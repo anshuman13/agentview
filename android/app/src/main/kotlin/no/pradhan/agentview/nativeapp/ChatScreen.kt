@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -89,6 +90,9 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         }
         Transcript(hub, state, live.id, session?.cwd ?: live.cwd, running, onOpenAgent, Modifier.weight(1f).fillMaxWidth())
         PendingList(state.pending, session?.permissionMode ?: "default", hub)
+        if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
+            Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
+        }
         Composer(hub, live.id, session, running, state.pending.isNotEmpty())
     }
 

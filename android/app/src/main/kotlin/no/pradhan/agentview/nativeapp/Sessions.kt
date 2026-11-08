@@ -52,6 +52,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val saved = remember(ws.saved) { ws.saved.associateBy { it.sessionId } }
     val pins = ws.pins.toSet()
     val seen = ws.seen
+    var status by rememberSaveable { mutableStateOf(StatusFilter.All) }
+    val byStatus = status != StatusFilter.All
     var showIdle by rememberSaveable { mutableStateOf(false) }
     var repoKey by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -91,6 +93,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             state = chatState(c, s, seen),
             selected = c.id == state.shownId,
             actions = actions(c.sessionId, c.title, c),
+            onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
         )
     }
@@ -115,7 +118,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
 
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
-    val recentRows = remember(groups, filter, ws.pins) { recentRows(groups, filter, pins) }
+    val recentRows = remember(groups, filter, ws.pins, status, saved, seen) { recentRows(groups, filter, pins, status, saved, seen) }
     val unfiltered = remember(live, ws) { groupByRepo(live, ws) }
     val repo = repoKey?.let { k -> unfiltered.firstOrNull { it.key == k } }
 
@@ -124,8 +127,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 PageHeader(repo.name, onBack = { repoKey = null })
-                val rows = repo.open.map { ChatItem(it, null) } + repo.recent.map { ChatItem(null, it) }
-                if (rows.isEmpty()) EmptyState("No chats in ${repo.name} yet", action = { Button("New chat", { hub.newChat(repo.key) }, variant = ButtonVariant.Tinted, icon = "add") })
+                val rows = (repo.open.map { ChatItem(it, null) } + repo.recent.map { ChatItem(null, it) }).filter { status.matches(it.state(saved, seen)) }
+                if (rows.isEmpty()) EmptyState(if (byStatus) "No ${status.label.lowercase()} chats in ${repo.name}" else "No chats in ${repo.name} yet", action = { Button("New chat", { hub.newChat(repo.key) }, variant = ButtonVariant.Tinted, icon = "add") })
                 else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Tokens.sp3, bottom = Tokens.fabClear)) {
                     lazyGroup(rows, { "c-${it.key}" }) { row(it) }
                 }
@@ -141,6 +144,12 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                     Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
                 }
             }
+            Row(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                StatusFilter.entries.forEach { f ->
+                    val n = if (f == StatusFilter.All) groups.sumOf { it.open.size + it.recent.size } else statusCount(groups, f, saved, seen)
+                    Chip("${f.label} $n", { status = f }, on = status == f)
+                }
+            }
             if (live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()) {
                 EmptyState(if (waitingForServer) "Waiting for the server" else "No sessions yet", if (waitingForServer) "Check the Mac address." else null)
                 return@Column
@@ -150,22 +159,23 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 return@Column
             }
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
-                if (waiting.isNotEmpty()) {
+                if (!byStatus && waiting.isNotEmpty()) {
                     item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
                     lazyGroup(waiting, { "needs-${it.id}" }) { liveRow(it, folderName(folderKey(it.cwd, ws.repos, ws.trees))) }
                 }
-                if (pinned.isNotEmpty()) {
+                if (!byStatus && pinned.isNotEmpty()) {
                     item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
                     lazyGroup(pinned, { "pin-${it.key}" }) { row(it) }
                 }
                 if (recentRows.isNotEmpty()) {
-                    item(key = "recent-head") { SectionHeader(if (filter.isBlank()) "Recent" else "Chats") }
+                    item(key = "recent-head") { SectionHeader(if (byStatus) status.label else if (filter.isBlank()) "Recent" else "Chats") }
                     lazyGroup(recentRows, { "rc-${it.key}" }) { row(it) }
                 }
-                val repoRows = if (showIdle || filter.isNotBlank()) busy + idle.sortedBy { it.name.lowercase() } else busy
-                if (repoRows.isNotEmpty() || idle.isNotEmpty()) item(key = "repos-head") { SectionHeader("Repos", (busy.size + idle.size).toString()) }
+                if (byStatus && recentRows.isEmpty()) item(key = "none") { EmptyState("No ${status.label.lowercase()} chats") }
+                val repoRows = if (byStatus) emptyList() else if (showIdle || filter.isNotBlank()) busy + idle.sortedBy { it.name.lowercase() } else busy
+                if (!byStatus && (repoRows.isNotEmpty() || idle.isNotEmpty())) item(key = "repos-head") { SectionHeader("Repos", (busy.size + idle.size).toString()) }
                 lazyGroup(repoRows, { "g-${it.key}" }, lead = true) { g -> RepoRow(g, seen) { repoKey = g.key } }
-                if (idle.isNotEmpty() && filter.isBlank()) item(key = "idle") {
+                if (!byStatus && idle.isNotEmpty() && filter.isBlank()) item(key = "idle") {
                     Group { ListRow(if (showIdle) "Show fewer repos" else "More repos", trailing = { Chevron(if (!showIdle) "${idle.size}" else null) }, onClick = { showIdle = !showIdle }) }
                 }
             }
@@ -209,12 +219,12 @@ private fun RepoMark(name: String) {
 }
 
 @Composable
-private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit) {
-    val unread = state == ChatState.Done || state == ChatState.Needs
+private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, onResume: (() -> Unit)? = null) {
     ListRow(
         title, meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
-        leading = if (unread) ({ StatusDot(DotState.Unread) }) else null,
+        leading = { StatusDot(dotFor(state)) },
         trailing = {
+            if (onResume != null) Button("Resume", onResume, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
             when (state) {
                 ChatState.Needs -> Badge("Needs you", BadgeTone.Waiting)
                 ChatState.Failed -> Badge("Failed", BadgeTone.Failed)

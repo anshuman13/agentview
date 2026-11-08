@@ -107,9 +107,39 @@ data class ChatItem(val live: LiveChat?, val saved: SavedSession?, val repo: Str
     val key get() = live?.id ?: saved!!.sessionId
 }
 
-fun recentRows(groups: List<RepoGroup>, filter: String, pins: Set<String> = emptySet()): List<ChatItem> =
-    groups.flatMap { g -> g.open.filter { it.pending == 0 && it.sessionId !in pins }.map { ChatItem(it, null, g.name) to it.lastActive } + g.recent.filter { it.sessionId !in pins }.map { ChatItem(null, it, g.name) to it.lastModified } }
-        .sortedByDescending { it.second }.map { it.first }.let { if (filter.isBlank()) it.take(RECENT) else it }
+fun recentRows(groups: List<RepoGroup>, filter: String, pins: Set<String> = emptySet(), status: StatusFilter = StatusFilter.All, saved: Map<String, SavedSession> = emptyMap(), seen: Map<String, Long> = emptyMap()): List<ChatItem> {
+    val every = status != StatusFilter.All
+    return groups.flatMap { g -> g.open.filter { every || (it.pending == 0 && it.sessionId !in pins) }.map { ChatItem(it, null, g.name) to it.lastActive } + g.recent.filter { every || it.sessionId !in pins }.map { ChatItem(null, it, g.name) to it.lastModified } }
+        .sortedByDescending { it.second }.map { it.first }
+        .filter { status.matches(it.state(saved, seen)) }
+        .let { if (filter.isBlank() && !every) it.take(RECENT) else it }
+}
+
+enum class StatusFilter(val label: String) {
+    All("All"), Running("Running"), Needs("Needs you"), Done("Done");
+
+    fun matches(s: ChatState?) = when (this) {
+        All -> true
+        Running -> s == ChatState.Running
+        Needs -> s == ChatState.Needs || s == ChatState.Failed
+        Done -> s == ChatState.Done
+    }
+}
+
+fun ChatItem.state(saved: Map<String, SavedSession>, seen: Map<String, Long>) = chatState(live, live?.sessionId?.let { saved[it] } ?: this.saved, seen)
+
+fun ChatItem.stalled() = live?.stalled == true
+
+fun statusCount(groups: List<RepoGroup>, status: StatusFilter, saved: Map<String, SavedSession>, seen: Map<String, Long>) =
+    groups.sumOf { g -> g.open.count { status.matches(chatState(it, it.sessionId?.let(saved::get), seen)) } + g.recent.count { status.matches(chatState(null, it, seen)) } }
+
+fun dotFor(s: ChatState?) = when (s) {
+    ChatState.Running -> DotState.Running
+    ChatState.Needs -> DotState.Warn
+    ChatState.Failed -> DotState.Bad
+    ChatState.Done -> DotState.Ok
+    null -> DotState.Idle
+}
 
 // Pinned chats, live or saved, that match the filter.
 fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatItem> {

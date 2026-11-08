@@ -369,6 +369,12 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun closeChat(id: String) = post(closeCmd(id), id)
 
     // A message while Claude runs queues for its next step, or with `steer` stops it and sends now.
+    fun resume(chat: String) {
+        if (readOnly) { notice.value = READ_ONLY_SENT; return }
+        open(chat)
+        submit("continue", false) {}
+    }
+
     fun submit(text: String, steer: Boolean, onLost: () -> Unit) {
         val t = text.trim()
         if (t.isEmpty()) return
