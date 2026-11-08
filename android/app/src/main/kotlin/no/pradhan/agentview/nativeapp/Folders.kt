@@ -109,8 +109,8 @@ data class ChatItem(val live: LiveChat?, val saved: SavedSession?, val repo: Str
     val key get() = live?.id ?: saved!!.sessionId
 }
 
-fun recentRows(groups: List<RepoGroup>, filter: String): List<ChatItem> =
-    groups.flatMap { g -> g.open.filter { it.pending == 0 }.map { ChatItem(it, null, g.name) to it.lastActive } + g.recent.map { ChatItem(null, it, g.name) to it.lastModified } }
+fun recentRows(groups: List<RepoGroup>, filter: String, pins: Set<String> = emptySet()): List<ChatItem> =
+    groups.flatMap { g -> g.open.filter { it.pending == 0 && it.sessionId !in pins }.map { ChatItem(it, null, g.name) to it.lastActive } + g.recent.filter { it.sessionId !in pins }.map { ChatItem(null, it, g.name) to it.lastModified } }
         .sortedByDescending { it.second }.map { it.first }.let { if (filter.isBlank()) it.take(RECENT) else it }
 
 // Pinned chats, live or saved, that match the filter.

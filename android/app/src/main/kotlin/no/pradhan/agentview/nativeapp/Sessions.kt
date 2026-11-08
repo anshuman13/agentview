@@ -47,7 +47,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     LaunchedEffect(Unit) { hub.refreshWorkspace() }
 
     val live = state.live
-    val all = remember(live, ws, filter) { groupByRepo(live, ws, filter) }
+    val all = remember(live, ws, filter) { groupByRepo(live, ws, filter, includePinned = true) }
     val groups = remember(all, segment) { all.filter { segmentOf(it.key) == segment } }
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
     val waiting = remember(live) { live.filter { it.pending > 0 }.sortedWith(byUrgency) }
@@ -117,7 +117,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
 
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
-    val recentRows = remember(groups, filter) { recentRows(groups, filter) }
+    val recentRows = remember(groups, filter, ws) { recentRows(groups, filter, ws.pins.toSet()) }
     val unfiltered = remember(live, ws) { groupByRepo(live, ws, includePinned = true) }
     val repo = repoKey?.let { k -> unfiltered.firstOrNull { it.key == k } }
 
@@ -191,7 +191,7 @@ private fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) 
         g.open.isNotEmpty() -> "${g.open.size} open · ${since(g.last)}"
         else -> "$chats ${if (chats == 1) "chat" else "chats"} · ${since(g.last)}"
     }
-    ListRow(g.name, meta, leading = { RepoMark(g.name) }, onClick = onClick, trailing = {
+    ListRow(g.name, meta, leading = { AvIcon("folder", null, Tokens.icon) }, onClick = onClick, trailing = {
         when {
             glance.needs > 0 -> Badge("${glance.needs}", BadgeTone.Waiting)
             glance.running > 0 -> Badge("${glance.running}", BadgeTone.Running)
@@ -199,15 +199,6 @@ private fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) 
         }
         Chevron()
     })
-}
-
-// A coloured tile with the repo's first letter, the colour fixed by the name.
-@Composable
-private fun RepoMark(name: String) {
-    val hues = listOf(av.hueBlue, av.hueViolet, av.hueTeal, av.hueAmber, av.hueMagenta, av.hueGreen, av.hueSky)
-    Box(Modifier.size(Tokens.leadWidth).clip(RoundedCornerShape(Tokens.shapeMd)).background(hues[Math.floorMod(name.hashCode(), hues.size)]), contentAlignment = Alignment.Center) {
-        Text(name.trimStart('.', '_', '-').take(1).uppercase(), style = Type.label, color = av.bg)
-    }
 }
 
 @Composable
