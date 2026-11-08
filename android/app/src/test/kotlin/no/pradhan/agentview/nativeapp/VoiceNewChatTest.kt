@@ -35,6 +35,7 @@ class VoiceNewChatTest {
     fun newSessionCarriesModelOnlyWhenChosen() {
         assertTrue(newSessionCmd(cwd = "/a", model = "opus").contains("\"model\":\"opus\""))
         assertFalse(newSessionCmd(cwd = "/a").contains("model"))
+        assertTrue(newSessionCmd(cwd = "/a", fork = "s1").contains("\"fork\":\"s1\""))
     }
 
     @Test

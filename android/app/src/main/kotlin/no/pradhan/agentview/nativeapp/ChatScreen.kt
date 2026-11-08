@@ -107,6 +107,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                 MenuItem("Images", "file-media", { close(); imagesOpen = true }, enabled = images.isNotEmpty())
                 MenuItem("Dev servers", "globe", { close(); serversOpen = true })
                 MenuItem("TODOs", "checklist", { close(); todosOpen = true })
+                MenuItem("Fork chat", "repo-forked", { close(); hub.newChat(cwd, fork = sessionId) }, enabled = sessionId != null)
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
                 MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
                 MenuSeparator()

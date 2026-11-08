@@ -252,7 +252,7 @@ fun setEffortCmd(effort: String) = cmd("set_effort") { put("effort", effort) }
 fun usageCmd() = cmd("usage")
 fun setAccountCmd(account: String) = cmd("set_account") { put("account", account) }
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
-fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model) }
+fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork) }
 fun closeCmd(id: String) = cmd("close") { put("id", id) }
 fun openSessionCmd(sessionId: String) = cmd("open_session") { put("sessionId", sessionId) }
 fun stopTaskCmd(toolUseId: String) = cmd("stop_task") { put("toolUseId", toolUseId) }
