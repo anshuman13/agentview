@@ -1,19 +1,14 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -25,10 +20,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.launch
 
@@ -47,7 +40,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     LaunchedEffect(Unit) { hub.refreshWorkspace() }
 
     val live = state.live
-    val all = remember(live, ws, filter) { groupByRepo(live, ws, filter, includePinned = true) }
+    val all = remember(live, ws, filter) { groupByRepo(live, ws, filter) }
     val groups = remember(all, segment) { all.filter { segmentOf(it.key) == segment } }
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
     val waiting = remember(live) { live.filter { it.pending > 0 }.sortedWith(byUrgency) }
@@ -117,8 +110,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
 
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
-    val recentRows = remember(groups, filter, ws) { recentRows(groups, filter, ws.pins.toSet()) }
-    val unfiltered = remember(live, ws) { groupByRepo(live, ws, includePinned = true) }
+    val recentRows = remember(groups, filter, ws.pins) { recentRows(groups, filter, pins) }
+    val unfiltered = remember(live, ws) { groupByRepo(live, ws) }
     val repo = repoKey?.let { k -> unfiltered.firstOrNull { it.key == k } }
 
     if (repo != null) {
@@ -188,8 +181,8 @@ private fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) 
     val chats = g.open.size + g.recent.size
     val meta = when {
         chats == 0 -> "No chats"
-        g.open.isNotEmpty() -> "${g.open.size} open · ${since(g.last)}"
-        else -> "$chats ${if (chats == 1) "chat" else "chats"} · ${since(g.last)}"
+        g.open.isNotEmpty() -> metaLine("${g.open.size} open", since(g.last))
+        else -> metaLine("$chats ${if (chats == 1) "chat" else "chats"}", since(g.last))
     }
     ListRow(g.name, meta, leading = { AvIcon("folder", null, Tokens.icon) }, onClick = onClick, trailing = {
         when {

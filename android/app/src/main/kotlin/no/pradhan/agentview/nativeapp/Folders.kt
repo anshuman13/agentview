@@ -71,10 +71,9 @@ fun matchesWords(words: List<String>, vararg texts: String?): Boolean {
 }
 
 // A chat matches when every word of the query is in its title, repo or the title or first prompt of its saved copy.
-fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", includePinned: Boolean = false): List<RepoGroup> {
+fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = ""): List<RepoGroup> {
     val words = queryWords(filter)
     val saved = ws.saved.associateBy { it.sessionId }
-    val pinned = if (includePinned) emptySet() else ws.pins.toSet()
     val m = LinkedHashMap<String, RepoGroup>()
     fun add(cwd: String, title: String, sessionId: String?, last: Long): RepoGroup? {
         val key = folderKey(cwd, ws.repos, ws.trees)
@@ -88,13 +87,12 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", includ
         return g
     }
     for (c in live) {
-        if (c.sessionId != null && c.sessionId in pinned) continue
         val g = add(c.cwd, c.title, c.sessionId, c.lastActive) ?: continue
         g.open += c
         if (c.pending > 0) g.waiting++
     }
     val ids = live.mapNotNull { it.sessionId }.toSet()
-    for (s in ws.saved) if (s.sessionId !in ids && s.sessionId !in pinned) add(s.cwd, s.title, s.sessionId, s.lastModified)?.recent?.add(s)
+    for (s in ws.saved) if (s.sessionId !in ids) add(s.cwd, s.title, s.sessionId, s.lastModified)?.recent?.add(s)
     for (r in ws.repos) if (r.cwd !in m && (words.isEmpty() || matchesWords(words, r.name))) m[r.cwd] = RepoGroup(r.cwd, folderName(r.cwd)).apply { last = r.lastCommit.toLong() }
     for (g in m.values) {
         g.open.sortWith(byUrgency)

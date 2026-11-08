@@ -41,10 +41,10 @@ class FoldersTest {
     }
 
     @Test
-    fun pinnedChatsLeaveTheirGroup() {
+    fun pinnedChatsStayInTheirGroup() {
         val ws = Workspace(repos, trees, listOf(saved("s1", "/w/agentview")), pins = listOf("s1", "l1"))
         val l = listOf(live("l1", "/w/shop"))
-        assertEquals(listOf(0, 0), groupByRepo(l, ws).map { it.open.size + it.recent.size })
+        assertEquals(listOf(1, 1), groupByRepo(l, ws).map { it.open.size + it.recent.size })
         assertEquals(listOf("l1", "s1"), pinnedRows(l, ws, "").map { it.key }.sortedBy { it != "l1" })
     }
 
