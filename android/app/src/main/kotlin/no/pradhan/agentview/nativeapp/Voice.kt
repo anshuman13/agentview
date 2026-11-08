@@ -58,7 +58,11 @@ fun speechError(code: Int): String? = when (code) {
     else -> "Voice input failed: $code"
 }
 
-private fun Bundle?.best() = this?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty()
+internal fun Bundle?.best() = this?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty()
+
+internal fun dictationIntent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+    .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
 
 // Tap to dictate and tap again to stop. The mic permission is asked on first use.
 @Composable
@@ -94,11 +98,7 @@ fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit) {
         rec[0] = r
         pending[0] = ""
         listening = true
-        r.startListening(
-            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true),
-        )
+        r.startListening(dictationIntent())
     }
 
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
