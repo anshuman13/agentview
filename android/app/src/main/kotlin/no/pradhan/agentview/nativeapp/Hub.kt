@@ -292,10 +292,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         prefs.edit().putString(key, encodeDaily(DailyChat(today(), mac, chat, sessionId))).apply()
     }
 
-    fun newChat() {
+    fun newChat(cwd: String? = null) {
         if (readOnly) { notice.value = READ_ONLY_SENT; return }
         viewModelScope.launch {
-            val id = switchTo(newSessionCmd())
+            val id = switchTo(newSessionCmd(cwd = cwd))
             if (id == null) notice.value = "The chat did not open" else link.value = DeepLink(chat = id)
         }
     }

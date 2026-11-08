@@ -118,7 +118,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
             }
         }
-        if (live.isEmpty() && ws.saved.isEmpty()) {
+        if (live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()) {
             EmptyState(if (connected) "No sessions yet" else "Waiting for the server", if (connected) null else "Check the Mac address.")
             return@Column
         }
@@ -141,7 +141,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             }
             for (g in groups) {
                 val open = filter.isNotBlank() || !(collapsed[g.key] ?: g.open.isEmpty())
-                item(key = "g-${g.key}") { GroupHeader(g, open, seen) { hub.setCollapsed(g.key, open) } }
+                item(key = "g-${g.key}") { GroupHeader(g, open, seen, { hub.newChat(g.key); onOpen() }) { hub.setCollapsed(g.key, open) } }
                 if (open) {
                     val chats = g.open.filter { it.pending == 0 }
                     items(chats.size, key = { "o-${chats[it].id}" }) { Box { liveRow(chats[it]) } }
@@ -164,7 +164,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
 class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit)
 
 @Composable
-private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, onToggle: () -> Unit) {
+private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, onNew: () -> Unit, onToggle: () -> Unit) {
     val glance = groupGlance(g, seen)
     SectionHeader(g.name, open = open, onToggle = onToggle, style = Type.headline, titleColor = av.fg, action = {
         when {
@@ -172,6 +172,7 @@ private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, on
             glance.running > 0 -> Badge("${glance.running}", BadgeTone.Running)
             glance.unread > 0 -> Badge("${glance.unread}", BadgeTone.Quiet)
         }
+        IconBtn("add", "New chat in ${g.name}", onNew)
     })
 }
 

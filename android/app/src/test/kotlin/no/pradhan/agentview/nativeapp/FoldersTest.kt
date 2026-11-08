@@ -37,13 +37,14 @@ class FoldersTest {
         assertEquals(listOf("agentview"), groupByRepo(l, ws, "database migrate").map { it.name })
         assertEquals(listOf("agentview"), groupByRepo(l, ws, "agentview").map { it.name })
         assertEquals(emptyList<String>(), groupByRepo(l, ws, "nothing here").map { it.name })
+        assertEquals(listOf("agentview", "shop"), groupByRepo(emptyList(), Workspace(repos)).map { it.name }.sorted())
     }
 
     @Test
     fun pinnedChatsLeaveTheirGroup() {
         val ws = Workspace(repos, trees, listOf(saved("s1", "/w/agentview")), pins = listOf("s1", "l1"))
         val l = listOf(live("l1", "/w/shop"))
-        assertEquals(emptyList<RepoGroup>(), groupByRepo(l, ws))
+        assertEquals(listOf(0, 0), groupByRepo(l, ws).map { it.open.size + it.recent.size })
         assertEquals(listOf("l1", "s1"), pinnedRows(l, ws, "").map { it.first?.id ?: it.second?.sessionId }.sortedBy { it != "l1" })
     }
 

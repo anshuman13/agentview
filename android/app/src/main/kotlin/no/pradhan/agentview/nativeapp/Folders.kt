@@ -95,6 +95,7 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = ""): List<
     }
     val ids = live.mapNotNull { it.sessionId }.toSet()
     for (s in ws.saved) if (s.sessionId !in ids && s.sessionId !in pinned) add(s.cwd, s.title, s.sessionId, s.lastModified)?.recent?.add(s)
+    for (r in ws.repos) if (r.cwd !in m && (words.isEmpty() || matchesWords(words, r.name))) m[r.cwd] = RepoGroup(r.cwd, folderName(r.cwd)).apply { last = r.lastCommit.toLong() }
     for (g in m.values) {
         g.open.sortWith(byUrgency)
         g.recent.sortByDescending { it.lastModified }
