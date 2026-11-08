@@ -224,7 +224,10 @@ export function createRoutes(d: RouteDeps) {
         return { status: 404, body: { error: err instanceof Error ? err.message : String(err) } };
       }
     }),
-    'ANY /api/state': entry(({ chat }) => d.host.req({ op: 'state', id: chat.id })),
+    'ANY /api/state': entry(({ url, chat }) => {
+      const limit = parseInt(url.searchParams.get('limit') ?? '', 10);
+      return d.host.req({ op: 'state', id: chat.id, ...(!Number.isNaN(limit) && { limit }) });
+    }),
     'ANY /api/attention': entry(({ url, chat }) => (url.searchParams.has('fresh') ? refreshAttention(d.attentionSources([chat.cwd])) : attention())),
     'ANY /api/findings': entry(({ url, chat }) => getFindings(chat.cwd, url.searchParams.get('target') ?? 'local')),
     'POST /api/findings/dismiss': entry(({ body, chat }) => dismissFinding(chat.cwd, String(body.target ?? 'local'), String(body.key ?? '')), true),

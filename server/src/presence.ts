@@ -6,7 +6,7 @@ export function isPhone(client: string | null | undefined, userAgent: string | u
   return client === 'phone' || PHONE_UA.test(userAgent ?? '');
 }
 
-// The last time a desktop client (a browser tab) connected or sent a command.
+// The last time a desktop client (a browser tab) connected or sent a command. The menu bar app reports nothing, so a Mac with only the menu bar open counts as away.
 export function createPresence(now: () => number = Date.now) {
   let last = 0;
   return {

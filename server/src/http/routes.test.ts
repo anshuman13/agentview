@@ -84,4 +84,11 @@ describe('routes', () => {
     expect([thrown.code, thrown.json]).toEqual([500, { error: 'boom' }]);
     for (const body of ['{bad', '']) expect((await call('POST', '/api/focus', body)).code).toBe(500);
   });
+
+  it('passes the limit of /api/state to the host', async () => {
+    const req = vi.fn(async () => ({ pending: [] }));
+    await call('GET', '/api/state?limit=0', undefined, { host: { req } } as unknown as Partial<RouteDeps>);
+    await call('GET', '/api/state', undefined, { host: { req } } as unknown as Partial<RouteDeps>);
+    expect(req.mock.calls).toEqual([[{ op: 'state', id: 'c1', limit: 0 }], [{ op: 'state', id: 'c1' }]]);
+  });
 });
