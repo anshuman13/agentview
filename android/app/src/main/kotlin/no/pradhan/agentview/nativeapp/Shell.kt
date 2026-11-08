@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
@@ -130,7 +131,9 @@ fun App(hub: Hub) {
     val inMore = isMore(route)
     val inAgent = isAgent(route)
     val shownChat = state.live.firstOrNull { it.id == state.shownId }
-    val rail = LocalConfiguration.current.screenWidthDp >= RAIL_MIN_DP
+    val width = LocalConfiguration.current.screenWidthDp
+    val rail = width >= RAIL_MIN_DP
+    val twoPane = isExpanded(width)
     val navHidden by hub.navHidden.collectAsState()
     val openAgent = { id: String -> nav.navigate("agent/${Uri.encode(id)}") }
     LaunchedEffect(route, state.shownId) { hub.navHidden.value = false }
@@ -143,6 +146,7 @@ fun App(hub: Hub) {
         Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge) { more = false; nav.goTab(t.route) }
     } + Dest("More", "ellipsis", more || inMore, 0) { more = true }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = av.bg,
         contentColor = av.fg,
@@ -175,8 +179,8 @@ fun App(hub: Hub) {
                 if (banner == OfflineState.Shown) OfflineBanner(onRetry = hub::retry)
                 NavHost(nav, startDestination = Tab.Codex.route, modifier = Modifier.weight(1f)) {
                     composable(Tab.Codex.route) { CodexScreen(hub) }
-                    composable(Tab.Chat.route) { ChatScreen(hub, onOpenAgent = openAgent) }
-                    composable(Tab.Sessions.route) { SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
+                    composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent) else ChatScreen(hub, onOpenAgent = openAgent) }
+                    composable(Tab.Sessions.route) { if (twoPane) TwoPane(hub, openAgent) else SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
                     composable("agent/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->
                         AgentScreen(hub, e.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() }, onOpenAgent = openAgent)
                     }
@@ -187,6 +191,9 @@ fun App(hub: Hub) {
                 }
             }
         }
+    }
+
+    VoiceHost(hub)
     }
 
     shared?.let { ShareSheet(hub, it) }
@@ -208,6 +215,16 @@ fun App(hub: Hub) {
                 ListRow("Mac address", leading = icon("device-desktop"), onClick = { go(ORIGIN_ROUTE) })
             }
         }
+    }
+}
+
+// The Sessions list beside the open chat on wide windows.
+@Composable
+private fun TwoPane(hub: Hub, onOpenAgent: (String) -> Unit) {
+    Row(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(2f).fillMaxHeight()) { SessionsScreen(hub, onOpen = {}) }
+        Box(Modifier.width(Tokens.hairline).fillMaxHeight().background(av.border))
+        Box(Modifier.weight(3f).fillMaxHeight()) { ChatScreen(hub, onOpenAgent) }
     }
 }
 

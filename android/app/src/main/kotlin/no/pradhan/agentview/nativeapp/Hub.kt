@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -62,6 +63,8 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     ).also { s -> saved.get<String>(CHAT_KEY)?.takeIf { it.isNotEmpty() }?.let(s::show) }
     val notifier = Notifier(app)
 
+    val models = MutableStateFlow(parseModels(prefs.getString("models", null)))
+    val voiceRequest = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected
@@ -172,6 +175,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         store.handle(m)
+        store.state.value.session?.models?.takeIf { it.isNotEmpty() && it != models.value }?.let { models.value = it; prefs.edit().putString("models", encodeModels(it)).apply() }
         if (m is ServerMessage.Live) {
             liveLoaded.value = true
             if (outbox.items.value.isNotEmpty() && System.currentTimeMillis() - flushFailedAt > FLUSH_RETRY_MS) flushOutbox()
@@ -309,25 +313,45 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         asking = true
         viewModelScope.launch {
             try {
-                val key = "codex-chat-$profile"
-                val mac = origin.value
-                val daily = reusableDaily(parseDaily(prefs.getString(key, null)), today(), mac)
-                val live = openDaily(daily, store.state.value.live)
-                val id = when {
-                    live != null -> showChat(live.id)
-                    daily?.sessionId != null -> switchTo(openSessionCmd(daily.sessionId))
-                    else -> switchTo(newSessionCmd(profile))
-                }
-                if (id == null) { notice.value = "The Codex chat did not open, the question was not sent"; return@launch }
-                submit(question, false) { notice.value = "The question was not sent" }
-                link.value = DeepLink(chat = id)
-                val sessionId = store.state.value.session?.sessionId ?: live?.sessionId ?: daily?.sessionId
-                prefs.edit().putString(key, encodeDaily(DailyChat(today(), mac, id, sessionId))).apply()
-                if (sessionId == null) launch { rememberSession(key, mac, id) }
+                val id = sendCodex(question, profile)?.first
+                if (id == null) notice.value = "The Codex chat did not open, the question was not sent" else link.value = DeepLink(chat = id)
             } finally {
                 asking = false
             }
         }
+    }
+
+    // The finished answer to a question put to the Codex chat, or null when it could not be asked or took too long.
+    suspend fun askAnswer(question: String, profile: String): String? {
+        if (readOnly) { notice.value = "Read-only check, nothing was sent"; return null }
+        if (asking) return null
+        asking = true
+        try {
+            val (id, before) = sendCodex(voicePrompt(question, store.state.value.live), profile, question) ?: return null
+            return withTimeoutOrNull(120_000) {
+                store.state.mapNotNull { s -> if (s.shownId == id) voiceAnswer(s.events, question, before) else null }.first()
+            }
+        } finally {
+            asking = false
+        }
+    }
+
+    private suspend fun sendCodex(question: String, profile: String, match: String = ""): Pair<String, Int>? {
+        val key = "codex-chat-$profile"
+        val mac = origin.value
+        val daily = reusableDaily(parseDaily(prefs.getString(key, null)), today(), mac)
+        val live = openDaily(daily, store.state.value.live)
+        val id = when {
+            live != null -> showChat(live.id)
+            daily?.sessionId != null -> switchTo(openSessionCmd(daily.sessionId))
+            else -> switchTo(newSessionCmd(profile))
+        } ?: return null
+        val before = store.state.value.events.count { it.kind == "user" && it.text.startsWith(match) }
+        submit(question, false) { notice.value = "The question was not sent" }
+        val sessionId = store.state.value.session?.sessionId ?: live?.sessionId ?: daily?.sessionId
+        prefs.edit().putString(key, encodeDaily(DailyChat(today(), mac, id, sessionId))).apply()
+        if (sessionId == null) viewModelScope.launch { rememberSession(key, mac, id) }
+        return id to before
     }
 
     private suspend fun showChat(id: String): String? {
@@ -341,10 +365,15 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         prefs.edit().putString(key, encodeDaily(DailyChat(today(), mac, chat, sessionId))).apply()
     }
 
-    fun newChat(cwd: String? = null) {
+    var lastModel: String?
+        get() = prefs.getString("lastModel", null)
+        set(v) { prefs.edit().putString("lastModel", v).apply() }
+
+    fun newChat(cwd: String? = null, model: String? = null) {
         if (readOnly) { notice.value = READ_ONLY_SENT; return }
+        if (model != null) lastModel = model
         viewModelScope.launch {
-            val id = switchTo(newSessionCmd(cwd = cwd))
+            val id = switchTo(newSessionCmd(cwd = cwd, model = model))
             if (id == null) notice.value = "The chat did not open" else link.value = DeepLink(chat = id)
         }
     }
