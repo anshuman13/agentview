@@ -512,6 +512,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         val done = codex.capture("${title.ifBlank { "Saved reply" }}\n$text", "note", segmentOf(cwd)) != null
         if (done) notice.value = "Saved to Notes"
     }
+    fun remindChat(title: String, sessionId: String, cwd: String, at: Long) {
+        val extra = mapOf("source" to "chat", "source_url" to "${origin.value}/?session=$sessionId")
+        if (codex.capture("Check ${title.ifBlank { "chat" }}", "open", segmentOf(cwd), at, extra) != null) notice.value = "Reminder set"
+    }
     fun rewind(id: String) = post(rewindCmd(id), store.wanted)
     fun stopTask(toolUseId: String) = post(stopTaskCmd(toolUseId), store.wanted)
     fun setModel(model: String) = post(setModelCmd(model), store.wanted)

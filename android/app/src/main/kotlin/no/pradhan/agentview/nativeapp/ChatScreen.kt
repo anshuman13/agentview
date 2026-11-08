@@ -61,6 +61,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     var serversOpen by remember { mutableStateOf(false) }
     var imagesOpen by remember { mutableStateOf(false) }
     var todosOpen by remember { mutableStateOf(false) }
+    var remindOpen by remember { mutableStateOf(false) }
     val images = remember(state.events) { chatImages(state.events) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val ticking = agentsOpen && agents.any { it.status == "running" }
@@ -113,6 +114,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                     val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, state.events))
                     context.startActivity(android.content.Intent.createChooser(send, null))
                 }, enabled = state.events.any { it.kind == "assistant" })
+                MenuItem("Remind me", "bell", { close(); remindOpen = true }, enabled = sessionId != null)
                 MenuItem("Fork chat", "repo-forked", { close(); hub.newChat(cwd, fork = sessionId) }, enabled = sessionId != null)
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
                 MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
@@ -140,6 +142,10 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     if (imagesOpen) ImagesSheet(hub, live.id, images, cwd) { imagesOpen = false }
     if (serversOpen) DevServersSheet(hub) { serversOpen = false }
     if (todosOpen) TodosSheet(hub, cwd) { todosOpen = false }
+    if (remindOpen) Sheet(onDismiss = { remindOpen = false }, title = "Remind me", padded = false, full = false) {
+        val choices = remember { remindChoices(System.currentTimeMillis()) }
+        Group { choices.forEachIndexed { i, (label, at) -> if (i > 0) Hairline(); ListRow(label, lines = 1, onClick = { hub.remindChat(live.title, sessionId!!, cwd, at); remindOpen = false }) } }
+    }
 
     when (dialog) {
         "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { dialog = null })

@@ -228,6 +228,12 @@ fun newMarker(items: List<Item>, ats: Map<String, Long>, seen: Long, openedAt: L
 }
 
 // The prompts and replies of the loaded transcript as Markdown, for the share sheet. Tools and system lines are left out.
+// Slack's "Remind me about this": when a reminder task for a chat falls due.
+fun remindChoices(now: Long, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): List<Pair<String, Long>> {
+    val tomorrow = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate().plusDays(1).atTime(9, 0).atZone(zone).toInstant().toEpochMilli()
+    return listOf("In 1 hour" to now + 3_600_000, "In 3 hours" to now + 3 * 3_600_000, "Tomorrow at 9:00" to tomorrow)
+}
+
 fun chatMarkdown(title: String, events: List<ChatEvent>): String = buildString {
     if (title.isNotBlank()) append("# ").append(title.trim()).append("\n\n")
     for (e in events) {

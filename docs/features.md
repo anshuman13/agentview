@@ -196,6 +196,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   is saved with that one block of changed lines put back to the last commit
 - On the phone, the last reply of each finished turn has Save as note, which saves the chat title and the reply as a
   Codex note in the chat's profile (like Slack's saved messages)
+- "Remind me" in the phone chat menu adds an open task "Check <chat>" due in 1 hour, 3 hours or tomorrow at 9:00, linked to
+  the chat; the hub pushes it when due (like Slack's remind me about this)
 - "Share chat" in the phone chat menu sends the loaded prompts and replies as Markdown to the Android share sheet
 - "Continue in terminal" in the same menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI. Stop the chat first so two processes do not write to it
