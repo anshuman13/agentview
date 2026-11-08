@@ -282,11 +282,11 @@ object Tokens {
     val hairline = 1.dp
     val sp1 = 2.dp
     val sp2 = 4.dp
-    val sp3 = 6.dp
+    val sp3 = 8.dp
     val sp4 = 8.dp
-    val sp5 = 10.dp
+    val sp5 = 12.dp
     val sp6 = 12.dp
-    val sp7 = 14.dp
+    val sp7 = 16.dp
     val sp8 = 16.dp
     val sp10 = 20.dp
     val sp12 = 24.dp
@@ -329,10 +329,10 @@ object Tokens {
     val tracking = 0.02f
     val trackingWide = 0.04f
     val trackingWider = 0.08f
-    val iconSm = 14.dp
-    val icon = 16.dp
-    val iconMd = 18.dp
-    val iconLg = 20.dp
+    val iconSm = 18.dp
+    val icon = 20.dp
+    val iconMd = 24.dp
+    val iconLg = 24.dp
     val iconXl = 24.dp
     val iconHero = 40.dp
     val radiusXs = 2.dp
@@ -350,12 +350,12 @@ object Tokens {
     val sizeXl = 28.dp
     val size2xl = 32.dp
     val sizeBar = 35.dp
-    val touchSm = 36.dp
-    val touchMd = 40.dp
-    val touch = 44.dp
-    val controlSm = 28.dp
-    val controlMd = 36.dp
-    val tabbarH = 56.dp
+    val touchSm = 48.dp
+    val touchMd = 48.dp
+    val touch = 48.dp
+    val controlSm = 32.dp
+    val controlMd = 40.dp
+    val tabbarH = 64.dp
     val activitybarW = 48.dp
     val sidebarW = 300.dp
     val shadowSm = 8.dp
@@ -376,11 +376,11 @@ object Tokens {
     val focusOffset = 1.dp
     val focusOffsetInset = -2.dp
     // Sizes the web keeps in component CSS, not in tokens.css.
-    val buttonMd = 34.dp
+    val buttonMd = 40.dp
     val menuMin = 200.dp
     val bar = 3.dp
     val stroke = 1.5.dp
-    val buttonLg = 50.dp
+    val buttonLg = 56.dp
     val emptyHint = 320.dp
     val fab = 56.dp
     val leadWidth = 24.dp
@@ -396,18 +396,22 @@ object Tokens {
     val fileError = 140.dp
     val subIndent = 7.dp
     val spark = 120.dp
+    val rowOne = 56.dp
+    val rowTwo = 72.dp
+    val rowThree = 88.dp
+    val fabClear = 88.dp
 }
 
 object Type {
-    val largeTitle = TextStyle(fontSize = 34.sp, lineHeight = 44.2.sp, fontWeight = FontWeight(700))
-    val title = TextStyle(fontSize = 22.sp, lineHeight = 28.6.sp, fontWeight = FontWeight(700))
-    val headline = TextStyle(fontSize = 16.sp, lineHeight = 22.4.sp, fontWeight = FontWeight(600))
+    val largeTitle = TextStyle(fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight(700))
+    val title = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight(700))
+    val headline = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(600))
     val body = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(400))
-    val callout = TextStyle(fontSize = 15.sp, lineHeight = 22.5.sp, fontWeight = FontWeight(400))
-    val subheadline = TextStyle(fontSize = 14.sp, lineHeight = 19.6.sp, fontWeight = FontWeight(400))
-    val footnote = TextStyle(fontSize = 12.sp, lineHeight = 15.6.sp, fontWeight = FontWeight(400))
-    val caption = TextStyle(fontSize = 12.sp, lineHeight = 15.6.sp, fontWeight = FontWeight(400))
-    val meta = TextStyle(fontSize = 14.sp, lineHeight = 19.6.sp, fontWeight = FontWeight(400))
-    val display = TextStyle(fontSize = 28.sp, lineHeight = 36.4.sp, fontWeight = FontWeight(700))
-    val label = TextStyle(fontSize = 12.sp, lineHeight = 15.6.sp, fontWeight = FontWeight(500))
+    val callout = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight(500))
+    val subheadline = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight(400))
+    val footnote = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight(400))
+    val caption = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight(400))
+    val meta = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight(400))
+    val display = TextStyle(fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight(700))
+    val label = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight(500))
 }

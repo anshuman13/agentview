@@ -18,8 +18,8 @@ private val typography = Typography(
     displayLarge = Type.largeTitle, displayMedium = Type.display, displaySmall = Type.title,
     headlineLarge = Type.largeTitle, headlineMedium = Type.display, headlineSmall = Type.title,
     titleLarge = Type.title, titleMedium = Type.headline, titleSmall = Type.headline,
-    bodyLarge = Type.body, bodyMedium = Type.body, bodySmall = Type.subheadline,
-    labelLarge = Type.callout, labelMedium = Type.subheadline, labelSmall = Type.label,
+    bodyLarge = Type.body, bodyMedium = Type.meta, bodySmall = Type.caption,
+    labelLarge = Type.callout, labelMedium = Type.label, labelSmall = Type.label,
 )
 
 @Composable

@@ -26,7 +26,7 @@ server as the web app: the `/api/events` stream, `POST /api/cmd` and the `/api/a
 
 Colors, type and spacing come from `web/src/styles/tokens.css` and the icons from the codicons in `node_modules`:
 `./gradlew generateTokens generateIcons` writes `Tokens.kt` and `Codicons.kt`, so a token change reaches the app on the
-next generate and build. Screens build from the shared components in `Components.kt`.
+next generate and build. TokenGen applies native overrides, listed under Phone in `design-system.md`. Screens build from the shared components in `Components.kt`.
 
 `npm run native` runs the unit tests and builds a minified release APK signed with the debug key;
 `npm run native -- <adb serial>` also installs it. It needs JDK 17 and the Android SDK

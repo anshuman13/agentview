@@ -50,7 +50,7 @@ fun CheckCircle(done: Boolean, label: String, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     Box(Modifier.size(Tokens.touch).clip(CircleShape).clickable(onClickLabel = label) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); onClick() }, contentAlignment = Alignment.Center) {
         Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.ok) else Modifier.border(Tokens.stroke, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
-            if (done) AvIcon("check", null, Tokens.iconSm, tint = av.onColor)
+            if (done) AvIcon("check", null, Tokens.size2xs, tint = av.onColor)
         }
     }
 }

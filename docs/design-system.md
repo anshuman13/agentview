@@ -313,6 +313,42 @@ Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` 
 - Reasons are under 6 words in meta: "someone else answered", "second ask in 3 days".
 - Times are relative within today ("14:20"), a weekday beyond ("Tue"), from `clock` and `ago` in codex/time.
 
+## Phone (native Android)
+
+Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NATIVE_SIZES` and `NATIVE_TYPE` after reading `tokens.css`, so Material wins over the web touch tokens there and `Tokens.kt` stays generated.
+
+### Foundations
+- **Spacing** is on the 4dp grid: sp2 4, sp4 8, sp6 12, sp8 16, sp12 24, sp16 32. sp1, sp3, sp5 and sp7 exist only so old call sites compile; new code does not use them. The screen margin is 16dp (`listPad`) on both sides and groups sit 24dp apart.
+- **Touch targets** are 48dp with 8dp between targets. Painted controls may be smaller (Chip 32, Button sm 32) and reach 48 through `minimumInteractiveComponentSize`.
+- **Icons** are 24dp as standard (IconBtn, nav, FAB, row leading, search), 20 inline in text and 18 in chips, buttons and menu items.
+- **Rows** are 56dp with a title only and 72dp with meta; three-line rows grow to about 88dp. Leading element and text are 16dp apart.
+- **Type** is on a 4dp line grid. Reading text is never below 14sp; 12sp is for badges, nav labels and captions. Text uses `fg` or `fgMuted`, never `fgFaint` (3.3:1 to 3.9:1 on bg and surface, below 4.5:1), which is for icons and disabled states.
+
+| Role | Size/line | Weight |
+|---|---|---|
+| largeTitle | 32/40 | 700 |
+| display | 28/36 | 700 |
+| title | 22/28 | 700 |
+| headline, body | 16/24 | 600, 400 |
+| callout | 14/20 | 500 |
+| subheadline, meta, footnote | 14/20 | 400 |
+| caption | 12/16 | 400 |
+| label | 12/16 | 500 |
+| Mono | 14/20 | 400 |
+
+- **Separation** is by tone: `bg` page, `surface` for bars, `groupCard` for cards, `raised` for menus and dialogs. Hairlines only sit between rows of a group.
+
+### Interaction
+- Every clickable has the default Material ripple (`indication = null` only on a scrim); IconBtn's is circular.
+- A row with a More menu shows the kebab, and long press opens the same menu with a long-press haptic. Long press is never the only route.
+- A swipe action (`SwipeToDismissBox`: start-to-end done or pin, end-to-start snooze or archive) also sits in the menu and shows a 5 s Undo snack.
+- Menus over 5 items, forms and pickers open in `Sheet`.
+- Back is system predictive back (`enableOnBackInvokedCallback` is on). `BackHandler` is only for in-screen state; there is no in-app edge swipe and no swipe between tabs.
+- Hide on scroll and the FAB follow the navigation spec.
+
+### Worked example: Wiki page
+The Wiki page keeps 16dp side margins and 16dp above the title. In the hero, title, meta line and summary are 8dp apart. Claim rows clamp to 3 lines and a tap expands the row in place. The index shows one "Review claims" row instead of a header button. Older becomes a collapsible SectionHeader "Not used by Claude" (chevron, 48dp, no Show/Hide button and no hint sentence).
+
 ## Migration
 
 Done: Summary uses Panel (filter card), every empty list or report uses EmptyState (the old
