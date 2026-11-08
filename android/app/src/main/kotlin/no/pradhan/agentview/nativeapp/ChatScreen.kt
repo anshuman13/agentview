@@ -59,6 +59,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     var agentsOpen by remember { mutableStateOf(false) }
     var serversOpen by remember { mutableStateOf(false) }
     var imagesOpen by remember { mutableStateOf(false) }
+    var todosOpen by remember { mutableStateOf(false) }
     val images = remember(state.events) { chatImages(state.events) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val ticking = agentsOpen && agents.any { it.status == "running" }
@@ -105,6 +106,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                 MenuItem("Review changes", "source-control", { close(); review = 0 }, enabled = left.isNotEmpty())
                 MenuItem("Images", "file-media", { close(); imagesOpen = true }, enabled = images.isNotEmpty())
                 MenuItem("Dev servers", "globe", { close(); serversOpen = true })
+                MenuItem("TODOs", "checklist", { close(); todosOpen = true })
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
                 MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
                 MenuSeparator()
@@ -130,6 +132,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
 
     if (imagesOpen) ImagesSheet(hub, live.id, images, cwd) { imagesOpen = false }
     if (serversOpen) DevServersSheet(hub) { serversOpen = false }
+    if (todosOpen) TodosSheet(hub, cwd) { todosOpen = false }
 
     when (dialog) {
         "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { dialog = null })

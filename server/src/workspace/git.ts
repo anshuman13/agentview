@@ -98,9 +98,26 @@ async function branchDiff(cwd: string) {
   return { base: name, files: parseNumstat(numstat), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff };
 }
 
+export type Todo = { path: string; line: number; text: string };
+
+// `git grep -n` lines for TODO and FIXME comments, as tasks to hand to Claude. Lock files and minified code are skipped.
+export function parseTodos(out: string, max = 100): Todo[] {
+  const todos: Todo[] = [];
+  for (const l of out.split('\n')) {
+    const m = /^(.+?):(\d+):(.*)$/.exec(l);
+    if (!m || /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lock)$|\.min\./.test(m[1])) continue;
+    const text = /\b(?:TODO|FIXME)\b(?:\([^)]*\))?[:\s]*(.*)$/.exec(m[3])?.[1]?.replace(/\s*(\*\/|-->)\s*$/, '').trim();
+    if (text === undefined || m[3].length > 400) continue;
+    todos.push({ path: m[1], line: Number(m[2]), text });
+    if (todos.length >= max) break;
+  }
+  return todos;
+}
+
 export async function gitRoute(cwd: string, route: string, query: URLSearchParams, body: Record<string, unknown> | null) {
   if (route === 'status') return gitStatus(cwd);
   if (route === 'branch') return branchDiff(cwd);
+  if (route === 'todos') return { todos: parseTodos(await git(cwd, ['grep', '-n', '-I', '-w', '-E', 'TODO|FIXME'], [0, 1])) };
   if (route === 'diff') return { diff: await diff(cwd, query.get('path') ?? '', query.get('staged') === 'true') };
   if (!body) throw new Error('Use POST');
   if (route === 'commit') {

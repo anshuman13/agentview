@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { gitRoute, parseStatus, parseNumstat } from './git.js';
+import { gitRoute, parseStatus, parseNumstat, parseTodos } from './git.js';
 
 const repo = mkdtempSync(path.join(os.tmpdir(), 'agentview-git-'));
 const sh = (...args: string[]) => execFileSync('git', args, { cwd: repo });
@@ -79,6 +79,17 @@ describe('parseNumstat', () => {
       { path: 'img/logo.png', add: 0, del: 0 },
       { path: 'src/new/b.ts', add: 0, del: 0 },
       { path: 'docs/y.md', add: 2, del: 0 },
+    ]);
+  });
+});
+
+describe('parseTodos', () => {
+  it('reads the text after TODO or FIXME and skips lock files', () => {
+    const out = ['src/a.ts:12:  // TODO: retry on 429', 'web/b.css:3:/* FIXME(ana) dark mode */', 'package-lock.json:9:"TODO": 1', 'x.md:1:Fix the TODOS list', 'y.py:4:# TODO'].join('\n');
+    expect(parseTodos(out)).toEqual([
+      { path: 'src/a.ts', line: 12, text: 'retry on 429' },
+      { path: 'web/b.css', line: 3, text: 'dark mode' },
+      { path: 'y.py', line: 4, text: '' },
     ]);
   });
 });
