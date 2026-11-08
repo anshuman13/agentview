@@ -32,7 +32,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.launch
 
-private const val RECENT = 6
 
 @Composable
 fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
@@ -112,12 +111,14 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         )
     }
 
-    val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
-    val (busy, idle) = groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() }
-    val recentRows = remember(busy, filter) {
-        busy.flatMap { g -> g.open.filter { it.pending == 0 }.map { Triple<LiveChat?, SavedSession?, String>(it, null, g.name) to it.lastActive } + g.recent.map { Triple<LiveChat?, SavedSession?, String>(null, it, g.name) to it.lastModified } }
-            .sortedByDescending { it.second }.map { it.first }.let { if (filter.isBlank()) it.take(RECENT) else it }
+    @Composable
+    fun row(item: ChatItem) {
+        if (item.live != null) liveRow(item.live, item.repo) else savedRow(item.saved!!, item.repo)
     }
+
+    val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
+    val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
+    val recentRows = remember(groups, filter) { recentRows(groups.filter { it.open.isNotEmpty() || it.recent.isNotEmpty() }, filter) }
     val unfiltered = remember(live, ws) { groupByRepo(live, ws, includePinned = true) }
     val repo = repoKey?.let { k -> unfiltered.firstOrNull { it.key == k } }
 
@@ -126,13 +127,13 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 PageHeader(repo.name, onBack = { repoKey = null })
-                val rows = repo.open.map<LiveChat, Pair<LiveChat?, SavedSession?>> { it to null } + repo.recent.map { null to it }
-                if (rows.isEmpty()) EmptyState("No chats in ${repo.name} yet", action = { Button("New chat", { hub.newChat(repo.key); onOpen() }, variant = ButtonVariant.Tinted, icon = "add") })
+                val rows = repo.open.map { ChatItem(it, null) } + repo.recent.map { ChatItem(null, it) }
+                if (rows.isEmpty()) EmptyState("No chats in ${repo.name} yet", action = { Button("New chat", { hub.newChat(repo.key) }, variant = ButtonVariant.Tinted, icon = "add") })
                 else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Tokens.sp3, bottom = Tokens.fabClear)) {
-                    lazyGroup(rows, { if (it.first != null) "o-${it.first!!.id}" else "r-${it.second!!.sessionId}" }) { (c, s) -> if (c != null) liveRow(c) else savedRow(s!!) }
+                    lazyGroup(rows, { "c-${it.key}" }) { row(it) }
                 }
             }
-            Fab("add", "New chat in ${repo.name}", { hub.newChat(repo.key); onOpen() }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
+            Fab("add", "New chat in ${repo.name}", { hub.newChat(repo.key) }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
         }
     } else Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -158,14 +159,11 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 }
                 if (pinned.isNotEmpty()) {
                     item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
-                    lazyGroup(pinned, { "pin-${it.first?.id ?: it.second?.sessionId}" }) { (c, s) ->
-                        val name = folderName(folderKey(c?.cwd ?: s!!.cwd, ws.repos, ws.trees))
-                        if (c != null) liveRow(c, name) else savedRow(s!!, name)
-                    }
+                    lazyGroup(pinned, { "pin-${it.key}" }) { row(it) }
                 }
                 if (recentRows.isNotEmpty()) {
                     item(key = "recent-head") { SectionHeader(if (filter.isBlank()) "Recent" else "Chats") }
-                    lazyGroup(recentRows, { (c, s) -> if (c != null) "rc-${c.id}" else "rs-${s!!.sessionId}" }) { (c, s, name) -> if (c != null) liveRow(c, name) else savedRow(s!!, name) }
+                    lazyGroup(recentRows, { "rc-${it.key}" }) { row(it) }
                 }
                 val repoRows = if (showIdle || filter.isNotBlank()) busy + idle.sortedBy { it.name.lowercase() } else busy
                 if (repoRows.isNotEmpty() || idle.isNotEmpty()) item(key = "repos-head") { SectionHeader("Repos", (busy.size + idle.size).toString()) }

@@ -104,7 +104,17 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", includ
 }
 
 // Pinned chats, live or saved, that match the filter.
-fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<Pair<LiveChat?, SavedSession?>> {
+const val RECENT = 6
+
+data class ChatItem(val live: LiveChat?, val saved: SavedSession?, val repo: String? = null) {
+    val key get() = live?.id ?: saved!!.sessionId
+}
+
+fun recentRows(groups: List<RepoGroup>, filter: String): List<ChatItem> =
+    groups.flatMap { g -> g.open.filter { it.pending == 0 }.map { ChatItem(it, null, g.name) to it.lastActive } + g.recent.map { ChatItem(null, it, g.name) to it.lastModified } }
+        .sortedByDescending { it.second }.map { it.first }.let { if (filter.isBlank()) it.take(RECENT) else it }
+
+fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatItem> {
     val words = queryWords(filter)
     val saved = ws.saved.associateBy { it.sessionId }
     return ws.pins.mapNotNull { id ->
@@ -113,7 +123,7 @@ fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<Pair<L
         val title = c?.title ?: s?.title ?: return@mapNotNull null
         val cwd = c?.cwd ?: s!!.cwd
         val repo = folderName(folderKey(cwd, ws.repos, ws.trees))
-        if (words.isNotEmpty() && !matchesWords(words, title, saved[id]?.firstPrompt, repo)) null else Pair(c, s)
+        if (words.isNotEmpty() && !matchesWords(words, title, saved[id]?.firstPrompt, repo)) null else ChatItem(c, s, repo)
     }
 }
 

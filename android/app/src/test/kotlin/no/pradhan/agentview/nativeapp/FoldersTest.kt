@@ -45,7 +45,16 @@ class FoldersTest {
         val ws = Workspace(repos, trees, listOf(saved("s1", "/w/agentview")), pins = listOf("s1", "l1"))
         val l = listOf(live("l1", "/w/shop"))
         assertEquals(listOf(0, 0), groupByRepo(l, ws).map { it.open.size + it.recent.size })
-        assertEquals(listOf("l1", "s1"), pinnedRows(l, ws, "").map { it.first?.id ?: it.second?.sessionId }.sortedBy { it != "l1" })
+        assertEquals(listOf("l1", "s1"), pinnedRows(l, ws, "").map { it.key }.sortedBy { it != "l1" })
+    }
+
+    @Test
+    fun recentRowsMergeOpenAndSavedNewestFirst() {
+        val ws = Workspace(repos, trees, listOf(saved("s1", "/w/agentview", at = 5), saved("s2", "/w/agentview", at = 1)))
+        val l = listOf(live("l1", "/w/shop", active = 9), live("l2", "/w/shop", active = 8, pending = 1))
+        val groups = groupByRepo(l, ws)
+        assertEquals(listOf("l1", "s1", "s2"), recentRows(groups, "").map { it.key })
+        assertEquals(listOf("shop", "agentview", "agentview"), recentRows(groups, "").map { it.repo })
     }
 
     @Test
