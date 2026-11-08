@@ -66,7 +66,7 @@ fun ChatScreen(hub: Hub) {
                         usageText(usage).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = if (usageHigh(usage)) warn else muted)) { append(" · $it") } }
                     }
                 }
-                WordClamp(line, Type.subheadline, muted, 2)
+                WordClamp(line, Type.subheadline, muted, 1)
             },
         ) {
             MoreButton { close ->

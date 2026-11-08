@@ -3,7 +3,6 @@ package no.pradhan.agentview.nativeapp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +19,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -78,14 +78,14 @@ private fun MdBlockView(b: MdBlock) {
         is MdBlock.Heading -> Text(
             inlineText(b.inlines),
             style = (if (b.level <= 1) Type.headline.copy(fontSize = Tokens.fsXl) else Type.headline).copy(color = av.fg),
-            modifier = Modifier.padding(top = Tokens.sp3),
+            modifier = Modifier.padding(top = Tokens.sp4),
         )
         is MdBlock.Code -> CodeBlock(b.text, b.lang)
         is MdBlock.Quote -> Row(Modifier.height(IntrinsicSize.Min)) {
             Box(Modifier.width(Tokens.bar).fillMaxHeight().background(av.borderStrong))
             MdBlocks(b.blocks, Modifier.padding(start = Tokens.sp4))
         }
-        is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
+        is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
             b.items.forEachIndexed { n, item ->
                 Row {
                     Text(if (b.ordered) "${b.start + n}." else "•", style = body, color = av.fgMuted, modifier = Modifier.width(Tokens.leadWidth).padding(start = Tokens.sp2))
@@ -102,16 +102,16 @@ private fun MdBlockView(b: MdBlock) {
 fun CodeBlock(text: String, lang: String = "", modifier: Modifier = Modifier) {
     val clip = LocalClipboardManager.current
     Column(modifier.well(av)) {
-        Row(Modifier.fillMaxWidth().padding(start = Tokens.sp5, end = Tokens.sp5, top = Tokens.sp2), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth().padding(start = Tokens.sp5, end = Tokens.sp2), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(lang, style = Type.footnote, color = av.fgFaint)
-            Text("Copy", style = Type.footnote, color = av.accentText, modifier = Modifier.clickable { clip.setText(AnnotatedString(text)) })
+            IconBtn("copy", "Copy code", { clip.setText(AnnotatedString(text)) })
         }
         Text(
             text,
             style = Mono,
             color = av.fg,
             softWrap = false,
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.sp5, vertical = Tokens.sp4),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(Tokens.sp6),
         )
     }
 }
@@ -128,7 +128,7 @@ private fun TableView(t: MdBlock.Table) {
                         inlineText(row.getOrElse(c) { emptyList() }),
                         style = Type.subheadline.copy(color = av.fg),
                         fontWeight = if (r == 0 && t.header.isNotEmpty()) FontWeight.SemiBold else null,
-                        modifier = Modifier.width(Tokens.tableCell).border(BorderStroke(Tokens.hairline, av.border)).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2),
+                        modifier = Modifier.width(Tokens.tableCell).border(BorderStroke(Tokens.hairline, av.border)).padding(Tokens.sp4),
                     )
                 }
             }

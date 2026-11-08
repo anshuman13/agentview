@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -65,14 +67,15 @@ import kotlinx.serialization.json.Json
 
 private val pretty = Json { prettyPrint = true }
 
-private fun gapAbove(older: Item?, it: Item): Dp? {
+internal fun gapAbove(older: Item?, it: Item): Dp? {
     if (older == null) return null
     val act = { i: Item -> i is Item.Step || i is Item.Agent }
     return when {
         act(older) && act(it) -> null
         (act(older) && it is Item.File) || (older is Item.File && act(it)) -> Tokens.sp1
-        it is Item.Phase -> Tokens.sp7
-        else -> Tokens.sp6
+        it is Item.User || older is Item.User -> Tokens.sp12
+        it is Item.Phase -> Tokens.sp12
+        else -> Tokens.sp4
     }
 }
 
@@ -89,6 +92,18 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     var users by remember { mutableStateOf(0) }
     val atBottom by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 80 } }
 
+    LaunchedEffect(listState) {
+        var last = Int.MAX_VALUE to Int.MAX_VALUE
+        snapshotFlow { Triple(listState.isScrollInProgress, listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) }.collect { (moving, index, offset) ->
+            val pos = index to offset
+            if (moving && last.first != Int.MAX_VALUE) {
+                if (index > last.first || (index == last.first && offset > last.second)) hub.navHidden.value = true
+                else if (pos != last) hub.navHidden.value = false
+            }
+            last = pos
+        }
+    }
+    LaunchedEffect(atBottom) { if (atBottom) hub.navHidden.value = false }
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress to atBottom }.collect { (moving, bottom) -> if (moving) stick = bottom }
     }
@@ -108,7 +123,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
             Modifier.fillMaxSize(),
             state = listState,
             reverseLayout = true,
-            contentPadding = PaddingValues(horizontal = Tokens.sp6, vertical = Tokens.sp6),
+            contentPadding = PaddingValues(horizontal = Tokens.listPad, vertical = Tokens.sp8),
         ) {
             itemsIndexed(rows, key = { _, it -> it.id }, contentType = { _, it -> it::class }) { i, it ->
                 Box(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) { ItemRow(hub, it, chatId, cwd, !running) }
@@ -120,8 +135,9 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                 if (state.settled && !(blank && (loading || tried != state.earlier))) EmptyState("No messages yet", "Your prompts, Claude's steps and replies show up here.") else EmptyState("Loading")
             }
         }
-        if (!atBottom) JumpButton(Modifier.align(Alignment.BottomCenter).padding(bottom = Tokens.sp5)) {
+        if (!atBottom) JumpButton(Modifier.align(Alignment.BottomCenter).padding(bottom = Tokens.sp4)) {
             stick = true
+            hub.navHidden.value = false
             scope.launch { listState.animateScrollToItem(0) }
         }
     }
@@ -130,7 +146,10 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
 @Composable
 private fun JumpButton(modifier: Modifier, onClick: () -> Unit) {
     Surface(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(Tokens.radiusPill), color = av.raised, contentColor = av.fg, border = BorderStroke(Tokens.hairline, av.borderCard), shadowElevation = Tokens.elev2) {
-        Text("Jump to latest ↓", Modifier.heightIn(min = Tokens.touchSm).padding(horizontal = Tokens.sp6, vertical = Tokens.sp4), style = Type.footnote)
+        Row(Modifier.heightIn(min = Tokens.touch).padding(horizontal = Tokens.sp6), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+            Text("Jump to latest", style = Type.subheadline)
+            AvIcon("arrow-down", null, Tokens.icon)
+        }
     }
 }
 
@@ -142,7 +161,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
             Text(it.text, style = Type.label, color = av.agent, fontWeight = FontWeight.SemiBold)
             HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
         }
-        is Item.Assistant -> Box(Modifier.fillMaxWidth().leftBar(av.claude.copy(alpha = 0.7f)).padding(start = Tokens.sp5, end = Tokens.sp1)) { Markdown(it.text) }
+        is Item.Assistant -> SelectionContainer { Markdown(it.text, Modifier.fillMaxWidth()) }
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = av.fgFaint)
         is Item.Step -> StepRow(it, cwd, settled)
         is Item.File -> FileCard(it, cwd)
@@ -156,19 +175,20 @@ fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Toke
 
 @Composable
 private fun UserRow(hub: Hub, it: Item.User, chat: String) {
-    val shape = RoundedCornerShape(Tokens.radius)
-    Column(
-        Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.borderCard), shape).clip(shape).leftBar(av.prompt, Tokens.bar).padding(horizontal = Tokens.sp7, vertical = Tokens.sp6),
-        verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
-    ) {
-        for (p in userParts(it.text)) when (p) {
-            is Part.Text -> Text(p.text, style = Type.body, color = av.fg)
-            is Part.Image -> ChatImage(hub, chat, p.path)
-        }
-        if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgFaint)
-        if (it.queued) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
-            Text("Waiting for Claude's next step", Modifier.weight(1f, fill = false), style = Type.footnote, color = av.fgFaint)
-            Button("Send now", { hub.sendNow(it.id) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+        Column(
+            Modifier.widthIn(max = maxWidth * 0.85f).background(av.surface, RoundedCornerShape(Tokens.shapeLg)).padding(horizontal = Tokens.sp8, vertical = Tokens.sp6),
+            verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
+        ) {
+            for (p in userParts(it.text)) when (p) {
+                is Part.Text -> SelectionContainer { Text(p.text, style = Type.body, color = av.fg) }
+                is Part.Image -> ChatImage(hub, chat, p.path)
+            }
+            if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgFaint)
+            if (it.queued) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
+                Text("Waiting for Claude's next step", Modifier.weight(1f, fill = false), style = Type.footnote, color = av.fgFaint)
+                Button("Send now", { hub.sendNow(it.id) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            }
         }
     }
 }
@@ -211,7 +231,7 @@ private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
         else -> "ok"
     }
     val dur = result?.let { r -> duration(r.at - it.use.at) } ?: ""
-    Column(Modifier.fillMaxWidth().clickable { open = !open }.heightIn(min = Tokens.touchSm)) {
+    Column(Modifier.fillMaxWidth().clickable { open = !open }.heightIn(min = Tokens.touch)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.CenterStart) {
                 if (state == "pending") CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint)
@@ -252,7 +272,7 @@ private fun Pre(text: String, wrap: Boolean = true, error: Boolean = false) {
     Box(Modifier.heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState())) {
         Text(
             text,
-            Modifier.then(if (wrap) Modifier else Modifier.horizontalScroll(rememberScrollState())).padding(horizontal = Tokens.sp5, vertical = Tokens.sp4),
+            Modifier.then(if (wrap) Modifier else Modifier.horizontalScroll(rememberScrollState())).padding(Tokens.sp6),
             style = Mono,
             softWrap = wrap,
             color = if (error) av.err else av.fg,
@@ -314,7 +334,7 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String) {
     val agentBar = av.agent.copy(alpha = 0.45f)
     val shown = if (open) it.steps else if (it.running) it.steps.takeLast(3) else emptyList()
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touchSm).clickable(enabled = canOpen) { open = !open }, verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = canOpen) { open = !open }, verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.CenterStart) { StatusDot(DotState.Agent) }
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
@@ -329,11 +349,13 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String) {
             if (canOpen) AvIcon("chevron-right", null, Tokens.icon, Modifier.padding(horizontal = Tokens.sp3).rotate(if (open) 90f else 0f), tint = av.fgFaint)
         }
         if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {
-            if (!open && it.steps.size > shown.size) Text("${it.steps.size - shown.size} earlier steps", Modifier.clickable { open = true }.padding(vertical = Tokens.sp2), style = Type.footnote, color = av.fgFaint)
+            if (!open && it.steps.size > shown.size) Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable { open = true }, verticalAlignment = Alignment.CenterVertically) {
+                Text("${it.steps.size - shown.size} earlier steps", style = Type.footnote, color = av.fgFaint)
+            }
             val running = it.running
             shown.forEachIndexed { i, s -> Box(Modifier.gap(gapAbove(shown.getOrNull(i - 1), s)?.coerceAtMost(Tokens.sp2))) { ItemRow(hub, s, chat, cwd, !running) } }
         }
-        if (open && result != null && !it.running) Box(Modifier.padding(start = Tokens.leadWidth, top = Tokens.sp1, bottom = Tokens.sp4).heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp5)) {
+        if (open && result != null && !it.running) Box(Modifier.padding(start = Tokens.leadWidth, top = Tokens.sp1, bottom = Tokens.sp4).heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp6)) {
             Markdown(result.text.ifEmpty { "(no output)" })
         }
     }

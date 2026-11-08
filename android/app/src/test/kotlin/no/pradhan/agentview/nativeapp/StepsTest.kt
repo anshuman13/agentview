@@ -84,4 +84,16 @@ class StepsTest {
         val r = { c: Double -> ChatEvent("r$c", "result", costUsd = c) }
         assertEquals(0.5 + 0.3 + 0.2, chatCost(listOf(r(0.5), r(0.8), r(0.2))), 1e-9)
     }
+
+    @Test
+    fun gapsFollowAuthorsAndSteps() {
+        val user = Item.User("u", "hi", 0, false, false)
+        val text = Item.Assistant("a", "ok", false)
+        val step = Item.Step("s", use("t", "Bash"), null)
+        assertNull(gapAbove(null, user))
+        assertEquals(Tokens.sp12, gapAbove(user, text))
+        assertEquals(Tokens.sp12, gapAbove(text, user))
+        assertEquals(Tokens.sp4, gapAbove(text, step))
+        assertNull(gapAbove(step, step))
+    }
 }
