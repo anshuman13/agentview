@@ -4,7 +4,7 @@ import { allowedPeer, canon, netbirdIp } from './access.js';
 
 export type DevPort = { port: number; name: string; local: boolean };
 
-const DEV = /^(node|bun|deno|python|ruby|php|java|go|cargo|uvicorn|gunicorn|rails|vite|next|hugo|caddy|nginx)/i;
+const DEV = /^(node|bun|deno|python[\d.]*|ruby|php|uvicorn|gunicorn|rails|hugo|caddy|nginx)$/i;
 const OWN = new Set([7777, 7779, 7790, 7791]);
 
 // Parses `lsof -F cn` into the dev servers listening on this Mac. local marks a port bound to loopback only.
