@@ -7,3 +7,4 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
