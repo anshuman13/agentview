@@ -343,6 +343,13 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         if (!readOnly) link.value = DeepLink(chat = chat)
     }
 
+    // Puts a prompt in the composer of the chat on screen and shows the chat, without sending it.
+    fun draftPrompt(text: String) {
+        val chat = store.wanted
+        setDraft(chat, appendPrompt(draft(chat), text))
+        link.value = DeepLink(chat = chat)
+    }
+
     fun setTheme(value: String) {
         theme.value = value
         prefs.edit().putString("theme", value).apply()

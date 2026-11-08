@@ -174,3 +174,35 @@ fun agoShort(t: Long, now: Long, suffix: String = ""): String {
     }
     return text + suffix
 }
+
+// A diff line with its line number: in the new file for kept and added lines, in the old file for removed ones, 0 for a fold.
+data class DiffRow(val line: DiffLine, val no: Int)
+
+fun diffRows(lines: List<DiffLine>, onlyChanges: Boolean, context: Int = 3): List<DiffRow> {
+    var old = 0
+    var new = 0
+    val numbered = lines.map { l ->
+        DiffRow(l, when (l.mark) { '-' -> ++old; '+' -> ++new; else -> { old++; ++new } })
+    }
+    if (!onlyChanges) return numbered
+    val folded = changesOnly(lines, context)
+    var i = 0
+    return folded.map { f -> if (f.mark == '@') DiffRow(f, 0) else { while (numbered[i].line !== f) i++; numbered[i++] } }
+}
+
+// A file against HEAD as a diff; a file with no committed version is all additions.
+fun fileDiffLines(original: String, content: String): List<DiffLine> =
+    if (original.isEmpty()) content.removeSuffix("\n").split('\n').filter { content.isNotEmpty() }.map { DiffLine('+', it) } else fileDiff(original, content)
+
+fun diffCounts(lines: List<DiffLine>) = lines.count { it.mark == '+' } to lines.count { it.mark == '-' }
+
+fun revertTitle(path: String) = "Revert ${path.substringAfterLast('/')}?"
+const val REVERT_DETAIL = "The file goes back to its last commit, or is deleted when it is new. This cannot be undone."
+
+// The composer text for a comment on a diff line, quoting where it is and what it says.
+fun commentPrompt(path: String, row: DiffRow, comment: String): String {
+    val where = if (row.line.mark == '-') "$path:${row.no} (removed line)" else "$path:${row.no}"
+    return "$where\n> ${row.line.text}\n\n${comment.trim()}"
+}
+
+fun appendPrompt(draft: String, prompt: String) = if (draft.isBlank()) prompt else draft.trimEnd() + "\n\n" + prompt

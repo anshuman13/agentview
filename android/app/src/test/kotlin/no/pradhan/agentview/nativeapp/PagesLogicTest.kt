@@ -270,3 +270,31 @@ class PagesLogicTest {
         assertEquals(true, result)
     }
 }
+
+class ReviewDiffTest {
+    @Test fun rowsNumberNewLinesAndRemovedLinesApart() {
+        val rows = diffRows(fileDiff("a\nb\nc", "a\nB\nc\nd"), false)
+        assertEquals(listOf(1, 2, 2, 3, 4), rows.map { it.no })
+        assertEquals(listOf(' ', '-', '+', ' ', '+'), rows.map { it.line.mark })
+    }
+
+    @Test fun foldedRowsKeepTheirNumbers() {
+        val a = (1..20).joinToString("\n") { "l$it" }
+        val rows = diffRows(fileDiff(a, a.replace("l18", "x")), true)
+        assertEquals('@', rows.first().line.mark)
+        assertEquals(15, rows[1].no)
+        assertEquals(listOf(1 to 1), listOf(diffCounts(rows.map { it.line })))
+    }
+
+    @Test fun aNewFileIsAllAdditions() {
+        assertEquals(listOf('+', '+'), fileDiffLines("", "x\ny\n").map { it.mark })
+        assertTrue(fileDiffLines("", "").isEmpty())
+    }
+
+    @Test fun commentQuotesTheLine() {
+        assertEquals("a/b.kt:3\n> val x = 1\n\nwhy?", commentPrompt("a/b.kt", DiffRow(DiffLine('+', "val x = 1"), 3), " why? "))
+        assertTrue(commentPrompt("f", DiffRow(DiffLine('-', "q"), 2), "c").startsWith("f:2 (removed line)"))
+        assertEquals("one\n\ntwo", appendPrompt("one\n", "two"))
+        assertEquals("two", appendPrompt(" ", "two"))
+    }
+}

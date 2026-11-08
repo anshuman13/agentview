@@ -22,6 +22,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -156,5 +158,19 @@ fun DiffLinesView(lines: List<DiffLine>, lang: Lang, wrap: Boolean) {
     if (lines.isEmpty()) { EmptyState("No changes"); return }
     LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4)) {
         items(lines) { l -> DiffCodeLine(l, lang, wrap, scroll) }
+    }
+}
+
+// A diff with line numbers in the gutter; a long press on a line asks for a comment on it.
+@Composable
+fun NumberedDiffView(rows: List<DiffRow>, lang: Lang, wrap: Boolean, onComment: (DiffRow) -> Unit) {
+    val scroll = rememberScrollState()
+    val haptic = LocalHapticFeedback.current
+    if (rows.isEmpty()) { EmptyState("No changes"); return }
+    LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4)) {
+        items(rows) { r ->
+            val long = if (r.line.mark == '@') null else { { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onComment(r) } }
+            DiffCodeLine(r.line, lang, wrap, scroll, onLongClick = long)
+        }
     }
 }

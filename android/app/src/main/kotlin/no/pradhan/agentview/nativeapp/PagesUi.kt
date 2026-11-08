@@ -3,6 +3,8 @@ package no.pradhan.agentview.nativeapp
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -125,10 +127,10 @@ fun highlighted(line: String, spans: List<SynSpan>): AnnotatedString {
 
 // One line of code or diff: a gutter with the line number or mark, then the text on its diff tint.
 @Composable
-fun CodeLine(number: String, text: AnnotatedString, mark: Char = ' ', wrap: Boolean, scroll: ScrollState, gutter: Dp = Tokens.sp24) {
+fun CodeLine(number: String, text: AnnotatedString, mark: Char = ' ', wrap: Boolean, scroll: ScrollState, gutter: Dp = Tokens.sp24, onLongClick: (() -> Unit)? = null) {
     val c = av
     val bg = when (mark) { '+' -> c.diffAddSoft; '-' -> c.diffDelSoft; '@' -> c.hover; else -> Color.Transparent }
-    Row(Modifier.fillMaxWidth().background(bg).then(if (wrap) Modifier else Modifier.horizontalScroll(scroll))) {
+    Row(Modifier.fillMaxWidth().background(bg).then(if (onLongClick != null) Modifier.combinedClickable(onClick = {}, onLongClick = onLongClick) else Modifier).then(if (wrap) Modifier else Modifier.horizontalScroll(scroll))) {
         Text(number, Modifier.widthIn(min = gutter).padding(start = Tokens.sp4, end = Tokens.sp4), style = Mono, color = c.fgMuted, maxLines = 1)
         Text(text, style = Mono, color = if (mark == '@') c.fgMuted else c.fg, softWrap = wrap)
     }
@@ -136,7 +138,7 @@ fun CodeLine(number: String, text: AnnotatedString, mark: Char = ' ', wrap: Bool
 
 // One diff line as a CodeLine, its mark in the gutter and its text highlighted for `lang`.
 @Composable
-fun DiffCodeLine(l: DiffLine, lang: Lang, wrap: Boolean, scroll: ScrollState, gutter: Dp = Tokens.sp24) {
+fun DiffCodeLine(l: DiffLine, lang: Lang, wrap: Boolean, scroll: ScrollState, gutter: Dp = Tokens.sp24, onLongClick: (() -> Unit)? = null) {
     val text = if (l.mark == '@') AnnotatedString(l.text) else highlighted(l.text, remember(l, lang) { highlightLine(l.text, lang).first })
-    CodeLine(if (l.mark == '@') "" else l.mark.toString(), text, l.mark, wrap, scroll, gutter)
+    CodeLine(if (l.mark == '@') "" else l.mark.toString(), text, l.mark, wrap, scroll, gutter, onLongClick)
 }
