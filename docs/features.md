@@ -232,6 +232,7 @@ Chats start only inside these folders or Paseo worktrees.
   limits that to the listed repo names, `false` turns it off
 - A chat closes after 10 idle minutes with no one viewing it. Reopen it from Recent
 - Chats and Paseo worktrees idle for 12 hours can be deleted (worktree branches are kept)
+- A Paseo worktree whose branch has a merged PR and nothing uncommitted shows Merged and can be removed at once
 
 ## Notifications
 

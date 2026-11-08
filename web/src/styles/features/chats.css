@@ -33,6 +33,7 @@
 .sessions .row.removing .when { display: none; }
 .sessions .row .busy { display: inline-flex; margin: 0 var(--sp-5) 0 auto; }
 .sessions .row .dirty { flex: none; font-size: var(--fs-xs); color: var(--warn); margin-left: var(--sp-3); }
+.sessions .row .merged { flex: none; font-size: var(--fs-xs); color: var(--ok); margin-left: var(--sp-3); }
 .sessions .row.more { font-size: var(--fs-sm); color: var(--fg-muted); }
 @media (hover: hover) { .sessions .row.more:hover { color: var(--fg); text-decoration: underline; } }
 .sessions .group, .sessions .row.group-row {

@@ -69,6 +69,17 @@ export async function createFolder(root: string, name: string) {
   return dir;
 }
 
+// A worktree can go once nothing has it open and it is idle, or once its PR has merged and nothing is left uncommitted.
+export const canRemove = (w: { open: boolean; dirty: number; lastActive: number; merged?: number }, now = Date.now()) =>
+  !w.open && (now - w.lastActive > STALE_MS || Boolean(w.merged && !w.dirty));
+
+async function mergedPr(cwd: string) {
+  const branch = await git(cwd, 'rev-parse', '--abbrev-ref', 'HEAD').catch(() => 'HEAD');
+  if (branch === 'HEAD') return undefined;
+  const { stdout } = await run('gh', ['pr', 'list', '--head', branch, '--state', 'merged', '--json', 'number', '--limit', '1'], { cwd, timeout: 15_000 }).catch(() => ({ stdout: '[]' }));
+  return (JSON.parse(stdout || '[]') as Array<{ number: number }>)[0]?.number;
+}
+
 export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
   const listed = await Promise.all([paseo(['workspace', 'ls', '--json'], 30_000), paseoProjects()]).catch((err) => { if (paseoMissing(err)) return null; throw err; });
   if (!listed) return [];
@@ -84,7 +95,8 @@ export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
       const lastChat = chats.filter((c) => c.cwd && inside(c.cwd, w.cwd)).map((c) => c.lastModified);
       const lastActive = Math.max(lastCommit, ...lastChat, ...edits);
       const open = openCwds.some((c) => inside(c, w.cwd));
-      return { id: w.workspaceId, project: w.project, repo: projects.find((p) => p.name === w.project || p.projectId === w.project)?.path ?? '', name: w.name, cwd: w.cwd, dirty: dirty.length, lastActive, removable: !open && Date.now() - lastActive > STALE_MS };
+      const merged = dirty.length ? undefined : await mergedPr(w.cwd);
+      return { id: w.workspaceId, project: w.project, repo: projects.find((p) => p.name === w.project || p.projectId === w.project)?.path ?? '', name: w.name, cwd: w.cwd, dirty: dirty.length, lastActive, merged, removable: canRemove({ open, dirty: dirty.length, lastActive, merged }) };
     }),
   );
 }
@@ -92,7 +104,7 @@ export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
 export async function removeWorktree(id: string, openCwds: string[]) {
   const w = (await listWorktrees(openCwds)).find((x) => x.id === id);
   if (!w) throw new Error('Worktree not found');
-  if (!w.removable) throw new Error('This worktree was used in the last 12 hours or is open');
+  if (!w.removable) throw new Error('This worktree is open, or was used in the last 12 hours and its PR has not merged');
   await paseo(['workspace', 'archive', id], 60_000).catch(notInstalled);
 }
 

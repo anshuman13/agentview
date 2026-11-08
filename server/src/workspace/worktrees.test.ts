@@ -69,3 +69,14 @@ describe('paseo missing', () => {
     await expect(mod.createWorktree('/repo', 'main')).rejects.toThrow('paseo is not installed');
   });
 });
+
+describe('canRemove', () => {
+  const now = 100 * 3600_000;
+  it('waits 12 idle hours unless the PR merged and nothing is uncommitted', () => {
+    expect(mod.canRemove({ open: false, dirty: 0, lastActive: now - 1000 }, now)).toBe(false);
+    expect(mod.canRemove({ open: false, dirty: 0, lastActive: now - 1000, merged: 7 }, now)).toBe(true);
+    expect(mod.canRemove({ open: false, dirty: 2, lastActive: now - 1000, merged: 7 }, now)).toBe(false);
+    expect(mod.canRemove({ open: true, dirty: 0, lastActive: 0, merged: 7 }, now)).toBe(false);
+    expect(mod.canRemove({ open: false, dirty: 3, lastActive: 0 }, now)).toBe(true);
+  });
+});

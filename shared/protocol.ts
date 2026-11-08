@@ -267,6 +267,8 @@ export type Worktree = {
   cwd: string;
   dirty: number;
   lastActive: number;
+  // The number of the merged pull request from this worktree's branch, if any.
+  merged?: number;
   removable: boolean;
 };
 

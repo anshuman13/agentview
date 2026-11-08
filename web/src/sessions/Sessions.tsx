@@ -157,11 +157,12 @@ export function Sessions() {
           <div
             key={w.id}
             className={`row session worktree ${removing.has(w.id) ? 'removing' : ''}`}
-            title={`${w.name}\n${w.cwd}${w.dirty ? `\n${w.dirty} uncommitted` : ''}${w.removable ? '' : '\nUsed in the last 12 hours or open, so it cannot be removed yet'}`}
+            title={`${w.name}\n${w.cwd}${w.dirty ? `\n${w.dirty} uncommitted` : ''}${w.merged ? `\nPR #${w.merged} merged` : ''}${w.removable ? '' : '\nOpen, or used in the last 12 hours with no merged PR, so it cannot be removed yet'}`}
           >
             <Icon name="git-branch" small />
             <span className="name">{removing.has(w.id) ? 'Removing… ' : ''}{w.name.split('/').pop()}</span>
             {w.dirty > 0 && <span className="dirty" title={`${w.dirty} uncommitted`}>M</span>}
+            {w.merged && <span className="merged" title={`PR #${w.merged} merged`}>Merged</span>}
             <span className="when">{ago(w.lastActive)}</span>
             {removing.has(w.id) ? (
               <span className="busy"><Icon name="loading" small spin /></span>
