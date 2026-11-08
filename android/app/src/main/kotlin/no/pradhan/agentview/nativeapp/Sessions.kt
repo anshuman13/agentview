@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -184,7 +189,7 @@ private fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) 
         g.open.isNotEmpty() -> metaLine("${g.open.size} open", since(g.last))
         else -> metaLine("$chats ${if (chats == 1) "chat" else "chats"}", since(g.last))
     }
-    ListRow(g.name, meta, leading = { AvIcon("folder", null, Tokens.icon) }, onClick = onClick, trailing = {
+    ListRow(g.name, meta, leading = { RepoMark(g.name) }, onClick = onClick, trailing = {
         when {
             glance.needs > 0 -> Badge("${glance.needs}", BadgeTone.Waiting)
             glance.running > 0 -> Badge("${glance.running}", BadgeTone.Running)
@@ -192,6 +197,15 @@ private fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) 
         }
         Chevron()
     })
+}
+
+// A coloured tile with the repo's first letter, the colour fixed by the name.
+@Composable
+private fun RepoMark(name: String) {
+    val hues = listOf(av.hueBlue, av.hueViolet, av.hueTeal, av.hueAmber, av.hueMagenta, av.hueGreen, av.hueOrange, av.hueSky)
+    Box(Modifier.size(Tokens.leadWidth + Tokens.sp2).clip(RoundedCornerShape(Tokens.shapeMd)).background(hues[Math.floorMod(name.hashCode(), hues.size)]), contentAlignment = Alignment.Center) {
+        Text(name.trimStart('.', '_', '-').take(1).uppercase(), style = Type.label, color = av.onColor)
+    }
 }
 
 @Composable
