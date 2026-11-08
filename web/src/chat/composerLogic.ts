@@ -1,7 +1,7 @@
 import { parseWhen, stripWhen } from '../codex/data/engine';
 import { match } from '../workspace/FileSwitcher';
 import { toolId } from '../ops/mcpHelpers';
-import { COMPACT_AT, MAX_GOAL_ROUNDS, type ChatEvent } from '../../../shared/protocol';
+import { COMPACT_AT, MAX_GOAL_ROUNDS, type Account, type ChatEvent } from '../../../shared/protocol';
 import { apiUrl, fetchJson } from '../app/api';
 import { clock, isBlock, span } from '../../../shared/util';
 import { timedMeetings } from '../../../shared/plan';
@@ -158,3 +158,12 @@ export function saveDraft(chat: string, text: string) {
 }
 
 export const uploadPaste = (f: File) => fetchJson<{ path: string }>(apiUrl(`/api/paste?name=${encodeURIComponent(f.name || 'pasted')}`), { method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f });
+
+const CONFIG_DIR: Partial<Record<Account, string>> = { alt: '~/.claude-alt', alt2: '~/.claude-alt2' };
+const shQuote = (s: string) => (/^[\w./~-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
+
+// A shell line that continues this chat in the Claude CLI, on the same account.
+export function resumeCommand(cwd: string, sessionId: string, account: Account) {
+  const dir = CONFIG_DIR[account];
+  return `cd ${shQuote(cwd)} && ${dir ? `CLAUDE_CONFIG_DIR=${dir} ` : ''}claude --resume ${sessionId}`;
+}

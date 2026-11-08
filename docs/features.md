@@ -187,6 +187,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   cards: turns, files changed, failed commands and whether a permission is waiting. Tap it to dismiss
 - "Fork chat" in the chat settings menu (or the palette) starts a new chat that carries the whole conversation so
   far, so two directions can be tried from the same point
+- "Continue in terminal" in the same menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
+  a Work account, to pick the chat up in the Claude CLI. Stop the chat first so two processes do not write to it
 - "Rewind files" under the files of a turn puts them back to how they were before that prompt (later turns' edits
   go too); the conversation itself stays
 

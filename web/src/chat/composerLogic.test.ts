@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stampedNotes } from '../codex/data/meetings';
 import type { Meeting } from '../codex/data/wiki';
-import { accept, addUse, currentMeeting, buildHistory, filesEdited, ghostFor, rankCommands, rankFiles, remember, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
+import { accept, addUse, currentMeeting, buildHistory, filesEdited, ghostFor, rankCommands, rankFiles, remember, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
 import type { ChatEvent } from '../../../shared/protocol';
 
 let n = 0;
@@ -200,5 +200,12 @@ describe('stampedNotes', () => {
   });
   it('ignores blank text', () => {
     expect(stampedNotes('old', '  \n', at)).toBeNull();
+  });
+});
+
+describe('resumeCommand', () => {
+  it('resumes in the chat folder on its account', () => {
+    expect(resumeCommand('/Users/me/repo', 'abc', 'main')).toBe('cd /Users/me/repo && claude --resume abc');
+    expect(resumeCommand("/Users/me/my repo's", 'abc', 'alt')).toBe("cd '/Users/me/my repo'\\''s' && CLAUDE_CONFIG_DIR=~/.claude-alt claude --resume abc");
   });
 });
