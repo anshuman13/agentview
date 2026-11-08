@@ -17,9 +17,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.delay
 
 private data class DeployAsk(val title: String, val detail: String, val action: String, val run: (String) -> Unit, val input: String? = null)
+
+@Composable
+private fun envMetaLine(env: DeployEnv, s: DeployStatus, now: Long): AnnotatedString {
+    val badge = envBadge(env)
+    val color = when (badge?.second) { BadgeTone.Done -> av.ok; BadgeTone.Failed -> av.err; else -> av.accentText }
+    return buildAnnotatedString {
+        if (badge != null) { withStyle(SpanStyle(color = color)) { append(badge.first) }; append(" · ") }
+        append(envMeta(env, s, now))
+    }
+}
 
 // Deploy (web/src/ops/Deploy.tsx): the Velo app's environments, what runs where, deploy and roll back with a confirm.
 @Composable
@@ -57,7 +71,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (load.error.contains("no Velo app")) item { EmptyState("No Velo app here", "This repo has no .deploy/app.yaml") }
                 else item { ErrorHint(load.error) }
-                if (s == null && load.error.isEmpty()) item { Hint("Loading") }
+                if (s == null && load.error.isEmpty()) item { EmptyState("Loading") }
                 if (s != null) {
                     item { SectionHeader(s.app.ifEmpty { "Velo" }) }
                     item {
@@ -72,8 +86,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
                                         "Deploy", { v -> begin("/api/deploy/run", deployBody(s.app, env.name, ref ?: v)) }, if (ref == null) s.head.branch else null,
                                     )
                                 }
-                                ListRow(env.label, envMeta(env, s, now), trailing = {
-                                    envBadge(env)?.let { (t, tone) -> Badge(t, tone) }
+                                ListRow(env.label, envMetaLine(env, s, now), trailing = {
                                     Button("Deploy", { deploy(s.head.sha) }, size = ButtonSize.Sm)
                                     MoreButton { close ->
                                         MenuItem("Deploy a branch or commit...", "rocket", { close(); deploy(null) })
@@ -98,9 +111,11 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
                 job?.let { j ->
                     item {
                         SectionHeader(
-                            if (!j.done) "Deploying" else if (j.ok) "Deployed" else "Deploy did not succeed",
-                            color = if (!j.done) av.accentText else if (j.ok) av.ok else av.err,
-                            action = if (j.done) ({ Button("Close", { job = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) else null,
+                            "Deploy",
+                            action = {
+                                Badge(if (!j.done) "Deploying" else if (j.ok) "Deployed" else "Failed", if (!j.done) BadgeTone.Running else if (j.ok) BadgeTone.Done else BadgeTone.Failed)
+                                if (j.done) Button("Close", { job = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                            },
                         )
                     }
                     item {

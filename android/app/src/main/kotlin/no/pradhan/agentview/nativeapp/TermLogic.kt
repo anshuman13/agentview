@@ -180,11 +180,11 @@ fun parseChrome(text: String): ChromeMsg? = runCatching {
 }.getOrNull()
 
 val CHROME_REASONS = mapOf(
-    "nofda" to "macOS blocks AgentView from finding Chrome. AgentView needs Full Disk Access, and macOS forgets it each time AgentView is rebuilt.",
-    "nochrome" to "Chrome is not running.",
-    "disabled" to "Chrome is running, but remote debugging is off.",
-    "denied" to "Chrome refused the connection.",
-    "timeout" to "Chrome did not answer in time.",
-    "closed" to "The connection to Chrome closed.",
-    "server" to "The AgentView server is not reachable.",
+    "nofda" to "Needs Full Disk Access",
+    "nochrome" to "Chrome is not running",
+    "disabled" to "Remote debugging is off",
+    "denied" to "Chrome refused the connection",
+    "timeout" to "Chrome did not answer",
+    "closed" to "Connection to Chrome closed",
+    "server" to "Server not reachable",
 )

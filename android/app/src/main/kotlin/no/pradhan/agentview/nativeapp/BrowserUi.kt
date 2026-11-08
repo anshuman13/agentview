@@ -60,12 +60,12 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 when (state.state) {
-                    "connecting" -> item { EmptyState("Connecting to Chrome", if (state.own) null else "If Chrome asks to allow remote debugging, click Allow", small = false) }
+                    "connecting" -> item { EmptyState("Connecting to Chrome", if (state.own) null else "Allow remote debugging if Chrome asks", small = false) }
                     "on" -> {
                         val f = frame
                         item {
                             if (f != null) Image(f, tab?.title, Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
-                            else EmptyState(if (tabs.tabs.isNotEmpty()) "Waiting for the tab to draw" else "No tab open in Chrome", "Chrome only draws the tab that is in front. Pick a tab below to bring it forward", small = false)
+                            else EmptyState(if (tabs.tabs.isNotEmpty()) "Waiting for the tab to draw" else "No tab open in Chrome", "Pick a tab below", small = false)
                         }
                         if (tabs.tabs.isNotEmpty()) {
                             item { SectionHeader("Tabs", tabs.tabs.size.toString()) }
@@ -80,7 +80,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                         }
                     }
                     else -> item {
-                        EmptyState("Show your Chrome here", if (state.own && state.reason == "nochrome") "The AgentView Chrome is not running." else CHROME_REASONS[state.reason] ?: state.reason, small = false, action = if (state.reason != "server") ({
+                        EmptyState("Show your Chrome here", if (state.own && state.reason == "nochrome") "Chrome is not running" else CHROME_REASONS[state.reason] ?: state.reason, small = false, action = if (state.reason != "server") ({
                             Button(if (state.reason == "nofda") "Open Full Disk Access settings" else "Connect Chrome", { send("setup") }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
                         }) else null)
                     }

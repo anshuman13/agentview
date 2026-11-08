@@ -1,14 +1,11 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -69,12 +66,12 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val need = shown.count { mcpNeedsYou(it) }
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "MCP Servers", onBack, sub = if (probe.data != null) "$ok connected of ${shown.size}" + if (need > 0) " · $need need you" else "" else null) {
-            Button(if (probe.busy) "Checking" else "Check", { refresh = true; reprobe() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !probe.busy)
+            IconBtn("refresh", "Check", { refresh = true; reprobe() }, enabled = !probe.busy)
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 item { ErrorHint(probe.error) }
-                if (probe.data == null && probe.error.isEmpty()) item { Hint("Checking the servers") }
+                if (probe.data == null && probe.error.isEmpty()) item { EmptyState("Checking the servers") }
                 if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", "Add one with claude mcp add or connect one on claude.ai, then check again.") }
                 listOf("Work" to sections.work, "Personal" to sections.personal).forEach { (label, list) ->
                     if (list.isNotEmpty()) {
@@ -119,21 +116,18 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
             MoreButton { close ->
                 MenuItem(if (hidden) "Show" else "Hide", if (hidden) "eye" else "eye-closed", { close(); setGroup(mcpHideKey(r), if (hidden) "shown" else "hidden") })
                 if (r.account == null) MenuItem("Move to ${if (group == "work") "Personal" else "Work"}", "arrow-swap", { close(); setGroup(mcpGroupKey(r), if (group == "work") "personal" else "work") })
+                if (r.live) MenuItem(if (r.status == "disabled") "Enable" else "Disable for this chat", if (r.status == "disabled") "play" else "circle-slash", { close(); hub.command(mcpToggleCmd(r.name, r.status == "disabled")) })
                 if (url) MenuItem("Open URL", "link-external", { close(); link(r.server.command) })
             }
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
-                if (r.live) item {
-                    Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                        if (r.status == "failed" || r.status == "needs-auth") Button("Reconnect in chat", { hub.command(mcpReconnectCmd(r.name)) }, size = ButtonSize.Sm)
-                        if (r.status == "disabled") Button("Enable", { hub.command(mcpToggleCmd(r.name, true)) }, size = ButtonSize.Sm)
-                        else Button("Disable for this chat", { hub.command(mcpToggleCmd(r.name, false)) }, size = ButtonSize.Sm)
-                    }
-                }
                 item {
                     Group(Modifier.padding(top = Tokens.sp4)) {
-                        ListRow("Status", label + (r.server.version?.let { " · v$it" } ?: ""), trailing = { Badge(label, tone) })
+                        ListRow("Status", r.server.version?.let { "v$it" }, trailing = {
+                            if (r.live && (r.status == "failed" || r.status == "needs-auth")) Button("Reconnect", { hub.command(mcpReconnectCmd(r.name)) }, size = ButtonSize.Sm)
+                            else Badge(label, tone)
+                        })
                         r.server.error?.takeIf { r.live || r.status != "needs-auth" }?.let { Hairline(); ListRow("Error", it, lines = 3) }
                         r.server.command?.let { Hairline(); ListRow(if (url) "URL" else "Command", it) }
                         r.server.env?.takeIf { it.isNotEmpty() }?.let { Hairline(); ListRow("Env", it.joinToString("  ")) }
@@ -150,10 +144,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                         if (tools.isEmpty()) EmptyState("No tools")
                         tools.forEachIndexed { i, t ->
                             if (i > 0) Hairline()
-                            Column(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4)) {
-                                Text(t.name, style = Mono, color = av.fg)
-                                if (t.description.isNotEmpty()) Text(firstLine(t.description), style = Type.subheadline, color = av.fgMuted, maxLines = 3)
-                            }
+                            ListRow(t.name, firstLine(t.description).ifEmpty { null }, lines = 1, metaLines = 2)
                         }
                     }
                 }

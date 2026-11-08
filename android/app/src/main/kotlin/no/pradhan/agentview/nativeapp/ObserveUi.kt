@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -53,15 +55,14 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
                     }
                 }
                 item { ErrorHint(load.error) }
-                if (info == null) { if (load.error.isEmpty()) item { Hint("Loading") } }
+                if (info == null) { if (load.error.isEmpty()) item { EmptyState("Loading") } }
                 else {
-                    if (!hasConfig(info)) item { Hint("No Grafana settings for ${info.repo} yet. The settings below are a guess: check them and save. They live in ${info.file}.") }
                     item(key = "grafana:${info.repo}:$tick") { Grafana(hub, info) }
                     item { SectionHeader("Snowflake") }
                     item {
                         val sf = info.snowflake
                         val connected = sf.hasSecret && sf.account.isNotEmpty() && sf.user.isNotEmpty()
-                        Group { ListRow(if (connected) "${sf.user} on ${sf.account}" else "Not connected", if (connected) listOf(sf.database, sf.schema).filter { it.isNotEmpty() }.joinToString(".").ifEmpty { null } else "Set up the connection on the Mac", trailing = { Tag(if (connected) "Connected" else "Off", if (connected) Status.Ok else Status.Neutral) }) }
+                        Group { ListRow(if (connected) "${sf.user} on ${sf.account}" else "Not connected", if (connected) "Connected" else "Off") }
                     }
                     item(key = "settings:${info.repo}") { ObserveSettings(hub, info) { reload() } }
                 }
@@ -85,7 +86,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
     Column {
         SectionHeader("Grafana", open = open, onToggle = { open = !open })
         if (!open) return@Column
-        if (!info.grafanaServer) { Group { EmptyState("No Grafana server", "Add one with: claude mcp add grafana -s user -e GRAFANA_URL=... -e GRAFANA_API_KEY=... -- mcp-grafana") }; return@Column }
+        if (!info.grafanaServer) { Group { EmptyState("No Grafana server", "Add the Grafana MCP server") }; return@Column }
         val (dash) = rememberLoad(info.repo, "dash") { protocolJson.decodeFromString(GrafanaDashboards.serializer(), hub.read("/api/observe/grafana/dashboards?repo=$repo")) }
         val (panels) = rememberLoad(info.repo, "panels") { protocolJson.decodeFromString(GrafanaPanels.serializer(), hub.read("/api/observe/grafana/panels?repo=$repo")) }
         val (logs) = rememberLoad(info.repo, "logs") { protocolJson.decodeFromString(GrafanaLogs.serializer(), hub.read("/api/observe/grafana/logs?repo=$repo")) }
@@ -102,7 +103,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         } else if (dash.data != null) Group { EmptyState("No dashboards match", "Set grafana.query or grafana.dashboards in the settings") }
 
         SectionHeader("Metrics, last 6 hours")
-        if (panels.busy && panels.data == null) Hint("Loading")
+        if (panels.busy && panels.data == null) EmptyState("Loading")
         ErrorHint(panels.error)
         panels.data?.let { p ->
             Group {
@@ -115,7 +116,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         }
 
         SectionHeader("Error logs, last hour", action = linkAction("Open", logs.data?.link, link))
-        if (logs.busy && logs.data == null) Hint("Loading")
+        if (logs.busy && logs.data == null) EmptyState("Loading")
         ErrorHint(logs.error)
         logs.data?.let { l ->
             Group {
@@ -127,10 +128,9 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         }
 
         SectionHeader("Error patterns", action = linkAction("Open", pats.data?.link, link))
-        if (pats.busy && pats.data == null) Hint("Loading")
+        if (pats.busy && pats.data == null) EmptyState("Loading")
         ErrorHint(pats.error)
         pats.data?.let { p ->
-            if (p.source.isNotEmpty()) Hint(p.source)
             Group {
                 if (p.patterns.isEmpty()) EmptyState("No error patterns")
                 p.patterns.forEachIndexed { i, pat ->
@@ -139,7 +139,6 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
                 }
             }
         }
-        lokiSelector(info).takeIf { it.isNotEmpty() }?.let { Hint(it, mono = true) }
     }
 }
 
@@ -148,14 +147,10 @@ private fun linkAction(label: String, url: String?, link: (String) -> Unit): (@C
 
 @Composable
 private fun PanelRow(p: GrafanaPanel, onClick: () -> Unit) {
-    val vs = p.points.mapNotNull { it.getOrNull(1) }
-    val meta = if (p.last == null) p.error ?: "No data" else if (vs.isNotEmpty()) "min ${panelNum(vs.min())}${p.unit ?: ""}, max ${panelNum(vs.max())}${p.unit ?: ""}" else null
+    val meta = p.last?.let { AnnotatedString(panelNum(it) + (p.unit ?: "")) } ?: buildAnnotatedString { withStyle(SpanStyle(color = av.err)) { append("No data") } }
     ListRow(
         p.title, meta, lines = 1,
-        trailing = {
-            if (p.points.size > 1) Sparkline(p.points)
-            Text(p.last?.let { panelNum(it) + (p.unit ?: "") } ?: "", style = Type.headline, color = if (p.last == null) av.err else av.fg)
-        },
+        trailing = { if (p.points.size > 1) Sparkline(p.points) },
         onClick = if (p.link != null) onClick else null,
     )
 }
@@ -182,16 +177,16 @@ private fun LogRow(l: LogLine) {
     val color = when (l.level) { "error", "critical", "fatal" -> c.err; "warn", "warning" -> c.warn; else -> c.fg }
     Text(
         buildAnnotatedString {
-            withStyle(androidx.compose.ui.text.SpanStyle(color = c.fgFaint)) { append(logClock(l.ts) + "  ") }
-            withStyle(androidx.compose.ui.text.SpanStyle(color = color)) { append(l.line) }
+            withStyle(SpanStyle(color = c.fgFaint)) { append(logClock(l.ts) + "  ") }
+            withStyle(SpanStyle(color = color)) { append(l.line) }
         },
-        Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp1), style = Mono, maxLines = 3, overflow = TextOverflow.Ellipsis,
+        Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), style = Mono, maxLines = 2, overflow = TextOverflow.Ellipsis,
     )
 }
 
 @Composable
 private fun ObserveSettings(hub: Hub, info: ObserveInfo, onSaved: () -> Unit) {
-    var open by rememberSaveable(info.repo) { mutableStateOf(!hasConfig(info)) }
+    var open by rememberSaveable(info.repo) { mutableStateOf(false) }
     var draft by rememberSaveable(info.repo) { mutableStateOf(observeDraft(info)) }
     var state by rememberSaveable(info.repo) { mutableStateOf("") }
     var error by remember(info.repo) { mutableStateOf("") }
