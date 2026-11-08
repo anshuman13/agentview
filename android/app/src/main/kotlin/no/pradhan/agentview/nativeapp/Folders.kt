@@ -135,14 +135,6 @@ fun RepoGroup.items() = open.map { ChatItem(it, null, name) } + recent.map { Cha
 fun statusCount(groups: List<RepoGroup>, status: StatusFilter, saved: Map<String, SavedSession>, seen: Map<String, Long>) =
     groups.sumOf { g -> g.items().count { status.matches(it.state(saved, seen)) } }
 
-fun dotFor(s: ChatState?) = when (s) {
-    ChatState.Running -> DotState.Running
-    ChatState.Needs -> DotState.Warn
-    ChatState.Failed -> DotState.Bad
-    ChatState.Done -> DotState.Ok
-    null -> DotState.Idle
-}
-
 // Pinned chats, live or saved, that match the filter.
 fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatItem> {
     val words = queryWords(filter)

@@ -110,8 +110,6 @@ class FoldersTest {
         assertEquals(listOf("n"), ids(StatusFilter.Needs))
         assertEquals(listOf("s1"), ids(StatusFilter.Done))
         assertEquals(1, statusCount(groups, StatusFilter.Done, bySession, ws.seen))
-        assertEquals(DotState.Warn, dotFor(ChatState.Needs))
-        assertEquals(DotState.Idle, dotFor(null))
     }
 
     @Test

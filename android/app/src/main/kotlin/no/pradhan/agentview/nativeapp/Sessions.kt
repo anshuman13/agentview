@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -117,13 +119,18 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         if (item.live != null) liveRow(item.live, item.repo) else savedRow(item.saved!!, item.repo)
     }
 
+    // Status chips with a count above zero; tapping the chosen one again shows all.
     @Composable
     fun statusChips(of: List<RepoGroup>) {
-        Row(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-            StatusFilter.entries.forEach { f ->
-                Chip("${f.label} ${statusCount(of, f, saved, seen)}", { status = f }, on = status == f)
-            }
+        StatusFilter.entries.filter { it != StatusFilter.All }.forEach { f ->
+            val n = statusCount(of, f, saved, seen)
+            if (n > 0 || status == f) Chip("${f.label} $n", { status = if (status == f) StatusFilter.All else f }, on = status == f)
         }
+    }
+
+    @Composable
+    fun chipRow(content: @Composable () -> Unit) {
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) { content() }
     }
 
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
@@ -137,7 +144,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 PageHeader(repo.name, onBack = { repoKey = null })
-                statusChips(listOf(repo))
+                chipRow { statusChips(listOf(repo)) }
                 val rows = repo.items().map { it.copy(repo = null) }.filter { status.matches(it.state(saved, seen)) }
                 if (rows.isEmpty()) EmptyState(if (byStatus) "No ${status.label.lowercase()} chats in ${repo.name}" else "No chats in ${repo.name} yet", action = { Button("New chat", { newChat = RepoChoice(repo.key, repo.name) }, variant = ButtonVariant.Tinted, icon = "add") })
                 else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Tokens.sp3, bottom = Tokens.fabClear)) {
@@ -150,12 +157,12 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         Column(Modifier.fillMaxSize()) {
             PageHeader("Sessions") { IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) }); IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
             SearchField(filter, { filter = it }, "Search repos and sessions")
-            Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            chipRow {
                 listOf(WORK, PERSONAL).forEach { k ->
                     Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
                 }
+                statusChips(groups)
             }
-            statusChips(groups)
             if (live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()) {
                 val offline = if (waitingForServer) remember { hub.savedChats() } else emptyList()
                 if (offline.isEmpty()) EmptyState(if (waitingForServer) "Waiting for the server" else "No sessions yet", if (waitingForServer) "Check the Mac address." else null)
@@ -236,7 +243,6 @@ private fun RepoMark(name: String) {
 private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, onResume: (() -> Unit)? = null) {
     ListRow(
         title, meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
-        leading = { StatusDot(dotFor(state)) },
         trailing = {
             if (onResume != null) Button("Resume", onResume, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
             when (state) {
