@@ -1,7 +1,7 @@
 import { parseWhen, stripWhen } from '../codex/data/engine';
 import { match } from '../workspace/FileSwitcher';
 import { toolId } from '../ops/mcpHelpers';
-import { COMPACT_AT, MAX_GOAL_ROUNDS, type Account, type ChatEvent } from '../../../shared/protocol';
+import { COMPACT_AT, MAX_GOAL_ROUNDS, type Account, type ChatEvent, type SavedSession } from '../../../shared/protocol';
 import { apiUrl, fetchJson } from '../app/api';
 import { clock, isBlock, span } from '../../../shared/util';
 import { timedMeetings } from '../../../shared/plan';
@@ -37,6 +37,11 @@ function rank<T>(items: T[], key: (t: T) => string, query: string, limit: number
 export const rankCommands = <T extends { name: string }>(commands: T[], query: string, limit = MAX_ROWS) => rank(commands, (c) => c.name, query, limit);
 
 export const rankFiles = (files: string[], query: string, limit = MAX_ROWS) => rank(files, (f) => f, query, limit);
+
+// "@chat:" lists other chats by title; picking one inserts @chat:<session id>, which the server expands to its transcript.
+export const chatQuery = (t: Trigger) => (t?.kind === 'file' && t.query.startsWith('chat:') ? t.query.slice(5) : null);
+
+export const rankChats = (chats: SavedSession[], query: string, limit = MAX_ROWS) => rank(chats.filter((c) => c.title), (c) => c.title, query, limit);
 
 export function accept(text: string, start: number, caret: number, insert: string) {
   const next = `${text.slice(0, start)}${insert} ${text.slice(caret)}`;

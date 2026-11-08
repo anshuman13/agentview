@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stampedNotes } from '../codex/data/meetings';
 import type { Meeting } from '../codex/data/wiki';
-import { accept, addUse, currentMeeting, buildHistory, filesEdited, ghostFor, rankCommands, rankFiles, remember, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
-import type { ChatEvent } from '../../../shared/protocol';
+import { accept, addUse, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
+import type { ChatEvent, SavedSession } from '../../../shared/protocol';
 
 let n = 0;
 const user = (text: string): ChatEvent => ({ id: `u${++n}`, kind: 'user', text, at: n });
@@ -207,5 +207,14 @@ describe('resumeCommand', () => {
   it('resumes in the chat folder on its account', () => {
     expect(resumeCommand('/Users/me/repo', 'abc', 'main')).toBe('cd /Users/me/repo && claude --resume abc');
     expect(resumeCommand("/Users/me/my repo's", 'abc', 'alt')).toBe("cd '/Users/me/my repo'\\''s' && CLAUDE_CONFIG_DIR=~/.claude-alt claude --resume abc");
+  });
+});
+
+describe('chat mentions', () => {
+  it('lists chats by title after @chat:', () => {
+    expect(chatQuery(triggerAt('see @chat:tri', 13))).toBe('tri');
+    expect(chatQuery(triggerAt('see @src', 8))).toBeNull();
+    const chats = [{ sessionId: 'a', title: '/tries worktrees', cwd: '/r' }, { sessionId: 'b', title: 'Day dividers', cwd: '/r' }, { sessionId: 'c', title: '', cwd: '/r' }] as SavedSession[];
+    expect(rankChats(chats, 'tri').map((r) => r.item.sessionId)).toEqual(['a']);
   });
 });

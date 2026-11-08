@@ -188,6 +188,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - `/tries 3 <prompt>` (2 to 4) starts the prompt in that many new chats, each in its own worktree on a `tries/` branch
   off the default branch, so the best attempt can be kept. Paseo makes the worktrees; without Paseo they are plain git
   worktrees in a hidden `.tries` folder next to the repo. These show under Workspace and a clean one can be removed at once
+- `@chat:` in the web composer lists the other chats by title; picking one inserts `@chat:<session id>`, and the server
+  adds that chat's transcript path to the prompt so Claude can read it (the chat shows the prompt as typed)
 - "Fork chat" in the chat settings menu (web and phone, or the palette) starts a new chat that carries the whole conversation so
   far, so two directions can be tried from the same point
 - "Share chat" in the phone chat menu sends the loaded prompts and replies as Markdown to the Android share sheet

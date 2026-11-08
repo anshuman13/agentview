@@ -16,6 +16,7 @@ import { agentResult, agentToolUse, isAgent, patchAgent, taskDone, taskToolUse }
 import { sessionUsage } from './usage.js';
 import { LiveText } from './stream.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, RUN_ID, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, workflowEvents, workflowName, type AgentIds } from './transcript.js';
+import { expandChatMentions } from './chatMentions.js';
 
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 
@@ -434,7 +435,7 @@ export class ClaudeDriver implements AgentDriver {
 
   send(text: string, id?: string, priority?: 'next') {
     if (id) this.sent.push({ id, text });
-    this.inputQueue.push({ ...userMessage(text), ...(priority && { priority }) });
+    this.inputQueue.push({ ...userMessage(expandChatMentions(text)), ...(priority && { priority }) });
     this.wake?.();
   }
 

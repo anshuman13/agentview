@@ -14,10 +14,10 @@ import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
 import { Hl, readFlag, wsUrl, plural, save, storedStrings } from '../ui/util';
 import type { Meeting } from '../codex/data/wiki';
-import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
+import { COMPACT_AT, PERMISSION_MODES, type ChatEvent, type SavedSession } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { ChatSettings, useChatSettings, type Pick } from './ChatSettings';
-import { accept, addUse, append, buildHistory, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, sharedTask, turnEnd, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
+import { accept, addUse, append, buildHistory, chatQuery, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, readDraft, sharedTask, turnEnd, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -69,6 +69,7 @@ export function Composer() {
   const [sel, setSel] = useState(0);
   const [dismissed, setDismissed] = useState('');
   const [files, setFiles] = useState<string[]>([]);
+  const [chats, setChats] = useState<SavedSession[]>([]);
   const [sentHistory, setSentHistory] = useState(() => storedStrings(STORED_KEY));
   const [hist, setHist] = useState<Hist | null>(null);
   const dictate = useDictation(text, setText);
@@ -83,10 +84,12 @@ export function Composer() {
   const trigger = useMemo(() => triggerAt(text, at), [text, at]);
   const shell = trigger?.kind === 'shell';
   const popKey = trigger && trigger.kind !== 'shell' ? `${trigger.kind}:${trigger.start}:${trigger.query}` : '';
+  const chatQ = chatQuery(trigger);
   const items = useMemo(() => {
     if (!trigger || trigger.kind === 'shell' || popKey === dismissed) return [];
+    if (chatQ !== null) return rankChats(chats.filter((c) => c.sessionId !== getState().session.sessionId), chatQ);
     return trigger.kind === 'command' ? rankCommands(commands, trigger.query) : rankFiles(files, trigger.query);
-  }, [trigger, popKey, dismissed, commands, files]);
+  }, [trigger, popKey, dismissed, commands, files, chats, chatQ]);
   const open = items.length > 0;
   const history = useMemo(() => buildHistory(getState().events, sentHistory), [chat, userCount, sentHistory]);
   const ghost = !open && !shell && at === text.length ? ghostFor(text, history) : '';
@@ -101,6 +104,14 @@ export function Composer() {
     fetch(api('/api/files')).then((r) => r.json()).then((f: string[]) => { fileCache.set(cwd, f); if (live) setFiles(f); }).catch(() => {});
     return () => void (live = false);
   }, [trigger?.kind, cwd]);
+
+  const wantChats = chatQ !== null;
+  useEffect(() => {
+    if (!wantChats) return;
+    let live = true;
+    fetch(api('/api/sessions')).then((r) => r.json()).then((l: SavedSession[]) => { if (live && Array.isArray(l)) setChats(l); }).catch(() => {});
+    return () => void (live = false);
+  }, [wantChats]);
 
   useEffect(() => {
     if (draftFor.current === chat) return saveDraft(chat, text);
@@ -149,7 +160,8 @@ export function Composer() {
 
   const choose = (i: number) => {
     if (!trigger || trigger.kind === 'shell' || !items[i]) return;
-    const value = trigger.kind === 'command' ? `/${(items[i].item as { name: string }).name}` : `@${items[i].item as string}`;
+    const it = items[i].item;
+    const value = trigger.kind === 'command' ? `/${(it as { name: string }).name}` : typeof it === 'object' && 'sessionId' in it ? `@chat:${it.sessionId}` : `@${it as string}`;
     const r = accept(text, trigger.start, at, value);
     apply(r.text, r.caret);
   };
@@ -305,7 +317,7 @@ export function Composer() {
 
   const typed = text.trim().length > 0;
   const hint = shell ? 'Runs in the terminal' : '';
-  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? (touch() ? 'Claude reads this next · hold Send to stop' : 'Claude reads this at its next step · ⌘Enter stops and sends') : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files';
+  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? (touch() ? 'Claude reads this next · hold Send to stop' : 'Claude reads this at its next step · ⌘Enter stops and sends') : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files · @chat: chats';
   const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
 
   return (
@@ -423,6 +435,15 @@ export function Composer() {
                 <li key={c.name} id={`${popId}-${i}`} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
                   <span className="cp-name">/<Hl text={c.name} hits={r.hits} /></span>
                   <span className="cp-detail">{c.description}</span>
+                </li>
+              );
+            }
+            if (typeof r.item === 'object' && 'sessionId' in r.item) {
+              const c = r.item as SavedSession;
+              return (
+                <li key={c.sessionId} id={`${popId}-${i}`} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
+                  <span className="cp-name"><Hl text={c.title} hits={r.hits} /></span>
+                  <span className="cp-detail">{c.cwd.split('/').pop()}</span>
                 </li>
               );
             }
