@@ -89,6 +89,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     val rows = remember(items) { items.asReversed() }
     val days = remember(items) { dayDividers(items, System.currentTimeMillis()) }
     val dayOf = remember(items, days) { dayOfRows(items, days) }
+    val rewinds = remember(items) { rewindable(items) }
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, state.events.associate { it.id to it.at }, seen.first, seen.second) }
     DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
@@ -139,7 +140,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                 Column(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) {
                     days[it.id]?.let { DayDivider(it) }
                     if (it.id == newId) NewLine()
-                    ItemRow(hub, it, chatId, cwd, !running, onOpenAgent)
+                    ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && it.id in rewinds)
                 }
             }
             if (state.earlier > 0) item(key = "earlier") {
@@ -198,9 +199,9 @@ private fun JumpButton(modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false) {
     when (it) {
-        is Item.User -> UserRow(hub, it, chat)
+        is Item.User -> UserRow(hub, it, chat, canRewind)
         is Item.Phase -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             Text(it.text, style = Type.label, color = av.agent, fontWeight = FontWeight.SemiBold)
             HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
@@ -237,7 +238,13 @@ private fun BubbleFooter(label: String, action: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun UserRow(hub: Hub, it: Item.User, chat: String) {
+private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
+    var ask by remember { mutableStateOf(false) }
+    if (ask) ConfirmDialog(
+        "Rewind files?",
+        "Puts every file Claude changed back to how it was before this prompt. Edits from later prompts are undone too; the conversation stays.",
+        "Rewind", { ask = false; hub.rewind(it.id) }, onDismiss = { ask = false },
+    )
     UserBubble {
         for (p in userParts(it.text)) when (p) {
             is Part.Text -> SelectionContainer { Text(p.text, style = Type.body, color = av.fg) }
@@ -245,6 +252,7 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String) {
         }
         if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgMuted)
         if (it.queued) BubbleFooter("Waiting for Claude's next step", "Send now") { hub.sendNow(it.id) }
+        if (canRewind) BubbleFooter("", "Rewind files") { ask = true }
     }
 }
 

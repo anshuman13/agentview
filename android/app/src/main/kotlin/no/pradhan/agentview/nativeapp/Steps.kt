@@ -196,6 +196,17 @@ fun dayOfRows(items: List<Item>, days: Map<String, String>): Map<String, String>
     return out
 }
 
+// Prompts whose turn changed files, which the server can put back from its checkpoint.
+fun rewindable(items: List<Item>): Set<String> {
+    val out = HashSet<String>()
+    var prompt: String? = null
+    for (it in items) when {
+        it is Item.User -> prompt = it.id
+        it is Item.File && it.error == null && !it.denied -> prompt?.let { p -> out.add(p) }
+    }
+    return out
+}
+
 // Slack-style New line: the first reply or step that arrived after this phone last showed the chat and before it was opened.
 fun newMarker(items: List<Item>, ats: Map<String, Long>, seen: Long, openedAt: Long): String? {
     if (seen <= 0) return null

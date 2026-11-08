@@ -194,7 +194,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - "Continue in terminal" in the same menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI. Stop the chat first so two processes do not write to it
 - "Rewind files" under the files of a turn puts them back to how they were before that prompt (later turns' edits
-  go too); the conversation itself stays
+  go too); the conversation itself stays. On the phone, a prompt that changed files has the same Rewind files link under it
+  while Claude is idle
 
 ## Review findings
 

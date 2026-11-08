@@ -128,4 +128,13 @@ class StepsTest {
         val items = ids.map { Item.Assistant(it, it, false) }
         assertEquals(mapOf("b" to "Yesterday", "c" to "Yesterday", "d" to "Today"), dayOfRows(items, mapOf("b" to "Yesterday", "d" to "Today")))
     }
+
+    @Test fun rewindableMarksPromptsThatChangedFiles() {
+        val items = listOf(
+            Item.User("u1", "edit", 0, false, false), Item.File("f1", "a.kt", 1, 0, emptyList(), null, false),
+            Item.User("u2", "look", 0, false, false), Item.Assistant("a", "ok", false),
+            Item.User("u3", "try", 0, false, false), Item.File("f3", "b.kt", 0, 0, emptyList(), "failed", false),
+        )
+        assertEquals(setOf("u1"), rewindable(items))
+    }
 }

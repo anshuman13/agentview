@@ -506,6 +506,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun permission(id: String, allow: Boolean, always: Boolean = false) = post(permissionCmd(id, allow, always), store.wanted)
     fun allowBlocked(id: String) = post(allowBlockedCmd(id), store.wanted)
     fun sendNow(id: String) = post(sendNowCmd(id), store.wanted)
+    fun rewind(id: String) = post(rewindCmd(id), store.wanted)
     fun stopTask(toolUseId: String) = post(stopTaskCmd(toolUseId), store.wanted)
     fun setModel(model: String) = post(setModelCmd(model), store.wanted)
     fun setEffort(effort: String) = post(setEffortCmd(effort), store.wanted)
