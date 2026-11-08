@@ -156,7 +156,14 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             }
             statusChips(groups)
             if (live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()) {
-                EmptyState(if (waitingForServer) "Waiting for the server" else "No sessions yet", if (waitingForServer) "Check the Mac address." else null)
+                val offline = if (waitingForServer) remember { hub.savedChats() } else emptyList()
+                if (offline.isEmpty()) EmptyState(if (waitingForServer) "Waiting for the server" else "No sessions yet", if (waitingForServer) "Check the Mac address." else null)
+                else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
+                    item(key = "saved-head") { SectionHeader("Saved on this phone", offline.size.toString()) }
+                    lazyGroup(offline, { "sv-${it.id}" }) { c ->
+                        ListRow(c.title.ifBlank { "Untitled" }, "Offline", onClick = { hub.open(c.id); onOpen() })
+                    }
+                }
                 return@Column
             }
             if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty()) {

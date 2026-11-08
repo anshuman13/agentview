@@ -116,3 +116,16 @@ class OfflineTest {
         assertTrue(!fresh.state.value.settled)
     }
 }
+
+class TranscriptListTest {
+    @get:Rule val tmp = TemporaryFolder()
+
+    @Test
+    fun listsSavedChatsNewestFirst() {
+        val d = TranscriptDisk(tmp.newFolder("t"))
+        val e = RecentChats.Entry(listOf(ChatEvent("e", "assistant", text = "x")), 0)
+        d.save("a", "First", e)
+        d.save("b", "Second", e)
+        assertEquals(listOf("b", "a"), d.list().map { it.id })
+    }
+}

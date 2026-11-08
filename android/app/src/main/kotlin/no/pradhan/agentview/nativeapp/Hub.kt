@@ -171,6 +171,8 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     // The title a chat had when it was last saved to disk, for showing it offline.
     fun savedTitle(chat: String) = disk.load(chat)?.title ?: ""
 
+    fun savedChats() = disk.list()
+
     fun cancelQueued(id: String) = outbox.cancel(id)
 
     private fun flushOutbox() {

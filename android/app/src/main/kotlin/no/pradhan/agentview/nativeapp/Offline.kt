@@ -107,6 +107,10 @@ class TranscriptDisk(private val dir: File, private val keep: Int = CACHED_CHATS
         protocolJson.decodeFromString(SavedChat.serializer(), file(id).readText()).takeIf { it.id == id }
     }.getOrNull()
 
+    fun list(): List<SavedChat> = (dir.listFiles() ?: emptyArray()).sortedByDescending { it.lastModified() }.mapNotNull { f ->
+        runCatching { protocolJson.decodeFromString(SavedChat.serializer(), f.readText()) }.getOrNull()
+    }
+
     fun remove(id: String) { file(id).delete() }
 
     private fun encode(c: SavedChat) = protocolJson.encodeToString(SavedChat.serializer(), c)
