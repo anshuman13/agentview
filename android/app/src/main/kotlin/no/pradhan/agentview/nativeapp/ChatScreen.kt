@@ -15,6 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -57,6 +58,16 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     val ticking = agentsOpen && agents.any { it.status == "running" }
     LaunchedEffect(ticking) { while (ticking) { now = System.currentTimeMillis(); delay(1000) } }
     val status = statusLine(live, session)
+    val cwd = session?.cwd ?: live.cwd
+    val changed = remember(state.events, cwd) { buildTranscript(state.events).filterIsInstance<Item.File>().filter { it.error == null }.map { relPath(it.path, cwd) }.filter { !it.startsWith("/") }.distinct() }
+    var review by rememberSaveable(live.id) { mutableStateOf<Int?>(null) }
+    var reviewed by rememberSaveable(live.id) { mutableStateOf(listOf<String>()) }
+    var reverted by rememberSaveable(live.id) { mutableStateOf(listOf<String>()) }
+    val left = changed - reverted.toSet()
+    review?.let { start ->
+        ChangesPager(hub, left, start, reviewed.toSet(), { reviewed = reviewed + it }, { reverted = reverted + it }, onBack = { review = null })
+        return
+    }
     val sessionId = live.sessionId ?: session?.sessionId
 
     Column(Modifier.fillMaxSize()) {
@@ -82,13 +93,14 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                 BadgedBox(badge = { Badge("$count", if (anyRunning) BadgeTone.Running else BadgeTone.Quiet) }) { IconBtn("hubot", "Agents", { agentsOpen = true }) }
             }
             MoreButton { close ->
+                MenuItem("Review changes", "source-control", { close(); review = 0 }, enabled = left.isNotEmpty())
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
                 MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
                 MenuSeparator()
                 MenuItem("Archive", "archive", { close(); dialog = "archive" }, danger = true, enabled = sessionId != null)
             }
         }
-        Transcript(hub, state, live.id, session?.cwd ?: live.cwd, running, onOpenAgent, Modifier.weight(1f).fillMaxWidth())
+        Transcript(hub, state, live.id, cwd, running, onOpenAgent, Modifier.weight(1f).fillMaxWidth())
         PendingList(state.pending, session?.permissionMode ?: "default", hub)
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")

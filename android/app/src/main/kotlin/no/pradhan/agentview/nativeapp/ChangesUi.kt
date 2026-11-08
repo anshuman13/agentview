@@ -157,14 +157,15 @@ fun ChangesPager(hub: Hub, paths: List<String>, start: Int, reviewed: Set<String
     val counts = remember { androidx.compose.runtime.mutableStateMapOf<String, Pair<Int, Int>>() }
     var ask by remember { mutableStateOf<String?>(null) }
     var comment by remember { mutableStateOf<Pair<String, DiffRow>?>(null) }
-    val path = paths.getOrNull(pager.currentPage) ?: return
+    if (paths.isEmpty()) { LaunchedEffect(Unit) { onBack() }; return }
+    val path = paths[pager.currentPage.coerceIn(0, paths.lastIndex)]
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val c = counts[path]
 
     Column(Modifier.fillMaxSize()) {
         PageHeader(path.substringAfterLast('/'), onBack, subtitle = {
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Text("${pager.currentPage + 1} of ${paths.size}", maxLines = 1)
+                Text("${paths.indexOf(path) + 1} of ${paths.size}", maxLines = 1)
                 if (c != null) {
                     Text("+${c.first}", color = av.diffAdd, maxLines = 1)
                     Text("-${c.second}", color = av.diffDel, maxLines = 1)
