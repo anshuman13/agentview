@@ -101,7 +101,7 @@ fun FileTag(name: String, dir: Boolean = false) {
         FileHue.Green -> c.fileGreen; FileHue.Red -> c.fileRed; FileHue.Pink -> c.filePink; FileHue.Cyan -> c.fileCyan
         FileHue.Gray -> c.fileGray; FileHue.Folder -> c.fileFolder
     }
-    Text(fileTag(name), style = Mono.copy(fontSize = Tokens.fsCaption2), color = color, maxLines = 1, softWrap = false)
+    Text(fileTag(name), style = Mono.copy(fontSize = Tokens.fsCaption), color = color, maxLines = 1, softWrap = false)
 }
 
 @Composable

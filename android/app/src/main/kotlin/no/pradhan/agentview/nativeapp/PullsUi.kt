@@ -18,7 +18,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 
 // Pull Requests (web/src/ops/GitHub.tsx): the repo's open PRs in three groups, and a PR page with review actions.
 @Composable
@@ -45,13 +49,12 @@ fun PullsScreen(hub: Hub, onBack: () -> Unit) {
                     problem != null -> item { EmptyState(problem.title, problem.text + (problem.cmd?.let { "\n$it" } ?: ""), small = false) }
                     load.error.isNotEmpty() -> item { ErrorHint(load.error) }
                     load.data == null -> item { Hint("Loading") }
-                    else -> prGroups(load.data).forEach { g ->
+                    else -> prGroups(load.data).filter { it.prs.isNotEmpty() }.forEach { g ->
                         item(key = g.title) {
                             var shown by rememberSaveable(g.title) { mutableStateOf(true) }
                             Column {
                                 SectionHeader(g.title, g.prs.size.toString(), open = shown, onToggle = { shown = !shown })
                                 if (shown) Group {
-                                    if (g.prs.isEmpty()) EmptyState(g.empty)
                                     g.prs.forEachIndexed { i, p ->
                                         if (i > 0) Hairline(lead = true)
                                         PrRow(p, now) { open = p.number }
@@ -104,6 +107,7 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "#${pr.number}", onBack, sub = pr.branch) {
             MoreButton { close ->
+                MenuItem("Ask Claude to review", "sparkle", { close(); hub.askClaude(reviewPrPrompt(pr.number)) })
                 MenuItem("Open on GitHub", "link-external", { close(); link(pr.url) })
                 MenuSeparator()
                 MERGE_METHODS.forEach { (m, label) ->
@@ -116,7 +120,13 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
             LazyColumn(Modifier.fillMaxSize()) {
                 item {
                     Group(Modifier.padding(top = Tokens.sp4)) {
-                        ListRow(pr.title, "${pr.author} · ${pr.branch} · ${agoShort(isoMillis(pr.updatedAt), now)}", lines = 3, leading = { StatusDot(checkDot(pr.checks)) }, trailing = { Counts(pr.additions, pr.deletions); PrState(pr) })
+                        val meta = buildAnnotatedString {
+                            append("${pr.author} · ${pr.branch} · ${agoShort(isoMillis(pr.updatedAt), now)} · ")
+                            withStyle(SpanStyle(color = av.diffAdd)) { append("+${pr.additions}") }
+                            append(" ")
+                            withStyle(SpanStyle(color = av.diffDel)) { append("-${pr.deletions}") }
+                        }
+                        ListRow(pr.title, meta, lines = 3, leading = { StatusDot(checkDot(pr.checks)) }, trailing = { PrState(pr) })
                     }
                 }
                 if (busy.isNotEmpty()) item { Hint("Running ${busy.replace('_', ' ')}...") }
@@ -125,48 +135,52 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
                 else {
                     item { Column { Findings(hub, pr.number.toString()) { openFile = it.file } } }
                     item { SectionHeader("Description") }
-                    item { Group { if (d.body.isBlank()) EmptyState("No description") else Column(Modifier.padding(Tokens.sp7)) { Markdown(d.body) } } }
-                    item { SectionHeader("Checks", d.checks.size.toString()) }
-                    item {
-                        Group {
-                            if (d.checks.isEmpty()) EmptyState("No checks")
-                            d.checks.forEachIndexed { i, c ->
-                                if (i > 0) Hairline(lead = true)
-                                ListRow(c.name, lines = 1, leading = { StatusDot(checkDot(c.state)) }, onClick = if (c.url.isNotEmpty()) ({ link(c.url) }) else null)
+                    item { Group { if (d.body.isBlank()) EmptyState("No description") else Column(Modifier.padding(Tokens.listPad)) { Markdown(d.body) } } }
+                    if (d.checks.isNotEmpty()) {
+                        item { SectionHeader("Checks", d.checks.size.toString()) }
+                        item {
+                            Group {
+                                d.checks.forEachIndexed { i, c ->
+                                    if (i > 0) Hairline(lead = true)
+                                    ListRow(c.name, lines = 1, leading = { StatusDot(checkDot(c.state)) }, onClick = if (c.url.isNotEmpty()) ({ link(c.url) }) else null)
+                                }
                             }
                         }
                     }
-                    item { SectionHeader("Reviews", d.reviews.size.toString()) }
-                    item {
-                        Group {
-                            if (d.reviews.isEmpty()) EmptyState("No reviews")
-                            d.reviews.forEachIndexed { i, r ->
-                                if (i > 0) Hairline()
-                                ListRow(r.author, agoShort(isoMillis(r.at), now), trailing = { reviewLabel(r.state)?.let { (l, t) -> Tag(l, t) } })
-                                if (r.body.isNotBlank()) Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp6)) { Markdown(r.body) }
+                    if (d.reviews.isNotEmpty()) {
+                        item { SectionHeader("Reviews", d.reviews.size.toString()) }
+                        item {
+                            Group {
+                                d.reviews.forEachIndexed { i, r ->
+                                    if (i > 0) Hairline()
+                                    ListRow(r.author, agoShort(isoMillis(r.at), now), trailing = { reviewLabel(r.state)?.let { (l, t) -> Tag(l, t) } })
+                                    if (r.body.isNotBlank()) Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp6)) { Markdown(r.body) }
+                                }
                             }
                         }
                     }
-                    item { SectionHeader("Commits", d.commits.size.toString()) }
-                    item {
-                        Group {
-                            if (d.commits.isEmpty()) EmptyState("No commits")
-                            d.commits.forEachIndexed { i, c ->
-                                if (i > 0) Hairline()
-                                ListRow(firstLine(c.message), shortSha(c.oid))
+                    if (d.commits.isNotEmpty()) {
+                        item { SectionHeader("Commits", d.commits.size.toString()) }
+                        item {
+                            Group {
+                                d.commits.forEachIndexed { i, c ->
+                                    if (i > 0) Hairline()
+                                    ListRow(firstLine(c.message), shortSha(c.oid))
+                                }
                             }
                         }
                     }
-                    item { SectionHeader("Files changed", d.files.size.toString()) }
-                    item {
-                        Group {
-                            if (d.files.isEmpty()) EmptyState("No files")
-                            d.files.forEachIndexed { i, f ->
-                                if (i > 0) Hairline(lead = true)
-                                val name = f.path.substringAfterLast('/')
-                                val shown = openFile == f.path
-                                ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { openFile = if (shown) null else f.path })
-                                if (shown) PatchView(diffs[f.path] ?: "No diff", f.path)
+                    if (d.files.isNotEmpty()) {
+                        item { SectionHeader("Files changed", d.files.size.toString()) }
+                        item {
+                            Group {
+                                d.files.forEachIndexed { i, f ->
+                                    if (i > 0) Hairline(lead = true)
+                                    val name = f.path.substringAfterLast('/')
+                                    val shown = openFile == f.path
+                                    ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { openFile = if (shown) null else f.path })
+                                    if (shown) PatchView(diffs[f.path] ?: "No diff", f.path)
+                                }
                             }
                         }
                     }
@@ -175,14 +189,13 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
             }
         }
         HorizontalDivider(color = av.border, thickness = Tokens.hairline)
-        Column(Modifier.fillMaxWidth().padding(Tokens.sp6), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            TextField(text, { text = it }, placeholder = "Leave a comment", maxLines = 4)
-            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Button("Approve", { confirm = "Approve #${pr.number}?" to { act("approve", "review", reviewBody("approve", text)) { text = "" } } }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, enabled = busy.isEmpty())
-                Button("Request changes", { act("request_changes", "review", reviewBody("request_changes", text)) { text = "" } }, size = ButtonSize.Sm, enabled = busy.isEmpty() && text.isNotBlank())
-                Button("Comment", { act("comment", "review", reviewBody("comment", text)) { text = "" } }, size = ButtonSize.Sm, enabled = busy.isEmpty() && text.isNotBlank())
+        Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+            TextField(text, { text = it }, Modifier.weight(1f), placeholder = "Leave a comment", maxLines = 4)
+            Button("Approve", { confirm = "Approve #${pr.number}?" to { act("approve", "review", reviewBody("approve", text)) { text = "" } } }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, enabled = busy.isEmpty())
+            MoreButton { close ->
+                MenuItem("Comment", "comment", { close(); act("comment", "review", reviewBody("comment", text)) { text = "" } }, enabled = busy.isEmpty() && text.isNotBlank())
+                MenuItem("Request changes", "request-changes", { close(); act("request_changes", "review", reviewBody("request_changes", text)) { text = "" } }, enabled = busy.isEmpty() && text.isNotBlank())
             }
-            Button("Ask Claude to review", { hub.askClaude(reviewPrPrompt(pr.number)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         }
     }
     confirm?.let { (title, run) -> ConfirmDialog(title, pr.title, title.substringBefore(' '), run, danger = false, onDismiss = { confirm = null }) }
