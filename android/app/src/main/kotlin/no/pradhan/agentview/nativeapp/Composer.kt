@@ -126,10 +126,13 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     when (sheet) {
         Picker.Settings -> Sheet({ sheet = null }, "Chat settings", padded = false, full = false) {
             val account = session?.account ?: "main"
-            if ((session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null) ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); sheet = Picker.Account })
-            ListRow("Permission mode", MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", onClick = { sheet = Picker.Mode })
-            ListRow("Model", shortModel(modelName(session)), onClick = { sheet = Picker.Model })
-            session?.effort?.let { ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { sheet = Picker.Effort }) }
+            Group {
+                if ((session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null) { ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); sheet = Picker.Account }, trailing = { Chevron() }); Hairline() }
+                ListRow("Permission mode", MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", onClick = { sheet = Picker.Mode }, trailing = { Chevron() })
+                Hairline()
+                ListRow("Model", shortModel(modelName(session)), onClick = { sheet = Picker.Model }, trailing = { Chevron() })
+                session?.effort?.let { Hairline(); ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { sheet = Picker.Effort }, trailing = { Chevron() }) }
+            }
         }
         Picker.Mode -> PickerSheet("Permission mode", PERMISSION_MODES.map { Choice(it, MODES[it]?.label ?: it, MODES[it]?.detail ?: "") }, session?.permissionMode ?: "default", { hub.setMode(it) }) { sheet = null }
         Picker.Model -> PickerSheet("Select model", (session?.models ?: emptyList()).map { Choice(it.value, it.displayName, it.description) }, if (session?.team == true) "team" else session?.model, { hub.setModel(it) }) { sheet = null }
@@ -149,10 +152,15 @@ private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, gly
 @Composable
 private fun PickerSheet(title: String, items: List<Choice>, current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     Sheet(onDismiss, title, padded = false, full = false) {
-        for (c in items) ListRow(
-            c.label, c.detail,
-            onClick = { onPick(c.value); onDismiss() },
-            trailing = if (c.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null,
-        )
+        Group {
+            items.forEachIndexed { i, c ->
+                if (i > 0) Hairline()
+                ListRow(
+                    c.label, c.detail,
+                    onClick = { onPick(c.value); onDismiss() },
+                    trailing = if (c.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null,
+                )
+            }
+        }
     }
 }

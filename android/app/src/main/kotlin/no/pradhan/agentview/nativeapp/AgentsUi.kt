@@ -58,7 +58,7 @@ private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, onBack: () 
     val clip = LocalClipboardManager.current
     Column(Modifier.fillMaxSize()) {
         PageHeader(a.description, onBack, subtitle = { Text(agentMeta(a, now), maxLines = 1) }) {
-            if (running && a.group == null) Button("Stop", { hub.stopTask(a.id) }, size = ButtonSize.Sm)
+            if (running && a.group == null) Button("Stop", { hub.stopTask(a.id) }, Modifier.padding(end = Tokens.sp6), variant = ButtonVariant.Danger, size = ButtonSize.Sm)
         }
         val pad = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2)
         LazyColumn(Modifier.fillMaxSize()) {

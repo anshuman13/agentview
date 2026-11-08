@@ -3,8 +3,9 @@ package no.pradhan.agentview.nativeapp
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 
-// The pages the Codex tab reaches from its menu beyond Overview and Tasks: Meetings, Wiki and Jobs with the pages under them.
-// A route is "meetings", "meeting:<key>", "person:<name>", "wiki", "wiki:<key>", "jobs" or "job:<key>".
+// The pages the Codex tab shows beyond Overview, Tasks and Goals: Meetings, Wiki and Jobs with the pages under them.
+// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>", "person:<name>", "wiki:<key>", "job:<key>", "series:<key>", "review" or "autopilot".
+val EXTRA_ROOTS = setOf("meetings", "jobs", "wiki")
 const val ROUTE_SEP = '\u0001'
 
 fun routesOf(text: String): List<String> = if (text.isEmpty()) emptyList() else text.split(ROUTE_SEP)

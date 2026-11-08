@@ -287,7 +287,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
                 LRow(verticalAlignment = Alignment.CenterVertically) {
                     Text(m.title?.ifEmpty { null } ?: "Untitled", Modifier.weight(1f), style = Type.title)
                     if (state == MState.Live && link != null) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                    else if (link != null && isCal) Button("Calendar", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    else if (link != null && isCal) IconBtn("link-external", "Open in calendar", { uri.openUri(link) })
                 }
                 pageMeta(m).takeIf { it.isNotEmpty() }?.let { Text(it, style = Type.subheadline, color = av.fgMuted) }
                 stateLine(m, now)?.let { Text(it, style = Type.callout, color = if (state == MState.Missing) av.warn else av.info) }
@@ -303,7 +303,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             actionGroup(review, m, now, actions, onTask)
         }
         item { SectionHeader("Summary", action = if (!m.str("summary").isNullOrEmpty()) { { Button("Pin", { pinning = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } } else null) }
-        m.str("summary")?.takeIf { it.isNotEmpty() }?.let { item { Markdown(it, Modifier.padding(horizontal = Tokens.listPad)) } }
+        m.str("summary")?.takeIf { it.isNotEmpty() }?.let { item { Markdown(it, Modifier.padding(horizontal = Tokens.listPad)) } } ?: item { EmptyState("No summary yet", "It is written after the meeting ends") }
         if (pins.isNotEmpty()) {
             item { SectionHeader("Pinned", pins.size.toString()) }
             item { PinList(pins, ops) }

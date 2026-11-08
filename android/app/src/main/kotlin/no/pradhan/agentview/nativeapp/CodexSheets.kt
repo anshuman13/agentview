@@ -92,10 +92,10 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
         if (text != (latest.text ?: "")) patch["text"] = text.trim().ifEmpty { null }
         if (patch.isNotEmpty()) actions.edit(latest, patch)
     }
-    Sheet(onDismiss = { commit(); onDismiss() }, title = "Task") {
+    Sheet(onDismiss = { commit(); onDismiss() }, title = "Task", action = { IconBtn("close", "Close", { commit(); onDismiss() }) }) {
         Column(Modifier.imePadding().padding(vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
             FieldLabel("Title")
-            TextField(title, { title = it }, placeholder = "Title", style = Type.headline.copy(fontSize = Tokens.fs3xl))
+            TextField(title, { title = it }, placeholder = "Title", style = Type.title)
             FieldLabel("Notes")
             TextField(text, { text = it }, placeholder = "Notes", minLines = 3)
             FieldLabel("Due")
@@ -253,7 +253,7 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
         is Need.OverdueAll -> ListRow("${n.rows.size} overdue", "Move them all to today", trailing = { Button("Move to today", { actions.moveToToday(n.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
         is Need.JustEnded -> ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
         is Need.Ask -> ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · ").atWord(), metaLines = 4, onClick = { onOpen(n.row) },
-            below = { Button("Dismiss", { actions.dismiss(n.row) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm); Button("Add", { actions.accept(n.row) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
+            below = { Button("Add", { actions.accept(n.row) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm); Button("Dismiss", { actions.dismiss(n.row) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
         is Need.Risk -> ListRow(n.row.title ?: "", "At risk · due ${whenText(n.due, now)} · ${minutesText(n.short)} short", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
         is Need.Slack -> NeedCard(n.bullet.title, "Slack" + (n.bullet.why.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), n.bullet.url, { hub.hideNeed(slackKey(n.bullet)) }, null) {
             if (hub.codex.capture(listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), "open", n.profile, null, mapOf("text" to n.bullet.url)) != null) hub.hideNeed(slackKey(n.bullet))
@@ -270,8 +270,8 @@ private fun String.atWord(max: Int = 110) = if (length <= max) this else substri
 private fun NeedCard(title: String, meta: String, url: String?, onDismiss: () -> Unit, onOpen: (() -> Unit)?, onTask: () -> Unit) {
     val uri = LocalUriHandler.current
     ListRow(title, meta.atWord(), metaLines = 4, onClick = onOpen, below = {
-        Button("Dismiss", onDismiss, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
-        Button("Make task", onTask, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+        Button("Make task", onTask, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
+        Button("Dismiss", onDismiss, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         if (url != null && url.startsWith("http")) MoreButton { close -> MenuItem("Open in Slack", "link", { close(); uri.openUri(url) }) }
     })
 }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,13 +87,12 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                 MenuItem("Archive", "archive", { close(); dialog = "archive" }, danger = true, enabled = sessionId != null)
             }
         }
-        HorizontalDivider(color = av.border, thickness = Tokens.hairline)
         Transcript(hub, state, live.id, session?.cwd ?: live.cwd, running, onOpenAgent, Modifier.weight(1f).fillMaxWidth())
         PendingList(state.pending, session?.permissionMode ?: "default", hub)
         Composer(hub, live.id, session, running, state.pending.isNotEmpty())
     }
 
-    if (agentsOpen) Sheet(onDismiss = { agentsOpen = false }, title = "Agents", padded = false) {
+    if (agentsOpen) Sheet(onDismiss = { agentsOpen = false }, title = "Agents", padded = false, full = false) {
         AgentList(agents, now) { agentsOpen = false; onOpenAgent(it) }
     }
 
