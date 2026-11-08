@@ -54,6 +54,9 @@ class VoiceNewChatTest {
         assertNull(voiceAnswer(listOf(user, ChatEvent("a", "assistant", text = "One", streaming = true)), q))
         assertEquals("Two chats.", voiceAnswer(listOf(ChatEvent("old", "assistant", text = "stale"), user, ChatEvent("a", "assistant", text = "Two chats. ")), q))
         assertNull(voiceAnswer(listOf(ChatEvent("a", "assistant", text = "stale")), q))
+        val tool = ChatEvent("t", "tool_use", text = "")
+        assertNull(voiceAnswer(listOf(user, ChatEvent("a", "assistant", text = "Let me check."), tool), q, busy = true))
+        assertEquals("Final.", voiceAnswer(listOf(user, ChatEvent("a", "assistant", text = "Let me check."), tool, ChatEvent("b", "assistant", text = "Final.")), q))
         assertNull(voiceAnswer(listOf(user, ChatEvent("a", "assistant", text = "old answer")), q, before = 1))
         assertEquals("new", voiceAnswer(listOf(user, ChatEvent("a", "assistant", text = "old"), user.copy(id = "u2"), ChatEvent("b", "assistant", text = "new")), q, before = 1))
     }

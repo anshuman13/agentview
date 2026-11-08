@@ -64,7 +64,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val notifier = Notifier(app)
 
     val models = MutableStateFlow(parseModels(prefs.getString("models", null)))
-    val voiceRequest = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val voiceRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected
@@ -321,16 +321,20 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         }
     }
 
-    // The finished answer to a question put to the Codex chat, or null when it could not be asked or took too long.
-    suspend fun askAnswer(question: String, profile: String): String? {
-        if (readOnly) { notice.value = "Read-only check, nothing was sent"; return null }
-        if (asking) return null
+    // The finished answer to a question put to the Codex chat, or a failure that says why there is none.
+    suspend fun askAnswer(question: String, profile: String): Result<String> {
+        if (readOnly) { notice.value = "Read-only check, nothing was sent"; return Result.failure(Exception("Read-only check, nothing was sent")) }
+        if (asking) return Result.failure(Exception("A Codex question is already running"))
         asking = true
         try {
-            val (id, before) = sendCodex(voicePrompt(question, store.state.value.live), profile, question) ?: return null
+            val (id, before) = sendCodex(voicePrompt(question, store.state.value.live), profile, question) ?: return Result.failure(Exception("The Codex chat did not open"))
             return withTimeoutOrNull(120_000) {
-                store.state.mapNotNull { s -> if (s.shownId == id) voiceAnswer(s.events, question, before) else null }.first()
-            }
+                store.state.mapNotNull { s ->
+                    if (s.shownId != id) return@mapNotNull Result.failure<String>(Exception("The answer is in the Codex chat"))
+                    val chat = s.live.firstOrNull { it.id == id }
+                    voiceAnswer(s.events, question, before, busy = chat != null && (chat.running || chat.pending > 0))?.let { Result.success(it) }
+                }.first()
+            } ?: Result.failure(Exception("No answer yet, it may be in the Codex chat"))
         } finally {
             asking = false
         }

@@ -196,7 +196,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         if (!waitingForServer) Fab("add", "New chat", { newChat = RepoChoice(null, "") }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
     }
 
-    newChat?.let { NewChatSheet(hub, it.key, groups.map { RepoChoice(it.key, it.name) }, onDismiss = { newChat = null }) }
+    newChat?.let { NewChatSheet(hub, it.key, unfiltered.map { RepoChoice(it.key, it.name) }, onDismiss = { newChat = null }) }
     renaming?.let { (id, title) -> RenameDialog(title, onSave = { hub.rename(id, it) }, onDismiss = { renaming = null }) }
     archiving?.let { (id, title) -> ConfirmDialog("Archive this chat?", "$title\n\nYou can restore it from the bin for 24 hours.", "Archive", { hub.archive(id) }) { archiving = null } }
     closing?.let { c -> ConfirmDialog("Close this chat?", "${c.title}\n\nClaude is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(c.id) }) { closing = null } }

@@ -64,6 +64,10 @@ internal fun icon(t: Tab): String = when (t) {
 }
 
 private const val RAIL_MIN_DP = 600
+// Material window size class: two panes from 840dp.
+private const val EXPANDED_MIN_DP = 840
+
+fun isExpanded(widthDp: Int) = widthDp >= EXPANDED_MIN_DP
 
 private class Dest(val label: String, val icon: String, val selected: Boolean, val badge: Int, val onClick: () -> Unit)
 
@@ -222,9 +226,9 @@ fun App(hub: Hub) {
 @Composable
 private fun TwoPane(hub: Hub, onOpenAgent: (String) -> Unit) {
     Row(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(2f).fillMaxHeight()) { SessionsScreen(hub, onOpen = {}) }
+        Box(Modifier.width(Tokens.sidebarW).fillMaxHeight().background(av.surface)) { SessionsScreen(hub, onOpen = {}) }
         Box(Modifier.width(Tokens.hairline).fillMaxHeight().background(av.border))
-        Box(Modifier.weight(3f).fillMaxHeight()) { ChatScreen(hub, onOpenAgent) }
+        Box(Modifier.weight(1f).fillMaxHeight()) { ChatScreen(hub, onOpenAgent) }
     }
 }
 

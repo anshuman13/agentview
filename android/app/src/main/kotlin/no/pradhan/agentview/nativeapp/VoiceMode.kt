@@ -79,8 +79,7 @@ class VoiceMode(private val ctx: Context, private val hub: Hub, private val scop
     private fun ask(question: String) {
         _state.value = VoiceState(VoicePhase.Thinking, question)
         job = scope.launch {
-            val answer = hub.askAnswer(question, hub.codexProfile)
-            if (answer == null) fail("No answer came back") else speak(question, answer)
+            hub.askAnswer(question, hub.codexProfile).fold({ speak(question, it) }, { fail(it.message ?: "No answer came back") })
         }
     }
 
@@ -89,7 +88,7 @@ class VoiceMode(private val ctx: Context, private val hub: Hub, private val scop
         at = 0
         _state.value = VoiceState(VoicePhase.Speaking, question, answer)
         val engine = tts
-        if (engine != null) say(engine, 0)
+        if (engine != null) { engine.setOnUtteranceProgressListener(progress(question, answer)); say(engine, 0) }
         else tts = TextToSpeech(ctx) { status ->
             main.post {
                 val e = tts

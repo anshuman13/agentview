@@ -16,7 +16,7 @@ class RepoChoice(val key: String?, val name: String)
 fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss: () -> Unit) {
     val models by hub.models.collectAsState()
     var repo by remember { mutableStateOf(repoKey) }
-    var model by remember { mutableStateOf(startModel(models, hub.lastModel)) }
+    var model by remember(models) { mutableStateOf(startModel(models, hub.lastModel)) }
     Sheet(onDismiss, "New chat", padded = false, full = false) {
         if (repoKey == null && repos.isNotEmpty()) {
             SectionHeader("Repo")

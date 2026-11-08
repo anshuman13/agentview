@@ -15,8 +15,9 @@ fun voicePrompt(question: String, chats: List<LiveChat>): String {
     return listOfNotNull(question, if (lines.isNotEmpty()) "\nMy open chats:\n$lines" else null, "\n$VOICE_RULES").joinToString("\n")
 }
 
-// The finished answer to the question, or null while Claude is still writing it.
-fun voiceAnswer(events: List<ChatEvent>, question: String, before: Int = 0): String? {
+// The finished answer to the question, or null while Claude is still writing or working.
+fun voiceAnswer(events: List<ChatEvent>, question: String, before: Int = 0, busy: Boolean = false): String? {
+    if (busy) return null
     if (events.count { it.kind == "user" && it.text.startsWith(question) } <= before) return null
     val asked = events.indexOfLast { it.kind == "user" && it.text.startsWith(question) }
     val after = events.drop(asked + 1)
