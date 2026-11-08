@@ -12,6 +12,9 @@ class ComposerLogicTest {
         assertEquals(Trigger(0, "co"), commandTrigger("/co", 3))
         assertEquals(Trigger(6, ""), commandTrigger("hello /", 7))
         assertNull(commandTrigger("a/b", 3))
+        assertEquals(Trigger(4, "Ses", file = true), commandTrigger("fix @Ses", 8))
+        assertNull(commandTrigger("me@x", 4))
+        assertEquals(listOf("web/src/Sessions.tsx", "android/Sessions.kt"), rankFiles(listOf("README.md", "android/Sessions.kt", "web/src/Sessions.tsx"), "sessions.t"))
         assertNull(commandTrigger("/co now", 7))
         assertEquals(Trigger(0, "c"), commandTrigger("/c more text", 2))
     }

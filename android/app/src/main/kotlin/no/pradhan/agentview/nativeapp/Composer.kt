@@ -26,6 +26,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,7 +56,15 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
 
     val trigger = commandTrigger(text.text, text.selection.end)
     val key = trigger?.let { "${it.start}:${it.query}" } ?: ""
-    val suggestions = if (trigger != null && key != dismissed) rankCommands(session?.commands ?: emptyList(), trigger.query) else emptyList()
+    var files by remember(chatId) { mutableStateOf<List<String>?>(null) }
+    LaunchedEffect(chatId, trigger?.file) {
+        if (trigger?.file == true && files == null) files = runCatching { protocolJson.decodeFromString<List<String>>(hub.api.get("/api/files", chatId)) }.getOrDefault(emptyList())
+    }
+    val suggestions = when {
+        trigger == null || key == dismissed -> emptyList()
+        trigger.file -> rankFiles(files.orEmpty(), trigger.query).map { f -> Suggestion(f.substringAfterLast('/'), f.substringBeforeLast('/', ""), "@$f") }
+        else -> rankCommands(session?.commands ?: emptyList(), trigger.query).map { Suggestion("/${it.name}", it.description, "/${it.name}") }
+    }
 
     fun submit(steer: Boolean) {
         val t = text.text
@@ -68,7 +77,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
         waiting -> "Answer above, or message Claude to stop and send"
         compacting -> "Sends when compacting is done"
         running -> "Claude reads this at its next step"
-        else -> "Ask anything, / for commands"
+        else -> "Ask anything, / for commands, @ for files"
     }
     val pct = contextPercent(session?.context)
 
@@ -78,12 +87,12 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
         if (suggestions.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max = Tokens.imageMax).well(c).verticalScroll(rememberScrollState())) {
             for (s in suggestions) Column(
                 Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable {
-                    val r = acceptSuggestion(text.text, trigger!!.start, text.selection.end, "/${s.name}")
+                    val r = acceptSuggestion(text.text, trigger!!.start, text.selection.end, s.insert)
                     set(TextFieldValue(r.first, TextRange(r.second)))
                 }.padding(horizontal = Tokens.sp6, vertical = Tokens.sp3),
             ) {
-                Text("/${s.name}", style = Type.body.copy(fontFamily = FontFamily.Monospace), color = c.fg)
-                if (s.description.isNotEmpty()) Text(s.description, style = Type.footnote, color = c.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(s.label, style = Type.body.copy(fontFamily = FontFamily.Monospace), color = c.fg)
+                if (s.detail.isNotEmpty()) Text(s.detail, style = Type.footnote, color = c.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Column(Modifier.fillMaxWidth().clip(card).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), card)) {

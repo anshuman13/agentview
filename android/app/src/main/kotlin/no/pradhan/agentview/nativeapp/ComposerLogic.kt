@@ -33,14 +33,16 @@ val MODE_HINTS = mapOf(
     "plan" to "Plan mode asks before it starts building",
 )
 
-data class Trigger(val start: Int, val query: String)
+class Suggestion(val label: String, val detail: String, val insert: String)
+
+data class Trigger(val start: Int, val query: String, val file: Boolean = false)
 
 // The `/command` the caret is in, or null.
 fun commandTrigger(text: String, caret: Int): Trigger? {
     val before = text.substring(0, minOf(caret, text.length))
-    val m = Regex("(?:^|\\s)/(\\S*)$").find(before) ?: return null
-    val query = m.groupValues[1]
-    return Trigger(before.length - 1 - query.length, query)
+    val m = Regex("(?:^|\\s)([/@])(\\S*)$").find(before) ?: return null
+    val query = m.groupValues[2]
+    return Trigger(before.length - 1 - query.length, query, m.groupValues[1] == "@")
 }
 
 // Higher is better; null when the query is not in the name. A match at the start beats one inside, which beats scattered letters.
@@ -67,6 +69,9 @@ fun matchScore(name: String, query: String): Double? {
 
 fun rankCommands(commands: List<CommandInfo>, query: String, limit: Int = MAX_ROWS): List<CommandInfo> =
     commands.mapNotNull { c -> matchScore(c.name, query)?.let { c to it } }.sortedByDescending { it.second }.take(limit).map { it.first }
+
+fun rankFiles(files: List<String>, query: String, limit: Int = MAX_ROWS): List<String> =
+    files.mapNotNull { f -> matchScore(f, query)?.let { f to it } }.sortedByDescending { it.second }.take(limit).map { it.first }
 
 fun acceptSuggestion(text: String, start: Int, caret: Int, insert: String): Pair<String, Int> =
     Pair("${text.substring(0, start)}$insert ${text.substring(caret)}", start + insert.length + 1)
