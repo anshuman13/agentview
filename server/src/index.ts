@@ -313,7 +313,7 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
       break;
     case 'new_session':
       if (msg.profile === 'work') mkdirSync(CODEX_WORK, { recursive: true });
-      host.req<string>({ op: 'new', cwd: msg.profile === 'work' ? CODEX_WORK : msg.profile === 'personal' ? PROJECT : msg.cwd ?? chats.get(client.view)?.cwd ?? PROJECT, from: client.view, ...(typeof msg.fork === 'string' && { fork: msg.fork }) }).then((c) => view(client, c), fail);
+      host.req<string>({ op: 'new', cwd: msg.profile === 'work' ? CODEX_WORK : msg.profile === 'personal' ? PROJECT : msg.cwd ?? chats.get(client.view)?.cwd ?? PROJECT, from: client.view, ...(typeof msg.fork === 'string' && { fork: msg.fork }), ...(typeof msg.model === 'string' && { model: msg.model }) }).then((c) => view(client, c), fail);
       break;
     case 'restart':
       restart(Boolean(msg.now), false);

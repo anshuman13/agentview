@@ -16,6 +16,7 @@ import { ownProfile } from '../chrome/chrome.js';
 import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../../shared/edits.js';
 import { errText } from '../../../shared/util.js';
+import { applyInitialModel } from './initialModel.js';
 import { sendWhenChanged } from './changed.js';
 import { costsOf, modelField } from './summaryCache.js';
 import { busy, runningAgents, parseSaved, stoppedOf, type Saved } from './restore.js';
@@ -394,8 +395,11 @@ async function handle(req: HostRequest): Promise<unknown> {
       return null;
     case 'open':
       return (await openSaved(req.sessionId)).id;
-    case 'new':
-      return (await newChat(req.cwd, get(req.from), req.fork)).id;
+    case 'new': {
+      const chat = await newChat(req.cwd, get(req.from), req.fork);
+      applyInitialModel(chat, req.model);
+      return chat.id;
+    }
     case 'close':
       return closeByUser(get(req.id));
     case 'rename': {

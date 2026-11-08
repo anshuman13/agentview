@@ -291,7 +291,7 @@ export type ClientMessage =
   | { type: 'retry' }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
-  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal' }
+  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string }
   | { type: 'mcp_status' }
   | { type: 'usage' }
   | { type: 'mcp_reconnect'; name: string }

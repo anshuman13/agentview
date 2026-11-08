@@ -13,7 +13,7 @@ export type HostRequest =
   | { op: 'events_before'; id: string; before: string; limit?: number }
   | { op: 'cmd'; id: string; msg: ClientMessage }
   | { op: 'open'; sessionId: string }
-  | { op: 'new'; cwd: string; from: string; fork?: string }
+  | { op: 'new'; cwd: string; from: string; fork?: string; model?: string }
   | { op: 'close'; id: string }
   | { op: 'rename'; sessionId: string; title: string }
   | { op: 'ask'; cwd: string; prompt: string; from?: string; fresh?: boolean }
