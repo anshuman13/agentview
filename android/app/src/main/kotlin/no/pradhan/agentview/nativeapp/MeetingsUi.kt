@@ -126,16 +126,19 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
 }
 
 @Composable
-fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = null) {
+fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = null, onTask: ((Row) -> Unit)? = null) {
     val status = r.status ?: ""
     val at = r.at
     val late = status == "open" && at != null && at < now
-    val meta = listOfNotNull(
+    val rest = listOfNotNull(
         if ((status == "open" || status == "suggested") && at != null) whenText(at, now) else null,
         r.str("assignee")?.takeIf { it.isNotEmpty() }?.let { displayName(it).substringBefore(' ') },
-        r.text?.replace(Regex("\\s+"), " ")?.trim()?.ifEmpty { null },
         from,
     ).joinToString(" · ")
+    val meta = buildAnnotatedString {
+        if (late) { pushStyle(SpanStyle(color = av.err)); append("Late"); pop(); if (rest.isNotEmpty()) append(" · ") }
+        append(rest)
+    }
     val primary: Pair<String, () -> Unit>? = when (status) {
         "open" -> "Done" to { actions.done(r) }
         "done" -> "Not done" to { actions.reopen(r) }
@@ -144,8 +147,7 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = 
         "dismissed" -> "Restore" to { actions.restore(r) }
         else -> null
     }
-    ListRow(r.title ?: "(Untitled)", meta, lines = Int.MAX_VALUE, metaLines = Int.MAX_VALUE, strike = status == "done", trailing = {
-        if (late) RowLabel("Overdue", av.err)
+    ListRow(r.title ?: "(Untitled)", meta, strike = status == "done", onClick = onTask?.let { { it(r) } }, trailing = {
         if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         if (status == "open" || status == "suggested" || status == "done") MoreButton { close ->
             if (status != "done") MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r) })
@@ -155,8 +157,8 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = 
     })
 }
 
-private fun LazyListScope.actionGroup(rows: List<Row>, m: Row, now: Long, actions: TaskActions) {
-    item { Group { rows.forEachIndexed { i, r -> if (i > 0) Hairline(); ActionLine(r, m, now, actions) } } }
+private fun LazyListScope.actionGroup(rows: List<Row>, m: Row, now: Long, actions: TaskActions, onTask: (Row) -> Unit) {
+    item { Group { rows.forEachIndexed { i, r -> if (i > 0) Hairline(); ActionLine(r, m, now, actions, onTask = onTask) } } }
 }
 
 @Composable
@@ -196,23 +198,14 @@ private fun Fold(label: String, count: Int, open: Boolean, onToggle: () -> Unit)
 private fun RoomMic(hub: Hub, m: Row) {
     val room = m.str("room") ?: ""
     var busy by remember(m.key) { mutableStateOf(false) }
-    val shape = RoundedCornerShape(Tokens.shapeLg)
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = Tokens.sp8, vertical = Tokens.sp2).clip(shape).background(av.cMeeting.copy(alpha = 0.1f))
-            .border(Tokens.hairline, av.cMeeting.copy(alpha = 0.35f), shape).padding(horizontal = Tokens.sp7, vertical = Tokens.sp6),
-        verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
-    ) {
-        LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-            AvIcon("mic", null, Tokens.icon, tint = av.cMeeting)
-            Text(buildAnnotatedString { append("Were you on the room mic, "); pushStyle(SpanStyle(fontWeight = FontWeight.SemiBold)); append(room); pop(); append("?") }, style = Type.body, color = av.fg)
-        }
-        LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            Button("No", { hub.codex.update(m, mapOf("room_me" to 0)) }, size = ButtonSize.Sm, enabled = !busy)
-            Button(if (busy) "Reading" else "Yes, me", {
+    Group {
+        ListRow("On the room mic?", room, trailing = {
+            Button("No", { hub.codex.update(m, mapOf("room_me" to 0)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !busy)
+            Button(if (busy) "Reading" else "Yes", {
                 busy = true
                 hub.readWithRoomMic(m) { busy = false }
             }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, enabled = !busy)
-        }
+        })
     }
 }
 
@@ -286,37 +279,34 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val speakers = remember(transcript) { transcript?.getOrNull()?.let { talkTime(it) } ?: emptyList() }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
-            LRow(Modifier.fillMaxWidth().padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-                Text(m.title?.ifEmpty { null } ?: "Untitled", Modifier.weight(1f), style = Type.title)
-                if (state == MState.Live && link != null) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                else if (link != null && isCal) Button("Calendar", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                LRow(verticalAlignment = Alignment.CenterVertically) {
+                    Text(m.title?.ifEmpty { null } ?: "Untitled", Modifier.weight(1f), style = Type.title)
+                    if (state == MState.Live && link != null) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    else if (link != null && isCal) Button("Calendar", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                }
+                pageMeta(m).takeIf { it.isNotEmpty() }?.let { Text(it, style = Type.subheadline, color = av.fgMuted) }
+                stateLine(m, now)?.let { Text(it, style = Type.callout, color = if (state == MState.Missing) av.warn else av.accentText) }
             }
-            pageMeta(m).takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted) }
-            stateLine(m, now)?.let { Text(it, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.callout, color = if (state == MState.Missing) av.warn else av.accentText) }
             if (!m.str("room").isNullOrEmpty() && m.long("room_me") == null) RoomMic(hub, m)
         }
-        item { SectionHeader("My actions", if (count.total > 0) "${count.done} of ${count.total} done" else null) }
-        if (mine.isNotEmpty()) actionGroup(mine, m, now, actions)
-        else if (review.isEmpty()) item {
-            Pending(when (state) { MState.Missing -> "No transcript. Add actions under More."; MState.Done -> "Nothing for you in the transcript."; else -> "Your actions from the transcript land here and in Today." })
+        if (mine.isNotEmpty()) {
+            item { SectionHeader("My actions", if (count.total > 0) "${count.done} of ${count.total} done" else null) }
+            actionGroup(mine, m, now, actions, onTask)
         }
         if (review.isNotEmpty()) {
             item { SectionHeader("To review", review.size.toString(), action = { if (review.size > 1) Button("Confirm all", { review.forEach { actions.edit(it, mapOf("status" to "open")) }; actions.undoable("${review.size} added to Today") { review.forEach { r -> actions.edit(r, mapOf("status" to "suggested")) } } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
-            actionGroup(review, m, now, actions)
+            actionGroup(review, m, now, actions, onTask)
         }
         item { SectionHeader("Summary", action = if (!m.str("summary").isNullOrEmpty()) { { Button("Pin", { pinning = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } } else null) }
-        item {
-            val summary = m.str("summary")
-            if (!summary.isNullOrEmpty()) Markdown(summary, Modifier.padding(horizontal = Tokens.sp8))
-            else Pending(if (state == MState.Missing) "No summary without a transcript." else "Written from the transcript after the meeting.")
-        }
+        m.str("summary")?.takeIf { it.isNotEmpty() }?.let { item { Markdown(it, Modifier.padding(horizontal = Tokens.listPad)) } }
         if (pins.isNotEmpty()) {
             item { SectionHeader("Pinned", pins.size.toString()) }
             item { PinList(pins, ops) }
         }
         if (decisions.isNotEmpty()) {
             item { SectionHeader("Decisions") }
-            item { Group { decisions.forEachIndexed { i, d -> if (i > 0) Hairline(); ListRow(d, lines = 4, trailing = { RaiseButton(d, raiseTo) { p -> ops.points.raise(d, p, m.profile) } }) } } }
+            item { Group { decisions.forEachIndexed { i, d -> if (i > 0) Hairline(); ExpandRow(d, trailing = { RaiseButton(d, raiseTo) { p -> ops.points.raise(d, p, m.profile) } }) } } }
         }
         prep?.let { pr ->
             val meta = { x: Row -> "${x.title} · ${dayLabel(x.startsAt!!)}" }
@@ -361,24 +351,24 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             }
             val unassigned = all.filter { it.status == "unassigned" }
             item { Fold("Unassigned", unassigned.size, unassignedOpen) { unassignedOpen = !unassignedOpen } }
-            if (unassignedOpen) actionGroup(unassigned, m, now, actions)
+            if (unassignedOpen) actionGroup(unassigned, m, now, actions, onTask)
             if (others.isNotEmpty()) {
                 item { SectionHeader("Others took", others.size.toString()) }
                 item { Group { others.forEachIndexed { i, o -> if (i > 0) Hairline(); ListRow(o.what, o.who) } } }
             }
             val dismissed = all.filter { it.status == "dismissed" }
             item { Fold("Not mine", dismissed.size, notMineOpen) { notMineOpen = !notMineOpen } }
-            if (notMineOpen) actionGroup(dismissed, m, now, actions)
+            if (notMineOpen) actionGroup(dismissed, m, now, actions, onTask)
             if (state == MState.Done) {
                 item { SectionHeader("Transcript", open = transcriptOpen, onToggle = { transcriptOpen = !transcriptOpen }) }
                 if (transcriptOpen) {
                     val t = transcript
                     when {
-                        t == null -> item { Pending("Loading") }
-                        t.isFailure -> item { Pending("Could not load the transcript: ${t.exceptionOrNull()?.message}") }
-                        t.getOrNull().isNullOrEmpty() -> item { Pending("No transcript text kept for this meeting.") }
+                        t == null -> item { EmptyState("Loading") }
+                        t.isFailure -> item { ErrorHint("Could not load the transcript: ${t.exceptionOrNull()?.message}") }
+                        t.getOrNull().isNullOrEmpty() -> item { EmptyState("No transcript text kept") }
                         else -> items(t.getOrNull()!!.lines().filter { it.isNotBlank() }) { line ->
-                            Text(line, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp1), style = Type.subheadline, color = av.fgMuted, fontFamily = FontFamily.Default)
+                            Text(line, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted, fontFamily = FontFamily.Default)
                         }
                     }
                 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,12 +42,18 @@ fun RaiseButton(text: String, people: List<String>, onRaise: (String) -> Unit) {
 }
 
 @Composable
+fun ExpandRow(title: String, meta: String? = null, onClick: (() -> Unit)? = null, trailing: (@Composable RowScope.() -> Unit)? = null) {
+    var open by remember(title) { mutableStateOf(false) }
+    ListRow(title, meta, lines = if (open) Int.MAX_VALUE else 2, onClick = onClick ?: { open = !open }, trailing = trailing)
+}
+
+@Composable
 fun PointList(points: List<Row>, meetings: List<Row>, now: Long, person: Boolean, showMeeting: Boolean, ops: CodexOps) {
     Group {
         points.forEachIndexed { i, r ->
             if (i > 0) Hairline()
             val m = if (showMeeting) pointMeeting(r, meetings) else null
-            ListRow((if (person) "${firstName(r.people ?: "")}: " else "") + (r.title ?: ""), m?.let { "${it.title} · ${whenText(it.startsAt!!, now, true)}" },
+            ExpandRow((if (person) "${firstName(r.people ?: "")}: " else "") + (r.title ?: ""), m?.let { "${it.title} · ${whenText(it.startsAt!!, now, true)}" },
                 trailing = { Button("Raised", { ops.points.tick(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "check") })
         }
     }
@@ -79,7 +86,7 @@ fun PinList(pins: List<Row>, ops: CodexOps, onOpen: ((Row) -> Unit)? = null) {
     Group {
         pins.forEachIndexed { i, r ->
             if (i > 0) Hairline()
-            ListRow(r.text ?: r.title ?: "", if (onOpen != null) r.people else null, lines = 4, onClick = if (onOpen != null && r.meetingId != null) { { onOpen(r) } } else null,
+            ExpandRow(r.text ?: r.title ?: "", if (onOpen != null) r.people else null, onClick = if (onOpen != null && r.meetingId != null) { { onOpen(r) } } else null,
                 trailing = { Button("Unpin", { ops.points.unpin(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
         }
     }
