@@ -6,7 +6,7 @@ import type { Meeting } from './wiki';
 const PARAGRAPH = '\nRead these events in Calendar for location and notes. Then use Calendar, Gmail and web search to suggest concrete alternatives near where I am, each with opening hours and travel time. Change the calendar only after I confirm.';
 const at = (days: number, h: number, m = 0) => new Date(2026, 10, 10 + days, h, m).getTime();
 const meeting = (id: string, startsAt: number | null, extra: Partial<Meeting> = {}) =>
-  ({ id, profile: 'personal', deleted: 0, state: 'live', title: id, starts_at: startsAt, others: null, ...extra }) as Meeting;
+  ({ id, profile: 'personal', deleted: 0, state: 'live', title: id, starts_at: startsAt, others: null, links: null, ...extra }) as Meeting;
 const item = { id: 'i1', profile: 'work', deleted: 0, status: 'open', title: 'Ship it', at: null, source: null, source_url: null, text: null } as unknown as ItemRow;
 
 beforeEach(() => {

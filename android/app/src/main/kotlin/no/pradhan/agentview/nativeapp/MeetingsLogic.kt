@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp
 
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import java.time.Instant
@@ -13,6 +14,19 @@ fun jsonList(s: String?): List<String> {
     if (s.isNullOrBlank()) return emptyList()
     return runCatching { (protocolJson.parseToJsonElement(s) as JsonArray).mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.contentOrNull } }.getOrDefault(emptyList())
 }
+
+class MeetingLink(val title: String, val url: String) {
+    val domain get() = url.substringAfter("://").substringBefore('/').removePrefix("www.")
+}
+
+// The ticket, doc and thread links the calendar import found on the event.
+fun linksOf(m: Row): List<MeetingLink> = runCatching {
+    (protocolJson.parseToJsonElement(m.str("links") ?: "[]") as JsonArray).mapNotNull {
+        val o = it as? JsonObject ?: return@mapNotNull null
+        val title = (o["title"] as? JsonPrimitive)?.contentOrNull; val url = safeHref((o["url"] as? JsonPrimitive)?.contentOrNull)
+        if (title != null && url != null) MeetingLink(title, url) else null
+    }
+}.getOrDefault(emptyList())
 
 fun liveRows(rows: List<Row>) = rows.filter { !it.deleted && (it.str("state") ?: "live") == "live" }
 

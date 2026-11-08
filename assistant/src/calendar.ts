@@ -20,6 +20,7 @@ const Event = z.object({
   people: z.array(z.string()).describe('Other attendees by name, or email when there is no name'),
   organizer: z.boolean().nullish().describe('True when I organise the event'),
   url: z.string().optional().describe('The event link in Google Calendar'),
+  links: z.array(z.object({ title: z.string(), url: z.string() })).optional().describe('Links in the description and attachments, titled by what they point to'),
 });
 type CalendarEvent = z.infer<typeof Event>;
 
@@ -36,13 +37,13 @@ const samePeople = (old: unknown, people: string[]) => typeof old === 'string' &
 // Upserts the events as meetings and removes calendar meetings in the window that are gone, unless they have notes.
 // A meeting removed here comes back when its event reappears; one you deleted stays deleted.
 export function saveMeetings(db: Database, profile: Profile, events: CalendarEvent[], from: number, to: number, now = Date.now()) {
-  const row = db.prepare('SELECT title, starts_at, ends_at, people, calendar_url, organizer_me, deleted, field_times FROM meetings WHERE profile = ? AND id = ?');
+  const row = db.prepare('SELECT title, starts_at, ends_at, people, calendar_url, organizer_me, links, deleted, field_times FROM meetings WHERE profile = ? AND id = ?');
   const sweptKey = (id: string) => `swept:${profile}:${id}`;
   const all: Change[] = events
     .filter((e) => !Number.isNaN(Date.parse(e.start)) && !Number.isNaN(Date.parse(e.end)))
     .map((e) => ({
       table: 'meetings', id: `cal:${e.id}`, profile, updated_at: now,
-      fields: { title: e.title, starts_at: Date.parse(e.start), ends_at: Date.parse(e.end), people: JSON.stringify(e.people), calendar_url: eventUrl(e.id, e.url), ...(e.organizer != null && { organizer_me: e.organizer ? 1 : 0 }) },
+      fields: { title: e.title, starts_at: Date.parse(e.start), ends_at: Date.parse(e.end), people: JSON.stringify(e.people), calendar_url: eventUrl(e.id, e.url), ...(e.organizer != null && { organizer_me: e.organizer ? 1 : 0 }), ...(e.links && { links: JSON.stringify(e.links.filter((l) => /^https?:\/\//.test(l.url))) }) },
     }));
   const kept = new Set(all.map((c) => c.id));
   const back: string[] = [];
@@ -74,6 +75,7 @@ export function calendarPrompt(profile: Profile, from: number, to: number) {
   return [
     `List my Google Calendar events on my primary calendar from ${new Date(from).toISOString()} to ${new Date(to).toISOString()}.`,
     'For each event set organizer to true when I organise it and false when someone else does.',
+    'Put every link from its description and attachments (tickets, docs, pull requests, Slack threads) in links, titled by what each points to, such as "AIE-924 Fix the importer" or "Q4 planning doc". Leave out video call and calendar links.',
     profile === 'personal'
       ? 'Leave out all-day events and events I declined. Keep timed events with no other attendees; send them with an empty people list.'
       : 'Leave out all-day events, events I declined, and events with no other attendees.',

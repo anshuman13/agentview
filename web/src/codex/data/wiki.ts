@@ -36,6 +36,7 @@ export type Meeting = Common & {
   room_me: number | null;
   organizer_me: number | null;
   others: string | null;
+  links: string | null;
 };
 
 export type Action = Common & {
@@ -85,6 +86,11 @@ export const fieldsOf = (a: Action) => json<Record<string, string>>(a.fields, {}
 export const othersOf = (m: Meeting) => {
   const v = json<unknown>(m.others, []);
   return (Array.isArray(v) ? v : []).filter((o): o is { who: string; what: string } => typeof o?.who === 'string' && typeof o?.what === 'string');
+};
+
+export const linksOf = (m: Meeting) => {
+  const v = json<unknown>(m.links, []);
+  return (Array.isArray(v) ? v : []).filter((l): l is { title: string; url: string } => typeof l?.title === 'string' && typeof l?.url === 'string' && /^https?:\/\//.test(l.url));
 };
 
 export const live = <T extends Common & { state?: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted && (r.state ?? 'live') === 'live');

@@ -17,6 +17,15 @@ describe('saveMeetings', () => {
     expect(rows).toEqual([{ id: 'cal:a', deleted: 1, people: '["Kari"]' }, { id: 'cal:b', deleted: 0, people: '["Kari"]' }, { id: 'cal:c', deleted: 0, people: '["Kari"]' }]);
   });
 
+  it('keeps web links from the event and skips unchanged ones', () => {
+    const db = openDb(':memory:');
+    const from = Date.parse('2026-10-26T00:00:00Z'), to = from + 9 * 86400_000;
+    const a = { ...ev('a', '2026-10-27T09:00:00Z'), links: [{ title: 'AIE-1 Fix', url: 'https://linear.app/x' }, { title: 'Bad', url: 'javascript:x' }] };
+    expect(saveMeetings(db, 'work', [a], from, to, 1)).toBe(1);
+    expect(saveMeetings(db, 'work', [a], from, to, 2)).toBe(0);
+    expect(db.prepare('SELECT links FROM meetings').get()).toEqual({ links: '[{"title":"AIE-1 Fix","url":"https://linear.app/x"}]' });
+  });
+
   it('brings back a removed meeting when its event reappears, but not one I deleted', () => {
     const db = openDb(':memory:');
     const from = Date.parse('2026-10-26T00:00:00Z'), to = from + 9 * 86400_000;

@@ -8,7 +8,7 @@ const item = (id: string, title: string, extra: Partial<ItemRow> = {}): ItemRow 
   ...common(id), title, text: null, source: null, source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...extra,
 });
 const meeting = (id: string, title: string, extra: Partial<Meeting> = {}): Meeting => ({
-  ...common(id), title, starts_at: 1, ends_at: 2, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null, ...extra,
+  ...common(id), title, starts_at: 1, ends_at: 2, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null, links: null, ...extra,
 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
 const fact = (id: string, pageId: string | null, text: string, extra: Partial<Fact> = {}): Fact => ({

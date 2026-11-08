@@ -4,7 +4,9 @@ import { ask, meetingAskText } from '../data/ask';
 import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
 import { rowKey, type ItemRow } from '../data/sync';
-import { listOf, othersOf, type Meeting } from '../data/wiki';
+import { linksOf, listOf, othersOf, type Meeting } from '../data/wiki';
+import { linkDomain } from '../data/links';
+import { Row } from '../../ui/Row';
 import { actionCount, actionsOf, displayName, isSolo, meetingState, peopleOf, pinsOf, seriesMeetings, seriesOf, seriesTitleOf } from '../data/meetings';
 import { clock, when } from '../time';
 import { useMinute } from '../split';
@@ -94,6 +96,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const count = actionCount(snap.items, m);
   const others = othersOf(m);
   const decisions = listOf(m.decisions);
+  const links = linksOf(m);
   const people = peopleOf(m);
   const raiseTo = recentPeople(meetings, m.profile, m);
   const now = useMinute();
@@ -156,6 +159,13 @@ export function MeetingPage({ m }: { m: Meeting }) {
           {meta && <p className="mt-meta">{meta}</p>}
           {state !== 'done' && <StateLine m={m} now={now} />}
           {m.room && m.room_me == null && <RoomMic m={m} />}
+
+          {links.length > 0 && (
+            <section className="mt-sec">
+              <h2>Links<span className="mt-of">{links.length}</span></h2>
+              <div className="ui-group">{links.map((l) => <Row key={l.url} href={l.url} title={l.title} meta={linkDomain(l.url)} trailing={<Icon name="link-external" small />} />)}</div>
+            </section>
+          )}
 
           <section className="mt-sec">
             <h2>My actions{count.total > 0 && <span className="mt-of">{count.done} of {count.total} done</span>}</h2>

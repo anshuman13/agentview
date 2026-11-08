@@ -19,7 +19,7 @@ const val PERSONAL = "personal"
 val ITEM_FIELDS = listOf("title", "text", "source", "source_url", "people", "at", "status", "meeting_id", "rolls", "rolled_from", "rank", "draft", "spent", "time_log", "goal", "priority", "tags", "remind", "assignee", "snoozed_until")
 val SYNCED_FIELDS = mapOf(
     "items" to ITEM_FIELDS,
-    "meetings" to listOf("title", "starts_at", "ends_at", "people", "calendar_url", "recorded_ms", "notes", "summary", "decisions", "transcript", "tries", "room", "room_me", "organizer_me", "others"),
+    "meetings" to listOf("title", "starts_at", "ends_at", "people", "calendar_url", "recorded_ms", "notes", "summary", "decisions", "transcript", "tries", "room", "room_me", "organizer_me", "others", "links"),
     "chats" to listOf("name", "kind", "url", "summary", "last_at", "waiting"),
     "pages" to listOf("title", "section", "summary", "sort", "state"),
     "facts" to listOf("text", "item_id", "superseded_by", "page_id", "heading", "sources", "at", "contested", "state", "replaces", "added_by"),

@@ -251,6 +251,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val decisions = jsonList(m.str("decisions"))
     val others = othersOf(m)
     val people = peopleOf(m)
+    val links = linksOf(m)
     val link = safeHref(m.str("calendar_url"))
     val uri = LocalUriHandler.current
     val isCal = m.id.startsWith("cal:")
@@ -293,6 +294,10 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
                 stateLine(m, now)?.let { Text(it, style = Type.callout, color = if (state == MState.Missing) av.warn else av.info) }
             }
             if (!m.str("room").isNullOrEmpty() && m.long("room_me") == null) RoomMic(hub, m)
+        }
+        if (links.isNotEmpty()) {
+            item { SectionHeader("Links", links.size.toString()) }
+            item { Group { links.forEachIndexed { i, l -> if (i > 0) Hairline(); ListRow(l.title, l.domain, onClick = { uri.openUri(l.url) }, trailing = { AvIcon("link-external", tint = av.fgMuted) }) } } }
         }
         if (mine.isNotEmpty()) {
             item { SectionHeader("My actions", if (count.total > 0) "${count.done} of ${count.total} done" else null) }
