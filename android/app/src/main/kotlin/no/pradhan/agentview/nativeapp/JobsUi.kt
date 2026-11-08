@@ -1,5 +1,7 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +33,7 @@ fun toggleJob(hub: Hub, j: Row, on: Boolean) = hub.codex.update(j, mapOf("enable
 
 @Composable
 fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopilot: () -> Unit, onOpen: (Row) -> Unit) {
+    val haptic = LocalHapticFeedback.current
     val jobs = remember(st.jobs, profile) { jobsOf(st.jobs, profile) }
     val waiting = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).review, profile, now).size }
     LazyColumn(Modifier.fillMaxWidth()) {
@@ -43,7 +46,7 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopi
                     val state = jobState(j, st.runs, now)
                     val menu = remember(j.key) { mutableStateOf(false) }
                     ListRow(j.str("name")?.ifEmpty { null } ?: "Untitled job", listOfNotNull(jobMeta(j, st.runs, now), if (profile == null) profileLabel(j.profile) else null).joinToString(" · "), onClick = { onOpen(j) },
-                        onLongClick = { menu.value = true },
+                        onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu.value = true },
                         trailing = {
                             if (state != null) StateBadge(state)
                             MoreButton(expanded = menu) { close ->

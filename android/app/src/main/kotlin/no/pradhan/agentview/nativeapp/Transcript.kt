@@ -163,7 +163,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
             HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
         }
         is Item.Assistant -> SelectionContainer { Markdown(it.text, Modifier.fillMaxWidth()) }
-        is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = av.fgFaint)
+        is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
         is Item.File -> FileCard(it, cwd)
         is Item.Agent -> AgentRow(hub, it, chat, cwd, onOpenAgent)
@@ -185,9 +185,9 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String) {
                 is Part.Text -> SelectionContainer { Text(p.text, style = Type.body, color = av.fg) }
                 is Part.Image -> ChatImage(hub, chat, p.path)
             }
-            if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgFaint)
+            if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgMuted)
             if (it.queued) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
-                Text("Waiting for Claude's next step", Modifier.weight(1f, fill = false), style = Type.footnote, color = av.fgFaint)
+                Text("Waiting for Claude's next step", Modifier.weight(1f, fill = false), style = Type.footnote, color = av.fgMuted)
                 Button("Send now", { hub.sendNow(it.id) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
         }
@@ -245,12 +245,12 @@ private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
                 },
                 Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
-            if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgFaint, modifier = Modifier.padding(start = Tokens.sp3))
+            if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgMuted, modifier = Modifier.padding(start = Tokens.sp3))
         }
         if (!open) {
-            label.cmd?.let { Text(cmdPreview(it), Modifier.padding(start = Tokens.leadWidth), style = Mono, color = av.fgFaint, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            label.cmd?.let { Text(cmdPreview(it), Modifier.padding(start = Tokens.leadWidth), style = Mono, color = av.fgMuted, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             if (state == "err") WordClamp(androidx.compose.ui.text.AnnotatedString(firstLine(result!!.text).ifEmpty { "Failed" }), Type.footnote, av.err, 2, modifier = Modifier.padding(start = Tokens.leadWidth))
-            if (state == "denied") Text("Denied", Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.fgFaint)
+            if (state == "denied") Text("Denied", Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.fgMuted)
         } else ToolDetail(it.use, result)
     }
 }
@@ -349,7 +349,7 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpen
         }
         if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {
             if (it.steps.size > shown.size) Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
-                Text("${it.steps.size - shown.size} earlier steps", style = Type.footnote, color = av.fgFaint)
+                Text("${it.steps.size - shown.size} earlier steps", style = Type.footnote, color = av.fgMuted)
             }
             val running = it.running
             shown.forEachIndexed { i, s -> Box(Modifier.gap(gapAbove(shown.getOrNull(i - 1), s)?.coerceAtMost(Tokens.sp2))) { ItemRow(hub, s, chat, cwd, !running, onOpenAgent) } }

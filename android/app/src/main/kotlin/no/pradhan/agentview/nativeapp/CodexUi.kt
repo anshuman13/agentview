@@ -109,13 +109,15 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
                 leading = if (row.status == "note") null else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done") { if (isDone) actions.reopen(row) else actions.done(row) } } },
                 trailing = {
                     if (row.status == "suggested") Badge("Needs you", BadgeTone.Waiting)
-                    IconBtn("kebab-vertical", "More", { menu = true })
+                    Box {
+                        IconBtn("kebab-vertical", "More", { menu = true })
+                        TaskMenu(row, menu, { menu = false }, actions, onOpen)
+                    }
                 },
                 strike = isDone,
                 onClick = onOpen,
                 onLongClick = { menu = true },
             )
-            TaskMenu(row, menu, { menu = false }, actions, onOpen)
         }
     }
     if (!swipeable) { body(); return }

@@ -119,7 +119,7 @@ fun GroupList(foldKey: String, group: DigestGroup, capOpen: Boolean = false, pla
             if (plain) ListRow(r.title, lines = 2) else ListRow(r.title, r.meta, onClick = r.open)
         }
     }
-    if (!all && rows.size < group.rows.size) Button("Show all ${group.rows.size}", { all = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+    if (!all && rows.size < group.rows.size) Button("Show all ${group.rows.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
 }
 
 // A recurring series: open actions across the occurrences, then the occurrences newest first.
@@ -155,7 +155,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
             Group {
                 (if (allOpen) open else open.take(5)).forEachIndexed { i, (m, r) -> if (i > 0) Hairline(); ActionLine(r, m, now, actions, from = weekdayDate(m.startsAt!!)) }
             }
-            if (!allOpen && open.size > 5) Button("Show all ${open.size}", { allOpen = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (!allOpen && open.size > 5) Button("Show all ${open.size}", { allOpen = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         }
         item { SectionHeader("Occurrences", members.size.toString()) }
         item {
@@ -168,7 +168,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
                     ListRow("${weekdayDate(m.startsAt!!)}, ${clock(m.startsAt!!)}", meta.ifEmpty { null }, muted = meetingState(m, now) == MState.Missing, onClick = { onMeeting(m) })
                 }
             }
-            if (!allOcc && members.size > 5) Button("Show all ${members.size}", { allOcc = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (!allOcc && members.size > 5) Button("Show all ${members.size}", { allOcc = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             Spacer(Modifier.padding(bottom = Tokens.sp16))
         }
     }

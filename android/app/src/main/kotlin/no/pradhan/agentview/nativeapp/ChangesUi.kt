@@ -111,19 +111,19 @@ private fun FileGroup(files: List<GitFile>, onOpen: (GitFile) -> Unit, menu: @Co
             if (i > 0) Hairline(lead = true)
             val name = f.path.substringAfterLast('/')
             val letter = letterOf(f)
-            val menu = remember { mutableStateOf(false) }
+            val open = remember(f.path) { mutableStateOf(false) }
             ListRow(
                 name, parentOf(f.path).ifEmpty { null }, lines = 2, metaLines = 2, strike = f.status == "D",
                 leading = { FileTag(name) },
                 trailing = {
                     RowLabel(letter, letterColor(letter))
-                    MoreButton(expanded = menu) { close ->
+                    MoreButton(expanded = open) { close ->
                         MenuItem("Open File", "go-to-file", { close(); onOpen(f) })
                         menu(f, close)
                     }
                 },
                 onClick = { onOpen(f) },
-                onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu.value = true },
+                onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); open.value = true },
             )
         }
     }

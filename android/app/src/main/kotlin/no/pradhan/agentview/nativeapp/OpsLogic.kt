@@ -43,13 +43,6 @@ fun parseObserve(body: String): ObserveInfo = protocolJson.decodeFromString(Obse
 // The settings shown in the field: the saved config, else the guess.
 fun observeDraft(info: ObserveInfo): String = (info.config?.takeIf { it !is JsonNull } ?: info.guess)?.let { pretty.encodeToString(JsonElement.serializer(), it) } ?: ""
 
-fun hasConfig(info: ObserveInfo) = info.config != null && info.config !is JsonNull
-
-fun lokiSelector(info: ObserveInfo): String = runCatching {
-    val cfg = (info.config?.takeIf { it !is JsonNull } ?: info.guess) as kotlinx.serialization.json.JsonObject
-    ((cfg["grafana"] as kotlinx.serialization.json.JsonObject)["lokiSelector"] as kotlinx.serialization.json.JsonPrimitive).content
-}.getOrDefault("")
-
 // The body of POST /api/observe/config; throws on JSON that does not parse, an empty field clears the config.
 fun observeConfigBody(repo: String, draft: String): String {
     val config = if (draft.isBlank()) JsonNull else protocolJson.parseToJsonElement(draft)

@@ -72,8 +72,8 @@ fun PageBody(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun Hint(text: String, color: Color = av.fgMuted, mono: Boolean = false) {
-    Text(text, Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), style = if (mono) Mono else Type.subheadline, color = color)
+fun Hint(text: String, color: Color = av.fgMuted) {
+    Text(text, Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), style = Type.subheadline, color = color)
 }
 
 @Composable

@@ -106,8 +106,6 @@ class PagesLogicTest {
 
     @Test fun observeSettingsAndPanels() {
         val info = parseObserve("""{"repo":"shop","config":null,"guess":{"grafana":{"lokiSelector":"{app=\"shop\"}"}},"repos":["x","example"],"file":"~/.agentview/observe.json","grafanaServer":true,"snowflake":{"account":"","user":"","hasSecret":false}}""")
-        assertFalse(hasConfig(info))
-        assertEquals("{app=\"shop\"}", lokiSelector(info))
         assertTrue(observeDraft(info).contains("\"lokiSelector\""))
         assertEquals("""{"repo":"shop","config":{"a":1}}""", observeConfigBody("shop", """{ "a": 1 }"""))
         assertEquals("""{"repo":"shop","config":null}""", observeConfigBody("shop", " "))

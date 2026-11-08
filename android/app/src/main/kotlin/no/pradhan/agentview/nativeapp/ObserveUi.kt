@@ -147,7 +147,7 @@ private fun linkAction(label: String, url: String?, link: (String) -> Unit): (@C
 
 @Composable
 private fun PanelRow(p: GrafanaPanel, onClick: () -> Unit) {
-    val meta = p.last?.let { AnnotatedString(panelNum(it) + (p.unit ?: "")) } ?: buildAnnotatedString { withStyle(SpanStyle(color = av.err)) { append("No data") } }
+    val meta = p.last?.let { AnnotatedString(panelNum(it) + (p.unit ?: "")) } ?: buildAnnotatedString { withStyle(SpanStyle(color = av.err)) { append(p.error ?: "No data") } }
     ListRow(
         p.title, meta, lines = 1,
         trailing = { if (p.points.size > 1) Sparkline(p.points) },

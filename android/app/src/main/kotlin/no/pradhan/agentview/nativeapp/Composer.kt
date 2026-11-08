@@ -97,7 +97,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 decorationBox = { inner ->
                     Box(Modifier.heightIn(min = Tokens.sp20)) {
-                        if (text.text.isEmpty()) WordClamp(androidx.compose.ui.text.AnnotatedString(placeholder), Type.body, c.fgFaint, 2)
+                        if (text.text.isEmpty()) WordClamp(androidx.compose.ui.text.AnnotatedString(placeholder), Type.body, c.fgMuted, 2)
                         inner()
                     }
                 },

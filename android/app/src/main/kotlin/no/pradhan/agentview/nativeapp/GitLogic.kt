@@ -94,12 +94,12 @@ data class PullRequestDetail(
 fun parsePulls(body: String): List<PullRequest> = protocolJson.decodeFromString(ListSerializer(PullRequest.serializer()), body)
 fun parsePullDetail(body: String): PullRequestDetail = protocolJson.decodeFromString(PullRequestDetail.serializer(), body)
 
-data class PrGroup(val title: String, val empty: String, val prs: List<PullRequest>)
+data class PrGroup(val title: String, val prs: List<PullRequest>)
 
 fun prGroups(prs: List<PullRequest>) = listOf(
-    PrGroup("Waiting for my review", "No pull requests waiting for you", prs.filter { it.reviewRequested }),
-    PrGroup("My pull requests", "No pull requests of yours", prs.filter { it.mine }),
-    PrGroup("All open", "No open pull requests", prs),
+    PrGroup("Waiting for my review", prs.filter { it.reviewRequested }),
+    PrGroup("My pull requests", prs.filter { it.mine }),
+    PrGroup("All open", prs),
 )
 
 // web/src/ops/pulls.tsx REVIEW: the label and tone of a review state; unknown states show nothing.
