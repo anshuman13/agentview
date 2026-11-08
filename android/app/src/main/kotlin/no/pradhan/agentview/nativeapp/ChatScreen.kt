@@ -58,6 +58,8 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     val agents = remember(state.events) { buildAgents(state.events) }
     var agentsOpen by remember { mutableStateOf(false) }
     var serversOpen by remember { mutableStateOf(false) }
+    var imagesOpen by remember { mutableStateOf(false) }
+    val images = remember(state.events) { chatImages(state.events) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val ticking = agentsOpen && agents.any { it.status == "running" }
     LaunchedEffect(ticking) { while (ticking) { now = System.currentTimeMillis(); delay(1000) } }
@@ -101,6 +103,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
             }
             MoreButton { close ->
                 MenuItem("Review changes", "source-control", { close(); review = 0 }, enabled = left.isNotEmpty())
+                MenuItem("Images", "file-media", { close(); imagesOpen = true }, enabled = images.isNotEmpty())
                 MenuItem("Dev servers", "globe", { close(); serversOpen = true })
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
                 MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
@@ -125,6 +128,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         AgentList(agents, now) { agentsOpen = false; onOpenAgent(it) }
     }
 
+    if (imagesOpen) ImagesSheet(hub, live.id, images, cwd) { imagesOpen = false }
     if (serversOpen) DevServersSheet(hub) { serversOpen = false }
 
     when (dialog) {
