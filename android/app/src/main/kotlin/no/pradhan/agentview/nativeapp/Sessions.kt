@@ -105,7 +105,6 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             meta = buildAnnotatedString { append(metaLine(repo, branch, since(s.lastModified))) },
             state = chatState(null, s, seen),
             selected = false,
-            muted = true,
             actions = actions(s.sessionId, s.title, null),
             onClick = { scope.launch { opening = s.sessionId; if (hub.openSaved(s.sessionId)) onOpen(); opening = null } },
         )
@@ -132,24 +131,22 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
                 if (waiting.isNotEmpty()) {
                     item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
-                    items(waiting.size, key = { "needs-${waiting[it].id}" }) { Box { liveRow(waiting[it], folderName(folderKey(waiting[it].cwd, ws.repos, ws.trees))) } }
+                    lazyGroup(waiting, { "needs-${it.id}" }) { liveRow(it, folderName(folderKey(it.cwd, ws.repos, ws.trees))) }
                 }
                 if (pinned.isNotEmpty()) {
                     item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
-                    items(pinned.size, key = { "pin-${pinned[it].first?.id ?: pinned[it].second?.sessionId}" }) { i ->
-                        val (c, s) = pinned[i]
+                    lazyGroup(pinned, { "pin-${it.first?.id ?: it.second?.sessionId}" }) { (c, s) ->
                         val repo = folderName(folderKey(c?.cwd ?: s!!.cwd, ws.repos, ws.trees))
-                        Box { if (c != null) liveRow(c, repo) else savedRow(s!!, repo) }
+                        if (c != null) liveRow(c, repo) else savedRow(s!!, repo)
                     }
                 }
                 for (g in groups) {
                     val open = filter.isNotBlank() || !(collapsed[g.key] ?: g.open.isEmpty())
                     item(key = "g-${g.key}") { GroupHeader(g, open, seen, { hub.newChat(g.key); onOpen() }) { hub.setCollapsed(g.key, open) } }
                     if (open) {
-                        val chats = g.open.filter { it.pending == 0 }
-                        items(chats.size, key = { "o-${chats[it].id}" }) { Box { liveRow(chats[it]) } }
                         val recent = if (g.key in full || filter.isNotBlank()) g.recent else g.recent.take(RECENT)
-                        items(recent.size, key = { "r-${recent[it].sessionId}" }) { Box { savedRow(recent[it]) } }
+                        val rows = g.open.filter { it.pending == 0 }.map<LiveChat, Pair<LiveChat?, SavedSession?>> { it to null } + recent.map { null to it }
+                        lazyGroup(rows, { if (it.first != null) "o-${it.first!!.id}" else "r-${it.second!!.sessionId}" }) { (c, s) -> if (c != null) liveRow(c) else savedRow(s!!) }
                         if (filter.isBlank() && g.recent.size > RECENT) item(key = "m-${g.key}") {
                             val all = g.key in full
                             Button(if (all) "Show less" else "Show ${g.recent.size - RECENT} more", { if (all) full.remove(g.key) else full.add(g.key) }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
@@ -182,10 +179,10 @@ private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, on
 }
 
 @Composable
-private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, muted: Boolean = false) {
+private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit) {
     val unread = state == ChatState.Done || state == ChatState.Needs
     ListRow(
-        title, meta, lines = 2, metaLines = 2, muted = muted, selected = selected, onClick = onClick,
+        title, meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
         leading = { if (unread) StatusDot(DotState.Unread) },
         trailing = {
             when (state) {

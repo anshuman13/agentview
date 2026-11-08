@@ -196,10 +196,17 @@ fun App(hub: Hub) {
         Sheet(onDismiss = { more = false }, title = "More", padded = false) {
             val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = av.fgMuted) } }
             SectionHeader("Workspace")
-            MORE_TOOLS.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }) }
+            Group {
+                MORE_TOOLS.forEachIndexed { i, it ->
+                    if (i > 0) Hairline(lead = true)
+                    ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") })
+                }
+            }
             SectionHeader("Tools")
-            MORE_PAGES.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }) }
-            ListRow("Mac address", leading = icon("device-desktop"), onClick = { go(ORIGIN_ROUTE) })
+            Group {
+                MORE_PAGES.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }); Hairline(lead = true) }
+                ListRow("Mac address", leading = icon("device-desktop"), onClick = { go(ORIGIN_ROUTE) })
+            }
         }
     }
 }

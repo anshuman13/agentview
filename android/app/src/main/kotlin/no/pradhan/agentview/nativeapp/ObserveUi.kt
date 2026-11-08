@@ -58,12 +58,7 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
                 if (info == null) { if (load.error.isEmpty()) item { Loading("Loading") } }
                 else {
                     item(key = "grafana:${info.repo}:$tick") { Grafana(hub, info) }
-                    item { SectionHeader("Snowflake") }
-                    item {
-                        val sf = info.snowflake
-                        val connected = sf.hasSecret && sf.account.isNotEmpty() && sf.user.isNotEmpty()
-                        Group { ListRow(if (connected) "${sf.user} on ${sf.account}" else "Not connected", if (connected) "Connected" else "Off") }
-                    }
+                    item { Snowflake(info.snowflake) }
                     item(key = "settings:${info.repo}") { ObserveSettings(hub, info) { reload() } }
                 }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
@@ -71,9 +66,23 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
         }
     }
     if (picking) Sheet(onDismiss = { picking = false }, title = "Project", padded = false) {
-        observeRepos(ws.repos.map { it.name }, info).forEach { n ->
-            ListRow(n, selected = n == info?.repo, onClick = { picking = false; picked = n })
+        Group {
+            observeRepos(ws.repos.map { it.name }, info).forEachIndexed { i, n ->
+                if (i > 0) Hairline()
+                ListRow(n, selected = n == info?.repo, onClick = { picking = false; picked = n })
+            }
         }
+    }
+}
+
+@Composable
+private fun Snowflake(sf: SnowflakeInfo) {
+    var open by rememberSaveable { mutableStateOf(true) }
+    Column {
+        SectionHeader("Snowflake", open = open, onToggle = { open = !open })
+        if (!open) return@Column
+        val connected = sf.hasSecret && sf.account.isNotEmpty() && sf.user.isNotEmpty()
+        Group { ListRow(if (connected) "${sf.user} on ${sf.account}" else "Not connected", if (connected) "Connected" else "Off") }
     }
 }
 
@@ -85,7 +94,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
     Column {
         SectionHeader("Grafana", open = open, onToggle = { open = !open })
         if (!open) return@Column
-        if (!info.grafanaServer) { Group { EmptyState("No Grafana server", "Add the Grafana MCP server") }; return@Column }
+        if (!info.grafanaServer) { EmptyState("No Grafana server", "Add the Grafana MCP server"); return@Column }
         val (dash) = rememberLoad(info.repo, "dash") { protocolJson.decodeFromString(GrafanaDashboards.serializer(), hub.read("/api/observe/grafana/dashboards?repo=$repo")) }
         val (panels) = rememberLoad(info.repo, "panels") { protocolJson.decodeFromString(GrafanaPanels.serializer(), hub.read("/api/observe/grafana/panels?repo=$repo")) }
         val (logs) = rememberLoad(info.repo, "logs") { protocolJson.decodeFromString(GrafanaLogs.serializer(), hub.read("/api/observe/grafana/logs?repo=$repo")) }
@@ -99,7 +108,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
                 if (i > 0) Hairline()
                 ListRow(d.title, d.folder, lines = 1, onClick = if (d.url.isNotEmpty()) ({ link(d.url) }) else null)
             }
-        } else if (dash.data != null) Group { EmptyState("No dashboards match", "Set grafana.query or grafana.dashboards in the settings") }
+        } else if (dash.data != null) EmptyState("No dashboards match", "Set grafana.query or grafana.dashboards in the settings")
 
         SectionHeader("Metrics, last 6 hours")
         if (panels.busy && panels.data == null) Loading("Loading")

@@ -69,7 +69,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
-                if (load.error.contains("no Velo app")) item { EmptyState("No Velo app here", "This repo has no .deploy/app.yaml") }
+                if (load.error.contains("no Velo app")) item { EmptyState("No Velo app here", "This repo has no .deploy/app.yaml", icon = "rocket", small = false) }
                 else item { ErrorHint(load.error) }
                 if (s == null && load.error.isEmpty()) item { Loading("Loading") }
                 if (s != null) {

@@ -13,7 +13,7 @@ val MORE_TOOLS = listOf(
     MoreItem("browser", "Browser", "globe"),
     MoreItem("terminal", "Terminal", "terminal"),
     MoreItem("changes", "Source Control", "source-control"),
-    MoreItem("github", "Pull Requests", "github"),
+    MoreItem("github", "Pull Requests", "git-pull-request"),
 )
 val MORE_PAGES = listOf(
     MoreItem("observe", "Observe", "pulse"),

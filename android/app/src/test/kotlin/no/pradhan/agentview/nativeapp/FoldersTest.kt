@@ -74,9 +74,9 @@ class FoldersTest {
     fun sinceReadsLikeTheWeb() {
         val now = System.currentTimeMillis()
         assertEquals("just now", since(now - 10_000, now))
-        assertEquals("5 min ago", since(now - 5 * 60_000, now))
-        assertEquals("3 h ago", since(now - 3 * 3_600_000, now))
-        assertEquals("2 w ago", since(now - 15 * 86_400_000L, now))
+        assertEquals("5m ago", since(now - 5 * 60_000, now))
+        assertEquals("3h ago", since(now - 3 * 3_600_000, now))
+        assertEquals("2w ago", since(now - 15 * 86_400_000L, now))
     }
 
     @Test

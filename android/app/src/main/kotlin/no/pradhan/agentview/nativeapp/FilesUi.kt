@@ -70,7 +70,7 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (error.isNotEmpty()) item { ErrorHint(error) }
                 else if (dirs[""] == null) item { Hint("Loading") }
-                else if (rows.isEmpty()) item { EmptyState("No files") }
+                else if (rows.isEmpty()) item { EmptyState("No files", icon = "files", small = false) }
                 item { Spacer(Modifier.padding(top = Tokens.sp4)) }
                 lazyGroup(rows, key = { it.path }) { r ->
                     val isOpen = r.dir && r.path in expanded
@@ -80,8 +80,7 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
                         lines = 1,
                         muted = r.hidden,
                         leading = {
-                            if (r.dir) AvIcon("chevron-right", null, Tokens.icon, Modifier.rotate(if (isOpen) 90f else 0f), tint = av.fileFolder)
-                            else FileTag(r.name)
+                            AvIcon(if (!r.dir) "file" else if (isOpen) "folder-opened" else "folder", null, Tokens.iconMd, tint = av.fgMuted)
                         },
                         onClick = {
                             if (r.dir) expanded = if (isOpen) expanded - r.path else expanded + r.path

@@ -32,14 +32,16 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                 SectionHeader("Appearance")
                 Group {
                     val menu = remember { mutableStateOf(false) }
-                    Box {
-                        ListRow("Theme", (if (dark) "Dark" else "Light") + if (theme.isEmpty()) " (system)" else "", onClick = { menu.value = true }, trailing = { Chevron() })
-                        Menu(menu.value, { menu.value = false }) {
-                            listOf("" to "System", "dark" to "Dark", "light" to "Light").forEach { (v, label) ->
-                                MenuItem(label, if (v.isEmpty()) "device-desktop" else "color-mode", { menu.value = false; hub.setTheme(v) }, checked = theme == v)
+                    ListRow("Theme", (if (dark) "Dark" else "Light") + if (theme.isEmpty()) " (system)" else "", onClick = { menu.value = true }, trailing = {
+                        Box {
+                            Chevron()
+                            Menu(menu.value, { menu.value = false }) {
+                                listOf(Triple("", "System", "device-mobile"), Triple("light", "Light", "lightbulb"), Triple("dark", "Dark", "color-mode")).forEach { (v, label, icon) ->
+                                    MenuItem(label, icon, { menu.value = false; hub.setTheme(v) }, checked = theme == v)
+                                }
                             }
                         }
-                    }
+                    })
                 }
                 SectionHeader("Phone")
                 Group {

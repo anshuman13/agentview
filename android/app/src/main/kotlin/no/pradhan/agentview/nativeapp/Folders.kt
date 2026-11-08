@@ -139,11 +139,11 @@ fun groupGlance(g: RepoGroup, seen: Map<String, Long>): Glance {
 fun since(t: Long, now: Long = System.currentTimeMillis()): String {
     val m = maxOf(0L, (now - t) / 60_000)
     if (m < 1) return "just now"
-    if (m < 60) return "$m min ago"
-    if (m < 1440) return "${m / 60} h ago"
+    if (m < 60) return "${m}m ago"
+    if (m < 1440) return "${m / 60}h ago"
     fun day(x: Long) = Calendar.getInstance().apply { timeInMillis = x; set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis
     val d = Math.round((day(now) - day(t)) / 864e5)
-    return if (d == 1L) "yesterday" else if (d < 7) "$d d ago" else "${d / 7} w ago"
+    return if (d == 1L) "yesterday" else if (d < 7) "${d}d ago" else "${d / 7}w ago"
 }
 
 fun metaLine(vararg parts: String?) = parts.filter { !it.isNullOrEmpty() }.joinToString(" · ")

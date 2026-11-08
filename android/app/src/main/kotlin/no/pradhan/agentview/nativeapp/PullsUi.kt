@@ -49,7 +49,7 @@ fun PullsScreen(hub: Hub, onBack: () -> Unit) {
                     problem != null -> item { EmptyState(problem.title, problem.text + (problem.cmd?.let { "\n$it" } ?: ""), small = false) }
                     load.error.isNotEmpty() -> item { ErrorHint(load.error) }
                     load.data == null -> item { Hint("Loading") }
-                    load.data.isEmpty() -> item { EmptyState("No open pull requests") }
+                    load.data.isEmpty() -> item { EmptyState("No open pull requests", icon = "git-pull-request", small = false) }
                     else -> prGroups(load.data).filter { it.prs.isNotEmpty() }.forEach { g ->
                         item(key = g.title) {
                             var shown by rememberSaveable(g.title) { mutableStateOf(true) }
