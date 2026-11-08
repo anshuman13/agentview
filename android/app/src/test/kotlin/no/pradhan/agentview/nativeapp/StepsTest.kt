@@ -114,4 +114,12 @@ class StepsTest {
         assertNull(newMarker(items, ats, seen = 0, openedAt = 50))
         assertNull(newMarker(items, ats, seen = 45, openedAt = 50))
     }
+
+    @Test fun chatMarkdownKeepsPromptsAndReplies() {
+        val events = listOf(
+            ChatEvent("1", "user", "fix it"), ChatEvent("2", "tool_use", name = "Bash"),
+            ChatEvent("3", "assistant", "Done."), ChatEvent("4", "user", "later", queued = true),
+        )
+        assertEquals("# T\n\n**You:** fix it\n\nDone.\n", chatMarkdown("T", events))
+    }
 }

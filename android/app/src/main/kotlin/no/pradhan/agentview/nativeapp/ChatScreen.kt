@@ -52,6 +52,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         return
     }
     val session = state.session
+    val context = androidx.compose.ui.platform.LocalContext.current
     val running = session?.running ?: live.running
     val cost = remember(state.events, live.cost) { live.cost ?: chatCost(state.events) }
     var dialog by remember { mutableStateOf<String?>(null) }
@@ -107,6 +108,11 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                 MenuItem("Images", "file-media", { close(); imagesOpen = true }, enabled = images.isNotEmpty())
                 MenuItem("Dev servers", "globe", { close(); serversOpen = true })
                 MenuItem("TODOs", "checklist", { close(); todosOpen = true })
+                MenuItem("Share chat", "share", {
+                    close()
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, state.events))
+                    context.startActivity(android.content.Intent.createChooser(send, null))
+                }, enabled = state.events.any { it.kind == "assistant" })
                 MenuItem("Fork chat", "repo-forked", { close(); hub.newChat(cwd, fork = sessionId) }, enabled = sessionId != null)
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
                 MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })

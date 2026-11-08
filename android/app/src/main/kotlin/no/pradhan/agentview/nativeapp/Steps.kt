@@ -190,3 +190,15 @@ fun newMarker(items: List<Item>, ats: Map<String, Long>, seen: Long, openedAt: L
     if (seen <= 0) return null
     return items.firstOrNull { it !is Item.User && (ats[it.id] ?: 0L).let { at -> at > seen && at <= openedAt } }?.id
 }
+
+// The prompts and replies of the loaded transcript as Markdown, for the share sheet. Tools and system lines are left out.
+fun chatMarkdown(title: String, events: List<ChatEvent>): String = buildString {
+    if (title.isNotBlank()) append("# ").append(title.trim()).append("\n\n")
+    for (e in events) {
+        if (e.text.isBlank() || e.queued) continue
+        when (e.kind) {
+            "user" -> append("**You:** ").append(e.text.trim()).append("\n\n")
+            "assistant" -> append(e.text.trim()).append("\n\n")
+        }
+    }
+}.trimEnd() + "\n"

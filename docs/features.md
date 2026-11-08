@@ -190,6 +190,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   worktrees in a hidden `.tries` folder next to the repo. These show under Workspace and a clean one can be removed at once
 - "Fork chat" in the chat settings menu (web and phone, or the palette) starts a new chat that carries the whole conversation so
   far, so two directions can be tried from the same point
+- "Share chat" in the phone chat menu sends the loaded prompts and replies as Markdown to the Android share sheet
 - "Continue in terminal" in the same menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI. Stop the chat first so two processes do not write to it
 - "Rewind files" under the files of a turn puts them back to how they were before that prompt (later turns' edits
