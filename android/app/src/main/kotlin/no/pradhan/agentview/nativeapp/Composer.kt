@@ -107,7 +107,8 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 Row(Modifier.weight(1f)) {
                     if (!(running && typed)) {
                         val account = session?.account ?: "main"
-                        Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default"), { sheet = Picker.Settings }, Modifier.weight(1f, fill = false), late = usageHigh(session?.usage), tone = if (account == "main") ChipTone.Personal else ChipTone.Work)
+                        val high = usageHigh(session?.usage)
+                        Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default"), { sheet = Picker.Settings }, Modifier.weight(1f, fill = false), warn = high, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, icon = if (high) "warning" else null)
                     }
                 }
                 if (uploading > 0) RowLabel("Uploading", c.fgMuted)

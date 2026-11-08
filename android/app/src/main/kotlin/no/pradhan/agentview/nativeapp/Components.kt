@@ -282,7 +282,7 @@ fun IconBtn(icon: String, label: String, onClick: () -> Unit, modifier: Modifier
 
 enum class ChipTone { Default, Work, Personal }
 
-// Chip (web Chip): quiet by default, filled when on, red when late, dashed-quiet for an unset value.
+// Chip (web Chip): quiet by default, filled when on, red when late, warn-coloured when warn, dashed-quiet for an unset value. A profile tone adds a leading dot.
 @Composable
 fun Chip(
     text: String,
@@ -290,6 +290,7 @@ fun Chip(
     modifier: Modifier = Modifier,
     on: Boolean = false,
     late: Boolean = false,
+    warn: Boolean = false,
     tone: ChipTone = ChipTone.Default,
     quiet: Boolean = false,
     icon: String? = null,
@@ -299,12 +300,12 @@ fun Chip(
     val c = av
     val fg = when {
         late -> c.err
-        tone == ChipTone.Work -> c.work
-        tone == ChipTone.Personal -> c.personal
+        warn -> c.warn
         on -> c.onSecondaryContainer
         else -> c.fgMuted
     }
     val bg = if (on) c.accentSoft else Color.Transparent
+    val dot = when (tone) { ChipTone.Work -> c.work; ChipTone.Personal -> c.personal; ChipTone.Default -> null }
     val shape = RoundedCornerShape(Tokens.radiusMd)
     Row(
         modifier.minimumInteractiveComponentSize().height(Tokens.size2xl).clip(shape).background(bg).then(if (quiet) Modifier.dashedBorder(Tokens.hairline, c.borderStrong, Tokens.radiusMd) else Modifier)
@@ -312,6 +313,7 @@ fun Chip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
     ) {
+        if (dot != null) Box(Modifier.size(Tokens.dot).clip(CircleShape).background(dot))
         if (icon != null) AvIcon(icon, null, Tokens.iconSm, tint = fg)
         Text(text, style = Type.callout, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (trailingIcon != null) AvIcon(trailingIcon, trailingLabel, Tokens.iconSm, tint = fg)

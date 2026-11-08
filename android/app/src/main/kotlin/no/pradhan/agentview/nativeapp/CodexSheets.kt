@@ -100,7 +100,8 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
             TextField(text, { text = it }, placeholder = "Notes", minLines = 3)
             FieldLabel("Due")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Chip(dueLabel(row.at, now), { pickDue = true }, icon = "calendar", on = row.at != null, late = (row.at ?: Long.MAX_VALUE) < now && row.status == "open", quiet = row.at == null)
+                val late = (row.at ?: Long.MAX_VALUE) < now && row.status == "open"
+                Chip(dueLabel(row.at, now), { pickDue = true }, icon = if (late) "warning" else "calendar", on = row.at != null, late = late, quiet = row.at == null)
                 if (row.at != null) Chip("Clear", { actions.due(row, null) })
             }
             FieldLabel("Snooze")
