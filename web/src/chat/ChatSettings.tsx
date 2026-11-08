@@ -2,6 +2,7 @@ import { notice, send, useStore } from '../app/store';
 import { copyText } from '../ui/util';
 import { resumeCommand } from './composerLogic';
 import { QuickPick } from '../ui/QuickPick';
+import { MemoryPick } from './Memory';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
 
 const MODES: Record<string, { label: string; detail: string; icon: string }> = {
@@ -17,7 +18,7 @@ const LOOP_ITEMS = [
   ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Up to ${n} ${n === 1 ? 'round' : 'rounds'}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
 ];
 
-export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools'; at: DOMRect; server?: string };
+export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools' | 'memory'; at: DOMRect; server?: string };
 
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -54,6 +55,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
             ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),
             { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
             { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
+            { value: 'memory', label: 'Memory', detail: 'CLAUDE.md and memory files' },
             ...(sessionId ? [{ value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
           ]}
           onPick={(v) => {
@@ -63,11 +65,12 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
               close();
               return;
             }
-            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'account' | 'loop' | 'saved', at: pick.at });
+            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'account' | 'loop' | 'saved' | 'memory', at: pick.at });
           }}
           onClose={close}
         />
       )}
+      {pick.kind === 'memory' && <MemoryPick anchor={pick.at} cwd={cwd} onClose={close} />}
       {pick.kind === 'model' && (
         <QuickPick
           anchor={pick.at}
