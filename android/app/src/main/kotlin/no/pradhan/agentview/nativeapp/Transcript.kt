@@ -90,6 +90,8 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     val days = remember(items) { dayDividers(items, System.currentTimeMillis()) }
     val dayOf = remember(items, days) { dayOfRows(items, days) }
     val rewinds = remember(items) { rewindable(items) }
+    val ends = remember(items, running) { turnEnds(items, running) }
+    val title = state.live.firstOrNull { it.id == chatId }?.title.orEmpty()
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, state.events.associate { it.id to it.at }, seen.first, seen.second) }
     DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
@@ -141,6 +143,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                     days[it.id]?.let { DayDivider(it) }
                     if (it.id == newId) NewLine()
                     ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && it.id in rewinds)
+                    if (it is Item.Assistant && it.id in ends) Button("Save as note", { hub.saveReply(it.text, title, cwd) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
             }
             if (state.earlier > 0) item(key = "earlier") {

@@ -506,6 +506,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun permission(id: String, allow: Boolean, always: Boolean = false) = post(permissionCmd(id, allow, always), store.wanted)
     fun allowBlocked(id: String) = post(allowBlockedCmd(id), store.wanted)
     fun sendNow(id: String) = post(sendNowCmd(id), store.wanted)
+    fun saveReply(text: String, title: String, cwd: String) {
+        val done = codex.capture("${title.ifBlank { "Saved reply" }}\n$text", "note", segmentOf(cwd)) != null
+        if (done) notice.value = "Saved to Notes"
+    }
     fun rewind(id: String) = post(rewindCmd(id), store.wanted)
     fun stopTask(toolUseId: String) = post(stopTaskCmd(toolUseId), store.wanted)
     fun setModel(model: String) = post(setModelCmd(model), store.wanted)

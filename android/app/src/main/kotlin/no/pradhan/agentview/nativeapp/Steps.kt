@@ -207,6 +207,20 @@ fun rewindable(items: List<Item>): Set<String> {
     return out
 }
 
+// The last reply of each finished turn, which can be saved as a note like a Slack saved message.
+fun turnEnds(items: List<Item>, running: Boolean): Set<String> {
+    val out = HashSet<String>()
+    var last: String? = null
+    for (it in items) when (it) {
+        is Item.User -> { last?.let(out::add); last = null }
+        is Item.System -> if (it.text.startsWith("Claude woke up")) { last?.let(out::add); last = null }
+        is Item.Assistant -> if (!it.streaming && it.text.isNotBlank()) last = it.id
+        else -> {}
+    }
+    if (!running) last?.let(out::add)
+    return out
+}
+
 // Slack-style New line: the first reply or step that arrived after this phone last showed the chat and before it was opened.
 fun newMarker(items: List<Item>, ats: Map<String, Long>, seen: Long, openedAt: Long): String? {
     if (seen <= 0) return null

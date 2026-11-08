@@ -137,4 +137,14 @@ class StepsTest {
         )
         assertEquals(setOf("u1"), rewindable(items))
     }
+
+    @Test fun turnEndsAreTheLastReplyOfEachTurn() {
+        val items = listOf(
+            Item.User("u1", "a", 0, false, false), Item.Assistant("a1", "looking", false), Item.Assistant("a2", "done", false),
+            Item.System("s", "Claude woke up: run"), Item.Assistant("a4", "ran", false),
+            Item.User("u2", "b", 0, false, false), Item.Assistant("a3", "working", false),
+        )
+        assertEquals(setOf("a2", "a4"), turnEnds(items, running = true))
+        assertEquals(setOf("a2", "a4", "a3"), turnEnds(items, running = false))
+    }
 }
