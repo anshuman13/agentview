@@ -218,3 +218,15 @@ fun checksLabel(state: String) = when (state) {
 }
 
 fun prStripMeta(pr: PullRequest) = listOfNotNull("#${pr.number}", "Draft".takeIf { pr.draft }, checksLabel(pr.checks), reviewLabel(pr.review)?.first).joinToString(" · ")
+
+// A draft asking the chat to fix its PR's failing checks and requested changes; null when nothing needs fixing.
+fun fixPrPrompt(number: Int, d: PullRequestDetail): String? {
+    val failed = d.checks.filter { it.state == "failure" }.map { it.name }.distinct()
+    val asked = d.reviews.filter { it.state == "CHANGES_REQUESTED" }.map { it.author }.distinct()
+    if (failed.isEmpty() && asked.isEmpty()) return null
+    val parts = listOfNotNull(
+        failed.takeIf { it.isNotEmpty() }?.let { "the failing checks (${it.joinToString(", ")})" },
+        asked.takeIf { it.isNotEmpty() }?.let { "the changes ${it.joinToString(", ")} requested" },
+    )
+    return "PR #$number: fix ${parts.joinToString(" and ")}. Read the logs and review comments with gh, push the fix, and tell me what changed."
+}

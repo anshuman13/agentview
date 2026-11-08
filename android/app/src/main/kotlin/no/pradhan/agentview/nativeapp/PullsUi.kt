@@ -109,6 +109,8 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
         WorkspaceHeader(hub, "#${pr.number}", onBack, sub = pr.branch) {
             MoreButton { close ->
                 MenuItem("Ask Claude to review", "sparkle", { close(); hub.askClaude(reviewPrPrompt(pr.number)) })
+                val fix = d?.let { fixPrPrompt(pr.number, it) }
+                MenuItem("Fix in chat", "wrench", { close(); fix?.let(hub::draftPrompt); onBack() }, enabled = fix != null)
                 MenuItem("Open on GitHub", "link-external", { close(); link(pr.url) })
                 MenuSeparator()
                 MERGE_METHODS.forEach { (m, label) ->
