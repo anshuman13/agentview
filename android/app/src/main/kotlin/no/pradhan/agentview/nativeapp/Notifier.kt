@@ -18,6 +18,7 @@ private const val WAITING_CHANNEL = "needs"
 private const val WAITING_ID = 1
 const val EXTRA_CHAT = "chat"
 const val EXTRA_NOTICE_ID = "noticeId"
+const val EXTRA_PERMISSION = "permission"
 const val EXTRA_CHANNEL = "channel"
 const val EXTRA_READONLY = "readonly"
 const val KEY_REPLY = "reply"
@@ -41,11 +42,11 @@ class Notifier(private val app: Application) {
         return PendingIntent.getActivity(app, code, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
-    private fun action(op: String, chat: String, id: Int, channel: String, label: String, reply: Boolean = false): NotificationCompat.Action {
+    private fun action(op: String, chat: String, id: Int, channel: String, label: String, permissionId: String = "", reply: Boolean = false): NotificationCompat.Action {
         val intent = Intent(op).setClass(app, NoticeReceiver::class.java)
-            .putExtra(EXTRA_CHAT, chat).putExtra(EXTRA_NOTICE_ID, id).putExtra(EXTRA_CHANNEL, channel).putExtra(EXTRA_READONLY, AppState.readOnly)
+            .putExtra(EXTRA_CHAT, chat).putExtra(EXTRA_NOTICE_ID, id).putExtra(EXTRA_CHANNEL, channel).putExtra(EXTRA_PERMISSION, permissionId).putExtra(EXTRA_READONLY, AppState.readOnly)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (reply) PendingIntent.FLAG_MUTABLE else PendingIntent.FLAG_IMMUTABLE
-        val builder = NotificationCompat.Action.Builder(0, label, PendingIntent.getBroadcast(app, (op + chat).hashCode(), intent, flags))
+        val builder = NotificationCompat.Action.Builder(0, label, PendingIntent.getBroadcast(app, (op + id).hashCode(), intent, flags))
         if (reply) builder.addRemoteInput(RemoteInput.Builder(KEY_REPLY).setLabel("Reply").build())
         return builder.build()
     }
@@ -63,8 +64,8 @@ class Notifier(private val app: Application) {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
         val replies = n.ask == NoticeAsk.Question || n.kind == NoticeKind.Finished
         if (n.ask == NoticeAsk.Permission) {
-            builder.addAction(action(NoticeOp.ALLOW, n.chatId, id, n.kind.channel, "Allow"))
-            builder.addAction(action(NoticeOp.DENY, n.chatId, id, n.kind.channel, "Deny"))
+            builder.addAction(action(NoticeOp.ALLOW, n.chatId, id, n.kind.channel, "Allow", n.permissionId))
+            builder.addAction(action(NoticeOp.DENY, n.chatId, id, n.kind.channel, "Deny", n.permissionId))
         }
         if (replies) builder.addAction(action(NoticeOp.REPLY, n.chatId, id, n.kind.channel, "Reply", reply = true))
         manager.notify(id, builder.build())

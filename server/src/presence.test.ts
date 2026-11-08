@@ -2,17 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { createPresence, desktopActive, isPhone } from './presence.js';
 
 describe('presence', () => {
-  it('is active for 3 minutes after a desktop touch', () => {
+  it('records the time of the last desktop touch', () => {
     let t = 1_000_000;
     const p = createPresence(() => t);
-    expect(p.active()).toBe(false);
+    expect(p.at()).toBe(0);
     p.touch();
-    t += 179_000;
-    expect(p.active()).toBe(true);
-    t += 2_000;
-    expect(p.active()).toBe(false);
+    expect(p.at()).toBe(t);
+    t += 5_000;
     p.touch();
-    expect(p.active()).toBe(true);
     expect(p.at()).toBe(t);
   });
 

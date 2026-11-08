@@ -35,11 +35,6 @@ class ExtrasLogicTest {
         assertEquals("a b/1", parseDeepLink(chatLink("a b/1"))?.chat)
     }
 
-    @Test fun badgeIsClamped() {
-        assertEquals(0, badgeArg(-3))
-        assertEquals(7, badgeArg(7))
-        assertEquals(99, badgeArg(250))
-    }
 
     @Test fun shortcutActionsParse() {
         assertEquals(Shortcut.NEW_CHAT, parseDeepLink("agentview://open?action=new-chat")?.action)

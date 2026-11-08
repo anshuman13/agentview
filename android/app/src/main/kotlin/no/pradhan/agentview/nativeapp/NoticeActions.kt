@@ -23,22 +23,23 @@ sealed interface ActionResult {
 // Never plan approvals: those need the plan on screen.
 private fun List<Pending>.permission() = filterIsInstance<Pending.Permission>().firstOrNull { it.toolName != "ExitPlanMode" }
 
-suspend fun noticeAsk(remote: NoticeRemote, chat: String): NoticeAsk {
-    val open = runCatching { remote.pending(chat) }.getOrNull() ?: return NoticeAsk.None
+suspend fun noticeAsk(remote: NoticeRemote, n: Notice): Notice {
+    val open = runCatching { remote.pending(n.chatId) }.getOrNull() ?: return n
+    val permission = open.permission()
     return when {
-        open.permission() != null -> NoticeAsk.Permission
-        open.any { it is Pending.Question } -> NoticeAsk.Question
-        else -> NoticeAsk.None
+        permission != null -> n.copy(ask = NoticeAsk.Permission, permissionId = permission.id, body = "${permission.toolName}: ${n.body}")
+        open.any { it is Pending.Question } -> n.copy(ask = NoticeAsk.Question)
+        else -> n
     }
 }
 
 // The same commands the in-app buttons send: permission for Allow and Deny, answer for a question, prompt for a finished chat.
-suspend fun runNoticeAction(remote: NoticeRemote, readOnly: Boolean, op: String, chat: String, text: String = "", newId: () -> String = { UUID.randomUUID().toString() }): ActionResult {
+suspend fun runNoticeAction(remote: NoticeRemote, readOnly: Boolean, op: String, chat: String, text: String = "", permissionId: String = "", newId: () -> String = { UUID.randomUUID().toString() }): ActionResult {
     if (readOnly) return ActionResult.ReadOnly
     return try {
         val open = remote.pending(chat)
         val body = when (op) {
-            NoticeOp.ALLOW, NoticeOp.DENY -> open.permission()?.let { permissionCmd(it.id, op == NoticeOp.ALLOW) } ?: return ActionResult.Failed("Already answered")
+            NoticeOp.ALLOW, NoticeOp.DENY -> open.permission()?.takeIf { it.id == permissionId }?.let { permissionCmd(it.id, op == NoticeOp.ALLOW) } ?: return ActionResult.Failed("Already answered")
             NoticeOp.REPLY -> {
                 val reply = text.trim()
                 if (reply.isEmpty()) return ActionResult.Failed("Nothing to send")

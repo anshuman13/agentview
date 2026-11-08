@@ -11,7 +11,7 @@ enum class NoticeKind(val channel: String, val label: String) {
 
 enum class NoticeAsk { None, Permission, Question }
 
-data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None)
+data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None, val permissionId: String = "")
 
 fun repoName(c: LiveChat) = c.cwd.trimEnd('/').substringAfterLast('/')
 
@@ -44,9 +44,6 @@ fun waitingSnapshot(live: List<LiveChat>): WaitingSnapshot {
 fun WaitingLine.text() = if (repo.isEmpty()) title else "$title · $repo"
 
 fun chatLink(id: String) = "agentview://open?chat=${URLEncoder.encode(id, "UTF-8")}"
-
-// web/src/app/launcherBadge.ts badgeArg
-fun badgeArg(count: Int) = count.coerceIn(0, 99)
 
 data class SharedItem(val text: String?, val subject: String?, val images: List<String>)
 

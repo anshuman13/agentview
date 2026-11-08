@@ -6,13 +6,12 @@ export function isPhone(client: string | null | undefined, userAgent: string | u
   return client === 'phone' || PHONE_UA.test(userAgent ?? '');
 }
 
-// The last time a desktop client (a browser tab or the menu bar) connected or sent a command.
+// The last time a desktop client (a browser tab) connected or sent a command.
 export function createPresence(now: () => number = Date.now) {
   let last = 0;
   return {
     touch: () => void (last = now()),
     at: () => last,
-    active: () => last > 0 && now() - last < DESKTOP_ACTIVE_MS,
   };
 }
 

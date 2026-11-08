@@ -2,8 +2,11 @@ package no.pradhan.agentview.nativeapp
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -22,6 +25,9 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.color.ColorProvider
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.serialization.encodeToString
 
 // The waiting chats the ongoing notification lists, kept where the widget can read them without the app running.
@@ -32,6 +38,13 @@ object WaitingStore {
         context.getSharedPreferences("agentview", 0).edit().putString(KEY, protocolJson.encodeToString(snap)).apply()
     }
 
+    fun changes(context: Context): Flow<WaitingSnapshot> = callbackFlow {
+        val prefs = context.getSharedPreferences("agentview", 0)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> if (key == KEY) trySend(read(context)) }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
     fun read(context: Context): WaitingSnapshot =
         context.getSharedPreferences("agentview", 0).getString(KEY, null)?.let { runCatching { protocolJson.decodeFromString<WaitingSnapshot>(it) }.getOrNull() } ?: WaitingSnapshot()
 }
@@ -40,8 +53,10 @@ private fun pick(pair: (AvColors) -> Color) = ColorProvider(day = pair(LightColo
 
 class WaitingWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val snap = WaitingStore.read(context)
-        provideContent { WaitingContent(context, snap) }
+        provideContent {
+            val snap by WaitingStore.changes(context).collectAsState(WaitingStore.read(context))
+            WaitingContent(context, snap)
+        }
     }
 }
 

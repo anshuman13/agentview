@@ -13,9 +13,10 @@ class NoticeActionsTest {
         override suspend fun send(chat: String, body: String) { sent += chat to body }
     }
 
+    private val notice = Notice(NoticeKind.Approval, "c1", "Claude needs you", "Fix")
     private fun perm(id: String = "p1", tool: String = "Bash") = Pending.Permission(id, tool, "Run", "", JsonObject(emptyMap()), true, false)
     private fun ask(vararg q: String) = Pending.Question("q1", q.map { Ask(it, "", false, emptyList()) })
-    private fun run(f: Fake, op: String, text: String = "", readOnly: Boolean = false) = runBlocking { runNoticeAction(f, readOnly, op, "c1", text) { "id1" } }
+    private fun run(f: Fake, op: String, text: String = "", readOnly: Boolean = false, permissionId: String = "p1") = runBlocking { runNoticeAction(f, readOnly, op, "c1", text, permissionId) { "id1" } }
 
     @Test fun allowAndDenySendThePermissionCommand() {
         val f = Fake(listOf(perm()))
@@ -40,7 +41,7 @@ class NoticeActionsTest {
     @Test fun planApprovalNeedsTheChat() {
         val f = Fake(listOf(perm(tool = "ExitPlanMode")))
         assertTrue(run(f, NoticeOp.ALLOW) is ActionResult.Failed)
-        assertEquals(NoticeAsk.None, runBlocking { noticeAsk(f, "c1") })
+        assertEquals(NoticeAsk.None, runBlocking { noticeAsk(f, notice).ask })
     }
 
     @Test fun replyAnswersAQuestionOrPromptsAFinishedChat() {
@@ -62,9 +63,18 @@ class NoticeActionsTest {
     }
 
     @Test fun askKindFollowsTheOpenRequest() {
-        assertEquals(NoticeAsk.Permission, runBlocking { noticeAsk(Fake(listOf(perm())), "c") })
-        assertEquals(NoticeAsk.Question, runBlocking { noticeAsk(Fake(listOf(ask("a"))), "c") })
-        assertEquals(NoticeAsk.None, runBlocking { noticeAsk(Fake(fail = true), "c") })
+        val p = runBlocking { noticeAsk(Fake(listOf(perm())), notice) }
+        assertEquals(NoticeAsk.Permission, p.ask)
+        assertEquals("p1", p.permissionId)
+        assertEquals("Bash: Fix", p.body)
+        assertEquals(NoticeAsk.Question, runBlocking { noticeAsk(Fake(listOf(ask("a"))), notice).ask })
+        assertEquals(notice, runBlocking { noticeAsk(Fake(fail = true), notice) })
+    }
+
+    @Test fun aNewPermissionIsNotAnsweredByAnOldNotification() {
+        val f = Fake(listOf(perm("p2")))
+        assertEquals(ActionResult.Failed("Already answered"), run(f, NoticeOp.ALLOW, permissionId = "p1"))
+        assertTrue(f.sent.isEmpty())
     }
 
     @Test fun waitingListsFiveLongestIdleFirst() {

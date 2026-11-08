@@ -10,8 +10,6 @@ import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -138,7 +136,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     // A permission notification gets Allow and Deny, a question one Reply; the kind of request is read from the chat first.
     private fun notify(n: Notice) {
         if (n.kind != NoticeKind.Approval) return notifier.post(n)
-        viewModelScope.launch { notifier.post(n.copy(ask = withContext(Dispatchers.IO) { noticeAsk(api, n.chatId) })) }
+        viewModelScope.launch { notifier.post(withContext(Dispatchers.IO) { noticeAsk(api, n) }) }
     }
 
     private fun handle(m: ServerMessage) {
