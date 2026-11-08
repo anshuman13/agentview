@@ -126,7 +126,7 @@ fun CodexScreen(hub: Hub) {
                 back = if (sub) back else null,
                 filter = filterKey, onFilter = hub::setCodexFilter,
                 onSearch = if (route == null && (page == "overview" || page == "tasks")) { { page = "tasks"; searching = true } } else null,
-                menu = if (route != null) (if (route == "meetings") { close -> ExtraMenu(route, hub, profile, now, chips, decisions, onChip, { decisions = !decisions }, push, close) } else null) else { close ->
+                menu = if (route != null) (if (route == "meetings") { close -> ExtraMenu(route, hub, profile, now, decisions, { decisions = !decisions }, push, close) } else null) else { close ->
                     MenuItem("Search everything", "search", { close(); page = "search" })
                 },
             )

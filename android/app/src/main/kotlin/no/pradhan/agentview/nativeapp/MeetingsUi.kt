@@ -89,7 +89,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
             SearchField(query, { query = it }, "Search meetings")
         }
         item {
-            LazyRow(Modifier.padding(vertical = Tokens.sp2), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            LazyRow(Modifier.padding(vertical = Tokens.sp2), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 items(MEETING_CHIPS) { c -> Chip(c, { onChip(c) }, on = c in chips) }
             }
         }
@@ -389,6 +389,9 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
     val tasks = remember(st.items, name) { st.items.filter { !it.deleted && it.status == "open" && matchesWords(listOf(name.lowercase()), it.title, it.text, it.people) } }
     val titles = remember(st.pages) { st.pages.associate { it.id to it.title } }
     var all by rememberSaveable(name) { mutableStateOf(false) }
+    var allCommitments by rememberSaveable(name, "commitments") { mutableStateOf(false) }
+    var allClaims by rememberSaveable(name, "claims") { mutableStateOf(false) }
+    var adding by rememberSaveable(name, "adding") { mutableStateOf(false) }
     val points = remember(st.items, name) { pointsOf(st.items, name) }
     val pins = remember(st.items, mine) { pinsOf(st.items, mine) }
     val resolved by hub.resolvedQuestions.collectAsState()
@@ -404,11 +407,16 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
         }
         if (commitments.isNotEmpty()) {
             item { SectionHeader("Commitments", commitments.size.toString()) }
-            item { Group { commitments.forEachIndexed { i, c -> if (i > 0) Hairline(); ListRow(c.what, c.meeting.title, onClick = { onMeeting(c.meeting) }) } } }
+            item {
+                Group { (if (allCommitments) commitments else commitments.take(5)).forEachIndexed { i, c -> if (i > 0) Hairline(); ListRow(c.what, c.meeting.title, onClick = { onMeeting(c.meeting) }) } }
+                if (!allCommitments && commitments.size > 5) Button("Show all ${commitments.size}", { allCommitments = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            }
         }
-        item { SectionHeader("Raise with ${firstName(shown)}", points.size.toString()) }
-        if (points.isNotEmpty()) item { PointList(points, st.meetings, now, person = false, showMeeting = true, ops = ops) }
-        item { AddPoint(name, mine.firstOrNull()?.profile ?: WORK, ops) }
+        if (points.isNotEmpty() || adding) {
+            item { SectionHeader("Raise with ${firstName(shown)}", points.size.toString()) }
+            if (points.isNotEmpty()) item { PointList(points, st.meetings, now, person = false, showMeeting = true, ops = ops) }
+            item { AddPoint(name, mine.firstOrNull()?.profile ?: WORK, ops) }
+        } else item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Add point", onClick = { adding = true }) } }
         if (questions.isNotEmpty()) {
             item { SectionHeader("Open questions", questions.size.toString()) }
             item { QuestionList(questions, now, onMeeting) { hub.resolveQuestion(it, st.meetings, now) } }
@@ -432,12 +440,13 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
             item { SectionHeader("In the wiki", claims.size.toString()) }
             item {
                 Group {
-                    claims.forEachIndexed { i, f ->
+                    (if (allClaims) claims else claims.take(5)).forEachIndexed { i, f ->
                         if (i > 0) Hairline()
                         val pid = f.str("page_id")
                         ListRow(f.str("text") ?: "", pid?.let { titles[it] }, onClick = pid?.let { p -> { onWikiPage(f.profile, p) } })
                     }
                 }
+                if (!allClaims && claims.size > 5) Button("Show all ${claims.size}", { allClaims = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }

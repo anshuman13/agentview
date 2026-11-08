@@ -59,7 +59,7 @@ fun ExtraContent(
 }
 
 @Composable
-fun ExtraMenu(route: String, hub: Hub, profile: String?, now: Long, chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, onDecisions: () -> Unit, push: (String) -> Unit, close: () -> Unit) {
+fun ExtraMenu(route: String, hub: Hub, profile: String?, now: Long, decisions: Boolean, onDecisions: () -> Unit, push: (String) -> Unit, close: () -> Unit) {
     if (route != "meetings") return
     MenuItem("Decisions", "check", { close(); onDecisions() }, checked = decisions)
     MenuItem("Take notes", "edit", {
@@ -67,7 +67,4 @@ fun ExtraMenu(route: String, hub: Hub, profile: String?, now: Long, chips: Set<S
         val row = newNotes(if (profile == PERSONAL) PERSONAL else WORK, now)
         if (hub.codex.add(row)) push("meeting:${row.key}")
     })
-    MEETING_CHIPS.forEach { c ->
-        MenuItem(c, "tag", { close(); onChip(c) }, checked = c in chips)
-    }
 }

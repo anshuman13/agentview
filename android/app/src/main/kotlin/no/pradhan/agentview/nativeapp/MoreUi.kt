@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row as LRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -137,13 +139,14 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
     LazyColumn(Modifier.fillMaxWidth()) {
         if (members.isEmpty()) { item { EmptyState("No meetings") }; return@LazyColumn }
         item {
-            SectionHeader(members[0].title ?: "Meeting", action = {
-                if (next != null) Button("Open next", { onMeeting(next) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
-                if (calendar != null) MoreButton { close -> MenuItem("Open calendar", "calendar", { close(); uri.openUri(calendar) }) }
-            })
-            LRow(Modifier.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                cadence?.let { Chip(it, null) }
-                if (people.isNotEmpty()) Chip(if (people.size == 1) "1 person" else "${people.size} people", null)
+            Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                LRow(verticalAlignment = Alignment.CenterVertically) {
+                    Text(members[0].title ?: "Meeting", Modifier.weight(1f), style = Type.title)
+                    if (next != null) Button("Open next", { onMeeting(next) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
+                    if (calendar != null) MoreButton { close -> MenuItem("Open calendar", "calendar", { close(); uri.openUri(calendar) }) }
+                }
+                val meta = listOfNotNull(cadence, if (people.isNotEmpty()) (if (people.size == 1) "1 person" else "${people.size} people") else null).joinToString(" · ")
+                if (meta.isNotEmpty()) Text(meta, style = Type.subheadline, color = av.fgMuted)
             }
         }
         item { SectionHeader("Open across the series") }
@@ -152,7 +155,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
             Group {
                 (if (allOpen) open else open.take(5)).forEachIndexed { i, (m, r) -> if (i > 0) Hairline(); ActionLine(r, m, now, actions, from = weekdayDate(m.startsAt!!)) }
             }
-            if (!allOpen && open.size > 5) Button("+${open.size - 5} more", { allOpen = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (!allOpen && open.size > 5) Button("Show all ${open.size}", { allOpen = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         }
         item { SectionHeader("Occurrences", members.size.toString()) }
         item {
@@ -165,13 +168,14 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
                     ListRow("${weekdayDate(m.startsAt!!)}, ${clock(m.startsAt!!)}", meta.ifEmpty { null }, muted = meetingState(m, now) == MState.Missing, onClick = { onMeeting(m) })
                 }
             }
-            if (!allOcc && members.size > 5) Button("+${members.size - 5} more", { allOcc = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (!allOcc && members.size > 5) Button("Show all ${members.size}", { allOcc = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             Spacer(Modifier.padding(bottom = Tokens.sp16))
         }
     }
 }
 
 // One proposed claim at a time with big Approve, Skip and Reject, so a long list can be cleared with the thumb.
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (Row) -> Unit) {
     val open = remember(st.facts) { proposals(st.facts).associateBy { it.key } }
@@ -191,22 +195,26 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
     }
     val page = fact.str("page_id")?.let { id -> st.pages.firstOrNull { it.id == id && it.profile == fact.profile } }
     val old = fact.str("replaces")?.let { id -> st.facts.firstOrNull { it.id == id && it.profile == fact.profile } }
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
-        Text("${total - left + 1} of $total", style = Type.label, color = av.fgMuted)
-        Panel(Modifier.fillMaxWidth()) {
-            Text(if (page != null) listOfNotNull(page.title, if (page.str("state") == "proposed") "(new page)" else null, fact.str("heading")?.ifEmpty { null }).joinToString(" · ") else "Memory",
-                if (page != null) Modifier.clickable { onPage(page) } else Modifier, style = Type.callout, color = if (page != null) av.accentText else av.fgMuted)
-            Text(fact.str("text") ?: "", style = Type.body, color = av.fg)
-            if (old != null) Text(old.str("text") ?: "", style = Type.subheadline, color = av.fgMuted, textDecoration = TextDecoration.LineThrough)
-            LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-                sourcesOf(fact).forEach { s -> Chip(s.label, safeHref(s.url)?.let { u -> { uri.openUri(u) } }) }
-                fact.long("at")?.let { Text(shortDate(it, System.currentTimeMillis()), style = Type.meta, color = av.metaFg) }
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
+        Text("${total - left + 1} of $total", Modifier.padding(horizontal = Tokens.listPad), style = Type.label, color = av.fgMuted)
+        Group {
+            Column(Modifier.padding(Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
+                Text(listOfNotNull(page?.title, if (page?.str("state") == "proposed") "(new page)" else null, fact.str("heading")?.ifEmpty { null }).joinToString(" · ").ifEmpty { "Memory" }, style = Type.callout, color = av.fgMuted)
+                Text(fact.str("text") ?: "", style = Type.body, color = av.fg)
+                if (old != null) Text(old.str("text") ?: "", style = Type.subheadline, color = av.fgMuted, textDecoration = TextDecoration.LineThrough)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4), itemVerticalAlignment = Alignment.CenterVertically) {
+                    sourcesOf(fact).forEach { s -> Chip(s.label, safeHref(s.url)?.let { u -> { uri.openUri(u) } }) }
+                    fact.long("at")?.let { Text(shortDate(it, System.currentTimeMillis()), style = Type.meta, color = av.metaFg) }
+                }
             }
+            if (page != null) { Hairline(); ListRow("Open page", onClick = { onPage(page) }, trailing = { Chevron() }) }
         }
-        LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            Button("Reject", { ops.reject(listOf(fact)) }, Modifier.weight(1f), variant = ButtonVariant.Danger, size = ButtonSize.Lg)
-            Button("Skip", { skipped = skipped.filter { it != fact.key } + fact.key }, Modifier.weight(1f), size = ButtonSize.Lg)
-            Button("Approve", { ops.approve(listOf(fact)) }, Modifier.weight(1f), variant = ButtonVariant.Filled, size = ButtonSize.Lg)
+        Column(Modifier.padding(horizontal = Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            Button("Approve", { ops.approve(listOf(fact)) }, Modifier.fillMaxWidth(), variant = ButtonVariant.Filled, size = ButtonSize.Lg)
+            LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                Button("Reject", { ops.reject(listOf(fact)) }, Modifier.weight(1f), variant = ButtonVariant.Danger, size = ButtonSize.Md)
+                Button("Skip", { skipped = skipped.filter { it != fact.key } + fact.key }, Modifier.weight(1f), size = ButtonSize.Md)
+            }
         }
     }
 }
