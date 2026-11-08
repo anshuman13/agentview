@@ -53,6 +53,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -94,9 +95,9 @@ import androidx.compose.ui.unit.dp
 
 // The shared components, one per web primitive (web/src/ui and web/src/styles/components). Screens build only from these and the tokens.
 
-val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = Tokens.fsSm, lineHeight = Tokens.lineSm)
+val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = Tokens.fsSubheadline, lineHeight = Tokens.lineMd)
 
-// Page header with an optional back button: a single line title that ends in an ellipsis.
+// Page header with an optional back button: one line at a tab root, two with back, ending in an ellipsis.
 @Composable
 fun PageHeader(title: String, onBack: (() -> Unit)? = null, large: Boolean = onBack == null, subtitle: (@Composable () -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) {
     Row(
@@ -106,7 +107,7 @@ fun PageHeader(title: String, onBack: (() -> Unit)? = null, large: Boolean = onB
     ) {
         if (onBack != null) IconBtn("arrow-left", "Back", onBack, tint = av.fg)
         Column(Modifier.weight(1f)) {
-            Text(title, style = if (large) Type.title else Type.headline, color = av.fg, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(title, style = if (large) Type.title else Type.headline, color = av.fg, maxLines = if (large) 1 else 2, overflow = TextOverflow.Ellipsis)
             subtitle?.invoke()
         }
         actions()
@@ -115,8 +116,8 @@ fun PageHeader(title: String, onBack: (() -> Unit)? = null, large: Boolean = onB
 
 // Section header (web Section): muted label, a quiet count badge, a chevron when it folds, actions at the end.
 @Composable
-fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, onToggle: (() -> Unit)? = null, color: Color = av.fgMuted, style: TextStyle = Type.label, titleColor: Color = color, action: (@Composable RowScope.() -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth().padding(end = Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, onToggle: (() -> Unit)? = null, color: Color = av.fgMuted, style: TextStyle = Type.callout, titleColor: Color = color, action: (@Composable RowScope.() -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth().padding(top = Tokens.sp3, end = Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         Row(
             Modifier.weight(1f).heightIn(min = Tokens.touchMd).then(if (onToggle != null) Modifier.clickable(onClick = onToggle) else Modifier).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4),
             verticalAlignment = Alignment.CenterVertically,
@@ -149,7 +150,7 @@ fun <T> LazyListScope.lazyGroup(rows: List<T>, key: (T) -> Any, lead: Boolean = 
 }
 
 @Composable
-fun Hairline(lead: Boolean = false) = HorizontalDivider(Modifier.padding(start = Tokens.listPad + if (lead) Tokens.leadWidth + Tokens.sp6 else 0.dp), color = av.border, thickness = Tokens.hairline)
+fun Hairline(lead: Boolean = false) = HorizontalDivider(Modifier.padding(start = Tokens.listPad + if (lead) Tokens.leadWidth + Tokens.sp8 else 0.dp), color = av.border, thickness = Tokens.hairline)
 
 // List row (web Row): leading slot, a title of one or two lines, a meta line and trailing content.
 @OptIn(ExperimentalFoundationApi::class)
@@ -171,10 +172,10 @@ fun ListRow(
 ) {
     val click = if (onClick != null || onLongClick != null) Modifier.combinedClickable(onClick = { onClick?.invoke() }, onLongClick = onLongClick) else Modifier
     Row(
-        modifier.fillMaxWidth().background(if (selected) av.hover else Color.Transparent).heightIn(min = Tokens.touch).then(click)
-            .padding(start = Tokens.listPad, end = if (trailing != null) Tokens.sp4 else Tokens.listPad, top = Tokens.sp3, bottom = Tokens.sp3),
+        modifier.fillMaxWidth().background(if (selected) av.hover else Color.Transparent).heightIn(min = if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click)
+            .padding(start = Tokens.listPad, end = if (trailing != null) Tokens.sp4 else Tokens.listPad, top = Tokens.sp5, bottom = Tokens.sp5),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Tokens.sp6),
+        horizontalArrangement = Arrangement.spacedBy(Tokens.sp8),
     ) {
         if (leading != null) Box(Modifier.widthIn(min = Tokens.leadWidth), contentAlignment = Alignment.Center) { CompositionLocalProvider(LocalContentColor provides av.fgMuted) { leading() } }
         Column(Modifier.weight(1f)) {
@@ -240,7 +241,7 @@ fun Button(
         ButtonVariant.Danger -> c.err.copy(alpha = 0.14f) to c.err
     }
     val (h, pad, style) = when (size) {
-        ButtonSize.Sm -> Triple(Tokens.controlSm, Tokens.sp6, Type.label)
+        ButtonSize.Sm -> Triple(Tokens.controlSm, Tokens.sp6, Type.callout)
         ButtonSize.Md -> Triple(Tokens.buttonMd, Tokens.sp8, Type.body.copy(fontWeight = FontWeight.Medium))
         ButtonSize.Lg -> Triple(Tokens.buttonLg, Tokens.sp12, Type.body.copy(fontWeight = FontWeight.SemiBold))
     }
@@ -276,7 +277,7 @@ private val CodiconFont = FontFamily(Font(R.font.codicon))
 @Composable
 fun IconBtn(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, on: Boolean = false, enabled: Boolean = true, tint: Color? = null) {
     Box(
-        modifier.size(Tokens.touch).clip(RoundedCornerShape(Tokens.radiusMd)).clickable(enabled = enabled, onClickLabel = label, onClick = onClick).alpha(if (enabled) 1f else 0.4f),
+        modifier.size(Tokens.touch).clickable(interactionSource = remember { MutableInteractionSource() }, indication = ripple(bounded = false, radius = Tokens.controlMd / 2), enabled = enabled, onClickLabel = label, onClick = onClick).alpha(if (enabled) 1f else 0.4f),
         contentAlignment = Alignment.Center,
     ) { AvIcon(icon, label, Tokens.iconLg, tint = tint ?: if (on) av.accentText else av.fgMuted) }
 }
@@ -304,7 +305,6 @@ fun Chip(
         tone == ChipTone.Accent -> c.accentText
         tone == ChipTone.Work -> c.work
         tone == ChipTone.Personal -> c.personal
-        quiet -> c.fgFaint
         on -> c.fg
         else -> c.fgMuted
     }
@@ -316,12 +316,12 @@ fun Chip(
     val shape = RoundedCornerShape(Tokens.radiusMd)
     Row(
         modifier.minimumInteractiveComponentSize().height(Tokens.size2xl).clip(shape).background(bg).then(if (quiet) Modifier.dashedBorder(Tokens.hairline, c.borderStrong, Tokens.radiusMd) else Modifier)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = Tokens.sp4),
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = Tokens.sp6),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
     ) {
         if (icon != null) AvIcon(icon, null, Tokens.iconSm, tint = fg)
-        Text(text, style = Type.footnote, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, style = Type.callout, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (trailingIcon != null) AvIcon(trailingIcon, trailingLabel, Tokens.iconSm, tint = fg)
     }
 }
@@ -440,7 +440,7 @@ fun TextField(
             ) {
                 leading?.invoke()
                 Box(Modifier.weight(1f).padding(vertical = Tokens.sp4)) {
-                    if (value.isEmpty() && placeholder.isNotEmpty()) Text(placeholder, style = style, color = c.fgFaint, maxLines = if (singleLine) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
+                    if (value.isEmpty() && placeholder.isNotEmpty()) Text(placeholder, style = style, color = c.fgMuted, maxLines = if (singleLine) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
                     inner()
                 }
                 trailing?.invoke()
@@ -453,8 +453,8 @@ fun TextField(
 @Composable
 fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
     TextField(
-        value, onValueChange, modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), placeholder = placeholder, singleLine = true, pill = true,
-        leading = { AvIcon("search", null, Tokens.iconMd, tint = av.fgFaint) },
+        value, onValueChange, modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), placeholder = placeholder, singleLine = true, pill = true,
+        leading = { AvIcon("search", null, Tokens.iconMd, tint = av.fgMuted) },
         trailing = if (value.isNotEmpty()) { { IconBtn("close", "Clear", { onValueChange("") }) } } else null,
     )
 }
@@ -477,7 +477,7 @@ fun Sheet(onDismiss: () -> Unit, padded: Boolean = true, full: Boolean = true, c
         shape = RoundedCornerShape(topStart = Tokens.radiusSheet, topEnd = Tokens.radiusSheet),
         tonalElevation = 0.dp,
         dragHandle = {
-            Box(Modifier.fillMaxWidth().height(Tokens.sizeMd), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxWidth().height(Tokens.sp24), contentAlignment = Alignment.Center) {
                 Box(Modifier.size(Tokens.handleWidth, Tokens.handleHeight).clip(RoundedCornerShape(Tokens.radiusXs)).background(c.borderStrong))
             }
         },

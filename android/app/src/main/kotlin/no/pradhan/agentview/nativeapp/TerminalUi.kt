@@ -87,7 +87,7 @@ private fun TermView(hub: Hub, id: String, onGone: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth().background(av.surface)) {
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = Tokens.sp4), state = list) {
-                items(lines) { l -> Text(termText(l), Modifier.horizontalScroll(scroll), style = Mono, color = av.fg, softWrap = false) }
+                items(lines) { l -> Text(termText(l), Modifier.horizontalScroll(scroll), style = TermMono, color = av.fg, softWrap = false) }
             }
         }
         HorizontalDivider(color = av.border, thickness = Tokens.hairline)
@@ -96,7 +96,7 @@ private fun TermView(hub: Hub, id: String, onGone: () -> Unit) {
         }
         Row(Modifier.fillMaxWidth().padding(start = Tokens.sp6, end = Tokens.sp2, bottom = Tokens.sp4)) {
             TextField(
-                input, { input = it }, Modifier.weight(1f), placeholder = "Type a command", singleLine = true, style = Mono,
+                input, { input = it }, Modifier.weight(1f), placeholder = "Type a command", singleLine = true, style = TermMono,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, autoCorrectEnabled = false),
                 keyboardActions = KeyboardActions(onSend = { send(input + "\r"); input = "" }),
             )
@@ -123,3 +123,5 @@ private fun termText(l: TermLine): AnnotatedString {
         for (r in l.runs) if (r.end <= l.text.length) addStyle(SpanStyle(color = colors[r.color]), r.start, r.end)
     }
 }
+
+private val TermMono = Mono.copy(fontSize = Tokens.fsSm, lineHeight = Tokens.lineSm)

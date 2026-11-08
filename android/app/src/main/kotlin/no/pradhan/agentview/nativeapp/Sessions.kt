@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -113,7 +114,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         PageHeader("Sessions") { IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
         SearchField(filter, { filter = it }, "Search repos and sessions")
-        Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+        Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
             listOf(WORK, PERSONAL).forEach { k ->
                 Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
             }
@@ -126,7 +127,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No ${profileLabel(segment).lowercase()} sessions yet")
             return@Column
         }
-        LazyColumn(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.sp8)) {
             if (waiting.isNotEmpty()) {
                 item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
                 items(waiting.size, key = { "needs-${waiting[it].id}" }) { Box { liveRow(waiting[it], folderName(folderKey(waiting[it].cwd, ws.repos, ws.trees))) } }
@@ -149,7 +150,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                     items(recent.size, key = { "r-${recent[it].sessionId}" }) { Box { savedRow(recent[it]) } }
                     if (filter.isBlank() && g.recent.size > RECENT) item(key = "m-${g.key}") {
                         val all = g.key in full
-                        Button(if (all) "Show less" else "Show ${g.recent.size - RECENT} more", { if (all) full.remove(g.key) else full.add(g.key) }, Modifier.padding(start = Tokens.sp12), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                        Button(if (all) "Show less" else "Show ${g.recent.size - RECENT} more", { if (all) full.remove(g.key) else full.add(g.key) }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     }
                 }
             }
