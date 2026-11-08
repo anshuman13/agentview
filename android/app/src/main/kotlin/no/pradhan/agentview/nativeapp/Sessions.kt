@@ -160,8 +160,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 if (offline.isEmpty()) EmptyState(if (waitingForServer) "Waiting for the server" else "No sessions yet", if (waitingForServer) "Check the Mac address." else null)
                 else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
                     item(key = "saved-head") { SectionHeader("Saved on this phone", offline.size.toString()) }
-                    lazyGroup(offline, { "sv-${it.id}" }) { c ->
-                        ListRow(c.title.ifBlank { "Untitled" }, "Offline", onClick = { hub.open(c.id); onOpen() })
+                    lazyGroup(offline, { "sv-${it.first}" }) { c ->
+                        ListRow(c.second.ifBlank { "Untitled" }, "Offline", onClick = { hub.open(c.first); onOpen() })
                     }
                 }
                 return@Column

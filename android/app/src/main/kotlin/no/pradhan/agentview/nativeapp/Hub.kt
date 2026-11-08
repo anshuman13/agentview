@@ -9,6 +9,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.coroutineScope
@@ -35,6 +36,7 @@ import java.util.UUID
 const val DEFAULT_ORIGIN = "http://macmini.netbird.cloud:7777"
 const val WORKSPACE_MIN_AGE_MS = 30_000L
 private const val CHAT_KEY = "chat"
+private const val FLUSH_RETRY_MS = 15_000L
 
 class Hub(private val app: Application, private val saved: SavedStateHandle) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("agentview", 0)
@@ -43,10 +45,18 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     private val disk = TranscriptDisk(File(app.filesDir, "transcripts"))
     val drafts = Drafts(PrefsKeyValue(prefs))
     val outbox = Outbox(PrefsKeyValue(prefs))
+    private val titles = ChatTitles(PrefsKeyValue(prefs))
+    private var flushing: Job? = null
+    private var flushFailedAt = 0L
     val store: ChatStore = ChatStore(
         persist = { id, e ->
             val title = store.state.value.live.firstOrNull { it.id == id }?.title
-            viewModelScope.launch(Dispatchers.IO) { runCatching { disk.save(id, title ?: disk.load(id)?.title ?: "", e) } }
+            viewModelScope.launch(Dispatchers.IO) {
+                runCatching {
+                    val name = title ?: titles.get(id)
+                    if (disk.save(id, name, e)) titles.set(id, name)
+                }
+            }
         },
         restore = { id -> disk.load(id)?.let { RecentChats.Entry(it.events, it.earlier) } },
     ).also { s -> saved.get<String>(CHAT_KEY)?.takeIf { it.isNotEmpty() }?.let(s::show) }
@@ -162,27 +172,32 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         store.handle(m)
-        if (m is ServerMessage.Live) liveLoaded.value = true
+        if (m is ServerMessage.Live) {
+            liveLoaded.value = true
+            if (outbox.items.value.isNotEmpty() && System.currentTimeMillis() - flushFailedAt > FLUSH_RETRY_MS) flushOutbox()
+        }
     }
 
     fun draft(chat: String) = drafts.get(chat)
     fun setDraft(chat: String, text: String) = drafts.set(chat, text)
 
     // The title a chat had when it was last saved to disk, for showing it offline.
-    fun savedTitle(chat: String) = disk.load(chat)?.title ?: ""
+    fun savedTitle(chat: String) = titles.get(chat)
 
-    fun savedChats() = disk.list()
+    fun savedChats() = titles.list()
 
     fun cancelQueued(id: String) = outbox.cancel(id)
 
     private fun flushOutbox() {
-        if (readOnly) return
-        viewModelScope.launch {
-            outbox.flush { q ->
-                val running = store.state.value.let { s -> s.session?.running ?: s.live.firstOrNull { it.id == q.chat }?.running } == true
+        if (readOnly || flushing?.isActive == true) return
+        flushing = viewModelScope.launch {
+            liveLoaded.first { it }
+            val err = outbox.flush { q ->
+                val running = store.state.value.let { s -> (if (s.shownId == q.chat) s.session?.running else null) ?: s.live.firstOrNull { it.id == q.chat }?.running } == true
                 val body = if (running && q.steer) steerCmd(q.text, q.id) else promptCmd(q.text, running, q.id)
-                send(body, q.chat) == null
+                send(body, q.chat)
             }
+            if (err != null) { notice.value = err; flushFailedAt = System.currentTimeMillis() }
         }
     }
 
@@ -236,7 +251,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         notifier.clear(id)
         store.show(id)
         markSeen(store.state.value.live.firstOrNull { it.id == id }?.sessionId)
-        post(viewCmd(id), id, viewing = true)
+        if (_connected.value) post(viewCmd(id), id, viewing = true)
     }
 
     // Opens a saved session; true once its chat is shown.
@@ -429,8 +444,9 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         val chat = store.wanted
         val running = store.state.value.let { s -> s.session?.running ?: s.live.firstOrNull { it.id == chat }?.running } == true
         val id = UUID.randomUUID().toString()
-        if (!readOnly && !_connected.value) {
+        if (!readOnly && (!_connected.value || outbox.items.value.isNotEmpty())) {
             if (!outbox.add(Queued(id, chat, t, steer, System.currentTimeMillis()))) { notice.value = "Too many unsent messages"; onLost() }
+            else if (_connected.value) flushOutbox()
             return
         }
         val body = when {

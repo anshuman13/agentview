@@ -50,7 +50,7 @@ class OfflineTest {
         val o = Outbox(FakeKv())
         o.add(q("1")); o.add(q("2", "c2")); o.add(q("3"))
         val sent = ArrayList<String>()
-        o.flush { sent += it.id; true }
+        o.flush { sent += it.id; null }
         assertEquals(listOf("1", "2", "3"), sent)
         assertTrue(o.items.value.isEmpty())
     }
@@ -60,20 +60,19 @@ class OfflineTest {
         val kv = FakeKv()
         val o = Outbox(kv)
         o.add(q("1")); o.add(q("2")); o.add(q("3"))
-        o.flush { it.id != "2" }
+        assertEquals("boom", o.flush { if (it.id == "2") "boom" else null })
         assertEquals(listOf("2", "3"), Outbox(kv).items.value.map { it.id })
         val sent = ArrayList<String>()
-        o.flush { sent += it.id; true }
+        o.flush { sent += it.id; null }
         assertEquals(listOf("2", "3"), sent)
     }
 
     @Test
-    fun cancelRemovesOneAndForChatFilters() {
+    fun cancelRemovesOne() {
         val o = Outbox(FakeKv())
         o.add(q("1")); o.add(q("2", "c2")); o.add(q("3"))
         o.cancel("3")
-        assertEquals(listOf("1"), o.forChat("c1").map { it.id })
-        assertEquals(listOf("2"), o.forChat("c2").map { it.id })
+        assertEquals(listOf("1", "2"), o.items.value.map { it.id })
     }
 
     @Test
@@ -121,11 +120,13 @@ class TranscriptListTest {
     @get:Rule val tmp = TemporaryFolder()
 
     @Test
-    fun listsSavedChatsNewestFirst() {
+    fun titlesListNewestFirstAndKeepTheLimit() {
         val d = TranscriptDisk(tmp.newFolder("t"))
         val e = RecentChats.Entry(listOf(ChatEvent("e", "assistant", text = "x")), 0)
-        d.save("a", "First", e)
-        d.save("b", "Second", e)
-        assertEquals(listOf("b", "a"), d.list().map { it.id })
+        val t = ChatTitles(FakeKv(), keep = 2)
+        t.set("a", "First"); t.set("b", "Second"); t.set("c", "Third"); t.set("b", "Second")
+        assertEquals(listOf("b" to "Second", "c" to "Third"), t.list())
+        assertEquals("", t.get("a"))
+        assertTrue(d.save("a", "First", e))
     }
 }

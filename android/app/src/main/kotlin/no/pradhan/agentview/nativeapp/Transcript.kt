@@ -12,6 +12,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -179,38 +180,41 @@ fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Toke
     drawBehind { drawRect(color, size = androidx.compose.ui.geometry.Size(width.toPx(), size.height)) }
 
 @Composable
-private fun UserRow(hub: Hub, it: Item.User, chat: String) {
+private fun UserBubble(content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Column(
             Modifier.widthIn(max = maxWidth * 0.85f).background(av.surface, RoundedCornerShape(Tokens.shapeLg)).padding(horizontal = Tokens.sp8, vertical = Tokens.sp6),
             verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
-        ) {
-            for (p in userParts(it.text)) when (p) {
-                is Part.Text -> SelectionContainer { Text(p.text, style = Type.body, color = av.fg) }
-                is Part.Image -> ChatImage(hub, chat, p.path)
-            }
-            if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgMuted)
-            if (it.queued) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
-                Text("Waiting for Claude's next step", Modifier.weight(1f, fill = false), style = Type.footnote, color = av.fgMuted)
-                Button("Send now", { hub.sendNow(it.id) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-            }
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun BubbleFooter(label: String, action: String, onClick: () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f, fill = false), style = Type.footnote, color = av.fgMuted)
+        Button(action, onClick, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+    }
+}
+
+@Composable
+private fun UserRow(hub: Hub, it: Item.User, chat: String) {
+    UserBubble {
+        for (p in userParts(it.text)) when (p) {
+            is Part.Text -> SelectionContainer { Text(p.text, style = Type.body, color = av.fg) }
+            is Part.Image -> ChatImage(hub, chat, p.path)
         }
+        if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgMuted)
+        if (it.queued) BubbleFooter("Waiting for Claude's next step", "Send now") { hub.sendNow(it.id) }
     }
 }
 
 @Composable
 private fun QueuedRow(hub: Hub, q: Queued) {
-    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-        Column(
-            Modifier.widthIn(max = maxWidth * 0.85f).background(av.surface, RoundedCornerShape(Tokens.shapeLg)).padding(horizontal = Tokens.sp8, vertical = Tokens.sp6),
-            verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
-        ) {
-            Text(q.text, style = Type.body, color = av.fgMuted)
-            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
-                Text("Waiting to send", Modifier.weight(1f, fill = false), style = Type.footnote, color = av.fgMuted)
-                Button("Cancel", { hub.cancelQueued(q.id) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-            }
-        }
+    UserBubble {
+        Text(q.text, style = Type.body, color = av.fgMuted)
+        BubbleFooter("Waiting to send", "Cancel") { hub.cancelQueued(q.id) }
     }
 }
 

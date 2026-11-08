@@ -50,8 +50,6 @@ class Outbox(private val kv: KeyValue) {
 
     private fun save() = kv.put("outbox", protocolJson.encodeToString(serializer, items.value))
 
-    fun forChat(chat: String) = items.value.filter { it.chat == chat }
-
     fun add(q: Queued): Boolean {
         if (items.value.size >= MAX_OUTBOX) return false
         items.value = items.value + q
@@ -64,14 +62,33 @@ class Outbox(private val kv: KeyValue) {
         save()
     }
 
-    // Sends the oldest first and stops at the first that fails, which stays queued.
-    suspend fun flush(send: suspend (Queued) -> Boolean) = lock.withLock {
+    // Sends the oldest first and stops at the first that fails, which stays queued; returns that error.
+    suspend fun flush(send: suspend (Queued) -> String?): String? = lock.withLock {
         while (true) {
             val next = items.value.firstOrNull() ?: break
-            if (!send(next)) break
+            val err = send(next)
+            if (err != null) return@withLock err
             cancel(next.id)
         }
+        null
     }
+}
+
+// Titles of the saved chats, newest last, so lists and headers do not read the transcript files.
+class ChatTitles(private val kv: KeyValue, private val keep: Int = CACHED_CHATS) {
+    private val serializer = MapSerializer(String.serializer(), String.serializer())
+    private val map = LinkedHashMap<String, String>(runCatching { protocolJson.decodeFromString(serializer, kv.get("chatTitles") ?: "{}") }.getOrDefault(emptyMap()))
+
+    @Synchronized fun get(id: String) = map[id] ?: ""
+
+    @Synchronized fun set(id: String, title: String) {
+        map.remove(id)
+        map[id] = title
+        while (map.size > keep) map.remove(map.keys.first())
+        kv.put("chatTitles", protocolJson.encodeToString(serializer, map))
+    }
+
+    @Synchronized fun list(): List<Pair<String, String>> = map.entries.reversed().map { it.key to it.value }
 }
 
 @Serializable
@@ -83,8 +100,8 @@ class TranscriptDisk(private val dir: File, private val keep: Int = CACHED_CHATS
 
     private fun file(id: String) = File(dir, id.filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(80).ifEmpty { "chat" } + ".json")
 
-    fun save(id: String, title: String, entry: RecentChats.Entry) {
-        if (entry.events.isEmpty()) return
+    fun save(id: String, title: String, entry: RecentChats.Entry): Boolean {
+        if (entry.events.isEmpty()) return false
         var events = entry.events
         var earlier = entry.earlier
         var json = encode(SavedChat(id, title, earlier, events))
@@ -94,24 +111,19 @@ class TranscriptDisk(private val dir: File, private val keep: Int = CACHED_CHATS
             earlier += drop
             json = encode(SavedChat(id, title, earlier, events))
         }
-        if (json.length > maxBytes) return
+        if (json.length > maxBytes) return false
         dir.mkdirs()
         val f = file(id)
         f.writeText(json)
         stamp = maxOf(System.currentTimeMillis(), stamp + 1)
         f.setLastModified(stamp)
         (dir.listFiles() ?: emptyArray()).sortedByDescending { it.lastModified() }.drop(keep).forEach { it.delete() }
+        return true
     }
 
     fun load(id: String): SavedChat? = runCatching {
         protocolJson.decodeFromString(SavedChat.serializer(), file(id).readText()).takeIf { it.id == id }
     }.getOrNull()
-
-    fun list(): List<SavedChat> = (dir.listFiles() ?: emptyArray()).sortedByDescending { it.lastModified() }.mapNotNull { f ->
-        runCatching { protocolJson.decodeFromString(SavedChat.serializer(), f.readText()) }.getOrNull()
-    }
-
-    fun remove(id: String) { file(id).delete() }
 
     private fun encode(c: SavedChat) = protocolJson.encodeToString(SavedChat.serializer(), c)
 }
