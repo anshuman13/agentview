@@ -208,7 +208,7 @@ private fun ReviewPage(hub: Hub, path: String, onCounts: (Pair<Int, Int>) -> Uni
             val lines = remember(file) { fileDiffLines(file.original, file.content) }
             val rows = remember(lines) { diffRows(lines, true) }
             LaunchedEffect(lines) { onCounts(diffCounts(lines)) }
-            NumberedDiffView(rows, langOf(path), false, onComment)
+            NumberedDiffView(rows, langOf(path), true, onComment)
         }
     }
 }
