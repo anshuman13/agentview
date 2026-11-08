@@ -71,16 +71,6 @@ fun matchesWords(words: List<String>, vararg texts: String?): Boolean {
 }
 
 // A chat matches when every word of the query is in its title, repo or the title or first prompt of its saved copy.
-val KINDS = listOf("new" to "New", "web" to "Web apps", "service" to "Services", "infra" to "Infra", "data" to "Data", "app" to "Apps", "docs" to "Docs", "other" to "Other")
-
-// Repo groups under their repo kind, in the web's kind order; empty kinds are left out.
-fun groupByKind(groups: List<RepoGroup>, repos: List<Repo>): List<Pair<String, List<RepoGroup>>> {
-    val kind = repos.associate { it.cwd to it.kind }
-    val known = KINDS.map { it.first }.toSet()
-    val by = groups.groupBy { g -> kind[g.key]?.takeIf { it in known } ?: "other" }
-    return KINDS.mapNotNull { (k, label) -> by[k]?.let { label to it } }
-}
-
 fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = ""): List<RepoGroup> {
     val words = queryWords(filter)
     val saved = ws.saved.associateBy { it.sessionId }

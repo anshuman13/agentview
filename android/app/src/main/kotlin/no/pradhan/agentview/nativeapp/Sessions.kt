@@ -56,7 +56,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val saved = remember(ws.saved) { ws.saved.associateBy { it.sessionId } }
     val pins = ws.pins.toSet()
     val seen = ws.seen
-    val shutKinds = remember { mutableStateListOf<String>() }
+    var showIdle by rememberSaveable { mutableStateOf(false) }
 
     fun repoBranch(cwd: String) = ws.repos.firstOrNull { it.cwd == folderKey(cwd, ws.repos, ws.trees) }?.branch
 
@@ -141,10 +141,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                         if (c != null) liveRow(c, repo) else savedRow(s!!, repo)
                     }
                 }
-                for ((label, inKind) in groupByKind(groups, ws.repos)) {
-                    val kindOpen = label !in shutKinds
-                    item(key = "k-$label") { SectionHeader(label, inKind.size.toString(), open = kindOpen, onToggle = { if (kindOpen) shutKinds.add(label) else shutKinds.remove(label) }) }
-                    if (kindOpen) for (g in inKind) {
+                val (busy, idle) = groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() }
+                for (g in busy) {
                     val open = filter.isNotBlank() || !(collapsed[g.key] ?: g.open.isEmpty())
                     item(key = "g-${g.key}") { GroupHeader(g, open, seen, { hub.newChat(g.key); onOpen() }) { hub.setCollapsed(g.key, open) } }
                     if (open) {
@@ -156,6 +154,12 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                             Button(if (all) "Show less" else "Show ${g.recent.size - RECENT} more", { if (all) full.remove(g.key) else full.add(g.key) }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                         }
                     }
+                }
+                if (idle.isNotEmpty()) {
+                    val idleOpen = showIdle || filter.isNotBlank()
+                    item(key = "idle-head") { SectionHeader("Repos without chats", idle.size.toString(), open = idleOpen, onToggle = { showIdle = !showIdle }) }
+                    if (idleOpen) lazyGroup(idle.sortedBy { it.name.lowercase() }, { "g-${it.key}" }) { g ->
+                        ListRow(g.name, trailing = { IconBtn("add", "New chat in ${g.name}", { hub.newChat(g.key); onOpen() }) }, onClick = { hub.newChat(g.key); onOpen() })
                     }
                 }
             }
