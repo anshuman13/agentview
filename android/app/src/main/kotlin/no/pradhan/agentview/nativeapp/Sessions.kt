@@ -56,6 +56,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val saved = remember(ws.saved) { ws.saved.associateBy { it.sessionId } }
     val pins = ws.pins.toSet()
     val seen = ws.seen
+    val shutKinds = remember { mutableStateListOf<String>() }
 
     fun repoBranch(cwd: String) = ws.repos.firstOrNull { it.cwd == folderKey(cwd, ws.repos, ws.trees) }?.branch
 
@@ -140,7 +141,10 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                         if (c != null) liveRow(c, repo) else savedRow(s!!, repo)
                     }
                 }
-                for (g in groups) {
+                for ((label, inKind) in groupByKind(groups, ws.repos)) {
+                    val kindOpen = label !in shutKinds
+                    item(key = "k-$label") { SectionHeader(label, inKind.size.toString(), open = kindOpen, onToggle = { if (kindOpen) shutKinds.add(label) else shutKinds.remove(label) }) }
+                    if (kindOpen) for (g in inKind) {
                     val open = filter.isNotBlank() || !(collapsed[g.key] ?: g.open.isEmpty())
                     item(key = "g-${g.key}") { GroupHeader(g, open, seen, { hub.newChat(g.key); onOpen() }) { hub.setCollapsed(g.key, open) } }
                     if (open) {
@@ -151,6 +155,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                             val all = g.key in full
                             Button(if (all) "Show less" else "Show ${g.recent.size - RECENT} more", { if (all) full.remove(g.key) else full.add(g.key) }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                         }
+                    }
                     }
                 }
             }

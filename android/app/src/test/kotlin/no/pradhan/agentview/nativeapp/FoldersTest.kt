@@ -90,4 +90,12 @@ class FoldersTest {
     fun metaLineSkipsEmptyParts() {
         assertEquals("a · c", metaLine("a", null, "", "c"))
     }
+
+    @Test
+    fun groupsReposByKindInWebOrder() {
+        val repos = listOf(Repo("api", "/w/api", kind = "service"), Repo("site", "/w/site", kind = "web"), Repo("x", "/w/x", kind = "weird"))
+        val groups = repos.map { RepoGroup(it.cwd, it.name) } + RepoGroup("/w/loose", "loose")
+        assertEquals(listOf("Web apps" to listOf("/w/site"), "Services" to listOf("/w/api"), "Other" to listOf("/w/x", "/w/loose")),
+            groupByKind(groups, repos).map { (k, gs) -> k to gs.map { it.key } })
+    }
 }
