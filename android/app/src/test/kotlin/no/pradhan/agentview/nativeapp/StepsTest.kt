@@ -96,4 +96,14 @@ class StepsTest {
         assertEquals(Tokens.sp4, gapAbove(text, step))
         assertNull(gapAbove(step, step))
     }
+
+    @Test fun dayDividersMarkEachNewDay() {
+        val zone = java.time.ZoneId.of("Europe/Oslo")
+        fun at(d: String) = java.time.LocalDateTime.parse(d).atZone(zone).toInstant().toEpochMilli()
+        fun user(id: String, d: String) = Item.User(id, "hi", at(d), false, false)
+        val now = at("2026-11-08T22:00")
+        val items = listOf(user("a", "2025-12-31T10:00"), user("b", "2026-11-06T09:00"), Item.System("s", "x"), user("c", "2026-11-06T18:00"), user("d", "2026-11-07T08:00"), user("e", "2026-11-08T07:00"))
+        assertEquals(mapOf("a" to "31 December 2025", "b" to "Friday, 6 November", "d" to "Yesterday", "e" to "Today"), dayDividers(items, now, zone))
+        assertEquals(emptyMap<String, String>(), dayDividers(listOf(user("x", "2026-11-08T09:00"), user("y", "2026-11-08T21:00")), now, zone))
+    }
 }

@@ -165,3 +165,22 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
     }
     return items
 }
+
+// Slack-style day dividers: the label to draw above each prompt that starts a new day. A chat that stays within today gets none.
+fun dayDividers(items: List<Item>, now: Long, zone: java.time.ZoneId = codexZone): Map<String, String> {
+    val today = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    val out = HashMap<String, String>()
+    var prev: java.time.LocalDate? = null
+    for (it in items) {
+        if (it !is Item.User || it.at <= 0) continue
+        val day = java.time.Instant.ofEpochMilli(it.at).atZone(zone).toLocalDate()
+        if (day != prev && (prev != null || day != today)) out[it.id] = when {
+            day == today -> "Today"
+            day == today.minusDays(1) -> "Yesterday"
+            day.year == today.year -> java.time.format.DateTimeFormatter.ofPattern("EEEE, d MMMM", java.util.Locale.ENGLISH).format(day)
+            else -> java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.ENGLISH).format(day)
+        }
+        prev = day
+    }
+    return out
+}

@@ -86,6 +86,7 @@ private fun Modifier.gap(d: Dp?) = if (d == null) this else padding(top = d)
 fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList()) {
     val items = remember(state.events) { buildTranscript(state.events) }
     val rows = remember(items) { items.asReversed() }
+    val days = remember(items) { dayDividers(items, System.currentTimeMillis()) }
     val listState = rememberLazyListState()
     val loading by hub.loadingEarlier.collectAsState()
     val scope = rememberCoroutineScope()
@@ -130,7 +131,10 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
             }
             itemsIndexed(rows, key = { _, it -> it.id }, contentType = { _, it -> it::class }) { i, it ->
-                Box(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) { ItemRow(hub, it, chatId, cwd, !running, onOpenAgent) }
+                Column(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) {
+                    days[it.id]?.let { DayDivider(it) }
+                    ItemRow(hub, it, chatId, cwd, !running, onOpenAgent)
+                }
             }
             if (state.earlier > 0) item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
@@ -146,6 +150,15 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
             hub.navHidden.value = false
             scope.launch { listState.animateScrollToItem(0) }
         }
+    }
+}
+
+@Composable
+private fun DayDivider(label: String) {
+    Row(Modifier.fillMaxWidth().padding(bottom = Tokens.sp8), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
+        Text(label, style = Type.label, color = av.fgMuted, fontWeight = FontWeight.SemiBold)
+        HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
     }
 }
 
