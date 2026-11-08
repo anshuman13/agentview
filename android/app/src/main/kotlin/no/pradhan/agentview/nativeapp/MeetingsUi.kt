@@ -110,7 +110,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
         }
         val folded = query.isEmpty() && chips.isEmpty() && !showPast
         val older = groups.filter { it.label != "Today" }.sumOf { it.rows.size }
-        if (folded && older > 0) item { Group(Modifier.padding(top = Tokens.sp8)) { ListRow("Past meetings", "$older before today", trailing = { Chevron() }, onClick = { showPast = true }) } }
+        if (folded && older > 0) item { Group(Modifier.padding(top = Tokens.sp8)) { ListRow("Past meetings", trailing = { Text("$older", style = Type.body, color = av.fgMuted); Chevron() }, onClick = { showPast = true }) } }
         val listed = if (folded) groups.filter { it.label == "Today" } else groups
         var left = shown
         for (g in listed) {
