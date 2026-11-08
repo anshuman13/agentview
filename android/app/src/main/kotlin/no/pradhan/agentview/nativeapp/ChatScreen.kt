@@ -40,7 +40,10 @@ fun costLabel(cost: Double) = if (cost > 0) "$" + String.format(java.util.Locale
 @Composable
 fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     val state by hub.store.state.collectAsState()
-    val live = state.live.firstOrNull { it.id == state.shownId }
+    val connected by hub.connected.collectAsState()
+    val queued by hub.outbox.items.collectAsState()
+    val cached = state.shownId.isNotEmpty() && state.events.isNotEmpty()
+    val live = state.live.firstOrNull { it.id == state.shownId } ?: if (cached && !connected) LiveChat(state.shownId, remember(state.shownId) { hub.savedTitle(state.shownId) }) else null
     if (live == null) {
         Column(Modifier.fillMaxSize()) {
             PageHeader("Chat")
@@ -100,7 +103,8 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                 MenuItem("Archive", "archive", { close(); dialog = "archive" }, danger = true, enabled = sessionId != null)
             }
         }
-        Transcript(hub, state, live.id, cwd, running, onOpenAgent, Modifier.weight(1f).fillMaxWidth())
+        if (!connected && state.events.isNotEmpty()) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
+        Transcript(hub, state, live.id, cwd, running, onOpenAgent, Modifier.weight(1f).fillMaxWidth(), queued.filter { it.chat == live.id })
         PendingList(state.pending, session?.permissionMode ?: "default", hub)
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")

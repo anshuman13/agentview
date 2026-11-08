@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -81,7 +82,7 @@ internal fun gapAbove(older: Item?, it: Item): Dp? {
 private fun Modifier.gap(d: Dp?) = if (d == null) this else padding(top = d)
 
 @Composable
-fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, modifier: Modifier = Modifier) {
+fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList()) {
     val items = remember(state.events) { buildTranscript(state.events) }
     val rows = remember(items) { items.asReversed() }
     val listState = rememberLazyListState()
@@ -124,6 +125,9 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
             reverseLayout = true,
             contentPadding = PaddingValues(horizontal = Tokens.listPad, vertical = Tokens.sp8),
         ) {
+            lazyItems(queued.asReversed(), key = { "out-${it.id}" }) { q ->
+                Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
+            }
             itemsIndexed(rows, key = { _, it -> it.id }, contentType = { _, it -> it::class }) { i, it ->
                 Box(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) { ItemRow(hub, it, chatId, cwd, !running, onOpenAgent) }
             }
@@ -189,6 +193,22 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String) {
             if (it.queued) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
                 Text("Waiting for Claude's next step", Modifier.weight(1f, fill = false), style = Type.footnote, color = av.fgMuted)
                 Button("Send now", { hub.sendNow(it.id) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            }
+        }
+    }
+}
+
+@Composable
+private fun QueuedRow(hub: Hub, q: Queued) {
+    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+        Column(
+            Modifier.widthIn(max = maxWidth * 0.85f).background(av.surface, RoundedCornerShape(Tokens.shapeLg)).padding(horizontal = Tokens.sp8, vertical = Tokens.sp6),
+            verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
+        ) {
+            Text(q.text, style = Type.body, color = av.fgMuted)
+            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
+                Text("Waiting to send", Modifier.weight(1f, fill = false), style = Type.footnote, color = av.fgMuted)
+                Button("Cancel", { hub.cancelQueued(q.id) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
         }
     }

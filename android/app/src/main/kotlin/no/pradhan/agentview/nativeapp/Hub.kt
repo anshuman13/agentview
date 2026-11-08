@@ -28,6 +28,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
 import java.util.UUID
 
 // Same default as the Tauri phone app (web/src/app/api.ts MAC_URL).
@@ -39,7 +40,16 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     private val prefs = app.getSharedPreferences("agentview", 0)
     private val cid = UUID.randomUUID().toString()
     val client = OkHttpClient()
-    val store = ChatStore().also { s -> saved.get<String>(CHAT_KEY)?.takeIf { it.isNotEmpty() }?.let(s::show) }
+    private val disk = TranscriptDisk(File(app.filesDir, "transcripts"))
+    val drafts = Drafts(PrefsKeyValue(prefs))
+    val outbox = Outbox(PrefsKeyValue(prefs))
+    val store: ChatStore = ChatStore(
+        persist = { id, e ->
+            val title = store.state.value.live.firstOrNull { it.id == id }?.title
+            viewModelScope.launch(Dispatchers.IO) { runCatching { disk.save(id, title ?: disk.load(id)?.title ?: "", e) } }
+        },
+        restore = { id -> disk.load(id)?.let { RecentChats.Entry(it.events, it.earlier) } },
+    ).also { s -> saved.get<String>(CHAT_KEY)?.takeIf { it.isNotEmpty() }?.let(s::show) }
     val notifier = Notifier(app)
 
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
@@ -81,7 +91,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         },
         onConnected = { up ->
             _connected.value = up
-            if (up) viewModelScope.launch { refreshWorkspace(force = true) }
+            if (up) {
+                viewModelScope.launch { refreshWorkspace(force = true) }
+                flushOutbox()
+            }
         },
         onData = { data -> runCatching { parseMessage(data) }.onSuccess { handle(it) } },
     )
@@ -152,9 +165,24 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         if (m is ServerMessage.Live) liveLoaded.value = true
     }
 
-    private val drafts = HashMap<String, String>()
-    fun draft(chat: String) = drafts[chat] ?: ""
-    fun setDraft(chat: String, text: String) { if (text.isEmpty()) drafts.remove(chat) else drafts[chat] = text }
+    fun draft(chat: String) = drafts.get(chat)
+    fun setDraft(chat: String, text: String) = drafts.set(chat, text)
+
+    // The title a chat had when it was last saved to disk, for showing it offline.
+    fun savedTitle(chat: String) = disk.load(chat)?.title ?: ""
+
+    fun cancelQueued(id: String) = outbox.cancel(id)
+
+    private fun flushOutbox() {
+        if (readOnly) return
+        viewModelScope.launch {
+            outbox.flush { q ->
+                val running = store.state.value.let { s -> s.session?.running ?: s.live.firstOrNull { it.id == q.chat }?.running } == true
+                val body = if (running && q.steer) steerCmd(q.text, q.id) else promptCmd(q.text, running, q.id)
+                send(body, q.chat) == null
+            }
+        }
+    }
 
     // Keeps a stream that had a ping in the last 25 s when the app comes back, so it does not download everything again.
     fun connect() { if (!_connected.value || System.currentTimeMillis() - stream.lastSeen > 25_000) stream.start() }
@@ -399,6 +427,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         val chat = store.wanted
         val running = store.state.value.let { s -> s.session?.running ?: s.live.firstOrNull { it.id == chat }?.running } == true
         val id = UUID.randomUUID().toString()
+        if (!readOnly && !_connected.value) {
+            if (!outbox.add(Queued(id, chat, t, steer, System.currentTimeMillis()))) { notice.value = "Too many unsent messages"; onLost() }
+            return
+        }
         val body = when {
             running && steer -> {
                 store.addLocal(chat, ChatEvent(id, "user", text = t, at = System.currentTimeMillis(), stopping = true))
@@ -468,17 +500,21 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
 
     suspend fun image(chat: String, path: String): ByteArray? = runCatching { api.image(chat, path) }.getOrNull()
 
+    private suspend fun send(body: String, chat: String): String? = withContext(Dispatchers.IO) {
+        val url = "${origin.value}/api/cmd?cid=$cid&client=phone&chat=${enc(chat)}"
+        try {
+            client.newCall(Request.Builder().url(url).post(body.toRequestBody("application/json".toMediaType())).build()).execute().use { if (it.isSuccessful) null else "Server said ${it.code}" }
+        } catch (e: Exception) {
+            "Not connected, that did not reach the server"
+        }
+    }
+
     private fun post(body: String, chat: String, viewing: Boolean = false, done: ((Boolean) -> Unit)? = null) {
         if (readOnly && !viewing) { notice.value = READ_ONLY_SENT; done?.invoke(true); return }
-        viewModelScope.launch(Dispatchers.IO) {
-            val url = "${origin.value}/api/cmd?cid=$cid&client=phone&chat=${enc(chat)}"
-            val err = try {
-                client.newCall(Request.Builder().url(url).post(body.toRequestBody("application/json".toMediaType())).build()).execute().use { if (it.isSuccessful) null else "Server said ${it.code}" }
-            } catch (e: Exception) {
-                "Not connected, that did not reach the server"
-            }
+        viewModelScope.launch {
+            val err = send(body, chat)
             if (err != null) notice.value = err
-            withContext(Dispatchers.Main) { done?.invoke(err == null) }
+            done?.invoke(err == null)
         }
     }
 }

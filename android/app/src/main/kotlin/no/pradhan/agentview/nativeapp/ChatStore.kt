@@ -36,7 +36,10 @@ data class StoreState(
 )
 
 // Holds the live list and the events of the viewed chat; the server streams events for one chat at a time.
-class ChatStore {
+class ChatStore(
+    private val persist: (String, RecentChats.Entry) -> Unit = { _, _ -> },
+    private val restore: (String) -> RecentChats.Entry? = { null },
+) {
     val state = MutableStateFlow(StoreState())
     val cache = RecentChats()
 
@@ -85,8 +88,8 @@ class ChatStore {
         wanted = id
         val s = state.value
         if (id == s.shownId) return
-        if (s.shownId.isNotEmpty() && s.settled) cache.put(s.shownId, s.events, s.earlier)
-        val hit = cache.get(id)
+        remember(s)
+        val hit = cache.get(id) ?: restore(id)
         state.value = s.copy(shownId = id, events = hit?.events ?: emptyList(), earlier = hit?.earlier ?: 0, settled = false, session = null, pending = emptyList())
     }
 
@@ -109,9 +112,12 @@ class ChatStore {
         if (s.shownId == chat) state.value = s.copy(events = s.events.filter { it.id != id })
     }
 
-    fun close() {
-        val s = state.value
-        if (s.shownId.isNotEmpty() && s.settled) cache.put(s.shownId, s.events, s.earlier)
+    fun close() = remember(state.value)
+
+    private fun remember(s: StoreState) {
+        if (s.shownId.isEmpty() || !s.settled) return
+        cache.put(s.shownId, s.events, s.earlier)
+        cache.get(s.shownId)?.let { persist(s.shownId, it) }
     }
 
     fun reset() {

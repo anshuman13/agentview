@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) { hub.foreground = true; hub.refreshGranted(); hub.notifier.clearChats(); hub.connect() }
             // With notifications on the stream stays open for as long as the system keeps the process.
-            override fun onStop(owner: LifecycleOwner) { hub.foreground = false; if (!hub.wantsStream()) hub.disconnect() }
+            override fun onStop(owner: LifecycleOwner) { hub.foreground = false; hub.close(); if (!hub.wantsStream()) hub.disconnect() }
         })
         setContent {
             val theme by hub.theme.collectAsState()
