@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { appendTo, ATTENTION_LABEL, ROW_WINDOW, type AttentionItem, type ChatEvent, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
 import { notify } from './notify';
+import { isMuted } from './mute';
 import { apiUrl, bundled } from './api';
 import { backoffDelay } from './backoff';
 import { initPage, prependPage } from './pageEvents';
@@ -135,7 +136,7 @@ function notifyBackground(chats: LiveChat[]) {
     const was = state.live.find((x) => x.id === c.id);
     if (!was || c.id === state.session.id) continue;
     if (c.pending > was.pending) notify(`Claude needs you in ${repo(c)}`, c.title, focus(c.id));
-    else if (was.running && !c.running) notify(`Claude finished in ${repo(c)}`, c.title, focus(c.id));
+    else if (was.running && !c.running && !isMuted(c.sessionId)) notify(`Claude finished in ${repo(c)}`, c.title, focus(c.id));
   }
 }
 

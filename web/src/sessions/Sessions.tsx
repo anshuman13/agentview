@@ -22,6 +22,7 @@ import { Badge } from '../ui/Badge';
 import { RepoRow } from './RepoRow';
 import { Swipe } from '../codex/Swipe';
 import { showSnack } from '../codex/view';
+import { isMuted, setMuted } from '../app/mute';
 import { draftLine, readDraft } from '../chat/composerLogic';
 
 const PAGE = 5;
@@ -501,6 +502,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [muted, setMute] = useState(() => isMuted(sessionId));
   const more = useRef<HTMLButtonElement>(null);
   const unread = state === 'done' || state === 'needs';
   useEffect(() => {
@@ -546,6 +548,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
               case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={pick(retry)}>Retry</MenuItem>;
               case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={pick(() => void onPin!(!pinned))}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
               case 'unread': return <MenuItem key={key} icon="mail" onClick={pick(() => markUnread(sessionId!))}>Mark as unread</MenuItem>;
+              case 'mute': return <MenuItem key={key} icon={muted ? 'bell' : 'bell-slash'} onClick={pick(() => { setMuted(sessionId!, !muted); setMute(!muted); })}>{muted ? 'Unmute' : 'Mute'}</MenuItem>;
               case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={pick(() => setRenaming(true))}>Rename</MenuItem>;
               case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={pick(onBeside!)}>Open beside</MenuItem>;
               case 'close': return <MenuItem key={key} icon="close" onClick={pick(onClose!)}>Close chat</MenuItem>;
