@@ -18,8 +18,6 @@ fun parseGitStatus(body: String): GitStatus = protocolJson.decodeFromString(GitS
 
 fun letterOf(f: GitFile) = if (f.status == "?") "U" else f.status
 
-val GIT_STATUS = mapOf("M" to "Modified", "A" to "Added", "D" to "Deleted", "R" to "Renamed", "U" to "Untracked")
-
 fun pathsBody(files: List<GitFile>) = buildJsonObject { put("paths", JsonArray(files.map { JsonPrimitive(it.path) })) }.toString()
 fun commitBody(message: String) = buildJsonObject { put("message", message) }.toString()
 

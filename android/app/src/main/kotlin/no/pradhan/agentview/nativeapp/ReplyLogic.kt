@@ -1,7 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.put
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale

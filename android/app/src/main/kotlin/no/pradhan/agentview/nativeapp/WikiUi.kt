@@ -29,8 +29,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-private fun pageRoute(r: Row) = "${r.profile}:${r.id}"
-
 @Composable
 fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }

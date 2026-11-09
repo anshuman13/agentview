@@ -182,9 +182,6 @@ private fun NotesField(hub: Hub, m: Row) {
 }
 
 @Composable
-private fun Body(text: String) = Text(text, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.body, color = av.fg)
-
-@Composable
 internal fun Pending(text: String) = Text(text, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.body, color = av.fgMuted)
 
 @Composable

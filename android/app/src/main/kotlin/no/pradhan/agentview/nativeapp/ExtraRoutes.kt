@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 
 // The pages the Codex tab shows beyond Overview, Tasks and Goals: Meetings, Wiki and Jobs with the pages under them.
