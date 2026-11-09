@@ -12,24 +12,19 @@ import { configDef } from '../agent/claude/mcp.js';
 import type { AgentSession } from '../session/session.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway, notifyRunEnded, notifyStall, stallWatch } from '../integrations/notify.js';
-import { prChecks } from '../integrations/github.js';
-import { hubLearn, learnEvents } from '../integrations/assistant.js';
-import { profileOf } from '../agent/claude/accounts.js';
 import { allowedFolder } from '../workspace/files.js';
 import { removeChat } from '../agent/claude/pins.js';
 import { parseTries, startTries, TRIES_USAGE } from '../workspace/tries.js';
 import { ownProfile } from '../chrome/chrome.js';
-import { MCP_BAD, type ChatRun, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
-import { recapOf, replyLine } from '../../../shared/edits.js';
-import { latestTodos, todoCount } from '../../../shared/todos.js';
+import type { ChatRun, ClientMessage, LiveChat, ServerMessage } from '../../../shared/protocol.js';
 import { errText } from '../../../shared/util.js';
 import { applyInitialModel } from './initialModel.js';
 import { sendWhenChanged } from './changed.js';
-import { costsOf, modelField } from './summaryCache.js';
-import { busy, runningAgents, parseSaved, stoppedOf, type Saved } from './restore.js';
+import { busy, parseSaved, stoppedOf, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
 import { watchFiles } from './watchFiles.js';
-import { editsOf, runField } from './liveFields.js';
+import { LearnQueue } from './learnQueue.js';
+import { lastActive, summary } from './summary.js';
 import { Runs, firstSentence, openTries } from '../session/runs.js';
 import { ROUND_INSTRUCTION } from '../session/repeat.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
@@ -52,7 +47,6 @@ const RESTORE = path.join(os.homedir(), '.agentview', 'restore.json');
 const RUNS = path.join(os.homedir(), '.agentview', 'runs.json');
 const IDLE_MS = 10 * 60 * 1000;
 const ORPHAN_MS = 5 * 60 * 1000;
-const LEARN_WAIT_MS = 5 * 60 * 1000;
 
 process.on('uncaughtException', (err) => console.error('uncaught:', err));
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
@@ -77,7 +71,6 @@ let restarting: NodeJS.Timeout | null = null;
 
 const viewers = (chat: AgentSession) => counts[chat.id] ?? 0;
 const bySession = (sessionId: string | null) => [...live.values()].find((l) => l.chat.state.session.sessionId === sessionId)?.chat;
-const lastActive = (chat: AgentSession) => chat.state.events.at(-1)?.at ?? chat.created;
 const get = (id: string) => {
   const chat = live.get(id)?.chat;
   if (!chat) throw new Error('This chat was closed');
@@ -90,55 +83,18 @@ const runs = new Runs(RUNS, () => broadcastLive(), (run) => {
   notifyRunEnded(run, chat ? path.basename(chat.cwd) : '', !desktopActive(desktopAt));
 }, (run) => live.get(run.chatId)?.chat.compareTries(run));
 
+const learning = new LearnQueue({ isLive: (id) => live.has(id), titleOf: (chat) => summaryOf(chat).title });
+
 const stalls = stallWatch((id) => {
   const l = live.get(id);
   if (!l) return;
-  notifyStall(summary(l.chat));
+  notifyStall(summaryOf(l.chat));
   broadcastLive();
 });
 
 
-function prChecksField(cwd: string, pr: number) {
-  const checks = prChecks(cwd, pr, broadcastLive);
-  return checks && checks !== 'none' ? { prChecks: checks } : {};
-}
-
-function summary(chat: AgentSession): LiveChat {
-  const s = chat.state;
-  const todos = latestTodos(s.events);
-  const progress = todos && todoCount(todos);
-  const recap = recapOf(s.events, s.session.running);
-  const agentList = runningAgents(chat);
-  const firstPrompt = s.events.find((e) => e.kind === 'user');
-  const { cost, spend } = costsOf(s.events, new Date().setHours(0, 0, 0, 0));
-  return {
-    id: chat.id,
-    sessionId: s.session.sessionId,
-    cwd: chat.cwd,
-    title: chat.title || (firstPrompt?.kind === 'user' ? firstPrompt.text.split('\n')[0].slice(0, 80) : 'New chat'),
-    running: s.session.running,
-    agents: agentList.length,
-    ...(agentList.length > 0 && { agentList }),
-    pending: s.pending.length,
-    status: s.status,
-    lastActive: lastActive(chat),
-    mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,
-    cost,
-    ...(Object.keys(spend.week).length > 0 && { spend }),
-    stalled: stalls.stalled(chat.id),
-    ...(chat.failed && { failed: true }),
-    ...modelField(s.session.model),
-    last: replyLine(s.events),
-    edits: editsOf(chat),
-    ...(s.session.pr && { pr: s.session.pr, ...prChecksField(chat.cwd, s.session.pr) }),
-    ...(progress && progress.done < progress.total && { todos: progress }),
-    ...(recap && { recap }),
-    ...runField(runs.activeFor(chat.id)),
-  };
-}
-
-
-const liveList = () => [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
+const summaryOf = (chat: AgentSession) => summary(chat, { stalled: stalls.stalled(chat.id), run: runs.activeFor(chat.id), refresh: broadcastLive });
+const liveList = () => [...live.values()].map((l) => summaryOf(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
 let liveTimer: NodeJS.Timeout | null = null;
 const sendLive = sendWhenChanged((chats: LiveChat[]) => broadcast({ type: 'live', chats }));
 const sendRuns = sendWhenChanged((list: ChatRun[]) => broadcast({ type: 'runs', runs: list }));
@@ -151,25 +107,21 @@ function broadcastLive() {
   }, 100);
 }
 
-const learnTimers = new Map<string, NodeJS.Timeout>();
-const learnPosted = new Map<string, number>();
-
-// A chat that stays idle for LEARN_WAIT_MS with a user message not posted yet goes to the hub once, to learn what the user taught.
-function learnLater(chat: AgentSession) {
-  clearTimeout(learnTimers.get(chat.id));
-  learnTimers.set(chat.id, setTimeout(() => {
-    learnTimers.delete(chat.id);
-    if (!live.has(chat.id) || busy(chat) || chat.state.pending.length) return;
-    const since = learnPosted.get(chat.id) ?? 0;
-    const events = chat.state.events;
-    const fresh = events.filter((e) => e.kind === 'user' && !e.auto && e.at > since);
-    if (!fresh.length) return;
-    const title = summary(chat).title;
-    // Keyed by the Claude session, which outlives this host's chat id, so the hub's cursor survives a restart.
-    hubLearn({ chat: chat.state.session.sessionId ?? chat.id, title, profile: profileOf(chat.cwd), events: learnEvents(events) })
-      .then(() => learnPosted.set(chat.id, Math.max(...fresh.map((e) => e.at))))
-      .catch((err) => console.error(`learn ${chat.id}:`, errText(err)));
-  }, LEARN_WAIT_MS).unref());
+function onChatMessage(chat: AgentSession, m: ServerMessage) {
+  broadcast(m, chat);
+  notifyAway(m, () => (viewers(chat) ? null : summaryOf(chat)), () => desktopActive(desktopAt), chat.roundNote);
+  if (m.type === 'session' && chat.state.session.sessionId) rememberAccount(chat.state.session.sessionId, chat.state.session.account);
+  if (m.type === 'session' && chat === lastViewed) remember(chat);
+  if (m.type === 'session') {
+    const { repeat, loop } = chat.state.session;
+    const key = JSON.stringify([repeat, loop]);
+    if (persisted.get(chat) !== key) {
+      persisted.set(chat, key);
+      saveSoon();
+    }
+  }
+  const woke = stalls.seen(chat.id, chat.state.session.running);
+  if (woke || (m.type === 'event' ? m.event.kind === 'user' : m.type !== 'append')) broadcastLive();
 }
 
 async function createChat(cwd: string, resume?: string, title = '', fork = false) {
@@ -178,24 +130,9 @@ async function createChat(cwd: string, resume?: string, title = '', fork = false
   const chat = claudeSession(cwd, resume, fork);
   chat.runs = runs;
   chat.title = title;
-  chat.onIdle = () => learnLater(chat);
+  chat.onIdle = () => learning.later(chat);
   await chat.loadHistory();
-  chat.onMessage((m) => {
-    broadcast(m, chat);
-    notifyAway(m, () => (viewers(chat) ? null : summary(chat)), () => desktopActive(desktopAt), chat.roundNote);
-    if (m.type === 'session' && chat.state.session.sessionId) rememberAccount(chat.state.session.sessionId, chat.state.session.account);
-    if (m.type === 'session' && chat === lastViewed) remember(chat);
-    if (m.type === 'session') {
-      const { repeat, loop } = chat.state.session;
-      const key = JSON.stringify([repeat, loop]);
-      if (persisted.get(chat) !== key) {
-        persisted.set(chat, key);
-        saveSoon();
-      }
-    }
-    const woke = stalls.seen(chat.id, chat.state.session.running);
-    if (woke || (m.type === 'event' ? m.event.kind === 'user' : m.type !== 'append')) broadcastLive();
-  });
+  chat.onMessage((m) => onChatMessage(chat, m));
   if (!resume || fork) chat.start();
   live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });
   broadcastLive();
@@ -203,9 +140,7 @@ async function createChat(cwd: string, resume?: string, title = '', fork = false
 }
 
 function closeChat(chat: AgentSession) {
-  clearTimeout(learnTimers.get(chat.id));
-  learnTimers.delete(chat.id);
-  learnPosted.delete(chat.id);
+  learning.forget(chat.id);
   chat.close();
   stalls.seen(chat.id, false);
   live.get(chat.id)?.watcher.close();
@@ -396,18 +331,20 @@ async function keepTry(runId: string, n: number) {
   runs.keep(runId, n);
 }
 
+function promptCommand(chat: AgentSession, msg: Extract<ClientMessage, { type: 'prompt' }>) {
+  if (typeof msg.text !== 'string') return;
+  const id = typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined;
+  const tries = parseTries(msg.text);
+  if (tries) return runTries(chat, msg.text, tries, id);
+  // The composer sends steer to stop Claude; a prompt during a run (Fix, Compact) waits its turn.
+  void chat.prompt(msg.text, id);
+}
+
 // Chat-level commands from a client. The ones whose failure the client should hear about return their promise.
 function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | void {
   switch (msg.type) {
-    case 'prompt': {
-      if (typeof msg.text !== 'string') return;
-      const id = typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined;
-      const tries = parseTries(msg.text);
-      if (tries) return runTries(chat, msg.text, tries, id);
-      // The composer sends steer to stop Claude; a prompt during a run (Fix, Compact) waits its turn.
-      void chat.prompt(msg.text, id);
-      return;
-    }
+    case 'prompt':
+      return promptCommand(chat, msg);
     case 'queue':
       if (typeof msg.text === 'string') void chat.queueNext(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
       return;
