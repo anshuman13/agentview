@@ -532,6 +532,8 @@ async function handle(req: HostRequest): Promise<unknown> {
       counts = req.counts;
       const last = live.get(req.last)?.chat;
       if (last) { lastViewed = last; remember(last); }
+      // A resumed chat starts its CLI once someone opens it, so the first prompt skips the cold start.
+      for (const { chat } of live.values()) if (viewers(chat)) chat.start();
       broadcastLive();
       return;
     }
