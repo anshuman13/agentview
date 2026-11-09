@@ -1,6 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { connect, embedded, getState, useStore } from '../store';
-import { openAgent } from '../../sessions/agents';
 import { EmptyState } from '../../ui/Panel';
 import { command } from '../../ui/util';
 import { haptic } from '../../ui/haptic';
@@ -14,6 +13,7 @@ import { SideChat, useSideChat } from './SideChat';
 import { SidebarPane } from './SidebarPane';
 import { useResize } from './useResize';
 import { useWorkbenchKeys } from './useWorkbenchKeys';
+import { useWorkbenchCommands } from './useWorkbenchCommands';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
@@ -127,35 +127,9 @@ export function App() {
     return () => window.removeEventListener('open-agent', open);
   }, []);
 
-  useEffect(() => {
-    const onCommand = (e: Event) => {
-      const [kind, arg] = (e as CustomEvent<{ id: string }>).detail.id.split(':');
-      if (kind === 'assistant' || (kind === 'view' && arg === 'assistant')) openAssistant();
-      else if (kind === 'view') {
-        setView(arg as View);
-        setSidebar(true);
-        if (narrow() && arg === 'explorer') { setTab('code'); setEditor('file'); setBrowse(true); }
-        else if (narrow()) setTab('repos');
-      }
-      else if (kind === 'tab') {
-        if (arg === 'agents' && !narrow()) return openAgent();
-        if (arg === 'chat') setChatOpen(true);
-        else if (arg === 'term') setTerminal(true);
-        else setEditor(arg === 'code' ? 'file' : (arg as 'browser' | 'agents'));
-        if (narrow()) setTab(arg as Tab);
-        if (arg === 'chat') window.dispatchEvent(new CustomEvent('agentview:focus'));
-      }
-      else if (kind === 'page' && isPage(arg)) openPage(arg);
-      else if (kind === 'terminal') { if (narrow()) setTab('term'); else setTerminal((v) => !v); }
-      else if (kind === 'switchEditor') setEditor((v) => (v === 'file' ? 'browser' : 'file'));
-      else if (kind === 'phone') setPhone((v) => !v);
-      else if (kind === 'toggleSidebar') setSidebar((v) => !v);
-      else if (kind === 'toggleChat') setChatOpen((v) => !v);
-      else if (kind === 'theme') toggleTheme();
-    };
-    window.addEventListener('agentview:command', onCommand);
-    return () => window.removeEventListener('agentview:command', onCommand);
-  }, [toggleTheme]);
+  useWorkbenchCommands({
+    openAssistant, openPage, toggleTheme, setView, setSidebar, setTab, setEditor, setBrowse, setChatOpen, setTerminal, setPhone,
+  });
 
   // Applied once the first init is in, so the chat switch does not undo it on the phone.
   const linked = useRef(false);
