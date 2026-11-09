@@ -35,6 +35,7 @@ import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.chat.appendRule
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
@@ -158,6 +159,10 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.nullable("start")?.jsonPrimitive?.content, tasks.firstOrNull { !it.done }?.let { startTaskPrompt(it, c.str("path")) })
             assertEquals(c.str("name"), c.str("all"), runAllPrompt(c.str("path")))
         }
+    }
+
+    @Test fun appendRule() {
+        for (c in cases("append-rule")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, appendRule(c.str("text"), c.str("rule")))
     }
 
     @Test fun specPrompt() {

@@ -1,0 +1,7 @@
+[
+  { "name": "a missing file", "text": "", "rule": "Use tabs", "expected": "- Use tabs\n" },
+  { "name": "text with a trailing newline", "text": "# Rules\n- One\n", "rule": "Two", "expected": "# Rules\n- One\n- Two\n" },
+  { "name": "text without a trailing newline", "text": "# Rules\n- One", "rule": "Two", "expected": "# Rules\n- One\n- Two\n" },
+  { "name": "spaces and line breaks in the rule", "text": "- One\n", "rule": "  Two\n  words ", "expected": "- One\n- Two words\n" },
+  { "name": "an empty rule", "text": "- One\n", "rule": "  \n ", "expected": null }
+]

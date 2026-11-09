@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { editCount, stripRound } from '../../shared/edits';
 import type { ChatEvent, ChatRun, LiveChat, Try } from '../../shared/protocol';
+import { appendRule } from '../../shared/steering';
 import { isSpecPath, runAllPrompt, specProgress, specPrompt, specTasks, startTaskPrompt, type SpecTask } from '../../shared/specTasks';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { handoffText, runLine } from './chat/composer/composerLogic';
@@ -65,6 +66,10 @@ describe('cases shared with the Android app', () => {
       expect(open && startTaskPrompt(open, c.path)).toBe(c.start ?? undefined);
       expect(runAllPrompt(c.path)).toBe(c.all);
     });
+  }
+
+  for (const c of cases<{ name: string; text: string; rule: string; expected: string | null }>('append-rule')) {
+    it(`appendRule: ${c.name}`, () => expect(appendRule(c.text, c.rule)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; request: string; expected: string }>('spec-prompt')) {
