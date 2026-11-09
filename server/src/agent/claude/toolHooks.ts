@@ -38,13 +38,15 @@ export class ToolHooks {
     return notes.length ? { hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: notes.join('\n\n') } } : {};
   }
 
-  // Held until the next top-level tool call finishes, which hands it to Claude as context.
+  // Held until the next top-level tool call finishes, which hands it to Claude as context, or until the turn would end.
   inject(text: string) {
     this.injected.push(text);
   }
 
   async onStop(input: HookInput): Promise<HookJSONOutput> {
-    if (input.hook_event_name === 'Stop' && !input.agent_id) this.host.crons = input.session_crons ?? [];
-    return {};
+    if (input.hook_event_name !== 'Stop' || input.agent_id) return {};
+    this.host.crons = input.session_crons ?? [];
+    const notes = this.injected.splice(0);
+    return notes.length ? { decision: 'block', reason: notes.join('\n\n') } : {};
   }
 }
