@@ -363,14 +363,14 @@ setting is Off.
 
 ## Personal and work Claude accounts
 
-`./claude-alt.sh` sets up `~/.claude-alt` for a work Claude login and `./claude-alt.sh 2` sets up `~/.claude-alt2` for Work
-Enterprise, next to the personal one in `~/.claude`. Each shares settings, skills, plugins and chat history with `~/.claude` and keeps its own
+`./claude-alt.sh` sets up `~/.claude-alt` for a work Claude login and `./claude-alt.sh 2` sets up `~/.claude-alt2` for a third
+account, next to the personal one in `~/.claude`. Each shares settings, skills, plugins and chat history with `~/.claude` and keeps its own
 login; log in once with `CLAUDE_CONFIG_DIR=<dir> claude` and `/login`. A new chat under `~/workspace_personal` starts on
 Personal and any other folder on Work; a reopened chat goes back to the account it was last on. Codex questions go to a daily
 chat per profile: work ones run in `~/.agentview/codex-work`, so they get the Work account and the work wiki and data, and
 personal ones in this repo. When a turn ends on a usage limit, the chat moves to the next
-logged-in account with usage left (Personal, then Work; Work Enterprise is for documents only and is never picked on its own) and continues where it stopped, and new chats start
-there until the limit resets. The composer menu shows the account (Personal, Work or Work Enterprise) and switches it by hand. The status bar shows the account with
+logged-in account with usage left (the main account, then the second; the third is picked by hand only) and continues where it stopped, and new chats start
+there until the limit resets. The composer menu shows the account (Account 1 to 3 unless `accountLabels` in `~/.agentview/settings.json` names them) and switches it by hand. The status bar shows the account with
 its weekly and 5-hour usage as `w25 h15` (read when a turn ends, every 10 minutes while the chat is open, and on a click while a Claude process is open), and the even weekly pace (100/7 % a day, to the hour) on hover. When the
 week is ahead of that pace or either window passes 80%, it turns yellow and a click switches the chat to the other
 account. A switch restarts the Claude process, so Claude recreates the chat's scheduled jobs in the new one.
@@ -446,7 +446,7 @@ are read once and removed from the address bar.
 
 ## Pages
 
-Observe, Deploy and MCP Servers open as tabs in the editor area (the lower three activity bar icons, or the command
+Observe, Deploy (only with `deployUrl` set in `~/.agentview/settings.json`) and MCP Servers open as tabs in the editor area (the lower three activity bar icons, or the command
 palette), so they get the full width instead of the sidebar. One page is open at a time; opening another replaces it.
 
 Without a Grafana MCP server, Observe makes no Grafana requests. Observe's Grafana section shows a card per entry in a repo's `grafana.panels` (`{ title, query, unit }`, a PromQL query in

@@ -102,3 +102,20 @@ The native Android client in `android/` speaks the same protocol; see [Phone and
 ## Access
 
 Only this Mac and NetBird peers may connect, and requests from other origins are refused (`server/src/http/access.ts`).
+
+## Setup for a new user
+
+Nothing is specific to one person or company until `~/.agentview/settings.json` says so. The server creates it on the first
+start and fills in what applied on that Mac (a hub there, a deploy service reachable, extra Claude accounts logged in);
+anywhere else it is empty. Keys, all optional:
+
+| Key | Default | Effect |
+|---|---|---|
+| `deployUrl` | empty | Base URL of the deploy service. Empty hides the Deploy page, its nav item, palette entries and the Android screen, and `/api/deploy/*` answers 404. |
+| `owner` | "the owner" | Name in the Slack auto-reply texts. |
+| `hubUrl` | `http://localhost:7790` | How phones and other Macs reach the hub; used in push action links and by a server without a local hub. |
+| `accountLabels` | Account 1, Account 2, Account 3 | Names of the `main`, `alt` and `alt2` Claude accounts, for example `{ "main": "Personal", "alt": "Work" }`. |
+
+The server reads the file on each request and the host process applies the labels at start, so restart the server after editing
+`accountLabels`. The phone app starts on `http://localhost:7777` until a Mac address is saved in its Mac address screen.
+Grafana, Snowflake, ntfy and Sentry stay in `~/.agentview/observe.json` and show only when configured there.

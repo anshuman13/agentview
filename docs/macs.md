@@ -61,7 +61,7 @@ To run AgentView on a second Mac, such as an always-on Mac mini, first do the pa
 
 Then paste this into `claude`:
 
-> Clone anshuman13/agentview with gh into ~/workspace_personal/agentview and follow the "Another Mac" section of
+> Clone the agentview repo with gh into ~/workspace_personal/agentview and follow the "Another Mac" section of
 > docs/macs.md, the steps for Claude.
 
 Steps for Claude:

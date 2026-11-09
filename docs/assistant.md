@@ -111,7 +111,7 @@ ask instead of sending. See [autopilot.md](autopilot.md).
 
 There are no keys to copy. NetBird is the identity: each device has its own WireGuard key enrolled through SSO, and a
 device cannot send traffic as another one's address. The hub answers only NetBird peers, names each request by its
-peer (`pixel-9`, `macbook`, `macmini`) and records which device changed an item. Removing a device in the NetBird
+peer (`phone`, `laptop`, `desktop`) and records which device changed an item. Removing a device in the NetBird
 dashboard cuts it off. AgentView and the hub share this check (`server/src/http/access.ts`). The hub also refuses
 requests from web pages other than the phone app (an Origin or cross-site Sec-Fetch-Site header), so a page open in a
 browser on a peer cannot write to it. A Host header that names neither this Mac nor a NetBird peer is refused too.

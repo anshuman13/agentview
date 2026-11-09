@@ -110,7 +110,7 @@ reply to a message older than when the mode turned on, mail (Gmail keeps its own
 drafts).
 
 A post that fails is retried on the next away scans, three tries in all, then pushed to me once (`tries` on the
-replies row). Every sent reply starts with a short marker: "(auto-reply from Anshuman's assistant)" in away mode, nothing in
+replies row). Every sent reply starts with a short marker: "(auto-reply from <owner>'s assistant)" in away mode, the owner being the `owner` setting, nothing in
 assist mode since I pressed Send myself.
 
 ## Build order
@@ -179,6 +179,6 @@ report writes itself.
 ## Open points for me
 
 - Vacation dates and the backup person's name
-- Whether replies go out as me with a marker, or whether a Slack app user "Anshuman's assistant" is worth the admin ask
+- Whether replies go out as me with a marker, or whether a Slack app user for the assistant is worth the admin ask
 - The tier C list: manager and named people
 - Which channels count as public enough to answer in (default: the watched list minus `temp-*` and `tmp-*`)
