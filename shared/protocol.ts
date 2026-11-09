@@ -80,6 +80,9 @@ export const ACCOUNT_NOTE: Partial<Record<Account, string>> = { alt2: 'Only pick
 // What the clients read from /api/settings: the features that are on and the account labels.
 export type PublicSettings = { deploy: boolean; accountLabels: Record<Account, string> };
 
+// What runs a chat: the Claude login, or Claude Code on OpenRouter models.
+export type Provider = 'claude' | 'openrouter';
+
 // Share of the Claude plan's 5-hour and weekly limits used, from the CLI's usage API.
 export type UsageWindow = { pct: number; resetsAt: number | null };
 export type PlanUsage = { fiveHour: UsageWindow | null; week: UsageWindow | null };
@@ -109,6 +112,7 @@ export type SessionInfo = {
   account: Account;
   accounts: Account[];
   usage?: PlanUsage | null;
+  provider?: Provider;
   capabilities?: Capabilities;
   // Names of the manual prompt hooks for this chat's repo.
   hooks?: string[];

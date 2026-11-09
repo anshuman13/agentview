@@ -11,8 +11,9 @@ const DIRS: Partial<Record<Account, string>> = {
 };
 const ORDER: Account[] = ['main', 'alt', 'alt2'];
 const AUTO = ORDER.filter((a) => !ACCOUNT_NOTE[a]);
-const LIMITS = path.join(process.env.AGENTVIEW_LIMITS_DIR ?? path.join(os.homedir(), '.agentview'), 'limits.json');
-const CHATS = path.join(path.dirname(LIMITS), 'chat-accounts.json');
+export const STATE_DIR = process.env.AGENTVIEW_LIMITS_DIR ?? path.join(os.homedir(), '.agentview');
+const LIMITS = path.join(STATE_DIR, 'limits.json');
+const CHATS = path.join(STATE_DIR, 'chat-accounts.json');
 
 type Limits = Partial<Record<Account, number>>;
 

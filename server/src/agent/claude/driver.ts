@@ -1,6 +1,6 @@
 import { query, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
-import type { Account, Effort } from '../../../../shared/protocol.js';
-import type { AgentDriver, AgentHost, History } from '../types.js';
+import type { Account, Capabilities, Effort, Provider } from '../../../../shared/protocol.js';
+import type { AgentDriver, AgentHost, DriverFactory, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { InputQueue } from './inputQueue.js';
 import { TranscriptWatch } from './transcriptWatch.js';
@@ -11,6 +11,7 @@ import { Messages } from './messages.js';
 import { SystemMessages } from './systemMessages.js';
 import { TEAM, agentOptions, userMessage } from './options.js';
 import { mcpFrom } from './mcp.js';
+import { loadOpenRouter, openRouterModels, openRouterValue } from './openrouter.js';
 import { McpControl } from './mcpControl.js';
 import { loadMeta, loadUsage } from './queryInfo.js';
 import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
@@ -19,14 +20,16 @@ import { continuedTurn } from './subagents.js';
 import { LiveText } from './stream.js';
 import { historyFrom } from './transcript.js';
 import { expandChatMentions } from './chatMentions.js';
+import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
 
 const USAGE_EVERY = 10 * 60_000;
 
-export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume, cwd)) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
+export const claudeDriver = (cwd: string, resume?: string, fork = false, openrouter = false, account = reopenAccount(resume, cwd)): DriverFactory => (host) => new ClaudeDriver(host, resume, fork, account, openrouter);
+
+export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume, cwd)) => new AgentSession(cwd, claudeDriver(cwd, resume, fork, false, account), resume ?? null);
 
 // Runs a chat on the Claude Agent SDK: one CLI process at a time, resumed from its transcript when it exits.
 export class ClaudeDriver implements AgentDriver {
-  readonly capabilities = { rewind: true, mcp: true, effort: true, team: true, stopTask: true };
   private q: Query | null = null;
   private closed = false;
   private input = new InputQueue(() => this.closed);
@@ -46,7 +49,7 @@ export class ClaudeDriver implements AgentDriver {
   private systemMessages: SystemMessages;
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
-  constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main') {
+  constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main', private openrouter = false) {
     this.live = new LiveText(host);
     this.toolHooks = new ToolHooks(host);
     this.tasks = new TaskTracker(host);
@@ -62,8 +65,29 @@ export class ClaudeDriver implements AgentDriver {
     });
   }
 
+  // On OpenRouter the models, effort and the Opus advisor are not Anthropic's, so they are left out.
+  get capabilities(): Capabilities {
+    return { rewind: true, mcp: true, effort: !this.openrouter, team: !this.openrouter, stopTask: true };
+  }
+
+  get provider(): Provider {
+    return this.openrouter ? 'openrouter' : 'claude';
+  }
+
   accounts(): Account[] {
-    return loggedInAccounts();
+    return this.openrouter ? [] : loggedInAccounts();
+  }
+
+  // The CLI runs with the other provider's environment, so a running chat restarts; it resumes from its transcript.
+  private switchProvider(openrouter: boolean) {
+    if (openrouter && !loadOpenRouter()) throw new Error('Set an OpenRouter key and models in Settings first');
+    if (this.q && this.state.session.running) throw new Error(`Stop Claude before switching to ${openrouter ? 'OpenRouter' : 'Claude'}`);
+    this.openrouter = openrouter;
+    this.host.setSession({ provider: this.provider, capabilities: this.capabilities, accounts: this.accounts(), usage: null });
+    if (!this.q) return;
+    this.restart();
+    this.host.system(`Restarted on ${openrouter ? 'OpenRouter' : 'Claude'} to change the model`);
+    this.host.restarted(`Claude restarted on ${openrouter ? 'OpenRouter' : 'Claude'}`);
   }
 
   setAccount(a: Account) {
@@ -78,6 +102,7 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   limitHit(until: number) {
+    if (this.openrouter) return null;
     markLimited(this.account, until);
     const next = otherAccount(this.account);
     if (next) this.setAccount(next);
@@ -152,6 +177,8 @@ export class ClaudeDriver implements AgentDriver {
 
   start() {
     if (this.q || this.closed) return;
+    const openrouter = this.openrouter ? loadOpenRouter() : null;
+    if (this.openrouter && !openrouter) throw new Error('The OpenRouter key was removed in Settings');
     const options = agentOptions({
       cwd: this.cwd,
       resume: this.resume,
@@ -163,9 +190,10 @@ export class ClaudeDriver implements AgentDriver {
       afterTool: async (input) => this.toolHooks.afterTool(input),
       onStop: (input) => this.toolHooks.onStop(input),
       mcp: this.mcp.added,
-      effort: this.state.session.effort ?? undefined,
+      effort: (!openrouter && this.state.session.effort) || undefined,
       fork: this.fork,
       configDir: configDir(this.account),
+      openrouter,
     });
     this.mcp.servers = options.mcpServers ?? {};
     this.q = query({ prompt: this.input.stream(), options });
@@ -187,7 +215,7 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   private async loadMeta() {
-    if (this.q) return loadMeta(this.q, this.host);
+    if (this.q) return loadMeta(this.q, this.host, openRouterModels(loadOpenRouter()));
   }
 
   refreshUsage() {
@@ -196,7 +224,7 @@ export class ClaudeDriver implements AgentDriver {
 
   private async loadUsage() {
     const q = this.q;
-    if (q) return loadUsage(q, this.host, () => q === this.q);
+    if (q && !this.openrouter) return loadUsage(q, this.host, () => q === this.q);
   }
 
   async mcpStatus() {
@@ -226,10 +254,12 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   async setModel(model: string) {
+    const openrouter = model.startsWith(OPENROUTER_PREFIX);
+    if (openrouter !== this.openrouter) this.switchProvider(openrouter);
     this.start();
     const team = model === 'team';
     if (team || this.state.session.team) await this.q?.applyFlagSettings({ advisorModel: team ? TEAM.advisor : null });
-    await this.q?.setModel(team ? TEAM.model : model);
+    await this.q?.setModel(team ? TEAM.model : openrouter ? model.slice(OPENROUTER_PREFIX.length) : model);
     return { model: team ? TEAM.model : model, team };
   }
 
@@ -344,7 +374,8 @@ export class ClaudeDriver implements AgentDriver {
       host.system('Forked into a new chat');
     }
     const newId = this.watcher.active && msg.session_id !== this.state.session.sessionId;
-    host.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
+    const or = this.openrouter ? loadOpenRouter() : null;
+    host.setSession({ sessionId: msg.session_id, model: or ? openRouterValue(or, msg.model) : msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
     if (newId) this.watchHistory(true);
     if (changed) host.system(`Session started with ${msg.model}`);
     if (this.resume && msg.permissionMode !== 'auto' && !this.resumedAuto) {
@@ -357,6 +388,6 @@ export class ClaudeDriver implements AgentDriver {
   private onResult(msg: Extract<SDKMessage, { type: 'result' }>) {
     this.live.end();
     const ok = msg.subtype === 'success';
-    this.host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}`, costUsd: msg.total_cost_usd, isError: msg.is_error });
+    this.host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}`, costUsd: this.openrouter ? 0 : msg.total_cost_usd, isError: msg.is_error });
   }
 }

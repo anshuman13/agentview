@@ -2,9 +2,9 @@ import path from 'node:path';
 import { stat } from 'node:fs/promises';
 import type { ServerMessage } from '../../../shared/protocol.js';
 import { getSessionInfo } from '../agent/claude/sessions.js';
-import { claudeSession } from '../agent/claude/driver.js';
-import { loggedInAccounts, rememberAccount, verifyLimit } from '../agent/claude/accounts.js';
-import type { AgentSession } from '../session/session.js';
+import { rememberAccount } from '../agent/claude/accounts.js';
+import { provider, providerOf, rememberProvider } from '../agent/registry.js';
+import { AgentSession } from '../session/session.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway } from '../integrations/notify.js';
 import { allowedFolder } from '../workspace/files.js';
@@ -17,7 +17,10 @@ import { PROJECT, broadcast, bySession, get, hub, live, push, viewers } from './
 function onChatMessage(chat: AgentSession, m: ServerMessage) {
   broadcast(m, chat);
   notifyAway(m, () => (viewers(chat) ? null : summaryOf(chat)), () => desktopActive(hub.desktopAt), chat.roundNote);
-  if (m.type === 'session' && chat.state.session.sessionId) rememberAccount(chat.state.session.sessionId, chat.state.session.account);
+  if (m.type === 'session' && chat.state.session.sessionId) {
+    rememberAccount(chat.state.session.sessionId, chat.state.session.account);
+    rememberProvider(chat.state.session.sessionId, chat.driver.provider);
+  }
   if (m.type === 'session' && chat === hub.lastViewed) remember(chat);
   if (m.type === 'session') saveWhenLoopChanged(chat);
   const woke = seenRunning(chat, chat.state.session.running);
@@ -26,8 +29,9 @@ function onChatMessage(chat: AgentSession, m: ServerMessage) {
 
 export async function createChat(cwd: string, resume?: string, title = '', fork = false) {
   // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.
-  await Promise.all(loggedInAccounts().map((a) => verifyLimit(a)));
-  const chat = claudeSession(cwd, resume, fork);
+  const p = provider(providerOf(resume));
+  await p.verifyLimits();
+  const chat = new AgentSession(cwd, p.driver(cwd, resume, fork), resume ?? null);
   chat.runs = runs;
   chat.title = title;
   chat.onIdle = () => learning.later(chat);

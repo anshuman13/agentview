@@ -5,6 +5,7 @@ import { chatTools } from './chats.js';
 import { DATA_RULES, dataTools } from './data.js';
 import { WIKI_RULES, wikiTools } from './wiki.js';
 import { ownProfile, PROFILE_PORT } from '../../chrome/launch.js';
+import { openRouterEnv, type OpenRouterSettings } from './openrouter.js';
 
 export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
 
@@ -66,13 +67,14 @@ export function agentOptions(o: {
   effort?: Effort;
   fork?: boolean;
   configDir?: string;
+  openrouter?: OpenRouterSettings | null;
 }): Options {
   return {
     cwd: o.cwd,
     resume: o.resume,
     forkSession: o.fork,
     effort: o.effort,
-    env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(o.configDir && { CLAUDE_CONFIG_DIR: o.configDir }) },
+    env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(o.configDir && { CLAUDE_CONFIG_DIR: o.configDir }), ...(o.openrouter && openRouterEnv(o.openrouter)) },
     systemPrompt: { type: 'preset', preset: 'claude_code', append: ownProfile() ? `${INSTRUCTIONS} ${OWN_CHROME}` : INSTRUCTIONS },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
@@ -86,7 +88,7 @@ export function agentOptions(o: {
     toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
     canUseTool: o.canUseTool,
     perTaskStopAffordance: true,
-    agents: {
+    agents: o.openrouter ? {} : {
       [BIG_BRO]: {
         description:
           'Fable, the most capable model. Only for a really hard problem you could not resolve yourself: a bug that survived several attempts, a risky design decision, or subtle correctness reasoning. The user approves every call, so put the full question and context in the prompt. If the call is declined, continue without it.',

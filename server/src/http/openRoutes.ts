@@ -6,6 +6,7 @@ import { cancelFocus, scheduleFocus } from '../integrations/focus.js';
 import { connectorStatus, mcpGroups, setMcpGroup } from '../agent/claude/mcp.js';
 import { emptyBin, listBin, restoreSession } from '../agent/claude/bin.js';
 import { pinsRoute, removeChat } from '../agent/claude/pins.js';
+import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
 import { assistantRoute } from '../integrations/assistant.js';
@@ -95,6 +96,8 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     }, true),
     'ANY /api/mcp/groups': entry(() => mcpGroups()),
     'ANY /api/settings': entry(() => publicSettings()),
+    'POST /api/openrouter': entry(({ body }) => saveOpenRouter(body), true),
+    'ANY /api/openrouter': entry(() => openRouterView()),
     'POST /api/restart': entry(({ url }) => {
       d.restart(url.searchParams.has('now'), url.searchParams.has('full'));
       return { ok: true };

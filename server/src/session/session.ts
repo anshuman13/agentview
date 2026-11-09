@@ -69,6 +69,7 @@ export class AgentSession implements AgentHost {
     this.approvals = new Approvals(this.state, (m) => this.emit(m));
     this.log = new EventLog(this.state, (m) => this.emit(m), (ev) => this.pushEvent(ev));
     this.driver = driver(this);
+    this.state.session.provider = this.driver.provider;
     this.state.session.capabilities = this.driver.capabilities;
     this.state.session.account = this.driver.account;
     this.state.session.accounts = this.driver.accounts();
