@@ -31,6 +31,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.withStyle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -49,6 +50,13 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
 
     val live = state.live
     val all = remember(live, ws, filter) { groupByRepo(live, ws, filter) }
+    var hits by remember { mutableStateOf(emptyList<MessageHit>()) }
+    LaunchedEffect(filter) {
+        val q = messageQuery(filter)
+        if (q == null) { hits = emptyList(); return@LaunchedEffect }
+        delay(400)
+        hits = runCatching { protocolJson.decodeFromString<List<MessageHit>>(hub.read("/api/sessions/search?q=${enc(q)}")) }.getOrDefault(emptyList())
+    }
     val groups = remember(all, segment) { all.filter { segmentOf(it.key) == segment } }
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
     val waiting = remember(live) { live.filter { it.pending > 0 }.sortedWith(byUrgency) }
@@ -180,7 +188,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 }
                 return@Column
             }
-            if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty()) {
+            if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty() && hits.isEmpty()) {
                 EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No ${profileLabel(segment).lowercase()} sessions yet")
                 return@Column
             }
@@ -203,6 +211,13 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 lazyGroup(repoRows, { "g-${it.key}" }, lead = true) { g -> RepoRow(g, seen) { repoKey = g.key } }
                 if (!byStatus && idle.isNotEmpty() && filter.isBlank()) item(key = "idle") {
                     Group { ListRow(if (showIdle) "Show fewer repos" else "More repos", trailing = { Chevron(if (!showIdle) "${idle.size}" else null) }, onClick = { showIdle = !showIdle }) }
+                }
+                if (hits.isNotEmpty()) {
+                    item(key = "msg-head") { SectionHeader("Messages", hits.size.toString()) }
+                    val now = System.currentTimeMillis()
+                    lazyGroup(hits, { "msg-${it.sessionId}-${it.role}-${it.at}" }) { h ->
+                        ListRow(h.text, messageMeta(h, now), onClick = { scope.launch { if (hub.openSaved(h.sessionId)) onOpen() } })
+                    }
                 }
             }
         }

@@ -11,6 +11,7 @@ import type { McpServerDef } from '../integrations/mcpClient.js';
 import { emptyBin, listBin, restoreSession } from '../agent/claude/bin.js';
 import { pinsRoute, removeChat } from '../agent/claude/pins.js';
 import { chatMemory } from '../agent/claude/memory.js';
+import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
 import { listDir, listFiles, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
 import { github } from '../integrations/github.js';
@@ -155,6 +156,12 @@ export function createRoutes(d: RouteDeps) {
       const [list, bin] = await Promise.all([listSessions({ limit: 300 }), listBin()]);
       const binned = new Set(bin.map((b) => b.sessionId));
       return list.filter((x) => !binned.has(x.sessionId)).map(savedSession);
+    }),
+    'ANY /api/sessions/search': entry(async ({ url }) => {
+      const [hits, list, bin] = await Promise.all([searchMessages(url.searchParams.get('q') ?? ''), listSessions({ limit: 300 }), listBin()]);
+      const binned = new Set(bin.map((b) => b.sessionId));
+      const byId = new Map(list.map((x) => [x.sessionId, x]));
+      return hits.filter((h) => byId.has(h.sessionId) && !binned.has(h.sessionId)).map((h) => ({ ...h, title: byId.get(h.sessionId)!.summary, cwd: byId.get(h.sessionId)!.cwd ?? '' }));
     }),
     'POST /api/focus': entry(({ body }) => {
       const r = scheduleFocus(body?.title, body?.end);
