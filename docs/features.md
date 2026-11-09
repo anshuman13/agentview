@@ -24,7 +24,7 @@
 At max-width 480px (900px where noted) the app is one column with a tab bar. Task-specific phone behaviour (the + button, quick-add sheet, date sheet, Select) is under Tasks; sharing into the app is under [Share to the app (Android)](#layout).
 
 - **Tabs**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side. The tab bar shows a count only on Chat (waiting); Sessions (waiting elsewhere) and Agents (running) show a dot
-- **Installing on the phone**: `npm run android -w app` builds `dist/AgentView.apk` and prints its path; it needs no phone connected. `npm run phone` installs it with adb through `app/phone.sh`, over USB or Android wireless debugging. The installed version is the commit sha of the build
+- **Installing on the phone**: `npm run native` tests and builds the native app, copies it to `dist/AgentView.apk` (served at `/api/app.apk`) and prints its path; `npm run native -- <adb serial>` also installs it
 - **Launcher badge**: the launcher icon shows the Needs you count (up to 99) when the phone build has the badge plugin, and nothing on the web
 - **Haptics**: a swipe action, a task completion, a long press, a pull refresh and a drag drop give a short native tap in the phone app, and fall back to the WebView vibration; the web and desktop give none (see Row density in the design system)
 - **Sync**: the interval sync runs only while the app is visible

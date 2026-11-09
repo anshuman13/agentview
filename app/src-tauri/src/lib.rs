@@ -27,17 +27,14 @@ fn open_external(url: &tauri::Url) {
     }
 }
 
-// On Android a blocked link opens in the browser through the shell bridge, so the WebView and the browser never both open it.
-fn navigate(webview: &tauri::Webview, url: &tauri::Url) -> bool {
+// A blocked link that is not http opens in its Mac app.
+fn navigate(_webview: &tauri::Webview, url: &tauri::Url) -> bool {
     if trusted(url) {
         return true;
     }
     #[cfg(desktop)]
     if url.scheme() != "http" && url.scheme() != "https" {
         open_external(url);
-    }
-    if cfg!(target_os = "android") && matches!(url.scheme(), "http" | "https" | "mailto" | "tel" | "sms" | "geo" | "intent" | "market") {
-        let _ = webview.eval(format!("window.AgentViewShell&&AgentViewShell.open({})", Value::String(url.to_string())));
     }
     false
 }
@@ -60,9 +57,6 @@ fn assistant_close(store: State<Store>) {
 
 #[tauri::command]
 fn assistant_dev_key(app: tauri::AppHandle) -> Result<String, String> {
-    if cfg!(target_os = "android") {
-        return Err("not available".into());
-    }
     assistant::dev_key(&data_dir(&app)?)
 }
 
@@ -86,12 +80,8 @@ fn assistant_query(store: State<Store>, sql: String, params: Vec<Value>) -> Resu
     store.query(&sql, &params)
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default();
-    #[cfg(mobile)]
-    let builder = builder.plugin(tauri_plugin_haptics::init());
-    builder
+    tauri::Builder::default()
         .manage(Store::new())
         .invoke_handler(tauri::generate_handler![assistant_open, assistant_close, assistant_dev_key, assistant_batch, assistant_exec, assistant_exec_many, assistant_query])
         .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(navigate).build())

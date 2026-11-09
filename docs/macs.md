@@ -20,8 +20,9 @@ websockets from other websites, including other servers on localhost.
 
 ## Native Android app
 
-`android/` holds a native Kotlin and Jetpack Compose client, "AgentView N" (package `no.pradhan.agentview.native`).
-It installs beside the Tauri phone app, which stays until the native one covers everything. It talks to the same
+`android/` holds the phone app, a native Kotlin and Jetpack Compose client, "AgentView" (package
+`no.pradhan.agentview.native`). The Tauri WebView phone app was removed on 9 Nov 2026; `app/` now builds only the
+desktop window app. The phone app talks to the same
 server as the web app: the `/api/events` stream, `POST /api/cmd` and the `/api/assistant/*` hub proxy.
 
 Colors, type and spacing come from `web/src/styles/tokens.css` and the icons from the codicons in `node_modules`:

@@ -9,7 +9,7 @@ Read the doc for the area before searching the code: `docs/architecture.md` (ove
 - `assistant/src`: Codex hub on :7790 (tasks, meetings, calendar import, jobs). Tests use `bun test`.
 - `shared/`: code used by all three. `protocol.ts` is the wire protocol, `tables.ts` the hub columns (a new column there must also go in `SYNCED_FIELDS` in the Android `CodexRows.kt`).
 - `android/`: native Kotlin/Compose app. Code is in `android/app/src/main/kotlin/no/pradhan/agentview/nativeapp/` (flat, no `java/` or `ui/` folders), tests in `android/app/src/test/kotlin/...`. `Tokens.kt` and `Codicons.kt` are generated.
-- `app/`: the older Tauri wrapper. Edit the native app in `android/` only.
+- `app/`: the Tauri desktop window app (macOS only). The phone app is `android/`.
 
 ## Checks
 - Server, web, shared: `npx vitest run` from the root, and `npx tsc --noEmit -p .` in `server/`, `web/`, `assistant/`.

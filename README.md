@@ -19,8 +19,6 @@ installed and its login.
 | --- | --- |
 | `npm run serve` | Server and vite, no reload on server changes |
 | `npm run dev` | Same, with server reload |
-| `npm run android -w app` | Build dist/AgentView.apk, versioned with the commit sha, and print its path |
-| `npm run phone` | Install the latest Android build on a connected phone |
 | `npm run native [-- <adb serial>]` | Test and build the native Android app (`android/`), and install it on that device |
 | `npm test` | Unit tests (vitest; server, web and shared) |
 | `npm test -w assistant` | Hub tests (bun test) |

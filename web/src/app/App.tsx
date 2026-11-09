@@ -19,7 +19,7 @@ import { Guard } from './Guard';
 import { deepLink } from './deepLinks';
 import { isPage, pageOf, PageView, PAGES, type Page } from './pages';
 import { Brief, AgentsPane, FileSwitcher, Palette, Shortcuts, OpenChats, Runs, RepoPicker, Sessions, AssistantNav, Assistant, FocusBar, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from './lazy';
-import { AppUpdate, Offline, Restarting } from './StatusItems';
+import { Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
 import { useTheme } from './theme';
 import { MoreSheet, TabBar, type Tab, type View } from './TabBar';
@@ -295,7 +295,6 @@ export function App() {
 
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} data-codex={active === 'assistant'} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
-      <AppUpdate />
       {tauriInvoke() && <BadgeMount />}
       {fromRepos && tab === 'chat' && narrow() && <Back close={() => { slideFrom(-1); setTab('repos'); }} />}
       <SwitchedBanner />

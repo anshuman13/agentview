@@ -1,31 +1,11 @@
 import { useEffect, useState } from 'react';
-import { apiUrl, bundled, useApiBase } from './api';
 import { send, useStore } from './store';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { Icon } from '../ui/Icon';
-import { command, save, spendLines, stored, weekPace } from '../ui/util';
+import { command, spendLines, weekPace } from '../ui/util';
 import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from './offlineBanner';
 import { useMcpHealth } from '../ops/mcpShown';
 import { Badge } from '../ui/Badge';
-
-export function AppUpdate() {
-  const [ready, setReady] = useState(0);
-  const base = useApiBase();
-  useEffect(() => {
-    const own = bundled ? fetch('build.txt').then((r) => (r.ok ? r.text() : '')).then(Number).catch(() => 0) : Promise.resolve(Number(stored('agentview.shell', 0)) || (/; wv\)/.test(navigator.userAgent) ? 1 : 0));
-    const later = Number(stored('agentview.shell.later', 0));
-    void own.then((shell) => (shell ? fetch(apiUrl('/api/app')).then((r) => r.json()).then((a) => setReady(a.build > shell && a.build > later ? a.build : 0)).catch(() => {}) : undefined));
-  }, [base]);
-  if (!ready) return null;
-  return (
-    <div className="app-update">
-      <Icon name="cloud-download" small />
-      <span>A new version of the app is ready</span>
-      <a href={apiUrl('/api/app.apk')}>Install</a>
-      <button className="icon-btn" title="Later" onClick={() => { save('agentview.shell.later', ready); setReady(0); }}><Icon name="close" small /></button>
-    </div>
-  );
-}
 
 export function Restarting() {
   const restarting = useStore((s) => s.ui.restarting && s.ui.connected);

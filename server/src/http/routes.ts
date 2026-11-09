@@ -137,7 +137,6 @@ export function createRoutes(d: RouteDeps) {
       d.restart(url.searchParams.has('now'), url.searchParams.has('full'));
       return { ok: true };
     }),
-    'ANY /api/app': entry(async () => ({ build: Number(await readFile(`${d.APK}.txt`, 'utf8').catch(() => '0')) || 0 })),
     'ANY /api/app.apk': entry(async ({ res }) => {
       const body = await readFile(d.APK);
       res.writeHead(200, { 'content-type': 'application/vnd.android.package-archive', 'content-disposition': 'attachment; filename="AgentView.apk"' });

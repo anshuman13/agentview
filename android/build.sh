@@ -6,5 +6,6 @@ cd "$(dirname "$0")"
 export PATH="$PATH:/opt/homebrew/share/android-commandlinetools/platform-tools"
 ./gradlew -q testDebugUnitTest assembleRelease
 apk="$PWD/app/build/outputs/apk/release/app-release.apk"
+mkdir -p ../dist && cp "$apk" ../dist/AgentView.apk
 echo "$apk"
 [ -z "$1" ] || adb -s "$1" install -r "$apk"
