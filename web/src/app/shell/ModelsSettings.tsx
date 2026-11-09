@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
@@ -17,7 +17,8 @@ export function ModelsSettings() {
   const [main, setMain] = useState<ModelSlot>('sonnet');
   const [busy, setBusy] = useState(false);
   const codex = appSettings.use((s) => s.providers.find((p) => p.id === 'codex'));
-  const enabled = appSettings.use((s) => s.providers.filter((p) => p.enabled));
+  const providers = appSettings.use((s) => s.providers);
+  const enabled = useMemo(() => providers.filter((p) => p.enabled), [providers]);
   const defaultProvider = appSettings.use((s) => s.defaultProvider);
   const load = (v: OpenRouterView) => {
     setSaved(v.maskedKey);
