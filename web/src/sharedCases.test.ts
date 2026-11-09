@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { editCount, stripRound } from '../../shared/edits';
 import type { ChatEvent, ChatRun, LiveChat, Try } from '../../shared/protocol';
+import { isSpecPath, runAllPrompt, specProgress, specTasks, startTaskPrompt, type SpecTask } from '../../shared/specTasks';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { handoffText, runLine } from './chat/composer/composerLogic';
 import { runBands } from './sessions/runBands';
@@ -51,6 +52,18 @@ describe('cases shared with the Android app', () => {
     it(`todos: ${c.name}`, () => {
       expect(todoProgress(todoCount(c.items))).toBe(c.progress);
       expect(todoCurrent(c.items)).toBe(c.current);
+    });
+  }
+
+  for (const c of cases<{ name: string; path: string; isSpec: boolean; md: string; tasks: SpecTask[]; progress: string; start: string | null; all: string }>('spec-tasks')) {
+    it(`specTasks: ${c.name}`, () => {
+      const tasks = specTasks(c.md);
+      const open = tasks.find((t) => !t.done);
+      expect(tasks).toEqual(c.tasks);
+      expect(isSpecPath(c.path)).toBe(c.isSpec);
+      expect(specProgress(tasks)).toBe(c.progress);
+      expect(open && startTaskPrompt(open, c.path)).toBe(c.start ?? undefined);
+      expect(runAllPrompt(c.path)).toBe(c.all);
     });
   }
 
