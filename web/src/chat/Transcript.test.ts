@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTranscript, createTranscriptBuilder, duration, stepLabel, stepTone } from './steps';
+import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone } from './steps';
 import { editCount, replyLine, sumEdits } from '../../../shared/edits';
 import { chatLine } from '../sessions/folders';
 import type { ChatEvent, LiveChat } from '../../../shared/protocol';
@@ -171,5 +171,19 @@ describe('createTranscriptBuilder', () => {
     const swapped = [...paged.slice(0, 2), say('changed'), ...paged.slice(3)];
     expect(build(swapped)).toEqual(buildTranscript(swapped));
     expect(build([])).toEqual([]);
+  });
+});
+
+describe('exploreRuns', () => {
+  it('folds runs of 3 or more finished reads and searches', () => {
+    const steps = [tool('Read', { file_path: '/w/a.ts' }), tool('Grep', { pattern: 'x' }), tool('Read', { file_path: '/w/c.ts' })];
+    const bash = tool('Bash', { command: 'ls' });
+    const pair = [tool('Read', { file_path: '/w/e.ts' }), tool('Glob', { pattern: '*' })];
+    const open = tool('Read', { file_path: '/w/g.ts' });
+    const items = buildTranscript([...steps.flatMap((s) => [s, result(s.id)]), bash, result(bash.id), ...pair.flatMap((s) => [s, result(s.id)]), open]);
+    const runs = exploreRuns(items);
+    expect([...runs.keys()]).toEqual([steps[0].id]);
+    expect(runs.get(steps[0].id)!.map((s) => s.id)).toEqual(steps.map((s) => s.id));
+    expect(exploreLabel(runs.get(steps[0].id)!)).toBe('2 files, 1 search');
   });
 });

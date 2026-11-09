@@ -6,7 +6,7 @@ import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
-import { createTranscriptBuilder, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
+import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural, pressable } from '../ui/util';
 import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../shared/protocol';
@@ -43,6 +43,9 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
   const from = windowStart(items.length, Math.min(staged, shown));
   const staging = staged < Math.min(shown, items.length);
   const last = events[events.length - 1];
+  const runs = useMemo(() => exploreRuns(items), [items]);
+  const [openRuns, setOpenRuns] = useState(() => new Set<string>());
+  const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
 
   useEffect(() => {
     const el = box.current;
@@ -135,7 +138,12 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
       {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(showEarlier)}>{loading ? 'Loading earlier' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
-      {items.slice(from).map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
+      {items.slice(from).map((it, i) => {
+        if (i > 0 && folded.has(it.id)) return null;
+        const run = runs.get(it.id);
+        if (run && !openRuns.has(it.id)) return <Explored key={it.id} label={exploreLabel(run)} onOpen={() => setOpenRuns(new Set(openRuns).add(it.id))} />;
+        return <Row key={it.id} it={it} cwd={cwd} />;
+      })}
       </div>
     </div>
     {!stuck && (behind || running) && <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />Jump to latest</button>}
@@ -196,6 +204,15 @@ function saveReply(text: string, cwd: string) {
   const st = getState();
   const note = replyNote(text, st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd);
   assistantStore().capture(note.text, 'note', note.profile).then(() => notice('Saved to Notes'), () => notice('Could not save the note'));
+}
+
+function Explored({ label, onOpen }: { label: string; onOpen: () => void }) {
+  return (
+    <div className="tr-step tr-act t-read ok" onClick={onOpen}>
+      <span className="tr-mark"><i className="tr-hex" /></span>
+      <span className="tr-text" role="button" tabIndex={0} aria-expanded={false} onKeyDown={clickOnKey}><span className="tr-verb">Explored </span><span className="tr-obj">{label}</span></span>
+    </div>
+  );
 }
 
 function Step({ use, result, cwd, settled }: { use: ToolUse; result?: ToolResult; cwd: string; settled?: boolean }) {

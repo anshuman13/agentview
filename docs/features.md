@@ -197,8 +197,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - On the phone, the last reply of each finished turn has Save as note, which saves the chat title and the reply as a
   Codex note in the chat's profile (like Slack's saved messages). On the web every finished reply shows the same Save as note
   link on hover (always shown on touch screens)
-- In the phone transcript, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as "Explored 4 files,
-  2 searches"; a tap shows the steps again
+- In the web and phone transcripts, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as
+  "Explored 4 files, 2 searches"; a tap or click shows the steps again
 - Phone Settings has Notification types under Notifications: it opens Android's page for the app, where Approvals, Finished
   chats and Failed chats are separate channels to turn off or give their own sound
 - "Memory" in the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder

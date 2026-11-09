@@ -160,3 +160,26 @@ export function createTranscriptBuilder() {
     return items;
   };
 }
+
+const EXPLORE = new Set(['Read', 'Grep', 'Glob']);
+type StepItem = Extract<Item, { kind: 'step' }>;
+
+// Runs of at least min finished Read, Grep and Glob steps in a row, keyed by the first step's id, so the
+// transcript folds each into one Explored row like Slack's compact message groups (the phone does the same).
+export function exploreRuns(items: Item[], min = 3) {
+  const runs = new Map<string, StepItem[]>();
+  let run: StepItem[] = [];
+  const close = () => { if (run.length >= min) runs.set(run[0].id, run); run = []; };
+  for (const it of items) {
+    if (it.kind === 'step' && EXPLORE.has(it.use.name) && it.result && !it.result.isError) run.push(it);
+    else close();
+  }
+  close();
+  return runs;
+}
+
+export function exploreLabel(steps: StepItem[]) {
+  const reads = steps.filter((s) => s.use.name === 'Read').length;
+  const searches = steps.length - reads;
+  return [reads && `${reads} ${reads === 1 ? 'file' : 'files'}`, searches && `${searches} ${searches === 1 ? 'search' : 'searches'}`].filter(Boolean).join(', ');
+}
