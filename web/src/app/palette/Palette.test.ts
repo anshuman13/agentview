@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCommands, itemKey, matchCommand, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, seeAllCount, type PaletteItem } from './Palette';
+import { buildCommands, itemKey, matchCommand, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, seeAllCount, type PaletteItem } from './paletteLogic';
 
 const models = [{ value: 'claude-opus-4-1', displayName: 'Opus 4.1' }, { value: 'claude-sonnet-4-5', displayName: 'Sonnet 4.5' }];
 const cmds = buildCommands(models);
