@@ -144,18 +144,10 @@ private fun NavHostController.goTab(route: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun App(hub: Hub) {
-    val nav = rememberNavController()
-    val snack = remember { SnackbarHostState() }
+private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostState) {
     val notice by hub.notice.collectAsState()
-    val live by hub.store.state.select { it.live }
-    val shownId by hub.store.state.select { it.shownId }
-    val connected by hub.connected.collectAsState()
     val link by hub.link.collectAsState()
-    val shared by hub.shared.collectAsState()
-    var more by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(notice) { notice?.let { snack.showSnackbar(it); hub.notice.value = null } }
     LaunchedEffect(Unit) {
         hub.undoable.collectLatest { u ->
@@ -163,7 +155,6 @@ fun App(hub: Hub) {
             if (snack.showSnackbar(u.text, if (u.undo != null) "Undo" else null, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) u.undo?.invoke()
         }
     }
-
     LaunchedEffect(link) {
         val l = link ?: return@LaunchedEffect
         l.chat?.let { hub.open(it) }
@@ -172,7 +163,10 @@ fun App(hub: Hub) {
         routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.openMore(r) else nav.goTab(r) }
         hub.link.value = null
     }
+}
 
+@Composable
+private fun rememberOfflineBanner(connected: Boolean): OfflineState {
     var banner by remember { mutableStateOf(OfflineState.Hidden) }
     LaunchedEffect(connected) {
         if (connected) { banner = offlineBanner(banner, OfflineEvent.Up); return@LaunchedEffect }
@@ -180,96 +174,127 @@ fun App(hub: Hub) {
         delay(OFFLINE_DELAY_MS)
         banner = offlineBanner(banner, OfflineEvent.Elapsed)
     }
+    return banner
+}
 
-    val route = nav.currentBackStackEntryAsState().value?.destination?.route
-    val inMore = isMore(route)
-    val inAgent = isAgent(route)
+@Composable
+private fun rememberDests(hub: Hub, nav: NavHostController, route: String?, more: Boolean, onMore: (Boolean) -> Unit): List<Dest> {
+    val live by hub.store.state.select { it.live }
+    val shownId by hub.store.state.select { it.shownId }
     val shownChat = live.firstOrNull { it.id == shownId }
-    val width = LocalConfiguration.current.screenWidthDp
-    val rail = width >= RAIL_MIN_DP
-    val twoPane = isExpanded(width)
-    val navHidden by hub.navHidden.collectAsState()
-    val openAgent = { id: String -> nav.navigate("agent/${Uri.encode(id)}") }
-    LaunchedEffect(route, shownId) { hub.navHidden.value = false }
-    val dests = Tab.entries.map { t ->
+    val inAgent = isAgent(route)
+    return Tab.entries.map { t ->
         val badge = when (t) {
             Tab.Chat -> shownChat?.pending ?: 0
             Tab.Sessions -> sessionsBadge(live, shownId)
             else -> 0
         }
-        Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge) { more = false; nav.goTab(t.route) }
-    } + Dest("More", "ellipsis", more || inMore, 0) { more = true }
+        Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge) { onMore(false); nav.goTab(t.route) }
+    } + Dest("More", "ellipsis", more || isMore(route), 0) { onMore(true) }
+}
+
+@Composable
+private fun BottomNav(dests: List<Dest>) {
+    NavigationBar(containerColor = av.surface) {
+        val colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
+            unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
+        )
+        dests.forEach { d -> NavigationBarItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
+    }
+}
+
+@Composable
+private fun SideRail(dests: List<Dest>) {
+    NavigationRail(containerColor = av.surface) {
+        val colors = NavigationRailItemDefaults.colors(
+            selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
+            unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
+        )
+        dests.forEach { d -> NavigationRailItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
+    }
+}
+
+@Composable
+private fun AppNavHost(hub: Hub, nav: NavHostController, twoPane: Boolean, modifier: Modifier) {
+    val openAgent = { id: String -> nav.navigate("agent/${Uri.encode(id)}") }
+    NavHost(nav, startDestination = Tab.Codex.route, modifier = modifier) {
+        composable(Tab.Codex.route) { CodexScreen(hub) }
+        composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent) else ChatScreen(hub, onOpenAgent = openAgent) }
+        composable(Tab.Sessions.route) { if (twoPane) TwoPane(hub, openAgent) else SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
+        composable("agent/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->
+            AgentScreen(hub, e.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() }, onOpenAgent = openAgent)
+        }
+        (MORE_TOOLS + MORE_PAGES).forEach { m ->
+            composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onTab = nav::goTab, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
+        }
+        composable(ORIGIN_ROUTE) { Column(Modifier.fillMaxSize()) { OriginScreen(hub, onDone = { nav.popBackStack() }) } }
+    }
+}
+
+@Composable
+private fun MoreSheet(onDismiss: () -> Unit, go: (String) -> Unit) {
+    Sheet(onDismiss = onDismiss, title = "More", padded = false) {
+        val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = av.fgMuted) } }
+        SectionHeader("Workspace")
+        Group {
+            MORE_TOOLS.forEachIndexed { i, it ->
+                if (i > 0) Hairline(lead = true)
+                ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") })
+            }
+        }
+        SectionHeader("Tools")
+        Group {
+            MORE_PAGES.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }); Hairline(lead = true) }
+            ListRow("Mac address", leading = icon("device-desktop"), onClick = { go(ORIGIN_ROUTE) })
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun App(hub: Hub) {
+    val nav = rememberNavController()
+    val snack = remember { SnackbarHostState() }
+    val connected by hub.connected.collectAsState()
+    val shared by hub.shared.collectAsState()
+    var more by rememberSaveable { mutableStateOf(false) }
+    AppEffects(hub, nav, snack)
+    val banner = rememberOfflineBanner(connected)
+    val route = nav.currentBackStackEntryAsState().value?.destination?.route
+    val width = LocalConfiguration.current.screenWidthDp
+    val rail = width >= RAIL_MIN_DP
+    val navHidden by hub.navHidden.collectAsState()
+    val shownId by hub.store.state.select { it.shownId }
+    LaunchedEffect(route, shownId) { hub.navHidden.value = false }
+    val dests = rememberDests(hub, nav, route, more) { more = it }
 
     Box(Modifier.fillMaxSize()) {
-    Scaffold(
-        containerColor = av.bg,
-        contentColor = av.fg,
-        snackbarHost = { SnackHost(snack) },
-        bottomBar = {
-            if (!rail) AnimatedVisibility(
-                visible = !navHidden && !inAgent,
-                enter = slideInVertically(tween(Tokens.dur * 2)) { it } + expandVertically(tween(Tokens.dur * 2)),
-                exit = slideOutVertically(tween(Tokens.dur * 2)) { it } + shrinkVertically(tween(Tokens.dur * 2)),
-            ) {
-                NavigationBar(containerColor = av.surface) {
-                    val colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
-                        unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
-                    )
-                    dests.forEach { d -> NavigationBarItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
-                }
-            }
-        },
-    ) { pad ->
-        Row(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding().windowInsetsPadding(WindowInsets.navigationBars)) {
-            if (rail) NavigationRail(containerColor = av.surface) {
-                val colors = NavigationRailItemDefaults.colors(
-                    selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
-                    unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
-                )
-                dests.forEach { d -> NavigationRailItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
-            }
-            Column(Modifier.weight(1f).fillMaxHeight()) {
-                if (banner == OfflineState.Shown) OfflineBanner(onRetry = hub::retry)
-                NavHost(nav, startDestination = Tab.Codex.route, modifier = Modifier.weight(1f)) {
-                    composable(Tab.Codex.route) { CodexScreen(hub) }
-                    composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent) else ChatScreen(hub, onOpenAgent = openAgent) }
-                    composable(Tab.Sessions.route) { if (twoPane) TwoPane(hub, openAgent) else SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
-                    composable("agent/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->
-                        AgentScreen(hub, e.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() }, onOpenAgent = openAgent)
-                    }
-                    (MORE_TOOLS + MORE_PAGES).forEach { m ->
-                        composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onTab = nav::goTab, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
-                    }
-                    composable(ORIGIN_ROUTE) { Column(Modifier.fillMaxSize()) { OriginScreen(hub, onDone = { nav.popBackStack() }) } }
+        Scaffold(
+            containerColor = av.bg,
+            contentColor = av.fg,
+            snackbarHost = { SnackHost(snack) },
+            bottomBar = {
+                if (!rail) AnimatedVisibility(
+                    visible = !navHidden && !isAgent(route),
+                    enter = slideInVertically(tween(Tokens.dur * 2)) { it } + expandVertically(tween(Tokens.dur * 2)),
+                    exit = slideOutVertically(tween(Tokens.dur * 2)) { it } + shrinkVertically(tween(Tokens.dur * 2)),
+                ) { BottomNav(dests) }
+            },
+        ) { pad ->
+            Row(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding().windowInsetsPadding(WindowInsets.navigationBars)) {
+                if (rail) SideRail(dests)
+                Column(Modifier.weight(1f).fillMaxHeight()) {
+                    if (banner == OfflineState.Shown) OfflineBanner(onRetry = hub::retry)
+                    AppNavHost(hub, nav, isExpanded(width), Modifier.weight(1f))
                 }
             }
         }
-    }
-
-    VoiceHost(hub)
+        VoiceHost(hub)
     }
 
     shared?.let { ShareSheet(hub, it) }
-
-    if (more) {
-        val go = { r: String -> more = false; nav.openMore(r) }
-        Sheet(onDismiss = { more = false }, title = "More", padded = false) {
-            val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = av.fgMuted) } }
-            SectionHeader("Workspace")
-            Group {
-                MORE_TOOLS.forEachIndexed { i, it ->
-                    if (i > 0) Hairline(lead = true)
-                    ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") })
-                }
-            }
-            SectionHeader("Tools")
-            Group {
-                MORE_PAGES.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }); Hairline(lead = true) }
-                ListRow("Mac address", leading = icon("device-desktop"), onClick = { go(ORIGIN_ROUTE) })
-            }
-        }
-    }
+    if (more) MoreSheet({ more = false }) { r -> more = false; nav.openMore(r) }
 }
 
 // The Sessions list beside the open chat on wide windows.
