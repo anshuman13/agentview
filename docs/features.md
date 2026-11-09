@@ -221,6 +221,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Scrolled up in a web chat that is running or has new rows, a Jump to latest button shows, with the count of finished
   replies that arrived since you scrolled up ("Jump to latest · 2 new replies"), like Slack's new messages pill. The phone's
   Jump to latest shows the same count
+- The web transcript draws Slack-style day dividers (Today, Yesterday, "Tuesday 3 November") above each prompt that starts a
+  new day, like the phone; a chat that stays within today has none
 - "TODOs" in the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
   end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer. The web chat settings menu has the same TODOs list
 - Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar; web sidebar rows of open chats do the same, except for the chat you are viewing

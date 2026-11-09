@@ -6,7 +6,7 @@ import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
-import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, duration, newMarker, newReplies, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
+import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../ui/util';
 import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../shared/protocol';
@@ -55,6 +55,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     setMark({ ...mark, seen: seenBefore(id) });
     forgetSeenBefore(id);
   }, [seenTimes, mark]);
+  const days = useMemo(() => dayDividers(items, Date.now()), [items]);
   const newId = useMemo(() => newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt), [items, events, mark]);
   const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
 
@@ -157,7 +158,8 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
         const run = runs.get(it.id);
         if (run && !openRuns.has(it.id)) return <Explored key={it.id} label={exploreLabel(run)} onOpen={() => setOpenRuns(new Set(openRuns).add(it.id))} />;
         const row = <Row key={it.id} it={it} cwd={cwd} />;
-        return it.id === newId ? <Fragment key={it.id}><div className="tr-new"><span>New</span></div>{row}</Fragment> : row;
+        const day = days.get(it.id);
+        return day || it.id === newId ? <Fragment key={it.id}>{day && <div className="tr-day"><span>{day}</span></div>}{it.id === newId && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
       </div>
     </div>

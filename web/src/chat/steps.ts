@@ -167,6 +167,25 @@ type StepItem = Extract<Item, { kind: 'step' }>;
 // Runs of at least min finished Read, Grep and Glob steps in a row, keyed by the first step's id, so the
 // transcript folds each into one Explored row like Slack's compact message groups (the phone does the same).
 // Slack-style New line: the first reply or step that arrived after the chat was last seen and before it was opened; android Steps.kt newMarker says the same.
+// Slack-style day dividers: the label above each prompt that starts a new day. A chat that stays within today gets none.
+export function dayDividers(items: Item[], now: number) {
+  const key = (t: number) => new Date(t).toDateString();
+  const today = key(now);
+  const yesterday = key(now - 864e5);
+  const out = new Map<string, string>();
+  let prev = '';
+  for (const it of items) {
+    if (it.kind !== 'user' || it.at <= 0) continue;
+    const day = key(it.at);
+    if (day !== prev && (prev || day !== today)) {
+      const d = new Date(it.at);
+      out.set(it.id, day === today ? 'Today' : day === yesterday ? 'Yesterday' : d.toLocaleDateString('en-GB', d.getFullYear() === new Date(now).getFullYear() ? { weekday: 'long', day: 'numeric', month: 'long' } : { day: 'numeric', month: 'long', year: 'numeric' }));
+    }
+    prev = day;
+  }
+  return out;
+}
+
 // Replies that arrived after the reader scrolled up, for the Jump to latest button.
 export const newReplies = (items: Item[], lastSeenId: string) => items.slice(items.findIndex((it) => it.id === lastSeenId) + 1 || items.length).filter((it) => it.kind === 'assistant' && !it.streaming).length;
 
