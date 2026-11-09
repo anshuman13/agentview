@@ -36,7 +36,7 @@ suspend fun Hub.read(path: String): String = api.get(path, pageChat)
 
 fun Hub.write(path: String, body: String, failure: String, done: (Boolean) -> Unit = {}) = write(path, body, failure, {}) { done(it != null) }
 
-fun Hub.saveFile(path: String, content: String, done: (Boolean) -> Unit) = writes.run("Could not save ${path.substringAfterLast('/')}", { api.put("/api/file?path=${enc(path)}", content, pageChat) }, done)
+fun Hub.saveFile(path: String, content: String, failure: String = "Could not save ${path.substringAfterLast('/')}", done: (Boolean) -> Unit) = writes.run(failure, { api.put("/api/file?path=${enc(path)}", content, pageChat) }, done)
 
 // A guarded write whose response is parsed and handed to `done`, or null when it did not go through.
 fun <T> Hub.write(path: String, body: String, failure: String, parse: (String) -> T, done: (T?) -> Unit) {
