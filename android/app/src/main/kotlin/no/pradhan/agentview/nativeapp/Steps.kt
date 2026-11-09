@@ -221,6 +221,12 @@ fun turnEnds(items: List<Item>, running: Boolean): Set<String> {
     return out
 }
 
+// Replies that arrived after the reader scrolled up, for the Jump to latest button.
+fun newReplies(items: List<Item>, lastSeenId: String): Int {
+    val i = items.indexOfFirst { it.id == lastSeenId }
+    return if (i < 0) 0 else items.drop(i + 1).count { it is Item.Assistant && !it.streaming }
+}
+
 // Slack-style New line: the first reply or step that arrived after this phone last showed the chat and before it was opened.
 fun newMarker(items: List<Item>, ats: Map<String, Long>, seen: Long, openedAt: Long): String? {
     if (seen <= 0) return null

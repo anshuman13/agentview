@@ -118,6 +118,9 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
         }
     }
     LaunchedEffect(atBottom) { if (atBottom) hub.navHidden.value = false }
+    var leftId by remember(chatId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(atBottom) { leftId = if (atBottom) null else leftId ?: rows.firstOrNull()?.id }
+    val replies = remember(items, leftId) { leftId?.let { newReplies(items, it) } ?: 0 }
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress to atBottom }.collect { (moving, bottom) -> if (moving) stick = bottom }
     }
@@ -170,7 +173,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
         }
         val pill by remember(dayOf) { derivedStateOf { if (listState.isScrollInProgress) listState.layoutInfo.visibleItemsInfo.lastOrNull()?.key?.let { dayOf[it] } else null } }
         pill?.let { DayPill(it, Modifier.align(Alignment.TopCenter).padding(top = Tokens.sp4)) }
-        if (!atBottom) JumpButton(Modifier.align(Alignment.BottomCenter).padding(bottom = Tokens.sp4)) {
+        if (!atBottom) JumpButton(replies, Modifier.align(Alignment.BottomCenter).padding(bottom = Tokens.sp4)) {
             stick = true
             hub.navHidden.value = false
             scope.launch { listState.animateScrollToItem(0) }
@@ -205,10 +208,10 @@ private fun NewLine() {
 }
 
 @Composable
-private fun JumpButton(modifier: Modifier, onClick: () -> Unit) {
+private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
     Surface(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(Tokens.radiusPill), color = av.raised, contentColor = av.fg, border = BorderStroke(Tokens.hairline, av.borderCard), shadowElevation = Tokens.elev2) {
         Row(Modifier.heightIn(min = Tokens.touch).padding(horizontal = Tokens.sp6), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-            Text("Jump to latest", style = Type.subheadline)
+            Text(if (replies > 0) "Jump to latest · $replies new ${if (replies == 1) "reply" else "replies"}" else "Jump to latest", style = Type.subheadline)
             AvIcon("arrow-down", null, Tokens.icon)
         }
     }
