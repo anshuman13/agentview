@@ -211,7 +211,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   shortcut
 - In the web and phone transcripts, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as
   "Explored 4 files, 2 searches"; a tap or click shows the steps again
-- On the phone, the New chat sheet has Start as: Chat (the default mode), Plan first or Auto. The mode is set right after the chat opens
+- On the phone, the New chat sheet has Start as: Auto (the default for new chats), Plan first or Ask first (asks before edits and risky commands). The mode is set right after the chat opens
 - Phone Settings has Notification types under Notifications: it opens Android's page for the app, where Approvals, Finished
   chats and Failed chats are separate channels to turn off or give their own sound
 - "Memory" in the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder

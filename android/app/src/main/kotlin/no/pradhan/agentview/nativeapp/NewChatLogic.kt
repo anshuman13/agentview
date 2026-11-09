@@ -15,4 +15,4 @@ fun startModel(models: List<ModelInfo>, last: String?): String? =
 // The "Start as" choices of the new chat sheet: no mode keeps the chat's default; the others are set once the chat opens.
 class StartMode(val label: String, val mode: String?)
 
-val START_MODES = listOf(StartMode("Chat", null), StartMode("Plan first", "plan"), StartMode("Auto", "auto"))
+val START_MODES = listOf(StartMode("Auto", null), StartMode("Plan first", "plan"), StartMode("Ask first", "default"))
