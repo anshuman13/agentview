@@ -292,3 +292,11 @@ describe('AgentsBlock', () => {
     expect(out).toContain('Running · build');
   });
 });
+
+describe('messageMeta', () => {
+  it('names the chat, the author and the age', async () => {
+    const { messageMeta } = await import('./Sessions');
+    expect(messageMeta({ title: 'Importer', role: 'assistant', at: new Date(Date.now() - 3 * 3_600_000).toISOString() })).toBe('Importer · Claude · 3h');
+    expect(messageMeta({ title: '', role: 'user', at: '' })).toBe('Untitled · You');
+  });
+});

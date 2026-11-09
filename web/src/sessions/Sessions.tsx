@@ -245,6 +245,7 @@ export function OpenChats() {
   const { folders, chats, setChats } = useWorkspace(current + cwd);
   const savedById = useMemo(() => new Map(chats.map((s) => [s.sessionId, s])), [chats]);
   const [filter, setFilter] = useState('');
+  const hits = useMessageSearch(filter);
   const viewing = useStore((s) => s.session.id);
   const [collapsed, setCollapsed] = useState(() => stored<Record<string, boolean>>(KEY, {}));
   const [full, setFull] = useState<Set<string>>(new Set());
@@ -370,7 +371,11 @@ export function OpenChats() {
             )}
           </div>
         ))}
-        {!groups.length && <EmptyState size="sm" title={filter ? 'No repo or session matches' : 'No sessions yet'} />}
+        {!groups.length && !hits.length && <EmptyState size="sm" title={filter ? 'No repo or session matches' : 'No sessions yet'} />}
+        {hits.length > 0 && <div className="group">Messages</div>}
+        {hits.map((h) => (
+          <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={h.text} lines={2} meta={messageMeta(h)} onClick={() => send({ type: 'open_session', sessionId: h.sessionId })} />
+        ))}
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
@@ -532,6 +537,23 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
       {row}
     </Swipe>
   );
+}
+
+type MessageHit = { sessionId: string; role: 'user' | 'assistant'; text: string; at: string; title: string };
+
+export const messageMeta = (h: Pick<MessageHit, 'title' | 'role' | 'at'>) => metaLine(h.title || 'Untitled', h.role === 'user' ? 'You' : 'Claude', h.at ? ago(h.at) : undefined);
+
+// Prompts and replies of every chat matching the sidebar search, from 3 characters.
+function useMessageSearch(filter: string) {
+  const [hits, setHits] = useState<MessageHit[]>([]);
+  useEffect(() => {
+    const q = filter.trim();
+    if (q.length < 3) { setHits([]); return; }
+    let live = true;
+    const t = setTimeout(() => fetch(api(`/api/sessions/search?q=${encodeURIComponent(q)}`)).then((r) => r.json()).then((l) => live && setHits(Array.isArray(l) ? l : []), () => live && setHits([])), 300);
+    return () => { live = false; clearTimeout(t); };
+  }, [filter]);
+  return hits;
 }
 
 const metaLine = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ');

@@ -203,7 +203,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   Terminal page, as on the web
 - Typing 3 or more characters in the phone Sessions search also searches every chat's prompts and replies (from
   /api/sessions/search, newest first, at most 3 per chat); a Messages section lists the matching text with the chat,
-  You or Claude and the age, and a tap opens that chat, like Slack's message search
+  You or Claude and the age, and a tap opens that chat, like Slack's message search. The web sidebar Sessions search
+  shows the same Messages list under the repos
 - "TODOs" in the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
   end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer
 - Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar
