@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.chat
 import kotlinx.serialization.builtins.ListSerializer
 import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.protocolJson
+import no.pradhan.agentview.nativeapp.workspace.specPrompt
 
 private val modelList = ListSerializer(ModelInfo.serializer())
 
@@ -14,7 +15,7 @@ fun encodeModels(models: List<ModelInfo>): String = protocolJson.encodeToString(
 fun startModel(models: List<ModelInfo>, last: String?): String? =
     models.firstOrNull { it.value == last }?.value ?: models.firstOrNull()?.value
 
-// The "Start as" choices of the new chat sheet: no mode keeps the chat's default; the others are set once the chat opens.
-class StartMode(val label: String, val mode: String?)
+// The "Start as" choices of the new chat sheet: no mode keeps the chat's default; the others are set once the chat opens, and Spec also puts the spec request prefix in the composer.
+class StartMode(val label: String, val mode: String?, val draft: String? = null)
 
-val START_MODES = listOf(StartMode("Auto", null), StartMode("Plan first", "plan"), StartMode("Ask first", "default"))
+val START_MODES = listOf(StartMode("Auto", null), StartMode("Plan first", "plan"), StartMode("Ask first", "default"), StartMode("Spec", "plan", specPrompt("")))

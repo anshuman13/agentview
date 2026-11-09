@@ -87,7 +87,7 @@ class VoiceNewChatTest {
 
     @Test
     fun startModesKeepAutoOrSetPlanOrAsk() {
-        assertEquals(listOf(null, "plan", "default"), START_MODES.map { it.mode })
+        assertEquals(listOf(null, "plan", "default", "plan"), START_MODES.map { it.mode })
         assertEquals("Auto", START_MODES.first().label)
     }
 }

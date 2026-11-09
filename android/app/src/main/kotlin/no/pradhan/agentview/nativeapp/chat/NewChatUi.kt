@@ -33,7 +33,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
     var startMode by remember { mutableStateOf(START_MODES.first()) }
     val start = {
         model?.let { hub.lastModel = it }
-        hub.newChat(repo, model.takeIf { it != models.firstOrNull()?.value }, mode = startMode.mode)
+        hub.newChat(repo, model.takeIf { it != models.firstOrNull()?.value }, mode = startMode.mode, draft = startMode.draft)
         onDismiss()
     }
     Sheet(onDismiss, "New chat", padded = false, full = false, action = { Button("Start", start, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }) {
