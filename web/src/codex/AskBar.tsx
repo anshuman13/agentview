@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAssistantStore, useCodex } from './data';
 import type { Meeting } from './data/wiki';
-import { ask, askText } from './data/ask';
+import { ask, askText, guessProfile } from './data/ask';
 import { SNOOZES, isQuestion, parseWhen, stripWhen } from './data/engine';
 import { withEstimate } from './data/plan';
 import { captureTask } from './captureTask';
@@ -85,7 +85,8 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
 
   const typed = text.trim();
   const m: Mode = mode ?? (isQuestion(typed) ? 'ask' : 'task');
-  const prof: Profile = profile ?? (filter !== 'all' ? filter : readFlag('assistant-personal', false) ? 'personal' : 'work');
+  const fallback: Profile = readFlag('assistant-personal', false) ? 'personal' : 'work';
+  const prof: Profile = profile ?? (filter !== 'all' ? filter : m === 'ask' ? guessProfile(typed, meetings, fallback) : fallback);
   const w = m === 'task' && !noWhen ? parseWhen(text) : null;
   const due = m === 'task' ? pick ?? w?.at ?? null : null;
   const dated = pick != null || w != null;
@@ -117,7 +118,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
           <>
             <Chip on icon={MODE[m].icon} title="A task or a question for Claude" onClick={cycle}>{MODE[m].label}</Chip>
             {m === 'ask' && <Chip on={fresh} icon={fresh ? 'add' : 'comment-discussion'} title="Ask in today's Codex chat or start a new one" onClick={() => setFresh((f) => !f)}>{fresh ? 'New chat' : "Today's chat"}</Chip>}
-            {m !== 'ask' && <Chip tone={prof} title="Work or personal" onClick={() => setProfile(prof === 'work' ? 'personal' : 'work')}>{FILTER_LABEL[prof]}</Chip>}
+            {(m !== 'ask' || filter === 'all') && <Chip tone={prof} title="Work or personal" onClick={() => setProfile(prof === 'work' ? 'personal' : 'work')}>{FILTER_LABEL[prof]}</Chip>}
             {m === 'task' && asking && !dated ? (
               <>
                 <span className="as-ask">When?</span>

@@ -96,4 +96,20 @@ class CodexAskTest {
         assertNull(d.apply("hel!", 4, "hello", true))
         assertEquals("hel! next" to 9, d.apply("hel!", 4, "next", true))
     }
+
+    private fun meetingRow(title: String, profile: String, start: Long): Row {
+        val f = SYNCED_FIELDS.getValue("meetings").associateWith { kotlinx.serialization.json.JsonNull as kotlinx.serialization.json.JsonElement }.toMutableMap()
+        f["title"] = toJson(title); f["starts_at"] = toJson(start)
+        return Row("meetings", title, profile, f = f)
+    }
+
+    @Test
+    fun guessesPersonalForTravelAndPersonalEventsWorkForWorkWords() {
+        val now = 1_800_000_000_000
+        assertEquals(PERSONAL, guessProfile("Eurostar tomorrow worth upgrading", emptyList(), WORK, now))
+        assertEquals(PERSONAL, guessProfile("what time is the louvre visit", listOf(meetingRow("Louvre visit", PERSONAL, now + DAY_MS)), WORK, now))
+        assertEquals(WORK, guessProfile("summarise the slack thread on oncall", emptyList(), PERSONAL, now))
+        assertEquals(WORK, guessProfile("prep for the rollout", listOf(meetingRow("Claude rollout", WORK, now + DAY_MS)), PERSONAL, now))
+        assertEquals(PERSONAL, guessProfile("what next", emptyList(), PERSONAL, now))
+    }
 }

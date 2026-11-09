@@ -197,16 +197,22 @@ private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String?, onF
 private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
     val text by hub.codexDraft.collectAsState()
     val uploading by hub.codexUploads.collectAsState()
+    var picked by rememberSaveable { mutableStateOf<String?>(null) }
+    val guess = profile ?: picked ?: guessProfile(text, st.meetings, hub.codexProfile)
     val send = {
         val q = text.trim()
         if (q.isNotEmpty() && uploading == 0) {
-            val p = profile ?: hub.codexProfile
+            val p = guess
+            picked = null
             hub.askCodex(askText(q, p, st.items.filter { !it.deleted && it.profile == p }, null, st.meetings.filter { it.profile == p }), p)
             hub.setCodexDraft("")
         }
     }
     val recipes = remember(text) { matchRecipes(DEFAULT_RECIPES, text) }
     Column {
+        if (profile == null && text.isNotBlank()) Row(Modifier.padding(start = Tokens.listPad, top = Tokens.sp3)) {
+            Chip(profileLabel(guess), { picked = if (guess == WORK) PERSONAL else WORK }, tone = if (guess == WORK) ChipTone.Work else ChipTone.Personal)
+        }
         if (recipes.isNotEmpty()) Group {
             recipes.forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title, onClick = { hub.setCodexDraft(r.text) }) }
         }

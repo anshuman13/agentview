@@ -32,6 +32,21 @@ const plansText = (meetings: Meeting[], now = new Date()) => {
   return `\nMy personal meetings, today and the next 3 days:\n${plans.length ? plans.join('\n') : 'No personal meetings in the next 3 days.'}`;
 };
 
+const PERSONAL_WORDS = /\b(trip|travel|train|flight|fly|eurostar|hotel|airbnb|holiday|vacation|ferie|reise|museum|tickets?|restaurant|dinner|birthday|family|kids|weekend|booking|upgrade)\b/i;
+const WORK_WORDS = /\b(slack|linear|jira|pr|pull request|oncall|on-call|standup|sprint|deploy|incident|ticket|review|roadmap|okr|oda|team|colleague|1:1)\b/i;
+const words = (t: string) => new Set(t.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 4));
+
+// Work or personal for a question asked with the All filter: travel and private words, or a word shared with a
+// personal calendar event in the coming week, mean personal; work words or a shared work meeting word mean work.
+export function guessProfile(question: string, meetings: Meeting[], fallback: Profile, now = Date.now()): Profile {
+  const q = words(question);
+  const near = live(meetings).filter((m) => m.starts_at != null && m.starts_at > now - 86400_000 && m.starts_at < now + 7 * 86400_000);
+  const hits = (p: Profile) => near.filter((m) => m.profile === p && [...words(m.title ?? '')].some((w) => q.has(w))).length;
+  const personal = (PERSONAL_WORDS.test(question) ? 2 : 0) + hits('personal');
+  const work = (WORK_WORDS.test(question) ? 2 : 0) + hits('work');
+  return personal > work ? 'personal' : work > personal ? 'work' : fallback;
+}
+
 export function askText(question: string, profile: Profile, items: ItemRow[], about?: ItemRow, meetings: Meeting[] = []) {
   const open = items.filter((r) => !r.deleted && r.status === 'open').slice(0, 60);
   const personal = profile === 'personal';
@@ -41,7 +56,7 @@ export function askText(question: string, profile: Profile, items: ItemRow[], ab
     about && `\nAbout this item:\n${line(about)}${about.text ? `\n${about.text}` : ''}`,
     open.length ? `\nMy open items in Codex:\n${open.map(line).join('\n')}` : '',
     others.length ? `\nWhat others took on in recent meetings:\n${others.join('\n')}` : '',
-    personal ? plansText(meetings) : '\nUse my Slack, Calendar, Gmail and Linear connectors when the question needs them.',
+    personal ? plansText(meetings) : '\nUse my Slack, Calendar, Gmail and Linear connectors when the question needs them. They are my work accounts: if the question is about my private life (travel, family, personal bookings), do not search them and reply in one line that it belongs in Personal.',
     personal && '\nRead these events in Calendar for location and notes. Then use Calendar, Gmail and web search to suggest concrete alternatives near where I am, each with opening hours and travel time. Change the calendar only after I confirm.',
   ].filter(Boolean).join('\n');
 }

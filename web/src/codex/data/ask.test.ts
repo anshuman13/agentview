@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { askText } from './ask';
+import { askText, guessProfile } from './ask';
 import type { ItemRow } from './sync';
 import type { Meeting } from './wiki';
 
@@ -51,4 +51,17 @@ it('lists personal meetings from today to the end of today+3 in start order', ()
 it('says so when no personal meeting is in the window', () => {
   const out = askText('plans?', 'personal', [], undefined, [meeting('too-far', at(4, 9))]);
   expect(out).toContain('No personal meetings in the next 3 days.\n' + PARAGRAPH);
+});
+
+it('guesses personal for travel and words from personal events, work for work words', () => {
+  const now = at(0, 10);
+  expect(guessProfile('Eurostar tomorrow worth upgrading', [], 'work', now)).toBe('personal');
+  expect(guessProfile('what time is the louvre visit', [meeting('Louvre visit', at(1, 10))], 'work', now)).toBe('personal');
+  expect(guessProfile('summarise the slack thread on oncall', [], 'personal', now)).toBe('work');
+  expect(guessProfile('prep for the rollout', [meeting('Claude rollout', at(1, 9), { profile: 'work' })], 'personal', now)).toBe('work');
+  expect(guessProfile('what next', [], 'personal', now)).toBe('personal');
+});
+
+it('tells the work chat to leave private questions alone', () => {
+  expect(askText('x', 'work', [])).toContain('it belongs in Personal');
 });
