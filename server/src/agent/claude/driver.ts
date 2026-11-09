@@ -57,7 +57,7 @@ export class ClaudeDriver implements AgentDriver {
     this.watcher = new TranscriptWatch({
       host,
       isClosed: () => this.closed,
-      attached: () => this.q !== null,
+      attached: () => this.attached,
       taskCount: () => this.tasks.size,
       restart: () => this.restart(),
       history: (...args) => this.history(...args),
