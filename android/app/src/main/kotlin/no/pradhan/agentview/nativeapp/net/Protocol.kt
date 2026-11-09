@@ -158,6 +158,10 @@ data class Edits(val add: Int = 0, val del: Int = 0)
 @Serializable
 data class ModelInfo(val value: String, val displayName: String = "", val description: String = "")
 
+// shared/protocol.ts Capabilities: what the chat's driver supports; a missing field counts as supported.
+@Serializable
+data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val effort: Boolean = true, val team: Boolean = true, val stopTask: Boolean = true)
+
 @Serializable
 data class CommandInfo(val name: String, val description: String = "")
 
@@ -185,6 +189,7 @@ data class SessionInfo(
     val loop: LoopInfo? = null,
     val hooks: List<String> = emptyList(),
     val review: Boolean = false,
+    val capabilities: Capabilities = Capabilities(),
 )
 
 @Serializable

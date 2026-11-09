@@ -313,6 +313,15 @@ Any chat can ask Fable 5.1 about a hard problem. Each call needs your approval.
 **Effort** in the same menu (or the palette) sets how hard the model thinks, from low to max, per chat. New chats start at medium. The footer
 pill shows the current level next to the model.
 
+**OpenRouter**: Settings has a Models section with an OpenRouter key (masked after saving), one OpenRouter model id for
+each Claude slot (Opus, Sonnet, Haiku, Fable) and the default slot. They are saved in `~/.agentview/openrouter.json`,
+never in the repo. With a key and at least one model, the model menus (chat settings, new chat, palette, phone) list
+those models by their OpenRouter id next to Claude's. Picking one runs the Claude Code CLI against OpenRouter; picking
+it in a running chat restarts the CLI on the new provider (and says so), so stop the chat first. Each chat remembers its
+provider, and a chat without a mark runs on Claude. An OpenRouter chat has no plan usage bar, no cost (the SDK prices
+are Anthropic's), no Team, effort or Fable agent and no account menu, because the controls a driver lacks come from
+the chat's `capabilities` and are hidden on web and the phone. Without a key nothing new shows.
+
 ## Workspace
 
 Repos come from `~/workspace` and `~/workspace_personal`. Set `AGENTVIEW_ROOTS` (colon-separated) to change that.

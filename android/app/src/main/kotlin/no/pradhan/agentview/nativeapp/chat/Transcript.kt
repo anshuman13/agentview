@@ -133,6 +133,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val items = view.items
     val rows = view.rows
     val noEvents by hub.store.state.select { it.events.isEmpty() }
+    val canRewind by hub.store.state.select { it.session?.capabilities?.rewind ?: true }
     val openRuns = rememberSaveable(chatId) { mutableStateOf(setOf<String>()) }
     val folded = remember(view.runs, openRuns.value) { view.runs.filterKeys { it !in openRuns.value }.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
@@ -161,7 +162,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
             lazyItems(queued.asReversed(), key = { "out-${it.id}" }) { q ->
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
             }
-            transcriptRows(hub, view, newId, openRuns, folded, chatId, cwd, running, onOpenAgent)
+            transcriptRows(hub, view, newId, openRuns, folded, chatId, cwd, running, canRewind, onOpenAgent)
             if (earlier > 0) item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
                     Text(if (loading) "Loading earlier…" else "Show earlier ($earlier hidden)", style = Type.callout, color = av.accentText)
@@ -182,7 +183,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     }
 }
 
-private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String?, openRuns: MutableState<Set<String>>, folded: Set<String>, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit) {
+private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String?, openRuns: MutableState<Set<String>>, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, onOpenAgent: (String) -> Unit) {
     val rows = view.rows
     val days = view.days
     val firstId = view.items.firstOrNull()?.id
@@ -195,7 +196,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String
             when {
                 it.id in folded -> {}
                 run != null && it.id !in openRuns.value -> ExploredRow(exploreLabel(run)) { openRuns.value = openRuns.value + it.id }
-                else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && it.id in view.rewinds)
+                else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in view.rewinds)
             }
         }
     }

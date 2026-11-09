@@ -60,7 +60,8 @@ type FootProps = { goal: GoalChoice; uses: Use[]; uploading: number; typed: bool
 
 export function ComposerFoot({ goal, uses, uploading, typed, shell, setPick, attach, dictate, submit }: FootProps) {
   const canMcp = useCan('mcp');
-  const hasServers = canMcp && useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
+  const connected = useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
+  const hasServers = canMcp && connected;
   return (
     <div className="cp-foot">
       <ModeChip goal={goal} setPick={setPick} />

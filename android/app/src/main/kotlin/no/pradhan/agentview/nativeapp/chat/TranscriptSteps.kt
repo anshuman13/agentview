@@ -43,6 +43,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.net.image
 import no.pradhan.agentview.nativeapp.net.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
@@ -213,6 +214,7 @@ internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpe
         else -> "done" + if (dur.isNotEmpty()) " $dur" else ""
     }
     val agentBar = av.agent
+    val canStop by hub.store.state.select { it.session?.capabilities?.stopTask ?: true }
     val shown = if (it.running) it.steps.takeLast(3) else emptyList()
     Column(Modifier.fillMaxWidth().clickable { onOpenAgent(it.use.id) }) {
         Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
@@ -226,7 +228,7 @@ internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpe
                 },
                 Modifier.weight(1f), style = Type.subheadline, color = av.fg, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
-            if (it.running) Button("Stop", { hub.stopTask(it.use.id) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
+            if (it.running && canStop) Button("Stop", { hub.stopTask(it.use.id) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
             AvIcon("chevron-right", null, Tokens.icon, Modifier.padding(horizontal = Tokens.sp3), tint = av.fgFaint)
         }
         if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {

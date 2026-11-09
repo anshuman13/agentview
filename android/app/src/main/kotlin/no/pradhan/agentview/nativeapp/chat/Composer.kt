@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.net.ChatRun
+import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.interrupt
@@ -212,7 +213,9 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, session: SessionInfo?,
     val c = av
     Sheet({ onSheet(null) }, "Chat settings", padded = false, full = false) {
         val account = session?.account ?: "main"
-        val models = session?.models.orEmpty()
+        val caps = session?.capabilities ?: Capabilities()
+        val models = modelsFor(session?.models.orEmpty(), caps)
+        val effort = session?.effort?.takeIf { caps.effort }
         if (models.isNotEmpty()) {
             SectionHeader("Model")
             val current = if (session?.team == true) "team" else session?.model
@@ -239,10 +242,10 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, session: SessionInfo?,
             }
         }
         val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null
-        if (showAccount || session?.effort != null) SectionHeader("Account and effort")
-        if (showAccount || session?.effort != null) Group {
+        if (showAccount || effort != null) SectionHeader("Account and effort")
+        if (showAccount || effort != null) Group {
             if (showAccount) ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); onSheet(Picker.Account) }, trailing = { Chevron() })
-            session?.effort?.let { if (showAccount) Hairline(); ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { onSheet(Picker.Effort) }, trailing = { Chevron() }) }
+            effort?.let { if (showAccount) Hairline(); ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { onSheet(Picker.Effort) }, trailing = { Chevron() }) }
         }
     }
 }

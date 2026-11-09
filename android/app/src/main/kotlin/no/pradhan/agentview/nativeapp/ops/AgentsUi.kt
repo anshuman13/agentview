@@ -71,12 +71,13 @@ fun AgentList(agents: List<Agent>, now: () -> Long, onOpen: (String) -> Unit) {
 private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, onBack: () -> Unit, onOpenAgent: (String) -> Unit) {
     BackHandler(onBack = onBack)
     val running = a.status == "running"
+    val canStop by hub.store.state.select { it.session?.capabilities?.stopTask ?: true }
     val now by rememberNow(running)
     var prompt by rememberSaveable(a.id) { mutableStateOf(false) }
     val clip = LocalClipboardManager.current
     Column(Modifier.fillMaxSize()) {
         PageHeader(a.description, onBack, subtitle = { Text(agentMeta(a, now), maxLines = 1) }) {
-            if (running && a.group == null) Button("Stop", { hub.stopTask(a.id) }, Modifier.padding(end = Tokens.sp6), variant = ButtonVariant.Danger, size = ButtonSize.Sm)
+            if (running && canStop && a.group == null) Button("Stop", { hub.stopTask(a.id) }, Modifier.padding(end = Tokens.sp6), variant = ButtonVariant.Danger, size = ButtonSize.Sm)
         }
         val pad = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2)
         LazyColumn(Modifier.fillMaxSize()) {
