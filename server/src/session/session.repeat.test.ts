@@ -314,7 +314,7 @@ describe('runs', () => {
 describe('send queue fuzz', () => {
   const seeds = Number(process.env.FUZZ_SEEDS ?? 10);
   const base = Number(process.env.FUZZ_FROM ?? 1);
-  type Priv = { queued: unknown[]; enqueue: (text: string) => void };
+  type Priv = { waiting: { queued: unknown[] }; enqueue: (text: string) => void };
   type Drv = { q: { interrupt: () => Promise<void> } | null; inputQueue: unknown[]; consume: () => Promise<void>; start: () => void };
 
   function rng(seed: number) {
@@ -359,7 +359,7 @@ describe('send queue fuzz', () => {
         expect(user().filter((e) => e.queued).map((e) => e.id), `queue order ${info()}`).toEqual(waiting);
         for (const e of user()) if (sent.some((m) => m.id === e.id)) expect(e.text, info()).toBe(sent.find((m) => m.id === e.id)?.text);
       };
-      const queuedIds = () => (priv.queued as { id: string }[]).map((e) => e.id);
+      const queuedIds = () => (priv.waiting.queued as { id: string }[]).map((e) => e.id);
       for (let step = 0; step < 25; step++) {
         const roll = r();
         if (roll < 0.3) {

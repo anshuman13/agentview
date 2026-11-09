@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { ACCOUNT_LABEL, MAX_GOAL_ROUNDS, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type ChatRun, type Effort, type LoopState, type Repeat, type RoundOutcome, type RunOp, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, MAX_GOAL_ROUNDS, ROW_WINDOW, ACCOUNT_NOTE, EFFORT_LEVELS, type Account, type ChatEvent, type ChatRun, type Effort, type LoopState, type Repeat, type RoundOutcome, type RunOp, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, errText } from '../../../shared/util.js';
 import { costRise } from '../../../shared/cost.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
@@ -12,13 +12,12 @@ import { Runs, WAITING, openTries, roundResult } from './runs.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { EventIndex, MAX_EVENTS, stopAgents, trimHistory } from './events.js';
 import { PR_URL, createsPr, prFrom } from './pr.js';
-
-type UserEvent = Extract<ChatEvent, { kind: 'user' }>;
+import { MessageQueue, type UserEvent } from './messageQueue.js';
+import { Compaction } from './compaction.js';
 
 const accountName = (a: Account) => ACCOUNT_LABEL[a];
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
 
-const RETRY_COMPACT_GROWTH = 20_000;
 const STOP_TIMEOUT = 15_000;
 
 export class AgentSession implements AgentHost {
@@ -37,13 +36,10 @@ export class AgentSession implements AgentHost {
 
   private turns = 0;
   private planChange: string | null = null;
-  private queued: UserEvent[] = [];
-  // Sent to Claude mid-turn, shown as waiting until Claude reaches its next step.
-  private pending: UserEvent[] = [];
+  private waiting = new MessageQueue();
   // A message sent mid-turn missed the turn's last step, so the CLI starts a turn for it.
   private expectTurn = false;
-  private autoCompact = true;
-  private compactFailedAt: number | null = null;
+  private compaction = new Compaction();
   private lastResult = '';
   private loopPrevModel: string | null = null;
   private planDenied = false;
@@ -137,7 +133,7 @@ export class AgentSession implements AgentHost {
   }
 
   private release() {
-    for (const ev of this.pending.splice(0)) {
+    for (const ev of this.waiting.takePending()) {
       ev.queued = false;
       this.emit({ type: 'event', event: ev });
     }
@@ -148,7 +144,7 @@ export class AgentSession implements AgentHost {
     if (this.known(id)) return;
     const s = this.state.session;
     if (!s.running || s.compacting || s.loop.on || text.trim().startsWith('/') || !this.driver.attached) return this.prompt(text, id);
-    this.hold(this.pending, text, id);
+    this.hold(this.waiting.pending, text, id);
     this.driver.send(text, id, 'next');
   }
 
@@ -165,13 +161,12 @@ export class AgentSession implements AgentHost {
 
   // Stops the current step so a waiting message runs now.
   async sendNow(id: string) {
-    const held = this.queued.find((e) => e.id === id);
+    const held = this.waiting.takeQueued(id);
     if (held) {
-      this.queued = this.queued.filter((e) => e !== held);
       this.removeEvents((e) => e === held);
       return this.steer(held.text);
     }
-    if (!this.pending.some((e) => e.id === id) || this.state.session.stopping) return;
+    if (!this.waiting.hasPending(id) || this.state.session.stopping) return;
     await this.stop();
   }
 
@@ -457,7 +452,7 @@ export class AgentSession implements AgentHost {
     }
     this.turns -= this.driver.dropInput();
     this.dropQueue();
-    const dropped = new Set(this.pending.splice(0));
+    const dropped = new Set(this.waiting.takePending());
     if (dropped.size) this.removeEvents((e) => dropped.has(e as UserEvent));
     if (this.turns <= 0) {
       this.turns = 0;
@@ -489,19 +484,18 @@ export class AgentSession implements AgentHost {
   }
 
   private queue(text: string, id: string = randomUUID()) {
-    this.hold(this.queued, text, id);
+    this.hold(this.waiting.queued, text, id);
   }
 
   private dropQueue() {
-    if (!this.queued.length) return;
-    const ids = new Set(this.queued.map((e) => e.id));
-    this.queued = [];
+    if (!this.waiting.queued.length) return;
+    const ids = this.waiting.clearQueued();
     this.removeEvents((e) => ids.has(e.id));
   }
 
   // Messages waiting behind a turn, saved when the host exits so a restart does not drop them.
   get queuedMessages() {
-    return this.queued.map(({ id, text }) => ({ id, text }));
+    return this.waiting.messages;
   }
 
   // Scheduled jobs live in the CLI process, so a new process has to create them again. The loop does not take this prompt as a task.
@@ -694,15 +688,14 @@ export class AgentSession implements AgentHost {
   compacted(pre: number, post: number | null | undefined) {
     this.setSession({ context: post ?? null, compacting: false });
     this.setStatus('Compacted');
-    this.autoCompact = true;
-    this.compactFailedAt = null;
+    this.compaction.rearm();
     this.system(`Compacted from ${Math.round(pre / 1000)}k${post ? ` to ${Math.round(post / 1000)}k` : ''} tokens`);
     this.rearmWakeups();
   }
 
   compactFailed(error: string) {
     this.setSession({ compacting: false });
-    this.compactFailedAt = this.state.session.context ?? 0;
+    this.compaction.failed(this.state.session.context ?? 0);
     this.system(`Compact failed: ${error}`);
   }
 
@@ -754,7 +747,7 @@ export class AgentSession implements AgentHost {
 
   turnResult(r: TurnResult) {
     // Before a switch to the other account the messages stay held, since the CLI that has them is replaced.
-    if (this.pending.length && !this.limitReset) {
+    if (this.waiting.pending.length && !this.limitReset) {
       this.expectTurn = true;
       this.release();
     }
@@ -771,6 +764,12 @@ export class AgentSession implements AgentHost {
     this.roundTurn = false;
     this.reportTurn = undefined;
     this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: this.state.session.model });
+    this.recordRuns(r, repeat, report);
+    if (repeat?.goal && met) this.repeater.set(null, `Goal met after ${repeat.round} ${repeat.round === 1 ? 'check' : 'checks'}: ${repeat.goal}`, 'goal met');
+    this.turnEnded();
+  }
+
+  private recordRuns(r: TurnResult, repeat: Repeat | null, report: string | undefined) {
     const sessionId = this.state.session.sessionId;
     if (sessionId) this.runs.reportTry(sessionId, { ...roundResult(r.text, { failed: this.lastError }), costUsd: this.turnCost });
     if (this.compareRun) {
@@ -779,8 +778,6 @@ export class AgentSession implements AgentHost {
       this.compareRun = undefined;
     }
     if (repeat?.runId && this.roundNote) this.runs.addRound(repeat.runId, { n: repeat.round, outcome: this.roundNote.outcome, line: this.roundNote.line, costUsd: this.turnCost, ...(report && { report }) });
-    if (repeat?.goal && met) this.repeater.set(null, `Goal met after ${repeat.round} ${repeat.round === 1 ? 'check' : 'checks'}: ${repeat.goal}`, 'goal met');
-    this.turnEnded();
   }
 
   turnEnded() {
@@ -788,12 +785,12 @@ export class AgentSession implements AgentHost {
     const stopped = this.turns === 0 && this.state.session.stopping;
     const idle = this.turns === 0 && !this.state.session.stopping;
     if (idle && this.limitReset && this.failOver(this.limitReset)) {
-      this.queued.unshift(...this.pending.splice(0));
+      this.waiting.requeuePending();
       this.limitReset = null;
       this.setSession({ compacting: false });
       return;
     }
-    if (this.pending.length && this.limitReset) {
+    if (this.waiting.pending.length && this.limitReset) {
       this.expectTurn = true;
       this.release();
     }
@@ -833,7 +830,7 @@ export class AgentSession implements AgentHost {
 
   // The agent process is gone; its queued input went with it, but the events stay.
   exited() {
-    this.queued.unshift(...this.pending.splice(0));
+    this.waiting.requeuePending();
     this.expectTurn = false;
     this.turns = 0;
     this.setSession({ running: false, stopping: false, compacting: false });
@@ -860,27 +857,19 @@ export class AgentSession implements AgentHost {
   private followUp() {
     const plan = this.takePlanChange();
     if (plan) return plan;
-    const context = this.state.session.context ?? 0;
-    if (!this.autoCompact && this.compactFailedAt !== null && context >= this.compactFailedAt + RETRY_COMPACT_GROWTH) {
-      this.autoCompact = true;
-      this.compactFailedAt = null;
-    }
-    if (this.autoCompact && context >= COMPACT_AT) {
-      this.autoCompact = false;
-      return '/compact';
-    }
+    if (this.compaction.due(this.state.session.context ?? 0)) return '/compact';
     this.dequeue();
     return null;
   }
 
   // The sent message and the ones still waiting move below the finished turn, in the order they were typed.
   private dequeue() {
-    const ev = this.queued.shift();
+    const ev = this.waiting.queued.shift();
     if (!ev) return false;
     ev.queued = false;
     ev.at = Date.now();
-    const tail = new Set<ChatEvent>([ev, ...this.queued]);
-    this.state.events = [...this.state.events.filter((e) => !tail.has(e)), ev, ...this.queued];
+    const tail = new Set<ChatEvent>([ev, ...this.waiting.queued]);
+    this.state.events = [...this.state.events.filter((e) => !tail.has(e)), ev, ...this.waiting.queued];
     this.emit({ type: 'init', state: this.state });
     this.enqueue(ev.text, ev.id);
     return true;
