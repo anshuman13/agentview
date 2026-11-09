@@ -322,6 +322,17 @@ provider, and a chat without a mark runs on Claude. An OpenRouter chat has no pl
 are Anthropic's), no Team, effort or Fable agent and no account menu, because the controls a driver lacks come from
 the chat's `capabilities` and are hidden on web and the phone. Without a key nothing new shows.
 
+**Codex**: chats can run on the Codex CLI with a ChatGPT plan (`codex app-server`, one process per chat). Sign in once with
+`codex login` on the Mac; until then Settings shows Codex as "Run codex login on this Mac" and the palette entry only says
+so. Start one from the command palette (Chat: New Codex Chat) or the Provider section of the phone's new chat sheet. The
+model menu lists Codex's models, effort goes to the model when it supports that level, and the permission modes map to
+Codex's approval policy and sandbox: Default asks before leaving the workspace sandbox, Auto never asks, Plan and
+Don't ask only read. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes
+(shown as edits with diffs) and MCP calls appear as steps. The usage bar shows the plan's 5-hour and weekly windows;
+there is no cost. No rewind, Team or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
+transcript, and are kept in `~/.agentview/codex-chats.json`. Not yet for Codex: AgentView's own tools (status, wiki,
+data, chat search), `/compact`, chat search and @chat mentions.
+
 ## Workspace
 
 Repos come from `~/workspace` and `~/workspace_personal`. Set `AGENTVIEW_ROOTS` (colon-separated) to change that.
