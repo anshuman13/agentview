@@ -1,0 +1,11 @@
+[
+  { "name": "write counts lines", "tool": "Write", "input": { "content": "a\nb\nc" }, "expected": { "add": 3, "del": 0 } },
+  { "name": "write with a trailing newline", "tool": "Write", "input": { "content": "a\nb\n" }, "expected": { "add": 2, "del": 0 } },
+  { "name": "write with an empty file", "tool": "Write", "input": { "content": "" }, "expected": { "add": 0, "del": 0 } },
+  { "name": "write with the truncation marker", "tool": "Write", "input": { "content": "a\nb\n… 10 more lines" }, "expected": { "add": 12, "del": 0 } },
+  { "name": "edit counts both sides", "tool": "Edit", "input": { "old_string": "a", "new_string": "b\nc" }, "expected": { "add": 2, "del": 1 } },
+  { "name": "edit without old string", "tool": "Edit", "input": { "new_string": "x" }, "expected": { "add": 1, "del": 0 } },
+  { "name": "multiedit sums the edits", "tool": "MultiEdit", "input": { "edits": [{ "old_string": "a", "new_string": "b\nc" }, { "old_string": "d\ne", "new_string": "f" }] }, "expected": { "add": 3, "del": 3 } },
+  { "name": "multiedit without edits", "tool": "MultiEdit", "input": {}, "expected": { "add": 0, "del": 0 } },
+  { "name": "other tools have no count", "tool": "Bash", "input": { "command": "ls" }, "expected": null }
+]

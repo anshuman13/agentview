@@ -1,0 +1,10 @@
+[
+  { "name": "no round line", "text": "Done with the fix.", "expected": "Done with the fix." },
+  { "name": "round line at the end", "text": "Fixed it.\nROUND: done fixed the bug", "expected": "Fixed it." },
+  { "name": "lowercase and indented", "text": "Fixed it.\n  round: progress half way", "expected": "Fixed it." },
+  { "name": "trailing whitespace after the round line", "text": "Fixed it.\nROUND: done ok\n\n", "expected": "Fixed it." },
+  { "name": "only a round line", "text": "ROUND: nothing", "expected": "" },
+  { "name": "round in the middle stays", "text": "ROUND: done early\nand then more text", "expected": "ROUND: done early\nand then more text" },
+  { "name": "round mentioned inside a sentence stays", "text": "The ROUND: marker is parsed", "expected": "The ROUND: marker is parsed" },
+  { "name": "blank lines before the round line are trimmed", "text": "Fixed it.\n\n\nROUND: blocked need a key", "expected": "Fixed it." }
+]

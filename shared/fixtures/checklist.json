@@ -1,0 +1,7 @@
+[
+  { "name": "in progress item by its active form", "items": [{ "content": "Read code", "activeForm": "Reading code", "status": "completed" }, { "content": "Write test", "activeForm": "Writing the test", "status": "in_progress" }, { "content": "Ship", "activeForm": "Shipping", "status": "pending" }], "progress": "1 of 3", "current": "Writing the test" },
+  { "name": "first pending when nothing is in progress", "items": [{ "content": "Read code", "activeForm": "", "status": "completed" }, { "content": "Ship", "activeForm": "", "status": "pending" }], "progress": "1 of 2", "current": "Ship" },
+  { "name": "in progress wins over an earlier pending", "items": [{ "content": "A", "activeForm": "", "status": "pending" }, { "content": "B", "activeForm": "Doing B", "status": "in_progress" }], "progress": "0 of 2", "current": "Doing B" },
+  { "name": "all completed has no current", "items": [{ "content": "A", "activeForm": "Doing A", "status": "completed" }], "progress": "1 of 1", "current": "" },
+  { "name": "empty list", "items": [], "progress": "0 of 0", "current": "" }
+]

@@ -1,0 +1,16 @@
+[
+  { "name": "travel word", "question": "Eurostar tomorrow worth upgrading", "fallback": "work", "meetings": [], "expected": "personal" },
+  { "name": "work word", "question": "summarise the slack thread on oncall", "fallback": "personal", "meetings": [], "expected": "work" },
+  { "name": "no signal uses fallback work", "question": "what next", "fallback": "work", "meetings": [], "expected": "work" },
+  { "name": "no signal uses fallback personal", "question": "what next", "fallback": "personal", "meetings": [], "expected": "personal" },
+  { "name": "shares a word with a personal event", "question": "what time is the louvre visit", "fallback": "work", "meetings": [{ "title": "Louvre visit", "profile": "personal", "startsInHours": 24 }], "expected": "personal" },
+  { "name": "shares a word with a work event", "question": "prep for the rollout", "fallback": "personal", "meetings": [{ "title": "Claude rollout", "profile": "work", "startsInHours": 24 }], "expected": "work" },
+  { "name": "event started 23 hours ago still counts", "question": "what time is the louvre visit", "fallback": "work", "meetings": [{ "title": "Louvre visit", "profile": "personal", "startsInHours": -23 }], "expected": "personal" },
+  { "name": "event started 25 hours ago is too old", "question": "what time is the louvre visit", "fallback": "work", "meetings": [{ "title": "Louvre visit", "profile": "personal", "startsInHours": -25 }], "expected": "work" },
+  { "name": "event in 6 days counts", "question": "what time is the louvre visit", "fallback": "work", "meetings": [{ "title": "Louvre visit", "profile": "personal", "startsInHours": 144 }], "expected": "personal" },
+  { "name": "event in 8 days is too far", "question": "what time is the louvre visit", "fallback": "work", "meetings": [{ "title": "Louvre visit", "profile": "personal", "startsInHours": 192 }], "expected": "work" },
+  { "name": "deleted event is ignored", "question": "what time is the louvre visit", "fallback": "work", "meetings": [{ "title": "Louvre visit", "profile": "personal", "startsInHours": 24, "deleted": true }], "expected": "work" },
+  { "name": "tie between personal and work words uses fallback", "question": "dinner with the team", "fallback": "personal", "meetings": [], "expected": "personal" },
+  { "name": "words under four letters do not match", "question": "the gym", "fallback": "work", "meetings": [{ "title": "gym", "profile": "personal", "startsInHours": 2 }], "expected": "work" },
+  { "name": "event hit adds to a travel word", "question": "louvre museum tickets", "fallback": "work", "meetings": [{ "title": "Louvre", "profile": "personal", "startsInHours": 2 }], "expected": "personal" }
+]

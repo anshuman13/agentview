@@ -1,0 +1,16 @@
+[
+  { "name": "future is now", "ageMs": -300000, "suffix": "", "expected": "now" },
+  { "name": "under a minute", "ageMs": 59999, "suffix": "", "expected": "now" },
+  { "name": "one minute", "ageMs": 60000, "suffix": "", "expected": "1m" },
+  { "name": "59 minutes", "ageMs": 3540000, "suffix": "", "expected": "59m" },
+  { "name": "one hour", "ageMs": 3600000, "suffix": "", "expected": "1h" },
+  { "name": "90 minutes rounds up", "ageMs": 5400000, "suffix": "", "expected": "2h" },
+  { "name": "23 hours", "ageMs": 82800000, "suffix": "", "expected": "23h" },
+  { "name": "one day", "ageMs": 86400000, "suffix": "", "expected": "1d" },
+  { "name": "36 hours rounds up", "ageMs": 129600000, "suffix": "", "expected": "2d" },
+  { "name": "six days", "ageMs": 518400000, "suffix": "", "expected": "6d" },
+  { "name": "one week", "ageMs": 604800000, "suffix": "", "expected": "1w" },
+  { "name": "ten weeks", "ageMs": 6048000000, "suffix": "", "expected": "10w" },
+  { "name": "suffix is added", "ageMs": 18000000, "suffix": " ago", "expected": "5h ago" },
+  { "name": "suffix is not added to now", "ageMs": 1000, "suffix": " ago", "expected": "now" }
+]
