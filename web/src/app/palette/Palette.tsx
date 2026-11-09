@@ -5,11 +5,11 @@ import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type SavedSession } from
 import { Back } from '../touch/back';
 import { openMeeting, openSearch, openTask, setView, useView, type Filter, type List } from '../../codex/view';
 import { assistantStore, codexMeetings } from '../../codex/data';
-import { isTask, searchAll } from '../../codex/data/search';
-import { live } from '../../codex/data/wiki';
+import { isTask, searchAll } from '../../codex/data/ask/search';
+import { live } from '../../codex/data/wiki/wiki';
 import type { Snapshot } from '../../codex/data/store';
 import { rowKey } from '../../codex/data/sync';
-import { clock } from '../../codex/time';
+import { clock } from '../../codex/tasks/time';
 import { isBlock } from '../../../../shared/util';
 import { Icon } from '../../ui/Icon';
 import { Row as UiRow } from '../../ui/Row';

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
 import type { ItemRow } from '../data/sync';
-import { errorText, splitTitle } from '../data/engine';
-import { queryWords, rowMatcher } from '../data/wiki';
+import { errorText, splitTitle } from '../data/tasks/engine';
+import { queryWords, rowMatcher } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { ShowMore, useWindow } from '../../ui/useWindow';

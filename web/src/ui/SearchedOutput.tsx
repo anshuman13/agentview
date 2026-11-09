@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { queryWords } from '../codex/data/match';
+import { queryWords } from '../codex/data/ask/match';
 import { Icon } from './Icon';
 import { IconButton } from './Button';
 import { markSegments, matchLabel, stepMatch } from './util';

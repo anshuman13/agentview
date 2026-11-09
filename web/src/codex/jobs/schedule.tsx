@@ -1,6 +1,6 @@
 import { useAssistantStore, useAssistantData } from '../data';
-import type { Job, Run } from '../data/wiki';
-import { clock } from '../time';
+import type { Job, Run } from '../data/wiki/wiki';
+import { clock } from '../tasks/time';
 import { dayLabel, dayStart } from '../data/dates';
 import { money } from '../../ui/util';
 import { showSnack, useView } from '../view';

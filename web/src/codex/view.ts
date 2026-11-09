@@ -2,9 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObjec
 import { createStore } from '../ui/createStore';
 import { useBack } from '../app/touch/back';
 import { rowKey, type Profile } from './data/sync';
-import { errorText } from './data/engine';
-import { seriesKey, seriesTitleOf } from './data/meetings';
-import type { Meeting } from './data/wiki';
+import { errorText } from './data/tasks/engine';
+import { seriesKey, seriesTitleOf } from './data/meetings/meetings';
+import type { Meeting } from './data/wiki/wiki';
 import { clearScroll, saveScroll, takeScroll } from './scrollStore';
 import { PHONE } from '../ui/Menu';
 import { copyText as copyToClipboard } from '../ui/util';

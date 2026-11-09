@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { FIELDS, rowToChange, mergeIncoming, type Change, type ItemRow, type PulledChange } from './sync';
-import { runSync } from './engine';
+import { runSync } from './tasks/engine';
 
 const empty = Object.fromEntries(FIELDS.map((f) => [f, null]));
 

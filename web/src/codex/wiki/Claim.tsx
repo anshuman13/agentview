@@ -1,14 +1,14 @@
 import { memo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore } from '../data';
-import { chatOf, contestOf, sourcesOf, type Fact } from '../data/wiki';
-import type { Mentions } from '../data/mentions';
+import { chatOf, contestOf, sourcesOf, type Fact } from '../data/wiki/wiki';
+import type { Mentions } from '../data/meetings/mentions';
 import { dayLabel } from '../data/dates';
 import { Button, IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { ago, safeHref } from '../../ui/util';
 import { copyText, openMeeting, openTask, showSnack } from '../view';
-import { Swipe } from '../Swipe';
+import { Swipe } from '../gestures/Swipe';
 import { KIND, SourceChip } from './Chips';
 import { useReview } from './Review';
 import { actionsFor, SOURCE_ICON, shortDate, type ClaimButton, type ClaimMenuItem } from './shared';

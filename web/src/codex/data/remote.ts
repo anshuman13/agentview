@@ -1,10 +1,10 @@
 import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type ReplyHistory, type SentReply, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
-import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
+import { edited, moved, newCapture, runSync, toRow, type Dirty } from './tasks/engine';
 import { doneCutoff } from './localRows';
 import { mergeIncoming, rowKey } from './sync';
 import { COLUMNS, LEGACY_KEY, META_KEY, cacheOp, cacheWrite, rowId, rowRange, tableKey, type Cached } from './cache';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
-import type { Table, Tables } from './wiki';
+import type { Table, Tables } from './wiki/wiki';
 import { hub, LONG_TIMEOUT, QUICK_TIMEOUT, REPLY_TIMEOUT, SYNC_TIMEOUT } from './hubFetch';
 
 const SYNC_EVERY = 30000;

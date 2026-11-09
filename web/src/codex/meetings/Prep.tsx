@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { dayLabel } from '../data/dates';
-import { agendaMarkdown } from '../data/meetingMarkdown';
-import { pointsFor, theirActions } from '../data/points';
-import { type Meeting } from '../data/wiki';
-import { briefFor, openQuestions, priorWith, questionKey } from '../data/meetings';
+import { agendaMarkdown } from '../data/meetings/meetingMarkdown';
+import { pointsFor, theirActions } from '../data/meetings/points';
+import { type Meeting } from '../data/wiki/wiki';
+import { briefFor, openQuestions, priorWith, questionKey } from '../data/meetings/meetings';
 import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';

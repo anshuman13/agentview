@@ -1,7 +1,7 @@
 import type { ChatRun } from '../../../shared/protocol';
 import type { BadgeSpec } from '../ui/Badge';
 import { useStore } from '../app/store';
-import type { Job } from '../codex/data/wiki';
+import type { Job } from '../codex/data/wiki/wiki';
 
 export type RunItem = { kind: 'run'; run: ChatRun } | { kind: 'job'; job: Job; state: BadgeSpec };
 

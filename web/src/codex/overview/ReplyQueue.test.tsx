@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ItemRow } from '../data/sync';
 import { askKey, ReplyQueue, replyQueue, snoozeOptions, staleAsks } from './ReplyQueue';
 
-vi.mock('../data/engine', () => ({ reviewedSince: (r: { at?: number }) => r.at ?? 0, errorText: String }));
+vi.mock('../data/tasks/engine', () => ({ reviewedSince: (r: { at?: number }) => r.at ?? 0, errorText: String }));
 vi.mock('../data', () => ({ useAssistantStore: () => ({}) }));
 vi.mock('../useActions', () => ({ useActions: () => ({}) }));
 

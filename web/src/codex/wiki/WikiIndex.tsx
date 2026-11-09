@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useAssistantStore, useCodex } from '../data';
-import { ask, wikiAskText } from '../data/ask';
-import { live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
+import { ask, wikiAskText } from '../data/ask/ask';
+import { live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
@@ -17,7 +17,7 @@ import { Feed } from './Feed';
 import { Notes } from './Notes';
 import { PageTile } from './PageTile';
 import { NeedsLook, ToReview } from './Review';
-import { usePullSync } from '../pullSync';
+import { usePullSync } from '../gestures/pullSync';
 import { MEMORY, shortDate } from './shared';
 import { plural } from '../../ui/util';
 import { Sheet } from '../../ui/Sheet';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Fact } from '../data/wiki';
+import type { Fact } from '../data/wiki/wiki';
 import { actionsFor } from './shared';
 
 const fact = (over: Partial<Fact> = {}) => ({ id: 'f', state: null, contested: null, ...over }) as Fact;

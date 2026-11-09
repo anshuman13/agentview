@@ -1,7 +1,7 @@
 import { Icon } from '../../ui/Icon';
 import { Chip } from '../../ui/Button';
 import { safeHref } from '../../ui/util';
-import type { Source } from '../data/wiki';
+import type { Source } from '../data/wiki/wiki';
 import { SOURCE_ICON } from './shared';
 
 export const KIND: Record<Source['kind'], string> = { slack: 'Slack', linear: 'Linear', pr: 'PR', doc: 'Doc', meeting: 'Meeting', chat: 'Chat' };

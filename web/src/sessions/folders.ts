@@ -5,7 +5,7 @@ import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
 import { inside } from '../../../shared/util';
-import { matcher, queryWords } from '../codex/data/match';
+import { matcher, queryWords } from '../codex/data/ask/match';
 
 export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
 

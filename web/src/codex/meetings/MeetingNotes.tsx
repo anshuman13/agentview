@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantStore } from '../data';
-import type { Meeting } from '../data/wiki';
+import type { Meeting } from '../data/wiki/wiki';
 import { fitHeight } from '../../ui/util';
 import { Chip } from '../../ui/Button';
-import { NOTES_TEMPLATES, notesTemplateCaret, notesTemplateChips, notesTemplateText, rememberNotesTemplate, type NotesTemplate } from '../data/notesTemplates';
+import { NOTES_TEMPLATES, notesTemplateCaret, notesTemplateChips, notesTemplateText, rememberNotesTemplate, type NotesTemplate } from '../data/meetings/notesTemplates';
 import { caretLine, RelatedStrip } from '../Related';
 
 const SAVE_AFTER = 800;

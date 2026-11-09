@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAssistantStore } from '../data';
 import type { ItemRow } from '../data/sync';
-import type { Meeting } from '../data/wiki';
+import type { Meeting } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { showSnack } from '../view';
 

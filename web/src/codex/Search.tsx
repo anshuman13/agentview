@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from './data';
-import { GROUP_CAP, searchAll, type Group, type Hit } from './data/search';
+import { GROUP_CAP, searchAll, type Group, type Hit } from './data/ask/search';
 import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { leaveOverlay, openMeeting, openTask, setView, takeSearchQuery, useEscapeBack, useView } from './view';
 import { useTranscriptHits } from './meetings/MeetingList';
-import { live } from './data/wiki';
+import { live } from './data/wiki/wiki';
 import { dayLabel } from './data/dates';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';

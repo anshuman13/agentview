@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAssistantStore } from '../data';
-import { errorText } from '../data/engine';
-import { SUMMARY_TEMPLATES, rememberTemplate, summaryInstructions, templateFor, type SummaryTemplate } from '../data/summaryTemplates';
-import { talkTime } from '../data/talkTime';
-import type { Meeting } from '../data/wiki';
+import { errorText } from '../data/tasks/engine';
+import { SUMMARY_TEMPLATES, rememberTemplate, summaryInstructions, templateFor, type SummaryTemplate } from '../data/meetings/summaryTemplates';
+import { talkTime } from '../data/meetings/talkTime';
+import type { Meeting } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { Section } from '../../ui/Section';
 import { SearchedOutput } from '../../ui/SearchedOutput';
 import { markSegments, matchLabel, plural } from '../../ui/util';
-import { queryWords } from '../data/match';
+import { queryWords } from '../data/ask/match';
 import { showSnack } from '../view';
 import { rowKey } from '../data/sync';
-import { useSnackTask } from '../useSnackTask';
+import { useSnackTask } from '../tasks/useSnackTask';
 
 // The transcript text stays on the hub; a summarized meeting fetches it for the talk time and the Transcript section, again after each new summary.
 export function useTranscript(m: Meeting, on: boolean) {

@@ -8,12 +8,12 @@ import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from
 import { handoffText, runLine } from './chat/composer/composerLogic';
 import { runBands } from './sessions/runBands';
 import { tryColumn } from './sessions/TriesBoard';
-import { parseWhen, stripWhen } from './codex/data/when';
+import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { needsYou } from './codex/summary/needsYou';
 import { ago } from './ui/util';
-import { guessProfile } from './codex/data/ask';
+import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
-import type { Meeting } from './codex/data/wiki';
+import type { Meeting } from './codex/data/wiki/wiki';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 

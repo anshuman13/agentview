@@ -1,4 +1,4 @@
-import { contestOf, factTime, live, type Fact, type Page, type Source } from '../data/wiki';
+import { contestOf, factTime, live, type Fact, type Page, type Source } from '../data/wiki/wiki';
 import { ago } from '../../ui/util';
 
 export const SOURCE_ICON: Record<Source['kind'], string> = { meeting: 'calendar', slack: 'comment-discussion', linear: 'issues', pr: 'git-pull-request', doc: 'file', chat: 'comment-discussion' };

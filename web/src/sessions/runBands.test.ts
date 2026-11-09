@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { runBands } from './runBands';
 import type { ChatRun } from '../../../shared/protocol';
-import type { Job } from '../codex/data/wiki';
+import type { Job } from '../codex/data/wiki/wiki';
 
 const run = (id: string, over: Partial<ChatRun> = {}): ChatRun => ({ id, kind: 'loop', sessionId: `s${id}`, chatId: `c${id}`, title: id, what: '', startedAt: 1, endedAt: null, state: 'running', why: '', round: 0, max: 0, nextAt: null, costUsd: 0, rounds: [], needsYou: false, ...over });
 const job = (id: string) => ({ id, profile: 'work' }) as Job;

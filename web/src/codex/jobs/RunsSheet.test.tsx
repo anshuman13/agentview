@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { Run } from '../data/wiki';
+import type { Run } from '../data/wiki/wiki';
 import { RunsRow, RunsSheet } from './RunsSheet';
 
 vi.mock('../data', () => ({ useAssistantStore: () => ({}), useAssistantData: () => ({}) }));

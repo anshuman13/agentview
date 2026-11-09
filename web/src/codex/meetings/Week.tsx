@@ -6,13 +6,13 @@ import { Row } from '../../ui/Row';
 import { Section as Head } from '../../ui/Section';
 import { dayLabel } from '../data/dates';
 import { hoursText, weekReview } from '../data/load';
-import { unanswered, waitingByPerson } from '../data/review';
-import type { Fact, Meeting } from '../data/wiki';
-import { when } from '../time';
+import { unanswered, waitingByPerson } from '../data/tasks/review';
+import type { Fact, Meeting } from '../data/wiki/wiki';
+import { when } from '../tasks/time';
 import { copyText, openMeeting, setView, useView } from '../view';
 import { plural } from '../../ui/util';
 import { Review } from './Review';
-import { WeekGoals } from '../Goals';
+import { WeekGoals } from '../tasks/Goals';
 
 const MAX = 8;
 const text = (t: string | null) => t?.trim() || 'Untitled';

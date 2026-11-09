@@ -1,4 +1,4 @@
-import type { Page } from '../data/wiki';
+import type { Page } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 
 // Each page gets a coloured tile, picked from its id so it stays put; the section picks the icon.

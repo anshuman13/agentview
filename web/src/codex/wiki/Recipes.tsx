@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react';
-import { allRecipes, matchRecipes, type Recipe } from '../data/recipes';
+import { allRecipes, matchRecipes, type Recipe } from '../data/ask/recipes';
 
 export function useRecipes(q: string, fill: (text: string) => void) {
   const [index, setIndex] = useState(0);

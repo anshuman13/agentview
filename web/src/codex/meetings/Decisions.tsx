@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
 import { EmptyState } from '../../ui/Panel';
-import { decisionsMarkdown } from '../data/meetingMarkdown';
-import { decisionLog, type Meeting } from '../data/wiki';
-import { decisionsWith, peopleOf } from '../data/meetings';
-import { when } from '../time';
+import { decisionsMarkdown } from '../data/meetings/meetingMarkdown';
+import { decisionLog, type Meeting } from '../data/wiki/wiki';
+import { decisionsWith, peopleOf } from '../data/meetings/meetings';
+import { when } from '../tasks/time';
 import { copyText, openMeeting } from '../view';
 
 export function Decisions({ meetings }: { meetings: Meeting[] }) {

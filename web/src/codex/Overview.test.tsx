@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { Overview } from './Overview';
 import { doneCount } from './overview/TodayList';
 import type { ItemRow } from './data/sync';
-import type { Meeting } from './data/wiki';
+import type { Meeting } from './data/wiki/wiki';
 
 const mocks = vi.hoisted(() => ({ needs: [] as unknown[], queue: [] as unknown[] }));
 
@@ -13,7 +13,7 @@ vi.mock('react', async (importOriginal) => {
 });
 vi.mock('./data', () => ({ useAssistantData: () => ({ items: [] }), useSyncGate: () => ({ loading: false }) }));
 vi.mock('./useActions', () => ({ useActions: () => ({}) }));
-vi.mock('./AddSheet', () => ({ AddSheet: () => null }));
+vi.mock('./tasks/AddSheet', () => ({ AddSheet: () => null }));
 vi.mock('./NeedsYou', () => ({ useNeedsYou: () => ({ rows: mocks.needs }) }));
 vi.mock('./overview/ReplyQueue', () => ({ replyQueue: () => mocks.queue }));
 vi.mock('./overview/Review', () => ({ Review: () => null }));

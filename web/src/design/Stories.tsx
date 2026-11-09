@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Guard } from '../app/shell/Guard';
 import { THEME_NAMES, applyTheme, useTheme, useThemeName } from '../app/theme';
-import { SnackBar } from '../codex/SnackBar';
+import { SnackBar } from '../codex/tasks/SnackBar';
 import { copyText } from '../codex/view';
 import { AskRow } from '../ui/AskRow';
 import { Badge } from '../ui/Badge';

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { send, useStore } from '../../app/store';
 import { showSnack } from '../../codex/view';
-import { clock } from '../../codex/time';
+import { clock } from '../../codex/tasks/time';
 import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Panel } from '../../ui/Panel';

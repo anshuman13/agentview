@@ -3,7 +3,7 @@ import { getState, send, useStore } from '../app/store';
 import { useAssistantData } from '../codex/data';
 import { rowKey } from '../codex/data/sync';
 import { jobState } from '../codex/jobs/schedule';
-import { useMinute } from '../codex/split';
+import { useMinute } from '../codex/tasks/split';
 import { setView } from '../codex/view';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';

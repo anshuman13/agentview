@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { contestOf, currentClaim, factTime, live, sourcesOf, type Fact, type Page } from '../data/wiki';
+import { contestOf, currentClaim, factTime, live, sourcesOf, type Fact, type Page } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';

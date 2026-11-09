@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { Page } from '../data/wiki';
+import type { Page } from '../data/wiki/wiki';
 import { Overview, PageRow } from './WikiIndex';
 
 vi.mock('../data', () => ({ useAssistantStore: () => ({ editRow: vi.fn() }), useCodex: () => ({ pages: [], facts: [] }) }));

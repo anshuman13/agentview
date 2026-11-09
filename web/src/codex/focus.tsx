@@ -1,8 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { assistantStore, useAssistantTable } from './data';
 import type { ItemRow, Profile } from './data/sync';
-import { estimateMin, focusTitle, minutesText } from './data/plan';
-import { appendSession } from './data/timeLog';
+import { estimateMin, focusTitle, minutesText } from './data/tasks/plan';
+import { appendSession } from './data/tasks/timeLog';
 import { apiUrl, fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { save, stored } from '../ui/util';

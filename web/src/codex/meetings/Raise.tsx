@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useAssistantData, useAssistantStore, useCodex } from '../data';
-import { POINT, RAISED, endedPoints, firstName, pointMeeting } from '../data/points';
+import { POINT, RAISED, endedPoints, firstName, pointMeeting } from '../data/meetings/points';
 import type { AssistantStore } from '../data/store';
 import type { ItemRow, Profile } from '../data/sync';
 import { Icon } from '../../ui/Icon';
-import { when } from '../time';
+import { when } from '../tasks/time';
 import { openMeeting, showSnack } from '../view';
 import '../../styles/features/wiki.css';
 import '../../styles/features/meetings.css';

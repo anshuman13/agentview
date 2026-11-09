@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stampedNotes } from '../../codex/data/meetings';
-import type { Meeting } from '../../codex/data/wiki';
+import { stampedNotes } from '../../codex/data/meetings/meetings';
+import type { Meeting } from '../../codex/data/wiki/wiki';
 import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, quoteReply, remindChoices, runLine, goalInfo, goalText } from './composerLogic';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 

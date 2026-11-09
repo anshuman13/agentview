@@ -5,9 +5,9 @@ import { Section } from '../../ui/Section';
 import { useAssistantTable } from '../data';
 import { hoursText, meetingLoad } from '../data/load';
 import { dayLabel } from '../data/dates';
-import { seriesAudit } from '../data/seriesAudit';
+import { seriesAudit } from '../data/meetings/seriesAudit';
 import { openMeeting } from '../view';
-import type { Meeting } from '../data/wiki';
+import type { Meeting } from '../data/wiki/wiki';
 import { Badge } from '../../ui/Badge';
 
 export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {

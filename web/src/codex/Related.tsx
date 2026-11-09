@@ -1,7 +1,7 @@
 import type { ItemRow } from './data/sync';
 import { useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from './data';
-import { related, relatedToTask, type Related as Hit } from './data/search';
+import { related, relatedToTask, type Related as Hit } from './data/ask/search';
 import { dayLabel } from './data/dates';
 import { Icon } from '../ui/Icon';
 import { Row } from '../ui/Row';

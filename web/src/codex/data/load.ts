@@ -1,7 +1,7 @@
-import { decisionLog, factTime, live, type Chat, type Fact, type Meeting } from './wiki';
-import { createdAt } from './review';
-import { peopleOf, seriesTitle } from './meetings';
-import { statusTime } from './engine';
+import { decisionLog, factTime, live, type Chat, type Fact, type Meeting } from './wiki/wiki';
+import { createdAt } from './tasks/review';
+import { peopleOf, seriesTitle } from './meetings/meetings';
+import { statusTime } from './tasks/engine';
 import { isSaid, type ItemRow } from './sync';
 
 const HOUR = 3600_000;

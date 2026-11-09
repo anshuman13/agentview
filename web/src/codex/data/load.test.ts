@@ -3,7 +3,7 @@ process.env.TZ = 'Europe/Oslo';
 import { describe, expect, it } from 'vitest';
 import { meetingLoad, meetingTimeLeft, weekReview } from './load';
 import type { ItemRow } from './sync';
-import type { Chat, Fact, Meeting } from './wiki';
+import type { Chat, Fact, Meeting } from './wiki/wiki';
 
 const meeting = (id: string, start: Date, hours: number, extra: Partial<Meeting> = {}) =>
   ({ id, profile: 'work', deleted: 0, starts_at: start.getTime(), ends_at: start.getTime() + hours * 3600_000, people: 'Ann, Bo', recorded_ms: null, ...extra }) as Meeting;

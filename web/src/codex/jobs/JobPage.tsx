@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Job } from '../data/wiki';
+import type { Job } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { Section } from '../../ui/Section';
 import { Button, Chip, IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { useOnUnmount, useReturnFocus } from '../../ui/util';
 import { setView, useEscapeBack } from '../view';
-import { useMinute } from '../split';
+import { useMinute } from '../tasks/split';
 import { nextRun } from '../../../../shared/schedule';
 import { DAYS, DAY_NAMES, KINDS, type Kind, at, canRunNow, jobState, parseSchedule, removeJob, runNow, runsOf, scheduleOf, useJobs } from './schedule';
 import { Badge } from '../../ui/Badge';

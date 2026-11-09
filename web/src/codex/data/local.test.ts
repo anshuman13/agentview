@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { edited, newCapture } from './engine';
+import { edited, newCapture } from './tasks/engine';
 import { captureParams, patchSQL, swapSQL, type SqlValue } from './localRows';
 import { WIKI_TABLES } from './store';
 import { TABLE_FIELDS, type ItemRow } from './sync';

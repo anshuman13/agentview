@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { Job } from '../data/wiki';
+import type { Job } from '../data/wiki/wiki';
 import { JobRow } from './Jobs';
 
 vi.mock('../data', () => ({ useAssistantStore: () => ({}), useAssistantData: () => ({}) }));

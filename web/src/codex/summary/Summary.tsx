@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
-import { errorText } from '../data/engine';
+import { errorText } from '../data/tasks/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
 import { Button, Chip } from '../../ui/Button';
@@ -9,7 +9,7 @@ import { AskRow } from '../../ui/AskRow';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { ago, safeHref } from '../../ui/util';
-import { clock } from '../time';
+import { clock } from '../tasks/time';
 import { dayLabel } from '../data/dates';
 import { copyText, openTask, setView, showSnack, useView } from '../view';
 import { buildReport, type DateRange, type StatusFilter } from './report';

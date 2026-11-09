@@ -1,6 +1,6 @@
 import { useAssistantStore } from '../data';
 import { isSaid, type ItemRow } from '../data/sync';
-import { channelOf } from '../taskSource';
+import { channelOf } from '../tasks/taskSource';
 import { Icon } from '../../ui/Icon';
 import { Button } from '../../ui/Button';
 import { Section } from '../../ui/Section';

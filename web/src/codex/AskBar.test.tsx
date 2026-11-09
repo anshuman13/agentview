@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Composer, recipes } from './AskBar';
-import type { Meeting } from './data/wiki';
+import type { Meeting } from './data/wiki/wiki';
 
 vi.mock('./data', () => ({ useAssistantStore: () => ({}), useCodex: () => ({ meetings: [] }) }));
-vi.mock('./data/ask', () => ({ ask: () => true, askText: () => '' }));
-vi.mock('./captureTask', () => ({ captureTask: async () => true }));
+vi.mock('./data/ask/ask', () => ({ ask: () => true, askText: () => '' }));
+vi.mock('./tasks/captureTask', () => ({ captureTask: async () => true }));
 vi.mock('../chat/composer/Voice', () => ({ Voice: () => null, useDictation: () => () => {} }));
 
 describe('Composer', () => {

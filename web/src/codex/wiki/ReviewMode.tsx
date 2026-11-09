@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCodex } from '../data';
-import { chatOf, proposals, sourcesOf, type Fact } from '../data/wiki';
+import { chatOf, proposals, sourcesOf, type Fact } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { setView, useEscapeBack } from '../view';
-import { Swipe } from '../Swipe';
+import { Swipe } from '../gestures/Swipe';
 import { ClaudeChip, SourceChip } from './Chips';
 import { useReview } from './Review';
 import { MEMORY, shortDate } from './shared';

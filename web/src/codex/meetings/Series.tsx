@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useAssistantData } from '../data';
 import { dayLabel } from '../data/dates';
-import { seriesRepeats } from '../data/meetings';
+import { seriesRepeats } from '../data/meetings/meetings';
 import type { ItemRow } from '../data/sync';
-import { listOf, type Meeting } from '../data/wiki';
+import { listOf, type Meeting } from '../data/wiki/wiki';
 import { Row } from '../../ui/Row';
 import { Section, sectionCount } from '../../ui/Section';
 import { openMeeting } from '../view';

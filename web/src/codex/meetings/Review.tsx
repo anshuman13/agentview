@@ -5,10 +5,10 @@ import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
-import { nextMonday, nudgeText, unanswered, waitingByPerson, weeklyReview } from '../data/review';
+import { nextMonday, nudgeText, unanswered, waitingByPerson, weeklyReview } from '../data/tasks/review';
 import type { ItemRow } from '../data/sync';
 import type { Patch } from '../data/store';
-import { PickTime, when } from '../time';
+import { PickTime, when } from '../tasks/time';
 import { copyText, showSnack, useView } from '../view';
 import { safeHref } from '../../ui/util';
 

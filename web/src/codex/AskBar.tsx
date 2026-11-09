@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAssistantStore, useCodex } from './data';
-import type { Meeting } from './data/wiki';
-import { ask, askText, guessProfile } from './data/ask';
-import { SNOOZES, isQuestion, parseWhen, stripWhen } from './data/engine';
-import { withEstimate } from './data/plan';
-import { captureTask } from './captureTask';
+import type { Meeting } from './data/wiki/wiki';
+import { ask, askText, guessProfile } from './data/ask/ask';
+import { SNOOZES, isQuestion, parseWhen, stripWhen } from './data/tasks/engine';
+import { withEstimate } from './data/tasks/plan';
+import { captureTask } from './tasks/captureTask';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { Chip, chipClass } from '../ui/Button';
@@ -12,7 +12,7 @@ import { touch } from '../app/touch/touch';
 import { Voice, useDictation } from '../chat/composer/Voice';
 import { readFlag, reveal } from '../ui/util';
 import { FILTER_LABEL, type Filter } from './view';
-import { EVENING, PickTime, clock, muted, when } from './time';
+import { EVENING, PickTime, clock, muted, when } from './tasks/time';
 
 type Mode = 'task' | 'ask';
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Run } from '../data/wiki';
+import type { Run } from '../data/wiki/wiki';
 import { Badge } from '../../ui/Badge';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';

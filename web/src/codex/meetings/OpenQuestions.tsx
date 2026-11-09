@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useCodex } from '../data';
-import { openQuestions, questionKey, type Question } from '../data/meetings';
-import { when } from '../time';
+import { openQuestions, questionKey, type Question } from '../data/meetings/meetings';
+import { when } from '../tasks/time';
 import { save, stored } from '../../ui/util';
 import { openMeeting } from '../view';
 

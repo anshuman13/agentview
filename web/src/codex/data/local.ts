@@ -1,9 +1,9 @@
 import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type ReplyHistory, type SentReply, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
-import { edited, errorText, moved, newCapture, runSync, toRow, type Dirty } from './engine';
+import { edited, errorText, moved, newCapture, runSync, toRow, type Dirty } from './tasks/engine';
 import { TABLE_FIELDS, mergeIncoming } from './sync';
 import { captureParams, doneCutoff, patchSQL, swapSQL, type SqlValue } from './localRows';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
-import type { Table, Tables } from './wiki';
+import type { Table, Tables } from './wiki/wiki';
 import { hub, LONG_TIMEOUT, QUICK_TIMEOUT, REPLY_TIMEOUT, SYNC_TIMEOUT } from './hubFetch';
 import { showSnack, snackParked } from '../view';
 

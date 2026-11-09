@@ -4,7 +4,7 @@ import { bundled } from '../../app/api';
 import { LocalStore, tauriInvoke } from './local';
 import { RemoteStore } from './remote';
 import type { AssistantStore, Snapshot } from './store';
-import type { Table } from './wiki';
+import type { Table } from './wiki/wiki';
 
 let store: AssistantStore | undefined;
 

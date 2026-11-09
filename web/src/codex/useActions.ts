@@ -1,15 +1,15 @@
 import { useAssistant } from './data';
 import type { AssistantStore } from './data/store';
 import { plural } from '../ui/util';
-import { atTime, errorText, nextNine } from './data/engine';
+import { atTime, errorText, nextNine } from './data/tasks/engine';
 import { dayEnd } from './data/dates';
-import { nextRepeat } from './data/recur';
-import { snoozeLaterAt, todayAt } from './data/reschedule';
+import { nextRepeat } from './data/tasks/recur';
+import { snoozeLaterAt, todayAt } from './data/tasks/reschedule';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { stopFocusFor } from './focus';
 import { FILTER_LABEL, showSnack } from './view';
-import { when } from './time';
+import { when } from './tasks/time';
 
 // A reschedule to a future day starts over, so it clears the rollover history; one to today or earlier keeps it.
 export const UNROLL = { rolls: null, rolled_from: null };

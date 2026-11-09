@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react';
-import { errorText } from './data/engine';
+import { errorText } from './data/tasks/engine';
 import type { AssistantStore } from './data/store';
 
 const CALENDAR_FRESH = 15 * 60_000;

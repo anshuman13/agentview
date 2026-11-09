@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 import { Assistant } from '../codex/Codex';
 import { Overview } from '../codex/Overview';
 import { Meetings } from '../codex/meetings/Meetings';
-import { sharedSplit } from '../codex/split';
+import { sharedSplit } from '../codex/tasks/split';
 import { setView } from '../codex/view';
 import { DesignPage } from '../design/Stories';
 import { Settings } from './shell/Settings';

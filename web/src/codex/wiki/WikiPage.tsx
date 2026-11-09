@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantTable, useCodex } from '../data';
-import { ask, wikiAskText } from '../data/ask';
-import { olderClaims, pageClaims, staleClaims, newFact, proposals, type Fact } from '../data/wiki';
-import { mentionsOf, type Mentions } from '../data/mentions';
-import { hasLiveClaims, wikiMarkdown } from '../data/wikiMarkdown';
+import { ask, wikiAskText } from '../data/ask/ask';
+import { olderClaims, pageClaims, staleClaims, newFact, proposals, type Fact } from '../data/wiki/wiki';
+import { mentionsOf, type Mentions } from '../data/meetings/mentions';
+import { hasLiveClaims, wikiMarkdown } from '../data/wiki/wikiMarkdown';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';

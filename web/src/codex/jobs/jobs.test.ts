@@ -1,4 +1,4 @@
-import type { Job, Run } from '../data/wiki';
+import type { Job, Run } from '../data/wiki/wiki';
 import { describe as group, expect, test } from 'vitest';
 import { canRunNow, describe, jobState, queued, rowMeta, runMeta, parseSchedule, scheduleOf } from './schedule';
 

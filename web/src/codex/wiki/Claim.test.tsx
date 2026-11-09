@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { Fact } from '../data/wiki';
+import type { Fact } from '../data/wiki/wiki';
 import { Claim } from './Claim';
 
 vi.mock('../data', () => ({ useAssistantStore: () => ({ editRow: vi.fn() }) }));

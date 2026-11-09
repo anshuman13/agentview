@@ -1,5 +1,5 @@
 import type { AutopilotState } from '../data/store';
-import { clock } from '../time';
+import { clock } from '../tasks/time';
 import { dayLabel } from '../data/dates';
 
 export const when = (t: number) => (t >= new Date().setHours(0, 0, 0, 0) ? clock(t) : dayLabel(t, true));

@@ -1,6 +1,6 @@
-import { edited, errorText } from './engine';
+import { edited, errorText } from './tasks/engine';
 import type { ItemFields, ItemRow, Paused, Profile, ScanHealth } from './sync';
-import type { Table, Tables } from './wiki';
+import type { Table, Tables } from './wiki/wiki';
 
 export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs'];
 

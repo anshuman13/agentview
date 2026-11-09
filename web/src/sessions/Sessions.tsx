@@ -10,7 +10,7 @@ import { QuickPick } from '../ui/QuickPick';
 import { type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
 import { ago, markSegments, pressable, save, stored } from '../ui/util';
-import { queryWords } from '../codex/data/match';
+import { queryWords } from '../codex/data/ask/match';
 import { Bin } from './Bin';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
 import { byUrgency, chatFinder, chatsByStatus, chatState, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, newChatGroups, orderGroups, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RepoGroup } from './folders';

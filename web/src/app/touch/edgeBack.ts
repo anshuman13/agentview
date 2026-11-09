@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { isDragging } from '../../codex/drag';
+import { isDragging } from '../../codex/gestures/drag';
 import { haptic } from '../../ui/haptic';
 
 const EDGE_START = 20;
