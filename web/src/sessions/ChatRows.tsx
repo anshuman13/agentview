@@ -15,7 +15,7 @@ import { Badge } from '../ui/Badge';
 import { Swipe } from '../codex/Swipe';
 import { showSnack } from '../codex/view';
 import { isMuted, setMuted } from '../app/runtime/mute';
-import { draftLine, readDraft } from '../chat/composerLogic';
+import { draftLine, readDraft } from '../chat/composer/composerLogic';
 import { clock } from '../codex/time';
 import { useChatRun } from './runBands';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { catchUp, recap, recapText } from './recap';
-import type { ChatEvent, Round } from '../../../shared/protocol';
+import type { ChatEvent, Round } from '../../../../shared/protocol';
 
 let n = 0;
 const at = () => ++n;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api } from '../app/store';
-import { QuickPick } from '../ui/QuickPick';
+import { api } from '../../app/store';
+import { QuickPick } from '../../ui/QuickPick';
 
 export type Todo = { path: string; line: number; text?: string; ai?: string | null };
 

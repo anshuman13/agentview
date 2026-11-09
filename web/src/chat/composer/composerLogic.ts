@@ -1,11 +1,11 @@
-import { parseWhen, stripWhen } from '../codex/data/engine';
-import { match } from '../workspace/FileSwitcher';
-import { toolId } from '../ops/mcpHelpers';
-import { COMPACT_AT, type Account, type ChatEvent, type ChatRun, type RoundOutcome, type SavedSession } from '../../../shared/protocol';
-import { apiUrl, fetchJson } from '../app/api';
-import { clock, isBlock, span } from '../../../shared/util';
-import { timedMeetings } from '../../../shared/plan';
-import { live, type Meeting } from '../codex/data/wiki';
+import { parseWhen, stripWhen } from '../../codex/data/engine';
+import { match } from '../../workspace/FileSwitcher';
+import { toolId } from '../../ops/mcpHelpers';
+import { COMPACT_AT, type Account, type ChatEvent, type ChatRun, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
+import { apiUrl, fetchJson } from '../../app/api';
+import { clock, isBlock, span } from '../../../../shared/util';
+import { timedMeetings } from '../../../../shared/plan';
+import { live, type Meeting } from '../../codex/data/wiki';
 
 type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
 

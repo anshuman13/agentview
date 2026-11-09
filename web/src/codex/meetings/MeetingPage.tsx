@@ -15,7 +15,7 @@ import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { Section } from '../../ui/Section';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
-import { Voice, useDictation } from '../../chat/Voice';
+import { Voice, useDictation } from '../../chat/composer/Voice';
 import { clearNotesFocus, copyText, notesFocusFor, openSeries, setView, showSnack, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
 import { Fold } from '../Fold';

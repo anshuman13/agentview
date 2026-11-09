@@ -1,4 +1,4 @@
-import { ROW_WINDOW } from '../../../shared/protocol';
+import { ROW_WINDOW } from '../../../../shared/protocol';
 
 export function windowStart(total: number, shown: number): number {
   return Math.max(0, total - shown);

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker, newReplies, dayDividers } from './steps';
-import { editCount, replyLine, sumEdits } from '../../../shared/edits';
-import { chatLine } from '../sessions/folders';
-import type { ChatEvent, LiveChat } from '../../../shared/protocol';
+import { editCount, replyLine, sumEdits } from '../../../../shared/edits';
+import { chatLine } from '../../sessions/folders';
+import type { ChatEvent, LiveChat } from '../../../../shared/protocol';
 
 let n = 0;
 const at = () => ++n;

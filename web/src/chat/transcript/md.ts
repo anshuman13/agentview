@@ -1,5 +1,5 @@
 import { Marked, type Token } from 'marked';
-import { escapeHtml } from '../ui/util';
+import { escapeHtml } from '../../ui/util';
 
 export type { Token };
 

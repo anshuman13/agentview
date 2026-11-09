@@ -1,6 +1,6 @@
-import { Hl } from '../ui/util';
-import { FileIcon } from '../workspace/FileIcon';
-import type { SavedSession } from '../../../shared/protocol';
+import { Hl } from '../../ui/util';
+import { FileIcon } from '../../workspace/FileIcon';
+import type { SavedSession } from '../../../../shared/protocol';
 
 type Props = {
   items: { item: string | object; hits: number[] }[];

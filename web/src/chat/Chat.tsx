@@ -1,14 +1,14 @@
 import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
-import type { Token } from './md';
+import type { Token } from './transcript/md';
 import { copyText } from '../ui/util';
-import { cachedHtml, mdKey, storeHtml } from './mdCache';
+import { cachedHtml, mdKey, storeHtml } from './transcript/mdCache';
 
-export { Composer } from './Composer';
+export { Composer } from './composer/Composer';
 
 // marked loads beside the chat; until it arrives a message shows as plain text.
-type Md = typeof import('./md');
+type Md = typeof import('./transcript/md');
 let loaded: Md | null = null;
-const loading = import('./md').then((m) => (loaded = m));
+const loading = import('./transcript/md').then((m) => (loaded = m));
 
 function useMd() {
   const [m, setM] = useState(loaded);

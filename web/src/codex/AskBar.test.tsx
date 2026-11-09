@@ -6,7 +6,7 @@ import type { Meeting } from './data/wiki';
 vi.mock('./data', () => ({ useAssistantStore: () => ({}), useCodex: () => ({ meetings: [] }) }));
 vi.mock('./data/ask', () => ({ ask: () => true, askText: () => '' }));
 vi.mock('./captureTask', () => ({ captureTask: async () => true }));
-vi.mock('../chat/Voice', () => ({ Voice: () => null, useDictation: () => () => {} }));
+vi.mock('../chat/composer/Voice', () => ({ Voice: () => null, useDictation: () => () => {} }));
 
 describe('Composer', () => {
   it('renders no chip row while idle', () => {

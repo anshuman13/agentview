@@ -15,7 +15,7 @@ export function prefetch<P extends object>(load: () => Promise<ComponentType<P>>
 }
 
 // Views that render chat markdown wait for marked too, so replies never show as plain text first.
-const withMd = <T,>(view: Promise<T>) => Promise.all([view, import('../chat/md')]).then(([m]) => m);
+const withMd = <T,>(view: Promise<T>) => Promise.all([view, import('../chat/transcript/md')]).then(([m]) => m);
 
 export const Brief = lazy(() => withMd(import('../sessions/Brief')).then((m) => ({ default: m.Brief })));
 export const AgentsPane = lazy(() => withMd(import('../sessions/AgentsPane')).then((m) => ({ default: m.AgentsPane })));

@@ -1,5 +1,5 @@
 import type { AgentEvent, AgentStatus, ChatEvent } from '../../../shared/protocol';
-import { buildTranscript, denied, firstLine, stepLabel, type Item, type ToolResult, type ToolUse } from '../chat/steps';
+import { buildTranscript, denied, firstLine, stepLabel, type Item, type ToolResult, type ToolUse } from '../chat/transcript/steps';
 
 export type Agent = {
   id: string;

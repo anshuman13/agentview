@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getState, useStore } from '../app/store';
-import { turnEnd } from './composerLogic';
+import { turnEnd } from './composer/composerLogic';
 
 // Tells a screen reader when Claude's turn ends or Claude asks something, without reading every streamed word.
 export function Announcer() {

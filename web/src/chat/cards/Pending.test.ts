@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { PendingPermission } from '../../../shared/protocol';
+import type { PendingPermission } from '../../../../shared/protocol';
 import { lineDiff, PermissionCard, planFeedback, planParagraphs } from './Pending';
 
 describe('lineDiff', () => {

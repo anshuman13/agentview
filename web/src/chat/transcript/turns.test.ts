@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildTurns, chatCost, createTurnsBuilder } from './turns';
-import type { ChatEvent } from '../../../shared/protocol';
+import type { ChatEvent } from '../../../../shared/protocol';
 
 let n = 0;
 const at = () => ++n;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { Icon } from '../ui/Icon';
+import { Icon } from '../../ui/Icon';
 
 type Result = { isFinal: boolean; 0: { transcript: string } };
 type Recognition = {

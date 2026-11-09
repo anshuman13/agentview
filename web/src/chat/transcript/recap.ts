@@ -1,6 +1,6 @@
-import type { ChatEvent, Round } from '../../../shared/protocol';
+import type { ChatEvent, Round } from '../../../../shared/protocol';
 import { buildTurns, openFailures } from './turns';
-import { plural } from '../ui/util';
+import { plural } from '../../ui/util';
 
 type Recap = { turns: number; files: number; failed: number; pending: boolean };
 

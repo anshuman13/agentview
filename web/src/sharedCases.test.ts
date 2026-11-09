@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { editCount, stripRound } from '../../shared/edits';
 import type { ChatEvent, ChatRun, LiveChat, Try } from '../../shared/protocol';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
-import { handoffText, runLine } from './chat/composerLogic';
+import { handoffText, runLine } from './chat/composer/composerLogic';
 import { runBands } from './sessions/runBands';
 import { tryColumn } from './sessions/TriesBoard';
 import { parseWhen, stripWhen } from './codex/data/when';

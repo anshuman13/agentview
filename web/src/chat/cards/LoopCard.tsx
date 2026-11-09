@@ -1,14 +1,14 @@
 import { useRef, useState } from 'react';
-import { send, useStore } from '../app/store';
-import { showSnack } from '../codex/view';
-import { clock } from '../codex/time';
-import { IconButton } from '../ui/Button';
-import { Menu, MenuItem } from '../ui/Menu';
-import { Panel } from '../ui/Panel';
-import { TriesBoard } from '../sessions/TriesBoard';
-import { money } from '../ui/util';
-import type { RunOp } from '../../../shared/protocol';
-import { OUTCOME_DOT, runLine, showTurn, stoppedText } from './composerLogic';
+import { send, useStore } from '../../app/store';
+import { showSnack } from '../../codex/view';
+import { clock } from '../../codex/time';
+import { IconButton } from '../../ui/Button';
+import { Menu, MenuItem } from '../../ui/Menu';
+import { Panel } from '../../ui/Panel';
+import { TriesBoard } from '../../sessions/TriesBoard';
+import { money } from '../../ui/util';
+import type { RunOp } from '../../../../shared/protocol';
+import { OUTCOME_DOT, runLine, showTurn, stoppedText } from '../composer/composerLogic';
 
 export function LoopCard() {
   const chat = useStore((s) => s.session.id);

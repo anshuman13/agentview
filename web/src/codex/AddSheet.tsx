@@ -13,7 +13,7 @@ import { readFlag } from '../ui/util';
 import { Sheet } from '../ui/Sheet';
 import { FILTER_LABEL, type Filter } from './view';
 import { ProfileDot } from './ProfileDot';
-import { Voice, useDictation } from '../chat/Voice';
+import { Voice, useDictation } from '../chat/composer/Voice';
 import { EVENING, MORNING, when } from './time';
 
 type Pick = { at: number | null; cadence: Cadence; remind?: number | null };

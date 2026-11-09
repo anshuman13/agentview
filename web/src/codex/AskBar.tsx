@@ -9,7 +9,7 @@ import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { Chip, chipClass } from '../ui/Button';
 import { touch } from '../app/touch/touch';
-import { Voice, useDictation } from '../chat/Voice';
+import { Voice, useDictation } from '../chat/composer/Voice';
 import { readFlag, reveal } from '../ui/util';
 import { FILTER_LABEL, type Filter } from './view';
 import { EVENING, PickTime, clock, muted, when } from './time';

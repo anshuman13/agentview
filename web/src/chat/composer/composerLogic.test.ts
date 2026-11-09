@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { stampedNotes } from '../codex/data/meetings';
-import type { Meeting } from '../codex/data/wiki';
+import { stampedNotes } from '../../codex/data/meetings';
+import type { Meeting } from '../../codex/data/wiki';
 import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, quoteReply, remindChoices, runLine, goalInfo, goalText } from './composerLogic';
-import type { ChatEvent, ChatRun, SavedSession } from '../../../shared/protocol';
+import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
 let n = 0;
 const user = (text: string): ChatEvent => ({ id: `u${++n}`, kind: 'user', text, at: n });

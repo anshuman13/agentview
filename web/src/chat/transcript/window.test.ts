@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ROW_WINDOW } from '../../../shared/protocol';
+import { ROW_WINDOW } from '../../../../shared/protocol';
 import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
 
 describe('staged rows', () => {

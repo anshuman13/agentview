@@ -10,7 +10,7 @@ import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { command, money } from '../ui/util';
 import type { ChatRun } from '../../../shared/protocol';
-import { OUTCOME_DOT, runLine, showTurn } from '../chat/composerLogic';
+import { OUTCOME_DOT, runLine, showTurn } from '../chat/composer/composerLogic';
 import { runBands, type RunItem } from './runBands';
 import { TriesBoard } from './TriesBoard';
 

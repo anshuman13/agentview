@@ -1,11 +1,11 @@
 import { embedded, getState, notice, prompt, send, setUi, subscribe, useStore } from '../app/store';
 import { copyText } from '../ui/util';
-import { chatMarkdown, goalChoices, handoffText, goalInfo, remindChoices, replyNote, resumeCommand, runLine, type GoalChoice } from './composerLogic';
+import { chatMarkdown, goalChoices, handoffText, goalInfo, remindChoices, replyNote, resumeCommand, runLine, type GoalChoice } from './composer/composerLogic';
 import { useChatRun } from '../sessions/runBands';
 import { assistantStore } from '../codex/data';
 import { QuickPick } from '../ui/QuickPick';
-import { MemoryPick } from './Memory';
-import { TodosPick } from './Todos';
+import { MemoryPick } from './cards/Memory';
+import { TodosPick } from './cards/Todos';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
 
 const MODES: Record<string, { label: string; detail: string; icon: string }> = {

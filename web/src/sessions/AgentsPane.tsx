@@ -7,7 +7,7 @@ import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
 import { AgentRow, STATUS_ICON } from './AgentRow';
 import { Markdown } from '../chat/Chat';
-import { Row } from '../chat/Transcript';
+import { Row } from '../chat/transcript/Transcript';
 import { copyText } from '../codex/view';
 import { agentCounts, agentsOf, elapsed, openAgent, reportText, tokens, type Agent } from './agents';
 import { plural, useTick } from '../ui/util';

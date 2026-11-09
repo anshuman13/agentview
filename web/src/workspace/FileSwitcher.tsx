@@ -4,7 +4,7 @@ import { useOpened } from './opened';
 import { FileIcon } from './FileIcon';
 import { touch } from '../app/touch/touch';
 import { Hl, listKeys, useReturnFocus } from '../ui/util';
-import { fileCache as cache } from '../chat/composerLogic';
+import { fileCache as cache } from '../chat/composer/composerLogic';
 
 export function FileSwitcher() {
   const open = useStore((s) => s.ui.switcherOpen);

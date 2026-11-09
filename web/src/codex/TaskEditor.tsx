@@ -31,7 +31,7 @@ import { addCheck, checkItems, moveCheck, noteView, toggleCheck } from './taskCh
 import { live } from './data/wiki';
 import { dayEnd, dayStart } from './data/dates';
 import { useDrag } from './drag';
-import { md } from '../chat/md';
+import { md } from '../chat/transcript/md';
 import { Flag, PRIORITIES, REMINDS, tagList } from './AddSheet';
 import { Draft, Links } from './TaskDraft';
 

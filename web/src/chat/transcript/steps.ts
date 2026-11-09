@@ -1,5 +1,5 @@
-import { editCount, stripRound, type EditCount } from '../../../shared/edits';
-import type { ChatEvent } from '../../../shared/protocol';
+import { editCount, stripRound, type EditCount } from '../../../../shared/edits';
+import type { ChatEvent } from '../../../../shared/protocol';
 
 export type ToolUse = Extract<ChatEvent, { kind: 'tool_use' }>;
 export type ToolResult = Extract<ChatEvent, { kind: 'tool_result' }>;

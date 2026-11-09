@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { api } from '../app/store';
-import { QuickPick } from '../ui/QuickPick';
-import { Sheet } from '../ui/Sheet';
-import { Markdown } from './Chat';
+import { api } from '../../app/store';
+import { QuickPick } from '../../ui/QuickPick';
+import { Sheet } from '../../ui/Sheet';
+import { Markdown } from '../Chat';
 
 type MemoryFile = { path: string; name: string; description: string; text: string };
 

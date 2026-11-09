@@ -1,16 +1,16 @@
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { forgetSeenBefore, getState, loadEarlier, notice, seenBefore, send, setUi, useStore } from '../app/store';
-import { assistantStore } from '../codex/data';
-import { quoteReply, replyNote } from './composerLogic';
-import { Icon } from '../ui/Icon';
-import { IconButton } from '../ui/Button';
-import { Markdown } from './Chat';
-import { BlockedCard } from './Pending';
-import { FileIcon } from '../workspace/FileIcon';
+import { forgetSeenBefore, getState, loadEarlier, notice, seenBefore, send, setUi, useStore } from '../../app/store';
+import { assistantStore } from '../../codex/data';
+import { quoteReply, replyNote } from '../composer/composerLogic';
+import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
+import { Markdown } from '../Chat';
+import { BlockedCard } from '../cards/Pending';
+import { FileIcon } from '../../workspace/FileIcon';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
-import { clickOnKey, copyText, plural, pressable } from '../ui/util';
+import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
 import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
-import { ROW_WINDOW, type ChatEvent } from '../../../shared/protocol';
+import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 
 export function Transcript() {
   const events = useStore((s) => s.events);

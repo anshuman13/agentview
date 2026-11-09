@@ -1,6 +1,6 @@
-import { editCount, stripRound } from '../../../shared/edits';
-import { BIG_BRO, type ChatEvent } from '../../../shared/protocol';
-import { chatCost } from '../../../shared/cost';
+import { editCount, stripRound } from '../../../../shared/edits';
+import { BIG_BRO, type ChatEvent } from '../../../../shared/protocol';
+import { chatCost } from '../../../../shared/cost';
 export { chatCost };
 import { buildTranscript, denied, fastFrom, tailStart, firstLine, str, type Item, type ToolResult, type ToolUse } from './steps';
 

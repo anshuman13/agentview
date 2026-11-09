@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { useStore } from '../app/store';
-import { Icon } from '../ui/Icon';
-import { Panel } from '../ui/Panel';
-import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../../shared/todos';
+import { useStore } from '../../app/store';
+import { Icon } from '../../ui/Icon';
+import { Panel } from '../../ui/Panel';
+import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../../../shared/todos';
 
 const ICON: Record<TodoItem['status'], string> = { completed: 'check', in_progress: 'play', pending: 'circle-large-outline' };
 
