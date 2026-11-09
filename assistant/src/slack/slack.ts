@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { pushOrHold, pushQueued } from './hold.js';
 import { claimCite } from './draft.js';
 import { readJsonSync } from '../../../server/src/json.js';
+import { loadSettings } from '../../../server/src/settings.js';
 import { DB_DIR, getMeta, setMeta } from '../core/db.js';
 import { DRAFT_STEP, contextTool, slotsTool } from './draft.js';
 import { correctionLines, weeklyCorrections } from './corrections.js';
@@ -23,7 +24,7 @@ import { DAY, MIN, inWeekHours, localDate, workSlotDue } from '../core/time.js';
 const EVERY = 15 * MIN;
 const SLACK = 'mcp__claude_ai_Slack__';
 const READ_TOOLS = ['slack_search_public_and_private', 'slack_read_channel', 'slack_read_thread', 'slack_list_user_channels', 'slack_read_user_profile'].map((t) => SLACK + t);
-export const HUB_URL = process.env.ASSISTANT_PUBLIC ?? 'http://macmini.netbird.cloud:7790';
+export const HUB_URL = process.env.ASSISTANT_PUBLIC ?? (loadSettings().hubUrl || 'http://localhost:7790');
 
 // Kept outside the repo in ~/.agentview/assistant/slack.json: my Slack user id, the workspace domain and the channels to watch.
 type SlackConfig = { me: string; domain: string; channels: string[]; push?: { from: number; to: number } };

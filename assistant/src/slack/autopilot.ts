@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import path from 'node:path';
 import { readJsonSync } from '../../../server/src/json.js';
+import { ownerName } from '../../../server/src/settings.js';
 import { DB_DIR, getMeta, setMeta } from '../core/db.js';
 import { slackConfig } from './slack.js';
 import { ANSWERED, CHANGED, postReply } from './post.js';
@@ -104,10 +105,10 @@ export function awayStart(c: AutopilotConfig, now = Date.now()) {
 
 const pretty = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
 
-export const marker = (a: Away) => `(auto-reply from Anshuman's assistant: he is away until ${pretty(a.to)}${a.backup ? `, ${a.backup} covers meanwhile` : ''})`;
+export const marker = (a: Away, owner = ownerName()) => `(auto-reply from ${owner}'s assistant: away until ${pretty(a.to)}${a.backup ? `, ${a.backup} covers meanwhile` : ''})`;
 
-export const holdNote = (a: Away) =>
-  `Hi, this is an auto-reply: Anshuman is away until ${pretty(a.to)} and will see this when he is back.${a.backup ? ` ${a.backup} covers for him meanwhile.` : ''}${a.note ? ` ${a.note}` : ''}`;
+export const holdNote = (a: Away, owner = ownerName()) =>
+  `Hi, this is an auto-reply: ${owner} is away until ${pretty(a.to)} and will see this on return.${a.backup ? ` ${a.backup} covers meanwhile.` : ''}${a.note ? ` ${a.note}` : ''}`;
 
 // What the scan prompt adds while I am away, so drafts stay factual and name the backup.
 export function awayLines(c: AutopilotConfig, now = Date.now()) {

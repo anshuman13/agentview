@@ -112,7 +112,7 @@ describe('allowedRequest', () => {
   it('accepts pages served by this server', () => {
     expect(allowedRequest(own('localhost:5173'))).toBe(true);
     expect(allowedRequest(own('127.0.0.1:7777'))).toBe(true);
-    expect(allowedRequest(own('macmini.netbird.cloud:5173'))).toBe(true);
+    expect(allowedRequest(own('desktop.netbird.cloud:5173'))).toBe(true);
     expect(allowedRequest(own('100.102.26.124:5173'))).toBe(true);
     expect(allowedRequest(own('[fd71:58b7:cd10:35cc:b910:535d:54b3:3633]:5173'))).toBe(true);
     expect(allowedRequest({ host: 'localhost:7777' })).toBe(true);
@@ -131,7 +131,7 @@ describe('allowedRequest', () => {
     expect(allowedRequest({ host: 'localhost:7777', origin: 'http://localhost:3000' })).toBe(false);
     expect(allowedRequest({ host: 'localhost:7777', origin: 'http://evil.example' })).toBe(false);
     expect(allowedRequest({ host: 'localhost:7777', origin: 'null' })).toBe(false);
-    expect(allowedRequest({ host: 'macmini.netbird.cloud:5173', origin: 'http://laptop.netbird.cloud:5173' })).toBe(false);
+    expect(allowedRequest({ host: 'desktop.netbird.cloud:5173', origin: 'http://laptop.netbird.cloud:5173' })).toBe(false);
     expect(allowedRequest({ host: 'localhost:7777', origin: 'https://localhost:7777' })).toBe(false);
   });
 
@@ -144,7 +144,7 @@ describe('allowedRequest', () => {
 });
 
 describe('bundled app origin', () => {
-  const app = (origin: string, extra = {}) => ({ host: 'macmini.netbird.cloud:7777', origin, 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'cors', ...extra });
+  const app = (origin: string, extra = {}) => ({ host: 'desktop.netbird.cloud:7777', origin, 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'cors', ...extra });
 
   it('is accepted from loopback and NetBird peers', () => {
     for (const origin of ['http://tauri.localhost', 'tauri://localhost']) {

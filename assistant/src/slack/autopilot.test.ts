@@ -37,8 +37,9 @@ describe('modeOf', () => {
   });
 
   test('texts name the return date and the backup', () => {
-    expect(marker(away.away!)).toBe("(auto-reply from Anshuman's assistant: he is away until 5 January, Kim covers meanwhile)");
-    expect(holdNote({ from: '2026-12-20', to: '2027-01-05' })).toBe('Hi, this is an auto-reply: Anshuman is away until 5 January and will see this when he is back.');
+    expect(marker(away.away!, 'Sam')).toBe("(auto-reply from Sam's assistant: away until 5 January, Kim covers meanwhile)");
+    expect(holdNote({ from: '2026-12-20', to: '2027-01-05' }, 'Sam')).toBe('Hi, this is an auto-reply: Sam is away until 5 January and will see this on return.');
+    expect(marker(away.away!)).toContain("the owner's assistant");
   });
 });
 
@@ -82,7 +83,7 @@ describe('afterScan', () => {
     expect(r.answered).toEqual(['Answer u1']);
     expect(r.held).toEqual(['Answer u2', 'Answer u6']);
     expect(r.skipped).toEqual(['Answer u3', 'Answer u4', 'Answer u5']);
-    expect(posts[0]).toBe(url('u1') + ": (auto-reply from Anshuman's assistant: he is away until 5 January, Kim covers meanwhile) Use the guide.");
+    expect(posts[0]).toBe(url('u1') + ": (auto-reply from the owner's assistant: away until 5 January, Kim covers meanwhile) Use the guide.");
     expect(posts[1]).toContain(url('u2') + ': Hi, this is an auto-reply');
     const item = (u: string) => db.prepare('SELECT status, text FROM items WHERE id = ?').get(askId(url(u))) as { status: string; text: string };
     expect(item('u1').status).toBe('done');
@@ -151,7 +152,7 @@ describe('afterScan', () => {
     await afterScan(db, { ...away, dry_run: true }, ['ai-help'], [ask('u1')], now, post);
     expect(posts).toEqual([]);
     expect(db.prepare('SELECT status FROM replies').get()).toEqual({ status: 'dry' });
-    expect(db.prepare('SELECT status, text FROM items').get()).toEqual({ status: 'suggested', text: "How?\n\nAutopilot would reply: (auto-reply from Anshuman's assistant: he is away until 5 January, Kim covers meanwhile) Use the guide." });
+    expect(db.prepare('SELECT status, text FROM items').get()).toEqual({ status: 'suggested', text: "How?\n\nAutopilot would reply: (auto-reply from the owner's assistant: away until 5 January, Kim covers meanwhile) Use the guide." });
   });
 
   test('never replies twice to the same ask, and stops at the hourly cap', async () => {
@@ -242,7 +243,7 @@ test('settings are cleaned on save and read back from the database', () => {
   expect(modeOf(c, at(22, 10))).toBe('assist');
   expect(autopilotState(db, at(22, 10)).texts).toBeNull();
   saveAutopilot(db, away);
-  expect(autopilotState(db, at(22, 10)).texts?.hold).toBe('Hi, this is an auto-reply: Anshuman is away until 5 January and will see this when he is back. Kim covers for him meanwhile.');
+  expect(autopilotState(db, at(22, 10)).texts?.hold).toBe('Hi, this is an auto-reply: the owner is away until 5 January and will see this on return. Kim covers meanwhile.');
 });
 
 test('awayStart is midnight of the first away day, only while away', () => {

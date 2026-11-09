@@ -38,7 +38,7 @@ describe('allowedFolder', () => {
 describe('parseBranch', () => {
   it('reads the branch from git status -b', () => {
     expect(mod.parseBranch('## main...origin/main [ahead 1]')).toBe('main');
-    expect(mod.parseBranch('## anshuman/ast-1/slug')).toBe('anshuman/ast-1/slug');
+    expect(mod.parseBranch('## dev/ast-1/slug')).toBe('dev/ast-1/slug');
     expect(mod.parseBranch('## No commits yet on main')).toBe('main');
   });
 });
