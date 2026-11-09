@@ -127,7 +127,7 @@ const host = new Host(PORT, PROJECT, {
     const hello = r as Hello;
     const before = chats;
     chats = new Map(hello.chats.map((c) => [c.id, c]));
-    runs = hello.runs;
+    runs = hello.runs ?? [];
     restarting = hello.restarting;
     lastViewed = chats.has(lastViewed) ? lastViewed : hello.last;
     // After a host restart the chats come back under new ids; a client follows its chat by session id.
