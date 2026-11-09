@@ -539,7 +539,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
   };
   const row = (
     <div className={`chat-row ${unread ? 'unread' : ''}`}>
-      <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />} onClick={onOpen} onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined} onLongPress={sessionId ? () => setRenaming(true) : undefined} />
+      <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={(muted || state) && <>{muted && <span title="Muted" className="chat-muted"><Icon name="bell-slash" small /></span>}{state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />}</>} onClick={onOpen} onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined} onLongPress={sessionId ? () => setRenaming(true) : undefined} />
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>

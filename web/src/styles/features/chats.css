@@ -131,6 +131,7 @@
 .chat-row .chat-add { color: var(--diff-add); }
 .chat-row .chat-del { color: var(--diff-del); }
 .chat-row .chat-draft { color: var(--danger); }
+.chat-row .chat-muted { color: var(--meta-fg); }
 .sessions-status .sessions-read { margin-left: auto; font-size: var(--fs-xs); }
 .chat-rename { width: 100%; min-width: 0; }
 .sessions .as-swipe:has(.ui-menu) { overflow: visible; }

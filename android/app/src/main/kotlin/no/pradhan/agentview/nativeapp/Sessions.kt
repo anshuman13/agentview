@@ -282,6 +282,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
         meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
         trailing = {
             if (onResume != null) Button("Resume", onResume, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
+            if (actions.muted) AvIcon("bell-slash", tint = av.fgMuted)
             when (state) {
                 ChatState.Needs -> Badge("Needs you", BadgeTone.Waiting)
                 ChatState.Failed -> Badge("Failed", BadgeTone.Failed)
