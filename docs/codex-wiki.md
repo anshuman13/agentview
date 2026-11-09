@@ -178,7 +178,7 @@ the chat's folder; Claude can mark a claim personal when it is about my personal
 
 | Table | New columns | Notes |
 | --- | --- | --- |
-| facts | state, replaces, added_by | `state` proposed, live or rejected (null means live, so existing rows stay live); `replaces` is the live claim a proposal would supersede; `added_by` is `claude:<chat id>`, `meeting:<id>`, `slack:<id>` or `you` |
+| facts | state, replaces, added_by | `state` proposed, live or rejected (null means live, so existing rows stay live); `replaces` is the live claim a proposal would supersede; `added_by` is `<provider>:<chat id>` (`claude`, `openrouter` or `codex`), `meeting:<id>`, `slack:<id>` or `you` |
 | pages | state | A page Claude proposes is `proposed` until a claim on it is approved |
 
 Approving a claim sets it live, makes its proposed page live, and sets `superseded_by` on the claim it replaces.

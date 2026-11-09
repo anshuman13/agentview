@@ -71,7 +71,7 @@ async function handle(req: HostRequest): Promise<unknown> {
       return { last: hub.lastViewed.id, restarting: Boolean(hub.restarting), chats: liveList(), runs: runs.list() } satisfies Hello;
     case 'tool_call': {
       const chat = get(req.id);
-      return callTool(req.name, req.args, { cwd: chat.cwd, chatId: chat.state.session.sessionId, host: chat });
+      return callTool(req.name, req.args, { cwd: chat.cwd, chatId: chat.state.session.sessionId, provider: chat.driver.provider, host: chat });
     }
     case 'state':
       return get(req.id).view(req.limit);

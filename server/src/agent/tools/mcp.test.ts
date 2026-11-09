@@ -34,7 +34,7 @@ test('tools/call hands the name and arguments to the caller and turns a throw in
 });
 
 test('callTool runs the handler with the chat and rejects bad arguments', async () => {
-  const ctx = { cwd: '/tmp', chatId: 'chat-1', host: { setStatus: () => undefined } };
+  const ctx = { cwd: '/tmp', chatId: 'chat-1', provider: 'claude' as const, host: { setStatus: () => undefined } };
   expect(await callTool('echo', { text: 'hi' }, ctx, [fake])).toBe('chat-1:hi');
   await expect(callTool('echo', { text: 1 }, ctx, [fake])).rejects.toThrow();
   await expect(callTool('nope', {}, ctx, [fake])).rejects.toThrow('No tool nope');

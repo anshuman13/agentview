@@ -277,7 +277,7 @@ export function reviewGroups(pages: Page[], facts: Fact[]) {
 // How many claims wait for a decision, so the badge says 75 for 75 claims and not 3 for 3 pages.
 export const reviewCount = (_pages: Page[], facts: Fact[]) => proposals(facts).length;
 
-export const chatOf = (f: Fact) => (f.added_by?.startsWith('claude:') ? f.added_by.slice(7) : null);
+export const chatOf = (f: Fact) => /^(?:claude|openrouter|codex):(.+)$/.exec(f.added_by ?? '')?.[1] ?? null;
 export const meetingOf = (f: Fact) => (f.added_by?.startsWith('meeting:') ? f.added_by.slice(8) : null);
 
 // Approving sets the claim live, its proposed page live, and supersedes the claim it replaces.

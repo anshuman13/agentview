@@ -79,7 +79,7 @@ export const wikiProposeTool = defineTool({
     replaces: z.string().optional().describe('Id of the live claim this one supersedes'),
     profile: PROFILE,
   },
-  async handler(a, { cwd, chatId }) {
+  async handler(a, { cwd, chatId, provider }) {
     const profile = a.profile ?? profileOf(cwd);
     const now = Date.now();
     const pages = await hubRows('pages');
@@ -93,7 +93,7 @@ export const wikiProposeTool = defineTool({
     const id = crypto.randomUUID();
     changes.push({
       table: 'facts', id, profile, updated_at: now,
-      fields: { text: a.text, page_id: pageId ?? null, heading: a.heading ?? null, sources: JSON.stringify(a.sources), at: now, state: 'proposed', replaces: a.replaces ?? null, added_by: chatId ? `claude:${chatId}` : 'claude' },
+      fields: { text: a.text, page_id: pageId ?? null, heading: a.heading ?? null, sources: JSON.stringify(a.sources), at: now, state: 'proposed', replaces: a.replaces ?? null, added_by: chatId ? `${provider}:${chatId}` : provider },
     });
     await hubPush(changes);
     return `Proposed [${id}] for the user to approve${pageId ? '' : ' in memory'}.`;
