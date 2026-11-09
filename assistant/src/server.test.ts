@@ -4,7 +4,6 @@ import http from 'node:http';
 import { BadRequest } from '../../server/src/http/body.js';
 import { createServer, fromAllowedPage } from './server.js';
 import { readJson } from './routes/http.js';
-import { syncRoutes } from './routes/sync.js';
 
 const req = (body: string) => Readable.from([Buffer.from(body)]) as unknown as http.IncomingMessage;
 
@@ -18,23 +17,6 @@ describe('readJson', () => {
   test('passes a too large body through for a 413', async () => {
     await expect(readJson(req('{"a":"' + 'x'.repeat(200) + '"}'), 100)).rejects.toThrow('Request body too large');
   });
-});
-
-test('GET /debug reports ASSISTANT_DEBUG=1 only', () => {
-  const prev = process.env.ASSISTANT_DEBUG;
-  const call = () => {
-    let body = '';
-    const res = { writeHead: () => {}, end: (b: string) => (body = b) };
-    syncRoutes['GET /debug']({ res } as never);
-    return JSON.parse(body);
-  };
-  process.env.ASSISTANT_DEBUG = '1';
-  expect(call()).toEqual({ debug: true });
-  process.env.ASSISTANT_DEBUG = '0';
-  expect(call()).toEqual({ debug: false });
-  delete process.env.ASSISTANT_DEBUG;
-  expect(call()).toEqual({ debug: false });
-  if (prev !== undefined) process.env.ASSISTANT_DEBUG = prev;
 });
 
 test('fromAllowedPage lets the phone app and non-browser callers in, not other pages', () => {

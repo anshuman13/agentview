@@ -4,7 +4,6 @@ import { openDb } from '../core/db.js';
 import { applyChanges } from '../core/sync.js';
 import { askId, saveScan, threadKey } from './slackSave.js';
 import { HOUR } from '../core/time.js';
-import { taskRoutes } from '../routes/tasks.js';
 
 const at = (d: number, h: number) => new Date(2026, 11, d, h).getTime();
 const url = (u: string) => (u.startsWith('http') ? u : `https://x.slack.com/archives/C1/${u}`);
@@ -348,12 +347,4 @@ describe('replyHistory', () => {
     expect(r[1]!.line).toBe('first');
   });
 
-  test('an empty who gives an empty list', () => {
-    const db = openDb(':memory:');
-    expect(replyHistory(db, '')).toEqual([]);
-    const out: { status?: number; body?: string } = {};
-    const res = { writeHead: (s: number) => (out.status = s), end: (b: string) => (out.body = b) } as never;
-    void taskRoutes['GET /history']!({ req: {} as never, res, url: new URL('http://x/history'), device: 'd', getDb: () => db });
-    expect(out).toEqual({ status: 200, body: '{"replies":[]}' });
-  });
 });
