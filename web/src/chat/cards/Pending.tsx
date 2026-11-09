@@ -250,7 +250,7 @@ function Diff({ a, b }: { a: string; b: string }) {
   );
 }
 
-type DiffLine = [' ' | '-' | '+', string];
+export type DiffLine = [' ' | '-' | '+', string];
 
 export function lineDiff(a: string, b: string): DiffLine[] {
   const x = a ? a.split('\n') : [];

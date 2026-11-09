@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MouseEvent, type MutableRefObject, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type MutableRefObject, type PointerEvent } from 'react';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
@@ -8,6 +8,9 @@ import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { showChat } from '../ui/util';
 import { touch } from '../app/touch/touch';
 import { isDark, useThemeName } from '../app/theme';
+import { Confirm, type ConfirmRequest } from '../ui/Confirm';
+import { Menu, MenuItem } from '../ui/Menu';
+import { blockAt, revertBlock } from './revertBlock';
 
 async function lang(path: string): Promise<Extension> {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
@@ -43,14 +46,27 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = fa
   const press = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout> } | null>(null);
   const dark = isDark(useThemeName());
 
-  const quoteAt = (x: number, y: number) => {
+  const [menu, setMenu] = useState<{ x: number; y: number; block: number; quote: () => void } | null>(null);
+  const [ask, setAsk] = useState<ConfirmRequest | null>(null);
+  const menuBox = useRef<HTMLSpanElement>(null);
+
+  const openLine = (x: number, y: number) => {
     const view = viewRef.current;
     const pos = view?.posAtCoords({ x, y });
     if (!view || pos == null) return;
     const l = view.state.doc.lineAt(pos);
     const removed = document.elementFromPoint(x, y)?.closest('.cm-deletedLine');
-    quoteLine(file.path, l.number, removed?.textContent ?? l.text);
+    const quote = () => quoteLine(file.path, l.number, removed?.textContent ?? l.text);
+    const block = file.original && !file.binary ? blockAt(file.original, file.content, l.number, Boolean(removed)) : -1;
+    if (block < 0) quote();
+    else setMenu({ x, y, block, quote });
   };
+  const askRevert = (block: number) => setAsk({
+    title: `Revert this change in ${file.path.split('/').pop()}?`,
+    detail: 'The block goes back to the last commit.',
+    action: 'Revert',
+    run: async () => save.current?.(revertBlock(file.original, file.content, block)),
+  });
   const release = () => {
     if (press.current) clearTimeout(press.current.timer);
     press.current = null;
@@ -59,7 +75,7 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = fa
     if (!diff || e.button !== 0) return;
     release();
     const { clientX: x, clientY: y } = e;
-    press.current = { x, y, timer: setTimeout(() => { press.current = null; quoteAt(x, y); }, PRESS_MS) };
+    press.current = { x, y, timer: setTimeout(() => { press.current = null; openLine(x, y); }, PRESS_MS) };
   };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (press.current && Math.hypot(e.clientX - press.current.x, e.clientY - press.current.y) > 8) release();
@@ -68,7 +84,7 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = fa
     if (!diff) return;
     e.preventDefault();
     release();
-    if (!touch()) quoteAt(e.clientX, e.clientY);
+    if (!touch()) openLine(e.clientX, e.clientY);
   };
 
   useEffect(() => {
@@ -111,6 +127,18 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = fa
     };
   }, [file, diff, wrap, changesOnly, dark, line, edit]);
 
-  return <div className="cd-editor" ref={host} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={release} onPointerCancel={release} onContextMenu={onContextMenu} />;
+  return (
+    <>
+      <div className="cd-editor" ref={host} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={release} onPointerCancel={release} onContextMenu={onContextMenu} />
+      {menu && (
+        <span className="cd-linemenu" ref={menuBox} style={{ left: menu.x, top: menu.y }}>
+          <Menu trigger={menuBox} onClose={() => setMenu(null)}>
+            <MenuItem icon="comment" onClick={() => { menu.quote(); setMenu(null); }}>Quote line</MenuItem>
+            <MenuItem icon="discard" danger onClick={() => { askRevert(menu.block); setMenu(null); }}>Revert this change</MenuItem>
+          </Menu>
+        </span>
+      )}
+      {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
+    </>
+  );
 }
-

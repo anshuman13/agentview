@@ -1,0 +1,7 @@
+[
+  { "name": "the first of two blocks", "original": "a\nb\nc\nd\ne\n", "content": "a\nB\nc\nd\nE\n", "block": 0, "expected": "a\nb\nc\nd\nE\n" },
+  { "name": "the second of two blocks", "original": "a\nb\nc\nd\ne\n", "content": "a\nB\nc\nd\nE\n", "block": 1, "expected": "a\nB\nc\nd\ne\n" },
+  { "name": "an added line", "original": "a\nb\n", "content": "a\nx\nb\n", "block": 0, "expected": "a\nb\n" },
+  { "name": "a removed line", "original": "a\nb\nc\n", "content": "a\nc\n", "block": 0, "expected": "a\nb\nc\n" },
+  { "name": "a block past the last one changes nothing", "original": "a\nb\n", "content": "a\nB\n", "block": 3, "expected": "a\nB\n" }
+]

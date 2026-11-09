@@ -12,6 +12,7 @@ import { runBands } from './sessions/runBands';
 import { tryColumn } from './sessions/TriesBoard';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { needsYou } from './codex/summary/needsYou';
+import { revertBlock } from './workspace/revertBlock';
 import { ago } from './ui/util';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
@@ -104,6 +105,10 @@ describe('cases shared with the Android app', () => {
       const state = col.state.status === 'waiting' ? col.state.label : col.state.status === 'skipped' ? col.state.reason : { running: 'Running', failed: 'Failed', done: 'Done' }[col.state.status as string];
       expect({ ...col, state, edits: col.edits ?? null }).toEqual(c.expected);
     });
+  }
+
+  for (const c of cases<{ name: string; original: string; content: string; block: number; expected: string }>('revert-block')) {
+    it(`revertBlock: ${c.name}`, () => expect(revertBlock(c.original, c.content, c.block)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; text: string; expected: { title: string; url: string | null; why: string }[] }>('brief-bullets')) {

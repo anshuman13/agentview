@@ -12,6 +12,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
 import no.pradhan.agentview.nativeapp.chat.ChecklistItem
 import no.pradhan.agentview.nativeapp.chat.checklistCurrent
@@ -35,6 +36,8 @@ import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.workspace.fileDiff
+import no.pradhan.agentview.nativeapp.workspace.revertBlock
 import no.pradhan.agentview.nativeapp.chat.appendRule
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
@@ -163,6 +166,10 @@ class SharedCasesTest {
 
     @Test fun appendRule() {
         for (c in cases("append-rule")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, appendRule(c.str("text"), c.str("rule")))
+    }
+
+    @Test fun revertBlock() {
+        for (c in cases("revert-block")) assertEquals(c.str("name"), c.str("expected"), revertBlock(fileDiff(c.str("original"), c.str("content")), c.getValue("block").jsonPrimitive.int))
     }
 
     @Test fun specPrompt() {
