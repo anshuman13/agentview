@@ -8,7 +8,7 @@ Read the doc for the area before searching the code: `docs/architecture.md` (ove
 - `web/src`: React web app (Vite). `app/` shell and store, `chat/`, `sessions/`, `codex/` (tasks, meetings, wiki), `workspace/` (files, git), `ops/`, `ui/` shared components, `styles/tokens.css` design tokens.
 - `assistant/src`: Codex hub on :7790 (tasks, meetings, calendar import, jobs). Tests use `bun test`.
 - `shared/`: code used by all three. `protocol.ts` is the wire protocol, `tables.ts` the hub columns (a new column there must also go in `SYNCED_FIELDS` in the Android `CodexRows.kt`).
-- `android/`: native Kotlin/Compose app. Code is in `android/app/src/main/kotlin/no/pradhan/agentview/nativeapp/` (flat, no `java/` or `ui/` folders), tests in `android/app/src/test/kotlin/...`. `Tokens.kt` and `Codicons.kt` are generated.
+- `android/`: native Kotlin/Compose app. Code is in `android/app/src/main/kotlin/no/pradhan/agentview/nativeapp/`, in feature subpackages (`app`, `chat`, `sessions`, `codex` with `meetings`, `wiki`, `jobs`, `autopilot`, `workspace`, `ops`, `net`, `ui`; folder path matches the package). Only `MainActivity` and the manifest receivers stay in the root. Tests mirror the packages under `android/app/src/test/kotlin/...`. `ui/Tokens.kt` and `ui/Codicons.kt` are generated.
 - `app/`: the Tauri desktop window app (macOS only). The phone app is `android/`.
 
 ## Checks
