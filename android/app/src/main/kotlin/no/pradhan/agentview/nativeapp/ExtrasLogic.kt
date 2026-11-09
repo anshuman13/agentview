@@ -16,13 +16,14 @@ data class Notice(val kind: NoticeKind, val chatId: String, val title: String, v
 fun repoName(c: LiveChat) = c.cwd.trimEnd('/').substringAfterLast('/')
 
 // web/src/app/store.ts notifyBackground: a chat that gained a pending request, or stopped running, since the last list.
-fun notices(was: List<LiveChat>, now: List<LiveChat>, shownId: String = ""): List<Notice> = now.mapNotNull { c ->
+// A muted chat (Slack's mute) skips Finished; Needs you and Failed still come.
+fun notices(was: List<LiveChat>, now: List<LiveChat>, shownId: String = "", muted: Set<String> = emptySet()): List<Notice> = now.mapNotNull { c ->
     if (c.id == shownId) return@mapNotNull null
     val before = was.firstOrNull { it.id == c.id } ?: return@mapNotNull null
     when {
         c.pending > before.pending -> Notice(NoticeKind.Approval, c.id, "Claude needs you in ${repoName(c)}", c.title)
         c.failed && !before.failed -> Notice(NoticeKind.Failed, c.id, "Claude failed in ${repoName(c)}", c.title)
-        before.running && !c.running && !c.failed -> Notice(NoticeKind.Finished, c.id, "Claude finished in ${repoName(c)}", c.title)
+        before.running && !c.running && !c.failed && c.sessionId !in muted -> Notice(NoticeKind.Finished, c.id, "Claude finished in ${repoName(c)}", c.title)
         else -> null
     }
 }

@@ -63,6 +63,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val saved = remember(ws.saved) { ws.saved.associateBy { it.sessionId } }
     val pins = ws.pins.toSet()
     val seen = ws.seen
+    val muted by hub.muted.collectAsState()
     var status by rememberSaveable { mutableStateOf(StatusFilter.All) }
     val byStatus = status != StatusFilter.All
     var showIdle by rememberSaveable { mutableStateOf(false) }
@@ -79,6 +80,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         onArchive = { sessionId?.let { archiving = it to title } },
         canPin = sessionId != null,
         onUnread = { sessionId?.let { hub.markUnread(it) } },
+        muted = sessionId != null && sessionId in muted,
+        onMute = { sessionId?.let { hub.setMuted(it, it !in muted) } },
     )
 
     @Composable
@@ -240,7 +243,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     closing?.let { c -> ConfirmDialog("Close this chat?", "${c.title}\n\nClaude is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(c.id) }) { closing = null } }
 }
 
-class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {})
+class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {})
 
 @Composable
 private fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) {
@@ -289,6 +292,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
             MoreButton { close ->
                 if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", if (actions.pinned) "pinned" else "pin", { close(); actions.onPin() })
                 if (actions.canPin && state == null && !selected) MenuItem("Mark as unread", "mail", { close(); actions.onUnread() })
+                if (actions.canPin) MenuItem(if (actions.muted) "Unmute" else "Mute", if (actions.muted) "bell" else "bell-slash", { close(); actions.onMute() })
                 if (actions.canPin) MenuItem("Rename", "edit", { close(); actions.onRename() })
                 actions.onClose?.let { c -> MenuItem("Close chat", "close", { close(); c() }) }
                 if (actions.canPin) { MenuSeparator(); MenuItem("Archive", "archive", { close(); actions.onArchive() }, danger = true) }

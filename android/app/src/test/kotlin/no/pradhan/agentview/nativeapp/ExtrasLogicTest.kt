@@ -21,6 +21,12 @@ class ExtrasLogicTest {
         assertEquals(listOf(Notice(NoticeKind.Finished, "a", "Claude finished in agentview", "Fix tests")), n)
     }
 
+    @Test fun mutedChatSkipsFinishedButNotApproval() {
+        val muted = setOf("s1")
+        assertEquals(emptyList<Notice>(), notices(listOf(chat("a", running = true).copy(sessionId = "s1")), listOf(chat("a").copy(sessionId = "s1")), muted = muted))
+        assertEquals(NoticeKind.Approval, notices(listOf(chat("a").copy(sessionId = "s1")), listOf(chat("a", pending = 1).copy(sessionId = "s1")), muted = muted).single().kind)
+    }
+
     @Test fun approvalWinsOverFinished() {
         assertEquals(NoticeKind.Approval, notices(listOf(chat("a", running = true)), listOf(chat("a", pending = 1))).single().kind)
     }

@@ -163,6 +163,12 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         prefs.edit().putString("handledOrder", handled.value.joinToString("\n")).apply()
     }
 
+    val muted = MutableStateFlow(prefs.getStringSet("muted", null)?.toSet() ?: emptySet())
+    fun setMuted(sessionId: String, on: Boolean) {
+        muted.value = if (on) muted.value + sessionId else muted.value - sessionId
+        prefs.edit().putStringSet("muted", muted.value).apply()
+    }
+
     fun setNotify(on: Boolean) {
         notifyOn.value = on
         prefs.edit().putBoolean("notify", on).apply()
@@ -178,7 +184,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     }
 
     private fun handle(m: ServerMessage) {
-        if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, store.state.value.shownId).forEach(::notify)
+        if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, store.state.value.shownId, muted.value).forEach(::notify)
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         store.handle(m)
