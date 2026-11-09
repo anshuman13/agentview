@@ -1,0 +1,51 @@
+[
+  {
+    "name": "done try with a report, chat edits and cost",
+    "run": { "rounds": [{ "n": 1, "outcome": "done", "line": "Try 1: patched it", "costUsd": 0.5 }] },
+    "try": { "n": 1, "sessionId": "s1", "branch": "tries/a-1" },
+    "live": [{ "id": "c1", "sessionId": "s1", "edits": { "add": 4, "del": 1 }, "cost": 0.7 }],
+    "expected": { "n": 1, "branch": "tries/a-1", "state": "Done", "line": "patched it", "edits": { "add": 4, "del": 1 }, "cost": 0.7, "archived": false }
+  },
+  {
+    "name": "question in the last report needs you",
+    "run": { "rounds": [{ "n": 2, "outcome": "question", "line": "Try 2: which one?", "costUsd": 0.2 }] },
+    "try": { "n": 2, "sessionId": "s2", "branch": "tries/a-2" },
+    "live": [],
+    "expected": { "n": 2, "branch": "tries/a-2", "state": "Needs you", "line": "which one?", "edits": null, "cost": 0.2, "archived": false }
+  },
+  {
+    "name": "waiting requests on the chat need you",
+    "run": { "rounds": [{ "n": 1, "outcome": "done", "line": "Try 1: ok", "costUsd": 0.1 }] },
+    "try": { "n": 1, "sessionId": "s1", "branch": "tries/a-1" },
+    "live": [{ "id": "c1", "sessionId": "s1", "pending": 1 }],
+    "expected": { "n": 1, "branch": "tries/a-1", "state": "Needs you", "line": "ok", "edits": null, "cost": 0.1, "archived": false }
+  },
+  {
+    "name": "dropped try is archived whatever the chat does",
+    "run": { "rounds": [] },
+    "try": { "n": 3, "sessionId": "s3", "branch": "tries/a-3", "dropped": true },
+    "live": [{ "id": "c3", "sessionId": "s3", "running": true, "pending": 2 }],
+    "expected": { "n": 3, "branch": "tries/a-3", "state": "Archived", "line": "", "edits": null, "cost": 0, "archived": true }
+  },
+  {
+    "name": "no report yet is running and uses the chat's last line",
+    "run": { "rounds": [] },
+    "try": { "n": 1, "sessionId": "s1", "branch": "tries/a-1" },
+    "live": [{ "id": "c1", "sessionId": "s1", "last": "Reading the code" }],
+    "expected": { "n": 1, "branch": "tries/a-1", "state": "Running", "line": "Reading the code", "edits": null, "cost": 0, "archived": false }
+  },
+  {
+    "name": "running chat after a finished round is running",
+    "run": { "rounds": [{ "n": 1, "outcome": "done", "line": "Try 1: first", "costUsd": 0.3 }, { "n": 1, "outcome": "done", "line": "Try 1: second", "costUsd": 0.4 }] },
+    "try": { "n": 1, "sessionId": "s1", "branch": "tries/a-1" },
+    "live": [{ "id": "c1", "sessionId": "s1", "running": true }],
+    "expected": { "n": 1, "branch": "tries/a-1", "state": "Running", "line": "second", "edits": null, "cost": 0.7, "archived": false }
+  },
+  {
+    "name": "failed last report",
+    "run": { "rounds": [{ "n": 2, "outcome": "failed", "line": "Try 2: broke", "costUsd": 0.25 }, { "n": 1, "outcome": "done", "line": "Try 1: fine", "costUsd": 9 }] },
+    "try": { "n": 2, "sessionId": "s2", "branch": "tries/a-2" },
+    "live": [],
+    "expected": { "n": 2, "branch": "tries/a-2", "state": "Failed", "line": "broke", "edits": null, "cost": 0.25, "archived": false }
+  }
+]

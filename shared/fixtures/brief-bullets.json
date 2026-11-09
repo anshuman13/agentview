@@ -1,0 +1,44 @@
+[
+  {
+    "name": "linked and bold titles, first sentence only",
+    "text": "## Needs you\n- [Review the plan](https://example.test/1): Ann asked for it. More later.\n- **Budget**: due Friday\n- Plain title: why it matters\n",
+    "expected": [
+      { "title": "Review the plan", "url": "https://example.test/1", "why": "Ann asked for it." },
+      { "title": "Budget", "url": null, "why": "due Friday" },
+      { "title": "Plain title", "url": null, "why": "why it matters" }
+    ]
+  },
+  {
+    "name": "stops at the next heading",
+    "text": "**Needs you**\n- First: now\n\n**Decided**\n- Other: no\n",
+    "expected": [{ "title": "First", "url": null, "why": "now" }]
+  },
+  {
+    "name": "intro line and nested bullets are skipped",
+    "text": "## Needs you\nThese are waiting on you:\n- Top: one\n  - nested\n  continued text\n- Second: two\n## FYI\n- Not this: skipped\n",
+    "expected": [
+      { "title": "Top", "url": null, "why": "one" },
+      { "title": "Second", "url": null, "why": "two" }
+    ]
+  },
+  {
+    "name": "bullets before the heading are skipped",
+    "text": "- Early: not yet\n## Needs you\n- Late: yes\n",
+    "expected": [{ "title": "Late", "url": null, "why": "yes" }]
+  },
+  {
+    "name": "heading match ignores case and star bullets work",
+    "text": "NEEDS YOU today\n* Star bullet: counted\n",
+    "expected": [{ "title": "Star bullet", "url": null, "why": "counted" }]
+  },
+  {
+    "name": "script links are dropped",
+    "text": "## Needs you\n- [Fix](javascript:void): now\n",
+    "expected": [{ "title": "Fix", "url": null, "why": "now" }]
+  },
+  {
+    "name": "no needs section",
+    "text": "## Decided\n- Thing: done\n",
+    "expected": []
+  }
+]

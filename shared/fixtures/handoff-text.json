@@ -1,0 +1,4 @@
+[
+  { "name": "uuid style id", "sessionId": "1b4e28ba-2fa1-4d3b-a3f0-0c9d2a1e7f10", "expected": "Summarise @chat:1b4e28ba-2fa1-4d3b-a3f0-0c9d2a1e7f10 so we can continue its work in this chat: the goal, decisions made, what is done, what is still open, and the files and commands that matter. At most 15 lines. Then wait for my next message." },
+  { "name": "short id", "sessionId": "abc", "expected": "Summarise @chat:abc so we can continue its work in this chat: the goal, decisions made, what is done, what is still open, and the files and commands that matter. At most 15 lines. Then wait for my next message." }
+]

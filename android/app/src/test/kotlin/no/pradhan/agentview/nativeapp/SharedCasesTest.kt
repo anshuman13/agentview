@@ -6,15 +6,21 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
+import java.time.Instant
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 
 // The cases in shared/fixtures also run in shared/cases.test.ts, so a case added there is checked against both implementations.
 class SharedCasesTest {
+    @Before fun zone() { codexZone = ZoneId.of("UTC") }
+
     private fun cases(file: String): List<JsonObject> =
         Json.parseToJsonElement(File("../../shared/fixtures/$file.json").readText()).jsonArray.map { it.jsonObject }
 
@@ -58,4 +64,70 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.str("current"), checklistCurrent(items))
         }
     }
+
+    private fun JsonObject.nullable(k: String) = this[k]?.takeIf { it !is JsonNull }
+
+    private inline fun <reified T> JsonElement.decode(): T = protocolJson.decodeFromJsonElement(this)
+
+    @Test fun handoffText() {
+        for (c in cases("handoff-text")) assertEquals(c.str("name"), c.str("expected"), handoffText(c.str("sessionId")))
+    }
+
+    @Test fun latestChecklist() {
+        for (c in cases("checklist-events")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            val expected = c.nullable("expected")?.jsonArray?.map { ChecklistItem(it.jsonObject.str("content"), it.jsonObject.str("activeForm"), it.jsonObject.str("status")) }
+            assertEquals(c.str("name"), expected, latestChecklist(events))
+        }
+    }
+
+    @Test fun runLine() {
+        for (c in cases("run-line")) {
+            val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
+            assertEquals(c.str("name"), c.str("expected"), runLine(run, c.nullable("phase")?.jsonPrimitive?.content))
+        }
+    }
+
+    @Test fun runBands() {
+        for (c in cases("run-bands")) {
+            val runs = c.getValue("runs").jsonArray.map { it.decode<ChatRun>() }
+            val b = runBands(runs, emptyList(), emptyList(), 0)
+            val name = { e: RunEntry -> (e as RunEntry.Chat).run.id }
+            val e = c.getValue("expected").jsonObject
+            fun ids(k: String) = e.getValue(k).jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(c.str("name"), ids("needs"), b.needs.map(name))
+            assertEquals(c.str("name"), ids("running"), b.running.map(name))
+            assertEquals(c.str("name"), ids("finished"), b.finished.map { it.id })
+        }
+    }
+
+    @Test fun tryColumn() {
+        for (c in cases("try-column")) {
+            val rounds = c.getValue("run").jsonObject.getValue("rounds").jsonArray.map { it.decode<Round>() }
+            val t = c.getValue("try").decode<RunTry>()
+            val live = c.getValue("live").jsonArray.map { it.decode<LiveChat>() }
+            val e = c.getValue("expected").jsonObject
+            val edits = e.nullable("edits")?.jsonObject?.let { Edits(it.getValue("add").jsonPrimitive.long.toInt(), it.getValue("del").jsonPrimitive.long.toInt()) }
+            val expected = TryColumn(e.getValue("n").jsonPrimitive.long.toInt(), e.str("branch"), e.str("state"), e.str("line"), edits, e.getValue("cost").jsonPrimitive.content.toDouble(), e.getValue("archived").jsonPrimitive.booleanOrNull!!)
+            assertEquals(c.str("name"), expected, tryColumn(ChatRun("r", rounds = rounds, tries = listOf(t)), t, live))
+        }
+    }
+
+    @Test fun briefBullets() {
+        for (c in cases("brief-bullets")) {
+            val expected = c.getValue("expected").jsonArray.map { listOf(it.jsonObject.str("title"), it.jsonObject.nullable("url")?.jsonPrimitive?.content, it.jsonObject.str("why")) }
+            assertEquals(c.str("name"), expected, briefBullets(c.str("text")).map { listOf(it.title, it.url, it.why) })
+        }
+    }
+
+    @Test fun parseWhen() {
+        for (c in cases("parse-when")) {
+            val w = parseWhen(c.str("text"), Instant.parse(c.str("now")).toEpochMilli())
+            val actual = w?.let { listOf(it.at?.let { at -> Instant.ofEpochMilli(at).toString() }, it.spans.map { r -> r.first to r.last + 1 }, stripWhen(c.str("text"), it)) }
+            val e = c.nullable("expected")?.jsonObject
+            val expected = e?.let { listOf(it.nullable("at")?.jsonPrimitive?.content, it.getValue("spans").jsonArray.map { s -> s.jsonArray[0].jsonPrimitive.long.toInt() to s.jsonArray[1].jsonPrimitive.long.toInt() }, it.str("stripped")) }
+            assertEquals(c.str("name"), expected, actual)
+        }
+    }
 }
+

@@ -1,0 +1,19 @@
+[
+  {
+    "name": "splits by needs you and state, newest first",
+    "runs": [
+      { "id": "a", "startedAt": 90, "needsYou": true },
+      { "id": "b", "startedAt": 80 },
+      { "id": "c", "startedAt": 70, "state": "paused" },
+      { "id": "d", "startedAt": 60, "state": "paused", "needsYou": true },
+      { "id": "e", "startedAt": 10, "state": "done", "endedAt": 50 },
+      { "id": "f", "startedAt": 20, "state": "done", "endedAt": 95 }
+    ],
+    "expected": { "needs": ["a", "d"], "running": ["b", "c"], "finished": ["f", "e"] }
+  },
+  {
+    "name": "no runs",
+    "runs": [],
+    "expected": { "needs": [], "running": [], "finished": [] }
+  }
+]

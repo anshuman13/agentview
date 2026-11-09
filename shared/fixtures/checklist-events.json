@@ -1,0 +1,70 @@
+[
+  {
+    "name": "no events",
+    "events": [],
+    "expected": null
+  },
+  {
+    "name": "no TodoWrite call",
+    "events": [
+      { "id": "e1", "kind": "user", "text": "hello" },
+      { "id": "e2", "kind": "tool_use", "name": "Read", "input": { "file_path": "/tmp/a.txt" } }
+    ],
+    "expected": null
+  },
+  {
+    "name": "newest call wins",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "TodoWrite", "input": { "todos": [{ "content": "Old", "activeForm": "Doing old", "status": "pending" }] } },
+      { "id": "e2", "kind": "tool_use", "name": "TodoWrite", "input": { "todos": [{ "content": "Read code", "activeForm": "Reading code", "status": "completed" }, { "content": "Write test", "activeForm": "Writing test", "status": "in_progress" }] } },
+      { "id": "e3", "kind": "assistant", "text": "working" }
+    ],
+    "expected": [
+      { "content": "Read code", "activeForm": "Reading code", "status": "completed" },
+      { "content": "Write test", "activeForm": "Writing test", "status": "in_progress" }
+    ]
+  },
+  {
+    "name": "sub-agent calls are skipped",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "TodoWrite", "input": { "todos": [{ "content": "Mine", "activeForm": "Doing mine", "status": "pending" }] } },
+      { "id": "e2", "kind": "tool_use", "name": "TodoWrite", "parent": "agent1", "input": { "todos": [{ "content": "Theirs", "activeForm": "Doing theirs", "status": "pending" }] } }
+    ],
+    "expected": [{ "content": "Mine", "activeForm": "Doing mine", "status": "pending" }]
+  },
+  {
+    "name": "newest call with an empty list gives an empty list",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "TodoWrite", "input": { "todos": [{ "content": "Old", "activeForm": "Doing old", "status": "pending" }] } },
+      { "id": "e2", "kind": "tool_use", "name": "TodoWrite", "input": { "todos": [] } }
+    ],
+    "expected": []
+  },
+  {
+    "name": "call without a todos array gives an empty list",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "TodoWrite", "input": {} }
+    ],
+    "expected": []
+  },
+  {
+    "name": "items with an unknown status or missing content are dropped",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "TodoWrite", "input": { "todos": [
+        { "content": "Keep", "activeForm": "Keeping", "status": "pending" },
+        { "content": "Odd status", "activeForm": "Odd", "status": "blocked" },
+        { "activeForm": "No content", "status": "pending" },
+        null,
+        "text"
+      ] } }
+    ],
+    "expected": [{ "content": "Keep", "activeForm": "Keeping", "status": "pending" }]
+  },
+  {
+    "name": "missing activeForm becomes an empty string",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "TodoWrite", "input": { "todos": [{ "content": "Ship", "status": "in_progress" }] } }
+    ],
+    "expected": [{ "content": "Ship", "activeForm": "", "status": "in_progress" }]
+  }
+]
