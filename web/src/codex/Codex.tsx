@@ -4,10 +4,11 @@ import '@fontsource-variable/geist-mono';
 import { codexMeetings, useAssistant, useSyncGate } from './data';
 import { ask, askText } from './data/ask/ask';
 import { reviewedSince } from './data/tasks/engine';
-import { greeting, moveTo } from './tasks/days';
+import { greeting } from './tasks/days';
+import { dropRow as dropRowTo, moveOverdue } from './tasks/rowMoves';
+import { TasksHead } from './TasksHead';
 import { SnackBar } from './tasks/SnackBar';
 import { useHubLifecycle } from './useHubLifecycle';
-import type { Patch } from './data/store';
 import { rowKey, type ItemRow } from './data/sync';
 import type { BulkKind } from './useActions';
 import { Icon } from '../ui/Icon';
@@ -15,12 +16,12 @@ import { EmptyState } from '../ui/Panel';
 import { Button } from '../ui/Button';
 import { Section } from '../ui/Section';
 import { haptic } from '../ui/haptic';
-import { FILTER_LABEL, searchRun, setView, showSnack, useSpotBack, useView } from './view';
+import { searchRun, setView, showSnack, useSpotBack, useView } from './view';
 import { when } from './tasks/time';
 import { Composer, prepText } from './AskBar';
 import { AddSheet } from './tasks/AddSheet';
 import { TagPage } from './tasks/TagPage';
-import { UNROLL, useActions } from './tasks/Task';
+import { useActions } from './tasks/Task';
 import { DayGroup, TaskList, type Day } from './tasks/TaskGroup';
 import { Overview, Review } from './Overview';
 import { useSplit } from './tasks/split';
@@ -46,8 +47,6 @@ const Search = prefetch(() => import('./Search').then((m) => m.Search));
 const Meetings = prefetch(() => import('./meetings/Meetings').then((m) => m.Meetings));
 
 const DAY = 86400_000;
-
-const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
 
 function SpotBack({ scroller }: { scroller: React.RefObject<HTMLElement | null> }) {
   useSpotBack(scroller, 'tasks');
@@ -118,19 +117,8 @@ export function Assistant() {
 
   const now = Date.now();
   const { days, dueToday, startOfDay } = dayGroups(s, now, !!drag);
-  // Dropping sets the order of the day's rows and moves the task to that day.
   function dropRow(row: ItemRow, d: Drop) {
-    const target = days.find((x) => x.key === d.section);
-    if (!target || target.day == null) return;
-    const order = target.rows.filter((r) => !sameRow(r, row));
-    order.splice(d.index, 0, row);
-    const at = moveTo(row, target.day, startOfDay);
-    order.forEach((r, i) => {
-      const patch: Patch = r.rank === i + 1 ? {} : { rank: i + 1 };
-      if (sameRow(r, row) && at !== undefined) Object.assign(patch, { at }, UNROLL);
-      if (Object.keys(patch).length) act.edit(r, patch);
-    });
-    if (at !== undefined) showSnack(`Moved to ${target.label}`, () => act.edit(row, { at: row.at, rank: row.rank, rolls: row.rolls, rolled_from: row.rolled_from }));
+    dropRowTo(act, days, startOfDay, row, d);
   }
   const chosen = picked ? snap.items.filter((r) => pickable(r) && picked.has(r.profile + r.id)) : [];
   const bulk = (kind: BulkKind) => { act.bulk(chosen, kind); setPicked(null); };
@@ -141,26 +129,9 @@ export function Assistant() {
   const older = s.review.filter((r) => now - reviewedSince(r) >= DAY);
   const empty = !s.overdue.length && days.every((d) => !d.rows.length) && !s.review.length;
   const nextLater = s.nextLater;
-  // Overdue tasks move to today at the same time of day, with one undo for all of them.
-  const moveOverdue = () => {
-    const moved = s.overdue.map((r) => ({ r, before: { at: r.at, rolls: r.rolls, rolled_from: r.rolled_from } as Patch, at: moveTo(r, startOfDay, startOfDay) }));
-    for (const m of moved) if (m.at !== undefined) act.edit(m.r, { at: m.at, ...UNROLL });
-    showSnack(`Moved ${moved.length} to Today`, () => moved.forEach((m) => act.edit(m.r, m.before)));
-  };
-
   return (
     <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
-      <div className="tasks-head">
-        <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={() => setDrawer(true)}><Icon name="menu" /></button>
-        <Section
-          label={<span role="heading" aria-level={1}>{heading}</span>}
-          action={<>
-            {list === 'tasks' && query == null && !picked && <button className="icon-btn" title="Select tasks" aria-label="Select tasks" onClick={() => setPicked(new Set())}><Icon name="tasklist" /></button>}
-            {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
-            {filter !== 'all' && <span className="muted">{FILTER_LABEL[filter]}</span>}
-          </>}
-        />
-      </div>
+      <TasksHead list={list} heading={heading} filter={filter} searching={query != null} selecting={!!picked} onMenu={() => setDrawer(true)} onSelect={() => setPicked(new Set())} onSearch={() => setQuery('')} />
       {gate.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
       {calError && <button className="as-error" onClick={() => void retryCalendar()}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
 
@@ -173,7 +144,7 @@ export function Assistant() {
           <>
             {s.overdue.length > 0 && (
               <section>
-                <Section label="Overdue" count={s.overdue.length} action={!picked && <Button variant="quiet" size="sm" onClick={moveOverdue}>Move all to today</Button>} />
+                <Section label="Overdue" count={s.overdue.length} action={!picked && <Button variant="quiet" size="sm" onClick={() => moveOverdue(act, s.overdue, startOfDay)}>Move all to today</Button>} />
                 {rows(s.overdue, 'overdue', false)}
               </section>
             )}
