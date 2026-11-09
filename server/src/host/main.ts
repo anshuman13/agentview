@@ -3,7 +3,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, unlinkSync, watch, type FSWatcher } from 'node:fs';
+import { mkdirSync, unlinkSync } from 'node:fs';
 import { readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { getSessionInfo } from '../agent/claude/sessions.js';
 import { claudeSession } from '../agent/claude/driver.js';
@@ -19,7 +19,7 @@ import { removeChat } from '../agent/claude/pins.js';
 import { parseTries, startTries, TRIES_USAGE } from '../workspace/tries.js';
 import { ownProfile } from '../chrome/chrome.js';
 import { MCP_BAD, type ChatRun, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
-import { recapOf, replyLine, sumEdits } from '../../../shared/edits.js';
+import { recapOf, replyLine } from '../../../shared/edits.js';
 import { latestTodos, todoCount } from '../../../shared/todos.js';
 import { errText } from '../../../shared/util.js';
 import { applyInitialModel } from './initialModel.js';
@@ -27,6 +27,8 @@ import { sendWhenChanged } from './changed.js';
 import { costsOf, modelField } from './summaryCache.js';
 import { busy, runningAgents, parseSaved, stoppedOf, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
+import { watchFiles } from './watchFiles.js';
+import { editsOf, runField } from './liveFields.js';
 import { Runs, firstSentence, openTries } from '../session/runs.js';
 import { ROUND_INSTRUCTION } from '../session/repeat.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
@@ -44,7 +46,6 @@ if (ownProfile()) {
   process.env.AGENTVIEW_PORT = String(PORT);
 }
 
-const IGNORED = /(^|\/)(node_modules|\.git|dist|build|coverage|\.next|\.venv|venv|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|\.tox)(\/|$)/;
 const LAST = path.join(os.homedir(), '.agentview-last.json');
 const RESTORE = path.join(os.homedir(), '.agentview', 'restore.json');
 const RUNS = path.join(os.homedir(), '.agentview', 'runs.json');
@@ -95,16 +96,6 @@ const stalls = stallWatch((id) => {
   broadcastLive();
 });
 
-// sumEdits walks every event; tool_use inputs and results are never edited in place, so identity + length is a safe key.
-const editsCache = new WeakMap<AgentSession, { events: unknown[]; length: number; edits: ReturnType<typeof sumEdits> }>();
-function editsOf(chat: AgentSession) {
-  const { events } = chat.state;
-  const hit = editsCache.get(chat);
-  if (hit?.events === events && hit.length === events.length) return hit.edits;
-  const edits = sumEdits(events);
-  editsCache.set(chat, { events, length: events.length, edits });
-  return edits;
-}
 
 function summary(chat: AgentSession): LiveChat {
   const s = chat.state;
@@ -140,11 +131,6 @@ function summary(chat: AgentSession): LiveChat {
   };
 }
 
-function runField(run: ChatRun | undefined): Pick<LiveChat, 'run'> {
-  if (!run) return {};
-  const last = run.rounds.at(-1);
-  return { run: { id: run.id, kind: run.kind, state: run.state, ...(run.why && { why: run.why }), nextAt: run.nextAt, round: run.round, needsYou: run.needsYou, ...(last && { outcome: last.outcome, line: last.line }) } };
-}
 
 const liveList = () => [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
 let liveTimer: NodeJS.Timeout | null = null;
@@ -241,39 +227,6 @@ setInterval(() => {
   if (orphaned && Date.now() - orphaned > ORPHAN_MS && ![...live.values()].some(({ chat }) => busy(chat))) saveAndExit();
 }, 60_000);
 
-// One recursive watcher per folder, shared by every chat in it and closed with the last one.
-const folders = new Map<string, { listeners: Set<(rel: string) => void>; watcher: FSWatcher }>();
-
-function watchFiles(cwd: string, onChange: (rel: string) => void) {
-  let folder = folders.get(cwd);
-  if (!folder) {
-    const listeners = new Set<(rel: string) => void>();
-    const timers = new Map<string, NodeJS.Timeout>();
-    const watcher = watch(cwd, { recursive: true }, (_, rel) => {
-      if (!rel || IGNORED.test(rel)) return;
-      clearTimeout(timers.get(rel));
-      timers.set(rel, setTimeout(() => {
-        timers.delete(rel);
-        stat(path.join(cwd, rel)).then((s) => s.isFile() && listeners.forEach((l) => l(rel))).catch(() => {});
-      }, 200));
-    }).on('error', (err) => {
-      console.error(`watcher: ${String(err)}`);
-      watcher.close();
-      if (folders.get(cwd)?.watcher === watcher) folders.delete(cwd);
-    });
-    folder = { listeners, watcher };
-    folders.set(cwd, folder);
-  }
-  const { listeners, watcher } = folder;
-  listeners.add(onChange);
-  return {
-    close() {
-      if (!listeners.delete(onChange) || listeners.size) return;
-      watcher.close();
-      folders.delete(cwd);
-    },
-  };
-}
 
 const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
 
