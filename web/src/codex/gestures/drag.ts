@@ -20,6 +20,102 @@ function locate(x: number, y: number, key: string, attr: string): Drop | null {
   return { section: el.dataset.drop!, index: i < 0 ? rows.length : i };
 }
 
+type Handlers<T> = {
+  setDrag: (d: Drag<T> | null) => void;
+  drop: React.MutableRefObject<(item: T, drop: Drop) => void>;
+  hold: React.MutableRefObject<((item: T) => void) | undefined>;
+  scroller: React.RefObject<HTMLElement | null>;
+  attr: string;
+};
+
+// One pointer gesture on a row: from the press to the drop or cancel.
+class DragGesture<T> {
+  private pos: { x: number; y: number };
+  private on = false;
+  private moved = false;
+  private frame = 0;
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private readonly touch: boolean;
+  private readonly x0: number;
+  private readonly y0: number;
+  private readonly events: readonly [string, string, string];
+
+  constructor(private item: T, private key: string, private title: string, e: React.PointerEvent, private h: Handlers<T>) {
+    this.touch = e.pointerType !== 'mouse';
+    this.x0 = e.clientX;
+    this.y0 = e.clientY;
+    this.pos = { x: this.x0, y: this.y0 };
+    this.events = this.touch ? ['touchmove', 'touchend', 'touchcancel'] : ['pointermove', 'pointerup', 'pointercancel'];
+    this.timer = this.touch ? setTimeout(this.begin, HOLD) : undefined;
+    window.addEventListener(this.events[0], this.onMove, { passive: false });
+    window.addEventListener(this.events[1], this.end);
+    window.addEventListener(this.events[2], this.cancel);
+    if (this.touch) window.addEventListener('contextmenu', quiet);
+  }
+
+  private show = () => this.h.setDrag({ item: this.item, key: this.key, title: this.title, ...this.pos, over: locate(this.pos.x, this.pos.y, this.key, this.h.attr) });
+
+  private scroll = () => {
+    const scroller = this.h.scroller.current;
+    const box = scroller?.getBoundingClientRect();
+    if (scroller && box) {
+      const y = this.pos.y;
+      const by = y < box.top + EDGE ? -(box.top + EDGE - y) / 4 : y > box.bottom - EDGE ? (y - box.bottom + EDGE) / 4 : 0;
+      if (by) { scroller.scrollTop += by; this.show(); }
+    }
+    this.frame = requestAnimationFrame(this.scroll);
+  };
+
+  private begin = () => {
+    this.on = active = true;
+    if (this.touch) haptic('tap');
+    this.show();
+    this.frame = requestAnimationFrame(this.scroll);
+  };
+
+  private onMove = (ev: Event) => {
+    const p = 'touches' in ev ? (ev as TouchEvent).touches[0] : (ev as PointerEvent);
+    const far = Math.hypot(p.clientX - this.x0, p.clientY - this.y0) >= SLOP;
+    if (far) this.moved = true;
+    if (!this.on) {
+      if (!far) return;
+      if (this.touch) return this.stop();
+      this.begin();
+    }
+    if (ev.cancelable) ev.preventDefault();
+    this.pos = { x: p.clientX, y: p.clientY };
+    this.show();
+  };
+
+  private stop = () => {
+    clearTimeout(this.timer);
+    cancelAnimationFrame(this.frame);
+    window.removeEventListener(this.events[0], this.onMove);
+    window.removeEventListener(this.events[1], this.end);
+    window.removeEventListener(this.events[2], this.cancel);
+    window.removeEventListener('contextmenu', quiet);
+  };
+
+  private end = () => {
+    this.stop();
+    if (!this.on) return;
+    active = false;
+    window.addEventListener('click', quiet, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener('click', quiet, { capture: true }), 400);
+    const over = locate(this.pos.x, this.pos.y, this.key, this.h.attr);
+    this.h.setDrag(null);
+    if (this.touch && !this.moved && this.h.hold.current) this.h.hold.current(this.item);
+    else if (over) {
+      if (this.touch) haptic('tap');
+      this.h.drop.current(this.item, over);
+    }
+  };
+
+  private cancel = () => { this.stop(); if (this.on) { active = false; this.h.setDrag(null); } };
+}
+
+const quiet = (ev: Event) => { ev.preventDefault(); ev.stopPropagation(); };
+
 // A mouse drags once it moves; a finger drags after holding still, so swipes and scrolling keep working. A finger released after the hold without moving calls onHold instead of dropping.
 export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: React.RefObject<HTMLElement | null>, attr = 'row', onHold?: (item: T) => void) {
   const [drag, setDrag] = useState<Drag<T> | null>(null);
@@ -30,73 +126,7 @@ export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: Reac
 
   const start = (item: T, key: string, title: string) => (e: React.PointerEvent) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('button, a, input, textarea')) return;
-    const touch = e.pointerType !== 'mouse';
-    const x0 = e.clientX;
-    const y0 = e.clientY;
-    let pos = { x: x0, y: y0 };
-    let on = false;
-    let moved = false;
-    let frame = 0;
-    const show = () => setDrag({ item, key, title, ...pos, over: locate(pos.x, pos.y, key, attr) });
-    const scroll = () => {
-      const box = scroller.current?.getBoundingClientRect();
-      if (box) {
-        const by = pos.y < box.top + EDGE ? -(box.top + EDGE - pos.y) / 4 : pos.y > box.bottom - EDGE ? (pos.y - box.bottom + EDGE) / 4 : 0;
-        if (by) { scroller.current!.scrollTop += by; show(); }
-      }
-      frame = requestAnimationFrame(scroll);
-    };
-    const begin = () => {
-      on = active = true;
-      if (touch) haptic('tap');
-      show();
-      frame = requestAnimationFrame(scroll);
-    };
-    const timer = touch ? setTimeout(begin, HOLD) : undefined;
-    const move = (x: number, y: number, ev: Event) => {
-      if (Math.hypot(x - x0, y - y0) >= SLOP) moved = true;
-      if (!on) {
-        if (Math.hypot(x - x0, y - y0) < SLOP) return;
-        if (touch) return stop();
-        begin();
-      }
-      if (ev.cancelable) ev.preventDefault();
-      pos = { x, y };
-      show();
-    };
-    const onMove = (ev: Event) => {
-      const p = 'touches' in ev ? (ev as TouchEvent).touches[0] : (ev as PointerEvent);
-      move(p.clientX, p.clientY, ev);
-    };
-    const quiet = (ev: Event) => { ev.preventDefault(); ev.stopPropagation(); };
-    const [moveEv, endEv, cancelEv] = touch ? ['touchmove', 'touchend', 'touchcancel'] as const : ['pointermove', 'pointerup', 'pointercancel'] as const;
-    const stop = () => {
-      clearTimeout(timer);
-      cancelAnimationFrame(frame);
-      window.removeEventListener(moveEv, onMove);
-      window.removeEventListener(endEv, end);
-      window.removeEventListener(cancelEv, cancel);
-      window.removeEventListener('contextmenu', quiet);
-    };
-    const end = () => {
-      stop();
-      if (!on) return;
-      active = false;
-      window.addEventListener('click', quiet, { capture: true, once: true });
-      setTimeout(() => window.removeEventListener('click', quiet, { capture: true }), 400);
-      const over = locate(pos.x, pos.y, key, attr);
-      setDrag(null);
-      if (touch && !moved && hold.current) hold.current(item);
-      else if (over) {
-        if (touch) haptic('tap');
-        drop.current(item, over);
-      }
-    };
-    const cancel = () => { stop(); if (on) { active = false; setDrag(null); } };
-    window.addEventListener(moveEv, onMove, { passive: false });
-    window.addEventListener(endEv, end);
-    window.addEventListener(cancelEv, cancel);
-    if (touch) window.addEventListener('contextmenu', quiet);
+    new DragGesture(item, key, title, e, { setDrag, drop, hold, scroller, attr });
   };
 
   return { drag, start };
