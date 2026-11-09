@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { expandChatMentions } from './chatMentions.js';
 import type { UserEvent } from './messageQueue.js';
 import type { AgentSession } from './session.js';
 
@@ -43,7 +44,7 @@ export class Prompts {
     const { running, compacting, loop } = this.s.state.session;
     if (!running || compacting || loop.on || text.trim().startsWith('/') || !this.s.driver.attached) return this.prompt(text, id);
     this.s.waiting.holdMidTurn(text, id);
-    this.s.driver.send(text, id, 'next');
+    this.s.driver.send(expandChatMentions(text), id, 'next');
   }
 
   // Stops the current step so a waiting message runs now.

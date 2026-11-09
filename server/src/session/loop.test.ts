@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { advance, loopOff, needsApproval, verdictOf } from './loop.js';
-import { RepeatController, after, limitReset, parseGoal, parseLoop } from './repeat.js';
+import { RepeatController, after, parseGoal, parseLoop } from './repeat.js';
+import { limitReset } from '../agent/claude/limitText.js';
 import type { Repeat } from '../../../shared/protocol.js';
 
 describe('verdictOf', () => {

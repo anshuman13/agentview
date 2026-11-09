@@ -15,8 +15,11 @@ function run() {
   const captured: string[] = [];
   const results: unknown[] = [];
   const session: unknown[] = [];
+  const limits: number[] = [];
   const stream = new CodexStream({
     cwd: '/tmp/proj',
+    state: { session: { usage: { fiveHour: { pct: 100, resetsAt: 1_900_000_000_000 }, week: { pct: 40, resetsAt: 1_900_500_000_000 } } } } as never,
+    limit: (until) => void limits.push(until),
     pushEvent: (ev) => void events.push(ev),
     emit: (m) => void emitted.push(m),
     system: () => undefined,
@@ -27,7 +30,7 @@ function run() {
     captureEdit: (f) => void captured.push(f),
   });
   for (const l of lines) stream.handle(l.method, l.params);
-  return { events, emitted, noted, captured, results, session, stream };
+  return { events, emitted, noted, captured, results, session, limits, stream };
 }
 
 describe('CodexStream', () => {
@@ -70,6 +73,16 @@ describe('CodexStream', () => {
     results.length = 0;
     stream.handle('turn/completed', { turn: { id: 'turn2', status: 'failed', error: { message: 'usage limit' }, items: [] } });
     expect(results).toEqual([{ id: 'turn2:result', ok: false, text: 'usage limit', costUsd: 0, isError: true }]);
+  });
+});
+
+describe('usage limit', () => {
+  it('reports the reset of the full window when the turn hits the plan limit', () => {
+    const { stream, limits } = run();
+    stream.handle('error', { willRetry: false, error: { message: 'limit', codexErrorInfo: 'usageLimitExceeded' } });
+    expect(limits).toEqual([1_900_000_000_000]);
+    stream.handle('error', { willRetry: false, error: { message: 'other', codexErrorInfo: 'other' } });
+    expect(limits).toHaveLength(1);
   });
 });
 

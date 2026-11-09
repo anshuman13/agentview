@@ -3,9 +3,11 @@ import type { Provider, ProviderOption } from '../../../shared/protocol.js';
 import { providerLabel } from '../../../shared/providers.js';
 import { readJsonSync, writeJsonSync } from '../json.js';
 import { STATE_DIR, loggedInAccounts, verifyLimit } from './claude/accounts.js';
+import { claudeTranscript } from './claude/chatMentions.js';
 import { claudeDriver } from './claude/driver.js';
 import { NOT_SIGNED_IN, codexSignedIn } from './codex/binary.js';
 import { codexDriver } from './codex/driver.js';
+import { codexTranscript } from './codex/threads.js';
 import { loadOpenRouter } from './claude/openrouter.js';
 import type { DriverFactory } from './types.js';
 
@@ -13,20 +15,25 @@ type Entry = {
   driver(cwd: string, resume?: string, fork?: boolean): DriverFactory;
   // Clears a limit mark the provider no longer deserves, so a chat does not start on a wrong one.
   verifyLimits(): Promise<unknown>;
+  // The file that holds a chat's transcript, or null when this provider has no such chat.
+  transcriptPath(id: string): string | null;
 };
 
 const PROVIDERS: Record<Provider, Entry> = {
   claude: {
     driver: (cwd, resume, fork) => claudeDriver(cwd, resume, fork),
     verifyLimits: () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
+    transcriptPath: claudeTranscript,
   },
   openrouter: {
     driver: (cwd, resume, fork) => claudeDriver(cwd, resume, fork, true),
     verifyLimits: () => Promise.resolve(),
+    transcriptPath: claudeTranscript,
   },
   codex: {
     driver: (_cwd, resume, fork) => codexDriver(resume, fork),
     verifyLimits: () => Promise.resolve(),
+    transcriptPath: codexTranscript,
   },
 };
 
@@ -60,3 +67,5 @@ export function providerOf(sessionId: string | undefined): Provider {
   const p = sessionId ? chatProviders[sessionId] : undefined;
   return p && p in PROVIDERS ? p : 'claude';
 }
+
+export const transcriptPath = (id: string) => provider(providerOf(id)).transcriptPath(id);

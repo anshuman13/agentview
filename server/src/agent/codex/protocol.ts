@@ -22,7 +22,7 @@ export type ThreadItem =
 
 export type TurnStatus = 'completed' | 'interrupted' | 'failed' | 'inProgress';
 export type Turn = { id: string; items: ThreadItem[]; status: TurnStatus; startedAt: number | null; error: { message: string } | null };
-export type Thread = { id: string; cwd: string; preview: string; name: string | null; updatedAt: number; turns: Turn[] };
+export type Thread = { id: string; cwd: string; path: string | null; preview: string; name: string | null; updatedAt: number; turns: Turn[] };
 
 export type RateLimitWindow = { usedPercent: number; windowDurationMins: number | null; resetsAt: number | null };
 export type RateLimits = { primary: RateLimitWindow | null; secondary: RateLimitWindow | null };

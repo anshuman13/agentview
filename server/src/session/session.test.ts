@@ -903,6 +903,15 @@ describe('pull request link', () => {
     expect(prFrom(events)).toBe(42);
     expect(prFrom([{ id: 'x', kind: 'tool_result', toolUseId: 'other', text: made.content, isError: false, at: 2 }])).toBeNull();
   });
+
+  it('records it from the events of any driver, top-level only', () => {
+    const { s } = fakeSession();
+    s.pushEvent({ id: 'gh1', kind: 'tool_use', name: 'Bash', input: create.input, summary: '', at: 1 });
+    s.pushEvent({ id: 'r', kind: 'tool_result', toolUseId: 'gh1', text: made.content, isError: false, at: 2, parent: 'ag' });
+    expect(s.state.session.pr).toBeNull();
+    s.pushEvent({ id: 'r2', kind: 'tool_result', toolUseId: 'gh1', text: made.content, isError: false, at: 3 });
+    expect(s.state.session.pr).toBe(42);
+  });
 });
 
 describe('event index', () => {

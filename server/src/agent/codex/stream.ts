@@ -2,11 +2,12 @@ import path from 'node:path';
 import type { ChatEvent } from '../../../../shared/protocol.js';
 import type { AgentHost } from '../types.js';
 import { finishedEvents, startedEvents } from './events.js';
+import { limitUntil } from './usage.js';
 import type { FileUpdateChange, ThreadItem, TokenUsage, Turn } from './protocol.js';
 
 const FLUSH_MS = 80;
 
-type Sink = Pick<AgentHost, 'cwd' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'compacted' | 'noteFile' | 'captureEdit'>;
+type Sink = Pick<AgentHost, 'cwd' | 'state' | 'limit' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'compacted' | 'noteFile' | 'captureEdit'>;
 type Live = { ev: Extract<ChatEvent, { kind: 'assistant' }>; sent: number; timer?: ReturnType<typeof setTimeout> };
 
 // Turns the app-server's notifications into chat events: assistant text streams in, commands, file changes and MCP calls become tool steps.
@@ -28,8 +29,13 @@ export class CodexStream {
       case 'turn/completed': return this.turnDone(params.turn);
       case 'thread/tokenUsage/updated': return this.usage(params.tokenUsage);
       case 'thread/compacted': return this.compacted(params.turnId);
-      case 'error': return params.willRetry ? undefined : this.host.system(`Codex: ${params.error.message}`, true);
+      case 'error': return params.willRetry ? undefined : this.failed(params.error);
     }
+  }
+
+  private failed(error: { message: string; codexErrorInfo?: unknown }) {
+    this.host.system(`Codex: ${error.message}`, true);
+    if (error.codexErrorInfo === 'usageLimitExceeded') this.host.limit(limitUntil(this.host.state.session.usage));
   }
 
   // The process is gone; text still streaming ends as it is.

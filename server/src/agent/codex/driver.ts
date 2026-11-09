@@ -93,7 +93,7 @@ export class CodexDriver implements AgentDriver {
     this.fork = false;
     this.threadId = res.thread.id;
     this.host.setSession({ sessionId: res.thread.id, model: res.model, permissionMode: this.mode, commands: COMMANDS });
-    void noteThread(res.thread.id, { cwd: this.host.cwd });
+    void noteThread(res.thread.id, { cwd: this.host.cwd, ...(res.thread.path && { path: res.thread.path }) });
     void this.loadModels(rpc);
     void this.loadUsage();
     clearInterval(this.usageTimer);

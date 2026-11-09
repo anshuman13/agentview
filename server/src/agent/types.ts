@@ -87,14 +87,12 @@ export interface AgentHost {
   turnStarted(why?: string): void;
   turnEnded(): void;
   turnResult(r: TurnResult): void;
-  noteLimit(text: string): void;
-  overage(until: number): void;
+  // The account is out of usage until then; a driver parses its own limit notice.
+  limit(until: number): void;
   startCompacting(): void;
   compacted(pre: number, post: number | null | undefined): void;
   compactFailed(error: string): void;
   blocked(toolUseId: string, tool: string, reason: string): void;
-  reportFindings(input: unknown): void;
-  notePr(toolUseId: string, text: string): void;
   adopt(toolUseId: string): void;
   exited(): void;
   // The driver replaced its agent process; what lived only in the old one (scheduled jobs) has to be set up again.

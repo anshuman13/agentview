@@ -19,7 +19,6 @@ import { ToolHooks } from './toolHooks.js';
 import { continuedTurn } from './subagents.js';
 import { LiveText } from './stream.js';
 import { historyFrom } from './transcript.js';
-import { expandChatMentions } from './chatMentions.js';
 import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
 
 const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: 'claude-sonnet-5-5' } as const;
@@ -286,7 +285,7 @@ export class ClaudeDriver implements AgentDriver {
 
   send(text: string, id?: string, priority?: 'next') {
     if (id) this.rewinds.track(id, text);
-    this.input.push({ ...userMessage(expandChatMentions(text)), ...(priority && { priority }) });
+    this.input.push({ ...userMessage(text), ...(priority && { priority }) });
   }
 
   dropInput() {
@@ -379,7 +378,7 @@ export class ClaudeDriver implements AgentDriver {
     if (!until) return;
     // An idle chat moves to the other account at once; the new CLI must not be interrupted.
     const q = this.q;
-    this.host.overage(until);
+    this.host.limit(until);
     if (this.q === q) this.interrupt().catch(() => undefined);
   }
 

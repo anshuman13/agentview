@@ -1,14 +1,18 @@
 import path from 'node:path';
 import type { SavedSession } from '../../../../shared/protocol.js';
-import { jsonFile } from '../../json.js';
+import { jsonFile, readJsonSync } from '../../json.js';
 import { STATE_DIR } from '../claude/accounts.js';
 
 // Codex keeps its threads in its own store; this is the list AgentView shows for them, with the folder each one ran in.
-export type SavedThread = { cwd: string; summary: string; lastModified: number };
+export type SavedThread = { cwd: string; summary: string; lastModified: number; path?: string };
 
-const store = jsonFile<Record<string, SavedThread>>(path.join(STATE_DIR, 'codex-chats.json'), {});
+const FILE = path.join(STATE_DIR, 'codex-chats.json');
+const store = jsonFile<Record<string, SavedThread>>(FILE, {});
 
 export const codexThread = async (id: string) => (await store.read())[id] ?? null;
+
+// The rollout file Codex wrote the thread to, as recorded when the thread started or resumed.
+export const codexTranscript = (id: string) => readJsonSync<Record<string, SavedThread>>(FILE, {})[id]?.path ?? null;
 
 export const noteThread = (id: string, patch: Partial<SavedThread> & { cwd: string }) =>
   store.update((all) => ({ ...all, [id]: { ...all[id], summary: all[id]?.summary ?? '', lastModified: Date.now(), ...patch } }));

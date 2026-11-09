@@ -8,6 +8,7 @@ import { BuildCycle } from './cycle.js';
 import { EventLog } from './eventLog.js';
 import { Hooks } from './hooks.js';
 import { blockedRule } from './events.js';
+import { expandChatMentions } from './chatMentions.js';
 import { loopOff } from './loop.js';
 import { Mcp } from './mcp.js';
 import { MessageQueue } from './messageQueue.js';
@@ -24,6 +25,9 @@ import { Stopper } from './stopper.js';
 import { Turn } from './turn.js';
 import { UsageLimit } from './usageLimit.js';
 import { Wakeups } from './wakeups.js';
+
+// The tools whose call carries a review's findings.
+const FINDINGS_TOOLS = new Set(['ReportFindings']);
 
 export class AgentSession implements AgentHost {
   readonly driver: AgentDriver;
@@ -46,7 +50,7 @@ export class AgentSession implements AgentHost {
   readonly cycle = new BuildCycle(this);
   readonly settings = new SessionSettings(this);
   readonly mcp = new Mcp(this);
-  readonly limit = new UsageLimit(this);
+  readonly usage = new UsageLimit(this);
   readonly wakeups = new Wakeups(this);
   readonly links = new RunLinks(this);
   readonly compaction = new Compaction(this);
@@ -100,7 +104,17 @@ export class AgentSession implements AgentHost {
     this.log.add(ev);
     if (ev.kind === 'user' && !ev.auto) this.runs.answer(this.id);
     this.emit({ type: 'event', event: ev });
+    this.noteTool(ev);
     if (ev.kind === 'tool_result' && !ev.parent && opts?.release !== false) this.waiting.release();
+  }
+
+  // What a top-level tool step means to the session, whichever driver ran it: a review's findings, or the PR a command opened.
+  private noteTool(ev: ChatEvent) {
+    if (ev.kind === 'tool_use' && !ev.parent && FINDINGS_TOOLS.has(ev.name)) this.reportFindings(ev.input);
+    if (ev.kind !== 'tool_result' || ev.parent) return;
+    const pr = PR_URL.exec(ev.text)?.[1];
+    const use = pr ? this.log.get(ev.toolUseId) : undefined;
+    if (pr && use && createsPr(use)) this.setSession({ pr: Number(pr) });
   }
 
   queueNext(text: string, id?: string) {
@@ -229,14 +243,8 @@ export class AgentSession implements AgentHost {
     if (added) void this.prompt(`I allowed ${ev.rule} for this chat. Retry it.`);
   }
 
-  reportFindings(input: unknown) {
+  private reportFindings(input: unknown) {
     void saveFindings(this.cwd, this.reviewTarget ?? 'local', parseFindings(input)).then((review) => this.emit({ type: 'findings', review }), () => {});
-  }
-
-  notePr(toolUseId: string, text: string) {
-    const pr = PR_URL.exec(text)?.[1];
-    const use = pr ? this.log.get(toolUseId) : undefined;
-    if (pr && use && createsPr(use)) this.setSession({ pr: Number(pr) });
   }
 
   sendPrompt(text: string, id: string = randomUUID(), mark?: { auto: 'loop' | 'goal'; round: number }) {
@@ -252,7 +260,7 @@ export class AgentSession implements AgentHost {
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
     this.begin();
     if (name === 'code-review' && /^\d*$/.test(args)) this.driver.review(args ? Number(args) : 'local');
-    else this.driver.send(text, id);
+    else this.driver.send(expandChatMentions(text), id);
   }
 
   compact(instructions?: string) {
@@ -355,12 +363,8 @@ export class AgentSession implements AgentHost {
     this.turn.started(why);
   }
 
-  noteLimit(text: string) {
-    this.limit.note(text);
-  }
-
-  overage(until: number) {
-    this.limit.overage(until);
+  limit(until: number) {
+    this.usage.note(until);
   }
 
   turnResult(r: TurnResult) {

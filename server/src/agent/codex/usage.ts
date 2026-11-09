@@ -13,3 +13,10 @@ export function planUsage(r: RateLimits): PlanUsage {
   const length = (w: RateLimitWindow) => w.windowDurationMins ?? 0;
   return { fiveHour: windowOf(all.find((w) => length(w) > 0 && length(w) <= FIVE_HOURS)), week: windowOf(all.find((w) => length(w) >= WEEK)) };
 }
+
+// When the plan has usage again: the reset of the most used window, or five hours on when no window says.
+export function limitUntil(u: PlanUsage | null | undefined, now = Date.now()) {
+  const windows = [u?.fiveHour, u?.week].filter((w): w is UsageWindow => Boolean(w?.resetsAt));
+  const fullest = windows.sort((a, b) => b.pct - a.pct)[0];
+  return fullest?.resetsAt ?? now + FIVE_HOURS * 60_000;
+}

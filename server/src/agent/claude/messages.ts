@@ -3,6 +3,7 @@ import path from 'node:path';
 import { ACCOUNT_LABEL, type Account } from '../../../../shared/protocol.js';
 import type { AgentHost } from '../types.js';
 import type { AssistantMessage, ToolResultBlock, UserMessage } from './sdkTypes.js';
+import { limitReset } from './limitText.js';
 import type { Rewinds } from './rewinds.js';
 import type { TaskTracker } from './taskTracker.js';
 import { agentResult, isAgent, patchAgent } from './subagents.js';
@@ -38,7 +39,8 @@ export class Messages {
       if (block.type === 'server_tool_use' && block.name === 'advisor') host.pushEvent(advisorEvent(block.id, Date.now()));
       if (block.type === 'tool_use') this.toolUse(block);
       // The CLI marks its own usage-limit notice with error 'rate_limit'; Claude's replies never carry it.
-      if (block.type === 'text' && msg.error === 'rate_limit') host.noteLimit(block.text);
+      const until = block.type === 'text' && msg.error === 'rate_limit' ? limitReset(block.text) : null;
+      if (until) host.limit(until);
       if (block.type === 'text' && msg.error === 'authentication_failed') host.system(`Logged out of the ${ACCOUNT_LABEL[this.account()]} Claude account (${block.text}). Run claude, then /login`);
     }
   }
@@ -58,7 +60,6 @@ export class Messages {
   private toolUse(block: { id: string; name: string; input: unknown }, parent?: string) {
     this.host.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now(), parent, this.tasks.agents));
     if (AGENT_TOOLS.has(block.name)) this.host.pushEvent(agentEvent(block.id, block.input, Date.now(), parent));
-    if (block.name === 'ReportFindings') this.host.reportFindings(block.input);
     const file = (block.input as { file_path?: unknown })?.file_path;
     if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
   }
@@ -77,6 +78,5 @@ export class Messages {
     }
     const report = agent ? liveReport(text, output) : text.slice(0, 4000);
     host.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: report, isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
-    if (!parent) host.notePr(block.tool_use_id, text);
   }
 }

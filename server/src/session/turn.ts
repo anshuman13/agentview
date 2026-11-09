@@ -70,7 +70,7 @@ export class Turn {
   result(r: TurnResult) {
     const s = this.s;
     // Before a switch to the other account the messages stay held, since the CLI that has them is replaced.
-    if (s.waiting.pending.length && !s.limit.reset) this.releaseHeld();
+    if (s.waiting.pending.length && !s.usage.reset) this.releaseHeld();
     this.lastResult = r.ok ? r.text : '';
     this.lastError = !r.ok || Boolean(r.isError);
     s.failed = this.lastError;
@@ -110,13 +110,13 @@ export class Turn {
     this.finish();
     const stopped = this.count === 0 && s.state.session.stopping;
     const idle = this.count === 0 && !s.state.session.stopping;
-    if (idle && s.limit.failOver()) {
+    if (idle && s.usage.failOver()) {
       s.waiting.requeuePending();
-      s.limit.clear();
+      s.usage.clear();
       s.setSession({ compacting: false });
       return;
     }
-    if (s.waiting.pending.length && s.limit.reset) this.releaseHeld();
+    if (s.waiting.pending.length && s.usage.reset) this.releaseHeld();
     if (idle && !this.lastError && s.cycle.askReplyApproval(this.lastResult)) return;
     const before = s.state.session.loop;
     const loop = idle ? advance(before, this.lastResult, { planDenied: s.cycle.planDenied, failed: this.lastError }) : null;
@@ -136,7 +136,7 @@ export class Turn {
       s.repeater.defer();
     } else if (idle) this.repeatWhenIdle();
     // A turn that ends without a result (a local command) must not read the last one's.
-    s.limit.clear();
+    s.usage.clear();
     this.lastResult = '';
     this.lastError = false;
     this.cost = 0;
@@ -144,9 +144,9 @@ export class Turn {
   }
 
   private repeatWhenIdle() {
-    const { limit, repeater, state } = this.s;
-    if (limit.reset && state.session.repeat) repeater.defer(limit.reset, 'Usage limit reached, loop round', true);
-    else if (limit.reset) this.s.system(`Usage limit reached, resets at ${clock(limit.reset)}`);
+    const { usage, repeater, state } = this.s;
+    if (usage.reset && state.session.repeat) repeater.defer(usage.reset, 'Usage limit reached, loop round', true);
+    else if (usage.reset) this.s.system(`Usage limit reached, resets at ${clock(usage.reset)}`);
     else if (this.lastError) repeater.defer();
     else if (repeater.due || state.session.repeat?.every === 0) repeater.fire();
   }
