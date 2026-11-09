@@ -392,8 +392,8 @@ export class ClaudeDriver implements AgentDriver {
     if (!until) return;
     // An idle chat moves to the other account at once; the new CLI must not be interrupted.
     const q = this.q;
-    if (this.host.state.session.running) this.host.system(`Stopped before using extra usage on the ${ACCOUNT_LABEL[this.account]} account`);
-    this.host.limit(until);
+    const running = this.host.state.session.running;
+    if (this.host.limit(until) && running) this.host.system(`Stopped before using extra usage on the ${ACCOUNT_LABEL[this.account]} account`);
     if (this.q === q) this.interrupt().catch(() => undefined);
   }
 

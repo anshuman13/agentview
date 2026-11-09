@@ -13,18 +13,19 @@ export class UsageLimit {
     this.reset = null;
   }
 
-  // The turn ends like one that hit the usage limit.
+  // The turn ends like one that hit the usage limit; false when a limit was already noted.
   note(until: number) {
     const s = this.s;
-    if (this.reset) return;
+    if (this.reset) return false;
     // A report while idle (a background agent) has no turn to end, so the account changes now.
     if (!s.state.session.running) {
       const from = s.driver.account;
       const to = this.hit(until);
       s.system(`Usage limit reported on the ${ACCOUNT_LABEL[from]} account${to ? `, next turn runs on the ${ACCOUNT_LABEL[to]} account` : ''}`);
-      return;
+      return true;
     }
     this.reset = until;
+    return true;
   }
 
   // A turn that ended on a usage limit goes on under the other account, if it has usage left.

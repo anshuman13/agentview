@@ -378,7 +378,7 @@ export class AgentSession implements AgentHost {
   }
 
   limit(until: number) {
-    this.usage.note(until);
+    return this.usage.note(until);
   }
 
   turnResult(r: TurnResult) {

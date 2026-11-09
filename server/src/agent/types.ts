@@ -93,7 +93,7 @@ export interface AgentHost {
   turnEnded(): void;
   turnResult(r: TurnResult): void;
   // The account is out of usage until then; a driver parses its own limit notice.
-  limit(until: number): void;
+  limit(until: number): boolean;
   startCompacting(): void;
   compacted(pre: number, post: number | null | undefined): void;
   compactFailed(error: string): void;
