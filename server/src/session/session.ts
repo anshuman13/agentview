@@ -8,7 +8,7 @@ import { resumePrompt, type Stopped } from '../host/restore.js';
 import { Approvals } from './approvals.js';
 import { advance, looping, loopOff, needsApproval, phaseRound, planChangeText, planStep, withLoop, type LoopStep } from './loop.js';
 import { RepeatController, ROUND_INSTRUCTION, after, fireTime, goalMet, limitReset, restorePrompt } from './repeat.js';
-import { Runs, roundResult } from './runs.js';
+import { Runs, WAITING, roundResult } from './runs.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { EventIndex, MAX_EVENTS, stopAgents, trimHistory } from './events.js';
 import { PR_URL, createsPr, prFrom } from './pr.js';
@@ -20,7 +20,6 @@ const CONTINUE = 'You hit a usage limit and now run on another Claude account. C
 
 const RETRY_COMPACT_GROWTH = 20_000;
 const STOP_TIMEOUT = 15_000;
-const WAITING = 'waiting for your approval';
 
 export class AgentSession implements AgentHost {
   readonly driver: AgentDriver;
@@ -57,6 +56,8 @@ export class AgentSession implements AgentHost {
   private cycleRun: string | undefined;
   // The last turn was a loop round or goal check; its reply ends with a ROUND line.
   private roundTurn = false;
+  // The id of the prompt of the weekly report round of a standing goal, while that round runs.
+  private reportTurn: string | undefined;
   // ends: the run ends with this round, so its own end push is the only one.
   roundNote: { outcome: RoundOutcome; line: string; ends: boolean } | null = null;
   private lastCost = 0;
@@ -72,7 +73,12 @@ export class AgentSession implements AgentHost {
     endRun: (id, why) => this.runs.end(id, why),
     reopenRun: (id) => this.runs.reopen(id),
     patchRun: (id, patch) => this.runs.update(id, patch),
-    sendPrompt: (text, auto, round) => this.sendPrompt(text, randomUUID(), { auto, round }),
+    asking: () => this.state.pending.length > 0,
+    sendPrompt: (text, auto, round, report) => {
+      const id = randomUUID();
+      this.reportTurn = report ? id : undefined;
+      this.sendPrompt(text, id, { auto, round });
+    },
   });
   private orphans = new Set<string>();
   private index = new EventIndex(() => this.state.events);
@@ -120,6 +126,7 @@ export class AgentSession implements AgentHost {
 
   pushEvent(ev: ChatEvent, opts?: { release?: boolean }) {
     this.state.events.push(ev);
+    if (ev.kind === 'user' && !ev.auto) this.runs.answer(this.id);
     this.index.pushed(ev);
     if (this.state.events.length > MAX_EVENTS + 500) this.state.events = trimHistory(this.state.events);
     this.emit({ type: 'event', event: ev });
@@ -380,7 +387,7 @@ export class AgentSession implements AgentHost {
 
   private startRun(r: Repeat) {
     const what = r.goal ?? r.prompt;
-    return this.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.state.session.sessionId ?? '', chatId: this.id, title: this.runTitle(what), what, round: r.round, max: r.goal ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt });
+    return this.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.state.session.sessionId ?? '', chatId: this.id, title: this.runTitle(what), what, round: r.round, max: r.goal && !r.every ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt, ...(r.goal && r.every && { every: r.every }) });
   }
 
   // A restart keeps the run of a loop or goal; the chat has a new id.
@@ -743,10 +750,13 @@ export class AgentSession implements AgentHost {
     const met = Boolean(repeat?.goal && goalMet(this.lastResult));
     this.turnCost = r.costUsd > 0 ? costRise(r.costUsd, this.lastCost) : 0;
     if (r.costUsd > 0) this.lastCost = r.costUsd;
+    const report = this.reportTurn;
     this.roundNote = this.roundTurn && repeat?.runId ? { ...roundResult(r.text, { failed: this.lastError, met }), ends: met || this.repeater.ends() } : null;
+    if (report && this.roundNote && !this.lastError && !met) this.roundNote.outcome = 'progress';
     this.roundTurn = false;
+    this.reportTurn = undefined;
     this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: this.state.session.model });
-    if (repeat?.runId && this.roundNote) this.runs.addRound(repeat.runId, { n: repeat.round, outcome: this.roundNote.outcome, line: this.roundNote.line, costUsd: this.turnCost });
+    if (repeat?.runId && this.roundNote) this.runs.addRound(repeat.runId, { n: repeat.round, outcome: this.roundNote.outcome, line: this.roundNote.line, costUsd: this.turnCost, ...(report && { report }) });
     if (repeat?.goal && met) this.repeater.set(null, `Goal met after ${repeat.round} ${repeat.round === 1 ? 'check' : 'checks'}: ${repeat.goal}`, 'goal met');
     this.turnEnded();
   }

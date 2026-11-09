@@ -132,7 +132,7 @@ function summary(chat: AgentSession): LiveChat {
 function runField(run: ChatRun | undefined): Pick<LiveChat, 'run'> {
   if (!run) return {};
   const last = run.rounds.at(-1);
-  return { run: { id: run.id, kind: run.kind, state: run.state, ...(run.why && { why: run.why }), nextAt: run.nextAt, round: run.round, ...(last && { outcome: last.outcome, line: last.line }) } };
+  return { run: { id: run.id, kind: run.kind, state: run.state, ...(run.why && { why: run.why }), nextAt: run.nextAt, round: run.round, needsYou: run.needsYou, ...(last && { outcome: last.outcome, line: last.line }) } };
 }
 
 const liveList = () => [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);

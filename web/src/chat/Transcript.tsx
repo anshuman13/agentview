@@ -199,7 +199,7 @@ export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.se
 function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="tr-auto" {...pressable(() => setOpen((v) => !v))} title={open ? 'Hide the prompt' : 'Show the full prompt'}>
+    <div id={`turn-${it.id}`} className="tr-auto" {...pressable(() => setOpen((v) => !v))} title={open ? 'Hide the prompt' : 'Show the full prompt'}>
       <Icon name={open ? 'chevron-down' : 'chevron-right'} small />{it.label}
       {open && <div className="tr-auto-text">{it.text}</div>}
     </div>

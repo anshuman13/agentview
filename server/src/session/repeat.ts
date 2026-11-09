@@ -6,17 +6,38 @@ const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
 export const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
 
-export const GOAL_USAGE = 'Usage: /goal <condition>, /goal off';
+export const GOAL_USAGE = 'Usage: /goal <condition>, /goal every 1h <condition> (every 30m or longer), /goal off';
+
+const DAY = 24 * 3_600_000;
+const STANDING_MS = 28 * DAY;
+const REPORT_MS = 7 * DAY;
+const MIN_STANDING_EVERY = 30 * 60_000;
+const STANDING_ENDED = 'ran for 28 days, start it again to continue';
 
 export const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET when it is, otherwise keep working on it.`;
 
+export const standingPrompt = (goal: string) => `Standing goal: ${goal}. Read where things stand. Do whatever moves the goal forward without the user. Do not do anything irreversible or outward-facing (push, deploy, delete, send a message to someone): ask it as a question instead. Reply GOAL MET when the goal is met.`;
+
+export const reportPrompt = (goal: string) => `Standing goal: ${goal}. Write a short weekly report: what moved, what is blocked, what is next, in at most 8 lines. Do not change anything this round.`;
+
+export const standing = (r: Repeat) => Boolean(r.goal && r.every);
+
+export const reportDue = (r: Repeat, now = Date.now()) => standing(r) && r.reportAt !== undefined && now >= r.reportAt;
+
 // /goal <condition> checks the condition whenever Claude goes idle, until it reports GOAL MET or the rounds run out.
-export function parseGoal(text: string): Repeat | 'off' | 'usage' | null {
+// /goal every 1h <condition> is a standing goal: one heartbeat per interval for up to 28 days.
+export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usage' | null {
   const m = /^\/goal\b([\s\S]*)$/.exec(text.trim());
   if (!m) return null;
   const goal = m[1].trim();
   if (/^(off|stop)$/i.test(goal)) return 'off';
   if (!goal) return 'usage';
+  const s = /^every\s+(\d+)\s*(m|min|h)\b\s*([\s\S]*)$/i.exec(goal);
+  if (s) {
+    const every = Number(s[1]) * UNIT[s[2].toLowerCase()];
+    if (every < MIN_STANDING_EVERY || every > MAX_EVERY || !s[3].trim()) return 'usage';
+    return { prompt: standingPrompt(s[3].trim()), every, until: now + STANDING_MS, round: 0, nextAt: null, goal: s[3].trim(), reportAt: now + REPORT_MS };
+  }
   return { prompt: goalPrompt(goal), every: 0, until: null, round: 0, nextAt: null, goal };
 }
 
@@ -88,7 +109,7 @@ export function limitReset(text: string, now = Date.now()): number | null {
 }
 
 export const describeLoop = (r: Repeat) =>
-  r.goal ? `checked whenever Claude goes idle until "${r.goal}" is met, up to ${MAX_GOAL_ROUNDS} checks` : once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
+  standing(r) ? `standing goal every ${span(r.every)} for up to 28 days: "${r.goal}"` : r.goal ? `checked whenever Claude goes idle until "${r.goal}" is met, up to ${MAX_GOAL_ROUNDS} checks` : once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
 
 // A loop goes on after Stop or a CLI exit, with time to type /loop off first.
 const REPEAT_GRACE_MS = 2 * 60_000;
@@ -106,7 +127,8 @@ export interface RepeatHost {
   endRun(id: string, why: string): void;
   reopenRun(id: string): void;
   patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt'>>): void;
-  sendPrompt(text: string, auto: 'loop' | 'goal', round: number): void;
+  asking(): boolean;
+  sendPrompt(text: string, auto: 'loop' | 'goal', round: number, report?: boolean): void;
 }
 
 export class RepeatController {
@@ -211,8 +233,8 @@ export class RepeatController {
   }
 
   private finish(r: Repeat) {
-    if (r.until && Date.now() >= r.until && !unrun(r)) return { note: `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, why: `finished at ${clock(r.until)}` };
-    if (r.goal && r.round >= MAX_GOAL_ROUNDS) return { note: `Goal not met after ${r.round} checks: ${r.goal}`, why: 'goal not met' };
+    if (r.until && Date.now() >= r.until && !unrun(r)) return standing(r) ? { note: `Goal ${STANDING_ENDED}: ${r.goal}`, why: STANDING_ENDED } : { note: `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, why: `finished at ${clock(r.until)}` };
+    if (r.goal && !standing(r) && r.round >= MAX_GOAL_ROUNDS) return { note: `Goal not met after ${r.round} checks: ${r.goal}`, why: 'goal not met' };
     return null;
   }
 
@@ -221,20 +243,31 @@ export class RepeatController {
     if (!r || this.held || r.paused) return;
     const end = this.finish(r);
     if (end) return this.set(null, end.note, end.why);
+    // A standing goal skips a heartbeat that finds Claude busy or waiting for the user; the next one is a full interval away.
+    if (standing(r) && (this.host.running() || this.host.asking())) return this.skip(r);
     if (this.host.running()) {
       this.due = true;
       return;
     }
     // A round that ended within a minute of starting did no work; wait before the next one instead of spinning.
-    if (Date.now() - this.roundAt < MIN_ROUND_MS) return this.defer(this.roundAt + REPEAT_GRACE_MS);
+    if (!standing(r) && Date.now() - this.roundAt < MIN_ROUND_MS) return this.defer(this.roundAt + REPEAT_GRACE_MS);
     this.due = false;
     this.roundAt = Date.now();
     const round = r.round + 1;
     const nextAt = r.every ? Date.now() + r.every : null;
-    this.host.setSession({ repeat: { ...r, round, nextAt } });
+    const report = reportDue(r);
+    const reportAt = report ? r.reportAt! + REPORT_MS * (Math.floor((Date.now() - r.reportAt!) / REPORT_MS) + 1) : r.reportAt;
+    this.host.setSession({ repeat: { ...r, round, nextAt, reportAt } });
     this.patchRun({ state: 'running', why: '', round, nextAt });
     this.arm();
-    this.host.sendPrompt(r.prompt, r.goal ? 'goal' : 'loop', round);
+    this.host.sendPrompt(report ? reportPrompt(r.goal!) : r.prompt, r.goal ? 'goal' : 'loop', round, report);
+  }
+
+  private skip(r: Repeat) {
+    const nextAt = Date.now() + r.every;
+    this.host.setSession({ repeat: { ...r, nextAt } });
+    this.patchRun({ nextAt });
+    this.arm();
   }
 
   // A round that failed waits before the next one, so a loop never spins on an error.

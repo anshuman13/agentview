@@ -104,7 +104,7 @@ export type SessionInfo = {
 export type Capabilities = { rewind: boolean; mcp: boolean; effort: boolean; team: boolean; stopTask: boolean };
 
 // A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
-export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean };
+export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean; reportAt?: number };
 
 export const MAX_GOAL_ROUNDS = 20;
 
@@ -116,7 +116,7 @@ export type LoopState = { on: boolean; max: number; round: number; phase: LoopPh
 
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
 export type RunOp = 'pause' | 'resume' | 'now' | 'stop' | 'restore';
-export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number };
+export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number; report?: string };
 
 // One /loop, /goal or build cycle: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
 export type ChatRun = {
@@ -133,8 +133,11 @@ export type ChatRun = {
   round: number;
   max: number;
   nextAt: number | null;
+  every?: number;
   costUsd: number;
   rounds: Round[];
+  asked?: boolean;
+  needsYou: boolean;
 };
 
 export type McpProp = { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown; title?: string; maxLength?: number };
@@ -223,7 +226,7 @@ export type LiveChat = {
   cost?: number;
   spend?: { today: Record<string, number>; week: Record<string, number> };
   pr?: number;
-  run?: { id: string; kind: ChatRun['kind']; state: ChatRun['state']; why?: string; nextAt: number | null; round: number; outcome?: RoundOutcome; line?: string };
+  run?: { id: string; kind: ChatRun['kind']; state: ChatRun['state']; why?: string; nextAt: number | null; round: number; needsYou: boolean; outcome?: RoundOutcome; line?: string };
 };
 
 export type AttentionKind = 'ci' | 'changes' | 'review' | 'ready' | 'issue' | 'stale' | 'commit' | 'deploy';

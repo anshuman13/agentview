@@ -10,13 +10,15 @@ import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { command, money } from '../ui/util';
 import type { ChatRun } from '../../../shared/protocol';
-import { OUTCOME_DOT, runLine } from '../chat/composerLogic';
-import { lastUserAt, runBands, type RunItem } from './runBands';
+import { OUTCOME_DOT, runLine, showTurn } from '../chat/composerLogic';
+import { runBands, type RunItem } from './runBands';
 
 function openRun(run: ChatRun) {
   const { live } = getState();
   const chat = live.find((c) => c.id === run.chatId) ?? live.find((c) => c.sessionId === run.sessionId);
   send(chat ? { type: 'view', id: chat.id } : { type: 'open_session', sessionId: run.sessionId });
+  const report = run.rounds.at(-1)?.report;
+  if (report) showTurn(report);
 }
 
 function RunRow({ item }: { item: RunItem }) {
@@ -30,7 +32,7 @@ function RunRow({ item }: { item: RunItem }) {
   const meta = (
     <>
       {runLine(run)}
-      {last && <> · <span className={`dot ${OUTCOME_DOT[last.outcome]}`} /> {last.line || last.outcome}</>}
+      {last && <> · <span className={`dot ${OUTCOME_DOT[last.outcome]}`} /> {last.report ? 'Weekly report' : last.line || last.outcome}</>}
     </>
   );
   return <Row title={run.title} meta={meta} trailing={<span className="rn-cost">{money(run.costUsd)}</span>} onClick={() => openRun(run)} />;
@@ -48,15 +50,13 @@ function Band({ label, items, open, onToggle }: { label: string; items: RunItem[
 
 export function Runs() {
   const runs = useStore((s) => s.runs);
-  const viewing = useStore((s) => s.session.id);
-  const userAt = useStore((s) => lastUserAt(s.events));
   const snap = useAssistantData();
   const now = useMinute();
   const [finished, setFinished] = useState(false);
   const bands = useMemo(() => {
     const jobs = snap.jobs.filter((j) => !j.deleted).map((job) => ({ job, state: jobState(job, snap.runs, now) }));
-    return runBands(runs, jobs, (chat) => (chat === viewing ? userAt : 0));
-  }, [runs, snap, now, viewing, userAt]);
+    return runBands(runs, jobs);
+  }, [runs, snap, now]);
   if (!bands.needs.length && !bands.running.length && !bands.finished.length) return <EmptyState size="sm" icon="sync" title="No runs yet" hint="Loops, goals and scheduled jobs you start show here" />;
   return (
     <div className="runs">

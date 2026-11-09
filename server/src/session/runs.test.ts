@@ -22,6 +22,38 @@ describe('roundResult', () => {
   });
 });
 
+describe('Runs needsYou', () => {
+  const round = (n: number, outcome: 'blocked' | 'progress') => ({ n, outcome, line: '', costUsd: 0 });
+
+  it('is set by a blocked or question round and cleared by a later round or a user message', () => {
+    const runs = new Runs();
+    const id = runs.start(init);
+    runs.addRound(id, round(1, 'blocked'));
+    expect(runs.get(id)?.needsYou).toBe(true);
+    runs.addRound(id, round(2, 'progress'));
+    expect(runs.get(id)?.needsYou).toBe(false);
+    runs.addRound(id, round(3, 'blocked'));
+    runs.answer('c');
+    expect(runs.get(id)?.needsYou).toBe(false);
+  });
+
+  it('is set while paused for approval, then falls back to the last round', () => {
+    const runs = new Runs();
+    const id = runs.start(init);
+    runs.addRound(id, round(1, 'blocked'));
+    runs.update(id, { state: 'paused', why: 'waiting for your approval' });
+    runs.update(id, { state: 'running', why: '' });
+    expect(runs.get(id)?.needsYou).toBe(true);
+    runs.answer('c');
+    runs.update(id, { state: 'paused', why: 'waiting for your approval' });
+    expect(runs.get(id)?.needsYou).toBe(true);
+    runs.update(id, { state: 'paused', why: 'usage limit until 18:00' });
+    expect(runs.get(id)?.needsYou).toBe(false);
+    runs.end(id, 'x');
+    expect(runs.get(id)?.needsYou).toBe(false);
+  });
+});
+
 describe('Runs', () => {
   it('keeps active runs, the latest 100 ended ones and the last 50 rounds of each in the file', () => {
     const file = path.join(dir, 'runs.json');

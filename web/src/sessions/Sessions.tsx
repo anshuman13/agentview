@@ -499,10 +499,10 @@ type ChatRowProps = {
 };
 
 function RunTag({ chat }: { chat: string }) {
-  const r = useChatRun(chat);
-  if (!r) return null;
-  const warn = r.needs || r.run.state === 'paused';
-  return <span className={`chat-run ${warn ? 'warn' : ''}`}>{r.needs ? 'Needs you' : r.run.state === 'paused' ? 'Paused' : <><Icon name="sync" small />{r.run.nextAt ? clock(r.run.nextAt) : 'Running'}</>}</span>;
+  const run = useChatRun(chat);
+  if (!run) return null;
+  const warn = run.needsYou || run.state === 'paused';
+  return <span className={`chat-run ${warn ? 'warn' : ''}`}>{run.needsYou ? 'Needs you' : run.state === 'paused' ? 'Paused' : <><Icon name="sync" small />{run.nextAt ? clock(run.nextAt) : 'Running'}</>}</span>;
 }
 
 const BADGE = { needs: 'waiting', failed: 'failed', running: 'running', done: 'done' } as const;

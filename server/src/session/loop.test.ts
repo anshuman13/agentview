@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { advance, loopOff, needsApproval, verdictOf } from './loop.js';
-import { RepeatController, after, limitReset, parseLoop } from './repeat.js';
+import { RepeatController, after, limitReset, parseGoal, parseLoop } from './repeat.js';
+import type { Repeat } from '../../../shared/protocol.js';
 
 describe('verdictOf', () => {
   it('reads the last verdict line', () => {
@@ -113,6 +114,8 @@ describe('RepeatController', () => {
       resumeRun: () => 'run',
       endRun: () => {},
       patchRun: () => {},
+      asking: () => false,
+      reopenRun: () => {},
       sendPrompt: (t) => sent.push(t),
     });
     c.set(r as never);
@@ -122,6 +125,92 @@ describe('RepeatController', () => {
     running = false;
     c.fire();
     expect(sent).toEqual(['check']);
+    vi.useRealTimers();
+  });
+});
+
+describe('standing goal', () => {
+  const HOUR = 3_600_000;
+  const DAY = 24 * HOUR;
+
+  it('parses /goal every 1h and rejects intervals under 30m', () => {
+    expect(parseGoal('/goal every 1h keep CI green', 1000)).toMatchObject({ every: HOUR, goal: 'keep CI green', until: 1000 + 28 * DAY, reportAt: 1000 + 7 * DAY });
+    expect(parseGoal('/goal every 30m x')).toMatchObject({ every: 30 * 60_000 });
+    expect(parseGoal('/goal every 20m x')).toBe('usage');
+    expect(parseGoal('/goal every 169h x')).toBe('usage');
+    expect(parseGoal('/goal every 1h')).toBe('usage');
+    expect(parseGoal('/goal every bug is fixed')).toMatchObject({ every: 0 });
+  });
+
+  function setup(goal: string) {
+    vi.useFakeTimers();
+    let r = parseGoal(`/goal every 1h ${goal}`) as Repeat;
+    const state = { running: false, asking: false, sent: [] as { text: string; report?: boolean }[], ended: '' };
+    const c = new RepeatController({
+      repeat: () => r,
+      running: () => state.running,
+      closed: () => false,
+      setSession: (p) => { r = p.repeat as Repeat; },
+      system: () => {},
+      startRun: () => 'run',
+      resumeRun: () => 'run',
+      endRun: (_id, why) => { state.ended = why; },
+      reopenRun: () => {},
+      patchRun: () => {},
+      asking: () => state.asking,
+      sendPrompt: (text, _auto, _round, report) => state.sent.push({ text, report }),
+    });
+    return { c, state, repeat: () => r };
+  }
+
+  it('skips a heartbeat while Claude is busy or waiting, records no round and re-arms', () => {
+    const { c, state, repeat } = setup('x');
+    c.set(repeat());
+    expect(state.sent).toHaveLength(1);
+    state.running = true;
+    vi.advanceTimersByTime(HOUR);
+    state.running = false;
+    state.asking = true;
+    vi.advanceTimersByTime(HOUR);
+    expect(state.sent).toHaveLength(1);
+    expect(repeat().round).toBe(1);
+    state.asking = false;
+    vi.advanceTimersByTime(HOUR);
+    expect(state.sent).toHaveLength(2);
+    expect(c.due).toBe(false);
+    c.stop();
+    vi.useRealTimers();
+  });
+
+  it('runs a heartbeat right after a short round and has no 20 check cap', () => {
+    const { c, state, repeat } = setup('x');
+    c.set({ ...repeat(), round: 25 });
+    vi.advanceTimersByTime(HOUR);
+    expect(state.sent).toHaveLength(2);
+    expect(repeat().round).toBe(27);
+    c.stop();
+    vi.useRealTimers();
+  });
+
+  it('asks for the weekly report once every 7 days', () => {
+    const { c, state, repeat } = setup('x');
+    c.set(repeat());
+    vi.advanceTimersByTime(7 * DAY - HOUR);
+    expect(state.sent.some((s) => s.report)).toBe(false);
+    vi.advanceTimersByTime(HOUR);
+    expect(state.sent.filter((s) => s.report)).toHaveLength(1);
+    vi.advanceTimersByTime(HOUR);
+    expect(state.sent.filter((s) => s.report)).toHaveLength(1);
+    c.stop();
+    vi.useRealTimers();
+  });
+
+  it('ends after 28 days with its own reason', () => {
+    const { c, state, repeat } = setup('x');
+    c.set(repeat());
+    vi.advanceTimersByTime(28 * DAY);
+    expect(state.ended).toBe('ran for 28 days, start it again to continue');
+    expect(repeat()).toBeNull();
     vi.useRealTimers();
   });
 });

@@ -3,11 +3,13 @@ import { readJsonSync, writeJsonSync } from '../json.js';
 import { roundOf } from '../../../shared/edits.js';
 import type { ChatRun, Round, RoundOutcome } from '../../../shared/protocol.js';
 
+export const WAITING = 'waiting for your approval';
+
 const KEEP_ENDED = 100;
 const KEEP_ROUNDS = 50;
 const SAVE_MS = 1000;
 
-export type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt'>>;
+export type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every'>>;
 
 export const firstSentence = (text: string, max = 120) => text.trim().split(/(?<=[.!?])\s|\n/)[0].slice(0, max).trim();
 
@@ -19,6 +21,11 @@ export function roundResult(text: string, { failed = false, met = false } = {}):
   return parsed ?? { outcome: 'progress', line: firstSentence(text) };
 }
 
+// A blocked or question round, or a pause for approval, until a later round or a message from the user.
+const mark = (r: ChatRun) => {
+  r.needsYou = r.state !== 'done' && (Boolean(r.asked) || (r.state === 'paused' && r.why === WAITING));
+};
+
 // All runs of the host. Active ones and the latest ended ones are saved to file, each with its last rounds.
 export class Runs {
   private runs: ChatRun[];
@@ -27,6 +34,7 @@ export class Runs {
   constructor(private file: string | null = null, private onChange: () => void = () => {}, private onEnd: (run: ChatRun) => void = () => {}) {
     const saved = file ? readJsonSync<unknown>(file, []) : [];
     this.runs = Array.isArray(saved) ? saved.filter((r): r is ChatRun => typeof r?.id === 'string' && Array.isArray(r.rounds)) : [];
+    for (const r of this.runs) mark(r);
   }
 
   list() {
@@ -43,7 +51,7 @@ export class Runs {
   }
 
   start(init: NewRun) {
-    const run: ChatRun = { round: 0, max: 0, nextAt: null, ...init, id: randomUUID(), startedAt: Date.now(), endedAt: null, state: 'running', why: '', costUsd: 0, rounds: [] };
+    const run: ChatRun = { round: 0, max: 0, nextAt: null, ...init, id: randomUUID(), startedAt: Date.now(), endedAt: null, state: 'running', why: '', costUsd: 0, rounds: [], needsYou: false };
     this.runs.push(run);
     this.touch();
     return run.id;
@@ -66,6 +74,7 @@ export class Runs {
     if (!run || run.state === 'done') return;
     run.rounds.push({ ...round, at: Date.now() });
     run.costUsd += round.costUsd;
+    run.asked = round.outcome === 'blocked' || round.outcome === 'question';
     this.touch();
   }
 
@@ -75,6 +84,13 @@ export class Runs {
     Object.assign(run, { state: 'done', why, endedAt: Date.now(), nextAt: null });
     this.touch();
     this.onEnd(run);
+  }
+
+  // A message from the user in the chat answers a blocked or question round.
+  answer(chatId: string) {
+    const asked = this.runs.filter((r) => r.chatId === chatId && r.asked);
+    for (const r of asked) r.asked = false;
+    if (asked.length) this.touch();
   }
 
   // A stopped run starts again with its rounds and cost.
@@ -101,6 +117,7 @@ export class Runs {
     const drop = new Set(ended.slice(KEEP_ENDED));
     this.runs = this.runs.filter((r) => !drop.has(r));
     for (const r of this.runs) if (r.rounds.length > KEEP_ROUNDS) r.rounds = r.rounds.slice(-KEEP_ROUNDS);
+    for (const r of this.runs) mark(r);
     this.onChange();
     if (this.file && !this.timer) {
       this.timer = setTimeout(() => this.flush(), SAVE_MS);

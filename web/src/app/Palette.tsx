@@ -64,6 +64,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     ...PERMISSION_MODES.map((m) => ({ id: `mode:${m}`, label: `Permission Mode: ${MODES[m] ?? m}` })),
     { id: 'compact', label: 'Chat: Compact Context' },
     { id: 'loop', label: 'Chat: Toggle Build Cycle' },
+    { id: 'goal', label: 'Chat: Start a standing goal' },
     { id: 'stop', label: 'Chat: Stop Claude' },
     { id: 'theme', label: 'Preferences: Toggle Theme' },
     { id: 'notify', label: 'Preferences: Toggle Notifications' },
@@ -207,6 +208,7 @@ function perform(id: string) {
   }
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
   else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });
+  else if (id === 'goal') window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: '/goal every 1h ' } }));
   else if (id === 'stop') send({ type: 'interrupt' });
   else if (id === 'restart') send({ type: 'restart' });
   else if (id === 'file') setUi({ switcherOpen: true });

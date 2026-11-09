@@ -349,6 +349,16 @@ keep the loop; `/loop off` ends it. The loop card above the composer shows the r
 Claude replies GOAL MET to end it; the check also stops by itself after 20 rounds. `/goal off` ends it early, and
 the loop card shows the check count the way it shows loop rounds.
 
+`/goal every 1h <condition>` (30m, 2h, 4h or any interval from 30m up to 7 days) starts a standing goal that works on a
+heartbeat: each interval Claude reads where things stand, does what moves the goal forward without you, and asks as a
+question anything irreversible or outward-facing (push, deploy, delete, send a message) instead of doing it. A heartbeat
+is skipped, with no turn and no round, while Claude is busy, a permission or question is pending or the run is paused.
+There is no check cap: the goal ends on GOAL MET, on Stop, or after 28 days ("ran for 28 days, start it again to
+continue"). The card and the Runs row read "Standing goal · every 1h · at most 24 rounds a day". Every 7 days one
+heartbeat writes a short weekly report (what moved, what is blocked, what is next, at most 8 lines), recorded as a
+progress round; the card and the Runs row show "Weekly report", which jumps to that turn in the chat. "Chat: Start a
+standing goal" in the palette fills the composer with `/goal every 1h `.
+
 Every `/loop`, `/goal` and build cycle is a run, kept in the host in `~/.agentview/runs.json` (active runs and the
 latest 100 ended ones, each with its last 50 rounds) and served at `GET /api/runs`. A round is the outcome of one turn,
 its one-line summary and its cost. Loop rounds and goal checks end with an instruction to finish the reply with
@@ -367,8 +377,8 @@ cycle only has Stop ("Build cycle stopped", no Undo). The controls take a run id
 that ends its run (goal met, last check, end time) sends only the run-end push.
 
 The Runs view (activity bar, `?view=runs`) lists every run in three bands. Needs you holds active runs whose last round
-is blocked or a question, or that are paused for your approval, until a later round or a message from you in that chat,
-plus hub jobs whose last run failed. Running holds the other active and paused runs plus jobs that are running or
+is blocked or a question, or that are paused for your approval, until a later round or a message from you in that chat
+(the server decides this, so web and phone agree), plus hub jobs whose last run failed. Running holds the other active and paused runs plus jobs that are running or
 queued. Finished (collapsed) holds the latest 30 ended runs. A row is the title, the state line, the last outcome with
 its dot and the cost; a chat run opens its chat and a job opens its job page. Sessions and Open chats rows of a chat with
 an active run show the loop icon with the next time, "Paused" or "Needs you" in warn. The status bar shows "N running"

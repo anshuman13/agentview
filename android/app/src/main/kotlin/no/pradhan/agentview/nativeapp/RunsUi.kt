@@ -56,7 +56,7 @@ private fun RoundLine(r: Round, showTime: Boolean) {
     Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
         if (showTime) Text(clock(r.at), style = Type.footnote, color = av.fgMuted)
         StatusDot(outcomeDot(r.outcome))
-        Text(r.line.ifEmpty { r.outcome }, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(roundText(r), Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (showTime) Text(money(r.costUsd), style = Type.footnote, color = av.fgMuted)
     }
 }
@@ -92,7 +92,7 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
             val last = e.run.rounds.lastOrNull()
             ListRow(
                 e.run.title.ifBlank { "Untitled" }, runLine(e.run), onClick = { openChat(e.run) },
-                below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(it.line.ifEmpty { it.outcome }, style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+                below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(roundText(it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
                 trailing = { RowLabel(money(e.run.costUsd)) },
             )
         }

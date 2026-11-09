@@ -7,7 +7,6 @@ import { command, save, spendLines, stored, weekPace } from '../ui/util';
 import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from './offlineBanner';
 import { useMcpHealth } from '../ops/mcpShown';
 import { Badge } from '../ui/Badge';
-import { lastUserAt, needsYou } from '../sessions/runBands';
 
 export function AppUpdate() {
   const [ready, setReady] = useState(0);
@@ -78,7 +77,7 @@ export function McpItem() {
 
 export function RunsItem() {
   const running = useStore((s) => s.runs.filter((r) => r.state !== 'done').length);
-  const needs = useStore((s) => s.runs.filter((r) => needsYou(r, r.chatId === s.session.id ? lastUserAt(s.events) : 0)).length);
+  const needs = useStore((s) => s.runs.filter((r) => r.needsYou).length);
   if (!running) return null;
   return (
     <button className="item clickable" title="Loops and goals" onClick={() => command('view:runs')}>

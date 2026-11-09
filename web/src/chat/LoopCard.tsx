@@ -7,7 +7,7 @@ import { Menu, MenuItem } from '../ui/Menu';
 import { Panel } from '../ui/Panel';
 import { money } from '../ui/util';
 import type { RunOp } from '../../../shared/protocol';
-import { OUTCOME_DOT, runLine, stoppedText } from './composerLogic';
+import { OUTCOME_DOT, runLine, showTurn, stoppedText } from './composerLogic';
 
 export function LoopCard() {
   const chat = useStore((s) => s.session.id);
@@ -21,6 +21,7 @@ export function LoopCard() {
   const cycle = run.kind === 'cycle';
   const paused = run.state === 'paused';
   const last = run.rounds.at(-1);
+  const report = run.rounds.filter((r) => r.report).at(-1);
   const stop = () => {
     control('stop');
     showSnack(stoppedText(run), cycle ? undefined : () => control('restore'));
@@ -49,6 +50,7 @@ export function LoopCard() {
           <span className="lc-what">{last.line || last.outcome}</span>
         </button>
       )}
+      {report && <button className="lc-line lc-last" onClick={() => showTurn(report.report!)}><span className="lc-time">{clock(report.at)}</span><span className="lc-what">Weekly report</span></button>}
       {open && (
         <ul className="lc-rounds">
           {run.rounds.slice(-10).reverse().map((r) => (
