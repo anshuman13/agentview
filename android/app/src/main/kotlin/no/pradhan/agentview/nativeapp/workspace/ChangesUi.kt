@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +61,10 @@ import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.color
 
+private class GitOps(private val hub: Hub, private val reload: () -> Unit, val onDiscard: (List<GitFile>) -> Unit, val onReview: (GitFile) -> Unit) {
+    fun run(action: String, body: String, done: () -> Unit = {}) = hub.write("/api/git/$action", body, "Could not $action") { if (it) done(); reload() }
+}
+
 // Source Control (web/src/workspace/Changes.tsx): branch, commit box, staged and unstaged files, a file opens as its diff.
 @Composable
 fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
@@ -67,7 +73,8 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var pager by rememberSaveable(chat) { mutableStateOf<List<String>?>(null) }
     var reviewed by rememberSaveable(chat) { mutableStateOf(listOf<String>()) }
-    var message by rememberSaveable(chat) { mutableStateOf("") }
+    val message = rememberSaveable(chat) { mutableStateOf("") }
+    val shownPatch = rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var ask by androidx.compose.runtime.remember { mutableStateOf<List<GitFile>?>(null) }
     val o = open
     if (o != null) { FileScreen(hub, o, onBack = { open = null }); return }
@@ -83,86 +90,96 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
         return
     }
     val (branchLoad, reloadBranch) = rememberLoad(chat) { parseBranchDiff(hub.read("/api/git/branch")) }
-    var shownPatch by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     WhileStarted(chat) { while (true) { delay(5000); reload() } }
-    val status = load.data
-    val files = status?.files ?: emptyList()
-    val staged = files.filter { it.staged }
-    val changes = files.filter { !it.staged }
+    val files = load.data?.files ?: emptyList()
     val review = files.map { it.path }.distinct()
-    val openReview = { f: GitFile -> pager = listOf(review.indexOf(f.path).toString()) + review }
-    fun run(action: String, body: String, done: () -> Unit = {}) = hub.write("/api/git/$action", body, "Could not $action") { if (it) done(); reload() }
+    val ops = GitOps(hub, reload, { ask = it }) { f -> pager = listOf(review.indexOf(f.path).toString()) + review }
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Source Control", onBack) {
             IconBtn("refresh", "Refresh", { reload(); reloadBranch() })
             MoreButton { close ->
-                MenuItem("Write message with Claude", "sparkle", { close(); hub.askClaude(DRAFT_PROMPT) }, enabled = staged.isNotEmpty())
+                MenuItem("Write message with Claude", "sparkle", { close(); hub.askClaude(DRAFT_PROMPT) }, enabled = files.any { it.staged })
                 MenuItem("Review changes with Claude", "sparkle", { close(); hub.askClaude(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
             }
         }
-        PageBody {
-            LazyColumn(Modifier.fillMaxSize()) {
-                item {
-                    Group(Modifier.padding(top = Tokens.sp4)) {
-                        val ab = listOfNotNull(status?.behind?.takeIf { it > 0 }?.let { "$it behind" }, status?.ahead?.takeIf { it > 0 }?.let { "$it ahead" }).joinToString(" · ")
-                        ListRow(status?.branch?.ifEmpty { null } ?: if (status == null) "Loading…" else "No branch", ab.ifEmpty { null }, lines = 1)
-                    }
-                }
-                item {
-                    Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp8)) {
-                        TextField(message, { message = it }, placeholder = "Message${status?.branch?.let { " (commit on $it)" } ?: ""}", minLines = 1, maxLines = 6)
-                        Button("Commit", { run("commit", commitBody(message)) { message = "" } }, variant = ButtonVariant.Filled, enabled = staged.isNotEmpty() && message.isNotBlank(), fill = true)
-                    }
-                }
-                item { ErrorHint(load.error) }
-                if (staged.isNotEmpty()) {
-                    item {
-                        SectionHeader("Staged Changes", staged.size.toString(), action = {
-                            MoreButton { close -> MenuItem("Unstage All Changes", "remove", { close(); run("unstage", pathsBody(staged)) }) }
-                        })
-                    }
-                    item { FileGroup(staged, onOpen = openReview) { f, close -> MenuItem("Unstage Changes", "remove", { close(); run("unstage", pathsBody(listOf(f))) }) } }
-                }
-                if (changes.isNotEmpty()) {
-                    item {
-                        SectionHeader("Changes", changes.size.toString(), action = {
-                            MoreButton { close ->
-                                MenuItem("Stage All Changes", "add", { close(); run("stage", pathsBody(changes)) })
-                                MenuItem("Discard All Changes", "discard", { close(); ask = changes }, danger = true)
-                            }
-                        })
-                    }
-                    item {
-                        FileGroup(changes, onOpen = openReview) { f, close ->
-                            MenuItem("Stage Changes", "add", { close(); run("stage", pathsBody(listOf(f))) })
-                            MenuItem("Discard Changes", "discard", { close(); ask = listOf(f) }, danger = true)
-                        }
-                    }
-                }
-                if (status != null && files.isEmpty()) item { EmptyState("No changes", icon = "source-control", small = false) }
-                branchLoad.data?.takeIf { it.files.isNotEmpty() }?.let { b ->
-                    val patches = splitDiff(b.diff)
-                    item { SectionHeader("Committed since ${b.base}", b.files.size.toString()) }
-                    item {
-                        Group {
-                            b.files.forEachIndexed { i, f ->
-                                if (i > 0) Hairline(lead = true)
-                                val name = f.path.substringAfterLast('/')
-                                val shown = shownPatch == f.path
-                                ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.add, f.del) }, onClick = { shownPatch = if (shown) null else f.path })
-                                if (shown) PatchView(patches[f.path] ?: if (b.diff.isEmpty()) "Diff too large to show" else "No diff", f.path)
-                            }
-                        }
-                    }
-                }
-                item { Column { Findings(hub, "local") { open = it.file } } }
-                item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
-            }
-        }
+        PageBody { ChangesList(hub, load, branchLoad.data, ops, message, shownPatch) { open = it } }
     }
     ask?.let { list ->
-        ConfirmDialog(discardTitle(list), discardDetail(list), if (list.any { it.status == "?" }) "Discard and Delete" else "Discard", { run("discard", pathsBody(list)) }, onDismiss = { ask = null })
+        ConfirmDialog(discardTitle(list), discardDetail(list), if (list.any { it.status == "?" }) "Discard and Delete" else "Discard", { ops.run("discard", pathsBody(list)) }, onDismiss = { ask = null })
+    }
+}
+
+@Composable
+private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, ops: GitOps, message: MutableState<String>, shownPatch: MutableState<String?>, onOpenFile: (String) -> Unit) {
+    val status = load.data
+    val files = status?.files ?: emptyList()
+    val staged = files.filter { it.staged }
+    val changes = files.filter { !it.staged }
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Group(Modifier.padding(top = Tokens.sp4)) {
+                val ab = listOfNotNull(status?.behind?.takeIf { it > 0 }?.let { "$it behind" }, status?.ahead?.takeIf { it > 0 }?.let { "$it ahead" }).joinToString(" · ")
+                ListRow(status?.branch?.ifEmpty { null } ?: if (status == null) "Loading…" else "No branch", ab.ifEmpty { null }, lines = 1)
+            }
+        }
+        item {
+            Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp8)) {
+                TextField(message.value, { message.value = it }, placeholder = "Message${status?.branch?.let { " (commit on $it)" } ?: ""}", minLines = 1, maxLines = 6)
+                Button("Commit", { ops.run("commit", commitBody(message.value)) { message.value = "" } }, variant = ButtonVariant.Filled, enabled = staged.isNotEmpty() && message.value.isNotBlank(), fill = true)
+            }
+        }
+        item { ErrorHint(load.error) }
+        stagedSection(staged, ops)
+        changesSection(changes, ops)
+        if (status != null && files.isEmpty()) item { EmptyState("No changes", icon = "source-control", small = false) }
+        branch?.takeIf { it.files.isNotEmpty() }?.let { committedSection(it, shownPatch) }
+        item { Column { Findings(hub, "local") { onOpenFile(it.file) } } }
+        item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
+    }
+}
+
+private fun LazyListScope.stagedSection(staged: List<GitFile>, ops: GitOps) {
+    if (staged.isEmpty()) return
+    item {
+        SectionHeader("Staged Changes", staged.size.toString(), action = {
+            MoreButton { close -> MenuItem("Unstage All Changes", "remove", { close(); ops.run("unstage", pathsBody(staged)) }) }
+        })
+    }
+    item { FileGroup(staged, onOpen = ops.onReview) { f, close -> MenuItem("Unstage Changes", "remove", { close(); ops.run("unstage", pathsBody(listOf(f))) }) } }
+}
+
+private fun LazyListScope.changesSection(changes: List<GitFile>, ops: GitOps) {
+    if (changes.isEmpty()) return
+    item {
+        SectionHeader("Changes", changes.size.toString(), action = {
+            MoreButton { close ->
+                MenuItem("Stage All Changes", "add", { close(); ops.run("stage", pathsBody(changes)) })
+                MenuItem("Discard All Changes", "discard", { close(); ops.onDiscard(changes) }, danger = true)
+            }
+        })
+    }
+    item {
+        FileGroup(changes, onOpen = ops.onReview) { f, close ->
+            MenuItem("Stage Changes", "add", { close(); ops.run("stage", pathsBody(listOf(f))) })
+            MenuItem("Discard Changes", "discard", { close(); ops.onDiscard(listOf(f)) }, danger = true)
+        }
+    }
+}
+
+private fun LazyListScope.committedSection(b: BranchDiff, shownPatch: MutableState<String?>) {
+    val patches = splitDiff(b.diff)
+    item { SectionHeader("Committed since ${b.base}", b.files.size.toString()) }
+    item {
+        Group {
+            b.files.forEachIndexed { i, f ->
+                if (i > 0) Hairline(lead = true)
+                val name = f.path.substringAfterLast('/')
+                val shown = shownPatch.value == f.path
+                ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.add, f.del) }, onClick = { shownPatch.value = if (shown) null else f.path })
+                if (shown) PatchView(patches[f.path] ?: if (b.diff.isEmpty()) "Diff too large to show" else "No diff", f.path)
+            }
+        }
     }
 }
 
