@@ -155,6 +155,9 @@ export function readDraft(chat: string) {
   }
 }
 
+// The first non-empty line of a draft, for the sidebar's Draft: line.
+export const draftLine = (text: string) => text.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+
 export function saveDraft(chat: string, text: string) {
   try {
     if (text) localStorage.setItem(draftKey(chat), text);

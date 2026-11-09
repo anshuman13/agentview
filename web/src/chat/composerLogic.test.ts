@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stampedNotes } from '../codex/data/meetings';
 import type { Meeting } from '../codex/data/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine } from './composerLogic';
 import type { ChatEvent, SavedSession } from '../../../shared/protocol';
 
 let n = 0;
@@ -235,5 +235,12 @@ describe('replyNote', () => {
   it('puts the chat title first and picks the profile from the folder', () => {
     expect(replyNote(' Fixed. ', 'Importer', '/Users/me/workspace_personal/app')).toEqual({ text: 'Importer\nFixed.', profile: 'personal' });
     expect(replyNote('Fixed.', '', '/Users/me/workspace/app')).toEqual({ text: 'Saved reply\nFixed.', profile: 'work' });
+  });
+});
+
+describe('draftLine', () => {
+  it('takes the first non-empty line, trimmed', () => {
+    expect(draftLine('\n  fix the login \nand more')).toBe('fix the login');
+    expect(draftLine('  \n ')).toBe('');
   });
 });

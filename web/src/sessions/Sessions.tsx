@@ -22,6 +22,7 @@ import { Badge } from '../ui/Badge';
 import { RepoRow } from './RepoRow';
 import { Swipe } from '../codex/Swipe';
 import { showSnack } from '../codex/view';
+import { draftLine, readDraft } from '../chat/composerLogic';
 
 const PAGE = 5;
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -595,7 +596,9 @@ function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin
   const seen = useStore((s) => s.seen);
   const line = chatLine(c, events);
   const when = c.pending ? since(c.lastActive) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : since(Math.max(c.lastActive, saved?.lastModified ?? 0));
-  const meta = (
+  // Slack's sidebar draft line: an unsent composer draft replaces the meta line, except in the chat you are in.
+  const draft = selected ? '' : draftLine(readDraft(c.id));
+  const meta = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
     <>
       {metaLine(repo, branchOf(saved?.gitBranch, branch), when)}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
