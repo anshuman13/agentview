@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../app/store';
 import { QuickPick } from '../../ui/QuickPick';
+import { fetchTodos } from '../chatApi';
 
 export type Todo = { path: string; line: number; text?: string; ai?: string | null };
 
@@ -18,7 +18,7 @@ const todoTitle = (t: Todo) => `${t.ai ? `AI${t.ai} ` : ''}${t.text || 'TODO'}`;
 export function TodosPick({ anchor, onClose }: { anchor: DOMRect; onClose: () => void }) {
   const [todos, setTodos] = useState<Todo[] | null>(null);
   useEffect(() => {
-    fetch(api('/api/git/todos')).then((r) => r.json()).then((r: { todos?: Todo[] }) => setTodos(Array.isArray(r?.todos) ? r.todos : [])).catch(() => setTodos([]));
+    fetchTodos().then((r: { todos?: Todo[] }) => setTodos(Array.isArray(r?.todos) ? r.todos : [])).catch(() => setTodos([]));
   }, []);
   const items = todos === null ? [{ value: '', label: 'Looking for TODOs…' }] : todos.length ? todos.map((t, i) => ({ value: String(i), label: todoTitle(t), detail: `${t.path}:${t.line}` })) : [{ value: '', label: 'No TODO, FIXME or AI! comments in tracked files' }];
   return (

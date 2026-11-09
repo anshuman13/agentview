@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import '../styles/index.css';
 import { Guard } from './shell/Guard';
 import { touch } from './touch/touch';
-import { api } from './store';
+import { openExternal } from './shell/macApi';
 import { DesignPage } from './lazy';
 
 const App = lazy(() => import('./shell/App').then((m) => ({ default: m.App })));
@@ -20,7 +20,7 @@ if (/Macintosh/.test(navigator.userAgent) && !/Safari\//.test(navigator.userAgen
     const a = e.target instanceof Element ? e.target.closest('a[href]') : null;
     if (!(a instanceof HTMLAnchorElement) || e.defaultPrevented || e.button !== 0 || !/^https?:$/.test(a.protocol) || a.origin === location.origin) return;
     e.preventDefault();
-    void fetch(api('/api/open'), { method: 'POST', body: JSON.stringify({ url: a.href }) });
+    openExternal(a.href);
   });
 }
 

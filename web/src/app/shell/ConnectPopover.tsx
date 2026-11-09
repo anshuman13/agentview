@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Icon } from '../../ui/Icon';
 import QRCode from 'qrcode';
 import { useEscape } from '../../ui/util';
-import { apiUrl, macPort } from '../api';
+import { macPort } from '../api';
+import { connectInfo } from './macApi';
 
 export function ConnectPopover({ onClose }: { onClose: () => void }) {
   const [urls, setUrls] = useState<string[] | null>(null);
@@ -11,9 +12,8 @@ export function ConnectPopover({ onClose }: { onClose: () => void }) {
   const [apk, setApk] = useState(false);
 
   useEffect(() => {
-    fetch(apiUrl(`/api/connect?peer=1&port=${macPort()}`))
-      .then((r) => r.json())
-      .then((d: { urls: string[] }) => setUrls(d.urls))
+    connectInfo<{ urls: string[] }>(`peer=1&port=${macPort()}`)
+      .then((d) => setUrls(d.urls))
       .catch((e) => setError(String(e)));
   }, []);
 

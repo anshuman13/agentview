@@ -1,6 +1,7 @@
 import { Component, Fragment, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { EditorView } from '@codemirror/view';
 import { api, setUi, useStore } from '../app/store';
+import { fileRequest } from './fileApi';
 import { Icon } from '../ui/Icon';
 import { FileIcon } from './FileIcon';
 import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
@@ -29,7 +30,7 @@ function useFile(path: string | null, bump: unknown, paused = false) {
   useEffect(() => {
     if (!path || hold.current) return;
     let cancelled = false;
-    fetch(api(`/api/file?path=${encodeURIComponent(path)}`))
+    fileRequest(path)
       .then((r) => r.json())
       .then((d: { content?: string; original?: string; image?: boolean; binary?: boolean; error?: string }) => {
         if (cancelled) return;
@@ -130,7 +131,7 @@ export function CodePane() {
     if (!openFile) return;
     setSaving('saving');
     try {
-      const r = await fetch(api(`/api/file?path=${encodeURIComponent(openFile)}`), { method: 'PUT', body: text });
+      const r = await fileRequest(openFile, { method: 'PUT', body: text });
       if (!r.ok) throw new Error(await r.text());
       setDirty(false);
       setSaving('saved');

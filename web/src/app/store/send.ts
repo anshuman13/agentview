@@ -4,6 +4,7 @@ import { cid, getState, notice, set, uid } from './core';
 import { markSeen } from './seen';
 import { showCached } from './view';
 import { connect } from './stream';
+import { postCommand } from './storeApi';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -13,7 +14,7 @@ async function post(m: ClientMessage, tries = 1, chat = getState().session.id): 
   const url = apiUrl(`/api/cmd?cid=${cid}&chat=${encodeURIComponent(chat)}`);
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m), signal: AbortSignal.timeout(10_000) });
+      const r = await postCommand(url, m);
       if (r.ok) return true;
       // The server has no stream for this tab; reopen it and try again.
       if (r.status === 409 && i + 1 < tries) {

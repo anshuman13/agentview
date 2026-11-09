@@ -1,6 +1,7 @@
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 import { prependPage } from '../runtime/pageEvents';
-import { api, getState, notice, set } from './core';
+import { getState, notice, set } from './core';
+import { fetchEarlier } from './storeApi';
 
 // The last rows of the most recently viewed chats, so switching back shows them before the server's init arrives.
 const CACHED_CHATS = 8;
@@ -38,7 +39,7 @@ export async function loadEarlier() {
   if (!first || view.shownId !== chat) return false;
   const stale = () => getState().session.id !== chat || view.boot !== was || Boolean(getState().ui.restarting);
   try {
-    const r = await fetch(api(`/api/chat/events?before=${encodeURIComponent(first)}&limit=${ROW_WINDOW}`));
+    const r = await fetchEarlier(first, ROW_WINDOW);
     const body = await r.json();
     if (stale()) return false;
     if (!r.ok) throw new Error(body.error ?? `${r.status} ${r.statusText}`);

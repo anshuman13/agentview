@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { api, setUi, useStore } from '../app/store';
+import { setUi, useStore } from '../app/store';
+import { listFiles } from './fileApi';
 import { useOpened } from './opened';
 import { FileIcon } from './FileIcon';
 import { touch } from '../app/touch/touch';
@@ -25,8 +26,7 @@ export function FileSwitcher() {
     setQ('');
     setIdx(0);
     setFiles(cache.get(cwd) ?? []);
-    fetch(api('/api/files'))
-      .then((r) => r.json())
+    listFiles()
       .then((f: string[]) => {
         cache.set(cwd, f);
         if (live) setFiles(f);

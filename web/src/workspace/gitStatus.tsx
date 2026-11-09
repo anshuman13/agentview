@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import type { GitStatus } from '../../../shared/protocol';
-import { api, useStore } from '../app/store';
+import { useStore } from '../app/store';
 import { createStore } from '../ui/createStore';
+import { fetchGitStatus } from './fileApi';
 
 const git = createStore<{ status: GitStatus | null; error: string }>({ status: null, error: '' });
 export const useGit = () => git.use();
@@ -10,7 +11,7 @@ let seq = 0;
 export async function refresh() {
   const n = ++seq;
   try {
-    const r = await fetch(api('/api/git/status'));
+    const r = await fetchGitStatus();
     const d = await r.json().catch(() => null);
     if (n !== seq) return;
     git.set(r.ok && d ? { status: d, error: '' } : { status: null, error: d?.error ?? `Request failed (${r.status})` });

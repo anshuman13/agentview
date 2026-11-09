@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { apiUrl } from '../app/api';
+import { deleteRequest } from './sessionApi';
 import { notice } from '../app/store';
 import { Icon } from '../ui/Icon';
 import type { ConfirmRequest } from '../ui/Confirm';
@@ -28,7 +28,7 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
     warning: 'The transcripts are removed permanently.',
     action: 'Empty bin',
     run: async () => {
-      const r = await fetch(apiUrl('/api/sessions/bin'), { method: 'DELETE' }).catch(() => null);
+      const r = await deleteRequest('/api/sessions/bin');
       if (!r?.ok) return notice('Could not empty the bin');
       setList([]);
     },

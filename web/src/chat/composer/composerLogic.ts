@@ -3,6 +3,7 @@ import { match } from '../../workspace/FileSwitcher';
 import { toolId } from '../../ops/mcpHelpers';
 import { COMPACT_AT, type Account, type ChatEvent, type ChatRun, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
 import { apiUrl, fetchJson } from '../../app/api';
+import { createTerm, listTerms } from '../../workspace/termApi';
 import { clock, isBlock, span } from '../../../../shared/util';
 import { timedMeetings } from '../../../../shared/plan';
 import { live, type Meeting } from '../../codex/data/wiki/wiki';
@@ -168,12 +169,12 @@ export const fileCache = new Map<string, string[]>();
 
 export async function terminalId(url: (path: string) => string): Promise<string | null> {
   try {
-    const listed = await fetch(url('/api/terms'));
+    const listed = await listTerms(url('/api/terms'));
     if (!listed.ok) return null;
     const list: Array<{ id: string }> = await listed.json();
     let term = list.at(-1);
     if (!term) {
-      const created = await fetch(url('/api/terms'), { method: 'POST' });
+      const created = await createTerm(url('/api/terms'));
       if (!created.ok) return null;
       term = await created.json();
     }

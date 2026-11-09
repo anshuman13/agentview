@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, useStore } from '../app/store';
 import { fetchJson } from '../app/api';
+import { fetchDeployJob, fetchDeployStatus } from './opsApi';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
@@ -37,8 +38,7 @@ export function track(cwd: string, job: DeployJob, every = 3000) {
   if (job.done) return;
   setTimeout(() => {
     if (jobs.get()[cwd]?.id !== job.id) return;
-    fetch(api(`/api/deploy/job/${job.id}`))
-      .then((r) => r.json())
+    fetchDeployJob(job.id)
       .then((j) => track(cwd, j.error ? { ...job, done: true, lines: [...job.lines, j.error] } : j, every))
       .catch(() => track(cwd, job, every));
   }, every);
@@ -112,8 +112,7 @@ export function Deploy() {
   const load = () => {
     const n = ++seq.current;
     setLoading(true);
-    fetch(api(`/api/deploy/status${app ? `?app=${encodeURIComponent(app)}` : ''}`))
-      .then((r) => r.json())
+    fetchDeployStatus(app)
       .then((r) => n === seq.current && (r.error ? (setError(r.error), setStatus(null)) : (setError(''), setStatus(r))))
       .catch((e) => n === seq.current && setError(String(e)))
       .finally(() => n === seq.current && setLoading(false));

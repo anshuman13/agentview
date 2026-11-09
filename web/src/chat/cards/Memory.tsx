@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { appendRule } from '../../../../shared/steering';
-import { api, setUi } from '../../app/store';
+import { setUi } from '../../app/store';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
 import { Sheet } from '../../ui/Sheet';
+import { fileRequest } from '../../workspace/fileApi';
 import { Markdown } from '../Chat';
+import { fetchMemory } from '../chatApi';
 
 type MemoryFile = { path: string; name: string; description: string; text: string };
 
@@ -17,16 +19,15 @@ export function memoryWhere(f: Pick<MemoryFile, 'path'>, cwd: string) {
 }
 
 const REPO_FILE = 'CLAUDE.md';
-const fileUrl = () => api(`/api/file?path=${REPO_FILE}`);
 
 async function readRepoFile(): Promise<string> {
-  const r = await fetch(fileUrl());
+  const r = await fileRequest(REPO_FILE);
   if (!r.ok) throw new Error(await r.text());
   return (await r.json()).content ?? '';
 }
 
 async function writeRepoFile(text: string) {
-  const r = await fetch(fileUrl(), { method: 'PUT', body: text });
+  const r = await fileRequest(REPO_FILE, { method: 'PUT', body: text });
   if (!r.ok) throw new Error(await r.text());
 }
 
@@ -73,7 +74,7 @@ export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void 
   const [open, setOpen] = useState<MemoryFile | null>(null);
   const [reloads, setReloads] = useState(0);
   useEffect(() => {
-    fetch(api('/api/memory')).then((r) => r.json()).then((l: MemoryFile[]) => setFiles(Array.isArray(l) ? l : [])).catch(() => setFiles([]));
+    fetchMemory().then((l: MemoryFile[]) => setFiles(Array.isArray(l) ? l : [])).catch(() => setFiles([]));
   }, [reloads]);
   if (open) {
     const edit = () => { setUi({ openFile: REPO_FILE, openEdit: true, follow: false }); onClose(); };

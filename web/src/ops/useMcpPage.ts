@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { McpServer } from '../../../shared/protocol';
-import { getState, send, notice, api } from '../app/store';
+import { getState, send, notice } from '../app/store';
 import { post } from './mcpActions';
+import { fetchMcpConnectors, fetchMcpGroups, fetchMcpProbe } from './opsApi';
 import type { Group } from './mcpHelpers';
 import type { AccountConnectors } from './mcpRows';
 
@@ -18,15 +19,14 @@ export function useMcpProbe(account: string, id: string) {
     setBusy(true);
     setError('');
     send({ type: 'mcp_status' });
-    fetch(api(`/api/mcp/connectors${refresh ? '?refresh=1' : ''}`)).then((r) => r.json()).then((a) => {
+    fetchMcpConnectors(refresh).then((a) => {
       if (n !== seq.current || !a || a.error) return;
       setAccounts(a);
       // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
       const loggedIn = new Set((a[account] ?? []).filter((c: { status: string }) => c.status === 'connected').map((c: { name: string }) => c.name));
       for (const m of getState().session.mcp) if (m.type === 'claudeai' && m.status === 'needs-auth' && loggedIn.has(m.name)) send({ type: 'mcp_reconnect', name: m.name });
     }, () => undefined);
-    fetch(api(`/api/mcp/probe${refresh ? '?refresh=1' : ''}`))
-      .then((r) => r.json())
+    fetchMcpProbe(refresh)
       .then((p) => {
         if (n !== seq.current) return;
         if (Array.isArray(p)) { setProbed(p); setAt(Date.now()); } else setError(p?.error ?? 'Probe failed');
@@ -40,7 +40,7 @@ export function useMcpProbe(account: string, id: string) {
 export function useMcpGroups() {
   const [groups, setGroups] = useState<Record<string, Group | 'hidden'>>({});
   useEffect(() => {
-    fetch(api('/api/mcp/groups')).then((r) => r.json()).then((g) => g && typeof g === 'object' && setGroups(g), () => undefined);
+    fetchMcpGroups().then((g) => g && typeof g === 'object' && setGroups(g), () => undefined);
   }, []);
   const setGroup = (service: string, group: Group | 'hidden' | 'shown') => {
     const before = groups;

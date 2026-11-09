@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { api, setUi } from '../app/store';
+import { setUi } from '../app/store';
+import { listDir } from './fileApi';
 import { save, stored } from '../ui/util';
 
 export type Entry = { name: string; dir: boolean; hidden: boolean };
@@ -25,7 +26,7 @@ export function useFileTree(cwd: string, openFile: string | null, recent: string
 
   const fetchDir = (p: string) => {
     loading.current.add(p);
-    fetch(api(`/api/dir?path=${encodeURIComponent(p)}`))
+    listDir(p)
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)
       .then((list: Entry[] | null) => {

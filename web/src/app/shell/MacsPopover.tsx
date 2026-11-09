@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../../ui/Icon';
 import { stored, useEscape } from '../../ui/util';
-import { apiUrl, bundled, knownMacs, macPort, macUrl, setApiBase, trusted, useApiBase } from '../api';
+import { bundled, knownMacs, macPort, macUrl, setApiBase, trusted, useApiBase } from '../api';
 import { switchedMac } from '../store';
-import { loadMacName, useMacName, type Connect, type Mac } from './macName';
+import { connectInfo, pingMac } from './macApi';
+import { loadMacName, useMacName, type Mac } from './macName';
 
 export async function reachable(url: string) {
   try {
-    await fetch(`${url}/api/connect?peer=1`, { mode: 'no-cors', signal: AbortSignal.timeout(4000) });
+    await pingMac(url);
     return true;
   } catch {
     return false;
@@ -73,9 +74,8 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
       });
     };
     const load = () =>
-      fetch(apiUrl(`/api/connect?port=${macPort()}`))
-        .then((r) => r.json())
-        .then((d: Connect) => {
+      connectInfo(`port=${macPort()}`)
+        .then((d) => {
           setMacs(others(d.macs ?? []));
           setNetbird(d.netbird ?? '');
         })

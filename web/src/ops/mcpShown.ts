@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
-import { api, useStore } from '../app/store';
+import { useStore } from '../app/store';
+import { fetchMcpGroups } from './opsApi';
 import { apiBase, useApiBase } from '../app/api';
 import { MCP_BAD } from '../../../shared/protocol';
 import { createStore } from '../ui/createStore';
@@ -13,7 +14,7 @@ function load(force = false) {
   const base = apiBase();
   if (!force && loadedFor === base) return;
   loadedFor = base;
-  fetch(api('/api/mcp/groups')).then((r) => r.json()).then((g) => {
+  fetchMcpGroups().then((g) => {
     if (base !== apiBase() || !g || typeof g !== 'object') return;
     groups.set(g);
   }, () => void (loadedFor === base && (loadedFor = null)));

@@ -1,4 +1,4 @@
-import { apiUrl } from '../app/api';
+import { createFolder } from './sessionApi';
 import { notice, send, setUi, useStore } from '../app/store';
 import { QuickPick } from '../ui/QuickPick';
 import { useWorkspace } from './folders';
@@ -23,7 +23,7 @@ export function RepoPicker() {
         close();
         if (!v.startsWith('create:')) return send({ type: 'new_session', cwd: v });
         const [, root, name] = v.split(':');
-        const r = await fetch(apiUrl('/api/folders'), { method: 'POST', body: JSON.stringify({ root, name }) }).catch(() => null);
+        const r = await createFolder(root, name);
         const body = await r?.json().catch(() => null);
         if (r?.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
         else notice(body?.error ?? 'Could not create the folder');

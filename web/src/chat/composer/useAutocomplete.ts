@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { api, getState, useStore } from '../../app/store';
+import { getState, useStore } from '../../app/store';
+import { listFiles } from '../../workspace/fileApi';
+import { fetchSavedSessions } from '../chatApi';
 import type { SavedSession } from '../../../../shared/protocol';
 import { chatQuery, fileCache, rankChats, rankCommands, rankFiles, triggerAt } from './composerLogic';
 
@@ -28,7 +30,7 @@ export function useAutocomplete(text: string, caret: number) {
     if (trigger?.kind !== 'file' || !cwd) return;
     let live = true;
     setFiles(fileCache.get(cwd) ?? []);
-    fetch(api('/api/files')).then((r) => r.json()).then((f: string[]) => { fileCache.set(cwd, f); if (live) setFiles(f); }).catch(() => {});
+    listFiles().then((f: string[]) => { fileCache.set(cwd, f); if (live) setFiles(f); }).catch(() => {});
     return () => void (live = false);
   }, [trigger?.kind, cwd]);
 
@@ -36,7 +38,7 @@ export function useAutocomplete(text: string, caret: number) {
   useEffect(() => {
     if (!wantChats) return;
     let live = true;
-    fetch(api('/api/sessions')).then((r) => r.json()).then((l: SavedSession[]) => { if (live && Array.isArray(l)) setChats(l); }).catch(() => {});
+    fetchSavedSessions().then((l: SavedSession[]) => { if (live && Array.isArray(l)) setChats(l); }).catch(() => {});
     return () => void (live = false);
   }, [wantChats]);
 

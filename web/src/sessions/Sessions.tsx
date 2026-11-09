@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { apiUrl } from '../app/api';
+import { deleteRequest } from './sessionApi';
 import { send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
@@ -67,7 +67,7 @@ export function Sessions() {
   };
 
   const call = async (url: string, fallback: string) => {
-    const r = await fetch(apiUrl(url), { method: 'DELETE' }).catch(() => null);
+    const r = await deleteRequest(url);
     if (!r?.ok) setError((await r?.json().catch(() => null))?.error ?? fallback);
     return !!r?.ok;
   };

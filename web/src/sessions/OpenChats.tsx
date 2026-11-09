@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, embedded, markSeen, notice, send, setUi, useStore } from '../app/store';
+import { embedded, markSeen, notice, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Chip, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
@@ -13,6 +13,7 @@ import { chatOrder, nextUnread, stepChat } from './chatNav';
 import { byUrgency, chatFinder, chatsByStatus, chatState, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, repoName, usePins, useWorkspace, type ChatState, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
+import { searchMessages } from './sessionApi';
 import { NeedsYou } from './NeedsYou';
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -223,7 +224,7 @@ function useMessageSearch(filter: string) {
     const q = filter.trim();
     if (q.length < 3) { setHits([]); return; }
     let live = true;
-    const t = setTimeout(() => fetch(api(`/api/sessions/search?q=${encodeURIComponent(q)}`)).then((r) => r.json()).then((l) => live && setHits(Array.isArray(l) ? l : []), () => live && setHits([])), 300);
+    const t = setTimeout(() => searchMessages(q).then((l) => live && setHits(Array.isArray(l) ? l : []), () => live && setHits([])), 300);
     return () => { live = false; clearTimeout(t); };
   }, [filter]);
   return hits;

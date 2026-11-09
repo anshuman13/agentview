@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../../ui/Icon';
-import { apiBase, apiUrl, macOrigin, shell } from '../api';
+import { apiBase, macOrigin, shell } from '../api';
+import { connectInfo } from './macApi';
 
 export type Mac = { name: string; url: string; running: number; self?: boolean };
 export type Connect = { hostname: string; macs: Mac[]; netbird?: string };
@@ -12,9 +13,8 @@ export function loadMacName() {
   hostname = '';
   listeners.forEach((f) => f(hostname));
   const base = apiBase();
-  fetch(apiUrl('/api/connect?peer=1'))
-    .then((r) => r.json())
-    .then((d: Connect) => {
+  connectInfo('peer=1')
+    .then((d) => {
       if (base !== apiBase()) return;
       hostname = d.hostname;
       shell()?.remember?.(macOrigin(), hostname);

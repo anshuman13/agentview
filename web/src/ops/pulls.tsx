@@ -1,21 +1,15 @@
 import { useEffect } from 'react';
 import type { CheckState, PullRequest } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
-import { api, useStore } from '../app/store';
+import { useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { createStore } from '../ui/createStore';
+import { call } from './opsApi';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
 const list = createStore<List>({ cwd: '', prs: [], error: '', loading: false });
 const setList = list.patch;
 export const useList = () => list.use();
-
-export async function call<T>(path: string, body?: object): Promise<T> {
-  const r = await fetch(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);
-  const data = await r.json().catch(() => ({ error: `Request failed (${r.status})` }));
-  if (!r.ok || data?.error) throw new Error(data?.error ?? `Request failed (${r.status})`);
-  return data;
-}
 
 let inflight = '';
 let latest = 0;

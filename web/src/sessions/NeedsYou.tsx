@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { api, notice, send, useStore } from '../app/store';
+import { notice, send, useStore } from '../app/store';
+import { attentionPost } from './sessionApi';
 import { Icon } from '../ui/Icon';
 import { ATTENTION_LABEL, type AttentionItem } from '../../../shared/protocol';
 import { ago, pressable } from '../ui/util';
@@ -17,11 +18,10 @@ export function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
   const [busy, setBusy] = useState<string | null>(null);
   if (n + items.length === 0) return null;
   const pullOf = (it: AttentionItem) => (it.cwd === cwd && PR_KINDS.has(it.kind) ? prs.find((p) => p.number === it.number) : undefined);
-  const post = (path: string, id: string) => fetch(api(path), { method: 'POST', body: JSON.stringify({ id }) }).then((r) => r.json());
   const ask = async (it: AttentionItem) => {
     setBusy(it.id);
     try {
-      const r = await post('/api/attention/ask', it.id);
+      const r = await attentionPost('/api/attention/ask', it.id);
       if (r.error) notice(r.error);
       else send({ type: 'view', id: r.id });
     } catch {
@@ -51,7 +51,7 @@ export function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
           </span>
           <span className="acts">
             <button className="icon-btn" title="Ask Claude to handle this" onClick={(e) => { e.stopPropagation(); void ask(it); }}><Icon name="sparkle" small /></button>
-            <button className="icon-btn" title="Dismiss until it changes" onClick={(e) => { e.stopPropagation(); post('/api/attention/dismiss', it.id).catch(() => notice('Could not dismiss. It stays in Needs you.')); }}><Icon name="close" small /></button>
+            <button className="icon-btn" title="Dismiss until it changes" onClick={(e) => { e.stopPropagation(); attentionPost('/api/attention/dismiss', it.id).catch(() => notice('Could not dismiss. It stays in Needs you.')); }}><Icon name="close" small /></button>
           </span>
         </div>
       ))}
