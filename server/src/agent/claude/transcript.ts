@@ -17,93 +17,127 @@ export function noteLaunch(agents: AgentIds, toolUseId: string, text: string) {
   if (id) agents.set(id, toolUseId);
 }
 
-export function historyFrom(msgs: SessionMessage[], subagents: Record<string, SessionMessage[]> = {}, workflows: WorkflowRun[] = []) {
-  const events: ChatEvent[] = [];
-  let context: number | null = null;
-  let cache: CacheInfo | null = null;
-  let lastText = '';
-  let lastAt = 0;
-  let inTurn = false;
-  const agents: AgentIds = new Map();
-  const agentUses = new Set<string>();
-  const usages = new Map<string, AgentUsage>();
-  const handedBack = new Set<string>();
-  const workflowCalls = new Map<string, { name: string; at: number }>();
-  const runCalls = new Map<string, string>();
-  let prev = '';
-  const endTurn = () => {
-    if (inTurn) events.push({ id: `${prev}:result`, kind: 'result', text: lastText, costUsd: 0, isError: false, at: lastAt });
-    inTurn = false;
-  };
-  for (const m of msgs) {
-    if (m.parent_tool_use_id) continue;
-    const at = stamp(m);
-    const base = m.uuid || randomUUID();
-    const content = (m.message as { content?: unknown })?.content;
-    const blocks: any[] = typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
-    for (const [i, b] of blocks.entries()) {
-      const id = `${base}:${i}`;
-      if (m.type === 'user' && b.type === 'text' && b.text.startsWith('<task-notification>')) {
-        const usage = usageFrom(b.text);
-        for (const e of notificationResults(b.text, at, agents, id)) {
-          if (e.kind !== 'tool_result') continue;
-          // A CLI restart reports an agent that already handed back as stopped.
-          if (e.stopped && handedBack.has(e.toolUseId)) continue;
-          if (usage) usages.set(e.toolUseId, usage);
-          events.push(subagents[e.toolUseId] ? { ...e, text: agentReport(e.text, subagents[e.toolUseId]) } : e);
-        }
-      } else if (m.type === 'user' && b.type === 'text' && HANDBACK.test(b.text)) {
-        const [, agentId, report] = b.text.match(HANDBACK)!;
-        const toolUseId = agents.get(agentId);
-        if (toolUseId) {
-          handedBack.add(toolUseId);
-          events.push({ id, kind: 'tool_result', toolUseId, text: report.replace(/^  /gm, '').trim(), isError: false, at });
-        }
-      } else if (m.type === 'user' && b.type === 'text' && b.text.includes('<local-command-stdout>Compacted')) {
-        context = null;
-      } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith(COMPACT_SUMMARY)) {
-        events.push({ id, kind: 'system', text: 'Compacted the earlier conversation', at });
-      } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith('[Request interrupted')) {
-        events.push({ id, kind: 'system', text: 'Interrupted', at });
-      } else if (m.type === 'user' && b.type === 'text' && !b.text.trimStart().startsWith('<')) {
-        endTurn();
-        inTurn = true;
-        events.push({ id, kind: 'user', text: b.text, at });
-      } else if (m.type === 'user' && b.type === 'tool_result') {
-        const text = toolResultText(b);
-        const runId = workflowCalls.has(b.tool_use_id) ? text.match(RUN_ID)?.[1] : undefined;
-        if (runId) runCalls.set(runId, b.tool_use_id);
-        if (text.startsWith(ASYNC_LAUNCH)) noteLaunch(agents, b.tool_use_id, text);
-        else if (agentUses.has(b.tool_use_id)) {
-          const usage = usageFrom(text);
-          if (usage) usages.set(b.tool_use_id, usage);
-          events.push({ id, kind: 'tool_result', toolUseId: b.tool_use_id, text: agentReport(text, subagents[b.tool_use_id]), isError: Boolean(b.is_error), at });
-        } else events.push({ id, kind: 'tool_result', toolUseId: b.tool_use_id, text: text.slice(0, 4000), isError: Boolean(b.is_error), at });
-      } else if (m.type === 'assistant' && b.type === 'text') {
-        lastText = b.text;
-        events.push({ id, kind: 'assistant', text: b.text, streaming: false, at });
-      } else if (m.type === 'assistant' && b.type === 'server_tool_use' && b.name === 'advisor') {
-        events.push(advisorEvent(b.id, at));
-      } else if (m.type === 'assistant' && b.type === 'tool_use') {
-        if (AGENT_TOOLS.has(b.name)) agentUses.add(b.id);
-        if (b.name === 'Workflow') workflowCalls.set(b.id, { name: workflowName(b.input), at });
-        events.push(toolUseEvent(b.id, b.name, b.input, at, undefined, agents));
-      }
-    }
-    prev = base;
-    if (at) lastAt = at;
-    if (m.type === 'assistant' && at) cache = cacheFrom((m.message as any)?.usage, at, cache);
-    if (m.type === 'assistant') context = contextFrom((m.message as any)?.usage) ?? context;
+type Subagents = Record<string, SessionMessage[]>;
+
+type HistoryState = {
+  events: ChatEvent[];
+  context: number | null;
+  cache: CacheInfo | null;
+  lastText: string;
+  lastAt: number;
+  inTurn: boolean;
+  prev: string;
+  agents: AgentIds;
+  agentUses: Set<string>;
+  usages: Map<string, AgentUsage>;
+  handedBack: Set<string>;
+  workflowCalls: Map<string, { name: string; at: number }>;
+  runCalls: Map<string, string>;
+  subagents: Subagents;
+};
+
+function endTurn(st: HistoryState) {
+  if (st.inTurn) st.events.push({ id: `${st.prev}:result`, kind: 'result', text: st.lastText, costUsd: 0, isError: false, at: st.lastAt });
+  st.inTurn = false;
+}
+
+function taskNotificationBlock(st: HistoryState, text: string, at: number, id: string) {
+  const usage = usageFrom(text);
+  for (const e of notificationResults(text, at, st.agents, id)) {
+    if (e.kind !== 'tool_result') continue;
+    // A CLI restart reports an agent that already handed back as stopped.
+    if (e.stopped && st.handedBack.has(e.toolUseId)) continue;
+    if (usage) st.usages.set(e.toolUseId, usage);
+    st.events.push(st.subagents[e.toolUseId] ? { ...e, text: agentReport(e.text, st.subagents[e.toolUseId]) } : e);
   }
-  endTurn();
-  for (const [parent, sub] of Object.entries(subagents)) events.push(...subagentEvents(sub, parent, subagents));
+}
+
+function handbackBlock(st: HistoryState, text: string, at: number, id: string) {
+  const [, agentId, report] = text.match(HANDBACK)!;
+  const toolUseId = st.agents.get(agentId);
+  if (!toolUseId) return;
+  st.handedBack.add(toolUseId);
+  st.events.push({ id, kind: 'tool_result', toolUseId, text: report.replace(/^  /gm, '').trim(), isError: false, at });
+}
+
+function userTextBlock(st: HistoryState, text: string, at: number, id: string) {
+  if (text.startsWith('<task-notification>')) taskNotificationBlock(st, text, at, id);
+  else if (HANDBACK.test(text)) handbackBlock(st, text, at, id);
+  else if (text.includes('<local-command-stdout>Compacted')) st.context = null;
+  else if (text.startsWith(COMPACT_SUMMARY)) st.events.push({ id, kind: 'system', text: 'Compacted the earlier conversation', at });
+  else if (text.startsWith('[Request interrupted')) st.events.push({ id, kind: 'system', text: 'Interrupted', at });
+  else if (!text.trimStart().startsWith('<')) {
+    endTurn(st);
+    st.inTurn = true;
+    st.events.push({ id, kind: 'user', text, at });
+  }
+}
+
+function toolResultBlock(st: HistoryState, b: any, at: number, id: string) {
+  const text = toolResultText(b);
+  const runId = st.workflowCalls.has(b.tool_use_id) ? text.match(RUN_ID)?.[1] : undefined;
+  if (runId) st.runCalls.set(runId, b.tool_use_id);
+  if (text.startsWith(ASYNC_LAUNCH)) return noteLaunch(st.agents, b.tool_use_id, text);
+  if (!st.agentUses.has(b.tool_use_id)) return st.events.push({ id, kind: 'tool_result', toolUseId: b.tool_use_id, text: text.slice(0, 4000), isError: Boolean(b.is_error), at });
+  const usage = usageFrom(text);
+  if (usage) st.usages.set(b.tool_use_id, usage);
+  st.events.push({ id, kind: 'tool_result', toolUseId: b.tool_use_id, text: agentReport(text, st.subagents[b.tool_use_id]), isError: Boolean(b.is_error), at });
+}
+
+function assistantBlock(st: HistoryState, b: any, at: number, id: string) {
+  if (b.type === 'text') {
+    st.lastText = b.text;
+    st.events.push({ id, kind: 'assistant', text: b.text, streaming: false, at });
+  } else if (b.type === 'server_tool_use' && b.name === 'advisor') {
+    st.events.push(advisorEvent(b.id, at));
+  } else if (b.type === 'tool_use') {
+    if (AGENT_TOOLS.has(b.name)) st.agentUses.add(b.id);
+    if (b.name === 'Workflow') st.workflowCalls.set(b.id, { name: workflowName(b.input), at });
+    st.events.push(toolUseEvent(b.id, b.name, b.input, at, undefined, st.agents));
+  }
+}
+
+function messageBlocks(m: SessionMessage): any[] {
+  const content = (m.message as { content?: unknown })?.content;
+  return typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
+}
+
+function readMessage(st: HistoryState, m: SessionMessage) {
+  const at = stamp(m);
+  const base = m.uuid || randomUUID();
+  for (const [i, b] of messageBlocks(m).entries()) {
+    const id = `${base}:${i}`;
+    if (m.type === 'user' && b.type === 'text') userTextBlock(st, b.text, at, id);
+    else if (m.type === 'user' && b.type === 'tool_result') toolResultBlock(st, b, at, id);
+    else if (m.type === 'assistant') assistantBlock(st, b, at, id);
+  }
+  st.prev = base;
+  if (at) st.lastAt = at;
+  if (m.type === 'assistant' && at) st.cache = cacheFrom((m.message as any)?.usage, at, st.cache);
+  if (m.type === 'assistant') st.context = contextFrom((m.message as any)?.usage) ?? st.context;
+}
+
+function withWorkflowRuns(st: HistoryState, events: ChatEvent[], workflows: WorkflowRun[]) {
   const byCall = new Map<string, WorkflowRun[]>();
   for (const run of workflows) {
-    const call = runCalls.get(run.runId);
+    const call = st.runCalls.get(run.runId);
     if (call) byCall.set(call, [...(byCall.get(call) ?? []), run]);
   }
-  const all = withAgents(events, subagents, usages, agents).flatMap((e) => (e.kind === 'tool_use' ? [e, ...(byCall.get(e.id) ?? []).flatMap((run) => workflowEvents(run, workflowCalls.get(e.id)!.name, e.at))] : [e]));
-  return { events: all, context, cache, agents };
+  return events.flatMap((e) => (e.kind === 'tool_use' ? [e, ...(byCall.get(e.id) ?? []).flatMap((run) => workflowEvents(run, st.workflowCalls.get(e.id)!.name, e.at))] : [e]));
+}
+
+export function historyFrom(msgs: SessionMessage[], subagents: Subagents = {}, workflows: WorkflowRun[] = []) {
+  const st: HistoryState = {
+    events: [], context: null, cache: null, lastText: '', lastAt: 0, inTurn: false, prev: '',
+    agents: new Map(), agentUses: new Set(), usages: new Map(), handedBack: new Set(), workflowCalls: new Map(), runCalls: new Map(), subagents,
+  };
+  for (const m of msgs) {
+    if (!m.parent_tool_use_id) readMessage(st, m);
+  }
+  endTurn(st);
+  for (const [parent, sub] of Object.entries(subagents)) st.events.push(...subagentEvents(sub, parent, subagents));
+  const all = withWorkflowRuns(st, withAgents(st.events, subagents, st.usages, st.agents), workflows);
+  return { events: all, context: st.context, cache: st.cache, agents: st.agents };
 }
 
 const CLIP = 4096;
