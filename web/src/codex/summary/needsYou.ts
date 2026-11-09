@@ -14,7 +14,7 @@ export function needsYou(text: string) {
       continue;
     }
     if (!inside) continue;
-    const m = bullet[1].match(/^(?:\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*)\s*:?\s*(.*)$/);
+    const m = bullet[1].match(/^(?:\[([^\]]+)\]\(((?:[^()]|\([^()]*\))+)\)|\*\*([^*]+)\*\*)\s*:?\s*(.*)$/);
     const title = m ? (m[1] ?? m[3]) : bullet[1].split(':')[0];
     const rest = m ? m[4] : bullet[1].slice(title.length + 1);
     const url = safeHref(m?.[2]) ?? null;

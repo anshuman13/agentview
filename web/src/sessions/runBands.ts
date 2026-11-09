@@ -8,7 +8,7 @@ export type RunItem = { kind: 'run'; run: ChatRun } | { kind: 'job'; job: Job; s
 const FINISHED = 30;
 
 export function runBands(runs: ChatRun[], jobs: { job: Job; state: BadgeSpec | null }[]) {
-  const active = runs.filter((r) => r.state !== 'done');
+  const active = runs.filter((r) => r.state !== 'done').sort((a, b) => b.startedAt - a.startedAt);
   const entry = (run: ChatRun): RunItem => ({ kind: 'run', run });
   const needs = active.filter((r) => r.needsYou).map(entry);
   const running = active.filter((r) => !r.needsYou).map(entry);
@@ -16,7 +16,7 @@ export function runBands(runs: ChatRun[], jobs: { job: Job; state: BadgeSpec | n
     if (state?.status === 'failed') needs.push({ kind: 'job', job, state });
     else if (state?.status === 'running' || (state?.status === 'waiting' && state.reason === 'Queued')) running.push({ kind: 'job', job, state });
   }
-  const finished = runs.filter((r) => r.state === 'done').sort((a, b) => (b.endedAt ?? 0) - (a.endedAt ?? 0)).slice(0, FINISHED);
+  const finished = runs.filter((r) => r.state === 'done').sort((a, b) => (b.endedAt ?? b.startedAt) - (a.endedAt ?? a.startedAt)).slice(0, FINISHED);
   return { needs, running, finished };
 }
 

@@ -267,6 +267,6 @@ private fun NeedCard(title: String, meta: String, url: String?, onDismiss: () ->
     ListRow(title, meta.atWord(), metaLines = 4, onClick = onOpen, below = {
         Button("Make task", onTask, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
         Button("Dismiss", onDismiss, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        if (url != null && url.startsWith("http")) MoreButton { close -> MenuItem("Open in Slack", "link", { close(); uri.openUri(url) }) }
+        safeHref(url)?.let { href -> MoreButton { close -> MenuItem("Open in Slack", "link", { close(); uri.openUri(href) }) } }
     })
 }

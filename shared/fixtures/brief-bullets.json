@@ -40,5 +40,15 @@
     "name": "no needs section",
     "text": "## Decided\n- Thing: done\n",
     "expected": []
+  },
+  {
+    "name": "mail links are kept",
+    "text": "## Needs you\n- [Reply](mailto:ann@example.test): she waits\n",
+    "expected": [{ "title": "Reply", "url": "mailto:ann@example.test", "why": "she waits" }]
+  },
+  {
+    "name": "link url with parentheses",
+    "text": "## Needs you\n- [Fix](https://example.test/a_(b)): broken now\n",
+    "expected": [{ "title": "Fix", "url": "https://example.test/a_(b)", "why": "broken now" }]
   }
 ]

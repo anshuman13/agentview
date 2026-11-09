@@ -15,5 +15,24 @@
     "name": "no runs",
     "runs": [],
     "expected": { "needs": [], "running": [], "finished": [] }
+  },
+  {
+    "name": "needs you and running sort newest first whatever the input order",
+    "runs": [
+      { "id": "a", "startedAt": 10, "needsYou": true },
+      { "id": "b", "startedAt": 30 },
+      { "id": "c", "startedAt": 30, "needsYou": true },
+      { "id": "d", "startedAt": 20 }
+    ],
+    "expected": { "needs": ["c", "a"], "running": ["b", "d"], "finished": [] }
+  },
+  {
+    "name": "finished run without an end time sorts by its start",
+    "runs": [
+      { "id": "a", "startedAt": 10, "state": "done", "endedAt": 50 },
+      { "id": "b", "startedAt": 70, "state": "done", "endedAt": null },
+      { "id": "c", "startedAt": 20, "state": "done", "endedAt": null }
+    ],
+    "expected": { "needs": [], "running": [], "finished": ["b", "a", "c"] }
   }
 ]

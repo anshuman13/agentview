@@ -42,7 +42,7 @@ import kotlinx.coroutines.delay
 private const val PAGE_SIZE = 30
 private const val NOTES_SAVE_MS = 800L
 
-fun safeHref(url: String?) = url?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+fun safeHref(url: String?) = url?.takeIf { Regex("^(https?:|mailto:)", RegexOption.IGNORE_CASE).containsMatchIn(it) }
 
 @Composable
 private fun MeetingListRow(m: Row, now: Long, showProfile: Boolean, noDay: Boolean = false, onClick: () -> Unit) {

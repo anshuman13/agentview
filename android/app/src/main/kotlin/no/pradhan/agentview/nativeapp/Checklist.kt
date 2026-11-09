@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 // Port of shared/todos.ts: Claude's TodoWrite list, shown as a card above the composer.
 @Immutable
@@ -33,7 +34,7 @@ fun latestChecklist(events: List<ChatEvent>): List<ChecklistItem>? {
         return list.mapNotNull { t ->
             val o = t as? JsonObject ?: return@mapNotNull null
             val status = o.s("status")
-            if (o["content"] == null || status !in STATUSES) null else ChecklistItem(o.s("content"), o.s("activeForm"), status)
+            if ((o["content"] as? JsonPrimitive)?.isString != true || status !in STATUSES) null else ChecklistItem(o.s("content"), o.s("activeForm"), status)
         }
     }
     return null

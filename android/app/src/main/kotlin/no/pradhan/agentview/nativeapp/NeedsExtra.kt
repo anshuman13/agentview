@@ -58,7 +58,7 @@ fun atRisk(tasks: List<Pair<Row, Long>>, busy: List<Span>, now: Long, startHour:
 class Bullet(val title: String, val url: String?, val why: String) { val key get() = url ?: title }
 
 private val BULLET = Regex("^[-*]\\s+(.*)$")
-private val BULLET_HEAD = Regex("^(?:\\[([^\\]]+)]\\(([^)]+)\\)|\\*\\*([^*]+)\\*\\*)\\s*:?\\s*(.*)$")
+private val BULLET_HEAD = Regex("^(?:\\[([^\\]]+)]\\(((?:[^()]|\\([^()]*\\))+)\\)|\\*\\*([^*]+)\\*\\*)\\s*:?\\s*(.*)$")
 private val HEADING = Regex("^#{1,6}\\s|^\\*\\*[^*]+\\*\\*:?\\s*$")
 
 // Top-level bullets under the brief's "Needs you" heading: the linked or bold title and the first sentence after it.
@@ -79,7 +79,7 @@ fun briefBullets(text: String): List<Bullet> {
         val m = BULLET_HEAD.find(body)
         val title = if (m != null) m.groupValues[1].ifEmpty { m.groupValues[3] } else body.split(':')[0]
         val rest = if (m != null) m.groupValues[4] else body.drop(title.length + 1)
-        val url = m?.groupValues?.get(2)?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+        val url = safeHref(m?.groupValues?.get(2))
         out.add(Bullet(title.trim(), url, rest.trim().split(Regex("(?<=[.!?])\\s"))[0]))
     }
     return out

@@ -66,5 +66,12 @@
       { "id": "e1", "kind": "tool_use", "name": "TodoWrite", "input": { "todos": [{ "content": "Ship", "status": "in_progress" }] } }
     ],
     "expected": [{ "content": "Ship", "activeForm": "", "status": "in_progress" }]
+  },
+  {
+    "name": "items whose content is not a string are dropped",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "TodoWrite", "input": { "todos": [{ "content": 5, "activeForm": "Doing five", "status": "pending" }, { "content": "Real", "activeForm": "Doing real", "status": "pending" }] } }
+    ],
+    "expected": [{ "content": "Real", "activeForm": "Doing real", "status": "pending" }]
   }
 ]
