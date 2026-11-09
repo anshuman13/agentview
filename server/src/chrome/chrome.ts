@@ -1,9 +1,10 @@
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
 import { chromeRunning, endpoint, failure, launchProfile, openMac, ownProfile } from './launch.js';
+import { forgetViewer, frame, hooks, resetFrames, viewers, viewport } from './frames.js';
 import { errText } from '../../../shared/util.js';
 
-export { chromeRunning, endpoint, ownProfile };
+export { chromeRunning, endpoint, ownProfile, viewers, hooks, resetFrames, frame };
 
 type Tab = { id: string; title: string; url: string; at: number };
 type State = 'off' | 'connecting' | 'on';
@@ -15,7 +16,6 @@ let reason = '';
 let nextId = 1;
 const calls = new Map<number, { resolve: (r: any) => void; reject: (e: Error) => void }>();
 const tabs = new Map<string, Tab>();
-export const viewers = new Set<WebSocket>();
 const EDITABLE = "(() => { const a = document.activeElement; return !!a && (a.isContentEditable || /^(INPUT|TEXTAREA)$/.test(a.tagName)); })()";
 const selfOrigins = new Set<string>();
 let pinned: string | null = null;
@@ -26,7 +26,6 @@ type Dims = { cssW: number; cssH: number; dpr: number; mobile: boolean };
 const sizes = new Map<WebSocket, Dims>();
 let emulated: { session: string; key: string } | null = null;
 const touches = new Map<WebSocket, { x: number; y: number; moved: boolean }>();
-let viewport = { w: 0, h: 0 };
 let retryTimer: NodeJS.Timeout | null = null;
 let retryDelay = 2000;
 let fastUntil = 0;
@@ -198,58 +197,13 @@ function onMessage(m: Msg) {
       break;
     case 'Page.screencastFrame':
       if (m.sessionId !== watching?.session) return;
-      viewport = { w: m.params.metadata.deviceWidth, h: m.params.metadata.deviceHeight };
+      Object.assign(viewport, { w: m.params.metadata.deviceWidth, h: m.params.metadata.deviceHeight });
       frame(m.params.data, { session: m.sessionId, id: m.params.sessionId });
       break;
   }
 }
 
-type Ack = { session?: string; id: number };
-const MAX_UNFLUSHED = 3;
-const unflushed = new Map<WebSocket, number>();
-let heldAck: Ack | null = null;
-
-export const hooks = {
-  ack: ({ session, id }: Ack) => void call('Page.screencastFrameAck', { sessionId: id }, session).catch(() => {}),
-};
-
-export function resetFrames() {
-  viewers.clear();
-  unflushed.clear();
-  heldAck = null;
-}
-
-function releaseHeld() {
-  const a = heldAck;
-  heldAck = null;
-  if (a) hooks.ack(a);
-}
-
-// A viewer that stops flushing holds the ack, and so the screencast, until another send callback fires.
-export function frame(data: string, ack?: Ack) {
-  if (ack) releaseHeld();
-  const s = JSON.stringify({ t: 'frame', data, w: viewport.w, h: viewport.h });
-  let took = 0;
-  let left = 1;
-  const settle = () => {
-    if (--left === 0 && ack) hooks.ack(ack);
-  };
-  viewers.forEach((v) => {
-    if (v.readyState !== WebSocket.OPEN || (unflushed.get(v) ?? 0) >= MAX_UNFLUSHED) return;
-    took++;
-    left++;
-    unflushed.set(v, (unflushed.get(v) ?? 0) + 1);
-    v.send(s, () => {
-      if (unflushed.has(v)) unflushed.set(v, unflushed.get(v)! - 1);
-      settle();
-      releaseHeld();
-    });
-  });
-  if (took) return settle();
-  if (!ack) return;
-  if ([...viewers].some((v) => v.readyState === WebSocket.OPEN)) heldAck = ack;
-  else hooks.ack(ack);
-}
+hooks.ack = ({ session, id }) => void call('Page.screencastFrameAck', { sessionId: id }, session).catch(() => {});
 
 function sendTabs() {
   const list = [...tabs.values()].filter((t) => !isSelf(t.url)).map(({ id, title, url }) => ({ id, title, url }));
@@ -314,7 +268,7 @@ async function watch(target: string) {
     await call('Page.enable', {}, sessionId);
     await emulate(false);
     const { cssVisualViewport: v } = await call('Page.getLayoutMetrics', {}, sessionId);
-    viewport = { w: v.clientWidth, h: v.clientHeight };
+    Object.assign(viewport, { w: v.clientWidth, h: v.clientHeight });
     await screencast();
     await snapshot();
   } catch (err) {
@@ -500,7 +454,7 @@ export function openChrome(ws: WebSocket, origin: string | undefined) {
   ws.on('close', () => {
     viewers.delete(ws);
     touches.delete(ws);
-    unflushed.delete(ws);
+    forgetViewer(ws);
     const was = sizes.delete(ws);
     if (!viewers.size) return stop();
     if (was) void emulate();

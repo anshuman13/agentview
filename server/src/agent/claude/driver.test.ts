@@ -39,7 +39,7 @@ describe('transcript sync', () => {
     await s.loadHistory();
     const sent: ServerMessage[] = [];
     s.onMessage((m) => sent.push(m));
-    const sync = () => (s.driver as unknown as { syncTranscript: (own: boolean) => Promise<void> }).syncTranscript(false);
+    const sync = () => (s.driver as unknown as { watcher: { syncTranscript: (own: boolean) => Promise<void> } }).watcher.syncTranscript(false);
     return { s, sessionId, file, last: b.uuid, sent, sync };
   }
 
@@ -92,7 +92,8 @@ describe('transcript sync', () => {
 
   it('shows workflow agents live with an open query, once each, without releasing queued messages', async () => {
     const { s, sessionId, sent } = await setup();
-    const driver = s.driver as unknown as { q: object | null; syncWorkflows: () => Promise<void> };
+    const owner = s.driver as unknown as { q: object | null; watcher: { syncWorkflows: () => Promise<void> } };
+    const driver = { set q(v: object | null) { owner.q = v; }, syncWorkflows: () => owner.watcher.syncWorkflows() };
     driver.q = {};
     const release = vi.spyOn(s as unknown as { release: () => void }, 'release');
     const wf = path.join(dir, sessionId, 'subagents', 'workflows', 'wf_live');

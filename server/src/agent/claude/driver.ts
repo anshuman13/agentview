@@ -1,22 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { watch, type FSWatcher } from 'node:fs';
-import { query, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
+import { query, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import { ACCOUNT_LABEL, type Account, type Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History, RunningTask } from '../types.js';
 import { AgentSession } from '../../session/session.js';
-import { JsonlTail } from './tail.js';
+import { TranscriptWatch } from './transcriptWatch.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
-import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, workflowAgents, workflowSize, type SubFile, type WorkflowFile, type WorkflowRun } from './history.js';
 import { bigBroRequest, bigBroVerdict } from './approval.js';
 import { ENDED, replayText, usageOf } from './tasks.js';
 import { agentResult, agentToolUse, isAgent, patchAgent, taskDone, taskToolUse } from './subagents.js';
 import { hookLine } from './hooks.js';
 import { sessionUsage } from './usage.js';
 import { LiveText } from './stream.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, RUN_ID, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, workflowEvents, workflowName, type AgentIds } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 import { expandChatMentions } from './chatMentions.js';
 
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
@@ -35,7 +33,6 @@ export class ClaudeDriver implements AgentDriver {
   private wake: (() => void) | null = null;
   private closed = false;
   private gen = 0;
-  private endedAt = 0;
   private sinceStatus = 0;
   private usageTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -47,18 +44,7 @@ export class ClaudeDriver implements AgentDriver {
   private mcpServers: Record<string, McpServerConfig> = {};
   private addedMcp: Record<string, McpServerConfig> = {};
 
-  private transcript: FSWatcher | null = null;
-  private watchedId: string | undefined;
-  private transcriptTimer: NodeJS.Timeout | undefined;
-  private seen = '';
-  private seenSubs = 0;
-  private log: JsonlTail | null = null;
-  private chain: { entries: any[]; n: number; msgs: SessionMessage[] } | null = null;
-  private subFiles = new Map<string, SubFile>();
-  private workflowFiles = new Map<string, WorkflowFile>();
-  private liveWorkflowFiles = new Map<string, WorkflowFile>();
-  private workflowTimer: NodeJS.Timeout | undefined;
-  private dirty = true;
+  private watcher: TranscriptWatch;
   private agents: AgentIds = new Map();
   private tasks = new Map<string, RunningTask>();
   private sent: { id: string; text: string }[] = [];
@@ -68,6 +54,14 @@ export class ClaudeDriver implements AgentDriver {
 
   constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main') {
     this.live = new LiveText(host);
+    this.watcher = new TranscriptWatch({
+      host,
+      isClosed: () => this.closed,
+      attached: () => this.q !== null,
+      taskCount: () => this.tasks.size,
+      restart: () => this.restart(),
+      history: (...args) => this.history(...args),
+    });
   }
 
   accounts(): Account[] {
@@ -129,98 +123,12 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   watchHistory(on: boolean) {
-    const sessionId = this.state.session.sessionId;
-    if (!on || !sessionId || this.closed) {
-      this.transcript?.close();
-      this.transcript = null;
-      this.log = null;
-      this.chain = null;
-      this.subFiles = new Map();
-      this.workflowFiles = new Map();
-      this.liveWorkflowFiles = new Map();
-      clearTimeout(this.workflowTimer);
-      this.dirty = true;
-      return;
-    }
-    if (this.transcript && this.watchedId === sessionId) return;
-    // A new session id (after /clear) needs a watcher on its own transcript.
-    this.transcript?.close();
-    this.watchedId = sessionId;
-    try {
-      this.transcript = watch(projectDir(this.cwd), { recursive: true }, (_, file) => {
-        if (file && !file.startsWith(sessionId)) return;
-        clearTimeout(this.transcriptTimer);
-        this.transcriptTimer = setTimeout(() => void this.syncTranscript(false), 300);
-        if (!file?.includes('/subagents/workflows/')) return;
-        clearTimeout(this.workflowTimer);
-        this.workflowTimer = setTimeout(() => void this.syncWorkflows(), 300);
-      }).on('error', () => this.watchHistory(false));
-    } catch {
-      return;
-    }
-    void this.syncTranscript(false);
-    void this.syncWorkflows();
-  }
-
-  // Adds and updates the agents of running workflows without a rebuild, so they show while a turn runs.
-  private async syncWorkflows() {
-    const sessionId = this.state.session.sessionId;
-    if (!sessionId || this.closed) return;
-    const wf = await workflowAgents(this.cwd, sessionId, this.liveWorkflowFiles).catch(() => null);
-    if (!wf?.runs.length || this.closed || this.state.session.sessionId !== sessionId) return;
-    const calls = new Map<string, string>();
-    for (const e of this.state.events) {
-      if (e.kind !== 'tool_result') continue;
-      const runId = e.text.match(RUN_ID)?.[1];
-      if (runId) calls.set(runId, e.toolUseId);
-    }
-    for (const run of wf.runs) {
-      const call = this.host.eventById(calls.get(run.runId) ?? '');
-      if (call?.kind !== 'tool_use' || call.name !== 'Workflow') continue;
-      this.pushWorkflowRun(run, workflowName(call.input), call.at);
-    }
-  }
-
-  private pushWorkflowRun(run: WorkflowRun, group: string, callAt: number) {
-    for (const ev of workflowEvents(run, group, callAt)) {
-      const have = this.host.eventById(ev.id);
-      if (!have) this.host.pushEvent(ev, { release: false });
-      else if (JSON.stringify(have) !== JSON.stringify(ev)) {
-        Object.assign(have, ev);
-        this.host.emit({ type: 'event', event: have });
-      }
-    }
+    this.watcher.watchHistory(on);
   }
 
   settled() {
-    this.endedAt = Date.now();
     void this.loadUsage();
-    setTimeout(() => void this.syncTranscript(true), 500);
-  }
-
-  private async syncTranscript(ownTurn: boolean) {
-    const sessionId = this.state.session.sessionId;
-    if (!sessionId || this.closed || this.state.session.running) return;
-    const t = await this.readTranscript(sessionId).catch(() => null);
-    if (!t || this.state.session.running) return;
-    this.dirty ||= t.read !== 'same' || t.changed;
-    if (!this.dirty) return;
-    const { subs, runs, size } = t;
-    const msgs = await this.messages(sessionId, t.entries).catch(() => null);
-    const last = msgs && lastUuid(msgs);
-    if (!msgs || !last || this.state.session.running) return;
-    this.dirty = false;
-    const subsMoved = !this.q && size !== this.seenSubs;
-    this.seenSubs = size;
-    if (last === this.seen && !subsMoved) return;
-    if (last !== this.seen) {
-      // The CLI's last transcript write lands just before `result`, so the watcher fires before the own-turn sync.
-      const baseline = ownTurn || !this.seen || this.tasks.size > 0 || Date.now() - this.endedAt < 3000;
-      this.seen = last;
-      if (baseline) return;
-    }
-    this.host.replaceHistory(this.history(msgs, subs, runs));
-    if (this.q) this.restart();
+    this.watcher.settled();
   }
 
   kill() {
@@ -237,36 +145,7 @@ export class ClaudeDriver implements AgentDriver {
 
   async loadHistory() {
     if (!this.resume) return null;
-    const { entries, subs, runs, size } = await this.readTranscript(this.resume);
-    const msgs = await this.messages(this.resume, entries);
-    this.dirty = false;
-    this.seen = lastUuid(msgs) ?? '';
-    this.seenSubs = size;
-    return this.history(msgs, subs, runs);
-  }
-
-  // Only bytes appended since the last read are parsed; unchanged subagent files are not re-read.
-  private async readTranscript(sessionId: string) {
-    const file = path.join(projectDir(this.cwd), `${sessionId}.jsonl`);
-    if (this.log?.file !== file) {
-      this.log = new JsonlTail(file);
-      this.subFiles = new Map();
-      this.workflowFiles = new Map();
-    }
-    const log = this.log;
-    const [read, sub, wf] = await Promise.all([log.read(), subagentMessages(this.cwd, sessionId, this.subFiles), workflowAgents(this.cwd, sessionId, this.workflowFiles)]);
-    const { subs, changed } = sub;
-    return { read, entries: log.entries, subs, runs: wf.runs, size: countAll(subs) + workflowSize(wf.runs), changed: changed || wf.changed };
-  }
-
-  // The conversation chain only changes when the transcript does; a subagent write alone reuses the last one.
-  private async messages(sessionId: string, entries: any[]) {
-    const c = this.chain;
-    if (c?.entries === entries && c.n === entries.length) return c.msgs;
-    const n = entries.length;
-    const msgs = await sessionMessages(sessionId, this.cwd, entries.slice());
-    this.chain = { entries, n, msgs };
-    return msgs;
+    return this.watcher.loadHistory(this.resume);
   }
 
   private history(...args: Parameters<typeof historyFrom>): History {
@@ -533,7 +412,7 @@ export class ClaudeDriver implements AgentDriver {
             this.watchHistory(false);
             host.system('Forked into a new chat');
           }
-          const newId = this.transcript && msg.session_id !== this.state.session.sessionId;
+          const newId = this.watcher.active && msg.session_id !== this.state.session.sessionId;
           host.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
           if (newId) this.watchHistory(true);
           if (changed) host.system(`Session started with ${msg.model}`);
