@@ -1,7 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { getState, loadEarlier, notice, send, setUi, useStore } from '../app/store';
 import { assistantStore } from '../codex/data';
-import { replyNote } from './composerLogic';
+import { quoteReply, replyNote } from './composerLogic';
 import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
@@ -186,7 +186,7 @@ function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolea
     case 'phase':
       return <div className="tr-phase"><Icon name="sync" small />{it.text}</div>;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <button className="link tr-save" title="Save this reply to Notes" onClick={() => saveReply(it.text, cwd)}>Save as note</button>}</div>;
+      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <div className="tr-acts"><button className="link" title="Quote this reply in the composer" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: quoteReply(it.text) } }))}>Reply</button><button className="link" title="Save this reply to Notes" onClick={() => saveReply(it.text, cwd)}>Save as note</button></div>}</div>;
     case 'system':
       return <div className="tr-system">{it.text}</div>;
     case 'step':

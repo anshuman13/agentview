@@ -213,7 +213,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   You or Claude and the age, and a tap opens that chat, like Slack's message search. The web sidebar Sessions search
   shows the same Messages list under the repos
 - Under the last reply of a turn on the phone, Reply puts the start of that reply (up to 300 characters) in the composer
-  as a Markdown quote, like Slack's reply with quote
+  as a Markdown quote, like Slack's reply with quote. On the web every finished reply has the same Reply link next to Save as note
 - "TODOs" in the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
   end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer
 - Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar; web sidebar rows of open chats do the same, except for the chat you are viewing

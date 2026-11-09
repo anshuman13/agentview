@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stampedNotes } from '../codex/data/meetings';
 import type { Meeting } from '../codex/data/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, remindChoices } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, quoteReply, remindChoices } from './composerLogic';
 import type { ChatEvent, SavedSession } from '../../../shared/protocol';
 
 let n = 0;
@@ -252,5 +252,12 @@ describe('remindChoices', () => {
     expect(one.at - now).toBe(3_600_000);
     expect(three.at - now).toBe(3 * 3_600_000);
     expect(new Date(tomorrow.at)).toEqual(new Date(2026, 10, 10, 9, 0));
+  });
+});
+
+describe('quoteReply', () => {
+  it('quotes each line and cuts long replies at a word', () => {
+    expect(quoteReply('Done.\n\nTests pass')).toBe('> Done.\n>\n> Tests pass\n\n');
+    expect(quoteReply('one two three', 9)).toBe('> one two…\n\n');
   });
 });
