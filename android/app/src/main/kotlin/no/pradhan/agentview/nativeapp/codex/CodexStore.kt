@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import java.io.File
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +14,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -47,6 +50,7 @@ class CodexStore(
     private val notify: (String) -> Unit,
     private val now: () -> Long = System::currentTimeMillis,
     private val parsing: CoroutineContext = Dispatchers.Default,
+    private val cache: File? = null,
 ) {
     val state = MutableStateFlow(CodexState())
     private val tables = SYNCED_FIELDS.keys.associateWith { LinkedHashMap<String, Row>() }
@@ -57,7 +61,40 @@ class CodexStore(
     fun reset() {
         tables.values.forEach { it.clear() }
         since = 0
+        cache?.delete()
         state.value = CodexState()
+    }
+
+    // Shows the rows of the last sync at once; the next pull then fetches only what changed since.
+    suspend fun restore() {
+        val body = withContext(Dispatchers.IO) { cache?.takeIf { it.exists() }?.readText() } ?: return
+        try {
+            val (version, changes) = parse(body)
+            if (since != 0L || state.value.loaded) return
+            apply(changes)
+            since = version
+            publish(loaded = true)
+        } catch (e: Exception) {
+            cache?.delete()
+        }
+    }
+
+    // Rows with an unsent edit are not stored, so the copy never holds an edit as synced.
+    private suspend fun save() {
+        val file = cache ?: return
+        val rows = tables.values.flatMap { it.values }
+        if (rows.any { it.dirty }) return
+        val body = buildJsonObject {
+            put("version", since)
+            put("changes", JsonArray(rows.map(::rowToCache)))
+        }
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val tmp = File(file.path + ".tmp")
+                tmp.writeText(body.toString())
+                tmp.renameTo(file)
+            }
+        }
     }
 
     private fun publish(error: String? = state.value.error, loaded: Boolean = state.value.loaded) {
@@ -90,11 +127,13 @@ class CodexStore(
             val dirty = tables.values.flatMap { t -> t.values.filter { it.dirty } }
             var queue = dirty
             var more = true
+            var changed = false
             while (more) {
                 val batch = queue.take(PUSH_BATCH)
                 queue = queue.drop(batch.size)
                 val body = if (batch.isEmpty() && queue.isEmpty()) pull(since, since == 0L) else push(pushBody(batch))
                 val (version, changes, hasMore, refused) = parse(body)
+                changed = changed || batch.isNotEmpty() || changes.isNotEmpty()
                 for (sent in batch) {
                     if (refused.any { it["id"]?.jsonPrimitive?.contentOrNull == sent.id }) continue
                     val map = tables.getValue(sent.table)
@@ -107,6 +146,7 @@ class CodexStore(
                 since = version
                 if (refused.isNotEmpty()) error("${refused.size} change${if (refused.size > 1) "s" else ""} rejected: ${refused[0]["reason"]?.jsonPrimitive?.contentOrNull}")
             }
+            if (changed) save()
             publish(error = null, loaded = true)
         } catch (e: Exception) {
             publish(error = e.message ?: "Sync failed", loaded = true)

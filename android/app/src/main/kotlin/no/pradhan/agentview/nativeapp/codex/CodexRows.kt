@@ -172,6 +172,18 @@ fun rowToChange(row: Row): JsonObject {
     }
 }
 
+// The row as parseRow reads it, whole: every column, its time and the hub version, for the on-device copy.
+fun rowToCache(row: Row): JsonObject = buildJsonObject {
+    put("table", row.table)
+    put("id", row.id)
+    put("profile", row.profile)
+    put("updated_at", row.updatedAt)
+    put("version", row.version)
+    put("deleted", row.deleted)
+    put("fields", JsonObject(row.f))
+    put("field_times", JsonObject(row.times.mapValues { JsonPrimitive(it.value) }))
+}
+
 // The item under the other profile keeps its id; every column is timed now so it replaces a row moved away earlier.
 fun moved(row: Row, there: Row?, profile: String, now: Long): Row {
     val base = there ?: row.copy(profile = profile, version = 0, times = emptyMap(), deleted = false)

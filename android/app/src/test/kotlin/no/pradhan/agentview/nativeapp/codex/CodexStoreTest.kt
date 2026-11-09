@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import java.io.File
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -29,8 +30,8 @@ class CodexStoreTest {
         var pushReply = reply(9)
     }
 
-    private fun store(scope: TestScope, fake: Fake, writable: () -> Boolean = { true }, notices: MutableList<String> = mutableListOf()) = CodexStore(
-        scope, { since, full -> fake.pulled.add(since to full); fake.pulls.removeAt(0) }, { body -> fake.pushes.add(body); fake.pushReply }, writable, { notices.add(it) }, { 5000L }, EmptyCoroutineContext,
+    private fun store(scope: TestScope, fake: Fake, writable: () -> Boolean = { true }, notices: MutableList<String> = mutableListOf(), cache: File? = null) = CodexStore(
+        scope, { since, full -> fake.pulled.add(since to full); fake.pulls.removeAt(0) }, { body -> fake.pushes.add(body); fake.pushReply }, writable, { notices.add(it) }, { 5000L }, EmptyCoroutineContext, cache,
     )
 
     @Test fun pullsEveryPageAndKeepsOnlyTheSyncedTables() = runTest {
@@ -124,5 +125,19 @@ class CodexStoreTest {
         s.sync()
         assertEquals(1, s.state.value.items.size)
         assertNotNull(s.state.value.error)
+    }
+
+    @Test fun aRestartShowsTheCachedRowsAndPullsOnlyWhatChanged() = runTest {
+        val file = File.createTempFile("codex", ".json").also { it.delete() }
+        store(this, Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1)))), cache = file).sync()
+        val fake = Fake(mutableListOf(reply(6, change("a", "two", "open", 200, 2))))
+        val s = store(this, fake, cache = file)
+        s.restore()
+        assertEquals(listOf("one"), s.state.value.items.map { it.title })
+        assertTrue(s.state.value.loaded)
+        s.sync()
+        assertEquals(listOf(5L to false), fake.pulled)
+        assertEquals(listOf("two"), s.state.value.items.map { it.title })
+        file.delete()
     }
 }

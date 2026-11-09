@@ -129,7 +129,9 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val api = Api({ origin.value }, client)
 
-    val codex = CodexStore(viewModelScope, api::assistantChanges, api::assistantSync, { !readOnly }, { notice.value = it })
+    val codex = CodexStore(viewModelScope, api::assistantChanges, api::assistantSync, { !readOnly }, { notice.value = it }, cache = File(app.filesDir, "codex-rows.json"))
+
+    init { viewModelScope.launch { codex.restore() } }
 
     val notifyOn = MutableStateFlow(prefs.getBoolean("notify", true))
 
