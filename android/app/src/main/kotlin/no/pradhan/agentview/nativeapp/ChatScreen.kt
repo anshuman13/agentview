@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.BadgedBox
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,11 +42,21 @@ fun costLabel(cost: Double) = if (cost > 0) "$" + String.format(java.util.Locale
 
 @Composable
 fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
-    val state by hub.store.state.collectAsState()
+    val store = hub.store.state
+    val liveChats by store.select { it.live }
+    val shownId by store.select { it.shownId }
+    val session by store.select { it.session }
+    val pending by store.select { it.pending }
+    val runs by store.select { it.runs }
+    val earlier by store.select { it.earlier }
+    val settled by store.select { it.settled }
+    val hasEvents by store.select { it.events.isNotEmpty() }
+    val feed by hub.transcript.view.collectAsState()
+    val view = if (feed.chat == shownId) feed else ChatView.EMPTY
     val connected by hub.connected.collectAsState()
     val queued by hub.outbox.items.collectAsState()
-    val cached = state.shownId.isNotEmpty() && state.events.isNotEmpty()
-    val live = state.live.firstOrNull { it.id == state.shownId } ?: if (cached && !connected) LiveChat(state.shownId, remember(state.shownId) { hub.savedTitle(state.shownId) }) else null
+    val cached = shownId.isNotEmpty() && hasEvents
+    val live = liveChats.firstOrNull { it.id == shownId } ?: if (cached && !connected) LiveChat(shownId, remember(shownId) { hub.savedTitle(shownId) }) else null
     if (live == null) {
         Column(Modifier.fillMaxSize()) {
             PageHeader("Chat")
@@ -53,25 +64,22 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         }
         return
     }
-    val session = state.session
     val context = androidx.compose.ui.platform.LocalContext.current
     val running = session?.running ?: live.running
-    val cost = remember(state.events, live.cost) { live.cost ?: chatCost(state.events) }
+    val cost = live.cost ?: view.cost
     var dialog by remember { mutableStateOf<String?>(null) }
-    val agents = remember(state.events) { buildAgents(state.events) }
+    val agents = view.agents
     var agentsOpen by remember { mutableStateOf(false) }
     var serversOpen by remember { mutableStateOf(false) }
     var imagesOpen by remember { mutableStateOf(false) }
     var todosOpen by remember { mutableStateOf(false) }
     var remindOpen by remember { mutableStateOf(false) }
     var memoryOpen by remember { mutableStateOf(false) }
-    val images = remember(state.events) { chatImages(state.events) }
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val ticking = agentsOpen && agents.any { it.status == "running" }
-    LaunchedEffect(ticking) { while (ticking) { now = System.currentTimeMillis(); delay(1000) } }
+    val images = view.images
+    val now = rememberNow(agentsOpen && agents.any { it.status == "running" })
     val status = statusLine(live, session)
     val cwd = session?.cwd ?: live.cwd
-    val changed = remember(state.events, cwd) { buildTranscript(state.events).filterIsInstance<Item.File>().filter { it.error == null }.map { relPath(it.path, cwd) }.filter { !it.startsWith("/") }.distinct() }
+    val changed = remember(view.changed, cwd) { view.changed.map { relPath(it, cwd) }.filter { !it.startsWith("/") }.distinct() }
     var review by rememberSaveable(live.id) { mutableStateOf<Int?>(null) }
     var reviewed by rememberSaveable(live.id) { mutableStateOf(listOf<String>()) }
     var reverted by rememberSaveable(live.id) { mutableStateOf(listOf<String>()) }
@@ -116,9 +124,9 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                 MenuItem("Memory", "book", { close(); memoryOpen = true })
                 MenuItem("Share chat", "share", {
                     close()
-                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, state.events))
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, store.value.events))
                     context.startActivity(android.content.Intent.createChooser(send, null))
-                }, enabled = state.events.any { it.kind == "assistant" })
+                }, enabled = view.items.any { it is Item.Assistant })
                 MenuItem("Continue in terminal", "terminal", {
                     close()
                     clip.setText(AnnotatedString(resumeCommand(cwd, sessionId!!, session?.account)))
@@ -136,18 +144,20 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
             ListRow(pr.title, prStripMeta(pr), leading = { StatusDot(checkDot(pr.checks)) }, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, lines = 1, onClick = { prOpen = pr.number })
             Hairline()
         }
-        if (!connected && state.events.isNotEmpty()) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
-        Transcript(hub, state, live.id, cwd, running, onOpenAgent, Modifier.weight(1f).fillMaxWidth(), queued.filter { it.chat == live.id })
-        PendingList(state.pending, session?.permissionMode ?: "default", hub)
+        if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
+        SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
+            Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, Modifier.fillMaxSize(), queued.filter { it.chat == live.id })
+        }
+        PendingList(pending, session?.permissionMode ?: "default", hub)
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }
-        state.runs.lastOrNull { it.chatId == live.id && it.state != "done" }?.let { LoopCard(hub, it, session?.loop?.phase) }
-        Composer(hub, live.id, session, running, state.pending.isNotEmpty(), state.runs.lastOrNull { it.chatId == live.id && it.state != "done" })
+        runs.lastOrNull { it.chatId == live.id && it.state != "done" }?.let { LoopCard(hub, it, session?.loop?.phase) }
+        Composer(hub, live.id, session, running, pending.isNotEmpty(), runs.lastOrNull { it.chatId == live.id && it.state != "done" })
     }
 
     if (agentsOpen) Sheet(onDismiss = { agentsOpen = false }, title = "Agents", padded = false, full = false) {
-        AgentList(agents, now) { agentsOpen = false; onOpenAgent(it) }
+        AgentList(agents, { now.value }) { agentsOpen = false; onOpenAgent(it) }
     }
 
     if (imagesOpen) ImagesSheet(hub, live.id, images, cwd) { imagesOpen = false }

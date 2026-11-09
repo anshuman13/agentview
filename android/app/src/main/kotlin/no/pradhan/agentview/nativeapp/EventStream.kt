@@ -7,7 +7,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.Call
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
@@ -43,7 +42,7 @@ class EventStream(
     private val onConnected: (Boolean) -> Unit,
     private val onData: (String) -> Unit,
 ) {
-    private val http = OkHttpClient.Builder().readTimeout(45, TimeUnit.SECONDS).build()
+    private val http = sharedHttp.newBuilder().readTimeout(45, TimeUnit.SECONDS).build()
     private var job: Job? = null
     private var call: Call? = null
     private var lastId = ""

@@ -40,7 +40,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
-    val state by hub.store.state.collectAsState()
+    val live by hub.store.state.select { it.live }
+    val shownId by hub.store.state.select { it.shownId }
+    val sessionCwd by hub.store.state.select { it.session?.cwd }
     val ws by hub.workspace.collectAsState()
     val connected by hub.connected.collectAsState()
     val segment by hub.chatSegment.collectAsState()
@@ -52,7 +54,6 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { hub.refreshWorkspace() }
 
-    val live = state.live
     val all = remember(live, ws, filter) { groupByRepo(live, ws, filter) }
     var hits by remember { mutableStateOf(emptyList<MessageHit>()) }
     LaunchedEffect(filter) {
@@ -75,8 +76,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     var repoKey by rememberSaveable { mutableStateOf<String?>(null) }
     var newChat by remember { mutableStateOf<RepoChoice?>(null) }
 
-    val shownCwd = live.firstOrNull { it.id == state.shownId }?.cwd
-    val (prLoad) = rememberLoad(state.shownId, shownCwd) { if (shownCwd == null || live.none { it.pr != null }) emptyList() else parsePulls(hub.read("/api/gh/prs")) }
+    val shownCwd = live.firstOrNull { it.id == shownId }?.cwd
+    val (prLoad) = rememberLoad(shownId, shownCwd) { if (shownCwd == null || live.none { it.pr != null }) emptyList() else parsePulls(hub.read("/api/gh/prs")) }
 
     fun repoBranch(cwd: String) = ws.repos.firstOrNull { it.cwd == folderKey(cwd, ws.repos, ws.trees) }?.branch
 
@@ -121,7 +122,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 }
             },
             state = chatState(c, s, seen),
-            selected = c.id == state.shownId,
+            selected = c.id == shownId,
             actions = actions(c.sessionId, c.title, c),
             run = c.run,
             pr = c.pr?.let { n -> prChip(n, prLoad.data?.takeIf { c.cwd == shownCwd }?.firstOrNull { it.number == n }) },
@@ -245,7 +246,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     }
 
     newChat?.let { choice ->
-        val here = state.session?.cwd?.ifEmpty { null }?.let { c -> folderKey(c, ws.repos, ws.trees) }?.takeIf { k -> unfiltered.any { g -> g.key == k } }
+        val here = sessionCwd?.ifEmpty { null }?.let { c -> folderKey(c, ws.repos, ws.trees) }?.takeIf { k -> unfiltered.any { g -> g.key == k } }
         val choices = unfiltered.filter { g -> g.key == here || g.open.isNotEmpty() || g.recent.isNotEmpty() }.sortedByDescending { g -> g.key == here }
         NewChatSheet(hub, choice.key, choices.map { RepoChoice(it.key, it.name) }, onDismiss = { newChat = null }, initial = here)
     }

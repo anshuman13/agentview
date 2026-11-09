@@ -42,7 +42,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
     val chat = st.shownId
     var app by rememberSaveable(chat) { mutableStateOf("") }
     val (load, reload) = rememberLoad(chat, app) { parseDeploy(hub.read("/api/deploy/status" + if (app.isNotEmpty()) "?app=${enc(app)}" else "")) }
-    LaunchedEffect(chat, app) { while (true) { delay(60_000); reload() } }
+    WhileStarted(chat, app) { while (true) { delay(60_000); reload() } }
     var job by remember(chat) { mutableStateOf<DeployJob?>(null) }
     var ask by remember { mutableStateOf<DeployAsk?>(null) }
     val link = openLink()

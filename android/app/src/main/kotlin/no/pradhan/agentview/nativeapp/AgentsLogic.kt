@@ -1,6 +1,9 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.runtime.Immutable
+
 // Port of web/src/sessions/agents.ts: the sub-agents of a chat, newest first in the list.
+@Immutable
 data class Agent(
     val id: String,
     val item: Item.Agent,
@@ -52,7 +55,7 @@ private fun agentOf(it: Item.Agent, info: ChatEvent?, lastAt: Long): Agent {
     )
 }
 
-fun buildAgents(events: List<ChatEvent>): List<Agent> {
+fun buildAgents(events: List<ChatEvent>, items: List<Item> = buildTranscript(events)): List<Agent> {
     val info = HashMap<String, ChatEvent>()
     val lastAt = HashMap<String, Long>()
     for (e in events) {
@@ -67,7 +70,7 @@ fun buildAgents(events: List<ChatEvent>): List<Agent> {
             walk(it.steps)
         }
     }
-    walk(buildTranscript(events))
+    walk(items)
     return out
 }
 

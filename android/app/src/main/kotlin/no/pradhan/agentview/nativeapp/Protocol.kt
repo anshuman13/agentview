@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -17,6 +18,7 @@ val protocolJson = Json { ignoreUnknownKeys = true; isLenient = true }
 
 // shared/protocol.ts ChatEvent: one flat class covering the kinds this client reads (user, assistant, tool_use, agent, result, system).
 // Fields not present on a kind keep their defaults. For tool_use, `summary` is the one-line description; for agent it is `description`.
+@Immutable
 @Serializable
 data class ChatEvent(
     val id: String,

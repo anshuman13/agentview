@@ -26,9 +26,11 @@ import kotlinx.coroutines.delay
 // One agent's report, prompt and steps (web/src/sessions/AgentsPane.tsx), and the list of the chat's sub-agents shown in the Chat sheet. Not a tab.
 @Composable
 fun AgentScreen(hub: Hub, id: String, onBack: () -> Unit, onOpenAgent: (String) -> Unit) {
-    val st by hub.store.state.collectAsState()
-    val agent = remember(st.events, id) { buildAgents(st.events).firstOrNull { it.id == id } }
-    if (agent != null) { AgentPage(hub, agent, st.session?.cwd ?: "", st.shownId, onBack, onOpenAgent); return }
+    val view by hub.transcript.view.collectAsState()
+    val cwd by hub.store.state.select { it.session?.cwd ?: "" }
+    val shownId by hub.store.state.select { it.shownId }
+    val agent = remember(view, id) { view.agents.firstOrNull { it.id == id } }
+    if (agent != null) { AgentPage(hub, agent, cwd, shownId, onBack, onOpenAgent); return }
     Column(Modifier.fillMaxSize()) {
         PageHeader("Agent", onBack)
         EmptyState("Agent not found", "It is not in the chat on screen")
@@ -36,13 +38,13 @@ fun AgentScreen(hub: Hub, id: String, onBack: () -> Unit, onOpenAgent: (String) 
 }
 
 @Composable
-fun AgentList(agents: List<Agent>, now: Long, onOpen: (String) -> Unit) {
+fun AgentList(agents: List<Agent>, now: () -> Long, onOpen: (String) -> Unit) {
     for ((name, rows) in agentGroups(agents)) {
         SectionHeader(name ?: "Agents", rows.size.toString())
         Group {
             rows.forEachIndexed { i, a ->
                 if (i > 0) Hairline(lead = true)
-                ListRow(a.description, agentRowMeta(a), leading = { StatusDot(agentDot(a.status)) }, trailing = { RowLabel(agentTrailing(a, now)) }, onClick = { onOpen(a.id) })
+                ListRow(a.description, agentRowMeta(a), leading = { StatusDot(agentDot(a.status)) }, trailing = { RowLabel(agentTrailing(a, now())) }, onClick = { onOpen(a.id) })
             }
         }
     }
@@ -52,8 +54,7 @@ fun AgentList(agents: List<Agent>, now: Long, onOpen: (String) -> Unit) {
 private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, onBack: () -> Unit, onOpenAgent: (String) -> Unit) {
     BackHandler(onBack = onBack)
     val running = a.status == "running"
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(running) { while (running) { now = System.currentTimeMillis(); delay(1000) } }
+    val now by rememberNow(running)
     var prompt by rememberSaveable(a.id) { mutableStateOf(false) }
     val clip = LocalClipboardManager.current
     Column(Modifier.fillMaxSize()) {

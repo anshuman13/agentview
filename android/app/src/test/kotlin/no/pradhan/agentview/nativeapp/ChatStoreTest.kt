@@ -148,4 +148,16 @@ class ChatStoreTest {
         s.dropLocal("a", "n")
         assertEquals(listOf("1", "m"), s.state.value.events.map { it.id })
     }
+
+    @Test
+    fun concurrentHandleAndAddLocalKeepBothChanges() {
+        val s = ChatStore()
+        s.show("a")
+        s.handle(init("a", ev("0")))
+        val n = 500
+        val streamed = Thread { for (i in 1..n) s.handle(ServerMessage.Event(ev("s$i"))) }
+        val local = Thread { for (i in 1..n) s.addLocal("a", ev("l$i")) }
+        streamed.start(); local.start(); streamed.join(); local.join()
+        assertEquals(2 * n + 1, s.state.value.events.size)
+    }
 }

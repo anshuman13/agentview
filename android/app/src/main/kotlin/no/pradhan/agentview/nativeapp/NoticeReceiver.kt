@@ -8,7 +8,6 @@ import androidx.core.app.RemoteInput
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
 
 // Allow, Deny and Reply on a notification; they send the same commands as the buttons in the chat.
 class NoticeReceiver : BroadcastReceiver() {
@@ -24,7 +23,7 @@ class NoticeReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = runNoticeAction(Api({ origin }, OkHttpClient()), readOnly, intent.action.orEmpty(), chat, text, permissionId)
+                val result = runNoticeAction(Api({ origin }, sharedHttp), readOnly, intent.action.orEmpty(), chat, text, permissionId)
                 Notifier(app).settle(id, channel, chat, result)
             } finally {
                 pending.finish()

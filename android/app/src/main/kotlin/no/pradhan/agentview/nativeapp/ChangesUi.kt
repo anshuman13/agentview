@@ -50,7 +50,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     }
     val (branchLoad, reloadBranch) = rememberLoad(chat) { parseBranchDiff(hub.read("/api/git/branch")) }
     var shownPatch by rememberSaveable(chat) { mutableStateOf<String?>(null) }
-    LaunchedEffect(chat) { while (true) { delay(5000); reload() } }
+    WhileStarted(chat) { while (true) { delay(5000); reload() } }
     val status = load.data
     val files = status?.files ?: emptyList()
     val staged = files.filter { it.staged }

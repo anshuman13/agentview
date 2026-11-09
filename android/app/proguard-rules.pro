@@ -3,7 +3,7 @@
 -keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
 -keepclasseswithmembers class no.pradhan.agentview.nativeapp.** { kotlinx.serialization.KSerializer serializer(...); }
 -keep,includedescriptorclasses class no.pradhan.agentview.nativeapp.**$$serializer { *; }
--keepclassmembers class no.pradhan.agentview.nativeapp.** { *** Companion; }
+-keepclassmembers @kotlinx.serialization.Serializable class no.pradhan.agentview.nativeapp.** { *** Companion; }
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**

@@ -37,10 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.input.ImeAction
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -88,12 +85,9 @@ fun CodexScreen(hub: Hub) {
     LaunchedEffect(st.items, st.meetings, now / 60_000) {
         if (!hub.readOnly) endedPoints(st.items, st.meetings, now).forEach { hub.codex.update(it, mapOf("status" to RAISED)) }
     }
-    val owner = LocalLifecycleOwner.current
     val origin by hub.origin.collectAsState()
-    LaunchedEffect(owner, origin) {
-        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (true) { now = System.currentTimeMillis(); hub.codex.sync(); delay(SYNC_EVERY_MS) }
-        }
+    WhileStarted(origin) {
+        while (true) { now = System.currentTimeMillis(); hub.codex.sync(); delay(SYNC_EVERY_MS) }
     }
     LaunchedEffect(Unit) { while (true) { delay(60_000); now = System.currentTimeMillis() } }
     LaunchedEffect(st) { now = System.currentTimeMillis() }

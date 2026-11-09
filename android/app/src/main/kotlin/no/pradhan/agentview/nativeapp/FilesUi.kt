@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
@@ -146,7 +145,7 @@ fun CodeView(text: String, lang: Lang, wrap: Boolean) {
     }
     val scroll = rememberScrollState()
     LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4)) {
-        itemsIndexed(lines) { i, l ->
+        itemsIndexed(lines, key = { i, _ -> i }, contentType = { _, _ -> "line" }) { i, l ->
             CodeLine("${i + 1}", spans?.getOrNull(i)?.let { highlighted(l, it) } ?: AnnotatedString(l), wrap = wrap, scroll = scroll)
         }
     }
@@ -157,7 +156,7 @@ fun DiffLinesView(lines: List<DiffLine>, lang: Lang, wrap: Boolean) {
     val scroll = rememberScrollState()
     if (lines.isEmpty()) { EmptyState("No changes"); return }
     LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4)) {
-        items(lines) { l -> DiffCodeLine(l, lang, wrap, scroll) }
+        itemsIndexed(lines, key = { i, _ -> i }, contentType = { _, _ -> "line" }) { _, l -> DiffCodeLine(l, lang, wrap, scroll) }
     }
 }
 
@@ -169,7 +168,7 @@ fun NumberedDiffView(rows: List<DiffRow>, lang: Lang, wrap: Boolean, onComment: 
     if (rows.isEmpty()) { EmptyState("No changes"); return }
     val digits = (rows.maxOfOrNull { it.no } ?: 0).toString().length
     LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4)) {
-        items(rows) { r ->
+        itemsIndexed(rows, key = { i, _ -> i }, contentType = { _, _ -> "row" }) { _, r ->
             val long = if (r.line.mark == '@') null else { { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onComment(r) } }
             DiffCodeLine(r.line, lang, wrap, scroll, onLongClick = long, number = if (r.line.mark == '@') "" else "${r.no.toString().padStart(digits)} ${r.line.mark}")
         }

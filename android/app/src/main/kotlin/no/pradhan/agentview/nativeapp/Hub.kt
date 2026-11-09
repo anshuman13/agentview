@@ -10,6 +10,7 @@ import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.coroutineScope
@@ -19,7 +20,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
@@ -27,7 +31,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.builtins.serializer
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
@@ -44,10 +47,11 @@ private const val FLUSH_RETRY_MS = 15_000L
 
 class Undoable(val text: String, val undo: (() -> Unit)?)
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class Hub(private val app: Application, private val saved: SavedStateHandle) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("agentview", 0)
     private val cid = UUID.randomUUID().toString()
-    val client = OkHttpClient()
+    val client = sharedHttp
     private val disk = TranscriptDisk(File(app.filesDir, "transcripts"))
     val drafts = Drafts(PrefsKeyValue(prefs))
     val outbox = Outbox(PrefsKeyValue(prefs))
@@ -65,7 +69,8 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
             }
         },
         restore = { id -> disk.load(id)?.let { RecentChats.Entry(it.events, it.earlier) } },
-    ).also { s -> saved.get<String>(CHAT_KEY)?.takeIf { it.isNotEmpty() }?.let(s::show) }
+    ).also { s -> saved.get<String>(CHAT_KEY)?.takeIf { it.isNotEmpty() }?.let { showChat(s, it) } }
+    val transcript = TranscriptFeed(store.state.map { it.shownId to it.events }.distinctUntilChanged { a, b -> a.first == b.first && a.second === b.second }, viewModelScope)
     val notifier = Notifier(app)
 
     val models = MutableStateFlow(parseModels(prefs.getString("models", null)))
@@ -92,7 +97,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val openJob = MutableStateFlow<String?>(null)
     val undoable = MutableSharedFlow<Undoable>(extraBufferCapacity = 1)
     val navHidden = MutableStateFlow(false)
-    @Volatile var foreground = false
+    private val foregroundNow = MutableStateFlow(false)
+    var foreground: Boolean
+        get() = foregroundNow.value
+        set(v) { foregroundNow.value = v }
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
     val handled = MutableStateFlow(
         prefs.getString("handledOrder", null)?.split("\n")?.filter { it.isNotEmpty() }?.toCollection(LinkedHashSet()) ?: emptySet(),
@@ -151,7 +159,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
 
     init {
         viewModelScope.launch {
-            val minute = flow { while (true) { emit(Unit); delay(60_000) } }
+            val minute = foregroundNow.flatMapLatest { up -> if (up) flow { while (true) { emit(Unit); delay(60_000) } } else emptyFlow() }.onStart { emit(Unit) }
             val needs = combine(codex.state, minute, codexFilter, handled) { s, _, filter, hidden -> needsList(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden).size }.distinctUntilChanged()
             combine(store.state.map { waitingSnapshot(it.live) }.distinctUntilChanged(), liveLoaded, notifyOn, needs) { snap, loaded, on, badge -> Triple(snap, loaded, if (on) badge else -1) }.collect { (snap, loaded, badge) ->
                 if (!loaded) return@collect
@@ -202,6 +210,11 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
             liveLoaded.value = true
             if (outbox.items.value.isNotEmpty() && System.currentTimeMillis() - flushFailedAt > FLUSH_RETRY_MS) flushOutbox()
         }
+    }
+
+    private fun showChat(s: ChatStore, id: String) {
+        s.show(id)
+        viewModelScope.launch { s.fill(id) }
     }
 
     fun draft(chat: String) = drafts.get(chat)
@@ -283,7 +296,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun open(id: String) {
         saved[CHAT_KEY] = id
         notifier.clear(id)
-        store.show(id)
+        showChat(store, id)
         markSeen(store.state.value.live.firstOrNull { it.id == id }?.sessionId)
         if (_connected.value) post(viewCmd(id), id, viewing = true)
     }

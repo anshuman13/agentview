@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
+import android.util.LruCache
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,7 +19,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -33,6 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @Composable
 fun inlineText(inlines: List<Inline>): AnnotatedString {
@@ -57,10 +65,23 @@ fun inlineText(inlines: List<Inline>): AnnotatedString {
     }
 }
 
+const val MARKDOWN_STREAM_MS = 100L
+private val parsed = LruCache<String, List<MdBlock>>(64)
+
+// Parses off the main thread. While `streaming` the text is re-parsed at most every MARKDOWN_STREAM_MS; a finished message is parsed once.
 @Composable
-fun Markdown(text: String, modifier: Modifier = Modifier) {
-    val blocks = remember(text) { parseMarkdown(text) }
-    MdBlocks(blocks, modifier)
+fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = false) {
+    val latest by rememberUpdatedState(text to streaming)
+    val blocks by produceState(parsed.get(text)) {
+        var last = 0L
+        snapshotFlow { latest }.collect { (_, live) ->
+            if (live) delay(last + MARKDOWN_STREAM_MS - System.currentTimeMillis())
+            val (t, still) = latest
+            last = System.currentTimeMillis()
+            value = parsed.get(t) ?: withContext(Dispatchers.Default) { parseMarkdown(t) }.also { if (!still) parsed.put(t, it) }
+        }
+    }
+    blocks?.let { MdBlocks(it, modifier) }
 }
 
 @Composable

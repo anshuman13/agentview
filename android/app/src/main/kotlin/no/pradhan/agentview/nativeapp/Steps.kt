@@ -1,21 +1,23 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 // Port of web/src/chat/steps.ts: the transcript items built from the flat event list.
+@Immutable
 sealed interface Item {
     val id: String
 
-    data class User(override val id: String, val text: String, val at: Long, val stopping: Boolean, val queued: Boolean) : Item
-    data class Phase(override val id: String, val text: String) : Item
-    data class Assistant(override val id: String, val text: String, val streaming: Boolean) : Item
-    data class System(override val id: String, val text: String) : Item
-    data class Step(override val id: String, val use: ChatEvent, val result: ChatEvent?) : Item
-    data class File(override val id: String, val path: String, val add: Int, val del: Int, val uses: List<ChatEvent>, val error: String?, val denied: Boolean) : Item
-    data class Agent(override val id: String, val use: ChatEvent, val result: ChatEvent?, val running: Boolean, val steps: List<Item>) : Item
-    data class Blocked(override val id: String, val ev: ChatEvent) : Item
+    @Immutable data class User(override val id: String, val text: String, val at: Long, val stopping: Boolean, val queued: Boolean) : Item
+    @Immutable data class Phase(override val id: String, val text: String) : Item
+    @Immutable data class Assistant(override val id: String, val text: String, val streaming: Boolean) : Item
+    @Immutable data class System(override val id: String, val text: String) : Item
+    @Immutable data class Step(override val id: String, val use: ChatEvent, val result: ChatEvent?) : Item
+    @Immutable data class File(override val id: String, val path: String, val add: Int, val del: Int, val uses: List<ChatEvent>, val error: String?, val denied: Boolean) : Item
+    @Immutable data class Agent(override val id: String, val use: ChatEvent, val result: ChatEvent?, val running: Boolean, val steps: List<Item>) : Item
+    @Immutable data class Blocked(override val id: String, val ev: ChatEvent) : Item
 }
 
 const val CMD_PREVIEW = 160

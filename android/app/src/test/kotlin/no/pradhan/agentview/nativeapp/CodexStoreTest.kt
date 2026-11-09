@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.coroutines.EmptyCoroutineContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -28,7 +29,7 @@ class CodexStoreTest {
     }
 
     private fun store(scope: TestScope, fake: Fake, writable: () -> Boolean = { true }, notices: MutableList<String> = mutableListOf()) = CodexStore(
-        scope, { since, full -> fake.pulled.add(since to full); fake.pulls.removeAt(0) }, { body -> fake.pushes.add(body); fake.pushReply }, writable, { notices.add(it) }, { 5000L },
+        scope, { since, full -> fake.pulled.add(since to full); fake.pulls.removeAt(0) }, { body -> fake.pushes.add(body); fake.pushReply }, writable, { notices.add(it) }, { 5000L }, EmptyCoroutineContext,
     )
 
     @Test fun pullsEveryPageAndKeepsOnlyTheSyncedTables() = runTest {

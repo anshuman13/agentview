@@ -6,6 +6,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlin.coroutines.EmptyCoroutineContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -28,7 +29,7 @@ private fun ask(id: String, draft: String? = "ok", vararg v: Pair<String, Any?>)
 
 private fun mtg(id: String, title: String, start: Long, vararg v: Pair<String, Any?>) = r("meetings", id, WORK, "title" to title, "starts_at" to start, "ends_at" to start + 3_600_000, *v)
 
-private fun store(scope: TestScope, writable: () -> Boolean = { true }, notices: MutableList<String> = mutableListOf()) = CodexStore(scope, { _, _ -> "{}" }, { "{}" }, writable, { notices.add(it) }, { 5000L })
+private fun store(scope: TestScope, writable: () -> Boolean = { true }, notices: MutableList<String> = mutableListOf()) = CodexStore(scope, { _, _ -> "{}" }, { "{}" }, writable, { notices.add(it) }, { 5000L }, EmptyCoroutineContext)
 
 private class FakeRemote : AssistantRemote {
     val calls = mutableListOf<String>()

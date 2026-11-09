@@ -1,12 +1,15 @@
 package no.pradhan.agentview.nativeapp
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -42,6 +45,7 @@ class CodexStore(
     private val canWrite: () -> Boolean,
     private val notify: (String) -> Unit,
     private val now: () -> Long = System::currentTimeMillis,
+    private val parsing: CoroutineContext = Dispatchers.Default,
 ) {
     val state = MutableStateFlow(CodexState())
     private val tables = SYNCED_FIELDS.keys.associateWith { LinkedHashMap<String, Row>() }
@@ -63,12 +67,21 @@ class CodexStore(
         )
     }
 
-    private fun apply(changes: List<JsonObject>) {
-        for (c in changes) {
-            val inc = parseRow(c) ?: continue
+    private fun apply(changes: List<Row?>) {
+        for (inc in changes) {
+            if (inc == null) continue
             val map = tables.getValue(inc.table)
             map[inc.key] = mergeIncoming(map[inc.key], inc)
         }
+    }
+
+    private data class Page(val version: Long, val changes: List<Row?>, val hasMore: Boolean, val refused: List<JsonObject>)
+
+    private suspend fun parse(body: String): Page = withContext(parsing) {
+        val reply = protocolJson.parseToJsonElement(body).jsonObject
+        val version = reply["version"]?.jsonPrimitive?.content?.toLongOrNull() ?: error("Unexpected hub response")
+        val changes = reply["changes"]?.jsonArray?.map { parseRow(it.jsonObject) } ?: error("Unexpected hub response")
+        Page(version, changes, (reply["hasMore"] as? JsonPrimitive)?.content == "true", (reply["rejected"] as? JsonArray)?.map { it.jsonObject } ?: emptyList())
     }
 
     suspend fun sync() = lock.withLock {
@@ -80,10 +93,7 @@ class CodexStore(
                 val batch = queue.take(PUSH_BATCH)
                 queue = queue.drop(batch.size)
                 val body = if (batch.isEmpty() && queue.isEmpty()) pull(since, since == 0L) else push(pushBody(batch))
-                val reply = protocolJson.parseToJsonElement(body).jsonObject
-                val version = reply["version"]?.jsonPrimitive?.content?.toLongOrNull() ?: error("Unexpected hub response")
-                val changes = reply["changes"]?.jsonArray?.map { it.jsonObject } ?: error("Unexpected hub response")
-                val refused = (reply["rejected"] as? JsonArray)?.map { it.jsonObject } ?: emptyList()
+                val (version, changes, hasMore, refused) = parse(body)
                 for (sent in batch) {
                     if (refused.any { it["id"]?.jsonPrimitive?.contentOrNull == sent.id }) continue
                     val map = tables.getValue(sent.table)
@@ -92,7 +102,7 @@ class CodexStore(
                 }
                 if (queue.isNotEmpty()) continue
                 apply(changes)
-                more = (reply["hasMore"] as? JsonPrimitive)?.content == "true" && version != since
+                more = hasMore && version != since
                 since = version
                 if (refused.isNotEmpty()) error("${refused.size} change${if (refused.size > 1) "s" else ""} rejected: ${refused[0]["reason"]?.jsonPrimitive?.contentOrNull}")
             }

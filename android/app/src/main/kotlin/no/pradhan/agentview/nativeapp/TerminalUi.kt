@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -87,7 +87,7 @@ private fun TermView(hub: Hub, id: String, onGone: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth().background(av.surface)) {
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = Tokens.sp4), state = list) {
-                items(lines) { l -> Text(termText(l), Modifier.horizontalScroll(scroll), style = TermMono, color = av.fg, softWrap = false) }
+                itemsIndexed(lines, key = { i, _ -> i }, contentType = { _, _ -> "line" }) { _, l -> Text(termText(l), Modifier.horizontalScroll(scroll), style = TermMono, color = av.fg, softWrap = false) }
             }
         }
         HorizontalDivider(color = av.border, thickness = Tokens.hairline)

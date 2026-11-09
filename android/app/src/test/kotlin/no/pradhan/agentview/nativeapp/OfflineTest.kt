@@ -117,6 +117,8 @@ class OfflineTest {
         assertNotNull(saved["a"])
         val fresh = ChatStore(persist = { _, _ -> }, restore = { saved[it] })
         fresh.show("a")
+        assertEquals(emptyList<ChatEvent>(), fresh.state.value.events)
+        runBlocking { fresh.fill("a") }
         assertEquals(listOf("1"), fresh.state.value.events.map { it.id })
         assertTrue(!fresh.state.value.settled)
     }

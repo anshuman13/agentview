@@ -110,7 +110,8 @@ fun App(hub: Hub) {
     val nav = rememberNavController()
     val snack = remember { SnackbarHostState() }
     val notice by hub.notice.collectAsState()
-    val state by hub.store.state.collectAsState()
+    val live by hub.store.state.select { it.live }
+    val shownId by hub.store.state.select { it.shownId }
     val connected by hub.connected.collectAsState()
     val link by hub.link.collectAsState()
     val shared by hub.shared.collectAsState()
@@ -143,17 +144,17 @@ fun App(hub: Hub) {
     val route = nav.currentBackStackEntryAsState().value?.destination?.route
     val inMore = isMore(route)
     val inAgent = isAgent(route)
-    val shownChat = state.live.firstOrNull { it.id == state.shownId }
+    val shownChat = live.firstOrNull { it.id == shownId }
     val width = LocalConfiguration.current.screenWidthDp
     val rail = width >= RAIL_MIN_DP
     val twoPane = isExpanded(width)
     val navHidden by hub.navHidden.collectAsState()
     val openAgent = { id: String -> nav.navigate("agent/${Uri.encode(id)}") }
-    LaunchedEffect(route, state.shownId) { hub.navHidden.value = false }
+    LaunchedEffect(route, shownId) { hub.navHidden.value = false }
     val dests = Tab.entries.map { t ->
         val badge = when (t) {
             Tab.Chat -> shownChat?.pending ?: 0
-            Tab.Sessions -> sessionsBadge(state.live, state.shownId)
+            Tab.Sessions -> sessionsBadge(live, shownId)
             else -> 0
         }
         Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge) { more = false; nav.goTab(t.route) }

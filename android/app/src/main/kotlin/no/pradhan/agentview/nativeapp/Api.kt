@@ -22,7 +22,10 @@ class ApiError(message: String, val code: Int = 0) : Exception(message)
 fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
 // The REST routes of server/src/http/routes.ts that the chat screens read and write.
-class Api(private val origin: () -> String, private val http: OkHttpClient = OkHttpClient()) : AssistantRemote, NoticeRemote {
+// One client for the whole app, so its connections and threads are shared; callers that need other timeouts use newBuilder().
+val sharedHttp: OkHttpClient by lazy { OkHttpClient() }
+
+class Api(private val origin: () -> String, private val http: OkHttpClient = sharedHttp) : AssistantRemote, NoticeRemote {
     private val slow = http.newBuilder().readTimeout(120, java.util.concurrent.TimeUnit.SECONDS).build()
     private val long = http.newBuilder().readTimeout(300, java.util.concurrent.TimeUnit.SECONDS).build()
 
