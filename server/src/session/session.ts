@@ -277,7 +277,7 @@ export class AgentSession implements AgentHost {
     if (name && name !== 'code-review' && this.driver.command(name, args)) return;
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
     this.begin();
-    if (name === 'code-review' && /^\d*$/.test(args)) this.driver.review(args ? Number(args) : 'local');
+    if (name === 'code-review' && /^\d*$/.test(args)) this.driver.review(args ? Number(args) : 'local', id);
     else this.driver.send(expandChatMentions(text), id);
   }
 

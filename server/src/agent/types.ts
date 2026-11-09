@@ -46,7 +46,7 @@ export interface AgentDriver {
   // Drops what inject held for a step that never came; a stopped turn must not carry it into the next one.
   clearInjected(): void;
   // Starts a code review of the working tree or a PR; the findings reach host.reportFindings.
-  review(target: 'local' | number): void;
+  review(target: 'local' | number, id?: string): void;
   // The model a build cycle step runs on; null keeps the chat's own.
   roleModel(role: LoopRole): { model: string; effort?: Effort } | null;
   // cancelQueued also drops messages sent with 'next' that Claude has not read yet.

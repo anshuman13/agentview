@@ -314,8 +314,8 @@ export class ClaudeDriver implements AgentDriver {
     this.toolHooks.clearInjected();
   }
 
-  review(target: 'local' | number) {
-    this.send(target === 'local' ? '/code-review' : `/code-review ${target}`);
+  review(target: 'local' | number, id?: string) {
+    this.send(target === 'local' ? '/code-review' : `/code-review ${target}`, id);
   }
 
   roleModel(role: LoopRole) {
