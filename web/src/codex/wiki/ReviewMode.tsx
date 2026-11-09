@@ -8,6 +8,7 @@ import { setView, useEscapeBack } from '../view';
 import { Swipe } from '../gestures/Swipe';
 import { ClaudeChip, SourceChip } from './Chips';
 import { useReview } from './Review';
+import { reviewQueue } from './reviewQueue';
 import { MEMORY, shortDate } from './shared';
 
 const key = (f: Fact) => f.profile + f.id;
@@ -24,7 +25,7 @@ export function ReviewMode() {
   for (const k of open.keys()) if (!order.current.includes(k)) order.current.push(k);
   const total = order.current.length;
   const left = order.current.filter((k) => open.has(k));
-  const queue = [...left.filter((k) => !skipped.includes(k)), ...skipped.filter((k) => open.has(k))];
+  const queue = reviewQueue(order.current, skipped, new Set(open.keys()));
   const fact = queue.length ? open.get(queue[0]) : undefined;
   const n = total - left.length + 1;
   const back = () => setView({ open: null, anchor: null });

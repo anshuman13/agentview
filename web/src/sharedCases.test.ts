@@ -12,6 +12,7 @@ import { runBands } from './sessions/runBands';
 import { tryColumn } from './sessions/TriesBoard';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { needsYou } from './codex/summary/needsYou';
+import { reviewQueue } from './codex/wiki/reviewQueue';
 import { revertBlock } from './workspace/revertBlock';
 import { ago } from './ui/util';
 import { guessProfile } from './codex/data/ask/ask';
@@ -120,5 +121,9 @@ describe('cases shared with the Android app', () => {
       const w = parseWhen(c.text, new Date(c.now));
       expect(w && { at: w.at === null ? null : new Date(w.at).toISOString().replace('.000Z', 'Z'), spans: w.spans, stripped: stripWhen(c.text, w) }).toEqual(c.expected);
     });
+  }
+
+  for (const c of cases<{ name: string; order: string[]; skipped: string[]; open: string[]; expected: string[] }>('review-queue')) {
+    it(`reviewQueue: ${c.name}`, () => expect(reviewQueue(c.order, c.skipped, new Set(c.open))).toEqual(c.expected));
   }
 });

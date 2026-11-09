@@ -38,6 +38,7 @@ import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
+import no.pradhan.agentview.nativeapp.workspace.reviewQueue
 import no.pradhan.agentview.nativeapp.chat.appendRule
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
@@ -184,6 +185,11 @@ class SharedCasesTest {
             val expected = e?.let { listOf(it.nullable("at")?.jsonPrimitive?.content, it.getValue("spans").jsonArray.map { s -> s.jsonArray[0].jsonPrimitive.long.toInt() to s.jsonArray[1].jsonPrimitive.long.toInt() }, it.str("stripped")) }
             assertEquals(c.str("name"), expected, actual)
         }
+    }
+
+    @Test fun reviewQueue() {
+        fun strings(c: JsonObject, k: String) = c.getValue(k).jsonArray.map { it.jsonPrimitive.content }
+        for (c in cases("review-queue")) assertEquals(c.str("name"), strings(c, "expected"), reviewQueue(strings(c, "order"), strings(c, "skipped"), strings(c, "open").toSet()))
     }
 }
 

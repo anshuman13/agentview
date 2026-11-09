@@ -1,0 +1,7 @@
+[
+  { "name": "fresh", "order": ["a", "b", "c"], "skipped": [], "open": ["a", "b", "c"], "expected": ["a", "b", "c"] },
+  { "name": "one skip", "order": ["a", "b", "c"], "skipped": ["a"], "open": ["a", "b", "c"], "expected": ["b", "c", "a"] },
+  { "name": "skip of the last claim", "order": ["a"], "skipped": ["a"], "open": ["a"], "expected": ["a"] },
+  { "name": "decided claim removed", "order": ["a", "b", "c"], "skipped": [], "open": ["a", "c"], "expected": ["a", "c"] },
+  { "name": "skipped claim decided", "order": ["a", "b", "c"], "skipped": ["a"], "open": ["b", "c"], "expected": ["b", "c"] }
+]
