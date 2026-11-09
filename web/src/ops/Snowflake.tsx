@@ -39,25 +39,16 @@ function Picker({ kind, parent, value, onPick, enabled }: { kind: 'database' | '
   );
 }
 
-export function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInfo) => void }) {
-  const sf = info.snowflake;
+type Conn = { sf: SnowflakeInfo; connected: boolean; missing: string[] };
+
+function ConnectionForm({ sf, connected, missing, onInfo }: Conn & { onInfo: (i: ObserveInfo) => void }) {
   const [form, setForm] = useState<SnowflakeInfo & { secret: string }>({ ...sf, secret: '' });
   const [saveMsg, setSaveMsg] = useState('');
-  const [db, setDb] = useState(sf.database);
-  const [schema, setSchema] = useState(sf.schema);
-  const [table, setTable] = useState('');
-  const [sql, setSql] = useState('');
-  const [result, setResult] = useState<Load<SnowflakeResult>>({ data: null, error: '', busy: false });
   const [test, setTest] = useState<Load<SnowflakeTest>>({ data: null, error: '', busy: false });
-  const connected = sf.hasSecret && !!sf.account && !!sf.user;
-  const missing = [...(['account', 'user'] as const).filter((k) => !sf[k]), ...(sf.hasSecret ? [] : [sf.auth === 'pat' ? 'token' : 'password'])];
-
   const testConnection = () => track(setTest, () => post<SnowflakeTest>('/api/observe/snowflake/test', {}));
 
   useEffect(() => {
     setForm({ ...sf, secret: '' });
-    setDb((d) => d || sf.database);
-    setSchema((s) => s || sf.schema);
   }, [sf]);
 
   const saveForm = async () => {
@@ -71,23 +62,10 @@ export function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: Obs
     }
   };
 
-  const run = () => {
-    if (sql.trim()) track(setResult, () => post<SnowflakeResult>('/api/observe/snowflake/query', { sql }));
-  };
-
-  const pickTable = (t: string) => {
-    setTable(t);
-    if (t && db && schema) setSql(`SELECT * FROM ${db}.${schema}.${t} LIMIT 100`);
-  };
-
   const field = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
-    <Pane
-      label="Snowflake"
-      open={false}
-      action={<AddToClaude server="snowflake" added={info.inClaude.snowflake} disabled={!connected} title={connected ? 'Write the Snowflake MCP server into ~/.claude.json' : 'Save the connection first'} onDone={onInfo} />}
-    >
+    <>
       <div className="obs-form">
         {FIELDS.map((f) => (
           <label key={f.key}>
@@ -121,6 +99,49 @@ export function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: Obs
         </div>
       )}
       <Err text={test.error} />
+    </>
+  );
+}
+
+function ResultTable({ data }: { data: SnowflakeResult }) {
+  if (data.columns.length === 0) return <EmptyState size="sm" title="No rows" />;
+  return (
+    <div className="obs-table">
+      <table>
+        <thead><tr>{data.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
+        <tbody>
+          {data.rows.map((r, i) => (
+            <tr key={i}>{r.map((v, j) => <td key={j} title={cell(v)}>{cell(v)}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function QueryPanel({ sf, connected }: Pick<Conn, 'sf' | 'connected'>) {
+  const [db, setDb] = useState(sf.database);
+  const [schema, setSchema] = useState(sf.schema);
+  const [table, setTable] = useState('');
+  const [sql, setSql] = useState('');
+  const [result, setResult] = useState<Load<SnowflakeResult>>({ data: null, error: '', busy: false });
+
+  useEffect(() => {
+    setDb((d) => d || sf.database);
+    setSchema((s) => s || sf.schema);
+  }, [sf]);
+
+  const run = () => {
+    if (sql.trim()) track(setResult, () => post<SnowflakeResult>('/api/observe/snowflake/query', { sql }));
+  };
+
+  const pickTable = (t: string) => {
+    setTable(t);
+    if (t && db && schema) setSql(`SELECT * FROM ${db}.${schema}.${t} LIMIT 100`);
+  };
+
+  return (
+    <>
       <div className="obs-pickers">
         <Picker kind="database" parent="" value={db} enabled={connected} onPick={(v) => { setDb(v); setSchema(''); setTable(''); }} />
         <Picker kind="schema" parent={`database=${encodeURIComponent(db)}`} value={schema} enabled={connected && !!db} onPick={(v) => { setSchema(v); setTable(''); }} />
@@ -152,20 +173,23 @@ export function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: Obs
         </button>
       </div>
       <Err text={result.error} />
-      {result.data && result.data.columns.length > 0 && (
-        <div className="obs-table">
-          <table>
-            <thead><tr>{result.data.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-            <tbody>
-              {result.data.rows.map((r, i) => (
-                <tr key={i}>{r.map((v, j) => <td key={j} title={cell(v)}>{cell(v)}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {result.data && result.data.columns.length === 0 && <EmptyState size="sm" title="No rows" />}
-    </Pane>
+      {result.data && <ResultTable data={result.data} />}
+    </>
   );
 }
 
+export function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInfo) => void }) {
+  const sf = info.snowflake;
+  const connected = sf.hasSecret && !!sf.account && !!sf.user;
+  const missing = [...(['account', 'user'] as const).filter((k) => !sf[k]), ...(sf.hasSecret ? [] : [sf.auth === 'pat' ? 'token' : 'password'])];
+  return (
+    <Pane
+      label="Snowflake"
+      open={false}
+      action={<AddToClaude server="snowflake" added={info.inClaude.snowflake} disabled={!connected} title={connected ? 'Write the Snowflake MCP server into ~/.claude.json' : 'Save the connection first'} onDone={onInfo} />}
+    >
+      <ConnectionForm sf={sf} connected={connected} missing={missing} onInfo={onInfo} />
+      <QueryPanel sf={sf} connected={connected} />
+    </Pane>
+  );
+}

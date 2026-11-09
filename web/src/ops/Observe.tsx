@@ -17,6 +17,49 @@ import { Err, Loading, post } from './observeShared';
 
 const SAVE_BADGE: Record<'unsaved' | 'saved' | 'failed', BadgeSpec> = { unsaved: { status: 'waiting', reason: 'Unsaved' }, saved: { status: 'done' }, failed: { status: 'failed' } };
 
+type PickerProps = { input: string; setInput: (v: string) => void; names: string[]; commit: (v: string) => void; picked: string; reset: () => void };
+
+function ProjectPicker({ input, setInput, names, commit, picked, reset }: PickerProps) {
+  return (
+    <div className="obs-picker">
+      <Icon name="repo" small />
+      <input
+        list="obs-repos"
+        value={input}
+        placeholder="Project"
+        aria-label="Project"
+        spellCheck={false}
+        onChange={(e) => {
+          setInput(e.target.value);
+          if (names.includes(e.target.value)) commit(e.target.value);
+        }}
+        onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && commit(input)}
+        onBlur={() => commit(input)}
+      />
+      <datalist id="obs-repos">{names.map((n) => <option key={n} value={n} />)}</datalist>
+      {picked && <button className="icon-btn" title="Back to this chat's repo" onClick={reset}><Icon name="discard" small /></button>}
+    </div>
+  );
+}
+
+type SettingsProps = { info: ObserveInfo; open: boolean; toggle: () => void; draft: string; saveState: 'idle' | 'unsaved' | 'saved' | 'failed'; saveError: string; saving: boolean; onEdit: (text: string) => void; onSave: () => void };
+
+function SettingsSection({ info, open, toggle, draft, saveState, saveError, saving, onEdit, onSave }: SettingsProps) {
+  return (
+    <>
+      <UiSection label="Settings" open={open} onToggle={toggle} action={saveState !== 'idle' && <Badge {...SAVE_BADGE[saveState]} />} />
+      {open && (
+        <div className="obs-body">
+          <textarea className="obs-field" aria-label="Observe settings" value={draft} spellCheck={false} rows={14} onChange={(e) => onEdit(e.target.value)} />
+          <Err text={saveError} />
+          <div className="obs-hint">Grafana MCP: {info.grafanaServer ? 'found in ~/.claude.json' : 'missing from ~/.claude.json'}</div>
+          <div className="obs-actions"><Button variant="primary" size="sm" disabled={saving} onClick={onSave}>Save</Button></div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function Observe() {
   const chat = useStore((s) => s.session.id);
   const [picked, setPicked] = useState('');
@@ -92,24 +135,7 @@ export function Observe() {
 
   return (
     <div className="wk"><div className="wk-scroll"><div className="mt-page observe">
-      <div className="obs-picker">
-        <Icon name="repo" small />
-        <input
-          list="obs-repos"
-          value={input}
-          placeholder="Project"
-          aria-label="Project"
-          spellCheck={false}
-          onChange={(e) => {
-            setInput(e.target.value);
-            if (all.includes(e.target.value)) commit(e.target.value);
-          }}
-          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && commit(input)}
-          onBlur={() => commit(input)}
-        />
-        <datalist id="obs-repos">{all.map((n) => <option key={n} value={n} />)}</datalist>
-        {picked && <button className="icon-btn" title="Back to this chat's repo" onClick={() => setPicked('')}><Icon name="discard" small /></button>}
-      </div>
+      <ProjectPicker input={input} setInput={setInput} names={all} commit={commit} picked={picked} reset={() => setPicked('')} />
       <Err text={error} />
       {!info && !error && <Loading />}
       {info && (
@@ -121,31 +147,7 @@ export function Observe() {
           )}
           <Grafana key={`g-${info.repo}`} info={info} />
           <Snowflake info={info} onInfo={setInfo} />
-          <UiSection
-            label="Settings"
-            open={settingsOpen}
-            onToggle={() => setSettingsOpen((v) => !v)}
-            action={saveState !== 'idle' && <Badge {...SAVE_BADGE[saveState]} />}
-          />
-          {settingsOpen && (
-            <div className="obs-body">
-              <textarea
-                className="obs-field"
-                aria-label="Observe settings"
-                value={draft}
-                spellCheck={false}
-                rows={14}
-                onChange={(e) => {
-                  edit(e.target.value);
-                  setSaveState('unsaved');
-                  setSaveError('');
-                }}
-              />
-              <Err text={saveError} />
-              <div className="obs-hint">Grafana MCP: {info.grafanaServer ? 'found in ~/.claude.json' : 'missing from ~/.claude.json'}</div>
-              <div className="obs-actions"><Button variant="primary" size="sm" disabled={saving} onClick={saveConfig}>Save</Button></div>
-            </div>
-          )}
+          <SettingsSection info={info} open={settingsOpen} toggle={() => setSettingsOpen((v) => !v)} draft={draft} saveState={saveState} saveError={saveError} saving={saving} onEdit={(t) => { edit(t); setSaveState('unsaved'); setSaveError(''); }} onSave={saveConfig} />
         </>
       )}
     </div></div></div>
