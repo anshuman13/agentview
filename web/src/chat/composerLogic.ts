@@ -174,6 +174,11 @@ export function chatMarkdown(events: ChatEvent[], title: string) {
   return [`# ${title || 'Chat'}`, ...parts].join('\n\n') + '\n';
 }
 
+// A reply saved to Notes: the chat title on the first line, in the profile of the chat's folder.
+export function replyNote(text: string, title: string, cwd: string) {
+  return { text: `${title || 'Saved reply'}\n${text.trim()}`, profile: cwd.includes('/workspace_personal/') || cwd.endsWith('/workspace_personal') ? ('personal' as const) : ('work' as const) };
+}
+
 export function resumeCommand(cwd: string, sessionId: string, account: Account) {
   const dir = CONFIG_DIR[account];
   return `cd ${shQuote(cwd)} && ${dir ? `CLAUDE_CONFIG_DIR=${dir} ` : ''}claude --resume ${sessionId}`;

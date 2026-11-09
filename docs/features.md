@@ -195,7 +195,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
   is saved with that one block of changed lines put back to the last commit
 - On the phone, the last reply of each finished turn has Save as note, which saves the chat title and the reply as a
-  Codex note in the chat's profile (like Slack's saved messages)
+  Codex note in the chat's profile (like Slack's saved messages). On the web every finished reply shows the same Save as note
+  link on hover (always shown on touch screens)
 - "Memory" in the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder
   (name, description, where it comes from); a tap shows the file (like Windsurf's memories panel). Read-only, from /api/memory.
   The web has the same list under Memory in the chat settings menu

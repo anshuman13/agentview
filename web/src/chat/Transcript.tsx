@@ -1,5 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { loadEarlier, send, setUi, useStore } from '../app/store';
+import { getState, loadEarlier, notice, send, setUi, useStore } from '../app/store';
+import { assistantStore } from '../codex/data';
+import { replyNote } from './composerLogic';
 import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
@@ -176,7 +178,7 @@ function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolea
     case 'phase':
       return <div className="tr-phase"><Icon name="sync" small />{it.text}</div>;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} /></div>;
+      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <button className="link tr-save" title="Save this reply to Notes" onClick={() => saveReply(it.text, cwd)}>Save as note</button>}</div>;
     case 'system':
       return <div className="tr-system">{it.text}</div>;
     case 'step':
@@ -188,6 +190,12 @@ function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolea
     case 'blocked':
       return <BlockedCard ev={it.ev} />;
   }
+}
+
+function saveReply(text: string, cwd: string) {
+  const st = getState();
+  const note = replyNote(text, st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd);
+  assistantStore().capture(note.text, 'note', note.profile).then(() => notice('Saved to Notes'), () => notice('Could not save the note'));
 }
 
 function Step({ use, result, cwd, settled }: { use: ToolUse; result?: ToolResult; cwd: string; settled?: boolean }) {

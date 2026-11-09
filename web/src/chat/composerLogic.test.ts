@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stampedNotes } from '../codex/data/meetings';
 import type { Meeting } from '../codex/data/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
 import type { ChatEvent, SavedSession } from '../../../shared/protocol';
 
 let n = 0;
@@ -228,5 +228,12 @@ describe('chatMarkdown', () => {
       { id: '4', kind: 'user', text: 'queued', at: 4, queued: true },
     ] as ChatEvent[];
     expect(chatMarkdown(events, 'Importer')).toBe('# Importer\n\n**You:** Fix it\n\nFixed.\n');
+  });
+});
+
+describe('replyNote', () => {
+  it('puts the chat title first and picks the profile from the folder', () => {
+    expect(replyNote(' Fixed. ', 'Importer', '/Users/me/workspace_personal/app')).toEqual({ text: 'Importer\nFixed.', profile: 'personal' });
+    expect(replyNote('Fixed.', '', '/Users/me/workspace/app')).toEqual({ text: 'Saved reply\nFixed.', profile: 'work' });
   });
 });
