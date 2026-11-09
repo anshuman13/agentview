@@ -17,8 +17,9 @@ export class Stopper {
     try {
       await s.driver.interrupt(cancelQueued);
       // A CLI stuck in a tool (such as a macOS privacy prompt) never ends the turn, so end the process.
+      clearTimeout(this.timer);
       this.timer = setTimeout(() => {
-        if (!s.state.session.stopping) return;
+        if (s.closed || !s.state.session.stopping) return;
         s.system('Claude did not stop, so its process was ended');
         s.driver.kill();
       }, STOP_TIMEOUT);
