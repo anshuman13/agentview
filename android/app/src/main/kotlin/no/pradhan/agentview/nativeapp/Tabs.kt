@@ -16,6 +16,7 @@ val MORE_TOOLS = listOf(
     MoreItem("github", "Pull Requests", "git-pull-request"),
 )
 val MORE_PAGES = listOf(
+    MoreItem("runs", "Runs", "sync"),
     MoreItem("observe", "Observe", "pulse"),
     MoreItem("deploy", "Deploy", "rocket"),
     MoreItem("mcp", "MCP Servers", "plug"),
@@ -32,7 +33,7 @@ fun routeFor(link: DeepLink): String? = when {
         "agents" -> Tab.Chat.route
         "chats", "sessions" -> Tab.Sessions.route
         "explorer" -> "more/files"
-        "changes", "github" -> "more/${link.view}"
+        "changes", "github", "runs" -> "more/${link.view}"
         else -> null
     }
 }

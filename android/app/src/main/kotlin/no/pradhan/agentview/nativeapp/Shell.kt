@@ -32,7 +32,9 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +56,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 private const val ORIGIN_ROUTE = "origin"
 
@@ -113,6 +116,12 @@ fun App(hub: Hub) {
     val shared by hub.shared.collectAsState()
     var more by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(notice) { notice?.let { snack.showSnackbar(it); hub.notice.value = null } }
+    LaunchedEffect(Unit) {
+        hub.undoable.collectLatest { u ->
+            snack.currentSnackbarData?.dismiss()
+            if (snack.showSnackbar(u.text, if (u.undo != null) "Undo" else null, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) u.undo?.invoke()
+        }
+    }
 
     LaunchedEffect(link) {
         val l = link ?: return@LaunchedEffect
@@ -144,7 +153,7 @@ fun App(hub: Hub) {
     val dests = Tab.entries.map { t ->
         val badge = when (t) {
             Tab.Chat -> shownChat?.pending ?: 0
-            Tab.Sessions -> state.live.filter { it.id != state.shownId }.sumOf { it.pending }
+            Tab.Sessions -> sessionsBadge(state.live, state.shownId)
             else -> 0
         }
         Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge) { more = false; nav.goTab(t.route) }
@@ -189,7 +198,7 @@ fun App(hub: Hub) {
                         AgentScreen(hub, e.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() }, onOpenAgent = openAgent)
                     }
                     (MORE_TOOLS + MORE_PAGES).forEach { m ->
-                        composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
+                        composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onTab = nav::goTab, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
                     }
                     composable(ORIGIN_ROUTE) { Column(Modifier.fillMaxSize()) { OriginScreen(hub, onDone = { nav.popBackStack() }) } }
                 }
@@ -241,7 +250,7 @@ private fun OfflineBanner(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) = when (m.route) {
+private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onTab: (String) -> Unit, onOrigin: () -> Unit) = when (m.route) {
     "files" -> FilesScreen(hub, onBack)
     "changes" -> ChangesScreen(hub, onBack)
     "github" -> PullsScreen(hub, onBack)
@@ -250,5 +259,6 @@ private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onOrigin: () -> 
     "observe" -> ObserveScreen(hub, onBack)
     "deploy" -> DeployScreen(hub, onBack)
     "mcp" -> McpScreen(hub, onBack)
+    "runs" -> RunsScreen(hub, onBack, { onTab(Tab.Chat.route) }, { onTab(Tab.Codex.route) })
     else -> SettingsScreen(hub, onBack, onOrigin)
 }

@@ -42,6 +42,8 @@ const val WORKSPACE_MIN_AGE_MS = 30_000L
 private const val CHAT_KEY = "chat"
 private const val FLUSH_RETRY_MS = 15_000L
 
+class Undoable(val text: String, val undo: (() -> Unit)?)
+
 class Hub(private val app: Application, private val saved: SavedStateHandle) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("agentview", 0)
     private val cid = UUID.randomUUID().toString()
@@ -82,6 +84,9 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val notifyOn = MutableStateFlow(prefs.getBoolean("notify", true))
     val shared = MutableStateFlow<SharedItem?>(null)
     val addTask = MutableStateFlow(false)
+    // A job the Runs screen asks the Codex tab to open, by row key.
+    val openJob = MutableStateFlow<String?>(null)
+    val undoable = MutableSharedFlow<Undoable>(extraBufferCapacity = 1)
     val navHidden = MutableStateFlow(false)
     @Volatile var foreground = false
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
@@ -521,6 +526,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     }
 
     fun interrupt() = post(interruptCmd(), store.wanted)
+    fun runControl(run: ChatRun, op: String) {
+        post(runCmd(run.id, op), store.wanted)
+        if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run), if (run.kind == "cycle") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
+    }
     fun answer(id: String, answers: Map<String, String>) = post(answerCmd(id, answers), store.wanted)
     fun permission(id: String, allow: Boolean, always: Boolean = false) = post(permissionCmd(id, allow, always), store.wanted)
     fun allowBlocked(id: String) = post(allowBlockedCmd(id), store.wanted)

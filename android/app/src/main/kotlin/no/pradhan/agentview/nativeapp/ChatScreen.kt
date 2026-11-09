@@ -142,6 +142,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }
+        state.runs.lastOrNull { it.chatId == live.id && it.state != "done" }?.let { LoopCard(hub, it, session?.loop?.phase) }
         Composer(hub, live.id, session, running, state.pending.isNotEmpty())
     }
 

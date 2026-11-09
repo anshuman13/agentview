@@ -76,6 +76,43 @@ data class LiveChat(
     val edits: Edits? = null,
     val cost: Double? = null,
     val pr: Int? = null,
+    val run: LiveRun? = null,
+)
+
+// shared/protocol.ts LiveChat.run: the run a chat is on, as the live list carries it.
+@Serializable
+data class LiveRun(
+    val id: String,
+    val kind: String = "loop",
+    val state: String = "running",
+    val why: String? = null,
+    val nextAt: Long? = null,
+    val round: Int = 0,
+    val outcome: String? = null,
+    val line: String? = null,
+)
+
+// shared/protocol.ts Round and ChatRun, the entries of the 'runs' message.
+@Serializable
+data class Round(val n: Int = 0, val at: Long = 0, val outcome: String = "", val line: String = "", val costUsd: Double = 0.0)
+
+@Serializable
+data class ChatRun(
+    val id: String,
+    val kind: String = "loop",
+    val sessionId: String = "",
+    val chatId: String = "",
+    val title: String = "",
+    val what: String = "",
+    val startedAt: Long = 0,
+    val endedAt: Long? = null,
+    val state: String = "running",
+    val why: String = "",
+    val round: Int = 0,
+    val max: Int = 0,
+    val nextAt: Long? = null,
+    val costUsd: Double = 0.0,
+    val rounds: List<Round> = emptyList(),
 )
 
 @Serializable
@@ -108,7 +145,11 @@ data class SessionInfo(
     val account: String? = null,
     val accounts: List<String> = emptyList(),
     val usage: PlanUsage? = null,
+    val loop: LoopInfo? = null,
 )
+
+@Serializable
+data class LoopInfo(val phase: String? = null)
 
 @Serializable
 data class UsageWindow(val pct: Double = 0.0)
@@ -177,6 +218,7 @@ sealed interface ServerMessage {
     data class Event(val event: ChatEvent) : ServerMessage
     data class Append(val id: String, val offset: Int, val text: String) : ServerMessage
     data class Live(val chats: List<LiveChat>) : ServerMessage
+    data class Runs(val runs: List<ChatRun>) : ServerMessage
     data class Findings(val review: ReviewFindings) : ServerMessage
     data class Other(val type: String) : ServerMessage
 }
@@ -204,6 +246,7 @@ fun parseMessage(data: String): ServerMessage {
         "live" -> ServerMessage.Live(
             o["chats"]!!.let { protocolJson.decodeFromJsonElement(ListSerializer(LiveChat.serializer()), it) },
         )
+        "runs" -> ServerMessage.Runs(protocolJson.decodeFromJsonElement(ListSerializer(ChatRun.serializer()), o["runs"]!!))
         "findings" -> ServerMessage.Findings(protocolJson.decodeFromJsonElement(ReviewFindings.serializer(), o["review"]!!))
         else -> ServerMessage.Other(type)
     }
@@ -240,6 +283,7 @@ private fun cmd(type: String, build: kotlinx.serialization.json.JsonObjectBuilde
 
 fun steerCmd(text: String, id: String) = cmd("steer") { put("text", text); put("id", id) }
 fun interruptCmd() = cmd("interrupt")
+fun runCmd(run: String, op: String) = cmd("run") { put("run", run); put("op", op) }
 fun permissionCmd(id: String, allow: Boolean, always: Boolean = false) = cmd("permission") {
     put("id", id); put("allow", allow); if (always) put("always", true)
 }

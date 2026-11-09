@@ -105,6 +105,8 @@ fun CodexScreen(hub: Hub) {
     val push = { r: String -> routeText = pushRoute(routeText, r) }
     val onChip = { c: String -> chipText = (if (c in chips) chips - c else chips + c).joinToString(",") }
     val go = { p: String -> routeText = ""; page = p }
+    val jobRequest by hub.openJob.collectAsState()
+    LaunchedEffect(jobRequest) { jobRequest?.let { page = "jobs"; routeText = "job:$it"; hub.openJob.value = null } }
     val sub = route != null || page == "search" || page.startsWith("tag:")
     LaunchedEffect(page) { if (page != "meetings") decisions = false }
     val back = {

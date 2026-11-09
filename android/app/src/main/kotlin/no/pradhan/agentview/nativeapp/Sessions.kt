@@ -118,6 +118,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             state = chatState(c, s, seen),
             selected = c.id == state.shownId,
             actions = actions(c.sessionId, c.title, c),
+            run = c.run,
             onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
         )
@@ -278,7 +279,7 @@ private fun RepoMark(name: String) {
 }
 
 @Composable
-private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, onResume: (() -> Unit)? = null) {
+private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun? = null, onResume: (() -> Unit)? = null) {
     // Like Slack's unread channels, a chat with a reply or question you have not opened has a bold title.
     val unread = state == ChatState.Done || state == ChatState.Needs
     ListRow(
@@ -287,6 +288,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
         trailing = {
             if (onResume != null) Button("Resume", onResume, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
             if (actions.muted) AvIcon("bell-slash", tint = av.fgMuted)
+            run?.let { r -> runBadge(r)?.takeIf { !(it == RunBadge.Needs && state == ChatState.Needs) }?.let { RunBadgeView(it, r) } }
             when (state) {
                 ChatState.Needs -> Badge("Needs you", BadgeTone.Waiting)
                 ChatState.Failed -> Badge("Failed", BadgeTone.Failed)
