@@ -36,7 +36,8 @@ export function App() {
   const pendingCount = useStore((s) => s.pending.length);
   const openFile = useStore((s) => s.ui.openFile);
   const repoPicker = useStore((s) => s.ui.repoPicker);
-  const session = useStore((s) => s.session);
+  const chatId = useStore((s) => s.session.id);
+  const cwd = useStore((s) => s.session.cwd);
   const [tab, setTab] = useState<Tab>(() => (narrow() && !deepLink.chat && !deepLink.session ? 'assistant' : 'chat'));
   const [editor, setEditor] = useState<'file' | 'browser' | 'agents' | 'assistant' | Page>('file');
   const [seenAssistant, setSeenAssistant] = useState(false);
@@ -78,11 +79,11 @@ export function App() {
   }, [pendingCount]);
 
   // The first init swaps the preset chat id for the server's; that is not a chat switch, so a deep-linked view stays.
-  const prevId = useRef(session.id);
+  const prevId = useRef(chatId);
   const [fromRepos, setFromRepos] = useState(false);
   useEffect(() => {
     const from = prevId.current;
-    prevId.current = session.id;
+    prevId.current = chatId;
     if (deepLink.view && from === deepLink.chat) return;
     setTab((t) => {
       if (t !== 'repos') return t;
@@ -90,7 +91,7 @@ export function App() {
       setFromRepos(true);
       return 'chat';
     });
-  }, [session.id]);
+  }, [chatId]);
   useEffect(() => { if (tab !== 'chat') setFromRepos(false); }, [tab]);
 
   useEffect(() => {
@@ -132,12 +133,12 @@ export function App() {
     openAssistant, openPage, toggleTheme, setView, setSidebar, setTab, setEditor, setBrowse, setChatOpen, setTerminal, setPhone,
   });
 
-  useDeepLink(session.id);
+  useDeepLink(chatId);
 
   const showing = tab === 'assistant' ? 'assistant' : tab === 'browser' ? 'browser' : tab === 'agents' ? 'agents' : tab === 'code' && !isPage(editor) ? 'file' : editor;
   const unreachable = useUnreachable();
   const active = showing === 'assistant' ? 'assistant' : unreachable ? 'offline' : showing === 'browser' ? 'browser' : showing === 'agents' ? 'agents' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
-  const project = session.cwd ? session.cwd.split('/').pop() : 'AgentView';
+  const project = cwd ? cwd.split('/').pop() : 'AgentView';
   const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor);
   const chatsView = view === 'chats' || view === 'sessions';
   const inChats = tab === 'repos' && chatsView;
@@ -205,7 +206,7 @@ export function App() {
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
             <EmptyState size="md" icon="files" title="No file open" hint={`Pick a file in the Explorer${touch() ? '' : ' or press ⌘P'}. Files Claude edits open here`} />
           </div>
-          <TerminalPanel chat={session.id} project={project} height={termH} open={terminal} tab={tab} startResize={startTermResize} toggle={() => setTerminal((v) => !v)} />
+          <TerminalPanel chat={chatId} project={project} height={termH} open={terminal} tab={tab} startResize={startTermResize} toggle={() => setTerminal((v) => !v)} />
         </section>
 
         <div className="sash desktop-only" onPointerDown={startResize} />
