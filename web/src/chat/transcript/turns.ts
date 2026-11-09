@@ -60,6 +60,38 @@ const cloneTurn = (t: Turn): Turn => ({ ...t, notes: [...t.notes], blocked: [...
 
 export const buildTurns = (events: ChatEvent[]) => turnsFrom(events).out;
 
+const isNoteText = (text: string) => ['Compact', 'Loop ', 'Build cycle', 'Goal', 'Usage limit', 'Logged out'].some((p) => text.startsWith(p));
+
+function recordStatus(turn: Turn, e: ToolUse, next: string[]) {
+  const done = str(e.input.done).trim();
+  const important = str(e.input.important).trim();
+  if (done) turn.notes.push({ id: `${e.id}:done`, text: done, kind: 'done' });
+  if (important) turn.notes.push({ id: `${e.id}:note`, text: important, kind: 'important' });
+  return Array.isArray(e.input.next) ? e.input.next.filter((x): x is string => typeof x === 'string') : next;
+}
+
+function recordTool(turn: Turn, e: ToolUse, result: ToolResult | undefined, resumed: Map<string, number>) {
+  const count = editCount(e.name, e.input);
+  const path = str(e.input.file_path);
+  if (count && path && !result?.isError) {
+    const f = turn.files.find((x) => x.path === path);
+    if (f) { f.add += count.add; f.del += count.del; } else turn.files.push({ path, ...count });
+  }
+  if (e.name === 'Bash') {
+    const cmd = str(e.input.command);
+    if (!e.parent) turn.commands.push({ id: e.id, label: str(e.input.description) || firstLine(cmd), done: !!result, ...(denied(result) ? { denied: true } : { error: result?.isError ? errorLine(result.text) : undefined }) });
+    if (result && !result.isError && /\bgit\b[\s\S]*\bcommit\b/.test(cmd)) {
+      for (const m of result.text.matchAll(COMMIT)) if (!turn.commits.some((c) => c.hash === m[2])) turn.commits.push({ hash: m[2], subject: m[3].trim() });
+    }
+  }
+  if (AGENT_TOOLS.has(e.name) && !e.parent) {
+    const running = !result || (resumed.get(e.id) ?? 0) > result.at;
+    const state = running ? 'running' : result.stopped ? 'stopped' : denied(result) ? 'denied' : result.isError ? 'failed' : 'done';
+    turn.agents.push({ id: e.id, label: str(e.input.description) || 'Sub-agent', type: str(e.input.subagent_type), state });
+  }
+
+}
+
 // Builds from events[from] on, resuming from a snapshot taken before `from`. With `split`, also returns a snapshot taken before events[split].
 function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapshot) {
   const results = new Map<string, ToolResult>();
@@ -107,42 +139,18 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
     if (e.kind === 'plan') next = e.next;
     if (e.kind === 'blocked') turn.blocked.push(e);
     if (e.kind === 'result') turn.ended = e.at;
-    if (e.kind === 'system' && (e.text.startsWith('Compact') || e.text.startsWith('Loop ') || e.text.startsWith('Build cycle') || e.text.startsWith('Goal') || e.text.startsWith('Usage limit') || e.text.startsWith('Logged out'))) {
-      turn.notes.push({ id: e.id, text: e.text, kind: /fail|limit|logged out/i.test(e.text) ? 'important' : 'done' });
-    }
+    if (e.kind === 'system' && isNoteText(e.text)) turn.notes.push({ id: e.id, text: e.text, kind: /fail|limit|logged out/i.test(e.text) ? 'important' : 'done' });
     if (e.kind === 'tool_result' && fableCalls.has(e.toolUseId) && !e.isError) turn.notes.push({ id: e.id, text: handBack(e.text), kind: 'fable' });
     if (e.kind !== 'tool_use') continue;
     if (e.name.endsWith('__set_status')) {
-      if (e.parent) continue;
-      const done = str(e.input.done).trim();
-      const important = str(e.input.important).trim();
-      if (done) turn.notes.push({ id: `${e.id}:done`, text: done, kind: 'done' });
-      if (important) turn.notes.push({ id: `${e.id}:note`, text: important, kind: 'important' });
-      if (Array.isArray(e.input.next)) next = e.input.next.filter((x): x is string => typeof x === 'string');
+      if (!e.parent) next = recordStatus(turn, e, next);
       continue;
     }
     lastTool = e;
     const result = results.get(e.id);
     if (e.name === 'Advisor') advisor++;
     if (e.input.subagent_type === BIG_BRO) fableCalls.add(e.id);
-    const count = editCount(e.name, e.input);
-    const path = str(e.input.file_path);
-    if (count && path && !result?.isError) {
-      const f = turn.files.find((x) => x.path === path);
-      if (f) { f.add += count.add; f.del += count.del; } else turn.files.push({ path, ...count });
-    }
-    if (e.name === 'Bash') {
-      const cmd = str(e.input.command);
-      if (!e.parent) turn.commands.push({ id: e.id, label: str(e.input.description) || firstLine(cmd), done: !!result, ...(denied(result) ? { denied: true } : { error: result?.isError ? errorLine(result.text) : undefined }) });
-      if (result && !result.isError && /\bgit\b[\s\S]*\bcommit\b/.test(cmd)) {
-        for (const m of result.text.matchAll(COMMIT)) if (!turn.commits.some((c) => c.hash === m[2])) turn.commits.push({ hash: m[2], subject: m[3].trim() });
-      }
-    }
-    if (AGENT_TOOLS.has(e.name) && !e.parent) {
-      const running = !result || (resumed.get(e.id) ?? 0) > result.at;
-      const state = running ? 'running' : result.stopped ? 'stopped' : denied(result) ? 'denied' : result.isError ? 'failed' : 'done';
-      turn.agents.push({ id: e.id, label: str(e.input.description) || 'Sub-agent', type: str(e.input.subagent_type), state });
-    }
+    recordTool(turn, e, result, resumed);
   }
 
   const starts = new Set(turns.map((t) => t.id));

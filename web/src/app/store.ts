@@ -281,101 +281,100 @@ function equal(a: unknown, b: unknown): boolean {
 // The first attention list after load is not news; later ones notify per new item.
 let attentionSeen = false;
 
+function onInit(m: Extract<ServerMessage, { type: 'init' }>) {
+  // A new server boot means new code on the dev server too; reload so the client matches it.
+  if (m.boot && boot && m.boot !== boot) return location.reload();
+  if (m.boot) boot = m.boot;
+  // A chat opened another way (a saved chat, a new one) still leaves the one before it cached.
+  if (shownId !== m.state.session.id) cacheShown();
+  set((s) => {
+    const same = s.session.id === m.state.session.id;
+    const shown = shownId === m.state.session.id;
+    const old = new Map(s.events.map((e) => [e.id, e]));
+    const page = initPage(s.events, same, m.state.events, m.state.earlier);
+    const events = page.events.map((e) => {
+      const o = shown ? old.get(e.id) : undefined;
+      return o && equal(o, e) ? o : e;
+    });
+    const keep = shown && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
+    const moved = Boolean(s.session.cwd) && s.session.cwd !== m.state.session.cwd;
+    return { ...m.state, earlier: page.earlier, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: { ...s.ui, restarting: false, ...(moved && { openFile: null, openLine: null }) } };
+  });
+  shownId = m.state.session.id;
+  settled = true;
+}
+
+function onEvent(m: Extract<ServerMessage, { type: 'event' }>) {
+  if (m.event.kind === 'result' && !state.events.some((e) => e.id === m.event.id)) {
+    notify('Claude finished', m.event.text.trim().split('\n')[0], focus(state.session.id));
+  }
+  set((s) => {
+    const cur = s.events;
+    let i = cur.length - 1;
+    while (i >= 0 && cur[i].id !== m.event.id) i--;
+    if (i < 0) return { events: [...cur, m.event] };
+    const events = cur.slice();
+    events[i] = m.event;
+    return { events };
+  });
+}
+
+function onAppend(m: Extract<ServerMessage, { type: 'append' }>) {
+  let i = state.events.length - 1;
+  while (i >= 0 && state.events[i].id !== m.id) i--;
+  const ev = i < 0 ? null : appendTo(state.events[i], m.offset, m.text);
+  if (!ev) return;
+  const events = state.events.slice();
+  events[i] = ev;
+  set({ events });
+}
+
+function onPending(m: Extract<ServerMessage, { type: 'pending' }>) {
+  if (!state.pending.some((p) => p.id === m.request.id)) {
+    notify('Claude needs you', m.request.kind === 'question' ? m.request.questions[0]?.question ?? '' : m.request.title, focus(state.session.id));
+    if (document.visibilityState !== 'visible') navigator.vibrate?.(200);
+  }
+  set((s) => ({ pending: [...s.pending.filter((p) => p.id !== m.request.id), m.request] }));
+}
+
+function onFileChanged(m: Extract<ServerMessage, { type: 'file_changed' }>) {
+  set((s) => ({
+    recentFiles: [m.path, ...s.recentFiles.filter((f) => f !== m.path)].slice(0, 30),
+    ui: s.ui.follow && m.source === 'tool' ? { ...s.ui, openFile: m.path } : s.ui,
+  }));
+}
+
+function onLive(m: Extract<ServerMessage, { type: 'live' }>) {
+  notifyBackground(m.chats);
+  markViewedDone(m.chats);
+  for (const id of cache.keys()) if (!m.chats.some((c) => c.id === id)) cache.delete(id);
+  set({ live: m.chats });
+}
+
+function onAttention(m: Extract<ServerMessage, { type: 'attention' }>) {
+  for (const it of m.items) {
+    if (attentionSeen && !state.attention.some((x) => x.id === it.id)) notify(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, `${it.number ? `#${it.number} ` : ''}${it.title}`, () => (it.chatId ? send({ type: 'view', id: it.chatId }) : window.open(it.url, '_blank')));
+  }
+  attentionSeen = true;
+  set({ attention: m.items });
+}
+
 function handle(m: ServerMessage) {
   switch (m.type) {
-    case 'init':
-      // A new server boot means new code on the dev server too; reload so the client matches it.
-      if (m.boot && boot && m.boot !== boot) return location.reload();
-      if (m.boot) boot = m.boot;
-      // A chat opened another way (a saved chat, a new one) still leaves the one before it cached.
-      if (shownId !== m.state.session.id) cacheShown();
-      set((s) => {
-        const same = s.session.id === m.state.session.id;
-        const shown = shownId === m.state.session.id;
-        const old = new Map(s.events.map((e) => [e.id, e]));
-        const page = initPage(s.events, same, m.state.events, m.state.earlier);
-        const events = page.events.map((e) => {
-          const o = shown ? old.get(e.id) : undefined;
-          return o && equal(o, e) ? o : e;
-        });
-        const keep = shown && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
-        const moved = Boolean(s.session.cwd) && s.session.cwd !== m.state.session.cwd;
-        return { ...m.state, earlier: page.earlier, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: { ...s.ui, restarting: false, ...(moved && { openFile: null, openLine: null }) } };
-      });
-      shownId = m.state.session.id;
-      settled = true;
-      break;
-    case 'findings':
-      setFindings(m.review);
-      break;
-    case 'error':
-      notice(m.text);
-      break;
-    case 'restarting':
-      setUi({ restarting: true });
-      break;
-    case 'event':
-      if (m.event.kind === 'result' && !state.events.some((e) => e.id === m.event.id)) {
-        notify('Claude finished', m.event.text.trim().split('\n')[0], focus(state.session.id));
-      }
-      set((s) => {
-        const cur = s.events;
-        let i = cur.length - 1;
-        while (i >= 0 && cur[i].id !== m.event.id) i--;
-        if (i < 0) return { events: [...cur, m.event] };
-        const events = cur.slice();
-        events[i] = m.event;
-        return { events };
-      });
-      break;
-    case 'append': {
-      let i = state.events.length - 1;
-      while (i >= 0 && state.events[i].id !== m.id) i--;
-      const ev = i < 0 ? null : appendTo(state.events[i], m.offset, m.text);
-      if (!ev) break;
-      const events = state.events.slice();
-      events[i] = ev;
-      set({ events });
-      break;
-    }
-    case 'status':
-      set({ status: m.text });
-      break;
-    case 'pending':
-      if (!state.pending.some((p) => p.id === m.request.id)) {
-        notify('Claude needs you', m.request.kind === 'question' ? m.request.questions[0]?.question ?? '' : m.request.title, focus(state.session.id));
-        if (document.visibilityState !== 'visible') navigator.vibrate?.(200);
-      }
-      set((s) => ({ pending: [...s.pending.filter((p) => p.id !== m.request.id), m.request] }));
-      break;
-    case 'resolved':
-      set((s) => ({ pending: s.pending.filter((p) => p.id !== m.id) }));
-      break;
-    case 'file_changed':
-      set((s) => ({
-        recentFiles: [m.path, ...s.recentFiles.filter((f) => f !== m.path)].slice(0, 30),
-        ui: s.ui.follow && m.source === 'tool' ? { ...s.ui, openFile: m.path } : s.ui,
-      }));
-      break;
-    case 'session':
-      set({ session: m.session });
-      break;
-    case 'live':
-      notifyBackground(m.chats);
-      markViewedDone(m.chats);
-      for (const id of cache.keys()) if (!m.chats.some((c) => c.id === id)) cache.delete(id);
-      set({ live: m.chats });
-      break;
-    case 'runs':
-      set({ runs: m.runs });
-      break;
-    case 'attention':
-      for (const it of m.items) {
-        if (attentionSeen && !state.attention.some((x) => x.id === it.id)) notify(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, `${it.number ? `#${it.number} ` : ''}${it.title}`, () => (it.chatId ? send({ type: 'view', id: it.chatId }) : window.open(it.url, '_blank')));
-      }
-      attentionSeen = true;
-      set({ attention: m.items });
-      break;
+    case 'init': return onInit(m);
+    case 'findings': return setFindings(m.review);
+    case 'error': return notice(m.text);
+    case 'restarting': return setUi({ restarting: true });
+    case 'event': return onEvent(m);
+    case 'append': return onAppend(m);
+    case 'status': return set({ status: m.text });
+    case 'pending': return onPending(m);
+    case 'resolved': return set((s) => ({ pending: s.pending.filter((p) => p.id !== m.id) }));
+    case 'file_changed': return onFileChanged(m);
+    case 'session': return set({ session: m.session });
+    case 'live': return onLive(m);
+    case 'runs': return set({ runs: m.runs });
+    case 'attention': return onAttention(m);
   }
 }
 
