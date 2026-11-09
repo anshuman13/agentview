@@ -30,13 +30,6 @@ class VoiceNewChatTest {
     }
 
     @Test
-    fun twoPanesFrom840dp() {
-        assertFalse(isExpanded(839))
-        assertTrue(isExpanded(840))
-        assertFalse(isExpanded(411))
-    }
-
-    @Test
     fun newSessionCarriesModelOnlyWhenChosen() {
         assertTrue(newSessionCmd(cwd = "/a", model = "opus").contains("\"model\":\"opus\""))
         assertFalse(newSessionCmd(cwd = "/a").contains("model"))

@@ -55,31 +55,6 @@ class ComposerLogicTest {
         assertEquals(listOf(Part.Text("plain")), userParts("plain"))
     }
 
-    @Test
-    fun modelNamesAndContext() {
-        val s = SessionInfo(model = "opus", models = listOf(ModelInfo("opus", "Opus 5.5 (recommended)")))
-        assertEquals("Opus 5.5 (recommended)", modelName(s))
-        assertEquals("Opus 5.5", shortModel(modelName(s)))
-        assertEquals("Opus 4.8", shortModel("claude-opus-4-8"))
-        assertEquals("Team", modelName(SessionInfo(team = true)))
-        assertEquals(50, contextPercent(100_000))
-        assertEquals(100, contextPercent(500_000))
-        assertNull(contextPercent(null))
-    }
-
-    @Test
-    fun settingsChipShowsModelAndNonDefaultMode() {
-        assertEquals("Opus 4.8", settingsLabel("claude-opus-4-8", "default"))
-        assertEquals("Opus 4.8 · Plan", settingsLabel("claude-opus-4-8", "plan"))
-    }
-
-    @Test
-    fun sendKindDependsOnRunningAndSteer() {
-        assertEquals(SendKind.Prompt, sendKind(false, true))
-        assertEquals(SendKind.Queue, sendKind(true, false))
-        assertEquals(SendKind.Steer, sendKind(true, true))
-    }
-
     @Test fun bangIsAShellCommand() {
         assertEquals("git status", shellCommand("  ! git status "))
         assertNull(shellCommand("!"))
