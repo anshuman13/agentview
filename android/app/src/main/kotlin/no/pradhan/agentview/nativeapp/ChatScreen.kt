@@ -143,7 +143,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }
         state.runs.lastOrNull { it.chatId == live.id && it.state != "done" }?.let { LoopCard(hub, it, session?.loop?.phase) }
-        Composer(hub, live.id, session, running, state.pending.isNotEmpty())
+        Composer(hub, live.id, session, running, state.pending.isNotEmpty(), state.runs.lastOrNull { it.chatId == live.id && it.state != "done" })
     }
 
     if (agentsOpen) Sheet(onDismiss = { agentsOpen = false }, title = "Agents", padded = false, full = false) {

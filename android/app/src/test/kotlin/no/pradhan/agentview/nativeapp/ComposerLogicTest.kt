@@ -82,6 +82,20 @@ class ComposerLogicTest {
         assertNull(shellCommand("why ! here"))
     }
 
+    @Test fun goalChoiceWrapsTheNextMessage() {
+        codexZone = java.time.ZoneId.of("UTC")
+        val now = 14 * 3_600_000L + 30 * 60_000L
+        assertEquals("/goal ship it", goalText("done", "ship it", now))
+        assertEquals("/loop until 07:00 ship it", goalText("morning", "ship it", now))
+        assertEquals("/loop until 15:30 ship it", goalText("1h", "ship it", now))
+        assertEquals("/loop until 18:30 ship it", goalText("4h", "ship it", now))
+        assertEquals("/goal every 1h ship it", goalText("hourly", "ship it", now))
+        assertEquals("hi", goalText("off", "hi", now))
+        assertEquals("/compact", goalText("1h", "/compact", now))
+        assertEquals("Until 15:30", goalInfo("1h", now).chip)
+        assertEquals("Every hour", goalInfo("hourly", now).chip)
+    }
+
     @Test fun resumeCommandQuotesTheFolderAndPicksTheAccountDir() {
         assertEquals("cd ~/r && claude --resume abc", resumeCommand("~/r", "abc", "main"))
         assertEquals("cd '/a b' && CLAUDE_CONFIG_DIR=~/.claude-alt claude --resume abc", resumeCommand("/a b", "abc", "alt"))

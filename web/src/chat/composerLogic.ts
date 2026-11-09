@@ -139,6 +139,30 @@ export const stoppedText = (run: ChatRun) => `${KIND[run.kind]} stopped`;
 
 export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', question: 'warn', failed: 'bad', done: 'ok', quiet: '', progress: '' };
 
+export type GoalChoice = 'off' | 'done' | 'morning' | '1h' | '4h' | 'hourly';
+
+const HOUR_MS = 3_600_000;
+const MORNING = '07:00';
+
+// The picker's options; the timed ones end at a clock time counted from now.
+export function goalChoices(now: number): { value: GoalChoice; label: string; chip: string; detail: string; command: string }[] {
+  const until = (hours: number) => clock(now + hours * HOUR_MS);
+  return [
+    { value: 'off', label: 'Off', chip: '', detail: 'Your next message runs once', command: '' },
+    { value: 'done', label: 'Until done', chip: 'Until done', detail: 'Treats your next message as a goal and keeps checking until it is met', command: '/goal' },
+    { value: 'morning', label: 'Until morning', chip: `Until ${MORNING}`, detail: `Repeats it back to back until ${MORNING}`, command: `/loop until ${MORNING}` },
+    { value: '1h', label: 'For 1 hour', chip: `Until ${until(1)}`, detail: `Repeats it back to back until ${until(1)}`, command: `/loop until ${until(1)}` },
+    { value: '4h', label: 'For 4 hours', chip: `Until ${until(4)}`, detail: `Repeats it back to back until ${until(4)}`, command: `/loop until ${until(4)}` },
+    { value: 'hourly', label: 'Every hour, up to 28 days', chip: 'Every hour', detail: 'Works toward your next message as a goal every hour, up to 28 days', command: '/goal every 1h' },
+  ];
+}
+
+export const goalInfo = (choice: GoalChoice, now: number) => goalChoices(now).find((c) => c.value === choice) ?? goalChoices(now)[0];
+
+export const goalText = (choice: GoalChoice, text: string, now: number) => (choice === 'off' || text.startsWith('/') ? text : `${goalInfo(choice, now).command} ${text}`);
+
+export const goalPlaceholder = 'What is the goal?';
+
 export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? ENDED[loop.phase] ?? `Build cycle${loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 export const fileCache = new Map<string, string[]>();
 

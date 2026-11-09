@@ -352,6 +352,8 @@ Claude is still working waits for the round to end. The loop lives in the AgentV
 restart and never depends on the CLI's own scheduled jobs. Your messages and Stop interrupt the current round but
 keep the loop; `/loop off` ends it. The loop card above the composer shows the round and the next fire time.
 
+The Goal row in the chat settings menu (phone: the Goal section of the mode picker) starts a goal or loop without typing the command: Until done, Until morning, For 1 hour, For 4 hours or Every hour wraps the next message you send as `/goal`, `/loop until 07:00` (or the clock time) or `/goal every 1h` and resets to Off, and Off with a run active stops it.
+
 `/goal <condition>` asks Claude to check the condition whenever it goes idle and to keep working until it is met.
 Claude replies GOAL MET to end it; the check also stops by itself after 20 rounds. `/goal off` ends it early, and
 the loop card shows the check count the way it shows loop rounds.

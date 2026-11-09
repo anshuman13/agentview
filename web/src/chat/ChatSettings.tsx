@@ -1,6 +1,7 @@
 import { embedded, getState, notice, send, setUi, subscribe, useStore } from '../app/store';
 import { copyText } from '../ui/util';
-import { chatMarkdown, remindChoices, replyNote, resumeCommand } from './composerLogic';
+import { chatMarkdown, goalChoices, goalInfo, remindChoices, replyNote, resumeCommand, runLine, type GoalChoice } from './composerLogic';
+import { useChatRun } from '../sessions/runBands';
 import { assistantStore } from '../codex/data';
 import { QuickPick } from '../ui/QuickPick';
 import { MemoryPick } from './Memory';
@@ -48,7 +49,7 @@ async function remindChat(at: number) {
   await store.update(row, { source: 'chat', source_url: `${location.origin}/?session=${sessionId}` });
 }
 
-export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'todos'; at: DOMRect; server?: string };
+export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'goal' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'todos'; at: DOMRect; server?: string };
 
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -64,12 +65,15 @@ export function useChatSettings() {
 }
 
 // The chat settings menu and the pickers it opens; the saved prompt and MCP pickers stay with the composer.
-export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null; setPick: (p: Pick | null) => void; savedCount: number }) {
+export function ChatSettings({ pick, setPick, savedCount, goal, setGoal }: { pick: Pick | null; setPick: (p: Pick | null) => void; savedCount: number; goal: GoalChoice; setGoal: (g: GoalChoice) => void }) {
   const { mode, model, models, effort, team, loop, modelName, effortName, modeInfo } = useChatSettings();
   const sessionId = useStore((s) => s.session.sessionId);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
   const cwd = useStore((s) => s.session.cwd);
+  const chat = useStore((s) => s.session.id);
+  const phase = useStore((s) => s.session.loop.phase);
+  const run = useChatRun(chat);
   if (!pick) return null;
   const close = () => setPick(null);
   return (
@@ -83,6 +87,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
             { value: 'model', label: 'Model', detail: modelName },
             { value: 'effort', label: 'Effort', detail: effortName },
             ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),
+            { value: 'goal', label: 'Goal', detail: run ? runLine(run, phase) : goalInfo(goal, Date.now()).label },
             { value: 'loop', label: 'Build cycle', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
             { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
             { value: 'memory', label: 'Memory', detail: 'CLAUDE.md and memory files' },
@@ -104,7 +109,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
               close();
               return;
             }
-            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'account' | 'loop' | 'saved' | 'memory' | 'remind' | 'todos', at: pick.at });
+            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'account' | 'loop' | 'goal' | 'saved' | 'memory' | 'remind' | 'todos', at: pick.at });
           }}
           onClose={close}
         />
@@ -157,6 +162,20 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
           current={loop.on ? String(loop.max) : 'off'}
           items={LOOP_ITEMS}
           onPick={(v) => { send(v === 'off' ? { type: 'set_loop', on: false } : { type: 'set_loop', on: true, max: Number(v) }); close(); }}
+          onClose={close}
+        />
+      )}
+      {pick.kind === 'goal' && (
+        <QuickPick
+          anchor={pick.at}
+          title="Goal"
+          current={goal}
+          items={goalChoices(Date.now()).map((c) => ({ value: c.value, label: c.label, detail: c.detail }))}
+          onPick={(v) => {
+            if (v === 'off' && run) send({ type: 'run', run: run.id, op: 'stop' });
+            setGoal(v as GoalChoice);
+            close();
+          }}
           onClose={close}
         />
       )}

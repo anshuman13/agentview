@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stampedNotes } from '../codex/data/meetings';
 import type { Meeting } from '../codex/data/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, quoteReply, remindChoices, runLine } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, quoteReply, remindChoices, runLine, goalInfo, goalText } from './composerLogic';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../shared/protocol';
 
 let n = 0;
@@ -273,5 +273,25 @@ describe('runLine', () => {
     expect(runLine(run({ kind: 'goal', every: 30 * 60_000 }))).toBe('Standing goal · every 30m · at most 48 rounds a day');
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'test')).toBe('Build cycle · round 2/3 · Test');
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'passed')).toBe('Build cycle · round 2/3');
+  });
+});
+
+describe('goal choice', () => {
+  const now = new Date(2026, 0, 5, 14, 30).getTime();
+
+  it('wraps the next message as a goal or loop', () => {
+    expect(goalText('done', 'ship it', now)).toBe('/goal ship it');
+    expect(goalText('morning', 'ship it', now)).toBe('/loop until 07:00 ship it');
+    expect(goalText('1h', 'ship it', now)).toBe('/loop until 15:30 ship it');
+    expect(goalText('4h', 'ship it', now)).toBe('/loop until 18:30 ship it');
+    expect(goalText('hourly', 'ship it', now)).toBe('/goal every 1h ship it');
+    expect(goalText('off', 'hi', now)).toBe('hi');
+    expect(goalText('1h', '/compact', now)).toBe('/compact');
+  });
+
+  it('labels the chip', () => {
+    expect(goalInfo('done', now).chip).toBe('Until done');
+    expect(goalInfo('1h', now).chip).toBe('Until 15:30');
+    expect(goalInfo('hourly', now).chip).toBe('Every hour');
   });
 });

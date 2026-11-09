@@ -43,11 +43,13 @@ private class Choice(val value: String, val label: String, val detail: String = 
 private enum class Picker { Settings, Effort, Account }
 
 @Composable
-fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean) {
+fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean, run: ChatRun?) {
     var text by remember(chatId) { mutableStateOf(hub.draft(chatId).let { TextFieldValue(it, TextRange(it.length)) }) }
     val dictation = remember(chatId) { Dictation() }
     var dismissed by remember(chatId) { mutableStateOf("") }
     var sheet by remember { mutableStateOf<Picker?>(null) }
+    var goal by remember(chatId) { mutableStateOf("off") }
+    val goalOn = goal != "off"
     var uploading by remember { mutableIntStateOf(0) }
     val compacting = session?.compacting == true
     val typed = text.text.isNotBlank()
@@ -71,10 +73,13 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
         if (t.isBlank() || uploading > 0) return
         shellCommand(t)?.let { if (hub.runInTerminal(it)) set(TextFieldValue("")); return }
         set(TextFieldValue(""))
-        hub.submit(t, steer) { val back = restoreUnsent(text.text, t); set(TextFieldValue(back, TextRange(back.length))) }
+        val sent = goalText(goal, t, System.currentTimeMillis())
+        if (sent != t) goal = "off"
+        hub.submit(sent, steer) { val back = restoreUnsent(text.text, t); set(TextFieldValue(back, TextRange(back.length))) }
     }
 
     val placeholder = when {
+        goal != "off" -> GOAL_PLACEHOLDER
         waiting -> "Answer above, or message Claude to stop and send"
         compacting -> "Sends when compacting is done"
         running -> "Claude reads this at its next step"
@@ -118,7 +123,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                     if (!(running && typed)) {
                         val account = session?.account ?: "main"
                         val high = usageHigh(session?.usage)
-                        Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default"), { sheet = Picker.Settings }, Modifier.weight(1f, fill = false), warn = high, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, icon = if (high) "warning" else null)
+                        Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default") + (if (goal != "off") " · ${goalInfo(goal, System.currentTimeMillis()).chip}" else ""), { sheet = Picker.Settings }, Modifier.weight(1f, fill = false), warn = high, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, icon = if (high) "warning" else if (goalOn) "sync" else null)
                     }
                 }
                 if (uploading > 0) RowLabel("Uploading…", c.fgMuted)
@@ -145,6 +150,14 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                         if (i > 0) Hairline()
                         ListRow(m.displayName.ifBlank { m.value }, m.description, onClick = { hub.setModel(m.value); sheet = null }, trailing = if (m.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
                     }
+                }
+            }
+            SectionHeader("Goal")
+            Group {
+                goalChoices(System.currentTimeMillis()).forEachIndexed { i, g ->
+                    if (i > 0) Hairline()
+                    val detail = if (g.value == "off" && run != null) runLine(run, session?.loop?.phase) else g.detail
+                    ListRow(g.label, detail, onClick = { if (g.value == "off" && run != null) hub.runControl(run, "stop"); goal = g.value; sheet = null }, trailing = if (g.value == goal) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
                 }
             }
             SectionHeader("Permission mode")

@@ -88,6 +88,30 @@ fun shortModel(name: String): String {
     return Regex("^claude-([a-z]+)-(\\d+)-(\\d+).*$").replace(plain) { m -> "${m.groupValues[1].replaceFirstChar { it.uppercase() }} ${m.groupValues[2]}.${m.groupValues[3]}" }
 }
 
+class GoalChoice(val value: String, val label: String, val chip: String, val detail: String, val command: String)
+
+private const val GOAL_HOUR_MS = 3_600_000L
+private const val GOAL_MORNING = "07:00"
+
+// The Goal options; the timed ones end at a clock time counted from now (web/src/chat/composerLogic.ts goalChoices).
+fun goalChoices(now: Long): List<GoalChoice> {
+    fun until(hours: Int) = clock(now + hours * GOAL_HOUR_MS)
+    return listOf(
+        GoalChoice("off", "Off", "", "Your next message runs once", ""),
+        GoalChoice("done", "Until done", "Until done", "Treats your next message as a goal and keeps checking until it is met", "/goal"),
+        GoalChoice("morning", "Until morning", "Until $GOAL_MORNING", "Repeats it back to back until $GOAL_MORNING", "/loop until $GOAL_MORNING"),
+        GoalChoice("1h", "For 1 hour", "Until ${until(1)}", "Repeats it back to back until ${until(1)}", "/loop until ${until(1)}"),
+        GoalChoice("4h", "For 4 hours", "Until ${until(4)}", "Repeats it back to back until ${until(4)}", "/loop until ${until(4)}"),
+        GoalChoice("hourly", "Every hour, up to 28 days", "Every hour", "Works toward your next message as a goal every hour, up to 28 days", "/goal every 1h"),
+    )
+}
+
+fun goalInfo(value: String, now: Long) = goalChoices(now).let { l -> l.firstOrNull { it.value == value } ?: l.first() }
+
+fun goalText(value: String, text: String, now: Long) = if (value == "off" || text.startsWith("/")) text else "${goalInfo(value, now).command} $text"
+
+const val GOAL_PLACEHOLDER = "What is the goal?"
+
 // The settings chip text: the short model name, plus the mode when it is not Default.
 fun settingsLabel(model: String, mode: String) = if (mode == "default") shortModel(model) else "${shortModel(model)} · ${MODES[mode]?.label ?: mode}"
 

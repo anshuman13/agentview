@@ -18,7 +18,7 @@ import type { Meeting } from '../codex/data/wiki';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent, type SavedSession } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { ChatSettings, useChatSettings, type Pick } from './ChatSettings';
-import { accept, addUse, append, buildHistory, chatQuery, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, readDraft, sharedTask, turnEnd, remember, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
+import { accept, addUse, append, buildHistory, chatQuery, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, readDraft, goalInfo, goalPlaceholder, goalText, type GoalChoice, sharedTask, turnEnd, remember, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -62,6 +62,8 @@ export function Composer() {
 
   const [pick, setPick] = useState<Pick | null>(null);
   const [uses, setUses] = useState<Use[]>([]);
+  const [goals, setGoals] = useState<Record<string, GoalChoice>>({});
+  const goal = goals[chat] ?? 'off';
   const [text, setText] = useState(() => readDraft(chat));
   const draftFor = useRef(chat);
   const picker = useRef<HTMLInputElement>(null);
@@ -282,12 +284,14 @@ export function Composer() {
       const next = remember(t, sentHistory);
       setSentHistory(next);
       save(STORED_KEY, next);
-      const full = withUses(t, uses);
+      const used = withUses(t, uses);
+      const full = goalText(goal, used, Date.now());
+      if (full !== used) setGoals((g) => ({ ...g, [chat]: 'off' }));
       const lost = () => setText((cur) => (cur.trim() ? cur : t));
       if (running && (stop || waiting)) steer(full, lost);
       else if (running) queueNext(full, lost);
       else prompt(full, lost);
-      if (full !== t) setUses([]);
+      if (used !== t) setUses([]);
     }
     setHist(null);
     apply('');
@@ -317,7 +321,7 @@ export function Composer() {
 
   const typed = text.trim().length > 0;
   const hint = shell ? 'Runs in the terminal' : '';
-  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? (touch() ? 'Claude reads this next · hold Send to stop' : 'Claude reads this at its next step · ⌘Enter stops and sends') : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files · @chat: chats';
+  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? (touch() ? 'Claude reads this next · hold Send to stop' : 'Claude reads this at its next step · ⌘Enter stops and sends') : goal !== 'off' ? goalPlaceholder : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files · @chat: chats';
   const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
 
   return (
@@ -382,7 +386,7 @@ export function Composer() {
         )}
         <div className="cp-foot">
           <Chip className={`cp-mode${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Build cycle on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
-            <Icon name={modeInfo.icon} small /><span>{shortModel}{effort && ` · ${effortName}`} · {modeInfo.label}</span>{loop.on && <Icon name="sync" small />}<Icon name="chevron-down" small />
+            <Icon name={modeInfo.icon} small /><span>{shortModel}{effort && ` · ${effortName}`} · {modeInfo.label}{goal !== 'off' && ` · ${goalInfo(goal, Date.now()).chip}`}</span>{(loop.on || goal !== 'off') && <Icon name="sync" small />}<Icon name="chevron-down" small />
           </Chip>
           <span className="cp-spacer" />
           {servers.length > 0 && (
@@ -459,7 +463,7 @@ export function Composer() {
         </ul>
       )}
       <Announcer key={chat} />
-      <ChatSettings pick={pick} setPick={setPick} savedCount={sentHistory.length} />
+      <ChatSettings pick={pick} setPick={setPick} savedCount={sentHistory.length} goal={goal} setGoal={(c) => setGoals((g) => ({ ...g, [chat]: c }))} />
       {pick?.kind === 'saved' && (
         <QuickPick
           anchor={pick.at}
