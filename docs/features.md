@@ -366,6 +366,15 @@ a restart. Stop shows "Loop stopped" or "Goal stopped" with Undo, which starts t
 cycle only has Stop ("Build cycle stopped", no Undo). The controls take a run id, so they work from any screen. A round
 that ends its run (goal met, last check, end time) sends only the run-end push.
 
+The Runs view (activity bar, `?view=runs`) lists every run in three bands. Needs you holds active runs whose last round
+is blocked or a question, or that are paused for your approval, until a later round or a message from you in that chat,
+plus hub jobs whose last run failed. Running holds the other active and paused runs plus jobs that are running or
+queued. Finished (collapsed) holds the latest 30 ended runs. A row is the title, the state line, the last outcome with
+its dot and the cost; a chat run opens its chat and a job opens its job page. Sessions and Open chats rows of a chat with
+an active run show the loop icon with the next time, "Paused" or "Needs you" in warn. The status bar shows "N running"
+and "· M need you" in warn while a run is active, and a click opens Runs. When you open a chat, the recap adds "While you
+were away: 6 rounds, 5 quiet, 1 blocked: <line>" from the rounds that ended after the last event you saw.
+
 ## Agents
 
 Agents in the More menu of the task box header opens a pane that lists the subagents of the chat with their status, elapsed time and tokens.
@@ -375,7 +384,7 @@ In Sessions, a live chat with running agents has an Agents section under its row
 
 ## Deep links
 
-`?view=github` opens a sidebar view (explorer, changes, github, chats, sessions), `?page=observe` opens a page
+`?view=github` opens a sidebar view (explorer, changes, github, chats, sessions, runs), `?page=observe` opens a page
 (observe, deploy, mcp, settings), `?chat=<id>` opens a running chat and `?session=<id>` reopens a saved one. The parameters
 are read once and removed from the address bar.
 

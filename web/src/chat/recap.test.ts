@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { recap, recapText } from './recap';
-import type { ChatEvent } from '../../../shared/protocol';
+import { catchUp, recap, recapText } from './recap';
+import type { ChatEvent, Round } from '../../../shared/protocol';
 
 let n = 0;
 const at = () => ++n;
@@ -31,5 +31,21 @@ describe('recap', () => {
   it('writes one line with only the parts that are not zero', () => {
     expect(recapText({ turns: 2, files: 1, failed: 0, pending: true })).toBe('Since you last looked: 2 turns, 1 file, pending');
     expect(recapText({ turns: 0, files: 0, failed: 3, pending: false })).toBe('Since you last looked: 3 failed commands');
+  });
+});
+
+describe('catchUp', () => {
+  const seen: ChatEvent = { id: 'seen', kind: 'system', text: '', at: 100 };
+  const round = (n: number, at: number, outcome: Round['outcome'], line = ''): Round => ({ n, at, outcome, line, costUsd: 0 });
+
+  it('counts the rounds after the seen event and quotes the last one that is not quiet', () => {
+    const rounds = [round(1, 90, 'blocked', 'old'), round(2, 110, 'quiet'), round(3, 120, 'blocked', 'needs a token'), round(4, 130, 'quiet'), round(5, 140, 'quiet')];
+    expect(catchUp([seen], 'seen', rounds)).toBe('While you were away: 4 rounds, 3 quiet, 1 blocked: needs a token');
+  });
+
+  it('shows nothing without new rounds or a known seen event', () => {
+    expect(catchUp([seen], 'seen', [round(1, 90, 'done')])).toBeNull();
+    expect(catchUp([seen], 'gone', [round(1, 190, 'done')])).toBeNull();
+    expect(catchUp([seen], null, [round(1, 190, 'done')])).toBeNull();
   });
 });

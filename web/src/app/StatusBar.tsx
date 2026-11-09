@@ -1,6 +1,6 @@
 import { setUi, useStore } from './store';
 import { Icon } from '../ui/Icon';
-import { CacheItem, McpItem, UsageItem } from './StatusItems';
+import { CacheItem, McpItem, RunsItem, UsageItem } from './StatusItems';
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, type Theme } from './theme';
 
@@ -19,6 +19,7 @@ export function StatusBar({ project, theme, toggleTheme, macName, onPhone, onMac
       </span>
       {!['Idle', 'Working', 'Connecting'].includes(status) && <span className="item status-text">{status}</span>}
       <span className="spacer" />
+      <RunsItem />
       <McpItem />
       <UsageItem />
       <CacheItem />

@@ -105,6 +105,7 @@
   border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg); font-size: var(--fs-sm); color: var(--fg);
 }
 @media (hover: hover) { .tl-recap:hover { background: var(--hover); } }
+.tl-recap-lines { display: flex; flex-direction: column; min-width: 0; }
 .tl-recap .codicon { color: var(--fg-muted); }
 .tl-foot {
   position: sticky; bottom: 0; z-index: var(--z-raised); flex: none; margin-top: var(--sp-4); padding: var(--sp-2) var(--sp-4) var(--sp-3);

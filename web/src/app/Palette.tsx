@@ -37,6 +37,7 @@ const VIEWS = [
   ['github', 'GitHub Pull Requests'],
   ['chats', 'Sessions'],
   ['sessions', 'Workspace'],
+  ['runs', 'Runs'],
 ];
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];
 const MODES: Record<string, string> = { default: 'Default', acceptEdits: 'Accept edits', plan: 'Plan mode', auto: 'Auto mode', dontAsk: "Don't ask" };

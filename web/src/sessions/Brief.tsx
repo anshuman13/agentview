@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { send, setUi, useStore } from '../app/store';
+import { getState, send, setUi, useStore } from '../app/store';
 import { IconButton } from '../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { Icon } from '../ui/Icon';
@@ -13,7 +13,7 @@ import { Row, Transcript } from '../chat/Transcript';
 import { FileIcon } from '../workspace/FileIcon';
 import { relPath } from '../chat/steps';
 import { createTurnsBuilder, openFailures, type Turn } from '../chat/turns';
-import { markSeen, readSeen, recap, recapText } from '../chat/recap';
+import { catchUp, markSeen, readSeen, recap, recapText } from '../chat/recap';
 import { AgentsPane } from './AgentsPane';
 import { agentCounts, agentsOf, openAgent } from './agents';
 import { REVIEW_LOCAL } from '../ops/Findings';
@@ -61,7 +61,7 @@ export function Brief() {
   const end = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const recapFor = useRef('');
-  const [since, setSince] = useState<{ chat: string; text: string } | null>(null);
+  const [since, setSince] = useState<{ chat: string; lines: string[] } | null>(null);
   const from = all ? 0 : Math.max(0, turns.length - SHOWN_TURNS);
   const shown = turns.slice(from);
   const extras = [team && 'Team', advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
@@ -102,8 +102,11 @@ export function Brief() {
     if (!sessionId || !lastId) return;
     if (recapFor.current !== sessionId) {
       recapFor.current = sessionId;
-      const r = recap(eventsRef.current, readSeen(sessionId), waiting);
-      setSince(r ? { chat: sessionId, text: recapText(r) } : null);
+      const seen = readSeen(sessionId);
+      const r = recap(eventsRef.current, seen, waiting);
+      const rounds = getState().runs.filter((x) => x.chatId === sessionId).flatMap((x) => x.rounds);
+      const lines = [r && recapText(r), catchUp(eventsRef.current, seen, rounds)].filter((l): l is string => !!l);
+      setSince(lines.length ? { chat: sessionId, lines } : null);
     }
     mark();
   }, [sessionId, lastId]);
@@ -171,7 +174,7 @@ export function Brief() {
           )}
         </div>
         {since?.chat === sessionId && (
-          <button className="tl-recap" title="Tap to dismiss" onClick={dismissSince}><Icon name="history" small />{since.text}</button>
+          <button className="tl-recap" title="Tap to dismiss" onClick={dismissSince}><Icon name="history" small /><span className="tl-recap-lines">{since.lines.map((l) => <span key={l}>{l}</span>)}</span></button>
         )}
         {showAgents ? <AgentsPane stack selected={agentSel} onSelect={setAgentSel} /> : full ? <Transcript /> : (
           <div className="turns">

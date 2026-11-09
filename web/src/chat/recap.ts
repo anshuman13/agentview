@@ -1,4 +1,4 @@
-import type { ChatEvent } from '../../../shared/protocol';
+import type { ChatEvent, Round } from '../../../shared/protocol';
 import { buildTurns, openFailures } from './turns';
 import { plural } from '../ui/util';
 
@@ -19,6 +19,20 @@ export function recap(events: ChatEvent[], lastSeen: string | null, pending: boo
 export function recapText(r: Recap) {
   const parts = [r.turns > 0 && plural(r.turns, 'turn'), r.files > 0 && plural(r.files, 'file'), r.failed > 0 && plural(r.failed, 'failed command'), r.pending && 'pending'].filter(Boolean);
   return `Since you last looked: ${parts.join(', ')}`;
+}
+
+// The run rounds that ended after the last event the user saw, as one line; null when there are none.
+export function catchUp(events: ChatEvent[], lastSeen: string | null, rounds: Round[]) {
+  const at = events.find((e) => e.id === lastSeen)?.at;
+  const fresh = at === undefined ? [] : rounds.filter((r) => r.at > at);
+  if (!fresh.length) return null;
+  const count = (...outcomes: Round['outcome'][]) => fresh.filter((r) => outcomes.includes(r.outcome)).length;
+  const quiet = count('quiet');
+  const blocked = count('blocked', 'question');
+  const failed = count('failed');
+  const parts = [plural(fresh.length, 'round'), quiet > 0 && `${quiet} quiet`, blocked > 0 && `${blocked} blocked`, failed > 0 && `${failed} failed`].filter(Boolean).join(', ');
+  const line = [...fresh].reverse().find((r) => r.outcome !== 'quiet' && r.line)?.line;
+  return `While you were away: ${parts}${line ? `: ${line}` : ''}`;
 }
 
 const key = (chat: string) => `agentview.seen.${chat}`;

@@ -24,6 +24,8 @@ import { Swipe } from '../codex/Swipe';
 import { showSnack } from '../codex/view';
 import { isMuted, setMuted } from '../app/mute';
 import { draftLine, readDraft } from '../chat/composerLogic';
+import { clock } from '../codex/time';
+import { useChatRun } from './runBands';
 
 const PAGE = 5;
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -496,6 +498,13 @@ type ChatRowProps = {
   onClose?: () => void;
 };
 
+function RunTag({ chat }: { chat: string }) {
+  const r = useChatRun(chat);
+  if (!r) return null;
+  const warn = r.needs || r.run.state === 'paused';
+  return <span className={`chat-run ${warn ? 'warn' : ''}`}>{r.needs ? 'Needs you' : r.run.state === 'paused' ? 'Paused' : <><Icon name="sync" small />{r.run.nextAt ? clock(r.run.nextAt) : 'Running'}</>}</span>;
+}
+
 const BADGE = { needs: 'waiting', failed: 'failed', running: 'running', done: 'done' } as const;
 
 function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
@@ -539,7 +548,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
   };
   const row = (
     <div className={`chat-row ${unread ? 'unread' : ''}`}>
-      <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={(muted || state) && <>{muted && <span title="Muted" className="chat-muted"><Icon name="bell-slash" small /></span>}{state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />}</>} onClick={onOpen} onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined} onLongPress={sessionId ? () => setRenaming(true) : undefined} />
+      <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={(muted || state || live) && <>{live && <RunTag chat={live.id} />}{muted && <span title="Muted" className="chat-muted"><Icon name="bell-slash" small /></span>}{state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />}</>} onClick={onOpen} onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined} onLongPress={sessionId ? () => setRenaming(true) : undefined} />
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>

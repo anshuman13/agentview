@@ -136,3 +136,8 @@
 .chat-rename { width: 100%; min-width: 0; }
 .sessions .as-swipe:has(.ui-menu) { overflow: visible; }
 .sessions .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
+
+.chat-run { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--meta-fg); white-space: nowrap; }
+.chat-run.warn { color: var(--warn); }
+.runs { padding-bottom: var(--sp-6); }
+.rn-cost { font-size: var(--fs-xs); font-variant-numeric: tabular-nums; color: var(--meta-fg); }

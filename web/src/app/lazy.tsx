@@ -24,6 +24,7 @@ export const Palette = lazy(() => import('./Palette').then((m) => ({ default: m.
 export const Shortcuts = lazy(() => import('./Shortcuts').then((m) => ({ default: m.Shortcuts })));
 export const OpenChats = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.OpenChats })));
 export const RepoPicker = lazy(() => import('../sessions/RepoPicker').then((m) => ({ default: m.RepoPicker })));
+export const Runs = lazy(() => import('../sessions/Runs').then((m) => ({ default: m.Runs })));
 export const Sessions = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.Sessions })));
 export const AssistantNav = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantNav })));
 export const AssistantBadge = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantBadge })));

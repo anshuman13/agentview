@@ -13,7 +13,7 @@ import { THEME_NAMES, type Theme } from './theme';
 import { useMcpHealth } from '../ops/mcpShown';
 
 export type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
-export type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
+export type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions' | 'runs';
 
 const LONG_PRESS = 450;
 

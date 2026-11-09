@@ -7,6 +7,7 @@ import { command, save, spendLines, stored, weekPace } from '../ui/util';
 import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from './offlineBanner';
 import { useMcpHealth } from '../ops/mcpShown';
 import { Badge } from '../ui/Badge';
+import { lastUserAt, needsYou } from '../sessions/runBands';
 
 export function AppUpdate() {
   const [ready, setReady] = useState(0);
@@ -71,6 +72,17 @@ export function McpItem() {
   return (
     <button className="item clickable" title="MCP servers" onClick={() => command('page:mcp')}>
       <span className={`dot ${dot}`} /> MCP {total ? `${ok}/${total}` : ''}
+    </button>
+  );
+}
+
+export function RunsItem() {
+  const running = useStore((s) => s.runs.filter((r) => r.state !== 'done').length);
+  const needs = useStore((s) => s.runs.filter((r) => needsYou(r, r.chatId === s.session.id ? lastUserAt(s.events) : 0)).length);
+  if (!running) return null;
+  return (
+    <button className="item clickable" title="Loops and goals" onClick={() => command('view:runs')}>
+      <Icon name="sync" small /> {running} running{needs > 0 && <span className="warn"> · {needs} need you</span>}
     </button>
   );
 }

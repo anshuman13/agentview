@@ -18,7 +18,7 @@ import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
 import { deepLink } from './deepLinks';
 import { isPage, pageOf, PageView, PAGES, type Page } from './pages';
-import { Brief, AgentsPane, FileSwitcher, Palette, Shortcuts, OpenChats, RepoPicker, Sessions, AssistantNav, Assistant, FocusBar, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from './lazy';
+import { Brief, AgentsPane, FileSwitcher, Palette, Shortcuts, OpenChats, Runs, RepoPicker, Sessions, AssistantNav, Assistant, FocusBar, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from './lazy';
 import { AppUpdate, Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
 import { useTheme } from './theme';
@@ -35,6 +35,7 @@ const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'github', icon: 'github', title: 'GitHub Pull Requests' },
   { id: 'chats', icon: 'comment-discussion', title: 'Sessions' },
   { id: 'sessions', icon: 'repo', title: 'Workspace' },
+  { id: 'runs', icon: 'sync', title: 'Runs' },
 ];
 
 const narrow = () => window.innerWidth <= 900;
@@ -330,7 +331,7 @@ export function App() {
               <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
             </div>
           )}
-          {view === 'assistant' ? <Guard><Suspense fallback={null}><AssistantNav /></Suspense></Guard> : view === 'explorer' ? <Suspense fallback={null}><Explorer /></Suspense> : view === 'changes' ? <Suspense fallback={null}><Changes /></Suspense> : view === 'github' ? <Suspense fallback={null}><GitHub /></Suspense> : view === 'chats' ? <Suspense fallback={null}><OpenChats /></Suspense> : <Suspense fallback={null}><Sessions /></Suspense>}
+          {view === 'assistant' ? <Guard><Suspense fallback={null}><AssistantNav /></Suspense></Guard> : view === 'explorer' ? <Suspense fallback={null}><Explorer /></Suspense> : view === 'changes' ? <Suspense fallback={null}><Changes /></Suspense> : view === 'github' ? <Suspense fallback={null}><GitHub /></Suspense> : view === 'chats' ? <Suspense fallback={null}><OpenChats /></Suspense> : view === 'runs' ? <Guard><Suspense fallback={null}><Runs /></Suspense></Guard> : <Suspense fallback={null}><Sessions /></Suspense>}
         </section>
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
