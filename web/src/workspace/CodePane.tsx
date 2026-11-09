@@ -163,7 +163,7 @@ export function CodePane() {
           {!showDoc && <Toggle on={wrap} icon="word-wrap" title="Word wrap" onClick={() => setWrap(!wrap)} />}
           {canEdit && <Toggle on={edit} icon="edit" title={edit ? 'Stop editing' : 'Edit this file'} onClick={() => { if (edit && dirty && !confirm('Drop the unsaved changes? This cannot be undone.')) return; setEdit(!edit); setDirty(false); setSaving(''); }} />}
           {edit && (dirty || saving) && <button className="cd-btn cd-save" title="Save (Cmd+S)" disabled={saving === 'saving' || !dirty} onClick={saveNow}>{saving === 'saving' ? 'Saving…' : saving === 'failed' ? 'Save failed' : saving === 'saved' ? 'Saved' : 'Save'}</button>}
-          <Toggle on={follow} icon="eye" title="Follow Claude's edits" onClick={() => setUi({ follow: !follow })} />
+          <Toggle on={follow} icon="eye" title="Follow the agent's edits" onClick={() => setUi({ follow: !follow })} />
           <Toggle icon="vscode" title="Open in VS Code" onClick={openInVsCode} />
         </div>
       </div>

@@ -36,7 +36,7 @@ export function showChat() {
 }
 
 // A pane sends a prompt and shows the chat, so the reply is seen.
-export function askClaude(text: string) {
+export function askChat(text: string) {
   showChat();
   send({ type: 'prompt', text });
 }

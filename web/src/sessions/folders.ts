@@ -137,7 +137,7 @@ export const flip = (set: (f: (prev: Set<string>) => Set<string>) => void, key: 
 
 export const closeChat = (c: LiveChat, ask: (r: ConfirmRequest) => void) =>
   c.running || c.pending
-    ? ask({ title: 'Close this chat?', detail: c.title, warning: 'Claude is still working on it and will stop. The transcript is kept.', action: 'Close', run: async () => send({ type: 'close', id: c.id }) })
+    ? ask({ title: 'Close this chat?', detail: c.title, warning: 'The agent is still working on it and will stop. The transcript is kept.', action: 'Close', run: async () => send({ type: 'close', id: c.id }) })
     : send({ type: 'close', id: c.id });
 
 const refreshBin = () => window.dispatchEvent(new Event('agentview:bin'));

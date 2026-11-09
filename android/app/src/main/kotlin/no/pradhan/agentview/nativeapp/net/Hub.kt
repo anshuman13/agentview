@@ -348,8 +348,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         findings.value = if (review == null) findings.value - target else findings.value + (target to review)
     }
 
-    // Sends a prompt to the chat on screen and shows the chat (web ui/util.ts askClaude).
-    fun askClaude(text: String) {
+    // Sends a prompt to the chat on screen and shows the chat (web ui/util.ts askChat).
+    fun askChat(text: String) {
         val chat = store.wanted
         submit(text, false) { notice.value = "That did not reach the chat" }
         if (!readOnly) link.value = DeepLink(chat = chat)

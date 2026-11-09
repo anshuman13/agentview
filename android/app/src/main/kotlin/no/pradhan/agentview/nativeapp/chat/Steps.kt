@@ -36,7 +36,7 @@ data class Label(val verb: String, val obj: String, val mono: Boolean = false, v
 enum class Tone { Read, Edit, Run, Web, Mcp, Agent, Other }
 
 private val AGENT_TOOLS = setOf("Agent", "Task")
-private val DENIED = Regex("^(The user doesn't want to proceed|User denied this action|aborted\\b|Session closed|The user sent a new message instead|Claude exited before this was answered)")
+private val DENIED = Regex("^(The user doesn't want to proceed|User denied this action|aborted\\b|Session closed|The user sent a new message instead|\\w+ exited before this was answered)")
 
 fun firstLine(text: String) = text.trim().lineSequence().firstOrNull() ?: ""
 

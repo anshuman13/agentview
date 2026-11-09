@@ -37,7 +37,7 @@ fun Findings(hub: Hub, target: String, onOpen: ((Finding) -> Unit)? = null) {
                 f.summary, "${f.file}:${f.line}", lines = 3,
                 leading = { StatusDot(if (f.verdict == "CONFIRMED") DotState.Bad else DotState.Warn) },
                 trailing = {
-                    Button("Fix", { hub.askClaude(findingFixPrompt(f)) }, size = ButtonSize.Sm)
+                    Button("Fix", { hub.askChat(findingFixPrompt(f)) }, size = ButtonSize.Sm)
                     MoreButton { close ->
                         MenuItem("Dismiss", "close", { close(); hub.write("/api/findings/dismiss", dismissBody(target, f), "Could not dismiss the finding", ::parseFindings) { r -> if (r != null) hub.setFindings(target, r) } })
                     }

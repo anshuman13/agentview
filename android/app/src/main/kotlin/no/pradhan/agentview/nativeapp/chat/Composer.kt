@@ -44,6 +44,7 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.interrupt
 import no.pradhan.agentview.nativeapp.net.protocolJson
+import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.refreshUsage
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.runInTerminal
@@ -111,18 +112,18 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
             s.set(TextFieldValue(r.first, TextRange(r.second)))
         }
         Column(Modifier.fillMaxWidth().clip(card).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), card)) {
-            ComposerInput(s, composerPlaceholder(s.goalOn, waiting, session?.compacting == true, running))
+            ComposerInput(s, composerPlaceholder(providerLabel(session?.provider), s.goalOn, waiting, session?.compacting == true, running))
             ComposerToolbar(hub, s, session, running, uploading, { uploading += it }, dictation) { sheet = Picker.Settings }
         }
     }
     ComposerSheets(hub, s, session, run, sheet) { sheet = it }
 }
 
-private fun composerPlaceholder(goalOn: Boolean, waiting: Boolean, compacting: Boolean, running: Boolean) = when {
+private fun composerPlaceholder(label: String, goalOn: Boolean, waiting: Boolean, compacting: Boolean, running: Boolean) = when {
     goalOn -> GOAL_PLACEHOLDER
-    waiting -> "Answer above, or message Claude to stop and send"
+    waiting -> "Answer above, or message $label to stop and send"
     compacting -> "Sends when compacting is done"
-    running -> "Claude reads this at its next step"
+    running -> "$label reads this at its next step"
     else -> "Ask anything, / for commands, @ for files"
 }
 
@@ -241,7 +242,7 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, session: SessionInfo?,
                 ListRow(MODES[m]?.label ?: m, MODES[m]?.detail, onClick = { hub.setMode(m); onSheet(null) }, trailing = if (m == (session?.permissionMode ?: "default")) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
             }
         }
-        val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null
+        val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main"
         if (showAccount || effort != null) SectionHeader("Account and effort")
         if (showAccount || effort != null) Group {
             if (showAccount) ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); onSheet(Picker.Account) }, trailing = { Chevron() })

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ObserveInfo, SnowflakeAuth, SnowflakeInfo, SnowflakeObjects, SnowflakeResult, SnowflakeTest } from '../../../shared/observe';
 import { api } from '../app/store';
 import { fetchJson } from '../app/api';
-import { askClaude } from '../ui/util';
+import { askChat } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { errText } from '../../../shared/util';
@@ -168,7 +168,7 @@ function QueryPanel({ sf, connected }: Pick<Conn, 'sf' | 'connected'>) {
         {result.data && <span className="muted">{result.data.rows.length}{result.data.truncated ? '+' : ''} rows, {result.data.ms} ms{result.data.truncated ? ', showing the first 200' : ''}</span>}
         {result.busy && <span className="muted"><Icon name="loading" small spin /> Running</span>}
         <span className="spacer" />
-        <button className="obs-ask" disabled={!connected} onClick={() => askClaude(`Use the snowflake MCP${db ? ` on ${db}${schema ? `.${schema}` : ''}` : ''}: ${sql.trim() ? `run this query and explain the result:\n${sql.trim()}` : 'list the tables that matter for this service and describe what they hold'}`)}>
+        <button className="obs-ask" disabled={!connected} onClick={() => askChat(`Use the snowflake MCP${db ? ` on ${db}${schema ? `.${schema}` : ''}` : ''}: ${sql.trim() ? `run this query and explain the result:\n${sql.trim()}` : 'list the tables that matter for this service and describe what they hold'}`)}>
           <Icon name="sparkle" small /> Ask Claude
         </button>
       </div>

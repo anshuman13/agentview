@@ -23,7 +23,7 @@ const AGENT_TOOLS = new Set(['Agent', 'Task']);
 export const firstLine = (text: string) => text.trim().split('\n')[0] ?? '';
 export const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
-const DENIED = /^(The user doesn't want to proceed|User denied this action|aborted\b|Session closed|The user sent a new message instead|Claude exited before this was answered)/;
+const DENIED = /^(The user doesn't want to proceed|User denied this action|aborted\b|Session closed|The user sent a new message instead|\w+ exited before this was answered)/;
 export const denied = (result?: ToolResult) => Boolean(result?.isError && DENIED.test(result.text.trim()));
 
 export function relPath(p: string, cwd: string) {

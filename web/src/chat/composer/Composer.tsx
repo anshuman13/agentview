@@ -21,18 +21,20 @@ import { useComposerKeys } from './useComposerKeys';
 import { useDraft, usePromptHistory } from './usePromptHistory';
 import { useSubmit } from './useSubmit';
 import { useUploads } from './useUploads';
+import { providerLabel } from '../../../../shared/providers';
 
-function placeholderFor(running: boolean, waiting: boolean, compacting: boolean, goal: GoalChoice, hasUses: boolean) {
-  if (waiting) return 'Answer below, or message Claude to stop and send';
+function placeholderFor(label: string, running: boolean, waiting: boolean, compacting: boolean, goal: GoalChoice, hasUses: boolean) {
+  if (waiting) return `Answer below, or message ${label} to stop and send`;
   if (compacting) return 'Sends when compacting is done';
-  if (running) return touch() ? 'Claude reads this next · hold Send to stop' : 'Claude reads this at its next step · ⌘Enter stops and sends';
+  if (running) return touch() ? `${label} reads this next · hold Send to stop` : `${label} reads this at its next step · ⌘Enter stops and sends`;
   if (goal !== 'off') return goalPlaceholder;
-  return hasUses ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files · @chat: chats';
+  return hasUses ? `What should ${label} do with it?` : 'Ask anything · / commands · @ files · @chat: chats';
 }
 
 export function Composer() {
   const chat = useStore((s) => s.session.id);
   const running = useStore((s) => s.session.running);
+  const label = useStore((s) => providerLabel(s.session.provider));
   const compacting = useStore((s) => s.session.compacting);
   const waiting = useStore((s) => s.pending.length > 0);
   const { mode } = useChatSettings();
@@ -87,11 +89,11 @@ export function Composer() {
             ref={ta}
             value={text}
             rows={1}
-            aria-label="Message Claude"
+            aria-label={`Message ${label}`}
             aria-autocomplete="list"
             aria-controls={ac.open ? popId : undefined}
             aria-activedescendant={ac.open ? `${popId}-${ac.sel}` : undefined}
-            placeholder={placeholderFor(running, waiting, compacting, goal, uses.length > 0)}
+            placeholder={placeholderFor(label, running, waiting, compacting, goal, uses.length > 0)}
             spellCheck={!ac.shell}
             onChange={(e) => { setText(e.target.value); setCaret(e.target.selectionStart); }}
             onSelect={(e) => setCaret(e.currentTarget.selectionStart)}

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { readJson } from '../json.js';
 import type { ChatRun, LiveChat, RoundOutcome, ServerMessage } from '../../../shared/protocol.js';
 import { stripRound } from '../../../shared/edits.js';
+import { providerLabel } from '../../../shared/providers.js';
 
 const last = new Map<string, { at: number; key: string }>();
 const FIFO = path.join(os.homedir(), '.agentview/notify.fifo');
@@ -11,7 +12,7 @@ const OBSERVE = path.join(os.homedir(), '.agentview/observe.json');
 const APP = 'http://localhost:7777';
 
 function detail(m: ServerMessage) {
-  if (m.type === 'pending') return m.request.kind === 'question' ? m.request.questions[0]?.question ?? 'Claude has a question' : m.request.title;
+  if (m.type === 'pending') return m.request.kind === 'question' ? m.request.questions[0]?.question ?? 'The agent has a question' : m.request.title;
   if (m.type === 'event' && m.event.kind === 'result') return stripRound(m.event.text).trim().split('\n')[0] || 'Turn ended';
   return null;
 }
@@ -33,7 +34,7 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null, deskto
   const prev = last.get(`${chat.id}:${kind}`);
   if (prev && prev.key === key && Date.now() - prev.at < 30_000) return;
   last.set(`${chat.id}:${kind}`, { at: Date.now(), key });
-  const title = word ? `Loop in ${path.basename(chat.cwd)}: ${word}` : `Claude ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
+  const title = word ? `Loop in ${path.basename(chat.cwd)}: ${word}` : `${providerLabel(chat.provider)} ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
   post(title, chat.title, (ended?.line || body).slice(0, 200), `${APP}/?chat=${chat.id}`, !desktopActive());
 }
 
@@ -81,7 +82,7 @@ export function stallWatch(onStall: (id: string) => void, every = 60_000) {
 }
 
 export function notifyStall(chat: LiveChat) {
-  post(`Claude is quiet in ${path.basename(chat.cwd)}`, chat.title, `No activity for ${STALL_MS / 60_000} minutes`, `${APP}/?chat=${chat.id}`);
+  post(`${providerLabel(chat.provider)} is quiet in ${path.basename(chat.cwd)}`, chat.title, `No activity for ${STALL_MS / 60_000} minutes`, `${APP}/?chat=${chat.id}`);
 }
 
 // A topic name on ntfy.sh or a full URL, from the environment or the ntfy key in observe.json. Off without either.

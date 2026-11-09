@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.enc
+import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.saveFile
 import no.pradhan.agentview.nativeapp.net.write
@@ -87,14 +88,15 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     WhileStarted(chat) { while (true) { delay(5000); reload() } }
     val files = load.data?.files ?: emptyList()
     val review = files.map { it.path }.distinct()
+    val label = providerLabel(st.session?.provider)
     val ops = GitOps(hub, reload, { ask = it }) { f -> pager = listOf(review.indexOf(f.path).toString()) + review }
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Source Control", onBack) {
             IconBtn("refresh", "Refresh", { reload(); reloadBranch() })
             MoreButton { close ->
-                MenuItem("Write message with Claude", "sparkle", { close(); hub.askClaude(DRAFT_PROMPT) }, enabled = files.any { it.staged })
-                MenuItem("Review changes with Claude", "sparkle", { close(); hub.askClaude(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
+                MenuItem("Write message with $label", "sparkle", { close(); hub.askChat(DRAFT_PROMPT) }, enabled = files.any { it.staged })
+                MenuItem("Review changes with $label", "sparkle", { close(); hub.askChat(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
             }
         }
         PageBody { ChangesList(hub, load, branchLoad.data, ops, message, shownPatch) { open = it } }

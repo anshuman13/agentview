@@ -24,7 +24,7 @@ export function StatusBar({ project, theme, toggleTheme, macName, onPhone, onMac
       <UsageItem />
       <CacheItem />
       {canNotify && (
-        <button className="item clickable" title={notifying ? 'Notifying you when Claude finishes or needs you. Click to turn off' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
+        <button className="item clickable" title={notifying ? 'Notifying you when the agent finishes or needs you. Click to turn off' : 'Notify me when the agent finishes or needs you'} onClick={toggleNotify}>
           <Icon name={notifying ? 'bell' : 'bell-slash'} small />
         </button>
       )}

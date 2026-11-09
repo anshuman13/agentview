@@ -215,7 +215,7 @@ function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }
 
 type MessageHit = { sessionId: string; role: 'user' | 'assistant'; text: string; at: string; title: string };
 
-export const messageMeta = (h: Pick<MessageHit, 'title' | 'role' | 'at'>) => metaLine(h.title || 'Untitled', h.role === 'user' ? 'You' : 'Claude', h.at ? ago(h.at) : undefined);
+export const messageMeta = (h: Pick<MessageHit, 'title' | 'role' | 'at'>) => metaLine(h.title || 'Untitled', h.role === 'user' ? 'You' : 'Agent', h.at ? ago(h.at) : undefined);
 
 // Prompts and replies of every chat matching the sidebar search, from 3 characters.
 function useMessageSearch(filter: string) {

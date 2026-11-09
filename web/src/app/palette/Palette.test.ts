@@ -27,7 +27,7 @@ describe('matchCommand', () => {
     const sub = matchCommand('Chat: Compact Context', 'cct')!;
     expect(sub.hits).toEqual([0, 6, 12]);
     expect(sub.score).toBeLessThan(matchCommand('Chat: Compact Context', 'compact')!.score);
-    expect(matchCommand('Chat: Stop Claude', 'xyz')).toBeNull();
+    expect(matchCommand('Chat: Stop the Agent', 'xyz')).toBeNull();
   });
 });
 
@@ -66,7 +66,7 @@ describe('rankCommands', () => {
 });
 
 describe('pinned chats', () => {
-  const pinned = pinCommands(['s2', 'gone', 's1'], [{ sessionId: 's1', title: 'Stop Claude' }], [{ sessionId: 's2', title: 'Fix login' }]);
+  const pinned = pinCommands(['s2', 'gone', 's1'], [{ sessionId: 's1', title: 'Stop the Agent' }], [{ sessionId: 's2', title: 'Fix login' }]);
   const all = [...cmds, ...pinned];
 
   it('lists chats that exist, capped at 20', () => {
@@ -80,7 +80,7 @@ describe('pinned chats', () => {
   });
 
   it('ranks above an equal match with a query', () => {
-    expect(ids(rankCommands(all, 'chat: stop claude', [])).slice(0, 2)).toEqual(['pin:s1', 'stop']);
+    expect(ids(rankCommands(all, 'chat: stop the agent', [])).slice(0, 2)).toEqual(['pin:s1', 'stop']);
   });
 });
 

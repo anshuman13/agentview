@@ -94,7 +94,7 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
           <Icon name="folder" small /><span>{project}</span>
         </button>
         {canNotify && (
-          <button className="icon-btn" title={notifying ? 'Turn off notifications' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
+          <button className="icon-btn" title={notifying ? 'Turn off notifications' : 'Notify me when the agent finishes or needs you'} onClick={toggleNotify}>
             <Icon name={notifying ? 'bell' : 'bell-slash'} />
           </button>
         )}

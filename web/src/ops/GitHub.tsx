@@ -10,13 +10,14 @@ import { call } from './opsApi';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
-import { ago, askClaude, pressable } from '../ui/util';
+import { ago, askChat, pressable } from '../ui/util';
 import { Skeleton } from '../ui/Skeleton';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { IconButton } from '../ui/Button';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
+import { providerLabel } from '../../../shared/providers';
 
 const initials = (login: string) => (login.replace(/^app\//, '').match(/[A-Za-z0-9]+/g) ?? ['?']).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
@@ -163,6 +164,7 @@ type Act = (label: string, path: string, body: object) => Promise<boolean>;
 
 function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean; act: Act; confirm: (c: ConfirmRequest) => void }) {
   const [text, setText] = useState('');
+  const label = useStore((s) => providerLabel(s.session.provider));
   const [method, setMethod] = useState('squash');
   const needsText = !text.trim();
   const review = async (event: string) => (await act(event, 'review', { event, body: text })) && setText('');
@@ -176,7 +178,7 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
       icon: 'git-merge',
       run: () => act('merge', 'merge', { method }),
     });
-  const askReview = () => askClaude(`/code-review ${pr.number}`);
+  const askReview = () => askChat(`/code-review ${pr.number}`);
 
   return (
     <div className="gh-actionbar">
@@ -196,7 +198,7 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
           </select>
         </span>
         <button disabled={busy} title={`Check out ${pr.branch} in this folder`} onClick={() => act('checkout', 'checkout', {})}><Icon name="git-branch" small /> Checkout</button>
-        <button className="btn sm gh-claude" title="Send a review prompt to the chat" onClick={askReview}><Icon name="sparkle" small /> Ask Claude to review</button>
+        <button className="btn sm gh-claude" title="Send a review prompt to the chat" onClick={askReview}><Icon name="sparkle" small /> Ask {label} to review</button>
       </div>
     </div>
   );

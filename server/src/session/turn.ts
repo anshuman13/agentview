@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { costRise } from '../../../shared/cost.js';
+import { providerLabel } from '../../../shared/providers.js';
 import { clock } from '../../../shared/util.js';
 import type { Repeat } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
@@ -62,9 +63,10 @@ export class Turn {
       this.expectTurn = false;
       return;
     }
+    const label = providerLabel(s.driver.provider);
     s.setStatus(why ?? 'Woke up for a scheduled or background task');
     const cron = !why && s.crons.length === 1 ? s.crons[0] : null;
-    s.system(why ?? (cron ? `Claude woke up: ${cron.prompt.slice(0, 100)}` : 'Claude woke up on its own'));
+    s.system(why ?? (cron ? `${label} woke up: ${cron.prompt.slice(0, 100)}` : `${label} woke up on its own`));
   }
 
   result(r: TurnResult) {
@@ -167,9 +169,9 @@ export class Turn {
     this.count = 0;
     s.setSession({ running: false, stopping: false, compacting: false });
     this.planChange = null;
-    s.approvals.denyAll('Claude exited before this was answered.');
+    s.approvals.denyAll(`${providerLabel(s.driver.provider)} exited before this was answered.`);
     const repeat = s.state.session.repeat;
-    if (this.roundTurn && repeat?.runId) s.runs.addRound(repeat.runId, { n: repeat.round, outcome: 'failed', line: 'Claude exited', costUsd: 0 });
+    if (this.roundTurn && repeat?.runId) s.runs.addRound(repeat.runId, { n: repeat.round, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0 });
     this.roundTurn = false;
     s.cycle.exited();
     // Queued messages are not lost with the process; the first one starts a fresh CLI.

@@ -28,6 +28,7 @@ import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.firstLine
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.write
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -176,8 +177,9 @@ private fun PullMenu(c: PullCtx, d: PullRequestDetail?, onBack: () -> Unit) {
     val pr = c.pr
     val hub = c.hub
     val link = openLink()
+    val label = providerLabel(hub.store.state.collectAsState().value.session?.provider)
     MoreButton { close ->
-        MenuItem("Ask Claude to review", "sparkle", { close(); hub.askClaude(reviewPrPrompt(pr.number)) })
+        MenuItem("Ask $label to review", "sparkle", { close(); hub.askChat(reviewPrPrompt(pr.number)) })
         val fix = d?.let { fixPrPrompt(pr.number, it) }
         MenuItem("Fix in chat", "wrench", { close(); fix?.let(hub::draftPrompt); onBack() }, enabled = fix != null)
         MenuItem("Open on GitHub", "link-external", { close(); link(pr.url) })

@@ -22,7 +22,7 @@ const FILES_SHOWN = 6;
 export function TurnCard({ turn, latest, live, cwd, pending }: { turn: Turn; latest: boolean; live: boolean; cwd: string; pending: PendingRequest[] }) {
   const [promptOpen, setPromptOpen] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
-  const when = turn.queued ? <span className="tl-state" title="Waiting for Claude's next step"><Icon name="clock" small /><button className="link tl-send-now" title="Stop Claude's current step and send this now" onClick={(e) => { e.stopPropagation(); send({ type: 'send_now', id: turn.id }); }}>Send now</button></span> : turn.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(turn.at).toLocaleString()}>{time(turn.at)}</span>;
+  const when = turn.queued ? <span className="tl-state" title="Waiting for the agent's next step"><Icon name="clock" small /><button className="link tl-send-now" title="Stop the current step and send this now" onClick={(e) => { e.stopPropagation(); send({ type: 'send_now', id: turn.id }); }}>Send now</button></span> : turn.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(turn.at).toLocaleString()}>{time(turn.at)}</span>;
   return (
     <section className={`tc ${latest ? 'latest' : ''}`}>
       {turn.prompt && (
@@ -65,7 +65,7 @@ function Reply({ text, clip }: { text: string; clip: boolean }) {
 
 const rewindRequest = (turn: Turn): ConfirmRequest => ({
   title: 'Rewind files?',
-  detail: `Puts every file Claude changed back to how it was before "${turn.prompt.split('\n')[0].slice(0, 80)}". Edits from later turns are undone too; the conversation stays.`,
+  detail: `Puts every file the agent changed back to how it was before "${turn.prompt.split('\n')[0].slice(0, 80)}". Edits from later turns are undone too; the conversation stays.`,
   action: 'Rewind',
   icon: 'discard',
   run: async () => send({ type: 'rewind', id: turn.id }),
@@ -97,7 +97,7 @@ function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: strin
   return (
     <div className="tc-facts">
       {pending.map((p) => (
-        <div key={p.id} className="tc-wait"><Icon name="bell-dot" small /><span>{p.kind === 'question' ? p.questions[0]?.question ?? 'Claude has a question' : p.title}</span></div>
+        <div key={p.id} className="tc-wait"><Icon name="bell-dot" small /><span>{p.kind === 'question' ? p.questions[0]?.question ?? 'The agent has a question' : p.title}</span></div>
       ))}
       {turn.blocked.map((b) => <BlockedCard key={b.id} ev={b} />)}
       {reviews.map((r) => <ReviewCard key={r.id} ev={r} />)}
@@ -135,7 +135,7 @@ function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: strin
                 );
               })}
               {turn.files.length > FILES_SHOWN && <button className="link" onClick={() => setAllFiles((v) => !v)}>{allFiles ? 'Show fewer' : `${turn.files.length - FILES_SHOWN} more`}</button>}
-              {latest && <button className="link" title="Claude reviews the working tree, findings show in the Changes view" onClick={() => send({ type: 'prompt', text: REVIEW_LOCAL })}>Review changes</button>}
+              {latest && <button className="link" title="The agent reviews the working tree, findings show in the Changes view" onClick={() => send({ type: 'prompt', text: REVIEW_LOCAL })}>Review changes</button>}
               {settled && canRewind && <button className="link" title="Put the files back to how they were before this prompt" onClick={() => setAsk(rewindRequest(turn))}>Rewind files</button>}
               {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
             </div>

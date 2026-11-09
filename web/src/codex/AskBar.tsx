@@ -157,7 +157,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
         <div className="cp-foot">
           <span className="cp-spacer" />
           <Voice onText={dictate} autoStart={voice} />
-          <button className="cp-send" onPointerDown={(e) => e.preventDefault()} title={m === 'ask' ? (fresh ? 'Ask Claude in a new chat' : "Ask Claude in today's Codex chat") : 'Save'} aria-label="Send" disabled={!typed} onClick={() => void submit()}>
+          <button className="cp-send" onPointerDown={(e) => e.preventDefault()} title={m === 'ask' ? (fresh ? 'Ask Claude in a new chat' : "Ask Claude in today's ask chat") : 'Save'} aria-label="Send" disabled={!typed} onClick={() => void submit()}>
             <Icon name="arrow-up" />
           </button>
         </div>

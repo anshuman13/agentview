@@ -6,6 +6,7 @@ import { useChatSettings, type Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
 import { Voice, type useDictation } from './Voice';
 import { goalInfo, type GoalChoice, type Use } from './composerLogic';
+import { providerLabel } from '../../../../shared/providers';
 
 function ModeChip({ goal, setPick }: { goal: GoalChoice; setPick: (p: Pick) => void }) {
   const { effort, loop, modelName, effortName, modeInfo } = useChatSettings();
@@ -23,7 +24,7 @@ function AttachButton({ attach }: { attach: (list: File[]) => Promise<void> }) {
   return (
     <>
       <input ref={picker} type="file" multiple hidden onChange={(e) => { void attach([...(e.target.files ?? [])]); e.target.value = ''; }} />
-      <button className="icon-btn attach" title="Add files for Claude to look at (or paste or drop them)" aria-label="Add files" onClick={() => picker.current?.click()}>
+      <button className="icon-btn attach" title="Add files for the agent to look at (or paste or drop them)" aria-label="Add files" onClick={() => picker.current?.click()}>
         <Icon name="file-add" small />
       </button>
     </>
@@ -34,9 +35,10 @@ function SendButton({ typed, shell, submit }: { typed: boolean; shell: boolean; 
   const running = useStore((s) => s.session.running);
   const stopping = useStore((s) => s.session.stopping);
   const compacting = useStore((s) => s.session.compacting);
+  const label = useStore((s) => providerLabel(s.session.provider));
   if (running && !typed) {
     return (
-      <button className="cp-stop" title={stopping ? 'Stopping…' : 'Stop Claude'} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onPointerDown={(e) => e.preventDefault()} onClick={() => send({ type: 'interrupt' })}>
+      <button className="cp-stop" title={stopping ? 'Stopping…' : `Stop ${label}`} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onPointerDown={(e) => e.preventDefault()} onClick={() => send({ type: 'interrupt' })}>
         <Icon name={stopping ? 'loading' : 'debug-stop'} small spin={stopping} />
       </button>
     );
@@ -44,7 +46,7 @@ function SendButton({ typed, shell, submit }: { typed: boolean; shell: boolean; 
   return (
     <button
       className="cp-send"
-      title={shell ? 'Run in the terminal (Enter)' : compacting ? 'Sends when compacting is done (Enter)' : running ? 'Send at Claude\'s next step (Enter), stop and send (⌘Enter or hold)' : 'Send (Enter)'}
+      title={shell ? 'Run in the terminal (Enter)' : compacting ? 'Sends when compacting is done (Enter)' : running ? `Send at ${label}'s next step (Enter), stop and send (⌘Enter or hold)` : 'Send (Enter)'}
       aria-label={shell ? 'Run' : 'Send'}
       disabled={!typed}
       onPointerDown={(e) => e.preventDefault()}

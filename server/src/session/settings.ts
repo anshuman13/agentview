@@ -1,4 +1,5 @@
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LEVELS, type Account, type Effort } from '../../../shared/protocol.js';
+import { providerLabel } from '../../../shared/providers.js';
 import { errText } from '../../../shared/util.js';
 import type { AgentSession } from './session.js';
 
@@ -22,7 +23,7 @@ export class SessionSettings {
     const { driver, state } = this.s;
     const accounts = driver.accounts();
     if (!accounts.includes(a as Account)) return this.s.system('That Claude account is not logged in. Run ./claude-alt.sh first');
-    if (state.session.running) return this.s.system('Stop Claude before switching account');
+    if (state.session.running) return this.s.system(`Stop ${providerLabel(driver.provider)} before switching account`);
     if (a === driver.account) return;
     driver.setAccount(a as Account);
     this.s.setSession({ account: a as Account, accounts });

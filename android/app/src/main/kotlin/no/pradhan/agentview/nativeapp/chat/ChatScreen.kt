@@ -265,7 +265,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, view: Ch
     when (panels.dialog) {
         "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { panels.dialog = null })
         "archive" -> ConfirmDialog("Archive this chat?", "${live.title}\n\nYou can restore it from the bin for 24 hours.", "Archive", { hub.archive(sessionId!!) }) { panels.dialog = null }
-        "close" -> ConfirmDialog("Close this chat?", "Claude is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(live.id) }) { panels.dialog = null }
+        "close" -> ConfirmDialog("Close this chat?", "The agent is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(live.id) }) { panels.dialog = null }
     }
 }
 

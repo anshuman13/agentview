@@ -125,7 +125,7 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
       turns.push({ ...newTurn(e.id, prompt, e.at, Boolean(e.phase)), stopping: e.stopping, queued: e.queued });
       continue;
     }
-    if (e.kind === 'system' && e.text.startsWith('Claude woke up')) {
+    if (e.kind === 'system' && /^\w+ woke up/.test(e.text)) {
       turns.push(newTurn(e.id, e.text, e.at, true));
       continue;
     }

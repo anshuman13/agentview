@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { GrafanaDashboards, GrafanaLogs, GrafanaPanel, GrafanaPanels, GrafanaPatterns, ObserveInfo } from '../../../shared/observe';
 import { api } from '../app/store';
-import { askClaude } from '../ui/util';
+import { askChat } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
@@ -52,13 +52,13 @@ export function Grafana({ info }: { info: ObserveInfo }) {
     refreshPats();
   };
   const [question, setQuestion] = useState('');
-  const prompt = (text: string) => () => askClaude(`Use the grafana MCP for ${info.repo} (Loki selector ${selector}): ${text}`);
+  const prompt = (text: string) => () => askChat(`Use the grafana MCP for ${info.repo} (Loki selector ${selector}): ${text}`);
   const known = dash.data?.dashboards ?? cfg.grafana?.dashboards ?? [];
   const ask = () => {
     const q = question.trim();
     if (!q) return;
     const boards = known.length ? `\nDashboards for this service:\n${known.map((d) => `- ${d.title}: ${d.url}`).join('\n')}` : '';
-    askClaude(
+    askChat(
       `Use the grafana MCP to answer a question about ${info.repo}. Its logs are in Loki under the selector ${selector || `{app="${info.repo}"}`}.${boards}\n\nQuestion: ${q}\n\nQuery the dashboards, Loki and Prometheus as needed. In the answer, link every Grafana dashboard you used and an Explore link (generate_deeplink) for each query you ran.`,
     );
     setQuestion('');

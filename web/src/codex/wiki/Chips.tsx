@@ -15,5 +15,5 @@ export function SourceChip({ s }: { s: Source }) {
 }
 
 export function ClaudeChip({ chat }: { chat: string }) {
-  return <a className="wk-src" href={`/?session=${encodeURIComponent(chat)}`} title="Open the chat that proposed this"><Icon name="sparkle" small /> Claude</a>;
+  return <a className="wk-src" href={`/?session=${encodeURIComponent(chat)}`} title="Open the chat that proposed this"><Icon name="sparkle" small /> Chat</a>;
 }

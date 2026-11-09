@@ -1,3 +1,4 @@
+import { providerLabel } from '../../../shared/providers.js';
 import type { AgentSession } from './session.js';
 
 const STOP_TIMEOUT = 15_000;
@@ -20,7 +21,7 @@ export class Stopper {
       clearTimeout(this.timer);
       this.timer = setTimeout(() => {
         if (s.closed || !s.state.session.stopping) return;
-        s.system('Claude did not stop, so its process was ended');
+        s.system(`${providerLabel(s.driver.provider)} did not stop, so its process was ended`);
         s.driver.kill();
       }, STOP_TIMEOUT);
       this.timer.unref?.();

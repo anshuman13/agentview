@@ -6,6 +6,7 @@ import { embedded, getState, notice, set, setFindings, setUi } from './core';
 import { markSeen } from './seen';
 import { send } from './send';
 import { cache, cacheShown, view } from './view';
+import { providerLabel } from '../../../../shared/providers';
 
 const repo = (c: LiveChat) => c.cwd.split('/').pop();
 const focus = (id: string) => () => send({ type: 'view', id });
@@ -16,8 +17,8 @@ function notifyBackground(chats: LiveChat[]) {
   for (const c of chats) {
     const was = live.find((x) => x.id === c.id);
     if (!was || c.id === session.id) continue;
-    if (c.pending > was.pending) notify(`Claude needs you in ${repo(c)}`, c.title, focus(c.id));
-    else if (was.running && !c.running && !isMuted(c.sessionId)) notify(`Claude finished in ${repo(c)}`, c.title, focus(c.id));
+    if (c.pending > was.pending) notify(`${providerLabel(c.provider)} needs you in ${repo(c)}`, c.title, focus(c.id));
+    else if (was.running && !c.running && !isMuted(c.sessionId)) notify(`${providerLabel(c.provider)} finished in ${repo(c)}`, c.title, focus(c.id));
   }
 }
 
@@ -64,7 +65,7 @@ function onInit(m: Extract<ServerMessage, { type: 'init' }>) {
 function onEvent(m: Extract<ServerMessage, { type: 'event' }>) {
   const { events, session } = getState();
   if (m.event.kind === 'result' && !events.some((e) => e.id === m.event.id)) {
-    notify('Claude finished', m.event.text.trim().split('\n')[0], focus(session.id));
+    notify(`${providerLabel(session.provider)} finished`, m.event.text.trim().split('\n')[0], focus(session.id));
   }
   set((s) => {
     const cur = s.events;
@@ -91,7 +92,7 @@ function onAppend(m: Extract<ServerMessage, { type: 'append' }>) {
 function onPending(m: Extract<ServerMessage, { type: 'pending' }>) {
   const { pending, session } = getState();
   if (!pending.some((p) => p.id === m.request.id)) {
-    notify('Claude needs you', m.request.kind === 'question' ? m.request.questions[0]?.question ?? '' : m.request.title, focus(session.id));
+    notify(`${providerLabel(session.provider)} needs you`, m.request.kind === 'question' ? m.request.questions[0]?.question ?? '' : m.request.title, focus(session.id));
     if (document.visibilityState !== 'visible') navigator.vibrate?.(200);
   }
   set((s) => ({ pending: [...s.pending.filter((p) => p.id !== m.request.id), m.request] }));

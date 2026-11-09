@@ -30,7 +30,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
 
   if (!agents.length) {
     return (
-      <EmptyState size="md" icon="hubot" title="No agents yet" hint="Sub-agents Claude starts in this chat show up here, with their prompt, steps and report" />
+      <EmptyState size="md" icon="hubot" title="No agents yet" hint="Sub-agents the agent starts in this chat show up here, with their prompt, steps and report" />
     );
   }
 

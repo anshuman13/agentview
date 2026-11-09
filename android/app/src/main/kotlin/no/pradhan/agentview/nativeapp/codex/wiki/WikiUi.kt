@@ -201,7 +201,7 @@ fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
             lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, page.title ?: "") }
         }
         if (older.isNotEmpty()) {
-            item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
+            item { SectionHeader("Not used by the agent", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
             if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, page.title ?: "", stale = it.id in staleIds) }
         }
         if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "Claims come from meetings and threads", icon = "book") }

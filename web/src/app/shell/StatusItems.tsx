@@ -16,7 +16,7 @@ export function Restarting() {
   return (
     <div className="app-update">
       <Icon name="debug-restart" small />
-      <span>Restarting AgentView when {busy > 1 ? `${busy} chats finish` : 'Claude finishes'}</span>
+      <span>Restarting AgentView when {busy > 1 ? `${busy} chats finish` : 'the agent finishes'}</span>
       <a href="#" onClick={(e) => {
         e.preventDefault();
         if (busy && !confirm(`Restart now? This stops ${agents ? `${agents} background agent${agents > 1 ? 's' : ''} and ` : ''}any running turn.`)) return;

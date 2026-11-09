@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ExtrasLogicTest {
-    private fun chat(id: String, running: Boolean = false, pending: Int = 0) = LiveChat(id = id, title = "Fix tests", cwd = "/Users/me/agentview/", running = running, pending = pending)
+    private fun chat(id: String, running: Boolean = false, pending: Int = 0, provider: String? = null) = LiveChat(id = id, title = "Fix tests", cwd = "/Users/me/agentview/", running = running, pending = pending, provider = provider)
 
     @Test fun skipsTheChatOnScreen() {
         assertEquals(emptyList<Notice>(), notices(listOf(chat("a")), listOf(chat("a", pending = 1)), "a"))
@@ -20,6 +20,11 @@ class ExtrasLogicTest {
     @Test fun finishedWhenRunningStops() {
         val n = notices(listOf(chat("a", running = true)), listOf(chat("a")))
         assertEquals(listOf(Notice(NoticeKind.Finished, "a", "Claude finished in agentview", "Fix tests")), n)
+    }
+
+    @Test fun noticeNamesTheChatsProvider() {
+        val n = notices(listOf(chat("a", running = true, provider = "codex")), listOf(chat("a", provider = "codex")))
+        assertEquals(listOf(Notice(NoticeKind.Finished, "a", "Codex finished in agentview", "Fix tests")), n)
     }
 
     @Test fun mutedChatSkipsFinishedButNotApproval() {

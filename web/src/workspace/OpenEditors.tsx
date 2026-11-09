@@ -34,7 +34,7 @@ export function OpenEditors() {
       />
       {editorsOpen && (
         <div className="ex-editors">
-          {opened.length === 0 && <EmptyState size="sm" title="No open files" hint="Files you open or Claude edits show here" />}
+          {opened.length === 0 && <EmptyState size="sm" title="No open files" hint="Files you open or the agent edits show here" />}
           {opened.map((f) => {
             const name = f.split('/').pop();
             return (

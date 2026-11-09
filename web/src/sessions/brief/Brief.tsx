@@ -97,7 +97,7 @@ export function Brief() {
         )}
         {showAgents ? <AgentsPane stack selected={agentSel} onSelect={setAgentSel} /> : full ? <Transcript /> : (
           <div className="turns">
-            {turns.length === 0 && <div className="tl-empty">Send a prompt. Each prompt shows up here with Claude's reply, the files it changed and the commands it ran.</div>}
+            {turns.length === 0 && <div className="tl-empty">Send a prompt. Each prompt shows up here with the agent's reply, the files it changed and the commands it ran.</div>}
             {from > 0 && <button className="link tc-earlier" onClick={() => setAll(true)}>Show {from} earlier turn{from === 1 ? '' : 's'}</button>}
             {shown.map((t, i) => {
               const latest = i === shown.length - 1;

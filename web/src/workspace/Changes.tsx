@@ -8,7 +8,8 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
 import { refresh, useGit } from './gitStatus';
 import { Findings, REVIEW_LOCAL } from '../ops/Findings';
-import { askClaude, clickOnKey, usePoll } from '../ui/util';
+import { askChat, clickOnKey, usePoll } from '../ui/util';
+import { providerLabel } from '../../../shared/providers';
 
 type Run = (action: string, body: object) => Promise<boolean>;
 const paths = (list: GitFile[]) => ({ paths: list.map((f) => f.path) });
@@ -39,6 +40,7 @@ function BranchBar({ status, onRefresh }: { status: GitStatus | null; onRefresh:
 
 function CommitBox({ branch, staged, onCommit }: { branch: string; staged: number; onCommit: (message: string) => Promise<boolean> }) {
   const [message, setMessage] = useState('');
+  const label = useStore((s) => providerLabel(s.session.provider));
   const canCommit = staged > 0 && message.trim() !== '';
   const commit = async () => canCommit && (await onCommit(message)) && setMessage('');
   return (
@@ -56,8 +58,8 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
         <button className="btn primary" disabled={!canCommit} title={staged ? 'Commit the staged changes' : 'Stage changes to commit them'} onClick={() => void commit()}>
           <Icon name="check" small /> Commit
         </button>
-        <button className="btn quiet scm-claude" disabled={staged === 0} title={staged ? 'Ask Claude in the chat for a commit subject' : 'Stage changes first'} onClick={() => askClaude(DRAFT_PROMPT)}>
-          <Icon name="sparkle" small /> Write message with Claude
+        <button className="btn quiet scm-claude" disabled={staged === 0} title={staged ? 'Ask the agent in the chat for a commit subject' : 'Stage changes first'} onClick={() => askChat(DRAFT_PROMPT)}>
+          <Icon name="sparkle" small /> Write message with {label}
         </button>
       </div>
     </div>
@@ -99,6 +101,7 @@ export function Changes() {
   const { status, error } = useGit();
   const openFile = useStore((s) => s.ui.openFile);
   const id = useStore((s) => s.session.id);
+  const label = useStore((s) => providerLabel(s.session.provider));
   const [failed, setFailed] = useState('');
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -140,8 +143,8 @@ export function Changes() {
       <BranchBar status={status} onRefresh={() => void refresh()} />
       <CommitBox branch={status?.branch ?? ''} staged={staged.length} onCommit={(message) => run('commit', { message })} />
       <div className="scm-commit-actions scm-review">
-        <button className="btn quiet scm-claude" disabled={!files.length} title={files.length ? 'Claude reviews the working tree, findings show below' : 'No changes to review'} onClick={() => askClaude(REVIEW_LOCAL)}>
-          <Icon name="search" small /> Review changes with Claude
+        <button className="btn quiet scm-claude" disabled={!files.length} title={files.length ? `${label} reviews the working tree, findings show below` : 'No changes to review'} onClick={() => askChat(REVIEW_LOCAL)}>
+          <Icon name="search" small /> Review changes with {label}
         </button>
       </div>
       {(failed || error) && <div className="scm-error" role="alert">{failed || error}</div>}

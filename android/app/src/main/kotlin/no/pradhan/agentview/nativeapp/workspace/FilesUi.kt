@@ -165,7 +165,7 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
 @Composable
 private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
     SectionHeader("Tasks", specProgress(tasks)) {
-        if (tasks.any { !it.done }) Button("Run all", { hub.askClaude(runAllPrompt(path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly)
+        if (tasks.any { !it.done }) Button("Run all", { hub.askChat(runAllPrompt(path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly)
     }
     Group {
         tasks.forEachIndexed { i, t ->
@@ -173,7 +173,7 @@ private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
             ListRow(t.text, strike = t.done, muted = t.done, trailing = if (t.done) null else if (t.doing) {
                 { Badge("In progress", BadgeTone.Running) }
             } else {
-                { Button("Start", { hub.askClaude(startTaskPrompt(t, path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly) }
+                { Button("Start", { hub.askChat(startTaskPrompt(t, path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly) }
             })
         }
     }

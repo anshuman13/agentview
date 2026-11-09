@@ -59,12 +59,12 @@ export function buildCommands(models: { value: string; displayName: string }[], 
     { id: 'review', label: 'Chat: Toggle Review Changes' },
     { id: 'goal', label: 'Chat: Start a standing goal' },
     { id: 'spec', label: 'Chat: Start with a spec' },
-    { id: 'stop', label: 'Chat: Stop Claude' },
+    { id: 'stop', label: 'Chat: Stop the Agent' },
     { id: 'theme', label: 'Preferences: Toggle Theme' },
     { id: 'notify', label: 'Preferences: Toggle Notifications' },
     { id: 'shortcuts', label: 'Keyboard shortcuts', key: '?' },
     { id: 'phone', label: 'Open on Phone' },
-    { id: 'restart', label: 'Developer: Restart Server When Claude Is Idle' },
+    { id: 'restart', label: 'Developer: Restart Server When Agents Are Idle' },
   ];
 }
 

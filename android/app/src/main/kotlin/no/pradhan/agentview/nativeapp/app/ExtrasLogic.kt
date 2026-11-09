@@ -4,6 +4,7 @@ import java.net.URLEncoder
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
 import no.pradhan.agentview.nativeapp.net.LiveChat
+import no.pradhan.agentview.nativeapp.net.providerLabel
 
 enum class NoticeKind(val channel: String, val label: String) {
     Approval("approvals", "Approvals"),
@@ -23,9 +24,9 @@ fun notices(was: List<LiveChat>, now: List<LiveChat>, shownId: String = "", mute
     if (c.id == shownId) return@mapNotNull null
     val before = was.firstOrNull { it.id == c.id } ?: return@mapNotNull null
     when {
-        c.pending > before.pending -> Notice(NoticeKind.Approval, c.id, "Claude needs you in ${repoName(c)}", c.title)
-        c.failed && !before.failed -> Notice(NoticeKind.Failed, c.id, "Claude failed in ${repoName(c)}", c.title)
-        before.running && !c.running && !c.failed && c.sessionId !in muted -> Notice(NoticeKind.Finished, c.id, "Claude finished in ${repoName(c)}", c.title)
+        c.pending > before.pending -> Notice(NoticeKind.Approval, c.id, "${providerLabel(c.provider)} needs you in ${repoName(c)}", c.title)
+        c.failed && !before.failed -> Notice(NoticeKind.Failed, c.id, "${providerLabel(c.provider)} failed in ${repoName(c)}", c.title)
+        before.running && !c.running && !c.failed && c.sessionId !in muted -> Notice(NoticeKind.Finished, c.id, "${providerLabel(c.provider)} finished in ${repoName(c)}", c.title)
         else -> null
     }
 }
