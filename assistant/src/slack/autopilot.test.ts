@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { ANSWERED, CHANGED, afterScan, awayDigest, dayDigest, escalated, scanModel, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, replyHistory, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { afterScan, escalated, scanModel, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, replyHistory, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { ANSWERED, CHANGED } from './post.js';
+import { awayDigest, dayDigest } from './digest.js';
 import { openDb } from '../core/db.js';
 import { applyChanges } from '../core/sync.js';
 import { askId, saveScan, threadKey } from './slackSave.js';

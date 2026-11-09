@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { pushNtfy } from '../../../server/src/integrations/notify.js';
-import { ANSWERED, CHANGED, postReply } from './autopilot.js';
+import { ANSWERED, CHANGED, postReply } from './post.js';
 import { deleteMeta, getMeta, setMeta } from '../core/db.js';
 import { PROFILE, webUrl } from './slackSave.js';
 import { applyChanges } from '../core/sync.js';
