@@ -17,6 +17,10 @@ import { LiveText } from './stream.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 import { expandChatMentions } from './chatMentions.js';
 
+type SystemMessage = Extract<SDKMessage, { type: 'system' }>;
+type AssistantMessage = Extract<SDKMessage, { type: 'assistant' }>;
+type ToolResultBlock = Extract<Exclude<Extract<SDKMessage, { type: 'user' }>['message']['content'], string>[number], { type: 'tool_result' }>;
+
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
@@ -390,155 +394,192 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   private handle(msg: SDKMessage) {
-    const host = this.host;
     // Turns the CLI starts by itself (a subagent handing back, a scheduled job) come without a prompt from us.
     if ((msg.type === 'assistant' || msg.type === 'stream_event') && !msg.parent_tool_use_id) this.continued();
     switch (msg.type) {
-      case 'rate_limit_event': {
-        const until = overageUntil(msg);
-        if (until) {
-          // An idle chat moves to the other account at once; the new CLI must not be interrupted.
-          const q = this.q;
-          host.overage(until);
-          if (this.q === q) this.interrupt().catch(() => undefined);
-        }
-        break;
-      }
+      case 'rate_limit_event':
+        return this.onRateLimit(msg);
       case 'system':
-        if (msg.subtype === 'init') {
-          const changed = msg.model !== this.state.session.model;
-          if (this.fork) {
-            this.fork = false;
-            this.watchHistory(false);
-            host.system('Forked into a new chat');
-          }
-          const newId = this.watcher.active && msg.session_id !== this.state.session.sessionId;
-          host.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
-          if (newId) this.watchHistory(true);
-          if (changed) host.system(`Session started with ${msg.model}`);
-          if (this.resume && msg.permissionMode !== 'auto' && !this.resumedAuto) {
-            this.resumedAuto = true;
-            void this.q?.setPermissionMode('auto').then(() => host.setSession({ permissionMode: 'auto' }), () => {});
-          }
-          if (this.state.session.commands.length === 0) void this.loadMeta();
-        } else if (msg.subtype === 'session_state_changed') {
-          if (msg.state === 'running' && !this.state.session.running) host.turnStarted();
-        } else if (msg.subtype === 'status') {
-          if (msg.permissionMode) host.setSession({ permissionMode: msg.permissionMode });
-          if (msg.status === 'compacting') host.startCompacting();
-          if (msg.compact_result === 'failed') host.compactFailed(msg.compact_error || 'no reason given');
-          else if (msg.compact_result) host.setSession({ compacting: false });
-        } else if (msg.subtype === 'compact_boundary') {
-          const { pre_tokens, post_tokens } = msg.compact_metadata;
-          host.compacted(pre_tokens, post_tokens);
-        } else if (msg.subtype === 'permission_denied') {
-          if (msg.decision_reason_type !== 'rule') host.blocked(msg.tool_use_id, msg.tool_name, msg.decision_reason || msg.message);
-        } else if (msg.subtype === 'task_started') {
-          const toolUseId = msg.tool_use_id && agentToolUse(this.host, msg.tool_use_id);
-          const call = toolUseId ? host.eventById(toolUseId) : undefined;
-          const use = call?.kind === 'tool_use' ? call : undefined;
-          this.tasks.set(msg.task_id, { toolUseId: toolUseId || '', tool: use?.name ?? msg.task_type ?? 'task', description: msg.description || use?.summary || '' });
-          if (toolUseId) {
-            this.taskIds.set(toolUseId, msg.task_id);
-            host.adopt(toolUseId);
-            patchAgent(this.host, toolUseId, (a) => ({
-              status: 'running',
-              background: msg.is_backgrounded ?? a.background,
-              prompt: msg.prompt || a.prompt,
-              subagentType: msg.subagent_type || a.subagentType,
-              ...(a.status !== 'running' && { startedAt: Date.now(), endedAt: null }),
-            }));
-          }
-        } else if (msg.subtype === 'task_progress') {
-          if (msg.tool_use_id) patchAgent(this.host, agentToolUse(this.host, msg.tool_use_id), (a) => ({ usage: usageOf(msg.usage), progress: msg.summary || a.progress }));
-        } else if (msg.subtype === 'task_updated') {
-          if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
-          const toolUseId = taskToolUse(this.taskIds, this.agents, msg.task_id);
-          const { status, end_time, is_backgrounded } = msg.patch;
-          if (toolUseId) patchAgent(this.host, toolUseId, () => ({
-            ...(status && ENDED[status] && { status: ENDED[status], endedAt: end_time ?? Date.now() }),
-            ...(is_backgrounded !== undefined && { background: is_backgrounded }),
-          }));
-        } else if (msg.subtype === 'task_notification') {
-          this.tasks.delete(msg.task_id);
-          const toolUseId = msg.tool_use_id ? agentToolUse(this.host, msg.tool_use_id) : taskToolUse(this.taskIds, this.agents, msg.task_id);
-          if (toolUseId) {
-            // The CLI writes the report to the transcript before it streams; without this the watcher takes it for another process and restarts the CLI.
-            this.continued();
-            const usage = msg.usage && usageOf(msg.usage);
-            patchAgent(this.host, toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
-            taskDone(this.host, this.agents, toolUseId, msg.task_id, msg.status, msg.summary);
-          }
-        } else if (msg.subtype === 'hook_response') {
-          const line = hookLine(msg);
-          if (line) host.system(line, true);
-        } else if (msg.subtype === 'local_command_output') {
-          host.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
-          host.turnEnded();
-        }
-        return;
-
+        return this.onSystem(msg);
       case 'stream_event':
         if (!msg.parent_tool_use_id) this.live.event(msg.event);
         return;
-
-      case 'assistant': {
-        const parent = msg.parent_tool_use_id ?? undefined;
-        if (parent) {
-          const model = msg.message.model;
-          if (model) patchAgent(this.host, parent, () => ({ model }));
-          for (const block of msg.message.content) {
-            if (block.type === 'text' && block.text.trim()) host.pushEvent({ id: randomUUID(), kind: 'assistant', text: block.text, streaming: false, at: Date.now(), parent });
-            if (block.type === 'tool_use') this.toolUse(block, parent);
-          }
-          return;
-        }
-        host.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), this.state.session.cache), context: contextFrom(msg.message.usage) ?? this.state.session.context });
-        for (const block of msg.message.content) {
-          if (block.type === 'server_tool_use' && block.name === 'advisor') host.pushEvent(advisorEvent(block.id, Date.now()));
-          if (block.type === 'tool_use') this.toolUse(block);
-          // The CLI marks its own usage-limit notice with error 'rate_limit'; Claude's replies never carry it.
-          if (block.type === 'text' && msg.error === 'rate_limit') host.noteLimit(block.text);
-          if (block.type === 'text' && msg.error === 'authentication_failed') host.system(`Logged out of the ${ACCOUNT_LABEL[this.account]} Claude account (${block.text}). Run claude, then /login`);
-        }
-        return;
-      }
-
-      case 'user': {
-        const parent = msg.parent_tool_use_id ?? undefined;
-        const content = msg.message.content;
-        if (!parent && this.sent.length) this.noteReplay(msg);
-        if (typeof content === 'string' && content.startsWith('<task-notification>')) for (const ev of notificationResults(content, Date.now(), this.agents)) host.pushEvent(ev);
-        if (!Array.isArray(content)) return;
-        const output = (msg as { tool_use_result?: unknown }).tool_use_result;
-        for (const block of content) {
-          if (block.type !== 'tool_result') continue;
-          const edited = this.edits.get(block.tool_use_id);
-          this.edits.delete(block.tool_use_id);
-          if (edited && !block.is_error) host.noteFile(path.relative(this.cwd, edited), 'tool');
-          const text = toolResultText(block);
-          const agent = isAgent(this.host, block.tool_use_id);
-          if (agent) agentResult(this.host, block.tool_use_id, text, Boolean(block.is_error), output);
-          if (!parent && text.startsWith(ASYNC_LAUNCH)) {
-            noteLaunch(this.agents, block.tool_use_id, text);
-            continue;
-          }
-          const report = agent ? liveReport(text, output) : text.slice(0, 4000);
-          host.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: report, isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
-          if (!parent) host.notePr(block.tool_use_id, text);
-        }
-        return;
-      }
-
-      case 'result': {
-        this.live.end();
-        const ok = msg.subtype === 'success';
-        host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}`, costUsd: msg.total_cost_usd, isError: msg.is_error });
-        return;
-      }
-
+      case 'assistant':
+        return msg.parent_tool_use_id ? this.onSubagentMessage(msg, msg.parent_tool_use_id) : this.onAssistant(msg);
+      case 'user':
+        return this.onUser(msg);
+      case 'result':
+        return this.onResult(msg);
       default:
         return;
     }
+  }
+
+  private onRateLimit(msg: Extract<SDKMessage, { type: 'rate_limit_event' }>) {
+    const until = overageUntil(msg);
+    if (!until) return;
+    // An idle chat moves to the other account at once; the new CLI must not be interrupted.
+    const q = this.q;
+    this.host.overage(until);
+    if (this.q === q) this.interrupt().catch(() => undefined);
+  }
+
+  private onSystem(msg: SystemMessage) {
+    switch (msg.subtype) {
+      case 'init':
+        return this.onInit(msg);
+      case 'session_state_changed':
+        if (msg.state === 'running' && !this.state.session.running) this.host.turnStarted();
+        return;
+      case 'status':
+        return this.onStatus(msg);
+      case 'compact_boundary': {
+        const { pre_tokens, post_tokens } = msg.compact_metadata;
+        this.host.compacted(pre_tokens, post_tokens);
+        return;
+      }
+      case 'permission_denied':
+        if (msg.decision_reason_type !== 'rule') this.host.blocked(msg.tool_use_id, msg.tool_name, msg.decision_reason || msg.message);
+        return;
+      case 'task_started':
+        return this.onTaskStarted(msg);
+      case 'task_progress':
+        if (msg.tool_use_id) patchAgent(this.host, agentToolUse(this.host, msg.tool_use_id), (a) => ({ usage: usageOf(msg.usage), progress: msg.summary || a.progress }));
+        return;
+      case 'task_updated':
+        return this.onTaskUpdated(msg);
+      case 'task_notification':
+        return this.onTaskNotification(msg);
+      case 'hook_response': {
+        const line = hookLine(msg);
+        if (line) this.host.system(line, true);
+        return;
+      }
+      case 'local_command_output':
+        this.host.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
+        this.host.turnEnded();
+        return;
+    }
+  }
+
+  private onInit(msg: Extract<SystemMessage, { subtype: 'init' }>) {
+    const host = this.host;
+    const changed = msg.model !== this.state.session.model;
+    if (this.fork) {
+      this.fork = false;
+      this.watchHistory(false);
+      host.system('Forked into a new chat');
+    }
+    const newId = this.watcher.active && msg.session_id !== this.state.session.sessionId;
+    host.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
+    if (newId) this.watchHistory(true);
+    if (changed) host.system(`Session started with ${msg.model}`);
+    if (this.resume && msg.permissionMode !== 'auto' && !this.resumedAuto) {
+      this.resumedAuto = true;
+      void this.q?.setPermissionMode('auto').then(() => host.setSession({ permissionMode: 'auto' }), () => {});
+    }
+    if (this.state.session.commands.length === 0) void this.loadMeta();
+  }
+
+  private onStatus(msg: Extract<SystemMessage, { subtype: 'status' }>) {
+    const host = this.host;
+    if (msg.permissionMode) host.setSession({ permissionMode: msg.permissionMode });
+    if (msg.status === 'compacting') host.startCompacting();
+    if (msg.compact_result === 'failed') host.compactFailed(msg.compact_error || 'no reason given');
+    else if (msg.compact_result) host.setSession({ compacting: false });
+  }
+
+  private onTaskStarted(msg: Extract<SystemMessage, { subtype: 'task_started' }>) {
+    const toolUseId = msg.tool_use_id && agentToolUse(this.host, msg.tool_use_id);
+    const call = toolUseId ? this.host.eventById(toolUseId) : undefined;
+    const use = call?.kind === 'tool_use' ? call : undefined;
+    this.tasks.set(msg.task_id, { toolUseId: toolUseId || '', tool: use?.name ?? msg.task_type ?? 'task', description: msg.description || use?.summary || '' });
+    if (!toolUseId) return;
+    this.taskIds.set(toolUseId, msg.task_id);
+    this.host.adopt(toolUseId);
+    patchAgent(this.host, toolUseId, (a) => ({
+      status: 'running',
+      background: msg.is_backgrounded ?? a.background,
+      prompt: msg.prompt || a.prompt,
+      subagentType: msg.subagent_type || a.subagentType,
+      ...(a.status !== 'running' && { startedAt: Date.now(), endedAt: null }),
+    }));
+  }
+
+  private onTaskUpdated(msg: Extract<SystemMessage, { subtype: 'task_updated' }>) {
+    if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
+    const toolUseId = taskToolUse(this.taskIds, this.agents, msg.task_id);
+    const { status, end_time, is_backgrounded } = msg.patch;
+    if (toolUseId) patchAgent(this.host, toolUseId, () => ({
+      ...(status && ENDED[status] && { status: ENDED[status], endedAt: end_time ?? Date.now() }),
+      ...(is_backgrounded !== undefined && { background: is_backgrounded }),
+    }));
+  }
+
+  private onTaskNotification(msg: Extract<SystemMessage, { subtype: 'task_notification' }>) {
+    this.tasks.delete(msg.task_id);
+    const toolUseId = msg.tool_use_id ? agentToolUse(this.host, msg.tool_use_id) : taskToolUse(this.taskIds, this.agents, msg.task_id);
+    if (!toolUseId) return;
+    // The CLI writes the report to the transcript before it streams; without this the watcher takes it for another process and restarts the CLI.
+    this.continued();
+    const usage = msg.usage && usageOf(msg.usage);
+    patchAgent(this.host, toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
+    taskDone(this.host, this.agents, toolUseId, msg.task_id, msg.status, msg.summary);
+  }
+
+  private onSubagentMessage(msg: AssistantMessage, parent: string) {
+    const model = msg.message.model;
+    if (model) patchAgent(this.host, parent, () => ({ model }));
+    for (const block of msg.message.content) {
+      if (block.type === 'text' && block.text.trim()) this.host.pushEvent({ id: randomUUID(), kind: 'assistant', text: block.text, streaming: false, at: Date.now(), parent });
+      if (block.type === 'tool_use') this.toolUse(block, parent);
+    }
+  }
+
+  private onAssistant(msg: AssistantMessage) {
+    const host = this.host;
+    host.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), this.state.session.cache), context: contextFrom(msg.message.usage) ?? this.state.session.context });
+    for (const block of msg.message.content) {
+      if (block.type === 'server_tool_use' && block.name === 'advisor') host.pushEvent(advisorEvent(block.id, Date.now()));
+      if (block.type === 'tool_use') this.toolUse(block);
+      // The CLI marks its own usage-limit notice with error 'rate_limit'; Claude's replies never carry it.
+      if (block.type === 'text' && msg.error === 'rate_limit') host.noteLimit(block.text);
+      if (block.type === 'text' && msg.error === 'authentication_failed') host.system(`Logged out of the ${ACCOUNT_LABEL[this.account]} Claude account (${block.text}). Run claude, then /login`);
+    }
+  }
+
+  private onUser(msg: Extract<SDKMessage, { type: 'user' }>) {
+    const parent = msg.parent_tool_use_id ?? undefined;
+    const content = msg.message.content;
+    if (!parent && this.sent.length) this.noteReplay(msg);
+    if (typeof content === 'string' && content.startsWith('<task-notification>')) for (const ev of notificationResults(content, Date.now(), this.agents)) this.host.pushEvent(ev);
+    if (!Array.isArray(content)) return;
+    const output = (msg as { tool_use_result?: unknown }).tool_use_result;
+    for (const block of content) {
+      if (block.type === 'tool_result') this.onToolResult(block, parent, output);
+    }
+  }
+
+  private onToolResult(block: ToolResultBlock, parent: string | undefined, output: unknown) {
+    const host = this.host;
+    const edited = this.edits.get(block.tool_use_id);
+    this.edits.delete(block.tool_use_id);
+    if (edited && !block.is_error) host.noteFile(path.relative(this.cwd, edited), 'tool');
+    const text = toolResultText(block);
+    const agent = isAgent(host, block.tool_use_id);
+    if (agent) agentResult(host, block.tool_use_id, text, Boolean(block.is_error), output);
+    if (!parent && text.startsWith(ASYNC_LAUNCH)) {
+      noteLaunch(this.agents, block.tool_use_id, text);
+      return;
+    }
+    const report = agent ? liveReport(text, output) : text.slice(0, 4000);
+    host.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: report, isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
+    if (!parent) host.notePr(block.tool_use_id, text);
+  }
+
+  private onResult(msg: Extract<SDKMessage, { type: 'result' }>) {
+    this.live.end();
+    const ok = msg.subtype === 'success';
+    this.host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}`, costUsd: msg.total_cost_usd, isError: msg.is_error });
   }
 }
