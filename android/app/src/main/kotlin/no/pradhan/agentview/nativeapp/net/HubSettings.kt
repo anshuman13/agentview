@@ -7,6 +7,7 @@ suspend fun Hub.refreshSettings() {
     val s = runCatching { api.settings() }.getOrNull() ?: return
     ACCOUNT_LABEL.putAll(s.accountLabels)
     deploy.value = s.deploy
+    providers.value = s.providers
 }
 
 fun Hub.setMuted(sessionId: String, on: Boolean) {

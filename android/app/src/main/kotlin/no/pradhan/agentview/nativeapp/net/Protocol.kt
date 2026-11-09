@@ -75,7 +75,11 @@ data class ReviewHunk(val line: Int = 0, val del: List<String> = emptyList(), va
 
 // shared/protocol.ts PublicSettings.
 @Serializable
-data class AppSettings(val deploy: Boolean = false, val accountLabels: Map<String, String> = emptyMap())
+data class AppSettings(val deploy: Boolean = false, val accountLabels: Map<String, String> = emptyMap(), val providers: List<ProviderOption> = emptyList())
+
+// shared/protocol.ts ProviderOption: what a new chat can run on; a disabled one says what is missing.
+@Serializable
+data class ProviderOption(val id: String, val label: String, val enabled: Boolean = true, val note: String? = null)
 
 @Serializable
 data class AgentUsage(val tokens: Long = 0, val toolUses: Int = 0, val durationMs: Long = 0)
@@ -348,7 +352,7 @@ fun setAccountCmd(account: String) = cmd("set_account") { put("account", account
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
 fun setReviewCmd(on: Boolean) = cmd("set_review") { put("on", on) }
 fun reviewCmd(id: String, action: String, file: String? = null, hunk: Int? = null) = cmd("review") { put("id", id); put("action", action); if (file != null) put("file", file); if (hunk != null) put("hunk", hunk) }
-fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork) }
+fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null, provider: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork); if (provider != null) put("provider", provider) }
 fun closeCmd(id: String) = cmd("close") { put("id", id) }
 fun openSessionCmd(sessionId: String) = cmd("open_session") { put("sessionId", sessionId) }
 fun rewindCmd(id: String) = cmd("rewind") { put("id", id) }

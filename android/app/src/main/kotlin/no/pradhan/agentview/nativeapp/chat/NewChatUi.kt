@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.lastModel
+import no.pradhan.agentview.nativeapp.net.ProviderOption
 import no.pradhan.agentview.nativeapp.net.newChat
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -31,9 +32,12 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
     var repo by remember { mutableStateOf(repoKey ?: initial) }
     var model by remember(models) { mutableStateOf(startModel(models, hub.lastModel)) }
     var startMode by remember { mutableStateOf(START_MODES.first()) }
+    val providers by hub.providers.collectAsState()
+    var provider by remember { mutableStateOf<ProviderOption?>(null) }
+    val other = provider?.takeIf { it.id != "claude" }
     val start = {
-        model?.let { hub.lastModel = it }
-        hub.newChat(repo, model.takeIf { it != models.firstOrNull()?.value }, mode = startMode.mode, draft = startMode.draft, review = startMode.review)
+        if (other == null) model?.let { hub.lastModel = it }
+        hub.newChat(repo, model.takeIf { other == null && it != models.firstOrNull()?.value }, mode = startMode.mode, draft = startMode.draft, review = startMode.review, provider = other?.id)
         onDismiss()
     }
     Sheet(onDismiss, "New chat", padded = false, full = false, action = { Button("Start", start, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }) {
@@ -42,6 +46,16 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
             START_MODES.forEachIndexed { i, m ->
                 if (i > 0) Hairline()
                 ListRow(m.label, onClick = { startMode = m }, trailing = if (m == startMode) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+            }
+        }
+        if (providers.size > 1) {
+            SectionHeader("Provider")
+            Group {
+                providers.forEachIndexed { i, p ->
+                    if (i > 0) Hairline()
+                    val chosen = p.id == (provider ?: providers.first()).id
+                    ListRow(p.label, if (p.enabled) null else p.note, onClick = if (p.enabled) { { provider = p } } else null, trailing = if (chosen) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+                }
             }
         }
         if (repoKey == null && repos.isNotEmpty()) {
@@ -53,7 +67,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
                 }
             }
         }
-        if (models.isNotEmpty()) {
+        if (models.isNotEmpty() && other == null) {
             SectionHeader("Model")
             Group {
                 models.forEachIndexed { i, m ->

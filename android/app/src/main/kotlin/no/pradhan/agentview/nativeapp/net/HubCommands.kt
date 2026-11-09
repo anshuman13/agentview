@@ -23,11 +23,11 @@ var Hub.lastModel: String?
     get() = prefs.getString("lastModel", null)
     set(v) { prefs.edit().putString("lastModel", v).apply() }
 
-fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, review: Boolean = false) {
+fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, review: Boolean = false, provider: String? = null) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
     if (model != null) lastModel = model
     viewModelScope.launch {
-        val id = switchTo(newSessionCmd(cwd = cwd, model = model ?: lastModel?.takeIf { fork == null }, fork = fork))
+        val id = switchTo(newSessionCmd(cwd = cwd, model = model ?: lastModel?.takeIf { fork == null && provider == null }, fork = fork, provider = provider))
         if (id == null) notice.value = "The chat did not open" else {
             if (mode != null) post(setModeCmd(mode), id)
             if (review) post(setReviewCmd(true), id)

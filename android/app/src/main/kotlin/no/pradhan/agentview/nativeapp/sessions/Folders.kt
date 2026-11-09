@@ -16,6 +16,7 @@ data class SavedSession(
     val gitBranch: String? = null,
     val lastModified: Long = 0,
     val firstPrompt: String? = null,
+    val provider: String? = null,
 )
 
 @Serializable

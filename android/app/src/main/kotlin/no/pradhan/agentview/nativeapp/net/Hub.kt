@@ -107,6 +107,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     // The integrations the server's settings file turns on (shared/protocol.ts PublicSettings).
     val deploy = MutableStateFlow(false)
 
+    val providers = MutableStateFlow<List<ProviderOption>>(emptyList())
+
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
 
     internal val _connected = MutableStateFlow(false)
