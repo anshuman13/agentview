@@ -248,7 +248,7 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
             Button("Approve", { ops.approve(listOf(fact)) }, Modifier.fillMaxWidth(), variant = ButtonVariant.Filled, size = ButtonSize.Lg)
             LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Button("Reject", { ops.reject(listOf(fact)) }, Modifier.weight(1f), variant = ButtonVariant.Danger, size = ButtonSize.Md)
-                Button("Skip", { skipped = skipped.filter { it != fact.key } + fact.key }, Modifier.weight(1f), size = ButtonSize.Md)
+                Button("Skip", { if (queue.size == 1) onBack() else skipped = skipped.filter { it != fact.key } + fact.key }, Modifier.weight(1f), size = ButtonSize.Md)
             }
         }
     }

@@ -14,6 +14,7 @@ const key = (f: Fact) => f.profile + f.id;
 
 // One proposed claim at a time with big Approve, Skip and Reject, so a long list can be cleared with the thumb.
 // The order is fixed when the screen opens; a skipped claim goes to the back, a decided one stays counted.
+// Skip on the only claim left goes back to the wiki and leaves it proposed.
 export function ReviewMode() {
   const { pages, facts } = useCodex();
   const review = useReview();
@@ -31,7 +32,11 @@ export function ReviewMode() {
   useEffect(() => { if (!fact && skipped.length) setSkipped([]); }, [fact, skipped.length]);
   const page = fact?.page_id ? pages.find((p) => p.id === fact.page_id && p.profile === fact.profile) : undefined;
   const old = fact?.replaces ? facts.find((f) => f.id === fact.replaces && f.profile === fact.profile) : undefined;
-  const skip = () => fact && setSkipped((s) => [...s.filter((k) => k !== key(fact)), key(fact)]);
+  const skip = () => {
+    if (!fact) return;
+    if (queue.length === 1) return back();
+    setSkipped((s) => [...s.filter((k) => k !== key(fact)), key(fact)]);
+  };
   return (
     <div className="wk wk-mode">
       <header className="wk-head">
