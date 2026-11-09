@@ -3,6 +3,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { parseObject, readBody } from '../http/body.js';
 import type { ObserveConfig, ObserveInfo, SnowflakeConfig, SnowflakeInfo } from '../../../shared/observe.js';
+import { provider } from '../agent/registry.js';
+import type { Provider } from '../../../shared/protocol.js';
 import { stop } from './mcpClient.js';
 import { CLAUDE, EMPTY_SNOWFLAKE, FILE, configFor, guess, load, repoName, save, userServers, type Settings } from './observeSettings.js';
 import { clearGrafanaCaches, dashboards, grafanaDef, logs, panels, patterns } from './observeGrafana.js';
@@ -15,8 +17,8 @@ const snowflakeInfo = (s: Settings): SnowflakeInfo => {
   return { ...rest, hasSecret: !!secret };
 };
 
-async function info(repo: string, cwd: string): Promise<ObserveInfo> {
-  const [s, servers] = await Promise.all([load(), userServers(cwd)]);
+async function info(repo: string, cwd: string, prov: Provider): Promise<ObserveInfo> {
+  const [s, servers] = await Promise.all([load(), userServers(cwd, prov)]);
   return {
     repo,
     config: s.repos?.[repo] ?? null,
@@ -25,12 +27,13 @@ async function info(repo: string, cwd: string): Promise<ObserveInfo> {
     file: FILE,
     grafanaServer: !!servers.grafana,
     snowflake: snowflakeInfo(s),
-    inClaude: { snowflake: !!servers.snowflake },
+    inChat: { snowflake: !!servers.snowflake },
+    serversFile: provider(prov).serversFile,
   };
 }
 
 
-async function saveSnowflake(input: unknown, cwd: string) {
+async function saveSnowflake(input: unknown, cwd: string, prov: Provider) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Snowflake settings must be an object');
   const s = await load();
   const prev = { ...EMPTY_SNOWFLAKE, ...s.snowflake };
@@ -41,10 +44,10 @@ async function saveSnowflake(input: unknown, cwd: string) {
   if (typeof inp.secret === 'string' && inp.secret) next.secret = inp.secret;
   await save({ ...s, snowflake: next });
   stop('snowflake');
-  return info(await repoName(cwd), cwd);
+  return info(await repoName(cwd), cwd, prov);
 }
 
-async function saveConfig(repo: string, b: Record<string, unknown>, cwd: string) {
+async function saveConfig(repo: string, b: Record<string, unknown>, cwd: string, prov: Provider) {
   const s = await load();
   const repos = { ...s.repos };
   if ('config' in b) {
@@ -55,11 +58,11 @@ async function saveConfig(repo: string, b: Record<string, unknown>, cwd: string)
   }
   await save({ ...s, repos });
   clearGrafanaCaches();
-  return info(repo, cwd);
+  return info(repo, cwd, prov);
 }
 
-async function addToClaude(server: string, cwd: string) {
-  const [s, servers] = await Promise.all([load(), userServers(cwd)]);
+async function addToClaude(server: string, cwd: string, prov: Provider) {
+  const [s, servers] = await Promise.all([load(), userServers(cwd, 'claude')]);
   if (server !== 'snowflake') throw new Error('server must be snowflake');
   const def = await snowflakeDef(s);
   if (servers[server]) throw new Error(`${server} is already in your Claude MCP config`);
@@ -67,29 +70,29 @@ async function addToClaude(server: string, cwd: string) {
   await run('claude', ['mcp', 'add-json', '--scope', 'user', server, JSON.stringify(def)], { timeout: 30_000 }).catch((err: { stderr?: string; message: string }) => {
     throw new Error(err.stderr?.trim() || err.message);
   });
-  return { server, file: CLAUDE, info: await info(await repoName(cwd), cwd) };
+  return { server, file: CLAUDE, info: await info(await repoName(cwd), cwd, prov) };
 }
 
-export async function observe(req: http.IncomingMessage, url: URL, cwd: string) {
+export async function observe(req: http.IncomingMessage, url: URL, cwd: string, prov: Provider) {
   const p = url.pathname;
   if (req.method === 'POST') {
     const b = parseObject(await readBody(req));
     if (p === '/api/observe/config') {
       if (typeof b.repo !== 'string' || !b.repo.trim()) throw new Error('Missing repo');
-      return saveConfig(b.repo.trim(), b, cwd);
+      return saveConfig(b.repo.trim(), b, cwd, prov);
     }
-    if (p === '/api/observe/snowflake/config') return saveSnowflake(b.snowflake, cwd);
+    if (p === '/api/observe/snowflake/config') return saveSnowflake(b.snowflake, cwd, prov);
     if (p === '/api/observe/snowflake/test') return snowflakeTest();
     if (p === '/api/observe/snowflake/query') return snowflakeQuery(String(b.sql ?? ''));
-    if (p === '/api/observe/mcp/add') return addToClaude(String(b.server ?? ''), cwd);
+    if (p === '/api/observe/mcp/add') return addToClaude(String(b.server ?? ''), cwd, prov);
     throw new Error('Not found');
   }
   const q = (k: string) => url.searchParams.get(k)?.trim() ?? '';
   if (p === '/api/observe/snowflake/objects') return snowflakeObjects(q('kind'), q('database'), q('schema'));
   const repo = q('repo') || (await repoName(cwd));
-  if (p === '/api/observe') return info(repo, cwd);
+  if (p === '/api/observe') return info(repo, cwd, prov);
   if (p.startsWith('/api/observe/grafana/')) {
-    const [s, servers] = await Promise.all([load(), userServers(cwd)]);
+    const [s, servers] = await Promise.all([load(), userServers(cwd, prov)]);
     const def = grafanaDef(servers);
     const cfg = (await configFor(repo, s)).grafana;
     if (p === '/api/observe/grafana/dashboards') return dashboards(repo, cfg, def);

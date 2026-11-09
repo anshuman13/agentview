@@ -18,6 +18,7 @@ import { Review } from './review.js';
 import { Prompts } from './prompts.js';
 import { PR_URL, createsPr } from './pr.js';
 import { RepeatController, ROUND_INSTRUCTION } from './repeat.js';
+import { provider } from '../agent/registry.js';
 import { RunLinks } from './runLinks.js';
 import { Runs } from './runs.js';
 import { SessionSettings } from './settings.js';
@@ -78,6 +79,7 @@ export class AgentSession implements AgentHost {
     this.state.session.instructionFiles = this.driver.instructionFiles;
     this.state.session.account = this.driver.account;
     this.state.session.accounts = this.driver.accounts();
+    this.setResumeCommand();
   }
 
   // The state for a client that opens the chat, with accounts logged in since the chat started.
@@ -139,9 +141,15 @@ export class AgentSession implements AgentHost {
     this.pushEvent({ id: randomUUID(), kind: 'status', text, at: Date.now() });
   }
 
+  private setResumeCommand() {
+    const { sessionId, account } = this.state.session;
+    this.state.session.resumeCommand = sessionId ? provider(this.driver.provider).resume(this.cwd, sessionId, account) : null;
+  }
+
   setSession(patch: Partial<SessionInfo>) {
     const wasRunning = this.state.session.running;
     this.state.session = { ...this.state.session, ...patch };
+    if ('sessionId' in patch || 'account' in patch || 'provider' in patch) this.setResumeCommand();
     if (patch.sessionId) this.runs.bind(this.id, patch.sessionId);
     if (wasRunning && patch.running === false) this.driver.settled();
     this.emit({ type: 'session', session: this.state.session });

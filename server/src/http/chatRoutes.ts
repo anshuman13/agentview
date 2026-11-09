@@ -1,6 +1,6 @@
 import { closeTerminal, createTerminal, listTerminals } from '../workspace/terminal.js';
 import { openInChrome } from '../chrome/chrome.js';
-import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from '../agent/claude/mcp.js';
+import { configDef, inSettings, mcpCall, mcpConfig } from '../agent/claude/mcp.js';
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import { provider } from '../agent/registry.js';
 import { listDir, listFiles, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
@@ -97,7 +97,7 @@ export function chatMcpRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> {
       if (r.authUrl) openInChrome(r.authUrl);
       return r;
     }),
-    'ANY /api/mcp/probe': entry(({ url, chat }) => mcpProbe(chat.cwd, url.searchParams.has('refresh'))),
+    'ANY /api/mcp/probe': entry(({ url, chat }) => provider(chat.provider ?? 'claude').mcpProbe(chat.cwd, url.searchParams.has('refresh'))),
     'POST /api/mcp/call': entry(async ({ body, chat }) => {
       const name = String(body.server ?? '');
       const def = await configDef(chat.cwd, name);
@@ -112,7 +112,7 @@ export function chatMcpRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> {
 
 export const chatPrefixes: Prefix<ChatCtx>[] = [
     { prefix: '/api/git/', run: ({ url, chat, body }) => gitRoute(chat.cwd, url.pathname.slice(9), url.searchParams, body), body: 'POST' },
-    { prefix: '/api/observe', run: ({ req, url, chat }) => observe(req, url, chat.cwd) },
+    { prefix: '/api/observe', run: ({ req, url, chat }) => observe(req, url, chat.cwd, chat.provider ?? 'claude') },
     { prefix: '/api/gh/', run: ({ req, method, url, chat }) => github(chat.cwd, method, url, () => readBody(req)) },
     { prefix: '/api/deploy/', run: ({ req, method, url, chat }) => (deployUrl() ? deployRoute(chat.cwd, method, url, () => readBody(req)) : { status: 404, body: { error: 'Deploy is not set up' } }) },
 ];

@@ -1,7 +1,6 @@
 import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../app/store';
 import { copyText } from '../ui/util';
-import type { Account } from '../../../shared/protocol';
-import { chatMarkdown, handoffText, replyNote, resumeCommand } from './composer/composerLogic';
+import { chatMarkdown, handoffText, replyNote } from './composer/composerLogic';
 import { assistantStore } from '../codex/data';
 
 // Side chat (like Claude desktop's): forks this chat into the column beside it, so a question does not land in the
@@ -51,6 +50,6 @@ export function copyChatMarkdown() {
   copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? '')).then(() => notice('Copied the chat as Markdown'), () => notice('Could not copy'));
 }
 
-export function copyResumeCommand(cwd: string, sessionId: string, account: Account) {
-  copyText(resumeCommand(cwd, sessionId, account)).then(() => notice('Copied. Stop this chat before resuming it in a terminal'), () => notice('Could not copy'));
+export function copyResumeCommand(command: string) {
+  copyText(command).then(() => notice('Copied. Stop this chat before resuming it in a terminal'), () => notice('Could not copy'));
 }

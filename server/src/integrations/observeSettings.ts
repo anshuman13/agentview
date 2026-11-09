@@ -3,7 +3,8 @@ import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { ROOTS } from '../workspace/files.js';
 import { errText, inside } from '../../../shared/util.js';
-import { allowedServers } from '../agent/claude/mcp.js';
+import { provider } from '../agent/registry.js';
+import type { Provider } from '../../../shared/protocol.js';
 import type { McpServerDef } from './mcpClient.js';
 import type { ObserveConfig, SnowflakeConfig } from '../../../shared/observe.js';
 import { writeJson } from '../json.js';
@@ -83,4 +84,4 @@ export async function configFor(repo: string, s: Settings) {
   return s.repos?.[repo] ?? (await guess(repo, s));
 }
 
-export const userServers = (cwd: string): Promise<Servers> => allowedServers(cwd);
+export const userServers = (cwd: string, p: Provider): Promise<Servers> => provider(p).servers(cwd);

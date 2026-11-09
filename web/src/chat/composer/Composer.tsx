@@ -37,7 +37,7 @@ export function Composer() {
   const label = useStore((s) => providerLabel(s.session.provider));
   const compacting = useStore((s) => s.session.compacting);
   const waiting = useStore((s) => s.pending.length > 0);
-  const { mode } = useChatSettings();
+  const { mode, modes } = useChatSettings();
   const [pick, setPick] = useState<Pick | null>(null);
   const [uses, setUses] = useState<Use[]>([]);
   const [goals, setGoals] = useState<Record<string, GoalChoice>>({});
@@ -69,7 +69,7 @@ export function Composer() {
     sentHistory: h.sentHistory, setSentHistory: h.setSentHistory, clearHistoryStep: () => h.setHist(null),
   });
 
-  const { choose, onKeyDown } = useComposerKeys({ text, mode, ghost, ac, h, apply, submit });
+  const { choose, onKeyDown } = useComposerKeys({ text, mode, modes, ghost, ac, h, apply, submit });
 
   return (
     <div className="cp" data-mode={mode}>

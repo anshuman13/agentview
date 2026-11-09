@@ -1,4 +1,5 @@
-import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ProviderOption } from '../../../../shared/protocol';
+import { EFFORT_LABEL, EFFORT_LEVELS, type Effort, type ProviderOption } from '../../../../shared/protocol';
+import { providerModes, type ModeOption } from '../../../../shared/providers';
 import { isBlock } from '../../../../shared/util';
 import { codexMeetings } from '../../codex/data';
 import { isTask, searchAll } from '../../codex/data/ask/search';
@@ -31,9 +32,7 @@ const VIEWS = [
   ['runs', 'Runs'],
 ];
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];
-const MODES: Record<string, string> = { default: 'Default', acceptEdits: 'Accept edits', plan: 'Plan mode', auto: 'Auto mode', dontAsk: "Don't ask" };
-
-export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, effort = true, providers: ProviderOption[] = []): Command[] {
+export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, efforts: readonly Effort[] = EFFORT_LEVELS, providers: ProviderOption[] = [], modes: ModeOption[] = providerModes()): Command[] {
   return [
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
@@ -52,8 +51,8 @@ export function buildCommands(models: { value: string; displayName: string }[], 
     ...providers.filter((p) => p.id !== 'claude').map((p) => ({ id: `newChat:${p.id}`, label: `Chat: New ${p.label} Chat${p.enabled ? '' : ` (${p.note})`}` })),
     { id: 'forkChat', label: 'Chat: Fork Chat' },
     ...models.map((m) => ({ id: `model:${m.value}`, label: `Model: ${m.displayName}` })),
-    ...(effort ? EFFORT_LEVELS : []).map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),
-    ...PERMISSION_MODES.map((m) => ({ id: `mode:${m}`, label: `Permission Mode: ${MODES[m] ?? m}` })),
+    ...efforts.map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),
+    ...modes.map((m) => ({ id: `mode:${m.value}`, label: `Permission Mode: ${m.label}` })),
     { id: 'compact', label: 'Chat: Compact Context' },
     { id: 'loop', label: 'Chat: Toggle Build Cycle' },
     { id: 'review', label: 'Chat: Toggle Review Changes' },

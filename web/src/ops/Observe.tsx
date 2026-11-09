@@ -52,7 +52,7 @@ function SettingsSection({ info, open, toggle, draft, saveState, saveError, savi
         <div className="obs-body">
           <textarea className="obs-field" aria-label="Observe settings" value={draft} spellCheck={false} rows={14} onChange={(e) => onEdit(e.target.value)} />
           <Err text={saveError} />
-          <div className="obs-hint">Grafana MCP: {info.grafanaServer ? 'found in ~/.claude.json' : 'missing from ~/.claude.json'}</div>
+          <div className="obs-hint">Grafana MCP: {info.grafanaServer ? `found in ${info.serversFile}` : `missing from ${info.serversFile}`}</div>
           <div className="obs-actions"><Button variant="primary" size="sm" disabled={saving} onClick={onSave}>Save</Button></div>
         </div>
       )}

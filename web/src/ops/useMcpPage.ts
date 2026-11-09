@@ -7,7 +7,7 @@ import type { Group } from './mcpHelpers';
 import type { AccountConnectors } from './mcpRows';
 
 // The probed server list and the connector lists per account; load reconnects connectors that were logged in meanwhile.
-export function useMcpProbe(account: string, id: string) {
+export function useMcpProbe(account: string, id: string, connectors: boolean) {
   const [probed, setProbed] = useState<McpServer[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [at, setAt] = useState(0);
@@ -19,7 +19,7 @@ export function useMcpProbe(account: string, id: string) {
     setBusy(true);
     setError('');
     send({ type: 'mcp_status' });
-    fetchMcpConnectors(refresh).then((a) => {
+    if (connectors) fetchMcpConnectors(refresh).then((a) => {
       if (n !== seq.current || !a || a.error) return;
       setAccounts(a);
       // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.

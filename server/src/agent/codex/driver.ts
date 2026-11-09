@@ -32,7 +32,7 @@ export const codexDriver = (resume?: string, fork = false): DriverFactory => (ho
 // Runs a chat on `codex app-server`: one process per chat, one thread in it, resumed by thread id when the process ends.
 export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
-  readonly capabilities: Capabilities = { rewind: false, mcp: true, effort: true, team: false, stopTask: false };
+  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, team: false, stopTask: false };
   readonly account: Account = 'main';
   readonly instructionFiles: string[];
 
@@ -352,7 +352,7 @@ export class CodexDriver implements AgentDriver {
   // The thread is read through a short-lived process, so a reopened chat starts none until its first prompt.
   async loadHistory(): Promise<History | null> {
     if (!this.threadId) return null;
-    const rpc = await CodexRpc.open(this.host.cwd, { notification: () => undefined, request: () => Promise.reject(new Error('unsupported')), exit: () => undefined }).catch(() => null);
+    const rpc = await CodexRpc.openQuiet(this.host.cwd).catch(() => null);
     if (!rpc) return null;
     try {
       const { thread } = await rpc.request<{ thread: Thread }>('thread/read', { threadId: this.threadId, includeTurns: true });

@@ -19,8 +19,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
+import no.pradhan.agentview.nativeapp.chat.can
 import no.pradhan.agentview.nativeapp.chat.firstLine
 import no.pradhan.agentview.nativeapp.codex.firstLine
+import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.command
 import no.pradhan.agentview.nativeapp.net.protocolJson
@@ -43,6 +45,7 @@ import no.pradhan.agentview.nativeapp.ui.SearchField
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint
+import no.pradhan.agentview.nativeapp.workspace.Hint
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.openLink
@@ -53,6 +56,7 @@ import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val st by hub.store.state.collectAsState()
     val chat = st.shownId
+    val connectors = (st.session?.capabilities ?: Capabilities()).can("connectors")
     var refresh by remember { mutableStateOf(false) }
     var accounts by remember { mutableStateOf<Map<String, List<McpConnector>>>(emptyMap()) }
     val (probe, reprobe) = rememberLoad(chat) {
@@ -60,7 +64,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
         refresh = false
         hub.quietCommand(mcpStatusCmd())
         coroutineScope {
-            launch {
+            if (connectors) launch {
                 runCatching { parseConnectors(hub.read("/api/mcp/connectors$q")) }.onSuccess { a ->
                     accounts = a
                     val s = hub.store.state.value.session
@@ -76,7 +80,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     var showHidden by rememberSaveable { mutableStateOf(false) }
     val live = st.session?.mcp ?: emptyList()
     val account = st.session?.account
-    val rows = remember(probe.data, live, account, accounts) { mcpWithAccounts(mergeMcp(probe.data ?: emptyList(), live), account, accounts) }
+    val rows = remember(probe.data, live, account, accounts, connectors) { mergeMcp(probe.data ?: emptyList(), live).let { if (connectors) mcpWithAccounts(it, account, accounts) else it } }
     val calls = remember(st.events) { mcpCalls(st.events) }
     val sections = remember(rows, groups) { mcpSections(rows, groups) }
 
@@ -100,7 +104,8 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
             LazyColumn(Modifier.fillMaxSize()) {
                 item { ErrorHint(probe.error) }
                 if (probe.data == null && probe.error.isEmpty()) item { Loading("Checking the servers") }
-                if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", "Add one with claude mcp add or connect one on claude.ai, then check again.", icon = "plug", small = false) }
+                if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", if (connectors) "Add one with claude mcp add or connect one on claude.ai, then check again." else "Add one with codex mcp add, then check again.", icon = "plug", small = false) }
+                if (!connectors) item { Hint("claude.ai connectors load in Claude chats only") }
                 listOf("Work" to sections.work, "Personal" to sections.personal).forEach { (label, list) ->
                     if (list.isNotEmpty()) {
                         item { SectionHeader(label, list.size.toString()) }
@@ -133,6 +138,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
     BackHandler(onBack = onBack)
     val (label, tone) = mcpState(r)
     val (scope, where) = mcpScope(r.server.scope)
+    val canEdit = (hub.store.state.value.session?.capabilities ?: Capabilities()).can("mcpEdit")
     var q by rememberSaveable(r.name) { mutableStateOf("") }
     val link = openLink()
     val hidden = groups[mcpHideKey(r)] == "hidden"
@@ -144,7 +150,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
             MoreButton { close ->
                 MenuItem(if (hidden) "Show" else "Hide", if (hidden) "eye" else "eye-closed", { close(); setGroup(mcpHideKey(r), if (hidden) "shown" else "hidden") })
                 if (r.account == null) MenuItem("Move to ${if (group == "work") "Personal" else "Work"}", "arrow-swap", { close(); setGroup(mcpGroupKey(r), if (group == "work") "personal" else "work") })
-                if (r.live) MenuItem(if (r.status == "disabled") "Enable" else "Disable for this chat", if (r.status == "disabled") "play" else "circle-slash", { close(); hub.command(mcpToggleCmd(r.name, r.status == "disabled")) })
+                if (canEdit && r.live) MenuItem(if (r.status == "disabled") "Enable" else "Disable for this chat", if (r.status == "disabled") "play" else "circle-slash", { close(); hub.command(mcpToggleCmd(r.name, r.status == "disabled")) })
                 if (url) MenuItem("Open URL", "link-external", { close(); link(r.server.command) })
             }
         }
@@ -162,6 +168,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                         Hairline(); ListRow("From", scope + if (where.isNotEmpty()) " · $where" else "")
                         Hairline(); ListRow("In chat", if (r.live) "Loaded" else "Not loaded")
                         Hairline(); ListRow(if (r.account != null) "Account" else "Group", if (r.account != null) r.account else if (group == "work") "Work" else "Personal")
+                        if (!canEdit) { Hairline(); ListRow("Edit", "~/.codex/config.toml, then Reconnect") }
                         calls?.let { (n, e) -> Hairline(); ListRow("Used in this chat", plural(n, "call") + if (e > 0) " · ${plural(e, "error")}" else "") }
                     }
                 }

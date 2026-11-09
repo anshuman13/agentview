@@ -14,6 +14,9 @@ export class SessionSettings {
 
   async setEffort(level: string) {
     if (!EFFORT_LEVELS.includes(level as Effort)) return;
+    const { model, models } = this.s.state.session;
+    const efforts = models.find((m) => m.value === model)?.efforts;
+    if (efforts && !efforts.includes(level)) return this.s.system(`${model} does not support ${level} effort`, true);
     await this.s.driver.setEffort(level as Effort);
     this.s.setSession({ effort: level as Effort });
     this.s.system(`Effort set to ${level}`);

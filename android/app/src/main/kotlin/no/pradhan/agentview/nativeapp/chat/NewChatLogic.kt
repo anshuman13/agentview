@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.chat
 import kotlinx.serialization.builtins.ListSerializer
 import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.protocolJson
+import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.workspace.specPrompt
 
 private val modelList = ListSerializer(ModelInfo.serializer())
@@ -26,3 +27,6 @@ fun startModel(models: List<ModelInfo>, last: String?): String? =
 class StartMode(val label: String, val mode: String?, val draft: String? = null, val review: Boolean = false)
 
 val START_MODES = listOf(StartMode("Auto", null), StartMode("Plan first", "plan"), StartMode("Ask first", "default"), StartMode("Spec", "plan", specPrompt("")), StartMode("Supervised", "auto", review = true))
+
+// A start mode the provider does not offer (Plan on Codex) starts in Default.
+fun startModeFor(mode: String?, provider: String?) = if (mode != null && providerModes(provider).none { it.value == mode }) "default" else mode

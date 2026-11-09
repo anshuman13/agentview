@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { setUi, useStore } from '../store';
 import type { SavedSession } from '../../../../shared/protocol';
+import { providerModes } from '../../../../shared/providers';
 import { Back } from '../touch/back';
-import { modelsFor } from '../../chat/capabilitiesLogic';
+import { effortsFor, modelsFor } from '../../chat/capabilitiesLogic';
 import { useCan } from '../../chat/useCan';
 import { openSearch, useView } from '../../codex/view';
 import { assistantStore } from '../../codex/data';
@@ -15,7 +16,11 @@ import { PaletteEntries, type Entry } from './PaletteEntries';
 
 export function Palette() {
   const models = modelsFor(useStore((s) => s.session.models), useStore((s) => s.session.capabilities));
+  const model = useStore((s) => s.session.model);
+  const provider = useStore((s) => s.session.provider);
   const canEffort = useCan('effort');
+  const efforts = useMemo(() => (canEffort ? effortsFor(models, model) : []), [canEffort, models, model]);
+  const modes = useMemo(() => providerModes(provider), [provider]);
   const live = useStore((s) => s.live);
   const [fetched, setFetched] = useState<{ pins: string[]; saved: SavedSession[] }>({ pins: [], saved: [] });
   const [open, setOpen] = useState(false);
@@ -27,7 +32,7 @@ export function Palette() {
   const deploy = appSettings.use((s) => s.deploy);
   const providers = appSettings.use((s) => s.providers);
   const pinned = useMemo(() => pinCommands(fetched.pins, live, fetched.saved), [fetched, live]);
-  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy, canEffort, providers)], [pinned, models, deploy, canEffort, providers]);
+  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy, efforts, providers, modes)], [pinned, models, deploy, efforts, providers, modes]);
   const rows = useMemo(() => rankCommands(commands, q, recent, MAX_ROWS + pinned.length), [commands, pinned, q, recent]);
 
   const items = useMemo(() => (open ? paletteItems(assistantStore().snapshot()) : []), [open]);

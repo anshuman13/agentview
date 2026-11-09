@@ -75,8 +75,15 @@ class ComposerLogicTest {
         assertEquals("Every hour", goalInfo("hourly", now).chip)
     }
 
-    @Test fun resumeCommandQuotesTheFolderAndPicksTheAccountDir() {
-        assertEquals("cd ~/r && claude --resume abc", resumeCommand("~/r", "abc", "main"))
-        assertEquals("cd '/a b' && CLAUDE_CONFIG_DIR=~/.claude-alt claude --resume abc", resumeCommand("/a b", "abc", "alt"))
+    @Test fun effortsFollowTheModelsList() {
+        val models = listOf(ModelInfo("a", efforts = listOf("low", "high", "minimal")), ModelInfo("b"))
+        assertEquals(listOf("low", "high"), effortsFor(models, "a"))
+        assertEquals(EFFORT_LEVELS, effortsFor(models, "b"))
+    }
+
+    @Test fun planStartsInDefaultWhereTheProviderHasNone() {
+        assertEquals("default", startModeFor("plan", "codex"))
+        assertEquals("plan", startModeFor("plan", "claude"))
+        assertNull(startModeFor(null, "codex"))
     }
 }

@@ -15,8 +15,8 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
   const sessionId = useStore((s) => s.session.sessionId);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
-  const cwd = useStore((s) => s.session.cwd);
   const chat = useStore((s) => s.session.id);
+  const resumeCommand = useStore((s) => s.session.resumeCommand);
   const hooks = useStore((s) => s.session.hooks) ?? [];
   const phase = useStore((s) => s.session.loop.phase);
   const run = useChatRun(chat);
@@ -26,7 +26,7 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
     if (v === 'review') return act(() => send({ type: 'set_review', on: !review }));
     if (v === 'fork') return act(forkChat);
     if (v === 'markdown') return act(copyChatMarkdown);
-    if (v === 'terminal') return act(() => copyResumeCommand(cwd, sessionId!, account));
+    if (v === 'terminal') return act(() => copyResumeCommand(resumeCommand!));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
   return (
@@ -46,7 +46,8 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
         { value: 'hooks', label: 'Hooks', detail: hooks.length ? `${hooks.length}` : 'None' },
         { value: 'todos', label: 'TODOs', detail: 'TODO, FIXME and AI! comments in the repo' },
         { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
-        ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'remind', label: 'Remind me', detail: 'Add a task to check this chat later' }, { value: 'fork', label: 'Fork chat', detail: 'Start a new chat from a summary of this one' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
+        ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'remind', label: 'Remind me', detail: 'Add a task to check this chat later' }, { value: 'fork', label: 'Fork chat', detail: 'Start a new chat from a summary of this one' }] : []),
+        ...(resumeCommand ? [{ value: 'terminal', label: 'Continue in terminal', detail: 'Copy the command that resumes this chat' }] : []),
       ]}
       onPick={onPick}
       onClose={close}

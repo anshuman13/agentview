@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, goalText } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, goalText } from './composerLogic';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
@@ -182,10 +182,12 @@ describe('stampedNotes', () => {
   });
 });
 
-describe('resumeCommand', () => {
-  it('resumes in the chat folder on its account', () => {
-    expect(resumeCommand('/Users/me/repo', 'abc', 'main')).toBe('cd /Users/me/repo && claude --resume abc');
-    expect(resumeCommand("/Users/me/my repo's", 'abc', 'alt')).toBe("cd '/Users/me/my repo'\\''s' && CLAUDE_CONFIG_DIR=~/.claude-alt claude --resume abc");
+describe('nextMode', () => {
+  it('cycles the modes a provider offers', () => {
+    const modes = [{ value: 'default' }, { value: 'auto' }, { value: 'readOnly' }];
+    expect(nextMode(modes, 'default')).toBe('auto');
+    expect(nextMode(modes, 'readOnly')).toBe('default');
+    expect(nextMode(modes, 'plan')).toBe('default');
   });
 });
 

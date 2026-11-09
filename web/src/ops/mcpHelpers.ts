@@ -18,6 +18,7 @@ const SCOPES: [id: string, title: string, where: string][] = [
   ['user', 'Your servers', '~/.claude.json'],
   ['project', 'This repo', '.mcp.json'],
   ['local', 'This folder', '~/.claude.json · project entry'],
+  ['codex', 'Codex config', '~/.codex/config.toml'],
   ['claudeai', 'Claude.ai connectors', 'claude.ai settings'],
   ['plugin', 'Plugins', 'Claude Code plugins'],
 ];

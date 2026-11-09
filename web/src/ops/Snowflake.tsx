@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { ObserveInfo, SnowflakeAuth, SnowflakeInfo, SnowflakeObjects, SnowflakeResult, SnowflakeTest } from '../../../shared/observe';
-import { api } from '../app/store';
+import { api, useStore } from '../app/store';
+import { providerLabel } from '../../../shared/providers';
+import { useCan } from '../chat/useCan';
 import { fetchJson } from '../app/api';
 import { askChat } from '../ui/util';
 import { Icon } from '../ui/Icon';
@@ -119,7 +121,8 @@ function ResultTable({ data }: { data: SnowflakeResult }) {
   );
 }
 
-function QueryPanel({ sf, connected }: Pick<Conn, 'sf' | 'connected'>) {
+function QueryPanel({ sf, connected, missingNote }: Pick<Conn, 'sf' | 'connected'> & { missingNote: string }) {
+  const label = providerLabel(useStore((s) => s.session.provider));
   const [db, setDb] = useState(sf.database);
   const [schema, setSchema] = useState(sf.schema);
   const [table, setTable] = useState('');
@@ -168,8 +171,8 @@ function QueryPanel({ sf, connected }: Pick<Conn, 'sf' | 'connected'>) {
         {result.data && <span className="muted">{result.data.rows.length}{result.data.truncated ? '+' : ''} rows, {result.data.ms} ms{result.data.truncated ? ', showing the first 200' : ''}</span>}
         {result.busy && <span className="muted"><Icon name="loading" small spin /> Running</span>}
         <span className="spacer" />
-        <button className="obs-ask" disabled={!connected} onClick={() => askChat(`Use the snowflake MCP${db ? ` on ${db}${schema ? `.${schema}` : ''}` : ''}: ${sql.trim() ? `run this query and explain the result:\n${sql.trim()}` : 'list the tables that matter for this service and describe what they hold'}`)}>
-          <Icon name="sparkle" small /> Ask Claude
+        <button className="obs-ask" disabled={!connected || !!missingNote} title={missingNote} onClick={() => askChat(`Use the snowflake MCP${db ? ` on ${db}${schema ? `.${schema}` : ''}` : ''}: ${sql.trim() ? `run this query and explain the result:\n${sql.trim()}` : 'list the tables that matter for this service and describe what they hold'}`)}>
+          <Icon name="sparkle" small /> Ask {label}
         </button>
       </div>
       <Err text={result.error} />
@@ -180,16 +183,17 @@ function QueryPanel({ sf, connected }: Pick<Conn, 'sf' | 'connected'>) {
 
 export function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInfo) => void }) {
   const sf = info.snowflake;
+  const canEdit = useCan('mcpEdit');
   const connected = sf.hasSecret && !!sf.account && !!sf.user;
   const missing = [...(['account', 'user'] as const).filter((k) => !sf[k]), ...(sf.hasSecret ? [] : [sf.auth === 'pat' ? 'token' : 'password'])];
   return (
     <Pane
       label="Snowflake"
       open={false}
-      action={<AddToClaude server="snowflake" added={info.inClaude.snowflake} disabled={!connected} title={connected ? 'Write the Snowflake MCP server into ~/.claude.json' : 'Save the connection first'} onDone={onInfo} />}
+      action={canEdit && <AddToClaude server="snowflake" added={info.inChat.snowflake} disabled={!connected} title={connected ? 'Write the Snowflake MCP server into ~/.claude.json' : 'Save the connection first'} onDone={onInfo} />}
     >
       <ConnectionForm sf={sf} connected={connected} missing={missing} onInfo={onInfo} />
-      <QueryPanel sf={sf} connected={connected} />
+      <QueryPanel sf={sf} connected={connected} missingNote={info.inChat.snowflake ? '' : `Add snowflake to ${info.serversFile}`} />
     </Pane>
   );
 }

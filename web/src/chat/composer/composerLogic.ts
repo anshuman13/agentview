@@ -209,10 +209,6 @@ export function saveDraft(chat: string, text: string) {
 
 export const uploadPaste = (f: File) => fetchJson<{ path: string }>(apiUrl(`/api/paste?name=${encodeURIComponent(f.name || 'pasted')}`), { method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f });
 
-const CONFIG_DIR: Partial<Record<Account, string>> = { alt: '~/.claude-alt', alt2: '~/.claude-alt2' };
-const shQuote = (s: string) => (/^[\w./~-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
-
-// A shell line that continues this chat in the Claude CLI, on the same account.
 // The loaded prompts and replies as Markdown, like the phone's Share chat and Goose's session export.
 export function chatMarkdown(events: ChatEvent[], title: string) {
   const parts = events.flatMap((e) => (e.kind === 'user' && !e.queued ? [`**You:** ${e.text.trim()}`] : e.kind === 'assistant' && !e.parent && e.text.trim() ? [e.text.trim()] : []));
@@ -239,10 +235,8 @@ export function remindChoices(now: number) {
   return [{ label: 'In 1 hour', at: now + 3_600_000 }, { label: 'In 3 hours', at: now + 3 * 3_600_000 }, { label: 'Tomorrow at 9:00', at: tomorrow.getTime() }];
 }
 
-export function resumeCommand(cwd: string, sessionId: string, account: Account) {
-  const dir = CONFIG_DIR[account];
-  return `cd ${shQuote(cwd)} && ${dir ? `CLAUDE_CONFIG_DIR=${dir} ` : ''}claude --resume ${sessionId}`;
-}
+// The mode Shift+Tab switches to: the next one the provider offers, wrapping around.
+export const nextMode = (modes: { value: string }[], mode: string) => modes[(modes.findIndex((m) => m.value === mode) + 1) % modes.length].value;
 
 // Fork chat: the new chat reads the old one's transcript (via @chat) and summarises it, so work continues from a short brief.
 export const handoffText = (sessionId: string) =>

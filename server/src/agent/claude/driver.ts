@@ -69,7 +69,7 @@ export class ClaudeDriver implements AgentDriver {
 
   // On OpenRouter the models, effort and the Opus advisor are not Anthropic's, so they are left out.
   get capabilities(): Capabilities {
-    return { rewind: true, mcp: true, effort: !this.openrouter, team: !this.openrouter, stopTask: true };
+    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, team: !this.openrouter, stopTask: true };
   }
 
   get instructionFiles() {

@@ -45,6 +45,7 @@ import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.interrupt
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.providerLabel
+import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.net.refreshUsage
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.runInTerminal
@@ -185,7 +186,7 @@ private fun ComposerToolbar(hub: Hub, s: ComposerState, session: SessionInfo?, r
             if (!(running && typed)) {
                 val account = session?.account ?: "main"
                 val high = usageHigh(session?.usage)
-                Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default") + (if (s.goalOn) " · ${goalInfo(s.goal, System.currentTimeMillis()).chip}" else ""), onSettings, Modifier.weight(1f, fill = false), warn = high, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, icon = if (high) "warning" else if (s.goalOn) "sync" else null)
+                Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default", session?.provider) + (if (s.goalOn) " · ${goalInfo(s.goal, System.currentTimeMillis()).chip}" else ""), onSettings, Modifier.weight(1f, fill = false), warn = high, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, icon = if (high) "warning" else if (s.goalOn) "sync" else null)
             }
         }
         if (uploading > 0) RowLabel("Uploading…", c.fgMuted)
@@ -203,7 +204,7 @@ private fun ComposerToolbar(hub: Hub, s: ComposerState, session: SessionInfo?, r
 private fun ComposerSheets(hub: Hub, s: ComposerState, session: SessionInfo?, run: ChatRun?, sheet: Picker?, onSheet: (Picker?) -> Unit) {
     when (sheet) {
         Picker.Settings -> ChatSettingsSheet(hub, s, session, run, onSheet)
-        Picker.Effort -> PickerSheet("Select effort", EFFORT_LEVELS.map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
+        Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
         null -> {}
     }
@@ -237,9 +238,9 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, session: SessionInfo?,
         }
         SectionHeader("Permission mode")
         Group {
-            PERMISSION_MODES.forEachIndexed { i, m ->
+            providerModes(session?.provider).forEachIndexed { i, m ->
                 if (i > 0) Hairline()
-                ListRow(MODES[m]?.label ?: m, MODES[m]?.detail, onClick = { hub.setMode(m); onSheet(null) }, trailing = if (m == (session?.permissionMode ?: "default")) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+                ListRow(m.label, m.detail, onClick = { hub.setMode(m.value); onSheet(null) }, trailing = if (m.value == (session?.permissionMode ?: "default")) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
             }
         }
         val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main"

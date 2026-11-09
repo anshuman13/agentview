@@ -29,6 +29,7 @@ data class ObserveInfo(
     val repos: List<String> = emptyList(),
     val file: String = "",
     val grafanaServer: Boolean = false,
+    val serversFile: String = "~/.claude.json",
     val snowflake: SnowflakeInfo = SnowflakeInfo(),
 )
 
@@ -177,6 +178,7 @@ fun mcpScope(scope: String?): Pair<String, String> = when (scope) {
     "user" -> "Your servers" to "~/.claude.json"
     "project" -> "This repo" to ".mcp.json"
     "local" -> "This folder" to "~/.claude.json · project entry"
+    "codex" -> "Codex config" to "~/.codex/config.toml"
     "claudeai" -> "Claude.ai connectors" to "claude.ai settings"
     "plugin" -> "Plugins" to "Claude Code plugins"
     null -> "Other" to ""

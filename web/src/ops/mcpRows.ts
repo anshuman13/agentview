@@ -17,8 +17,9 @@ function connectorsByAccount(account: string, live: Row[]): Row[] {
   return Object.entries(seen).filter(([a]) => a !== account).flatMap(([a, rows]) => rows.map((r) => ({ ...r, account: a, live: false })));
 }
 
-export function mcpRows(probed: McpServer[] | null, mcp: McpServer[], account: string, accounts: AccountConnectors): Row[] {
+export function mcpRows(probed: McpServer[] | null, mcp: McpServer[], account: string, accounts: AccountConnectors, connectors: boolean): Row[] {
   const merged: Row[] = merge(probed ?? [], mcp).map((r) => (r.type === 'claudeai' ? { ...r, account } : r));
+  if (!connectors) return merged;
   const other = connectorsByAccount(account, merged).filter((o) => !merged.some((r) => r.name === o.name && r.account === o.account));
   for (const [a, list] of Object.entries(accounts)) {
     if (a === account) continue;

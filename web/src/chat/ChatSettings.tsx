@@ -3,17 +3,12 @@ import { type GoalChoice } from './composer/composerLogic';
 import { MemoryPick } from './cards/Memory';
 import { TodosPick } from './cards/Todos';
 import { EFFORT_LABEL } from '../../../shared/protocol';
+import { providerModes } from '../../../shared/providers';
 import { modelsFor } from './capabilitiesLogic';
 import { HooksPick, RemindPick, SettingsMenu } from './SettingsMenu';
 import { AccountPick, EffortPick, GoalPick, LoopPick, ModePick, ModelPick } from './SettingsPickers';
 
-export const MODES: Record<string, { label: string; detail: string; icon: string }> = {
-  default: { label: 'Default', detail: 'Ask before edits and risky commands', icon: 'shield' },
-  acceptEdits: { label: 'Accept edits', detail: 'Edit files without asking, ask for the rest', icon: 'edit' },
-  plan: { label: 'Plan', detail: 'Read and plan, no edits', icon: 'eye' },
-  auto: { label: 'Auto', detail: 'Claude runs what is safe and asks only for risky actions', icon: 'zap' },
-  dontAsk: { label: "Don't ask", detail: 'Deny anything not pre-approved', icon: 'circle-slash' },
-};
+const MODE_ICON: Record<string, string> = { default: 'shield', acceptEdits: 'edit', plan: 'eye', readOnly: 'eye', auto: 'zap', dontAsk: 'circle-slash' };
 
 export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'goal' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'todos' | 'hooks'; at: DOMRect; server?: string };
 
@@ -21,6 +16,7 @@ export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
   const model = useStore((s) => s.session.model);
   const caps = useStore((s) => s.session.capabilities);
+  const provider = useStore((s) => s.session.provider);
   const models = modelsFor(useStore((s) => s.session.models), caps);
   const effort = useStore((s) => s.session.effort);
   const team = useStore((s) => s.session.team);
@@ -28,8 +24,9 @@ export function useChatSettings() {
   const review = useStore((s) => s.session.review) ?? false;
   const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
   const effortName = effort ? EFFORT_LABEL[effort] : 'Default';
-  const modeInfo = MODES[mode] ?? { label: mode, detail: mode, icon: 'shield' };
-  return { mode, model, models, effort, team, loop, review, modelName, effortName, modeInfo };
+  const modes = providerModes(provider);
+  const modeInfo = { ...(modes.find((m) => m.value === mode) ?? { label: mode, detail: mode }), icon: MODE_ICON[mode] ?? 'shield' };
+  return { mode, modes, model, models, effort, team, loop, review, modelName, effortName, modeInfo };
 }
 
 // The chat settings menu and the pickers it opens; the saved prompt and MCP pickers stay with the composer.

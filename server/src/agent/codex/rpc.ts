@@ -38,6 +38,11 @@ export class CodexRpc {
     return rpc;
   }
 
+  // A process that only answers our requests, for reads that need no chat.
+  static openQuiet(cwd: string) {
+    return CodexRpc.open(cwd, { notification: () => undefined, request: () => Promise.reject(new Error('unsupported')), exit: () => undefined });
+  }
+
   async initialize() {
     await this.request('initialize', { clientInfo: { name: 'agentview', title: 'AgentView', version: '1' }, capabilities: null });
     this.send({ method: 'initialized' });

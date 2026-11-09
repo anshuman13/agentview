@@ -1,17 +1,21 @@
 import path from 'node:path';
-import type { Provider, ProviderOption } from '../../../shared/protocol.js';
+import type { Account, McpServer, Provider, ProviderOption } from '../../../shared/protocol.js';
 import { providerLabel } from '../../../shared/providers.js';
 import { readJsonSync, writeJsonSync } from '../json.js';
 import { STATE_DIR, loggedInAccounts, verifyLimit } from './claude/accounts.js';
 import { claudeTranscript } from './claude/chatMentions.js';
 import { chatMemory } from './claude/memory.js';
+import { allowedServers, mcpProbe } from './claude/mcp.js';
 import { claudeDriver } from './claude/driver.js';
 import { NOT_SIGNED_IN, codexSignedIn } from './codex/binary.js';
 import { codexDriver } from './codex/driver.js';
 import { codexInstructionFiles } from './codex/instructions.js';
+import { codexMcpProbe, readCodexServers } from './codex/mcp.js';
 import { codexTranscript } from './codex/threads.js';
 import { loadOpenRouter } from './claude/openrouter.js';
 import { readMemory, type MemoryFile } from './memory.js';
+import { claudeResume, codexResume } from './resume.js';
+import type { McpServerDef } from '../integrations/mcpClient.js';
 import type { DriverFactory } from './types.js';
 
 type Entry = {
@@ -22,6 +26,13 @@ type Entry = {
   transcriptPath(id: string): string | null;
   // The instruction files the Memory list shows for a folder.
   memory(cwd: string): Promise<MemoryFile[]>;
+  // The shell line that continues a chat in the provider's own CLI, or null when it has none.
+  resume(cwd: string, sessionId: string, account: Account): string | null;
+  // The MCP servers the provider's own config defines for a folder, probed, and the plain definitions of those it would start.
+  mcpProbe(cwd: string, refresh: boolean): Promise<McpServer[]>;
+  servers(cwd: string): Promise<Record<string, McpServerDef>>;
+  // Where those servers are configured, as the pages name it.
+  serversFile: string;
 };
 
 const PROVIDERS: Record<Provider, Entry> = {
@@ -30,18 +41,30 @@ const PROVIDERS: Record<Provider, Entry> = {
     verifyLimits: () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
     transcriptPath: claudeTranscript,
     memory: (cwd) => chatMemory(cwd),
+    resume: claudeResume,
+    mcpProbe,
+    servers: allowedServers,
+    serversFile: '~/.claude.json',
   },
   openrouter: {
     driver: (cwd, resume, fork) => claudeDriver(cwd, resume, fork, true),
     verifyLimits: () => Promise.resolve(),
     transcriptPath: claudeTranscript,
     memory: (cwd) => chatMemory(cwd),
+    resume: () => null,
+    mcpProbe,
+    servers: allowedServers,
+    serversFile: '~/.claude.json',
   },
   codex: {
     driver: (_cwd, resume, fork) => codexDriver(resume, fork),
     verifyLimits: () => Promise.resolve(),
     transcriptPath: codexTranscript,
     memory: (cwd) => readMemory(codexInstructionFiles(cwd)),
+    resume: (cwd, sessionId) => codexResume(cwd, sessionId),
+    mcpProbe: codexMcpProbe,
+    servers: readCodexServers,
+    serversFile: '~/.codex/config.toml',
   },
 };
 

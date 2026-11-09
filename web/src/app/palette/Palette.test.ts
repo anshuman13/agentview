@@ -48,7 +48,7 @@ describe('rankCommands', () => {
   it('filters by the query and sorts the best match first', () => {
     const rows = rankCommands(cmds, 'explorer', []);
     expect(ids(rows)[0]).toBe('view:explorer');
-    expect(ids(rankCommands(cmds, 'model', []))).toEqual(['model:claude-opus-4-1', 'model:claude-sonnet-4-5', 'mode:default', 'mode:plan']);
+    expect(ids(rankCommands(cmds, 'model', []))).toEqual(['model:claude-opus-4-1', 'model:claude-sonnet-4-5', 'mode:plan', 'mode:default']);
   });
 
   it('keeps recent matches ahead of other matches', () => {

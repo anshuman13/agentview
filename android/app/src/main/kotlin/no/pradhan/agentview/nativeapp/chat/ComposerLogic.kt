@@ -13,7 +13,6 @@ import no.pradhan.agentview.nativeapp.net.providerModes
 const val MAX_ROWS = 8
 const val COMPACT_AT = 200_000
 
-val PERMISSION_MODES = listOf("default", "acceptEdits", "plan", "auto", "dontAsk")
 val EFFORT_LEVELS = listOf("low", "medium", "high", "xhigh", "max")
 // The labels are replaced by the ones in the server's settings file (Hub.refreshSettings).
 val ACCOUNT_LABEL = mutableMapOf("main" to "Account 1", "alt" to "Account 2", "alt2" to "Account 3")
@@ -24,10 +23,6 @@ fun usageText(u: PlanUsage?) = listOfNotNull(u?.week?.let { "Week ${it.pct.toInt
 fun usageHigh(u: PlanUsage?) = maxOf(u?.week?.pct ?: 0.0, u?.fiveHour?.pct ?: 0.0) >= 80
 
 val EFFORT_LABEL = mapOf("low" to "Low", "medium" to "Medium", "high" to "High", "xhigh" to "Extra high", "max" to "Max")
-
-class ModeInfo(val label: String, val detail: String)
-
-val MODES = providerModes("claude").associate { it.value to ModeInfo(it.label, it.detail) }
 
 val MODE_HINTS = mapOf(
     "auto" to "Auto mode asks only for risky actions",
@@ -119,7 +114,7 @@ fun goalText(value: String, text: String, now: Long) = if (value == "off" || tex
 const val GOAL_PLACEHOLDER = "What is the goal?"
 
 // The settings chip text: the short model name, plus the mode when it is not Default.
-fun settingsLabel(model: String, mode: String) = if (mode == "default") shortModel(model) else "${shortModel(model)} · ${MODES[mode]?.label ?: mode}"
+fun settingsLabel(model: String, mode: String, provider: String?) = if (mode == "default") shortModel(model) else "${shortModel(model)} · ${providerModes(provider).firstOrNull { it.value == mode }?.label ?: mode}"
 
 fun modelName(s: SessionInfo?): String {
     if (s == null) return "Model"
@@ -154,13 +149,6 @@ fun userParts(text: String): List<Part> {
 
 // A prompt starting with "!" is a shell command for the chat's terminal, as on the web; null when it is a prompt or empty.
 fun shellCommand(text: String): String? = text.trim().takeIf { it.startsWith("!") }?.drop(1)?.trim()?.ifEmpty { null }
-
-// A shell line that continues this chat in the Claude CLI on the same account; web composerLogic.ts resumeCommand says the same.
-fun resumeCommand(cwd: String, sessionId: String, account: String?): String {
-    val dir = mapOf("alt" to "~/.claude-alt", "alt2" to "~/.claude-alt2")[account]
-    val q = if (Regex("^[\\w./~-]+$").matches(cwd)) cwd else "'" + cwd.replace("'", "'\\''") + "'"
-    return "cd $q && " + (if (dir != null) "CLAUDE_CONFIG_DIR=$dir " else "") + "claude --resume $sessionId"
-}
 
 // web composerLogic.ts handoffText: Fork chat's new chat reads the old one's transcript (via @chat) and summarises it.
 fun handoffText(sessionId: String) =

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { GrafanaDashboards, GrafanaLogs, GrafanaPanel, GrafanaPanels, GrafanaPatterns, ObserveInfo } from '../../../shared/observe';
 import { api } from '../app/store';
 import { askChat } from '../ui/util';
+import { useCan } from '../chat/useCan';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
@@ -38,6 +39,7 @@ function PanelCard({ p }: { p: GrafanaPanel }) {
 }
 
 export function Grafana({ info }: { info: ObserveInfo }) {
+  const canEdit = useCan('mcpEdit');
   const repo = encodeURIComponent(info.repo);
   const [dash, refreshDash] = useLoad<GrafanaDashboards>(info.grafanaServer ? `/api/observe/grafana/dashboards?repo=${repo}` : null);
   const [panels, refreshPanels] = useLoad<GrafanaPanels>(info.grafanaServer ? `/api/observe/grafana/panels?repo=${repo}` : null);
@@ -65,7 +67,7 @@ export function Grafana({ info }: { info: ObserveInfo }) {
   };
   return (
     <Pane label="Grafana" action={<IconButton icon="refresh" label="Refresh" size="sm" small onClick={refresh} />}>
-      {!info.grafanaServer && <EmptyState size="sm" title="No Grafana server" hint="Add one with: claude mcp add grafana -s user -e GRAFANA_URL=… -e GRAFANA_API_KEY=… -- mcp-grafana" />}
+      {!info.grafanaServer && <EmptyState size="sm" title="No Grafana server" hint={canEdit ? 'Add one with: claude mcp add grafana -s user -e GRAFANA_URL=… -e GRAFANA_API_KEY=… -- mcp-grafana' : 'Add one with: codex mcp add grafana --env GRAFANA_URL=… --env GRAFANA_API_KEY=… -- mcp-grafana'} />}
       {info.grafanaServer && <>
       <form
         className="obs-askbar"

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ObserveInfo } from '../../../shared/observe';
-import { api } from '../app/store';
+import { api, useStore } from '../app/store';
+import { providerLabel } from '../../../shared/providers';
 import { fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
@@ -67,6 +68,7 @@ export function Pane({ label, action, open: initial = true, children }: { label:
 
 export function SubHead({ label, link, linkLabel, ask }: { label: string; link?: string; linkLabel: string; ask?: () => void }) {
   const [menu, setMenu] = useState(false);
+  const agent = providerLabel(useStore((s) => s.session.provider));
   const btn = useRef<HTMLButtonElement>(null);
   const action =
     link && ask ? (
@@ -75,14 +77,14 @@ export function SubHead({ label, link, linkLabel, ask }: { label: string; link?:
         {menu && (
           <Menu trigger={btn} onClose={() => setMenu(false)}>
             <MenuItem icon="link-external" href={link} onClick={() => setMenu(false)}>{linkLabel}</MenuItem>
-            <MenuItem icon="sparkle" onClick={() => { setMenu(false); ask(); }}>Ask Claude</MenuItem>
+            <MenuItem icon="sparkle" onClick={() => { setMenu(false); ask(); }}>Ask {agent}</MenuItem>
           </Menu>
         )}
       </span>
     ) : link ? (
       <IconButton href={link} icon="link-external" label={linkLabel} size="sm" small />
     ) : ask ? (
-      <IconButton icon="sparkle" label="Ask Claude" size="sm" small onClick={ask} />
+      <IconButton icon="sparkle" label={`Ask ${agent}`} size="sm" small onClick={ask} />
     ) : undefined;
   return <UiSection label={label} action={action} />;
 }
@@ -102,7 +104,7 @@ export function AddToClaude({ server, added, disabled, title, onDone }: { server
   return (
     <span className="obs-add">
       <button className="btn xs" disabled={disabled} title={title} onClick={() => post<{ info: ObserveInfo }>('/api/observe/mcp/add', { server }).then((r) => onDone(r.info), (e) => setMsg(e.message))}>
-        <Icon name="add" small /> Add to Claude
+        <Icon name="add" small /> Add to Claude Code config
       </button>
       {msg && <span className="error" role="alert">{msg}</span>}
     </span>

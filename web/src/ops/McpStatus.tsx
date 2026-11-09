@@ -4,6 +4,7 @@ import { getState, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
+import { useCan } from '../chat/useCan';
 import { ago, useTick } from '../ui/util';
 import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
@@ -34,13 +35,14 @@ export function McpPage() {
   const account = useStore((s) => s.session.account);
   const id = useStore((s) => s.session.id);
   const toolKey = useStore((s) => `${s.events[0]?.id}:${s.events.reduce((n, e) => n + (e.kind === 'tool_use' || e.kind === 'tool_result' ? 1 : 0), 0)}`);
-  const { probed, busy, at, error, accounts, load } = useMcpProbe(account, id);
+  const connectors = useCan('connectors');
+  const { probed, busy, at, error, accounts, load } = useMcpProbe(account, id, connectors);
   const { groups, setGroup } = useMcpGroups();
   const [sel, setSel] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   useTick(15000);
 
-  const rows = useMemo(() => mcpRows(probed, mcp, account, accounts), [probed, mcp, account, accounts]);
+  const rows = useMemo(() => mcpRows(probed, mcp, account, accounts, connectors), [probed, mcp, account, accounts, connectors]);
   const list = useMemo(() => services(rows).sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind)), [rows]);
   const usage = useMemo(() => mcpCalls(getState().events), [toolKey]);
   const usageOf = (r: Row) => usage.get(slug(r.name));
@@ -65,8 +67,9 @@ export function McpPage() {
           <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
         )}
         {probed !== null && rows.length === 0 && (
-          <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint={<>Add one with <code>claude mcp add</code> or connect one on claude.ai, then check again.</>} />
+          <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint={connectors ? <>Add one with <code>claude mcp add</code> or connect one on claude.ai, then check again.</> : <>Add one with <code>codex mcp add</code>, then check again.</>} />
         )}
+        {!connectors && <div className="muted">claude.ai connectors load in Claude chats only</div>}
         {(['work', 'personal'] as Group[]).map((g) => {
           const mine = shown.filter((s) => groupOf(s.variants[0].row) === g);
           if (!mine.length) return null;

@@ -2,8 +2,9 @@ import { send, useStore } from '../app/store';
 import { goalChoices, type GoalChoice } from './composer/composerLogic';
 import { useChatRun } from '../sessions/runBands';
 import { QuickPick } from '../ui/QuickPick';
-import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
-import { MODES, useChatSettings, type Pick } from './ChatSettings';
+import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL } from '../../../shared/protocol';
+import { effortsFor } from './capabilitiesLogic';
+import { useChatSettings, type Pick } from './ChatSettings';
 
 const LOOP_ITEMS = [
   { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
@@ -27,13 +28,13 @@ export function ModelPick({ pick, close }: Props) {
 }
 
 export function EffortPick({ pick, close }: Props) {
-  const { effort } = useChatSettings();
+  const { effort, model, models } = useChatSettings();
   return (
     <QuickPick
       anchor={pick.at}
       title="Select effort"
       current={effort}
-      items={EFFORT_LEVELS.map((e) => ({ value: e, label: EFFORT_LABEL[e] }))}
+      items={effortsFor(models, model).map((e) => ({ value: e, label: EFFORT_LABEL[e] }))}
       onPick={(v) => { send({ type: 'set_effort', effort: v }); close(); }}
       onClose={close}
     />
@@ -88,13 +89,13 @@ export function GoalPick({ pick, close, goal, setGoal }: Props & { goal: GoalCho
 }
 
 export function ModePick({ pick, close }: Props) {
-  const { mode } = useChatSettings();
+  const { mode, modes } = useChatSettings();
   return (
     <QuickPick
       anchor={pick.at}
       title="Permission mode"
       current={mode}
-      items={PERMISSION_MODES.map((m) => ({ value: m, label: MODES[m]?.label ?? m, detail: MODES[m]?.detail }))}
+      items={modes}
       onPick={(v) => { send({ type: 'set_permission_mode', mode: v }); close(); }}
       onClose={close}
     />

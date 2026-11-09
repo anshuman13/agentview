@@ -128,6 +128,16 @@ export async function probeOne(name: string, scope: string, def: McpServerDef, c
 const TTL = 60_000;
 const cache = new Map<string, { at: number; done: boolean; row: Promise<McpServer> }>();
 
+export function probeCached(cwd: string, name: string, scope: string, def: McpServerDef, refresh: boolean): Promise<McpServer> {
+  const key = `${cwd}:${name}:${JSON.stringify(def)}`;
+  const hit = cache.get(key);
+  if (hit && (!hit.done || (!refresh && Date.now() - hit.at < TTL))) return hit.row;
+  const entry = { at: Date.now(), done: false, row: probeOne(name, scope, def, cwd) };
+  void entry.row.then(() => { entry.done = true; entry.at = Date.now(); });
+  cache.set(key, entry);
+  return entry.row;
+}
+
 export async function mcpProbe(cwd: string, refresh = false): Promise<McpServer[]> {
   const [user, repo] = await readConfigs(cwd);
   const sources = await readApprovals(cwd, user);
@@ -135,13 +145,7 @@ export async function mcpProbe(cwd: string, refresh = false): Promise<McpServer[
     configDefs(user, repo, cwd).map(async (d) => {
       const { name, scope, def } = d;
       if (!runs(d, sources)) return { ...rowOf(name, scope, def), status: 'disabled', error: 'Not approved in Claude Code, so AgentView does not start it' };
-      const key = `${cwd}:${name}:${JSON.stringify(def)}`;
-      const hit = cache.get(key);
-      if (hit && (!hit.done || (!refresh && Date.now() - hit.at < TTL))) return hit.row;
-      const entry = { at: Date.now(), done: false, row: probeOne(name, scope, def, cwd) };
-      void entry.row.then(() => { entry.done = true; entry.at = Date.now(); });
-      cache.set(key, entry);
-      return entry.row;
+      return probeCached(cwd, name, scope, def, refresh);
     }),
   );
 }

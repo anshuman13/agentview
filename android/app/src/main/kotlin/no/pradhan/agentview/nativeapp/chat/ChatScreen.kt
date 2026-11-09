@@ -231,11 +231,13 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: Chat
             val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, hub.store.state.value.events))
             context.startActivity(android.content.Intent.createChooser(send, null))
         }, enabled = view.items.any { it is Item.Assistant })
-        MenuItem("Continue in terminal", "terminal", {
-            close()
-            clip.setText(AnnotatedString(resumeCommand(cwd, sessionId!!, session?.account)))
-            hub.notice.value = "Copied. Stop this chat before resuming it in a terminal"
-        }, enabled = sessionId != null)
+        session?.resumeCommand?.let { command ->
+            MenuItem("Continue in terminal", "terminal", {
+                close()
+                clip.setText(AnnotatedString(command))
+                hub.notice.value = "Copied. Stop this chat before resuming it in a terminal"
+            })
+        }
         MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)
         MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)

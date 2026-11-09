@@ -27,7 +27,9 @@ export type ObserveInfo = {
   file: string;
   grafanaServer: boolean;
   snowflake: SnowflakeInfo;
-  inClaude: { snowflake: boolean };
+  // Which of these servers the chat's own provider has, and the file it reads them from.
+  inChat: { snowflake: boolean };
+  serversFile: string;
 };
 
 export type SnowflakeTest = { row: Record<string, unknown>; ms: number };
