@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { keyWords } from '../../shared/claimMatch.js';
 import { workGaps, type Span } from '../../shared/plan.js';
 import { clock } from '../../shared/util.js';
-import { currentVersion, textList } from './db.js';
+import { textList } from './db.js';
+import { ftsQuery } from './wikiSearch.js';
 import { DAY, addWorkdays, hm, localDate, ymd } from './time.js';
 
 const PROFILE = 'work' as const;
@@ -28,21 +29,22 @@ export const DRAFT_DESC = 'A reply I could send, in my voice and in the language
 export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask and the asker\'s name, and write draft from the thread and what ask_context returns. If I promised this person something, say where it stands; if I already answered this before, point to that answer instead of repeating it. Do not promise dates or facts you do not know. Numbers, dates and names come verbatim from a claim, a decision or the thread; with none, the tier is hold and the draft asks one precise question back instead of guessing. When a wiki line says "as of <date>", say so in the draft. When a message asks several things, answer the parts a claim or the thread covers, say which part you will check, and the tier is answer only when every part is covered; a hold draft still gives the covered parts with their numbers, never only "will check". Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned. Set answered_by_other when a reply from someone other than me already answers it in the thread. In claims list the ids of the wiki claims the draft rests on, as ask_context gave them, and name them in why; a tier answer with no claim and nothing in the thread is a hold. A draft never says only that I will check, look at it or get back to them. For a hold it is one of: (a) the concrete thing I will do and when, like "i\'ll add you to the org today"; (b) the one missing detail I need to act, asked as a question (which email, which team, which tool); (c) empty, when I must decide something myself, so the ask waits for me with no ready reply. Prefer (b) when a detail is missing, else (c) when I must decide. Never say an action is done or an invite is sent. For access, invite, seat and limit asks, first use the Support FAQ claims from ask_context for the concrete step (where to request it, what to do) and give it in the draft. An answer uses what the thread and the claims already say before it defers anything. Write short lowercase-ish Slack lines in my voice, no greeting in a DM. When the claim has a link, end the draft with "see <link>". When someone asks to meet, call or talk, call free_slots and offer one or two of its times with the day and hour, never a time it did not list. When the answer is someone else\'s to give, name that person as Slack shows them (slack_read_user_profile for a bare <@U...> id) and tag them as <@id>; never guess an owner, and never write a raw id as a name.';
 
 // Current wiki claims, decisions of the last 30 days of meetings and 14 days of Slack, and my open tasks that share
-// at least two key words with the ask (one when the ask has under four), best first; a Support FAQ claim wins a tie.
+// at least two key words with the ask (one when the ask has under four); claims come in bm25 order, a Support FAQ claim first on a tie.
 // Claims carry their id and first source link so the draft can cite them.
-type ClaimWords = { id: string; hay: Set<string>; boost: number; line: string; url: string | null; at: number };
-const claimCache = new WeakMap<Database, { version: number; list: ClaimWords[] }>();
+type ClaimRow = { id: string; text: string; sources: string | null; at: number; title: string | null; score: number };
 
-function claimWords(db: Database) {
-  const version = currentVersion(db);
-  const hit = claimCache.get(db);
-  if (hit && hit.version === version) return hit.list;
+function claimsFor(db: Database, ask: string, words: Set<string>, need: number) {
+  const match = ftsQuery(ask);
+  if (!match) return [];
   const rows = db.prepare(
-    "SELECT f.id, f.text, f.sources, COALESCE(f.at, f.updated_at) AS at, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND f.text IS NOT NULL",
-  ).all(PROFILE) as { id: string; text: string; sources: string | null; at: number; title: string | null }[];
-  const list = rows.map((c): ClaimWords => ({ id: c.id, hay: keyWords(`${c.title ?? ''} ${c.text}`), boost: c.title === FAQ_PAGE ? 0.5 : 0, line: `${c.title ? `${c.title}: ` : ''}${c.text}`, url: firstUrl(c.sources), at: c.at }));
-  claimCache.set(db, { version, list });
-  return list;
+    "SELECT f.id, f.text, f.sources, COALESCE(f.at, f.updated_at) AS at, p.title, bm25(facts_fts) AS score FROM facts_fts JOIN facts f ON f.rowid = facts_fts.rowid JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE facts_fts MATCH ? AND f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND f.text IS NOT NULL",
+  ).all(match, PROFILE) as ClaimRow[];
+  const faq = (c: ClaimRow) => (c.title === FAQ_PAGE ? 0 : 1);
+  return rows
+    .filter((c) => [...keyWords(`${c.title ?? ''} ${c.text}`)].filter((w) => words.has(w)).length >= need)
+    .sort((a, b) => a.score - b.score || faq(a) - faq(b))
+    .slice(0, MAX)
+    .map((c): Claim => ({ id: c.id, line: `${c.title ? `${c.title}: ` : ''}${c.text}`, url: firstUrl(c.sources), at: c.at }));
 }
 
 const wholeWord = (name: string) => new RegExp(`(?<![\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu');
@@ -63,10 +65,10 @@ function personContext(db: Database, from: string) {
 export function askContext(db: Database, ask: string, now = Date.now(), from = '') {
   const words = keyWords(ask);
   const need = words.size < 4 ? 1 : 2;
-  const best = <T extends { hay: Set<string>; boost?: number }>(list: T[]) => list
+  const best = <T extends { hay: Set<string> }>(list: T[]) => list
     .map((x) => ({ x, n: [...x.hay].filter((w) => words.has(w)).length }))
     .filter((r) => r.n >= need)
-    .sort((a, b) => b.n + (b.x.boost ?? 0) - a.n - (a.x.boost ?? 0))
+    .sort((a, b) => b.n - a.n)
     .slice(0, MAX)
     .map((r) => r.x);
   const meetings = db.prepare("SELECT title, decisions FROM meetings WHERE profile = ? AND deleted = 0 AND starts_at BETWEEN ? AND ? AND decisions IS NOT NULL AND decisions NOT IN ('', '[]')").all(PROFILE, now - RECENT, now) as { title: string | null; decisions: string }[];
@@ -77,7 +79,7 @@ export function askContext(db: Database, ask: string, now = Date.now(), from = '
     ...slack.map((d) => ({ hay: keyWords(d.text), line: `${d.text} (#${d.channel}, ${ymd(d.at)}, see ${d.url})` })),
   ];
   return {
-    claims: best(claimWords(db)).map(({ id, line, url, at }): Claim => ({ id, line, url, at })),
+    claims: claimsFor(db, ask, words, need),
     decisions: best(decided).map((d) => d.line),
     tasks: best(tasks.map((t) => ({ hay: keyWords(t.title), line: `${t.title}${t.at ? `, due ${ymd(t.at)}` : ''}${t.status === 'suggested' ? ', not accepted yet' : ''}` }))).map((t) => t.line),
     person: from.trim() ? personContext(db, from) : undefined,

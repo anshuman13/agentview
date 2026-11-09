@@ -1,4 +1,4 @@
-const STOP = new Set(['about', 'after', 'also', 'from', 'have', 'into', 'just', 'more', 'next', 'only', 'over', 'should', 'some', 'than', 'that', 'their', 'them', 'then', 'there', 'they', 'this', 'until', 'week', 'when', 'will', 'with', 'would']);
+export const STOP = new Set(['about', 'after', 'also', 'from', 'have', 'into', 'just', 'more', 'next', 'only', 'over', 'should', 'some', 'than', 'that', 'their', 'them', 'then', 'there', 'they', 'this', 'until', 'week', 'when', 'will', 'with', 'would']);
 
 export const keyWords = (t: string) => new Set(t.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu)?.filter((w) => !STOP.has(w)) ?? []);
 export const titleWords = (t: string) => t.toLowerCase().split(/\s+/).filter(Boolean);

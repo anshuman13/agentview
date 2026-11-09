@@ -17,10 +17,11 @@ import { send, type Routes } from './routes/http.js';
 import { syncRoutes } from './routes/sync.js';
 import { calendarRoutes } from './routes/calendar.js';
 import { transcriptRoutes } from './routes/transcripts.js';
+import { wikiRoutes } from './routes/wiki.js';
 import { taskRoutes } from './routes/tasks.js';
 import { scanRoutes } from './routes/scan.js';
 
-const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, ...taskRoutes, ...scanRoutes() };
+const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, ...wikiRoutes,...taskRoutes, ...scanRoutes() };
 
 const ownHost = (host = '') => allowedHostHeader(host) || host === new URL(HUB_URL).host;
 

@@ -78,7 +78,7 @@ had no success for 45 minutes of work hours, the hub sends one push with the las
 
 The same scan call writes a reply draft for each new ask, in my voice, 2 to 4 sentences in the language of the ask,
 kept in the item's `draft` column. For it the model reads the ask's thread and calls a local `ask_context` tool, which
-returns up to 3 current wiki claims and 3 meeting decisions of the last 30 days that share at least two key words
+returns up to 3 current wiki claims, ranked by relevance, and 3 meeting decisions of the last 30 days that share at least two key words
 with the ask. Nothing is sent: the ask row has Copy draft next to the source link. My own promises get no draft.
 
 Both scans also pick up my own promises ("I'll send it tomorrow") from what I wrote, as suggested tasks labelled

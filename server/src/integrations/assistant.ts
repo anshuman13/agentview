@@ -105,6 +105,15 @@ async function pull() {
   }
 }
 
+export async function hubGet<T>(path: string): Promise<T> {
+  const resp = await fetch(`${HUB}${path}`, { signal: AbortSignal.timeout(15_000) });
+  if (!resp.ok) {
+    const body = (await resp.json().catch(() => null)) as { error?: unknown } | null;
+    throw new Error(typeof body?.error === 'string' ? body.error : `Hub returned HTTP ${resp.status}`);
+  }
+  return (await resp.json()) as T;
+}
+
 export async function hubPush(changes: HubChange[]) {
   const resp = await fetch(`${HUB}/sync`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ since, changes }), signal: AbortSignal.timeout(15_000) });
   if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}: ${await resp.text()}`);

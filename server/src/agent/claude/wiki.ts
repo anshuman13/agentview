@@ -3,7 +3,8 @@ import path from 'node:path';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { profileOf } from './accounts.js';
-import { hubPush, hubRows, type HubChange, type HubRow } from '../../integrations/assistant.js';
+import { errText } from '../../../../shared/util.js';
+import { hubGet, hubPush, hubRows, type HubChange, type HubRow } from '../../integrations/assistant.js';
 
 export const WIKI_RULES = [
   'You can add to the user\'s wiki and memory with mcp__agentview__wiki_propose. Nothing goes live until the user approves it.',
@@ -21,8 +22,6 @@ export { profileOf };
 const PROFILE = z.enum(['work', 'personal']).optional().describe('Which wiki: work or personal. Defaults to the profile of the chat\'s folder');
 const text = (t: string) => ({ content: [{ type: 'text' as const, text: t }] });
 const state = (r: HubRow) => (r.state as string | null) ?? 'live';
-const words = (q: string) => q.toLowerCase().split(/\s+/).filter(Boolean);
-const matches = (ws: string[], ...texts: unknown[]) => ws.length > 0 && ws.every((w) => texts.join(' ').toLowerCase().includes(w));
 // Claims retired by hand or older than 90 days are kept apart so they do not crowd out current ones (isOld in web/src/codex/data/wiki.ts).
 const RETIRE_AFTER = 90 * 86_400_000;
 const isOld = (f: HubRow) => state(f) === 'retired' || (state(f) !== 'proposed' && typeof f.at === 'number' && f.at > 0 && Date.now() - f.at > RETIRE_AFTER);
@@ -37,15 +36,17 @@ export function wikiTools(o: { cwd: string; chat: () => string | null }) {
     return { pages: pages.filter((r) => r.profile === profile), facts: facts.filter((r) => r.profile === profile) };
   };
   return [
-    tool('wiki_search', 'Search the user\'s wiki pages and claims, newest first, including proposed and rejected claims. Current claims come before superseded, retired and old ones, which may be out of date. Every word must match.', { query: z.string(), profile: PROFILE }, async ({ query, profile }) => {
-      const ws = words(query);
-      const { pages, facts } = await own(profile);
-      const p = pages.filter((r) => state(r) !== 'rejected' && matches(ws, r.title, r.summary)).map((r) => `- page [${r.id}] ${r.title} (${r.section ?? 'no section'}, ${state(r)})`);
-      const hits = facts.filter((r) => matches(ws, r.text)).sort(newest);
-      const stale = (r: HubRow) => !!r.superseded_by || isOld(r);
-      const f = hits.filter((r) => !stale(r)).slice(0, 30).map(claim);
-      const old = hits.filter(stale).slice(0, 10).map(claim);
-      return text([...p, ...f, ...(old.length ? ['Superseded, retired or old, may be out of date:', ...old] : [])].join('\n') || 'Nothing matches.');
+    tool('wiki_search', 'Search the user\'s wiki pages and claims, most relevant first, including proposed and rejected claims. Current claims come before superseded, retired and old ones, which may be out of date. Not every word has to match.', { query: z.string(), profile: PROFILE }, async ({ query, profile = profileOf(o.cwd) }) => {
+      try {
+        const { pages, claims } = await hubGet<{ pages: HubRow[]; claims: HubRow[] }>(`/wiki/search?q=${encodeURIComponent(query)}&profile=${profile}`);
+        const stale = (r: HubRow) => !!r.superseded_by || isOld(r);
+        const p = pages.map((r) => `- page [${r.id}] ${r.title} (${r.section ?? 'no section'}, ${state(r)})`);
+        const f = claims.filter((r) => !stale(r)).slice(0, 30).map(claim);
+        const old = claims.filter(stale).slice(0, 10).map(claim);
+        return text([...p, ...f, ...(old.length ? ['Superseded, retired or old, may be out of date:', ...old] : [])].join('\n') || 'Nothing matches.');
+      } catch (err) {
+        return text(`Wiki search failed: ${errText(err)}`);
+      }
     }),
     tool('wiki_page', 'One wiki page\'s current claims by heading, newest first, with claim ids to pass as replaces. Retired and old claims are listed last and may be out of date.', { id: z.string(), profile: PROFILE }, async ({ id, profile }) => {
       const { pages, facts } = await own(profile);

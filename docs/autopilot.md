@@ -15,7 +15,7 @@ is an assistant, and every send is logged and reversible by me.
 - Each new ask gets a reply draft in my voice, as short as the ask allows (one line for a DM yes or no, the
   answer or link first in a channel), with the thread and up to 3 wiki claims, 3 decisions (meetings of the
   last 30 days, Slack of the last 14 with their link) and 3 of my open tasks as context, plus an asker block (their role from Who does what, my last 3 replies to them, what I
-  promised them) (`assistant/src/draft.ts`, `ask_context`); a short ask matches on one key word, longer ones on two; Support FAQ claims rank first on a tie, each
+  promised them) (`assistant/src/draft.ts`, `ask_context`); a short ask matches on one key word, longer ones on two; claims are ranked by relevance and Support FAQ claims rank first on a tie, each
   claim comes with its id and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there
   is one; when the answer is someone else's to give, the draft names and tags them and never guesses an owner; numbers, dates and names come verbatim from a claim or the thread, else the draft asks one precise question back; a claim older than 30 days is quoted "as of" its date; access, invite, seat and limit asks give the Support FAQ step first; a message with several questions gets the covered parts answered and names the part still to check, also in a hold draft; an ask to meet or talk gets one or two free half hours from my calendar over the next two working days (the free_slots tool), never an invented time
 - The scan gives each ask a kind; access asks (invites, seats, plan moves, permissions I grant) and limit asks are

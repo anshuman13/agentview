@@ -127,6 +127,18 @@ export function openDb(file: string = DB_PATH): Database {
   db.exec('CREATE INDEX IF NOT EXISTS facts_replaces_idx ON facts(profile, replaces)');
   db.exec('CREATE INDEX IF NOT EXISTS runs_job_idx ON runs(profile, job_id)');
 
+  for (const [fts, table, cols] of [['facts_fts', 'facts', ['text']], ['pages_fts', 'pages', ['title', 'summary']]] as const) {
+    const fresh = !db.prepare('SELECT 1 FROM sqlite_master WHERE name = ?').get(fts);
+    const list = cols.join(', ');
+    const old = cols.map((c) => `old.${c}`).join(', ');
+    const next = cols.map((c) => `new.${c}`).join(', ');
+    db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS ${fts} USING fts5(${list}, content='${table}', tokenize='unicode61 remove_diacritics 2')`);
+    db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_ai AFTER INSERT ON ${table} BEGIN INSERT INTO ${fts}(rowid, ${list}) VALUES (new.rowid, ${next}); END`);
+    db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_ad AFTER DELETE ON ${table} BEGIN INSERT INTO ${fts}(${fts}, rowid, ${list}) VALUES ('delete', old.rowid, ${old}); END`);
+    db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_au AFTER UPDATE ON ${table} BEGIN INSERT INTO ${fts}(${fts}, rowid, ${list}) VALUES ('delete', old.rowid, ${old}); INSERT INTO ${fts}(rowid, ${list}) VALUES (new.rowid, ${next}); END`);
+    if (fresh) db.exec(`INSERT INTO ${fts}(${fts}) VALUES ('rebuild')`);
+  }
+
   const versionRow = db.prepare('SELECT value FROM meta WHERE key = ?').get('version');
   if (!versionRow) {
     db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)').run('version', '0');

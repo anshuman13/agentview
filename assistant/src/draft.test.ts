@@ -31,7 +31,19 @@ test('askContext keeps live claims and recent decisions that share two key words
     person: undefined,
   });
   // A short ask matches on one key word.
-  expect(askContext(db, 'invoices?', now).claims.map((c) => c.id)).toEqual(['f1', 'f4']);
+  expect(askContext(db, 'invoices?', now).claims.map((c) => c.id)).toEqual(['f4', 'f1']);
+});
+
+test('askContext ranks the claim with the most shared rare words first and needs two of a long ask', () => {
+  const db = openDb(':memory:');
+  const row = (table: string, id: string, fields: Record<string, unknown>) => ({ table, id, profile: 'work' as const, updated_at: now, fields });
+  applyChanges(db, [
+    row('pages', 'p1', { title: 'Systems', state: 'live' }),
+    row('facts', 'f1', { page_id: 'p1', text: 'The gateway enforces a rate limit for every user.' }),
+    row('facts', 'f2', { page_id: 'p1', text: 'The gateway runs in the main cluster.' }),
+  ]);
+  expect(askContext(db, 'what is the gateway rate limit per user', now).claims.map((c) => c.id)).toEqual(['f1']);
+  expect(askContext(db, 'where does the gateway deploy, and who approves releases to production', now).claims).toEqual([]);
 });
 
 test('askContext ranks a Support FAQ claim first on a tie and keeps its link; liveClaims drops dead ids', () => {
