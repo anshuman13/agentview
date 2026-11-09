@@ -102,7 +102,7 @@ export async function newChat(cwd: string, from: AgentSession, fork?: string, ch
 }
 
 export async function prompt(cwd: string, text: string, from?: string, fresh = false, choice: Provider = 'claude', model?: string) {
-  const reuse = fresh ? undefined : [...live.values()].map((l) => l.chat).filter((c) => c.cwd === cwd && !c.state.session.running && !c.state.pending.length).sort((a, b) => lastActive(b) - lastActive(a))[0];
+  const reuse = fresh ? undefined : [...live.values()].map((l) => l.chat).filter((c) => c.cwd === cwd && c.driver.provider === choice && !c.state.session.running && !c.state.pending.length).sort((a, b) => lastActive(b) - lastActive(a))[0];
   const chat = reuse ?? (from ? await newChat(cwd, get(from), undefined, choice) : await createChat(cwd, undefined, '', false, choice));
   if (!reuse) applyInitialModel(chat, model);
   void chat.prompt(text);
