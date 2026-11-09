@@ -219,7 +219,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     internal val liveLoaded = MutableStateFlow(false)
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             val minute = foregroundNow.flatMapLatest { up -> if (up) flow { while (true) { emit(Unit); delay(60_000) } } else emptyFlow() }.onStart { emit(Unit) }
             val needs = combine(codex.state, minute, codexFilter, handled) { s, _, filter, hidden -> needsList(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden).size }.distinctUntilChanged()
             combine(store.state.map { waitingSnapshot(it.live) }.distinctUntilChanged(), liveLoaded, notifyOn, needs) { snap, loaded, on, badge -> Triple(snap, loaded, if (on) badge else -1) }.collect { (snap, loaded, badge) ->

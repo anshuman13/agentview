@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.App
 import no.pradhan.agentview.nativeapp.app.SharedItem
@@ -34,7 +35,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch { hub.wantsPermission.collect { askNotifications(true) } }
         // Reconnect each time the app returns to the foreground; close the stream in the background.
         lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) { hub.foreground = true; hub.refreshGranted(); hub.notifier.clearChats(); hub.connect() }
+            override fun onStart(owner: LifecycleOwner) { hub.foreground = true; hub.refreshGranted(); lifecycleScope.launch(Dispatchers.IO) { hub.notifier.clearChats() }; hub.connect() }
             // With notifications on the stream stays open for as long as the system keeps the process.
             override fun onStop(owner: LifecycleOwner) { hub.foreground = false; hub.close(); if (!hub.wantsStream()) hub.disconnect() }
         })
