@@ -11,15 +11,16 @@ import { LoopCard } from './LoopCard';
 import { TodoCard } from './TodoCard';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../ui/QuickPick';
-import { FileIcon } from '../workspace/FileIcon';
 import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
-import { Hl, readFlag, wsUrl, plural, save, storedStrings } from '../ui/util';
+import { readFlag, wsUrl, plural, save, storedStrings } from '../ui/util';
 import type { Meeting } from '../codex/data/wiki';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent, type SavedSession } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
+import { PopItems } from './ComposerPop';
+import { Announcer } from './Announcer';
 import { ChatSettings, useChatSettings, type Pick } from './ChatSettings';
-import { accept, addUse, append, buildHistory, chatQuery, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, readDraft, goalInfo, goalPlaceholder, goalText, type GoalChoice, sharedTask, turnEnd, remember, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
+import { accept, addUse, append, buildHistory, chatQuery, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, readDraft, goalInfo, goalPlaceholder, goalText, type GoalChoice, sharedTask, remember, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -433,35 +434,7 @@ export function Composer() {
       </div>
       {open && (
         <ul ref={pop} id={popId} className="cp-pop" role="listbox" aria-label={trigger?.kind === 'command' ? 'Commands' : 'Files'}>
-          {items.map((r, i) => {
-            if (trigger?.kind === 'command') {
-              const c = r.item as { name: string; description: string };
-              return (
-                <li key={c.name} id={`${popId}-${i}`} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
-                  <span className="cp-name">/<Hl text={c.name} hits={r.hits} /></span>
-                  <span className="cp-detail">{c.description}</span>
-                </li>
-              );
-            }
-            if (typeof r.item === 'object' && 'sessionId' in r.item) {
-              const c = r.item as SavedSession;
-              return (
-                <li key={c.sessionId} id={`${popId}-${i}`} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
-                  <span className="cp-name"><Hl text={c.title} hits={r.hits} /></span>
-                  <span className="cp-detail">{c.cwd.split('/').pop()}</span>
-                </li>
-              );
-            }
-            const f = r.item as string;
-            const base = f.lastIndexOf('/') + 1;
-            return (
-              <li key={f} id={`${popId}-${i}`} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} title={f} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
-                <FileIcon name={f} />
-                <span className="cp-name"><Hl text={f.slice(base)} hits={r.hits} from={base} /></span>
-                <span className="cp-detail"><Hl text={f.slice(0, Math.max(base - 1, 0))} hits={r.hits} /></span>
-              </li>
-            );
-          })}
+          <PopItems items={items} kind={trigger?.kind} popId={popId} sel={sel} choose={choose} />
         </ul>
       )}
       <Announcer key={chat} />
@@ -495,20 +468,4 @@ export function Composer() {
       )}
     </div>
   );
-}
-
-// Tells a screen reader when Claude's turn ends or Claude asks something, without reading every streamed word.
-function Announcer() {
-  const running = useStore((s) => s.session.running);
-  const ask = useStore((s) => s.pending[s.pending.length - 1]);
-  const [text, setText] = useState('');
-  const was = useRef(running);
-  useEffect(() => {
-    if (was.current && !running) setText(turnEnd(getState().events));
-    was.current = running;
-  }, [running]);
-  useEffect(() => {
-    if (ask) setText(ask.kind === 'question' ? `Claude asks: ${ask.questions[0]?.question ?? ''}` : `Claude asks for permission: ${ask.title}`);
-  }, [ask?.id]);
-  return <div className="sr-only" role="status">{text}</div>;
 }

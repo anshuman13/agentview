@@ -15,7 +15,7 @@ import { Bin } from './Bin';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
 import { byUrgency, chatFinder, chatsByStatus, chatState, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, newChatGroups, orderGroups, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { RepoRow } from './RepoRow';
-import { ChatRow, LiveRow, SavedRow, WaitingRows, chatActions, metaLine, type Actions, type Pin, type SetChats } from './ChatRows';
+import { LiveRow, SavedRow, WaitingRows, chatActions, metaLine } from './ChatRows';
 import { NeedsYou } from './NeedsYou';
 
 const PAGE = 5;

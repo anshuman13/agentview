@@ -19,9 +19,9 @@ import { draftLine, readDraft } from '../chat/composerLogic';
 import { clock } from '../codex/time';
 import { useChatRun } from './runBands';
 
-export type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
-export type Pin = (on: boolean) => Promise<boolean>;
-export type Actions = {
+type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
+type Pin = (on: boolean) => Promise<boolean>;
+type Actions = {
   rename: (id: string, title: string) => void;
   archive: (s: { sessionId: string; title: string }) => void;
   archiveNow: (s: SavedSession, pinned: boolean, pin: Pin) => void;
@@ -100,7 +100,7 @@ function RunTag({ chat }: { chat: string }) {
 
 const BADGE = { needs: 'waiting', failed: 'failed', running: 'running', done: 'done' } as const;
 
-export function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
+function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [retrying, setRetrying] = useState(false);
