@@ -126,6 +126,7 @@
 .sessions .needs .chat-row > .ui-row { padding-left: var(--sp-4); }
 .chat-row .chat-dot { width: 8px; height: 8px; border-radius: var(--radius-round); }
 .chat-row .chat-dot.on { background: var(--accent-fill); }
+.chat-row.unread .ui-row-title { font-weight: var(--type-headline-weight); color: var(--fg-strong); }
 .chat-row .chat-add { color: var(--diff-add); }
 .chat-row .chat-del { color: var(--diff-del); }
 .chat-rename { width: 100%; min-width: 0; }
