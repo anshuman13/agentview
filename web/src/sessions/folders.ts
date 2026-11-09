@@ -169,7 +169,7 @@ export const archiveChat = (s: { sessionId: string; title: string }, onDone: () 
 });
 
 export const chatMenuItems = ({ failed, canPin, beside, closable, unread = false }: { failed: boolean; canPin: boolean; beside: boolean; closable: boolean; unread?: boolean }) =>
-  [failed && 'retry', canPin && 'pin', unread && 'unread', canPin && 'mute', 'rename', beside && 'beside', closable && 'close', 'separator', 'archive'].filter(Boolean) as ('retry' | 'pin' | 'unread' | 'mute' | 'rename' | 'beside' | 'close' | 'separator' | 'archive')[];
+  [failed && 'retry', canPin && 'pin', unread && 'unread', canPin && 'mute', canPin && 'link', 'rename', beside && 'beside', closable && 'close', 'separator', 'archive'].filter(Boolean) as ('retry' | 'pin' | 'unread' | 'mute' | 'link' | 'rename' | 'beside' | 'close' | 'separator' | 'archive')[];
 
 export const chatSwipe = (pinned: boolean, live?: LiveChat) => ({ right: pinned ? 'unpin' : 'pin', left: live && (live.running || live.pending) ? null : 'archive' }) as const;
 

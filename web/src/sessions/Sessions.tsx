@@ -10,7 +10,7 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { QuickPick } from '../ui/QuickPick';
 import { ATTENTION_LABEL, type AttentionItem, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
-import { ago, markSegments, pressable, save, stored } from '../ui/util';
+import { ago, copyText, markSegments, pressable, save, stored } from '../ui/util';
 import { queryWords } from '../codex/data/match';
 import { Bin } from './Bin';
 import { AgentsBlock } from './AgentRow';
@@ -549,6 +549,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
               case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={pick(() => void onPin!(!pinned))}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
               case 'unread': return <MenuItem key={key} icon="mail" onClick={pick(() => markUnread(sessionId!))}>Mark as unread</MenuItem>;
               case 'mute': return <MenuItem key={key} icon={muted ? 'bell' : 'bell-slash'} onClick={pick(() => { setMuted(sessionId!, !muted); setMute(!muted); })}>{muted ? 'Unmute' : 'Mute'}</MenuItem>;
+              case 'link': return <MenuItem key={key} icon="link" onClick={pick(() => copyText(`${location.origin}/?session=${sessionId}`).then(() => notice('Copied the chat link'), () => notice('Could not copy')))}>Copy link</MenuItem>;
               case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={pick(() => setRenaming(true))}>Rename</MenuItem>;
               case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={pick(onBeside!)}>Open beside</MenuItem>;
               case 'close': return <MenuItem key={key} icon="close" onClick={pick(onClose!)}>Close chat</MenuItem>;
