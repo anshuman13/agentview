@@ -533,14 +533,14 @@ describe('subagents', () => {
       msg('user', [{ type: 'tool_result', tool_use_id: 'ag', content: launched }]),
     ];
     const s = claudeSession('/tmp/project');
-    const apply = () => (s as unknown as { applyHistory: (h: History) => ChatEvent[] }).applyHistory((s.driver as unknown as { history: (m: unknown[], subs: object) => History }).history(history, {}));
-    s.state.events = apply();
+    const apply = () => s.replaceHistory((s.driver as unknown as { history: (m: unknown[], subs: object) => History }).history(history, {}));
+    apply();
     const agent = () => s.state.events.find((e) => e.kind === 'agent');
     expect(agent()).toMatchObject({ status: 'running' });
     await s.stopTask('ag');
     expect(agent()).toMatchObject({ status: 'stopped' });
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'tool_result', toolUseId: 'ag', stopped: true });
-    s.state.events = apply();
+    apply();
     expect(agent()).toMatchObject({ status: 'stopped' });
   });
 

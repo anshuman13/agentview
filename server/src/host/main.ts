@@ -81,7 +81,7 @@ const runs = new Runs(RUNS, () => broadcastLive(), (run) => {
   const chat = live.get(run.chatId)?.chat;
   if (run.why === 'you stopped it' || (chat && viewers(chat))) return;
   notifyRunEnded(run, chat ? path.basename(chat.cwd) : '', !desktopActive(desktopAt));
-}, (run) => live.get(run.chatId)?.chat.compareTries(run));
+}, (run) => live.get(run.chatId)?.chat.links.compareTries(run));
 
 const learning = new LearnQueue({ isLive: (id) => live.has(id), titleOf: (chat) => summaryOf(chat).title });
 
@@ -249,7 +249,7 @@ function restart(now: boolean, force: boolean) {
   if (now) return saveAndExit();
   if (restarting) return true;
   broadcast({ type: 'restarting' });
-  for (const { chat } of live.values()) chat.holdRepeat();
+  for (const { chat } of live.values()) chat.repeater.hold();
   // Background agents and tasks live in the Claude process, so they hold the restart too.
   // A turn that never ends (a card nobody answers) must not hold the restart and every loop for good.
   const deadline = Date.now() + 10 * 60_000;
@@ -273,7 +273,7 @@ async function restore() {
     });
     if (!chat) return;
     unrestored = unrestored.filter((u) => u !== s);
-    if (s.crons.length) chat.restoreCrons(s.crons);
+    if (s.crons.length) chat.wakeups.restore(s.crons);
     if (s.loop) chat.restoreLoop(s.loop);
     if (s.repeat) chat.resumeRepeat(s.repeat);
     if (s.stopped) chat.resumeStopped(s.stopped);
@@ -359,7 +359,7 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
       chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));
       return;
     case 'answer':
-      chat.answerQuestion(msg.id, msg.answers);
+      chat.approvals.answerQuestion(msg.id, msg.answers);
       return;
     case 'permission':
       chat.answerPermission(msg.id, msg.allow, msg.always);
@@ -396,16 +396,16 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
     case 'stop_task':
       return chat.stopTask(String(msg.toolUseId));
     case 'mcp_status':
-      void chat.refreshMcp();
+      void chat.mcp.refresh();
       return;
     case 'usage':
       void chat.refreshUsage();
       return;
     case 'mcp_reconnect':
-      void chat.reconnectMcp(String(msg.name));
+      void chat.mcp.reconnect(String(msg.name));
       return;
     case 'mcp_toggle':
-      void chat.toggleMcp(String(msg.name), Boolean(msg.enabled));
+      void chat.mcp.toggle(String(msg.name), Boolean(msg.enabled));
       return;
   }
 }
@@ -445,10 +445,10 @@ async function handle(req: HostRequest): Promise<unknown> {
       const chat = get(req.id);
       const def = await configDef(chat.cwd, req.name);
       if (!def) throw new Error(`${req.name} is not in your MCP config`);
-      return chat.addMcp(req.name, def);
+      return chat.mcp.add(req.name, def);
     }
     case 'mcp_login':
-      return get(req.id).loginMcp(req.name);
+      return get(req.id).mcp.login(req.name);
     case 'desktop':
       desktopAt = req.at;
       return;

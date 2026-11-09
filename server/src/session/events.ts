@@ -67,3 +67,10 @@ export function trimHistory(events: ChatEvent[]) {
   const kept = events.slice(-MAX_EVENTS);
   return [{ id: randomUUID(), kind: 'system' as const, text: `${events.length - MAX_EVENTS} older events are not shown`, at: kept[0].at }, ...kept];
 }
+
+// The allow rule for a tool call the CLI blocked, or null when a Bash call has no command to allow.
+export function blockedRule(use: ChatEvent | undefined, tool: string) {
+  const command = use?.kind === 'tool_use' && typeof use.input.command === 'string' ? use.input.command : '';
+  if (tool === 'Bash' && !command) return null;
+  return tool === 'Bash' && command ? `Bash(${command.replace(/[\\()]/g, '\\$&')})` : tool;
+}

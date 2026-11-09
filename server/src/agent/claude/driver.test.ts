@@ -95,7 +95,7 @@ describe('transcript sync', () => {
     const owner = s.driver as unknown as { q: object | null; watcher: { syncWorkflows: () => Promise<void> } };
     owner.q = {};
     const sync = () => owner.watcher.syncWorkflows();
-    const release = vi.spyOn(s as unknown as { release: () => void }, 'release');
+    const release = vi.spyOn(s.waiting, 'release');
     const wf = path.join(dir, sessionId, 'subagents', 'workflows', 'wf_live');
     const journal = path.join(wf, 'journal.jsonl');
     const stepId = (e: { kind: string }) => e.kind === 'tool_result' && 'toolUseId' in e && e.toolUseId === 't1';
