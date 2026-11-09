@@ -1,5 +1,5 @@
 import { query, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
-import type { Account, Capabilities, Effort, LoopRole, Provider } from '../../../../shared/protocol.js';
+import { ACCOUNT_LABEL, type Account, type Capabilities, type Effort, type LoopRole, type Provider } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, DriverFactory, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { InputQueue } from './inputQueue.js';
@@ -378,6 +378,7 @@ export class ClaudeDriver implements AgentDriver {
     if (!until) return;
     // An idle chat moves to the other account at once; the new CLI must not be interrupted.
     const q = this.q;
+    if (this.host.state.session.running) this.host.system(`Stopped before using extra usage on the ${ACCOUNT_LABEL[this.account]} account`);
     this.host.limit(until);
     if (this.q === q) this.interrupt().catch(() => undefined);
   }
