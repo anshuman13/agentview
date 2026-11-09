@@ -156,4 +156,21 @@ class StepsTest {
         assertEquals(setOf("a2", "a4"), turnEnds(items, running = true))
         assertEquals(setOf("a2", "a4", "a3"), turnEnds(items, running = false))
     }
+
+    @Test
+    fun foldsRunsOfFinishedReadsAndSearches() {
+        val items = buildTranscript(listOf(
+            use("a", "Read", obj("file_path" to "/r/a.kt")), res("ra", "a"),
+            use("b", "Grep", obj("pattern" to "x")), res("rb", "b"),
+            use("c", "Read", obj("file_path" to "/r/c.kt")), res("rc", "c"),
+            use("d", "Bash", obj("command" to "ls")), res("rd", "d"),
+            use("e", "Read", obj("file_path" to "/r/e.kt")), res("re", "e"),
+            use("f", "Glob", obj("pattern" to "*")), res("rf", "f"),
+            use("g", "Read", obj("file_path" to "/r/g.kt")),
+        ))
+        val runs = exploreRuns(items)
+        assertEquals(listOf("a"), runs.keys.toList())
+        assertEquals(listOf("a", "b", "c"), runs.getValue("a").map { it.id })
+        assertEquals("2 files, 1 search", exploreLabel(runs.getValue("a")))
+    }
 }

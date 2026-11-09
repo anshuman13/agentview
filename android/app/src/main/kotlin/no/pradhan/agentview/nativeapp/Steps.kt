@@ -244,3 +244,27 @@ fun chatMarkdown(title: String, events: List<ChatEvent>): String = buildString {
         }
     }
 }.trimEnd() + "\n"
+
+private val EXPLORE = setOf("Read", "Grep", "Glob")
+
+// Runs of at least min finished Read, Grep and Glob steps in a row, keyed by the first step's id, so the
+// transcript folds each into one Explored row like Slack's compact message groups.
+fun exploreRuns(items: List<Item>, min: Int = 3): Map<String, List<Item.Step>> {
+    val runs = mutableMapOf<String, List<Item.Step>>()
+    var run = mutableListOf<Item.Step>()
+    fun close() { if (run.size >= min) runs[run.first().id] = run; run = mutableListOf() }
+    for (it in items) {
+        if (it is Item.Step && it.use.name in EXPLORE && it.result != null && !it.result.isError) run += it else close()
+    }
+    close()
+    return runs
+}
+
+fun exploreLabel(steps: List<Item.Step>): String {
+    val reads = steps.count { it.use.name == "Read" }
+    val searches = steps.size - reads
+    return listOfNotNull(
+        if (reads > 0) "$reads ${if (reads == 1) "file" else "files"}" else null,
+        if (searches > 0) "$searches ${if (searches == 1) "search" else "searches"}" else null,
+    ).joinToString(", ")
+}

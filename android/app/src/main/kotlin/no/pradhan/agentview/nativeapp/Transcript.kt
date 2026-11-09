@@ -91,6 +91,9 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     val dayOf = remember(items, days) { dayOfRows(items, days) }
     val rewinds = remember(items) { rewindable(items) }
     val ends = remember(items, running) { turnEnds(items, running) }
+    val runs = remember(items) { exploreRuns(items) }
+    var openRuns by rememberSaveable(chatId) { mutableStateOf(setOf<String>()) }
+    val folded = remember(runs, openRuns) { runs.filterKeys { it !in openRuns }.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
     val title = state.live.firstOrNull { it.id == chatId }?.title.orEmpty()
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, state.events.associate { it.id to it.at }, seen.first, seen.second) }
@@ -142,7 +145,12 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                 Column(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) {
                     days[it.id]?.let { DayDivider(it) }
                     if (it.id == newId) NewLine()
-                    ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && it.id in rewinds)
+                    val run = runs[it.id]
+                    when {
+                        it.id in folded -> {}
+                        run != null && it.id !in openRuns -> ExploredRow(exploreLabel(run)) { openRuns = openRuns + it.id }
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && it.id in rewinds)
+                    }
                     if (it is Item.Assistant && it.id in ends) Row {
                         Button("Reply", { hub.draftPrompt(quoteReply(it.text)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                         Button("Save as note", { hub.saveReply(it.text, title, cwd) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
@@ -295,6 +303,18 @@ fun decodeSampled(bytes: ByteArray, maxWidth: Int): Bitmap? {
 
 @Composable
 private fun toneColor(t: Tone) = if (t == Tone.Agent) av.agent else av.fgMuted
+
+@Composable
+private fun ExploredRow(label: String, onOpen: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.CenterStart) { Box(Modifier.size(Tokens.dot).background(toneColor(stepTone("Read")), CircleShape)) }
+        Text(androidx.compose.ui.text.buildAnnotatedString {
+            withStyleColor(toneColor(stepTone("Read"))) { append("Explored ") }
+            withStyleColor(av.fg) { append(label) }
+        }, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Chevron()
+    }
+}
 
 @Composable
 private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
