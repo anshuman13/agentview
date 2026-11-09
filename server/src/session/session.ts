@@ -283,7 +283,7 @@ export class AgentSession implements AgentHost {
 
   compact(instructions?: string) {
     this.begin();
-    this.compaction.start();
+    this.compaction.start(true);
     this.driver.compact(instructions);
   }
 

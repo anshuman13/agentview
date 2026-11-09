@@ -720,6 +720,16 @@ describe('compacting', () => {
     expect(send).toHaveBeenCalledWith('after compact', 'm1');
   });
 
+  it('keeps a steer held when the CLI compacts mid-turn on its own', async () => {
+    const { s, handle } = fakeSession();
+    const send = vi.spyOn(s.driver, 'send');
+    s.sendPrompt('big task');
+    handle({ type: 'system', subtype: 'status', status: 'compacting' });
+    await s.steer('later', 'm1');
+    handle({ type: 'system', subtype: 'compact_boundary', compact_metadata: { trigger: 'auto', pre_tokens: 295_000, post_tokens: 12_000 } });
+    expect(send).not.toHaveBeenCalledWith('later', 'm1');
+  });
+
   it('compacts at 80% of the context window when the agent reports one', () => {
     const { s, result } = fakeSession();
     const compact = vi.spyOn(s.driver, 'compact').mockImplementation(() => {});

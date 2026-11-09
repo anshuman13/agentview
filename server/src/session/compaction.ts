@@ -6,10 +6,13 @@ const RETRY_GROWTH = 20_000;
 export class Compaction {
   private armed = true;
   private failedAt: number | null = null;
+  // Started by Session.compact(): a turn of its own whose end the held messages wait for. The CLI's own mid-turn compaction is not.
+  private manual = false;
 
   constructor(private s: AgentSession) {}
 
-  start() {
+  start(manual = false) {
+    this.manual = manual;
     this.s.setSession({ compacting: true });
     this.s.setStatus('Compacting the conversation');
   }
@@ -21,14 +24,21 @@ export class Compaction {
     this.rearm();
     s.system(`Compacted from ${Math.round(pre / 1000)}k${post ? ` to ${Math.round(post / 1000)}k` : ''} tokens`);
     s.wakeups.rearm();
-    s.waiting.dequeue();
+    this.release();
   }
 
   fail(error: string) {
     this.s.setSession({ compacting: false });
     this.failedAt = this.s.state.session.context ?? 0;
     this.s.system(`Compact failed: ${error}`);
-    this.s.waiting.dequeue();
+    this.release();
+  }
+
+  // Codex ends its compaction with a turn result, which sends the held messages.
+  private release() {
+    const manual = this.manual;
+    this.manual = false;
+    if (manual && this.s.driver.provider === 'claude') this.s.waiting.dequeue();
   }
 
   private rearm() {
