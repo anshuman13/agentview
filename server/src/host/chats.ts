@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 import type { Provider, ServerMessage } from '../../../shared/protocol.js';
 import { getSessionInfo } from '../agent/claude/sessions.js';
 import { rememberAccount } from '../agent/claude/accounts.js';
-import { isProvider, provider, providerOf, providerOptions, rememberProvider } from '../agent/registry.js';
+import { isProvider, provider, providerOf, providerOptions, rememberProvider, transcriptPath } from '../agent/registry.js';
 import { codexThread } from '../agent/codex/threads.js';
 import { AgentSession } from '../session/session.js';
 import { loadSettings } from '../settings.js';
@@ -42,6 +42,7 @@ export async function createChat(cwd: string, resume?: string, title = '', fork 
   await p.verifyLimits();
   const chat = new AgentSession(cwd, p.driver(cwd, resume, fork), resume ?? null);
   chat.runs = runs;
+  chat.transcriptPath = transcriptPath;
   chat.title = title;
   chat.onIdle = () => learning.later(chat);
   await chat.loadHistory();

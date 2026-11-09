@@ -44,7 +44,7 @@ export class Prompts {
     const { running, compacting, loop } = this.s.state.session;
     if (!running || compacting || loop.on || text.trim().startsWith('/') || !this.s.driver.attached) return this.prompt(text, id);
     this.s.waiting.holdMidTurn(text, id);
-    this.s.driver.send(expandChatMentions(text), id, 'next');
+    this.s.driver.send(expandChatMentions(text, this.s.transcriptPath), id, 'next');
   }
 
   // Stops the current step so a waiting message runs now.

@@ -42,6 +42,8 @@ export class AgentSession implements AgentHost {
   failed = false;
   // The host replaces this with the one it saves; a chat without a host keeps its runs in memory.
   runs = new Runs();
+  // The host sets the provider registry's lookup, which a session must not import.
+  transcriptPath: (id: string) => string | null = () => null;
   // ends: the run ends with this round, so its own end push is the only one.
   roundNote: { outcome: RoundOutcome; line: string; ends: boolean } | null = null;
   readonly approvals: Approvals;
@@ -280,7 +282,7 @@ export class AgentSession implements AgentHost {
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
     this.begin();
     if (name === 'code-review' && /^\d*$/.test(args)) this.driver.review(args ? Number(args) : 'local', id);
-    else this.driver.send(expandChatMentions(text), id);
+    else this.driver.send(expandChatMentions(text, this.transcriptPath), id);
   }
 
   compact(instructions?: string) {
