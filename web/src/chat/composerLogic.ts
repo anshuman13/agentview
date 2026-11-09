@@ -168,6 +168,12 @@ const CONFIG_DIR: Partial<Record<Account, string>> = { alt: '~/.claude-alt', alt
 const shQuote = (s: string) => (/^[\w./~-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
 
 // A shell line that continues this chat in the Claude CLI, on the same account.
+// The loaded prompts and replies as Markdown, like the phone's Share chat and Goose's session export.
+export function chatMarkdown(events: ChatEvent[], title: string) {
+  const parts = events.flatMap((e) => (e.kind === 'user' && !e.queued ? [`**You:** ${e.text.trim()}`] : e.kind === 'assistant' && !e.parent && e.text.trim() ? [e.text.trim()] : []));
+  return [`# ${title || 'Chat'}`, ...parts].join('\n\n') + '\n';
+}
+
 export function resumeCommand(cwd: string, sessionId: string, account: Account) {
   const dir = CONFIG_DIR[account];
   return `cd ${shQuote(cwd)} && ${dir ? `CLAUDE_CONFIG_DIR=${dir} ` : ''}claude --resume ${sessionId}`;

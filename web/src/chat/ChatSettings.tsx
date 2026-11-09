@@ -1,6 +1,6 @@
-import { notice, send, useStore } from '../app/store';
+import { getState, notice, send, useStore } from '../app/store';
 import { copyText } from '../ui/util';
-import { resumeCommand } from './composerLogic';
+import { chatMarkdown, resumeCommand } from './composerLogic';
 import { QuickPick } from '../ui/QuickPick';
 import { MemoryPick } from './Memory';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
@@ -56,10 +56,17 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
             { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
             { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
             { value: 'memory', label: 'Memory', detail: 'CLAUDE.md and memory files' },
+            { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
             ...(sessionId ? [{ value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
           ]}
           onPick={(v) => {
             if (v === 'fork') { send({ type: 'new_session', fork: sessionId! }); close(); return; }
+            if (v === 'markdown') {
+              const st = getState();
+              copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? '')).then(() => notice('Copied the chat as Markdown'), () => notice('Could not copy'));
+              close();
+              return;
+            }
             if (v === 'terminal') {
               copyText(resumeCommand(cwd, sessionId!, account)).then(() => notice('Copied. Stop this chat before resuming it in a terminal'), () => notice('Could not copy'));
               close();

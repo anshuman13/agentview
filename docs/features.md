@@ -212,6 +212,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar
 - "Remind me" in the phone chat menu adds an open task "Check <chat>" due in 1 hour, 3 hours or tomorrow at 9:00, linked to
   the chat; the hub pushes it when due (like Slack's remind me about this)
+- "Copy as Markdown" in the web chat settings menu copies the loaded prompts and replies under the chat title
 - "Share chat" in the phone chat menu sends the loaded prompts and replies as Markdown to the Android share sheet
 - "Continue in terminal" in the same menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI. Stop the chat first so two processes do not write to it
