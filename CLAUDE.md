@@ -14,7 +14,7 @@ Read the doc for the area before searching the code: `docs/architecture.md` (ove
 ## Checks
 - Server, web, shared: `npx vitest run` from the root, and `npx tsc --noEmit -p .` in `server/`, `web/`, `assistant/`.
 - Hub: `cd assistant && bun test`.
-- Android: `ANDROID_HOME=/opt/homebrew/share/android-commandlinetools android/build.sh` runs the unit tests and builds the minified release APK. Test the release build: R8 can strip classes the debug build keeps.
+- Android: `ANDROID_HOME=/opt/homebrew/share/android-commandlinetools android/build.sh` runs the unit tests and builds the minified release APK. Test the release build: R8 can strip classes the debug build keeps. `build.sh --fast` builds the debug APK in seconds for iterating; R8 is about 30 s of the release build.
 
 ## Restarts
 - Server: `curl -XPOST http://127.0.0.1:7777/api/restart`. It restarts the running chats too, so do it last.

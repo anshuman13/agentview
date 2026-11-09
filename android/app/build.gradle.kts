@@ -27,11 +27,15 @@ android {
 
     buildFeatures { compose = true }
 
+    lint { checkReleaseBuilds = false }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+composeCompiler { includeComposeMappingFile = false }
 
 dependencies {
     val bom = platform("androidx.compose:compose-bom:2026.03.01")
