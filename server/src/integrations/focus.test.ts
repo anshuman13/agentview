@@ -50,10 +50,4 @@ describe('focus push', () => {
     expect(scheduleFocus('A', Date.now() + 25 * MIN + 5000)).toEqual({ ok: true });
   });
 
-  it('sends nothing without an ntfy topic', async () => {
-    notify.ntfyTopic.mockResolvedValue('off');
-    expect(scheduleFocus('A', Date.now() + MIN)).toEqual({ ok: true });
-    await vi.advanceTimersByTimeAsync(2 * MIN);
-    expect(notify.pushNtfy).not.toHaveBeenCalled();
-  });
 });

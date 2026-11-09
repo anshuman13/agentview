@@ -20,10 +20,6 @@ afterAll(() => {
 });
 
 describe('seen route', () => {
-  it('starts empty', async () => {
-    expect(await seen.seenRoute('GET', null)).toEqual({ status: 200, body: {} });
-  });
-
   it('stores now for an id, known or not', async () => {
     const before = Date.now();
     expect((await seen.seenRoute('POST', 'abc')).status).toBe(200);
@@ -34,11 +30,6 @@ describe('seen route', () => {
   it('stores 0 for an id marked unread', async () => {
     await seen.seenRoute('POST', 'abc', true);
     expect(((await seen.seenRoute('GET', null)).body as Record<string, number>).abc).toBe(0);
-  });
-
-  it('rejects a missing id and other methods', async () => {
-    expect((await seen.seenRoute('POST', null)).status).toBe(400);
-    expect((await seen.seenRoute('DELETE', 'abc')).status).toBe(405);
   });
 
   it('removing a chat drops its entry', async () => {

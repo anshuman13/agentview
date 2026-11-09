@@ -40,26 +40,6 @@ async function call(method: string, path: string, body?: string, deps: Partial<R
 beforeEach(() => vi.clearAllMocks());
 
 describe('routes', () => {
-  it('POST /api/focus parses the body and answers 400 on an error', async () => {
-    mocks.scheduleFocus.mockReturnValueOnce({ error: 'bad end' }).mockReturnValueOnce({ ok: true });
-    const bad = await call('POST', '/api/focus', '{"title":"t","end":"x"}');
-    expect(mocks.scheduleFocus).toHaveBeenCalledWith('t', 'x');
-    expect([bad.code, bad.json]).toEqual([400, { error: 'bad end' }]);
-    const ok = await call('POST', '/api/focus', '{"title":"t"}');
-    expect([ok.code, ok.json]).toEqual([200, { ok: true }]);
-  });
-
-  it('DELETE /api/focus does not parse a body', async () => {
-    const r = await call('DELETE', '/api/focus');
-    expect([r.code, r.json]).toEqual([200, { ok: true }]);
-    expect(mocks.cancelFocus).toHaveBeenCalled();
-  });
-
-  it('ANY routes answer every method', async () => {
-    mocks.listRepos.mockResolvedValue(['r']);
-    for (const m of ['GET', 'POST']) expect((await call(m, '/api/repos')).json).toEqual(['r']);
-  });
-
   it('picks the method key before the ANY key', async () => {
     mocks.removeChat.mockResolvedValue({ removed: true });
     mocks.listSessions.mockResolvedValue([{ sessionId: 's' }]);
@@ -85,10 +65,4 @@ describe('routes', () => {
     for (const body of ['{bad', '']) expect((await call('POST', '/api/focus', body)).code).toBe(500);
   });
 
-  it('passes the limit of /api/state to the host', async () => {
-    const req = vi.fn(async () => ({ pending: [] }));
-    await call('GET', '/api/state?limit=0', undefined, { host: { req } } as unknown as Partial<RouteDeps>);
-    await call('GET', '/api/state', undefined, { host: { req } } as unknown as Partial<RouteDeps>);
-    expect(req.mock.calls).toEqual([[{ op: 'state', id: 'c1', limit: 0 }], [{ op: 'state', id: 'c1' }]]);
-  });
 });

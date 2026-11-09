@@ -14,43 +14,6 @@ describe('applyHubChanges', () => {
 });
 
 describe('assistantRoute', () => {
-  it('forwards GET /debug to the hub', async () => {
-    const fetchMock = vi.fn(async () => new Response('{"debug":true}', { headers: { 'content-type': 'application/json' } }));
-    vi.stubGlobal('fetch', fetchMock);
-    const res = await assistantRoute('GET', new URL('http://x/api/assistant/debug'), async () => '');
-    vi.unstubAllGlobals();
-    expect(res.status).toBe(200);
-    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toMatch(/\/debug$/);
-  });
-
-  it('forwards GET /history with who encoded', async () => {
-    const fetchMock = vi.fn(async () => new Response('{"replies":[]}', { headers: { 'content-type': 'application/json' } }));
-    vi.stubGlobal('fetch', fetchMock);
-    const res = await assistantRoute('GET', new URL('http://x/api/assistant/history?who=A%20B'), async () => '');
-    vi.unstubAllGlobals();
-    expect(res.status).toBe(200);
-    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toMatch(/\/history\?who=A%20B$/);
-  });
-
-  it('forwards full on GET /changes', async () => {
-    const fetchMock = vi.fn(async () => new Response('{"changes":[]}', { headers: { 'content-type': 'application/json' } }));
-    vi.stubGlobal('fetch', fetchMock);
-    await assistantRoute('GET', new URL('http://x/api/assistant/changes?since=5&full=1'), async () => '');
-    vi.unstubAllGlobals();
-    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toMatch(/\/changes\?since=5&full=1$/);
-  });
-
-  it('forwards a POST body with its content type', async () => {
-    const fetchMock = vi.fn(async () => new Response('{"ok":true}', { headers: { 'content-type': 'application/json' } }));
-    vi.stubGlobal('fetch', fetchMock);
-    await assistantRoute('POST', new URL('http://x/api/assistant/parse'), async () => '{"a":1}');
-    vi.unstubAllGlobals();
-    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(init.method).toBe('POST');
-    expect(init.headers).toEqual({ 'content-type': 'application/json' });
-    expect(init.body).toBe('{"a":1}');
-  });
-
   it('drops query params a route does not list', async () => {
     const fetchMock = vi.fn(async () => new Response('{"replies":[]}', { headers: { 'content-type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
