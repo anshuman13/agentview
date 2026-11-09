@@ -1,43 +1,26 @@
-import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
-import { send, useStore } from '../../app/store';
+import { useId, useRef, useState } from 'react';
+import { useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { touch } from '../../app/touch/touch';
-import { PERMISSION_MODES } from '../../../../shared/protocol';
 import { LoopCard } from '../cards/LoopCard';
 import { TodoCard } from '../cards/TodoCard';
 import { useDictation } from './Voice';
 import { PopItems } from './ComposerPop';
 import { Announcer } from '../Announcer';
 import { ChatSettings, useChatSettings, type Pick } from '../ChatSettings';
-import { accept, ghostFor, goalPlaceholder, type GoalChoice, type Use } from './composerLogic';
+import { ghostFor, goalPlaceholder, type GoalChoice, type Use } from './composerLogic';
 import { ComposerFoot } from './ComposerFoot';
 import { ComposerStats } from './ComposerStats';
 import { PickerSheets } from './PickerSheets';
 import { SharedConfirm, useSharedIntake } from './SharedText';
 import { UsesBar } from './UsesBar';
 import { useAutocomplete } from './useAutocomplete';
+import { useAutoHeight } from './useAutoHeight';
 import { useComposerEvents } from './useComposerEvents';
+import { useComposerKeys } from './useComposerKeys';
 import { useDraft, usePromptHistory } from './usePromptHistory';
 import { useSubmit } from './useSubmit';
 import { useUploads } from './useUploads';
-
-const MAX_HEIGHT = 220;
-
-function useAutoHeight(ta: RefObject<HTMLTextAreaElement | null>, mirror: RefObject<HTMLDivElement | null>, wantCaret: { current: number | null }, setCaret: (n: number) => void, deps: unknown[]) {
-  useLayoutEffect(() => {
-    const el = ta.current;
-    if (!el) return;
-    el.style.height = '0';
-    const h = Math.max(el.scrollHeight, mirror.current?.offsetHeight ?? 0);
-    el.style.height = `${Math.min(h, MAX_HEIGHT)}px`;
-    if (mirror.current) mirror.current.style.visibility = h > MAX_HEIGHT ? 'hidden' : '';
-    if (wantCaret.current !== null) {
-      el.setSelectionRange(wantCaret.current, wantCaret.current);
-      setCaret(wantCaret.current);
-      wantCaret.current = null;
-    }
-  }, deps);
-}
 
 function placeholderFor(running: boolean, waiting: boolean, compacting: boolean, goal: GoalChoice, hasUses: boolean) {
   if (waiting) return 'Answer below, or message Claude to stop and send';
@@ -84,31 +67,7 @@ export function Composer() {
     sentHistory: h.sentHistory, setSentHistory: h.setSentHistory, clearHistoryStep: () => h.setHist(null),
   });
 
-  const choose = (i: number) => {
-    if (!ac.trigger || ac.trigger.kind === 'shell' || !ac.items[i]) return;
-    const it = ac.items[i].item;
-    const value = ac.trigger.kind === 'command' ? `/${(it as { name: string }).name}` : typeof it === 'object' && 'sessionId' in it ? `@chat:${it.sessionId}` : `@${it as string}`;
-    const r = accept(text, ac.trigger.start, ac.at, value);
-    apply(r.text, r.caret);
-  };
-
-  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.nativeEvent.isComposing) return;
-    const el = e.currentTarget;
-    const onEntry = h.hist !== null && text === h.hist.list[h.hist.index];
-    if (ac.open) {
-      if (e.key === 'ArrowDown') { e.preventDefault(); ac.setSel((i) => (i + 1) % ac.items.length); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); ac.setSel((i) => (i - 1 + ac.items.length) % ac.items.length); return; }
-      if (e.key === 'Escape') { e.preventDefault(); ac.setDismissed(ac.popKey); return; }
-      const exact = ac.trigger?.kind === 'command' && (ac.items[ac.sel]?.item as { name: string } | undefined)?.name === ac.trigger.query;
-      if ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'Enter' && !e.shiftKey && !exact)) { e.preventDefault(); choose(ac.sel); return; }
-    }
-    if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); send({ type: 'set_permission_mode', mode: PERMISSION_MODES[(PERMISSION_MODES.indexOf(mode as never) + 1) % PERMISSION_MODES.length] }); return; }
-    if (ghost && (e.key === 'Tab' || e.key === 'ArrowRight') && el.selectionStart === text.length) { e.preventDefault(); apply(text + ghost); return; }
-    if (e.key === 'ArrowUp' && (text === '' || onEntry) && !text.slice(0, el.selectionStart).includes('\n')) { e.preventDefault(); h.step(1, text, apply); return; }
-    if (e.key === 'ArrowDown' && onEntry && !text.slice(el.selectionEnd).includes('\n')) { e.preventDefault(); h.step(-1, text, apply); return; }
-    if (e.key === 'Enter' && !e.shiftKey && (!touch() || e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(e.metaKey || e.ctrlKey); }
-  };
+  const { choose, onKeyDown } = useComposerKeys({ text, mode, ghost, ac, h, apply, submit });
 
   return (
     <div className="cp" data-mode={mode}>
