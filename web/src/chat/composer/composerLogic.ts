@@ -105,14 +105,14 @@ export function filesEdited(events: ChatEvent[]) {
 }
 
 // What a screen reader hears when a turn ends: the last top-level reply since the prompt, else the error.
-export function turnEnd(events: ChatEvent[]) {
+export function turnEnd(events: ChatEvent[], label: string) {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
     if (e.kind === 'user') break;
-    if (e.kind === 'assistant' && !e.parent && e.text.trim()) return `Claude: ${e.text}`;
-    if (e.kind === 'result' && e.isError) return `Claude stopped: ${e.text}`;
+    if (e.kind === 'assistant' && !e.parent && e.text.trim()) return `${label}: ${e.text}`;
+    if (e.kind === 'result' && e.isError) return `${label} stopped: ${e.text}`;
   }
-  return 'Claude finished';
+  return `${label} finished`;
 }
 
 export const contextPercent = (context: number | null, contextWindow?: number | null) => (context === null ? null : Math.min(100, Math.round((context / compactAt(contextWindow)) * 100)));

@@ -82,7 +82,7 @@ private fun AddRule(hub: Hub, file: String, onSaved: () -> Unit) {
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { add() }))
 }
 
-// What Claude is told and remembers in this folder, like Windsurf's memories panel. Only the repo instruction file can be changed.
+// What the agent is told and remembers in this folder, like Windsurf's memories panel. Only the repo instruction file can be changed.
 @Composable
 fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss: () -> Unit) {
     val file = ruleFile(cwd, instructionFiles)
@@ -109,7 +109,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss
         val list = files.data
         when {
             list == null && files.busy -> EmptyState("Loading memory…")
-            list.isNullOrEmpty() -> EmptyState("No memory", files.error.ifEmpty { "No CLAUDE.md or memory files for this folder." })
+            list.isNullOrEmpty() -> EmptyState("No memory", files.error.ifEmpty { "No $file or memory files for this folder." })
             else -> list.forEach { f ->
                 ListRow(f.name, listOf(f.description, memoryWhere(f, cwd)).filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
             }

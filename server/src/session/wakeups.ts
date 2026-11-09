@@ -1,3 +1,4 @@
+import { providerLabel } from '../../../shared/providers.js';
 import type { Cron } from '../agent/types.js';
 import { after, fireTime, restorePrompt } from './repeat.js';
 import type { AgentSession } from './session.js';
@@ -22,7 +23,7 @@ export class Wakeups {
   // Scheduled jobs live in the CLI process, so a new process has to create them again. The loop does not take this prompt as a task.
   restore(crons: Cron[], why = 'AgentView restarted') {
     this.s.crons = crons;
-    this.s.system(`${why}, so Claude is recreating ${crons.length} scheduled ${crons.length === 1 ? 'job' : 'jobs'}`);
+    this.s.system(`${why}, so ${providerLabel(this.s.driver.provider)} is recreating ${crons.length} scheduled ${crons.length === 1 ? 'job' : 'jobs'}`);
     this.s.prompts.orQueue(restorePrompt(crons, why));
   }
 

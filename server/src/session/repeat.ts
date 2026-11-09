@@ -24,7 +24,7 @@ export const standing = (r: Repeat) => Boolean(r.goal && r.every);
 
 const reportDue = (r: Repeat, now = Date.now()) => standing(r) && r.reportAt !== undefined && now >= r.reportAt;
 
-// /goal <condition> checks the condition whenever Claude goes idle, until it reports GOAL MET or the rounds run out.
+// /goal <condition> checks the condition whenever the agent goes idle, until it reports GOAL MET or the rounds run out.
 // /goal every 1h <condition> is a standing goal: one heartbeat per interval for up to 28 days.
 export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usage' | null {
   const m = /^\/goal\b([\s\S]*)$/.exec(text.trim());
@@ -98,7 +98,7 @@ export function fireTime(schedule: string, now = Date.now()) {
 }
 
 const describeLoop = (r: Repeat) =>
-  standing(r) ? `standing goal every ${span(r.every)} for up to 28 days: "${r.goal}"` : r.goal ? `checked whenever Claude goes idle until "${r.goal}" is met, up to ${MAX_GOAL_ROUNDS} checks` : once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
+  standing(r) ? `standing goal every ${span(r.every)} for up to 28 days: "${r.goal}"` : r.goal ? `checked whenever the agent goes idle until "${r.goal}" is met, up to ${MAX_GOAL_ROUNDS} checks` : once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
 
 // A loop goes on after Stop or a CLI exit, with time to type /loop off first.
 const REPEAT_GRACE_MS = 2 * 60_000;
@@ -195,7 +195,7 @@ export class RepeatController {
   runNow() {
     const r = this.host.repeat();
     if (!r || r.paused) return;
-    if (this.host.running()) return this.host.system('Claude is busy, so there is no round to run now');
+    if (this.host.running()) return this.host.system('The agent is busy, so there is no round to run now');
     this.roundAt = 0;
     this.fire();
   }

@@ -113,8 +113,8 @@ describe('filesEdited', () => {
 describe('turnEnd', () => {
   const say = (text: string, parent?: string): ChatEvent => ({ id: `a${++n}`, kind: 'assistant', text, streaming: false, at: n, parent });
   it('reads the last top-level reply of the current turn only', () => {
-    expect(turnEnd([user('a'), say('old'), user('b'), say('new'), say('sub', 't1')])).toBe('Claude: new');
-    expect(turnEnd([user('a'), say('old'), user('b')])).toBe('Claude finished');
+    expect(turnEnd([user('a'), say('old'), user('b'), say('new'), say('sub', 't1')], 'Codex')).toBe('Codex: new');
+    expect(turnEnd([user('a'), say('old'), user('b')], 'Codex')).toBe('Codex finished');
   });
 });
 

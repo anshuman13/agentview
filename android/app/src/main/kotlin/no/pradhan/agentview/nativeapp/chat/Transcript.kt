@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.loadEarlier
+import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.rewind
 import no.pradhan.agentview.nativeapp.net.sendNow
 import no.pradhan.agentview.nativeapp.ops.Agent
@@ -169,7 +170,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                 }
             }
             if (rows.isEmpty()) item(key = "empty") {
-                if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || tried != earlier))) EmptyState("No messages yet", "Your prompts, Claude's steps and replies show up here") else EmptyState("Loading…")
+                if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || tried != earlier))) EmptyState("No messages yet", "Your prompts, the agent's steps and replies show up here") else EmptyState("Loading…")
             }
         }
         val dayOf = view.dayOf
@@ -281,6 +282,7 @@ private fun BubbleFooter(label: String, action: String, onClick: () -> Unit) {
 @Composable
 private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
     var ask by remember { mutableStateOf(false) }
+    val label = providerLabel(hub.store.state.value.session?.provider)
     if (ask) ConfirmDialog(
         "Rewind files?",
         "Puts every file Claude changed back to how it was before this prompt. Edits from later prompts are undone too; the conversation stays.",
@@ -291,8 +293,8 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
             is Part.Text -> Text(p.text, style = Type.body, color = av.fg)
             is Part.Image -> ChatImage(hub, chat, p.path)
         }
-        if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgMuted)
-        if (it.queued) BubbleFooter("Waiting for Claude's next step", "Send now") { hub.sendNow(it.id) }
+        if (it.stopping) Text("Stopping $label to send this", style = Type.footnote, color = av.fgMuted)
+        if (it.queued) BubbleFooter("Waiting for $label's next step", "Send now") { hub.sendNow(it.id) }
         if (canRewind) BubbleFooter("", "Rewind files") { ask = true }
     }
 }

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { LoopState } from '../../../shared/protocol.js';
+import { providerLabel } from '../../../shared/providers.js';
 import { errText } from '../../../shared/util.js';
 import type { AskOptions, Decision } from '../agent/types.js';
 import { looping, loopOff, needsApproval, phaseRound, planStep, withLoop, type LoopStep } from './loop.js';
@@ -120,6 +121,6 @@ export class BuildCycle {
     const loop = this.s.state.session.loop;
     if (!looping(loop)) return;
     this.s.setSession({ loop: { ...loop, phase: 'failed' } });
-    this.end(`Build cycle stopped: Claude exited during the ${loop.phase} step`);
+    this.end(`Build cycle stopped: ${providerLabel(this.s.driver.provider)} exited during the ${loop.phase} step`);
   }
 }

@@ -216,7 +216,7 @@ describe('/goal', () => {
     await s.prompt('/goal off');
     expect(s.state.session.repeat).toBeNull();
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Goal off' });
-    expect(s.state.events.filter((e) => e.kind === 'system' && e.text === 'Goal on, checked whenever Claude goes idle until "ship it" is met, up to 20 checks')).toHaveLength(1);
+    expect(s.state.events.filter((e) => e.kind === 'system' && e.text === 'Goal on, checked whenever the agent goes idle until "ship it" is met, up to 20 checks')).toHaveLength(1);
     vi.useRealTimers();
   });
 });

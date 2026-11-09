@@ -64,12 +64,13 @@ export function ComposerFoot({ goal, uses, uploading, typed, shell, setPick, att
   const canMcp = useCan('mcp');
   const connected = useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
   const hasServers = canMcp && connected;
+  const label = useStore((s) => providerLabel(s.session.provider));
   return (
     <div className="cp-foot">
       <ModeChip goal={goal} setPick={setPick} />
       <span className="cp-spacer" />
       {hasServers && (
-        <button className={`icon-btn mcp${uses.length ? ' on' : ''}`} title="Ask Claude to use an MCP server or tool" aria-label="Use an MCP server" onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })}>
+        <button className={`icon-btn mcp${uses.length ? ' on' : ''}`} title={`Ask ${label} to use an MCP server or tool`} aria-label="Use an MCP server" onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })}>
           <Icon name="plug" small />
         </button>
       )}

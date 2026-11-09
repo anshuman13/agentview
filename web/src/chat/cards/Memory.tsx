@@ -69,7 +69,7 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
   );
 }
 
-// What Claude is told and remembers in this folder, like Windsurf's memories panel. Only the repo instruction file can be changed.
+// What the agent is told and remembers in this folder, like Windsurf's memories panel. Only the repo instruction file can be changed.
 export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void }) {
   const [files, setFiles] = useState<MemoryFile[] | null>(null);
   const [open, setOpen] = useState<MemoryFile | null>(null);
@@ -93,7 +93,7 @@ export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void 
     <Sheet label="Memory" onClose={onClose}>
       <h2>Memory</h2>
       {files === null && <div className="muted">Loading memory…</div>}
-      {files?.length === 0 && <div className="muted">No CLAUDE.md or memory files for this folder</div>}
+      {files?.length === 0 && <div className="muted">No {file} or memory files for this folder</div>}
       {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ')} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
       {files && <AddRule file={file} onSaved={() => setReloads((n) => n + 1)} />}
     </Sheet>

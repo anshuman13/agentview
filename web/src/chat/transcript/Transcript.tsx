@@ -11,6 +11,7 @@ import { FileIcon } from '../../workspace/FileIcon';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
+import { providerLabel } from '../../../../shared/providers';
 import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 
@@ -176,7 +177,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     {newId && recap && since && <div className="tr-since"><span className="tr-since-text">Since you left: {recap}</span><IconButton icon="close" label="Dismiss" size="sm" onClick={() => setSince(false)} /></div>}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
-      {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
+      {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, the agent's steps and replies show up here.</div>}
       {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(showEarlier)}>{loading ? 'Loading earlier…' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
       {items.slice(from).map((it, i) => {
         if (i > 0 && folded.has(it.id)) return null;
@@ -233,9 +234,10 @@ function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
 }
 
 function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolean }) {
+  const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
-      return <div className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title="Waiting for Claude's next step"><Icon name="clock" small /><button className="link tl-send-now" title="Stop Claude's current step and send this now" onClick={() => send({ type: 'send_now', id: it.id })}>Send now</button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><button className="link" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</button></span>}</div>;
+      return <div className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title={`Waiting for ${label}'s next step`}><Icon name="clock" small /><button className="link tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><button className="link" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</button></span>}</div>;
     case 'phase':
       return <div className="tr-phase"><Icon name="sync" small />{it.text}</div>;
     case 'auto':

@@ -4,6 +4,7 @@ import { useChatRun } from '../sessions/runBands';
 import { QuickPick } from '../ui/QuickPick';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { copyChatMarkdown, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
+import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
 
@@ -16,6 +17,8 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
   const chat = useStore((s) => s.session.id);
+  const cwd = useStore((s) => s.session.cwd);
+  const instructionFiles = useStore((s) => s.session.instructionFiles);
   const resumeCommand = useStore((s) => s.session.resumeCommand);
   const hooks = useStore((s) => s.session.hooks) ?? [];
   const phase = useStore((s) => s.session.loop.phase);
@@ -42,7 +45,7 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
         { value: 'goal', label: 'Goal', detail: run ? runLine(run, phase) : goalInfo(goal, Date.now()).label },
         { value: 'loop', label: 'Build cycle', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
         { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
-        { value: 'memory', label: 'Memory', detail: 'CLAUDE.md and memory files' },
+        { value: 'memory', label: 'Memory', detail: `${ruleFile(cwd, instructionFiles)} and memory files` },
         { value: 'hooks', label: 'Hooks', detail: hooks.length ? `${hooks.length}` : 'None' },
         { value: 'todos', label: 'TODOs', detail: 'TODO, FIXME and AI! comments in the repo' },
         { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
