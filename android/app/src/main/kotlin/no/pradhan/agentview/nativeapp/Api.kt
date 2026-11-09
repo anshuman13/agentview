@@ -48,7 +48,7 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = OkH
     suspend fun pins() = list("/api/sessions/pins", String.serializer())
     suspend fun seen(): Map<String, Long> = protocolJson.decodeFromString(MapSerializer(String.serializer(), Long.serializer()), call(url("/api/sessions/seen")).decodeToString())
 
-    suspend fun markSeen(sessionId: String) { call(url("/api/sessions/seen?id=${enc(sessionId)}").post("".toRequestBody())) }
+    suspend fun markSeen(sessionId: String, unread: Boolean = false) { call(url("/api/sessions/seen?id=${enc(sessionId)}${if (unread) "&unread=1" else ""}").post("".toRequestBody())) }
     suspend fun pin(sessionId: String, on: Boolean) {
         val req = url("/api/sessions/pins?id=${enc(sessionId)}")
         call(if (on) req.post("".toRequestBody()) else req.delete())

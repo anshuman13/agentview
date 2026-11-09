@@ -78,6 +78,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         onClose = liveChat?.let { c -> { if (c.running || c.pending > 0) closing = c else hub.closeChat(c.id) } },
         onArchive = { sessionId?.let { archiving = it to title } },
         canPin = sessionId != null,
+        onUnread = { sessionId?.let { hub.markUnread(it) } },
     )
 
     @Composable
@@ -234,7 +235,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     closing?.let { c -> ConfirmDialog("Close this chat?", "${c.title}\n\nClaude is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(c.id) }) { closing = null } }
 }
 
-class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit)
+class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {})
 
 @Composable
 private fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) {
@@ -282,6 +283,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
             }
             MoreButton { close ->
                 if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", if (actions.pinned) "pinned" else "pin", { close(); actions.onPin() })
+                if (actions.canPin && state == null && !selected) MenuItem("Mark as unread", "mail", { close(); actions.onUnread() })
                 if (actions.canPin) MenuItem("Rename", "edit", { close(); actions.onRename() })
                 actions.onClose?.let { c -> MenuItem("Close chat", "close", { close(); c() }) }
                 if (actions.canPin) { MenuSeparator(); MenuItem("Archive", "archive", { close(); actions.onArchive() }, danger = true) }
