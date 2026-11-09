@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { Provider, ProviderOption } from '../../../shared/protocol.js';
+import { providerLabel } from '../../../shared/providers.js';
 import { readJsonSync, writeJsonSync } from '../json.js';
 import { STATE_DIR, loggedInAccounts, verifyLimit } from './claude/accounts.js';
 import { claudeDriver } from './claude/driver.js';
@@ -29,8 +30,6 @@ const PROVIDERS: Record<Provider, Entry> = {
   },
 };
 
-const LABEL: Record<Provider, string> = { claude: 'Claude', openrouter: 'OpenRouter', codex: 'Codex' };
-
 // What a new chat can run on: OpenRouter once it has a key and models, Codex once this Mac is signed in to it.
 export async function providerOptions(): Promise<ProviderOption[]> {
   const codex = await codexSignedIn();
@@ -39,7 +38,7 @@ export async function providerOptions(): Promise<ProviderOption[]> {
     openrouter: loadOpenRouter() ? { on: true } : { on: false, note: 'Set a key and models in Settings' },
     codex: codex ? { on: true } : { on: false, note: NOT_SIGNED_IN },
   };
-  return (Object.keys(PROVIDERS) as Provider[]).map((id) => ({ id, label: LABEL[id], enabled: enabled[id].on, ...(enabled[id].note && { note: enabled[id].note }) }));
+  return (Object.keys(PROVIDERS) as Provider[]).map((id) => ({ id, label: providerLabel(id), enabled: enabled[id].on, ...(enabled[id].note && { note: enabled[id].note }) }));
 }
 
 export const provider = (id: Provider) => PROVIDERS[id];

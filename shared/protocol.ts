@@ -157,6 +157,7 @@ export type ChatRun = {
   max: number;
   nextAt: number | null;
   every?: number;
+  provider?: Provider;
   costUsd: number;
   rounds: Round[];
   asked?: boolean;
@@ -245,6 +246,7 @@ export type LiveChat = {
   stalled?: boolean;
   failed?: boolean;
   model?: string;
+  provider?: Provider;
   last?: string;
   edits?: { add: number; del: number };
   cost?: number;

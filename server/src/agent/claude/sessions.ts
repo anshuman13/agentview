@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { readdir, stat } from 'node:fs/promises';
+import { providerOf } from '../registry.js';
 import { getSessionInfo, listSessions as listAll, renameSession, type ListSessionsOptions, type SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import type { SavedSession } from '../../../../shared/protocol.js';
 import { codexThread, noteThread } from '../codex/threads.js';
@@ -40,7 +41,7 @@ export async function listSessions(opts: ListSessionsOptions = {}) {
 
 export function savedSession(x: SDKSessionInfo): SavedSession {
   const firstPrompt = x.firstPrompt?.replace(/\s+/g, ' ').trim().slice(0, 300);
-  return { sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified, ...(firstPrompt && { firstPrompt }) };
+  return { sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified, provider: providerOf(x.sessionId), ...(firstPrompt && { firstPrompt }) };
 }
 
 export const renameRoute = async (id: string | null, title: unknown): Promise<{ status: number; body: unknown }> => {

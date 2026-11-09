@@ -6,6 +6,7 @@ import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
 import { type ConfirmRequest } from '../ui/Confirm';
 import { type LiveChat, type SavedSession } from '../../../shared/protocol';
+import { providerMark } from '../../../shared/providers';
 import { copyText, save } from '../ui/util';
 import { AgentsBlock } from './AgentRow';
 import { openAgent } from './agents';
@@ -187,7 +188,7 @@ const branchOf = (saved?: string | null, repoBranch?: string) => {
 
 export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
   const seen = useStore((x) => x.seen);
-  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={metaLine(repo, branchOf(s.gitBranch, branch), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
+  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={metaLine(repo, branchOf(s.gitBranch, branch), providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
 }
 
 export function WaitingRows({ viewing, ask, pins, setPin, setChats }: { viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
@@ -209,7 +210,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   const draft = selected ? '' : draftLine(readDraft(c.id));
   const main = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
     <>
-      {metaLine(repo, branchOf(saved?.gitBranch, branch), when)}
+      {metaLine(repo, branchOf(saved?.gitBranch, branch), providerMark(c.provider), when)}
       {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{prText(c.pr, pr)}{checkIcon}</a> : <>#{c.pr}{checkIcon}</>}</>}
       {c.todos && ` · ${c.todos.done}/${c.todos.total}`}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}

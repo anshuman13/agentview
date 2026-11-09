@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { send, useStore } from '../store';
 import { ACCOUNT_LABEL } from '../../../../shared/protocol';
+import { billing, providerLabel } from '../../../../shared/providers';
 import { Icon } from '../../ui/Icon';
 import { command, spendLines, weekPace } from '../../ui/util';
 import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from '../runtime/offlineBanner';
@@ -73,21 +74,22 @@ export function useUsage() {
   const accounts = useStore((s) => s.session.accounts) ?? [];
   const live = useStore((s) => s.live);
   const models = useStore((s) => s.session.models);
+  const provider = useStore((s) => s.session.provider);
   if (!usage) return null;
   const { fiveHour, week } = usage;
   const at = (t: number | null) => (t ? new Date(t).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : 'unknown');
   const pace = week?.resetsAt ? weekPace(week.resetsAt) : null;
   const ahead = week && pace !== null && week.pct > pace;
   const other = accounts.find((a) => a !== account);
-  const advice = ahead ? (other ? `Ahead of pace: switch this chat to ${ACCOUNT_LABEL[other]}` : 'Ahead of pace: slow down or add a second account') : null;
+  const advice = ahead && accounts.length > 1 && other ? `Ahead of pace: switch this chat to ${ACCOUNT_LABEL[other]}` : null;
   const title = [
-    `Claude plan usage${accounts.length > 1 ? ` on the ${ACCOUNT_LABEL[account]} account` : ''}`,
+    `${providerLabel(provider)} plan usage${accounts.length > 1 ? ` on the ${ACCOUNT_LABEL[account]} account` : ''}`,
     fiveHour && `5-hour: ${fiveHour.pct}% used, resets ${at(fiveHour.resetsAt)}`,
     week && `Week: ${week.pct}% used, resets ${at(week.resetsAt)}`,
     pace !== null && `Even pace (100/7 a day): ${pace}% by now`,
-    advice && (other && running ? `${advice} once Claude stops` : other ? `${advice}. Click to switch` : advice),
-    !(ahead && other && !running) && 'Click to read usage again (needs an open Claude process)',
-  ].filter(Boolean).concat(spendLines(live.map((c) => c.spend), models)).join('\n');
+    advice && (running ? `${advice} once ${providerLabel(provider)} stops` : `${advice}. Click to switch`),
+    !(ahead && other && !running) && `Click to read usage again (needs an open ${providerLabel(provider)} process)`,
+  ].filter(Boolean).concat(spendLines(live.map((c) => c.spend), models, live.some((c) => billing(c.provider) !== 'usd'))).join('\n');
   const warn = ahead || Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
   const label = `${accounts.length > 1 ? `${ACCOUNT_LABEL[account]} ` : ''}${[week && `w${week.pct}`, fiveHour && `h${fiveHour.pct}`].filter(Boolean).join(' ')}`;
   const onClick = () => send(ahead && other && !running ? { type: 'set_account', account: other } : { type: 'usage' });

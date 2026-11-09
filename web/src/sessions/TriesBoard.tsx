@@ -6,6 +6,7 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { Section, sectionCount } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { money } from '../ui/util';
+import { billing } from '../../../shared/providers';
 import type { ChatRun, LiveChat, Try } from '../../../shared/protocol';
 
 type TryColumn = { n: number; branch: string; state: BadgeSpec; line: string; edits?: LiveChat['edits']; cost: number; archived: boolean };
@@ -43,7 +44,7 @@ function TriesColumns({ run, live, onOpen, onKeep }: { run: ChatRun; live: LiveC
           <div key={c.n} className="tb-col">
             <div className="tb-head"><span className="tb-branch">{c.branch}</span><Badge {...c.state} /></div>
             <div className="tb-line">{c.line || 'No report yet'}</div>
-            <div className="tb-meta">{c.edits ? `+${c.edits.add} -${c.edits.del}` : 'No edits'} · {money(c.cost)}</div>
+            <div className="tb-meta">{c.edits ? `+${c.edits.add} -${c.edits.del}` : 'No edits'} · {money(c.cost, billing(run.provider))}</div>
             {!c.archived && (
               <div className="tb-actions">
                 <Button size="sm" onClick={() => onOpen(c.n)}>Open</Button>

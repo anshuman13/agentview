@@ -1,0 +1,6 @@
+[
+  { "name": "no provider means Claude", "provider": null, "label": "Claude", "billing": "usd", "mark": null, "modes": ["default", "acceptEdits", "plan", "auto", "dontAsk"] },
+  { "name": "claude", "provider": "claude", "label": "Claude", "billing": "usd", "mark": null, "modes": ["default", "acceptEdits", "plan", "auto", "dontAsk"] },
+  { "name": "openrouter", "provider": "openrouter", "label": "OpenRouter", "billing": "none", "mark": "OpenRouter", "modes": ["default", "acceptEdits", "plan", "auto", "dontAsk"] },
+  { "name": "codex", "provider": "codex", "label": "Codex", "billing": "plan", "mark": "Codex", "modes": ["default", "auto", "readOnly"] }
+]

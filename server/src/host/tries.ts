@@ -21,6 +21,7 @@ export function runTries(chat: AgentSession, text: string, tries: Exclude<Return
         chatId: chat.id,
         title: `Tries: ${firstSentence(tries.prompt, 70)}`,
         what: tries.prompt,
+        provider: chat.state.session.provider,
         tries: started.map(({ id, branch }, i) => ({ n: i + 1, chatId: id, sessionId: live.get(id)?.chat.state.session.sessionId ?? '', branch })),
       });
       chat.system(`Started ${started.length} chats, one per tries/ branch; compare them on the tries board in Runs`);

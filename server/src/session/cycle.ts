@@ -31,7 +31,7 @@ export class BuildCycle {
     this.prevModel = state.session.model;
     this.planDenied = false;
     this.s.setSession({ loop: { ...state.session.loop, round: 1, phase: 'plan' } });
-    this.run = this.s.runs.start({ kind: 'cycle', sessionId: state.session.sessionId ?? '', chatId: this.s.id, title: links.title(task), what: task, round: 1, max: state.session.loop.max });
+    this.run = this.s.runs.start({ kind: 'cycle', sessionId: state.session.sessionId ?? '', chatId: this.s.id, title: links.title(task), what: task, provider: state.session.provider, round: 1, max: state.session.loop.max });
     await this.runStep(planStep(task), false);
   }
 

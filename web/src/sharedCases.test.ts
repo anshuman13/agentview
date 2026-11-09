@@ -3,7 +3,8 @@ process.env.TZ = 'UTC';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { editCount, stripRound } from '../../shared/edits';
-import type { Capabilities, ChatEvent, ChatRun, LiveChat, Try } from '../../shared/protocol';
+import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
+import { billing, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
 import { appendRule } from '../../shared/steering';
 import { isSpecPath, runAllPrompt, specProgress, specPrompt, specTasks, startTaskPrompt, type SpecTask } from '../../shared/specTasks';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
@@ -15,7 +16,7 @@ import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { needsYou } from './codex/summary/needsYou';
 import { reviewQueue } from './codex/wiki/reviewQueue';
 import { revertBlock } from './workspace/revertBlock';
-import { ago } from './ui/util';
+import { ago, money } from './ui/util';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import type { Meeting } from './codex/data/wiki/wiki';
@@ -135,5 +136,20 @@ describe('cases shared with the Android app', () => {
       expect(modelsFor(c.models.map((value) => ({ value })), caps).map((m) => m.value)).toEqual(c.shown);
       expect(Object.fromEntries(Object.keys(c.can).map((k) => [k, can(caps, k as keyof Capabilities)]))).toEqual(c.can);
     });
+  }
+
+  type Table = { name: string; provider: Provider | null; label: string; billing: Billing; mark: string | null; modes: string[] };
+  for (const c of cases<Table>('providers')) {
+    it(`provider table: ${c.name}`, () => {
+      const p = c.provider ?? undefined;
+      expect(providerLabel(p)).toBe(c.label);
+      expect(billing(p)).toBe(c.billing);
+      expect(providerMark(p) ?? null).toBe(c.mark);
+      expect(providerModes(p).map((m) => m.value)).toEqual(c.modes);
+    });
+  }
+
+  for (const c of cases<{ name: string; n: number; billing: Billing; expected: string }>('money')) {
+    it(`money: ${c.name}`, () => expect(money(c.n, c.billing)).toBe(c.expected));
   }
 });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import { send } from '../app/store';
+import type { Billing } from '../../../shared/providers';
 
 // Enter or Space on a focusable element that is not a button clicks it.
 export const clickOnKey = (e: KeyboardEvent<HTMLElement>) => {
@@ -143,14 +144,15 @@ export function weekPace(resetsAt: number, now = Date.now()) {
 // The phone keyboard covers the lower half, so a focused field moves into view once it is up.
 export const reveal = (e: { currentTarget: HTMLElement }) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
 
-export const money = (n: number) => (n > 0 && n < 0.005 ? '<$0.01' : n < 10 ? `$${n.toFixed(2)}` : `$${Math.round(n)}`);
+export const money = (n: number, billing: Billing = 'usd') =>
+  billing === 'plan' ? 'Plan' : billing === 'none' ? '-' : n > 0 && n < 0.005 ? '<$0.01' : n < 10 ? `$${n.toFixed(2)}` : `$${Math.round(n)}`;
 
 export const modelLabel = (id: string, models: Array<{ value: string; displayName: string }>) =>
   models.find((m) => m.value === id)?.displayName ?? id.replace(/^claude-/, '').replace(/-\d{8}$/, '');
 
 type Spend = { today: Record<string, number>; week: Record<string, number> };
 
-export function spendLines(spends: Array<Spend | undefined>, models: Array<{ value: string; displayName: string }>) {
+export function spendLines(spends: Array<Spend | undefined>, models: Array<{ value: string; displayName: string }>, unpriced = false) {
   const sums = new Map<string, { today: number; week: number }>();
   for (const sp of spends) {
     if (!sp) continue;
@@ -173,6 +175,7 @@ export function spendLines(spends: Array<Spend | undefined>, models: Array<{ val
     'Spend',
     ...rows.map((r) => `${r.label}: today ${money(r.today)}, 7 days ${money(r.week)}`),
     `Total: today ${money(total.today)}, 7 days ${money(total.week)}`,
+    ...(unpriced ? ['Codex and OpenRouter chats are not priced'] : []),
     'Counts chats open on the Mac since the host last started',
     "Today is the Mac's day",
   ];

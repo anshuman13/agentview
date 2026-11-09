@@ -7,6 +7,7 @@ import { Menu, MenuItem } from '../../ui/Menu';
 import { Panel } from '../../ui/Panel';
 import { TriesBoard } from '../../sessions/TriesBoard';
 import { money } from '../../ui/util';
+import { billing } from '../../../../shared/providers';
 import type { RunOp } from '../../../../shared/protocol';
 import { OUTCOME_DOT, runLine, showTurn, stoppedText } from '../composer/composerLogic';
 
@@ -46,7 +47,7 @@ export function LoopCard() {
           </>
         )}
       </div>
-      <div className="lc-line"><span className="lc-what">{run.what}</span><span className="lc-cost">{money(run.costUsd)}</span></div>
+      <div className="lc-line"><span className="lc-what">{run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></div>
       {last && (
         <button className="lc-line lc-last" aria-expanded={open} onClick={() => setOpen(!open)}>
           <span className={`dot ${OUTCOME_DOT[last.outcome]}`} />
@@ -61,7 +62,7 @@ export function LoopCard() {
               <span className="lc-time">{clock(r.at)}</span>
               <span className={`dot ${OUTCOME_DOT[r.outcome]}`} />
               <span className="lc-what">{r.line || r.outcome}</span>
-              <span className="lc-cost">{money(r.costUsd)}</span>
+              <span className="lc-cost">{money(r.costUsd, billing(run.provider))}</span>
             </li>
           ))}
         </ul>

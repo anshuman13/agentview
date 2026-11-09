@@ -41,6 +41,7 @@ export function summary(chat: AgentSession, { stalled, run, refresh }: SummaryIn
     stalled,
     ...(chat.failed && { failed: true }),
     ...modelField(s.session.model),
+    ...(s.session.provider && { provider: s.session.provider }),
     last: replyLine(s.events),
     edits: editsOf(chat),
     ...(s.session.pr && { pr: s.session.pr, ...prChecksField(chat.cwd, s.session.pr, refresh) }),

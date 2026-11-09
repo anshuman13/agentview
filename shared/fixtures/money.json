@@ -1,0 +1,7 @@
+[
+  { "name": "cents", "n": 0.456, "billing": "usd", "expected": "$0.46" },
+  { "name": "under a cent", "n": 0.001, "billing": "usd", "expected": "<$0.01" },
+  { "name": "ten dollars and up round", "n": 12.6, "billing": "usd", "expected": "$13" },
+  { "name": "codex is on a plan", "n": 0, "billing": "plan", "expected": "Plan" },
+  { "name": "openrouter is not priced", "n": 3, "billing": "none", "expected": "-" }
+]

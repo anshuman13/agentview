@@ -9,6 +9,7 @@ import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { command, money } from '../ui/util';
+import { billing } from '../../../shared/providers';
 import type { ChatRun } from '../../../shared/protocol';
 import { OUTCOME_DOT, runLine, showTurn } from '../chat/composer/composerLogic';
 import { runBands, type RunItem } from './runBands';
@@ -36,7 +37,7 @@ function RunRow({ item, onBoard }: { item: RunItem; onBoard: (id: string) => voi
       {last && <> · <span className={`dot ${OUTCOME_DOT[last.outcome]}`} /> {last.report ? 'Weekly report' : last.line || last.outcome}</>}
     </>
   );
-  return <Row title={run.title} meta={meta} trailing={<span className="rn-cost">{money(run.costUsd)}</span>} onClick={() => (run.kind === 'tries' ? onBoard(run.id) : openRun(run))} />;
+  return <Row title={run.title} meta={meta} trailing={<span className="rn-cost">{money(run.costUsd, billing(run.provider))}</span>} onClick={() => (run.kind === 'tries' ? onBoard(run.id) : openRun(run))} />;
 }
 
 function Band({ label, items, open, onToggle, onBoard }: { label: string; items: RunItem[]; open?: boolean; onToggle?: () => void; onBoard: (id: string) => void }) {
