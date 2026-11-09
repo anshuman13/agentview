@@ -5,8 +5,7 @@ import { codexMeetings, useAssistant, useCodex, useSyncGate } from './data';
 import { reviewCount } from './data/wiki/wiki';
 import { ask, askText } from './data/ask/ask';
 import { atTime, reviewedSince, split } from './data/tasks/engine';
-import { taskMatches } from './data/ask/match';
-import { dayLabel, greeting, moveTo } from './tasks/days';
+import { greeting, moveTo } from './tasks/days';
 import { SnackBar } from './tasks/SnackBar';
 import { useHubLifecycle } from './useHubLifecycle';
 import type { Patch } from './data/store';
@@ -15,7 +14,7 @@ import type { BulkKind } from './useActions';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Button } from '../ui/Button';
-import { Section, sectionCount } from '../ui/Section';
+import { Section } from '../ui/Section';
 import { haptic } from '../ui/haptic';
 import { FILTER_LABEL, searchRun, setView, showSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { when } from './tasks/time';
@@ -26,9 +25,13 @@ import { UNROLL, useActions } from './tasks/Task';
 import { DayGroup, TaskList, type Day } from './tasks/TaskGroup';
 import { Overview, Review } from './Overview';
 import { useSplit } from './tasks/split';
+import { dayGroups } from './tasks/dayGroups';
+import { BulkBar } from './tasks/BulkBar';
+import { SearchBar, SearchResults, useTaskSearch } from './tasks/TaskSearch';
+import { pickable, useTaskSelection } from './tasks/useTaskSelection';
+import { ListsDrawer, LockedCodex } from './CodexChrome';
 import { AssistantNav, LISTS } from './nav';
-import { isDragging, useDrag, type Drop } from './gestures/drag';
-import { Back } from '../app/touch/back';
+import { useDrag, type Drop } from './gestures/drag';
 import { usePullRefresh, useScrolledHeader } from './gestures/usePullRefresh';
 import { Skeleton } from '../ui/Skeleton';
 import { prefetch } from '../app/lazy';
@@ -45,14 +48,7 @@ const Meetings = prefetch(() => import('./meetings/Meetings').then((m) => m.Meet
 
 const DAY = 86400_000;
 
-const UPCOMING_DAYS = 7;
-
-// Rows keep the order they were dragged into; the rest follow by due time.
-const ranked = (rs: ItemRow[]) => [...rs].sort((a, b) => (a.rank ?? 1e15) - (b.rank ?? 1e15) || (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0));
-// A day's tasks sort by part of the day; tasks without a time come first.
-const partOf = (r: ItemRow) => { const at = atTime(r.at); if (at == null) return 0; const h = new Date(at).getHours(); return h < 12 ? 1 : h < 17 ? 2 : 3; };
 const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
-const pickable = (r: ItemRow) => !r.deleted && (r.status === 'open' || r.status === 'suggested');
 
 function SpotBack({ scroller }: { scroller: React.RefObject<HTMLElement | null> }) {
   useSpotBack(scroller, 'tasks');
@@ -68,39 +64,8 @@ export function Assistant() {
   const [adding, setAdding] = useState<boolean | number>(false);
   const [olderOpen, setOlderOpen] = useState(false);
   const [doneOpen, setDoneOpen] = useState(false);
-  const [query, setQuery] = useState<string | null>(null);
-  // / on Tasks opens the search when nothing else has focus.
-  useEffect(() => {
-    if (list !== 'tasks') return setQuery(null);
-    const key = (e: KeyboardEvent) => {
-      const at = document.activeElement;
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || root.current?.offsetParent == null || (at && at !== document.body && !at.matches('[data-row]'))) return;
-      e.preventDefault();
-      setQuery((q) => q ?? '');
-    };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, [list]);
-  // Selection mode: the keys of the chosen tasks, or null when off.
-  const [picked, setPicked] = useState<Set<string> | null>(null);
-  useEffect(() => setPicked(null), [list, filter, query != null]);
-  useEffect(() => {
-    if (!picked) return;
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && setPicked(null);
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, [!!picked]);
-  // The n key and the palette open the add sheet, except during a drag or selection.
-  useEffect(() => {
-    if (list !== 'tasks') return;
-    const add = () => { if (!isDragging() && !picked) setAdding(true); };
-    window.addEventListener('tasks:add', add);
-    return () => window.removeEventListener('tasks:add', add);
-  }, [list, !!picked]);
-  useEffect(() => {
-    const live = new Set(snap.items.filter(pickable).map((r) => r.profile + r.id));
-    setPicked((p) => (p && [...p].some((k) => !live.has(k)) ? new Set([...p].filter((k) => live.has(k))) : p));
-  }, [snap.items]);
+  const [query, setQuery] = useTaskSearch(list, root);
+  const { picked, setPicked, toggle } = useTaskSelection(list, snap.items, [list, filter, query != null], () => setAdding(true));
   const scroller = useRef<HTMLDivElement>(null);
   const act = useActions();
   const { drag, start } = useDrag<ItemRow>((row, d) => dropRow(row, d), scroller, 'row', (row) => {
@@ -123,26 +88,9 @@ export function Assistant() {
   const loading = gate.loading && !snap.items.length;
   const heading = list === 'today' ? `${greeting()}, ${new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric' })}` : LISTS.find((l) => l.id === list)!.label;
 
-  if (!ready) {
-    return (
-      <div className="assistant locked" ref={root}>
-        <Icon name="lock" />
-        <div className="as-lock-title">Codex is locked</div>
-        <div className="muted">{snap.message === 'Locked' ? 'Your tasks and notes are encrypted on this phone.' : snap.message}</div>
-        {snap.phase === 'locked' && <button className="btn primary lg" onClick={() => store.unlock()}>{snap.message === 'Locked' ? 'Unlock' : 'Retry'}</button>}
-      </div>
-    );
-  }
+  if (!ready) return <LockedCodex root={root} snap={snap} store={store} />;
 
-  const drawerSheet = drawer && (
-    <div className="as-drawer-overlay" onClick={() => setDrawer(false)}>
-      <Back close={() => setDrawer(false)} />
-      <div className="as-drawer" onClick={(e) => e.stopPropagation()}>
-        <div className="as-drawer-title">Codex</div>
-        <AssistantNav onPick={() => setDrawer(false)} />
-      </div>
-    </div>
-  );
+  const drawerSheet = drawer && <ListsDrawer close={() => setDrawer(false)} />;
 
   if (current) {
     return (
@@ -170,23 +118,7 @@ export function Assistant() {
   }
 
   const now = Date.now();
-  // Today holds everything due before midnight; later tasks follow by day, so a dated action never leaves the page.
-  const horizon = new Date(now).setHours(24 * (UPCOMING_DAYS + 1), 0, 0, 0);
-  const dueToday = [...s.today, ...s.later.filter((r) => atTime(r.at)! < s.endOfDay)];
-  const startOfDay = new Date(now).setHours(0, 0, 0, 0);
-  const days: Day[] = [{ key: 'today', label: 'Today', day: startOfDay, rows: ranked(dueToday) }];
-  for (const r of s.later.filter((r) => atTime(r.at)! >= s.endOfDay)) {
-    const at = atTime(r.at)!;
-    const later = at >= horizon;
-    const day = later ? null : new Date(at).setHours(0, 0, 0, 0);
-    const key = later ? 'later' : String(day);
-    const g = days.find((d) => d.key === key);
-    if (g) g.rows.push(r);
-    else days.push({ key, label: later ? 'Later' : dayLabel(at), day, rows: [r] });
-  }
-  for (const d of days) d.rows = d.day == null ? ranked(d.rows) : ranked(d.rows).sort((a, b) => partOf(a) - partOf(b));
-  const tomorrow = new Date(now).setHours(24, 0, 0, 0);
-  if (drag && !days.some((d) => d.day === tomorrow)) days.splice(1, 0, { key: String(tomorrow), label: 'Tomorrow', day: tomorrow, rows: [] });
+  const { days, dueToday, startOfDay } = dayGroups(s, now, !!drag);
   // Dropping sets the order of the day's rows and moves the task to that day.
   function dropRow(row: ItemRow, d: Drop) {
     const target = days.find((x) => x.key === d.section);
@@ -201,7 +133,6 @@ export function Assistant() {
     });
     if (at !== undefined) showSnack(`Moved to ${target.label}`, () => act.edit(row, { at: row.at, rank: row.rank, rolls: row.rolls, rolled_from: row.rolled_from }));
   }
-  const toggle = (k: string) => setPicked((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
   const chosen = picked ? snap.items.filter((r) => pickable(r) && picked.has(r.profile + r.id)) : [];
   const bulk = (kind: BulkKind) => { act.bulk(chosen, kind); setPicked(null); };
   const openRow = (r: ItemRow) => picked ? pickable(r) && toggle(r.profile + r.id) : setView({ open: rowKey(r) });
@@ -237,24 +168,8 @@ export function Assistant() {
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>
         {list === 'today' && <Overview s={s} dueToday={dueToday} onPrep={() => ask(askText(prepText(s.next!), s.next!.profile, snap.items, undefined, codexMeetings(snap.meetings)), s.next!.profile)} />}
-        {list === 'tasks' && query != null && (
-          <div className="as-search">
-            <Icon name="search" />
-            <input autoFocus value={query} placeholder="Search tasks" aria-label="Search tasks" enterKeyHint="search" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery(null)} />
-            <button className="icon-btn" title="Close search" aria-label="Close search" onClick={() => setQuery(null)}><Icon name="close" /></button>
-          </div>
-        )}
-        {list === 'tasks' && query?.trim() && (() => {
-          const q = query.trim().toLowerCase();
-          const seen = new Set<string>();
-          const found = [...s.overdue, ...days.flatMap((d) => d.rows), ...s.review, ...s.doneToday].filter((r) => taskMatches(r, q) && !seen.has(r.profile + r.id) && seen.add(r.profile + r.id));
-          return (
-            <section className="as-results">
-              <Section label="Results" count={found.length} />
-              {found.length ? rows(found, undefined, false) : <EmptyState size="sm" title="No task matches" />}
-            </section>
-          );
-        })()}
+        {list === 'tasks' && query != null && <SearchBar query={query} setQuery={setQuery} />}
+        {list === 'tasks' && query?.trim() && <SearchResults query={query} candidates={[...s.overdue, ...days.flatMap((d) => d.rows), ...s.review, ...s.doneToday]} rows={rows} />}
         {list === 'tasks' && !query?.trim() && (
           <>
             {s.overdue.length > 0 && (
@@ -289,16 +204,7 @@ export function Assistant() {
 
       {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || '(Untitled)'}</div>}
       <SnackBar />
-      {picked ? (
-        <div className="as-bulk" role="toolbar" aria-label="Selected tasks">
-          <span className="as-bulk-n">{picked.size} selected</span>
-          <Button variant="tinted" size="sm" disabled={!chosen.length} onClick={() => bulk('done')}>Done</Button>
-          <Button variant="gray" size="sm" disabled={!chosen.length} onClick={() => bulk('tomorrow')}>Move to tomorrow</Button>
-          <Button variant="gray" size="sm" disabled={!chosen.length} onClick={() => bulk('snooze')}>Snooze</Button>
-          <Button variant="danger" size="sm" disabled={!chosen.length} onClick={() => bulk('delete')}>Delete</Button>
-          <Button variant="plain" size="sm" onClick={() => setPicked(null)}>Cancel</Button>
-        </div>
-      ) : <Composer items={snap.items} next={s.next} filter={filter} />}
+      {picked ? <BulkBar count={picked.size} enabled={chosen.length > 0} bulk={bulk} cancel={() => setPicked(null)} /> : <Composer items={snap.items} next={s.next} filter={filter} />}
       {adding !== false && <AddSheet filter={filter} voice={typeof adding === 'number' ? adding : undefined} onClose={() => setAdding(false)} />}
       {drawerSheet}
     </div>
