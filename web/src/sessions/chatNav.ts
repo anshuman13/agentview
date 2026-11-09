@@ -11,3 +11,10 @@ export function stepChat(ids: string[], viewing: string, dir: 1 | -1) {
   if (i < 0) return dir === 1 ? ids[0] : ids[ids.length - 1];
   return ids[(i + dir + ids.length) % ids.length];
 }
+
+// Slack's jump to unread: the next or previous unread chat, or null when there is none besides the one in view.
+export function nextUnread(unread: string[], viewing: string, dir: 1 | -1) {
+  const others = unread.filter((id) => id !== viewing);
+  if (!others.length) return null;
+  return others.length === 1 ? others[0] : stepChat(unread, viewing, dir);
+}

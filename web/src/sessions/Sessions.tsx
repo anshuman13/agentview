@@ -15,7 +15,7 @@ import { queryWords } from '../codex/data/match';
 import { Bin } from './Bin';
 import { AgentsBlock } from './AgentRow';
 import { openAgent } from './agents';
-import { chatOrder, stepChat } from './chatNav';
+import { chatOrder, nextUnread, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
 import { archiveChat, byUrgency, chatFinder, chatsByStatus, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RenameEvent, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
@@ -276,14 +276,29 @@ export function OpenChats() {
     const pinned = pins.flatMap((id) => live.filter((c) => c.sessionId === id));
     return chatOrder(waiting, pinned, orderGroups(allGroups, frozen));
   }, [live, pins, allGroups, frozen]);
-  const nav = useRef({ order, viewing });
-  nav.current = { order, viewing };
+  const seen = useStore((s) => s.seen);
+  const unread = useMemo(() => order.filter((id) => {
+    const c = live.find((x) => x.id === id);
+    const state = c && chatState({ live: c, saved: c.sessionId ? savedById.get(c.sessionId) : undefined }, seen);
+    return state === 'done' || state === 'needs';
+  }), [order, live, savedById, seen]);
+  const nav = useRef({ order, viewing, unread });
+  nav.current = { order, viewing, unread };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.shiftKey && (e.code === 'BracketRight' || e.code === 'BracketLeft') && (MAC ? e.metaKey : e.ctrlKey) && !e.altKey) {
         e.preventDefault();
         const id = stepChat(nav.current.order, nav.current.viewing, e.code === 'BracketRight' ? 1 : -1);
         if (id) send({ type: 'view', id });
+        return;
+      }
+      // Slack's ⌥⇧↓ / ⌥⇧↑: the next or previous open chat that is Done or Needs you.
+      if (e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        const { unread, viewing } = nav.current;
+        const id = nextUnread(unread, viewing, e.key === 'ArrowDown' ? 1 : -1);
+        e.preventDefault();
+        if (id) send({ type: 'view', id });
+        else notice('No unread chats');
         return;
       }
       if ((e.key !== 'j' && e.key !== 'k') || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
@@ -299,7 +314,6 @@ export function OpenChats() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
-  const seen = useStore((s) => s.seen);
   const [peeking, setPeeking] = useState<ReadonlySet<string>>(new Set());
   const peekTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const liveIds = useRef<Set<string> | null>(null);
