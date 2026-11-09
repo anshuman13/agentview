@@ -84,7 +84,10 @@ fun restoreUnsent(current: String, sent: String) = if (current.isBlank()) sent e
 
 fun appendWord(text: String, add: String) = "$text${if (text.isNotEmpty() && !text.last().isWhitespace()) " " else ""}$add"
 
-fun contextPercent(context: Long?): Int? = context?.let { minOf(100, Math.round(it.toDouble() / COMPACT_AT * 100).toInt()) }
+// 80% of the model's window, or COMPACT_AT when the agent does not report it (shared/protocol.ts compactAt).
+fun compactAt(contextWindow: Long?): Long = contextWindow?.takeIf { it > 0 }?.let { Math.round(it * 0.8) } ?: COMPACT_AT.toLong()
+
+fun contextPercent(context: Long?, contextWindow: Long?): Int? = context?.let { minOf(100, Math.round(it.toDouble() / compactAt(contextWindow) * 100).toInt()) }
 
 fun shortModel(name: String): String {
     val plain = name.replace(Regex("\\s*\\(.*\\)$"), "")

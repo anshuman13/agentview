@@ -1,9 +1,7 @@
-import type { LoopPhase, LoopState, RoundOutcome } from '../../../shared/protocol.js';
+import type { LoopRole, LoopState, RoundOutcome } from '../../../shared/protocol.js';
 import { firstSentence } from './runs.js';
 
-const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: 'claude-sonnet-5-5' } as const;
-
-export type LoopStep = { phase: LoopPhase; model: string; mode: string; label: string; prompt: string };
+export type LoopStep = { phase: LoopRole; mode: string; label: string; prompt: string };
 
 export const loopOff = (max = 3): LoopState => ({ on: false, max, round: 0, phase: null });
 
@@ -42,7 +40,6 @@ export function needsApproval(plan: string): boolean {
 export function planStep(task: string): LoopStep {
   return {
     phase: 'plan',
-    model: LOOP_MODELS.plan,
     mode: 'plan',
     label: 'Plan',
     prompt: [
@@ -59,7 +56,6 @@ export function planStep(task: string): LoopStep {
 function buildStep(): LoopStep {
   return {
     phase: 'build',
-    model: LOOP_MODELS.build,
     mode: 'auto',
     label: 'Build',
     prompt: 'Phase 2 of 3: build. Implement the plan fully. Run the project checks yourself (typecheck, tests) before you finish, and end with a short summary of what changed and how to verify it.',
@@ -69,7 +65,6 @@ function buildStep(): LoopStep {
 function testStep(round: number, max: number): LoopStep {
   return {
     phase: 'test',
-    model: LOOP_MODELS.test,
     mode: 'auto',
     label: `Test ${round}/${max}`,
     prompt: [
@@ -83,7 +78,6 @@ function testStep(round: number, max: number): LoopStep {
 function fixStep(report: string): LoopStep {
   return {
     phase: 'build',
-    model: LOOP_MODELS.build,
     mode: 'auto',
     label: 'Fix',
     prompt: `Phase 2 again: fix. The tester found these problems:\n\n${report.trim()}\n\nFix them, run the checks again, and end with a short summary.`,

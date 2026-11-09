@@ -105,6 +105,8 @@ export type SessionInfo = {
   commands: Array<{ name: string; description: string }>;
   cache: CacheInfo | null;
   context: number | null;
+  // The model's context window in tokens, when the agent reports it.
+  contextWindow?: number | null;
   compacting: boolean;
   stopping: boolean;
   mcp: McpServer[];
@@ -131,6 +133,8 @@ export const MAX_GOAL_ROUNDS = 20;
 export const BIG_BRO = 'big-bro';
 
 export type LoopPhase = 'plan' | 'build' | 'test' | 'passed' | 'failed';
+
+export type LoopRole = Exclude<LoopPhase, 'passed' | 'failed'>;
 
 export type LoopState = { on: boolean; max: number; round: number; phase: LoopPhase | null };
 
@@ -297,6 +301,9 @@ export type SavedSession = {
 };
 
 export const COMPACT_AT = 200_000;
+
+// Where the context meter fills and auto-compact runs: 80% of the model's window, or COMPACT_AT when it is not known.
+export const compactAt = (contextWindow?: number | null) => (contextWindow ? Math.round(contextWindow * 0.8) : COMPACT_AT);
 
 export const STALE_MS = 12 * 60 * 60 * 1000;
 

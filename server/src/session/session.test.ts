@@ -143,6 +143,35 @@ describe('AgentSession turns', () => {
     expect(s.state.events.some((e) => e.kind === 'system' && e.text === 'Build cycle stopped: the plan was not approved')).toBe(true);
   });
 
+  it('takes the plan approval from the reply when the plan step ends without ExitPlanMode', async () => {
+    const { s, handle } = fakeSession();
+    Object.assign(s.driver, { q: { interrupt: vi.fn(), setModel: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
+    s.setLoop(true);
+    await s.prompt('build it');
+    const reply = (uuid: string, text: string) => handle({ type: 'result', subtype: 'success', uuid, result: text, total_cost_usd: 0, is_error: false });
+    reply('r1', 'Drop the users table\nAPPROVAL: NEEDED, deletes data');
+    expect(s.state.pending).toHaveLength(1);
+    s.answerPermission(s.state.pending[0].id, false);
+    await new Promise((r) => setTimeout(r));
+    expect(s.state.session.loop.phase).toBe('failed');
+
+    const next = fakeSession();
+    Object.assign(next.s.driver, { q: { interrupt: vi.fn(), setModel: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
+    next.s.setLoop(true);
+    await next.s.prompt('build it');
+    next.handle({ type: 'result', subtype: 'success', uuid: 'r2', result: 'Edit a.ts\nAPPROVAL: NOT NEEDED', total_cost_usd: 0, is_error: false });
+    expect(next.s.state.pending).toHaveLength(0);
+    expect(next.s.state.session.loop.phase).toBe('build');
+  });
+
+  it('runs the build cycle on the driver\'s role models', () => {
+    const { s } = fakeSession();
+    expect(s.driver.roleModel('test')).toEqual({ model: 'claude-sonnet-5-5' });
+    Object.assign(s.driver, { openrouter: true });
+    expect(s.driver.roleModel('plan')).toEqual({ model: 'openrouter:opus' });
+    expect(s.driver.roleModel('test')).toEqual({ model: 'openrouter:sonnet' });
+  });
+
   it('switches the build cycle off when it passes, so the next message is a normal turn', async () => {
     const { s, handle } = fakeSession();
     s.setLoop(true);
@@ -647,13 +676,49 @@ describe('compacting', () => {
 
   it('compacts automatically when a turn ends past 200k, once', () => {
     const { s, result } = fakeSession();
+    const compact = vi.spyOn(s.driver, 'compact');
     s.sendPrompt('big task');
     s.state.session.context = 210_000;
     result('r1');
-    expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: '/compact' });
+    expect(compact).toHaveBeenCalledOnce();
     expect(s.state.session.compacting).toBe(true);
     result('r2');
     expect(s.state.session.running).toBe(false);
+  });
+
+  it('/compact calls the driver and sends no prompt', () => {
+    const { s } = fakeSession();
+    const compact = vi.spyOn(s.driver, 'compact').mockImplementation(() => {});
+    const send = vi.spyOn(s.driver, 'send');
+    s.sendPrompt('/compact');
+    expect(compact).toHaveBeenCalledOnce();
+    expect(send).not.toHaveBeenCalled();
+    expect(s.state.session.compacting).toBe(true);
+  });
+
+  it('sends a steer held while compacting once the compaction ends', async () => {
+    const { s, handle } = fakeSession();
+    vi.spyOn(s.driver, 'compact').mockImplementation(() => {});
+    const send = vi.spyOn(s.driver, 'send');
+    s.sendPrompt('/compact');
+    await s.steer('after compact', 'm1');
+    expect(send).not.toHaveBeenCalled();
+    handle({ type: 'system', subtype: 'compact_boundary', compact_metadata: { trigger: 'manual', pre_tokens: 295_000, post_tokens: 12_000 } });
+    expect(send).toHaveBeenCalledWith('after compact', 'm1');
+  });
+
+  it('compacts at 80% of the context window when the agent reports one', () => {
+    const { s, result } = fakeSession();
+    const compact = vi.spyOn(s.driver, 'compact').mockImplementation(() => {});
+    s.sendPrompt('big task');
+    s.state.session.contextWindow = 100_000;
+    s.state.session.context = 79_000;
+    result('r1');
+    expect(compact).not.toHaveBeenCalled();
+    s.sendPrompt('more');
+    s.state.session.context = 81_000;
+    result('r2');
+    expect(compact).toHaveBeenCalledOnce();
   });
 
   it('stops compacting and says why when it fails', () => {

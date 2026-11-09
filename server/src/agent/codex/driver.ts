@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Account, Capabilities, McpServer, Provider } from '../../../../shared/protocol.js';
+import type { Account, Capabilities, Effort, LoopRole, McpServer, Provider } from '../../../../shared/protocol.js';
 import { errText } from '../../../../shared/util.js';
 import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '../types.js';
 import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, type Ask } from './approvals.js';
@@ -13,6 +13,16 @@ import { planUsage } from './usage.js';
 
 const USAGE_EVERY = 10 * 60_000;
 const MCP_STATUS: Record<string, string> = { connected: 'connected', authenticationRequired: 'needs-auth', failed: 'failed', disabled: 'disabled' };
+
+// Slash commands Codex has no equivalent for; the session owns these four.
+const COMMANDS = [
+  { name: 'loop', description: 'Repeat a prompt on an interval' },
+  { name: 'goal', description: 'Work toward a goal and check it on an interval' },
+  { name: 'compact', description: 'Compact the conversation' },
+  { name: 'code-review', description: 'Review the working tree or a PR' },
+];
+
+const ROLE_EFFORT: Record<LoopRole, Effort> = { plan: 'high', build: 'high', test: 'medium' };
 
 export const codexDriver = (resume?: string, fork = false): DriverFactory => (host) => new CodexDriver(host, resume, fork);
 
@@ -82,7 +92,7 @@ export class CodexDriver implements AgentDriver {
     if (this.fork) this.host.system('Forked into a new chat');
     this.fork = false;
     this.threadId = res.thread.id;
-    this.host.setSession({ sessionId: res.thread.id, model: res.model, permissionMode: this.mode });
+    this.host.setSession({ sessionId: res.thread.id, model: res.model, permissionMode: this.mode, commands: COMMANDS });
     void noteThread(res.thread.id, { cwd: this.host.cwd });
     void this.loadModels(rpc);
     void this.loadUsage();
@@ -238,6 +248,33 @@ export class CodexDriver implements AgentDriver {
 
   dropInput() {
     return 0;
+  }
+
+  compact() {
+    this.start();
+    this.queue = this.queue.then(async () => {
+      try {
+        await this.ready;
+        await this.rpc!.request('thread/compact/start', { threadId: this.threadId });
+      } catch (err) {
+        this.host.compactFailed(errText(err));
+        this.host.turnResult({ id: randomUUID(), ok: true, text: '', costUsd: 0, isError: false });
+      }
+    });
+  }
+
+  command(name: string) {
+    this.host.system(`/${name} is not available on Codex`);
+    return true;
+  }
+
+  review() {
+    this.host.turnResult({ id: randomUUID(), ok: false, text: 'Code review on Codex needs the AgentView tools', costUsd: 0, isError: true });
+  }
+
+  roleModel(role: LoopRole) {
+    const model = this.models.find((m) => m.isDefault)?.id ?? this.host.state.session.model;
+    return model ? { model, effort: ROLE_EFFORT[role] } : null;
   }
 
   async interrupt() {

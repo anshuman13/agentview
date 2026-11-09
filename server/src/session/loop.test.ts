@@ -41,7 +41,7 @@ describe('advance', () => {
     expect(a.step?.mode).toBe('auto');
     const b = advance(a.state, 'done');
     expect(b.state.phase).toBe('test');
-    expect(b.step?.model).toContain('sonnet');
+    expect(b.step?.phase).toBe('test');
     expect(b.step?.label).toBe('Test 1/2');
   });
 

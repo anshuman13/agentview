@@ -1,5 +1,5 @@
 import { query, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
-import type { Account, Capabilities, Effort, Provider } from '../../../../shared/protocol.js';
+import type { Account, Capabilities, Effort, LoopRole, Provider } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, DriverFactory, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { InputQueue } from './inputQueue.js';
@@ -21,6 +21,8 @@ import { LiveText } from './stream.js';
 import { historyFrom } from './transcript.js';
 import { expandChatMentions } from './chatMentions.js';
 import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
+
+const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: 'claude-sonnet-5-5' } as const;
 
 const USAGE_EVERY = 10 * 60_000;
 
@@ -289,6 +291,22 @@ export class ClaudeDriver implements AgentDriver {
 
   dropInput() {
     return this.input.drop();
+  }
+
+  compact(instructions = '') {
+    this.send(`/compact ${instructions}`.trim());
+  }
+
+  command() {
+    return false;
+  }
+
+  review(target: 'local' | number) {
+    this.send(target === 'local' ? '/code-review' : `/code-review ${target}`);
+  }
+
+  roleModel(role: LoopRole) {
+    return { model: this.openrouter ? `${OPENROUTER_PREFIX}${role === 'test' ? 'sonnet' : 'opus'}` : LOOP_MODELS[role] };
   }
 
   async rewind(id: string) {

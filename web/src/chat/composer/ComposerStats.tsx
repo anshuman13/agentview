@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { send, sinceHeard, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
-import { COMPACT_AT, type ChatEvent } from '../../../../shared/protocol';
+import { compactAt, type ChatEvent } from '../../../../shared/protocol';
 import { contextPercent, filesEdited } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
@@ -22,10 +22,12 @@ export function ComposerStats({ hint }: { hint: string }) {
   const running = useStore((s) => s.session.running);
   const compacting = useStore((s) => s.session.compacting);
   const context = useStore((s) => s.session.context);
+  const contextWindow = useStore((s) => s.session.contextWindow);
   const edited = useStore((s) => editedOf(s.events));
   const stale = useStaleSeconds();
-  const pct = contextPercent(context);
-  const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
+  const pct = contextPercent(context, contextWindow);
+  const limit = compactAt(contextWindow);
+  const level = context === null ? '' : context >= limit ? 'over' : context >= limit * 0.75 ? 'near' : '';
   return (
     <div className="cp-under">
       {hint && <span className="cp-hint">{hint}</span>}

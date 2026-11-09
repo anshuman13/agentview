@@ -1,4 +1,4 @@
-import type { Account, AgentEvent, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
+import type { Account, AgentEvent, CacheInfo, Capabilities, ChatEvent, Effort, LoopRole, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
 
@@ -35,6 +35,14 @@ export interface AgentDriver {
   // 'next' hands the message to Claude at its next step without stopping the turn.
   send(text: string, id?: string, priority?: 'next'): void;
   dropInput(): number;
+  // Compacts the conversation; the driver reports the end through host.compacted or host.compactFailed.
+  compact(instructions?: string): void;
+  // A /x the session does not own. False means the session sends the text as a prompt; true means the driver handled or refused it.
+  command(name: string, args: string): boolean;
+  // Starts a code review of the working tree or a PR; the findings reach host.reportFindings.
+  review(target: 'local' | number): void;
+  // The model a build cycle step runs on; null keeps the chat's own.
+  roleModel(role: LoopRole): { model: string; effort?: Effort } | null;
   // cancelQueued also drops messages sent with 'next' that Claude has not read yet.
   interrupt(cancelQueued?: boolean): Promise<void>;
   setModel(model: string): Promise<{ model: string; team: boolean }>;

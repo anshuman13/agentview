@@ -8,6 +8,8 @@ import { goalMet } from './repeat.js';
 import { roundResult } from './runs.js';
 import type { AgentSession } from './session.js';
 
+const COMPACT = Symbol('compact');
+
 export class Turn {
   count = 0;
   lastResult = '';
@@ -115,6 +117,7 @@ export class Turn {
       return;
     }
     if (s.waiting.pending.length && s.limit.reset) this.releaseHeld();
+    if (idle && !this.lastError && s.cycle.askReplyApproval(this.lastResult)) return;
     const before = s.state.session.loop;
     const loop = idle ? advance(before, this.lastResult, { planDenied: s.cycle.planDenied, failed: this.lastError }) : null;
     if (loop) {
@@ -125,6 +128,7 @@ export class Turn {
     s.setSession({ running: this.count > 0 || next !== null || Boolean(loop?.step), compacting: false, stopping: false });
     if (loop && !loop.step && loop.note) s.cycle.end(loop.note);
     if (loop?.step) void s.cycle.runStep(loop.step);
+    else if (next === COMPACT) s.compact();
     else if (next) s.sendPrompt(next);
     else if (stopped) {
       // Messages typed while the stop was in flight go on in a fresh turn.
@@ -150,7 +154,7 @@ export class Turn {
   private followUp() {
     const plan = this.takePlanChange();
     if (plan) return plan;
-    if (this.s.compaction.due(this.s.state.session.context ?? 0)) return '/compact';
+    if (this.s.compaction.due(this.s.state.session.context ?? 0, this.s.state.session.contextWindow)) return COMPACT;
     return this.s.waiting.dequeue() ? null : this.s.hooks.afterTurn();
   }
 

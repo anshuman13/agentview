@@ -1,7 +1,7 @@
 import { parseWhen, stripWhen } from '../../codex/data/tasks/engine';
 import { match } from '../../workspace/FileSwitcher';
 import { toolId } from '../../ops/mcpHelpers';
-import { COMPACT_AT, type Account, type ChatEvent, type ChatRun, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
+import { compactAt, type Account, type ChatEvent, type ChatRun, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
 import { apiUrl, fetchJson } from '../../app/api';
 import { createTerm, listTerms } from '../../workspace/termApi';
 import { clock, isBlock, span } from '../../../../shared/util';
@@ -115,7 +115,7 @@ export function turnEnd(events: ChatEvent[]) {
   return 'Claude finished';
 }
 
-export const contextPercent = (context: number | null) => (context === null ? null : Math.min(100, Math.round((context / COMPACT_AT) * 100)));
+export const contextPercent = (context: number | null, contextWindow?: number | null) => (context === null ? null : Math.min(100, Math.round((context / compactAt(contextWindow)) * 100)));
 
 const ENDED: Record<string, string> = { passed: 'Build cycle passed', failed: 'Build cycle stopped' };
 

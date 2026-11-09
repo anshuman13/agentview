@@ -6,13 +6,15 @@ import type { FileUpdateChange, ThreadItem, TokenUsage, Turn } from './protocol.
 
 const FLUSH_MS = 80;
 
-type Sink = Pick<AgentHost, 'cwd' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'noteFile' | 'captureEdit'>;
+type Sink = Pick<AgentHost, 'cwd' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'compacted' | 'noteFile' | 'captureEdit'>;
 type Live = { ev: Extract<ChatEvent, { kind: 'assistant' }>; sent: number; timer?: ReturnType<typeof setTimeout> };
 
 // Turns the app-server's notifications into chat events: assistant text streams in, commands, file changes and MCP calls become tool steps.
 export class CodexStream {
   private live = new Map<string, Live>();
   private lastText = '';
+  private context = 0;
+  private compactedTurn: string | null = null;
   // The files each file change item announced, for its approval card.
   readonly files = new Map<string, FileUpdateChange[]>();
 
@@ -22,9 +24,10 @@ export class CodexStream {
     switch (method) {
       case 'item/started': return this.started(params.item);
       case 'item/agentMessage/delta': return this.delta(params.itemId, params.delta);
-      case 'item/completed': return this.completed(params.item);
+      case 'item/completed': return this.completed(params.item, params.turnId);
       case 'turn/completed': return this.turnDone(params.turn);
-      case 'thread/tokenUsage/updated': return this.host.setSession({ context: (params.tokenUsage as TokenUsage).last.totalTokens || null });
+      case 'thread/tokenUsage/updated': return this.usage(params.tokenUsage);
+      case 'thread/compacted': return this.compacted(params.turnId);
       case 'error': return params.willRetry ? undefined : this.host.system(`Codex: ${params.error.message}`, true);
     }
   }
@@ -42,11 +45,23 @@ export class CodexStream {
     for (const ev of startedEvents(item, Date.now())) this.host.pushEvent(ev);
   }
 
-  private completed(item: ThreadItem) {
+  private completed(item: ThreadItem, turnId: string) {
     if (item.type === 'agentMessage') return this.message(item.id, item.text);
-    if (item.type === 'contextCompaction') return this.host.system('Context compacted');
+    if (item.type === 'contextCompaction') return this.compacted(turnId);
     for (const ev of finishedEvents(item, Date.now())) this.host.pushEvent(ev);
     if (item.type === 'fileChange' && item.status === 'completed') for (const c of item.changes) this.host.noteFile(path.relative(this.host.cwd, this.abs(c.path)), 'tool');
+  }
+
+  private usage(u: TokenUsage) {
+    this.context = u.last.totalTokens;
+    this.host.setSession({ context: this.context || null, contextWindow: u.modelContextWindow });
+  }
+
+  // The item and the thread notification both announce one compaction.
+  private compacted(turnId: string) {
+    if (this.compactedTurn === turnId) return;
+    this.compactedTurn = turnId;
+    this.host.compacted(this.context, null);
   }
 
   private abs(file: string) {

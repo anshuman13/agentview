@@ -22,6 +22,7 @@ function run() {
     system: () => undefined,
     setSession: (p) => void session.push(p),
     turnResult: (r) => void results.push(r),
+    compacted: () => undefined,
     noteFile: (rel) => void noted.push(rel),
     captureEdit: (f) => void captured.push(f),
   });
@@ -61,7 +62,7 @@ describe('CodexStream', () => {
   it('ends the turn with the last reply and records the context size', () => {
     const { results, session } = run();
     expect(results).toEqual([{ id: 'turn1:result', ok: true, text: 'Added the greeting.', costUsd: 0, isError: false }]);
-    expect(session).toEqual([{ context: 1234 }]);
+    expect(session).toEqual([{ context: 1234, contextWindow: 200000 }]);
   });
 
   it('reports a failed turn with its error', () => {

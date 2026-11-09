@@ -297,7 +297,8 @@ while that chat is open.
 
 ## Context
 
-The meter shows the tokens in context and turns red past 200k. AgentView then runs `/compact` when the turn ends.
+The meter shows the tokens in context and turns red past 200k, or past 80% of the model's context window when the agent
+reports one (Codex does). AgentView then compacts the conversation when the turn ends.
 A failed compact is retried once the context has grown by another 20k tokens.
 
 ## Models
@@ -374,10 +375,10 @@ in the chat list until its next message.
 
 ## Build cycle
 
-The build cycle setting in the composer turns a prompt into a plan, build, test cycle. Opus plans in plan mode, detailed
+The build cycle setting in the composer turns a prompt into a plan, build, test cycle. Opus plans in plan mode (on Codex the default model, with high effort for plan and build and medium for test), detailed
 enough that someone who missed the conversation could build from it, and starts building as soon as the plan is
 ready. A plan that deletes data, changes a schema, auth or security, reaches outside the repo, pushes or deploys,
-or guesses at an open question waits for your approval instead, and rejecting it stops the cycle. Sonnet then tests the result as a separate model and ends with a verdict, and
+or guesses at an open question waits for your approval instead (from its APPROVAL line when the agent has no plan tool), and rejecting it stops the cycle. Sonnet then tests the result as a separate model and ends with a verdict, and
 Opus fixes whatever the tester found, up to the number of rounds you pick. Phases show as violet markers in the
 timeline and transcript, the composer footer shows the round, and Stop ends the cycle. Claude
 exiting during a step ends it too. When a cycle ends (passed, failed or stopped) it switches itself off, so the next

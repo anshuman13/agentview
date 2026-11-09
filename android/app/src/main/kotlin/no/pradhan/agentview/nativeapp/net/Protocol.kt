@@ -185,6 +185,7 @@ data class SessionInfo(
     val models: List<ModelInfo> = emptyList(),
     val commands: List<CommandInfo> = emptyList(),
     val context: Long? = null,
+    val contextWindow: Long? = null,
     val compacting: Boolean = false,
     val stopping: Boolean = false,
     val pr: Int? = null,

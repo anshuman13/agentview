@@ -8,6 +8,8 @@ import type { AgentSession } from './session.js';
 export class BuildCycle {
   run: string | undefined;
   planDenied = false;
+  // ExitPlanMode came, or its approval was asked from the reply, so the plan step has no approval left to ask.
+  private planAnswered = false;
   private prevModel: string | null = null;
 
   constructor(private s: AgentSession) {}
@@ -16,7 +18,7 @@ export class BuildCycle {
     if (!on) this.s.runs.end(this.run, 'you stopped it');
     const next = withLoop(this.s.state.session.loop, on, max);
     this.s.setSession({ loop: next });
-    this.s.system(on ? `Build cycle on: Opus plans and builds, Sonnet tests, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Build cycle off');
+    this.s.system(on ? `Build cycle on: plan, build and test, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Build cycle off');
   }
 
   restore(loop: LoopState) {
@@ -30,17 +32,20 @@ export class BuildCycle {
     this.s.pushEvent({ id, kind: 'user', text: task, at: Date.now() });
     this.prevModel = state.session.model;
     this.planDenied = false;
+    this.planAnswered = false;
     this.s.setSession({ loop: { ...state.session.loop, round: 1, phase: 'plan' } });
     this.run = this.s.runs.start({ kind: 'cycle', sessionId: state.session.sessionId ?? '', chatId: this.s.id, title: links.title(task), what: task, provider: state.session.provider, round: 1, max: state.session.loop.max });
     await this.runStep(planStep(task), false);
   }
 
   async runStep(step: LoopStep, marker = true) {
-    const { state, turn, settings } = this.s;
+    const { state, turn, settings, driver } = this.s;
+    const role = driver.roleModel(step.phase);
     turn.start();
     this.s.setSession({ running: true });
     try {
-      if (state.session.model !== step.model) await settings.setModel(step.model);
+      if (role && state.session.model !== role.model) await settings.setModel(role.model);
+      if (role?.effort && state.session.effort !== role.effort) await settings.setEffort(role.effort);
       if (state.session.permissionMode !== step.mode) await settings.setPermissionMode(step.mode);
     } catch (err) {
       // Nothing was sent, so no turn will end and clear running; stop the loop here.
@@ -63,6 +68,7 @@ export class BuildCycle {
 
   planDone(toolName: string, input: Record<string, unknown>, opts: AskOptions): Promise<Decision> | null {
     const plan = toolName === 'ExitPlanMode' && this.s.state.session.loop.phase === 'plan';
+    if (plan) this.planAnswered = true;
     if (plan && needsApproval(String(input.plan ?? ''))) {
       return this.s.approvals.ask(toolName, input, opts).then((d) => {
         this.planDenied = d.behavior === 'deny';
@@ -71,6 +77,17 @@ export class BuildCycle {
     }
     const allow = plan || toolName.endsWith('__set_status');
     return allow ? Promise.resolve({ behavior: 'allow' as const, updatedInput: input }) : null;
+  }
+
+  // A plan step that ended without ExitPlanMode takes its approval from the APPROVAL line of the reply; true while the card is open.
+  askReplyApproval(reply: string) {
+    if (this.s.state.session.loop.phase !== 'plan' || this.planAnswered || !needsApproval(reply)) return false;
+    this.planAnswered = true;
+    void this.s.approvals.ask('ExitPlanMode', { plan: reply }, { signal: new AbortController().signal }).then((d) => {
+      this.planDenied = d.behavior === 'deny';
+      this.s.turn.ended();
+    });
+    return true;
   }
 
   end(note: string | null, why = note?.replace(/^Build cycle (?:stopped|passed): /, '') ?? 'ended') {

@@ -246,13 +246,26 @@ export class AgentSession implements AgentHost {
   }
 
   enqueue(text: string, id?: string) {
+    const [, name, args = ''] = /^\/([\w-]+)(?:\s+(.*))?$/s.exec(text.trim()) ?? [];
+    if (name === 'compact') return this.compact(args);
+    if (name && name !== 'code-review' && this.driver.command(name, args)) return;
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
+    this.begin();
+    if (name === 'code-review' && /^\d*$/.test(args)) this.driver.review(args ? Number(args) : 'local');
+    else this.driver.send(text, id);
+  }
+
+  compact(instructions?: string) {
+    this.begin();
+    this.compaction.start();
+    this.driver.compact(instructions);
+  }
+
+  private begin() {
     this.start();
     this.turn.start();
     this.failed = false;
     this.setSession({ running: true });
-    if (/^\/compact\b/.test(text.trim())) this.compaction.start();
-    this.driver.send(text, id);
   }
 
   async rewind(id: string) {

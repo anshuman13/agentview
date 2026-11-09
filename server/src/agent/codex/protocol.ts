@@ -27,7 +27,7 @@ export type Thread = { id: string; cwd: string; preview: string; name: string | 
 export type RateLimitWindow = { usedPercent: number; windowDurationMins: number | null; resetsAt: number | null };
 export type RateLimits = { primary: RateLimitWindow | null; secondary: RateLimitWindow | null };
 
-export type TokenUsage = { last: { totalTokens: number } };
+export type TokenUsage = { last: { totalTokens: number }; modelContextWindow: number | null };
 
 export type McpServerStatus = {
   name: string;

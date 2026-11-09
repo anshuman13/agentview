@@ -177,7 +177,7 @@ private fun ComposerToolbar(hub: Hub, s: ComposerState, session: SessionInfo?, r
     val c = av
     val text = s.text
     val typed = text.text.isNotBlank()
-    val pct = contextPercent(session?.context)
+    val pct = contextPercent(session?.context, session?.contextWindow)
     Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
         AttachButton(hub, onUploading) { path -> val t = appendWord(text.text, "[Image: $path] "); s.set(TextFieldValue(t, TextRange(t.length))) }
         Row(Modifier.weight(1f)) {
