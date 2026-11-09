@@ -1,12 +1,12 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { getState, loadEarlier, notice, send, setUi, useStore } from '../app/store';
+import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { forgetSeenBefore, getState, loadEarlier, notice, seenBefore, send, setUi, useStore } from '../app/store';
 import { assistantStore } from '../codex/data';
 import { quoteReply, replyNote } from './composerLogic';
 import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
-import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
+import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, duration, newMarker, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural, pressable } from '../ui/util';
 import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../shared/protocol';
@@ -45,6 +45,13 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
   const last = events[events.length - 1];
   const runs = useMemo(() => exploreRuns(items), [items]);
   const [openRuns, setOpenRuns] = useState(() => new Set<string>());
+  const [mark] = useState(() => {
+    const id = getState().session.sessionId;
+    const m = { seen: id ? seenBefore(id) : 0, openedAt: Date.now() };
+    if (id) forgetSeenBefore(id);
+    return m;
+  });
+  const newId = useMemo(() => newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt), [items, events, mark]);
   const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
 
   useEffect(() => {
@@ -142,7 +149,8 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
         if (i > 0 && folded.has(it.id)) return null;
         const run = runs.get(it.id);
         if (run && !openRuns.has(it.id)) return <Explored key={it.id} label={exploreLabel(run)} onOpen={() => setOpenRuns(new Set(openRuns).add(it.id))} />;
-        return <Row key={it.id} it={it} cwd={cwd} />;
+        const row = <Row key={it.id} it={it} cwd={cwd} />;
+        return it.id === newId ? <Fragment key={it.id}><div className="tr-new"><span>New</span></div>{row}</Fragment> : row;
       })}
       </div>
     </div>

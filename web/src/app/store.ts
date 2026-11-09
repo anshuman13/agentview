@@ -147,9 +147,15 @@ export function loadSeen() {
   fetch(apiUrl(SEEN_URL)).then((r) => r.json()).then((seen) => seen && typeof seen === 'object' && !Array.isArray(seen) && set({ seen })).catch(() => {});
 }
 
+// The seen time a chat had before this page last opened it, for the transcript's New line.
+const before: Record<string, number> = {};
+export const seenBefore = (sessionId: string) => (sessionId in before ? before[sessionId] : state.seen[sessionId] ?? 0);
+export const forgetSeenBefore = (sessionId: string) => void delete before[sessionId];
+
 // The stream connect reloads the server's times over this local one.
 export function markSeen(sessionId: string | null | undefined) {
   if (!sessionId) return;
+  if (!(sessionId in before)) before[sessionId] = state.seen[sessionId] ?? 0;
   set((s) => ({ seen: { ...s.seen, [sessionId]: Date.now() } }));
   fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}`), { method: 'POST' }).catch(() => {});
 }

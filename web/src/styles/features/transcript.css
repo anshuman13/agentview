@@ -92,6 +92,8 @@
 .tr-sub > .tr-file { margin: 3px 0; }
 .tr-sub > .tr-agent-box { margin: var(--sp-1) 0; }
 .tr-agent-box > .tr-report { margin: var(--sp-1) 0 var(--sp-4) 22px; }
+.tr-new { display: flex; align-items: center; gap: var(--sp-3); color: var(--danger); font-size: var(--fs-xs); font-weight: var(--type-headline-weight); }
+.tr-new::after { content: ''; flex: 1; border-top: 1px solid var(--danger); }
 .tr-more { font-size: var(--fs-xs); line-height: var(--size-row); color: var(--fg-faint); cursor: pointer; }
 @media (hover: hover) { .tr-more:hover { color: var(--fg); } }
 

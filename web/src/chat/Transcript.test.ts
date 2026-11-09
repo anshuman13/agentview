@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone } from './steps';
+import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker } from './steps';
 import { editCount, replyLine, sumEdits } from '../../../shared/edits';
 import { chatLine } from '../sessions/folders';
 import type { ChatEvent, LiveChat } from '../../../shared/protocol';
@@ -185,5 +185,18 @@ describe('exploreRuns', () => {
     expect([...runs.keys()]).toEqual([steps[0].id]);
     expect(runs.get(steps[0].id)!.map((s) => s.id)).toEqual(steps.map((s) => s.id));
     expect(exploreLabel(runs.get(steps[0].id)!)).toBe('2 files, 1 search');
+  });
+});
+
+describe('newMarker', () => {
+  const items = [{ id: 'u', kind: 'user' }, { id: 'a', kind: 'assistant' }, { id: 'b', kind: 'assistant' }] as never[];
+  const ats = new Map([['u', 5], ['a', 10], ['b', 20]]);
+  it('marks the first reply after the last visit and before opening', () => {
+    expect(newMarker(items, ats, 12, 30)).toBe('b');
+    expect(newMarker(items, ats, 1, 30)).toBe('a');
+  });
+  it('has no line for a never-seen chat or nothing new', () => {
+    expect(newMarker(items, ats, 0, 30)).toBeNull();
+    expect(newMarker(items, ats, 25, 30)).toBeNull();
   });
 });
