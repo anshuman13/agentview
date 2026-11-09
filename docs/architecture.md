@@ -87,8 +87,14 @@ The native Android client in `android/` speaks the same protocol; see [Phone and
   (`web/src/app/api.ts`) or the Codex data store (`web/src/codex/data/`); components never call `fetch` themselves.
   Server: `http/` routes call `session/`, `workspace/` and `integrations/`; only `agent/` talks to the Claude SDK.
   Android mirrors web: screens read state holders, which call `net/`.
-- Logic that both web and Android carry (parsers, queue order, labels) has one case list in `shared/fixtures/*.json`
-  that the vitest and the Kotlin unit test both run, so a fix on one side fails the other side's test until it is mirrored.
+- Server calls on web live in a feature API file (`chat/chatApi.ts`, `workspace/fileApi.ts`, `ops/opsApi.ts`,
+  `sessions/sessionApi.ts`, `sessions/folders.ts`) built on `fetchJson` or `apiUrl`/`api()` from `app/api.ts`. A new call
+  goes in the API file of its feature.
+- Files by role: `Foo.tsx` renders, `useFoo.ts` holds its state and effects, `fooLogic.ts` (Android `FooLogic.kt`) holds
+  pure logic with its tests. Folders are features (`chat`, `sessions`, `workspace`, `ops`, `codex`), not kinds of file.
+- Logic that web and Android both carry (prompts, parsers, queue order, labels) changes on both sides in the same commit.
+  Where a `shared/fixtures/*.json` case list exists, both test suites run it; add a case there when you change that logic.
+- No abstraction with one caller, no generic frameworks, no new dependency for something a few lines do.
 - Size is a hint, not a rule: aim for functions under about 50 lines, components under about 80 and files under about
   350. A file or function that does one coherent thing (a switch over message types, a route table) may stay longer.
   Split by responsibility, never just to meet a number.

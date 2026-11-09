@@ -14,6 +14,7 @@ Look for, in this order:
 2. Duplication inside the diff: the same lines in two callers that should be one function.
 3. Names: a function or variable a reader would misread, or that breaks the naming the file already uses.
 4. Shape: logic placed in a component that belongs in the data layer the file already has (or the reverse), a helper exported when only one caller uses it, a parameter that every caller passes the same value for.
+4b. Conventions in docs/architecture.md, section Code shape: a `fetch` in a component or hook outside an API file, a call reaching up a layer, logic that web and Android both carry changed on one side only (grep the other side for the same prompt, label or rule), a file or folder that groups by kind instead of feature. Line counts are hints: flag a long function only when it does several jobs.
 5. Noise: comments that restate the code, dead branches, defensive checks for cases that cannot happen, abstractions with one use.
 6. Readability: a line that needs a second read; say how to split or rename it.
 

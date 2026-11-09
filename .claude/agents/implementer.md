@@ -14,6 +14,7 @@ While coding:
 - Smallest diff that meets every Behaviour line. No refactors, no renames, no extra options.
 - Match the surrounding style: no comments or docstrings unless the file already has them, no em dashes.
 - UI uses tokens from web/src/styles/tokens.css, the primitives in web/src/ui and the Patterns section of docs/design-system.md (Report card, Row density, Status language). No pre-wrapped hub text, no bare URLs, at most two actions on a row.
+- Follow docs/architecture.md, section Code shape: no `fetch` in components (use the feature's API file), files by role (`Foo.tsx`, `useFoo.ts`, `fooLogic.ts`), logic web and Android both carry changed on both sides in the same commit.
 - New hub columns go through the ensure-column path in assistant/src/core/db.ts.
 - Tests only for real logic that can break, in an existing test file when one fits. No tests for trivial code, timing or "does not throw".
 - Keep docs in step when the feature changes what docs/features.md, docs/autopilot.md or docs/assistant.md describe.
