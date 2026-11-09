@@ -30,13 +30,17 @@ export class CodexRpc {
   static async open(cwd: string, handlers: RpcHandlers) {
     const rpc = new CodexRpc(cwd, handlers);
     try {
-      await rpc.request('initialize', { clientInfo: { name: 'agentview', title: 'AgentView', version: '1' }, capabilities: null });
+      await rpc.initialize();
     } catch (err) {
       rpc.close();
       throw err;
     }
-    rpc.send({ method: 'initialized' });
     return rpc;
+  }
+
+  async initialize() {
+    await this.request('initialize', { clientInfo: { name: 'agentview', title: 'AgentView', version: '1' }, capabilities: null });
+    this.send({ method: 'initialized' });
   }
 
   request<T = any>(method: string, params?: unknown): Promise<T> {

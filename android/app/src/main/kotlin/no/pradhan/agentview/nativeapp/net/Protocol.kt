@@ -160,7 +160,7 @@ data class ChatRun(
 data class Edits(val add: Int = 0, val del: Int = 0)
 
 @Serializable
-data class ModelInfo(val value: String, val displayName: String = "", val description: String = "")
+data class ModelInfo(val value: String, val displayName: String = "", val description: String = "", val efforts: List<String>? = null)
 
 // shared/protocol.ts Capabilities: what the chat's driver supports; a missing field counts as supported.
 @Serializable

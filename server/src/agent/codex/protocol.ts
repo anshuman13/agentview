@@ -37,5 +37,11 @@ export type McpServerStatus = {
   serverInfo: { name: string; version: string } | null;
 };
 
+export type UserInputQuestion = { id: string; header: string; question: string; options: Array<{ label: string; description: string }> | null };
+export type PermissionProfile = { network?: { enabled: boolean | null } | null; fileSystem?: { read?: string[] | null; write?: string[] | null; entries?: unknown[] } | null };
+export type PermissionsResponse = { permissions: PermissionProfile; scope: 'turn' | 'session' };
+export type ElicitationParams = { serverName: string; mode: string; message: string; url?: string; requestedSchema?: { properties?: Record<string, unknown> } | null };
+export type ElicitationResponse = { action: 'accept' | 'decline' | 'cancel'; content: null; _meta: null };
+
 export type ApprovalMethod = 'item/commandExecution/requestApproval' | 'item/fileChange/requestApproval';
 export type ApprovalDecision = 'accept' | 'acceptForSession' | 'decline' | 'cancel';

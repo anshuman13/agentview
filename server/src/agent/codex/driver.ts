@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { Account, Capabilities, McpServer, Provider } from '../../../../shared/protocol.js';
 import { errText } from '../../../../shared/util.js';
-import type { AgentDriver, AgentHost, DriverFactory, History } from '../types.js';
-import { askFor, decisionFor, policyFor } from './approvals.js';
+import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '../types.js';
+import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, type Ask } from './approvals.js';
 import { NOT_SIGNED_IN } from './binary.js';
 import { historyEvents } from './events.js';
-import type { ApprovalMethod, CodexModel, McpServerStatus, RateLimits, Thread, UserInput } from './protocol.js';
+import type { ApprovalMethod, CodexModel, ElicitationParams, McpServerStatus, PermissionProfile, RateLimits, Thread, UserInput, UserInputQuestion } from './protocol.js';
 import { CodexRpc } from './rpc.js';
 import { CodexStream } from './stream.js';
 import { noteThread } from './threads.js';
@@ -72,7 +72,7 @@ export class CodexDriver implements AgentDriver {
   }
 
   private async open(rpc: CodexRpc) {
-    await rpc.request('initialize', { clientInfo: { name: 'agentview', title: 'AgentView', version: '1' }, capabilities: null });
+    await rpc.initialize();
     const { account, requiresOpenaiAuth } = await rpc.request<{ account: unknown; requiresOpenaiAuth: boolean }>('account/read', { refreshToken: false });
     if (!account && requiresOpenaiAuth) throw new Error(NOT_SIGNED_IN);
     const { approvalPolicy, sandbox } = policyFor(this.mode);
@@ -99,7 +99,7 @@ export class CodexDriver implements AgentDriver {
     try {
       const { data } = await rpc.request<{ data: CodexModel[] }>('model/list', {});
       this.models = data.filter((m) => !m.hidden);
-      this.host.setSession({ models: this.models.map((m) => ({ value: m.id, displayName: m.displayName, description: m.description })) });
+      this.host.setSession({ models: this.models.map((m) => ({ value: m.id, displayName: m.displayName, description: m.description, efforts: m.supportedReasoningEfforts.map((e) => e.reasoningEffort) })) });
     } catch (err) {
       process.stderr.write(`codex model/list failed: ${errText(err)}\n`);
     }
@@ -132,20 +132,49 @@ export class CodexDriver implements AgentDriver {
   }
 
   private async onRequest(method: string, params: any): Promise<unknown> {
-    if (method !== 'item/commandExecution/requestApproval' && method !== 'item/fileChange/requestApproval') throw new Error(`Unsupported request ${method}`);
-    return this.approve(method, params);
+    switch (method) {
+      case 'item/commandExecution/requestApproval':
+      case 'item/fileChange/requestApproval': return this.approve(method, params);
+      case 'item/tool/requestUserInput': return this.answer(params.questions);
+      case 'item/permissions/requestApproval': return this.grant(params);
+      case 'mcpServer/elicitation/request': return this.elicit(params);
+      default: throw new Error(`Unsupported request ${method}`);
+    }
   }
 
-  private async approve(method: ApprovalMethod, params: any) {
-    const ask = askFor(method, params, this.stream.files);
+  private async prompt(ask: Ask, always = false) {
     const ac = new AbortController();
     this.asks.add(ac);
     try {
-      const d = await this.host.ask(ask.tool, ask.input, { signal: ac.signal, title: ask.title, description: ask.detail, suggestions: [{ type: 'acceptForSession' }] });
-      return { decision: decisionFor(d, ac.signal.aborted) };
+      const d = await this.host.ask(ask.tool, ask.input, { signal: ac.signal, title: ask.title, description: ask.detail, ...(always && { suggestions: [{ type: 'acceptForSession' }] }) });
+      return { d, cancelled: ac.signal.aborted };
     } finally {
       this.asks.delete(ac);
     }
+  }
+
+  private async approve(method: ApprovalMethod, params: any) {
+    const { d, cancelled } = await this.prompt(askFor(method, params, this.stream.files), true);
+    return { decision: decisionFor(d, cancelled) };
+  }
+
+  private async answer(questions: UserInputQuestion[]) {
+    const { d } = await this.prompt(questionsAsk(questions));
+    return answersFor(questions, d);
+  }
+
+  private async grant(params: { reason: string | null; permissions: PermissionProfile }) {
+    const { d, cancelled } = await this.prompt(permissionsAsk(params), true);
+    return permissionsFor(params.permissions, d, cancelled);
+  }
+
+  private async elicit(params: ElicitationParams) {
+    if (hasFields(params)) {
+      this.host.system(`${params.serverName} asked for form input, which AgentView does not show yet`);
+      return elicitationFor(null, false);
+    }
+    const { d, cancelled } = await this.prompt(elicitationAsk(params));
+    return elicitationFor(d, cancelled);
   }
 
   private abortAsks() {
@@ -184,12 +213,18 @@ export class CodexDriver implements AgentDriver {
       await this.ready;
       const rpc = this.rpc;
       if (!rpc) throw new Error('The codex process ended');
-      if (steer && this.turnId) return void (await rpc.request('turn/steer', { threadId: this.threadId, input, expectedTurnId: this.turnId }));
+      if (steer && this.turnId) {
+        try {
+          return void (await rpc.request('turn/steer', { threadId: this.threadId, input, expectedTurnId: this.turnId }));
+        } catch {
+          // The turn ended before the steer landed, so the text starts a new one.
+        }
+      }
       const { approvalPolicy, sandboxPolicy } = policyFor(this.mode);
       const { turn } = await rpc.request<{ turn: { id: string } }>('turn/start', { threadId: this.threadId, input, approvalPolicy, sandboxPolicy, ...this.modelParams() });
       this.turnId = turn.id;
+      if (steer && !this.host.state.session.running) this.host.turnStarted('Codex started a turn for your message');
     } catch (err) {
-      if (steer) return this.host.system(`Codex: ${errText(err)}`, true);
       this.host.turnResult({ id: randomUUID(), ok: false, text: errText(err), costUsd: 0, isError: true });
     }
   }

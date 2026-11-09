@@ -19,8 +19,10 @@ export function splitDiff(diff: string): { before: string; after: string } {
   return { before: before.join('\n'), after: after.join('\n') };
 }
 
+export const changeText = (c: FileUpdateChange) => (c.kind.type === 'delete' ? { before: c.diff, after: '' } : splitDiff(c.diff));
+
 function fileUse(itemId: string, i: number, c: FileUpdateChange, at: number): ChatEvent {
-  const { before, after } = c.kind.type === 'delete' ? { before: c.diff, after: '' } : splitDiff(c.diff);
+  const { before, after } = changeText(c);
   const id = `${itemId}:${i}`;
   return c.kind.type === 'add' ? toolUseEvent(id, 'Write', { file_path: c.path, content: after }, at) : toolUseEvent(id, 'Edit', { file_path: c.path, old_string: before, new_string: after }, at);
 }
