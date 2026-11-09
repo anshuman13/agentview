@@ -57,7 +57,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     forgetSeenBefore(id);
   }, [seenTimes, mark]);
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
-  const newId = useMemo(() => newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt), [items, events, mark]);
+  const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
   const recap = useStore((s) => s.live.find((c) => c.id === s.session.id)?.recap);
   const [since, setSince] = useState(true);
   const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
