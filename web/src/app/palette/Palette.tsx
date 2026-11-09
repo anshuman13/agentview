@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { setUi, useStore } from '../store';
 import type { SavedSession } from '../../../../shared/protocol';
 import { Back } from '../touch/back';
+import { modelsFor } from '../../chat/capabilitiesLogic';
+import { useCan } from '../../chat/useCan';
 import { openSearch, useView } from '../../codex/view';
 import { assistantStore } from '../../codex/data';
 import { PINS_URL, get } from '../../sessions/folders';
@@ -12,7 +14,8 @@ import { appSettings } from '../appSettings';
 import { PaletteEntries, type Entry } from './PaletteEntries';
 
 export function Palette() {
-  const models = useStore((s) => s.session.models);
+  const models = modelsFor(useStore((s) => s.session.models), useStore((s) => s.session.capabilities));
+  const canEffort = useCan('effort');
   const live = useStore((s) => s.live);
   const [fetched, setFetched] = useState<{ pins: string[]; saved: SavedSession[] }>({ pins: [], saved: [] });
   const [open, setOpen] = useState(false);
@@ -23,7 +26,7 @@ export function Palette() {
   const list = useRef<HTMLUListElement>(null);
   const deploy = appSettings.use((s) => s.deploy);
   const pinned = useMemo(() => pinCommands(fetched.pins, live, fetched.saved), [fetched, live]);
-  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy)], [pinned, models, deploy]);
+  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy, canEffort)], [pinned, models, deploy, canEffort]);
   const rows = useMemo(() => rankCommands(commands, q, recent, MAX_ROWS + pinned.length), [commands, pinned, q, recent]);
 
   const items = useMemo(() => (open ? paletteItems(assistantStore().snapshot()) : []), [open]);

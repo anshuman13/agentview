@@ -3,10 +3,11 @@ process.env.TZ = 'UTC';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { editCount, stripRound } from '../../shared/edits';
-import type { ChatEvent, ChatRun, LiveChat, Try } from '../../shared/protocol';
+import type { Capabilities, ChatEvent, ChatRun, LiveChat, Try } from '../../shared/protocol';
 import { appendRule } from '../../shared/steering';
 import { isSpecPath, runAllPrompt, specProgress, specPrompt, specTasks, startTaskPrompt, type SpecTask } from '../../shared/specTasks';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
+import { can, modelsFor } from './chat/capabilitiesLogic';
 import { handoffText, runLine } from './chat/composer/composerLogic';
 import { runBands } from './sessions/runBands';
 import { tryColumn } from './sessions/TriesBoard';
@@ -125,5 +126,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; order: string[]; skipped: string[]; open: string[]; expected: string[] }>('review-queue')) {
     it(`reviewQueue: ${c.name}`, () => expect(reviewQueue(c.order, c.skipped, new Set(c.open))).toEqual(c.expected));
+  }
+
+  type Caps = { name: string; capabilities: Capabilities | null; models: string[]; shown: string[]; can: Record<keyof Capabilities, boolean> };
+  for (const c of cases<Caps>('capabilities')) {
+    it(`capabilities: ${c.name}`, () => {
+      const caps = c.capabilities ?? undefined;
+      expect(modelsFor(c.models.map((value) => ({ value })), caps).map((m) => m.value)).toEqual(c.shown);
+      expect(Object.fromEntries(Object.keys(c.can).map((k) => [k, can(caps, k as keyof Capabilities)]))).toEqual(c.can);
+    });
   }
 });

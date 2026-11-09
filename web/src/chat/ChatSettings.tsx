@@ -3,6 +3,7 @@ import { type GoalChoice } from './composer/composerLogic';
 import { MemoryPick } from './cards/Memory';
 import { TodosPick } from './cards/Todos';
 import { EFFORT_LABEL } from '../../../shared/protocol';
+import { modelsFor } from './capabilitiesLogic';
 import { HooksPick, RemindPick, SettingsMenu } from './SettingsMenu';
 import { AccountPick, EffortPick, GoalPick, LoopPick, ModePick, ModelPick } from './SettingsPickers';
 
@@ -19,7 +20,8 @@ export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'l
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
   const model = useStore((s) => s.session.model);
-  const models = useStore((s) => s.session.models);
+  const caps = useStore((s) => s.session.capabilities);
+  const models = modelsFor(useStore((s) => s.session.models), caps);
   const effort = useStore((s) => s.session.effort);
   const team = useStore((s) => s.session.team);
   const loop = useStore((s) => s.session.loop);

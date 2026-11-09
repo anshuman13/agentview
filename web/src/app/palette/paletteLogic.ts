@@ -33,7 +33,7 @@ const VIEWS = [
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];
 const MODES: Record<string, string> = { default: 'Default', acceptEdits: 'Accept edits', plan: 'Plan mode', auto: 'Auto mode', dontAsk: "Don't ask" };
 
-export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean): Command[] {
+export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, effort = true): Command[] {
   return [
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
@@ -51,7 +51,7 @@ export function buildCommands(models: { value: string; displayName: string }[], 
     { id: 'newChat', label: 'Chat: New Chat' },
     { id: 'forkChat', label: 'Chat: Fork Chat' },
     ...models.map((m) => ({ id: `model:${m.value}`, label: `Model: ${m.displayName}` })),
-    ...EFFORT_LEVELS.map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),
+    ...(effort ? EFFORT_LEVELS : []).map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),
     ...PERMISSION_MODES.map((m) => ({ id: `mode:${m}`, label: `Permission Mode: ${MODES[m] ?? m}` })),
     { id: 'compact', label: 'Chat: Compact Context' },
     { id: 'loop', label: 'Chat: Toggle Build Cycle' },

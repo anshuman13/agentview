@@ -34,3 +34,4 @@ div.ui-row:is(:hover, :active) { --state: 0%; }
 
 .ui-group { display: flex; flex-direction: column; border-radius: var(--shape-lg); background: var(--group-card); overflow: hidden; }
 .ui-group:has(.ui-menu) { overflow: visible; }
+.ui-fields { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) var(--sp-8) var(--sp-8); }

@@ -11,6 +11,7 @@ import { Row } from '../chat/transcript/Transcript';
 import { copyText } from '../codex/view';
 import { agentCounts, agentsOf, elapsed, openAgent, reportText, tokens, type Agent } from './agents';
 import { plural, useTick } from '../ui/util';
+import { useCan } from '../chat/useCan';
 import type { AgentStatus } from '../../../shared/protocol';
 
 const useAgents = () => useStore((s) => agentsOf(s.events));
@@ -67,6 +68,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
 
 function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; now: number; stack?: boolean; onBack: () => void }) {
   const running = a.status === 'running';
+  const canStop = useCan('stopTask');
   const usage = a.info?.usage;
   const meta = [a.type, a.model, took(a, now), usage && tokens(usage.tokens), usage && plural(usage.toolUses, 'tool use'), a.info?.background && 'background'].filter(Boolean);
   return (
@@ -74,7 +76,7 @@ function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; no
       <button className={`ag-back ${stack ? '' : 'mobile-only'}`} onClick={onBack}><Icon name="arrow-left" small /> Agents</button>
       <Section
         label={<><span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={running} /></span> <span title={a.description}>{a.description}</span></>}
-        action={running && !a.group && <Button size="sm" icon="debug-stop" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: a.id })}>Stop</Button>}
+        action={running && !a.group && canStop && <Button size="sm" icon="debug-stop" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: a.id })}>Stop</Button>}
       />
       <div className="ag-meta">{meta.join(' · ')}</div>
       {running && a.info?.progress && <div className="ag-progress">{a.info.progress}</div>}

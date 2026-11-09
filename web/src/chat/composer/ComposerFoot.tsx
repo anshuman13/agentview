@@ -3,15 +3,17 @@ import { send, useStore } from '../../app/store';
 import { Chip } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { useChatSettings, type Pick } from '../ChatSettings';
+import { useCan } from '../useCan';
 import { Voice, type useDictation } from './Voice';
 import { goalInfo, type GoalChoice, type Use } from './composerLogic';
 
 function ModeChip({ goal, setPick }: { goal: GoalChoice; setPick: (p: Pick) => void }) {
   const { effort, loop, modelName, effortName, modeInfo } = useChatSettings();
+  const canEffort = useCan('effort');
   const shortModel = modelName.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);
   return (
     <Chip className={`cp-mode${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Build cycle on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
-      <Icon name={modeInfo.icon} small /><span>{shortModel}{effort && ` · ${effortName}`} · {modeInfo.label}{goal !== 'off' && ` · ${goalInfo(goal, Date.now()).chip}`}</span>{(loop.on || goal !== 'off') && <Icon name="sync" small />}<Icon name="chevron-down" small />
+      <Icon name={modeInfo.icon} small /><span>{shortModel}{effort && canEffort && ` · ${effortName}`} · {modeInfo.label}{goal !== 'off' && ` · ${goalInfo(goal, Date.now()).chip}`}</span>{(loop.on || goal !== 'off') && <Icon name="sync" small />}<Icon name="chevron-down" small />
     </Chip>
   );
 }
@@ -57,7 +59,8 @@ function SendButton({ typed, shell, submit }: { typed: boolean; shell: boolean; 
 type FootProps = { goal: GoalChoice; uses: Use[]; uploading: number; typed: boolean; shell: boolean; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void>; dictate: ReturnType<typeof useDictation>; submit: (stop?: boolean) => void };
 
 export function ComposerFoot({ goal, uses, uploading, typed, shell, setPick, attach, dictate, submit }: FootProps) {
-  const hasServers = useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
+  const canMcp = useCan('mcp');
+  const hasServers = canMcp && useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
   return (
     <div className="cp-foot">
       <ModeChip goal={goal} setPick={setPick} />

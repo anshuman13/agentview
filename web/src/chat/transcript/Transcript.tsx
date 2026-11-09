@@ -10,6 +10,7 @@ import { ReviewCard } from '../cards/ReviewCard';
 import { FileIcon } from '../../workspace/FileIcon';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
+import { useCan } from '../useCan';
 import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 
@@ -319,6 +320,7 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
 function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: string }) {
   const { use, result, steps, running } = it;
   const [open, setOpen] = useState(false);
+  const canStop = useCan('stopTask');
   const desc = typeof use.input.description === 'string' && use.input.description ? use.input.description : 'Sub-agent';
   const type = typeof use.input.subagent_type === 'string' ? use.input.subagent_type : '';
   const dur = result ? duration(result.at - use.at) : '';
@@ -334,7 +336,7 @@ function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: stri
           <span className="tr-state"> · {type && `${type} · `}{state}{steps.length > 0 && ` · ${plural(steps.length, 'step')}`}</span>
           {running && <Icon name="loading" small spin />}
         </span>
-        {running && (
+        {running && canStop && (
           <button className="icon-btn tr-stop" title="Stop this agent" aria-label="Stop agent" onClick={(e) => { e.stopPropagation(); send({ type: 'stop_task', toolUseId: use.id }); }}>
             <Icon name="debug-stop" small />
           </button>

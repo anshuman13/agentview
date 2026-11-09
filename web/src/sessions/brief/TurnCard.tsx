@@ -14,6 +14,7 @@ import { REVIEW_LOCAL } from '../../ops/Findings';
 import { plural } from '../../ui/util';
 import { BIG_BRO, type PendingRequest } from '../../../../shared/protocol';
 import { time } from './time';
+import { useCan } from '../../chat/useCan';
 
 const CLAUDE = <svg viewBox="0 0 16 16" width="12" height="12"><path d="M8 1.5v13M1.5 8h13M3.4 3.4l9.2 9.2M12.6 3.4l-9.2 9.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 const FILES_SHOWN = 6;
@@ -72,6 +73,7 @@ const rewindRequest = (turn: Turn): ConfirmRequest => ({
 
 function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: string; pending: PendingRequest[]; latest: boolean; settled: boolean }) {
   const [allFiles, setAllFiles] = useState(false);
+  const canRewind = useCan('rewind');
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const [open, setOpen] = useState(false);
   const failed = openFailures(turn.commands);
@@ -134,7 +136,7 @@ function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: strin
               })}
               {turn.files.length > FILES_SHOWN && <button className="link" onClick={() => setAllFiles((v) => !v)}>{allFiles ? 'Show fewer' : `${turn.files.length - FILES_SHOWN} more`}</button>}
               {latest && <button className="link" title="Claude reviews the working tree, findings show in the Changes view" onClick={() => send({ type: 'prompt', text: REVIEW_LOCAL })}>Review changes</button>}
-              {settled && <button className="link" title="Put the files back to how they were before this prompt" onClick={() => setAsk(rewindRequest(turn))}>Rewind files</button>}
+              {settled && canRewind && <button className="link" title="Put the files back to how they were before this prompt" onClick={() => setAsk(rewindRequest(turn))}>Rewind files</button>}
               {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
             </div>
           )}

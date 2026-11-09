@@ -1,0 +1,6 @@
+[
+  { "name": "Claude chat shows everything", "capabilities": { "rewind": true, "mcp": true, "effort": true, "team": true, "stopTask": true }, "models": ["team", "opus", "openrouter:sonnet"], "shown": ["team", "opus", "openrouter:sonnet"], "can": { "rewind": true, "mcp": true, "effort": true, "team": true, "stopTask": true } },
+  { "name": "no capabilities means everything", "capabilities": null, "models": ["team", "opus"], "shown": ["team", "opus"], "can": { "rewind": true, "mcp": true, "effort": true, "team": true, "stopTask": true } },
+  { "name": "a driver without team and effort", "capabilities": { "rewind": true, "mcp": true, "effort": false, "team": false, "stopTask": true }, "models": ["team", "opus", "openrouter:sonnet"], "shown": ["opus", "openrouter:sonnet"], "can": { "rewind": true, "mcp": true, "effort": false, "team": false, "stopTask": true } },
+  { "name": "a driver with only the basics", "capabilities": { "rewind": false, "mcp": false, "effort": false, "team": false, "stopTask": false }, "models": ["team", "gpt"], "shown": ["gpt"], "can": { "rewind": false, "mcp": false, "effort": false, "team": false, "stopTask": false } }
+]

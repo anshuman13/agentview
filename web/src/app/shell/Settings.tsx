@@ -5,6 +5,7 @@ import { Icon } from '../../ui/Icon';
 import { tauriInvoke } from '../../codex/data/local';
 import { hubDebug } from '../runtime/hubDebug';
 import { THEME_NAMES, useTheme } from '../theme';
+import { ModelsSettings } from './ModelsSettings';
 
 const webSha = typeof __APP_SHA__ === 'string' ? __APP_SHA__ : '';
 
@@ -28,6 +29,7 @@ export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolea
       <div className="ui-group">
         <Row title="Theme" meta={THEME_NAMES[theme]} onClick={toggleTheme} />
       </div>
+      <ModelsSettings />
       {phoneVersion && (
         <>
           <Section label="Phone" />

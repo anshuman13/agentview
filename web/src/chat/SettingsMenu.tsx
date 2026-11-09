@@ -5,11 +5,13 @@ import { QuickPick } from '../ui/QuickPick';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { copyChatMarkdown, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
 import { useChatSettings, type Pick } from './ChatSettings';
+import { useCan } from './useCan';
 
 type Props = { pick: Pick; setPick: (p: Pick | null) => void; close: () => void; savedCount: number; goal: GoalChoice };
 
 export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) {
   const { loop, review, modelName, effortName, modeInfo } = useChatSettings();
+  const canEffort = useCan('effort');
   const sessionId = useStore((s) => s.session.sessionId);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
@@ -35,7 +37,7 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
         { value: 'mode', label: 'Permission mode', detail: modeInfo.label },
         { value: 'review', label: 'Review each turn', detail: review ? 'On' : 'Off' },
         { value: 'model', label: 'Model', detail: modelName },
-        { value: 'effort', label: 'Effort', detail: effortName },
+        ...(canEffort ? [{ value: 'effort', label: 'Effort', detail: effortName }] : []),
         ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),
         { value: 'goal', label: 'Goal', detail: run ? runLine(run, phase) : goalInfo(goal, Date.now()).label },
         { value: 'loop', label: 'Build cycle', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
