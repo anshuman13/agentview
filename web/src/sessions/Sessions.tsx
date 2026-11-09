@@ -6,51 +6,14 @@ import { EmptyState } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { SavedSession, Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
-import { ago, pressable, save, stored } from '../ui/util';
+import { pressable, save, stored } from '../ui/util';
 import { chatFinder, deleteChat, findHere, flip, groupByKind, invalidateWorkspace, segmentOf, usePins, useWorkspace, worktreeRequest, type Folder } from './folders';
 import { FilterInput } from './FilterInput';
-import { RepoRow } from './RepoRow';
+import { RepoRow, SessionRow, WorktreeRow } from './RepoRow';
 import { WaitingRows } from './ChatRows';
 import { NeedsYou } from './NeedsYou';
 
 const PAGE = 5;
-
-function WorktreeRow({ w, removing, start, remove }: { w: Worktree; removing: boolean; start: () => void; remove: () => void }) {
-  return (
-    <div
-      className={`row session worktree ${removing ? 'removing' : ''}`}
-      title={`${w.name}\n${w.cwd}${w.dirty ? `\n${w.dirty} uncommitted` : ''}${w.merged ? `\nPR #${w.merged} merged` : ''}${w.removable ? '' : '\nOpen, or used in the last 12 hours with no merged PR, so it cannot be removed yet'}`}
-    >
-      <Icon name="git-branch" small />
-      <span className="name">{removing ? 'Removing… ' : ''}{w.name.split('/').pop()}</span>
-      {w.dirty > 0 && <span className="dirty" title={`${w.dirty} uncommitted`}>M</span>}
-      {w.merged && <span className="merged" title={`PR #${w.merged} merged`}>Merged</span>}
-      <span className="when">{ago(w.lastActive)}</span>
-      {removing ? (
-        <span className="busy"><Icon name="loading" small spin /></span>
-      ) : (
-        <span className="acts">
-          <button className="icon-btn" title="New chat in this worktree" onClick={start}><Icon name="add" small /></button>
-          {w.removable && (
-            <button className="icon-btn" title="Remove worktree, keep the branch" onClick={remove}><Icon name="trash" small /></button>
-          )}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function SessionRow({ s, selected, opening, open, remove }: { s: SavedSession; selected: boolean; opening: boolean; open: () => void; remove: () => void }) {
-  return (
-    <div className={`row session ${selected ? 'selected' : ''}`} title={`${s.title}\n${s.cwd}${s.gitBranch ? `\n${s.gitBranch}` : ''}`} onClick={open}>
-      <span className="name">{opening ? 'Opening… ' : ''}{s.title}</span>
-      <span className="when">{ago(s.lastModified)}</span>
-      <span className="acts">
-        <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); remove(); }}><Icon name="trash" small /></button>
-      </span>
-    </div>
-  );
-}
 
 export function Sessions() {
   const current = useStore((s) => s.session.sessionId);
