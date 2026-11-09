@@ -45,12 +45,15 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
   const last = events[events.length - 1];
   const runs = useMemo(() => exploreRuns(items), [items]);
   const [openRuns, setOpenRuns] = useState(() => new Set<string>());
-  const [mark] = useState(() => {
+  const seenTimes = useStore((s) => s.seen);
+  const [mark, setMark] = useState(() => ({ seen: -1, openedAt: Date.now() }));
+  // After a reload the seen times arrive after mount, so the mark waits for them.
+  useEffect(() => {
     const id = getState().session.sessionId;
-    const m = { seen: id ? seenBefore(id) : 0, openedAt: Date.now() };
-    if (id) forgetSeenBefore(id);
-    return m;
-  });
+    if (mark.seen >= 0 || !id || seenBefore(id) < 0) return;
+    setMark({ ...mark, seen: seenBefore(id) });
+    forgetSeenBefore(id);
+  }, [seenTimes, mark]);
   const newId = useMemo(() => newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt), [items, events, mark]);
   const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
 

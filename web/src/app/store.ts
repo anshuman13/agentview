@@ -144,18 +144,24 @@ const SEEN_URL = '/api/sessions/seen';
 
 // Seen times live on the Mac, so every device clears the same unread marks.
 export function loadSeen() {
-  fetch(apiUrl(SEEN_URL)).then((r) => r.json()).then((seen) => seen && typeof seen === 'object' && !Array.isArray(seen) && set({ seen })).catch(() => {});
+  fetch(apiUrl(SEEN_URL)).then((r) => r.json()).then((seen) => {
+    if (!seen || typeof seen !== 'object' || Array.isArray(seen)) return;
+    seenLoaded = true;
+    for (const id in before) if (before[id] < 0) before[id] = seen[id] ?? 0;
+    set({ seen });
+  }).catch(() => {});
 }
 
-// The seen time a chat had before this page last opened it, for the transcript's New line.
+// The seen time a chat had before this page last opened it, for the transcript's New line; -1 until the server's times load.
 const before: Record<string, number> = {};
-export const seenBefore = (sessionId: string) => (sessionId in before ? before[sessionId] : state.seen[sessionId] ?? 0);
+let seenLoaded = false;
+export const seenBefore = (sessionId: string) => (sessionId in before ? before[sessionId] : seenLoaded ? state.seen[sessionId] ?? 0 : -1);
 export const forgetSeenBefore = (sessionId: string) => void delete before[sessionId];
 
 // The stream connect reloads the server's times over this local one.
 export function markSeen(sessionId: string | null | undefined) {
   if (!sessionId) return;
-  if (!(sessionId in before)) before[sessionId] = state.seen[sessionId] ?? 0;
+  if (!(sessionId in before)) before[sessionId] = seenLoaded ? state.seen[sessionId] ?? 0 : -1;
   set((s) => ({ seen: { ...s.seen, [sessionId]: Date.now() } }));
   fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}`), { method: 'POST' }).catch(() => {});
 }
