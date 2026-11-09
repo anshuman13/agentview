@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { setUi } from '../store';
-import { sideChat } from '../../chat/ChatSettings';
+import { sideChat } from '../../chat/chatActions';
 import { command } from '../../ui/util';
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);

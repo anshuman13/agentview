@@ -3,7 +3,7 @@ import { toggleNotify } from '../runtime/notify';
 import { openMeeting, openTask, setView, type List } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
 import { ago, command } from '../../ui/util';
-import { forkChat } from '../../chat/ChatSettings';
+import { forkChat } from '../../chat/chatActions';
 import { specPrompt } from '../../../../shared/specTasks';
 import type { PaletteItem } from './paletteLogic';
 
