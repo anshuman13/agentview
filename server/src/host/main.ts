@@ -173,7 +173,8 @@ function learnLater(chat: AgentSession) {
     const fresh = events.filter((e) => e.kind === 'user' && !e.auto && e.at > since);
     if (!fresh.length) return;
     const title = summary(chat).title;
-    hubLearn({ chat: chat.id, title, profile: profileOf(chat.cwd), events: learnEvents(events) })
+    // Keyed by the Claude session, which outlives this host's chat id, so the hub's cursor survives a restart.
+    hubLearn({ chat: chat.state.session.sessionId ?? chat.id, title, profile: profileOf(chat.cwd), events: learnEvents(events) })
       .then(() => learnPosted.set(chat.id, Math.max(...fresh.map((e) => e.at))))
       .catch((err) => console.error(`learn ${chat.id}:`, errText(err)));
   }, LEARN_WAIT_MS).unref());
