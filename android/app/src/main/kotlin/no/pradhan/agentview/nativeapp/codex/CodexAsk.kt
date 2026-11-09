@@ -5,11 +5,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.serialization.Serializable
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.sessions.items
 
 // web/src/codex/data/ask.ts askText: the question with the open items and, by profile, the meetings the chat needs.
 private fun fmt(t: Long, pattern: String) = DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH).format(Instant.ofEpochMilli(t).atZone(codexZone))

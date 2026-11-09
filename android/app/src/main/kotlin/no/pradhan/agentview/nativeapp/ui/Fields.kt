@@ -24,7 +24,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
-import no.pradhan.agentview.nativeapp.app.text
 
 // Text field (web input): sunken fill, hairline border that turns accent on focus.
 @Composable

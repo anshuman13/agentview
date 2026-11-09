@@ -9,8 +9,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
-import no.pradhan.agentview.nativeapp.app.notices
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.autopilot.AutopilotForm
 import no.pradhan.agentview.nativeapp.codex.autopilot.AutopilotOps
@@ -48,11 +46,6 @@ import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.Writes
-import no.pradhan.agentview.nativeapp.net.pin
-import no.pradhan.agentview.nativeapp.net.rename
-import no.pradhan.agentview.nativeapp.net.send
-import no.pradhan.agentview.nativeapp.sessions.items
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.workspace.ReviewOps
 import no.pradhan.agentview.nativeapp.workspace.approveAllChanges
 import no.pradhan.agentview.nativeapp.workspace.extendOrder
@@ -60,7 +53,6 @@ import no.pradhan.agentview.nativeapp.workspace.rejectChanges
 import no.pradhan.agentview.nativeapp.workspace.reviewQueue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before

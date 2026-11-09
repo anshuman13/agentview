@@ -18,10 +18,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.codex.edited
-import no.pradhan.agentview.nativeapp.net.permission
-import no.pradhan.agentview.nativeapp.net.post
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 
 // Writes spoken text into a field at the caret and keeps replacing its own partial text until it is final (web chat/Voice.tsx useDictation).

@@ -35,15 +35,11 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveSocket
 import no.pradhan.agentview.nativeapp.net.enc
-import no.pradhan.agentview.nativeapp.net.post
 import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.net.send
 import no.pradhan.agentview.nativeapp.net.write
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chip
@@ -53,7 +49,6 @@ import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 
 // Terminal (web/src/workspace/Terminal.tsx): the chat's shells as a read view of their output, with a line input and the phone keys.
 @Composable

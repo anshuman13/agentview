@@ -9,10 +9,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.CACHED_CHATS
 import no.pradhan.agentview.nativeapp.chat.RecentChats
-import no.pradhan.agentview.nativeapp.sessions.items
 
 const val MAX_DRAFTS = 30
 const val MAX_CHAT_BYTES = 200_000

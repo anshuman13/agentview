@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp.codex
 
-import no.pradhan.agentview.nativeapp.app.text
 
 // web/src/codex/data/recipes.ts: "/" in the Ask bar lists canned questions that fill the field.
 class Recipe(val id: String, val title: String, val text: String)

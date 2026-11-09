@@ -27,15 +27,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.ChatImage
-import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.enc
-import no.pradhan.agentview.nativeapp.net.image
 import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.ListRow

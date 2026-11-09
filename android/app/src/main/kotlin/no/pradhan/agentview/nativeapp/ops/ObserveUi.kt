@@ -35,7 +35,6 @@ import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.refreshWorkspace
 import no.pradhan.agentview.nativeapp.net.write
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -54,7 +53,6 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader

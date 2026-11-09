@@ -37,10 +37,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
-import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.SessionInfo
@@ -54,7 +51,6 @@ import no.pradhan.agentview.nativeapp.net.setEffort
 import no.pradhan.agentview.nativeapp.net.setMode
 import no.pradhan.agentview.nativeapp.net.setModel
 import no.pradhan.agentview.nativeapp.net.submit
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -72,7 +68,6 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.ui.well
 
 private class Choice(val value: String, val label: String, val detail: String = "")

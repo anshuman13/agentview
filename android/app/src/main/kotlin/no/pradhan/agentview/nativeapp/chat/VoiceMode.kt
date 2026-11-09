@@ -36,15 +36,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.app.icon
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.answer
 import no.pradhan.agentview.nativeapp.net.askAnswer
 import no.pradhan.agentview.nativeapp.net.codexProfile
-import no.pradhan.agentview.nativeapp.net.permission
-import no.pradhan.agentview.nativeapp.net.post
-import no.pradhan.agentview.nativeapp.net.resume
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -52,7 +46,6 @@ import no.pradhan.agentview.nativeapp.ui.Panel
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 
 // Speech in, the Codex ask path for the answer, speech out. It only reads: nothing is sent to other chats.
 class VoiceMode(private val ctx: Context, private val hub: Hub, private val scope: CoroutineScope) {

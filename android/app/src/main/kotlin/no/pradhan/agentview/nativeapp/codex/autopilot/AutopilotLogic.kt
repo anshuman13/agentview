@@ -6,21 +6,16 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.AssistantRemote
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.atHour
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.dayStart
-import no.pradhan.agentview.nativeapp.codex.split
-import no.pradhan.agentview.nativeapp.codex.today
 import no.pradhan.agentview.nativeapp.net.Drafts
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.Writes
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.sessions.items
 
 // web/src/codex/jobs/autopilotRows.ts and data/store.ts: the settings of replying on my behalf in Slack.
 @Serializable class AutopilotAway(val from: String = "", val to: String = "", val backup: String = "", val note: String = "")

@@ -9,8 +9,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.SharedItem
 import no.pradhan.agentview.nativeapp.app.shareTask
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.voiceAnswer
 import no.pradhan.agentview.nativeapp.chat.voicePrompt
 import no.pradhan.agentview.nativeapp.codex.DailyChat
@@ -26,7 +24,6 @@ import no.pradhan.agentview.nativeapp.codex.reusableDaily
 import no.pradhan.agentview.nativeapp.codex.today
 import no.pradhan.agentview.nativeapp.codex.waitKey
 import no.pradhan.agentview.nativeapp.sessions.segmentOf
-import no.pradhan.agentview.nativeapp.sessions.state
 
 fun Hub.hideNeed(key: String) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }

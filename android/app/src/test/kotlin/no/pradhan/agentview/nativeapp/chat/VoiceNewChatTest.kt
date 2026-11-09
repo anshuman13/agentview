@@ -1,7 +1,6 @@
 package no.pradhan.agentview.nativeapp.chat
 
 import no.pradhan.agentview.nativeapp.app.isExpanded
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.ModelInfo

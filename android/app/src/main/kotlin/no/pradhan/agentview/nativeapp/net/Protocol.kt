@@ -13,16 +13,10 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
-import no.pradhan.agentview.nativeapp.codex.meetings.displayName
-import no.pradhan.agentview.nativeapp.codex.needsYou
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.ReviewFindings
-import no.pradhan.agentview.nativeapp.sessions.stalled
-import no.pradhan.agentview.nativeapp.sessions.state
 
 val protocolJson = Json { ignoreUnknownKeys = true; isLenient = true }
 

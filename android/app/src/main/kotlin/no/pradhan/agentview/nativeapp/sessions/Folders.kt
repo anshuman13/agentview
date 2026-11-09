@@ -2,11 +2,8 @@ package no.pradhan.agentview.nativeapp.sessions
 
 import java.util.Calendar
 import kotlinx.serialization.Serializable
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
 import no.pradhan.agentview.nativeapp.codex.WORK
-import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.net.LiveChat
 
 // web/src/sessions/folders.ts: the grouping, state and search logic of the sessions list.

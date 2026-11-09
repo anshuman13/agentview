@@ -2,7 +2,6 @@ package no.pradhan.agentview.nativeapp.chat
 
 import androidx.compose.runtime.Composable
 import kotlinx.serialization.Serializable
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.read

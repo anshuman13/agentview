@@ -1,15 +1,11 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.Week
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.meetings.Repeats
-import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.PlanUsage
 import no.pradhan.agentview.nativeapp.net.SessionInfo
-import no.pradhan.agentview.nativeapp.net.command
-import no.pradhan.agentview.nativeapp.net.resume
 
 // web/src/chat/composerLogic.ts and ChatSettings.tsx, the parts the phone composer uses.
 

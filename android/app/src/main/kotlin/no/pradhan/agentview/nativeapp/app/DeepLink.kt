@@ -2,7 +2,6 @@ package no.pradhan.agentview.nativeapp.app
 
 import java.net.URI
 import java.net.URLDecoder
-import no.pradhan.agentview.nativeapp.codex.split
 
 data class DeepLink(val view: String? = null, val page: String? = null, val chat: String? = null, val session: String? = null, val action: String? = null)
 

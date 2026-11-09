@@ -1,9 +1,5 @@
 package no.pradhan.agentview.nativeapp.codex
 
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.net.rename
-import no.pradhan.agentview.nativeapp.sessions.items
-import no.pradhan.agentview.nativeapp.sessions.state
 
 // web/src/codex/GoalsPage.tsx and Goals.tsx: adding, renaming, reopening and removing weekly goals.
 fun reopenBlock(items: List<Row>, goal: Row, now: Long): String? {

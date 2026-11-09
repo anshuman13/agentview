@@ -1,8 +1,5 @@
 package no.pradhan.agentview.nativeapp.codex
 
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.sessions.items
-import no.pradhan.agentview.nativeapp.sessions.state
 
 // web/src/codex/useActions.ts: each action edits through the store and offers one undo.
 private val UNROLL = mapOf("rolls" to null, "rolled_from" to null)

@@ -10,10 +10,8 @@ import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.SharedItem
 import no.pradhan.agentview.nativeapp.app.shareChatText
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.Transcript
 import no.pradhan.agentview.nativeapp.codex.Row
-import no.pradhan.agentview.nativeapp.sessions.state
 
 internal suspend fun Hub.attachUri(uri: String): String? {
     val r = app.contentResolver

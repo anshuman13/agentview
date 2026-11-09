@@ -24,16 +24,12 @@ import androidx.compose.ui.Modifier
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.answer
-import no.pradhan.agentview.nativeapp.sessions.items
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -52,7 +48,6 @@ import no.pradhan.agentview.nativeapp.ui.Toggle
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 
 // The settings of replying on my behalf in Slack (web/src/codex/jobs/Autopilot.tsx and AutopilotPage.tsx).
 private class Autopilot(val ops: AutopilotOps) {

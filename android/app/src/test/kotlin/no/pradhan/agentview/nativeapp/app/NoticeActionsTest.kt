@@ -10,7 +10,6 @@ import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.net.answerCmd
 import no.pradhan.agentview.nativeapp.net.permissionCmd
 import no.pradhan.agentview.nativeapp.net.promptCmd
-import no.pradhan.agentview.nativeapp.net.send
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

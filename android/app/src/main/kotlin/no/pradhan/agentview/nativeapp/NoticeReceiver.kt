@@ -18,7 +18,6 @@ import no.pradhan.agentview.nativeapp.app.KEY_REPLY
 import no.pradhan.agentview.nativeapp.app.NoticeKind
 import no.pradhan.agentview.nativeapp.app.Notifier
 import no.pradhan.agentview.nativeapp.app.runNoticeAction
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.Api
 import no.pradhan.agentview.nativeapp.net.DEFAULT_ORIGIN
 import no.pradhan.agentview.nativeapp.net.sharedHttp

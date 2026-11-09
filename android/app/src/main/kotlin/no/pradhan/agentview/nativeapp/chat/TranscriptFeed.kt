@@ -10,11 +10,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ops.buildAgents
-import no.pradhan.agentview.nativeapp.sessions.items
 
 const val TOKEN_BATCH_MS = 32L
 

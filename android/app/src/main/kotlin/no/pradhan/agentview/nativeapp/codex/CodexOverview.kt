@@ -7,12 +7,9 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
 import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.sessions.queryWords
 
 // The pieces of the Codex Overview (web/src/codex Overview.tsx, split.ts, NeedsYou.tsx, data/meetings.ts, data/goals.ts).

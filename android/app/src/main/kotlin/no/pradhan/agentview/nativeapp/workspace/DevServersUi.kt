@@ -17,9 +17,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import no.pradhan.agentview.nativeapp.app.icon
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.command
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.write
@@ -32,7 +30,6 @@ import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 
 @Serializable
 data class DevPort(val port: Int, val name: String, val local: Boolean = false)

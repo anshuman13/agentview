@@ -49,16 +49,12 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.loadEarlier
 import no.pradhan.agentview.nativeapp.net.rewind
 import no.pradhan.agentview.nativeapp.net.sendNow
 import no.pradhan.agentview.nativeapp.ops.Agent
-import no.pradhan.agentview.nativeapp.sessions.items
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -69,7 +65,6 @@ import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.ui.select
 
 internal fun gapAbove(older: Item?, it: Item): Dp? {

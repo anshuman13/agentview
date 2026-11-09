@@ -1,14 +1,11 @@
 package no.pradhan.agentview.nativeapp.codex
 
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.ChatStore
 import no.pradhan.agentview.nativeapp.chat.Dictation
 import no.pradhan.agentview.nativeapp.chat.restoreUnsent
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.ServerMessage
-import no.pradhan.agentview.nativeapp.sessions.state
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

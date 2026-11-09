@@ -7,7 +7,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
@@ -21,12 +20,9 @@ import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.isSolo
 import no.pradhan.agentview.nativeapp.codex.othersOf
 import no.pradhan.agentview.nativeapp.codex.peopleOf
-import no.pradhan.agentview.nativeapp.codex.split
-import no.pradhan.agentview.nativeapp.codex.today
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
 import no.pradhan.agentview.nativeapp.codex.whenText
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.sessions.queryWords
 

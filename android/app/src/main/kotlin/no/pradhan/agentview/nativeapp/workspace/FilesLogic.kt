@@ -2,7 +2,6 @@ package no.pradhan.agentview.nativeapp.workspace
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
-import no.pradhan.agentview.nativeapp.net.image
 import no.pradhan.agentview.nativeapp.net.protocolJson
 
 // web/src/workspace/Explorer.tsx: the tree is the listed folders walked from the root, expanded folders inline.

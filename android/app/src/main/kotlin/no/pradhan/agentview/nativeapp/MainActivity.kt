@@ -19,9 +19,7 @@ import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.App
 import no.pradhan.agentview.nativeapp.app.SharedItem
 import no.pradhan.agentview.nativeapp.app.parseDeepLink
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.permission
 import no.pradhan.agentview.nativeapp.net.saveOrigin
 import no.pradhan.agentview.nativeapp.ui.AgentViewTheme
 

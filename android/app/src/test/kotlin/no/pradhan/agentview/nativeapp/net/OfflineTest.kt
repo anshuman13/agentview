@@ -1,11 +1,8 @@
 package no.pradhan.agentview.nativeapp.net
 
 import kotlinx.coroutines.runBlocking
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.ChatStore
 import no.pradhan.agentview.nativeapp.chat.RecentChats
-import no.pradhan.agentview.nativeapp.sessions.items
-import no.pradhan.agentview.nativeapp.sessions.state
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

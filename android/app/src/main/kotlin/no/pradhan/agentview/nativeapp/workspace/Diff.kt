@@ -1,7 +1,5 @@
 package no.pradhan.agentview.nativeapp.workspace
 
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.codex.split
 
 // A line of web/src/chat/Pending.tsx lineDiff: ' ' kept, '-' removed, '+' added.
 data class DiffLine(val mark: Char, val text: String)

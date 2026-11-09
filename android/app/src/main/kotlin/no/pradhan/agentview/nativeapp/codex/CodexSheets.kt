@@ -31,17 +31,12 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.ImeAction
 import java.time.Instant
 import java.time.ZoneOffset
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.firstLine
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import no.pradhan.agentview.nativeapp.codex.wiki.agoText
 import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.codexProfile
 import no.pradhan.agentview.nativeapp.net.hideNeed
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -61,7 +56,6 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 
 private val PRIORITIES = listOf(0 to "None", 1 to "Low", 2 to "Medium", 3 to "High")

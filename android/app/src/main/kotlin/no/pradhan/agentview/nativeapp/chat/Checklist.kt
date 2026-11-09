@@ -19,13 +19,11 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.net.ChatEvent
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Panel
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 
 // Port of shared/todos.ts: Claude's TodoWrite list, shown as a card above the composer.
 @Immutable

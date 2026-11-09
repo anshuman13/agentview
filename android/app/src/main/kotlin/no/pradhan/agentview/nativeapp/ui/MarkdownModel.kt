@@ -1,7 +1,5 @@
 package no.pradhan.agentview.nativeapp.ui
 
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.sessions.items
 import org.commonmark.ext.gfm.strikethrough.Strikethrough
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TableBlock

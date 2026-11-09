@@ -40,12 +40,9 @@ import no.pradhan.agentview.nativeapp.app.popRoute
 import no.pradhan.agentview.nativeapp.app.pushRoute
 import no.pradhan.agentview.nativeapp.app.routeTitle
 import no.pradhan.agentview.nativeapp.app.routesOf
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.setCodexFilter
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.Chip

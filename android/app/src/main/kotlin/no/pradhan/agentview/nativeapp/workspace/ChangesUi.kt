@@ -26,11 +26,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.enc
-import no.pradhan.agentview.nativeapp.net.image
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.saveFile
 import no.pradhan.agentview.nativeapp.net.write
@@ -38,8 +35,6 @@ import no.pradhan.agentview.nativeapp.ops.DRAFT_PROMPT
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.PatchView
 import no.pradhan.agentview.nativeapp.ops.REVIEW_LOCAL
-import no.pradhan.agentview.nativeapp.sessions.since
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
@@ -59,7 +54,6 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 
 private class GitOps(private val hub: Hub, private val reload: () -> Unit, val onDiscard: (List<GitFile>) -> Unit, val onReview: (GitFile) -> Unit) {
     fun run(action: String, body: String, done: () -> Unit = {}) = hub.write("/api/git/$action", body, "Could not $action") { if (it) done(); reload() }

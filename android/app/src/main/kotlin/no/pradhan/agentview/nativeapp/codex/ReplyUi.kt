@@ -14,9 +14,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
-import no.pradhan.agentview.nativeapp.net.send
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -33,7 +31,6 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 
 // The Replies group of the Needs you sheet (web/src/codex/overview/ReplyQueue.tsx).

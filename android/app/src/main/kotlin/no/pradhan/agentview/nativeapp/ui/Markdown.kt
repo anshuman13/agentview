@@ -40,8 +40,6 @@ import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.sessions.items
 
 @Composable
 fun inlineText(inlines: List<Inline>): AnnotatedString {

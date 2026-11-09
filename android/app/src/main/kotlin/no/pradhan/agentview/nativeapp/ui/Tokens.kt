@@ -7,8 +7,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.workspace.fileError
 
 @Immutable
 class AvColors(

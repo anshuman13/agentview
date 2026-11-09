@@ -18,9 +18,6 @@ import no.pradhan.agentview.nativeapp.NoticeReceiver
 import no.pradhan.agentview.nativeapp.R
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
-import no.pradhan.agentview.nativeapp.net.permission
-import no.pradhan.agentview.nativeapp.net.post
-import no.pradhan.agentview.nativeapp.sessions.items
 
 private const val WAITING_CHANNEL = "needs"
 private const val WAITING_ID = 1

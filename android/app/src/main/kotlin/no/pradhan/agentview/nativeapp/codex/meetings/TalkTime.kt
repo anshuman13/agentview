@@ -1,8 +1,5 @@
 package no.pradhan.agentview.nativeapp.codex.meetings
 
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
-import no.pradhan.agentview.nativeapp.codex.split
 
 class Speaker(val name: String, val words: Int, val share: Double)
 

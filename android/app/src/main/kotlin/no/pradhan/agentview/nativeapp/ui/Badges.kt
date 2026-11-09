@@ -21,9 +21,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.ops.Agent
-import no.pradhan.agentview.nativeapp.sessions.state
 
 enum class Status { Neutral, Ok, Warn, Err, Run, Agent, Info }
 

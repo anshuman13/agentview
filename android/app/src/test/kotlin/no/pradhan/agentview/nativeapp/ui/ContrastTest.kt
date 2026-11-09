@@ -2,7 +2,6 @@ package no.pradhan.agentview.nativeapp.ui
 
 import androidx.compose.ui.graphics.Color
 import kotlin.math.pow
-import no.pradhan.agentview.nativeapp.app.text
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

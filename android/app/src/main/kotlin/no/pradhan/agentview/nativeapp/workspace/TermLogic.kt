@@ -2,13 +2,7 @@ package no.pradhan.agentview.nativeapp.workspace
 
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
-import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.net.write
-import no.pradhan.agentview.nativeapp.sessions.state
-import no.pradhan.agentview.nativeapp.ui.color
 
 // A read view of a shell: enough of a VT100 to show prompts, output, colours and line edits.
 // A colour is -1 for the default or 0..15 for the ANSI palette.

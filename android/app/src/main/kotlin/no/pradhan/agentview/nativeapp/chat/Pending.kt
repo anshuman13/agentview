@@ -31,7 +31,6 @@ import androidx.compose.ui.text.input.ImeAction
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
 import no.pradhan.agentview.nativeapp.net.ChatEvent
@@ -52,7 +51,6 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.ui.well
 import no.pradhan.agentview.nativeapp.workspace.CommentSheet
 import no.pradhan.agentview.nativeapp.workspace.DiffCodeLine

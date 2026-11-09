@@ -3,10 +3,8 @@ package no.pradhan.agentview.nativeapp.chat
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

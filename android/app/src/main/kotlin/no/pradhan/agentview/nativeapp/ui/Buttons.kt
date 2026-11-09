@@ -43,9 +43,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import no.pradhan.agentview.nativeapp.R
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.gap
 
 enum class ButtonVariant { Filled, Tinted, Gray, Plain, Danger }
 

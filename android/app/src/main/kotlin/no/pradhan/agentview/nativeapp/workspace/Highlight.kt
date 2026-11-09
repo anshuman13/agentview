@@ -1,7 +1,5 @@
 package no.pradhan.agentview.nativeapp.workspace
 
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.ui.Type
 
 // A line-based syntax highlighter for the file view: comments, strings, numbers, keywords, types and keys,

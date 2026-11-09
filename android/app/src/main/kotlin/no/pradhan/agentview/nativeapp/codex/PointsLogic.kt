@@ -1,11 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex
 
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.meetings.liveRows
 import no.pradhan.agentview.nativeapp.codex.meetings.sameName
-import no.pradhan.agentview.nativeapp.net.pin
-import no.pradhan.agentview.nativeapp.sessions.items
-import no.pradhan.agentview.nativeapp.sessions.since
 
 // web/src/codex/data/points.ts and meetings.ts pinsOf: points to raise with one person, and pinned text of a meeting.
 const val POINT = "point"

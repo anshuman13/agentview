@@ -24,14 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
-import no.pradhan.agentview.nativeapp.app.icon
 import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.firstLine
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.write
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -51,7 +49,6 @@ import no.pradhan.agentview.nativeapp.ui.Tag
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.workspace.Counts
 import no.pradhan.agentview.nativeapp.workspace.DiffCodeLine
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint

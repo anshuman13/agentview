@@ -1,10 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex
 
 import java.time.Instant
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
-import no.pradhan.agentview.nativeapp.sessions.inside
 
 // shared/plan.ts atRisk and web/src/codex/summary/needsYou.ts: the two sources of the Needs you list the tasks and asks do not cover.
 typealias Span = Pair<Long, Long>

@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.ChatRun
@@ -15,7 +14,6 @@ import no.pradhan.agentview.nativeapp.net.ServerMessage
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.appendTo
 import no.pradhan.agentview.nativeapp.ops.Findings
-import no.pradhan.agentview.nativeapp.sessions.state
 
 const val ROW_WINDOW = 150
 const val CACHED_CHATS = 8

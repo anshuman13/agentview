@@ -5,8 +5,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.serialization.Serializable
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.isoMillis
 

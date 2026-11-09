@@ -21,17 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.flow.update
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.AttachButton
 import no.pradhan.agentview.nativeapp.chat.Dictation
 import no.pradhan.agentview.nativeapp.chat.VoiceButton
 import no.pradhan.agentview.nativeapp.chat.appendWord
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.askCodex
 import no.pradhan.agentview.nativeapp.net.codexProfile
-import no.pradhan.agentview.nativeapp.net.send
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button

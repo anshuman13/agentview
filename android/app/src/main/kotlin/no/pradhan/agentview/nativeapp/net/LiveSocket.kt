@@ -2,7 +2,6 @@ package no.pradhan.agentview.nativeapp.net
 
 import android.os.Handler
 import android.os.Looper
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.workspace.termDelay
 import no.pradhan.agentview.nativeapp.workspace.termGone
 import okhttp3.OkHttpClient

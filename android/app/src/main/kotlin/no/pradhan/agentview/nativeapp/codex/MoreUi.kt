@@ -28,9 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.meetings.ActionLine
 import no.pradhan.agentview.nativeapp.codex.meetings.MState
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
@@ -47,8 +44,6 @@ import no.pradhan.agentview.nativeapp.codex.meetings.summaryLines
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
 import no.pradhan.agentview.nativeapp.codex.wiki.shortDate
 import no.pradhan.agentview.nativeapp.codex.wiki.sourcesOf
-import no.pradhan.agentview.nativeapp.net.pin
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -67,7 +62,6 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.workspace.ReviewOps
 import no.pradhan.agentview.nativeapp.workspace.extendOrder
 import no.pradhan.agentview.nativeapp.workspace.reviewQueue

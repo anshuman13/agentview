@@ -1,8 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
 import java.time.Instant
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 
 // web/src/codex/data/when.ts: the date, time and relative span written inside a task's text.
 private val DATE_RE = Regex("\\b(today|tomorrow|tmrw|next week|end of (?:the )?week|eow|(?:on )?next (?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?|(?:on )?(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?)\\b", RegexOption.IGNORE_CASE)

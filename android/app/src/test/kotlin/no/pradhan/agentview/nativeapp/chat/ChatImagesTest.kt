@@ -2,7 +2,6 @@ package no.pradhan.agentview.nativeapp.chat
 
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import org.junit.Assert.assertEquals
 import org.junit.Test

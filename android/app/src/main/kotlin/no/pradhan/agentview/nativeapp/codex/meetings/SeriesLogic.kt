@@ -2,14 +2,10 @@ package no.pradhan.agentview.nativeapp.codex.meetings
 
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.DAY_MS
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.peopleOf
-import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.sessions.inside
-import no.pradhan.agentview.nativeapp.sessions.items
 
 // web/src/codex/data/meetings.ts: a recurring series, and the questions the meetings left open.
 fun seriesKey(profile: String, title: String) = "$profile\n$title"

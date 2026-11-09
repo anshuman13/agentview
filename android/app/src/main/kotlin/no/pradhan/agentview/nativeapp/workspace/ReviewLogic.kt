@@ -1,12 +1,9 @@
 package no.pradhan.agentview.nativeapp.workspace
 
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.CodexStore
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.wiki.currentClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
-import no.pradhan.agentview.nativeapp.sessions.state
 
 // web/src/codex/data/wiki.ts approveChanges and wiki/ReviewMode.tsx: deciding proposed claims one at a time.
 class Change(val row: Row, val patch: Map<String, Any?>, val undo: Map<String, Any?>)

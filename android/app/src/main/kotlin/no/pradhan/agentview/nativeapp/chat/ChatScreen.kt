@@ -24,8 +24,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
@@ -36,16 +34,11 @@ import no.pradhan.agentview.nativeapp.net.forkChat
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.remindChat
 import no.pradhan.agentview.nativeapp.net.rename
-import no.pradhan.agentview.nativeapp.net.send
 import no.pradhan.agentview.nativeapp.net.submit
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
 import no.pradhan.agentview.nativeapp.ops.agentBadge
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.sessions.renameTitle
-import no.pradhan.agentview.nativeapp.sessions.since
-import no.pradhan.agentview.nativeapp.sessions.stalled
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -68,7 +61,6 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.ui.rememberNow
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.ChangesPager

@@ -1,10 +1,8 @@
 package no.pradhan.agentview.nativeapp.net
 
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
-import no.pradhan.agentview.nativeapp.sessions.state
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

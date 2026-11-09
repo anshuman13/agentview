@@ -1,7 +1,6 @@
 package no.pradhan.agentview.nativeapp.ops
 
 import androidx.compose.runtime.Immutable
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.Item
 import no.pradhan.agentview.nativeapp.chat.buildTranscript
 import no.pradhan.agentview.nativeapp.chat.firstLine
@@ -10,7 +9,6 @@ import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.stepLabel
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.net.ChatEvent
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.DotState
 
 // Port of web/src/sessions/agents.ts: the sub-agents of a chat, newest first in the list.

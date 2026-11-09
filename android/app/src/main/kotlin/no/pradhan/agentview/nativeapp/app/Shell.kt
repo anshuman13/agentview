@@ -59,7 +59,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import no.pradhan.agentview.nativeapp.chat.ChatScreen
 import no.pradhan.agentview.nativeapp.chat.VoiceHost
-import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.codex.CodexScreen
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunsScreen
 import no.pradhan.agentview.nativeapp.codex.autopilot.sessionsBadge
@@ -75,7 +74,6 @@ import no.pradhan.agentview.nativeapp.ops.McpScreen
 import no.pradhan.agentview.nativeapp.ops.ObserveScreen
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
 import no.pradhan.agentview.nativeapp.sessions.SessionsScreen
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -91,7 +89,6 @@ import no.pradhan.agentview.nativeapp.ui.SnackHost
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.BrowserScreen
 import no.pradhan.agentview.nativeapp.workspace.ChangesScreen

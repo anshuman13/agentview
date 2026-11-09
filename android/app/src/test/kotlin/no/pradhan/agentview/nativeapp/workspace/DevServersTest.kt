@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp.workspace
 
-import no.pradhan.agentview.nativeapp.net.command
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
 import org.junit.Test

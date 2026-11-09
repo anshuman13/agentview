@@ -5,8 +5,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import no.pradhan.agentview.nativeapp.app.notices
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.net.AgentUsage
 import no.pradhan.agentview.nativeapp.net.ChatEvent
@@ -14,7 +12,6 @@ import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.ServerMessage
 import no.pradhan.agentview.nativeapp.net.Writes
 import no.pradhan.agentview.nativeapp.net.parseMessage
-import no.pradhan.agentview.nativeapp.net.write
 import no.pradhan.agentview.nativeapp.ops.DeployJob
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.McpRow

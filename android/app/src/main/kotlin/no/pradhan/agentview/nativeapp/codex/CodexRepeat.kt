@@ -2,7 +2,6 @@ package no.pradhan.agentview.nativeapp.codex
 
 import java.time.Instant
 import java.time.LocalDate
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.meetings.Repeats
 
 // web/src/codex/data/recur.ts: a "Repeats: every monday 09:00" first line in the notes makes a done task create its next copy.

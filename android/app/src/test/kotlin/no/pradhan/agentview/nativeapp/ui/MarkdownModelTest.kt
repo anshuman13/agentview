@@ -1,7 +1,5 @@
 package no.pradhan.agentview.nativeapp.ui
 
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.sessions.items
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

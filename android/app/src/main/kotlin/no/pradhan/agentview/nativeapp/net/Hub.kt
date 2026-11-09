@@ -38,23 +38,19 @@ import no.pradhan.agentview.nativeapp.app.SharedItem
 import no.pradhan.agentview.nativeapp.app.WaitingSnapshot
 import no.pradhan.agentview.nativeapp.app.noticeAsk
 import no.pradhan.agentview.nativeapp.app.notices
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.app.waitingSnapshot
 import no.pradhan.agentview.nativeapp.chat.ChatStore
 import no.pradhan.agentview.nativeapp.chat.RecentChats
 import no.pradhan.agentview.nativeapp.chat.TranscriptFeed
 import no.pradhan.agentview.nativeapp.chat.encodeModels
 import no.pradhan.agentview.nativeapp.chat.parseModels
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.CodexStore
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.meetings.parseResolved
 import no.pradhan.agentview.nativeapp.codex.needsList
-import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.ReviewFindings
 import no.pradhan.agentview.nativeapp.sessions.Workspace
-import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.workspace.appendPrompt
 

@@ -1,7 +1,6 @@
 package no.pradhan.agentview.nativeapp.net
 
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
-import no.pradhan.agentview.nativeapp.sessions.state
 
 enum class OfflineState { Hidden, Pending, Shown }
 enum class OfflineEvent { Down, Up, Elapsed }

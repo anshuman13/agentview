@@ -2,11 +2,7 @@ package no.pradhan.agentview.nativeapp.codex
 
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.chat.s
-import no.pradhan.agentview.nativeapp.sessions.items
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test

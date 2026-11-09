@@ -6,12 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.DeepLink
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.handoffText
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
-import no.pradhan.agentview.nativeapp.sessions.items
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.workspace.TermTab
 import no.pradhan.agentview.nativeapp.workspace.parseTerms
 import no.pradhan.agentview.nativeapp.workspace.termInput

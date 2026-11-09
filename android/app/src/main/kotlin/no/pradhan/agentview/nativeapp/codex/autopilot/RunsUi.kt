@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.app.icon
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.JobState
 import no.pradhan.agentview.nativeapp.codex.jobs.jobMeta
@@ -37,7 +36,6 @@ import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.triesKeep
-import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -59,7 +57,6 @@ import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.color
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
 
 // The loop card above the composer (web/src/chat/LoopCard.tsx): state, last round, Pause and Stop; the rounds on tap, Run now on long press.

@@ -4,13 +4,9 @@ import androidx.compose.runtime.Immutable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.codexZone
-import no.pradhan.agentview.nativeapp.codex.split
-import no.pradhan.agentview.nativeapp.codex.today
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
-import no.pradhan.agentview.nativeapp.sessions.items
 
 // Port of web/src/chat/steps.ts: the transcript items built from the flat event list.
 @Immutable

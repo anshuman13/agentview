@@ -1,13 +1,11 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.net.ServerMessage
 import no.pradhan.agentview.nativeapp.net.SessionInfo
-import no.pradhan.agentview.nativeapp.sessions.state
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

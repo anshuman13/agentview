@@ -41,9 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import no.pradhan.agentview.nativeapp.app.icon
-import no.pradhan.agentview.nativeapp.app.text
-import no.pradhan.agentview.nativeapp.sessions.state
 
 // Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle and a title row.
 @OptIn(ExperimentalMaterial3Api::class)

@@ -11,7 +11,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
-import no.pradhan.agentview.nativeapp.app.text
 
 const val WORK = "work"
 const val PERSONAL = "personal"

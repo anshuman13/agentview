@@ -1,10 +1,7 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.LiveChat
-import no.pradhan.agentview.nativeapp.net.answer
-import no.pradhan.agentview.nativeapp.sessions.state
 
 enum class VoicePhase { Listening, Thinking, Speaking, Paused, Done, Failed }
 

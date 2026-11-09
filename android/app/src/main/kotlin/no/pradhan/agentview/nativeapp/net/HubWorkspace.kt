@@ -6,9 +6,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.sessions.Workspace
-import no.pradhan.agentview.nativeapp.sessions.state
 
 fun Hub.refreshWorkspace(force: Boolean = false) {
     val now = System.currentTimeMillis()

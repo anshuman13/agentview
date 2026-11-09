@@ -28,13 +28,10 @@ import no.pradhan.agentview.nativeapp.app.chatLink
 import no.pradhan.agentview.nativeapp.app.sessionsLink
 import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.net.write
 import no.pradhan.agentview.nativeapp.ui.AvColors
 import no.pradhan.agentview.nativeapp.ui.DarkColors
 import no.pradhan.agentview.nativeapp.ui.LightColors
 import no.pradhan.agentview.nativeapp.ui.Tokens
-import no.pradhan.agentview.nativeapp.ui.color
 
 // The waiting chats the ongoing notification lists, kept where the widget can read them without the app running.
 object WaitingStore {
