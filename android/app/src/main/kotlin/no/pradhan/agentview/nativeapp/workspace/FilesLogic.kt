@@ -101,3 +101,30 @@ fun fileTag(name: String): String {
 }
 
 fun isMarkdown(path: String) = Regex("\\.(md|markdown|mdx)$", RegexOption.IGNORE_CASE).containsMatchIn(path)
+
+// shared/specTasks.ts: the checkbox lines of a spec file, its progress and the prompts that start them.
+data class SpecTask(val n: Int, val text: String, val done: Boolean)
+
+private val SPEC_PATH = Regex("(^|/)\\.(claude|kiro)/specs/.+\\.(md|markdown|mdx)$", RegexOption.IGNORE_CASE)
+private val SPEC_TASK = Regex("^\\s*(?:[-*+]|\\d+[.)])\\s+\\[([ xX])]\\s+(.+?)\\s*$")
+private val FENCE = Regex("^\\s*(`{3,}|~{3,})")
+
+fun isSpecPath(path: String) = SPEC_PATH.containsMatchIn(path)
+
+fun specTasks(markdown: String): List<SpecTask> {
+    val tasks = mutableListOf<SpecTask>()
+    var fence = ""
+    for (line in markdown.split(Regex("\r?\n"))) {
+        val mark = FENCE.find(line)?.groupValues?.get(1)
+        if (mark != null) fence = if (fence.isEmpty()) mark else if (mark[0] == fence[0] && mark.length >= fence.length) "" else fence
+        val m = if (fence.isEmpty() && mark == null) SPEC_TASK.find(line) else null
+        if (m != null) tasks += SpecTask(tasks.size + 1, m.groupValues[2], m.groupValues[1] != " ")
+    }
+    return tasks
+}
+
+fun specProgress(tasks: List<SpecTask>) = "${tasks.count { it.done }} of ${tasks.size} done"
+
+fun startTaskPrompt(t: SpecTask, path: String) = "Do task ${t.n} in $path: ${t.text}. Tick its box in the file when it is done."
+
+fun runAllPrompt(path: String) = "/goal every task in $path is ticked: do them in order, tick each when done"

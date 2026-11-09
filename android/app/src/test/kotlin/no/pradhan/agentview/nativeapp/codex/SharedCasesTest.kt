@@ -35,6 +35,11 @@ import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.workspace.isSpecPath
+import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
+import no.pradhan.agentview.nativeapp.workspace.specProgress
+import no.pradhan.agentview.nativeapp.workspace.specTasks
+import no.pradhan.agentview.nativeapp.workspace.startTaskPrompt
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -139,6 +144,18 @@ class SharedCasesTest {
         for (c in cases("brief-bullets")) {
             val expected = c.getValue("expected").jsonArray.map { listOf(it.jsonObject.str("title"), it.jsonObject.nullable("url")?.jsonPrimitive?.content, it.jsonObject.str("why")) }
             assertEquals(c.str("name"), expected, briefBullets(c.str("text")).map { listOf(it.title, it.url, it.why) })
+        }
+    }
+
+    @Test fun specTasks() {
+        for (c in cases("spec-tasks")) {
+            val tasks = specTasks(c.str("md"))
+            val expected = c.getValue("tasks").jsonArray.map { it.jsonObject.let { t -> Triple(t.getValue("n").jsonPrimitive.long.toInt(), t.str("text"), t.getValue("done").jsonPrimitive.booleanOrNull) } }
+            assertEquals(c.str("name"), expected, tasks.map { Triple(it.n, it.text, it.done) })
+            assertEquals(c.str("name"), c.getValue("isSpec").jsonPrimitive.booleanOrNull, isSpecPath(c.str("path")))
+            assertEquals(c.str("name"), c.str("progress"), specProgress(tasks))
+            assertEquals(c.str("name"), c.nullable("start")?.jsonPrimitive?.content, tasks.firstOrNull { !it.done }?.let { startTaskPrompt(it, c.str("path")) })
+            assertEquals(c.str("name"), c.str("all"), runAllPrompt(c.str("path")))
         }
     }
 

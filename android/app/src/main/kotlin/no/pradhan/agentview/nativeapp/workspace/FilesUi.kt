@@ -32,11 +32,17 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.ButtonSize
+import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.EmptyState
+import no.pradhan.agentview.nativeapp.ui.Group
+import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
+import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
@@ -138,10 +144,32 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
                 file.error != null -> EmptyState(fileError(file.error))
                 file.image -> Column(Modifier.padding(Tokens.sp8)) { ChatImage(hub, hub.pageChat, path) }
                 file.binary -> EmptyState("Binary file")
-                showDoc -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = Tokens.listPad)) { item { Markdown(file.content, Modifier.padding(vertical = Tokens.sp6)) } }
+                showDoc -> {
+                    val tasks = remember(path, file.content) { if (isSpecPath(path)) specTasks(file.content) else emptyList() }
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        if (tasks.isNotEmpty()) item { SpecTasks(hub, path, tasks) }
+                        item { Markdown(file.content, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp6)) }
+                    }
+                }
                 diff -> DiffLinesView(remember(file, changes) { fileDiff(file.original, file.content).let { if (changes) changesOnly(it) else it } }, langOf(path), wrap)
                 else -> CodeView(file.content, langOf(path), wrap)
             }
+        }
+    }
+}
+
+// The checkbox lines of a spec file: progress, Run all (a goal) and a Start per open task, sent to the chat.
+@Composable
+private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
+    SectionHeader("Tasks", specProgress(tasks)) {
+        if (tasks.any { !it.done }) Button("Run all", { hub.askClaude(runAllPrompt(path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly)
+    }
+    Group {
+        tasks.forEachIndexed { i, t ->
+            if (i > 0) Hairline()
+            ListRow(t.text, strike = t.done, muted = t.done, trailing = if (t.done) null else {
+                { Button("Start", { hub.askClaude(startTaskPrompt(t, path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly) }
+            })
         }
     }
 }
