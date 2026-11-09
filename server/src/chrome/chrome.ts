@@ -1,51 +1,17 @@
-import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
-import { chromeRunning, endpoint, failure, launchProfile, openMac, ownProfile } from './launch.js';
+import { call, connect, connected, events, sendState, setup, stopRetrying, type Msg } from './cdp.js';
+import { chromeRunning, endpoint, launchProfile, openMac, ownProfile } from './launch.js';
 import { forgetViewer, frame, hooks, resetFrames, viewers, viewport } from './frames.js';
-import { errText } from '../../../shared/util.js';
+import { forgetTouch, pageInput, viewerSize } from './input.js';
+import { pick, selectTab } from './pick.js';
+import { dropEmulation, emulate, forgetSize, resize, snapshot, stopWatching } from './screencast.js';
+import { sendTabs, tabs, track, trustOrigin, view } from './tabs.js';
 
-export { chromeRunning, endpoint, ownProfile, viewers, hooks, resetFrames, frame };
-
-type Tab = { id: string; title: string; url: string; at: number };
-type State = 'off' | 'connecting' | 'on';
-type Msg = { id?: number; method?: string; params?: any; result?: any; error?: { message: string }; sessionId?: string };
-
-let cdp: WebSocket | null = null;
-let state: State = 'off';
-let reason = '';
-let nextId = 1;
-const calls = new Map<number, { resolve: (r: any) => void; reject: (e: Error) => void }>();
-const tabs = new Map<string, Tab>();
-const EDITABLE = "(() => { const a = document.activeElement; return !!a && (a.isContentEditable || /^(INPUT|TEXTAREA)$/.test(a.tagName)); })()";
-const selfOrigins = new Set<string>();
-let pinned: string | null = null;
-let watching: { target: string; session: string } | null = null;
-let watchSeq = 0;
-let size = { w: 1600, h: 1200 };
-type Dims = { cssW: number; cssH: number; dpr: number; mobile: boolean };
-const sizes = new Map<WebSocket, Dims>();
-let emulated: { session: string; key: string } | null = null;
-const touches = new Map<WebSocket, { x: number; y: number; moved: boolean }>();
-let retryTimer: NodeJS.Timeout | null = null;
-let retryDelay = 2000;
-let fastUntil = 0;
-const RETRY = new Set(['disabled', 'nochrome', 'closed', 'nofda']);
-
-
-
-function retry() {
-  if (retryTimer || !viewers.size || !RETRY.has(reason)) return;
-  broadcast({ t: 'state', state, reason, retry: true, own: ownProfile() });
-  retryTimer = setTimeout(() => {
-    retryTimer = null;
-    void connect();
-  }, retryDelay);
-  retryDelay = Date.now() < fastUntil ? 1500 : Math.min(retryDelay * 2, 30000);
-}
+export { chromeRunning, endpoint, ownProfile, viewers, hooks, resetFrames, frame, connect };
 
 export function openInChrome(url: string) {
   if (!/^https?:\/\//i.test(url)) return;
-  if (ownProfile() && cdp) {
+  if (ownProfile() && connected()) {
     call('Target.createTarget', { url })
       .then(({ targetId }) => call('Target.activateTarget', { targetId }))
       .catch(() => launchProfile(url));
@@ -55,131 +21,28 @@ export function openInChrome(url: string) {
   openMac('open in chrome', process.platform === 'darwin' ? ['-a', 'Google Chrome', url] : [url]);
 }
 
-const SETUP_PAGE = 'chrome://inspect/#remote-debugging';
+events.opened = async () => {
+  await call('Target.setDiscoverTargets', { discover: true });
+  const { targetInfos } = await call('Target.getTargets');
+  targetInfos.forEach((t: any) => track(t, false));
+  pick();
+};
 
-function setup() {
-  fastUntil = Date.now() + 3 * 60_000;
-  retryDelay = 1500;
-  const run = (...args: string[]) => openMac('chrome setup', args);
-  if (ownProfile()) void chromeRunning().then((up) => up || launchProfile());
-  else if (process.platform === 'darwin' && reason === 'nofda') {
-    run('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles');
-    run('-R', fileURLToPath(new URL('../../../dist/AgentView.app', import.meta.url)));
-  } else if (process.platform === 'darwin') run('-a', 'Google Chrome', SETUP_PAGE);
-  if (state === 'off') setTimeout(() => void connect(), 1500);
+events.closed = () => {
+  view.watching = null;
+  dropEmulation();
+  tabs.clear();
+  sendTabs();
+};
+
+function onTargetDestroyed(targetId: string) {
+  tabs.delete(targetId);
+  if (view.pinned === targetId) view.pinned = null;
+  if (view.watching?.target === targetId) view.watching = null;
+  pick();
 }
 
-function broadcast(m: object) {
-  const s = JSON.stringify(m);
-  viewers.forEach((v) => v.readyState === WebSocket.OPEN && v.send(s));
-}
-
-function setState(s: State, why = '') {
-  state = s;
-  reason = why;
-  broadcast({ t: 'state', state, reason, own: ownProfile() });
-  if (s === 'off') retry();
-}
-
-function call(method: string, params: object = {}, sessionId?: string, ms = 15000): Promise<any> {
-  return new Promise((resolve, reject) => {
-    if (!cdp || cdp.readyState !== WebSocket.OPEN) return reject(new Error('Chrome is not connected'));
-    const id = nextId++;
-    const timer = setTimeout(() => {
-      calls.delete(id);
-      reject(new Error(`${method} timed out`));
-    }, ms);
-    calls.set(id, {
-      resolve: (r) => { clearTimeout(timer); resolve(r); },
-      reject: (e) => { clearTimeout(timer); reject(e); },
-    });
-    cdp.send(JSON.stringify({ id, method, params, sessionId }));
-  });
-}
-
-export async function connect() {
-  if (retryTimer) clearTimeout(retryTimer);
-  retryTimer = null;
-  if (cdp || state === 'connecting') return;
-  setState('connecting');
-  let url: string;
-  try {
-    url = await endpoint();
-  } catch (err) {
-    return setState('off', errText(err));
-  }
-  let ws: WebSocket;
-  try {
-    ws = new WebSocket(url, { maxPayload: 512 * 1024 * 1024, handshakeTimeout: 60000 });
-  } catch {
-    // A half-written port file gives a URL the constructor rejects; without this the state stays connecting for good.
-    return setState('off', 'disabled');
-  }
-  let failed: Promise<string> | null = null;
-  ws.on('open', async () => {
-    cdp = ws;
-    retryDelay = 2000;
-    setState('on');
-    try {
-      await call('Target.setDiscoverTargets', { discover: true });
-      const { targetInfos } = await call('Target.getTargets');
-      targetInfos.forEach((t: any) => track(t, false));
-      pick();
-    } catch (err) {
-      console.error('chrome:', err);
-    }
-  });
-  ws.on('message', (raw) => {
-    try {
-      onMessage(JSON.parse(String(raw)));
-    } catch (err) {
-      console.error('chrome message:', err);
-    }
-  });
-  ws.on('error', (err: NodeJS.ErrnoException) => {
-    failed ??= failure(err);
-  });
-  ws.on('close', async () => {
-    const was = cdp === ws;
-    cdp = null;
-    watching = null;
-    emulated = null;
-    tabs.clear();
-    calls.forEach((c) => c.reject(new Error('Chrome disconnected')));
-    calls.clear();
-    sendTabs();
-    setState('off', was ? 'closed' : ((await failed) ?? 'closed'));
-  });
-}
-
-function isPage(t: any) {
-  return t.type === 'page' && !/^(devtools|chrome-extension):/.test(t.url);
-}
-
-function isSelf(url: string) {
-  try {
-    return selfOrigins.has(new URL(url).origin);
-  } catch {
-    return false;
-  }
-}
-
-function track(t: any, live: boolean) {
-  if (!isPage(t)) return;
-  const prev = tabs.get(t.targetId);
-  const moved = live && (!prev || prev.url !== t.url);
-  tabs.set(t.targetId, { id: t.targetId, title: t.title, url: t.url, at: moved ? Date.now() : (prev?.at ?? 0) });
-  return moved;
-}
-
-function onMessage(m: Msg) {
-  if (m.id) {
-    const c = calls.get(m.id);
-    calls.delete(m.id);
-    if (m.error) c?.reject(new Error(m.error.message));
-    else c?.resolve(m.result);
-    return;
-  }
+events.message = (m: Msg) => {
   switch (m.method) {
     case 'Target.targetCreated':
     case 'Target.targetInfoChanged':
@@ -187,266 +50,20 @@ function onMessage(m: Msg) {
       else sendTabs();
       break;
     case 'Target.targetDestroyed':
-      tabs.delete(m.params.targetId);
-      if (pinned === m.params.targetId) pinned = null;
-      if (watching?.target === m.params.targetId) watching = null;
-      pick();
+      onTargetDestroyed(m.params.targetId);
       break;
     case 'Page.screencastVisibilityChanged':
-      if (m.sessionId === watching?.session && !m.params.visible && !pinned) pick();
+      if (m.sessionId === view.watching?.session && !m.params.visible && !view.pinned) pick();
       break;
     case 'Page.screencastFrame':
-      if (m.sessionId !== watching?.session) return;
+      if (m.sessionId !== view.watching?.session) return;
       Object.assign(viewport, { w: m.params.metadata.deviceWidth, h: m.params.metadata.deviceHeight });
       frame(m.params.data, { session: m.sessionId, id: m.params.sessionId });
       break;
   }
-}
+};
 
 hooks.ack = ({ session, id }) => void call('Page.screencastFrameAck', { sessionId: id }, session).catch(() => {});
-
-function sendTabs() {
-  const list = [...tabs.values()].filter((t) => !isSelf(t.url)).map(({ id, title, url }) => ({ id, title, url }));
-  broadcast({ t: 'tabs', tabs: list, current: watching?.target ?? null, pinned });
-}
-
-async function isVisible(targetId: string) {
-  const own = watching?.target === targetId ? watching.session : null;
-  let session = own;
-  try {
-    session ??= (await call('Target.attachToTarget', { targetId, flatten: true }, undefined, 3000)).sessionId as string;
-    const { result } = await call('Runtime.evaluate', { expression: 'document.visibilityState', returnByValue: true }, session, 3000);
-    return result?.value === 'visible';
-  } catch {
-    return false;
-  } finally {
-    if (session && !own) void call('Target.detachFromTarget', { sessionId: session }).catch(() => {});
-  }
-}
-
-let picking = 0;
-let settled = 0;
-let shown = true;
-let pickTimer: NodeJS.Timeout | null = null;
-
-function pick() {
-  sendTabs();
-  if (pickTimer) clearTimeout(pickTimer);
-  pickTimer = setTimeout(() => void choose(), 250);
-}
-
-async function choose() {
-  if (!viewers.size || !cdp) return;
-  const seq = ++picking;
-  const list = [...tabs.values()].filter((t) => !isSelf(t.url)).sort((a, b) => b.at - a.at);
-  let target = pinned && tabs.has(pinned) ? pinned : null;
-  for (const t of target ? [] : list) {
-    if (await isVisible(t.id)) {
-      target = t.id;
-      break;
-    }
-    if (seq !== picking) return;
-  }
-  if (!target && watching && tabs.has(watching.target) && !pinned) target = watching.target;
-  target ??= list[0]?.id ?? null;
-  if (seq !== picking) return;
-  if (target && target !== watching?.target) await watch(target);
-  if (seq === picking) settled = seq;
-  sendTabs();
-}
-
-async function watch(target: string) {
-  const seq = ++watchSeq;
-  const prev = watching;
-  watching = null;
-  if (prev) release(prev.session);
-  try {
-    const { sessionId } = await call('Target.attachToTarget', { targetId: target, flatten: true });
-    if (seq !== watchSeq) return void call('Target.detachFromTarget', { sessionId }).catch(() => {});
-    watching = { target, session: sessionId };
-    sendTabs();
-    await call('Page.enable', {}, sessionId);
-    await emulate(false);
-    const { cssVisualViewport: v } = await call('Page.getLayoutMetrics', {}, sessionId);
-    Object.assign(viewport, { w: v.clientWidth, h: v.clientHeight });
-    await screencast();
-    await snapshot();
-  } catch (err) {
-    console.error('chrome watch:', err);
-    if (seq === watchSeq && watching) {
-      release(watching.session);
-      watching = null;
-    }
-  }
-}
-
-async function snapshot() {
-  const session = watching?.session;
-  if (!session) return;
-  const shot = await call('Page.captureScreenshot', { format: 'jpeg', quality: 70 }, session);
-  if (watching?.session === session) frame(shot.data);
-}
-
-setInterval(async () => {
-  if (!viewers.size || !cdp || picking !== settled) return;
-  if (!watching) return tabs.size && pick();
-  const was = shown;
-  shown = await isVisible(watching.target);
-  if (!pinned && was && !shown) pick();
-}, 2000).unref();
-
-async function screencast() {
-  if (!watching) return;
-  await call('Page.startScreencast', { format: 'jpeg', quality: 70, maxWidth: size.w, maxHeight: size.h }, watching.session);
-}
-
-function release(session: string) {
-  if (emulated?.session === session && emulated.key) {
-    void call('Emulation.clearDeviceMetricsOverride', {}, session).catch(() => {});
-    void call('Emulation.setTouchEmulationEnabled', { enabled: false }, session).catch(() => {});
-  }
-  if (emulated?.session === session) emulated = null;
-  void call('Target.detachFromTarget', { sessionId: session }).catch(() => {});
-}
-
-async function emulate(restart = true) {
-  if (!watching) return;
-  const m = [...sizes.values()].reverse().find((d) => d.mobile);
-  const key = m ? `${m.cssW}x${m.cssH}@${m.dpr}` : '';
-  const { session } = watching;
-  if ((emulated?.session === session ? emulated.key : '') === key) return;
-  emulated = { session, key };
-  try {
-    if (m) {
-      await call('Emulation.setDeviceMetricsOverride', { width: m.cssW, height: m.cssH, deviceScaleFactor: m.dpr, mobile: true }, session);
-      await call('Emulation.setTouchEmulationEnabled', { enabled: true }, session);
-    } else {
-      await call('Emulation.clearDeviceMetricsOverride', {}, session);
-      await call('Emulation.setTouchEmulationEnabled', { enabled: false }, session);
-    }
-    if (restart) await screencast();
-  } catch {}
-}
-
-function stop() {
-  if (retryTimer) clearTimeout(retryTimer);
-  retryTimer = null;
-  retryDelay = 2000;
-  // Also cancels a watch() still attaching, which would otherwise screencast to no one.
-  watchSeq++;
-  if (!watching) return;
-  release(watching.session);
-  watching = null;
-}
-
-const BUTTONS = new Set(['left', 'right', 'middle', 'none']);
-
-// The phone opened its keyboard on the tap; it closes again unless the tap landed in a text field.
-async function editable(ws: WebSocket, s: string) {
-  const { result } = await call('Runtime.evaluate', { expression: EDITABLE, returnByValue: true }, s, 3000).catch(() => ({ result: { value: false } }));
-  if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ t: 'editable', on: result?.value === true }));
-}
-
-const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
-
-async function selectTab(m: any) {
-  pinned = typeof m.id === 'string' && tabs.has(m.id) ? m.id : null;
-  if (pinned) await call('Target.activateTarget', { targetId: pinned }).catch(() => {});
-  return pick();
-}
-
-async function resize(m: any, ws: WebSocket) {
-  size = { w: Math.min(2400, Math.max(200, num(m.w))), h: Math.min(2400, Math.max(200, num(m.h))) };
-  sizes.delete(ws);
-  sizes.set(ws, {
-    cssW: Math.min(2400, Math.max(100, Math.round(num(m.cssW)))),
-    cssH: Math.min(2400, Math.max(100, Math.round(num(m.cssH)))),
-    dpr: Math.min(4, Math.max(1, num(m.dpr) || 1)),
-    mobile: m.mobile === true,
-  });
-  await emulate(false);
-  return screencast().catch(() => {});
-}
-
-function navigate(m: any, s: string) {
-  if (typeof m.url !== 'string' || !m.url.trim()) return;
-  const url = /^[a-z][a-z0-9+.-]*:/i.test(m.url) ? m.url : `https://${m.url}`;
-  return call('Page.navigate', { url }, s);
-}
-
-async function stepHistory(step: -1 | 1, s: string) {
-  const { currentIndex, entries } = await call('Page.getNavigationHistory', {}, s);
-  const entry = entries[currentIndex + step];
-  return entry && call('Page.navigateToHistoryEntry', { entryId: entry.id }, s);
-}
-
-function mouse(m: any, s: string) {
-  if (!['mousePressed', 'mouseReleased', 'mouseMoved'].includes(m.type)) return;
-  return call('Input.dispatchMouseEvent', {
-    type: m.type,
-    x: num(m.x),
-    y: num(m.y),
-    button: BUTTONS.has(m.button) ? m.button : 'none',
-    buttons: num(m.buttons),
-    clickCount: num(m.clickCount),
-    modifiers: num(m.modifiers),
-  }, s);
-}
-
-async function key(m: any, s: string) {
-  if (typeof m.key !== 'string') return;
-  const base = { key: m.key, code: String(m.code ?? ''), windowsVirtualKeyCode: num(m.keyCode), modifiers: num(m.modifiers) };
-  await call('Input.dispatchKeyEvent', { ...base, type: m.key === 'Enter' ? 'keyDown' : 'rawKeyDown', text: m.key === 'Enter' ? '\r' : undefined }, s);
-  return call('Input.dispatchKeyEvent', { ...base, type: 'keyUp' }, s);
-}
-
-async function touch(m: any, ws: WebSocket, s: string) {
-  if (!['touchStart', 'touchMove', 'touchEnd', 'touchCancel'].includes(m.type)) return;
-  const x = num(m.x);
-  const y = num(m.y);
-  const ends = m.type === 'touchEnd' || m.type === 'touchCancel';
-  if (emulated?.session === s && emulated.key) {
-    await call('Input.dispatchTouchEvent', { type: m.type, touchPoints: ends ? [] : [{ x, y }] }, s);
-    return m.type === 'touchEnd' ? editable(ws, s) : undefined;
-  }
-  const t = touches.get(ws);
-  if (m.type === 'touchStart') return void touches.set(ws, { x, y, moved: false });
-  if (!t) return;
-  if (!ends) {
-    if (!t.moved && Math.hypot(t.x - x, t.y - y) < 8) return;
-    touches.set(ws, { x, y, moved: true });
-    return call('Input.dispatchMouseEvent', { type: 'mouseWheel', x, y, deltaX: t.x - x, deltaY: t.y - y }, s);
-  }
-  touches.delete(ws);
-  if (m.type === 'touchCancel' || t.moved) return;
-  await call('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 }, s);
-  await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 }, s);
-  return editable(ws, s);
-}
-
-function pageInput(m: any, ws: WebSocket, s: string) {
-  switch (m.t) {
-    case 'nav':
-      return navigate(m, s);
-    case 'reload':
-      return call('Page.reload', {}, s);
-    case 'back':
-      return stepHistory(-1, s);
-    case 'forward':
-      return stepHistory(1, s);
-    case 'mouse':
-      return mouse(m, s);
-    case 'wheel':
-      return call('Input.dispatchMouseEvent', { type: 'mouseWheel', x: num(m.x), y: num(m.y), deltaX: num(m.dx), deltaY: num(m.dy) }, s);
-    case 'key':
-      return key(m, s);
-    case 'text':
-      if (typeof m.text === 'string' && m.text) return call('Input.insertText', { text: m.text }, s);
-      return;
-    case 'touch':
-      return touch(m, ws, s);
-  }
-}
 
 async function input(m: any, ws: WebSocket) {
   switch (m.t) {
@@ -455,19 +72,33 @@ async function input(m: any, ws: WebSocket) {
     case 'setup':
       return setup();
     case 'tab':
-      return selectTab(m);
-    case 'size':
-      return resize(m, ws);
+      return selectTab(m.id);
+    case 'size': {
+      const { size, dims } = viewerSize(m);
+      return resize(ws, size, dims);
+    }
   }
-  const s = watching?.session;
+  const s = view.watching?.session;
   if (s) return pageInput(m, ws, s);
 }
 
+function closeViewer(ws: WebSocket) {
+  viewers.delete(ws);
+  forgetTouch(ws);
+  forgetViewer(ws);
+  const was = forgetSize(ws);
+  if (!viewers.size) {
+    stopRetrying();
+    return stopWatching();
+  }
+  if (was) void emulate();
+}
+
 export function openChrome(ws: WebSocket, origin: string | undefined) {
-  if (origin) selfOrigins.add(origin);
+  if (origin) trustOrigin(origin);
   viewers.add(ws);
-  ws.send(JSON.stringify({ t: 'state', state, reason, own: ownProfile() }));
-  if (cdp) {
+  sendState(ws);
+  if (connected()) {
     pick();
     void snapshot().catch(() => {});
   } else void connect();
@@ -480,13 +111,5 @@ export function openChrome(ws: WebSocket, origin: string | undefined) {
     }
     input(m, ws).catch((err) => console.error('chrome input:', err.message));
   });
-  ws.on('close', () => {
-    viewers.delete(ws);
-    touches.delete(ws);
-    forgetViewer(ws);
-    const was = sizes.delete(ws);
-    if (!viewers.size) return stop();
-    if (was) void emulate();
-  });
+  ws.on('close', () => closeViewer(ws));
 }
-
