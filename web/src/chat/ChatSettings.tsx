@@ -83,7 +83,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
             { value: 'model', label: 'Model', detail: modelName },
             { value: 'effort', label: 'Effort', detail: effortName },
             ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),
-            { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
+            { value: 'loop', label: 'Build cycle', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
             { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
             { value: 'memory', label: 'Memory', detail: 'CLAUDE.md and memory files' },
             { value: 'todos', label: 'TODOs', detail: 'TODO, FIXME and AI! comments in the repo' },
@@ -153,7 +153,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
       {pick.kind === 'loop' && (
         <QuickPick
           anchor={pick.at}
-          title="Plan, build, test loop"
+          title="Build cycle"
           current={loop.on ? String(loop.max) : 'off'}
           items={LOOP_ITEMS}
           onPick={(v) => { send(v === 'off' ? { type: 'set_loop', on: false } : { type: 'set_loop', on: true, max: Number(v) }); close(); }}

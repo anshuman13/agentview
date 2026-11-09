@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { commitItem, deployItems, dismissAttention, fixCi, itemsFor, merge } from './attention.js';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { commitItem, deployItems, dismissAttention, fixCi, itemsFor, loadFixes, merge } from './attention.js';
 
 vi.mock('node:fs/promises', async (orig) => ({ ...(await orig<typeof import('node:fs/promises')>()), writeFile: vi.fn(async () => {}) }));
 import type { PullRequest } from '../../../shared/protocol.js';
@@ -117,6 +120,17 @@ describe('fixCi', () => {
     const pushed = itemsFor('/w/r', [pr(1, { checks: 'failure', sha: 'sha1b' })], []);
     await fixCi(pushed, ['r'], fix, started);
     expect(fix).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not start a second chat for a commit saved before a restart', async () => {
+    const file = path.join(mkdtempSync(path.join(os.tmpdir(), 'autofix-')), 'autofix.json');
+    writeFileSync(file, JSON.stringify({ sha1: 'chat1' }));
+    const fix = vi.fn(async () => 'chat9');
+    const list = itemsFor('/w/r', [pr(1, { checks: 'failure' })], []);
+    await fixCi(list, [], fix, await loadFixes(file));
+    expect(fix).not.toHaveBeenCalled();
+    expect(list[0].fixing).toBe('chat1');
+    expect((await loadFixes(path.join(path.dirname(file), 'none.json'))).size).toBe(0);
   });
 
   it('leaves other repos and failed starts alone', async () => {

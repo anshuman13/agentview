@@ -93,9 +93,9 @@ describe('/loop after Stop', () => {
     vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
     const { s } = fakeSession();
     s.resumeRepeat({ prompt: 'do the next round', every: 10 * 60_000, until: null, round: 3, nextAt: Date.now() - 1000 });
-    expect(s.state.events.map((e) => e.kind)).toEqual(['system', 'system', 'user']);
+    expect(s.state.events.map((e) => e.kind)).toEqual(['system', 'user']);
     expect(s.state.events[0]).toMatchObject({ kind: 'system', text: 'AgentView restarted, the loop continues every 10m' });
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: 'do the next round' });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: 'do the next round', auto: 'loop', round: 4 });
     expect(s.state.session).toMatchObject({ running: true, repeat: { round: 4, nextAt: Date.now() + 10 * 60_000 } });
     vi.useRealTimers();
   });

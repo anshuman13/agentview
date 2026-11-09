@@ -13,6 +13,14 @@ const user = (text: string): ChatEvent => ({ id: `u${at()}`, kind: 'user', text,
 const edit = (file: string, oldText: string, newText: string) => tool('Edit', { file_path: file, old_string: oldText, new_string: newText });
 const cwd = '/w/app';
 
+describe('automatic prompts', () => {
+  it('turn into compact labelled items instead of user bubbles', () => {
+    const loop: ChatEvent = { id: 'l1', kind: 'user', text: 'check the build\nthen report', at: 1, auto: 'loop', round: 3 };
+    const goal: ChatEvent = { id: 'g1', kind: 'user', text: 'Check whether this goal is met', at: 2, auto: 'goal', round: 2 };
+    expect(buildTranscript([loop, goal, user('hi')]).map((i) => i.kind === 'auto' ? i.label : i.kind)).toEqual(['Loop round 3 · check the build', 'Goal check 2', 'user']);
+  });
+});
+
 describe('stepLabel', () => {
   it('names the verb and the object, with paths relative to the project', () => {
     expect(stepLabel('Read', { file_path: '/w/app/src/a.ts' }, cwd)).toEqual({ verb: 'Read', object: 'src/a.ts' });

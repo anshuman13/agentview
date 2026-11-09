@@ -137,6 +137,7 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
     val items = mutableListOf<Item>()
     for (e in events) {
         when {
+            e.kind == "user" && e.auto != null -> items += Item.System(e.id, if (e.auto == "goal") "Goal check ${e.round}" else "Loop round ${e.round} \u00B7 ${firstLine(e.text)}")
             e.kind == "user" -> items += if (e.phase != null) Item.Phase(e.id, e.text) else Item.User(e.id, e.text, e.at, e.stopping, e.queued)
             e.kind == "assistant" -> if (e.text.isNotBlank()) items += Item.Assistant(e.id, e.text, e.streaming)
             e.kind == "system" -> items += Item.System(e.id, e.text)

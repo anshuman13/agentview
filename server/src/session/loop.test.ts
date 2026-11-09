@@ -55,7 +55,7 @@ describe('advance', () => {
     const r = advance({ ...on, phase: 'build' }, '', { failed: true });
     expect(r.state.phase).toBe('failed');
     expect(r.step).toBe(null);
-    expect(r.note).toBe('Loop stopped: the build step failed');
+    expect(r.note).toBe('Build cycle stopped: the build step failed');
   });
 
   it('passes when the tester says so', () => {

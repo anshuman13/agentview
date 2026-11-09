@@ -44,7 +44,7 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
   - Person pages with their Slack DM summary, open asks, your promises and unanswered mail
   - Related wiki claims, meetings and Slack tasks shown while you write
   - Urgent pushes held during a meeting and sent as one when it ends
-- `/loop` and `/goal`, loop mode (plan, build, test), Team and effort settings
+- `/loop` and `/goal`, build cycle (plan, build, test), Team and effort settings
 - Notifications on the Mac, in the browser and on the phone through ntfy; works from a phone and across Macs over NetBird
 
 ## Docs

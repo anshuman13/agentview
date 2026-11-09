@@ -62,7 +62,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     ...EFFORT_LEVELS.map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),
     ...PERMISSION_MODES.map((m) => ({ id: `mode:${m}`, label: `Permission Mode: ${MODES[m] ?? m}` })),
     { id: 'compact', label: 'Chat: Compact Context' },
-    { id: 'loop', label: 'Chat: Toggle Plan, Build, Test Loop' },
+    { id: 'loop', label: 'Chat: Toggle Build Cycle' },
     { id: 'stop', label: 'Chat: Stop Claude' },
     { id: 'theme', label: 'Preferences: Toggle Theme' },
     { id: 'notify', label: 'Preferences: Toggle Notifications' },

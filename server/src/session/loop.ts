@@ -82,14 +82,14 @@ function fixStep(report: string): LoopStep {
 
 export function advance(state: LoopState, result: string, { planDenied = false, failed = false } = {}): { state: LoopState; step: LoopStep | null; note: string | null } {
   if (!state.on || !state.phase) return { state, step: null, note: null };
-  if (state.phase === 'plan' && planDenied) return { state: { ...state, phase: 'failed' }, step: null, note: 'Loop stopped: the plan was not approved' };
-  if (failed && looping(state)) return { state: { ...state, phase: 'failed' }, step: null, note: `Loop stopped: the ${state.phase} step failed` };
+  if (state.phase === 'plan' && planDenied) return { state: { ...state, phase: 'failed' }, step: null, note: 'Build cycle stopped: the plan was not approved' };
+  if (failed && looping(state)) return { state: { ...state, phase: 'failed' }, step: null, note: `Build cycle stopped: the ${state.phase} step failed` };
   if (state.phase === 'plan') return { state: { ...state, phase: 'build' }, step: buildStep(), note: null };
   if (state.phase === 'build') return { state: { ...state, phase: 'test' }, step: testStep(state.round, state.max), note: null };
   if (state.phase === 'test') {
     const verdict = verdictOf(result);
-    if (verdict === 'pass') return { state: { ...state, phase: 'passed' }, step: null, note: `Loop passed: the tester approved after ${state.round} ${state.round === 1 ? 'round' : 'rounds'}` };
-    if (state.round >= state.max) return { state: { ...state, phase: 'failed' }, step: null, note: verdict ? `Loop stopped: the tester still found problems after ${state.max} rounds` : `Loop stopped: the tester gave no verdict after ${state.max} rounds` };
+    if (verdict === 'pass') return { state: { ...state, phase: 'passed' }, step: null, note: `Build cycle passed: the tester approved after ${state.round} ${state.round === 1 ? 'round' : 'rounds'}` };
+    if (state.round >= state.max) return { state: { ...state, phase: 'failed' }, step: null, note: verdict ? `Build cycle stopped: the tester still found problems after ${state.max} rounds` : `Build cycle stopped: the tester gave no verdict after ${state.max} rounds` };
     return { state: { ...state, phase: 'build', round: state.round + 1 }, step: fixStep(verdict ? result : `The tester gave no VERDICT line. Its report:\n${result}`), note: null };
   }
   return { state, step: null, note: null };

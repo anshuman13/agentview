@@ -34,7 +34,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 | Folder | Contents |
 | --- | --- |
 | `agent/` | `AgentDriver` interface (`types.ts`) and the Claude driver (`claude/`): SDK query, message handling, history, MCP, the `agentview` wiki and data tools |
-| `session/` | Provider-neutral chat session: send queue, turns, `/loop` and `/goal` (`repeat.ts`), loop mode (`loop.ts`), approvals, findings, pull request parsing |
+| `session/` | Provider-neutral chat session: send queue, turns, `/loop` and `/goal` (`repeat.ts`), build cycle (`loop.ts`), approvals, findings, pull request parsing |
 | `host/` | Agent host process, socket protocol and the API server's client for it |
 | `http/` | Access control, request bodies, SSE ring buffer, static serving, Mac discovery |
 | `workspace/` | Files, git, worktrees, terminals |

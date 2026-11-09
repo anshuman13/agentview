@@ -22,6 +22,12 @@ class StepsTest {
     }
 
     @Test
+    fun showsLoopRoundsAndGoalChecksAsCompactLines() {
+        val items = buildTranscript(listOf(ChatEvent("l", "user", text = "check it\nthen report", auto = "loop", round = 3), ChatEvent("g", "user", text = "goal prompt", auto = "goal", round = 2)))
+        assertEquals(listOf("Loop round 3 \u00B7 check it", "Goal check 2"), items.map { (it as Item.System).text })
+    }
+
+    @Test
     fun hidesSetStatusAndEmptyAssistantRows() {
         val items = buildTranscript(listOf(use("s", "mcp__agentview__set_status"), ChatEvent("a", "assistant", text = "  "), ChatEvent("r", "result", costUsd = 1.0)))
         assertTrue(items.isEmpty())

@@ -277,9 +277,10 @@ Repos come from `~/workspace` and `~/workspace_personal`. Set `AGENTVIEW_ROOTS` 
 Chats start only inside these folders or Paseo worktrees.
 
 - Chats keep running in the background. Ones that need you are marked and listed first
-- Failing CI on your pull request shows under Needs you, and a fix chat starts by itself, once per pushed
+- Failing CI on your pull request shows under Needs you, and once autofix is on a fix chat starts by itself, once per pushed
   commit; the item then says "Fixing in" with the chat and opens it. `autofix` in `~/.agentview/attention.json`
-  limits that to the listed repo names, `false` turns it off
+  limits that to the listed repo names, `false` or no key leaves it off. The commit to chat map is kept in
+  `~/.agentview/autofix.json`, so a restart does not start a second fix chat for a commit
 - A chat closes after 10 idle minutes with no one viewing it. Reopen it from Recent
 - Chats and Paseo worktrees idle for 12 hours can be deleted (worktree branches are kept)
 - A Paseo worktree whose branch has a merged PR and nothing uncommitted shows Merged and can be removed at once
@@ -304,15 +305,17 @@ or dismissed meanwhile are left out, and a queued push for an ask you already re
 A chat that runs for 15 minutes without sending anything is reported once the same way and gets a slow yellow dot
 in the chat list until its next message.
 
-## Loop mode
+## Build cycle
 
-The loop pill in the composer turns a prompt into a plan, build, test cycle. Opus plans in plan mode, detailed
+The build cycle setting in the composer turns a prompt into a plan, build, test cycle. Opus plans in plan mode, detailed
 enough that someone who missed the conversation could build from it, and starts building as soon as the plan is
 ready. A plan that deletes data, changes a schema, auth or security, reaches outside the repo, pushes or deploys,
-or guesses at an open question waits for your approval instead, and rejecting it stops the loop. Sonnet then tests the result as a separate model and ends with a verdict, and
+or guesses at an open question waits for your approval instead, and rejecting it stops the cycle. Sonnet then tests the result as a separate model and ends with a verdict, and
 Opus fixes whatever the tester found, up to the number of rounds you pick. Phases show as violet markers in the
-timeline and transcript, the composer footer shows the current phase and round, and Stop ends the loop. Claude
-exiting during a step ends it too.
+timeline and transcript, the composer footer shows the round, and Stop ends the cycle. Claude
+exiting during a step ends it too. When a cycle ends (passed, failed or stopped) it switches itself off, so the next
+message is a normal turn. A cycle that a server restart interrupted is not resumed: the chat gets a note and the
+setting is Off.
 
 ## Personal and work Claude accounts
 

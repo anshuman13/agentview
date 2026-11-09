@@ -8,6 +8,7 @@ import { post } from './notify.js';
 import { readJson, writeJson } from '../json.js';
 
 const FILE = path.join(os.homedir(), '.agentview/attention.json');
+const FIXES = path.join(os.homedir(), '.agentview/autofix.json');
 const EVERY = 15 * 60_000;
 const EDIT_AGE = 10 * 60_000;
 const STALE_AFTER = 2 * 24 * 60 * 60_000;
@@ -93,6 +94,7 @@ async function load() {
   seen = new Map(Object.entries(saved?.seen ?? {}));
   dismissed = new Set(saved?.dismissed ?? []);
   autofix = saved?.autofix ?? false;
+  fixes = await loadFixes();
 }
 
 let saving: Promise<void> = Promise.resolve();
@@ -130,9 +132,13 @@ export function merge(found: AttentionItem[], now = Date.now()) {
   return fresh;
 }
 
-const fixes = new Map<string, string>();
+let fixes = new Map<string, string>();
 
-// One fix chat per failing head commit; the chat ids live in memory only. The autofix key in attention.json
+export async function loadFixes(file = FIXES) {
+  return new Map(Object.entries(await readJson<Record<string, string>>(file, {})));
+}
+
+// One fix chat per failing head commit; the commit to chat map is kept in autofix.json. The autofix key in attention.json
 // lists repo names, an empty list means every repo, false or missing turns it off.
 export async function fixCi(list: AttentionItem[], repos: string[] | false, fix: (item: AttentionItem) => Promise<string>, started = fixes) {
   if (repos === false) return;
@@ -174,7 +180,11 @@ async function poll(src: Sources) {
     }),
   ]);
   const fresh = merge(found);
-  if (fixer) await fixCi(items, autofix, fixer);
+  if (fixer) {
+    const before = fixes.size;
+    await fixCi(items, autofix, fixer);
+    if (fixes.size !== before) await writeJson(FIXES, Object.fromEntries([...fixes].filter(([, chat]) => chat))).catch(() => {});
+  }
   if (seeded) for (const it of fresh) if (!dismissed.has(it.id)) post(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, it.number ? `#${it.number}` : it.repo, it.title);
   seeded = true;
   await save().catch(() => {});

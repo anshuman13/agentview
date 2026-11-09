@@ -46,7 +46,7 @@ export type AgentEvent = {
 };
 
 export type ChatEvent =
-  | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; phase?: LoopPhase }
+  | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; phase?: LoopPhase; auto?: 'loop' | 'goal'; round?: number }
   | { id: string; kind: 'assistant'; text: string; streaming: boolean; at: number; parent?: string }
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number; parent?: string; agent?: string }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number; parent?: string; stopped?: boolean }

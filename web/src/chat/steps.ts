@@ -7,6 +7,7 @@ export type ToolResult = Extract<ChatEvent, { kind: 'tool_result' }>;
 export type Item =
   | { kind: 'user'; id: string; text: string; at: number; stopping?: boolean; queued?: boolean }
   | { kind: 'phase'; id: string; text: string }
+  | { kind: 'auto'; id: string; label: string; text: string }
   | { kind: 'assistant'; id: string; text: string; streaming: boolean }
   | { kind: 'system'; id: string; text: string }
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
@@ -99,7 +100,8 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
 function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>, resumed: Map<string, number>): Item[] {
   const items: Item[] = [];
   for (const e of events) {
-    if (e.kind === 'user') items.push(e.phase ? { kind: 'phase', id: e.id, text: e.text } : { kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued });
+    if (e.kind === 'user' && e.auto) items.push({ kind: 'auto', id: e.id, label: e.auto === 'goal' ? `Goal check ${e.round}` : `Loop round ${e.round} · ${firstLine(e.text)}`, text: e.text });
+    else if (e.kind === 'user') items.push(e.phase ? { kind: 'phase', id: e.id, text: e.text } : { kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued });
     else if (e.kind === 'assistant') { if (e.text.trim()) items.push({ kind: 'assistant', id: e.id, text: e.text, streaming: e.streaming }); }
     else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text });
     else if (e.kind === 'blocked') items.push({ kind: 'blocked', id: e.id, ev: e });

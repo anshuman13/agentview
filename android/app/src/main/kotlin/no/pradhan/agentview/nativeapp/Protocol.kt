@@ -36,6 +36,8 @@ data class ChatEvent(
     val costUsd: Double = 0.0,
     val model: String? = null,
     val phase: String? = null,
+    val auto: String? = null,
+    val round: Int = 0,
     val stopping: Boolean = false,
     val stopped: Boolean = false,
     val rule: String = "",

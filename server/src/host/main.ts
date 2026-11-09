@@ -24,7 +24,7 @@ import { costsOf, modelField } from './summaryCache.js';
 import { busy, runningAgents, parseSaved, stoppedOf, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
-import { readJson, writeJsonSync } from '../json.js';
+import { readJson, writeJson, writeJsonSync } from '../json.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -142,6 +142,14 @@ async function createChat(cwd: string, resume?: string, title = '', fork = false
     notifyAway(m, () => (viewers(chat) ? null : summary(chat)), () => desktopActive(desktopAt));
     if (m.type === 'session' && chat.state.session.sessionId) rememberAccount(chat.state.session.sessionId, chat.state.session.account);
     if (m.type === 'session' && chat === lastViewed) remember(chat);
+    if (m.type === 'session') {
+      const { repeat, loop } = chat.state.session;
+      const key = JSON.stringify([repeat, loop]);
+      if (persisted.get(chat) !== key) {
+        persisted.set(chat, key);
+        saveSoon();
+      }
+    }
     const woke = stalls.seen(chat.id, chat.state.session.running);
     if (woke || (m.type === 'event' ? m.event.kind === 'user' : m.type !== 'append')) broadcastLive();
   });
@@ -156,6 +164,7 @@ function closeChat(chat: AgentSession) {
   stalls.seen(chat.id, false);
   live.get(chat.id)?.watcher.close();
   live.delete(chat.id);
+  saveSoon();
   push({ closed: chat.id });
   broadcastLive();
 }
@@ -256,9 +265,9 @@ function saveAndExit() {
   // A host that never got the socket has nothing to save, and the socket and saved chats belong to the one that did.
   if (!serving) process.exit(0);
   const open: Saved[] = [...live.values()].flatMap(({ chat }) => {
-    const { sessionId, repeat } = chat.state.session;
+    const { sessionId, repeat, loop } = chat.state.session;
     const stopped = stoppedOf(chat.state.events, chat.driver.runningTasks?.() ?? [], chat.state.session.running);
-    return sessionId ? [{ sessionId, crons: chat.crons, repeat, queued: chat.queuedMessages, ...(stopped && { stopped }) }] : [];
+    return sessionId ? [{ sessionId, crons: chat.crons, repeat, loop, queued: chat.queuedMessages, ...(stopped && { stopped }) }] : [];
   });
   const chats = [...open, ...unrestored.filter((u) => !open.some((c) => c.sessionId === u.sessionId))];
   writeJsonSync(RESTORE, { view: lastViewed?.state.session.sessionId, chats });
@@ -266,6 +275,23 @@ function saveAndExit() {
     unlinkSync(SOCK);
   } catch {}
   process.exit(0);
+}
+
+// A crash or kill skips saveAndExit, so a loop or build cycle is also written a second after it changes.
+// Only the loop state goes in: queued messages and running work would be stale by the time of a crash.
+const persisted = new WeakMap<AgentSession, string>();
+let saveTimer: NodeJS.Timeout | null = null;
+function saveSoon() {
+  saveTimer ??= setTimeout(() => {
+    saveTimer = null;
+    if (!serving || restarting) return;
+    const chats: Saved[] = [...live.values()].flatMap(({ chat }) => {
+      const { sessionId, repeat, loop } = chat.state.session;
+      return sessionId && (repeat || loop.on) ? [{ sessionId, crons: [], repeat, loop }] : [];
+    });
+    const kept = unrestored.filter((u) => !chats.some((c) => c.sessionId === u.sessionId));
+    writeJson(RESTORE, { view: lastViewed?.state.session.sessionId, chats: [...chats, ...kept] }).catch(() => {});
+  }, 1000);
 }
 
 // Only when the host's own code changed on disk, unless forced: restarting the host ends running Claude processes.
@@ -299,11 +325,13 @@ async function restore() {
     if (!chat) return;
     unrestored = unrestored.filter((u) => u !== s);
     if (s.crons.length) chat.restoreCrons(s.crons);
+    if (s.loop) chat.restoreLoop(s.loop);
     if (s.repeat) chat.resumeRepeat(s.repeat);
     if (s.stopped) chat.resumeStopped(s.stopped);
     for (const q of s.queued ?? []) void chat.prompt(q.text, q.id);
   }));
   await rm(RESTORE, { force: true });
+  saveSoon();
   return (saved.view && bySession(saved.view)) || null;
 }
 

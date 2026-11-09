@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { ACCOUNT_LABEL, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, errText } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from '../host/restore.js';
@@ -55,7 +55,7 @@ export class AgentSession implements AgentHost {
     closed: () => this.closed,
     setSession: (patch) => this.setSession(patch),
     system: (text) => this.system(text),
-    sendPrompt: (text) => this.sendPrompt(text),
+    sendPrompt: (text, auto, round) => this.sendPrompt(text, randomUUID(), { auto, round }),
   });
   private orphans = new Set<string>();
   private index = new EventIndex(() => this.state.events);
@@ -350,8 +350,8 @@ export class AgentSession implements AgentHost {
     if (pr && use && createsPr(use)) this.setSession({ pr: Number(pr) });
   }
 
-  sendPrompt(text: string, id: string = randomUUID()) {
-    this.pushEvent({ id, kind: 'user', text, at: Date.now() });
+  sendPrompt(text: string, id: string = randomUUID(), mark?: { auto: 'loop' | 'goal'; round: number }) {
+    this.pushEvent({ id, kind: 'user', text, at: Date.now(), ...mark });
     this.enqueue(text, id);
   }
 
@@ -384,7 +384,7 @@ export class AgentSession implements AgentHost {
     this.planChange = null;
     if (looping(this.state.session.loop)) {
       this.setSession({ loop: { ...this.state.session.loop, phase: null } });
-      this.endLoop('Loop stopped');
+      this.endLoop('Build cycle stopped');
     }
     this.turns -= this.driver.dropInput();
     this.dropQueue();
@@ -493,7 +493,13 @@ export class AgentSession implements AgentHost {
   setLoop(on: boolean, max?: number) {
     const next = withLoop(this.state.session.loop, on, max);
     this.setSession({ loop: next });
-    this.system(on ? `Loop on: Opus plans and builds, Sonnet tests, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Loop off');
+    this.system(on ? `Build cycle on: Opus plans and builds, Sonnet tests, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Build cycle off');
+  }
+
+  restoreLoop(loop: LoopState) {
+    if (!looping(loop)) return this.setSession({ loop });
+    this.setSession({ loop: loopOff(loop.max) });
+    this.system('Build cycle interrupted by a restart. Send a message to start it again.');
   }
 
   private async startLoop(task: string, id: string) {
@@ -513,7 +519,7 @@ export class AgentSession implements AgentHost {
     } catch (err) {
       // Nothing was sent, so no turn will end and clear running; stop the loop here.
       this.setSession({ running: this.turns > 1, loop: { ...this.state.session.loop, phase: 'failed' } });
-      this.endLoop(`Loop stopped: could not switch to the ${step.phase} step (${errText(err)})`);
+      this.endLoop(`Build cycle stopped: could not switch to the ${step.phase} step (${errText(err)})`);
       if (this.turns === 1) this.dequeue();
       return;
     } finally {
@@ -542,6 +548,7 @@ export class AgentSession implements AgentHost {
   }
 
   private endLoop(note: string | null) {
+    this.setSession({ loop: { ...this.state.session.loop, on: false } });
     if (note) this.system(note);
     const model = this.loopPrevModel;
     this.loopPrevModel = null;
@@ -723,7 +730,7 @@ export class AgentSession implements AgentHost {
     const loop = this.state.session.loop;
     if (looping(loop)) {
       this.setSession({ loop: { ...loop, phase: 'failed' } });
-      this.endLoop(`Loop stopped: Claude exited during the ${loop.phase} step`);
+      this.endLoop(`Build cycle stopped: Claude exited during the ${loop.phase} step`);
     }
     // Queued messages are not lost with the process; the first one starts a fresh CLI.
     if (!this.dequeue()) this.repeater.defer();

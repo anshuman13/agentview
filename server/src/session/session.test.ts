@@ -113,7 +113,7 @@ describe('AgentSession turns', () => {
     await s.prompt('build it');
     expect(s.state.session.running).toBe(false);
     expect(s.state.session.loop.phase).toBe('failed');
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('Loop stopped') });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('Build cycle stopped') });
   });
 
   it('stops the loop when Claude exits mid-step', async () => {
@@ -140,7 +140,29 @@ describe('AgentSession turns', () => {
     await expect(asked).resolves.toMatchObject({ behavior: 'deny' });
     result('r1');
     expect(s.state.session.loop.phase).toBe('failed');
-    expect(s.state.events.some((e) => e.kind === 'system' && e.text === 'Loop stopped: the plan was not approved')).toBe(true);
+    expect(s.state.events.some((e) => e.kind === 'system' && e.text === 'Build cycle stopped: the plan was not approved')).toBe(true);
+  });
+
+  it('switches the build cycle off when it passes, so the next message is a normal turn', async () => {
+    const { s, handle } = fakeSession();
+    s.setLoop(true);
+    s.state.session.loop = { on: true, max: 3, round: 1, phase: 'test' };
+    s.sendPrompt('test it');
+    handle({ type: 'result', subtype: 'success', uuid: 'r1', result: 'VERDICT: PASS', total_cost_usd: 0, is_error: false });
+    expect(s.state.session.loop).toMatchObject({ on: false, phase: 'passed' });
+    const send = vi.spyOn(s, 'sendPrompt');
+    await s.prompt('next');
+    expect(send).toHaveBeenCalledWith('next', expect.any(String));
+    expect(s.state.session.loop.phase).toBe('passed');
+  });
+
+  it('does not resume a build cycle that a restart interrupted', () => {
+    const { s } = fakeSession();
+    s.restoreLoop({ on: true, max: 5, round: 2, phase: 'build' });
+    expect(s.state.session.loop).toEqual({ on: false, max: 5, round: 0, phase: null });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Build cycle interrupted by a restart. Send a message to start it again.' });
+    s.restoreLoop({ on: true, max: 4, round: 0, phase: null });
+    expect(s.state.session.loop.on).toBe(true);
   });
 
   it('continues on the other account when a turn ends on a usage limit', async () => {

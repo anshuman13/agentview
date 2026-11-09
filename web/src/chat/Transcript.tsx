@@ -196,12 +196,24 @@ function sameItem(a: Item, b: Item): boolean {
 
 export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && sameItem(p.it, n.it));
 
+function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="tr-auto" {...pressable(() => setOpen((v) => !v))} title={open ? 'Hide the prompt' : 'Show the full prompt'}>
+      <Icon name={open ? 'chevron-down' : 'chevron-right'} small />{it.label}
+      {open && <div className="tr-auto-text">{it.text}</div>}
+    </div>
+  );
+}
+
 function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolean }) {
   switch (it.kind) {
     case 'user':
       return <div className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title="Waiting for Claude's next step"><Icon name="clock" small /><button className="link tl-send-now" title="Stop Claude's current step and send this now" onClick={() => send({ type: 'send_now', id: it.id })}>Send now</button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><button className="link" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</button></span>}</div>;
     case 'phase':
       return <div className="tr-phase"><Icon name="sync" small />{it.text}</div>;
+    case 'auto':
+      return <AutoRow it={it} />;
     case 'assistant':
       return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <div className="tr-acts"><button className="link" title="Quote this reply in the composer" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: quoteReply(it.text) } }))}>Reply</button><button className="link" title="Copy this reply as Markdown" onClick={() => copyText(it.text).then(() => notice('Copied the reply'), () => notice('Copy failed'))}>Copy</button><button className="link" title="Save this reply to Notes" onClick={() => saveReply(it.text, cwd)}>Save as note</button></div>}</div>;
     case 'system':

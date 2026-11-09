@@ -98,7 +98,7 @@ export interface RepeatHost {
   closed(): boolean;
   setSession(patch: Partial<SessionInfo>): void;
   system(text: string): void;
-  sendPrompt(text: string): void;
+  sendPrompt(text: string, auto: 'loop' | 'goal', round: number): void;
 }
 
 export class RepeatController {
@@ -164,8 +164,7 @@ export class RepeatController {
     const round = r.round + 1;
     this.host.setSession({ repeat: { ...r, round, nextAt: r.every ? Date.now() + r.every : null } });
     this.arm();
-    this.host.system(`${roundWord(r)} ${round}`);
-    this.host.sendPrompt(r.prompt);
+    this.host.sendPrompt(r.prompt, r.goal ? 'goal' : 'loop', round);
   }
 
   // A round that failed waits before the next one, so a loop never spins on an error.
