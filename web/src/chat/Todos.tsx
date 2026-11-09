@@ -20,7 +20,7 @@ export function TodosPick({ anchor, onClose }: { anchor: DOMRect; onClose: () =>
   useEffect(() => {
     fetch(api('/api/git/todos')).then((r) => r.json()).then((r: { todos?: Todo[] }) => setTodos(Array.isArray(r?.todos) ? r.todos : [])).catch(() => setTodos([]));
   }, []);
-  const items = todos === null ? [{ value: '', label: 'Looking for TODOs' }] : todos.length ? todos.map((t, i) => ({ value: String(i), label: todoTitle(t), detail: `${t.path}:${t.line}` })) : [{ value: '', label: 'No TODO, FIXME or AI! comments in tracked files' }];
+  const items = todos === null ? [{ value: '', label: 'Looking for TODOs…' }] : todos.length ? todos.map((t, i) => ({ value: String(i), label: todoTitle(t), detail: `${t.path}:${t.line}` })) : [{ value: '', label: 'No TODO, FIXME or AI! comments in tracked files' }];
   return (
     <QuickPick
       anchor={anchor}

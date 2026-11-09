@@ -71,7 +71,7 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (error.isNotEmpty()) item { ErrorHint(error) }
-                else if (dirs[""] == null) item { Hint("Loading") }
+                else if (dirs[""] == null) item { Hint("Loading…") }
                 else if (rows.isEmpty()) item { EmptyState("No files", icon = "files", small = false) }
                 item { Spacer(Modifier.padding(top = Tokens.sp4)) }
                 lazyGroup(rows, key = { it.path }) { r ->
@@ -124,7 +124,7 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
         Box(Modifier.fillMaxSize()) {
             when {
                 file == null && load.error.isNotEmpty() -> ErrorHint(load.error)
-                file == null -> Hint("Loading")
+                file == null -> Hint("Loading…")
                 file.error != null -> EmptyState(fileError(file.error))
                 file.image -> Column(Modifier.padding(Tokens.sp8)) { ChatImage(hub, hub.pageChat, path) }
                 file.binary -> EmptyState("Binary file")

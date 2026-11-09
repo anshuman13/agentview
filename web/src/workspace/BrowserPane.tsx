@@ -257,7 +257,7 @@ function Connect({ state, onSetup }: { state: State; onSetup: () => void }) {
   if (state.state === 'connecting') {
     return (
       <div className="browser-pane">
-        <EmptyState size="md" icon="loading" title="Connecting to Chrome" hint={state.own ? undefined : 'If Chrome asks to allow remote debugging, click Allow'} />
+        <EmptyState size="md" icon="loading" title="Connecting to Chrome…" hint={state.own ? undefined : 'If Chrome asks to allow remote debugging, click Allow'} />
       </div>
     );
   }

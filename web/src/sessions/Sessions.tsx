@@ -395,7 +395,7 @@ export function OpenChats() {
             )}
           </div>
         ))}
-        {!groups.length && !hits.length && <EmptyState size="sm" title={filter ? 'No repo or session matches' : 'No sessions yet'} />}
+        {!groups.length && !hits.length && <EmptyState size="sm" title={filter ? 'No repo or session matches' : 'No sessions yet'} hint={filter ? undefined : 'Chats you start show here'} />}
         {hits.length > 0 && <div className="group">Messages</div>}
         {hits.map((h) => (
           <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={markSegments(h.text, queryWords(filter)).map((x, i) => (x.hit ? <b key={i}>{x.text}</b> : x.text))} lines={2} meta={messageMeta(h)} onClick={() => send({ type: 'open_session', sessionId: h.sessionId })} />
@@ -440,7 +440,7 @@ const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Acti
   archiveNow: (s, pinned, pin) => removeRequest(s.sessionId, '&archive', () => {
     setChats((l) => l.filter((x) => x.sessionId !== s.sessionId));
     showSnack('Archived', async () => {
-      if (!(await restoreChat(s.sessionId))) return notice('Could not restore the chat');
+      if (!(await restoreChat(s.sessionId))) return notice('Could not restore the chat. It is still in the bin.');
       setChats((l) => [s, ...l]);
       if (pinned) await pin(true);
     });
@@ -710,7 +710,7 @@ function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
           </span>
           <span className="acts">
             <button className="icon-btn" title="Ask Claude to handle this" onClick={(e) => { e.stopPropagation(); void ask(it); }}><Icon name="sparkle" small /></button>
-            <button className="icon-btn" title="Dismiss until it changes" onClick={(e) => { e.stopPropagation(); post('/api/attention/dismiss', it.id).catch(() => notice('Could not dismiss')); }}><Icon name="close" small /></button>
+            <button className="icon-btn" title="Dismiss until it changes" onClick={(e) => { e.stopPropagation(); post('/api/attention/dismiss', it.id).catch(() => notice('Could not dismiss. It stays in Needs you.')); }}><Icon name="close" small /></button>
           </span>
         </div>
       ))}

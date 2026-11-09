@@ -31,7 +31,7 @@ export function Autopilot() {
     <section aria-label="Autopilot">
       <div className="ui-group" ref={group}>
         <Row plain role="button" tabIndex={0} onClick={open} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(); } }}
-          title="Reply for me in Slack" meta={error || (state ? modeLine(state, waiting) : 'Loading')}
+          title="Reply for me in Slack" meta={error || (state ? modeLine(state, waiting) : 'Loading…')}
           trailing={c && <Switch on={c.enabled} label="Reply for me in Slack" onChange={(on) => void load(store.autopilot({ enabled: on }))} />} />
       </div>
     </section>

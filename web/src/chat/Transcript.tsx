@@ -152,7 +152,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
-      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(showEarlier)}>{loading ? 'Loading earlier' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
+      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(showEarlier)}>{loading ? 'Loading earlier…' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
       {items.slice(from).map((it, i) => {
         if (i > 0 && folded.has(it.id)) return null;
         const run = runs.get(it.id);
@@ -220,7 +220,7 @@ function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolea
 function saveReply(text: string, cwd: string) {
   const st = getState();
   const note = replyNote(text, st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd);
-  assistantStore().capture(note.text, 'note', note.profile).then(() => notice('Saved to Notes'), () => notice('Could not save the note'));
+  assistantStore().capture(note.text, 'note', note.profile).then(() => notice('Saved to Notes'), () => notice('Could not save the note. Try again.'));
 }
 
 function Explored({ label, onOpen }: { label: string; onOpen: () => void }) {

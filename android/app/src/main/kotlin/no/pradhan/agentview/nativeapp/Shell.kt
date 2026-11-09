@@ -235,7 +235,7 @@ private fun TwoPane(hub: Hub, onOpenAgent: (String) -> Unit) {
 @Composable
 private fun OfflineBanner(onRetry: () -> Unit) {
     Row(Modifier.fillMaxWidth().background(av.warnContainer).padding(start = Tokens.listPad, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("Offline. Trying to reconnect...", color = av.onWarnContainer, style = Type.subheadline)
+        Text("Offline. Trying to reconnect…", color = av.onWarnContainer, style = Type.subheadline)
         Button("Retry", onRetry, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
     }
 }

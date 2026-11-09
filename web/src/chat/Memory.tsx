@@ -29,6 +29,6 @@ export function MemoryPick({ anchor, cwd, onClose }: { anchor: DOMRect; cwd: str
       </Sheet>
     );
   }
-  const items = files === null ? [{ value: '', label: 'Loading memory' }] : files.length ? files.map((f) => ({ value: f.path, label: f.name, detail: [f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ') })) : [{ value: '', label: 'No CLAUDE.md or memory files for this folder' }];
+  const items = files === null ? [{ value: '', label: 'Loading memory…' }] : files.length ? files.map((f) => ({ value: f.path, label: f.name, detail: [f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ') })) : [{ value: '', label: 'No CLAUDE.md or memory files for this folder' }];
   return <QuickPick anchor={anchor} title="Memory" items={items} onPick={(v) => { const f = files?.find((x) => x.path === v); if (f) setOpen(f); }} onClose={onClose} />;
 }

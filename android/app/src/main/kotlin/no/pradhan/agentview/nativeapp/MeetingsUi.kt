@@ -373,7 +373,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
                 if (transcriptOpen) {
                     val t = transcript
                     when {
-                        t == null -> item { EmptyState("Loading") }
+                        t == null -> item { EmptyState("Loading…") }
                         t.isFailure -> item { ErrorHint("Could not load the transcript: ${t.exceptionOrNull()?.message}") }
                         t.getOrNull().isNullOrEmpty() -> item { EmptyState("No transcript text kept") }
                         else -> items(t.getOrNull()!!.lines().filter { it.isNotBlank() }) { line ->

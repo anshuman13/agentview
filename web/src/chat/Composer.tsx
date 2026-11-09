@@ -199,7 +199,7 @@ export function Composer() {
       await assistantStore().capture(title, 'task', readFlag('assistant-personal', false) ? 'personal' : 'work', at);
       notice('Added to Tasks');
     } catch (err) {
-      notice(`Not saved: ${errText(err)}`);
+      notice(`Not saved: ${errText(err)}. The text is back in the composer.`);
       setText((t) => append(t, `${raw} `));
     }
   };
@@ -215,7 +215,7 @@ export function Composer() {
       if (store.snapshot().meetings.find((x) => x.profile === cur.profile && x.id === cur.id)?.notes !== notes) throw new Error('the notes did not change');
       showSnack('Added to the notes');
     } catch (err) {
-      notice(`Not saved: ${errText(err)}`);
+      notice(`Not saved: ${errText(err)}. The text is back in the composer.`);
       setText((t) => append(t, `${raw} `));
     }
   };

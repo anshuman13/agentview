@@ -49,7 +49,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     if (live == null) {
         Column(Modifier.fillMaxSize()) {
             PageHeader("Chat")
-            EmptyState("No chat open", "Open a chat from Sessions.")
+            EmptyState("No chat open", "Open a chat from Sessions")
         }
         return
     }

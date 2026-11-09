@@ -201,7 +201,7 @@ function Grafana({ info }: { info: ObserveInfo }) {
           </div>
         )}
         <SubHead
-          label={dash.busy ? 'Looking for dashboards' : `${dash.data?.dashboards.length ?? 0} dashboard${dash.data?.dashboards.length === 1 ? '' : 's'}`}
+          label={dash.busy ? 'Looking for dashboards…' : `${dash.data?.dashboards.length ?? 0} dashboard${dash.data?.dashboards.length === 1 ? '' : 's'}`}
           link={dash.data?.link}
           linkLabel="Search in Grafana"
           ask={prompt('search the dashboards for this service, open the most relevant one and summarize what its panels show right now, with links')}
@@ -278,7 +278,7 @@ function Picker({ kind, parent, value, onPick, enabled }: { kind: 'database' | '
   return (
     <div className="obs-pick">
       <select value={value} disabled={!enabled} onFocus={() => !list.data && !list.busy && enabled && load()} onChange={(e) => onPick(e.target.value)} title={list.error || kind}>
-        <option value="">{list.busy ? 'Loading' : list.error ? 'Failed' : `${kind}${value ? '' : '...'}`}</option>
+        <option value="">{list.busy ? 'Loading…' : list.error ? 'Failed' : `${kind}${value ? '' : '…'}`}</option>
         {value && !list.data?.names.includes(value) && <option value={value}>{value}</option>}
         {list.data?.names.map((n) => <option key={n} value={n}>{n}</option>)}
       </select>

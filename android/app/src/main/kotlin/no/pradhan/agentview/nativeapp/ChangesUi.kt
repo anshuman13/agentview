@@ -72,7 +72,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                 item {
                     Group(Modifier.padding(top = Tokens.sp4)) {
                         val ab = listOfNotNull(status?.behind?.takeIf { it > 0 }?.let { "$it behind" }, status?.ahead?.takeIf { it > 0 }?.let { "$it ahead" }).joinToString(" · ")
-                        ListRow(status?.branch?.ifEmpty { null } ?: if (status == null) "Loading" else "No branch", ab.ifEmpty { null }, lines = 1)
+                        ListRow(status?.branch?.ifEmpty { null } ?: if (status == null) "Loading…" else "No branch", ab.ifEmpty { null }, lines = 1)
                     }
                 }
                 item {
@@ -217,7 +217,7 @@ private fun ReviewPage(hub: Hub, path: String, onCounts: (Pair<Int, Int>) -> Uni
     val file = load.data
     when {
         file == null && load.error.isNotEmpty() -> ErrorHint(load.error)
-        file == null -> Hint("Loading")
+        file == null -> Hint("Loading…")
         file.error != null -> EmptyState(fileError(file.error))
         file.image -> EmptyState("Image file")
         file.binary -> EmptyState("Binary file")

@@ -146,7 +146,7 @@ fun CodexScreen(hub: Hub) {
             st.error?.let { Group { ListRow("Sync failed", it, trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) } }
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {
                 when {
-                    !st.loaded -> Loading("Loading Codex...")
+                    !st.loaded -> Loading("Loading Codex…")
                     extra != null -> ExtraContent(extra, hub, st, profile, now, actions, ops, chips, decisions, onChip, push, { routeText = popRoute(routeText) }, { routeText = popRoute(routeText); needsOpen = true }) { editKey = it.key }
                     page == "overview" -> OverviewPage(hub, st, profile, now, actions, { editKey = it.key }, { needsOpen = true }, { page = "goals" }, { adding = true }, { push("meeting:${it.key}") })
                     page == "tasks" -> TasksPage(st, profile, now, actions, searching, query, { query = it }, { editKey = it.key }, { page = "tag:$it" })
@@ -215,7 +215,7 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
             AttachButton(hub, { uploading += it }, choose = false) { path -> text = appendWord(text, "[Image: $path] ") }
-            TextField(text, { text = it }, Modifier.weight(1f), placeholder = if (uploading > 0) "Uploading image..." else "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
+            TextField(text, { text = it }, Modifier.weight(1f), placeholder = if (uploading > 0) "Uploading image…" else "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
             val dictation = remember { Dictation() }
             VoiceButton({ spoken, final -> dictation.apply(text, text.length, spoken, final)?.let { text = it.first } }, { hub.notice.value = it })

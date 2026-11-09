@@ -565,17 +565,17 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         }
     }
 
-    fun rename(sessionId: String, title: String) = write("Could not rename the chat") {
+    fun rename(sessionId: String, title: String) = write("Could not rename the chat. The old title is kept.") {
         api.rename(sessionId, title)
         workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.map { if (it.sessionId == sessionId) it.copy(title = title) else it }) }
     }
 
-    fun archive(sessionId: String) = write("Could not archive the chat") {
+    fun archive(sessionId: String) = write("Could not archive the chat. It is still in the list.") {
         api.archive(sessionId)
         workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.filter { it.sessionId != sessionId }) }
     }
 
-    fun pin(sessionId: String, on: Boolean) = write("Could not ${if (on) "pin" else "unpin"} the chat") {
+    fun pin(sessionId: String, on: Boolean) = write("Could not ${if (on) "pin" else "unpin"} the chat. Try again.") {
         api.pin(sessionId, on)
         workspace.value = workspace.value.let { w -> w.copy(pins = if (on) w.pins + sessionId else w.pins - sessionId) }
     }

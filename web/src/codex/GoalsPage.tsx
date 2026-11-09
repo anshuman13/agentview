@@ -60,7 +60,7 @@ function GoalGroup({ goal, items, showProfile, now, reopen, move, rename, remove
   return (
     <div className="gl-group">
       <Section label={label} count={count} action={action} />
-      {tasks.length ? tasks.map((t) => <Row key={t.id} title={t.title} meta={t.status === 'done' ? 'Done' : dueText(t, now)} onClick={() => openTask(t)} />) : <EmptyState size="sm" icon="target" title="No tasks yet" />}
+      {tasks.length ? tasks.map((t) => <Row key={t.id} title={t.title} meta={t.status === 'done' ? 'Done' : dueText(t, now)} onClick={() => openTask(t)} />) : <EmptyState size="sm" icon="target" title="No tasks yet" hint="Tasks linked to this goal show here" />}
     </div>
   );
 }

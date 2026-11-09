@@ -48,7 +48,7 @@ fun DevServersSheet(hub: Hub, onDismiss: () -> Unit) {
     Sheet(onDismiss = onDismiss, title = "Dev servers", padded = false, full = false) {
         val list = ports
         when {
-            list == null -> EmptyState("Looking for servers")
+            list == null -> EmptyState("Looking for servers…")
             list.isEmpty() -> EmptyState("No dev servers", error ?: "Start one on the Mac, such as npm run dev.")
             else -> list.forEach { p ->
                 ListRow(":${p.port}", devPortMeta(p), trailing = { AvIcon("link-external", tint = av.fgMuted) }, onClick = {

@@ -57,7 +57,7 @@ let asking = false;
 export function ask(text: string, profile: Profile, fresh = false) {
   const s = getState();
   if (!s.ui.connected) {
-    notice('Not connected to a Mac, the question was not sent');
+    notice('Not connected to a Mac. The question was not sent.');
     return false;
   }
   if (asking) return false;
@@ -86,7 +86,7 @@ export function ask(text: string, profile: Profile, fresh = false) {
     } else if (Date.now() - started > 15000) {
       clearInterval(t);
       asking = false;
-      notice('The Codex chat did not open, the question was not sent');
+      notice('The Codex chat did not open. The question was not sent.');
     }
   }, 150);
   window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'tab:chat' } }));

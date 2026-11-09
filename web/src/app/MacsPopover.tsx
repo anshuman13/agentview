@@ -110,7 +110,7 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
           ))}
         </ul>
         {error && <div className="connect-body muted">{error}</div>}
-        {!error && !macs && <div className="connect-body muted">Looking on NetBird</div>}
+        {!error && !macs && <div className="connect-body muted">Looking on NetBird…</div>}
         {netbird && <div className="connect-body warn">{netbird}</div>}
         {bundled && (
           <form className="connect-body" onSubmit={(e) => { e.preventDefault(); void connectTo(); }}>

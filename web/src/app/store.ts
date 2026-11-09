@@ -236,7 +236,7 @@ export function send(m: ClientMessage, chat?: string) {
   if (m.type === 'view') showCached(m.id);
   if (m.type === 'open_session') markSeen(m.sessionId);
   else if (m.type === 'view') markSeen(state.live.find((c) => c.id === m.id)?.sessionId);
-  void post(m, 2, chat).then((ok) => ok === false && notice('Not connected, that did not reach the server'));
+  void post(m, 2, chat).then((ok) => ok === false && notice('Not connected. That did not reach the server.'));
   return true;
 }
 
@@ -248,7 +248,7 @@ function deliver(msg: { type: 'prompt' | 'steer' | 'queue'; text: string; id: st
     if (ok) return;
     if (msg.type === 'steer') set((s) => ({ events: s.events.filter((e) => e.id !== msg.id) }));
     if (state.session.id !== chat) return notice('A message to another chat may not have reached the server');
-    notice('Message may not have reached the server, it is back in the box');
+    notice('Message may not have reached the server. It is back in the composer.');
     onLost();
   });
 }

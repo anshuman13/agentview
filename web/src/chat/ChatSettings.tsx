@@ -114,7 +114,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
           anchor={pick.at}
           title="Remind me"
           items={remindChoices(Date.now()).map((c) => ({ value: String(c.at), label: c.label }))}
-          onPick={(v) => { remindChat(Number(v)).then(() => notice('Reminder set'), () => notice('Could not set the reminder')); close(); }}
+          onPick={(v) => { remindChat(Number(v)).then(() => notice('Reminder set'), () => notice('Could not set the reminder. Try again.')); close(); }}
           onClose={close}
         />
       )}

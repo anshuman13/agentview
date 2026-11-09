@@ -110,7 +110,7 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
             if (showHistory && row.people != null) {
                 val h = history
                 when {
-                    h == null -> Text("Loading", style = Type.meta, color = av.metaFg)
+                    h == null -> Text("Loading…", style = Type.meta, color = av.metaFg)
                     h.isFailure -> Button("Retry history", { history = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     h.getOrThrow().replies.isEmpty() -> Text("No replies sent to ${row.people} yet", style = Type.meta, color = av.metaFg)
                     else -> h.getOrThrow().replies.forEach { Text("${ymd(it.at)} · ${it.line}", style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) }

@@ -18,7 +18,7 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
   }, []);
   if (!list.length) return null;
   const restore = async (b: BinnedSession) => {
-    if (!(await restoreChat(b.sessionId))) return notice('Could not restore the chat');
+    if (!(await restoreChat(b.sessionId))) return notice('Could not restore the chat. It is still in the bin.');
     setList((l) => l.filter((x) => x.sessionId !== b.sessionId));
     onRestore(b);
   };

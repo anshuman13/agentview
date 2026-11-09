@@ -25,7 +25,7 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
     <aside className="wk-feed">
       <Section label="Recently updated" count={sectionCount(entries.length)} />
       <div className="as-group">
-        {!shown.length && <EmptyState size="sm" icon="book" title="No claims yet" />}
+        {!shown.length && <EmptyState size="sm" icon="book" title="No claims yet" hint="New and changed claims show here" />}
         {shown.map(({ fact, kind, at }) => {
           const src = sourcesOf(fact)[0];
           const c = contestOf(fact);

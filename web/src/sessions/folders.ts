@@ -143,7 +143,7 @@ const refreshBin = () => window.dispatchEvent(new Event('agentview:bin'));
 
 export const removeRequest = (id: string, query: string, onDone: () => void, onError: (e: string) => void) => async () => {
   const r = await fetch(apiUrl(`/api/sessions?id=${encodeURIComponent(id)}${query}`), { method: 'DELETE' }).catch(() => null);
-  if (!r?.ok) return onError((await r?.json().catch(() => null))?.error ?? 'Could not delete the chat');
+  if (!r?.ok) return onError((await r?.json().catch(() => null))?.error ?? 'Could not delete the chat. It is still in the list.');
   invalidateWorkspace();
   onDone();
   refreshBin();
@@ -188,7 +188,7 @@ export function renameTitle(event: RenameEvent, text: string, current: string) {
 
 export async function renameChat(sessionId: string, title: string) {
   const r = await fetch(apiUrl(`/api/sessions/rename?id=${encodeURIComponent(sessionId)}`), { method: 'POST', body: JSON.stringify({ title }) }).catch(() => null);
-  if (!r?.ok) notice('Could not rename the chat');
+  if (!r?.ok) notice('Could not rename the chat. The old title is kept.');
   else invalidateWorkspace();
   return Boolean(r?.ok);
 }
@@ -213,7 +213,7 @@ export function usePins() {
   const setPin = async (id: string, on: boolean) => {
     const r = await fetch(apiUrl(`${PINS_URL}?id=${encodeURIComponent(id)}`), { method: on ? 'POST' : 'DELETE' }).catch(() => null);
     if (r?.ok) await load();
-    else notice(on ? 'Could not pin the chat' : 'Could not unpin the chat');
+    else notice(on ? 'Could not pin the chat. Try again.' : 'Could not unpin the chat. Try again.');
     return Boolean(r?.ok);
   };
   return { pins, setPin };

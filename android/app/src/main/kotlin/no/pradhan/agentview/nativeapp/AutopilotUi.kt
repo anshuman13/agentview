@@ -51,7 +51,7 @@ fun AutopilotRow(hub: Hub, waiting: Int, onOpen: () -> Unit) {
     val ap = rememberAutopilot(hub)
     val s = ap.state
     Group(Modifier.padding(top = Tokens.sp4)) {
-        ListRow("Reply for me in Slack", ap.error.ifEmpty { if (s != null) modeLine(s, waiting) else "Loading" }, onClick = onOpen, trailing = { Chevron() })
+        ListRow("Reply for me in Slack", ap.error.ifEmpty { if (s != null) modeLine(s, waiting) else "Loading…" }, onClick = onOpen, trailing = { Chevron() })
     }
 }
 

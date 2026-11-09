@@ -56,7 +56,7 @@ function HistoryLines({ data, error, who, retry }: { data: ReplyHistory | null; 
       {error ? (
         <span className="muted small">{error} <Button size="sm" onClick={retry}>Retry</Button></span>
       ) : !items ? (
-        <span className="muted small">Loading</span>
+        <span className="muted small">Loading…</span>
       ) : !items.length ? (
         <span className="muted small">No replies sent to {who} yet</span>
       ) : items.map((r, i) => <span key={i} className="muted small">{ymd(r.at)} · {r.line}</span>)}

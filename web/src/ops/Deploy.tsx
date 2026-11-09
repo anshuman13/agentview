@@ -62,7 +62,7 @@ function EnvRow({ env, s, onDeploy, onRollback }: { env: DeployEnv; s: DeploySta
           <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
           {menu && (
             <Menu trigger={btn} onClose={() => setMenu(false)}>
-              <MenuItem onClick={run(() => onDeploy())}>Deploy a branch or commit...</MenuItem>
+              <MenuItem onClick={run(() => onDeploy())}>Deploy a branch or commit…</MenuItem>
               {d && <MenuItem href={`https://github.com/${s.repo}/commit/${d.sha}`} onClick={() => setMenu(false)}>Open {short(d.sha)} on GitHub</MenuItem>}
               {latest?.url && <MenuItem href={latest.url} onClick={() => setMenu(false)}>Open the latest deploy</MenuItem>}
               <MenuItem disabled={!env.rollbackTo} title={env.rollbackTo ? undefined : 'No earlier deploy to roll back to'} onClick={run(onRollback)}>Roll back</MenuItem>

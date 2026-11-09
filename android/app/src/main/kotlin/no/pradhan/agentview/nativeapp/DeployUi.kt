@@ -71,7 +71,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (load.error.contains("no Velo app")) item { EmptyState("No Velo app here", "This repo has no .deploy/app.yaml", icon = "rocket", small = false) }
                 else item { ErrorHint(load.error) }
-                if (s == null && load.error.isEmpty()) item { Loading("Loading") }
+                if (s == null && load.error.isEmpty()) item { Loading("Loading…") }
                 if (s != null) {
                     item { SectionHeader(s.app.ifEmpty { "Velo" }) }
                     item {
@@ -89,7 +89,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
                                 ListRow(env.label, envMetaLine(env, s, now), trailing = {
                                     Button("Deploy", { deploy(s.head.sha) }, size = ButtonSize.Sm)
                                     MoreButton { close ->
-                                        MenuItem("Deploy a branch or commit...", "rocket", { close(); deploy(null) })
+                                        MenuItem("Deploy a branch or commit…", "rocket", { close(); deploy(null) })
                                         env.deployed?.let { d -> MenuItem("Open ${shortSha(d.sha)} on GitHub", "link-external", { close(); link("https://github.com/${s.repo}/commit/${d.sha}") }) }
                                         MenuItem("Roll back", "discard", {
                                             close()

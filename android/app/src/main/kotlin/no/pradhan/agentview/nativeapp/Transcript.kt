@@ -158,11 +158,11 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
             }
             if (state.earlier > 0) item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
-                    Text(if (loading) "Loading earlier" else "Show earlier (${state.earlier} hidden)", style = Type.callout, color = av.accentText)
+                    Text(if (loading) "Loading earlier…" else "Show earlier (${state.earlier} hidden)", style = Type.callout, color = av.accentText)
                 }
             }
             if (rows.isEmpty()) item(key = "empty") {
-                if (state.settled && !(blank && (loading || tried != state.earlier))) EmptyState("No messages yet", "Your prompts, Claude's steps and replies show up here.") else EmptyState("Loading")
+                if (state.settled && !(blank && (loading || tried != state.earlier))) EmptyState("No messages yet", "Your prompts, Claude's steps and replies show up here") else EmptyState("Loading…")
             }
         }
         val pill by remember(dayOf) { derivedStateOf { if (listState.isScrollInProgress) listState.layoutInfo.visibleItemsInfo.lastOrNull()?.key?.let { dayOf[it] } else null } }

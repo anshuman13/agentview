@@ -58,7 +58,7 @@ export function Transcript({ got }: { got: { text: string | null; error?: string
   return (
     <section className="mt-sec mt-fold">
       <Section label="Transcript" count={!open && count >= 0 ? matchLabel(count) : undefined} open={open} onToggle={() => setOpen((v) => !v)} />
-      {open && (!got ? <p className="mt-pending">Loading</p> : got.error ? <p className="mt-pending">Could not load the transcript: {got.error}</p> : got.text ? <SearchedOutput text={got.text} query={query} setQuery={setQuery} label="Search transcript" className="mt-transcript" /> : <p className="mt-pending">No transcript text kept for this meeting.</p>)}
+      {open && (!got ? <p className="mt-pending">Loading…</p> : got.error ? <p className="mt-pending">Could not load the transcript: {got.error}</p> : got.text ? <SearchedOutput text={got.text} query={query} setQuery={setQuery} label="Search transcript" className="mt-transcript" /> : <p className="mt-pending">No transcript text kept for this meeting.</p>)}
     </section>
   );
 }

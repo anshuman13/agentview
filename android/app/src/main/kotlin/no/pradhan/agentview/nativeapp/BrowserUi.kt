@@ -60,7 +60,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 when (state.state) {
-                    "connecting" -> item { EmptyState("Connecting to Chrome", if (state.own) null else "Allow remote debugging if Chrome asks", small = false) }
+                    "connecting" -> item { EmptyState("Connecting to Chrome…", if (state.own) null else "Allow remote debugging if Chrome asks", small = false) }
                     "on" -> {
                         val f = frame
                         item {

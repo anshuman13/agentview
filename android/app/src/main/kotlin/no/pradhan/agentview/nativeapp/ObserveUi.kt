@@ -55,7 +55,7 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
                     }
                 }
                 item { ErrorHint(load.error) }
-                if (info == null) { if (load.error.isEmpty()) item { Loading("Loading") } }
+                if (info == null) { if (load.error.isEmpty()) item { Loading("Loading…") } }
                 else {
                     item(key = "grafana:${info.repo}:$tick") { Grafana(hub, info) }
                     item { Snowflake(info.snowflake) }
@@ -101,7 +101,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         val (pats) = rememberLoad(info.repo, "patterns") { protocolJson.decodeFromString(GrafanaPatterns.serializer(), hub.read("/api/observe/grafana/patterns?repo=$repo")) }
 
         val boards = dash.data?.dashboards ?: emptyList()
-        SectionHeader(if (dash.busy) "Looking for dashboards" else plural(boards.size, "dashboard"), action = linkAction("Search", dash.data?.link, link))
+        SectionHeader(if (dash.busy) "Looking for dashboards…" else plural(boards.size, "dashboard"), action = linkAction("Search", dash.data?.link, link))
         ErrorHint(dash.error)
         if (boards.isNotEmpty()) Group {
             boards.forEachIndexed { i, d ->
@@ -111,7 +111,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         } else if (dash.data != null) EmptyState("No dashboards match", "Set grafana.query or grafana.dashboards in the settings")
 
         SectionHeader("Metrics, last 6 hours")
-        if (panels.busy && panels.data == null) Loading("Loading")
+        if (panels.busy && panels.data == null) Loading("Loading…")
         ErrorHint(panels.error)
         panels.data?.let { p ->
             Group {
@@ -124,7 +124,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         }
 
         SectionHeader("Error logs, last hour", action = linkAction("Open", logs.data?.link, link))
-        if (logs.busy && logs.data == null) Loading("Loading")
+        if (logs.busy && logs.data == null) Loading("Loading…")
         ErrorHint(logs.error)
         logs.data?.let { l ->
             Group {
@@ -136,7 +136,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         }
 
         SectionHeader("Error patterns", action = linkAction("Open", pats.data?.link, link))
-        if (pats.busy && pats.data == null) Loading("Loading")
+        if (pats.busy && pats.data == null) Loading("Loading…")
         ErrorHint(pats.error)
         pats.data?.let { p ->
             Group {
