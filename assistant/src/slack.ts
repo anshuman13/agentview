@@ -121,6 +121,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     `Permalinks look like https://${c.domain}/archives/<channel id>/p<ts without the dot>.`,
     'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old. For a DM, set waiting when the other person sent the last message and I have not replied.',
     'Add an ask when a message clearly asks me to do, answer or decide something, puts a direct question to me, makes a request to me in a thread I am in, or asks me to review or approve something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
+    'The one bot exception is a bot DM about Claude spend or usage: add an ask only when it needs action from me, such as pending seat or limit requests, blocked people, or spend near a limit. Put the numbers in the title, leave draft out, set tier hold and kind access or limit.',
     DRAFT_STEP,
     ...voiceLines(db),
     ...correctionLines(db),
