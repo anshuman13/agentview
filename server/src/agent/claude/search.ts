@@ -21,8 +21,12 @@ export function lineHit(line: string, words: string[]): MessageHit | null {
   const low = text.toLowerCase();
   if (!words.every((w) => low.includes(w))) return null;
   const i = low.indexOf(words[0]);
-  const start = Math.max(0, i - 40);
-  const snippet = (start > 0 ? '…' : '') + text.slice(start, start + 160) + (start + 160 < text.length ? '…' : '');
+  const from = Math.max(0, i - 40);
+  const space = text.indexOf(' ', from);
+  const start = from > 0 && space >= 0 && space < i ? space + 1 : from;
+  const cut = text.lastIndexOf(' ', start + 160);
+  const end = start + 160 >= text.length ? text.length : cut > i ? cut : start + 160;
+  const snippet = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
   return { sessionId: o.sessionId, role: o.type, text: snippet, at: o.timestamp ?? '' };
 }
 

@@ -10,7 +10,8 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { QuickPick } from '../ui/QuickPick';
 import { ATTENTION_LABEL, type AttentionItem, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
-import { ago, pressable, save, stored } from '../ui/util';
+import { ago, markSegments, pressable, save, stored } from '../ui/util';
+import { queryWords } from '../codex/data/match';
 import { Bin } from './Bin';
 import { AgentsBlock } from './AgentRow';
 import { openAgent } from './agents';
@@ -374,7 +375,7 @@ export function OpenChats() {
         {!groups.length && !hits.length && <EmptyState size="sm" title={filter ? 'No repo or session matches' : 'No sessions yet'} />}
         {hits.length > 0 && <div className="group">Messages</div>}
         {hits.map((h) => (
-          <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={h.text} lines={2} meta={messageMeta(h)} onClick={() => send({ type: 'open_session', sessionId: h.sessionId })} />
+          <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={markSegments(h.text, queryWords(filter)).map((x, i) => (x.hit ? <b key={i}>{x.text}</b> : x.text))} lines={2} meta={messageMeta(h)} onClick={() => send({ type: 'open_session', sessionId: h.sessionId })} />
         ))}
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>

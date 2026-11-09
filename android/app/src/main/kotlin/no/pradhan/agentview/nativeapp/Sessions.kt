@@ -216,7 +216,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                     item(key = "msg-head") { SectionHeader("Messages", hits.size.toString()) }
                     val now = System.currentTimeMillis()
                     lazyGroup(hits, { "msg-${it.sessionId}-${it.role}-${it.at}" }) { h ->
-                        ListRow(h.text, messageMeta(h, now), onClick = { scope.launch { if (hub.openSaved(h.sessionId)) onOpen() } })
+                        ListRow(boldMatches(h.text, filter), messageMeta(h, now), onClick = { scope.launch { if (hub.openSaved(h.sessionId)) onOpen() } })
                     }
                 }
             }

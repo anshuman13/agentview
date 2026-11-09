@@ -16,4 +16,9 @@ class MessageSearchTest {
         assertEquals("Importer · Claude · 3h", messageMeta(hits[0], now))
         assertEquals("Untitled · You", messageMeta(hits[1], now))
     }
+
+    @Test fun boldsEachQueryWord() {
+        val a = boldMatches("Retry the importer, retry again", "retry importer")
+        assertEquals(listOf(0 to 5, 10 to 18, 20 to 25), a.spanStyles.map { it.start to it.end }.sortedBy { it.first })
+    }
 }

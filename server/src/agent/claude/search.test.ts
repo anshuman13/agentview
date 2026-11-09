@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { searchMessages } from './search.js';
+import { lineHit, searchMessages } from './search.js';
 
 const root = mkdtempSync(path.join(os.tmpdir(), 'agentview-search-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -26,5 +26,12 @@ describe('searchMessages', () => {
       ['user', 'Fix the Retry logic in the importer'],
     ]);
     expect(await searchMessages('nothing here', root)).toEqual([]);
+  });
+
+  it('cuts long text at word boundaries around the first word', () => {
+    const text = `${'alpha '.repeat(20)}needle ${'omega '.repeat(40)}`;
+    const hit = lineHit(line({ type: 'user', sessionId: 'a', message: { content: text } }), ['needle']);
+    expect(hit?.text).toMatch(/^…alpha alpha .* needle omega .* omega…$/);
+    expect(hit?.text).not.toMatch(/…lpha|omeg…/);
   });
 });
