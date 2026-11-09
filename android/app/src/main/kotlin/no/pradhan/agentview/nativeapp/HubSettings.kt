@@ -1,0 +1,43 @@
+package no.pradhan.agentview.nativeapp
+
+
+
+fun Hub.setMuted(sessionId: String, on: Boolean) {
+    muted.value = if (on) muted.value + sessionId else muted.value - sessionId
+    prefs.edit().putStringSet("muted", muted.value).apply()
+}
+
+fun Hub.setNotify(on: Boolean) {
+    notifyOn.value = on
+    prefs.edit().putBoolean("notify", on).apply()
+    if (on && !notifier.granted()) wantsPermission.tryEmit(Unit)
+}
+
+fun Hub.saveOrigin(value: String) {
+    val v = value.trim().trimEnd('/').let { if (it.isEmpty() || "://" in it) it else "http://$it" }
+    if (v.isEmpty()) return
+    prefs.edit().putString("origin", v).apply()
+    origin.value = v
+    liveLoaded.value = false
+    store.reset()
+    codex.reset()
+    workspace.value = Workspace()
+    workspaceAt = 0
+    stream.resetResume()
+    stream.start()
+}
+
+fun Hub.setChatSegment(value: String) {
+    chatSegment.value = value
+    prefs.edit().putString("chatSegment", value).apply()
+}
+
+fun Hub.setCodexFilter(value: String) {
+    codexFilter.value = value
+    prefs.edit().putString("codexFilter", value).apply()
+}
+
+fun Hub.setTheme(value: String) {
+    theme.value = value
+    prefs.edit().putString("theme", value).apply()
+}
