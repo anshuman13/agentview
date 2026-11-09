@@ -79,33 +79,16 @@ private class Choice(val value: String, val label: String, val detail: String = 
 
 private enum class Picker { Settings, Effort, Account }
 
-@Composable
-fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean, run: ChatRun?) {
-    var text by remember(chatId) { mutableStateOf(hub.draft(chatId).let { TextFieldValue(it, TextRange(it.length)) }) }
-    val dictation = remember(chatId) { Dictation() }
-    var dismissed by remember(chatId) { mutableStateOf("") }
-    var sheet by remember { mutableStateOf<Picker?>(null) }
-    var goal by remember(chatId) { mutableStateOf("off") }
-    val goalOn = goal != "off"
-    var uploading by remember { mutableIntStateOf(0) }
-    val compacting = session?.compacting == true
-    val typed = text.text.isNotBlank()
+private class ComposerState(val hub: Hub, val chatId: String) {
+    var text by mutableStateOf(hub.draft(chatId).let { TextFieldValue(it, TextRange(it.length)) })
+    var goal by mutableStateOf("off")
+    var dismissed by mutableStateOf("")
+    var files by mutableStateOf<List<String>?>(null)
+    val goalOn get() = goal != "off"
 
     fun set(v: TextFieldValue) { text = v; hub.setDraft(chatId, v.text) }
 
-    val trigger = commandTrigger(text.text, text.selection.end)
-    val key = trigger?.let { "${it.start}:${it.query}" } ?: ""
-    var files by remember(chatId) { mutableStateOf<List<String>?>(null) }
-    LaunchedEffect(chatId, trigger?.file) {
-        if (trigger?.file == true && files == null) files = runCatching { protocolJson.decodeFromString<List<String>>(hub.api.get("/api/files", chatId)) }.getOrDefault(emptyList())
-    }
-    val suggestions = when {
-        trigger == null || key == dismissed -> emptyList()
-        trigger.file -> rankFiles(files.orEmpty(), trigger.query).map { f -> Suggestion(f.substringAfterLast('/'), f.substringBeforeLast('/', ""), "@$f") }
-        else -> rankCommands(session?.commands ?: emptyList(), trigger.query).map { Suggestion("/${it.name}", it.description, "/${it.name}") }
-    }
-
-    fun submit(steer: Boolean) {
+    fun submit(steer: Boolean, uploading: Int) {
         val t = text.text
         if (t.isBlank() || uploading > 0) return
         shellCommand(t)?.let { if (hub.runInTerminal(it)) set(TextFieldValue("")); return }
@@ -114,106 +97,158 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
         if (sent != t) goal = "off"
         hub.submit(sent, steer) { val back = restoreUnsent(text.text, t); set(TextFieldValue(back, TextRange(back.length))) }
     }
+}
 
-    val placeholder = when {
-        goal != "off" -> GOAL_PLACEHOLDER
-        waiting -> "Answer above, or message Claude to stop and send"
-        compacting -> "Sends when compacting is done"
-        running -> "Claude reads this at its next step"
-        else -> "Ask anything, / for commands, @ for files"
-    }
-    val pct = contextPercent(session?.context)
-
+@Composable
+fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean, run: ChatRun?) {
+    val s = remember(chatId) { ComposerState(hub, chatId) }
+    val dictation = remember(chatId) { Dictation() }
+    var sheet by remember { mutableStateOf<Picker?>(null) }
+    var uploading by remember { mutableIntStateOf(0) }
+    val trigger = commandTrigger(s.text.text, s.text.selection.end)
+    val suggestions = rememberSuggestions(s, trigger, session)
     val c = av
     val card = RoundedCornerShape(Tokens.radius)
     Column(Modifier.fillMaxWidth().background(c.bg).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-        if (suggestions.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max = Tokens.imageMax).well(c).verticalScroll(rememberScrollState())) {
-            for (s in suggestions) Column(
-                Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable {
-                    val r = acceptSuggestion(text.text, trigger!!.start, text.selection.end, s.insert)
-                    set(TextFieldValue(r.first, TextRange(r.second)))
-                }.padding(horizontal = Tokens.sp6, vertical = Tokens.sp3),
-            ) {
-                Text(s.label, style = Type.body.copy(fontFamily = FontFamily.Monospace), color = c.fg)
-                if (s.detail.isNotEmpty()) Text(s.detail, style = Type.footnote, color = c.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+        if (suggestions.isNotEmpty()) SuggestionList(suggestions) { sg ->
+            val r = acceptSuggestion(s.text.text, trigger!!.start, s.text.selection.end, sg.insert)
+            s.set(TextFieldValue(r.first, TextRange(r.second)))
         }
         Column(Modifier.fillMaxWidth().clip(card).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), card)) {
-            BasicTextField(
-                value = text,
-                onValueChange = { set(it) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4),
-                textStyle = Type.body.copy(color = c.fg),
-                cursorBrush = SolidColor(c.accent),
-                maxLines = 6,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                decorationBox = { inner ->
-                    Box(Modifier.heightIn(min = Tokens.sp20)) {
-                        if (text.text.isEmpty()) WordClamp(androidx.compose.ui.text.AnnotatedString(placeholder), Type.body, c.fgMuted, 2)
-                        inner()
-                    }
-                },
-            )
-            Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-                AttachButton(hub, { uploading += it }) { path -> val t = appendWord(text.text, "[Image: $path] "); set(TextFieldValue(t, TextRange(t.length))) }
-                Row(Modifier.weight(1f)) {
-                    if (!(running && typed)) {
-                        val account = session?.account ?: "main"
-                        val high = usageHigh(session?.usage)
-                        Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default") + (if (goal != "off") " · ${goalInfo(goal, System.currentTimeMillis()).chip}" else ""), { sheet = Picker.Settings }, Modifier.weight(1f, fill = false), warn = high, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, icon = if (high) "warning" else if (goalOn) "sync" else null)
-                    }
-                }
-                if (uploading > 0) RowLabel("Uploading…", c.fgMuted)
-                if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgMuted)
-                VoiceButton({ spoken, final -> dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> set(TextFieldValue(t, TextRange(caret))) } }, { hub.notice.value = it })
-                if (running && typed) Button("Stop and send", { submit(true) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                val canSend = typed && uploading == 0
-                val haptic = LocalHapticFeedback.current
-                if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp6).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
-                else SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); submit(false) }) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.sunken else c.fgFaint) }
-            }
+            ComposerInput(s, composerPlaceholder(s.goalOn, waiting, session?.compacting == true, running))
+            ComposerToolbar(hub, s, session, running, uploading, { uploading += it }, dictation) { sheet = Picker.Settings }
         }
     }
+    ComposerSheets(hub, s, session, run, sheet) { sheet = it }
+}
 
-    when (sheet) {
-        Picker.Settings -> Sheet({ sheet = null }, "Chat settings", padded = false, full = false) {
-            val account = session?.account ?: "main"
-            val models = session?.models.orEmpty()
-            if (models.isNotEmpty()) {
-                SectionHeader("Model")
-                val current = if (session?.team == true) "team" else session?.model
-                Group {
-                    models.forEachIndexed { i, m ->
-                        if (i > 0) Hairline()
-                        ListRow(m.displayName.ifBlank { m.value }, m.description, onClick = { hub.setModel(m.value); sheet = null }, trailing = if (m.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
-                    }
-                }
+private fun composerPlaceholder(goalOn: Boolean, waiting: Boolean, compacting: Boolean, running: Boolean) = when {
+    goalOn -> GOAL_PLACEHOLDER
+    waiting -> "Answer above, or message Claude to stop and send"
+    compacting -> "Sends when compacting is done"
+    running -> "Claude reads this at its next step"
+    else -> "Ask anything, / for commands, @ for files"
+}
+
+@Composable
+private fun rememberSuggestions(s: ComposerState, trigger: Trigger?, session: SessionInfo?): List<Suggestion> {
+    val key = trigger?.let { "${it.start}:${it.query}" } ?: ""
+    LaunchedEffect(s.chatId, trigger?.file) {
+        if (trigger?.file == true && s.files == null) s.files = runCatching { protocolJson.decodeFromString<List<String>>(s.hub.api.get("/api/files", s.chatId)) }.getOrDefault(emptyList())
+    }
+    return when {
+        trigger == null || key == s.dismissed -> emptyList()
+        trigger.file -> rankFiles(s.files.orEmpty(), trigger.query).map { f -> Suggestion(f.substringAfterLast('/'), f.substringBeforeLast('/', ""), "@$f") }
+        else -> rankCommands(session?.commands ?: emptyList(), trigger.query).map { Suggestion("/${it.name}", it.description, "/${it.name}") }
+    }
+}
+
+@Composable
+private fun SuggestionList(suggestions: List<Suggestion>, onPick: (Suggestion) -> Unit) {
+    val c = av
+    Column(Modifier.fillMaxWidth().heightIn(max = Tokens.imageMax).well(c).verticalScroll(rememberScrollState())) {
+        for (s in suggestions) Column(
+            Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable { onPick(s) }.padding(horizontal = Tokens.sp6, vertical = Tokens.sp3),
+        ) {
+            Text(s.label, style = Type.body.copy(fontFamily = FontFamily.Monospace), color = c.fg)
+            if (s.detail.isNotEmpty()) Text(s.detail, style = Type.footnote, color = c.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun ComposerInput(s: ComposerState, placeholder: String) {
+    val c = av
+    BasicTextField(
+        value = s.text,
+        onValueChange = { s.set(it) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4),
+        textStyle = Type.body.copy(color = c.fg),
+        cursorBrush = SolidColor(c.accent),
+        maxLines = 6,
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+        decorationBox = { inner ->
+            Box(Modifier.heightIn(min = Tokens.sp20)) {
+                if (s.text.text.isEmpty()) WordClamp(androidx.compose.ui.text.AnnotatedString(placeholder), Type.body, c.fgMuted, 2)
+                inner()
             }
-            SectionHeader("Goal")
-            Group {
-                goalChoices(System.currentTimeMillis()).forEachIndexed { i, g ->
-                    if (i > 0) Hairline()
-                    val detail = if (g.value == "off" && run != null) runLine(run, session?.loop?.phase) else g.detail
-                    ListRow(g.label, detail, onClick = { if (g.value == "off" && run != null) hub.runControl(run, "stop"); goal = g.value; sheet = null }, trailing = if (g.value == goal) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
-                }
-            }
-            SectionHeader("Permission mode")
-            Group {
-                PERMISSION_MODES.forEachIndexed { i, m ->
-                    if (i > 0) Hairline()
-                    ListRow(MODES[m]?.label ?: m, MODES[m]?.detail, onClick = { hub.setMode(m); sheet = null }, trailing = if (m == (session?.permissionMode ?: "default")) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
-                }
-            }
-            val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null
-            if (showAccount || session?.effort != null) SectionHeader("Account and effort")
-            if (showAccount || session?.effort != null) Group {
-                if (showAccount) ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); sheet = Picker.Account }, trailing = { Chevron() })
-                session?.effort?.let { if (showAccount) Hairline(); ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { sheet = Picker.Effort }, trailing = { Chevron() }) }
+        },
+    )
+}
+
+@Composable
+private fun ComposerToolbar(hub: Hub, s: ComposerState, session: SessionInfo?, running: Boolean, uploading: Int, onUploading: (Int) -> Unit, dictation: Dictation, onSettings: () -> Unit) {
+    val c = av
+    val text = s.text
+    val typed = text.text.isNotBlank()
+    val pct = contextPercent(session?.context)
+    Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+        AttachButton(hub, onUploading) { path -> val t = appendWord(text.text, "[Image: $path] "); s.set(TextFieldValue(t, TextRange(t.length))) }
+        Row(Modifier.weight(1f)) {
+            if (!(running && typed)) {
+                val account = session?.account ?: "main"
+                val high = usageHigh(session?.usage)
+                Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default") + (if (s.goalOn) " · ${goalInfo(s.goal, System.currentTimeMillis()).chip}" else ""), onSettings, Modifier.weight(1f, fill = false), warn = high, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, icon = if (high) "warning" else if (s.goalOn) "sync" else null)
             }
         }
-        Picker.Effort -> PickerSheet("Select effort", EFFORT_LEVELS.map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { sheet = null }
-        Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { sheet = null }
+        if (uploading > 0) RowLabel("Uploading…", c.fgMuted)
+        if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgMuted)
+        VoiceButton({ spoken, final -> dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> s.set(TextFieldValue(t, TextRange(caret))) } }, { hub.notice.value = it })
+        if (running && typed) Button("Stop and send", { s.submit(true, uploading) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+        val canSend = typed && uploading == 0
+        val haptic = LocalHapticFeedback.current
+        if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp6).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
+        else SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); s.submit(false, uploading) }) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.sunken else c.fgFaint) }
+    }
+}
+
+@Composable
+private fun ComposerSheets(hub: Hub, s: ComposerState, session: SessionInfo?, run: ChatRun?, sheet: Picker?, onSheet: (Picker?) -> Unit) {
+    when (sheet) {
+        Picker.Settings -> ChatSettingsSheet(hub, s, session, run, onSheet)
+        Picker.Effort -> PickerSheet("Select effort", EFFORT_LEVELS.map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
+        Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
         null -> {}
+    }
+}
+
+@Composable
+private fun ChatSettingsSheet(hub: Hub, s: ComposerState, session: SessionInfo?, run: ChatRun?, onSheet: (Picker?) -> Unit) {
+    val c = av
+    Sheet({ onSheet(null) }, "Chat settings", padded = false, full = false) {
+        val account = session?.account ?: "main"
+        val models = session?.models.orEmpty()
+        if (models.isNotEmpty()) {
+            SectionHeader("Model")
+            val current = if (session?.team == true) "team" else session?.model
+            Group {
+                models.forEachIndexed { i, m ->
+                    if (i > 0) Hairline()
+                    ListRow(m.displayName.ifBlank { m.value }, m.description, onClick = { hub.setModel(m.value); onSheet(null) }, trailing = if (m.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+                }
+            }
+        }
+        SectionHeader("Goal")
+        Group {
+            goalChoices(System.currentTimeMillis()).forEachIndexed { i, g ->
+                if (i > 0) Hairline()
+                val detail = if (g.value == "off" && run != null) runLine(run, session?.loop?.phase) else g.detail
+                ListRow(g.label, detail, onClick = { if (g.value == "off" && run != null) hub.runControl(run, "stop"); s.goal = g.value; onSheet(null) }, trailing = if (g.value == s.goal) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+            }
+        }
+        SectionHeader("Permission mode")
+        Group {
+            PERMISSION_MODES.forEachIndexed { i, m ->
+                if (i > 0) Hairline()
+                ListRow(MODES[m]?.label ?: m, MODES[m]?.detail, onClick = { hub.setMode(m); onSheet(null) }, trailing = if (m == (session?.permissionMode ?: "default")) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+            }
+        }
+        val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null
+        if (showAccount || session?.effort != null) SectionHeader("Account and effort")
+        if (showAccount || session?.effort != null) Group {
+            if (showAccount) ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); onSheet(Picker.Account) }, trailing = { Chevron() })
+            session?.effort?.let { if (showAccount) Hairline(); ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { onSheet(Picker.Effort) }, trailing = { Chevron() }) }
+        }
     }
 }
 
