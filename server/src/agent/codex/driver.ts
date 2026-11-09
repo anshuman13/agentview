@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { Account, Capabilities, Effort, LoopRole, McpServer, Provider } from '../../../../shared/protocol.js';
+import { reviewPrompt } from '../../../../shared/reviewPrompt.js';
 import { errText } from '../../../../shared/util.js';
 import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '../types.js';
 import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, type Ask } from './approvals.js';
 import { NOT_SIGNED_IN } from './binary.js';
 import { historyEvents } from './events.js';
+import { threadParams } from './options.js';
 import type { ApprovalMethod, CodexModel, ElicitationParams, McpServerStatus, PermissionProfile, RateLimits, Thread, UserInput, UserInputQuestion } from './protocol.js';
 import { CodexRpc } from './rpc.js';
 import { CodexStream } from './stream.js';
@@ -86,7 +88,7 @@ export class CodexDriver implements AgentDriver {
     const { account, requiresOpenaiAuth } = await rpc.request<{ account: unknown; requiresOpenaiAuth: boolean }>('account/read', { refreshToken: false });
     if (!account && requiresOpenaiAuth) throw new Error(NOT_SIGNED_IN);
     const { approvalPolicy, sandbox } = policyFor(this.mode);
-    const params = { cwd: this.host.cwd, approvalPolicy, sandbox };
+    const params = { cwd: this.host.cwd, approvalPolicy, sandbox, ...threadParams(this.host.state.session.id) };
     const method = this.threadId ? (this.fork ? 'thread/fork' : 'thread/resume') : 'thread/start';
     const res = await rpc.request<{ thread: Thread; model: string }>(method, this.threadId ? { threadId: this.threadId, ...params, ...(!this.fork && { excludeTurns: true }) } : params);
     if (this.fork) this.host.system('Forked into a new chat');
@@ -268,8 +270,8 @@ export class CodexDriver implements AgentDriver {
     return true;
   }
 
-  review() {
-    this.host.turnResult({ id: randomUUID(), ok: false, text: 'Code review on Codex needs the AgentView tools', costUsd: 0, isError: true });
+  review(target: 'local' | number) {
+    this.send(reviewPrompt(target));
   }
 
   roleModel(role: LoopRole) {
@@ -306,7 +308,7 @@ export class CodexDriver implements AgentDriver {
   async mcpStatus(): Promise<McpServer[] | null> {
     this.start();
     await this.ready;
-    const { data } = await this.rpc!.request<{ data: McpServerStatus[] }>('mcpServerStatus/list', {});
+    const { data } = await this.rpc!.request<{ data: McpServerStatus[] }>('mcpServerStatus/list', { threadId: this.threadId });
     return data.map((s) => ({
       name: s.name,
       status: MCP_STATUS[s.runtimeStatus ?? ''] ?? 'pending',

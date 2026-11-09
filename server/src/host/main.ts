@@ -3,17 +3,19 @@ import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync, unlinkSync } from 'node:fs';
 import { configDef } from '../agent/claude/mcp.js';
+import { callTool } from '../agent/tools/index.js';
 import { ownProfile } from '../chrome/chrome.js';
 import { errText } from '../../../shared/util.js';
 import { applyInitialModel } from './initialModel.js';
 import { command } from './commands.js';
+import { connection } from './connection.js';
 import { closeByUser, createChat, newChat, openSaved, prompt } from './chats.js';
 import { liveList, broadcastLive, runs } from './listing.js';
 import { sweepIdle, restart } from './lifecycle.js';
 import { LAST, remember, saveAndExit } from './persist.js';
 import { restoreChats } from './restoreChats.js';
-import { PORT, PROJECT, SOCK, apis, bySession, get, hub, live, viewers } from './state.js';
-import { lines, type Hello, type HostRequest } from './protocol.js';
+import { PORT, PROJECT, SOCK, bySession, get, hub, live, viewers } from './state.js';
+import type { Hello, HostRequest } from './protocol.js';
 import { readJson } from '../json.js';
 import { applyAccountLabels } from '../settings.js';
 
@@ -67,6 +69,10 @@ async function handle(req: HostRequest): Promise<unknown> {
     case 'hello':
       await ready;
       return { last: hub.lastViewed.id, restarting: Boolean(hub.restarting), chats: liveList(), runs: runs.list() } satisfies Hello;
+    case 'tool_call': {
+      const chat = get(req.id);
+      return callTool(req.name, req.args, { cwd: chat.cwd, chatId: chat.state.session.sessionId, host: chat });
+    }
     case 'state':
       return get(req.id).view(req.limit);
     case 'events_before':
@@ -107,30 +113,7 @@ async function newInFolder(req: Extract<HostRequest, { op: 'new' }>) {
 mkdirSync(path.dirname(SOCK), { recursive: true });
 let markReady!: () => void;
 const ready = new Promise<void>((ok) => (markReady = ok));
-// The state of a chat is sent before any later broadcast for it, since replies and broadcasts share one ordered socket.
-const host = net.createServer((sock) => {
-  const send = lines(sock, (v) => {
-    const { n, ...req } = v as HostRequest & { n: number };
-    const fail = (err: unknown) => n && send({ n, ok: false, error: errText(err) });
-    // Answered at once, not after an await, so no broadcast for the chat can slip in between.
-    if (req.op === 'state') {
-      try {
-        send({ n, ok: true, r: get(req.id).view(req.limit) });
-      } catch (err) {
-        fail(err);
-      }
-      return;
-    }
-    handle(req).then((r) => n && send({ n, ok: true, r: r ?? null }), fail);
-  });
-  apis.add(send);
-  sock.on('close', () => {
-    apis.delete(send);
-    // Without an API server nobody is watching; stale counts would hold back the phone notifications.
-    if (!apis.size) hub.counts = {};
-  });
-  sock.on('error', () => {});
-});
+const host = net.createServer(connection(handle));
 // Two hosts can start at once; the one that loses the socket leaves before it opens any chat.
 await new Promise<void>((ok) => {
   let retried = false;
