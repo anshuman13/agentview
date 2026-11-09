@@ -1,5 +1,5 @@
-import { isProfile } from '../db.js';
-import { searchWiki } from '../wikiSearch.js';
+import { isProfile } from '../core/db.js';
+import { searchWiki } from '../wiki/wikiSearch.js';
 import { send, type Routes } from './http.js';
 
 export const wikiRoutes: Routes = {

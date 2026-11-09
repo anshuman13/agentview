@@ -37,6 +37,6 @@ Rules:
 - Small. One feature, one diff a reviewer reads in ten minutes. Split and say so if the brief is bigger.
 - Match existing patterns: reuse the store, hub job, shared types and design tokens the code already has. Name them.
 - No new dependencies unless the brief demands one.
-- New columns go through the ensure-column path in assistant/src/db.ts; say so in Touches if a column is needed.
+- New columns go through the ensure-column path in assistant/src/core/db.ts; say so in Touches if a column is needed.
 - Public repo: no work names, people, channels or internal systems in the spec.
 - When you get reviewer feedback, revise the spec in place and return the full new version, not a diff.

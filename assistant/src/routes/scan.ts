@@ -1,7 +1,7 @@
 import { errText } from '../../../shared/util.js';
-import { gmailScan } from '../gmail.js';
-import type { Scanner } from '../scan.js';
-import { slackScan } from '../slack.js';
+import { gmailScan } from '../calendar/gmail.js';
+import type { Scanner } from '../core/scan.js';
+import { slackScan } from '../slack/slack.js';
 import { send, type Routes } from './http.js';
 
 export const SCANNERS: Record<string, Scanner> = { slack: slackScan, gmail: gmailScan };

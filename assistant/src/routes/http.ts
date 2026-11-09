@@ -1,8 +1,8 @@
 import type http from 'node:http';
 import { BadRequest, parseObject, readBody } from '../../../server/src/http/body.js';
 import { errText } from '../../../shared/util.js';
-import type { openDb } from '../db.js';
-import { SyncError } from '../sync.js';
+import type { openDb } from '../core/db.js';
+import { SyncError } from '../core/sync.js';
 
 export type Ctx = {
   req: http.IncomingMessage;

@@ -1,16 +1,16 @@
-import { isProfile } from '../db.js';
-import { once } from '../once.js';
-import { finishTask, snoozeTask } from '../remind.js';
-import { parseTask } from '../parse.js';
-import { HUB_URL, summarizeSlack } from '../slack.js';
+import { isProfile } from '../core/db.js';
+import { once } from '../core/once.js';
+import { finishTask, snoozeTask } from '../jobs/remind.js';
+import { parseTask } from '../meetings/parse.js';
+import { HUB_URL, summarizeSlack } from '../slack/slack.js';
 import { pushNtfy } from '../../../server/src/integrations/notify.js';
-import { learnPeople } from '../people.js';
-import { mineFaq } from '../faq.js';
-import { learnCorrections } from '../corrections.js';
-import { learnFromChat, type ChatEvent } from '../learn.js';
-import { learnVoice } from '../voice.js';
-import { acceptAsk, skipAsk } from '../slackSave.js';
-import { autopilotConfig, autopilotState, replyHistory, replyNow, saveAutopilot } from '../autopilot.js';
+import { learnPeople } from '../slack/people.js';
+import { mineFaq } from '../slack/faq.js';
+import { learnCorrections } from '../slack/corrections.js';
+import { learnFromChat, type ChatEvent } from '../wiki/learn.js';
+import { learnVoice } from '../slack/voice.js';
+import { acceptAsk, skipAsk } from '../slack/slackSave.js';
+import { autopilotConfig, autopilotState, replyHistory, replyNow, saveAutopilot } from '../slack/autopilot.js';
 import { errText } from '../../../shared/util.js';
 import { body, readJson, send, type Ctx, type Routes } from './http.js';
 

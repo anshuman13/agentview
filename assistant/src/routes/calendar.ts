@@ -1,7 +1,7 @@
 import { BadRequest } from '../../../server/src/http/body.js';
-import { isProfile, type Profile } from '../db.js';
-import { ACCOUNT_OF, lastAttempt, syncCalendar } from '../calendar.js';
-import { addBlock } from '../block.js';
+import { isProfile, type Profile } from '../core/db.js';
+import { ACCOUNT_OF, lastAttempt, syncCalendar } from '../calendar/calendar.js';
+import { addBlock } from '../calendar/block.js';
 import { errText } from '../../../shared/util.js';
 import { body, send, type Routes } from './http.js';
 

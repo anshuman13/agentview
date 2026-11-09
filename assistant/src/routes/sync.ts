@@ -1,9 +1,9 @@
 import { BadRequest } from '../../../server/src/http/body.js';
-import { pausedScans } from '../claude.js';
-import { currentVersion } from '../db.js';
-import { scanHealth } from '../scan.js';
+import { pausedScans } from '../core/claude.js';
+import { currentVersion } from '../core/db.js';
+import { scanHealth } from '../core/scan.js';
 import { SCANNERS } from './scan.js';
-import { exchange, type Change } from '../sync.js';
+import { exchange, type Change } from '../core/sync.js';
 import { fail, readJson, send, type Ctx, type Routes } from './http.js';
 
 const SETUP_TTL = 60_000;

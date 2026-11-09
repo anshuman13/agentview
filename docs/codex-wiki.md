@@ -103,7 +103,7 @@ full width, actions always visible as small icons. Meetings and meeting page sta
 
 ## Data model
 
-Hub tables in `assistant/src/db.ts` (synced like `items`: per-field last-write-wins, version per row). `openDb`
+Hub tables in `assistant/src/core/db.ts` (synced like `items`: per-field last-write-wins, version per row). `openDb`
 adds missing columns to existing tables, so the change is additive. The running hub picks the tables up at its
 next restart.
 

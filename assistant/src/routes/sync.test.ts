@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { openDb } from '../db.js';
+import { openDb } from '../core/db.js';
 import { SCANNERS } from './scan.js';
 import { resetScannerCache, syncRoutes, unconfiguredScanners } from './sync.js';
 

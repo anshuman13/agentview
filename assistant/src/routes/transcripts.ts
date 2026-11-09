@@ -1,5 +1,5 @@
-import { isProfile } from '../db.js';
-import { NotFound, searchTranscripts, syncTranscript, transcriptText } from '../transcripts.js';
+import { isProfile } from '../core/db.js';
+import { NotFound, searchTranscripts, syncTranscript, transcriptText } from '../meetings/transcripts.js';
 import { errText } from '../../../shared/util.js';
 import { body, send, type Routes } from './http.js';
 

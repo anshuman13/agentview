@@ -1,0 +1,253 @@
+import type { Database } from 'bun:sqlite';
+import os from 'node:os';
+import path from 'node:path';
+import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
+import { z } from 'zod';
+import { pushOrHold, pushQueued } from './hold.js';
+import { claimCite } from './draft.js';
+import { readJsonSync } from '../../../server/src/json.js';
+import { DB_DIR, getMeta, setMeta } from '../core/db.js';
+import { DRAFT_STEP, contextTool, slotsTool } from './draft.js';
+import { correctionLines, weeklyCorrections } from './corrections.js';
+import { voiceLines } from './voice.js';
+import { ACCOUNT_OF } from '../calendar/calendar.js';
+import { ask, scanPaused } from '../core/claude.js';
+import { afterScan, autopilotConfig, awayDigest, dayDigest, awayLines, awayStart, escalateLines, scanModel, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
+import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, needsMe, saveScan, webUrl, type ScanResult } from './slackSave.js';
+import { noteCost, runScan, startScan } from '../core/scan.js';
+import { COMMAND_STEP, Command, queueCommands } from './commands.js';
+import { applyChanges } from '../core/sync.js';
+import { DAY, MIN, inWeekHours, localDate, workSlotDue } from '../core/time.js';
+
+const EVERY = 15 * MIN;
+const SLACK = 'mcp__claude_ai_Slack__';
+const READ_TOOLS = ['slack_search_public_and_private', 'slack_read_channel', 'slack_read_thread', 'slack_list_user_channels', 'slack_read_user_profile'].map((t) => SLACK + t);
+export const HUB_URL = process.env.ASSISTANT_PUBLIC ?? 'http://macmini.netbird.cloud:7790';
+
+// Kept outside the repo in ~/.agentview/assistant/slack.json: my Slack user id, the workspace domain and the channels to watch.
+type SlackConfig = { me: string; domain: string; channels: string[]; push?: { from: number; to: number } };
+
+export function slackConfig(file = path.join(DB_DIR, 'slack.json')): SlackConfig | null {
+  const c = readJsonSync<any>(file, null);
+  return typeof c?.me === 'string' && Array.isArray(c.channels) ? c : null;
+}
+
+// Reads happen every quarter hour from 07:00 to 19:00 on weekdays, and every day until 22:00 while I am away; pushes only
+// inside the configured hours, on weekdays unless I am away.
+export function scanDue(last: number, now = Date.now(), away = false) {
+  return workSlotDue(last, EVERY, now, away);
+}
+
+export function pushHours(c: { push?: { from: number; to: number } }, now = Date.now(), away = false) {
+  const { from, to } = c.push ?? { from: 8, to: 17 };
+  return inWeekHours(now, from, to, away);
+}
+
+// Since the last scan, at most 7 days back, and never before the away window started, so a first away scan answers nothing older than the mode.
+export function sinceOf(db: Database, now: number, floor = 0) {
+  return Math.max(Number(getMeta(db, 'slack:last') ?? 0), now - 7 * DAY, floor);
+}
+
+const isAway = (db: Database, now = Date.now()) => modeOf(autopilotConfig(db), now) === 'away';
+
+export type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
+
+// Stops as soon as done() says the work is saved, so the model does not spend turns repeating itself.
+export type Usage = { input: number; output: number; cache_read: number; cache_write: number; usd: number; turns: number };
+
+export async function run(prompt: string, model: 'haiku' | 'sonnet' | 'opus', tools: Tools, maxTurns: number, done = () => false, read = READ_TOOLS, onUsage?: (u: Usage) => void) {
+  const account = ACCOUNT_OF[PROFILE];
+  let result = '';
+  for await (const m of ask(account, prompt, {
+    model,
+    maxTurns,
+    cwd: os.tmpdir(),
+    tools: [],
+    env: { ENABLE_TOOL_SEARCH: 'false' },
+    ...(model === 'haiku' ? { thinking: { type: 'disabled' as const } } : { effort: 'medium' as const }),
+    mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools }) },
+    allowedTools: [...read, ...tools.map((t) => `mcp__codex__${t.name}`)],
+    permissionMode: 'dontAsk',
+  })) {
+    if (m.type === 'result') {
+      onUsage?.({ input: m.usage.input_tokens, output: m.usage.output_tokens, cache_read: m.usage.cache_read_input_tokens, cache_write: m.usage.cache_creation_input_tokens, usd: m.total_cost_usd, turns: m.num_turns });
+      if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
+      result = m.result.trim();
+    }
+    if (m.type === 'user' && done()) break;
+  }
+  return result;
+}
+
+const openAsks = (db: Database, since: number) =>
+  db.prepare("SELECT id, title, source_url, people FROM items WHERE profile = ? AND deleted = 0 AND source = 'slack' AND id NOT LIKE 'said:%' AND status IN ('suggested', 'open') AND updated_at > ?").all(PROFILE, since) as { id: string; title: string; source_url: string; people: string }[];
+const openPromises = (db: Database, since: number) =>
+  db.prepare("SELECT id, title, source_url FROM items WHERE profile = ? AND deleted = 0 AND id LIKE 'said:%' AND status IN ('suggested', 'open') AND updated_at > ? ORDER BY updated_at DESC LIMIT 30").all(PROFILE, since) as { id: string; title: string; source_url: string | null }[];
+const closedAsks = (db: Database, since: number) =>
+  db.prepare("SELECT id, title FROM items WHERE profile = ? AND source = 'slack' AND id NOT LIKE 'said:%' AND (deleted = 1 OR status IN ('done', 'dismissed')) AND updated_at > ? ORDER BY updated_at DESC LIMIT 30").all(PROFILE, since) as { id: string; title: string }[];
+const tracked = (db: Database) =>
+  db.prepare("SELECT id, title FROM items WHERE profile = ? AND deleted = 0 AND status IN ('open', 'suggested') AND COALESCE(source, '') NOT IN ('slack', 'calendar') ORDER BY updated_at DESC LIMIT 60").all(PROFILE) as { id: string; title: string }[];
+
+export const channelIds = (db: Database): Record<string, string> => {
+  try {
+    return JSON.parse(getMeta(db, 'slack:channels') ?? '{}');
+  } catch {
+    return {};
+  }
+};
+
+// Channel ids found in a scan are kept, so later scans read the channels without looking them up.
+function keepChannelIds(db: Database, c: SlackConfig, r: ScanResult) {
+  const ids = channelIds(db);
+  for (const x of r.channels ?? []) {
+    const name = x.name.replace(/^#/, '');
+    if (c.channels.includes(name) && /^C[A-Z0-9]+$/.test(x.id)) ids[name] = x.id;
+  }
+  setMeta(db, 'slack:channels', JSON.stringify(ids));
+}
+
+// The Haiku prompt for one scan: what to read, what to add, and the open and recently closed asks.
+export function scanPrompt(db: Database, c: SlackConfig, since: number, now: number, extra: string[] = []) {
+  const chats = db.prepare('SELECT id, name, summary FROM chats WHERE profile = ? AND deleted = 0 AND COALESCE(last_at, updated_at) > ?').all(PROFILE, now - 2 * DAY) as { id: string; name: string; summary: string | null }[];
+  const unix = Math.floor(since / 1000);
+  const ids = channelIds(db);
+  return [
+    `I am Slack user ${c.me}. Read what is new in Slack since unix time ${unix} (${new Date(since).toISOString()}). Do not send or change anything in Slack.`,
+    `1. My DMs and group DMs: slack_search_public_and_private with filters "is:dm", after="${unix}", sort "timestamp", include_context false.`,
+    `2. Mentions of me: slack_search_public_and_private with keywords ["<@${c.me}>"], after="${unix}", sort "timestamp", include_context false.`,
+    `3. These channels, with slack_read_channel oldest="${unix}" limit 40: ${c.channels.map((n) => `#${n} ${ids[n] ?? '(id unknown, find it with slack_list_user_channels name_prefix)'}`).join(', ')}.`,
+    'Make all of these reads in parallel in one turn. When a read returns a next cursor, read the next page with it until there is none, so nothing since that time is missed. Read a thread with slack_read_thread only when a new message there might ask something of me.',
+    '',
+    `Permalinks look like https://${c.domain}/archives/<channel id>/p<ts without the dot>.`,
+    'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old. For a DM, set waiting when the other person sent the last message and I have not replied.',
+    'Add an ask when a message clearly asks me to do, answer or decide something, puts a direct question to me, makes a request to me in a thread I am in, or asks me to review or approve something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
+    'The one bot exception is a bot DM about Claude spend or usage: add an ask only when it needs action from me, such as pending seat or limit requests, blocked people, or spend near a limit. Put the numbers in the title, leave draft out, set tier hold and kind access or limit.',
+    DRAFT_STEP,
+    ...voiceLines(db),
+    ...correctionLines(db),
+    ...extra,
+    'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
+    `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip messages that report something already done ("added now", "invited") or only give an opinion, promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,
+    'In fulfilled, list permalinks of the open promises below that I have since done, for example when I posted what I promised.',
+    COMMAND_STEP,
+    'In decisions, add each decision the new messages in the watched channels settle: a plan, owner, date, number or status the people there agreed on. Skip proposals, questions and chatter.',
+    'In details, add a note when a new message gives more detail on one of the open asks or tracked tasks below: a date, a requirement, a link, a change of scope or who owns it. Use the id in brackets. Skip messages that only repeat the task.',
+    '',
+    'Previous summaries:',
+    ...(chats.length ? chats.map((x) => `- ${x.id} ${x.name}: ${x.summary ?? ''}`) : ['(none)']),
+    '',
+    'Open asks:',
+    ...openAsks(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.source_url} ${a.people}: ${a.title}`),
+    '',
+    'Open promises:',
+    ...openPromises(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.source_url ?? ''}: ${a.title}`),
+    '',
+    'Recently closed asks (done, dismissed or deleted in the last 7 days); do not add these again unless a new message changes the request:',
+    ...closedAsks(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.title}`),
+    '',
+    'Tracked tasks:',
+    ...tracked(db).map((t) => `- [${t.id}] ${t.title}`),
+    '',
+    'Then call save_scan exactly once and stop. Do not use the em dash character.',
+  ].join('\n');
+}
+
+// One Haiku pass over my DMs, mentions and watched channels since the last pass.
+async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
+  const auto = autopilotConfig(db);
+  const since = sinceOf(db, now, awayStart(auto, now));
+  let saved: ScanResult | null = null;
+  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), fulfilled: z.array(z.string()).describe('Permalinks of my open promises that I have since done, e.g. I posted the thing I promised'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), decisions: z.array(Decided).describe('Decisions made in the watched channels'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id'), commands: z.array(Command).optional().describe('Things I asked the bot to do in my DM with myself') }, async (a) => {
+    saved = a;
+    return { content: [{ type: 'text', text: 'saved' }] };
+  });
+  const prompt = scanPrompt(db, c, since, now, [...escalateLines(auto), ...awayLines(auto, now)]);
+  await run(prompt, scanModel(auto, now), [save, contextTool(db, now), slotsTool(db, now)], 40, () => saved != null, READ_TOOLS, (u) => noteCost(db, 'slack', { at: now, ...u }));
+  if (!saved) throw new Error('The scan did not save');
+  keepChannelIds(db, c, saved);
+  const { chats, added, urgent, said, messages, newAsks } = saveScan(db, saved, now);
+  setMeta(db, 'slack:last', String(now));
+  queueCommands(db, (saved as ScanResult).commands ?? [], now);
+  const replies = await afterScan(db, auto, c.channels, newAsks, now);
+  return { chats, messages, asks: added, said, urgent, newAsks, replies, mode: modeOf(auto, now), auto };
+}
+
+// In assist mode an ask with a draft gets a Send reply action and the draft in the body; otherwise only urgent asks are pushed.
+// The push for one ask. In assist mode a draft gets a one-tap Send reply, unless the ask needs me (a decision or something
+// urgent): then the title says so, the draft shows as a note and Make task takes its place. cite names the claim the draft
+// rests on. Skip closes the ask from the push. ntfy allows three actions.
+export function askPush(a: NewAsk, mode: Mode, cite = '') {
+  const url = webUrl(a.url);
+  const draft = mode === 'assist' && a.draft?.trim();
+  const mine = needsMe(a.tier);
+  const act = (label: string, path: string) => `http, ${label}, ${HUB_URL}/slack/${path}?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
+  const main = draft && !mine ? act('Send reply', 'reply') : act('Make task', 'accept');
+  const faq = a.tier === 'answer' && cite ? `FAQ answer${a.confidence ? `, ${Math.round(a.confidence * 100)}% sure` : ''}. ` : '';
+  const body = draft ? `${a.quote}\n\n${mine ? 'Needs you' : 'Reply'}: ${draft}${cite ? `\n${faq}${cite}` : ''}` : a.quote;
+  return { title: `${mine ? 'Needs you, ' : ''}${a.from}: ${a.title}`, body, url: url ?? '', actions: `${url ? `view, Open, ${url}; ` : ''}${main}; ${act('Skip', 'skip')}` };
+}
+
+async function pushUrgent(db: Database, c: SlackConfig, urgent: NewAsk[], mode: Mode = 'off', now = Date.now()) {
+  await pushQueued(db, 'slack:unpushed', urgent, pushHours(c, now, mode === 'away'), (a) => {
+    const p = askPush(a, mode, mode === 'assist' ? claimCite(db, a.claims) : '');
+    return pushOrHold(db, p.title, a.chat, p.body, p.url, p.actions, now, a.id, a.urgent);
+  });
+}
+
+// The Sonnet summary across all chats since the last one, with suggested tasks. Runs when I ask for it.
+export async function summarizeSlack(db: Database, now = Date.now()) {
+  const c = slackConfig();
+  if (!c) throw new Error('Slack is not set up: add ~/.agentview/assistant/slack.json');
+  const last = db.prepare("SELECT MAX(to_at) AS t FROM briefs WHERE profile = ? AND deleted = 0 AND kind = 'slack'").get(PROFILE) as { t: number | null };
+  const from = Math.max(last.t ?? 0, now - 3 * DAY);
+  const chats = db.prepare('SELECT name, kind, summary, url FROM chats WHERE profile = ? AND deleted = 0 AND last_at > ? ORDER BY last_at DESC').all(PROFILE, from) as { name: string; kind: string; summary: string; url: string | null }[];
+  const added: string[] = [];
+  const suggest = tool('suggest_task', 'Suggest a task for me; it waits for me to accept it.', { title: z.string(), quote: z.string(), url: z.string().describe('Permalink'), from: z.string(), chat: z.string() }, async (a) => {
+    const id = askId(a.url);
+    if (!db.prepare('SELECT 1 FROM items WHERE profile = ? AND id = ?').get(PROFILE, id)) {
+      applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Date.now(), fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people: `${a.from} · ${a.chat}`, at: null, status: 'suggested' } }]);
+      added.push(a.title.trim());
+    }
+    return { content: [{ type: 'text', text: 'added' }] };
+  });
+  const prompt = [
+    `Summarize my Slack since ${new Date(from).toISOString()}. I am Slack user ${c.me}. Do not send or change anything in Slack.`,
+    'Below are running summaries per chat and my open asks. Read threads with the Slack tools when you need detail.',
+    'Write markdown with these sections, skipping empty ones: **Needs you**, **Decided**, **Worth following**. Short bullets, each with a [link](permalink) and who.',
+    'Needs you holds only messages that wait for my reply, review or decision. A notice with nothing to answer, such as a booking or a status update, goes under Worth following.',
+    'Call suggest_task for each thing I should do that is not already an open ask.',
+    'Do not use the em dash character.',
+    '',
+    'Chats:',
+    ...(chats.length ? chats.map((x) => `- ${x.name} (${x.kind}${x.url ? `, ${x.url}` : ''}): ${x.summary}`) : ['(nothing new)']),
+    '',
+    'Open asks:',
+    ...openAsks(db, from).map((a) => `- ${a.source_url} ${a.people}: ${a.title}`),
+  ].join('\n');
+  const text = await run(prompt, 'sonnet', [suggest], 30);
+  applyChanges(db, [{ table: 'briefs', id: `slack:${now}`, profile: PROFILE, updated_at: now, fields: { kind: 'slack', text, from_at: from, to_at: now } }]);
+  return { text, added };
+}
+
+// One Slack scan with its urgent pushes, returning its counts.
+async function slackOnce(db: Database) {
+  const c = slackConfig();
+  if (!c) throw new Error('Slack is not set up');
+  const r = await scanSlack(db, c);
+  const auto = r.mode === 'off' ? '' : `, autopilot ${r.mode}: ${r.replies.answered.length} answered, ${r.replies.held.length} held, ${r.replies.skipped.length} skipped`;
+  console.log(`slack: ${r.chats} chats, ${r.messages} messages, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent${auto}`);
+  await pushUrgent(db, c, toPush(r.mode, r.auto, c.channels, r.newAsks, r.replies.followups), r.mode);
+  await awayDigest(db, r.auto);
+  await dayDigest(db, r.auto);
+  await weeklyCorrections(db);
+  return { chats: r.chats, messages: r.messages, asks: r.asks, promises: r.said, ...(r.mode === 'away' ? { replied: r.replies.answered.length + r.replies.held.length } : {}) };
+}
+
+export const slackScan = {
+  setUp: () => slackConfig() != null,
+  paused: (db: Database) => scanPaused(db, ACCOUNT_OF[PROFILE], 'slack'),
+  run: (db: Database) => runScan(db, 'slack', () => slackOnce(db)),
+  everyDay: (db: Database) => isAway(db),
+};
+
+export const startSlack = (db: () => Database) => startScan('slack', slackScan, EVERY, db);

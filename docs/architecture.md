@@ -50,7 +50,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 
 `assistant/src/server.ts` runs on the Mac mini on :7790 as a launchd service (`assistant/deploy/`). Its routes live in
 `assistant/src/routes/` (sync, tasks, calendar, transcripts) and share the helpers in `routes/http.ts`. Scans, jobs,
-transcript import and wiki updates call Claude through `assistant/src/claude.ts`, which runs on the profile's account
+transcript import and wiki updates call Claude through `assistant/src/core/claude.ts`, which runs on the profile's account
 and refuses at the usage limit. See [assistant.md](assistant.md).
 
 ## Client

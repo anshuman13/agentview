@@ -15,7 +15,7 @@ is an assistant, and every send is logged and reversible by me.
 - Each new ask gets a reply draft in my voice, as short as the ask allows (one line for a DM yes or no, the
   answer or link first in a channel), with the thread and up to 3 wiki claims, 3 decisions (meetings of the
   last 30 days, Slack of the last 14 with their link) and 3 of my open tasks as context, plus an asker block (their role from Who does what, my last 3 replies to them, what I
-  promised them) (`assistant/src/draft.ts`, `ask_context`); a short ask matches on one key word, longer ones on two; claims are ranked by relevance and Support FAQ claims rank first on a tie, each
+  promised them) (`assistant/src/slack/draft.ts`, `ask_context`); a short ask matches on one key word, longer ones on two; claims are ranked by relevance and Support FAQ claims rank first on a tie, each
   claim comes with its id and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there
   is one; when the answer is someone else's to give, the draft names and tags them and never guesses an owner; numbers, dates and names come verbatim from a claim or the thread, else the draft asks one precise question back; a claim older than 30 days is quoted "as of" its date; access, invite, seat and limit asks give the Support FAQ step first; a message with several questions gets the covered parts answered and names the part still to check, also in a hold draft; an ask to meet or talk gets one or two free half hours from my calendar over the next two working days (the free_slots tool), never an invented time
 - The scan gives each ask a kind; access asks (invites, seats, plan moves, permissions I grant) and limit asks are
@@ -23,14 +23,14 @@ is an assistant, and every send is logged and reversible by me.
   sitting in the admin console
 - When I edit or skip a draft the hub keeps the original; the first scan on a Monday (or `POST /slack/corrections`;
   needs 3 pairs) turns the differences into rules the drafter follows and proposes them on the How I
-  write page (`assistant/src/corrections.ts`)
-- Jobs run a prompt on a schedule with read-only tools plus the MCP tools the job lists (`assistant/src/jobs.ts`); every
+  write page (`assistant/src/slack/corrections.ts`)
+- Jobs run a prompt on a schedule with read-only tools plus the MCP tools the job lists (`assistant/src/jobs/jobs.ts`); every
   job can call `ask_context` to read my wiki claims, decisions and open tasks
 - Slack commands: a message I write in my DM with myself that starts with "bot" ("bot, what did the infra channel decide
   about the freeze") is picked up by the next Slack scan (every 15 min on weekdays, every day when away) and becomes a
   one-off job named "Slack: ..." that runs on the mini with my memory and voice. It can read Slack, Gmail, the calendar
   and the web and add tasks, but not post to anyone; it drafts instead. Its answer is posted in the thread of my
-  message, starting "Assistant: ", or pushed when the post fails (`assistant/src/commands.ts`). Between scans a Haiku
+  message, starting "Assistant: ", or pushed when the post fails (`assistant/src/slack/commands.ts`). Between scans a Haiku
   poll looks only for new commands every 5 minutes in scan hours (about $0.01 a poll), so a command waits minutes
 - Pushes through ntfy can carry actions (Done, Snooze on a task)
 - The wiki holds approved claims; the wiki update pass proposes claims from Slack decisions
@@ -127,12 +127,12 @@ assist mode since I pressed Send myself.
    "Is this yours?" shows the draft with Send, Edit and Skip. Send calls `send_reply`; Skip clears the draft. Edit
    opens the draft in the composer and sends on save.
 4. **FAQ.** `POST /slack/faq?channel=ai-help&days=90` reads the channel's threads and proposes one claim per answered
-   question on a "Support FAQ" page for Review, keyed by permalink so a rerun adds nothing twice (`assistant/src/faq.ts`).
+   question on a "Support FAQ" page for Review, keyed by permalink so a rerun adds nothing twice (`assistant/src/slack/faq.ts`).
    I approve them before the trip. `ask_context` already feeds live claims into drafts, so nothing else changes.
 5. **Away mode.** The scan sends tier A and B as above, at most 10 replies an hour and 40 a day, and at the first
    scan from 17:00 writes the day's digest to `briefs` (kind `away`, `awayDigest`): what it answered, held, escalated
    and skipped, as the same JSON `rows`. One push a day with the counts. `POST /slack/people` proposes "who owns what" claims on a
-   "Who does what" page from the hub's chat summaries and decisions of the last 30 days (`assistant/src/people.ts`). Meetings in the window get a decline with the note only if I enable `"decline": true`.
+   "Who does what" page from the hub's chat summaries and decisions of the last 30 days (`assistant/src/slack/people.ts`). Meetings in the window get a decline with the note only if I enable `"decline": true`.
 6. **Dry run.** Run assist mode for a week before the trip. The run log shows how many drafts I sent unchanged, edited
    or skipped per tier. Tier A goes live in away mode only if 80% of its drafts went out unchanged.
 7. **Day-to-day offload** (after the trip, same machinery):
