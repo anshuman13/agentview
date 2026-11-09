@@ -90,12 +90,10 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     val days = remember(items) { dayDividers(items, System.currentTimeMillis()) }
     val dayOf = remember(items, days) { dayOfRows(items, days) }
     val rewinds = remember(items) { rewindable(items) }
-    val ends = remember(items, running) { turnEnds(items, running) }
     val runs = remember(items) { exploreRuns(items) }
     var openRuns by rememberSaveable(chatId) { mutableStateOf(setOf<String>()) }
-    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val firstId = items.firstOrNull()?.id
     val folded = remember(runs, openRuns) { runs.filterKeys { it !in openRuns }.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
-    val title = state.live.firstOrNull { it.id == chatId }?.title.orEmpty()
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, state.events.associate { it.id to it.at }, seen.first, seen.second) }
     DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
@@ -147,6 +145,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
             }
             itemsIndexed(rows, key = { _, it -> it.id }, contentType = { _, it -> it::class }) { i, it ->
                 Column(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) {
+                    if (it is Item.User && it.id !in days && it.id != firstId) HorizontalDivider(Modifier.padding(bottom = Tokens.sp12), color = av.border, thickness = Tokens.hairline)
                     days[it.id]?.let { DayDivider(it) }
                     if (it.id == newId) NewLine()
                     val run = runs[it.id]
@@ -154,11 +153,6 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                         it.id in folded -> {}
                         run != null && it.id !in openRuns -> ExploredRow(exploreLabel(run)) { openRuns = openRuns + it.id }
                         else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && it.id in rewinds)
-                    }
-                    if (it is Item.Assistant && it.id in ends) Row {
-                        Button("Reply", { hub.draftPrompt(quoteReply(it.text)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                        Button("Copy", { clipboard.setText(androidx.compose.ui.text.AnnotatedString(it.text)); hub.notice.value = "Copied the reply" }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                        Button("Save as note", { hub.saveReply(it.text, title, cwd) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     }
                 }
             }
@@ -271,10 +265,7 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
         }
         if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgMuted)
         if (it.queued) BubbleFooter("Waiting for Claude's next step", "Send now") { hub.sendNow(it.id) }
-        if (!it.queued && !it.stopping) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5)) {
-            Button("Use again", { hub.draftPrompt(it.text) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-            if (canRewind) Button("Rewind files", { ask = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        }
+        if (canRewind) BubbleFooter("", "Rewind files") { ask = true }
     }
 }
 

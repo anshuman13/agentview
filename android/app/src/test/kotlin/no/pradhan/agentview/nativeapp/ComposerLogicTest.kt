@@ -7,11 +7,6 @@ import org.junit.Test
 class ComposerLogicTest {
     private val cmds = listOf(CommandInfo("compact"), CommandInfo("clear"), CommandInfo("code-review"), CommandInfo("review"), CommandInfo("init"))
 
-    @Test fun quotesAReplyAsMarkdown() {
-        assertEquals("> Done.\n>\n> Tests pass.\n\n", quoteReply(" Done.\n\nTests pass. "))
-        assertEquals("> alpha beta…\n\n", quoteReply("alpha beta gamma", max = 13))
-    }
-
     @Test
     fun triggerFindsTheSlashWordAtTheCaret() {
         assertEquals(Trigger(0, "co"), commandTrigger("/co", 3))

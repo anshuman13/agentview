@@ -131,10 +131,3 @@ fun resumeCommand(cwd: String, sessionId: String, account: String?): String {
     val q = if (Regex("^[\\w./~-]+$").matches(cwd)) cwd else "'" + cwd.replace("'", "'\\''") + "'"
     return "cd $q && " + (if (dir != null) "CLAUDE_CONFIG_DIR=$dir " else "") + "claude --resume $sessionId"
 }
-
-// A Markdown quote of a reply to answer it in the next prompt, like Slack's reply with quote: up to 300 characters, cut at a word.
-fun quoteReply(text: String, max: Int = 300): String {
-    val t = text.trim()
-    val cut = if (t.length <= max) t else t.take(max).substringBeforeLast(' ').trimEnd() + "…"
-    return cut.lines().joinToString("\n") { "> $it".trimEnd() } + "\n\n"
-}

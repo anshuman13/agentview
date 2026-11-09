@@ -207,20 +207,6 @@ fun rewindable(items: List<Item>): Set<String> {
     return out
 }
 
-// The last reply of each finished turn, which can be saved as a note like a Slack saved message.
-fun turnEnds(items: List<Item>, running: Boolean): Set<String> {
-    val out = HashSet<String>()
-    var last: String? = null
-    for (it in items) when (it) {
-        is Item.User -> { last?.let(out::add); last = null }
-        is Item.System -> if (it.text.startsWith("Claude woke up")) { last?.let(out::add); last = null }
-        is Item.Assistant -> if (!it.streaming && it.text.isNotBlank()) last = it.id
-        else -> {}
-    }
-    if (!running) last?.let(out::add)
-    return out
-}
-
 // Replies that arrived after the reader scrolled up, for the Jump to latest button.
 fun newReplies(items: List<Item>, lastSeenId: String): Int {
     val i = items.indexOfFirst { it.id == lastSeenId }
