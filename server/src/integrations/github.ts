@@ -87,6 +87,17 @@ export function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
   return Promise.resolve(hit.prs);
 }
 
+const polled = new Map<string, number>();
+
+// The check state of a PR from the last list of its repo, for rows that cannot wait on gh; the list is refetched at most every 5 min per repo, and changed runs after each fetch.
+export function prChecks(cwd: string, number: number, changed: () => void): CheckState | undefined {
+  if (Date.now() - (polled.get(cwd) ?? 0) > 5 * 60_000) {
+    polled.set(cwd, Date.now());
+    refresh(cwd).then(changed, () => {});
+  }
+  return lists.get(cwd)?.prs.find((p) => p.number === number)?.checks;
+}
+
 const key = (cwd: string, n: number | string) => `${cwd}#${n}`;
 
 function detail(cwd: string, pr: { number: number; updatedAt: string }) {

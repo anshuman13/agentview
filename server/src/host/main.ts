@@ -12,6 +12,7 @@ import { configDef } from '../agent/claude/mcp.js';
 import type { AgentSession } from '../session/session.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway, notifyRunEnded, notifyStall, stallWatch } from '../integrations/notify.js';
+import { prChecks } from '../integrations/github.js';
 import { hubLearn, learnEvents } from '../integrations/assistant.js';
 import { profileOf } from '../agent/claude/accounts.js';
 import { allowedFolder } from '../workspace/files.js';
@@ -97,6 +98,11 @@ const stalls = stallWatch((id) => {
 });
 
 
+function prChecksField(cwd: string, pr: number) {
+  const checks = prChecks(cwd, pr, broadcastLive);
+  return checks && checks !== 'none' ? { prChecks: checks } : {};
+}
+
 function summary(chat: AgentSession): LiveChat {
   const s = chat.state;
   const todos = latestTodos(s.events);
@@ -124,7 +130,7 @@ function summary(chat: AgentSession): LiveChat {
     ...modelField(s.session.model),
     last: replyLine(s.events),
     edits: editsOf(chat),
-    ...(s.session.pr && { pr: s.session.pr }),
+    ...(s.session.pr && { pr: s.session.pr, ...prChecksField(chat.cwd, s.session.pr) }),
     ...(progress && progress.done < progress.total && { todos: progress }),
     ...(recap && { recap }),
     ...runField(runs.activeFor(chat.id)),

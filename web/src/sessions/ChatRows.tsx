@@ -202,13 +202,15 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   const line = chatLine(c, events);
   const shownCwd = useStore((s) => s.session.cwd);
   const pr = usePullRequests(c.pr && c.cwd === shownCwd ? shownCwd : '').find((p) => p.number === c.pr);
+  const checks = pr?.checks ?? c.prChecks;
+  const checkIcon = checks && checks !== 'none' && <CheckIcon state={checks} />;
   const when = c.pending ? since(c.lastActive) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : since(Math.max(c.lastActive, saved?.lastModified ?? 0));
   // Slack's sidebar draft line: an unsent composer draft replaces the meta line, except in the chat you are in.
   const draft = selected ? '' : draftLine(readDraft(c.id));
   const main = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
     <>
       {metaLine(repo, branchOf(saved?.gitBranch, branch), when)}
-      {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>#{c.pr}{pr.checks !== 'none' && <CheckIcon state={pr.checks} />}</a> : `#${c.pr}`}</>}
+      {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>#{c.pr}{checkIcon}</a> : <>#{c.pr}{checkIcon}</>}</>}
       {c.todos && ` · ${c.todos.done}/${c.todos.total}`}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
