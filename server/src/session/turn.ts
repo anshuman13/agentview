@@ -169,6 +169,7 @@ export class Turn {
     this.count = 0;
     s.setSession({ running: false, stopping: false, compacting: false });
     this.planChange = null;
+    s.driver.clearInjected();
     s.approvals.denyAll(`${providerLabel(s.driver.provider)} exited before this was answered.`);
     const repeat = s.state.session.repeat;
     if (this.roundTurn && repeat?.runId) s.runs.addRound(repeat.runId, { n: repeat.round, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0 });

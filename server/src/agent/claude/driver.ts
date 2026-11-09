@@ -310,6 +310,10 @@ export class ClaudeDriver implements AgentDriver {
     return true;
   }
 
+  clearInjected() {
+    this.toolHooks.clearInjected();
+  }
+
   review(target: 'local' | number) {
     this.send(target === 'local' ? '/code-review' : `/code-review ${target}`);
   }

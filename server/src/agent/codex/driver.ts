@@ -254,6 +254,8 @@ export class CodexDriver implements AgentDriver {
     return this.rpc ? this.steer(this.rpc, [{ type: 'text', text, text_elements: [] }]) : false;
   }
 
+  clearInjected() {}
+
   // An effort the model does not list is left out, so the model keeps its own default.
   private modelParams() {
     const { model, effort } = this.host.state.session;

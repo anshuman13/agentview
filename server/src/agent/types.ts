@@ -43,6 +43,8 @@ export interface AgentDriver {
   command(name: string, args: string): boolean;
   // Adds context to the running turn without a user event; false when no turn is running to take it.
   inject(text: string): Promise<boolean>;
+  // Drops what inject held for a step that never came; a stopped turn must not carry it into the next one.
+  clearInjected(): void;
   // Starts a code review of the working tree or a PR; the findings reach host.reportFindings.
   review(target: 'local' | number): void;
   // The model a build cycle step runs on; null keeps the chat's own.

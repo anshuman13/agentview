@@ -35,6 +35,7 @@ export class Stopper {
     const { driver, state, turn, cycle, waiting, repeater } = this.s;
     if (!driver.attached || !state.session.running || state.session.stopping) return;
     turn.takePlanChange();
+    driver.clearInjected();
     cycle.interrupted();
     const idle = turn.drop(driver.dropInput());
     waiting.dropQueued();

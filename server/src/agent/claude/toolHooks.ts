@@ -43,6 +43,10 @@ export class ToolHooks {
     this.injected.push(text);
   }
 
+  clearInjected() {
+    this.injected = [];
+  }
+
   async onStop(input: HookInput): Promise<HookJSONOutput> {
     if (input.hook_event_name !== 'Stop' || input.agent_id) return {};
     this.host.crons = input.session_crons ?? [];
