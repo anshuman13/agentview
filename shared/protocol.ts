@@ -104,7 +104,7 @@ export type SessionInfo = {
 export type Capabilities = { rewind: boolean; mcp: boolean; effort: boolean; team: boolean; stopTask: boolean };
 
 // A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
-export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string };
+export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean };
 
 export const MAX_GOAL_ROUNDS = 20;
 
@@ -115,6 +115,7 @@ export type LoopPhase = 'plan' | 'build' | 'test' | 'passed' | 'failed';
 export type LoopState = { on: boolean; max: number; round: number; phase: LoopPhase | null };
 
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
+export type RunOp = 'pause' | 'resume' | 'now' | 'stop' | 'restore';
 export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number };
 
 // One /loop, /goal or build cycle: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
@@ -310,6 +311,7 @@ export type ClientMessage =
   | { type: 'set_account'; account: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_loop'; on: boolean; max?: number }
+  | { type: 'run'; run: string; op: RunOp }
   | { type: 'interrupt' }
   | { type: 'rewind'; id: string }
   | { type: 'stop_task'; toolUseId: string }

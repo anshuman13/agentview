@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { appendTo, ATTENTION_LABEL, ROW_WINDOW, type AttentionItem, type ChatEvent, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
+import { appendTo, ATTENTION_LABEL, ROW_WINDOW, type AttentionItem, type ChatEvent, type ChatRun, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
 import { notify } from './notify';
 import { isMuted } from './mute';
 import { apiUrl, bundled } from './api';
@@ -21,7 +21,7 @@ type UiState = {
 export const embedded = typeof window !== 'undefined' && window.self !== window.top;
 const storedBeside = () => { try { return embedded ? null : localStorage.getItem('agentview.beside') || null; } catch { return null; } };
 
-export type State = ServerState & { live: LiveChat[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; ui: UiState };
+export type State = ServerState & { live: LiveChat[]; runs: ChatRun[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; ui: UiState };
 
 let state: State = {
   session: { id: '', sessionId: null, model: null, effort: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null }, repeat: null, pr: null, account: 'main', accounts: [] },
@@ -30,6 +30,7 @@ let state: State = {
   pending: [],
   recentFiles: [],
   live: [],
+  runs: [],
   attention: [],
   findings: {},
   seen: {},
@@ -364,6 +365,9 @@ function handle(m: ServerMessage) {
       markViewedDone(m.chats);
       for (const id of cache.keys()) if (!m.chats.some((c) => c.id === id)) cache.delete(id);
       set({ live: m.chats });
+      break;
+    case 'runs':
+      set({ runs: m.runs });
       break;
     case 'attention':
       for (const it of m.items) {

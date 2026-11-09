@@ -420,6 +420,8 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
     case 'set_permission_mode':
       void chat.setPermissionMode(msg.mode);
       return;
+    case 'run':
+      return chat.runControl(String(msg.run), msg.op);
     case 'set_loop':
       chat.setLoop(Boolean(msg.on), typeof msg.max === 'number' ? msg.max : undefined);
       return;

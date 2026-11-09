@@ -1,9 +1,9 @@
 import { parseWhen, stripWhen } from '../codex/data/engine';
 import { match } from '../workspace/FileSwitcher';
 import { toolId } from '../ops/mcpHelpers';
-import { COMPACT_AT, MAX_GOAL_ROUNDS, type Account, type ChatEvent, type SavedSession } from '../../../shared/protocol';
+import { COMPACT_AT, type Account, type ChatEvent, type ChatRun, type RoundOutcome, type SavedSession } from '../../../shared/protocol';
 import { apiUrl, fetchJson } from '../app/api';
-import { clock, isBlock, span } from '../../../shared/util';
+import { clock, isBlock } from '../../../shared/util';
 import { timedMeetings } from '../../../shared/plan';
 import { live, type Meeting } from '../codex/data/wiki';
 
@@ -117,12 +117,19 @@ export const contextPercent = (context: number | null) => (context === null ? nu
 
 const ENDED: Record<string, string> = { passed: 'Build cycle passed', failed: 'Build cycle stopped' };
 
-const once = (r: { every: number; until: number | null; nextAt: number | null }) => !r.every && r.until !== null && r.nextAt !== null && r.until - r.nextAt <= 1000;
-export const repeatLabel = (r: { every: number; until: number | null; round: number; nextAt: number | null; goal?: string }) =>
-  r.goal ? `Goal check ${r.round} of ${MAX_GOAL_ROUNDS}: ${r.goal}` : once(r) ? `Continues once at ${clock(r.nextAt!)}` : `Loop round ${r.round}, ${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
+const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', cycle: 'Build cycle' };
 
-export const repeatPill = (r: { every: number; until: number | null; round: number; nextAt: number | null; goal?: string }) =>
-  r.goal ? `Goal ${r.round}/${MAX_GOAL_ROUNDS}${r.nextAt ? ` · next ${clock(r.nextAt)}` : ''}` : once(r) ? `Continue at ${clock(r.nextAt!)}` : `Loop ${r.round}${r.nextAt ? ` · next ${clock(r.nextAt)}` : ''}${r.until ? ` · until ${clock(r.until)}` : ''}`;
+export function runLine(run: ChatRun, phase: string | null = null) {
+  if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
+  if (run.kind === 'goal') return `Goal · check ${run.round} of ${run.max}`;
+  if (run.kind === 'cycle') return `Build cycle · round ${run.round}/${run.max}${phase && phase !== 'passed' && phase !== 'failed' ? ` · ${phase[0].toUpperCase()}${phase.slice(1)}` : ''}`;
+  return `Loop · round ${run.round}${run.nextAt ? ` · next ${clock(run.nextAt)}` : ''}`;
+}
+
+export const stoppedText = (run: ChatRun) => `${KIND[run.kind]} stopped`;
+
+export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', question: 'warn', failed: 'bad', done: 'ok', quiet: '', progress: '' };
+
 export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? ENDED[loop.phase] ?? `Build cycle${loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 export const fileCache = new Map<string, string[]>();
 

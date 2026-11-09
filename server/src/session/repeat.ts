@@ -93,6 +93,7 @@ export const describeLoop = (r: Repeat) =>
 // A loop goes on after Stop or a CLI exit, with time to type /loop off first.
 const REPEAT_GRACE_MS = 2 * 60_000;
 const MIN_ROUND_MS = 60_000;
+const UNDO_MS = 60_000;
 
 export interface RepeatHost {
   repeat(): Repeat | null;
@@ -103,6 +104,7 @@ export interface RepeatHost {
   startRun(r: Repeat): string;
   resumeRun(r: Repeat): string;
   endRun(id: string, why: string): void;
+  reopenRun(id: string): void;
   patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt'>>): void;
   sendPrompt(text: string, auto: 'loop' | 'goal', round: number): void;
 }
@@ -111,6 +113,7 @@ export class RepeatController {
   private timer: NodeJS.Timeout | undefined;
   private roundAt = 0;
   private held = false;
+  private stopped: { r: Repeat; at: number } | null = null;
   due = false;
 
   constructor(private host: RepeatHost) {}
@@ -153,16 +156,71 @@ export class RepeatController {
   resume(r: Repeat) {
     r = { ...r, runId: this.host.resumeRun(r) };
     this.host.setSession({ repeat: r });
-    this.host.system(`AgentView restarted, the ${r.goal ? 'goal' : 'loop'} continues ${describeLoop(r)}`);
+    this.host.system(`AgentView restarted, the ${r.goal ? 'goal' : 'loop'} ${r.paused ? 'stays paused' : `continues ${describeLoop(r)}`}`);
     if (!r.nextAt || r.nextAt <= Date.now()) this.fire();
     else this.arm();
   }
 
+  pause() {
+    const r = this.host.repeat();
+    if (!r || r.paused) return;
+    clearTimeout(this.timer);
+    this.due = false;
+    this.host.setSession({ repeat: { ...r, paused: true } });
+    this.patchRun({ state: 'paused', why: 'you paused it' });
+    this.host.system(`${r.goal ? 'Goal' : 'Loop'} paused`);
+  }
+
+  unpause() {
+    const r = this.host.repeat();
+    if (!r?.paused) return;
+    this.host.setSession({ repeat: { ...r, paused: false } });
+    this.patchRun({ state: 'running', why: '' });
+    this.host.system(`${r.goal ? 'Goal' : 'Loop'} resumed`);
+    if (!r.nextAt || r.nextAt <= Date.now()) this.fire();
+    else this.arm();
+  }
+
+  runNow() {
+    const r = this.host.repeat();
+    if (!r || r.paused) return;
+    if (this.host.running()) return this.host.system('Claude is busy, so there is no round to run now');
+    this.roundAt = 0;
+    this.fire();
+  }
+
+  stopRun() {
+    const r = this.host.repeat();
+    if (!r) return;
+    this.stopped = { r, at: Date.now() };
+    this.set(null, `${r.goal ? 'Goal' : 'Loop'} stopped`);
+  }
+
+  restore(runId: string) {
+    const s = this.stopped;
+    if (!s || s.r.runId !== runId || Date.now() - s.at > UNDO_MS || this.host.repeat()) return;
+    this.stopped = null;
+    this.host.reopenRun(runId);
+    this.set({ ...s.r, paused: false });
+  }
+
+  // Whether the next fire() ends the run instead of starting a round.
+  ends() {
+    const r = this.host.repeat();
+    return Boolean(r && this.finish(r));
+  }
+
+  private finish(r: Repeat) {
+    if (r.until && Date.now() >= r.until && !unrun(r)) return { note: `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, why: `finished at ${clock(r.until)}` };
+    if (r.goal && r.round >= MAX_GOAL_ROUNDS) return { note: `Goal not met after ${r.round} checks: ${r.goal}`, why: 'goal not met' };
+    return null;
+  }
+
   fire() {
     const r = this.host.repeat();
-    if (!r || this.held) return;
-    if (r.until && Date.now() >= r.until && !unrun(r)) return this.set(null, `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, `finished at ${clock(r.until)}`);
-    if (r.goal && r.round >= MAX_GOAL_ROUNDS) return this.set(null, `Goal not met after ${r.round} checks: ${r.goal}`, 'goal not met');
+    if (!r || this.held || r.paused) return;
+    const end = this.finish(r);
+    if (end) return this.set(null, end.note, end.why);
     if (this.host.running()) {
       this.due = true;
       return;
@@ -186,7 +244,7 @@ export class RepeatController {
     this.due = false;
     const nextAt = Math.max(r.nextAt ?? 0, until);
     this.host.setSession({ repeat: { ...r, nextAt } });
-    this.patchRun({ nextAt, ...(limit && { state: 'paused', why: `usage limit until ${clock(nextAt)}` }) });
+    this.patchRun({ nextAt, ...(limit && !r.paused && { state: 'paused', why: `usage limit until ${clock(nextAt)}` }) });
     this.arm();
     this.host.system(`${why ?? roundWord(r)} ${r.round + 1} at ${clock(nextAt)}, ${offCommand(r)} to end it`);
   }
@@ -201,7 +259,7 @@ export class RepeatController {
     const r = this.host.repeat();
     const at = Math.min(r?.nextAt ?? Infinity, r && unrun(r) ? Infinity : (r?.until ?? Infinity));
     // The driver reports its exit after close(); a closed chat must not wake up again.
-    if (!r || at === Infinity || this.host.closed()) return;
+    if (!r || r.paused || at === Infinity || this.host.closed()) return;
     this.timer = after(at, () => this.fire());
   }
 }

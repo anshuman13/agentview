@@ -20,12 +20,12 @@ function detail(m: ServerMessage) {
 const ROUND_PUSH: Partial<Record<RoundOutcome, string>> = { done: 'done', blocked: 'blocked', question: 'question', failed: 'failed' };
 
 // With a desktop client active in the last 3 minutes the menu bar notification still shows but the ntfy push is skipped.
-export function notifyAway(m: ServerMessage, away: () => LiveChat | null, desktopActive: () => boolean = () => false, round: { outcome: RoundOutcome; line: string } | null = null) {
+export function notifyAway(m: ServerMessage, away: () => LiveChat | null, desktopActive: () => boolean = () => false, round: { outcome: RoundOutcome; line: string; ends?: boolean } | null = null) {
   const body = detail(m);
   if (body === null) return;
   const ended = m.type === 'event' ? round : null;
   const word = ended && ROUND_PUSH[ended.outcome];
-  if (ended && !word) return;
+  if (ended && (!word || ended.ends)) return;
   const chat = away();
   if (!chat) return;
   const kind = m.type === 'pending' ? 'needs' : 'finished';

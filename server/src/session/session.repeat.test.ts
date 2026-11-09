@@ -120,6 +120,60 @@ describe('/loop after Stop', () => {
   });
 });
 
+describe('run controls', () => {
+  const users = (s: AgentSession) => s.state.events.filter((e) => e.kind === 'user').length;
+
+  it('a paused loop does not fire, stays paused through a restart and fires again on resume', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    const { s } = fakeSession();
+    await s.prompt('/loop 10m until 23:59 do the next round');
+    const run = s.state.session.repeat!.runId!;
+    s.runControl(run, 'pause');
+    expect(s.state.session.repeat?.paused).toBe(true);
+    expect(s.runs.get(run)).toMatchObject({ state: 'paused', why: 'you paused it' });
+    vi.advanceTimersByTime(30 * 60_000);
+    expect(users(s)).toBe(2);
+    const { s: again } = fakeSession();
+    again.runs = s.runs;
+    again.resumeRepeat({ ...s.state.session.repeat!, nextAt: Date.now() - 1000 });
+    expect(users(again)).toBe(0);
+    expect(again.state.session.repeat?.paused).toBe(true);
+    expect(again.runs.get(run)?.state).toBe('paused');
+    again.runControl(run, 'resume');
+    expect(users(again)).toBe(1);
+    expect(again.runs.get(run)).toMatchObject({ state: 'running', why: '' });
+    vi.useRealTimers();
+  });
+
+  it('restore brings a stopped loop back with its run and round, only within 60 s', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    const { s } = fakeSession();
+    await s.prompt('/loop 10m until 23:59 do the next round');
+    const before = s.state.session.repeat!;
+    s.runControl(before.runId!, 'stop');
+    expect(s.state.session.repeat).toBeNull();
+    expect(s.runs.get(before.runId)).toMatchObject({ state: 'done', why: 'you stopped it' });
+    vi.advanceTimersByTime(30_000);
+    s.runControl(before.runId!, 'restore');
+    expect(s.state.session.repeat).toMatchObject({ runId: before.runId, round: before.round, every: before.every, until: before.until });
+    expect(s.runs.get(before.runId)?.state).toBe('running');
+    s.runControl(before.runId!, 'stop');
+    vi.advanceTimersByTime(61_000);
+    s.runControl(before.runId!, 'restore');
+    expect(s.state.session.repeat).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('a goal met ends the run with its round, so only the run end pushes', async () => {
+    const { s, handle } = fakeSession();
+    await s.prompt('/goal the tests pass');
+    handle({ type: 'result', subtype: 'success', uuid: 'r1', result: 'All green. GOAL MET', total_cost_usd: 0, is_error: false });
+    expect(s.roundNote).toMatchObject({ outcome: 'done', ends: true });
+  });
+});
+
 describe('/goal', () => {
   const CHECK = 'Check whether this goal is met: the tests pass. Reply GOAL MET when it is, otherwise keep working on it.';
   const users = (s: AgentSession) => s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text);

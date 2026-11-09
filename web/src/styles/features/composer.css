@@ -1,6 +1,14 @@
 .cp { position: relative; display: flex; flex-direction: column; gap: var(--sp-2); width: 100%; --cp-ring: var(--border-strong); }
 .cp[data-mode='plan'] { --cp-ring: var(--accent); }
 .cp[data-mode='acceptEdits'] { --cp-ring: var(--fg-muted); }
+.lc { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.lc-head { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.lc-state { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: 600; color: var(--on-surface); }
+.lc-line { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-xs); line-height: var(--line-xs); color: var(--on-surface-muted); text-align: left; }
+.lc-what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-cost, .lc-time { flex: none; font-variant-numeric: tabular-nums; }
+.lc-last { cursor: pointer; }
+.lc-rounds { display: flex; flex-direction: column; gap: var(--sp-1); margin: var(--sp-2) 0 0; padding: 0; list-style: none; }
 .cp-card {
   position: relative; display: flex; flex-direction: column; transition: border-color var(--dur);
   background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius);

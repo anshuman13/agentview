@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { ACCOUNT_LABEL, MAX_GOAL_ROUNDS, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type RoundOutcome, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, MAX_GOAL_ROUNDS, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type RoundOutcome, type RunOp, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, errText } from '../../../shared/util.js';
 import { costRise } from '../../../shared/cost.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
@@ -57,7 +57,8 @@ export class AgentSession implements AgentHost {
   private cycleRun: string | undefined;
   // The last turn was a loop round or goal check; its reply ends with a ROUND line.
   private roundTurn = false;
-  roundNote: { outcome: RoundOutcome; line: string } | null = null;
+  // ends: the run ends with this round, so its own end push is the only one.
+  roundNote: { outcome: RoundOutcome; line: string; ends: boolean } | null = null;
   private lastCost = 0;
   private turnCost = 0;
   private repeater = new RepeatController({
@@ -69,6 +70,7 @@ export class AgentSession implements AgentHost {
     startRun: (r) => this.startRun(r),
     resumeRun: (r) => this.resumeRun(r),
     endRun: (id, why) => this.runs.end(id, why),
+    reopenRun: (id) => this.runs.reopen(id),
     patchRun: (id, patch) => this.runs.update(id, patch),
     sendPrompt: (text, auto, round) => this.sendPrompt(text, randomUUID(), { auto, round }),
   });
@@ -536,6 +538,16 @@ export class AgentSession implements AgentHost {
     this.repeater.resume(r);
   }
 
+  runControl(run: string, op: RunOp) {
+    if (this.cycleRun === run) return op === 'stop' ? this.setLoop(false) : undefined;
+    if (op === 'restore') return this.repeater.restore(run);
+    if (this.state.session.repeat?.runId !== run) return;
+    if (op === 'pause') this.repeater.pause();
+    else if (op === 'resume') this.repeater.unpause();
+    else if (op === 'now') this.repeater.runNow();
+    else if (op === 'stop') this.repeater.stopRun();
+  }
+
   setLoop(on: boolean, max?: number) {
     if (!on) this.runs.end(this.cycleRun, 'you stopped it');
     const next = withLoop(this.state.session.loop, on, max);
@@ -731,10 +743,10 @@ export class AgentSession implements AgentHost {
     const met = Boolean(repeat?.goal && goalMet(this.lastResult));
     this.turnCost = r.costUsd > 0 ? costRise(r.costUsd, this.lastCost) : 0;
     if (r.costUsd > 0) this.lastCost = r.costUsd;
-    this.roundNote = this.roundTurn && repeat?.runId ? roundResult(r.text, { failed: this.lastError, met }) : null;
+    this.roundNote = this.roundTurn && repeat?.runId ? { ...roundResult(r.text, { failed: this.lastError, met }), ends: met || this.repeater.ends() } : null;
     this.roundTurn = false;
     this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: this.state.session.model });
-    if (repeat?.runId && this.roundNote) this.runs.addRound(repeat.runId, { n: repeat.round, ...this.roundNote, costUsd: this.turnCost });
+    if (repeat?.runId && this.roundNote) this.runs.addRound(repeat.runId, { n: repeat.round, outcome: this.roundNote.outcome, line: this.roundNote.line, costUsd: this.turnCost });
     if (repeat?.goal && met) this.repeater.set(null, `Goal met after ${repeat.round} ${repeat.round === 1 ? 'check' : 'checks'}: ${repeat.goal}`, 'goal met');
     this.turnEnded();
   }

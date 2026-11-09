@@ -343,11 +343,11 @@ sends it once at that time. When a turn ends on a usage limit, the timeline show
 HH:MM" link that schedules the last prompt that way. A fire that lands while
 Claude is still working waits for the round to end. The loop lives in the AgentView server, so it survives a server
 restart and never depends on the CLI's own scheduled jobs. Your messages and Stop interrupt the current round but
-keep the loop; `/loop off` ends it. The composer footer shows the round and the next fire time; tap it to stop.
+keep the loop; `/loop off` ends it. The loop card above the composer shows the round and the next fire time.
 
 `/goal <condition>` asks Claude to check the condition whenever it goes idle and to keep working until it is met.
 Claude replies GOAL MET to end it; the check also stops by itself after 20 rounds. `/goal off` ends it early, and
-the footer shows the check count the way it shows loop rounds.
+the loop card shows the check count the way it shows loop rounds.
 
 Every `/loop`, `/goal` and build cycle is a run, kept in the host in `~/.agentview/runs.json` (active runs and the
 latest 100 ended ones, each with its last 50 rounds) and served at `GET /api/runs`. A round is the outcome of one turn,
@@ -357,6 +357,14 @@ transcript, the chat row and push bodies. A round without the line counts as pro
 <repo>: <outcome>" only for done, blocked, question or failed, and a run that ends pushes its reason unless you
 stopped it. A usage limit or a pending approval marks the run paused until the next round or the answer. A build
 cycle is one run with a round per step.
+
+The loop card sits above the composer while the chat has an active run: a state line ("Loop · round 4 · next 14:20",
+"Paused · usage limit until 18:00", "Goal · check 3 of 20", "Build cycle · round 2/3 · Test"), the what text, the total
+cost and the last round's outcome with a dot; tapping that line lists the last 10 rounds. A loop or goal has Pause (or
+Resume) and Stop, and Run now in its More menu; Run now does nothing while Claude is busy. A pause is saved and survives
+a restart. Stop shows "Loop stopped" or "Goal stopped" with Undo, which starts the same run again within 60 s. A build
+cycle only has Stop ("Build cycle stopped", no Undo). The controls take a run id, so they work from any screen. A round
+that ends its run (goal met, last check, end time) sends only the run-end push.
 
 ## Agents
 

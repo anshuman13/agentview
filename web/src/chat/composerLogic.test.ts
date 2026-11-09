@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stampedNotes } from '../codex/data/meetings';
 import type { Meeting } from '../codex/data/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, quoteReply, remindChoices } from './composerLogic';
-import type { ChatEvent, SavedSession } from '../../../shared/protocol';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, quoteReply, remindChoices, runLine } from './composerLogic';
+import type { ChatEvent, ChatRun, SavedSession } from '../../../shared/protocol';
 
 let n = 0;
 const user = (text: string): ChatEvent => ({ id: `u${++n}`, kind: 'user', text, at: n });
@@ -259,5 +259,17 @@ describe('quoteReply', () => {
   it('quotes each line and cuts long replies at a word', () => {
     expect(quoteReply('Done.\n\nTests pass')).toBe('> Done.\n>\n> Tests pass\n\n');
     expect(quoteReply('one two three', 9)).toBe('> one two…\n\n');
+  });
+});
+
+describe('runLine', () => {
+  const run = (over: Partial<ChatRun>) => ({ kind: 'loop', state: 'running', why: '', round: 4, max: 0, nextAt: null, ...over }) as ChatRun;
+  it('says the state of each kind of run', () => {
+    expect(runLine(run({ nextAt: new Date(2026, 10, 9, 14, 20).getTime() }))).toBe('Loop · round 4 · next 14:20');
+    expect(runLine(run({}))).toBe('Loop · round 4');
+    expect(runLine(run({ state: 'paused', why: 'usage limit until 18:00' }))).toBe('Paused · usage limit until 18:00');
+    expect(runLine(run({ kind: 'goal', round: 3, max: 20 }))).toBe('Goal · check 3 of 20');
+    expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'test')).toBe('Build cycle · round 2/3 · Test');
+    expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'passed')).toBe('Build cycle · round 2/3');
   });
 });

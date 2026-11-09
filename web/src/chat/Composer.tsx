@@ -7,6 +7,7 @@ import { assistantStore } from '../codex/data';
 import { stampedNotes } from '../codex/data/meetings';
 import { showSnack } from '../codex/view';
 import { clock } from '../codex/time';
+import { LoopCard } from './LoopCard';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../ui/QuickPick';
 import { FileIcon } from '../workspace/FileIcon';
@@ -17,7 +18,7 @@ import type { Meeting } from '../codex/data/wiki';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent, type SavedSession } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { ChatSettings, useChatSettings, type Pick } from './ChatSettings';
-import { accept, addUse, append, buildHistory, chatQuery, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, readDraft, sharedTask, turnEnd, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
+import { accept, addUse, append, buildHistory, chatQuery, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, readDraft, sharedTask, turnEnd, remember, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -47,7 +48,6 @@ export function Composer() {
   const compacting = useStore((s) => s.session.compacting);
   const waiting = useStore((s) => s.pending.length > 0);
   const commands = useStore((s) => s.session.commands);
-  const repeat = useStore((s) => s.session.repeat);
   const { mode, effort, loop, modelName, effortName, modeInfo } = useChatSettings();
   const [stale, setStale] = useState(0);
   useEffect(() => {
@@ -339,6 +339,7 @@ export function Composer() {
           }}
         />
       )}
+      <LoopCard />
       <div
         ref={card}
         className={`cp-card${shell ? ' shell' : ''}`}
@@ -421,9 +422,7 @@ export function Composer() {
             <button className={`cp-ctx ${level}`} disabled={running} title={`${context!.toLocaleString()} tokens in context. ${running ? 'Compacts when this turn ends' : 'Tap to compact'}.`} onClick={() => send({ type: 'prompt', text: '/compact' })}>{pct}% context{!running && ' · compact'}</button>
           )}
           {edited > 0 && <span>{edited} {edited === 1 ? 'file' : 'files'} edited</span>}
-          {loop.phase && <span className={`cp-phase ${loop.phase}`}>{loopLabel(loop)}</span>}
           {stale >= 30 && <span className="cp-phase cp-stale" title="Nothing has arrived from the server. The link is reopened after 50 s of silence.">No update for {stale}s</span>}
-          {repeat && <button className="cp-ctx cp-phase" title={`${repeatLabel(repeat)}. Tap to stop ${repeat.goal ? 'checking' : 'the loop'}.`} onClick={() => send({ type: 'prompt', text: repeat.goal ? '/goal off' : '/loop off' })}>{repeatPill(repeat)}</button>}
         </span>
       </div>
       {open && (

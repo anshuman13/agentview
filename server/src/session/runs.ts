@@ -77,6 +77,14 @@ export class Runs {
     this.onEnd(run);
   }
 
+  // A stopped run starts again with its rounds and cost.
+  reopen(id: string | undefined) {
+    const run = this.get(id);
+    if (!run || run.state !== 'done') return;
+    Object.assign(run, { state: 'running', why: '', endedAt: null });
+    this.touch();
+  }
+
   // After a restart, a run no chat took back is over.
   endExcept(keep: (string | undefined)[], why: string) {
     for (const r of this.runs) if (r.state !== 'done' && !keep.includes(r.id)) this.end(r.id, why);

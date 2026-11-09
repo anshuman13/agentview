@@ -138,6 +138,9 @@ describe('notifyAway', () => {
     const [, init] = sent.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>).Title).toBe('Loop in repo: blocked');
     expect(init.body).toBe('T\nneeds a token');
+    notifyAway(done('GOAL MET'), () => chat('e'), () => false, { outcome: 'done', line: 'Goal met', ends: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sent).toHaveBeenCalledTimes(1);
     notifyAway(done('Plain reply.\nROUND: done x'), () => chat('n'));
     await vi.advanceTimersByTimeAsync(0);
     const [, plain] = sent.mock.calls[1] as unknown as [string, RequestInit];
