@@ -1,137 +1,29 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { api, getState, notice, prompt, queueNext, send, sinceHeard, steer, useStore } from '../../app/store';
-import { Chip } from '../../ui/Button';
+import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { send, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
-import { Confirm } from '../../ui/Confirm';
-import { assistantStore } from '../../codex/data';
-import { stampedNotes } from '../../codex/data/meetings/meetings';
-import { showSnack } from '../../codex/view';
-import { clock } from '../../codex/tasks/time';
+import { touch } from '../../app/touch/touch';
+import { PERMISSION_MODES } from '../../../../shared/protocol';
 import { LoopCard } from '../cards/LoopCard';
 import { TodoCard } from '../cards/TodoCard';
-import { Voice, useDictation } from './Voice';
-import { QuickPick } from '../../ui/QuickPick';
-import { toolId } from '../../ops/mcpHelpers';
-import { touch } from '../../app/touch/touch';
-import { readFlag, wsUrl, plural, save, storedStrings } from '../../ui/util';
-import type { Meeting } from '../../codex/data/wiki/wiki';
-import { COMPACT_AT, PERMISSION_MODES, type ChatEvent, type SavedSession } from '../../../../shared/protocol';
-import { errText } from '../../../../shared/util';
+import { useDictation } from './Voice';
 import { PopItems } from './ComposerPop';
 import { Announcer } from '../Announcer';
 import { ChatSettings, useChatSettings, type Pick } from '../ChatSettings';
-import { accept, addUse, append, buildHistory, chatQuery, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, readDraft, goalInfo, goalPlaceholder, goalText, type GoalChoice, sharedTask, remember, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
-
-let editedFor: ChatEvent[] | undefined;
-let editedCount = 0;
-const editedOf = (events: ChatEvent[]) => (events === editedFor ? editedCount : ((editedFor = events), (editedCount = filesEdited(events))));
+import { accept, ghostFor, goalPlaceholder, type GoalChoice, type Use } from './composerLogic';
+import { ComposerFoot } from './ComposerFoot';
+import { ComposerStats } from './ComposerStats';
+import { PickerSheets } from './PickerSheets';
+import { SharedConfirm, useSharedIntake } from './SharedText';
+import { UsesBar } from './UsesBar';
+import { useAutocomplete } from './useAutocomplete';
+import { useComposerEvents } from './useComposerEvents';
+import { useDraft, usePromptHistory } from './usePromptHistory';
+import { useSubmit } from './useSubmit';
+import { useUploads } from './useUploads';
 
 const MAX_HEIGHT = 220;
 
-async function runInTerminal(cmd: string) {
-  const id = await terminalId(api);
-  if (!id) return notice('Terminal unavailable');
-  window.dispatchEvent(new CustomEvent('agentview:terminal', { detail: id }));
-  const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(id)}`));
-  ws.onerror = () => notice('Terminal unavailable');
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ t: 'i', d: `${cmd}\r` }));
-    ws.close();
-  };
-}
-
-type Hist = { list: string[]; index: number; draft: string };
-
-export function Composer() {
-  const cwd = useStore((s) => s.session.cwd);
-  const chat = useStore((s) => s.session.id);
-  const running = useStore((s) => s.session.running);
-  const stopping = useStore((s) => s.session.stopping);
-  const compacting = useStore((s) => s.session.compacting);
-  const waiting = useStore((s) => s.pending.length > 0);
-  const commands = useStore((s) => s.session.commands);
-  const { mode, effort, loop, modelName, effortName, modeInfo } = useChatSettings();
-  const [stale, setStale] = useState(0);
-  useEffect(() => {
-    const tick = () => setStale(document.visibilityState === 'visible' ? sinceHeard() : 0);
-    const t = setInterval(tick, 5_000);
-    return () => clearInterval(t);
-  }, []);
-  const context = useStore((s) => s.session.context);
-  const userCount = useStore((s) => s.events.reduce((n, e) => n + (e.kind === 'user' ? 1 : 0), 0));
-  const edited = useStore((s) => editedOf(s.events));
-  const servers = useStore((s) => s.session.mcp).filter((m) => m.status === 'connected');
-
-  const [pick, setPick] = useState<Pick | null>(null);
-  const [uses, setUses] = useState<Use[]>([]);
-  const [goals, setGoals] = useState<Record<string, GoalChoice>>({});
-  const goal = goals[chat] ?? 'off';
-  const [text, setText] = useState(() => readDraft(chat));
-  const draftFor = useRef(chat);
-  const picker = useRef<HTMLInputElement>(null);
-  const [caret, setCaret] = useState(0);
-  const [sel, setSel] = useState(0);
-  const [dismissed, setDismissed] = useState('');
-  const [files, setFiles] = useState<string[]>([]);
-  const [chats, setChats] = useState<SavedSession[]>([]);
-  const [sentHistory, setSentHistory] = useState(() => storedStrings(STORED_KEY));
-  const [hist, setHist] = useState<Hist | null>(null);
-  const dictate = useDictation(text, setText);
-  const ta = useRef<HTMLTextAreaElement>(null);
-  const mirror = useRef<HTMLDivElement>(null);
-  const card = useRef<HTMLDivElement>(null);
-  const pop = useRef<HTMLUListElement>(null);
-  const wantCaret = useRef<number | null>(null);
-  const popId = useId();
-
-  const at = Math.min(caret, text.length);
-  const trigger = useMemo(() => triggerAt(text, at), [text, at]);
-  const shell = trigger?.kind === 'shell';
-  const popKey = trigger && trigger.kind !== 'shell' ? `${trigger.kind}:${trigger.start}:${trigger.query}` : '';
-  const chatQ = chatQuery(trigger);
-  const items = useMemo(() => {
-    if (!trigger || trigger.kind === 'shell' || popKey === dismissed) return [];
-    if (chatQ !== null) return rankChats(chats.filter((c) => c.sessionId !== getState().session.sessionId), chatQ);
-    return trigger.kind === 'command' ? rankCommands(commands, trigger.query) : rankFiles(files, trigger.query);
-  }, [trigger, popKey, dismissed, commands, files, chats, chatQ]);
-  const open = items.length > 0;
-  const history = useMemo(() => buildHistory(getState().events, sentHistory), [chat, userCount, sentHistory]);
-  const ghost = !open && !shell && at === text.length ? ghostFor(text, history) : '';
-  const pct = contextPercent(context);
-  const shortModel = modelName.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);
-  const cycleMode = () => send({ type: 'set_permission_mode', mode: PERMISSION_MODES[(PERMISSION_MODES.indexOf(mode as never) + 1) % PERMISSION_MODES.length] });
-
-  useEffect(() => {
-    if (trigger?.kind !== 'file' || !cwd) return;
-    let live = true;
-    setFiles(fileCache.get(cwd) ?? []);
-    fetch(api('/api/files')).then((r) => r.json()).then((f: string[]) => { fileCache.set(cwd, f); if (live) setFiles(f); }).catch(() => {});
-    return () => void (live = false);
-  }, [trigger?.kind, cwd]);
-
-  const wantChats = chatQ !== null;
-  useEffect(() => {
-    if (!wantChats) return;
-    let live = true;
-    fetch(api('/api/sessions')).then((r) => r.json()).then((l: SavedSession[]) => { if (live && Array.isArray(l)) setChats(l); }).catch(() => {});
-    return () => void (live = false);
-  }, [wantChats]);
-
-  useEffect(() => {
-    if (draftFor.current === chat) return saveDraft(chat, text);
-    draftFor.current = chat;
-    setText(readDraft(chat));
-    setUses([]);
-    setHist(null);
-    setPick(null);
-  }, [chat, text]);
-
-  useEffect(() => setSel(0), [popKey]);
-
-  useEffect(() => {
-    pop.current?.children[sel]?.scrollIntoView({ block: 'nearest' });
-  }, [sel]);
-
+function useAutoHeight(ta: RefObject<HTMLTextAreaElement | null>, mirror: RefObject<HTMLDivElement | null>, wantCaret: { current: number | null }, setCaret: (n: number) => void, deps: unknown[]) {
   useLayoutEffect(() => {
     const el = ta.current;
     if (!el) return;
@@ -144,225 +36,92 @@ export function Composer() {
       setCaret(wantCaret.current);
       wantCaret.current = null;
     }
-  }, [text, ghost]);
+  }, deps);
+}
 
-  useLayoutEffect(() => {
-    const el = pop.current;
-    const anchor = card.current;
-    if (!el || !anchor) return;
-    const r = anchor.getBoundingClientRect();
-    el.style.left = `${r.left}px`;
-    el.style.width = `${r.width}px`;
-    if (r.top - 8 >= el.offsetHeight) { el.style.bottom = `${window.innerHeight - r.top + 4}px`; el.style.top = ''; }
-    else { el.style.top = `${r.bottom + 4}px`; el.style.bottom = ''; }
-  }, [items]);
+function placeholderFor(running: boolean, waiting: boolean, compacting: boolean, goal: GoalChoice, hasUses: boolean) {
+  if (waiting) return 'Answer below, or message Claude to stop and send';
+  if (compacting) return 'Sends when compacting is done';
+  if (running) return touch() ? 'Claude reads this next · hold Send to stop' : 'Claude reads this at its next step · ⌘Enter stops and sends';
+  if (goal !== 'off') return goalPlaceholder;
+  return hasUses ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files · @chat: chats';
+}
+
+export function Composer() {
+  const chat = useStore((s) => s.session.id);
+  const running = useStore((s) => s.session.running);
+  const compacting = useStore((s) => s.session.compacting);
+  const waiting = useStore((s) => s.pending.length > 0);
+  const { mode } = useChatSettings();
+  const [pick, setPick] = useState<Pick | null>(null);
+  const [uses, setUses] = useState<Use[]>([]);
+  const [goals, setGoals] = useState<Record<string, GoalChoice>>({});
+  const goal = goals[chat] ?? 'off';
+  const [caret, setCaret] = useState(0);
+  const ta = useRef<HTMLTextAreaElement>(null);
+  const mirror = useRef<HTMLDivElement>(null);
+  const wantCaret = useRef<number | null>(null);
+  const popId = useId();
+  const [text, setText] = useDraft(chat, () => { setUses([]); h.setHist(null); setPick(null); });
+  const h = usePromptHistory(chat);
+  const ac = useAutocomplete(text, caret);
+  const dictate = useDictation(text, setText);
+  const { uploading, attach } = useUploads(setText, ta);
+  const [shared, setShared] = useSharedIntake(attach);
+  useComposerEvents({ ta, wantCaret, setText, setUses });
+
+  const ghost = !ac.open && !ac.shell && ac.at === text.length ? ghostFor(text, h.history) : '';
+  const typed = text.trim().length > 0;
+  useAutoHeight(ta, mirror, wantCaret, setCaret, [text, ghost]);
 
   const apply = (next: string, c = next.length) => {
     wantCaret.current = c;
     setText(next);
   };
+  const submit = useSubmit({
+    text, setText, shell: ac.shell, uploading, uses, setUses, goal, apply,
+    resetGoal: () => setGoals((g) => ({ ...g, [chat]: 'off' })),
+    sentHistory: h.sentHistory, setSentHistory: h.setSentHistory, clearHistoryStep: () => h.setHist(null),
+  });
 
   const choose = (i: number) => {
-    if (!trigger || trigger.kind === 'shell' || !items[i]) return;
-    const it = items[i].item;
-    const value = trigger.kind === 'command' ? `/${(it as { name: string }).name}` : typeof it === 'object' && 'sessionId' in it ? `@chat:${it.sessionId}` : `@${it as string}`;
-    const r = accept(text, trigger.start, at, value);
+    if (!ac.trigger || ac.trigger.kind === 'shell' || !ac.items[i]) return;
+    const it = ac.items[i].item;
+    const value = ac.trigger.kind === 'command' ? `/${(it as { name: string }).name}` : typeof it === 'object' && 'sessionId' in it ? `@chat:${it.sessionId}` : `@${it as string}`;
+    const r = accept(text, ac.trigger.start, ac.at, value);
     apply(r.text, r.caret);
   };
 
-  const stepHistory = (dir: 1 | -1) => {
-    const h = hist ?? { list: history, index: -1, draft: text };
-    const index = Math.min(h.list.length - 1, h.index + dir);
-    if (index < 0) { setHist(null); apply(h.draft); return; }
-    setHist({ ...h, index });
-    apply(h.list[index]);
-  };
-
-  const [uploading, setUploading] = useState(0);
-  const sendAfter = useRef<boolean | null>(null);
-  const attach = async (list: File[]) => {
-    setUploading((n) => n + list.length);
-    for (const f of list) {
-      try {
-        const body = await uploadPaste(f);
-        setText((t) => append(t, `[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}] `));
-      } catch (err) {
-        notice(`Could not attach ${f.name || 'the file'}: ${errText(err)}`);
-      } finally {
-        setUploading((n) => n - 1);
-      }
-    }
-    ta.current?.focus();
-  };
-
-  const sharedAdded = useRef(false);
-  const [shared, setShared] = useState<string | null>(null);
-  const addShared = async (raw: string) => {
-    const { title, at } = sharedTask(raw);
-    try {
-      await assistantStore().capture(title, 'task', readFlag('assistant-personal', false) ? 'personal' : 'work', at);
-      notice('Added to Tasks');
-    } catch (err) {
-      notice(`Not saved: ${errText(err)}. The text is back in the composer.`);
-      setText((t) => append(t, `${raw} `));
-    }
-  };
-
-  const sharedMeeting = useMemo(() => (shared === null ? null : currentMeeting(assistantStore().snapshot().meetings, Date.now())), [shared === null]);
-  const addToNotes = async (raw: string, m: Meeting) => {
-    try {
-      const store = assistantStore();
-      const cur = store.snapshot().meetings.find((x) => x.profile === m.profile && x.id === m.id) ?? m;
-      const notes = stampedNotes(cur.notes, raw, Date.now());
-      if (!notes) return;
-      await store.editRow('meetings', cur, { notes });
-      if (store.snapshot().meetings.find((x) => x.profile === cur.profile && x.id === cur.id)?.notes !== notes) throw new Error('the notes did not change');
-      showSnack('Added to the notes');
-    } catch (err) {
-      notice(`Not saved: ${errText(err)}. The text is back in the composer.`);
-      setText((t) => append(t, `${raw} `));
-    }
-  };
-
-  useEffect(() => {
-    const shell = (window as { AgentViewShell?: { takeShared?: () => string } }).AgentViewShell;
-    if (!shell?.takeShared) return;
-    const take = () => {
-      try {
-        const items = JSON.parse(shell.takeShared!() || '[]') as { name: string; type: string; data: string; text?: string }[];
-        const texts = items.filter((it) => it.text).map((it) => it.text);
-        if (texts.length) setShared((s) => (s === null ? texts.join('\n') : `${s}\n${texts.join('\n')}`));
-        for (const it of items) {
-          if (it.text) continue;
-          else void attach([new File([Uint8Array.from(atob(it.data), (c) => c.charCodeAt(0))], it.name, { type: it.type })]);
-        }
-      } catch {
-        notice('Could not read what was shared');
-      }
-    };
-    take();
-    window.addEventListener('agentview:shared', take);
-    return () => window.removeEventListener('agentview:shared', take);
-  }, []);
-
-  useEffect(() => {
-    const insert = (e: Event) => {
-      const add = (e as CustomEvent<{ text: string }>).detail.text;
-      setText((t) => {
-        const next = append(t, add);
-        wantCaret.current = next.length;
-        return next;
-      });
-      requestAnimationFrame(() => ta.current?.focus());
-    };
-    window.addEventListener('agentview:insert', insert);
-    return () => window.removeEventListener('agentview:insert', insert);
-  }, []);
-
-  useEffect(() => {
-    const use = (e: Event) => {
-      setUses((u) => addUse(u, (e as CustomEvent<Use>).detail));
-      requestAnimationFrame(() => ta.current?.focus());
-    };
-    window.addEventListener('agentview:use', use);
-    return () => window.removeEventListener('agentview:use', use);
-  }, []);
-
-  useEffect(() => {
-    const focus = () => requestAnimationFrame(() => ta.current?.focus());
-    window.addEventListener('agentview:focus', focus);
-    return () => window.removeEventListener('agentview:focus', focus);
-  }, []);
-
-  const submit = (stop = false) => {
-    const t = text.trim();
-    if (!t) { sendAfter.current = null; return; }
-    if (uploading > 0) { sendAfter.current = stop; return; }
-    sendAfter.current = null;
-    if (shell) {
-      const cmd = t.slice(1).trim();
-      if (cmd) runInTerminal(cmd).catch(() => notice('Terminal unavailable'));
-    } else {
-      const next = remember(t, sentHistory);
-      setSentHistory(next);
-      save(STORED_KEY, next);
-      const used = withUses(t, uses);
-      const full = goalText(goal, used, Date.now());
-      if (full !== used) setGoals((g) => ({ ...g, [chat]: 'off' }));
-      const lost = () => setText((cur) => (cur.trim() ? cur : t));
-      if (running && (stop || waiting)) steer(full, lost);
-      else if (running) queueNext(full, lost);
-      else prompt(full, lost);
-      if (used !== t) setUses([]);
-    }
-    setHist(null);
-    apply('');
-  };
-
-  useEffect(() => {
-    if (uploading === 0 && sendAfter.current !== null) submit(sendAfter.current);
-  }, [uploading]);
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.nativeEvent.isComposing) return;
     const el = e.currentTarget;
-    const onEntry = hist !== null && text === hist.list[hist.index];
-    if (open) {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setSel((i) => (i + 1) % items.length); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); setSel((i) => (i - 1 + items.length) % items.length); return; }
-      if (e.key === 'Escape') { e.preventDefault(); setDismissed(popKey); return; }
-      const exact = trigger?.kind === 'command' && (items[sel]?.item as { name: string } | undefined)?.name === trigger.query;
-      if ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'Enter' && !e.shiftKey && !exact)) { e.preventDefault(); choose(sel); return; }
+    const onEntry = h.hist !== null && text === h.hist.list[h.hist.index];
+    if (ac.open) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); ac.setSel((i) => (i + 1) % ac.items.length); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); ac.setSel((i) => (i - 1 + ac.items.length) % ac.items.length); return; }
+      if (e.key === 'Escape') { e.preventDefault(); ac.setDismissed(ac.popKey); return; }
+      const exact = ac.trigger?.kind === 'command' && (ac.items[ac.sel]?.item as { name: string } | undefined)?.name === ac.trigger.query;
+      if ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'Enter' && !e.shiftKey && !exact)) { e.preventDefault(); choose(ac.sel); return; }
     }
-    if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); cycleMode(); return; }
+    if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); send({ type: 'set_permission_mode', mode: PERMISSION_MODES[(PERMISSION_MODES.indexOf(mode as never) + 1) % PERMISSION_MODES.length] }); return; }
     if (ghost && (e.key === 'Tab' || e.key === 'ArrowRight') && el.selectionStart === text.length) { e.preventDefault(); apply(text + ghost); return; }
-    if (e.key === 'ArrowUp' && (text === '' || onEntry) && !text.slice(0, el.selectionStart).includes('\n')) { e.preventDefault(); stepHistory(1); return; }
-    if (e.key === 'ArrowDown' && onEntry && !text.slice(el.selectionEnd).includes('\n')) { e.preventDefault(); stepHistory(-1); return; }
+    if (e.key === 'ArrowUp' && (text === '' || onEntry) && !text.slice(0, el.selectionStart).includes('\n')) { e.preventDefault(); h.step(1, text, apply); return; }
+    if (e.key === 'ArrowDown' && onEntry && !text.slice(el.selectionEnd).includes('\n')) { e.preventDefault(); h.step(-1, text, apply); return; }
     if (e.key === 'Enter' && !e.shiftKey && (!touch() || e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(e.metaKey || e.ctrlKey); }
   };
 
-  const typed = text.trim().length > 0;
-  const hint = shell ? 'Runs in the terminal' : '';
-  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? (touch() ? 'Claude reads this next · hold Send to stop' : 'Claude reads this at its next step · ⌘Enter stops and sends') : goal !== 'off' ? goalPlaceholder : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files · @chat: chats';
-  const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
-
   return (
     <div className="cp" data-mode={mode}>
-      {shared !== null && (
-        <Confirm
-          title="Shared text"
-          detail={sharedMeeting ? `${shared}\n\nMeeting: ${sharedMeeting.title}, ${clock(sharedMeeting.starts_at!)}` : shared}
-          icon="add"
-          neutral
-          action="Add as task"
-          cancel="Send to chat"
-          extra={sharedMeeting ? { label: 'Add to meeting notes', run: () => { sharedAdded.current = true; return addToNotes(shared, sharedMeeting); } } : undefined}
-          run={() => { sharedAdded.current = true; return addShared(shared); }}
-          onClose={() => {
-            if (!sharedAdded.current) setText((t) => append(t, `${shared} `));
-            sharedAdded.current = false;
-            setShared(null);
-          }}
-        />
-      )}
+      {shared !== null && <SharedConfirm shared={shared} setShared={setShared} setText={setText} />}
       <TodoCard />
       <LoopCard />
       <div
-        ref={card}
-        className={`cp-card${shell ? ' shell' : ''}`}
+        ref={ac.card}
+        className={`cp-card${ac.shell ? ' shell' : ''}`}
         onDragOver={(e) => e.dataTransfer.types.includes('Files') && e.preventDefault()}
         onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }}
       >
-        {uses.length > 0 && (
-          <div className="cp-uses">
-            {uses.map((u) => (
-              <span key={useLabel(u)} className="cp-use" title={u.tool ? `Claude is asked to use ${toolId(u.server, u.tool)}` : `Claude is asked to use the ${u.server} MCP server`}>
-                <Icon name="plug" small /><span>{u.server}</span>{u.tool && <span className="mono">{u.tool}</span>}
-                <button className="icon-btn" aria-label={`Remove ${u.tool ?? u.server}`} onClick={() => setUses((l) => l.filter((x) => x !== u))}><Icon name="close" small /></button>
-              </span>
-            ))}
-          </div>
-        )}
+        <UsesBar uses={uses} remove={(u) => setUses((l) => l.filter((x) => x !== u))} />
         <div className="cp-text">
           <div ref={mirror} className="cp-mirror" aria-hidden><span className="cp-typed">{text}</span><span className="cp-ghost">{ghost}</span></div>
           <textarea
@@ -371,10 +130,10 @@ export function Composer() {
             rows={1}
             aria-label="Message Claude"
             aria-autocomplete="list"
-            aria-controls={open ? popId : undefined}
-            aria-activedescendant={open ? `${popId}-${sel}` : undefined}
-            placeholder={placeholder}
-            spellCheck={!shell}
+            aria-controls={ac.open ? popId : undefined}
+            aria-activedescendant={ac.open ? `${popId}-${ac.sel}` : undefined}
+            placeholder={placeholderFor(running, waiting, compacting, goal, uses.length > 0)}
+            spellCheck={!ac.shell}
             onChange={(e) => { setText(e.target.value); setCaret(e.target.selectionStart); }}
             onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
             onKeyDown={onKeyDown}
@@ -387,85 +146,17 @@ export function Composer() {
             <Icon name="arrow-right" small /><span>{text.length > 12 && '…'}{text.slice(-12)}<b>{ghost}</b></span>
           </button>
         )}
-        <div className="cp-foot">
-          <Chip className={`cp-mode${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Build cycle on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
-            <Icon name={modeInfo.icon} small /><span>{shortModel}{effort && ` · ${effortName}`} · {modeInfo.label}{goal !== 'off' && ` · ${goalInfo(goal, Date.now()).chip}`}</span>{(loop.on || goal !== 'off') && <Icon name="sync" small />}<Icon name="chevron-down" small />
-          </Chip>
-          <span className="cp-spacer" />
-          {servers.length > 0 && (
-            <button className={`icon-btn mcp${uses.length ? ' on' : ''}`} title="Ask Claude to use an MCP server or tool" aria-label="Use an MCP server" onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })}>
-              <Icon name="plug" small />
-            </button>
-          )}
-          <input ref={picker} type="file" multiple hidden onChange={(e) => { void attach([...(e.target.files ?? [])]); e.target.value = ''; }} />
-          <button className="icon-btn attach" title="Add files for Claude to look at (or paste or drop them)" aria-label="Add files" onClick={() => picker.current?.click()}>
-            <Icon name="file-add" small />
-          </button>
-          {uploading > 0 && <span className="cp-hint"><Icon name="loading" small spin /> Uploading {uploading}</span>}
-          <Voice onText={dictate} />
-          {running && !typed ? (
-            <button className="cp-stop" title={stopping ? 'Stopping…' : 'Stop Claude'} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onPointerDown={(e) => e.preventDefault()} onClick={() => send({ type: 'interrupt' })}>
-              <Icon name={stopping ? 'loading' : 'debug-stop'} small spin={stopping} />
-            </button>
-          ) : (
-            <button
-              className="cp-send"
-              title={shell ? 'Run in the terminal (Enter)' : compacting ? 'Sends when compacting is done (Enter)' : running ? 'Send at Claude\'s next step (Enter), stop and send (⌘Enter or hold)' : 'Send (Enter)'}
-              aria-label={shell ? 'Run' : 'Send'}
-              disabled={!typed}
-              onPointerDown={(e) => e.preventDefault()}
-              onClick={(e) => submit(e.metaKey || e.ctrlKey)}
-              onContextMenu={(e) => { if (!running) return; e.preventDefault(); submit(true); }}
-            >
-              <Icon name={shell ? 'terminal' : 'arrow-up'} small />
-            </button>
-          )}
-        </div>
+        <ComposerFoot goal={goal} uses={uses} uploading={uploading} typed={typed} shell={ac.shell} setPick={setPick} attach={attach} dictate={dictate} submit={submit} />
       </div>
-      <div className="cp-under">
-        {hint && <span className="cp-hint">{hint}</span>}
-        <span className="cp-stats">
-          {compacting ? <span><Icon name="loading" small spin /> Compacting…</span> : level && (
-            <button className={`cp-ctx ${level}`} disabled={running} title={`${context!.toLocaleString()} tokens in context. ${running ? 'Compacts when this turn ends' : 'Tap to compact'}.`} onClick={() => send({ type: 'prompt', text: '/compact' })}>{pct}% context{!running && ' · compact'}</button>
-          )}
-          {edited > 0 && <span>{edited} {edited === 1 ? 'file' : 'files'} edited</span>}
-          {stale >= 30 && <span className="cp-phase cp-stale" title="Nothing has arrived from the server. The link is reopened after 50 s of silence.">No update for {stale}s</span>}
-        </span>
-      </div>
-      {open && (
-        <ul ref={pop} id={popId} className="cp-pop" role="listbox" aria-label={trigger?.kind === 'command' ? 'Commands' : 'Files'}>
-          <PopItems items={items} kind={trigger?.kind} popId={popId} sel={sel} choose={choose} />
+      <ComposerStats hint={ac.shell ? 'Runs in the terminal' : ''} />
+      {ac.open && (
+        <ul ref={ac.pop} id={popId} className="cp-pop" role="listbox" aria-label={ac.trigger?.kind === 'command' ? 'Commands' : 'Files'}>
+          <PopItems items={ac.items} kind={ac.trigger?.kind} popId={popId} sel={ac.sel} choose={choose} />
         </ul>
       )}
       <Announcer key={chat} />
-      <ChatSettings pick={pick} setPick={setPick} savedCount={sentHistory.length} goal={goal} setGoal={(c) => setGoals((g) => ({ ...g, [chat]: c }))} />
-      {pick?.kind === 'saved' && (
-        <QuickPick
-          anchor={pick.at}
-          title="Saved prompts"
-          items={[...sentHistory].reverse().map((t, i) => ({ value: String(i), label: t.replace(/\s+/g, ' ').slice(0, 200) }))}
-          onPick={(v) => { apply([...sentHistory].reverse()[Number(v)]); setPick(null); ta.current?.focus(); }}
-          onClose={() => setPick(null)}
-        />
-      )}
-      {pick?.kind === 'mcp' && (
-        <QuickPick
-          anchor={pick.at}
-          title="Use an MCP server"
-          items={servers.map((m) => ({ value: m.name, label: m.name, detail: plural(m.tools?.length ?? 0, 'tool') }))}
-          onPick={(v) => setPick({ kind: 'mcpTools', at: pick.at, server: v })}
-          onClose={() => setPick(null)}
-        />
-      )}
-      {pick?.kind === 'mcpTools' && (
-        <QuickPick
-          anchor={pick.at}
-          title={`Tool from ${pick.server}`}
-          items={[{ value: '', label: 'Any tool', detail: 'Claude picks' }, ...(servers.find((m) => m.name === pick.server)?.tools ?? []).map((t) => ({ value: t.name, label: t.name, detail: t.description }))]}
-          onPick={(v) => { setUses((u) => addUse(u, v ? { server: pick.server!, tool: v } : { server: pick.server! })); setPick(null); ta.current?.focus(); }}
-          onClose={() => setPick(null)}
-        />
-      )}
+      <ChatSettings pick={pick} setPick={setPick} savedCount={h.sentHistory.length} goal={goal} setGoal={(c) => setGoals((g) => ({ ...g, [chat]: c }))} />
+      <PickerSheets pick={pick} setPick={setPick} sentHistory={h.sentHistory} setUses={setUses} apply={apply} focus={() => ta.current?.focus()} />
     </div>
   );
 }
