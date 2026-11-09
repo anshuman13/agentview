@@ -147,7 +147,7 @@ export function loadSeen() {
 }
 
 // The stream connect reloads the server's times over this local one.
-function markSeen(sessionId: string | null | undefined) {
+export function markSeen(sessionId: string | null | undefined) {
   if (!sessionId) return;
   set((s) => ({ seen: { ...s.seen, [sessionId]: Date.now() } }));
   fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}`), { method: 'POST' }).catch(() => {});

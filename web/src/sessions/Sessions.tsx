@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { apiUrl } from '../app/api';
-import { api, embedded, getState, markUnread, notice, send, setUi, subscribe, useStore } from '../app/store';
+import { api, embedded, getState, markSeen, markUnread, notice, send, setUi, subscribe, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Chip, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
@@ -353,6 +353,7 @@ export function OpenChats() {
     return () => clearTimeout(t);
   }, [opening]);
 
+  const byStatus = status ? chatsByStatus(live, chats, seen, status) : null;
   return (
     <div className="sessions chats">
       <div className="sessions-bar">
@@ -361,8 +362,9 @@ export function OpenChats() {
       </div>
       <div className="sessions-status">
         {STATUS_CHIPS.map(([v, label]) => <Chip key={v} size="sm" on={status === v} aria-pressed={status === v} onClick={() => setStatus(status === v ? null : v)}>{label}</Chip>)}
+        {byStatus && status === 'done' && byStatus.live.length + byStatus.saved.length > 0 && <button className="link sessions-read" onClick={() => [...byStatus.live.map((c) => c.sessionId), ...byStatus.saved.map((s) => s.sessionId)].forEach(markSeen)}>Mark all read</button>}
       </div>
-      {status ? <StatusList {...chatsByStatus(live, chats, seen, status)} row={row} savedRow={savedRow} repo={(cwd) => repoName(folders, cwd)} /> : <>
+      {byStatus ? <StatusList {...byStatus} row={row} savedRow={savedRow} repo={(cwd) => repoName(folders, cwd)} /> : <>
       <NeedsYou n={waiting.length}>
         {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
       </NeedsYou>
