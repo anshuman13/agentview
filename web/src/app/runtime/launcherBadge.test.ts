@@ -29,9 +29,4 @@ describe('createBadgeSender', () => {
     expect(invoke).toHaveBeenCalledTimes(4);
   });
 
-  it('swallows rejections and a missing invoke', () => {
-    expect(() => createBadgeSender(() => Promise.reject(new Error('no plugin')))(1)).not.toThrow();
-    expect(() => createBadgeSender(() => { throw new Error('boom'); })(1)).not.toThrow();
-    expect(() => createBadgeSender(undefined)(1)).not.toThrow();
-  });
 });

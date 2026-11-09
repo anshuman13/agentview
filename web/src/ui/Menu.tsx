@@ -27,7 +27,7 @@ export function typeAhead(labels: string[], from: number, buffer: string): numbe
   return -1;
 }
 
-export const menuClass = (phone: boolean, className?: string) => cx('ui-menu', phone && 'sheet', className);
+const menuClass = (phone: boolean, className?: string) => cx('ui-menu', phone && 'sheet', className);
 
 export function Menu({ trigger, onClose, className, children }: {
   trigger: RefObject<HTMLElement | null>;

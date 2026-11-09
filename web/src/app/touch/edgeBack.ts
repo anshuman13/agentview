@@ -8,7 +8,7 @@ export const MAX_MS = 600;
 
 type Point = { x: number; y: number };
 
-export function edgeBackEnd(start: Point, end: Point, ms: number, depth: number) {
+function edgeBackEnd(start: Point, end: Point, ms: number, depth: number) {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   return depth > 0 && start.x <= EDGE_START && ms < MAX_MS && dx >= MIN_DX && dx >= 2 * Math.abs(dy);

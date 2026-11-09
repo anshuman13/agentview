@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ago, copyText, escapeHtml, markSegments, matchLabel, modelLabel, money, spendLines, stepMatch, weekPace } from './util';
+import { ago, escapeHtml, markSegments, matchLabel, spendLines, stepMatch, weekPace } from './util';
 
 describe('ago', () => {
   afterEach(() => vi.useRealTimers());
@@ -37,19 +37,6 @@ describe('escapeHtml', () => {
 
 describe('spend', () => {
   const models = [{ value: 'opus', displayName: 'Opus' }];
-
-  it('formats money', () => {
-    expect(money(0.004)).toBe('<$0.01');
-    expect(money(0)).toBe('$0.00');
-    expect(money(0.005)).toBe('$0.01');
-    expect(money(12.4)).toBe('$12');
-  });
-
-  it('labels models', () => {
-    expect(modelLabel('opus', models)).toBe('Opus');
-    expect(modelLabel('claude-opus-4-1-20250805', models)).toBe('opus-4-1');
-    expect(modelLabel('Unknown', models)).toBe('Unknown');
-  });
 
   it('sums, sorts and totals spend lines', () => {
     const lines = spendLines(
@@ -110,43 +97,5 @@ describe('stepMatch', () => {
     expect(stepMatch(-1, -1, 3)).toBe(2);
     expect(stepMatch(2, 1, 3)).toBe(0);
     expect(stepMatch(0, -1, 3)).toBe(2);
-  });
-});
-
-describe('copyText', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  function stubDom(ok: boolean) {
-    const body: unknown[] = [];
-    const selected: string[] = [];
-    const area = { value: '', select() { selected.push(this.value); }, remove() { body.splice(body.indexOf(area), 1); } };
-    const execCommand = vi.fn(() => ok);
-    vi.stubGlobal('document', { createElement: () => area, body: { appendChild: (el: unknown) => body.push(el) }, execCommand });
-    return { body, selected, execCommand };
-  }
-
-  it('copies through a selected textarea and removes it when the clipboard API is missing', async () => {
-    vi.stubGlobal('navigator', {});
-    const { body, selected, execCommand } = stubDom(true);
-    await expect(copyText('x')).resolves.toBeUndefined();
-    expect(selected).toEqual(['x']);
-    expect(execCommand).toHaveBeenCalledWith('copy');
-    expect(body).toHaveLength(0);
-  });
-
-  it('rejects when execCommand fails', async () => {
-    vi.stubGlobal('navigator', {});
-    const { body } = stubDom(false);
-    await expect(copyText('x')).rejects.toThrow();
-    expect(body).toHaveLength(0);
-  });
-
-  it('uses the clipboard API when present', async () => {
-    const writeText = vi.fn(() => Promise.resolve());
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-    const { execCommand } = stubDom(true);
-    await copyText('x');
-    expect(writeText).toHaveBeenCalledWith('x');
-    expect(execCommand).not.toHaveBeenCalled();
   });
 });

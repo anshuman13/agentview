@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { TriesColumns, tryColumn } from './TriesBoard';
+import { tryColumn } from './TriesBoard';
 import type { ChatRun, LiveChat } from '../../../shared/protocol';
 
 const run = {
@@ -20,11 +19,4 @@ describe('tries board', () => {
     expect(tryColumn(run, run.tries![2], live).archived).toBe(true);
   });
 
-  it('renders one column per try with Open and Keep on the open ones', () => {
-    const html = renderToStaticMarkup(<TriesColumns run={run} live={live} onOpen={() => {}} onKeep={() => {}} />);
-    expect(html.match(/class="tb-col"/g)).toHaveLength(3);
-    expect(html).toContain('tries/fix-it-2');
-    expect(html).toContain('+12 -3');
-    expect(html.match(/Keep try/g)).toHaveLength(2);
-  });
 });

@@ -54,7 +54,7 @@ function ActivitySheet({ state, onClose }: { state: AutopilotState; onClose: () 
 }
 
 // Reading and drafting is the main setting; sending on its own is a beta behind Auto send, with its settings under it.
-export function SettingRows({ state, onOpen, onToggle }: { state: AutopilotState; onOpen: (which: Which) => void; onToggle: (key: 'auto_send' | 'dry_run', on: boolean) => void }) {
+function SettingRows({ state, onOpen, onToggle }: { state: AutopilotState; onOpen: (which: Which) => void; onToggle: (key: 'auto_send' | 'dry_run', on: boolean) => void }) {
   const setting = (which: Which, title: string, meta: string) => <Row title={title} meta={meta} trailing={<Icon name="chevron-right" small />} onClick={() => onOpen(which)} />;
   const auto = !!state.config.auto_send;
   return (

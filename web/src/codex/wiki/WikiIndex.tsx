@@ -63,7 +63,7 @@ function PageCard({ page, stats }: { page: Page; stats: Map<string | null, PageS
   );
 }
 
-export function PageRow({ page, proposed }: { page: Page; proposed: Set<string | null> }) {
+function PageRow({ page, proposed }: { page: Page; proposed: Set<string | null> }) {
   const store = useAssistantStore();
   const open = () => setView({ open: page.id, anchor: null });
   const archive = () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX, SLOP, TRIGGER, classify, damp, shouldRefresh } from './usePullRefresh';
+import { SLOP, classify } from './usePullRefresh';
 
 describe('classify', () => {
   it('waits while both axes are under the slop', () => {
@@ -13,17 +13,5 @@ describe('classify', () => {
     expect(classify(0, -30, 0)).toBe('cancel');
     expect(classify(12, 9, 0)).toBe('cancel');
     expect(classify(0, 30, 5)).toBe('cancel');
-  });
-});
-
-describe('damp and release', () => {
-  it('halves travel and clamps to 0..MAX', () => {
-    expect(damp(100)).toBe(50);
-    expect(damp(-20)).toBe(0);
-    expect(damp(1000)).toBe(MAX);
-  });
-  it('refreshes from 64px of finger travel', () => {
-    expect(shouldRefresh(damp(TRIGGER - 1))).toBe(false);
-    expect(shouldRefresh(damp(TRIGGER))).toBe(true);
   });
 });

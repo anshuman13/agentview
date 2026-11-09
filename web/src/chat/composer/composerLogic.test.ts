@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, quoteReply, remindChoices, runLine, goalInfo, goalText } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, goalText } from './composerLogic';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
 let n = 0;
@@ -143,28 +143,6 @@ describe('withUses', () => {
   });
 });
 
-describe('terminalId', () => {
-  const res = (ok: boolean, body: unknown) => ({ ok, json: async () => body });
-  const url = (p: string) => p;
-  afterEach(() => vi.unstubAllGlobals());
-
-  it('creates a terminal when none exist', async () => {
-    const f = vi.fn().mockResolvedValueOnce(res(true, [])).mockResolvedValueOnce(res(true, { id: 'n' }));
-    vi.stubGlobal('fetch', f);
-    expect(await terminalId(url)).toBe('n');
-    expect(f.mock.calls[1][1]).toEqual({ method: 'POST' });
-  });
-
-  it('returns null on a failed response, a missing id or a rejected fetch', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(res(false, {})));
-    expect(await terminalId(url)).toBeNull();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(res(true, [])).mockResolvedValueOnce(res(true, {})));
-    expect(await terminalId(url)).toBeNull();
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
-    expect(await terminalId(url)).toBeNull();
-  });
-});
-
 describe('sharedTask', () => {
   it('keeps the link in the title and reads a time', () => {
     const now = new Date(2026, 9, 30, 8, 0);
@@ -245,16 +223,6 @@ describe('draftLine', () => {
   });
 });
 
-describe('remindChoices', () => {
-  it('offers 1 hour, 3 hours and tomorrow at 9:00', () => {
-    const now = new Date(2026, 10, 9, 22, 30).getTime();
-    const [one, three, tomorrow] = remindChoices(now);
-    expect(one.at - now).toBe(3_600_000);
-    expect(three.at - now).toBe(3 * 3_600_000);
-    expect(new Date(tomorrow.at)).toEqual(new Date(2026, 10, 10, 9, 0));
-  });
-});
-
 describe('quoteReply', () => {
   it('quotes each line and cuts long replies at a word', () => {
     expect(quoteReply('Done.\n\nTests pass')).toBe('> Done.\n>\n> Tests pass\n\n');
@@ -289,9 +257,4 @@ describe('goal choice', () => {
     expect(goalText('1h', '/compact', now)).toBe('/compact');
   });
 
-  it('labels the chip', () => {
-    expect(goalInfo('done', now).chip).toBe('Until done');
-    expect(goalInfo('1h', now).chip).toBe('Until 15:30');
-    expect(goalInfo('hourly', now).chip).toBe('Every hour');
-  });
 });

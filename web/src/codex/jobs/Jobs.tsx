@@ -22,7 +22,7 @@ import { Badge } from '../../ui/Badge';
 
 type Jobs = ReturnType<typeof useJobs>;
 
-export function JobRow({ j, runs, now, store, enable }: { j: Job; runs: Run[]; now: number; store: Jobs['store']; enable: Jobs['enable'] }) {
+function JobRow({ j, runs, now, store, enable }: { j: Job; runs: Run[]; now: number; store: Jobs['store']; enable: Jobs['enable'] }) {
   const [open, setOpen] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const choose = (fn: () => void) => () => { setOpen(false); fn(); };

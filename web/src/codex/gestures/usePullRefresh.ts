@@ -14,9 +14,9 @@ export function classify(dx: number, dy: number, scrollTop: number): 'wait' | 'c
   return dy <= 0 || Math.abs(dx) > dy ? 'cancel' : 'pull';
 }
 
-export const damp = (dy: number) => Math.min(MAX, Math.max(0, dy) * 0.5);
+const damp = (dy: number) => Math.min(MAX, Math.max(0, dy) * 0.5);
 
-export const shouldRefresh = (damped: number) => damped >= TRIGGER * 0.5;
+const shouldRefresh = (damped: number) => damped >= TRIGGER * 0.5;
 
 // Pull down from the top of a scroller to refresh. Attach the returned ref to an absolutely placed indicator; it is moved by style, so a pull does not re-render.
 export function usePullRefresh(scroller: RefObject<HTMLElement | null>, refresh: () => Promise<unknown>, on: unknown) {

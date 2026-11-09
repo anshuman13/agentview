@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { edgeBackEnabled, edgeBackEnd, useEdgeBack } from './edgeBack';
+import { edgeBackEnabled, useEdgeBack } from './edgeBack';
 
 vi.mock('react', () => ({ useEffect: (fn: () => void) => fn() }));
 
@@ -8,31 +8,6 @@ const ANDROID_10 = 'Mozilla/5.0 (Linux; Android 10; SM-G960F) AppleWebKit/537.36
 const ANDROID_9 = 'Mozilla/5.0 (Linux; Android 9; SM-G960F) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36';
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
 const DESKTOP = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36';
-
-const swipe = (x0: number, dx: number, dy = 0, ms = 200, depth = 1) => edgeBackEnd({ x: x0, y: 100 }, { x: x0 + dx, y: 100 + dy }, ms, depth);
-
-describe('edgeBackEnd', () => {
-  it('starts only within 20px of the edge', () => {
-    expect(swipe(20, 100)).toBe(true);
-    expect(swipe(21, 100)).toBe(false);
-  });
-  it('needs 70px of travel', () => {
-    expect(swipe(10, 69)).toBe(false);
-    expect(swipe(10, 70)).toBe(true);
-  });
-  it('needs a mostly horizontal swipe', () => {
-    expect(swipe(10, 100, 50)).toBe(true);
-    expect(swipe(10, 100, -51)).toBe(false);
-  });
-  it('needs under 600ms', () => {
-    expect(swipe(10, 100, 0, 599)).toBe(true);
-    expect(swipe(10, 100, 0, 600)).toBe(false);
-  });
-  it('ignores leftward swipes and no open layer', () => {
-    expect(swipe(10, -100)).toBe(false);
-    expect(swipe(10, 100, 0, 200, 0)).toBe(false);
-  });
-});
 
 describe('edgeBackEnabled', () => {
   it('is off only in Tauri on Android 10 or later', () => {

@@ -61,7 +61,7 @@ const ICONS: Record<string, string> = {
 
 type CardProps = { p: PendingPermission; mode: string; first: boolean };
 
-export function PermissionCard({ p, mode, first }: CardProps) {
+function PermissionCard({ p, mode, first }: CardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const Body = BODIES[p.toolName] ?? RowsBody;
   return (

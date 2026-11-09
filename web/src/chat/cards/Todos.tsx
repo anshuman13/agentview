@@ -5,7 +5,7 @@ import { QuickPick } from '../../ui/QuickPick';
 export type Todo = { path: string; line: number; text?: string; ai?: string | null };
 
 // The same prompts as android TodosUi.kt todoPrompt.
-export function todoPrompt(t: Todo) {
+function todoPrompt(t: Todo) {
   const at = `${t.path}:${t.line}`;
   if (t.ai === '!') return `Do what the AI! comment at ${at} asks ("${t.text}"). Read the code around it and any other AI comments in the repo, make the change, remove the comment and tell me what you did.`;
   if (t.ai === '?') return `Answer the AI? comment at ${at} ("${t.text}"). Read the code around it and change nothing.`;

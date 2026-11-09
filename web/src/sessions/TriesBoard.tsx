@@ -33,7 +33,7 @@ export function tryColumn(run: ChatRun, t: Try, live: LiveChat[]): TryColumn {
   };
 }
 
-export function TriesColumns({ run, live, onOpen, onKeep }: { run: ChatRun; live: LiveChat[]; onOpen: (n: number) => void; onKeep: (n: number) => void }) {
+function TriesColumns({ run, live, onOpen, onKeep }: { run: ChatRun; live: LiveChat[]; onOpen: (n: number) => void; onKeep: (n: number) => void }) {
   const tries = run.tries ?? [];
   return (
     <div className="tb-grid" style={{ ['--tries' as string]: tries.length }}>

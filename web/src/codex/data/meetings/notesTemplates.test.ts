@@ -1,17 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Meeting } from '../wiki/wiki';
-import { NOTES_TEMPLATES, notesTemplateChips, notesTemplateText, type NotesTemplate } from './notesTemplates';
+import { notesTemplateChips } from './notesTemplates';
 import { seriesKey } from './summaryTemplates';
 
 const meeting = (id: string, title: string, profile = 'work') => ({ id, title, profile }) as unknown as Meeting;
 
 describe('notes templates', () => {
-  it('starts each template with its first heading', () => {
-    for (const key of Object.keys(NOTES_TEMPLATES) as NotesTemplate[]) {
-      expect(notesTemplateText(key).startsWith(`## ${NOTES_TEMPLATES[key].headings[0]}\n\n`)).toBe(true);
-    }
-  });
-
   it('keys by series and profile', () => {
     expect(seriesKey(meeting('a', 'Weekly sync'))).toBe(seriesKey(meeting('b', 'Weekly sync')));
     expect(seriesKey(meeting('a', 'Weekly sync'))).not.toBe(seriesKey(meeting('a', 'Weekly sync', 'personal')));

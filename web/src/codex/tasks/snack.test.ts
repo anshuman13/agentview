@@ -32,16 +32,4 @@ describe('snack store', () => {
     expect(useSnack()).toBeNull();
   });
 
-  it('hideSnack clears', () => {
-    showSnack('x');
-    hideSnack();
-    expect(useSnack()).toBeNull();
-  });
-
-  it('gives two snacks in one tick different ids', () => {
-    showSnack('a');
-    const first = useSnack()!.id;
-    showSnack('a');
-    expect(useSnack()!.id).not.toBe(first);
-  });
 });

@@ -8,7 +8,7 @@ import { THEME_NAMES, useTheme } from '../theme';
 
 const webSha = typeof __APP_SHA__ === 'string' ? __APP_SHA__ : '';
 
-export const versionText = (sha = webSha) => sha || 'Unknown';
+const versionText = (sha = webSha) => sha || 'Unknown';
 
 const tauriAppVersion = async () => {
   const invoke = tauriInvoke();

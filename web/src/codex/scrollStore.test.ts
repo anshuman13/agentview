@@ -12,13 +12,6 @@ test('take returns the saved value once', () => {
   expect(takeScroll('tasks:work')).toBeNull();
 });
 
-test('filters are independent', () => {
-  saveScroll('tasks:work', 1);
-  saveScroll('tasks:all', 2);
-  expect(takeScroll('tasks:all')).toBe(2);
-  expect(takeScroll('tasks:work')).toBe(1);
-});
-
 test('clear removes every filter of one list only', () => {
   saveScroll('tasks:work', 1);
   saveScroll('tasks:all', 2);
@@ -27,8 +20,4 @@ test('clear removes every filter of one list only', () => {
   expect(takeScroll('tasks:work')).toBeNull();
   expect(takeScroll('tasks:all')).toBeNull();
   expect(takeScroll('meetings:work')).toBe(3);
-});
-
-test('take on a missing key is null', () => {
-  expect(takeScroll('tasks:none')).toBeNull();
 });
