@@ -182,6 +182,14 @@ export function replyNote(text: string, title: string, cwd: string) {
   return { text: `${title || 'Saved reply'}\n${text.trim()}`, profile: cwd.includes('/workspace_personal/') || cwd.endsWith('/workspace_personal') ? ('personal' as const) : ('work' as const) };
 }
 
+// Slack's "Remind me about this", the same choices as the phone's chat menu.
+export function remindChoices(now: number) {
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(9, 0, 0, 0);
+  return [{ label: 'In 1 hour', at: now + 3_600_000 }, { label: 'In 3 hours', at: now + 3 * 3_600_000 }, { label: 'Tomorrow at 9:00', at: tomorrow.getTime() }];
+}
+
 export function resumeCommand(cwd: string, sessionId: string, account: Account) {
   const dir = CONFIG_DIR[account];
   return `cd ${shQuote(cwd)} && ${dir ? `CLAUDE_CONFIG_DIR=${dir} ` : ''}claude --resume ${sessionId}`;

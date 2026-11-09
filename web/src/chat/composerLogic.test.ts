@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stampedNotes } from '../codex/data/meetings';
 import type { Meeting } from '../codex/data/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, terminalId, triggerAt, turnEnd, withUses, draftLine, remindChoices } from './composerLogic';
 import type { ChatEvent, SavedSession } from '../../../shared/protocol';
 
 let n = 0;
@@ -242,5 +242,15 @@ describe('draftLine', () => {
   it('takes the first non-empty line, trimmed', () => {
     expect(draftLine('\n  fix the login \nand more')).toBe('fix the login');
     expect(draftLine('  \n ')).toBe('');
+  });
+});
+
+describe('remindChoices', () => {
+  it('offers 1 hour, 3 hours and tomorrow at 9:00', () => {
+    const now = new Date(2026, 10, 9, 22, 30).getTime();
+    const [one, three, tomorrow] = remindChoices(now);
+    expect(one.at - now).toBe(3_600_000);
+    expect(three.at - now).toBe(3 * 3_600_000);
+    expect(new Date(tomorrow.at)).toEqual(new Date(2026, 10, 10, 9, 0));
   });
 });

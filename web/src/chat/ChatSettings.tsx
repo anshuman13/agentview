@@ -1,6 +1,7 @@
 import { embedded, getState, notice, send, setUi, subscribe, useStore } from '../app/store';
 import { copyText } from '../ui/util';
-import { chatMarkdown, resumeCommand } from './composerLogic';
+import { chatMarkdown, remindChoices, replyNote, resumeCommand } from './composerLogic';
+import { assistantStore } from '../codex/data';
 import { QuickPick } from '../ui/QuickPick';
 import { MemoryPick } from './Memory';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
@@ -34,7 +35,19 @@ export function sideChat() {
   setTimeout(stop, 30_000);
 }
 
-export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools' | 'memory'; at: DOMRect; server?: string };
+// A task "Check <chat>" due at the picked time, linked to the chat; the hub pushes it when due.
+async function remindChat(at: number) {
+  const st = getState();
+  const { sessionId, cwd } = st.session;
+  if (!sessionId) return;
+  const title = st.live.find((c) => c.id === st.session.id)?.title || 'chat';
+  const { profile } = replyNote('', title, cwd);
+  const store = assistantStore();
+  const row = await store.capture(`Check ${title}`, 'task', profile, at);
+  await store.update(row, { source: 'chat', source_url: `${location.origin}/?session=${sessionId}` });
+}
+
+export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind'; at: DOMRect; server?: string };
 
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -73,7 +86,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
             { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
             { value: 'memory', label: 'Memory', detail: 'CLAUDE.md and memory files' },
             { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
-            ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
+            ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'remind', label: 'Remind me', detail: 'Add a task to check this chat later' }, { value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
           ]}
           onPick={(v) => {
             if (v === 'side') { sideChat(); close(); return; }
@@ -89,8 +102,17 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
               close();
               return;
             }
-            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'account' | 'loop' | 'saved' | 'memory', at: pick.at });
+            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'account' | 'loop' | 'saved' | 'memory' | 'remind', at: pick.at });
           }}
+          onClose={close}
+        />
+      )}
+      {pick.kind === 'remind' && (
+        <QuickPick
+          anchor={pick.at}
+          title="Remind me"
+          items={remindChoices(Date.now()).map((c) => ({ value: String(c.at), label: c.label }))}
+          onPick={(v) => { remindChat(Number(v)).then(() => notice('Reminder set'), () => notice('Could not set the reminder')); close(); }}
           onClose={close}
         />
       )}
