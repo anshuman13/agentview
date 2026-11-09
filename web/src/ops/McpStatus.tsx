@@ -1,91 +1,46 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { McpServer } from '../../../shared/protocol';
-import { getState, send, notice, api, useStore } from '../app/store';
+import { getState, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
-import { ago, save, stored, useTick } from '../ui/util';
-import { post } from './mcpActions';
-import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, merge, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
+import { ago, useTick } from '../ui/util';
+import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
+import { mcpRows } from './mcpRows';
+import { useMcpGroups, useMcpProbe } from './useMcpPage';
 import { Detail } from './McpDetail';
 import { ServiceRow } from './McpServiceRow';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 
-const CONNECTORS = 'agentview.mcp.connectors';
+type Stats = { probed: boolean; busy: boolean; at: number; ok: number; total: number; attention: number; onCheck: () => void };
 
-// Keeps the last connector list seen per account, so both accounts show whichever one this chat runs on.
-function connectorsByAccount(account: string, live: Row[]): Row[] {
-  const seen = stored<Record<string, Row[]>>(CONNECTORS, {});
-  const mine = live.filter((r) => r.type === 'claudeai');
-  if (mine.length) {
-    seen[account] = mine.map((r) => ({ name: r.name, type: r.type, status: r.status, scope: r.scope, tools: r.tools?.map((t) => ({ name: t.name })) }) as Row);
-    save(CONNECTORS, seen);
-  }
-  return Object.entries(seen).filter(([a]) => a !== account).flatMap(([a, rows]) => rows.map((r) => ({ ...r, account: a, live: false })));
+function McpStats({ probed, busy, at, ok, total, attention, onCheck }: Stats) {
+  return (
+    <div className="mcp-stats">
+      {probed && <span className={attention ? 'warn' : ''}><b>{ok}</b> connected of {total}</span>}
+      {attention > 0 && <span className="bad"><b>{attention}</b> need you</span>}
+      <button className={`btn mcp-refresh ${busy ? 'busy' : ''}`} onClick={onCheck} disabled={busy} title="Connect to every server again">
+        <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at, ' ago')}` : 'Check'}
+      </button>
+    </div>
+  );
 }
+
+const rowCount = (of: Service[]) => of.reduce((n, s) => n + s.variants.length, 0);
 
 export function McpPage() {
   const mcp = useStore((s) => s.session.mcp);
   const account = useStore((s) => s.session.account);
   const id = useStore((s) => s.session.id);
   const toolKey = useStore((s) => `${s.events[0]?.id}:${s.events.reduce((n, e) => n + (e.kind === 'tool_use' || e.kind === 'tool_result' ? 1 : 0), 0)}`);
-  const [probed, setProbed] = useState<McpServer[] | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [at, setAt] = useState(0);
-  const [error, setError] = useState('');
+  const { probed, busy, at, error, accounts, load } = useMcpProbe(account, id);
+  const { groups, setGroup } = useMcpGroups();
   const [sel, setSel] = useState<string | null>(null);
-  const [groups, setGroups] = useState<Record<string, Group | 'hidden'>>({});
   const [showHidden, setShowHidden] = useState(false);
-  const [accounts, setAccounts] = useState<Record<string, { name: string; status: string }[]>>({});
-
-  const seq = useRef(0);
-  const load = (refresh = false) => {
-    const n = ++seq.current;
-    setBusy(true);
-    setError('');
-    send({ type: 'mcp_status' });
-    fetch(api(`/api/mcp/connectors${refresh ? '?refresh=1' : ''}`)).then((r) => r.json()).then((a) => {
-      if (n !== seq.current || !a || a.error) return;
-      setAccounts(a);
-      // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
-      const loggedIn = new Set((a[account] ?? []).filter((c: { status: string }) => c.status === 'connected').map((c: { name: string }) => c.name));
-      for (const m of getState().session.mcp) if (m.type === 'claudeai' && m.status === 'needs-auth' && loggedIn.has(m.name)) send({ type: 'mcp_reconnect', name: m.name });
-    }, () => undefined);
-    fetch(api(`/api/mcp/probe${refresh ? '?refresh=1' : ''}`))
-      .then((r) => r.json())
-      .then((p) => {
-        if (n !== seq.current) return;
-        if (Array.isArray(p)) { setProbed(p); setAt(Date.now()); } else setError(p?.error ?? 'Probe failed');
-      }, (e) => n === seq.current && setError(e.message))
-      .finally(() => n === seq.current && setBusy(false));
-  };
-  useEffect(() => load(), [id]);
-  useEffect(() => {
-    fetch(api('/api/mcp/groups')).then((r) => r.json()).then((g) => g && typeof g === 'object' && setGroups(g), () => undefined);
-  }, []);
   useTick(15000);
 
-  const setGroup = (service: string, group: Group | 'hidden' | 'shown') => {
-    const before = groups;
-    setGroups((g) => { const { [service]: _, ...rest } = g; return group === 'shown' ? rest : { ...rest, [service]: group }; });
-    post('/api/mcp/groups', { service, group }).then((g) => { setGroups(g); window.dispatchEvent(new Event('agentview:mcp-groups')); }, (e) => { setGroups(before); notice(`Could not save the group: ${e.message}`); });
-  };
-
-  const rows = useMemo(() => {
-    const merged: Row[] = merge(probed ?? [], mcp).map((r) => (r.type === 'claudeai' ? { ...r, account } : r));
-    const other = connectorsByAccount(account, merged).filter((o) => !merged.some((r) => r.name === o.name && r.account === o.account));
-    for (const [a, list] of Object.entries(accounts)) {
-      if (a === account) continue;
-      for (const c of list) {
-        const i = other.findIndex((o) => o.account === a && o.name === c.name);
-        if (i >= 0) other[i] = { ...other[i], status: c.status };
-        else other.push({ name: c.name, type: 'claudeai', status: c.status, account: a, live: false } as Row);
-      }
-    }
-    return [...merged, ...other];
-  }, [probed, mcp, account, accounts]);
+  const rows = useMemo(() => mcpRows(probed, mcp, account, accounts), [probed, mcp, account, accounts]);
   const list = useMemo(() => services(rows).sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind)), [rows]);
   const usage = useMemo(() => mcpCalls(getState().events), [toolKey]);
   const usageOf = (r: Row) => usage.get(slug(r.name));
@@ -95,11 +50,8 @@ export function McpPage() {
   const shown = list.filter((s) => !hidden(s));
   const hiddenList = list.filter(hidden);
   const shownRows = shown.flatMap((s) => s.variants.map((v) => v.row));
-  const ok = shownRows.filter((r) => r.status === 'connected').length;
-  const attention = shownRows.filter(needsYou).length;
   const extra = document.getElementById('page-mcp-extra');
   const pick = (name: string) => setSel((s) => (s === name ? null : name));
-  const rowCount = (of: Service[]) => of.reduce((n, s) => n + s.variants.length, 0);
   const renderRows = (s: Service, g: Group, isHidden: boolean) => s.variants.map(({ row }) => (
     <ServiceRow key={rowKey(row)} row={row} selected={rowKey(row) === sel} usage={usageOf(row)} onPick={() => pick(rowKey(row))} group={g} onGroup={(to) => setGroup(groupKey(s.variants[0].row), to)} onHide={() => setGroup(hideKey(s), isHidden ? 'shown' : 'hidden')} isHidden={isHidden} />
   ));
@@ -107,16 +59,7 @@ export function McpPage() {
   return (
     <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
       <div className="mcp-main wk"><div className="wk-scroll"><div className="mt-page">
-        {extra && createPortal(
-          <div className="mcp-stats">
-            {probed !== null && <span className={attention ? 'warn' : ''}><b>{ok}</b> connected of {shownRows.length}</span>}
-            {attention > 0 && <span className="bad"><b>{attention}</b> need you</span>}
-            <button className={`btn mcp-refresh ${busy ? 'busy' : ''}`} onClick={() => load(true)} disabled={busy} title="Connect to every server again">
-              <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at, ' ago')}` : 'Check'}
-            </button>
-          </div>,
-          extra,
-        )}
+        {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={shownRows.filter((r) => r.status === 'connected').length} total={shownRows.length} attention={shownRows.filter(needsYou).length} onCheck={() => load(true)} />, extra)}
         {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
         {probed === null && !error && (
           <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
