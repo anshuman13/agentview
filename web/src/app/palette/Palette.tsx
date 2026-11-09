@@ -25,8 +25,9 @@ export function Palette() {
   const [recentOpened, setRecentOpened] = useState(() => storedStrings(ITEMS_KEY));
   const list = useRef<HTMLUListElement>(null);
   const deploy = appSettings.use((s) => s.deploy);
+  const providers = appSettings.use((s) => s.providers);
   const pinned = useMemo(() => pinCommands(fetched.pins, live, fetched.saved), [fetched, live]);
-  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy, canEffort)], [pinned, models, deploy, canEffort]);
+  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy, canEffort, providers)], [pinned, models, deploy, canEffort, providers]);
   const rows = useMemo(() => rankCommands(commands, q, recent, MAX_ROWS + pinned.length), [commands, pinned, q, recent]);
 
   const items = useMemo(() => (open ? paletteItems(assistantStore().snapshot()) : []), [open]);

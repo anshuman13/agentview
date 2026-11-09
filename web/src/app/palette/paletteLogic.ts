@@ -1,4 +1,4 @@
-import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../../shared/protocol';
+import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ProviderOption } from '../../../../shared/protocol';
 import { isBlock } from '../../../../shared/util';
 import { codexMeetings } from '../../codex/data';
 import { isTask, searchAll } from '../../codex/data/ask/search';
@@ -33,7 +33,7 @@ const VIEWS = [
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];
 const MODES: Record<string, string> = { default: 'Default', acceptEdits: 'Accept edits', plan: 'Plan mode', auto: 'Auto mode', dontAsk: "Don't ask" };
 
-export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, effort = true): Command[] {
+export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, effort = true, providers: ProviderOption[] = []): Command[] {
   return [
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
@@ -49,6 +49,7 @@ export function buildCommands(models: { value: string; displayName: string }[], 
     { id: 'file', label: 'Go to File', key: '⌘P' },
     { id: 'repo', label: 'Chat: Open Repository', key: '⌘O' },
     { id: 'newChat', label: 'Chat: New Chat' },
+    ...providers.filter((p) => p.id !== 'claude').map((p) => ({ id: `newChat:${p.id}`, label: `Chat: New ${p.label} Chat${p.enabled ? '' : ` (${p.note})`}` })),
     { id: 'forkChat', label: 'Chat: Fork Chat' },
     ...models.map((m) => ({ id: `model:${m.value}`, label: `Model: ${m.displayName}` })),
     ...(effort ? EFFORT_LEVELS : []).map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),

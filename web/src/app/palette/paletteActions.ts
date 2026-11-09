@@ -1,4 +1,5 @@
-import { getState, send, setUi } from '../store';
+import { appSettings } from '../appSettings';
+import { getState, notice, send, setUi } from '../store';
 import { toggleNotify } from '../runtime/notify';
 import { openMeeting, openTask, setView, type List } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
@@ -38,6 +39,11 @@ export function perform(id: string) {
   else if (kind === 'effort') send({ type: 'set_effort', effort: arg });
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
   else if (id === 'newChat') send({ type: 'new_session' });
+  else if (kind === 'newChat') {
+    const p = appSettings.get().providers.find((o) => o.id === arg);
+    if (p?.enabled) send({ type: 'new_session', provider: p.id });
+    else notice(p?.note ?? 'That provider is not available');
+  }
   else if (id === 'forkChat') forkChat();
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
   else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });

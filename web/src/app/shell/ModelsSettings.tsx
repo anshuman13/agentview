@@ -3,6 +3,7 @@ import { Button } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { MODEL_SLOTS, type ModelSlot, type OpenRouterModels, type OpenRouterView } from '../../../../shared/openrouter';
+import { appSettings } from '../appSettings';
 import { notice } from '../store';
 import { fetchOpenRouter, saveOpenRouter } from './modelsApi';
 
@@ -14,6 +15,7 @@ export function ModelsSettings() {
   const [models, setModels] = useState<OpenRouterModels>({});
   const [main, setMain] = useState<ModelSlot>('sonnet');
   const [busy, setBusy] = useState(false);
+  const codex = appSettings.use((s) => s.providers.find((p) => p.id === 'codex'));
   const load = (v: OpenRouterView) => {
     setSaved(v.maskedKey);
     setModels(v.models);
@@ -44,6 +46,7 @@ export function ModelsSettings() {
           </select>
           <Button variant="filled" disabled={busy} onClick={save}>Save</Button>
         </div>
+        {codex && <Row plain title="Codex" meta={codex.enabled ? 'Signed in. Start a Codex chat from the command palette.' : codex.note} />}
       </div>
     </>
   );

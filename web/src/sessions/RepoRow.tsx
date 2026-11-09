@@ -66,7 +66,7 @@ export function SessionRow({ s, selected, opening, open, remove }: { s: SavedSes
   return (
     <div className={`row session ${selected ? 'selected' : ''}`} title={`${s.title}\n${s.cwd}${s.gitBranch ? `\n${s.gitBranch}` : ''}`} onClick={open}>
       <span className="name">{opening ? 'Opening… ' : ''}{s.title}</span>
-      <span className="when">{ago(s.lastModified)}</span>
+      <span className="when">{s.provider === 'codex' && 'Codex · '}{ago(s.lastModified)}</span>
       <span className="acts">
         <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); remove(); }}><Icon name="trash" small /></button>
       </span>
