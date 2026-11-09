@@ -11,7 +11,7 @@ import { FileIcon } from './FileIcon';
 import { OpenEditors } from './OpenEditors';
 import { useFileTree, type Row } from './useFileTree';
 
-const FolderPicker = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.FolderPicker })));
+const FolderPicker = lazy(() => import('../sessions/FolderPicker').then((m) => ({ default: m.FolderPicker })));
 
 export function Explorer() {
   const cwd = useStore((s) => s.session.cwd);

@@ -22,7 +22,7 @@ export const AgentsPane = lazy(() => withMd(import('../sessions/AgentsPane')).th
 export const FileSwitcher = lazy(() => import('../workspace/FileSwitcher').then((m) => ({ default: m.FileSwitcher })));
 export const Palette = lazy(() => import('./palette/Palette').then((m) => ({ default: m.Palette })));
 export const Shortcuts = lazy(() => import('./shell/Shortcuts').then((m) => ({ default: m.Shortcuts })));
-export const OpenChats = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.OpenChats })));
+export const OpenChats = lazy(() => import('../sessions/OpenChats').then((m) => ({ default: m.OpenChats })));
 export const RepoPicker = lazy(() => import('../sessions/RepoPicker').then((m) => ({ default: m.RepoPicker })));
 export const Runs = lazy(() => import('../sessions/Runs').then((m) => ({ default: m.Runs })));
 export const Sessions = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.Sessions })));
