@@ -3,7 +3,7 @@ import { Icon } from '../../ui/Icon';
 import { ChangesBadge } from '../../workspace/gitStatus';
 import { GitHubBadge } from '../../ops/pulls';
 import { unreadCount } from '../../sessions/folders';
-import { PAGES, type Page } from '../pages';
+import { usePages, type Page } from '../pages';
 import type { View } from './TabBar';
 
 export const VIEWS: { id: View; icon: string; title: string }[] = [
@@ -19,6 +19,7 @@ export const VIEWS: { id: View; icon: string; title: string }[] = [
 type Props = { showing: string; sidebar: boolean; view: View; browserShown: boolean; showView: (v: View) => void; openPage: (p: Page) => void; switchEditor: () => void };
 
 export function ActivityBar({ showing, sidebar, view, browserShown, showView, openPage, switchEditor }: Props) {
+  const pages = usePages();
   const elsewhere = useStore((s) => unreadCount(s.live, s.session.id, s.seen, s.attention.length));
   return (
     <aside className="activitybar desktop-only">
@@ -31,7 +32,7 @@ export function ActivityBar({ showing, sidebar, view, browserShown, showView, op
         </button>
       ))}
       <span className="divider" />
-      {PAGES.map((p) => (
+      {pages.map((p) => (
         <button key={p.id} data-view={p.id} className={showing === p.id ? 'active' : ''} title={p.title} onClick={() => openPage(p.id)}>
           <Icon name={p.icon} />
         </button>

@@ -8,7 +8,7 @@ import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/pro
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
 const chat = (cwd: string, lastModified: number, id = cwd + lastModified): SavedSession => ({ sessionId: id, title: id, cwd, gitBranch: null, lastModified });
-const tree: Worktree = { id: 'wt1', project: 'shop', repo: '/w/shop', name: 'anshuman/ast-1/shop', cwd: '/p/wt1', dirty: 0, lastActive: 0, removable: false };
+const tree: Worktree = { id: 'wt1', project: 'shop', repo: '/w/shop', name: 'dev/ast-1/shop', cwd: '/p/wt1', dirty: 0, lastActive: 0, removable: false };
 
 describe('buildFolders', () => {
   it('groups chats under their repo, including subfolders', () => {
@@ -43,7 +43,7 @@ describe('buildFolders', () => {
 describe('findHere', () => {
   it('labels a worktree by its branch and the main checkout by its branch', () => {
     const f = buildFolders([repo('shop')], [tree], []);
-    expect(findHere(f, '/p/wt1')).toMatchObject({ label: 'anshuman/ast-1/shop', tree });
+    expect(findHere(f, '/p/wt1')).toMatchObject({ label: 'dev/ast-1/shop', tree });
     expect(findHere(f, '/w/shop/src').label).toBe('main');
   });
 });

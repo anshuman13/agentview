@@ -33,7 +33,7 @@ const VIEWS = [
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];
 const MODES: Record<string, string> = { default: 'Default', acceptEdits: 'Accept edits', plan: 'Plan mode', auto: 'Auto mode', dontAsk: "Don't ask" };
 
-export function buildCommands(models: { value: string; displayName: string }[]): Command[] {
+export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean): Command[] {
   return [
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
@@ -44,7 +44,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     { id: 'toggleSidebar', label: 'View: Toggle Left Sidebar', key: '⌘B' },
     { id: 'toggleChat', label: 'View: Toggle Chat', key: '⌥⌘B' },
     { id: 'page:observe', label: 'View: Observe' },
-    { id: 'page:deploy', label: 'View: Deploy' },
+    ...(deploy ? [{ id: 'page:deploy', label: 'View: Deploy' }] : []),
     { id: 'page:mcp', label: 'View: MCP Servers' },
     { id: 'file', label: 'Go to File', key: '⌘P' },
     { id: 'repo', label: 'Chat: Open Repository', key: '⌘O' },

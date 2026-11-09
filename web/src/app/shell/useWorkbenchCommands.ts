@@ -1,6 +1,6 @@
 import { useEffect, type Dispatch, type SetStateAction } from 'react';
 import { openAgent } from '../../sessions/agents';
-import { isPage, type Page } from '../pages';
+import { isPage, pageOn, type Page } from '../pages';
 import type { Tab, View } from './TabBar';
 
 const narrow = () => window.innerWidth <= 900;
@@ -29,7 +29,7 @@ export function useWorkbenchCommands(w: Workbench) {
       if (kind === 'assistant' || (kind === 'view' && arg === 'assistant')) w.openAssistant();
       else if (kind === 'view') showView(w, arg as View);
       else if (kind === 'tab') showTab(w, arg);
-      else if (kind === 'page' && isPage(arg)) w.openPage(arg);
+      else if (kind === 'page' && isPage(arg) && pageOn(arg)) w.openPage(arg);
       else if (kind === 'terminal') { if (narrow()) w.setTab('term'); else w.setTerminal((v) => !v); }
       else if (kind === 'switchEditor') w.setEditor((v) => (v === 'file' ? 'browser' : 'file'));
       else if (kind === 'phone') w.setPhone((v) => !v);

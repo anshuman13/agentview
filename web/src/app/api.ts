@@ -4,7 +4,6 @@ type Known = { url: string; name?: string };
 type Shell = { macs?: () => string; remember?: (url: string, name: string) => void };
 
 const KEY = 'agentview.url';
-const MAC_URL = 'http://anshumans-macbook-pro.netbird.cloud:7777';
 const TRUSTED = /^http:\/\/([a-z0-9-]+\.netbird\.cloud|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|localhost)(:\d{1,5})?$/i;
 
 export const shell = () => (window as { AgentViewShell?: Shell }).AgentViewShell;
@@ -33,7 +32,7 @@ const read = () => {
   }
 };
 
-let base = bundled ? read() || knownMacs()[0]?.url || (/Android/i.test(navigator.userAgent) ? MAC_URL : 'http://localhost:7777') : '';
+let base = bundled ? read() || knownMacs()[0]?.url || 'http://localhost:7777' : '';
 const listeners = new Set<() => void>();
 
 export const apiBase = () => base;

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { macUrl } from './api';
 
 describe('macUrl', () => {
-  const macbook = 'http://anshumans-macbook-pro.netbird.cloud:7777';
+  const macbook = 'http://laptop.netbird.cloud:7777';
 
   it('opens the Mac the user sits at on localhost', () => {
     expect(macUrl({ url: macbook, self: true }, '7777')).toBe('http://localhost:7777');

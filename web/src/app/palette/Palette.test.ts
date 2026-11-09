@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildCommands, itemKey, matchCommand, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, seeAllCount, type PaletteItem } from './paletteLogic';
 
 const models = [{ value: 'claude-opus-4-1', displayName: 'Opus 4.1' }, { value: 'claude-sonnet-4-5', displayName: 'Sonnet 4.5' }];
-const cmds = buildCommands(models);
+const cmds = buildCommands(models, true);
 const ids = (rows: ReturnType<typeof rankCommands>) => rows.map((r) => r.cmd.id);
 
 describe('matchCommand', () => {
@@ -55,6 +55,10 @@ describe('rankCommands', () => {
     const rows = rankCommands(cmds, 'view', ['page:deploy']);
     expect(ids(rows)[0]).toBe('page:deploy');
     expect(ids(rows)).not.toContain('stop');
+  });
+  it('lists Deploy only when it is set up', () => {
+    expect(buildCommands(models, false).map((c) => c.id)).not.toContain('page:deploy');
+    expect(buildCommands(models, true).map((c) => c.id)).toContain('page:deploy');
   });
   it('offers the Codex views', () => {
     expect(ids(rankCommands(cmds, 'tasks', []))).toContain('codex:tasks');

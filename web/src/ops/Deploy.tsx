@@ -86,7 +86,7 @@ function DeployLog({ job, close }: { job: DeployJob & { done: boolean }; close: 
         }
         action={
           <>
-            {job.url && <IconButton href={job.url} icon="link-external" label="Open in Velodrome" size="sm" small />}
+            {job.url && <IconButton href={job.url} icon="link-external" label="Open in the deploy service" size="sm" small />}
             {job.done && <IconButton icon="close" label="Close" size="sm" small onClick={close} />}
           </>
         }
@@ -132,12 +132,12 @@ export function Deploy() {
 
   const s = status;
   const begin = (call: () => Promise<DeployJob>) => call().then((j) => track(cwd, j), (e: Error) => setJob(cwd, { id: '', lines: [e.message], done: true, ok: false, url: '' }));
-  const warning = (env: DeployEnv) => (env.name.includes('prod') ? 'This is a production environment.' : env.defaultBranchOnly ? 'Velodrome only deploys the default branch here.' : undefined);
+  const warning = (env: DeployEnv) => (env.name.includes('prod') ? 'This is a production environment.' : env.defaultBranchOnly ? 'Only the default branch deploys here.' : undefined);
 
   const deploy = (env: DeployEnv, ref?: string) =>
     s && setAsk({
       title: `Deploy to ${env.label}?`,
-      detail: ref ? `Deploys ${short(ref)} (HEAD of ${s.head.branch}) of ${s.app} to ${env.label} through Velodrome.` : `Branch or commit of ${s.app} to deploy to ${env.label} through Velodrome.`,
+      detail: ref ? `Deploys ${short(ref)} (HEAD of ${s.head.branch}) of ${s.app} to ${env.label} through the deploy service.` : `Branch or commit of ${s.app} to deploy to ${env.label} through the deploy service.`,
       warning: warning(env),
       action: 'Deploy',
       icon: 'rocket',
@@ -181,7 +181,7 @@ export function Deploy() {
           <div className="as-group">
             {s.envs.map((env) => <EnvRow key={env.name} env={env} s={s} onDeploy={(ref) => deploy(env, ref)} onRollback={() => rollback(env)} />)}
           </div>
-          <div className="as-group"><Row href={s.velodrome} title="Open in Velodrome" /></div>
+          <div className="as-group"><Row href={s.velodrome} title="Open in the deploy service" /></div>
         </>
       )}
       </section>

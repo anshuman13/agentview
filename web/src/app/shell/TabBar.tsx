@@ -7,7 +7,7 @@ import { GitHubBadge } from '../../ops/pulls';
 import { Icon } from '../../ui/Icon';
 import { Sheet } from '../../ui/Sheet';
 import { AssistantBadge } from '../lazy';
-import { PAGES, type Page } from '../pages';
+import { usePages, type Page } from '../pages';
 import { canNotify, toggleNotify, useNotify } from '../runtime/notify';
 import { THEME_NAMES, type Theme } from '../theme';
 import { useMcpHealth } from '../../ops/mcpShown';
@@ -84,6 +84,7 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
   const cwd = useStore((s) => s.session.cwd);
   const notifying = useNotify();
   const mcp = useMcpHealth();
+  const pages = usePages();
   if (!open) return null;
   const act = (f: () => void) => () => { onClose(); f(); };
   return (
@@ -115,7 +116,7 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
         <Icon name="github" /><span>Pull Requests</span><GitHubBadge />
       </button>
       <span className="more-label">Tools</span>
-      {PAGES.map((p) => (
+      {pages.map((p) => (
         <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>
           <Icon name={p.icon} />
           <span>{p.title}</span>

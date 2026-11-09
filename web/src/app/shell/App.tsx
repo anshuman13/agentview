@@ -17,6 +17,7 @@ import { Unreachable, useUnreachable } from './Unreachable';
 import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
 import { deepLink } from '../deepLinks';
+import { loadAppSettings } from '../appSettings';
 import { isPage, PageView, type Page } from '../pages';
 import { Brief, AgentsPane, FileSwitcher, Palette, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
 import { Offline, Restarting } from './StatusItems';
@@ -101,6 +102,7 @@ export function App() {
   }, []);
 
   useEffect(() => { connect(); }, []);
+  useEffect(() => void loadAppSettings(), []);
   useWorkbenchKeys({
     toggleChat: () => setChatOpen((v) => !v),
     toggleSidebar: () => setSidebar((v) => !v),

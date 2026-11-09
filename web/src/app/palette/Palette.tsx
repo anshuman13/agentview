@@ -8,6 +8,7 @@ import { PINS_URL, get } from '../../sessions/folders';
 import { command, listKeys, save, storedStrings } from '../../ui/util';
 import { ITEMS_KEY, KEY, MAX_RECENT_ITEMS, MAX_ROWS, buildCommands, itemKey, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, seeAllCount, type Command, type PaletteItem } from './paletteLogic';
 import { openItem, perform } from './paletteActions';
+import { appSettings } from '../appSettings';
 import { PaletteEntries, type Entry } from './PaletteEntries';
 
 export function Palette() {
@@ -20,8 +21,9 @@ export function Palette() {
   const [recent, setRecent] = useState(() => storedStrings(KEY));
   const [recentOpened, setRecentOpened] = useState(() => storedStrings(ITEMS_KEY));
   const list = useRef<HTMLUListElement>(null);
+  const deploy = appSettings.use((s) => s.deploy);
   const pinned = useMemo(() => pinCommands(fetched.pins, live, fetched.saved), [fetched, live]);
-  const commands = useMemo(() => [...pinned, ...buildCommands(models)], [pinned, models]);
+  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy)], [pinned, models, deploy]);
   const rows = useMemo(() => rankCommands(commands, q, recent, MAX_ROWS + pinned.length), [commands, pinned, q, recent]);
 
   const items = useMemo(() => (open ? paletteItems(assistantStore().snapshot()) : []), [open]);
