@@ -199,6 +199,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - "Memory" in the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder
   (name, description, where it comes from); a tap shows the file (like Windsurf's memories panel). Read-only, from /api/memory.
   The web has the same list under Memory in the chat settings menu
+- On the phone, a prompt starting with ! runs as a shell command in the chat's last terminal (or a new one) and opens the
+  Terminal page, as on the web
 - Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar
 - "Remind me" in the phone chat menu adds an open task "Check <chat>" due in 1 hour, 3 hours or tomorrow at 9:00, linked to
   the chat; the hub pushes it when due (like Slack's remind me about this)

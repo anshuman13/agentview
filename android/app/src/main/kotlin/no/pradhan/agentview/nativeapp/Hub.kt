@@ -29,6 +29,9 @@ import kotlinx.serialization.builtins.serializer
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.util.UUID
@@ -515,6 +518,20 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun remindChat(title: String, sessionId: String, cwd: String, at: Long) {
         val extra = mapOf("source" to "chat", "source_url" to "${origin.value}/?session=$sessionId")
         if (codex.capture("Check ${title.ifBlank { "chat" }}", "open", segmentOf(cwd), at, extra) != null) notice.value = "Reminder set"
+    }
+    // Types the command into the chat's last terminal, or a new one, and opens the Terminal page.
+    fun runInTerminal(cmd: String): Boolean {
+        if (!writes.allowed()) return false
+        write("Terminal unavailable") { typeInTerminal(cmd) }
+        return true
+    }
+    private suspend fun typeInTerminal(cmd: String) {
+        val chat = pageChat
+        val id = parseTerms(api.get("/api/terms", chat)).lastOrNull()?.id ?: protocolJson.decodeFromString<TermTab>(api.post("/api/terms", "", chat)).id
+        client.newWebSocket(Request.Builder().url("${wsOrigin(origin.value)}/ws?term=${enc(id)}").build(), object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) { webSocket.send(termInput("$cmd\r")); webSocket.close(1000, null) }
+        })
+        link.value = DeepLink(page = "terminal")
     }
     fun rewind(id: String) = post(rewindCmd(id), store.wanted)
     fun stopTask(toolUseId: String) = post(stopTaskCmd(toolUseId), store.wanted)

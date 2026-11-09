@@ -69,6 +69,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     fun submit(steer: Boolean) {
         val t = text.text
         if (t.isBlank() || uploading > 0) return
+        shellCommand(t)?.let { if (hub.runInTerminal(it)) set(TextFieldValue("")); return }
         set(TextFieldValue(""))
         hub.submit(t, steer) { val back = restoreUnsent(text.text, t); set(TextFieldValue(back, TextRange(back.length))) }
     }

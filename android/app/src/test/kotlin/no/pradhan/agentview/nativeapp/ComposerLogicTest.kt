@@ -75,4 +75,10 @@ class ComposerLogicTest {
         assertEquals(SendKind.Queue, sendKind(true, false))
         assertEquals(SendKind.Steer, sendKind(true, true))
     }
+
+    @Test fun bangIsAShellCommand() {
+        assertEquals("git status", shellCommand("  ! git status "))
+        assertNull(shellCommand("!"))
+        assertNull(shellCommand("why ! here"))
+    }
 }

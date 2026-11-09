@@ -121,3 +121,6 @@ fun userParts(text: String): List<Part> {
     if (at < text.length) out += Part.Text(text.substring(at).trim())
     return out.filter { it !is Part.Text || it.text.isNotEmpty() }
 }
+
+// A prompt starting with "!" is a shell command for the chat's terminal, as on the web; null when it is a prompt or empty.
+fun shellCommand(text: String): String? = text.trim().takeIf { it.startsWith("!") }?.drop(1)?.trim()?.ifEmpty { null }
