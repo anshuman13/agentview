@@ -93,7 +93,7 @@ class ChatStore(
             is ServerMessage.SessionUpdate -> state.update { s -> if (s.settled && m.session.id == s.shownId) s.copy(session = m.session) else s }
             is ServerMessage.PendingAdded -> state.update { s -> if (s.settled && s.pending.none { it.id == m.request.id }) s.copy(pending = s.pending + m.request) else s }
             is ServerMessage.Resolved -> state.update { s -> if (s.pending.any { it.id == m.id }) s.copy(pending = s.pending.filter { it.id != m.id }) else s }
-            is ServerMessage.Error, is ServerMessage.Findings, is ServerMessage.Other -> {}
+            is ServerMessage.Error, is ServerMessage.Findings, is ServerMessage.FileChanged, is ServerMessage.Other -> {}
         }
     }
 

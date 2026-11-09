@@ -103,6 +103,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val voiceRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
+    val fileChanged = MutableSharedFlow<String>(extraBufferCapacity = 8)
+
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
 
     internal val _connected = MutableStateFlow(false)
@@ -245,6 +247,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, store.state.value.shownId, muted.value).forEach(::notify)
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
+        if (m is ServerMessage.FileChanged) fileChanged.tryEmit(m.path)
         store.handle(m)
         store.state.value.session?.models?.takeIf { it.isNotEmpty() && it != models.value }?.let { models.value = it; prefs.edit().putString("models", encodeModels(it)).apply() }
         if (m is ServerMessage.Live) {

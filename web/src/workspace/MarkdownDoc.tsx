@@ -124,10 +124,11 @@ function clean(root: ParentNode, path: string) {
 function addStartButtons(root: ParentNode, tasks: SpecTask[]) {
   root.querySelectorAll('li.doc-task').forEach((li, i) => {
     if (!tasks[i] || tasks[i].done) return;
-    const start = document.createElement('button');
-    start.className = 'btn btn-plain btn-sm doc-start';
-    start.dataset.task = String(i);
-    start.textContent = 'Start';
+    const doing = tasks[i].doing;
+    const start = document.createElement(doing ? 'span' : 'button');
+    start.className = doing ? 'badge running doc-start' : 'btn btn-plain btn-sm doc-start';
+    if (!doing) start.dataset.task = String(i);
+    start.textContent = doing ? 'In progress' : 'Start';
     li.insertBefore(start, li.querySelector(':scope > ul, :scope > ol'));
   });
 }

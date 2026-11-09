@@ -32,6 +32,8 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.Badge
+import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -118,6 +120,7 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
     BackHandler(onBack = onBack)
     val (load, reload) = rememberLoad(path, hub.pageChat) { parseFile(hub.read("/api/file?path=${enc(path)}")) }
     val file = load.data
+    LaunchedEffect(hub, path) { hub.fileChanged.collect { if (it == path) reload() } }
     var mode by rememberSaveable(path) { mutableStateOf(if (diffFirst) "diff" else "file") }
     var preview by rememberSaveable(path) { mutableStateOf(true) }
     var wrap by rememberSaveable { mutableStateOf(false) }
@@ -167,7 +170,9 @@ private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
     Group {
         tasks.forEachIndexed { i, t ->
             if (i > 0) Hairline()
-            ListRow(t.text, strike = t.done, muted = t.done, trailing = if (t.done) null else {
+            ListRow(t.text, strike = t.done, muted = t.done, trailing = if (t.done) null else if (t.doing) {
+                { Badge("In progress", BadgeTone.Running) }
+            } else {
                 { Button("Start", { hub.askClaude(startTaskPrompt(t, path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly) }
             })
         }
