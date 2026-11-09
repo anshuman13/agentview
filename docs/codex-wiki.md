@@ -154,6 +154,7 @@ meetings, actions and jobs. They read and write the hub through its `/sync` API 
 | Tool | Does |
 | --- | --- |
 | `wiki_search(query)` | Pages and claims ranked by relevance (not every word has to match), with state (live, proposed, rejected); Claude calls it before proposing |
+| `chat_search(query)` | Past Claude chats of the chat's own profile, ranked by how many query words they hold (not a wiki search); returns title, folder, date, session id and a snippet |
 | `wiki_page(id)` | One page's current claims by heading |
 | `wiki_propose(text, sources, page?, heading?, replaces?)` | Proposes a one-sentence claim. No page means memory. `replaces` names a live claim it would supersede. `page` can be an existing id or a new title and section |
 

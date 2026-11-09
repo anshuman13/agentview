@@ -1,6 +1,7 @@
 import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpServerConfig, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { BIG_BRO, type Effort } from '../../../../shared/protocol.js';
+import { chatTools } from './chats.js';
 import { DATA_RULES, dataTools } from './data.js';
 import { WIKI_RULES, wikiTools } from './wiki.js';
 import { ownProfile, PROFILE_PORT } from '../../chrome/launch.js';
@@ -45,6 +46,7 @@ function statusServer(onStatus: (text: string) => void, o: { cwd: string; chat: 
         },
       ),
       ...wikiTools(o),
+      ...chatTools(o),
       ...dataTools(o),
     ],
   });
@@ -75,7 +77,7 @@ export function agentOptions(o: {
     includePartialMessages: true,
     includeHookEvents: true,
     enableFileCheckpointing: true,
-    allowedTools: ['mcp__agentview__set_status', 'mcp__agentview__wiki_search', 'mcp__agentview__wiki_page', 'mcp__agentview__wiki_propose', 'mcp__agentview__data_find', 'mcp__agentview__data_write'],
+    allowedTools: ['mcp__agentview__set_status', 'mcp__agentview__wiki_search', 'mcp__agentview__wiki_page', 'mcp__agentview__wiki_propose', 'mcp__agentview__chat_search', 'mcp__agentview__data_find', 'mcp__agentview__data_write'],
     disallowedTools: ['mcp__playwright'],
     extraArgs: { chrome: null },
     permissionMode: 'auto',
