@@ -241,6 +241,14 @@ fun checksLabel(state: String) = when (state) {
     else -> null
 }
 
+// The PR part of a chat row: "#123" with the review state, and a check dot only when the PR and its checks are known.
+data class PrChip(val text: String, val dot: DotState?, val url: String)
+
+fun prChip(number: Int, pr: PullRequest?): PrChip {
+    val state = pr?.let { if (it.draft) "Draft" else reviewLabel(it.review)?.first }
+    return PrChip(metaLine("#$number", state), pr?.takeIf { it.checks != "none" }?.let { checkDot(it.checks) }, pr?.url.orEmpty())
+}
+
 fun prStripMeta(pr: PullRequest) = listOfNotNull("#${pr.number}", "Draft".takeIf { pr.draft }, checksLabel(pr.checks), reviewLabel(pr.review)?.first).joinToString(" · ")
 
 // A draft asking the chat to fix its PR's failing checks and requested changes; null when nothing needs fixing.

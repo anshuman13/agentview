@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.buildAnnotatedString
@@ -72,6 +74,9 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     var showIdle by rememberSaveable { mutableStateOf(false) }
     var repoKey by rememberSaveable { mutableStateOf<String?>(null) }
     var newChat by remember { mutableStateOf<RepoChoice?>(null) }
+
+    val shownCwd = live.firstOrNull { it.id == state.shownId }?.cwd
+    val (prLoad) = rememberLoad(state.shownId, shownCwd) { if (shownCwd == null || live.none { it.pr != null }) emptyList() else parsePulls(hub.read("/api/gh/prs")) }
 
     fun repoBranch(cwd: String) = ws.repos.firstOrNull { it.cwd == folderKey(cwd, ws.repos, ws.trees) }?.branch
 
@@ -119,6 +124,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             selected = c.id == state.shownId,
             actions = actions(c.sessionId, c.title, c),
             run = c.run,
+            pr = c.pr?.let { n -> prChip(n, prLoad.data?.takeIf { c.cwd == shownCwd }?.firstOrNull { it.number == n }) },
             onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
         )
@@ -279,12 +285,21 @@ private fun RepoMark(name: String) {
 }
 
 @Composable
-private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun? = null, onResume: (() -> Unit)? = null) {
+private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun? = null, pr: PrChip? = null, onResume: (() -> Unit)? = null) {
+    val uri = LocalUriHandler.current
     // Like Slack's unread channels, a chat with a reply or question you have not opened has a bold title.
     val unread = state == ChatState.Done || state == ChatState.Needs
     ListRow(
         if (unread) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(title) } } else title,
         meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
+        below = pr?.let { p ->
+            {
+                Row(Modifier.clip(RoundedCornerShape(Tokens.sp4)).clickable(enabled = p.url.isNotEmpty()) { uri.openUri(p.url) }.padding(vertical = Tokens.sp2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    p.dot?.let { StatusDot(it) }
+                    Text(p.text, style = Type.meta, color = av.metaFg)
+                }
+            }
+        },
         trailing = {
             if (onResume != null) Button("Resume", onResume, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
             if (actions.muted) AvIcon("bell-slash", tint = av.fgMuted)

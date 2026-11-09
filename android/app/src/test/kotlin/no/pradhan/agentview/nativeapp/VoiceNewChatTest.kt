@@ -79,4 +79,10 @@ class VoiceNewChatTest {
         assertEquals(long, chunks.joinToString(" "))
         assertEquals(emptyList<String>(), speechChunks("  "))
     }
+
+    @Test
+    fun startModesSetNothingForChatAndPlanOrAutoOtherwise() {
+        assertEquals(listOf(null, "plan", "auto"), START_MODES.map { it.mode })
+        assertEquals("Chat", START_MODES.first().label)
+    }
 }

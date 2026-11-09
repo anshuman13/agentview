@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp
 
 import java.util.UUID
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 
 object NoticeOp {
     const val ALLOW = "no.pradhan.agentview.native.ALLOW"
@@ -23,11 +25,31 @@ sealed interface ActionResult {
 // Never plan approvals: those need the plan on screen.
 private fun List<Pending>.permission() = filterIsInstance<Pending.Permission>().firstOrNull { it.toolName != "ExitPlanMode" }
 
+private const val PREVIEW_LINES = 8
+private const val PREVIEW_WIDTH = 100
+
+// An Edit, Write or MultiEdit request as a notification: the file with "+N -M" for the title, the first changed lines for the expanded text.
+fun editPreview(p: Pending.Permission): Pair<String, String>? {
+    val edits = when (p.toolName) {
+        "Write" -> listOf("" to p.input.s("content"))
+        "Edit" -> listOf(p.input.s("old_string") to p.input.s("new_string"))
+        "MultiEdit" -> (p.input["edits"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.let { e -> e.s("old_string") to e.s("new_string") } } ?: emptyList()
+        else -> return null
+    }
+    val changed = edits.flatMap { (a, b) -> lineDiff(a, b).filter { it.mark != ' ' } }
+    val file = p.input.s("file_path").substringAfterLast('/')
+    val title = "${p.toolName} $file +${changed.count { it.mark == '+' }} -${changed.count { it.mark == '-' }}"
+    return title to changed.take(PREVIEW_LINES).joinToString("\n") { it.mark + it.text.take(PREVIEW_WIDTH) }
+}
+
 suspend fun noticeAsk(remote: NoticeRemote, n: Notice): Notice {
     val open = runCatching { remote.pending(n.chatId) }.getOrNull() ?: return n
     val permission = open.permission()
     return when {
-        permission != null -> n.copy(ask = NoticeAsk.Permission, permissionId = permission.id, body = "${permission.toolName}: ${n.body}")
+        permission != null -> {
+            val preview = editPreview(permission)
+            n.copy(ask = NoticeAsk.Permission, permissionId = permission.id, title = preview?.first ?: n.title, body = "${permission.toolName}: ${n.body}", detail = preview?.second.orEmpty())
+        }
         open.any { it is Pending.Question } -> n.copy(ask = NoticeAsk.Question)
         else -> n
     }

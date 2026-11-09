@@ -15,12 +15,20 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
     val models by hub.models.collectAsState()
     var repo by remember { mutableStateOf(repoKey ?: initial) }
     var model by remember(models) { mutableStateOf(startModel(models, hub.lastModel)) }
+    var startMode by remember { mutableStateOf(START_MODES.first()) }
     val start = {
         model?.let { hub.lastModel = it }
-        hub.newChat(repo, model.takeIf { it != models.firstOrNull()?.value })
+        hub.newChat(repo, model.takeIf { it != models.firstOrNull()?.value }, mode = startMode.mode)
         onDismiss()
     }
     Sheet(onDismiss, "New chat", padded = false, full = false, action = { Button("Start", start, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }) {
+        SectionHeader("Start as")
+        Group {
+            START_MODES.forEachIndexed { i, m ->
+                if (i > 0) Hairline()
+                ListRow(m.label, onClick = { startMode = m }, trailing = if (m == startMode) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+            }
+        }
         if (repoKey == null && repos.isNotEmpty()) {
             SectionHeader("Repo")
             Group {

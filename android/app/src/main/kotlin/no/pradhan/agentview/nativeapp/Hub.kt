@@ -403,12 +403,15 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         get() = prefs.getString("lastModel", null)
         set(v) { prefs.edit().putString("lastModel", v).apply() }
 
-    fun newChat(cwd: String? = null, model: String? = null, fork: String? = null) {
+    fun newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null) {
         if (readOnly) { notice.value = READ_ONLY_SENT; return }
         if (model != null) lastModel = model
         viewModelScope.launch {
             val id = switchTo(newSessionCmd(cwd = cwd, model = model ?: lastModel?.takeIf { fork == null }, fork = fork))
-            if (id == null) notice.value = "The chat did not open" else link.value = DeepLink(chat = id)
+            if (id == null) notice.value = "The chat did not open" else {
+                if (mode != null) post(setModeCmd(mode), id)
+                link.value = DeepLink(chat = id)
+            }
         }
     }
 

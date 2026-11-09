@@ -92,4 +92,22 @@ class NoticeActionsTest {
         assertEquals(listOf(NoticeKind.Failed), n.map { it.kind })
         assertTrue(notices(listOf(was.copy(running = false, failed = true)), listOf(was.copy(running = false, failed = true))).isEmpty())
     }
+
+    private fun edit(tool: String, vararg kv: Pair<String, String>) = Pending.Permission("p1", tool, "Edit", "", JsonObject(kv.associate { it.first to kotlinx.serialization.json.JsonPrimitive(it.second) }), true, false)
+
+    @Test fun anEditApprovalShowsTheFileAndChangedLines() {
+        val p = edit("Edit", "file_path" to "/a/b/Main.kt", "old_string" to "x\nold\nz", "new_string" to "x\nnew\nmore\nz")
+        assertEquals("Edit Main.kt +2 -1" to "-old\n+new\n+more", editPreview(p))
+        val n = runBlocking { noticeAsk(Fake(listOf(p)), notice) }
+        assertEquals("Edit Main.kt +2 -1", n.title)
+        assertEquals("-old\n+new\n+more", n.detail)
+    }
+
+    @Test fun aWriteCountsEveryLineAndCapsThePreview() {
+        val p = edit("Write", "file_path" to "n.txt", "content" to (1..12).joinToString("\n") { "l$it" })
+        val (title, body) = editPreview(p)!!
+        assertEquals("Write n.txt +12 -0", title)
+        assertEquals(8, body.lines().size)
+        assertEquals(null, editPreview(perm()))
+    }
 }

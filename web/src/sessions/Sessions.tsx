@@ -16,7 +16,7 @@ import { Bin } from './Bin';
 import { AgentsBlock } from './AgentRow';
 import { openAgent } from './agents';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
-import { PullState, usePullRequests } from '../ops/pulls';
+import { CheckIcon, PullState, usePullRequests } from '../ops/pulls';
 import { archiveChat, byUrgency, chatFinder, chatsByStatus, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RenameEvent, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
 import { RepoRow } from './RepoRow';
@@ -624,12 +624,15 @@ function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const seen = useStore((s) => s.seen);
   const line = chatLine(c, events);
+  const shownCwd = useStore((s) => s.session.cwd);
+  const pr = usePullRequests(c.pr && c.cwd === shownCwd ? shownCwd : '').find((p) => p.number === c.pr);
   const when = c.pending ? since(c.lastActive) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : since(Math.max(c.lastActive, saved?.lastModified ?? 0));
   // Slack's sidebar draft line: an unsent composer draft replaces the meta line, except in the chat you are in.
   const draft = selected ? '' : draftLine(readDraft(c.id));
   const meta = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
     <>
       {metaLine(repo, branchOf(saved?.gitBranch, branch), when)}
+      {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>#{c.pr}{pr.checks !== 'none' && <CheckIcon state={pr.checks} />}</a> : `#${c.pr}`}</>}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
   );
