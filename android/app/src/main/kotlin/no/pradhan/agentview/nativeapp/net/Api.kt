@@ -52,6 +52,8 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
 
     private suspend fun <T> list(path: String, ser: KSerializer<T>) = protocolJson.decodeFromString(ListSerializer(ser), call(url(path)).decodeToString())
 
+    suspend fun setDefaultProvider(id: String) { call(url("/api/settings").post(buildJsonObject { put("defaultProvider", id) }.toString().toRequestBody(json))) }
+
     suspend fun settings() = protocolJson.decodeFromString(AppSettings.serializer(), call(url("/api/settings")).decodeToString())
     suspend fun sessions() = list("/api/sessions", SavedSession.serializer())
     suspend fun repos() = list("/api/repos", Repo.serializer())

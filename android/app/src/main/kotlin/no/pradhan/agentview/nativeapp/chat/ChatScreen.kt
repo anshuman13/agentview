@@ -237,7 +237,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: Chat
             hub.notice.value = "Copied. Stop this chat before resuming it in a terminal"
         }, enabled = sessionId != null)
         MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)
-        MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model) }, enabled = sessionId != null)
+        MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
         MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) panels.dialog = "close" else hub.closeChat(live.id) })
         MenuSeparator()

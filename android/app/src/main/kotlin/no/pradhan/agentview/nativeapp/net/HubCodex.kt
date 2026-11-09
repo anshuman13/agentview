@@ -86,7 +86,7 @@ internal suspend fun Hub.sendCodex(question: String, profile: String, match: Str
     val id = when {
         live != null -> showChat(live.id)
         daily?.sessionId != null -> switchTo(openSessionCmd(daily.sessionId))
-        else -> switchTo(newSessionCmd(profile))
+        else -> switchTo(newSessionCmd(profile, provider = "claude"))
     } ?: return null
     val before = store.state.value.events.count { it.kind == "user" && it.text.startsWith(match) }
     submit(question, false) { notice.value = "The question was not sent" }

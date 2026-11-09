@@ -326,6 +326,8 @@ OpenRouter chat shows "-" and a Codex chat "Plan"; the Spend list says such chat
 **Codex**: chats can run on the Codex CLI with a ChatGPT plan (`codex app-server`, one process per chat). Sign in once with
 `codex login` on the Mac; until then Settings shows Codex as "Run codex login on this Mac" and the palette entry only says
 so. Start one from the command palette (Chat: New Codex Chat) or the Provider section of the phone's new chat sheet. The
+"New chats" select in Settings (Models on web, Providers on the phone) sets the provider a chat starts on when none is picked
+(`defaultProvider` in settings.json); Fork chat and tries keep the parent's provider. The
 model menu lists Codex's models, effort goes to the model when it supports that level, and the permission modes map to
 Codex's approval policy and sandbox: Default asks before leaving the workspace sandbox, Auto never asks, Plan and
 Don't ask only read. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes

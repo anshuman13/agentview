@@ -7,6 +7,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.chat.handoffText
+import no.pradhan.agentview.nativeapp.chat.lastModelKey
+import no.pradhan.agentview.nativeapp.chat.modelGroup
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.workspace.TermTab
 import no.pradhan.agentview.nativeapp.workspace.parseTerms
@@ -19,15 +21,20 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 
-var Hub.lastModel: String?
-    get() = prefs.getString("lastModel", null)
-    set(v) { prefs.edit().putString("lastModel", v).apply() }
+fun Hub.modelsOf(group: String) = if (group == "codex") codexModels else models
 
+fun Hub.lastModel(group: String) = prefs.getString(lastModelKey(group), null)
+
+fun Hub.setLastModel(group: String, model: String) { prefs.edit().putString(lastModelKey(group), model).apply() }
+
+// A model is sent only when the provider's own list has it, so a Codex id never reaches a Claude chat or the reverse.
 fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, review: Boolean = false, provider: String? = null) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
-    if (model != null) lastModel = model
+    val group = modelGroup(provider ?: defaultProvider.value)
+    if (model != null) setLastModel(group, model)
+    val sent = (model ?: lastModel(group).takeIf { fork == null })?.takeIf { m -> modelsOf(group).value.any { it.value == m } }
     viewModelScope.launch {
-        val id = switchTo(newSessionCmd(cwd = cwd, model = model ?: lastModel?.takeIf { fork == null && provider == null }, fork = fork, provider = provider))
+        val id = switchTo(newSessionCmd(cwd = cwd, model = sent, fork = fork, provider = provider))
         if (id == null) notice.value = "The chat did not open" else {
             if (mode != null) post(setModeCmd(mode), id)
             if (review) post(setReviewCmd(true), id)
@@ -38,10 +45,10 @@ fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null
 }
 
 // Fork chat: a new chat in the same folder and model that starts by summarising this one.
-fun Hub.forkChat(cwd: String?, sessionId: String, model: String?) {
+fun Hub.forkChat(cwd: String?, sessionId: String, model: String?, provider: String?) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
     viewModelScope.launch {
-        val id = switchTo(newSessionCmd(cwd = cwd, model = model))
+        val id = switchTo(newSessionCmd(cwd = cwd, model = model, provider = provider))
         if (id == null) notice.value = "The chat did not open" else {
             submit(handoffText(sessionId), false) { notice.value = "The summary was not requested. Try Fork chat again." }
             link.value = DeepLink(chat = id)
@@ -124,7 +131,7 @@ fun Hub.rewind(id: String) = post(rewindCmd(id), store.wanted)
 
 fun Hub.stopTask(toolUseId: String) = post(stopTaskCmd(toolUseId), store.wanted)
 
-fun Hub.setModel(model: String) { if (model != "team") lastModel = model; post(setModelCmd(model), store.wanted) }
+fun Hub.setModel(model: String) { if (model != "team") setLastModel(modelGroup(store.state.value.session?.provider), model); post(setModelCmd(model), store.wanted) }
 
 fun Hub.setEffort(effort: String) = post(setEffortCmd(effort), store.wanted)
 

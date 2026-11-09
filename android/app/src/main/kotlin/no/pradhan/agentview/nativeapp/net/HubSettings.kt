@@ -1,5 +1,7 @@
 package no.pradhan.agentview.nativeapp.net
 
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.personalRoot
@@ -10,6 +12,12 @@ suspend fun Hub.refreshSettings() {
     personalRoot = s.personalRoot
     deploy.value = s.deploy
     providers.value = s.providers
+    defaultProvider.value = s.defaultProvider
+}
+
+fun Hub.setDefaultProvider(id: String) {
+    defaultProvider.value = id
+    viewModelScope.launch { runCatching { api.setDefaultProvider(id) } }
 }
 
 fun Hub.setMuted(sessionId: String, on: Boolean) {

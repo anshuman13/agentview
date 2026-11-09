@@ -43,6 +43,8 @@ import no.pradhan.agentview.nativeapp.chat.ChatStore
 import no.pradhan.agentview.nativeapp.chat.RecentChats
 import no.pradhan.agentview.nativeapp.chat.TranscriptFeed
 import no.pradhan.agentview.nativeapp.chat.encodeModels
+import no.pradhan.agentview.nativeapp.chat.modelGroup
+import no.pradhan.agentview.nativeapp.chat.modelsKey
 import no.pradhan.agentview.nativeapp.chat.parseModels
 import no.pradhan.agentview.nativeapp.codex.CodexStore
 import no.pradhan.agentview.nativeapp.codex.WORK
@@ -100,6 +102,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val models = MutableStateFlow(parseModels(prefs.getString("models", null)))
 
+    val codexModels = MutableStateFlow(parseModels(prefs.getString("models:codex", null)))
+
     val voiceRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     val fileChanged = MutableSharedFlow<String>(extraBufferCapacity = 8)
@@ -108,6 +112,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val deploy = MutableStateFlow(false)
 
     val providers = MutableStateFlow<List<ProviderOption>>(emptyList())
+
+    val defaultProvider = MutableStateFlow("claude")
 
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
 
@@ -254,7 +260,11 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         if (m is ServerMessage.FileChanged) fileChanged.tryEmit(m.path)
         store.handle(m)
-        store.state.value.session?.models?.takeIf { it.isNotEmpty() && it != models.value }?.let { models.value = it; prefs.edit().putString("models", encodeModels(it)).apply() }
+        store.state.value.session?.let { s ->
+            val group = modelGroup(s.provider)
+            val list = modelsOf(group)
+            s.models.takeIf { it.isNotEmpty() && it != list.value }?.let { list.value = it; prefs.edit().putString(modelsKey(group), encodeModels(it)).apply() }
+        }
         if (m is ServerMessage.Live) {
             liveLoaded.value = true
             if (outbox.items.value.isNotEmpty() && System.currentTimeMillis() - flushFailedAt > FLUSH_RETRY_MS) flushOutbox()

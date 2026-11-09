@@ -11,6 +11,13 @@ fun parseModels(s: String?): List<ModelInfo> = s?.let { runCatching { protocolJs
 
 fun encodeModels(models: List<ModelInfo>): String = protocolJson.encodeToString(modelList, models)
 
+// Claude and OpenRouter share the Claude model aliases; Codex has its own list, so each keeps its own models and last model.
+fun modelGroup(provider: String?) = if (provider == "codex") "codex" else "claude"
+
+fun modelsKey(group: String) = if (group == "codex") "models:codex" else "models"
+
+fun lastModelKey(group: String) = if (group == "codex") "lastModel:codex" else "lastModel"
+
 // The model the sheet starts on: the last one used when the server still offers it, else the first on the list.
 fun startModel(models: List<ModelInfo>, last: String?): String? =
     models.firstOrNull { it.value == last }?.value ?: models.firstOrNull()?.value

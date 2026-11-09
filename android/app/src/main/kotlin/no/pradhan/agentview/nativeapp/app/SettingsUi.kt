@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.setDefaultProvider
 import no.pradhan.agentview.nativeapp.net.setNotify
 import no.pradhan.agentview.nativeapp.net.setTheme
 import no.pradhan.agentview.nativeapp.ui.Chevron
@@ -38,6 +39,8 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val origin by hub.origin.collectAsState()
     val notify by hub.notifyOn.collectAsState()
     val granted by hub.granted.collectAsState()
+    val providers by hub.providers.collectAsState()
+    val default by hub.defaultProvider.collectAsState()
     val ctx = LocalContext.current
     val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "Unknown"
     val dark = when (theme) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
@@ -58,6 +61,24 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                             }
                         }
                     })
+                }
+                if (providers.size > 1) {
+                    SectionHeader("Providers")
+                    Group {
+                        providers.forEach { p ->
+                            ListRow(p.label, if (p.enabled) "Ready" else p.note)
+                            Hairline()
+                        }
+                        val menu = remember { mutableStateOf(false) }
+                        ListRow("New chats", providers.firstOrNull { it.id == default }?.label ?: default, onClick = { menu.value = true }, trailing = {
+                            Box {
+                                Chevron()
+                                Menu(menu.value, { menu.value = false }) {
+                                    providers.filter { it.enabled }.forEach { p -> MenuItem(p.label, "check", { menu.value = false; hub.setDefaultProvider(p.id) }, checked = default == p.id) }
+                                }
+                            }
+                        })
+                    }
                 }
                 SectionHeader("Phone")
                 Group {
