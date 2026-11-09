@@ -20,9 +20,10 @@ function ReviewCard({ fact }: { fact: Fact }) {
   const chat = chatOf(fact);
   const from = meetingOf(fact);
   const meeting = from ? meetings.find((m) => m.id === from && m.profile === fact.profile) : undefined;
+  const fromChat = sourcesOf(fact).find((s) => s.kind === 'chat');
   const label = from
     ? meeting?.title ?? sourcesOf(fact).find((s) => s.kind === 'meeting')?.label ?? 'a meeting'
-    : fact.added_by?.startsWith('slack:') ? sourcesOf(fact).find((s) => s.kind === 'slack')?.label ?? 'Slack' : null;
+    : fact.added_by?.startsWith('slack:') ? sourcesOf(fact).find((s) => s.kind === 'slack')?.label ?? 'Slack' : fromChat ? `chat ${fromChat.label || 'Untitled'}` : null;
   const review = useReview();
   const approve = () => review.approve([fact]);
   const reject = () => review.reject([fact]);
@@ -45,7 +46,7 @@ function ReviewCard({ fact }: { fact: Fact }) {
       )}
       {old && <div className="wk-old"><s>{old.text}</s><span>Replaces</span></div>}
       <div className="wk-claim-foot">
-        {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
+        {sourcesOf(fact).filter((s) => s.kind !== 'chat').map((s, i) => <SourceChip key={i} s={s} />)}
         {chat && <ClaudeChip chat={chat} />}
         {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
       </div>

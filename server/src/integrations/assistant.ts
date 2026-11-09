@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import type { ChatEvent } from '../../../shared/protocol.js';
 import { errText } from '../../../shared/util.js';
 
 export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir(), '.agentview/assistant/assistant.db')) ? 'http://localhost:7790' : 'http://macmini.netbird.cloud:7790');
@@ -116,5 +117,17 @@ export async function hubGet<T>(path: string): Promise<T> {
 
 export async function hubPush(changes: HubChange[]) {
   const resp = await fetch(`${HUB}/sync`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ since, changes }), signal: AbortSignal.timeout(15_000) });
+  if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}: ${await resp.text()}`);
+}
+
+const LEARN_EVENTS = 60;
+const LEARN_CHARS = 2000;
+
+// The last user and assistant messages of a chat, cut to what the hub reads for a learning pass.
+export const learnEvents = (events: ChatEvent[]) =>
+  events.flatMap((e) => (e.kind === 'user' || e.kind === 'assistant' ? [{ id: e.id, kind: e.kind, text: e.text.slice(0, LEARN_CHARS), at: e.at }] : [])).slice(-LEARN_EVENTS);
+
+export async function hubLearn(post: { chat: string; title: string; profile: string; events: ReturnType<typeof learnEvents> }) {
+  const resp = await fetch(`${HUB}/wiki/learn`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(post), signal: AbortSignal.timeout(10 * 60_000) });
   if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}: ${await resp.text()}`);
 }

@@ -55,7 +55,7 @@ export function ReviewMode() {
               <p className="wk-mode-text">{fact.text}</p>
               {old && <div className="wk-old"><s>{old.text}</s><span>Replaces</span></div>}
               <div className="wk-claim-foot">
-                {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
+                {sourcesOf(fact).filter((s) => s.kind !== 'chat').map((s, i) => <SourceChip key={i} s={s} />)}
                 {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
                 {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
               </div>

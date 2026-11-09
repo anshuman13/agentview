@@ -12,6 +12,8 @@ import { configDef } from '../agent/claude/mcp.js';
 import type { AgentSession } from '../session/session.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway, notifyRunEnded, notifyStall, stallWatch } from '../integrations/notify.js';
+import { hubLearn, learnEvents } from '../integrations/assistant.js';
+import { profileOf } from '../agent/claude/accounts.js';
 import { allowedFolder } from '../workspace/files.js';
 import { removeChat } from '../agent/claude/pins.js';
 import { parseTries, startTries, TRIES_USAGE } from '../workspace/tries.js';
@@ -48,6 +50,7 @@ const RESTORE = path.join(os.homedir(), '.agentview', 'restore.json');
 const RUNS = path.join(os.homedir(), '.agentview', 'runs.json');
 const IDLE_MS = 10 * 60 * 1000;
 const ORPHAN_MS = 5 * 60 * 1000;
+const LEARN_WAIT_MS = 5 * 60 * 1000;
 
 process.on('uncaughtException', (err) => console.error('uncaught:', err));
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
@@ -156,12 +159,33 @@ function broadcastLive() {
   }, 100);
 }
 
+const learnTimers = new Map<string, NodeJS.Timeout>();
+const learnPosted = new Map<string, number>();
+
+// A chat that stays idle for LEARN_WAIT_MS with a user message not posted yet goes to the hub once, to learn what the user taught.
+function learnLater(chat: AgentSession) {
+  clearTimeout(learnTimers.get(chat.id));
+  learnTimers.set(chat.id, setTimeout(() => {
+    learnTimers.delete(chat.id);
+    if (!live.has(chat.id) || busy(chat) || chat.state.pending.length) return;
+    const since = learnPosted.get(chat.id) ?? 0;
+    const events = chat.state.events;
+    const fresh = events.filter((e) => e.kind === 'user' && !e.auto && e.at > since);
+    if (!fresh.length) return;
+    const title = summary(chat).title;
+    hubLearn({ chat: chat.id, title, profile: profileOf(chat.cwd), events: learnEvents(events) })
+      .then(() => learnPosted.set(chat.id, Math.max(...fresh.map((e) => e.at))))
+      .catch((err) => console.error(`learn ${chat.id}:`, errText(err)));
+  }, LEARN_WAIT_MS).unref());
+}
+
 async function createChat(cwd: string, resume?: string, title = '', fork = false) {
   // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.
   await Promise.all(loggedInAccounts().map((a) => verifyLimit(a)));
   const chat = claudeSession(cwd, resume, fork);
   chat.runs = runs;
   chat.title = title;
+  chat.onIdle = () => learnLater(chat);
   await chat.loadHistory();
   chat.onMessage((m) => {
     broadcast(m, chat);
@@ -186,6 +210,9 @@ async function createChat(cwd: string, resume?: string, title = '', fork = false
 }
 
 function closeChat(chat: AgentSession) {
+  clearTimeout(learnTimers.get(chat.id));
+  learnTimers.delete(chat.id);
+  learnPosted.delete(chat.id);
   chat.close();
   stalls.seen(chat.id, false);
   live.get(chat.id)?.watcher.close();

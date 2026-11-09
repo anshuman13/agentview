@@ -4,7 +4,7 @@ import { safeHref } from '../../ui/util';
 import type { Source } from '../data/wiki';
 import { SOURCE_ICON } from './shared';
 
-export const KIND: Record<Source['kind'], string> = { slack: 'Slack', linear: 'Linear', pr: 'PR', doc: 'Doc', meeting: 'Meeting' };
+export const KIND: Record<Source['kind'], string> = { slack: 'Slack', linear: 'Linear', pr: 'PR', doc: 'Doc', meeting: 'Meeting', chat: 'Chat' };
 
 export function SourceChip({ s }: { s: Source }) {
   const href = safeHref(s.url);

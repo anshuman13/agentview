@@ -82,7 +82,7 @@ function candidates(db: Database, profile: Profile, o: Origin): Candidate[] {
   return out.sort((a, b) => (b.claim.at ?? 0) - (a.claim.at ?? 0)).slice(0, MAX_CLAIMS);
 }
 
-const norm = (t: string) => t.trim().replace(/\s+/g, ' ').toLowerCase();
+export const norm = (t: string) => t.trim().replace(/\s+/g, ' ').toLowerCase();
 
 // Saves each update as a proposed claim that replaces the old one, unless the same text already replaces it.
 function saveUpdates(db: Database, profile: Profile, o: Origin, found: Candidate[], updates: Update[], now = Date.now()) {

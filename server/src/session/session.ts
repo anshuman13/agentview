@@ -29,6 +29,7 @@ export class AgentSession implements AgentHost {
 
   id = randomUUID();
   title = '';
+  onIdle: (() => void) | null = null;
   created = Date.now();
   state: ServerState;
   private listeners = new Set<(m: ServerMessage) => void>();
@@ -820,6 +821,7 @@ export class AgentSession implements AgentHost {
     this.lastResult = '';
     this.lastError = false;
     this.turnCost = 0;
+    if (idle && !this.state.session.running && !this.state.pending.length) this.onIdle?.();
   }
 
   private cycleRound(before: LoopState, after: LoopState) {

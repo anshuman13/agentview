@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { applyHubChanges, assistantRoute, type HubRow } from './assistant.js';
+import { applyHubChanges, assistantRoute, learnEvents, type HubRow } from './assistant.js';
 
 const change = (id: string, deleted = false) => ({ table: 'items', id, profile: 'work' as const, deleted, updated_at: 1, fields: { title: id } });
 
@@ -68,5 +68,15 @@ describe('assistantRoute', () => {
     expect(unknown.status).toBe(404);
     expect(wrongMethod.status).toBe(404);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('learnEvents', () => {
+  it('keeps the last 60 user and assistant messages, each cut to 2000 characters', () => {
+    const events = Array.from({ length: 100 }, (_, i) => ({ id: `e${i}`, kind: i % 3 === 0 ? ('tool_use' as const) : ('user' as const), text: 'x'.repeat(3000), at: i, name: 'Bash', input: {}, summary: '' }));
+    const out = learnEvents(events as never);
+    expect(out).toHaveLength(60);
+    expect(out.every((e) => e.kind === 'user' && e.text.length === 2000)).toBe(true);
+    expect(out.at(-1)?.id).toBe('e98');
   });
 });

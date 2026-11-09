@@ -59,7 +59,7 @@ export type Brief = Common & { kind: string | null; text: string | null; rows: s
 export type Tables = { pages: Page; facts: Fact; meetings: Meeting; actions: Action; jobs: Job; runs: Run; chats: Chat; briefs: Brief };
 export type Table = keyof Tables;
 
-export type Source = { kind: 'meeting' | 'slack' | 'linear' | 'pr' | 'doc'; label: string; url?: string };
+export type Source = { kind: 'meeting' | 'slack' | 'linear' | 'pr' | 'doc' | 'chat'; label: string; url?: string };
 export type Contest = { by: string; at: number; note: string };
 
 const json = <T,>(s: string | null, fallback: T): T => {

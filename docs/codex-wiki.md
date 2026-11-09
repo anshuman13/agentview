@@ -212,6 +212,12 @@ the channel, the permalink and the time), kept once per permalink (a re-worded d
 meeting title, in the same queue and limits as meetings. Its proposals have a Slack source with the permalink and
 `added_by` `slack:<id>`, and the review card says "From #channel".
 
+### Learning from chats
+
+When a chat stays idle for 5 minutes (nothing running or pending) and has a message of yours that is not a loop or goal prompt and is newer than the last post, the server posts it once to `POST /wiki/learn` on the hub: the chat id, its title, the profile and its last 60 user and assistant messages (2000 characters each, no tool calls). A hub error is logged and the chat is unaffected. The hub keeps a cursor in meta key `learn:<profile>:<chat id>` (the `at` of the newest message read) and reads only messages after it; with no user message left it does not call Claude. The cursor moves only after a run that finished, so a failed run is retried at the next idle. At the usage limit the answer is `{ skipped: 'limit' }`, and a post for a chat still being read gets `{ skipped: 'running' }`.
+
+One Haiku run (job id `learn`) saves at most 3 preferences or corrections you stated, with the profile's memory claims as "already known". Each is a proposed Memory claim: `added_by` `claude:<chat id>`, one `chat` source with the chat title, id `learn:<hash of the text>`. A claim equal to any non-deleted claim of the profile in any state, or matching a secret pattern, is skipped. The To review card says "From chat <title>" ("Untitled" when empty) and the Claude chip links the chat; after approval the Memory row shows a "Chat" chip with the title as tooltip.
+
 ### Steps
 
 - [x] 15. Columns `state`, `replaces`, `added_by` and pages `state`; client types; proposed and rejected rows hidden from pages, feed and search
