@@ -156,25 +156,10 @@ export function searchTranscripts(db: Database, query: string, profile?: Profile
 
 const formatLines = (instructions: string) => (instructions.trim() ? [`Write the summary to this brief: ${instructions.trim().slice(0, 1000)}`] : []);
 
-// Asks Claude to read the transcript in the Gemini doc attached to each meeting's event and saves what it finds.
-async function readTranscripts(db: Database, profile: Profile, meetings: Pending[], now: number, instructions = '') {
-  const found: MeetingNotes[] = [];
-  const save = tool('save_meeting_notes', 'Save the summary and my actions for one meeting.', Notes.shape, async (a) => {
-    found.push(a);
-    return { content: [{ type: 'text', text: 'saved' }] };
-  });
-  const dir = configDir(ACCOUNT_OF[profile]);
-  const root = dir ?? path.join(os.homedir(), '.claude');
-  const docs = docReader(root);
-  const saved = tool('read_saved_output', 'Read a tool output that was too large and was saved to a file, 30000 characters at a time.', { path: z.string(), offset: z.number().int().min(0).optional() }, async (a) => {
-    try {
-      return { content: [{ type: 'text', text: readSaved(root, a.path, a.offset) }] };
-    } catch (err) {
-      return { content: [{ type: 'text', text: errText(err) }], isError: true };
-    }
-  });
+// What each ended meeting asks of the reader, with the actions already recorded for it.
+function transcriptPrompt(db: Database, profile: Profile, meetings: Pending[], instructions: string) {
   const known = db.prepare("SELECT title, status FROM items WHERE profile = ? AND meeting_id = ? AND deleted = 0");
-  const prompt = [
+  return [
     'These meetings on my primary Google Calendar have ended:',
     ...meetings.flatMap((m) => {
       const old = known.all(profile, m.id) as { title: string; status: string }[];
@@ -200,6 +185,29 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     'Say things directly and briefly. Do not use the em dash character.',
     'Skip meetings without a Gemini notes doc. Do not do anything else.',
   ].join('\n');
+}
+
+const readSavedTool = (root: string) =>
+  tool('read_saved_output', 'Read a tool output that was too large and was saved to a file, 30000 characters at a time.', { path: z.string(), offset: z.number().int().min(0).optional() }, async (a) => {
+    try {
+      return { content: [{ type: 'text' as const, text: readSaved(root, a.path, a.offset) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: errText(err) }], isError: true };
+    }
+  });
+
+// Asks Claude to read the transcript in the Gemini doc attached to each meeting's event and saves what it finds.
+async function readTranscripts(db: Database, profile: Profile, meetings: Pending[], now: number, instructions = '') {
+  const found: MeetingNotes[] = [];
+  const save = tool('save_meeting_notes', 'Save the summary and my actions for one meeting.', Notes.shape, async (a) => {
+    found.push(a);
+    return { content: [{ type: 'text', text: 'saved' }] };
+  });
+  const dir = configDir(ACCOUNT_OF[profile]);
+  const root = dir ?? path.join(os.homedir(), '.claude');
+  const docs = docReader(root);
+  const saved = readSavedTool(root);
+  const prompt = transcriptPrompt(db, profile, meetings, instructions);
   let failure: string | null = null;
   for await (const m of ask(ACCOUNT_OF[profile], prompt, {
     model: 'sonnet',
