@@ -70,8 +70,10 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     let cached: Cached | undefined;
     if (meta?.layout === 2) {
       cached = { since: meta.columns === COLUMNS ? meta.since : 0, tables: {} };
-      for (const table of Object.keys(this.tables)) {
-        const rows = await cacheOp<SyncRow[]>('readonly', (s) => s.getAll(rowRange(table))).catch(() => undefined);
+      const names = Object.keys(this.tables);
+      const all = await Promise.all(names.map((table) => cacheOp<SyncRow[]>('readonly', (s) => s.getAll(rowRange(table))).catch(() => undefined)));
+      for (const [i, table] of names.entries()) {
+        const rows = all[i];
         if (rows) cached.tables[table] = rows;
         else cached.since = 0;
       }
