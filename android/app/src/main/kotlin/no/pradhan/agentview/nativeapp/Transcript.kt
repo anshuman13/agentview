@@ -143,7 +143,10 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                     days[it.id]?.let { DayDivider(it) }
                     if (it.id == newId) NewLine()
                     ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && it.id in rewinds)
-                    if (it is Item.Assistant && it.id in ends) Button("Save as note", { hub.saveReply(it.text, title, cwd) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    if (it is Item.Assistant && it.id in ends) Row {
+                        Button("Reply", { hub.draftPrompt(quoteReply(it.text)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                        Button("Save as note", { hub.saveReply(it.text, title, cwd) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    }
                 }
             }
             if (state.earlier > 0) item(key = "earlier") {

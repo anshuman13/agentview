@@ -124,3 +124,10 @@ fun userParts(text: String): List<Part> {
 
 // A prompt starting with "!" is a shell command for the chat's terminal, as on the web; null when it is a prompt or empty.
 fun shellCommand(text: String): String? = text.trim().takeIf { it.startsWith("!") }?.drop(1)?.trim()?.ifEmpty { null }
+
+// A Markdown quote of a reply to answer it in the next prompt, like Slack's reply with quote: up to 300 characters, cut at a word.
+fun quoteReply(text: String, max: Int = 300): String {
+    val t = text.trim()
+    val cut = if (t.length <= max) t else t.take(max).substringBeforeLast(' ').trimEnd() + "…"
+    return cut.lines().joinToString("\n") { "> $it".trimEnd() } + "\n\n"
+}
