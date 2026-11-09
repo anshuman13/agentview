@@ -25,6 +25,8 @@ export interface AgentDriver {
   readonly provider: Provider;
   readonly capabilities: Capabilities;
   readonly attached: boolean;
+  // The files the agent reads as instructions, the first being the repo's.
+  readonly instructionFiles: string[];
   readonly account: Account;
   accounts(): Account[];
   // Moves the chat to another account; it resumes there with its next prompt.

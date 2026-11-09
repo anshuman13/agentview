@@ -118,6 +118,8 @@ export type SessionInfo = {
   usage?: PlanUsage | null;
   provider?: Provider;
   capabilities?: Capabilities;
+  // The files the agent reads as instructions, the first being the repo's.
+  instructionFiles?: string[];
   // Names of the manual prompt hooks for this chat's repo.
   hooks?: string[];
 };

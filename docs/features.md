@@ -239,8 +239,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Phone Settings has Notification types under Notifications: it opens Android's page for the app, where Approvals, Finished
   chats and Failed chats are separate channels to turn off or give their own sound
 - "Memory" in the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder
+  (a Codex chat lists the repo's AGENTS.md, or CLAUDE.md when there is none, and ~/.codex/AGENTS.md)
   (name, description, where it comes from); a tap shows the file (like Windsurf's memories panel), from /api/memory.
-  The web has the same list under Memory in the chat settings menu. Only the repo CLAUDE.md can be changed: its file view
+  The web has the same list under Memory in the chat settings menu. Only the repo instruction file (the first in the chat's `instructionFiles`) can be changed: its file view
   has Edit (the web opens it in the editor tab with the pencil on; the phone shows a field with Save), and the list ends with
   an Add a rule field whose Enter appends `- <text>` to it (created if missing) and shows Rule added with Undo; a failed write
   says "Could not save the rule. Your text is still here." Account and memory files stay read-only
@@ -334,8 +335,10 @@ Codex's approval policy and sandbox: Default asks before leaving the workspace s
 Don't ask only read. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes
 (shown as edits with diffs) and MCP calls appear as steps. The usage bar shows the plan's 5-hour and weekly windows;
 there is no cost. No rewind, Team or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
-transcript, and are kept in `~/.agentview/codex-chats.json`. Not yet for Codex: AgentView's own tools (status, wiki,
-data, chat search), `/compact`, chat search and @chat mentions.
+transcript, and are kept in `~/.agentview/codex-chats.json`. Codex chats get the same AgentView tools as Claude ones
+(status, wiki, data, chat search, report findings) from a stdio MCP server the host starts for the chat, and the same
+instructions; the review buttons send a prompt that ends in report findings, and a plan change reaches the agent
+mid-turn. Not yet for Codex: `/compact`, chat search and @chat mentions.
 
 ## Workspace
 

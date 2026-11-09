@@ -9,6 +9,7 @@ import { TaskTracker } from './taskTracker.js';
 import { Rewinds } from './rewinds.js';
 import { Messages } from './messages.js';
 import { SystemMessages } from './systemMessages.js';
+import { claudeInstructionFiles } from './memory.js';
 import { TEAM, agentOptions, userMessage } from './options.js';
 import { mcpFrom } from './mcp.js';
 import { loadOpenRouter, openRouterModels, openRouterValue } from './openrouter.js';
@@ -69,6 +70,10 @@ export class ClaudeDriver implements AgentDriver {
   // On OpenRouter the models, effort and the Opus advisor are not Anthropic's, so they are left out.
   get capabilities(): Capabilities {
     return { rewind: true, mcp: true, effort: !this.openrouter, team: !this.openrouter, stopTask: true };
+  }
+
+  get instructionFiles() {
+    return claudeInstructionFiles(this.cwd);
   }
 
   get provider(): Provider {

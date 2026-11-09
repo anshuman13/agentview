@@ -6,6 +6,7 @@ import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '.
 import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, type Ask } from './approvals.js';
 import { NOT_SIGNED_IN } from './binary.js';
 import { historyEvents } from './events.js';
+import { codexInstructionFiles } from './instructions.js';
 import { threadParams } from './options.js';
 import type { ApprovalMethod, CodexModel, ElicitationParams, McpServerStatus, PermissionProfile, RateLimits, Thread, UserInput, UserInputQuestion } from './protocol.js';
 import { CodexRpc } from './rpc.js';
@@ -33,6 +34,7 @@ export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
   readonly capabilities: Capabilities = { rewind: false, mcp: true, effort: true, team: false, stopTask: false };
   readonly account: Account = 'main';
+  readonly instructionFiles: string[];
 
   private rpc: CodexRpc | null = null;
   private ready: Promise<void> | null = null;
@@ -48,6 +50,7 @@ export class CodexDriver implements AgentDriver {
 
   constructor(private host: AgentHost, resume?: string, private fork = false) {
     this.threadId = resume;
+    this.instructionFiles = codexInstructionFiles(host.cwd);
     this.titled = Boolean(resume);
     this.stream = new CodexStream(host);
   }

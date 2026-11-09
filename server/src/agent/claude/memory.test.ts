@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { chatMemory } from './memory.js';
+import { chatMemory, claudeInstructionFiles } from './memory.js';
 
 const root = mkdtempSync(path.join(os.tmpdir(), 'agentview-memory-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -26,5 +26,9 @@ describe('chatMemory', () => {
       ['MEMORY.md', '', '- [Git](git.md)'],
       ['git-workflow', 'push after rebase', 'Always rebase.'],
     ]);
+  });
+
+  it('claudeInstructionFiles lists the repo file first, then each account once', () => {
+    expect(claudeInstructionFiles('/r', ['/a', '/b', '/a', undefined])).toEqual(['/r/CLAUDE.md', '/a/CLAUDE.md', '/b/CLAUDE.md']);
   });
 });

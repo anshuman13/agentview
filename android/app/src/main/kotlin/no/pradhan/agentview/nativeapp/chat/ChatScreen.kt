@@ -256,7 +256,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, view: Ch
     if (panels.images) ImagesSheet(hub, live.id, view.images, cwd) { panels.images = false }
     if (panels.servers) DevServersSheet(hub) { panels.servers = false }
     if (panels.todos) TodosSheet(hub, cwd) { panels.todos = false }
-    if (panels.memory) MemorySheet(hub, cwd) { panels.memory = false }
+    if (panels.memory) MemorySheet(hub, cwd, session?.instructionFiles.orEmpty()) { panels.memory = false }
     if (panels.hooks) HooksSheet(hub, session?.hooks.orEmpty()) { panels.hooks = false }
     if (panels.remind) Sheet(onDismiss = { panels.remind = false }, title = "Remind me", padded = false, full = false) {
         val choices = remember { remindChoices(System.currentTimeMillis()) }

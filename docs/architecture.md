@@ -36,7 +36,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 
 | Folder | Contents |
 | --- | --- |
-| `agent/` | `AgentDriver` interface (`types.ts`), the provider registry (`registry.ts`: driver factory and limit check per provider, and the provider each chat last ran on), the Claude driver (`claude/`, also OpenRouter through the SDK's base URL): SDK query, message handling, history, MCP, the `agentview` wiki and data tools, and the Codex driver (`codex/`): JSON-RPC to `codex app-server`, event mapping, approvals, plan usage |
+| `agent/` | `AgentDriver` interface (`types.ts`), the provider registry (`registry.ts`: driver factory and limit check per provider, and the provider each chat last ran on), the Claude driver (`claude/`, also OpenRouter through the SDK's base URL): SDK query, message handling, history, MCP, and the Codex driver (`codex/`): JSON-RPC to `codex app-server`, event mapping, approvals, plan usage. The `agentview` tools (status, wiki, data, chat search, report findings) are one registry in `tools/`, served in process to Claude and over stdio to Codex |
 | `session/` | Provider-neutral chat session: send queue, turns, `/loop` and `/goal` (`repeat.ts`), build cycle (`loop.ts`), approvals, findings, pull request parsing |
 | `host/` | Agent host process, socket protocol and the API server's client for it |
 | `http/` | Access control, request bodies, SSE ring buffer, static serving, Mac discovery |

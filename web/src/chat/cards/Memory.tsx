@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { appendRule } from '../../../../shared/steering';
-import { setUi } from '../../app/store';
+import { setUi, useStore } from '../../app/store';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
@@ -13,34 +13,35 @@ type MemoryFile = { path: string; name: string; description: string; text: strin
 
 // Where a memory file comes from; android MemoryUi.kt memoryWhere says the same.
 export function memoryWhere(f: Pick<MemoryFile, 'path'>, cwd: string) {
-  if (f.path === `${cwd}/CLAUDE.md`) return 'Repo instructions';
-  const account = f.path.split('/').filter((p) => p.startsWith('.claude')).pop() ?? '';
+  if (f.path.slice(0, f.path.lastIndexOf('/')) === cwd) return 'Repo instructions';
+  const account = f.path.split('/').filter((p) => p.startsWith('.claude') || p === '.codex').pop() ?? '';
   return f.path.includes('/memory/') ? `Memory · ${account}` : `Global instructions · ${account}`;
 }
 
-const REPO_FILE = 'CLAUDE.md';
+// Rules go to the first instruction file, the repo's, as a path in the folder; android MemoryUi.kt ruleFile says the same.
+export const ruleFile = (cwd: string, files?: string[]) => (files?.[0]?.startsWith(`${cwd}/`) ? files[0].slice(cwd.length + 1) : 'CLAUDE.md');
 
-async function readRepoFile(): Promise<string> {
-  const r = await fileRequest(REPO_FILE);
+async function readRepoFile(file: string): Promise<string> {
+  const r = await fileRequest(file);
   if (!r.ok) throw new Error(await r.text());
   return (await r.json()).content ?? '';
 }
 
-async function writeRepoFile(text: string) {
-  const r = await fileRequest(REPO_FILE, { method: 'PUT', body: text });
+async function writeRepoFile(file: string, text: string) {
+  const r = await fileRequest(file, { method: 'PUT', body: text });
   if (!r.ok) throw new Error(await r.text());
 }
 
-// Enter appends a bullet to the repo CLAUDE.md; Undo writes the earlier text back.
-function AddRule({ onSaved }: { onSaved: () => void }) {
+// Enter appends a bullet to the repo instruction file; Undo writes the earlier text back.
+function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
   const [text, setText] = useState('');
   const [note, setNote] = useState('');
   const [before, setBefore] = useState<string | null>(null);
   const add = async () => {
     if (appendRule('', text) === null) return;
     try {
-      const old = await readRepoFile();
-      await writeRepoFile(appendRule(old, text)!);
+      const old = await readRepoFile(file);
+      await writeRepoFile(file, appendRule(old, text)!);
       setText('');
       setNote('Rule added');
       setBefore(old);
@@ -52,7 +53,7 @@ function AddRule({ onSaved }: { onSaved: () => void }) {
   };
   const undo = async () => {
     try {
-      await writeRepoFile(before!);
+      await writeRepoFile(file, before!);
       setNote('Rule removed');
       onSaved();
     } catch {
@@ -68,21 +69,22 @@ function AddRule({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-// What Claude is told and remembers in this folder, like Windsurf's memories panel. Only the repo CLAUDE.md can be changed.
+// What Claude is told and remembers in this folder, like Windsurf's memories panel. Only the repo instruction file can be changed.
 export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void }) {
   const [files, setFiles] = useState<MemoryFile[] | null>(null);
   const [open, setOpen] = useState<MemoryFile | null>(null);
   const [reloads, setReloads] = useState(0);
+  const file = ruleFile(cwd, useStore((s) => s.session.instructionFiles));
   useEffect(() => {
     fetchMemory().then((l: MemoryFile[]) => setFiles(Array.isArray(l) ? l : [])).catch(() => setFiles([]));
   }, [reloads]);
   if (open) {
-    const edit = () => { setUi({ openFile: REPO_FILE, openEdit: true, follow: false }); onClose(); };
+    const edit = () => { setUi({ openFile: file, openEdit: true, follow: false }); onClose(); };
     return (
       <Sheet label={open.name} onClose={onClose}>
         <h2>{open.name}</h2>
         <div className="muted">{memoryWhere(open, cwd)}</div>
-        {open.path === `${cwd}/CLAUDE.md` && <Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button>}
+        {open.path === `${cwd}/${file}` && <Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button>}
         <Markdown text={open.text || 'Empty'} />
       </Sheet>
     );
@@ -93,7 +95,7 @@ export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void 
       {files === null && <div className="muted">Loading memory…</div>}
       {files?.length === 0 && <div className="muted">No CLAUDE.md or memory files for this folder</div>}
       {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ')} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
-      {files && <AddRule onSaved={() => setReloads((n) => n + 1)} />}
+      {files && <AddRule file={file} onSaved={() => setReloads((n) => n + 1)} />}
     </Sheet>
   );
 }

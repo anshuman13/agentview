@@ -4,11 +4,14 @@ import { providerLabel } from '../../../shared/providers.js';
 import { readJsonSync, writeJsonSync } from '../json.js';
 import { STATE_DIR, loggedInAccounts, verifyLimit } from './claude/accounts.js';
 import { claudeTranscript } from './claude/chatMentions.js';
+import { chatMemory } from './claude/memory.js';
 import { claudeDriver } from './claude/driver.js';
 import { NOT_SIGNED_IN, codexSignedIn } from './codex/binary.js';
 import { codexDriver } from './codex/driver.js';
+import { codexInstructionFiles } from './codex/instructions.js';
 import { codexTranscript } from './codex/threads.js';
 import { loadOpenRouter } from './claude/openrouter.js';
+import { readMemory, type MemoryFile } from './memory.js';
 import type { DriverFactory } from './types.js';
 
 type Entry = {
@@ -17,6 +20,8 @@ type Entry = {
   verifyLimits(): Promise<unknown>;
   // The file that holds a chat's transcript, or null when this provider has no such chat.
   transcriptPath(id: string): string | null;
+  // The instruction files the Memory list shows for a folder.
+  memory(cwd: string): Promise<MemoryFile[]>;
 };
 
 const PROVIDERS: Record<Provider, Entry> = {
@@ -24,16 +29,19 @@ const PROVIDERS: Record<Provider, Entry> = {
     driver: (cwd, resume, fork) => claudeDriver(cwd, resume, fork),
     verifyLimits: () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
     transcriptPath: claudeTranscript,
+    memory: (cwd) => chatMemory(cwd),
   },
   openrouter: {
     driver: (cwd, resume, fork) => claudeDriver(cwd, resume, fork, true),
     verifyLimits: () => Promise.resolve(),
     transcriptPath: claudeTranscript,
+    memory: (cwd) => chatMemory(cwd),
   },
   codex: {
     driver: (_cwd, resume, fork) => codexDriver(resume, fork),
     verifyLimits: () => Promise.resolve(),
     transcriptPath: codexTranscript,
+    memory: (cwd) => readMemory(codexInstructionFiles(cwd)),
   },
 };
 

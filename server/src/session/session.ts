@@ -75,6 +75,7 @@ export class AgentSession implements AgentHost {
     this.driver = driver(this);
     this.state.session.provider = this.driver.provider;
     this.state.session.capabilities = this.driver.capabilities;
+    this.state.session.instructionFiles = this.driver.instructionFiles;
     this.state.session.account = this.driver.account;
     this.state.session.accounts = this.driver.accounts();
   }

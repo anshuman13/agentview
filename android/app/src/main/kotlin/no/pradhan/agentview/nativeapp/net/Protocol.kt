@@ -198,6 +198,7 @@ data class SessionInfo(
     val review: Boolean = false,
     val provider: String? = null,
     val capabilities: Capabilities = Capabilities(),
+    val instructionFiles: List<String> = emptyList(),
 )
 
 @Serializable

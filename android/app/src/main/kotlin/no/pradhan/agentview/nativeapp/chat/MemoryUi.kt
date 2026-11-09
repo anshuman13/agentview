@@ -38,10 +38,10 @@ import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 @Serializable
 data class MemoryFile(val path: String, val name: String, val description: String = "", val text: String = "")
 
-// Where a memory file comes from: the repo, or the account folder (.claude, .claude-alt) it was read from.
+// Where a memory file comes from: the repo, or the account folder (.claude, .claude-alt, .codex) it was read from.
 fun memoryWhere(f: MemoryFile, cwd: String): String {
-    if (f.path == "$cwd/CLAUDE.md") return "Repo instructions"
-    val account = f.path.split('/').lastOrNull { it.startsWith(".claude") } ?: ""
+    if (f.path.substringBeforeLast('/') == cwd) return "Repo instructions"
+    val account = f.path.split('/').lastOrNull { it.startsWith(".claude") || it == ".codex" } ?: ""
     return if (f.path.contains("/memory/")) "Memory · $account" else "Global instructions · $account"
 }
 
@@ -53,19 +53,21 @@ fun appendRule(text: String, rule: String): String? {
     return "$head- $line\n"
 }
 
-private const val REPO_FILE = "CLAUDE.md"
+// Rules go to the first instruction file, the repo's, as a path in the folder; web Memory.tsx ruleFile says the same.
+fun ruleFile(cwd: String, files: List<String>): String = files.firstOrNull()?.takeIf { it.startsWith("$cwd/") }?.removePrefix("$cwd/") ?: "CLAUDE.md"
+
 private const val RULE_FAILED = "Could not save the rule. Your text is still here."
 
 @Composable
-private fun AddRule(hub: Hub, onSaved: () -> Unit) {
+private fun AddRule(hub: Hub, file: String, onSaved: () -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val save = { before: String ->
         appendRule(before, text)?.let { next ->
-            hub.saveFile(REPO_FILE, next, RULE_FAILED) {
+            hub.saveFile(file, next, RULE_FAILED) {
                 if (it) {
                     text = ""
-                    hub.undoable.tryEmit(Undoable("Rule added") { hub.saveFile(REPO_FILE, before, "Could not undo the rule") { onSaved() } })
+                    hub.undoable.tryEmit(Undoable("Rule added") { hub.saveFile(file, before, "Could not undo the rule") { onSaved() } })
                     onSaved()
                 }
             }
@@ -73,16 +75,17 @@ private fun AddRule(hub: Hub, onSaved: () -> Unit) {
     }
     val add = {
         if (appendRule("", text) != null) scope.launch {
-            runCatching { parseFile(hub.read("/api/file?path=$REPO_FILE")).content }.onSuccess { save(it) }.onFailure { hub.notice.value = RULE_FAILED }
+            runCatching { parseFile(hub.read("/api/file?path=$file")).content }.onSuccess { save(it) }.onFailure { hub.notice.value = RULE_FAILED }
         }
     }
     TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), singleLine = true, placeholder = "Add a rule",
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { add() }))
 }
 
-// What Claude is told and remembers in this folder, like Windsurf's memories panel. Only the repo CLAUDE.md can be changed.
+// What Claude is told and remembers in this folder, like Windsurf's memories panel. Only the repo instruction file can be changed.
 @Composable
-fun MemorySheet(hub: Hub, cwd: String, onDismiss: () -> Unit) {
+fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss: () -> Unit) {
+    val file = ruleFile(cwd, instructionFiles)
     val (files, reload) = rememberLoad(cwd) { protocolJson.decodeFromString<List<MemoryFile>>(hub.read("/api/memory")) }
     var open by remember { mutableStateOf<MemoryFile?>(null) }
     open?.let { f ->
@@ -92,11 +95,11 @@ fun MemorySheet(hub: Hub, cwd: String, onDismiss: () -> Unit) {
             if (text != null) {
                 TextField(text, { draft = it }, minLines = 6)
                 Row(Modifier.padding(top = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-                    Button("Save", { hub.saveFile(REPO_FILE, text) { if (it) { open = f.copy(text = text); reload() } } }, size = ButtonSize.Sm)
+                    Button("Save", { hub.saveFile(file, text) { if (it) { open = f.copy(text = text); reload() } } }, size = ButtonSize.Sm)
                     Button("Cancel", { draft = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
             } else {
-                if (f.path == "$cwd/CLAUDE.md") Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (f.path == "$cwd/$file") Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 Markdown(f.text.ifBlank { "Empty" })
             }
         }
@@ -111,6 +114,6 @@ fun MemorySheet(hub: Hub, cwd: String, onDismiss: () -> Unit) {
                 ListRow(f.name, listOf(f.description, memoryWhere(f, cwd)).filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
             }
         }
-        if (list != null) AddRule(hub, reload)
+        if (list != null) AddRule(hub, file, reload)
     }
 }

@@ -2,7 +2,7 @@ import { closeTerminal, createTerminal, listTerminals } from '../workspace/termi
 import { openInChrome } from '../chrome/chrome.js';
 import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from '../agent/claude/mcp.js';
 import type { McpServerDef } from '../integrations/mcpClient.js';
-import { chatMemory } from '../agent/claude/memory.js';
+import { provider } from '../agent/registry.js';
 import { listDir, listFiles, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
 import { github } from '../integrations/github.js';
 import { attention, dismissAttention, refreshAttention } from '../integrations/attention.js';
@@ -47,7 +47,7 @@ export function chatSessionRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> 
       return d.host.req({ op: 'state', id: chat.id, ...(!Number.isNaN(limit) && { limit }) });
     }),
     'ANY /api/attention': entry(({ url, chat }) => (url.searchParams.has('fresh') ? refreshAttention(d.attentionSources([chat.cwd])) : attention())),
-    'ANY /api/memory': entry(({ chat }) => chatMemory(chat.cwd)),
+    'ANY /api/memory': entry(({ chat }) => provider(chat.provider ?? 'claude').memory(chat.cwd)),
     'ANY /api/findings': entry(({ url, chat }) => getFindings(chat.cwd, url.searchParams.get('target') ?? 'local')),
     'POST /api/findings/dismiss': entry(({ body, chat }) => dismissFinding(chat.cwd, String(body.target ?? 'local'), String(body.key ?? '')), true),
     'POST /api/attention/dismiss': entry(({ body }) => dismissAttention(String(body.id ?? '')), true),
