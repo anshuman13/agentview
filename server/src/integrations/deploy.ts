@@ -6,9 +6,10 @@ import { promisify } from 'node:util';
 import { parseObject } from '../http/body.js';
 import type { DeployEnv, DeployJob, DeployRecord, DeployStatus } from '../../../shared/protocol.js';
 import { inside } from '../../../shared/util.js';
+import { deployUrl } from '../settings.js';
+import { ROOTS } from '../workspace/files.js';
 
 const exec = promisify(execFile);
-const VELODROME = 'https://velodrome.prod.nube.tech';
 const FINAL = ['success', 'failure', 'error', 'inactive'];
 
 type App = { project: string; dir: string; envs: { name: string; defaultBranchOnly: boolean }[] };
@@ -77,11 +78,11 @@ async function context(cwd: string, want: string | null) {
   if (!app.envs.length) throw new Error(`${app.project} lists no environments in .deploy/app.yaml`);
   const remote = await run('git', ['remote', 'get-url', 'origin'], root).catch(() => '');
   const repo = remote.match(/github\.com[:/]([^/]+\/[^/]+?)(\.git)?$/)?.[1];
-  if (!repo) throw new Error('The repo has no GitHub origin remote, which Velodrome deploys from');
+  if (!repo) throw new Error('The repo has no GitHub origin remote, which the deploy service deploys from');
   return { apps, app, repo };
 }
 
-const deploymentUrl = (repo: string, project: string, id: number) => `${VELODROME}/repo/${repo.split('/')[1]}/project/${project}/deployments/${id}`;
+const deploymentUrl = (repo: string, project: string, id: number) => `${deployUrl()}/repo/${repo.split('/')[1]}/project/${project}/deployments/${id}`;
 
 const record = (n: Node, repo: string, project: string): DeployRecord => ({
   id: n.databaseId,
@@ -121,14 +122,29 @@ async function deployStatus(cwd: string, want: string | null): Promise<DeploySta
     apps: apps.map((a) => a.project),
     app: app.project,
     repo,
-    velodrome: `${VELODROME}/repo/${repo.split('/')[1]}/project/${app.project}`,
+    velodrome: `${deployUrl()}/repo/${repo.split('/')[1]}/project/${app.project}`,
     head: { sha, branch },
     envs: app.envs.map((e, i) => summarize(e.name, app.project, e.defaultBranchOnly, nodes[i].map((n) => record(n, repo, app.project)))),
   };
 }
 
+// The deploy service's base URL, read from the link on the latest deployment of the first repo that has an app.
+export async function detectDeployUrl() {
+  const apps = (await Promise.all(ROOTS.map(findApps))).flat();
+  for (const app of apps.slice(0, 5)) {
+    try {
+      const { repo } = await context(app.dir, app.project);
+      const [nodes] = await history(app.dir, repo, [app.envs[0].name]);
+      const base = nodes.map((n) => n.latestStatus?.logUrl?.match(/^(https?:\/\/[^/]+)\/repo\//)?.[1]).find(Boolean);
+      if (base) return base;
+    } catch {}
+  }
+  return '';
+}
+
 // Status for the background inbox: null when the repo has no Velo app, so the poll skips it quietly.
 export async function deployWatch(cwd: string) {
+  if (!deployUrl()) return null;
   const apps = await findApps(await run('git', ['rev-parse', '--show-toplevel'], cwd).catch(() => cwd)).catch(() => []);
   return apps.length ? deployStatus(cwd, null) : null;
 }
@@ -153,7 +169,7 @@ export async function follow(cwd: string, repo: string, id: number, job: DeployJ
         if (FINAL.includes(s.state)) Object.assign(job, { done: true, ok: s.state === 'success' });
       }
     }
-    if (!job.done) Object.assign(job, { done: true, lines: [...job.lines, 'Stopped following after an hour, see Velodrome'] });
+    if (!job.done) Object.assign(job, { done: true, lines: [...job.lines, 'Stopped following after an hour, see the deploy service'] });
   } finally {
     setTimeout(() => jobs.delete(job.id), 60 * 60_000);
   }
@@ -165,7 +181,7 @@ async function start(cwd: string, repo: string, project: string, env: string, sh
   if (!created.id) throw new Error(created.message ?? 'GitHub did not create the deployment');
   const job: DeployJob = {
     id: randomUUID(),
-    lines: [`Created deployment ${created.id}: ${created.sha.slice(0, 8)} (${label}) to ${env}`, 'Waiting for Velodrome...'],
+    lines: [`Created deployment ${created.id}: ${created.sha.slice(0, 8)} (${label}) to ${env}`, 'Waiting for the deploy service...'],
     done: false,
     ok: false,
     url: deploymentUrl(repo, project, created.id),

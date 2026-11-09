@@ -73,9 +73,12 @@ export function appendTo(ev: ChatEvent, offset: number, text: string): ChatEvent
 
 // The Claude login a chat runs on: the main one, or a second one to fall back to.
 export type Account = 'main' | 'alt' | 'alt2';
-export const ACCOUNT_LABEL: Record<Account, string> = { main: 'Personal', alt: 'Work', alt2: 'Work Enterprise' };
+// The labels are replaced at startup by the ones in ~/.agentview/settings.json.
+export const ACCOUNT_LABEL: Record<Account, string> = { main: 'Account 1', alt: 'Account 2', alt2: 'Account 3' };
 // Accounts only picked by hand, never for new chats or after a usage limit.
-export const ACCOUNT_NOTE: Partial<Record<Account, string>> = { alt2: 'Documents only, not for coding' };
+export const ACCOUNT_NOTE: Partial<Record<Account, string>> = { alt2: 'Only picked by hand' };
+// What the clients read from /api/settings: the features that are on and the account labels.
+export type PublicSettings = { deploy: boolean; accountLabels: Record<Account, string> };
 
 // Share of the Claude plan's 5-hour and weekly limits used, from the CLI's usage API.
 export type UsageWindow = { pct: number; resetsAt: number | null };

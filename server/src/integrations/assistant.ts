@@ -3,8 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { errText } from '../../../shared/util.js';
+import { loadSettings } from '../settings.js';
 
-export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir(), '.agentview/assistant/assistant.db')) ? 'http://localhost:7790' : 'http://macmini.netbird.cloud:7790');
+export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir(), '.agentview/assistant/assistant.db')) ? 'http://localhost:7790' : loadSettings().hubUrl || 'http://localhost:7790');
 
 type Param = { name: string; mode: 'always'; fallback: string } | { name: string; mode: 'flag' | 'positive' };
 type Route = { timeout: number; body?: boolean; params?: Param[] | 'all' };

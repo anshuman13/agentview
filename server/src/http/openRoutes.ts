@@ -11,6 +11,7 @@ import { seenRoute } from '../agent/claude/seen.js';
 import { assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
+import { publicSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
 import { readBody, savePaste } from './body.js';
@@ -93,6 +94,7 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return setMcpGroup(service, String(body.group ?? ''));
     }, true),
     'ANY /api/mcp/groups': entry(() => mcpGroups()),
+    'ANY /api/settings': entry(() => publicSettings()),
     'POST /api/restart': entry(({ url }) => {
       d.restart(url.searchParams.has('now'), url.searchParams.has('full'));
       return { ok: true };

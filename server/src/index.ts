@@ -18,6 +18,8 @@ import { serveWeb } from './http/web.js';
 import { createRoutes, writers } from './http/routes.js';
 import { allowedPeer, allowedRequest, appOrigin, requester } from './http/access.js';
 import { Host } from './host/client.js';
+import { migrateSettings } from './migrateSettings.js';
+import { applyAccountLabels } from './settings.js';
 import { createPresence, isPhone } from './presence.js';
 import type { Hello } from './host/protocol.js';
 
@@ -351,3 +353,4 @@ if (PORT === 7777 && !process.env.AGENTVIEW_DEV_WEB) {
 }
 void ntfyTopic().then((t) => console.log(t === 'off' ? 'push off' : 'push on, the ntfy topic is in ~/.agentview/observe.json'));
 void connectChrome();
+void migrateSettings().then(applyAccountLabels);

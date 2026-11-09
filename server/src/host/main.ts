@@ -15,6 +15,7 @@ import { restoreChats } from './restoreChats.js';
 import { PORT, PROJECT, SOCK, apis, bySession, get, hub, live, viewers } from './state.js';
 import { lines, type Hello, type HostRequest } from './protocol.js';
 import { readJson } from '../json.js';
+import { applyAccountLabels } from '../settings.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,6 +34,7 @@ const served = () =>
 // Another host already serving this port's socket keeps it; this one leaves.
 if (await served()) process.exit(0);
 
+applyAccountLabels();
 sweepIdle();
 process.on('SIGTERM', saveAndExit);
 process.on('SIGINT', saveAndExit);
