@@ -33,7 +33,7 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
       title="Chat settings"
       items={[
         { value: 'mode', label: 'Permission mode', detail: modeInfo.label },
-        { value: 'review', label: 'Review changes', detail: review ? 'On, after each turn' : 'Off' },
+        { value: 'review', label: 'Review each turn', detail: review ? 'On' : 'Off' },
         { value: 'model', label: 'Model', detail: modelName },
         { value: 'effort', label: 'Effort', detail: effortName },
         ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),

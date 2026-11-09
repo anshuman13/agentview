@@ -251,6 +251,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.File -> FileCard(it, cwd)
         is Item.Agent -> AgentRow(hub, it, chat, cwd, onOpenAgent)
         is Item.Blocked -> BlockedCard(it.ev, hub)
+        is Item.Review -> ReviewCard(it.ev, hub)
     }
 }
 

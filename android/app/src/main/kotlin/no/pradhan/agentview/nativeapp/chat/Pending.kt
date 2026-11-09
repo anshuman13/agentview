@@ -39,7 +39,11 @@ import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.net.allowBlocked
 import no.pradhan.agentview.nativeapp.net.answer
 import no.pradhan.agentview.nativeapp.net.permission
+import no.pradhan.agentview.nativeapp.net.review
+import no.pradhan.agentview.nativeapp.net.ReviewFile
+import no.pradhan.agentview.nativeapp.net.ReviewHunk
 import no.pradhan.agentview.nativeapp.net.submit
+import no.pradhan.agentview.nativeapp.ops.plural
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -286,5 +290,52 @@ fun BlockedCard(ev: ChatEvent, hub: Hub) {
         if (ev.reason.isNotEmpty()) Desc(ev.reason)
         if (ev.allowed) Text("Allowed for this chat", style = Type.footnote, color = av.fgMuted)
         else Primary("Allow and retry") { hub.allowBlocked(ev.id) }
+    }
+}
+
+private val REVIEW_STATE = mapOf("kept" to "Kept", "undone" to "Undone")
+
+@Composable
+private fun ReviewActions(keep: String, undo: String?, state: String?, onKeep: () -> Unit, onUndo: () -> Unit) {
+    if (state != null) Text(REVIEW_STATE[state] ?: state, style = Type.footnote, color = av.fgMuted)
+    else Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        Button(keep, onKeep, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
+        if (undo != null) Button(undo, onUndo, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
+    }
+}
+
+@Composable
+private fun ReviewHunkRow(h: ReviewHunk, id: String, file: String, k: Int, hub: Hub) {
+    Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        Text("Line ${h.line}", style = Type.footnote, color = av.fgMuted)
+        DiffView(h.del.map { DiffLine('-', it) } + h.add.map { DiffLine('+', it) })
+        ReviewActions("Keep", "Undo", h.state, { hub.review(id, "keep", file, k) }, { hub.review(id, "undo", file, k) })
+    }
+}
+
+@Composable
+private fun ReviewFileRow(f: ReviewFile, id: String, hub: Hub) {
+    val undecided = if (f.hunks.isEmpty()) f.state == null else f.hunks.any { it.state == null }
+    Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        Text(f.path, style = Mono, color = av.fg)
+        if (f.created || f.binary) Text(if (f.created) "New file" else "Binary file", style = Type.footnote, color = av.fgMuted)
+        if (undecided) ReviewActions("Keep file", if (f.binary) null else "Undo file", null, { hub.review(id, "keep", f.path) }, { hub.review(id, "undo", f.path) })
+        else f.state?.let { Text(REVIEW_STATE[it] ?: it, style = Type.footnote, color = av.fgMuted) }
+        f.hunks.forEachIndexed { k, h -> ReviewHunkRow(h, id, f.path, k, hub) }
+    }
+}
+
+@Composable
+fun ReviewCard(ev: ChatEvent, hub: Hub) {
+    val count = ev.files.sumOf { maxOf(it.hunks.size, 1) }
+    Panel {
+        if (ev.result.isNotEmpty()) {
+            Title("Reviewed ${plural(count, "change")}")
+            Desc(ev.result)
+        } else {
+            Title("Review ${plural(count, "change")}")
+            ev.files.forEach { ReviewFileRow(it, ev.id, hub) }
+            Primary("Keep all") { hub.review(ev.id, "keep") }
+        }
     }
 }

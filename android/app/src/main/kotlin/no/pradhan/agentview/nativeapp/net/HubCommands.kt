@@ -23,13 +23,14 @@ var Hub.lastModel: String?
     get() = prefs.getString("lastModel", null)
     set(v) { prefs.edit().putString("lastModel", v).apply() }
 
-fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null) {
+fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, review: Boolean = false) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
     if (model != null) lastModel = model
     viewModelScope.launch {
         val id = switchTo(newSessionCmd(cwd = cwd, model = model ?: lastModel?.takeIf { fork == null }, fork = fork))
         if (id == null) notice.value = "The chat did not open" else {
             if (mode != null) post(setModeCmd(mode), id)
+            if (review) post(setReviewCmd(true), id)
             if (draft != null) setDraft(id, draft)
             link.value = DeepLink(chat = id)
         }
@@ -132,6 +133,10 @@ fun Hub.setAccount(account: String) = post(setAccountCmd(account), store.wanted)
 fun Hub.refreshUsage() = post(usageCmd(), store.wanted)
 
 fun Hub.setMode(mode: String) = post(setModeCmd(mode), store.wanted)
+
+fun Hub.setReview(on: Boolean) = post(setReviewCmd(on), store.wanted)
+
+fun Hub.review(id: String, action: String, file: String? = null, hunk: Int? = null) = post(reviewCmd(id, action, file, hunk), store.wanted)
 
 internal suspend fun Hub.send(body: String, chat: String): String? = withContext(Dispatchers.IO) {
     val url = "${origin.value}/api/cmd?cid=$cid&client=phone&chat=${enc(chat)}"

@@ -60,7 +60,18 @@ data class ChatEvent(
     val usage: AgentUsage? = null,
     val background: Boolean = false,
     val group: String? = null,
+    val files: List<ReviewFile> = emptyList(),
+    val result: String = "",
 )
+
+// A file of a review event: hunks are the runs of changed lines; a created or binary file has none and is decided whole. state is kept or undone once decided.
+@Immutable
+@Serializable
+data class ReviewFile(val path: String, val hunks: List<ReviewHunk> = emptyList(), val created: Boolean = false, val binary: Boolean = false, val state: String? = null)
+
+@Immutable
+@Serializable
+data class ReviewHunk(val line: Int = 0, val del: List<String> = emptyList(), val add: List<String> = emptyList(), val state: String? = null)
 
 @Serializable
 data class AgentUsage(val tokens: Long = 0, val toolUses: Int = 0, val durationMs: Long = 0)
@@ -169,6 +180,7 @@ data class SessionInfo(
     val usage: PlanUsage? = null,
     val loop: LoopInfo? = null,
     val hooks: List<String> = emptyList(),
+    val review: Boolean = false,
 )
 
 @Serializable
@@ -325,6 +337,8 @@ fun setEffortCmd(effort: String) = cmd("set_effort") { put("effort", effort) }
 fun usageCmd() = cmd("usage")
 fun setAccountCmd(account: String) = cmd("set_account") { put("account", account) }
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
+fun setReviewCmd(on: Boolean) = cmd("set_review") { put("on", on) }
+fun reviewCmd(id: String, action: String, file: String? = null, hunk: Int? = null) = cmd("review") { put("id", id); put("action", action); if (file != null) put("file", file); if (hunk != null) put("hunk", hunk) }
 fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork) }
 fun closeCmd(id: String) = cmd("close") { put("id", id) }
 fun openSessionCmd(sessionId: String) = cmd("open_session") { put("sessionId", sessionId) }

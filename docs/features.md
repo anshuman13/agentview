@@ -227,7 +227,15 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   shortcut
 - In the web and phone transcripts, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as
   "Explored 4 files, 2 searches"; a tap or click shows the steps again
-- On the phone, the New chat sheet has Start as: Auto (the default for new chats), Plan first, Ask first (asks before edits and risky commands) or Spec (plan mode with the spec prefix in the composer). The mode is set right after the chat opens
+- On the phone, the New chat sheet has Start as: Auto (the default for new chats), Plan first, Ask first (asks before edits and risky commands), Spec (plan mode with the spec prefix in the composer) or Supervised (Auto plus Review each turn). The mode is set right after the chat opens
+- Review each turn (a chat setting: the web Chat settings menu and the Chat: Toggle Review Changes palette command, the phone chat menu, or Start as Supervised) lets Claude edit freely, and after a turn that changed files adds a
+  Review N changes card with each changed file's hunks against the file as it was before the turn. Each hunk has Keep and
+  Undo, each file Keep file and Undo file, the card Keep all; once everything is decided it shows "Kept 3, undid 1".
+  The server reads a file's text in a PreToolUse hook before the first Edit, Write, MultiEdit or NotebookEdit of the turn,
+  and Undo puts the hunk back in the file's current text, so a card still works after you send a new prompt. A hunk edited
+  since says "This change was edited since; open the file to undo it". Undo file on a new file deletes it; binary and
+  files over 1 MB can only be kept. The setting and the open before-texts live in the host's memory, so a host restart
+  ends both
 - Phone Settings has Notification types under Notifications: it opens Android's page for the app, where Approvals, Finished
   chats and Failed chats are separate channels to turn off or give their own sound
 - "Memory" in the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder

@@ -34,6 +34,7 @@ import no.pradhan.agentview.nativeapp.net.forkChat
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.remindChat
 import no.pradhan.agentview.nativeapp.net.rename
+import no.pradhan.agentview.nativeapp.net.setReview
 import no.pradhan.agentview.nativeapp.net.submit
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
@@ -217,6 +218,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: Chat
     val sessionId = live.sessionId ?: session?.sessionId
     MoreButton { close ->
         MenuItem("Review changes", "source-control", { close(); onReview() }, enabled = canReview)
+        MenuItem("Review each turn", "diff", { close(); hub.setReview(session?.review != true) }, checked = session?.review == true)
         MenuItem("Images", "file-media", { close(); panels.images = true }, enabled = view.images.isNotEmpty())
         MenuItem("Dev servers", "globe", { close(); panels.servers = true })
         MenuItem("TODOs", "checklist", { close(); panels.todos = true })

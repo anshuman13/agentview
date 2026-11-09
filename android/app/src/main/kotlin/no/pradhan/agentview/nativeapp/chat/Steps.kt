@@ -21,6 +21,7 @@ sealed interface Item {
     @Immutable data class File(override val id: String, val path: String, val add: Int, val del: Int, val uses: List<ChatEvent>, val error: String?, val denied: Boolean) : Item
     @Immutable data class Agent(override val id: String, val use: ChatEvent, val result: ChatEvent?, val running: Boolean, val steps: List<Item>) : Item
     @Immutable data class Blocked(override val id: String, val ev: ChatEvent) : Item
+    @Immutable data class Review(override val id: String, val ev: ChatEvent) : Item
 }
 
 const val CMD_PREVIEW = 160
@@ -153,6 +154,7 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
             e.kind == "assistant" -> stripRound(e.text).let { if (it.isNotBlank()) items += Item.Assistant(e.id, it, e.streaming) }
             e.kind == "system" -> items += Item.System(e.id, e.text, e.error)
             e.kind == "blocked" -> items += Item.Blocked(e.id, e)
+            e.kind == "review" -> items += Item.Review(e.id, e)
             e.kind == "plan" -> items += Item.System(e.id, if (e.next.isNotEmpty()) "You changed the next steps (${e.next.size})" else "You cleared the next steps")
             e.kind == "tool_use" && !e.name.endsWith("__set_status") -> {
                 val result = results[e.id]
