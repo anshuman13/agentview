@@ -24,4 +24,4 @@ export const startTaskPrompt = (t: SpecTask, path: string) => `Do task ${t.n} in
 
 export const specPrompt = (request: string) => `Write a spec for the request below in .claude/specs/<slug>.md with three sections: Requirements (numbered, each with testable acceptance criteria), Design, and Tasks (\`- [ ]\` lines, each one small step). Do not change any code; stop for review when the spec is written.\n\nRequest: ${request}`;
 
-export const runAllPrompt =(path: string) => `/goal every task in ${path} is ticked: do them in order, tick each when done`;
+export const runAllPrompt = (path: string) => `/goal every task in ${path} is ticked: do them in order, tick each when done`;
