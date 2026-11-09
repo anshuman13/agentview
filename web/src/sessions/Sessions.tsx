@@ -629,13 +629,15 @@ function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin
   const when = c.pending ? since(c.lastActive) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : since(Math.max(c.lastActive, saved?.lastModified ?? 0));
   // Slack's sidebar draft line: an unsent composer draft replaces the meta line, except in the chat you are in.
   const draft = selected ? '' : draftLine(readDraft(c.id));
-  const meta = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
+  const main = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
     <>
       {metaLine(repo, branchOf(saved?.gitBranch, branch), when)}
       {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>#{c.pr}{pr.checks !== 'none' && <CheckIcon state={pr.checks} />}</a> : `#${c.pr}`}</>}
+      {c.todos && ` · ${c.todos.done}/${c.todos.total}`}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
   );
+  const meta = c.recap ? <>{main}<span className="chat-recap">{c.recap}</span></> : main;
   return (
     <>
       <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={meta} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />

@@ -19,11 +19,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.delay
 
@@ -93,6 +95,8 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     val (prLoad) = rememberLoad(live.id, cwd) { branchPr(parsePulls(hub.read("/api/gh/prs")), parseGitStatus(hub.read("/api/git/status")).branch) }
     var prOpen by rememberSaveable(live.id) { mutableStateOf<Int?>(null) }
     prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
+    val since = remember(live.id) { val left = hub.leftAt(live.id); if (left > 0 && live.lastActive > left) live.recap else null }
+    var sinceOpen by remember(live.id) { mutableStateOf(true) }
 
     Column(Modifier.fillMaxSize()) {
         PageHeader(
@@ -145,6 +149,10 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
             Hairline()
         }
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
+        if (since != null && sinceOpen) Row(Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+            Text("Since you left: $since", Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            IconBtn("close", "Dismiss", { sinceOpen = false })
+        }
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
             Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, Modifier.fillMaxSize(), queued.filter { it.chat == live.id })
         }
@@ -152,6 +160,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }
+        visibleChecklist(view.checklist, running)?.let { ChecklistCard(it) }
         runs.lastOrNull { it.chatId == live.id && it.state != "done" }?.let { LoopCard(hub, it, session?.loop?.phase) }
         Composer(hub, live.id, session, running, pending.isNotEmpty(), runs.lastOrNull { it.chatId == live.id && it.state != "done" })
     }

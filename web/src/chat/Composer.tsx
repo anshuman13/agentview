@@ -8,6 +8,7 @@ import { stampedNotes } from '../codex/data/meetings';
 import { showSnack } from '../codex/view';
 import { clock } from '../codex/time';
 import { LoopCard } from './LoopCard';
+import { TodoCard } from './TodoCard';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../ui/QuickPick';
 import { FileIcon } from '../workspace/FileIcon';
@@ -343,6 +344,7 @@ export function Composer() {
           }}
         />
       )}
+      <TodoCard />
       <LoopCard />
       <div
         ref={card}

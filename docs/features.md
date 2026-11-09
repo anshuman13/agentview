@@ -185,6 +185,18 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - The composer shows "No update for Ns" when nothing has arrived from the server for 30 s. The link reopens by
   itself after 50 s of silence, and a message that cannot be delivered goes back into the box with a notice
 - Questions, plan approvals and permissions show as buttons in the timeline
+- A plan approval card splits the plan into paragraphs; tapping one stages a comment on it. Keep planning with comments
+  sends one message that quotes each commented paragraph (first 80 characters, as `> ...`) followed by its comment, and
+  without comments just declines the plan
+- The latest to-do list Claude wrote (TodoWrite) shows as a card above the composer: "3 of 7" and the item in progress,
+  tap for every item with its status. It hides when there is no list, or when all items are done and the turn has ended.
+  A chat row in Sessions adds "3/7" to its meta line while the list has items left
+- A hook that blocks a tool or fails shows in the timeline in the error colour, for example "Hook blocked Bash: reason" or
+  "PostToolUse hook failed: reason". Hooks that run fine show nothing
+- Each chat row in Sessions has a recap as its last line: the ROUND summary, else the first sentence of the last reply of
+  the newest finished turn. A turn only counts when it used a tool or replied with more than 200 characters. It is read
+  from the transcript, so it costs nothing and is not kept for chats that are not open. Opening a chat with replies since
+  you last showed it puts "Since you left: <recap>" above the transcript on the web and phone; the x dismisses it
 - Opening a chat with activity since this browser last showed it puts a "Since you last looked" line above the
   cards: turns, files changed, failed commands and whether a permission is waiting. Tap it to dismiss
 - `/tries 3 <prompt>` (2 to 4) starts the prompt in that many new chats, each in its own worktree on a `tries/` branch

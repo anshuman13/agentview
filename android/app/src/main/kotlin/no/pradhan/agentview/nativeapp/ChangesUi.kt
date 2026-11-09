@@ -207,7 +207,7 @@ fun ChangesPager(hub: Hub, paths: List<String>, start: Int, reviewed: Set<String
         ConfirmDialog(revertTitle(p), REVERT_DETAIL, "Revert", { hub.write("/api/git/revert", pathsBody(listOf(GitFile(p))), "Could not revert") { if (it) onReverted(p) } }, onDismiss = { ask = null })
     }
     comment?.let { (p, row, revert) ->
-        CommentSheet(p, row, onSend = { text -> hub.draftPrompt(commentPrompt(p, row, text)) }, onRevert = revert?.takeIf { !hub.readOnly }, onDismiss = { comment = null })
+        CommentSheet("Comment on ${p.substringAfterLast('/')}:${row.no}", row.line.text, onSend = { text -> hub.draftPrompt(commentPrompt(p, row, text)) }, onRevert = revert?.takeIf { !hub.readOnly }, onDismiss = { comment = null })
     }
 }
 
@@ -234,13 +234,13 @@ private fun ReviewPage(hub: Hub, path: String, onCounts: (Pair<Int, Int>) -> Uni
 }
 
 @Composable
-private fun CommentSheet(path: String, row: DiffRow, onSend: (String) -> Unit, onRevert: (() -> Unit)?, onDismiss: () -> Unit) {
-    var text by rememberSaveable { mutableStateOf("") }
-    Sheet(onDismiss, "Comment on ${path.substringAfterLast('/')}:${row.no}") {
+fun CommentSheet(title: String, quote: String, onSend: (String) -> Unit, onDismiss: () -> Unit, initial: String = "", sendLabel: String = "Send to composer", onRevert: (() -> Unit)? = null) {
+    var text by rememberSaveable { mutableStateOf(initial) }
+    Sheet(onDismiss, title) {
         Column(Modifier.padding(horizontal = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp8)) {
-            Text(row.line.text, style = Mono, color = av.fgMuted, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(quote, style = Mono, color = av.fgMuted, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             TextField(text, { text = it }, placeholder = "Comment", minLines = 2, maxLines = 6)
-            Button("Send to composer", { onSend(text); onDismiss() }, variant = ButtonVariant.Filled, enabled = text.isNotBlank(), fill = true)
+            Button(sendLabel, { onSend(text); onDismiss() }, variant = ButtonVariant.Filled, enabled = text.isNotBlank(), fill = true)
             if (onRevert != null) Button("Revert this change", { onRevert(); onDismiss() }, variant = ButtonVariant.Danger, icon = "discard", fill = true)
         }
     }

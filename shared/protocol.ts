@@ -51,7 +51,7 @@ export type ChatEvent =
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number; parent?: string; agent?: string }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number; parent?: string; stopped?: boolean }
   | { id: string; kind: 'result'; text: string; costUsd: number; isError: boolean; at: number; model?: string | null }
-  | { id: string; kind: 'system'; text: string; at: number }
+  | { id: string; kind: 'system'; text: string; at: number; error?: boolean }
   | { id: string; kind: 'status'; text: string; at: number }
   | { id: string; kind: 'plan'; next: string[]; at: number }
   | { id: string; kind: 'blocked'; rule: string; reason: string; allowed: boolean; at: number }
@@ -230,6 +230,8 @@ export type LiveChat = {
   cost?: number;
   spend?: { today: Record<string, number>; week: Record<string, number> };
   pr?: number;
+  todos?: { done: number; total: number };
+  recap?: string;
   run?: { id: string; kind: ChatRun['kind']; state: ChatRun['state']; why?: string; nextAt: number | null; round: number; needsYou: boolean; outcome?: RoundOutcome; line?: string };
 };
 

@@ -3,6 +3,7 @@ import { forgetSeenBefore, getState, loadEarlier, notice, seenBefore, send, setU
 import { assistantStore } from '../codex/data';
 import { quoteReply, replyNote } from './composerLogic';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
@@ -57,6 +58,8 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
   }, [seenTimes, mark]);
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
   const newId = useMemo(() => newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt), [items, events, mark]);
+  const recap = useStore((s) => s.live.find((c) => c.id === s.session.id)?.recap);
+  const [since, setSince] = useState(true);
   const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
 
   useEffect(() => {
@@ -149,6 +152,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
 
   return (
     <div className="tr-host">
+    {newId && recap && since && <div className="tr-since"><span className="tr-since-text">Since you left: {recap}</span><IconButton icon="close" label="Dismiss" size="sm" onClick={() => setSince(false)} /></div>}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
@@ -217,7 +221,7 @@ function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolea
     case 'assistant':
       return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <div className="tr-acts"><button className="link" title="Quote this reply in the composer" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: quoteReply(it.text) } }))}>Reply</button><button className="link" title="Copy this reply as Markdown" onClick={() => copyText(it.text).then(() => notice('Copied the reply'), () => notice('Copy failed'))}>Copy</button><button className="link" title="Save this reply to Notes" onClick={() => saveReply(it.text, cwd)}>Save as note</button></div>}</div>;
     case 'system':
-      return <div className="tr-system">{it.text}</div>;
+      return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':
       return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':

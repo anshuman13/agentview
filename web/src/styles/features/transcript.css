@@ -25,6 +25,7 @@
 .tr-assistant .md :is(p, ul, ol, pre) { margin-bottom: var(--sp-5); }
 .tr-assistant .md > :last-child, .tr-assistant .md > .md-b:last-child > :last-child { margin-bottom: 0; }
 .tr-system { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-faint); }
+.tr-system.err { color: var(--err); }
 .tr-auto { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-faint); cursor: pointer; }
 .tr-auto-text { margin-top: var(--sp-2); white-space: pre-wrap; color: var(--fg-muted); }
 .tr-phase { display: flex; align-items: center; gap: var(--sp-4); margin: var(--sp-7) 0 var(--sp-2); color: var(--agent); font-size: var(--fs-sm); font-weight: 600; letter-spacing: var(--tracking); }
@@ -96,6 +97,8 @@
 .tr-sub > .tr-file { margin: 3px 0; }
 .tr-sub > .tr-agent-box { margin: var(--sp-1) 0; }
 .tr-agent-box > .tr-report { margin: var(--sp-1) 0 var(--sp-4) 22px; }
+.tr-since { display: flex; align-items: center; gap: var(--sp-2); flex: none; padding: var(--sp-1) var(--sp-4) var(--sp-1) var(--sp-12); font-size: var(--fs-sm); color: var(--fg-muted); border-bottom: 1px solid var(--border); }
+.tr-since-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-new { display: flex; align-items: center; gap: var(--sp-3); color: var(--danger); font-size: var(--fs-xs); font-weight: var(--type-headline-weight); }
 .tr-new::after { content: ''; flex: 1; border-top: 1px solid var(--danger); }
 .tr-day { display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-muted); font-size: var(--fs-xs); font-weight: var(--type-headline-weight); }

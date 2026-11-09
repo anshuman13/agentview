@@ -220,7 +220,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
             HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
         }
         is Item.Assistant -> Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
-        is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = av.fgMuted)
+        is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
         is Item.File -> FileCard(it, cwd)
         is Item.Agent -> AgentRow(hub, it, chat, cwd, onOpenAgent)

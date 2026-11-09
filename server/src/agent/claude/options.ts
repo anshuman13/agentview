@@ -73,6 +73,7 @@ export function agentOptions(o: {
     systemPrompt: { type: 'preset', preset: 'claude_code', append: ownProfile() ? `${INSTRUCTIONS} ${OWN_CHROME}` : INSTRUCTIONS },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
+    includeHookEvents: true,
     enableFileCheckpointing: true,
     allowedTools: ['mcp__agentview__set_status', 'mcp__agentview__wiki_search', 'mcp__agentview__wiki_page', 'mcp__agentview__wiki_propose', 'mcp__agentview__data_find', 'mcp__agentview__data_write'],
     disallowedTools: ['mcp__playwright'],

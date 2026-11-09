@@ -9,6 +9,15 @@
 .lc-cost, .lc-time { flex: none; font-variant-numeric: tabular-nums; }
 .lc-last { cursor: pointer; }
 .lc-rounds { display: flex; flex-direction: column; gap: var(--sp-1); margin: var(--sp-2) 0 0; padding: 0; list-style: none; }
+.td { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.td-head { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-sm); color: var(--on-surface); text-align: left; cursor: pointer; }
+.td-head[aria-expanded='true'] .icon { transform: rotate(90deg); }
+.td-count { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+.td-now { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--on-surface-muted); }
+.td-list { display: flex; flex-direction: column; gap: var(--sp-1); margin: var(--sp-2) 0 0; padding: 0; list-style: none; max-height: 30vh; overflow-y: auto; }
+.td-item { display: flex; align-items: flex-start; gap: var(--sp-3); font-size: var(--fs-xs); line-height: var(--line-xs); color: var(--on-surface-muted); }
+.td-item.in_progress { color: var(--on-surface); }
+.td-item.completed .icon { color: var(--ok); }
 .cp-card {
   position: relative; display: flex; flex-direction: column; transition: border-color var(--dur);
   background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius);

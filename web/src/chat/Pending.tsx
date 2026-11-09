@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
-import { useOnUnmount } from '../ui/util';
+import { pressable, useOnUnmount } from '../ui/util';
 import { touch } from '../app/touch';
 import { Markdown } from './Chat';
 import { str } from './steps';
@@ -77,28 +77,89 @@ export function PermissionCard({ p, mode, first }: CardProps) {
   );
 }
 
+const QUOTE_MAX = 80;
+
+// The plan's blocks split at blank lines, leaving fenced code whole.
+export function planParagraphs(plan: string): string[] {
+  const out: string[] = [];
+  let cur: string[] = [];
+  let fence = false;
+  for (const line of plan.split('\n')) {
+    if (/^\s*(```|~~~)/.test(line)) fence = !fence;
+    if (!fence && !line.trim()) {
+      if (cur.length) out.push(cur.join('\n'));
+      cur = [];
+    } else cur.push(line);
+  }
+  if (cur.length) out.push(cur.join('\n'));
+  return out;
+}
+
+// One message quoting each commented paragraph, then the comment; empty when there are none.
+export function planFeedback(paragraphs: string[], notes: Record<number, string>) {
+  const parts = paragraphs.flatMap((p, i) => {
+    const note = notes[i]?.trim();
+    const flat = p.replace(/\s+/g, ' ').trim();
+    return note ? [`> ${flat.length > QUOTE_MAX ? `${flat.slice(0, QUOTE_MAX).trimEnd()}…` : flat}\n${note}`] : [];
+  });
+  return parts.length ? `Comments on the plan:\n\n${parts.join('\n\n')}` : '';
+}
+
 function PlanCard({ p, mode, first }: CardProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const plan = str(p.input.plan);
+  const paragraphs = useMemo(() => planParagraphs(str(p.input.plan)), [p.input.plan]);
+  const [notes, setNotes] = useState<Record<number, string>>({});
+  const [editing, setEditing] = useState<number | null>(null);
+  const keep = () => {
+    const text = planFeedback(paragraphs, notes);
+    send(text ? { type: 'steer', text } : { type: 'permission', id: p.id, allow: false });
+  };
+  const save = (i: number, text: string) => {
+    setNotes((n) => ({ ...n, [i]: text.trim() }));
+    setEditing(null);
+  };
   return (
     <div ref={ref} className="pd" tabIndex={-1} role="group" aria-label={p.title}>
       <div className="pd-head">
         <Icon name="checklist" />
         <span className="pd-title" title={p.title}>{p.title}</span>
       </div>
-      {plan && <div className="pd-plan"><Markdown text={plan} /></div>}
+      {paragraphs.length > 0 && (
+        <div className="pd-plan">
+          {paragraphs.map((text, i) => (
+            <div key={i} className="pd-para">
+              <div className="pd-para-text" title="Comment on this" {...pressable(() => setEditing(i))}><Markdown text={text} /></div>
+              {editing === i ? (
+                <input
+                  autoFocus
+                  className="pd-other-input"
+                  defaultValue={notes[i] ?? ''}
+                  placeholder="Your comment, Enter to stage it"
+                  aria-label="Comment on this part of the plan"
+                  onBlur={(e) => save(i, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) save(i, e.currentTarget.value);
+                    if (e.key === 'Escape') setEditing(null);
+                  }}
+                />
+              ) : notes[i] ? <div className="pd-note">{notes[i]}</div> : null}
+            </div>
+          ))}
+        </div>
+      )}
       {p.detail && <div className="pd-desc">{p.detail}</div>}
-      <Decision p={p} mode={mode} first={first} cardRef={ref} yes="Approve" no="Keep planning" />
+      <Decision p={p} mode={mode} first={first} cardRef={ref} yes="Approve" no="Keep planning" onNo={keep} />
     </div>
   );
 }
 
-function Decision({ p, mode, first, cardRef, yes, no }: CardProps & { cardRef: RefObject<HTMLDivElement | null>; yes: string; no: string }) {
+function Decision({ p, mode, first, cardRef, yes, no, onNo }: CardProps & { cardRef: RefObject<HTMLDivElement | null>; yes: string; no: string; onNo?: () => void }) {
   const always = p.canAlwaysAllow && p.toolName !== 'ExitPlanMode';
   const keys = !p.confirmFirst;
   const reply = (allow: boolean, all?: boolean) => send({ type: 'permission', id: p.id, allow, always: all });
+  const decline = onNo ?? (() => reply(false));
   useKeys(cardRef, first, (k) => {
-    if (k === 'n') reply(false);
+    if (k === 'n') decline();
     else if (k === 'y' && keys) reply(true);
     else if (k === 'a' && keys && always) reply(true, true);
     else return false;
@@ -109,7 +170,7 @@ function Decision({ p, mode, first, cardRef, yes, no }: CardProps & { cardRef: R
       <div className="pd-actions">
         <button className="btn lg primary" onClick={() => reply(true)}>{yes}{keys && <kbd>Y</kbd>}</button>
         {always && <button className="btn lg" onClick={() => reply(true, true)}>Always allow{keys && <kbd>A</kbd>}</button>}
-        <button className="btn lg" autoFocus={p.confirmFirst} onClick={() => reply(false)}>{no}<kbd>N</kbd></button>
+        <button className="btn lg" autoFocus={p.confirmFirst} onClick={decline}>{no}<kbd>N</kbd></button>
       </div>
       {MODE_HINTS[mode] && <div className="pd-hint">{MODE_HINTS[mode]}</div>}
     </>

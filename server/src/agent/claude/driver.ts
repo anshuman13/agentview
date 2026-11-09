@@ -13,6 +13,7 @@ import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, work
 import { bigBroRequest, bigBroVerdict } from './approval.js';
 import { ENDED, replayText, usageOf } from './tasks.js';
 import { agentResult, agentToolUse, isAgent, patchAgent, taskDone, taskToolUse } from './subagents.js';
+import { hookLine } from './hooks.js';
 import { sessionUsage } from './usage.js';
 import { LiveText } from './stream.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, RUN_ID, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, workflowEvents, workflowName, type AgentIds } from './transcript.js';
@@ -589,6 +590,9 @@ export class ClaudeDriver implements AgentDriver {
             patchAgent(this.host, toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
             taskDone(this.host, this.agents, toolUseId, msg.task_id, msg.status, msg.summary);
           }
+        } else if (msg.subtype === 'hook_response') {
+          const line = hookLine(msg);
+          if (line) host.system(line, true);
         } else if (msg.subtype === 'local_command_output') {
           host.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           host.turnEnded();

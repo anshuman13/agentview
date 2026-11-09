@@ -29,11 +29,12 @@ class ChatView(
     val dayOf: Map<String, String>,
     val ats: Map<String, Long>,
     val sent: Int,
+    val checklist: List<ChecklistItem>?,
 ) {
     // Newest first, the order the reversed list draws.
     val rows: List<Item> = items.asReversed()
 
-    fun withItems(events: List<ChatEvent>, items: List<Item>) = ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent)
+    fun withItems(events: List<ChatEvent>, items: List<Item>) = ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent, checklist)
 
     companion object {
         val EMPTY = buildView("", emptyList(), 0L, null)
@@ -49,7 +50,7 @@ fun buildView(chat: String, events: List<ChatEvent>, now: Long, prev: ChatView?)
         chat, events, items, buildAgents(events, items), chatCost(events), chatImages(events),
         items.filterIsInstance<Item.File>().filter { it.error == null }.map { it.path }.distinct(),
         rewindable(items), exploreRuns(items), days, dayOfRows(items, days),
-        events.associate { it.id to it.at }, items.count { it is Item.User },
+        events.associate { it.id to it.at }, items.count { it is Item.User }, latestChecklist(events),
     )
 }
 

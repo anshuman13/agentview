@@ -29,6 +29,7 @@ data class ChatEvent(
     val summary: String = "",
     val description: String = "",
     val isError: Boolean = false,
+    val error: Boolean = false,
     val queued: Boolean = false,
     val at: Long = 0,
     val input: JsonObject = JsonObject(emptyMap()),
@@ -78,8 +79,14 @@ data class LiveChat(
     val edits: Edits? = null,
     val cost: Double? = null,
     val pr: Int? = null,
+    val todos: LiveTodos? = null,
+    val recap: String? = null,
     val run: LiveRun? = null,
 )
+
+// shared/protocol.ts LiveChat.todos: how far Claude's to-do list is, while it has items left.
+@Serializable
+data class LiveTodos(val done: Int = 0, val total: Int = 0)
 
 // shared/protocol.ts LiveChat.run: the run a chat is on, as the live list carries it.
 @Serializable

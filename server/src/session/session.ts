@@ -190,8 +190,8 @@ export class AgentSession implements AgentHost {
     }
   }
 
-  system(text: string) {
-    this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now() });
+  system(text: string, error?: boolean) {
+    this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now(), ...(error && { error }) });
   }
 
   setStatus(text: string) {

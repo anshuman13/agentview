@@ -17,7 +17,8 @@ import { removeChat } from '../agent/claude/pins.js';
 import { parseTries, startTries, TRIES_USAGE } from '../workspace/tries.js';
 import { ownProfile } from '../chrome/chrome.js';
 import { MCP_BAD, type ChatRun, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
-import { replyLine, sumEdits } from '../../../shared/edits.js';
+import { recapOf, replyLine, sumEdits } from '../../../shared/edits.js';
+import { latestTodos, todoCount } from '../../../shared/todos.js';
 import { errText } from '../../../shared/util.js';
 import { applyInitialModel } from './initialModel.js';
 import { sendWhenChanged } from './changed.js';
@@ -104,6 +105,9 @@ function editsOf(chat: AgentSession) {
 
 function summary(chat: AgentSession): LiveChat {
   const s = chat.state;
+  const todos = latestTodos(s.events);
+  const progress = todos && todoCount(todos);
+  const recap = recapOf(s.events, s.session.running);
   const agentList = runningAgents(chat);
   const firstPrompt = s.events.find((e) => e.kind === 'user');
   const { cost, spend } = costsOf(s.events, new Date().setHours(0, 0, 0, 0));
@@ -127,6 +131,8 @@ function summary(chat: AgentSession): LiveChat {
     last: replyLine(s.events),
     edits: editsOf(chat),
     ...(s.session.pr && { pr: s.session.pr }),
+    ...(progress && progress.done < progress.total && { todos: progress }),
+    ...(recap && { recap }),
     ...runField(runs.activeFor(chat.id)),
   };
 }

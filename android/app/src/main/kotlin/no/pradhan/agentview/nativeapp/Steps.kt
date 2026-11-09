@@ -13,7 +13,7 @@ sealed interface Item {
     @Immutable data class User(override val id: String, val text: String, val at: Long, val stopping: Boolean, val queued: Boolean) : Item
     @Immutable data class Phase(override val id: String, val text: String) : Item
     @Immutable data class Assistant(override val id: String, val text: String, val streaming: Boolean) : Item
-    @Immutable data class System(override val id: String, val text: String) : Item
+    @Immutable data class System(override val id: String, val text: String, val error: Boolean = false) : Item
     @Immutable data class Step(override val id: String, val use: ChatEvent, val result: ChatEvent?) : Item
     @Immutable data class File(override val id: String, val path: String, val add: Int, val del: Int, val uses: List<ChatEvent>, val error: String?, val denied: Boolean) : Item
     @Immutable data class Agent(override val id: String, val use: ChatEvent, val result: ChatEvent?, val running: Boolean, val steps: List<Item>) : Item
@@ -148,7 +148,7 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
             e.kind == "user" && e.auto != null -> items += Item.System(e.id, if (e.auto == "goal") "Goal check ${e.round}" else "Loop round ${e.round} \u00B7 ${firstLine(e.text)}")
             e.kind == "user" -> items += if (e.phase != null) Item.Phase(e.id, e.text) else Item.User(e.id, e.text, e.at, e.stopping, e.queued)
             e.kind == "assistant" -> stripRound(e.text).let { if (it.isNotBlank()) items += Item.Assistant(e.id, it, e.streaming) }
-            e.kind == "system" -> items += Item.System(e.id, e.text)
+            e.kind == "system" -> items += Item.System(e.id, e.text, e.error)
             e.kind == "blocked" -> items += Item.Blocked(e.id, e)
             e.kind == "plan" -> items += Item.System(e.id, if (e.next.isNotEmpty()) "You changed the next steps (${e.next.size})" else "You cleared the next steps")
             e.kind == "tool_use" && !e.name.endsWith("__set_status") -> {

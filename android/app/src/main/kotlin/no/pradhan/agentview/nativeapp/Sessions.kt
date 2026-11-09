@@ -7,6 +7,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -113,7 +114,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                     withStyle(SpanStyle(color = av.err)) { append("Draft: ") }
                     append("$draft · ")
                 }
-                append(metaLine(repo, branch, c.model?.let(::shortModel), when_))
+                append(metaLine(repo, branch, c.model?.let(::shortModel), when_, c.todos?.let { "${it.done}/${it.total}" }))
                 if (line != null) {
                     append(" · ")
                     withStyle(SpanStyle(color = av.ok)) { append("+${line.add}") }
@@ -125,6 +126,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             selected = c.id == shownId,
             actions = actions(c.sessionId, c.title, c),
             run = c.run,
+            recap = c.recap,
             pr = c.pr?.let { n -> prChip(n, prLoad.data?.takeIf { c.cwd == shownCwd }?.firstOrNull { it.number == n }) },
             onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
@@ -286,21 +288,22 @@ private fun RepoMark(name: String) {
 }
 
 @Composable
-private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun? = null, pr: PrChip? = null, onResume: (() -> Unit)? = null) {
+private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun? = null, recap: String? = null, pr: PrChip? = null, onResume: (() -> Unit)? = null) {
     val uri = LocalUriHandler.current
     // Like Slack's unread channels, a chat with a reply or question you have not opened has a bold title.
     val unread = state == ChatState.Done || state == ChatState.Needs
     ListRow(
         if (unread) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(title) } } else title,
         meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
-        below = pr?.let { p ->
-            {
-                Row(Modifier.clip(RoundedCornerShape(Tokens.sp4)).clickable(enabled = p.url.isNotEmpty()) { uri.openUri(p.url) }.padding(vertical = Tokens.sp2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                    p.dot?.let { StatusDot(it) }
-                    Text(p.text, style = Type.meta, color = av.metaFg)
+        below = if (pr == null && recap == null) null else ({
+            Column(Modifier.weight(1f)) {
+                if (recap != null) Text(recap, style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (pr != null) Row(Modifier.clip(RoundedCornerShape(Tokens.sp4)).clickable(enabled = pr.url.isNotEmpty()) { uri.openUri(pr.url) }.padding(vertical = Tokens.sp2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    pr.dot?.let { StatusDot(it) }
+                    Text(pr.text, style = Type.meta, color = av.metaFg)
                 }
             }
-        },
+        }),
         trailing = {
             if (onResume != null) Button("Resume", onResume, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
             if (actions.muted) AvIcon("bell-slash", tint = av.fgMuted)

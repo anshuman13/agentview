@@ -60,13 +60,43 @@ export function roundOf(text: string): { outcome: RoundOutcome; line: string } |
   return { outcome: word === 'nothing' ? 'quiet' : (word as RoundOutcome), line: p[2].trim() };
 }
 
+const firstLine = (text: string) => text.split('\n')[0].replace(/^[#>*\-\s]+/, '').replace(/\*\*/g, '').trim();
+const clip = (line: string, max: number) => (line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line);
+
 export function replyLine(events: ChatEvent[], max = 60): string | undefined {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
     const text = e.kind === 'assistant' && !e.parent ? stripRound(e.text).trim() : '';
-    if (!text) continue;
-    const line = text.split('\n')[0].replace(/^[#>*\-\s]+/, '').replace(/\*\*/g, '').trim();
-    return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
+    if (text) return clip(firstLine(text), max);
+  }
+  return undefined;
+}
+
+export const RECAP_MIN = 200;
+
+// The one line a finished turn leaves behind: its ROUND summary, else the first sentence of its last reply. A turn without tool use and a short reply leaves none.
+function turnRecap(turn: ChatEvent[]): string | undefined {
+  const top = turn.filter((e) => !('parent' in e && e.parent));
+  const reply = [...top].reverse().find((e) => e.kind === 'assistant' && !e.streaming && stripRound(e.text).trim());
+  if (reply?.kind !== 'assistant') return undefined;
+  const text = stripRound(reply.text).trim();
+  if (text.length <= RECAP_MIN && !top.some((e) => e.kind === 'tool_use')) return undefined;
+  const line = roundOf(reply.text)?.line || firstLine(text);
+  return clip(line.split(/(?<=[.!?])\s/)[0], 140) || undefined;
+}
+
+// The recap of the newest turn that has one; a turn still running is left out.
+export function recapOf(events: ChatEvent[], running: boolean): string | undefined {
+  let end = events.length;
+  let skip = running;
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (events[i].kind !== 'user') continue;
+    if (!skip) {
+      const line = turnRecap(events.slice(i + 1, end));
+      if (line) return line;
+    }
+    skip = false;
+    end = i;
   }
   return undefined;
 }

@@ -77,24 +77,68 @@ fun PermissionCard(p: Pending.Permission, mode: String, hub: Hub) {
     }
 }
 
+private const val QUOTE_MAX = 80
+
+// Port of web/src/chat/Pending.tsx planParagraphs: the plan's blocks split at blank lines, leaving fenced code whole.
+fun planParagraphs(plan: String): List<String> {
+    val out = mutableListOf<String>()
+    var cur = mutableListOf<String>()
+    var fence = false
+    for (line in plan.lines()) {
+        if (line.trimStart().let { it.startsWith("```") || it.startsWith("~~~") }) fence = !fence
+        if (!fence && line.isBlank()) {
+            if (cur.isNotEmpty()) out += cur.joinToString("\n")
+            cur = mutableListOf()
+        } else cur += line
+    }
+    if (cur.isNotEmpty()) out += cur.joinToString("\n")
+    return out
+}
+
+private fun planQuote(paragraph: String): String {
+    val flat = paragraph.replace(Regex("\\s+"), " ").trim()
+    return "> " + if (flat.length > QUOTE_MAX) flat.take(QUOTE_MAX).trimEnd() + "…" else flat
+}
+
+// Port of planFeedback: one message quoting each commented paragraph, then the comment; empty when there are none.
+fun planFeedback(paragraphs: List<String>, notes: Map<Int, String>): String {
+    val parts = paragraphs.mapIndexedNotNull { i, p -> notes[i]?.trim()?.takeIf { it.isNotEmpty() }?.let { "${planQuote(p)}\n$it" } }
+    return if (parts.isEmpty()) "" else "Comments on the plan:\n\n" + parts.joinToString("\n\n")
+}
+
 @Composable
 private fun PlanCard(p: Pending.Permission, mode: String, hub: Hub) {
+    val paragraphs = remember(p.input) { planParagraphs(p.input.s("plan")) }
+    var notes by remember(p.id) { mutableStateOf(emptyMap<Int, String>()) }
+    var editing by remember(p.id) { mutableStateOf<Int?>(null) }
     Panel {
         Title(p.title)
-        val plan = p.input.s("plan")
-        if (plan.isNotEmpty()) Box(Modifier.heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp5)) { Markdown(plan) }
+        if (paragraphs.isNotEmpty()) Column(Modifier.heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp5), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            paragraphs.forEachIndexed { i, text ->
+                Column(Modifier.fillMaxWidth().clickable { editing = i }) {
+                    Markdown(text)
+                    notes[i]?.takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(start = Tokens.sp4, top = Tokens.sp2), style = Type.subheadline, color = av.accent) }
+                }
+            }
+        }
         if (p.detail.isNotEmpty()) Desc(p.detail)
-        Decision(p, mode, hub, "Approve", "Keep planning")
+        Decision(p, mode, hub, "Approve", "Keep planning") {
+            val text = planFeedback(paragraphs, notes)
+            if (text.isEmpty()) hub.permission(p.id, false) else hub.submit(text, true) {}
+        }
+    }
+    editing?.let { i ->
+        CommentSheet("Comment on the plan", planQuote(paragraphs[i]), onSend = { t -> notes = notes + (i to t.trim()) }, onDismiss = { editing = null }, initial = notes[i] ?: "", sendLabel = "Add comment")
     }
 }
 
 @Composable
-private fun Decision(p: Pending.Permission, mode: String, hub: Hub, yes: String, no: String) {
+private fun Decision(p: Pending.Permission, mode: String, hub: Hub, yes: String, no: String, onNo: (() -> Unit)? = null) {
     val always = p.canAlwaysAllow && p.toolName != "ExitPlanMode"
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         Primary(yes) { hub.permission(p.id, true) }
         if (always) Secondary("Always allow") { hub.permission(p.id, true, true) }
-        Secondary(no) { hub.permission(p.id, false) }
+        Secondary(no) { if (onNo != null) onNo() else hub.permission(p.id, false) }
     }
     Hint(mode)
 }
