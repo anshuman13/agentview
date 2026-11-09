@@ -20,6 +20,20 @@ function setup(running: boolean, steer: () => Promise<unknown>) {
   return { d, calls, started, results };
 }
 
+describe('inject', () => {
+  it('steers the running turn with the text', async () => {
+    const { d, calls } = setup(true, () => Promise.resolve());
+    expect(await d.inject('plan changed')).toBe(true);
+    expect(calls).toMatchObject([{ method: 'turn/steer', params: { expectedTurnId: 'turn1', input: [{ text: 'plan changed' }] } }]);
+  });
+  it('is refused when no turn is running or the steer misses', async () => {
+    const idle = setup(false, () => Promise.resolve());
+    idle.d.turnId = null;
+    expect(await idle.d.inject('x')).toBe(false);
+    expect(await setup(true, () => Promise.reject(new Error('gone'))).d.inject('x')).toBe(false);
+  });
+});
+
 describe('deliver', () => {
   it('starts a turn with the same text when the steer fails', async () => {
     const { d, calls, results } = setup(true, () => Promise.reject(new Error('no active turn')));

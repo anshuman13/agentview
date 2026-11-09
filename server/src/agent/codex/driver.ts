@@ -225,13 +225,8 @@ export class CodexDriver implements AgentDriver {
       await this.ready;
       const rpc = this.rpc;
       if (!rpc) throw new Error('The codex process ended');
-      if (steer && this.turnId) {
-        try {
-          return void (await rpc.request('turn/steer', { threadId: this.threadId, input, expectedTurnId: this.turnId }));
-        } catch {
-          // The turn ended before the steer landed, so the text starts a new one.
-        }
-      }
+      // A steer that misses because the turn ended starts a new turn with the text.
+      if (steer && (await this.steer(rpc, input))) return;
       const { approvalPolicy, sandboxPolicy } = policyFor(this.mode);
       const { turn } = await rpc.request<{ turn: { id: string } }>('turn/start', { threadId: this.threadId, input, approvalPolicy, sandboxPolicy, ...this.modelParams() });
       this.turnId = turn.id;
@@ -239,6 +234,21 @@ export class CodexDriver implements AgentDriver {
     } catch (err) {
       this.host.turnResult({ id: randomUUID(), ok: false, text: errText(err), costUsd: 0, isError: true });
     }
+  }
+
+  private async steer(rpc: CodexRpc, input: UserInput[]) {
+    if (!this.turnId) return false;
+    try {
+      await rpc.request('turn/steer', { threadId: this.threadId, input, expectedTurnId: this.turnId });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async inject(text: string) {
+    await this.ready?.catch(() => undefined);
+    return this.rpc ? this.steer(this.rpc, [{ type: 'text', text, text_elements: [] }]) : false;
   }
 
   // An effort the model does not list is left out, so the model keeps its own default.

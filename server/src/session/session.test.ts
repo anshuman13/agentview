@@ -480,6 +480,7 @@ describe('plan changes', () => {
     s.sendPrompt('task');
     s.changePlan(['curl /check', 'stop the server']);
     expect(interrupt).not.toHaveBeenCalled();
+    s.pushEvent({ id: 't1', kind: 'tool_use', name: 'Bash', input: {}, at: 0 });
     const out = (s.driver as ClaudeDriver).toolHooks.afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } };
     expect(out.hookSpecificOutput?.additionalContext).toContain('1. curl /check\n2. stop the server');
     expect((s.driver as ClaudeDriver).toolHooks.afterTool(hook)).toEqual({});
@@ -489,7 +490,19 @@ describe('plan changes', () => {
     const { s } = fakeSession();
     s.sendPrompt('task');
     s.changePlan(['a']);
+    s.pushEvent({ id: 't1', kind: 'tool_use', name: 'Bash', input: {}, at: 0 });
     expect((s.driver as ClaudeDriver).toolHooks.afterTool({ ...(hook as object), agent_id: 'sub' } as never)).toEqual({});
+    expect((s.driver as ClaudeDriver).toolHooks.afterTool(hook)).toMatchObject({ hookSpecificOutput: { additionalContext: expect.stringContaining('1. a') } });
+  });
+
+  it('sends a plan change as a prompt when the agent cannot take it mid-turn', async () => {
+    const { s } = fakeSession();
+    s.sendPrompt('task');
+    s.changePlan(['a']);
+    vi.spyOn(s.driver, 'inject').mockResolvedValue(false);
+    s.pushEvent({ id: 't1', kind: 'tool_use', name: 'Bash', input: {}, at: 0 });
+    await Promise.resolve();
+    expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: expect.stringContaining('1. a') });
   });
 
   it('sends an undelivered plan change as a prompt when the turn ends', () => {

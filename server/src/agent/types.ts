@@ -39,6 +39,8 @@ export interface AgentDriver {
   compact(instructions?: string): void;
   // A /x the session does not own. False means the session sends the text as a prompt; true means the driver handled or refused it.
   command(name: string, args: string): boolean;
+  // Adds context to the running turn without a user event; false when no turn is running to take it.
+  inject(text: string): Promise<boolean>;
   // Starts a code review of the working tree or a PR; the findings reach host.reportFindings.
   review(target: 'local' | number): void;
   // The model a build cycle step runs on; null keeps the chat's own.
@@ -83,7 +85,6 @@ export interface AgentHost {
   captureEdit(file: string): void;
   canUseTool(toolName: string, input: Record<string, unknown>, opts: AskOptions): Promise<Decision>;
   ask(toolName: string, input: Record<string, unknown>, opts: AskOptions): Promise<Decision>;
-  takePlanChange(): string | null;
   turnStarted(why?: string): void;
   turnEnded(): void;
   turnResult(r: TurnResult): void;

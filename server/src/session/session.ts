@@ -108,9 +108,12 @@ export class AgentSession implements AgentHost {
     if (ev.kind === 'tool_result' && !ev.parent && opts?.release !== false) this.waiting.release();
   }
 
-  // What a top-level tool step means to the session, whichever driver ran it: a review's findings, or the PR a command opened.
+  // What a top-level tool step means to the session, whichever driver ran it: a review's findings, a plan change to pass on, or the PR a command opened.
   private noteTool(ev: ChatEvent) {
-    if (ev.kind === 'tool_use' && !ev.parent && FINDINGS_TOOLS.has(ev.name)) this.reportFindings(ev.input);
+    if (ev.kind === 'tool_use' && !ev.parent) {
+      if (FINDINGS_TOOLS.has(ev.name)) this.reportFindings(ev.input);
+      this.injectPlanChange();
+    }
     if (ev.kind !== 'tool_result' || ev.parent) return;
     const pr = PR_URL.exec(ev.text)?.[1];
     const use = pr ? this.log.get(ev.toolUseId) : undefined;
@@ -243,6 +246,12 @@ export class AgentSession implements AgentHost {
     if (added) void this.prompt(`I allowed ${ev.rule} for this chat. Retry it.`);
   }
 
+  // A plan change made mid-turn reaches the agent at its next step; when the agent cannot take it, it goes as a prompt.
+  private injectPlanChange() {
+    const plan = this.turn.takePlanChange();
+    if (plan) void this.driver.inject(plan).then((taken) => taken || this.sendPrompt(plan));
+  }
+
   private reportFindings(input: unknown) {
     void saveFindings(this.cwd, this.reviewTarget ?? 'local', parseFindings(input)).then((review) => this.emit({ type: 'findings', review }), () => {});
   }
@@ -341,10 +350,6 @@ export class AgentSession implements AgentHost {
 
   changePlan(next: string[]) {
     this.turn.changePlan(next);
-  }
-
-  takePlanChange() {
-    return this.turn.takePlanChange();
   }
 
   startCompacting() {

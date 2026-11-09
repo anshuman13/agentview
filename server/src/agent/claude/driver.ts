@@ -300,6 +300,11 @@ export class ClaudeDriver implements AgentDriver {
     return false;
   }
 
+  async inject(text: string) {
+    this.toolHooks.inject(text);
+    return true;
+  }
+
   review(target: 'local' | number) {
     this.send(target === 'local' ? '/code-review' : `/code-review ${target}`);
   }
