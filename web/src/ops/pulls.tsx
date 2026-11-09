@@ -48,6 +48,11 @@ const REVIEW: Record<string, [string, string]> = {
   DISMISSED: ['Dismissed', ''],
   PENDING: ['Pending', 'st-warn'],
 };
+// The PR part of a chat row, as on the phone: "#12 · Draft" or "#12 · Approved".
+export const prText = (n: number, pr?: Pick<PullRequest, 'draft' | 'review'>) => {
+  const state = pr && (pr.draft ? 'Draft' : REVIEW[pr.review]?.[0]);
+  return state ? `#${n} · ${state}` : `#${n}`;
+};
 export const CheckIcon = ({ state }: { state: CheckState }) => (
   <span className={`gh-check ${state}`} title={CHECKS[state][1]}><Icon name={CHECKS[state][0]} small /></span>
 );

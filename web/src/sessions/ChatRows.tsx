@@ -9,7 +9,7 @@ import { type LiveChat, type SavedSession } from '../../../shared/protocol';
 import { copyText, save } from '../ui/util';
 import { AgentsBlock } from './AgentRow';
 import { openAgent } from './agents';
-import { CheckIcon, usePullRequests } from '../ops/pulls';
+import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
 import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, renameTitle, removeRequest, restoreChat, since, type ChatState, type RenameEvent } from './folders';
 import { Badge } from '../ui/Badge';
 import { Swipe } from '../codex/Swipe';
@@ -210,7 +210,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   const main = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
     <>
       {metaLine(repo, branchOf(saved?.gitBranch, branch), when)}
-      {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>#{c.pr}{checkIcon}</a> : <>#{c.pr}{checkIcon}</>}</>}
+      {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{prText(c.pr, pr)}{checkIcon}</a> : <>#{c.pr}{checkIcon}</>}</>}
       {c.todos && ` · ${c.todos.done}/${c.todos.total}`}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
