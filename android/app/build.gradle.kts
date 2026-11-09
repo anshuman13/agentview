@@ -65,16 +65,16 @@ android.sourceSets.getByName("test").kotlin.srcDir("../buildSrc/src/main/kotlin"
 
 tasks.register("generateTokens") {
     val css = rootProject.file("../web/src/styles/tokens.css")
-    val out = file("src/main/kotlin/no/pradhan/agentview/nativeapp/Tokens.kt")
+    val out = file("src/main/kotlin/no/pradhan/agentview/nativeapp/ui/Tokens.kt")
     inputs.file(css)
     outputs.file(out)
-    doLast { out.writeText(no.pradhan.agentview.tokens.TokenGen.generate(css.readText(), "no.pradhan.agentview.nativeapp")) }
+    doLast { out.writeText(no.pradhan.agentview.tokens.TokenGen.generate(css.readText(), "no.pradhan.agentview.nativeapp.ui")) }
 }
 
 tasks.register("generateIcons") {
     val css = rootProject.file("../node_modules/@vscode/codicons/dist/codicon.css")
-    val out = file("src/main/kotlin/no/pradhan/agentview/nativeapp/Codicons.kt")
+    val out = file("src/main/kotlin/no/pradhan/agentview/nativeapp/ui/Codicons.kt")
     inputs.file(css)
     outputs.file(out)
-    doLast { out.writeText(no.pradhan.agentview.tokens.IconGen.generate(css.readText(), "no.pradhan.agentview.nativeapp")) }
+    doLast { out.writeText(no.pradhan.agentview.tokens.IconGen.generate(css.readText(), "no.pradhan.agentview.nativeapp.ui")) }
 }

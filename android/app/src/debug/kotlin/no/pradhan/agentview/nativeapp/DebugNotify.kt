@@ -4,6 +4,13 @@ import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import no.pradhan.agentview.nativeapp.app.Notice
+import no.pradhan.agentview.nativeapp.app.NoticeAsk
+import no.pradhan.agentview.nativeapp.app.NoticeKind
+import no.pradhan.agentview.nativeapp.app.Notifier
+import no.pradhan.agentview.nativeapp.app.WAITING_MAX
+import no.pradhan.agentview.nativeapp.app.WaitingLine
+import no.pradhan.agentview.nativeapp.app.WaitingSnapshot
 
 // adb shell am broadcast -n no.pradhan.agentview.native/no.pradhan.agentview.nativeapp.DebugNotify --es kind approval --es ask permission --es chat <id> --ei waiting 3
 class DebugNotify : BroadcastReceiver() {
