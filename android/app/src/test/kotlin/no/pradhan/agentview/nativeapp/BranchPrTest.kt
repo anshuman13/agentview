@@ -37,6 +37,7 @@ class BranchPrTest {
 
     @Test fun aRowShowsTheNumberAndCheckDotOnlyWhenKnown() {
         assertEquals(PrChip("#7", null, ""), prChip(7, null))
+        assertEquals(PrChip("#7", DotState.Bad, ""), prChip(7, null, "failure"))
         assertEquals(PrChip("#2 · Approved", DotState.Bad, ""), prChip(2, prs[1]))
         assertEquals(PrChip("#9 · Draft", null, "u"), prChip(9, PullRequest(9, draft = true, checks = "none", url = "u")))
     }

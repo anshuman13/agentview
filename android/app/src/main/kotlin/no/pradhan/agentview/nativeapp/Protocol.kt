@@ -79,6 +79,7 @@ data class LiveChat(
     val edits: Edits? = null,
     val cost: Double? = null,
     val pr: Int? = null,
+    val prChecks: String? = null,
     val todos: LiveTodos? = null,
     val recap: String? = null,
     val run: LiveRun? = null,

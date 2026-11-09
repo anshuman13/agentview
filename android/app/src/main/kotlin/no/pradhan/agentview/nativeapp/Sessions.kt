@@ -127,7 +127,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             actions = actions(c.sessionId, c.title, c),
             run = c.run,
             recap = c.recap,
-            pr = c.pr?.let { n -> prChip(n, prLoad.data?.takeIf { c.cwd == shownCwd }?.firstOrNull { it.number == n }) },
+            pr = c.pr?.let { n -> prChip(n, prLoad.data?.takeIf { c.cwd == shownCwd }?.firstOrNull { it.number == n }, c.prChecks) },
             onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
         )
