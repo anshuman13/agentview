@@ -12,6 +12,7 @@ export class BuildCycle {
   // ExitPlanMode came, or its approval was asked from the reply, so the plan step has no approval left to ask.
   private planAnswered = false;
   private prevModel: string | null = null;
+  private replyApproval: AbortController | null = null;
 
   constructor(private s: AgentSession) {}
 
@@ -84,11 +85,19 @@ export class BuildCycle {
   askReplyApproval(reply: string) {
     if (this.s.state.session.loop.phase !== 'plan' || this.planAnswered || !needsApproval(reply)) return false;
     this.planAnswered = true;
-    void this.s.approvals.ask('ExitPlanMode', { plan: reply }, { signal: new AbortController().signal }).then((d) => {
+    const ctl = (this.replyApproval = new AbortController());
+    void this.s.approvals.ask('ExitPlanMode', { plan: reply }, { signal: ctl.signal }).then((d) => {
+      if (this.replyApproval !== ctl) return;
+      this.replyApproval = null;
       this.planDenied = d.behavior === 'deny';
-      this.s.turn.ended();
+      if (looping(this.s.state.session.loop) && this.s.state.session.loop.phase === 'plan') this.s.turn.ended();
     });
     return true;
+  }
+
+  private cancelReplyApproval() {
+    this.replyApproval?.abort();
+    this.replyApproval = null;
   }
 
   end(note: string | null, why = note?.replace(/^Build cycle (?:stopped|passed): /, '') ?? 'ended') {
@@ -110,6 +119,7 @@ export class BuildCycle {
   }
 
   interrupted() {
+    this.cancelReplyApproval();
     const loop = this.s.state.session.loop;
     if (!looping(loop)) return;
     this.s.setSession({ loop: { ...loop, phase: null } });
@@ -118,6 +128,7 @@ export class BuildCycle {
 
   // No result comes for the step that was running, so the loop cannot advance.
   exited() {
+    this.cancelReplyApproval();
     const loop = this.s.state.session.loop;
     if (!looping(loop)) return;
     this.s.setSession({ loop: { ...loop, phase: 'failed' } });
