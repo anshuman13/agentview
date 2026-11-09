@@ -1,5 +1,7 @@
 package no.pradhan.agentview.nativeapp
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +48,13 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                 SectionHeader("Phone")
                 Group {
                     ListRow("Notifications", if (notify && granted) "On" else "Off", trailing = { Toggle(notify && granted, hub::setNotify) })
+                    if (notify && granted) {
+                        Hairline()
+                        // Each kind is its own Android channel, so the system page turns each on or off and sets its sound.
+                        ListRow("Notification types", NoticeKind.entries.joinToString(", ") { it.label }, onClick = {
+                            ctx.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName))
+                        }, trailing = { Chevron() })
+                    }
                     Hairline()
                     ListRow("Mac address", origin, onClick = onOrigin, trailing = { Chevron() })
                 }
