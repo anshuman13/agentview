@@ -40,7 +40,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
-private enum class Picker { Settings, Mode, Model, Effort, Account }
+private enum class Picker { Settings, Effort, Account }
 
 @Composable
 fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean) {
@@ -136,16 +136,31 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     when (sheet) {
         Picker.Settings -> Sheet({ sheet = null }, "Chat settings", padded = false, full = false) {
             val account = session?.account ?: "main"
+            val models = session?.models.orEmpty()
+            if (models.isNotEmpty()) {
+                SectionHeader("Model")
+                val current = if (session?.team == true) "team" else session?.model
+                Group {
+                    models.forEachIndexed { i, m ->
+                        if (i > 0) Hairline()
+                        ListRow(m.displayName.ifBlank { m.value }, m.description, onClick = { hub.setModel(m.value); sheet = null }, trailing = if (m.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+                    }
+                }
+            }
+            SectionHeader("Permission mode")
             Group {
-                if ((session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null) { ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); sheet = Picker.Account }, trailing = { Chevron() }); Hairline() }
-                ListRow("Permission mode", MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", onClick = { sheet = Picker.Mode }, trailing = { Chevron() })
-                Hairline()
-                ListRow("Model", shortModel(modelName(session)), onClick = { sheet = Picker.Model }, trailing = { Chevron() })
-                session?.effort?.let { Hairline(); ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { sheet = Picker.Effort }, trailing = { Chevron() }) }
+                PERMISSION_MODES.forEachIndexed { i, m ->
+                    if (i > 0) Hairline()
+                    ListRow(MODES[m]?.label ?: m, MODES[m]?.detail, onClick = { hub.setMode(m); sheet = null }, trailing = if (m == (session?.permissionMode ?: "default")) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+                }
+            }
+            val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null
+            if (showAccount || session?.effort != null) SectionHeader("Account and effort")
+            if (showAccount || session?.effort != null) Group {
+                if (showAccount) ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); sheet = Picker.Account }, trailing = { Chevron() })
+                session?.effort?.let { if (showAccount) Hairline(); ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { sheet = Picker.Effort }, trailing = { Chevron() }) }
             }
         }
-        Picker.Mode -> PickerSheet("Permission mode", PERMISSION_MODES.map { Choice(it, MODES[it]?.label ?: it, MODES[it]?.detail ?: "") }, session?.permissionMode ?: "default", { hub.setMode(it) }) { sheet = null }
-        Picker.Model -> PickerSheet("Select model", (session?.models ?: emptyList()).map { Choice(it.value, it.displayName, it.description) }, if (session?.team == true) "team" else session?.model, { hub.setModel(it) }) { sheet = null }
         Picker.Effort -> PickerSheet("Select effort", EFFORT_LEVELS.map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { sheet = null }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { sheet = null }
         null -> {}

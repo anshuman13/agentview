@@ -351,7 +351,7 @@ private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
 }
 
 private fun androidx.compose.ui.text.AnnotatedString.Builder.withStyleColor(color: androidx.compose.ui.graphics.Color, mono: Boolean = false, block: () -> Unit) {
-    withStyle(androidx.compose.ui.text.SpanStyle(color = color, fontFamily = if (mono) FontFamily.Monospace else null)) { block() }
+    withStyle(androidx.compose.ui.text.SpanStyle(color = color, fontFamily = if (mono) MonoFont else null)) { block() }
 }
 
 @Composable

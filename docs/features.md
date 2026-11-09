@@ -199,6 +199,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - On the web every finished reply shows a Save as note link on hover (always shown on touch screens), which saves the
   chat title and the reply as a Codex note in the chat's profile (like Slack's saved messages). The phone has no reply
   buttons; a hairline divider separates each prompt from the turn before it
+- On the phone, the composer's settings chip opens Chat settings with the models and permission modes listed directly
+  (one tap picks), then Account and Effort. The model you pick becomes the default for new chats, including the New chat
+  shortcut
 - In the web and phone transcripts, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as
   "Explored 4 files, 2 searches"; a tap or click shows the steps again
 - Phone Settings has Notification types under Notifications: it opens Android's page for the app, where Approvals, Finished

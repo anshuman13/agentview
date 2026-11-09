@@ -37,7 +37,7 @@ import androidx.compose.ui.text.withStyle
 @Composable
 fun inlineText(inlines: List<Inline>): AnnotatedString {
     val c = av
-    val code = SpanStyle(fontFamily = FontFamily.Monospace, fontSize = Tokens.fsSubheadline, background = c.hover)
+    val code = SpanStyle(fontFamily = MonoFont, fontSize = Tokens.fsSubheadline, background = c.hover)
     val link = TextLinkStyles(SpanStyle(color = c.link))
     return remember(inlines, c) {
         buildAnnotatedString {

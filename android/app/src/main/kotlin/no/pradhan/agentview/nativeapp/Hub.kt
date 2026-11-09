@@ -398,7 +398,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         if (readOnly) { notice.value = READ_ONLY_SENT; return }
         if (model != null) lastModel = model
         viewModelScope.launch {
-            val id = switchTo(newSessionCmd(cwd = cwd, model = model, fork = fork))
+            val id = switchTo(newSessionCmd(cwd = cwd, model = model ?: lastModel?.takeIf { fork == null }, fork = fork))
             if (id == null) notice.value = "The chat did not open" else link.value = DeepLink(chat = id)
         }
     }
@@ -545,7 +545,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     }
     fun rewind(id: String) = post(rewindCmd(id), store.wanted)
     fun stopTask(toolUseId: String) = post(stopTaskCmd(toolUseId), store.wanted)
-    fun setModel(model: String) = post(setModelCmd(model), store.wanted)
+    fun setModel(model: String) { if (model != "team") lastModel = model; post(setModelCmd(model), store.wanted) }
     fun setEffort(effort: String) = post(setEffortCmd(effort), store.wanted)
     fun setAccount(account: String) = post(setAccountCmd(account), store.wanted)
     fun refreshUsage() = post(usageCmd(), store.wanted)

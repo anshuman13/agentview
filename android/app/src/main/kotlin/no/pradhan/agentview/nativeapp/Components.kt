@@ -95,7 +95,7 @@ import androidx.compose.ui.unit.dp
 
 // The shared components, one per web primitive (web/src/ui and web/src/styles/components). Screens build only from these and the tokens.
 
-val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = Tokens.fsSubheadline, lineHeight = Tokens.lineMd)
+val Mono = TextStyle(fontFamily = MonoFont, fontSize = Tokens.fsSubheadline, lineHeight = Tokens.lineMd)
 
 // Page header with an optional back button: 64dp, a one-line title ending in an ellipsis and an optional muted subtitle.
 @Composable
