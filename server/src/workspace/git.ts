@@ -100,14 +100,14 @@ async function branchDiff(cwd: string) {
 
 export type Todo = { path: string; line: number; text: string; ai?: '!' | '?' };
 
-// `git grep -n` lines for TODO and FIXME comments, as tasks to hand to Claude. Lock files and minified code are skipped.
+// `git grep -n` lines for TODO and FIXME comments, as tasks to hand to Claude. Lock files, minified code and tests are skipped.
 // Aider-style comments that start or end with AI! (do this) or AI? (answer this) come first.
 export function parseTodos(out: string, max = 100): Todo[] {
   const todos: Todo[] = [];
   const asks: Todo[] = [];
   for (const l of out.split('\n')) {
     const m = /^(.+?):(\d+):(.*)$/.exec(l);
-    if (!m || m[3].length > 400 || /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lock)$|\.min\./.test(m[1])) continue;
+    if (!m || m[3].length > 400 || /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lock)$|\.min\.|\.test\.|Test\.kt$|(^|\/)(test|tests|__tests__)\//.test(m[1])) continue;
     const ai = /(?:\/\/|#|\/\*|<!--|^\s*\*|--)\s*(?:AI([!?])\s*(.*?)|(.*?)\s*\bAI([!?]))\s*(?:\*\/|-->)?\s*$/.exec(m[3]);
     if (ai) {
       asks.push({ path: m[1], line: Number(m[2]), text: (ai[2] ?? ai[3]).trim(), ai: (ai[1] ?? ai[4]) as '!' | '?' });

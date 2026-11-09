@@ -94,7 +94,7 @@ describe('parseTodos', () => {
   });
 
   it('puts Aider AI! and AI? comments first', () => {
-    const out = ['a.ts:1:// TODO later', 'b.ts:5:  // make this async AI!', 'c.py:9:# AI? why retry twice', 'd.css:2:a { color: #fff } /* AI! use a token */', 'e.ts:3:const s = "AI!"'].join('\n');
+    const out = ['a.ts:1:// TODO later', 'b.ts:5:  // make this async AI!', 'c.py:9:# AI? why retry twice', 'd.css:2:a { color: #fff } /* AI! use a token */', 'e.ts:3:const s = "AI!"', 'f.test.ts:4:// TODO in a test', 'src/test/G.kt:2:// AI! fixture'].join('\n');
     expect(parseTodos(out)).toEqual([
       { path: 'b.ts', line: 5, text: 'make this async', ai: '!' },
       { path: 'c.py', line: 9, text: 'why retry twice', ai: '?' },

@@ -17,7 +17,7 @@ fun todoPrompt(t: Todo) = when (t.ai) {
 
 fun todoTitle(t: Todo) = t.text.ifEmpty { "TODO" }.let { if (t.ai != null) "AI${t.ai} $it" else it }
 
-// AI!/AI? (Aider), to-do and fix-me comments in the repo as ready-made tasks; a tap puts a prompt for one in the composer.
+// Aider-style AI comments, to-do and fix-me comments in the repo as ready-made tasks; a tap puts a prompt for one in the composer.
 @Composable
 fun TodosSheet(hub: Hub, cwd: String, onDismiss: () -> Unit) {
     val (todos) = rememberLoad(cwd) { protocolJson.decodeFromString<Todos>(hub.read("/api/git/todos")).todos }
