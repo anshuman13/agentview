@@ -22,9 +22,9 @@ export function sideChat() {
 
 // Fork chat: a new chat in the same folder and model that starts by summarising this one.
 export function forkChat() {
-  const { id, sessionId, model } = getState().session;
+  const { id, sessionId, model, provider } = getState().session;
   if (!sessionId) return;
-  send({ type: 'new_session', ...(model && { model }) });
+  send({ type: 'new_session', ...(model && { model }), ...(provider && { provider }) });
   const stop = subscribe(() => {
     const now = getState().session.id;
     if (!now || now === id) return;

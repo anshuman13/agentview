@@ -81,7 +81,7 @@ export function agentOptions(o: {
     includeHookEvents: true,
     enableFileCheckpointing: true,
     allowedTools: ['mcp__agentview__set_status', 'mcp__agentview__wiki_search', 'mcp__agentview__wiki_page', 'mcp__agentview__wiki_propose', 'mcp__agentview__chat_search', 'mcp__agentview__data_find', 'mcp__agentview__data_write'],
-    disallowedTools: ['mcp__playwright'],
+    disallowedTools: ['mcp__playwright', ...(o.openrouter && Object.values(o.openrouter.models).some((m) => !m.startsWith('anthropic/')) ? ['WebSearch'] : [])],
     extraArgs: { chrome: null },
     permissionMode: 'auto',
     mcpServers: { agentview: statusServer(o.onStatus, { cwd: o.cwd, chat: o.chat }), ...ownChrome(), ...o.mcp },

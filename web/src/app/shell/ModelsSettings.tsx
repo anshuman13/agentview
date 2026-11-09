@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { Button } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
+import type { Provider } from '../../../../shared/protocol';
 import { MODEL_SLOTS, type ModelSlot, type OpenRouterModels, type OpenRouterView } from '../../../../shared/openrouter';
 import { appSettings } from '../appSettings';
 import { notice } from '../store';
-import { fetchOpenRouter, saveOpenRouter } from './modelsApi';
+import { fetchOpenRouter, saveDefaultProvider, saveOpenRouter } from './modelsApi';
 
 const LABEL: Record<ModelSlot, string> = { opus: 'Opus slot', sonnet: 'Sonnet slot', haiku: 'Haiku slot', fable: 'Fable slot' };
 
@@ -16,6 +17,8 @@ export function ModelsSettings() {
   const [main, setMain] = useState<ModelSlot>('sonnet');
   const [busy, setBusy] = useState(false);
   const codex = appSettings.use((s) => s.providers.find((p) => p.id === 'codex'));
+  const enabled = appSettings.use((s) => s.providers.filter((p) => p.enabled));
+  const defaultProvider = appSettings.use((s) => s.defaultProvider);
   const load = (v: OpenRouterView) => {
     setSaved(v.maskedKey);
     setModels(v.models);
@@ -31,6 +34,8 @@ export function ModelsSettings() {
       .then((v) => { load(v); notice('Model settings saved'); }, (err) => notice(err instanceof Error ? err.message : 'Could not save'))
       .finally(() => setBusy(false));
   };
+  const pick = (id: Provider) =>
+    saveDefaultProvider(id).then((s) => appSettings.patch({ defaultProvider: s.defaultProvider ?? 'claude' }), (err) => notice(err instanceof Error ? err.message : 'Could not save'));
   return (
     <>
       <Section label="Models" />
@@ -46,7 +51,12 @@ export function ModelsSettings() {
           </select>
           <Button variant="filled" disabled={busy} onClick={save}>Save</Button>
         </div>
-        {codex && <Row plain title="Codex" meta={codex.enabled ? 'Signed in. Start a Codex chat from the command palette.' : codex.note} />}
+        {codex && <Row plain title="Codex" meta={codex.enabled ? 'Pick Codex when you start a chat' : codex.note} />}
+        <div className="ui-fields">
+          <select aria-label="Default provider" value={defaultProvider} onChange={(e) => pick(e.target.value as Provider)}>
+            {enabled.map((p) => <option key={p.id} value={p.id}>New chats: {p.label}</option>)}
+          </select>
+        </div>
       </div>
     </>
   );

@@ -87,7 +87,7 @@ export function ask(text: string, profile: Profile, fresh = false) {
     if (from !== open.id) send({ type: 'view', id: open.id });
     ready = (id) => id === open.id;
   } else {
-    send(reuse?.sessionId ? { type: 'open_session', sessionId: reuse.sessionId } : { type: 'new_session', profile });
+    send(reuse?.sessionId ? { type: 'open_session', sessionId: reuse.sessionId } : { type: 'new_session', profile, provider: 'claude' });
     ready = (id) => !!id && id !== from;
   }
   const started = Date.now();

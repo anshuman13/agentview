@@ -78,7 +78,7 @@ export const ACCOUNT_LABEL: Record<Account, string> = { main: 'Account 1', alt: 
 // Accounts only picked by hand, never for new chats or after a usage limit.
 export const ACCOUNT_NOTE: Partial<Record<Account, string>> = { alt2: 'Only picked by hand' };
 // What the clients read from /api/settings: the features that are on and the account labels.
-export type PublicSettings = { deploy: boolean; accountLabels: Record<Account, string>; providers?: ProviderOption[]; personalRoot?: string; roots?: string[] };
+export type PublicSettings = { deploy: boolean; accountLabels: Record<Account, string>; providers?: ProviderOption[]; personalRoot?: string; roots?: string[]; defaultProvider?: Provider };
 
 // What runs a chat: the Claude login, Claude Code on OpenRouter models, or the Codex CLI on a ChatGPT plan.
 export type Provider = 'claude' | 'openrouter' | 'codex';

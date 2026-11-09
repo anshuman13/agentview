@@ -33,6 +33,12 @@ describe('openrouter', () => {
     expect(Object.keys(off.agents ?? {})).toEqual(['big-bro']);
   });
 
+  it('disallows WebSearch when a slot is not an Anthropic model', () => {
+    expect(build(settings).disallowedTools).toContain('WebSearch');
+    expect(build({ ...settings, models: { sonnet: 'anthropic/claude-sonnet' } }).disallowedTools).not.toContain('WebSearch');
+    expect(build(null).disallowedTools).not.toContain('WebSearch');
+  });
+
   it('lists the saved slots by their OpenRouter id, and nothing without settings', () => {
     expect(openRouterModels(settings).map((m) => [m.value, m.displayName])).toEqual([['openrouter:sonnet', 'vendor/model-a'], ['openrouter:haiku', 'vendor/model-b']]);
     expect(openRouterModels(null)).toEqual([]);

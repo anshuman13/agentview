@@ -6,9 +6,11 @@ import { rememberAccount } from '../agent/claude/accounts.js';
 import { isProvider, provider, providerOf, rememberProvider } from '../agent/registry.js';
 import { codexThread } from '../agent/codex/threads.js';
 import { AgentSession } from '../session/session.js';
+import { loadSettings } from '../settings.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway } from '../integrations/notify.js';
 import { allowedFolder } from '../workspace/files.js';
+import { applyInitialModel } from './initialModel.js';
 import { watchFiles } from './watchFiles.js';
 import { lastActive } from './summary.js';
 import { broadcastLive, learning, runs, seenRunning, summaryOf } from './listing.js';
@@ -30,7 +32,8 @@ function onChatMessage(chat: AgentSession, m: ServerMessage) {
 
 export async function createChat(cwd: string, resume?: string, title = '', fork = false, choice?: Provider) {
   // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.
-  const p = provider(isProvider(choice) ? choice : providerOf(resume));
+  const { defaultProvider } = loadSettings();
+  const p = provider(isProvider(choice) ? choice : resume ? providerOf(resume) : isProvider(defaultProvider) ? defaultProvider : 'claude');
   await p.verifyLimits();
   const chat = new AgentSession(cwd, p.driver(cwd, resume, fork), resume ?? null);
   chat.runs = runs;
@@ -93,9 +96,10 @@ export async function newChat(cwd: string, from: AgentSession, fork?: string, ch
   return fork ? createChat(dir, fork, from.title, true) : createChat(dir, undefined, '', false, choice);
 }
 
-export async function prompt(cwd: string, text: string, from?: string, fresh = false) {
+export async function prompt(cwd: string, text: string, from?: string, fresh = false, choice: Provider = 'claude', model?: string) {
   const reuse = fresh ? undefined : [...live.values()].map((l) => l.chat).filter((c) => c.cwd === cwd && !c.state.session.running && !c.state.pending.length).sort((a, b) => lastActive(b) - lastActive(a))[0];
-  const chat = reuse ?? (from ? await newChat(cwd, get(from)) : await createChat(cwd));
+  const chat = reuse ?? (from ? await newChat(cwd, get(from), undefined, choice) : await createChat(cwd, undefined, '', false, choice));
+  if (!reuse) applyInitialModel(chat, model);
   void chat.prompt(text);
   return chat.id;
 }

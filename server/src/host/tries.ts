@@ -13,7 +13,8 @@ export function runTries(chat: AgentSession, text: string, tries: Exclude<Return
   chat.pushEvent({ id, kind: 'user', text, at: Date.now() });
   if (tries === 'usage') return chat.system(TRIES_USAGE);
   chat.system(`Starting ${tries.n} worktrees for this prompt`);
-  void startTries(chat.cwd, tries.n, tries.prompt, (cwd, p) => prompt(cwd, `${p}\n\n${ROUND_INSTRUCTION}`, chat.id, true)).then(
+  const { provider, model } = chat.state.session;
+  void startTries(chat.cwd, tries.n, tries.prompt, (cwd, p) => prompt(cwd, `${p}\n\n${ROUND_INSTRUCTION}`, chat.id, true, provider, model ?? undefined)).then(
     (started) => {
       runs.start({
         kind: 'tries',

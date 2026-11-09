@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { openInChrome } from '../chrome/chrome.js';
 import { listSessions, renameRoute, savedSession } from '../agent/claude/sessions.js';
 import { codexSessions } from '../agent/codex/threads.js';
-import { providerOptions } from '../agent/registry.js';
+import { isProvider, providerOptions } from '../agent/registry.js';
 import { cancelFocus, scheduleFocus } from '../integrations/focus.js';
 import { connectorStatus, mcpGroups, setMcpGroup } from '../agent/claude/mcp.js';
 import { emptyBin, listBin, restoreSession } from '../agent/claude/bin.js';
@@ -14,7 +14,7 @@ import { seenRoute } from '../agent/claude/seen.js';
 import { assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
-import { publicSettings } from '../settings.js';
+import { loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
 import { readBody, savePaste } from './body.js';
@@ -97,6 +97,11 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return setMcpGroup(service, String(body.group ?? ''));
     }, true),
     'ANY /api/mcp/groups': entry(() => mcpGroups()),
+    'POST /api/settings': entry(async ({ body }) => {
+      if (!isProvider(body.defaultProvider)) return { status: 400, body: { error: 'defaultProvider is not a provider' } };
+      await saveSettings({ ...loadSettings(), defaultProvider: body.defaultProvider });
+      return { ...publicSettings(), providers: await providerOptions() };
+    }, true),
     'ANY /api/settings': entry(async () => ({ ...publicSettings(), providers: await providerOptions() })),
     'POST /api/openrouter': entry(({ body }) => saveOpenRouter(body), true),
     'ANY /api/openrouter': entry(() => openRouterView()),
