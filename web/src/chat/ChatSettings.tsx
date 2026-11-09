@@ -1,4 +1,4 @@
-import { getState, notice, send, useStore } from '../app/store';
+import { embedded, getState, notice, send, setUi, subscribe, useStore } from '../app/store';
 import { copyText } from '../ui/util';
 import { chatMarkdown, resumeCommand } from './composerLogic';
 import { QuickPick } from '../ui/QuickPick';
@@ -17,6 +17,22 @@ const LOOP_ITEMS = [
   { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
   ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Up to ${n} ${n === 1 ? 'round' : 'rounds'}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
 ];
+
+// Side chat (like Claude desktop's): forks this chat into the column beside it, so a question does not land in the
+// running chat. The server views the fork once it starts; the original moves back to the main column.
+export function sideChat() {
+  const { id, sessionId } = getState().session;
+  if (!sessionId || embedded) return;
+  send({ type: 'new_session', fork: sessionId });
+  const stop = subscribe(() => {
+    const now = getState().session.id;
+    if (!now || now === id) return;
+    stop();
+    send({ type: 'view', id });
+    setUi({ beside: now });
+  });
+  setTimeout(stop, 30_000);
+}
 
 export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools' | 'memory'; at: DOMRect; server?: string };
 
@@ -57,9 +73,10 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
             { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
             { value: 'memory', label: 'Memory', detail: 'CLAUDE.md and memory files' },
             { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
-            ...(sessionId ? [{ value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
+            ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
           ]}
           onPick={(v) => {
+            if (v === 'side') { sideChat(); close(); return; }
             if (v === 'fork') { send({ type: 'new_session', fork: sessionId! }); close(); return; }
             if (v === 'markdown') {
               const st = getState();

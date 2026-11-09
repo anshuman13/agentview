@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { connect, embedded, getState, send, setUi, useStore } from './store';
+import { sideChat } from '../chat/ChatSettings';
 import { openAgent } from '../sessions/agents';
 import { FileIcon } from '../workspace/FileIcon';
 import { ChangesBadge } from '../workspace/gitStatus';
@@ -156,6 +157,7 @@ export function App() {
       const k = e.key.toLowerCase();
       if (k === 'p') { e.preventDefault(); setUi({ switcherOpen: true }); }
       if (k === 'o') { e.preventDefault(); setUi({ repoPicker: true }); }
+      if (e.key === ';') { e.preventDefault(); sideChat(); }
       if (e.code === 'KeyB' && e.altKey) { e.preventDefault(); setChatOpen((v) => !v); }
       else if (k === 'b') { e.preventDefault(); setSidebar((v) => !v); }
       if (k === 'j') { e.preventDefault(); setTerminal((v) => !v); }
