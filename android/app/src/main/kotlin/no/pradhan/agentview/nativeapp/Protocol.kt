@@ -97,6 +97,10 @@ data class LiveRun(
 @Serializable
 data class Round(val n: Int = 0, val at: Long = 0, val outcome: String = "", val line: String = "", val costUsd: Double = 0.0, val report: String? = null)
 
+// shared/protocol.ts Try: one chat of a /tries run.
+@Serializable
+data class RunTry(val n: Int = 0, val chatId: String = "", val sessionId: String = "", val branch: String = "", val dropped: Boolean = false)
+
 @Serializable
 data class ChatRun(
     val id: String,
@@ -115,6 +119,7 @@ data class ChatRun(
     val every: Long? = null,
     val costUsd: Double = 0.0,
     val rounds: List<Round> = emptyList(),
+    val tries: List<RunTry> = emptyList(),
     val needsYou: Boolean = false,
 )
 
@@ -287,6 +292,7 @@ private fun cmd(type: String, build: kotlinx.serialization.json.JsonObjectBuilde
 fun steerCmd(text: String, id: String) = cmd("steer") { put("text", text); put("id", id) }
 fun interruptCmd() = cmd("interrupt")
 fun runCmd(run: String, op: String) = cmd("run") { put("run", run); put("op", op) }
+fun triesKeepCmd(run: String, n: Int) = cmd("tries_keep") { put("run", run); put("n", n) }
 fun permissionCmd(id: String, allow: Boolean, always: Boolean = false) = cmd("permission") {
     put("id", id); put("allow", allow); if (always) put("always", true)
 }

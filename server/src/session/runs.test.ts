@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Runs, firstSentence, roundResult } from './runs.js';
+import { Runs, firstSentence, openTries, roundResult } from './runs.js';
 
 const dir = mkdtempSync(path.join(os.tmpdir(), 'runs-'));
 afterEach(() => rmSync(path.join(dir, 'runs.json'), { force: true }));
@@ -79,5 +79,48 @@ describe('Runs', () => {
     runs.end(id, 'chat closed');
     runs.addRound(id, { n: 1, outcome: 'done', line: '', costUsd: 1 });
     expect(runs.get(id)).toMatchObject({ state: 'done', why: 'you stopped it', rounds: [], costUsd: 0 });
+  });
+});
+
+describe('Runs tries', () => {
+  const tries = [1, 2, 3].map((n) => ({ n, chatId: `c${n}`, sessionId: `s${n}`, branch: `tries/x-${n}` }));
+  const report = { outcome: 'done', line: 'ok', costUsd: 1 } as const;
+
+  it('records each child report as a round of the parent run, prefixed with the try number', () => {
+    const runs = new Runs();
+    const id = runs.start({ ...init, kind: 'tries', tries });
+    runs.reportTry('s2', { ...report, line: 'works' });
+    runs.reportTry('other', report);
+    expect(runs.get(id)).toMatchObject({ costUsd: 1, rounds: [{ n: 2, line: 'Try 2: works', outcome: 'done' }] });
+  });
+
+  it('fires once, when the last try reports', () => {
+    const fired: string[] = [];
+    const runs = new Runs(null, undefined, undefined, (r) => fired.push(r.id));
+    const id = runs.start({ ...init, kind: 'tries', tries });
+    runs.reportTry('s1', report);
+    runs.reportTry('s2', report);
+    expect(fired).toEqual([]);
+    runs.reportTry('s3', report);
+    runs.reportTry('s3', report);
+    expect(fired).toEqual([id]);
+  });
+
+  it('keeping a try drops the others and ends the run; send targets skip the dropped', () => {
+    const runs = new Runs();
+    const id = runs.start({ ...init, kind: 'tries', tries });
+    expect(openTries(runs.get(id)!).map((t) => t.n)).toEqual([1, 2, 3]);
+    runs.keep(id, 2);
+    expect(openTries(runs.get(id)!).map((t) => t.n)).toEqual([2]);
+    expect(runs.get(id)).toMatchObject({ state: 'done', why: 'kept try 2' });
+  });
+
+  it('a try that stays out does not hold up the comparison', () => {
+    const fired: string[] = [];
+    const runs = new Runs(null, undefined, undefined, (r) => fired.push(r.id));
+    const id = runs.start({ ...init, kind: 'tries', tries: tries.map((t) => (t.n === 3 ? { ...t, dropped: true } : t)) });
+    runs.reportTry('s1', report);
+    runs.reportTry('s2', report);
+    expect(fired).toEqual([id]);
   });
 });

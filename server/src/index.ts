@@ -332,7 +332,7 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
       restart(Boolean(msg.now), false);
       break;
     default: {
-      const id = (msg.type === 'run' ? runs.find((r) => r.id === msg.run)?.chatId : undefined) ?? target ?? client.view;
+      const id = ('run' in msg ? runs.find((r) => r.id === msg.run)?.chatId : undefined) ?? target ?? client.view;
       if (!chats.has(id)) return fail(new Error('This chat was closed'));
       host.req({ op: 'cmd', id, msg }).catch(fail);
     }

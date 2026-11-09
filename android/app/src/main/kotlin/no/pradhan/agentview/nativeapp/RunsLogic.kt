@@ -3,17 +3,35 @@ package no.pradhan.agentview.nativeapp
 // Loops, goals and build cycles (web/src/chat/composerLogic.ts runLine and the Runs page bands).
 
 const val RUNS_FINISHED = 30
-private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "cycle" to "Build cycle")
+private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "cycle" to "Build cycle", "tries" to "Tries")
 
 fun runLine(run: ChatRun, phase: String? = null): String = when {
     run.state == "paused" -> if (run.why.isNotEmpty()) "Paused · ${run.why}" else "Paused"
     run.kind == "goal" && run.every != null -> "Standing goal · every ${everyText(run.every)} · at most ${86_400_000L / run.every} rounds a day"
     run.kind == "goal" -> "Goal · check ${run.round} of ${run.max}"
+    run.kind == "tries" -> "Tries · ${run.tries.count { !it.dropped }} chats"
     run.kind == "cycle" -> "Build cycle · round ${run.round}/${run.max}" + (phase?.takeIf { it != "passed" && it != "failed" }?.let { " · ${it.replaceFirstChar(Char::uppercase)}" } ?: "")
     else -> "Loop · round ${run.round}" + (run.nextAt?.let { " · next ${clock(it)}" } ?: "")
 }
 
 private fun everyText(ms: Long) = if (ms % 3_600_000L == 0L) "${ms / 3_600_000L}h" else "${ms / 60_000L}m"
+
+// One column of the tries board (web/src/sessions/TriesBoard.tsx tryColumn): the try's state, last report, diff size and cost.
+data class TryColumn(val n: Int, val branch: String, val state: String, val line: String, val edits: Edits?, val cost: Double, val archived: Boolean)
+
+fun tryColumn(run: ChatRun, t: RunTry, live: List<LiveChat>): TryColumn {
+    val chat = live.firstOrNull { it.sessionId == t.sessionId }
+    val rounds = run.rounds.filter { it.n == t.n }
+    val last = rounds.lastOrNull()
+    val state = when {
+        t.dropped -> "Archived"
+        chat?.pending?.let { it > 0 } == true || last?.outcome == "blocked" || last?.outcome == "question" -> "Needs you"
+        chat?.running == true || last == null -> "Running"
+        last.outcome == "failed" -> "Failed"
+        else -> "Done"
+    }
+    return TryColumn(t.n, t.branch, state, last?.line?.replace(Regex("^Try \\d+: "), "") ?: chat?.last ?: "", chat?.edits, chat?.cost ?: rounds.sumOf { it.costUsd }, t.dropped)
+}
 
 fun roundText(r: Round) = if (r.report != null) "Weekly report" else r.line.ifEmpty { r.outcome }
 

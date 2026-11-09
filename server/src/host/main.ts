@@ -13,6 +13,7 @@ import type { AgentSession } from '../session/session.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway, notifyRunEnded, notifyStall, stallWatch } from '../integrations/notify.js';
 import { allowedFolder } from '../workspace/files.js';
+import { removeChat } from '../agent/claude/pins.js';
 import { parseTries, startTries, TRIES_USAGE } from '../workspace/tries.js';
 import { ownProfile } from '../chrome/chrome.js';
 import { MCP_BAD, type ChatRun, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
@@ -23,7 +24,8 @@ import { sendWhenChanged } from './changed.js';
 import { costsOf, modelField } from './summaryCache.js';
 import { busy, runningAgents, parseSaved, stoppedOf, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
-import { Runs } from '../session/runs.js';
+import { Runs, firstSentence, openTries } from '../session/runs.js';
+import { ROUND_INSTRUCTION } from '../session/repeat.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
 import { readJson, writeJson, writeJsonSync } from '../json.js';
 
@@ -80,7 +82,7 @@ const runs = new Runs(RUNS, () => broadcastLive(), (run) => {
   const chat = live.get(run.chatId)?.chat;
   if (run.why === 'you stopped it' || (chat && viewers(chat))) return;
   notifyRunEnded(run, chat ? path.basename(chat.cwd) : '', !desktopActive(desktopAt));
-});
+}, (run) => live.get(run.chatId)?.chat.compareTries(run));
 
 const stalls = stallWatch((id) => {
   const l = live.get(id);
@@ -368,10 +370,37 @@ function runTries(chat: AgentSession, text: string, tries: Exclude<ReturnType<ty
   chat.pushEvent({ id, kind: 'user', text, at: Date.now() });
   if (tries === 'usage') return chat.system(TRIES_USAGE);
   chat.system(`Starting ${tries.n} worktrees for this prompt`);
-  void startTries(chat.cwd, tries.n, tries.prompt, (cwd, p) => prompt(cwd, p, chat.id, true)).then(
-    (ids) => chat.system(`Started ${ids.length} chats, one per tries/ branch; they are listed in Sessions`),
+  void startTries(chat.cwd, tries.n, tries.prompt, (cwd, p) => prompt(cwd, `${p}\n\n${ROUND_INSTRUCTION}`, chat.id, true)).then(
+    (started) => {
+      runs.start({
+        kind: 'tries',
+        sessionId: chat.state.session.sessionId ?? '',
+        chatId: chat.id,
+        title: `Tries: ${firstSentence(tries.prompt, 70)}`,
+        what: tries.prompt,
+        tries: started.map(({ id, branch }, i) => ({ n: i + 1, chatId: id, sessionId: live.get(id)?.chat.state.session.sessionId ?? '', branch })),
+      });
+      chat.system(`Started ${started.length} chats, one per tries/ branch; compare them on the tries board in Runs`);
+    },
     (err) => chat.system(`Tries failed: ${errText(err)}`),
   );
+}
+
+async function sendToTries(runId: string, text: string) {
+  const run = runs.get(runId);
+  if (!run || !text.trim()) return;
+  await Promise.all(openTries(run).filter((t) => t.sessionId).map(async (t) => void (await openSaved(t.sessionId)).prompt(text)));
+}
+
+async function keepTry(runId: string, n: number) {
+  const run = runs.get(runId);
+  if (!run?.tries?.some((t) => t.n === n)) return;
+  for (const t of openTries(run).filter((t) => t.n !== n && t.sessionId)) {
+    const chat = bySession(t.sessionId);
+    if (chat) await closeByUser(chat);
+    await removeChat(t.sessionId, false, true);
+  }
+  runs.keep(runId, n);
 }
 
 // Chat-level commands from a client. The ones whose failure the client should hear about return their promise.
@@ -422,6 +451,10 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
       return;
     case 'run':
       return chat.runControl(String(msg.run), msg.op);
+    case 'tries_send':
+      return sendToTries(msg.run, String(msg.text));
+    case 'tries_keep':
+      return keepTry(msg.run, Number(msg.n));
     case 'set_loop':
       chat.setLoop(Boolean(msg.on), typeof msg.max === 'number' ? msg.max : undefined);
       return;

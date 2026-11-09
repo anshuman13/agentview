@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 fun LoopCard(hub: Hub, run: ChatRun, phase: String?) {
     var open by rememberSaveable(run.id) { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
-    val cycle = run.kind == "cycle"
+    val cycle = run.kind == "cycle" || run.kind == "tries"
     val paused = run.state == "paused"
     val last = run.rounds.lastOrNull()
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
@@ -81,6 +81,11 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
     val bands = remember(state.runs, codex.jobs, codex.runs, now / 60_000) { runBands(state.runs, codex.jobs, codex.runs, now) }
     LaunchedEffect(Unit) { hub.codex.sync() }
 
+    var board by rememberSaveable { mutableStateOf<String?>(null) }
+    state.runs.firstOrNull { it.id == board }?.let { run ->
+        TriesSheet(hub, run, state.live, { board = null }, { t -> scope.launch { if (hub.openSaved(t.sessionId)) { board = null; onChat() } } })
+    }
+
     fun openChat(run: ChatRun) {
         if (state.live.any { it.id == run.chatId }) { hub.open(run.chatId); onChat() }
         else scope.launch { if (hub.openSaved(run.sessionId)) onChat() }
@@ -91,7 +96,7 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
         is RunEntry.Chat -> {
             val last = e.run.rounds.lastOrNull()
             ListRow(
-                e.run.title.ifBlank { "Untitled" }, runLine(e.run), onClick = { openChat(e.run) },
+                e.run.title.ifBlank { "Untitled" }, runLine(e.run), onClick = { if (e.run.kind == "tries") board = e.run.id else openChat(e.run) },
                 below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(roundText(it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
                 trailing = { RowLabel(money(e.run.costUsd)) },
             )
@@ -128,4 +133,33 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
 private fun entryKey(e: RunEntry) = when (e) {
     is RunEntry.Chat -> "r-${e.run.id}"
     is RunEntry.Job -> "j-${e.row.key}"
+}
+
+// The tries board as a sheet (web TriesBoard): a card per try with its state, last report, diff size and cost, Open and Keep behind a confirm.
+@Composable
+private fun TriesSheet(hub: Hub, run: ChatRun, live: List<LiveChat>, onDismiss: () -> Unit, onOpen: (RunTry) -> Unit) {
+    var keep by remember { mutableStateOf<Int?>(null) }
+    val open = run.tries.count { !it.dropped }
+    keep?.let { n ->
+        ConfirmDialog("Keep try $n?", "Archive the other ${open - 1} chats? Their worktrees stay on disk.", "Keep try $n", { hub.triesKeep(run, n) }, onDismiss = { keep = null })
+    }
+    Sheet(onDismiss, run.title.ifBlank { "Tries" }, count = run.tries.size.toString()) {
+        Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp5)) {
+            run.tries.forEach { t ->
+                val c = tryColumn(run, t, live)
+                Panel {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                        Text(c.branch, Modifier.weight(1f), style = Type.callout, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Badge(c.state, when (c.state) { "Needs you" -> BadgeTone.Waiting; "Running" -> BadgeTone.Running; "Failed" -> BadgeTone.Failed; "Done" -> BadgeTone.Done; else -> BadgeTone.Quiet })
+                    }
+                    Text(c.line.ifEmpty { "No report yet" }, style = Type.subheadline, color = av.fg)
+                    Text((c.edits?.let { "+${it.add} -${it.del}" } ?: "No edits") + " · " + money(c.cost), style = Type.footnote, color = av.fgMuted)
+                    if (!c.archived) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                        Button("Open", { onOpen(t) }, size = ButtonSize.Sm)
+                        Button("Keep try ${t.n}", { keep = t.n }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
+                    }
+                }
+            }
+        }
+    }
 }

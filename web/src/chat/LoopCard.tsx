@@ -5,6 +5,7 @@ import { clock } from '../codex/time';
 import { IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Panel } from '../ui/Panel';
+import { TriesBoard } from '../sessions/TriesBoard';
 import { money } from '../ui/util';
 import type { RunOp } from '../../../shared/protocol';
 import { OUTCOME_DOT, runLine, showTurn, stoppedText } from './composerLogic';
@@ -15,10 +16,11 @@ export function LoopCard() {
   const phase = useStore((s) => s.session.loop.phase);
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [board, setBoard] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   if (!run) return null;
   const control = (op: RunOp) => send({ type: 'run', run: run.id, op });
-  const cycle = run.kind === 'cycle';
+  const cycle = run.kind === 'cycle' || run.kind === 'tries';
   const paused = run.state === 'paused';
   const last = run.rounds.at(-1);
   const report = run.rounds.filter((r) => r.report).at(-1);
@@ -30,6 +32,7 @@ export function LoopCard() {
     <Panel padding="sm" className="lc">
       <div className="lc-head">
         <span className="lc-state">{runLine(run, phase)}</span>
+        {run.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
         {!cycle && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
         <IconButton icon="debug-stop" label="Stop" size="sm" onClick={stop} />
         {!cycle && !paused && (
@@ -63,6 +66,7 @@ export function LoopCard() {
           ))}
         </ul>
       )}
+      {board && <TriesBoard runId={run.id} onClose={() => setBoard(false)} />}
     </Panel>
   );
 }

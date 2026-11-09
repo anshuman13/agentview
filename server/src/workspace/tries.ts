@@ -38,7 +38,9 @@ async function gitWorktree(repo: string, branch: string) {
 export async function startTries(cwd: string, n: number, prompt: string, ask: (cwd: string, prompt: string) => Promise<string>) {
   const repo = await mainCheckout(cwd);
   const make = (b: string) => createWorktree(repo, b).catch((err) => (/not installed|not a Paseo project/.test(String(err)) ? gitWorktree(repo, b) : Promise.reject(err)));
+  const branches = triesBranches(prompt, n);
   const cwds = [];
-  for (const b of triesBranches(prompt, n)) cwds.push(await make(b));
-  return Promise.all(cwds.map((c) => ask(c, prompt)));
+  for (const b of branches) cwds.push(await make(b));
+  const ids = await Promise.all(cwds.map((c) => ask(c, prompt)));
+  return ids.map((id, i) => ({ id, branch: branches[i] }));
 }

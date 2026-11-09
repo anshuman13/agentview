@@ -15,6 +15,16 @@ class RunsTest {
 
     private fun name(e: RunEntry) = when (e) { is RunEntry.Chat -> e.run.id; is RunEntry.Job -> "job:${e.row.id}" }
 
+    @Test fun triesColumnsFollowTheChatAndItsLastReport() {
+        val tries = listOf(RunTry(1, "c1", "s1", "tries/a-1"), RunTry(2, "c2", "s2", "tries/a-2"), RunTry(3, "c3", "s3", "tries/a-3", dropped = true))
+        val r = run("t", kind = "tries", rounds = listOf(Round(1, 0, "done", "Try 1: patched it", 0.5), Round(2, 0, "question", "Try 2: which one?", 0.2))).copy(tries = tries)
+        val live = listOf(LiveChat("c1", sessionId = "s1", edits = Edits(4, 1), cost = 0.7))
+        assertEquals("Tries · 2 chats", runLine(r))
+        assertEquals(TryColumn(1, "tries/a-1", "Done", "patched it", Edits(4, 1), 0.7, false), tryColumn(r, tries[0], live))
+        assertEquals("Needs you", tryColumn(r, tries[1], live).state)
+        assertEquals("Archived", tryColumn(r, tries[2], live).state)
+    }
+
     @Test fun stateLineForRunningPausedAndDone() {
         assertEquals("Loop · round 4 · next 14:20", runLine(run("a")))
         assertEquals("Goal · check 4 of 20", runLine(run("a", kind = "goal")))

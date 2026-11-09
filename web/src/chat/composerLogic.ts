@@ -117,12 +117,13 @@ export const contextPercent = (context: number | null) => (context === null ? nu
 
 const ENDED: Record<string, string> = { passed: 'Build cycle passed', failed: 'Build cycle stopped' };
 
-const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', cycle: 'Build cycle' };
+const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', cycle: 'Build cycle', tries: 'Tries' };
 
 export function runLine(run: ChatRun, phase: string | null = null) {
   if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
   if (run.kind === 'goal' && run.every) return `Standing goal · every ${span(run.every)} · at most ${Math.floor(86_400_000 / run.every)} rounds a day`;
   if (run.kind === 'goal') return `Goal · check ${run.round} of ${run.max}`;
+  if (run.kind === 'tries') return `Tries · ${run.tries?.filter((t) => !t.dropped).length ?? 0} chats`;
   if (run.kind === 'cycle') return `Build cycle · round ${run.round}/${run.max}${phase && phase !== 'passed' && phase !== 'failed' ? ` · ${phase[0].toUpperCase()}${phase.slice(1)}` : ''}`;
   return `Loop · round ${run.round}${run.nextAt ? ` · next ${clock(run.nextAt)}` : ''}`;
 }

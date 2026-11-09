@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { ACCOUNT_LABEL, MAX_GOAL_ROUNDS, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type RoundOutcome, type RunOp, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, MAX_GOAL_ROUNDS, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type ChatRun, type Effort, type LoopState, type Repeat, type RoundOutcome, type RunOp, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, errText } from '../../../shared/util.js';
 import { costRise } from '../../../shared/cost.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
@@ -8,7 +8,7 @@ import { resumePrompt, type Stopped } from '../host/restore.js';
 import { Approvals } from './approvals.js';
 import { advance, looping, loopOff, needsApproval, phaseRound, planChangeText, planStep, withLoop, type LoopStep } from './loop.js';
 import { RepeatController, ROUND_INSTRUCTION, after, fireTime, goalMet, limitReset, restorePrompt } from './repeat.js';
-import { Runs, WAITING, roundResult } from './runs.js';
+import { Runs, WAITING, openTries, roundResult } from './runs.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { EventIndex, MAX_EVENTS, stopAgents, trimHistory } from './events.js';
 import { PR_URL, createsPr, prFrom } from './pr.js';
@@ -54,6 +54,8 @@ export class AgentSession implements AgentHost {
   // The host replaces this with the one it saves; a chat without a host keeps its runs in memory.
   runs = new Runs();
   private cycleRun: string | undefined;
+  // The tries run whose comparison turn is running here.
+  private compareRun: string | undefined;
   // The last turn was a loop round or goal check; its reply ends with a ROUND line.
   private roundTurn = false;
   // The id of the prompt of the weekly report round of a standing goal, while that round runs.
@@ -228,6 +230,7 @@ export class AgentSession implements AgentHost {
     this.closed = true;
     this.runs.end(this.state.session.repeat?.runId, 'chat closed');
     this.runs.end(this.cycleRun, 'chat closed');
+    for (const r of this.runs.list()) if (r.kind === 'tries' && r.chatId === this.id) this.runs.end(r.id, 'chat closed');
     this.repeater.stop();
     this.listeners.clear();
     this.approvals.denyAll();
@@ -383,6 +386,16 @@ export class AgentSession implements AgentHost {
     this.pushEvent({ id, kind: 'user', text, at: Date.now(), ...mark });
     if (mark) this.roundTurn = true;
     this.enqueue(mark ? `${text}\n\n${ROUND_INSTRUCTION}` : text, id);
+  }
+
+  // Every try has reported: one turn here compares them and recommends one, and the run ends with it.
+  compareTries(run: ChatRun) {
+    const id = randomUUID();
+    const text = 'Compare the tries of this run (each worktree is on its tries/ branch; read its diff if you need to) and recommend one, with a two-line reason.';
+    this.system(`All ${openTries(run).length} tries reported`);
+    this.compareRun = run.id;
+    this.pushEvent({ id, kind: 'user', text, at: Date.now() });
+    this.enqueue(`${text}\n\n${ROUND_INSTRUCTION}`, id);
   }
 
   private startRun(r: Repeat) {
@@ -546,6 +559,7 @@ export class AgentSession implements AgentHost {
   }
 
   runControl(run: string, op: RunOp) {
+    if (this.runs.get(run)?.kind === 'tries') return op === 'stop' ? this.runs.end(run, 'you stopped it') : undefined;
     if (this.cycleRun === run) return op === 'stop' ? this.setLoop(false) : undefined;
     if (op === 'restore') return this.repeater.restore(run);
     if (this.state.session.repeat?.runId !== run) return;
@@ -756,6 +770,13 @@ export class AgentSession implements AgentHost {
     this.roundTurn = false;
     this.reportTurn = undefined;
     this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: this.state.session.model });
+    const sessionId = this.state.session.sessionId;
+    if (sessionId) this.runs.reportTry(sessionId, { ...roundResult(r.text, { failed: this.lastError }), costUsd: this.turnCost });
+    if (this.compareRun) {
+      this.runs.addRound(this.compareRun, { n: 0, ...roundResult(r.text, { failed: this.lastError }), costUsd: this.turnCost });
+      this.runs.end(this.compareRun, 'all tries reported');
+      this.compareRun = undefined;
+    }
     if (repeat?.runId && this.roundNote) this.runs.addRound(repeat.runId, { n: repeat.round, outcome: this.roundNote.outcome, line: this.roundNote.line, costUsd: this.turnCost, ...(report && { report }) });
     if (repeat?.goal && met) this.repeater.set(null, `Goal met after ${repeat.round} ${repeat.round === 1 ? 'check' : 'checks'}: ${repeat.goal}`, 'goal met');
     this.turnEnded();

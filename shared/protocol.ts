@@ -118,10 +118,13 @@ export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet
 export type RunOp = 'pause' | 'resume' | 'now' | 'stop' | 'restore';
 export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number; report?: string };
 
-// One /loop, /goal or build cycle: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
+// One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.
+export type Try = { n: number; chatId: string; sessionId: string; branch: string; dropped?: boolean };
+
+// One /loop, /goal, build cycle or /tries: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
 export type ChatRun = {
   id: string;
-  kind: 'loop' | 'goal' | 'cycle';
+  kind: 'loop' | 'goal' | 'cycle' | 'tries';
   sessionId: string;
   chatId: string;
   title: string;
@@ -137,6 +140,7 @@ export type ChatRun = {
   costUsd: number;
   rounds: Round[];
   asked?: boolean;
+  tries?: Try[];
   needsYou: boolean;
 };
 
@@ -315,6 +319,8 @@ export type ClientMessage =
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_loop'; on: boolean; max?: number }
   | { type: 'run'; run: string; op: RunOp }
+  | { type: 'tries_send'; run: string; text: string }
+  | { type: 'tries_keep'; run: string; n: number }
   | { type: 'interrupt' }
   | { type: 'rewind'; id: string }
   | { type: 'stop_task'; toolUseId: string }

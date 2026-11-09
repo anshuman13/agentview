@@ -9,7 +9,7 @@ const KEEP_ENDED = 100;
 const KEEP_ROUNDS = 50;
 const SAVE_MS = 1000;
 
-export type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every'>>;
+export type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every' | 'tries'>>;
 
 export const firstSentence = (text: string, max = 120) => text.trim().split(/(?<=[.!?])\s|\n/)[0].slice(0, max).trim();
 
@@ -21,6 +21,11 @@ export function roundResult(text: string, { failed = false, met = false } = {}):
   return parsed ?? { outcome: 'progress', line: firstSentence(text) };
 }
 
+// The tries still in the run: Keep drops the others.
+export const openTries = (run: ChatRun) => (run.tries ?? []).filter((t) => !t.dropped);
+
+const allReported = (run: ChatRun) => openTries(run).every((t) => run.rounds.some((r) => r.n === t.n));
+
 // A blocked or question round, or a pause for approval, until a later round or a message from the user.
 const mark = (r: ChatRun) => {
   r.needsYou = r.state !== 'done' && (Boolean(r.asked) || (r.state === 'paused' && r.why === WAITING));
@@ -31,7 +36,7 @@ export class Runs {
   private runs: ChatRun[];
   private timer: NodeJS.Timeout | null = null;
 
-  constructor(private file: string | null = null, private onChange: () => void = () => {}, private onEnd: (run: ChatRun) => void = () => {}) {
+  constructor(private file: string | null = null, private onChange: () => void = () => {}, private onEnd: (run: ChatRun) => void = () => {}, private onReported: (run: ChatRun) => void = () => {}) {
     const saved = file ? readJsonSync<unknown>(file, []) : [];
     this.runs = Array.isArray(saved) ? saved.filter((r): r is ChatRun => typeof r?.id === 'string' && Array.isArray(r.rounds)) : [];
     for (const r of this.runs) mark(r);
@@ -66,7 +71,10 @@ export class Runs {
 
   // A chat that has no Claude session yet gets one with its first turn.
   bind(chatId: string, sessionId: string) {
-    for (const r of this.runs) if (r.chatId === chatId && !r.sessionId) r.sessionId = sessionId;
+    for (const r of this.runs) {
+      if (r.chatId === chatId && !r.sessionId) r.sessionId = sessionId;
+      for (const t of r.tries ?? []) if (t.chatId === chatId && !t.sessionId) t.sessionId = sessionId;
+    }
   }
 
   addRound(id: string | undefined, round: Omit<Round, 'at'>) {
@@ -75,6 +83,25 @@ export class Runs {
     run.rounds.push({ ...round, at: Date.now() });
     run.costUsd += round.costUsd;
     run.asked = round.outcome === 'blocked' || round.outcome === 'question';
+    this.touch();
+  }
+
+  // A turn of a try chat ends: its report is a round of the tries run. The last try to report fires onReported once.
+  reportTry(sessionId: string, report: { outcome: RoundOutcome; line: string; costUsd: number }) {
+    const run = this.runs.find((r) => r.state !== 'done' && openTries(r).some((t) => t.sessionId === sessionId));
+    const n = run && openTries(run).find((t) => t.sessionId === sessionId)?.n;
+    if (!run || !n) return;
+    const before = allReported(run);
+    this.addRound(run.id, { n, ...report, line: `Try ${n}: ${report.line}` });
+    if (!before && allReported(run)) this.onReported(run);
+  }
+
+  // The kept try stays; the other tries are archived, which ends the run if it is still going.
+  keep(id: string | undefined, n: number) {
+    const run = this.get(id);
+    if (!run?.tries?.some((t) => t.n === n)) return;
+    for (const t of run.tries) t.dropped = t.n !== n;
+    this.end(id, `kept try ${n}`);
     this.touch();
   }
 

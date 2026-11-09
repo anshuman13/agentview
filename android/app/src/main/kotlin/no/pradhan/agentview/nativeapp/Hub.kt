@@ -528,8 +528,9 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun interrupt() = post(interruptCmd(), store.wanted)
     fun runControl(run: ChatRun, op: String) {
         post(runCmd(run.id, op), store.wanted)
-        if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run), if (run.kind == "cycle") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
+        if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run), if (run.kind == "cycle" || run.kind == "tries") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
     }
+    fun triesKeep(run: ChatRun, n: Int) = post(triesKeepCmd(run.id, n), store.wanted)
     fun answer(id: String, answers: Map<String, String>) = post(answerCmd(id, answers), store.wanted)
     fun permission(id: String, allow: Boolean, always: Boolean = false) = post(permissionCmd(id, allow, always), store.wanted)
     fun allowBlocked(id: String) = post(allowBlockedCmd(id), store.wanted)

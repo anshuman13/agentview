@@ -190,6 +190,13 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - `/tries 3 <prompt>` (2 to 4) starts the prompt in that many new chats, each in its own worktree on a `tries/` branch
   off the default branch, so the best attempt can be kept. Paseo makes the worktrees; without Paseo they are plain git
   worktrees in a hidden `.tries` folder next to the repo. These show under Workspace and a clean one can be removed at once
+  Each try's prompt ends with the ROUND instruction, and the parent chat gets a `tries` run: every try's report is a round
+  ("Try 2: ..."). Opening the run (Runs, or the Open board button on the parent's loop card) shows the tries board: a
+  column per try (stacked on the phone) with its branch, state, last report, diff size and cost, Open (reopens an idle-closed
+  chat) and Keep try N, which asks "Archive the other N chats? Their worktrees stay on disk." The web board also has a
+  Send to all field that messages every try still in the run, reopening closed ones. When every try has reported, the
+  parent chat gets one turn ("All N tries reported") that compares them and recommends one with a ROUND line, and the run
+  ends ("all tries reported"); it also ends when the parent chat closes or on Keep
 - `@chat:` in the web composer lists the other chats by title; picking one inserts `@chat:<session id>`, and the server
   adds that chat's transcript path to the prompt so Claude can read it (the chat shows the prompt as typed)
 - "Fork chat" in the chat settings menu (web and phone, or the palette) starts a new chat that carries the whole conversation so
@@ -359,7 +366,7 @@ heartbeat writes a short weekly report (what moved, what is blocked, what is nex
 progress round; the card and the Runs row show "Weekly report", which jumps to that turn in the chat. "Chat: Start a
 standing goal" in the palette fills the composer with `/goal every 1h `.
 
-Every `/loop`, `/goal` and build cycle is a run, kept in the host in `~/.agentview/runs.json` (active runs and the
+Every `/loop`, `/goal`, build cycle and `/tries` is a run, kept in the host in `~/.agentview/runs.json` (active runs and the
 latest 100 ended ones, each with its last 50 rounds) and served at `GET /api/runs`. A round is the outcome of one turn,
 its one-line summary and its cost. Loop rounds and goal checks end with an instruction to finish the reply with
 `ROUND: <done|progress|blocked|question|nothing> <summary>`; the line is read by the server and hidden from the

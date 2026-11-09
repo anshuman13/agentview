@@ -141,3 +141,13 @@
 .chat-run.warn { color: var(--warn); }
 .runs { padding-bottom: var(--sp-6); }
 .rn-cost { font-size: var(--fs-xs); font-variant-numeric: tabular-nums; color: var(--meta-fg); }
+.tb-grid { display: grid; grid-template-columns: repeat(var(--tries, 2), minmax(0, 1fr)); gap: var(--sp-4); padding: var(--sp-3) 0; }
+.tb-col { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.tb-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-width: 0; }
+.tb-branch { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: 600; color: var(--on-surface); }
+.tb-line { font-size: var(--fs-sm); line-height: var(--line-sm); color: var(--on-surface); overflow-wrap: anywhere; }
+.tb-meta { font-size: var(--fs-xs); font-variant-numeric: tabular-nums; color: var(--meta-fg); }
+.tb-actions { display: flex; gap: var(--sp-3); margin-top: var(--sp-1); }
+.tb-send { display: flex; gap: var(--sp-3); align-items: center; }
+.tb-input { flex: 1; min-width: 0; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); font: inherit; font-size: var(--fs-sm); }
+@media (max-width: 700px) { .tb-grid { grid-template-columns: minmax(0, 1fr); } }
