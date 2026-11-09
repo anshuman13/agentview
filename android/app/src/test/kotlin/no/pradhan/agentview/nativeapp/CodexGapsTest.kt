@@ -134,7 +134,7 @@ class CodexGapsTest {
     }
 
     @Test fun autopilotStateReadsTheHubAndPatchesGoThroughWrites() = runTest {
-        val s = parseAutopilot("""{"config":{"dms":true,"enabled":true,"dry_run":true,"away":{"from":"2026-11-10","to":"2026-11-14","backup":"Bo","note":""},"escalate":["Cy"],"manager":"Di","channels":["a"]},"mode":"away","watched":["a","b"],"covered":["a"],"scan":{"ok":${at(7, 9)},"error":"x","failed":${at(7, 8)}},"spend":{"today":{"usd":1.5,"models":[]},"week":{"usd":12.4,"models":[{"model":"claude-sonnet-5-5-20260101","usd":10.0}],"jobs":{"j":2.0}}},"replies":[{"id":"1","who":"Ada","status":"held","at":1}],"extra":1}""")
+        val s = parseAutopilot("""{"config":{"dms":true,"enabled":true,"auto_send":true,"dry_run":true,"away":{"from":"2026-11-10","to":"2026-11-14","backup":"Bo","note":""},"escalate":["Cy"],"manager":"Di","channels":["a"]},"mode":"away","watched":["a","b"],"covered":["a"],"scan":{"ok":${at(7, 9)},"error":"x","failed":${at(7, 8)}},"spend":{"today":{"usd":1.5,"models":[]},"week":{"usd":12.4,"models":[{"model":"claude-sonnet-5-5-20260101","usd":10.0}],"jobs":{"j":2.0}}},"replies":[{"id":"1","who":"Ada","status":"held","at":1}],"extra":1}""")
         assertEquals("Away until 14 Nov · 1 waiting for you · Dry run".replace("1 waiting", "2 waiting"), modeLine(s, 2))
         assertEquals("10 Nov to 14 Nov", awayValue(s))
         assertEquals("DMs and 1 of 2 channels", coversValue(s))

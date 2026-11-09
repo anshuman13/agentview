@@ -14,10 +14,10 @@ import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { DAY, HOUR, ymd } from './time.js';
 
 // Kept outside the repo in ~/.agentview/assistant/autopilot.json. enabled turns the assist mode on: every ask with a draft
-// is pushed with a Send reply action. Inside the away window the hub answers tier A asks itself and sends one holding
-// note per person; dry_run logs what it would send instead of sending.
+// is pushed with a Send reply action. auto_send (beta, off) turns on the away window: inside it the hub answers tier A asks
+// itself and sends one holding note per person; dry_run logs what it would send instead of sending.
 export type Away = { from: string; to: string; backup?: string; note?: string };
-export type AutopilotConfig = { enabled?: boolean; dry_run?: boolean; away?: Away; escalate?: string[]; manager?: string; dms?: boolean; channels?: string[]; min_confidence?: number; model?: DraftModel };
+export type AutopilotConfig = { enabled?: boolean; auto_send?: boolean; dry_run?: boolean; away?: Away; escalate?: string[]; manager?: string; dms?: boolean; channels?: string[]; min_confidence?: number; model?: DraftModel };
 export type DraftModel = 'sonnet' | 'opus';
 export type Mode = 'off' | 'assist' | 'away';
 export const TIERS = ['answer', 'hold', 'escalate'] as const;
@@ -52,6 +52,7 @@ export function saveAutopilot(db: Database, c: Record<string, unknown>): Autopil
   const from = str(away.from), to = str(away.to);
   const clean: AutopilotConfig = {
     enabled: c.enabled === true || c.enabled === 1,
+    auto_send: c.auto_send === true || c.auto_send === 1,
     dry_run: c.dry_run !== false && c.dry_run !== 0,
     away: { from: DATE.test(from) ? from : '', to: DATE.test(to) ? to : '', backup: str(away.backup), note: str(away.note) },
     escalate: Array.isArray(c.escalate) ? c.escalate.map(str).filter(Boolean) : typeof c.escalate === 'string' ? c.escalate.split(',').map((x) => x.trim()).filter(Boolean) : [],
@@ -88,7 +89,7 @@ export function toPush(mode: Mode, c: AutopilotConfig, watched: string[], asks: 
 export function modeOf(c: AutopilotConfig, now = Date.now()): Mode {
   if (!c.enabled) return 'off';
   const a = c.away;
-  if (a?.from && a?.to) {
+  if (c.auto_send && a?.from && a?.to) {
     const d = ymd(now);
     if (d >= a.from && d <= a.to) return 'away';
   }

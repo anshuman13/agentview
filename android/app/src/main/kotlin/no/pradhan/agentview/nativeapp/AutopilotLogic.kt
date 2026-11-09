@@ -12,6 +12,7 @@ import java.time.LocalDate
 
 @Serializable class AutopilotConfig(
     val enabled: Boolean = false,
+    val auto_send: Boolean = false,
     val dry_run: Boolean = false,
     val away: AutopilotAway = AutopilotAway(),
     val escalate: List<String> = emptyList(),
@@ -44,9 +45,10 @@ fun autopilotDay(d: String): String = runCatching { dayLabel(atHour(LocalDate.pa
 fun modeLine(s: AutopilotState, waiting: Int): String {
     val a = s.config.away
     if (!s.config.enabled) return "Off"
-    val line = if (s.mode == "away") "Away until ${autopilotDay(a.to)}" else if (a.from.isNotEmpty() && a.to.isNotEmpty()) "Drafts only until ${autopilotDay(a.from)}" else "Drafts only"
+    val auto = s.config.auto_send
+    val line = if (s.mode == "away") "Away until ${autopilotDay(a.to)}" else if (auto && a.from.isNotEmpty() && a.to.isNotEmpty()) "Drafts only until ${autopilotDay(a.from)}" else "Drafts only"
     val failed = s.replies.count { it.status == "error" }
-    return listOf(line, if (waiting > 0) "$waiting waiting for you" else "", if (failed > 0) "$failed failed" else "", if (s.config.dry_run) "Dry run" else "").filter { it.isNotEmpty() }.joinToString(" · ")
+    return listOf(line, if (waiting > 0) "$waiting waiting for you" else "", if (failed > 0) "$failed failed" else "", if (auto && s.config.dry_run) "Dry run" else "").filter { it.isNotEmpty() }.joinToString(" · ")
 }
 
 private fun usd(n: Double) = "$" + if (n < 10) String.format(java.util.Locale.ENGLISH, "%.2f", n) else Math.round(n).toString()

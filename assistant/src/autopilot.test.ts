@@ -8,7 +8,7 @@ import { taskRoutes } from './routes/tasks.js';
 
 const at = (d: number, h: number) => new Date(2026, 11, d, h).getTime();
 const url = (u: string) => (u.startsWith('http') ? u : `https://x.slack.com/archives/C1/${u}`);
-const away: AutopilotConfig = { enabled: true, dry_run: false, away: { from: '2026-12-20', to: '2027-01-05', backup: 'Kim' }, escalate: ['Mia'] };
+const away: AutopilotConfig = { enabled: true, auto_send: true, dry_run: false, away: { from: '2026-12-20', to: '2027-01-05', backup: 'Kim' }, escalate: ['Mia'] };
 const ask = (u: string, over: Partial<NewAsk> = {}): NewAsk => ({ id: askId(url(u)), url: url(u), from: 'Per', chat: '#ai-help', title: `Answer ${u}`, quote: 'How?', urgent: false, draft: 'Use the guide.', tier: 'answer', confidence: 0.9, claims: ['f1'], ...over });
 const posts: string[] = [];
 const post = async (url: string, text: string) => {
@@ -32,6 +32,7 @@ describe('modeOf', () => {
     expect(modeOf(away, at(22, 10))).toBe('away');
     expect(modeOf(away, at(10, 10))).toBe('assist');
     expect(modeOf({ ...away, enabled: false }, at(22, 10))).toBe('off');
+    expect(modeOf({ ...away, auto_send: false }, at(22, 10))).toBe('assist');
   });
 
   test('texts name the return date and the backup', () => {
@@ -235,7 +236,7 @@ test('settings are cleaned on save and read back from the database', () => {
   const db = openDb(':memory:');
   expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual({});
   const c = saveAutopilot(db, { enabled: 1, away: { from: '2026-12-20', to: 'soon', backup: ' Kim ' }, escalate: 'Mia, , Bo', min_confidence: 2 });
-  expect(c).toEqual({ enabled: true, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], manager: '', model: 'sonnet', dms: true, min_confidence: 0.8 });
+  expect(c).toEqual({ enabled: true, auto_send: false, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], manager: '', model: 'sonnet', dms: true, min_confidence: 0.8 });
   expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual(c);
   expect(modeOf(c, at(22, 10))).toBe('assist');
   expect(autopilotState(db, at(22, 10)).texts).toBeNull();
@@ -244,7 +245,7 @@ test('settings are cleaned on save and read back from the database', () => {
 });
 
 test('awayStart is midnight of the first away day, only while away', () => {
-  const c: AutopilotConfig = { enabled: true, away: { from: '2026-10-26', to: '2026-10-30', backup: '', note: '' } };
+  const c: AutopilotConfig = { enabled: true, auto_send: true, away: { from: '2026-10-26', to: '2026-10-30', backup: '', note: '' } };
   const inside = new Date(2026, 9, 28, 10).getTime();
   expect(awayStart(c, inside)).toBe(new Date(2026, 9, 26).getTime());
   expect(awayStart(c, new Date(2026, 10, 2, 10).getTime())).toBe(0);

@@ -8,9 +8,10 @@ export const day = (d: string) => dayLabel(new Date(`${d}T00:00`).getTime(), tru
 export function modeLine(s: AutopilotState, waiting: number) {
   const a = s.config.away;
   if (!s.config.enabled) return 'Off';
-  const line = s.mode === 'away' ? `Away until ${day(a.to)}` : a.from && a.to ? `Drafts only until ${day(a.from)}` : 'Drafts only';
+  const auto = !!s.config.auto_send;
+  const line = s.mode === 'away' ? `Away until ${day(a.to)}` : auto && a.from && a.to ? `Drafts only until ${day(a.from)}` : 'Drafts only';
   const failed = s.replies.filter((r) => r.status === 'error').length;
-  return [line, waiting ? `${waiting} waiting for you` : '', failed ? `${failed} failed` : '', s.config.dry_run ? 'Dry run' : ''].filter(Boolean).join(' · ');
+  return [line, waiting ? `${waiting} waiting for you` : '', failed ? `${failed} failed` : '', auto && s.config.dry_run ? 'Dry run' : ''].filter(Boolean).join(' · ');
 }
 
 const usd = (n: number) => `$${n < 10 ? n.toFixed(2) : Math.round(n)}`;

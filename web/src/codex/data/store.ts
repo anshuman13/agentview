@@ -41,7 +41,7 @@ export interface AssistantStore {
   transcript(m: { profile: Profile; id: string }): Promise<string | null>;
 }
 
-export type AutopilotConfig = { enabled: boolean; dry_run: boolean; away: { from: string; to: string; backup: string; note: string }; escalate: string[]; manager: string; dms: boolean; channels?: string[]; min_confidence: number; model: 'sonnet' | 'opus' };
+export type AutopilotConfig = { enabled: boolean; auto_send?: boolean; dry_run: boolean; away: { from: string; to: string; backup: string; note: string }; escalate: string[]; manager: string; dms: boolean; channels?: string[]; min_confidence: number; model: 'sonnet' | 'opus' };
 export type ReplyHistory = { replies: { at: number; line: string }[] };
 export type SentReply = { status: 'sent' | 'dry' | 'answered' | 'changed'; url: string | null };
 export type AutopilotReply = { id: string; who: string | null; chat: string | null; tier: string | null; confidence: number | null; status: string; text: string | null; url: string | null; at: number };

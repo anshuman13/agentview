@@ -53,16 +53,19 @@ function ActivitySheet({ state, onClose }: { state: AutopilotState; onClose: () 
   );
 }
 
-export function SettingRows({ state, onOpen, onDryRun }: { state: AutopilotState; onOpen: (which: Which) => void; onDryRun: (on: boolean) => void }) {
+// Reading and drafting is the main setting; sending on its own is a beta behind Auto send, with its settings under it.
+export function SettingRows({ state, onOpen, onToggle }: { state: AutopilotState; onOpen: (which: Which) => void; onToggle: (key: 'auto_send' | 'dry_run', on: boolean) => void }) {
   const setting = (which: Which, title: string, meta: string) => <Row title={title} meta={meta} trailing={<Icon name="chevron-right" small />} onClick={() => onOpen(which)} />;
+  const auto = !!state.config.auto_send;
   return (
     <div className="ui-group">
-      {setting('away', 'Away', awayValue(state))}
       {setting('covers', 'Covers', coversValue(state))}
-      {setting('never', 'Never answers', neverValue(state))}
-      {setting('model', 'Model', modelValue(state))}
-      <Row plain title="Dry run" trailing={<Switch on={state.config.dry_run} label="Dry run" onChange={onDryRun} />} />
       {setting('activity', 'Activity', activityValue(state))}
+      <Row plain title="Auto send (beta)" meta={auto ? 'Sends replies itself while away' : 'Off: every draft waits for you'} trailing={<Switch on={auto} label="Auto send (beta)" onChange={(on) => onToggle('auto_send', on)} />} />
+      {auto && setting('away', 'Away', awayValue(state))}
+      {auto && setting('never', 'Never answers', neverValue(state))}
+      {auto && setting('model', 'Model', modelValue(state))}
+      {auto && <Row plain title="Dry run" trailing={<Switch on={state.config.dry_run} label="Dry run" onChange={(on) => onToggle('dry_run', on)} />} />}
     </div>
   );
 }
@@ -107,13 +110,13 @@ export function AutopilotPage() {
       <div className="wk-scroll">
         <div className="mt-page">
           {error && <div className="ui-group"><Row plain title="Could not load or save" meta={error} /></div>}
-          {state && <SettingRows state={state} onOpen={setSheet} onDryRun={(on) => void save({ dry_run: on })} />}
+          {state && <SettingRows state={state} onOpen={setSheet} onToggle={(key, on) => void save({ [key]: on })} />}
         </div>
       </div>
       {state && c && sheet === 'info' && (
         <Sheet label="How it works" onClose={close}>
           <Row plain className="jb-wrap" title="How it works"
-            meta={c.away.from && c.away.to
+            meta={c.auto_send && c.away.from && c.away.to
               ? <><span>{`From ${day(c.away.from)} to ${day(c.away.to)} it answers simple questions itself when the thread or your wiki has the answer, and sends one holding note${c.away.backup ? `, naming ${c.away.backup}` : ''}.`}</span><br /><span>Urgent asks and people on the never-answer list always come to you.</span></>
               : <><span>Each ask gets a draft. Send, Edit or Skip it from the Reply queue or the push.</span><br /><span>Nothing goes out on its own.</span></>} />
           <div className="jb-fields"><Button onClick={() => setView({ list: 'today', open: null, person: null })}>Open the Reply queue</Button></div>

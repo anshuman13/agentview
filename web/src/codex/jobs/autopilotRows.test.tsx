@@ -41,10 +41,13 @@ describe('autopilot row values', () => {
 });
 
 describe('settings rows', () => {
-  it('list the five settings in order, none with more than 40 characters of text', () => {
-    const h = renderToStaticMarkup(<SettingRows state={state()} onOpen={() => {}} onDryRun={() => {}} />);
-    const titles = [...h.matchAll(/ui-row-title[^>]*>([^<]*)</g)].map((m) => m[1]);
-    expect(titles).toEqual(['Away', 'Covers', 'Never answers', 'Model', 'Dry run', 'Activity']);
+  const titles = (auto: boolean) => {
+    const h = renderToStaticMarkup(<SettingRows state={state({ auto_send: auto })} onOpen={() => {}} onToggle={() => {}} />);
     for (const t of h.matchAll(/>([^<>]+)</g)) expect(t[1].length).toBeLessThanOrEqual(40);
+    return [...h.matchAll(/ui-row-title[^>]*>([^<]*)</g)].map((m) => m[1]);
+  };
+  it('hide the send settings until Auto send is on, none with more than 40 characters of text', () => {
+    expect(titles(false)).toEqual(['Covers', 'Activity', 'Auto send (beta)']);
+    expect(titles(true)).toEqual(['Covers', 'Activity', 'Auto send (beta)', 'Away', 'Never answers', 'Model', 'Dry run']);
   });
 });

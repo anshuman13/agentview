@@ -49,9 +49,10 @@ FAQ the drafts can lean on.
 The switch is the "Reply for me in Slack" row at the top of Jobs. It shows the mode in one line ("Drafts only", "Away
 until 14 Nov", with waiting, failed and "Dry run" appended) and a Switch; the Switch turns it on or off and a tap
 elsewhere opens its page. The page has Back, the title and an info button that opens a sheet with how it works and a
-button to the Reply queue. Below is one grouped list, each row a setting with its value: Away (the dates or Off),
-Covers (DMs and the watched channels), Never answers (the manager and the people listed), Model (Sonnet or Opus), Dry
-run (a Switch) and Activity (the last scan and the 7-day spend). Away, Covers, Never answers and Model open a sheet with
+button to the Reply queue. Below is one grouped list, each row a setting with its value: Covers (DMs and the watched
+channels), Activity (the last scan and the 7-day spend) and Auto send (beta), a Switch that is off by default. Only with
+Auto send on do Away (the dates or Off), Never answers (the manager and the people listed), Model (Sonnet or Opus) and Dry
+run (a Switch) show; with it off there is no away mode and the hub only reads and drafts. Away, Covers, Never answers and Model open a sheet with
 only their fields; text fields save on blur and on closing the sheet, the chips save at once. Activity opens a sheet with
 Seen, the last asks with what was done (Replied, Would reply, Could answer, Needs you, Escalate, Failed), five at a
 time, and the spend by model. The settings live in the hub's meta table (`GET` and `POST
@@ -74,7 +75,7 @@ Pushes go out in the Slack push hours (08:00 to 17:00 by default, weekdays only 
 meeting to end. In away mode the scan runs every day from 07:00 to 22:00, and it never reads back past the first away day,
 so a first away scan answers nothing older than the mode.
 
-The switch on outside the away dates is assist mode; inside them it is away mode. Dry run, on by default, logs every reply
+The switch on outside the away dates, or with Auto send off, is assist mode; inside them with Auto send on it is away mode. Dry run, on by default, logs every reply
 the hub would send on the ask instead of sending it. Send reply, pressed by me on the push or on the ask, posts even in a
 dry run: the app sends the draft as it reads on the phone with the request, so an edit made a moment ago is what goes out, and
 a failed send stays on the draft card with a Retry button and the next scan posts it again (3 tries, then one push). If someone answered the thread first, nothing is posted and the ask

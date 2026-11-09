@@ -70,14 +70,21 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, on
         if (ap.error.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Could not load or save", ap.error) } }
         if (s != null) item {
             Group(Modifier.padding(top = Tokens.sp4)) {
-                ListRow("On", trailing = { Toggle(s.config.enabled) { ap.save(togglePatch("enabled", it)) } }); Hairline()
-                SettingRow("Away", awayValue(s)) { sheet = Which.Away.name }; Hairline()
+                ListRow("Read and draft", trailing = { Toggle(s.config.enabled) { ap.save(togglePatch("enabled", it)) } }); Hairline()
                 SettingRow("Covers", coversValue(s)) { sheet = Which.Covers.name }; Hairline()
-                SettingRow("Never answers", neverValue(s)) { sheet = Which.Never.name }; Hairline()
-                SettingRow("Model", modelValue(s)) { sheet = Which.Model.name }; Hairline()
-                ListRow("Dry run", trailing = { Toggle(s.config.dry_run) { ap.save(togglePatch("dry_run", it)) } }); Hairline()
                 SettingRow("Activity", activityValue(s, now)) { sheet = Which.Activity.name }; Hairline()
                 SettingRow("How it works", null) { sheet = Which.Info.name }
+            }
+            // Sending on its own is a beta: its settings show only with Auto send on.
+            val auto = s.config.auto_send
+            Group(Modifier.padding(top = Tokens.sp4)) {
+                ListRow("Auto send (beta)", if (auto) "Sends replies itself while away" else "Off: every draft waits for you", trailing = { Toggle(auto) { ap.save(togglePatch("auto_send", it)) } })
+                if (auto) {
+                    Hairline(); SettingRow("Away", awayValue(s)) { sheet = Which.Away.name }; Hairline()
+                    SettingRow("Never answers", neverValue(s)) { sheet = Which.Never.name }; Hairline()
+                    SettingRow("Model", modelValue(s)) { sheet = Which.Model.name }; Hairline()
+                    ListRow("Dry run", trailing = { Toggle(s.config.dry_run) { ap.save(togglePatch("dry_run", it)) } })
+                }
             }
         }
         else item { Group(Modifier.padding(top = Tokens.sp4)) { SettingRow("How it works", null) { sheet = Which.Info.name } } }
@@ -102,7 +109,7 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, on
 private fun InfoSheet(s: AutopilotState?, onReplies: () -> Unit, close: () -> Unit) {
     val a = s?.config?.away
     Sheet(close, "How it works", padded = false) {
-        val text = if (a != null && a.from.isNotEmpty() && a.to.isNotEmpty())
+        val text = if (a != null && s.config.auto_send && a.from.isNotEmpty() && a.to.isNotEmpty())
             "From ${autopilotDay(a.from)} to ${autopilotDay(a.to)} it answers simple questions itself when the thread or your wiki has the answer, and sends one holding note${if (a.backup.isNotEmpty()) ", naming ${a.backup}" else ""}.\nUrgent asks and people on the never-answer list always come to you."
         else "Each ask gets a draft. Send, Edit or Skip it from the Reply queue or the push.\nNothing goes out on its own."
         Text(text, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), style = Type.body, color = av.fgMuted)
