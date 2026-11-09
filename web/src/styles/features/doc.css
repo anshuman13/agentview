@@ -22,6 +22,7 @@
 .doc li::marker { color: var(--fg-faint); }
 .doc li.doc-task { list-style: none; margin-left: -22px; }
 .doc li.doc-task input { width: auto; height: auto; margin: 0 var(--sp-4) 0 0; vertical-align: -1px; accent-color: var(--accent); }
+.doc li.doc-task .doc-start { margin-left: var(--sp-4); }
 .doc hr { height: 1px; margin: var(--sp-16) 0; border: 0; background: var(--border); }
 .doc img { max-width: 100%; border-radius: var(--radius-md); }
 .doc mark { background: color-mix(in srgb, var(--warn) 30%, transparent); color: inherit; border-radius: var(--radius-xs); padding: 0 var(--sp-1); }

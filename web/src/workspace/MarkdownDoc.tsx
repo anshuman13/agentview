@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { Marked } from 'marked';
 import { classHighlighter, highlightCode } from '@lezer/highlight';
 import type { Parser } from '@lezer/common';
-import { api, setUi } from '../app/store';
+import { isSpecPath, runAllPrompt, specProgress, specTasks, startTaskPrompt, type SpecTask } from '../../../shared/specTasks';
+import { api, prompt, queueNext, setUi, useStore } from '../app/store';
+import { Button } from '../ui/Button';
+import { Section } from '../ui/Section';
 import { escapeHtml } from '../ui/util';
 import '../styles/features/doc.css';
 
@@ -118,6 +121,17 @@ function clean(root: ParentNode, path: string) {
   }
 }
 
+function addStartButtons(root: ParentNode, tasks: SpecTask[]) {
+  root.querySelectorAll('li.doc-task').forEach((li, i) => {
+    if (!tasks[i] || tasks[i].done) return;
+    const start = document.createElement('button');
+    start.className = 'btn btn-plain btn-sm doc-start';
+    start.dataset.task = String(i);
+    start.textContent = 'Start';
+    li.insertBefore(start, li.querySelector(':scope > ul, :scope > ol'));
+  });
+}
+
 const parsers = new Map<string, Promise<Parser | null>>();
 
 function parserFor(lang: string) {
@@ -156,6 +170,8 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [active, setActive] = useState('');
   const last = useRef(path);
+  const running = useStore((s) => s.session.running);
+  const tasks = useMemo(() => (isSpecPath(path) ? specTasks(text) : []), [path, text]);
 
   useEffect(() => {
     const el = body.current;
@@ -166,6 +182,7 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
     const tpl = document.createElement('template');
     tpl.innerHTML = toHtml(text);
     clean(tpl.content, path);
+    addStartButtons(tpl.content, tasks);
     el.replaceChildren(tpl.content);
     box.scrollTop = top;
     setHeadings([...el.querySelectorAll<HTMLElement>('h1, h2, h3')].map((h) => ({ id: h.id, text: h.textContent?.replace(/^#/, '') ?? '', depth: Number(h.tagName[1]) })));
@@ -177,7 +194,7 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
     return () => {
       cancelled = true;
     };
-  }, [path, text]);
+  }, [path, text, tasks]);
 
   useEffect(() => {
     const box = scroller.current;
@@ -198,8 +215,16 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
 
   const jump = (id: string) => body.current?.querySelector(`[id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start' });
 
+  const sendToChat = (message: string) => {
+    const lost = () => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: message } }));
+    if (running) queueNext(message, lost);
+    else prompt(message, lost);
+  };
+
   const onClick = (e: MouseEvent) => {
     const t = e.target as HTMLElement;
+    const start = t.closest<HTMLElement>('[data-task]');
+    if (start) return sendToChat(startTaskPrompt(tasks[Number(start.dataset.task)], path));
     const copy = t.closest<HTMLElement>('[data-copy]');
     if (copy) {
       const code = copy.closest('.doc-code')?.querySelector('code')?.textContent ?? '';
@@ -225,6 +250,7 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
 
   return (
     <div className="doc-scroll" ref={scroller}>
+      {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} action={tasks.some((t) => !t.done) && <Button size="sm" variant="plain" onClick={() => sendToChat(runAllPrompt(path))}>Run all</Button>} />}
       <div className="doc-layout">
         <article className="doc" ref={body} onClick={onClick} />
         {outline.length >= 3 && (
