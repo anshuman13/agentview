@@ -320,7 +320,8 @@ those models by their OpenRouter id next to Claude's. Picking one runs the Claud
 it in a running chat restarts the CLI on the new provider (and says so), so stop the chat first. Each chat remembers its
 provider, and a chat without a mark runs on Claude. An OpenRouter chat has no plan usage bar, no cost (the SDK prices
 are Anthropic's), no Team, effort or Fable agent and no account menu, because the controls a driver lacks come from
-the chat's `capabilities` and are hidden on web and the phone. Without a key nothing new shows.
+the chat's `capabilities` and are hidden on web and the phone. Without a key nothing new shows. Rows of a chat on OpenRouter or Codex show the provider name before the time, and where a cost would show an
+OpenRouter chat shows "-" and a Codex chat "Plan"; the Spend list says such chats are not priced.
 
 **Codex**: chats can run on the Codex CLI with a ChatGPT plan (`codex app-server`, one process per chat). Sign in once with
 `codex login` on the Mac; until then Settings shows Codex as "Run codex login on this Mac" and the palette entry only says
