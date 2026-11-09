@@ -58,13 +58,6 @@
 
 .as-composer { flex: none; display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) var(--sp-8) var(--sp-8); }
 .as-chips { display: flex; gap: var(--sp-3); overflow-x: auto; scrollbar-width: none; }
-.dp-block { display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-4); padding: var(--sp-6); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
-.dp-block select, .dp-block input { min-width: 0; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
-.dp-block input[type='number'] { width: 72px; }
-.dp-when { display: flex; align-items: center; gap: var(--sp-4); }
-.dp-when > input + .muted { flex: none; font-variant-numeric: tabular-nums; }
-.dp-when > input[type='time'] { flex: 1; }
-.dp-foot { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--list-pad); font-size: var(--type-label-size); color: var(--on-surface-muted); }
 .as-pick { position: relative; flex: none; display: inline-flex; }
 .as-wrap-more { position: relative; flex: none; display: inline-flex; }
 .as-wrap-more > .ui-menu { white-space: nowrap; }
@@ -156,7 +149,7 @@
   .as-composer { padding: var(--sp-3) var(--sp-6) var(--sp-6); }
   .as-card textarea, .as-mirror { font-size: var(--fs-2xl); }
   .as-snack { bottom: 140px; }
-  :is(.ui-section-actions, .dp-when, .gl-row) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
+  :is(.ui-section-actions, .gl-row) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   /* While a task field has the keyboard, the composer gives its room to the task. */
   .assistant:has(.as-edit :focus) .as-composer { display: none; }
   .as-edit-title { font-size: var(--fs-xl) !important; line-height: 24px; padding-top: 10px !important; }
@@ -172,15 +165,6 @@
 .gl-group > .ui-section { position: relative; }
 .gl-group > .ui-row:disabled { --state: 0%; color: inherit; cursor: default; }
 .gl-input { flex: 1; width: 100%; min-width: 0; padding: var(--sp-3) var(--sp-5); border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; font-size: var(--fs-md); }
-.fc-ahead { display: flex; flex-direction: column; border-radius: 12px; background: var(--group-card); font-size: var(--fs-md); overflow: hidden; }
-.fc-summary { margin: 0; padding: var(--sp-7) var(--sp-8) 0; line-height: 1.4; }
-.fc-stats { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: var(--sp-4); padding: var(--sp-7) var(--sp-8); }
-.fc-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.fc-stats b { font-size: var(--fs-title3); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--fg); }
-.fc-stats span { font-size: var(--fs-footnote); color: var(--fg-muted); }
-.fc-first { display: flex; align-items: center; gap: var(--sp-4); min-height: var(--touch); margin-left: var(--sp-8); padding: var(--sp-5) var(--sp-8) var(--sp-5) 0; border: 0; border-top: 1px solid var(--border); background: none; color: var(--fg); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
-.fc-first > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.fc-first > .codicon { color: var(--fg-faint); }
 .as-ask { flex: none; align-self: center; color: var(--fg); font-size: var(--fs-sm); font-weight: 600; }
 
 /* Tasks page: same layout and card language as Meetings. */
@@ -353,7 +337,6 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-bulk { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--tk-pad, var(--sp-8)); border-top: 1px solid var(--border); background: var(--raised); }
 .as-bulk-n { margin-right: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
 .as-pick > .ui-menu { right: auto; left: 0; white-space: nowrap; }
-.as-stale-open { display: flex; flex-direction: column; width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 
 @media (max-width: 480px) {
   .tasks .as-scroll > section:not(.as-results) > .ui-section { position: sticky; top: 0; z-index: var(--z-raised); background: var(--bg); }

@@ -12,7 +12,6 @@
 .wk-meta > span { display: inline-flex; align-items: center; gap: var(--sp-2); }
 .wk-meta > span + span::before { content: '·'; margin-right: var(--sp-1); color: var(--fg-faint); }
 .wk-meta .codicon.icon { font-size: 12px; }
-.wk-warn { color: var(--warn) !important; }
 
 /* Index */
 .wk-index { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); }
@@ -40,7 +39,6 @@
 
 /* Recently updated */
 .wk-feed { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
-.wk-feed-page { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--fg-muted); }
 
 /* Ask */
 .wk-ask { flex: none; width: 100%; max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-10); }
