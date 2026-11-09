@@ -1,39 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useAssistantStore, useAssistantTable, useCodex } from '../data';
+import { useAssistantTable, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask/ask';
-import { olderClaims, pageClaims, staleClaims, newFact, proposals } from '../data/wiki/wiki';
+import { olderClaims, pageClaims, staleClaims, proposals } from '../data/wiki/wiki';
 import { mentionsOf, type Mentions } from '../data/meetings/mentions';
-import { hasLiveClaims, wikiMarkdown } from '../data/wiki/wikiMarkdown';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
-import { Button, IconButton } from '../../ui/Button';
-import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
-import { Section } from '../../ui/Section';
+import { Button } from '../../ui/Button';
 import { Sheet } from '../../ui/Sheet';
 import { EmptyState } from '../../ui/Panel';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { copyText, setView, showSnack, useEscapeBack, useView } from '../view';
+import { setView, useEscapeBack, useView } from '../view';
 import { AskBar } from './AskBar';
+import { usePageEdits } from './usePageEdits';
+import { useClaimAnchor } from './useClaimAnchor';
+import { WikiPageHead } from './WikiPageHead';
 import { ClaimGroups, OlderClaims, PendingBanner, ProposeForm } from './WikiPageParts';
 import { PageTile } from './PageTile';
 import { useReview } from './Review';
-import { MEMORY, REVIEW, memoryPage } from './shared';
+import { MEMORY, memoryPage } from './shared';
 
 export function WikiPage({ id }: { id: string }) {
   const { pages, facts, meetings } = useCodex();
   const items = useAssistantTable('items');
-  const store = useAssistantStore();
-  const { anchor, filter } = useView();
+  const { filter } = useView();
   const [menu, setMenu] = useState(false);
   const [asking, setAsking] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
-  const cancelled = useRef(false);
   const [proposing, setProposing] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
-  // A cited claim may sit past the window, so a page opened at an anchor shows every claim.
-  const [allFor, setAllFor] = useState<string | null>(null);
   const pid = id === MEMORY ? null : id;
   const page = id === MEMORY ? memoryPage(facts) : pages.find((p) => p.id === id && !p.deleted && p.state !== 'rejected');
   const review = useReview();
@@ -41,88 +36,38 @@ export function WikiPage({ id }: { id: string }) {
   const older = useMemo(() => olderClaims(facts, pid), [facts, pid]);
   const stale = useMemo(() => new Set(staleClaims(facts, pid).map((f) => f.id)), [facts, pid]);
   const total = useMemo(() => groups.reduce((n, g) => n + g.claims.length, 0), [groups]);
+  const { showAll, showOlder, setShowOlder, flash } = useClaimAnchor(id, older, facts.length > 0);
   const [shown, more] = useWindow(String(pid));
-  const visible = useMemo(() => capGroups(groups, anchor || allFor === id ? Infinity : shown, 'claims'), [groups, shown, anchor, allFor, id]);
+  const visible = useMemo(() => capGroups(groups, showAll ? Infinity : shown, 'claims'), [groups, shown, showAll]);
   const mentions = useMemo(() => {
     const out = new Map<string, Mentions>();
     if (pid && page?.title) for (const g of visible) for (const { fact } of g.claims) if (fact.state !== 'proposed') out.set(fact.profile + fact.id, mentionsOf({ items, meetings }, fact, page.title));
     return out;
   }, [visible, items, meetings, pid, page?.title]);
-  const [showOlder, setShowOlder] = useState(false);
   // After Approve all or Reject all the banner stays as a note, so the claims below do not jump up under the finger.
   const [decided, setDecided] = useState<string | null>(null);
-  useEffect(() => { setShowOlder(false); setDecided(null); setMenu(false); setAsking(false); setProposing(null); setRenaming(null); }, [id]);
-  // An anchor that arrives before the claims waits for them.
-  const loaded = facts.length > 0;
-  useEffect(() => {
-    if (!anchor || !loaded) return;
-    setAllFor(id);
-    if (older.some((f) => f.id === anchor)) setShowOlder(true);
-    setFlash(anchor);
-    setView({ anchor: null });
-  }, [anchor, id, loaded, older]);
-  // Runs again once Older opens, so a claim in it exists before the scroll.
-  useEffect(() => {
-    if (!flash) return;
-    document.getElementById(`claim-${flash}`)?.scrollIntoView({ block: 'center' });
-    const t = setTimeout(() => setFlash(null), 1600);
-    return () => clearTimeout(t);
-  }, [flash, showOlder]);
+  useEffect(() => { setDecided(null); setMenu(false); setAsking(false); setProposing(null); setRenaming(null); }, [id]);
   const pending = useMemo(() => proposals(facts).filter((f) => (f.page_id ?? null) === pid), [facts, pid]);
   const back = () => setView({ open: null, anchor: null });
   useEscapeBack(back);
+  const edits = usePageEdits(page, pid, filter, back);
   const propose = () => {
     const text = proposing?.trim();
     setProposing(null);
-    if (!text || !page) return;
-    const fact = newFact(text, pid, pid ? page.profile : filter === 'personal' ? 'personal' : 'work');
-    void store.editRow('facts', fact, {});
-    showSnack('Claim proposed', () => void store.editRow('facts', fact, { deleted: 1 }));
+    edits.propose(text);
   };
   const rename = () => {
     const title = renaming?.trim();
     setRenaming(null);
-    if (cancelled.current) return;
-    cancelled.current = true;
-    if (!title || !page || title === page.title) return;
-    const prev = page.title;
-    void store.editRow('pages', page, { title });
-    showSnack('Renamed', () => void store.editRow('pages', page, { title: prev }));
+    edits.rename(title);
   };
-  const archive = () => {
-    if (!page) return;
-    void store.editRow('pages', page, { state: 'retired' });
-    showSnack(`Archived ${page.title}`, () => void store.editRow('pages', page, { state: null }));
-    back();
-  };
-  const pick = (run: () => void) => () => { setMenu(false); run(); };
   return (
     <div className="wk">
       <header className="wk-head">
         <button className="icon-btn" title="Back to the wiki" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
         {page && (
-          <Section
-            label={renaming === null ? page.title : <input autoFocus className="wk-rename" aria-label="Page title" value={renaming} onChange={(e) => setRenaming(e.target.value)} onFocus={(e) => e.target.select()} onBlur={rename}
-              onKeyDown={(e) => { if (e.key === 'Enter') rename(); if (e.key === 'Escape') { e.stopPropagation(); cancelled.current = true; setRenaming(null); } }} />}
-            action={
-              <span className="as-tt-actions">
-                <Button size="sm" variant="filled" icon="add" onClick={() => setProposing((v) => v ?? '')}>Propose claim</Button>
-                <span className="wk-stale-more">
-                  <IconButton ref={moreBtn} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-                  {menu && (
-                    <Menu trigger={moreBtn} onClose={() => setMenu(false)}>
-                      {pid && <MenuItem icon="sparkle" onClick={pick(() => setAsking(true))}>Ask</MenuItem>}
-                      {pid && <MenuItem icon="edit" onClick={pick(() => { cancelled.current = false; setRenaming(page.title ?? ''); })}>Rename</MenuItem>}
-                      {pending.length > 0 && <MenuItem icon="checklist" onClick={pick(() => setView({ open: REVIEW, anchor: null }))}>Review</MenuItem>}
-                      {hasLiveClaims(groups) && <MenuItem icon="copy" onClick={pick(() => copyText(wikiMarkdown(page.title, groups)))}>Copy as Markdown</MenuItem>}
-                      {pid && <MenuSeparator />}
-                      {pid && <MenuItem icon="archive" danger onClick={pick(archive)}>Archive</MenuItem>}
-                    </Menu>
-                  )}
-                </span>
-              </span>
-            }
-          />
+          <WikiPageHead page={page} isMemory={!pid} groups={groups} pending={pending} renaming={renaming} setRenaming={setRenaming} cancelled={edits.cancelled} onRename={rename} onPropose={() => setProposing((v) => v ?? '')}
+            menu={menu} setMenu={setMenu} moreBtn={moreBtn} onAsk={() => setAsking(true)} onArchive={edits.archive} />
         )}
       </header>
       <div className="wk-scroll">
