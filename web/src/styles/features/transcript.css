@@ -12,6 +12,8 @@
   background: var(--raised); color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .tr-user.stopping { padding-right: var(--sp-16); }
+.tr-user .tr-acts { position: absolute; right: var(--sp-5); top: var(--sp-5); padding-left: var(--sp-3); background: var(--raised); font-size: var(--fs-xs); visibility: hidden; }
+.tr-user:hover .tr-acts, .tr-user .tr-acts:focus-within { visibility: visible; }
 .tr-user.queued .tr-stop { position: static; justify-content: flex-end; margin-top: var(--sp-2); }
 .tr-user .tr-stop { position: absolute; right: var(--sp-5); top: var(--sp-5); display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-faint); }
 .tr-assistant { padding: 0 var(--sp-1) 0 var(--sp-5); border-left: 2px solid color-mix(in srgb, var(--claude) 70%, transparent); }
