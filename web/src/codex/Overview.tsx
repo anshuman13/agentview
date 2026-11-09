@@ -16,6 +16,7 @@ import type { useSplit } from './tasks/split';
 import { UpNext } from './overview/UpNext';
 import { TodayList } from './overview/TodayList';
 import { NeedsYouSheet } from './overview/NeedsYouSheet';
+import { RunningChats } from './overview/RunningChats';
 
 export { Review } from './overview/Review';
 
@@ -66,6 +67,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           <Row title="Needs you" onClick={() => setSheet(true)} trailing={<><span className="badge quiet">{count}</span><Icon name="chevron-right" small /></>} />
         </div>
       )}
+      <RunningChats />
       <TodayList meetings={others} overdue={late} tasks={task ? todo.filter((r) => r !== task) : todo} now={now} done={s.doneToday.length} open={openCount} />
       {sheet && <NeedsYouSheet needs={needs} queue={queue} now={now} onClose={closeSheet} />}
       {adding && <AddSheet filter={filter} onClose={() => setAdding(false)} />}
