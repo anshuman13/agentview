@@ -66,7 +66,9 @@ class CodexStore(
     }
 
     // Shows the rows of the last sync at once; the next pull then fetches only what changed since.
-    suspend fun restore() {
+    suspend fun restore() = lock.withLock { load() }
+
+    private suspend fun load() {
         val body = withContext(Dispatchers.IO) { cache?.takeIf { it.exists() }?.readText() } ?: return
         try {
             val (version, changes) = parse(body)
