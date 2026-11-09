@@ -23,10 +23,11 @@ export function useChatSettings() {
   const effort = useStore((s) => s.session.effort);
   const team = useStore((s) => s.session.team);
   const loop = useStore((s) => s.session.loop);
+  const review = useStore((s) => s.session.review) ?? false;
   const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
   const effortName = effort ? EFFORT_LABEL[effort] : 'Default';
   const modeInfo = MODES[mode] ?? { label: mode, detail: mode, icon: 'shield' };
-  return { mode, model, models, effort, team, loop, modelName, effortName, modeInfo };
+  return { mode, model, models, effort, team, loop, review, modelName, effortName, modeInfo };
 }
 
 // The chat settings menu and the pickers it opens; the saved prompt and MCP pickers stay with the composer.

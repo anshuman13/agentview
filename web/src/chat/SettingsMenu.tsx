@@ -9,7 +9,7 @@ import { useChatSettings, type Pick } from './ChatSettings';
 type Props = { pick: Pick; setPick: (p: Pick | null) => void; close: () => void; savedCount: number; goal: GoalChoice };
 
 export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) {
-  const { loop, modelName, effortName, modeInfo } = useChatSettings();
+  const { loop, review, modelName, effortName, modeInfo } = useChatSettings();
   const sessionId = useStore((s) => s.session.sessionId);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
@@ -21,6 +21,7 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
     if (v === 'side') return act(sideChat);
+    if (v === 'review') return act(() => send({ type: 'set_review', on: !review }));
     if (v === 'fork') return act(forkChat);
     if (v === 'markdown') return act(copyChatMarkdown);
     if (v === 'terminal') return act(() => copyResumeCommand(cwd, sessionId!, account));
@@ -32,6 +33,7 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
       title="Chat settings"
       items={[
         { value: 'mode', label: 'Permission mode', detail: modeInfo.label },
+        { value: 'review', label: 'Review changes', detail: review ? 'On, after each turn' : 'Off' },
         { value: 'model', label: 'Model', detail: modelName },
         { value: 'effort', label: 'Effort', detail: effortName },
         ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),

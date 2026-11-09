@@ -55,6 +55,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     ...PERMISSION_MODES.map((m) => ({ id: `mode:${m}`, label: `Permission Mode: ${MODES[m] ?? m}` })),
     { id: 'compact', label: 'Chat: Compact Context' },
     { id: 'loop', label: 'Chat: Toggle Build Cycle' },
+    { id: 'review', label: 'Chat: Toggle Review Changes' },
     { id: 'goal', label: 'Chat: Start a standing goal' },
     { id: 'spec', label: 'Chat: Start with a spec' },
     { id: 'stop', label: 'Chat: Stop Claude' },

@@ -75,3 +75,7 @@ button.pd-option {
   button.pd-option { min-height: var(--touch); padding: var(--sp-5) var(--sp-4); }
   .pd-other-input { min-height: var(--touch); font-size: var(--fs-2xl); }
 }
+
+.review-card .pd-count { display: flex; align-items: center; gap: var(--sp-3); }
+.rv-file, .rv-hunk { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.rv-hunk .pd-actions { justify-content: flex-end; }

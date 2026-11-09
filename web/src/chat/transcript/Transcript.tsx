@@ -6,6 +6,7 @@ import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
+import { ReviewCard } from '../cards/ReviewCard';
 import { FileIcon } from '../../workspace/FileIcon';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
@@ -208,6 +209,7 @@ function sameItem(a: Item, b: Item): boolean {
       return a.use === o.use && a.result === o.result && a.running === o.running && a.steps.length === o.steps.length && a.steps.every((s, i) => sameItem(s, o.steps[i]));
     }
     case 'blocked':
+    case 'review':
       return a.ev === (b as typeof a).ev;
     default: {
       const x = a as Record<string, unknown>, y = b as Record<string, unknown>;
@@ -249,6 +251,8 @@ function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolea
       return <AgentRow it={it} cwd={cwd} />;
     case 'blocked':
       return <BlockedCard ev={it.ev} />;
+    case 'review':
+      return <ReviewCard ev={it.ev} />;
   }
 }
 

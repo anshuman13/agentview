@@ -3,6 +3,7 @@ import { send, setUi } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { BlockedCard } from '../../chat/cards/Pending';
+import { ReviewCard } from '../../chat/cards/ReviewCard';
 import { Markdown } from '../../chat/Chat';
 import { Row } from '../../chat/transcript/Transcript';
 import { FileIcon } from '../../workspace/FileIcon';
@@ -79,7 +80,8 @@ function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: strin
   const add = turn.files.reduce((n, f) => n + f.add, 0);
   const del = turn.files.reduce((n, f) => n + f.del, 0);
   const grouped = turn.files.length || turn.commits.length || turn.commands.length || turn.agents.length;
-  const any = pending.length || turn.blocked.length || turn.notes.length || grouped;
+  const reviews = turn.steps.flatMap((s) => (s.kind === 'review' ? [s.ev] : []));
+  const any = pending.length || turn.blocked.length || reviews.length || turn.notes.length || grouped;
   if (!any) return null;
   const delta = <><span className="add">+{add}</span> <span className="del">-{del}</span></>;
   const cmdIssues = <>{failed.length > 0 && <span className="tc-bad">, {failed.length} failed</span>}{refused.length > 0 && <span className="tc-muted">, {refused.length} denied</span>}</>;
@@ -96,6 +98,7 @@ function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: strin
         <div key={p.id} className="tc-wait"><Icon name="bell-dot" small /><span>{p.kind === 'question' ? p.questions[0]?.question ?? 'Claude has a question' : p.title}</span></div>
       ))}
       {turn.blocked.map((b) => <BlockedCard key={b.id} ev={b} />)}
+      {reviews.map((r) => <ReviewCard key={r.id} ev={r} />)}
       {turn.notes.length > 0 && (
         <ul className="tc-notes">
           {turn.notes.map((n) => (

@@ -13,7 +13,8 @@ export type Item =
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
   | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string; denied?: boolean }
   | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; running: boolean; steps: Item[] }
-  | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> };
+  | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> }
+  | { kind: 'review'; id: string; ev: Extract<ChatEvent, { kind: 'review' }> };
 
 type Label = { verb: string; object: string; mono?: boolean; cmd?: string };
 
@@ -105,6 +106,7 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
     else if (e.kind === 'assistant') { const text = stripRound(e.text); if (text.trim()) items.push({ kind: 'assistant', id: e.id, text, streaming: e.streaming }); }
     else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text, ...(e.error && { error: true }) });
     else if (e.kind === 'blocked') items.push({ kind: 'blocked', id: e.id, ev: e });
+    else if (e.kind === 'review') items.push({ kind: 'review', id: e.id, ev: e });
     else if (e.kind === 'plan') items.push({ kind: 'system', id: e.id, text: e.next.length ? `You changed the next steps (${e.next.length})` : 'You cleared the next steps' });
     else if (e.kind === 'tool_use' && !e.name.endsWith('__set_status')) {
       const result = results.get(e.id);
@@ -125,7 +127,7 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
   return items;
 }
 
-const TEXT_KINDS = new Set(['assistant', 'user', 'system', 'plan', 'blocked']);
+const TEXT_KINDS = new Set(['assistant', 'user', 'system', 'plan', 'blocked', 'review']);
 const textOnly = (e: ChatEvent) => TEXT_KINDS.has(e.kind) && !('parent' in e && e.parent);
 
 // Where the trailing run of top-level text events starts.
