@@ -215,7 +215,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Under the last reply of a turn on the phone, Reply puts the start of that reply (up to 300 characters) in the composer
   as a Markdown quote, like Slack's reply with quote. On the web every finished reply has the same Reply link next to Save as note
 - "TODOs" in the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
-  end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer
+  end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer. The web chat settings menu has the same TODOs list
 - Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar; web sidebar rows of open chats do the same, except for the chat you are viewing
 - "Remind me" in the phone chat menu adds an open task "Check <chat>" due in 1 hour, 3 hours or tomorrow at 9:00, linked to
   the chat; the hub pushes it when due (like Slack's remind me about this); the web chat settings menu has the same Remind me

@@ -4,6 +4,7 @@ import { chatMarkdown, remindChoices, replyNote, resumeCommand } from './compose
 import { assistantStore } from '../codex/data';
 import { QuickPick } from '../ui/QuickPick';
 import { MemoryPick } from './Memory';
+import { TodosPick } from './Todos';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
 
 const MODES: Record<string, { label: string; detail: string; icon: string }> = {
@@ -47,7 +48,7 @@ async function remindChat(at: number) {
   await store.update(row, { source: 'chat', source_url: `${location.origin}/?session=${sessionId}` });
 }
 
-export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind'; at: DOMRect; server?: string };
+export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'todos'; at: DOMRect; server?: string };
 
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -85,6 +86,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
             { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
             { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
             { value: 'memory', label: 'Memory', detail: 'CLAUDE.md and memory files' },
+            { value: 'todos', label: 'TODOs', detail: 'TODO, FIXME and AI! comments in the repo' },
             { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
             ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'remind', label: 'Remind me', detail: 'Add a task to check this chat later' }, { value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
           ]}
@@ -102,7 +104,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
               close();
               return;
             }
-            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'account' | 'loop' | 'saved' | 'memory' | 'remind', at: pick.at });
+            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'account' | 'loop' | 'saved' | 'memory' | 'remind' | 'todos', at: pick.at });
           }}
           onClose={close}
         />
@@ -116,6 +118,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
           onClose={close}
         />
       )}
+      {pick.kind === 'todos' && <TodosPick anchor={pick.at} onClose={close} />}
       {pick.kind === 'memory' && <MemoryPick anchor={pick.at} cwd={cwd} onClose={close} />}
       {pick.kind === 'model' && (
         <QuickPick
