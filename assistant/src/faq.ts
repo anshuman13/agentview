@@ -15,7 +15,7 @@ const dateOf = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'nu
 export type Faq = { question: string; answer: string; url: string; by: string; heading: string; at: string };
 
 // The Support FAQ page, created as proposed when there is none yet.
-export function faqPage(db: Database, now: number) {
+function faqPage(db: Database, now: number) {
   const row = db.prepare("SELECT id FROM pages WHERE profile = ? AND deleted = 0 AND lower(title) = lower(?) AND COALESCE(state, 'live') != 'rejected'").get(PROFILE, FAQ_PAGE) as { id: string } | null;
   if (row) return row.id;
   const id = crypto.randomUUID();

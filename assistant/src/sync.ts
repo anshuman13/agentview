@@ -86,7 +86,7 @@ export function applyChanges(
 }
 
 // Applies the valid changes and returns the invalid ones, so one bad change does not block the batch.
-export function applyValid(db: Database, changes: Change[]): { version: number; applied: number; rejected: Rejected[] } {
+function applyValid(db: Database, changes: Change[]): { version: number; applied: number; rejected: Rejected[] } {
   const good: Change[] = [];
   const rejected: Rejected[] = [];
   for (const change of changes) {

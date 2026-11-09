@@ -22,7 +22,7 @@ export function triesBranches(prompt: string, n: number, now = new Date()) {
 }
 
 // The main checkout of the repo the chat is in, also when the chat runs inside one of its worktrees.
-export async function mainCheckout(cwd: string) {
+async function mainCheckout(cwd: string) {
   const { stdout } = await run('git', ['-C', cwd, 'worktree', 'list', '--porcelain']);
   return stdout.split('\n')[0].replace(/^worktree /, '');
 }

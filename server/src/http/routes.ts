@@ -34,9 +34,9 @@ import { isPhone } from '../presence.js';
 
 const MAX_FILE_BODY = 5_000_000;
 
-export const HANDLED = Symbol('handled');
+const HANDLED = Symbol('handled');
 
-export type CommandClient = { send: (m: any) => void; sendRaw: (data: string, id?: number) => void; view: string; phone?: boolean };
+type CommandClient = { send: (m: any) => void; sendRaw: (data: string, id?: number) => void; view: string; phone?: boolean };
 
 export type RouteDeps = {
   host: Pick<Host, 'notify' | 'req'>;

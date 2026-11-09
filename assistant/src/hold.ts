@@ -9,7 +9,7 @@ const MAX_HELD = 20;
 
 type Held = { title: string; chat: string; meeting: string; id?: string; body?: string; url?: string; actions?: string };
 // Up to this many held asks go out one by one after the meeting, each with its own actions; more fold into one push.
-export const FEW = 3;
+const FEW = 3;
 
 // The calendar meeting running at now, skipping all-day events, time blocks and events with no other attendees.
 export function meetingAt(db: Database, now: number) {

@@ -7,7 +7,7 @@ import { run, slackConfig } from './slack.js';
 import { PROFILE } from './slackSave.js';
 import { applyChanges, type Change } from './sync.js';
 
-export const VOICE_PAGE = 'How I write';
+const VOICE_PAGE = 'How I write';
 const META = 'draft:voice';
 const MAX_TRAITS = 12;
 

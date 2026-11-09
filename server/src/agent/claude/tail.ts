@@ -3,7 +3,7 @@ import { open, stat, type FileHandle } from 'node:fs/promises';
 const HEAD = 256;
 const NL = 0x0a;
 
-export type TailRead = 'same' | 'append' | 'reload' | null;
+type TailRead = 'same' | 'append' | 'reload' | null;
 
 // Follows an append-only JSONL file: after the first read, only the bytes added since are parsed.
 // Anything that doesn't look like a plain append (shrunk, replaced, start rewritten) is re-read in full.

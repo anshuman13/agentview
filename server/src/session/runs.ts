@@ -9,7 +9,7 @@ const KEEP_ENDED = 100;
 const KEEP_ROUNDS = 50;
 const SAVE_MS = 1000;
 
-export type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every' | 'tries'>>;
+type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every' | 'tries'>>;
 
 export const firstSentence = (text: string, max = 120) => text.trim().split(/(?<=[.!?])\s|\n/)[0].slice(0, max).trim();
 

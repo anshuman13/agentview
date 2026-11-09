@@ -6,7 +6,7 @@ import { DAY, ymd } from './time.js';
 import { configDir, guardLimit, limitedUntil, stopOnOverage, verifyLimit } from '../../server/src/agent/claude/accounts.js';
 
 // One run on the account, with no saved session or settings. It refuses at the usage limit and stops before extra usage.
-export const ASK_TIMEOUT_MS = 10 * 60_000;
+const ASK_TIMEOUT_MS = 10 * 60_000;
 
 // Every hub run adds its cost per model to a day row in meta, spend:YYYY-MM-DD, kept 30 days.
 export type Spend = Record<string, { usd: number; tokens: number; runs: number }>;

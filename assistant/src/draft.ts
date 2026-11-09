@@ -143,7 +143,7 @@ export function slotLines(busy: Span[], now: number, max = 3) {
   return out;
 }
 
-export function freeSlots(db: Database, now = Date.now()) {
+function freeSlots(db: Database, now = Date.now()) {
   const busy = db.prepare('SELECT starts_at, ends_at FROM meetings WHERE profile = ? AND deleted = 0 AND ends_at > ? AND starts_at < ? AND ends_at - starts_at < ?').all(PROFILE, now, addWorkdays(now, 3), 20 * 3600_000) as { starts_at: number; ends_at: number }[];
   return slotLines(busy.map((m) => [m.starts_at, m.ends_at] as Span), now);
 }

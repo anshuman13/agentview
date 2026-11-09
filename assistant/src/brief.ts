@@ -17,7 +17,7 @@ const LONG = 20 * 3600_000;
 const KEEP = 60 * DAY;
 
 type Row = { title: string | null };
-export type BriefRow = { section: string; title: string; meta: string; item: string; meeting: string };
+type BriefRow = { section: string; title: string; meta: string; item: string; meeting: string };
 export type Brief = { title: string; text: string; rows: BriefRow[]; empty: boolean };
 
 export const briefId = (now: number) => `morning:${ymd(now)}`;
@@ -137,7 +137,7 @@ export function aheadDay(db: Database, now = Date.now()) {
   return { day, tasks, meetings: meetings.filter((m) => !isBlock(m.id)), asks };
 }
 
-export function aheadPrompt(a: NonNullable<ReturnType<typeof aheadDay>>) {
+function aheadPrompt(a: NonNullable<ReturnType<typeof aheadDay>>) {
   return [
     `Write a short summary of my work day on ${localDate(a.day)}: what I need to get done and what it is for, in 2 or 3 plain sentences addressed to me ("You need to ...").`,
     'Group related tasks into one point and lead with the most important. Name people only when a task is for them. Do not list every task, do not add advice, headings, bullets or em dashes. Reply with the summary only.',

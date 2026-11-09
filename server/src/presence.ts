@@ -1,4 +1,4 @@
-export const DESKTOP_ACTIVE_MS = 3 * 60_000;
+const DESKTOP_ACTIVE_MS = 3 * 60_000;
 
 const PHONE_UA = /Android|iPhone|iPad|iPod/i;
 

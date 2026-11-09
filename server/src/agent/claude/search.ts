@@ -91,7 +91,7 @@ async function indexFile(file: string, mtime: number, size: number, read: typeof
   return chat;
 }
 
-export type ChatSearchDeps = {
+type ChatSearchDeps = {
   dirs: () => string[];
   binned: () => Promise<string[]>;
   titles: () => Promise<Map<string, string>>;

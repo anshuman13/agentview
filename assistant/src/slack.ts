@@ -25,7 +25,7 @@ const READ_TOOLS = ['slack_search_public_and_private', 'slack_read_channel', 'sl
 export const HUB_URL = process.env.ASSISTANT_PUBLIC ?? 'http://macmini.netbird.cloud:7790';
 
 // Kept outside the repo in ~/.agentview/assistant/slack.json: my Slack user id, the workspace domain and the channels to watch.
-export type SlackConfig = { me: string; domain: string; channels: string[]; push?: { from: number; to: number } };
+type SlackConfig = { me: string; domain: string; channels: string[]; push?: { from: number; to: number } };
 
 export function slackConfig(file = path.join(DB_DIR, 'slack.json')): SlackConfig | null {
   const c = readJsonSync<any>(file, null);

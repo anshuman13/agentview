@@ -2,8 +2,8 @@ import { spawn, type ChildProcess } from 'node:child_process';
 
 export type McpServerDef = { type?: string; command?: string; args?: string[]; env?: Record<string, string>; url?: string; headers?: Record<string, string> };
 export type McpTool = { name: string; description?: string; inputSchema?: unknown; annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean } };
-export type McpInfo = { name?: string; version?: string };
-export type McpContent = { type: string; text?: string; [k: string]: unknown };
+type McpInfo = { name?: string; version?: string };
+type McpContent = { type: string; text?: string; [k: string]: unknown };
 export type McpResult = { content?: McpContent[]; structuredContent?: unknown; isError?: boolean };
 
 type Env = Record<string, string | undefined>;

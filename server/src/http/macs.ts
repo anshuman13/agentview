@@ -6,7 +6,7 @@ export type Mac = { name: string; url: string; running: number; self: boolean };
 
 const MACS_TTL = 5_000;
 
-export function netbirdProblem(d: NetbirdStatus) {
+function netbirdProblem(d: NetbirdStatus) {
   if (d.daemonStatus === 'Connected') return undefined;
   if (/login has expired/i.test(d.management?.error ?? '')) return 'NetBird login on this Mac has expired. Run netbird up to sign in again.';
   if (d.daemonStatus === 'NeedsLogin') return 'NetBird on this Mac is not signed in. Run netbird up.';

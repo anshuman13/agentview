@@ -6,20 +6,20 @@ import { DRAFT_DESC, liveClaims } from './draft.js';
 // Tag on an ask the bot should not answer for me: it needs my decision or is urgent.
 export const NEEDS_ME = 'needs-you';
 export const needsMe = (tier?: string | null) => tier === 'hold' || tier === 'escalate';
-export const FAQ_TAG = 'faq';
-export const SURE = 0.8;
+const FAQ_TAG = 'faq';
+const SURE = 0.8;
 // A tier answer the draft rests on a live wiki claim with high confidence: an FAQ answer I can send without reading.
-export const sureAnswer = (db: Database, a: { tier?: string | null; confidence?: number | null; claims?: string[] | null }) =>
+const sureAnswer = (db: Database, a: { tier?: string | null; confidence?: number | null; claims?: string[] | null }) =>
   a.tier === 'answer' && (a.confidence ?? 0) >= SURE && liveClaims(db, a.claims ?? []).length > 0;
 // Access and limit asks are tagged so the apps can batch them: I grant those in one sitting in an admin console.
-export const ADMIN_KINDS = ['access', 'limit'] as const;
+const ADMIN_KINDS = ['access', 'limit'] as const;
 export const askTags = (db: Database, a: { tier?: string | null; confidence?: number | null; claims?: string[] | null; kind?: string | null }) =>
   [needsMe(a.tier) ? NEEDS_ME : '', sureAnswer(db, a) ? FAQ_TAG : '', ADMIN_KINDS.find((k) => k === a.kind) ?? ''].filter(Boolean).join(' ') || null;
 import { applyChanges, type Change } from './sync.js';
 import { DAY, parseWhen } from './time.js';
 
 export const PROFILE = 'work' as const;
-export const REPLIED = 'Replied in Slack';
+const REPLIED = 'Replied in Slack';
 
 export const Chat = z.object({
   id: z.string().describe('Slack channel or DM id, like C0123 or D0123'),
@@ -95,7 +95,7 @@ export const saidId = (id: string) => `said:${id}`;
 const STOP = new Set(['the', 'and', 'for', 'you', 'your', 'with', 'about', 'from', 'this', 'that', 'into', 'our', 'are', 'can', 'will', 'not', 'all', 'her', 'his', 'him', 'them', 'they', 'its']);
 const words = (s: string) => new Set((s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []).filter((w) => !STOP.has(w)));
 // Two titles for the same thing: at least two words in common, and most words of the shorter one are in the other.
-export function sameAsk(a: string, b: string) {
+function sameAsk(a: string, b: string) {
   const x = words(a), y = words(b);
   if (!x.size || !y.size) return false;
   let n = 0;

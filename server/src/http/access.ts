@@ -2,11 +2,11 @@ import { execFile, execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import type http from 'node:http';
 
-export const NETBIRD = ['/opt/homebrew/bin/netbird', '/usr/local/bin/netbird'].find((p) => existsSync(p)) ?? 'netbird';
+const NETBIRD = ['/opt/homebrew/bin/netbird', '/usr/local/bin/netbird'].find((p) => existsSync(p)) ?? 'netbird';
 const TTL = 15_000;
 const RETRY = 2_000;
 
-export type NetbirdPeer = { fqdn: string; netbirdIp?: string; netbirdIpv6?: string };
+type NetbirdPeer = { fqdn: string; netbirdIp?: string; netbirdIpv6?: string };
 export type NetbirdStatus = {
   daemonStatus?: string;
   fqdn?: string;
@@ -114,7 +114,7 @@ const sameOrigin = (origin: string, host: string) => {
 export const APP_ORIGINS = new Set(['http://tauri.localhost', 'tauri://localhost']);
 export const appOrigin = (h: RequestHeaders, addr?: string) => (h.origin && APP_ORIGINS.has(h.origin) && addr !== undefined && allowedPeer(addr) ? h.origin : undefined);
 
-export type RequestHeaders = { host?: string; origin?: string; 'sec-fetch-site'?: string; 'sec-fetch-mode'?: string };
+type RequestHeaders = { host?: string; origin?: string; 'sec-fetch-site'?: string; 'sec-fetch-mode'?: string };
 
 // The page must be served by this server (Host allowed, Origin equal to it). Browsers send no Origin on plain GETs, so
 // Sec-Fetch-Site catches cross-site image and script loads; cross-site navigations into AgentView stay allowed.

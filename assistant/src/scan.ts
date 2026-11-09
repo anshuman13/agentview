@@ -8,7 +8,7 @@ import { pushNtfy } from '../../server/src/integrations/notify.js';
 
 export type Counts = Record<string, number>;
 export type Scanner = { setUp(): boolean; paused(db: Database): Promise<boolean>; run(db: Database): Promise<Counts>; everyDay?(db: Database): boolean };
-export type ScanCost = { at: number; input: number; output: number; cache_read: number; cache_write: number; usd: number; turns: number };
+type ScanCost = { at: number; input: number; output: number; cache_read: number; cache_write: number; usd: number; turns: number };
 export type ScanHealth = { scan: string; ok?: number; counts?: Counts; error?: string; failed?: number; stalled?: number; missing?: boolean };
 
 const key = (name: string) => `scan:${name}`;

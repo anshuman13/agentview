@@ -15,7 +15,7 @@ const SECRET = /[a-z0-9]{24,}|sk-|ghp_|xox|password/i;
 
 export type ChatEvent = { id: string; kind: string; text: string; at: number };
 export type Chat = { chat: string; title: string; profile: Profile; events: ChatEvent[] };
-export type Learned = { proposed: number } | { skipped: 'limit' };
+type Learned = { proposed: number } | { skipped: 'limit' };
 
 const cursorKey = (profile: Profile, chat: string) => `learn:${profile}:${chat}`;
 
@@ -24,7 +24,7 @@ function known(db: Database, profile: Profile) {
 }
 
 // Saves each claim as a proposed memory claim from the chat, unless a claim with the same text exists in any state or it looks like a secret.
-export function saveLearned(db: Database, c: Chat, claims: string[], now = Date.now()) {
+function saveLearned(db: Database, c: Chat, claims: string[], now = Date.now()) {
   const seen = new Set(known(db, c.profile).map((f) => norm(f.text)));
   const changes: Change[] = [];
   for (const raw of claims) {

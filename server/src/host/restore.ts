@@ -3,7 +3,7 @@ import type { Cron, RunningTask } from '../agent/types.js';
 import { RUN_ID } from '../agent/claude/transcript.js';
 import type { AgentSession } from '../session/session.js';
 
-export type StoppedTask = { description: string; tool: string; runId?: string; scriptPath?: string };
+type StoppedTask = { description: string; tool: string; runId?: string; scriptPath?: string };
 export type Stopped = { midTurn: boolean; tasks: StoppedTask[] };
 export type Saved = { sessionId: string; crons: Cron[]; repeat?: Repeat | null; loop?: LoopState; queued?: { id: string; text: string }[]; stopped?: Stopped };
 

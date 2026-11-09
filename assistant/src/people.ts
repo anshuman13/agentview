@@ -8,7 +8,7 @@ import { PROFILE, webUrl } from './slackSave.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, localDate } from './time.js';
 
-export const PEOPLE_PAGE = 'Who does what';
+const PEOPLE_PAGE = 'Who does what';
 const MAX = 30;
 const WITHIN = 30 * DAY;
 

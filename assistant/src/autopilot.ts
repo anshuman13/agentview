@@ -18,15 +18,15 @@ import { DAY, HOUR, ymd } from './time.js';
 // itself and sends one holding note per person; dry_run logs what it would send instead of sending.
 export type Away = { from: string; to: string; backup?: string; note?: string };
 export type AutopilotConfig = { enabled?: boolean; auto_send?: boolean; dry_run?: boolean; away?: Away; escalate?: string[]; manager?: string; dms?: boolean; channels?: string[]; min_confidence?: number; model?: DraftModel };
-export type DraftModel = 'sonnet' | 'opus';
+type DraftModel = 'sonnet' | 'opus';
 export type Mode = 'off' | 'assist' | 'away';
-export const TIERS = ['answer', 'hold', 'escalate'] as const;
-export type Tier = (typeof TIERS)[number];
+const TIERS = ['answer', 'hold', 'escalate'] as const;
+type Tier = (typeof TIERS)[number];
 export type NewAsk = { id: string; url: string; from: string; chat: string; title: string; quote: string; urgent: boolean; draft?: string; tier?: Tier; confidence?: number; why?: string; answered_by_other?: boolean; claims?: string[]; from_id?: string; external?: boolean };
 type Reply = { status: string; who: string; mode: string; tier: string | null };
 
-export const HOUR_CAP = 10;
-export const DAY_CAP = 40;
+const HOUR_CAP = 10;
+const DAY_CAP = 40;
 const HOLD_AGAIN = 3 * DAY;
 const SLACK = 'mcp__claude_ai_Slack__';
 
@@ -137,7 +137,7 @@ export function escalateLines(c: AutopilotConfig) {
 }
 
 // The watched channels minus temp ones, unless the config names its own list.
-export const coveredChannels = (c: AutopilotConfig, watched: string[]) => c.channels ?? watched.filter((n) => !/^te?mp[-_]/.test(n));
+const coveredChannels = (c: AutopilotConfig, watched: string[]) => c.channels ?? watched.filter((n) => !/^te?mp[-_]/.test(n));
 
 export function channelAllowed(c: AutopilotConfig, watched: string[], chat: string) {
   if (chat === 'DM') return c.dms !== false;
@@ -146,16 +146,16 @@ export function channelAllowed(c: AutopilotConfig, watched: string[], chat: stri
 
 const reply = (db: Database, id: string) => db.prepare('SELECT status, who, mode, tier FROM replies WHERE profile = ? AND id = ?').get(PROFILE, id) as Reply | null;
 
-export function recordAsks(db: Database, asks: NewAsk[], mode: Mode, now: number) {
+function recordAsks(db: Database, asks: NewAsk[], mode: Mode, now: number) {
   const add = db.prepare('INSERT OR IGNORE INTO replies (profile, id, who, chat, tier, confidence, why, mode, status, at, claims, thread) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   for (const a of asks) add.run(PROFILE, a.id, a.from, a.chat, a.tier ?? null, a.confidence ?? null, a.why ?? null, mode, 'held', now, a.claims?.length ? JSON.stringify(a.claims) : null, threadKey(a.url));
 }
 
 // True when the hub already sent (or dry-ran) a reply in the thread of this ask, under another ask.
-export const threadReplied = (db: Database, a: { id: string; url: string }) =>
+const threadReplied = (db: Database, a: { id: string; url: string }) =>
   !!db.prepare("SELECT 1 FROM replies WHERE profile = ? AND id != ? AND thread = ? AND status IN ('sent', 'dry')").get(PROFILE, a.id, threadKey(a.url));
 
-export const sentCount = (db: Database, since: number) => (db.prepare("SELECT COUNT(*) AS n FROM replies WHERE profile = ? AND status IN ('sent', 'dry') AND sent_at > ?").get(PROFILE, since) as { n: number }).n;
+const sentCount = (db: Database, since: number) => (db.prepare("SELECT COUNT(*) AS n FROM replies WHERE profile = ? AND status IN ('sent', 'dry') AND sent_at > ?").get(PROFILE, since) as { n: number }).n;
 
 // The last few replies sent to a person, newest first, each cut to its first line, for the history in the Reply queue.
 export const replyHistory = (db: Database, who: string) => {
@@ -255,7 +255,7 @@ export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: str
 }
 
 // followups: asks it did not answer that I must see, pushed in away mode: a second ask in a thread or within 3 days of a holding note.
-export type Outcome = { answered: string[]; held: string[]; skipped: string[]; followups: string[] };
+type Outcome = { answered: string[]; held: string[]; skipped: string[]; followups: string[] };
 
 export const MAX_TRIES = 3;
 type Failed = { id: string; who: string; chat: string; tier: Tier; text: string; tries: number; url: string | null; title: string | null; why: string | null };
@@ -266,7 +266,7 @@ export const failedReplies = (db: Database) => db.prepare(
 ).all(PROFILE, MAX_TRIES) as Failed[];
 
 // Retries each failed post, up to MAX_TRIES in all; after the last failure it pushes me once and stops trying.
-export async function retryFailed(db: Database, c: AutopilotConfig, now: number, post = postReply, push = pushNtfy) {
+async function retryFailed(db: Database, c: AutopilotConfig, now: number, post = postReply, push = pushNtfy) {
   const out = { answered: [] as string[], held: [] as string[] };
   for (const f of failedReplies(db)) {
     const title = f.title ?? f.id;

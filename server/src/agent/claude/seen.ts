@@ -4,7 +4,7 @@ import { jsonFile } from '../../json.js';
 
 const store = jsonFile<Record<string, number>>(path.join(os.homedir(), '.agentview', 'seen.json'), {});
 
-export const listSeen = () => store.read();
+const listSeen = () => store.read();
 
 // Unread sets the time to 0, so any activity in the chat shows it as Done again.
 export const markSeen = async (id: string, unread = false) => {

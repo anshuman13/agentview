@@ -34,7 +34,7 @@ export async function subagentMessages(cwd: string, sessionId: string, cache = n
   return { subs, changed };
 }
 
-export type JournalAgent = { key: string; agentId: string; label: string; phase: string; status: 'running' | 'done' | 'failed'; result: string };
+type JournalAgent = { key: string; agentId: string; label: string; phase: string; status: 'running' | 'done' | 'failed'; result: string };
 export type WorkflowRun = { runId: string; agents: (JournalAgent & { msgs: SessionMessage[] })[] };
 export type WorkflowFile = { sig: string; agents?: JournalAgent[]; msgs?: SessionMessage[] };
 

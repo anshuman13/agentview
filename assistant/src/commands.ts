@@ -24,13 +24,13 @@ export const Command = z.object({
 
 export const COMMAND_STEP = 'In commands, add each new message I wrote in my DM with myself (a DM whose only member is me) that starts with the word "bot" (any case, then a space, colon or comma): the text after that word and its permalink. Never add a message someone else wrote, or one from any other DM or channel.';
 
-export const REPLY_PREFIX = 'Assistant: ';
+const REPLY_PREFIX = 'Assistant: ';
 const urlKey = (jobId: string) => `cmd:${jobId}`;
 const jobIdOf = (url: string) => `cmd-${createHash('sha1').update(url).digest('hex').slice(0, 16)}`;
 // A DM channel id starts with D, so a message in a channel or group DM is never taken as a command.
 const inDm = (url: string) => /\/archives\/D[A-Z0-9]+\/p\d+/.test(url);
 
-export function commandPrompt(db: Database, text: string) {
+function commandPrompt(db: Database, text: string) {
   return [
     `I sent you this from Slack: "${text.trim()}"`,
     '',
@@ -73,7 +73,7 @@ export async function replyToCommand(db: Database, jobId: string, ok: boolean, o
 const SEARCH = 'mcp__claude_ai_Slack__slack_search_public_and_private';
 
 // A cheap Haiku pass between scans that only looks for new commands, so one waits minutes, not a quarter hour.
-export async function pollCommands(db: Database, me: string, now = Date.now(), onUsage?: (u: Usage) => void) {
+async function pollCommands(db: Database, me: string, now = Date.now(), onUsage?: (u: Usage) => void) {
   const since = Math.max(Number(getMeta(db, 'cmd:last') ?? 0), now - DAY);
   const unix = Math.floor(since / 1000);
   let found: z.infer<typeof Command>[] | null = null;

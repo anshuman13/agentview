@@ -72,7 +72,7 @@ const decode = (s: string) => s.replace(/&(?:#(\d+)|#x([\da-f]+)|(\w+));/gi, (m,
   return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : m;
 });
 
-export function titleOf(html: string): string | null {
+function titleOf(html: string): string | null {
   const head = html.slice(0, MAX_BYTES);
   const value = (tag: string, name: string) => {
     const m = tag.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));

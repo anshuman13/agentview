@@ -62,7 +62,7 @@ function clearLimit(a: Account) {
 
 type Window = { utilization: number | null } | null | undefined;
 type Windows = { five_hour?: Window; seven_day?: Window; seven_day_opus?: Window; seven_day_sonnet?: Window; seven_day_oauth_apps?: Window; model_scoped?: Window[] };
-export type LiveUsage = { rate_limits?: Windows | null };
+type LiveUsage = { rate_limits?: Windows | null };
 
 const under = (w: Window) => w?.utilization != null && w.utilization < 100;
 
@@ -71,7 +71,7 @@ const free = (r: Windows | null | undefined) =>
   !!r && under(r.five_hour) && under(r.seven_day) && ![r.seven_day_opus, r.seven_day_sonnet, r.seven_day_oauth_apps, ...(r.model_scoped ?? [])].some((w) => (w?.utilization ?? 0) >= 100);
 
 // The account's live usage, read from a CLI that gets no prompt, so the check itself uses none.
-export async function liveUsage(a: Account): Promise<LiveUsage> {
+async function liveUsage(a: Account): Promise<LiveUsage> {
   const dir = configDir(a);
   let stop = () => {};
   const stopped = new Promise<void>((r) => (stop = r));
