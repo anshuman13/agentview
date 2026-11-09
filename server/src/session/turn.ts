@@ -81,7 +81,6 @@ export class Turn {
     this.reportTurn = undefined;
     s.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: s.state.session.model });
     s.links.record(r, report);
-    s.review.finish();
     if (repeat?.goal && met) s.repeater.set(null, `Goal met after ${repeat.round} ${repeat.round === 1 ? 'check' : 'checks'}: ${repeat.goal}`, 'goal met');
     this.ended();
   }
@@ -105,6 +104,7 @@ export class Turn {
 
   ended() {
     const s = this.s;
+    s.review.finish();
     this.finish();
     const stopped = this.count === 0 && s.state.session.stopping;
     const idle = this.count === 0 && !s.state.session.stopping;
@@ -157,6 +157,7 @@ export class Turn {
   // The agent process is gone; its queued input went with it, but the events stay.
   exited() {
     const s = this.s;
+    s.review.finish();
     s.waiting.requeuePending();
     this.expectTurn = false;
     this.count = 0;
