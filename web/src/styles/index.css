@@ -1,4 +1,5 @@
 @import '@vscode/codicons/dist/codicon.css';
+@import './fonts.css';
 @import './tokens.css';
 @import './base.css';
 @import './components/buttons.css';

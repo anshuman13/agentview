@@ -72,22 +72,22 @@ class TokenGenTest {
         val out = TokenGen.generate(css, "x")
         assertTrue(out.contains("package x"))
         assertTrue(out.contains("    val bg: Color,"))
-        assertTrue(out.contains("val DarkColors = AvColors(\n    bg = Color(0xFF111418),"))
-        assertTrue(out.contains("    accentSoft = Color(0xFF3B4858),"))
-        assertTrue(out.contains("    accentSoft = Color(0xFFD7E3F7),"))
+        assertTrue(out.contains("val DarkColors = AvColors(\n    bg = Color(0xFF19161D),"))
+        assertTrue(out.contains("    accentSoft = Color(0xFF3A2F4D),"))
+        assertTrue(out.contains("    accentSoft = Color(0xFFEDE4FF),"))
         assertTrue(!out.contains("hover2"))
         assertTrue(out.contains("    val listPad = 8.dp"))
-        assertTrue(out.contains("    val body = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(400))"))
+        assertTrue(out.contains("    val body = TextStyle(fontFamily = AppFont, fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(400))"))
     }
 
     @Test fun nativeColorsOverrideBaseTokensAndFollowVar() {
         val out = TokenGen.generate(":root { --bg: #000000; --accent-text: #409cff; --link: var(--accent-text); --border: #123456; }", "x")
         val dark = out.substringAfter("val DarkColors").substringBefore("val LightColors")
         val light = out.substringAfter("val LightColors")
-        assertTrue(dark.contains("    accentText = Color(0xFF9ECAFF),"))
-        assertTrue(dark.contains("    link = Color(0xFF9ECAFF),"))
-        assertTrue(light.contains("    link = Color(0xFF0061A4),"))
-        assertTrue(dark.contains("    border = Color(0xFF42474E),"))
+        assertTrue(dark.contains("    accentText = Color(0xFFC19AFF),"))
+        assertTrue(dark.contains("    link = Color(0xFFC19AFF),"))
+        assertTrue(light.contains("    link = Color(0xFF7A35E0),"))
+        assertTrue(dark.contains("    border = Color(0xFF4A464F),"))
     }
 
     @Test fun addsDiffTints() {

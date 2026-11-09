@@ -1,11 +1,5 @@
 .as-editor { position: relative; }
-/* Codex uses Geist on the dark themes. */
-:root:not([data-theme='light']) :is(.as-editor, .as-nav) {
-  --font: 'Geist Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --mono: 'Geist Mono Variable', 'SF Mono', Menlo, monospace;
-  color: var(--fg);
-  font-family: var(--font);
-}
+:root:not([data-theme='light']) :is(.as-editor, .as-nav) { color: var(--fg); }
 :root:not([data-theme='light']) .as-editor { background: var(--app-gradient), var(--bg); }
 :is(.as-editor, .as-nav) { font-family: var(--font); }
 

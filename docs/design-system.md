@@ -10,10 +10,11 @@ layers, elevation levels, the shape scale, type roles and touch targets.
 
 ## Principles
 
-- Calm: warm near-black and warm greys, no borders where spacing does the job, hover only under
+- Calm: violet-tinted near-black and greys (KiroCrew's kiro theme), Space Grotesk for text and JetBrains Mono for code, no borders where spacing does the job, hover only under
   `(hover: hover)`, short motion (`--dur`, 120ms; see Motion).
 - Content first: chrome is quiet grey; controls get louder only when they act or are selected.
-- One accent: `--accent` marks interaction (focus, selection, links, the one primary action).
+- One accent: violet `--accent` marks interaction (focus, selection, links, the one primary action).
+  Agents and running work are teal (`--agent`), so they never read as a control.
 - Profile marks: Work blue (`--work`) and Personal magenta (`--personal`) are the only identity
   colours on tasks and lists. Status colours mark state, always next to text or an icon.
 - Dense on desktop, roomy on touch: 28 and 36px controls with a pointer, 44px on coarse pointers.
@@ -313,6 +314,17 @@ Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` 
 - Reasons are under 6 words in meta: "someone else answered", "second ask in 3 days".
 - Times are relative within today ("14:20"), a weekday beyond ("Tue"), from `clock` and `ago` in codex/time.
 
+### Writing (KiroCrew style, Nov 2026)
+- Sentence case, plain words, second person. No exclamation marks, no em dashes; a middle dot joins hints
+  ("Enter saves · Esc cancels").
+- Labels are short verbs: "New", "Pin", "Copy link", "Mark as unread". In progress ends in an ellipsis: "Saving…".
+- An error says what failed, then what state things are in or what to do, in one line at most:
+  "Could not save the note. Your text is still here." "Could not send. Nothing was sent, try again."
+- A confirm states the consequence: "Delete this chat? This cannot be undone." "Archive the worktree? No commits are lost."
+- An empty state says what appears there and how it gets there, in one line: "Chats you pin show here."
+- The one extra line is the limit. Settings rows stay title and value (Scandinavian rules); explanations stay
+  behind the info button.
+
 ## Phone (native Android)
 
 Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NATIVE_COLORS`, `NATIVE_SIZES` and `NATIVE_TYPE` after reading `tokens.css`, so Material wins over the web touch tokens there and `Tokens.kt` stays generated.
@@ -348,51 +360,51 @@ Colours are Material 3 roles. `NATIVE_COLORS` in TokenGen sets each value for bo
 
 | Role | Token | Dark | Light | Use |
 |---|---|---|---|---|
-| background | `bg`, `groupPage` | #111418 | #F8F9FF | page |
-| containerLowest | `containerLowest` | #0C0E13 | #FFFFFF | code, diff and output wells |
-| containerLow | `containerLow` | #191C20 | #F2F3FA | sheets |
-| container | `surface`, `groupCard` | #1D2024 | #ECEEF4 | grouped cards, nav bar, rail, user bubble, terminal |
-| containerHigh | `raised` | #272A2F | #E6E8EE | composer, menus, dialogs, pickers |
-| containerHighest | `sunken`, `hover` | #32353A | #E1E2E8 | text fields, Gray button, Default and Quiet badges, empty-state icon disc |
-| onSurface | `fg`, `fgStrong` | #E1E2E8 | #191C20 | text |
-| onSurfaceVariant | `fgMuted`, `metaFg` | #C2C7CF | #42474E | secondary text |
-| outline | `fgFaint`, `borderStrong` | #8C9199 | #73777F | icons, disabled, check rings; never text |
-| outlineVariant | `border`, `borderCard` | #42474E | #C2C7CF | hairlines |
-| primary | `accent`, `accentFill`, `accentText`, `link` | #9ECAFF | #0061A4 | primary action, links, selection |
-| onPrimary | `onAccent` | #003258 | #FFFFFF | text on primary |
-| primaryContainer | `primaryContainer` | #00497D | #D1E4FF | FAB |
-| onPrimaryContainer | `onPrimaryContainer` | #D1E4FF | #001D36 | FAB glyph |
-| secondaryContainer | `accentSoft` | #3B4858 | #D7E3F7 | nav indicator, selected chip, Tinted button, selected row |
-| onSecondaryContainer | `onSecondaryContainer` | #D7E3F7 | #101C2B | content on those |
-| inverseSurface | `inverseSurface` | #E1E2E8 | #2E3135 | snackbar |
-| inverseOnSurface | `inverseOnSurface` | #2E3135 | #EFF0F7 | snackbar text |
-| inversePrimary | `inversePrimary` | #0061A4 | #9ECAFF | snackbar action |
+| background | `bg`, `groupPage` | #19161D | #FFFFFF | page |
+| containerLowest | `containerLowest` | #141118 | #FFFFFF | code, diff and output wells |
+| containerLow | `containerLow` | #1C1922 | #FAFAFA | sheets |
+| container | `surface`, `groupCard` | #211D25 | #F5F5F5 | grouped cards, nav bar, rail, user bubble, terminal |
+| containerHigh | `raised` | #28242E | #F0F0F0 | composer, menus, dialogs, pickers |
+| containerHighest | `sunken`, `hover` | #2F2A36 | #E9E8EC | text fields, Gray button, Default and Quiet badges, empty-state icon disc |
+| onSurface | `fg`, `fgStrong` | #DCDADF / #F2F1F4 | #19161D | text |
+| onSurfaceVariant | `fgMuted`, `metaFg` | #B8B4BF | #4A464F | secondary text |
+| outline | `fgFaint`, `borderStrong` | #938F9B | #79747E | icons, disabled, check rings; never text |
+| outlineVariant | `border`, `borderCard` | #4A464F | #D4D4D8 / #E4E4E7 | hairlines |
+| primary | `accent`, `accentText`, `link` | #C19AFF | #7A35E0 | links, selection, focus |
+| primary fill | `accentFill` | #C19AFF | #8E48FF | primary button |
+| onPrimary | `onAccent` | #2A0063 | #FFFFFF | text on the fill |
+| primaryContainer | `primaryContainer` | #4B1C99 | #EBDCFF | FAB |
+| onPrimaryContainer | `onPrimaryContainer` | #EBDCFF | #2A0063 | FAB glyph |
+| secondaryContainer | `accentSoft` | #3A2F4D | #EDE4FF | nav indicator, selected chip, Tinted button, selected row |
+| onSecondaryContainer | `onSecondaryContainer` | #E8DEF8 | #21182B | content on those |
+| inverseSurface | `inverseSurface` | #E6E1E9 | #322F35 | snackbar |
+| inverseOnSurface | `inverseOnSurface` | #322F35 | #F5EFF7 | snackbar text |
+| inversePrimary | `inversePrimary` | #7A35E0 | #D3BBFF | snackbar action |
 
 Status pairs: the colour is for text and icons on the surfaces; the container holds a badge or banner with its on-container text.
 
 | Status | Colour | Container | On-container |
 |---|---|---|---|
-| ok | #78DC77 / #1B6D24 | #005313 / #A3F69C | #94F990 / #002204 |
-| warn | #FFB870 / #845400 | #693C00 / #FFDDB3 | #FFDDBA / #2A1800 |
-| err | #FFB4AB / #BA1A1A | #93000A / #FFDAD6 | #FFDAD6 / #410002 (`onErr` #690005 / #FFFFFF) |
-| agent (running, agents) | #C6BFFF / #5B53A9 | #463F8F / #E4DFFF | #E4DFFF / #170065 (`onAgent` #2F2176 / #FFFFFF) |
-| info (new, unread, upcoming) | #6CD3F0 / #00677F | #004E5F / #B8EAFF | #B1EBFF / #001F28 |
+| ok | #5FD38D / #00703A | #00522A / #C4F2D3 | #9CF6B8 / #00210E |
+| warn | #E0B94D / #7A6400 | #5A4300 / #FFE08B | #FFE08B / #241A00 |
+| err | #FF8A96 / #C01D3E | #8C1D2E / #FFDADC | #FFD9DC / #40000C (`onErr` #5C0016 / #FFFFFF) |
+| agent (running, agents) | #43C9BD / #00696B | #00504A / #9FF2E7 | #9FF2E7 / #00201F (`onAgent` #003733 / #FFFFFF) |
+| info (new, unread, upcoming) | #6F9AE0 / #285092 | #1E3A66 / #D6E3FF | #D6E3FF / #001A41 |
 
-Profile dots: work #82B1FF / #2160C4, personal #E8A3FF / #8E3FAA. Scrim is `scrimStrong`.
+Profile dots: work #6F9AE0 / #285092, personal #E8A3FF / #8E3FAA. Scrim is `scrimStrong`.
 
 Contrast ratios (worst case is text on `sunken`; `ContrastTest` checks them).
 
-| Theme | Text on surfaces | Icons only | Fill pairs | Profile dots |
-|---|---|---|---|---|
-| Dark | fg 9.5, fgMuted 7.3, accent and status at least 7.16 (info is lowest) | fgFaint 3.9 | onAccent/accent 7.7, onPrimaryContainer 7.2, onSecondaryContainer 7.2, inverse 10.1, inversePrimary on inverse 5.0, on-containers 6.9 or higher, onErr/err 7.7, onAgent/agent 7.7 | work 5.7, personal 6.5 |
-| Light | fg 13.2, fgMuted 7.2, accent and status at least 4.98 | fgFaint 3.5 | onAccent/accent 6.5, on-containers 13.2 or higher, inverse 11.5, inversePrimary 7.7, onErr/err 6.5, onAgent/agent 6.5 | work 4.6, personal 4.7 |
+| Theme | Text on surfaces | Icons only | Fill pairs |
+|---|---|---|---|
+| Both | fg, fgMuted, accent and status at least 4.5 on every surface (light ok, at 5.1, is lowest) | fgFaint, borderStrong and profile dots at least 3 on bg and surface | every on-colour pair at least 4.5 |
 
 Rules:
 - Text is `fg` or `fgMuted`, never `fgFaint`.
 - Accent is only for the primary action, links and selection, never for status.
 - A status colour always appears with an icon or a word. There is no decorative colour.
 - Profile hues are only 8dp dots beside the profile word.
-- Toggle on is primary blue, not green.
+- Toggle on is primary violet, not green.
 - Terminal ANSI 0 and 8 follow `fgFaint`, and terminal default text follows `fg`, so both shift with the theme.
 
 ### Interaction
@@ -411,7 +423,7 @@ The Wiki page keeps 16dp side margins and 16dp above the title. In the hero, tit
 Done: Summary uses Panel (filter card), every empty list or report uses EmptyState (the old
 `.as-empty` and `.empty-state` styles are gone), and the menus use Menu. Chips are done: as-chip, cp-chip, mcp-chip and ag-chip use Chip, which takes `tone` (`work`, `personal`, `accent`) and `quiet` (dashed, faint). `mt-add` stays a form, since it is an input row, and uses Chip tokens (height, radius, accent-soft on focus).
 
-As of 31 Oct 2026 the light and dark themes use Apple's iOS system colours: white or black page, #F2F2F7 or #1C1C1E for cards and chrome, systemBlue accent and work, systemPurple personal, and Apple's Increase Contrast hues for status text in light. Meeting and knowledge icons are neutral.
+As of 9 Nov 2026 the light and dark themes use KiroCrew's kiro palette: #19161D or white page, #211D25 or #FAFAFA for cards and chrome, violet #8E48FF accent, teal agents, blue work, and Space Grotesk with JetBrains Mono on web and phone. Meeting and knowledge icons are neutral.
 
 ### Migration status
 

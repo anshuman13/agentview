@@ -43,28 +43,28 @@ object TokenGen {
     // Material 3 colour roles for the native app, applied to each theme's vars before resolve (docs/design-system.md, Phone).
     private val NATIVE_COLORS = mapOf(
         "dark" to mapOf(
-            "bg" to "#111418", "group-page" to "#111418", "container-lowest" to "#0C0E13", "container-low" to "#191C20", "surface" to "#1D2024",
-            "group-card" to "#1D2024", "raised" to "#272A2F", "sunken" to "#32353A", "hover" to "#32353A", "fg" to "#E1E2E8", "fg-strong" to "#E1E2E8",
-            "fg-muted" to "#C2C7CF", "fg-faint" to "#8C9199", "border-strong" to "#8C9199", "border" to "#42474E", "border-card" to "#42474E",
-            "accent" to "#9ECAFF", "accent-fill" to "#9ECAFF", "accent-text" to "#9ECAFF", "on-accent" to "#003258", "primary-container" to "#00497D",
-            "on-primary-container" to "#D1E4FF", "accent-soft" to "#3B4858", "on-secondary-container" to "#D7E3F7", "inverse-surface" to "#E1E2E8",
-            "inverse-on-surface" to "#2E3135", "inverse-primary" to "#0061A4", "ok" to "#78DC77", "ok-container" to "#005313",
-            "on-ok-container" to "#94F990", "warn" to "#FFB870", "warn-container" to "#693C00", "on-warn-container" to "#FFDDBA", "warn-soft" to "#693C00",
-            "err" to "#FFB4AB", "err-container" to "#93000A", "on-err-container" to "#FFDAD6", "on-err" to "#690005", "agent" to "#C6BFFF",
-            "agent-container" to "#463F8F", "on-agent-container" to "#E4DFFF", "on-agent" to "#2F2176", "info" to "#6CD3F0", "info-container" to "#004E5F",
-            "on-info-container" to "#B1EBFF", "work" to "#82B1FF", "personal" to "#E8A3FF",
+            "bg" to "#19161D", "group-page" to "#19161D", "container-lowest" to "#141118", "container-low" to "#1C1922", "surface" to "#211D25",
+            "group-card" to "#211D25", "raised" to "#28242E", "sunken" to "#2F2A36", "hover" to "#2F2A36", "fg" to "#DCDADF", "fg-strong" to "#F2F1F4",
+            "fg-muted" to "#B8B4BF", "fg-faint" to "#938F9B", "border-strong" to "#938F9B", "border" to "#4A464F", "border-card" to "#4A464F",
+            "accent" to "#C19AFF", "accent-fill" to "#C19AFF", "accent-text" to "#C19AFF", "on-accent" to "#2A0063", "primary-container" to "#4B1C99",
+            "on-primary-container" to "#EBDCFF", "accent-soft" to "#3A2F4D", "on-secondary-container" to "#E8DEF8", "inverse-surface" to "#E6E1E9",
+            "inverse-on-surface" to "#322F35", "inverse-primary" to "#7A35E0", "ok" to "#5FD38D", "ok-container" to "#00522A",
+            "on-ok-container" to "#9CF6B8", "warn" to "#E0B94D", "warn-container" to "#5A4300", "on-warn-container" to "#FFE08B", "warn-soft" to "#5A4300",
+            "err" to "#FF8A96", "err-container" to "#8C1D2E", "on-err-container" to "#FFD9DC", "on-err" to "#5C0016", "agent" to "#43C9BD",
+            "agent-container" to "#00504A", "on-agent-container" to "#9FF2E7", "on-agent" to "#003733", "info" to "#6F9AE0", "info-container" to "#1E3A66",
+            "on-info-container" to "#D6E3FF", "work" to "#6F9AE0", "personal" to "#E8A3FF",
         ),
         "light" to mapOf(
-            "bg" to "#F8F9FF", "group-page" to "#F8F9FF", "container-lowest" to "#FFFFFF", "container-low" to "#F2F3FA", "surface" to "#ECEEF4",
-            "group-card" to "#ECEEF4", "raised" to "#E6E8EE", "sunken" to "#E1E2E8", "hover" to "#E1E2E8", "fg" to "#191C20", "fg-strong" to "#191C20",
-            "fg-muted" to "#42474E", "fg-faint" to "#73777F", "border-strong" to "#73777F", "border" to "#C2C7CF", "border-card" to "#C2C7CF",
-            "accent" to "#0061A4", "accent-fill" to "#0061A4", "accent-text" to "#0061A4", "on-accent" to "#FFFFFF", "primary-container" to "#D1E4FF",
-            "on-primary-container" to "#001D36", "accent-soft" to "#D7E3F7", "on-secondary-container" to "#101C2B", "inverse-surface" to "#2E3135",
-            "inverse-on-surface" to "#EFF0F7", "inverse-primary" to "#9ECAFF", "ok" to "#1B6D24", "ok-container" to "#A3F69C",
-            "on-ok-container" to "#002204", "warn" to "#845400", "warn-container" to "#FFDDB3", "on-warn-container" to "#2A1800", "warn-soft" to "#FFDDB3",
-            "err" to "#BA1A1A", "err-container" to "#FFDAD6", "on-err-container" to "#410002", "on-err" to "#FFFFFF", "agent" to "#5B53A9",
-            "agent-container" to "#E4DFFF", "on-agent-container" to "#170065", "on-agent" to "#FFFFFF", "info" to "#00677F", "info-container" to "#B8EAFF",
-            "on-info-container" to "#001F28", "work" to "#2160C4", "personal" to "#8E3FAA",
+            "bg" to "#FFFFFF", "group-page" to "#FFFFFF", "container-lowest" to "#FFFFFF", "container-low" to "#FAFAFA", "surface" to "#F5F5F5",
+            "group-card" to "#F5F5F5", "raised" to "#F0F0F0", "sunken" to "#E9E8EC", "hover" to "#E9E8EC", "fg" to "#19161D", "fg-strong" to "#19161D",
+            "fg-muted" to "#4A464F", "fg-faint" to "#79747E", "border-strong" to "#79747E", "border" to "#D4D4D8", "border-card" to "#E4E4E7",
+            "accent" to "#7A35E0", "accent-fill" to "#8E48FF", "accent-text" to "#7A35E0", "on-accent" to "#FFFFFF", "primary-container" to "#EBDCFF",
+            "on-primary-container" to "#2A0063", "accent-soft" to "#EDE4FF", "on-secondary-container" to "#21182B", "inverse-surface" to "#322F35",
+            "inverse-on-surface" to "#F5EFF7", "inverse-primary" to "#D3BBFF", "ok" to "#00703A", "ok-container" to "#C4F2D3",
+            "on-ok-container" to "#00210E", "warn" to "#7A6400", "warn-container" to "#FFE08B", "on-warn-container" to "#241A00", "warn-soft" to "#FFE08B",
+            "err" to "#C01D3E", "err-container" to "#FFDADC", "on-err-container" to "#40000C", "on-err" to "#FFFFFF", "agent" to "#00696B",
+            "agent-container" to "#9FF2E7", "on-agent-container" to "#00201F", "on-agent" to "#FFFFFF", "info" to "#285092", "info-container" to "#D6E3FF",
+            "on-info-container" to "#001A41", "work" to "#285092", "personal" to "#8E3FAA",
         ),
     )
 
@@ -230,7 +230,7 @@ object TokenGen {
             val size = native?.first?.toDouble() ?: resolve("var(--type-$r-size)", dark)?.removeSuffix("px")?.toDoubleOrNull() ?: return@mapNotNull null
             val line = native?.second?.toDouble() ?: (Math.round(size * (resolve("var(--type-$r-line)", dark)?.toDoubleOrNull() ?: 1.0) * 10) / 10.0)
             val weight = native?.third ?: resolve("var(--type-$r-weight)", dark)?.toIntOrNull() ?: 400
-            "val ${camel(r)} = TextStyle(fontSize = ${num(size)}.sp, lineHeight = ${num(line)}.sp, fontWeight = FontWeight($weight))"
+            "val ${camel(r)} = TextStyle(fontFamily = AppFont, fontSize = ${num(size)}.sp, lineHeight = ${num(line)}.sp, fontWeight = FontWeight($weight))"
         }
         return buildString {
             appendLine("// Generated by ./gradlew generateTokens from agentview/web/src/styles/tokens.css. Do not edit.")

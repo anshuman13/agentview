@@ -13,6 +13,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
@@ -23,6 +24,7 @@ import androidx.core.view.WindowCompat
 val LocalAv = staticCompositionLocalOf { DarkColors }
 val av: AvColors @Composable get() = LocalAv.current
 
+@OptIn(ExperimentalTextApi::class)
 private fun variable(res: Int, vararg weights: Int) = FontFamily(weights.map { Font(res, FontWeight(it), variationSettings = FontVariation.Settings(FontVariation.weight(it))) })
 val AppFont = variable(R.font.space_grotesk, 300, 400, 500, 600, 700)
 val MonoFont = variable(R.font.jetbrains_mono, 400, 500, 700)
