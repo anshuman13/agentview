@@ -1,31 +1,22 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { apiUrl } from '../app/api';
-import { api, embedded, getState, markSeen, markUnread, notice, send, setUi, subscribe, useStore } from '../app/store';
+import { api, embedded, markSeen, notice, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Chip, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
-import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { QuickPick } from '../ui/QuickPick';
-import { ATTENTION_LABEL, type AttentionItem, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
-import { ago, copyText, markSegments, pressable, save, stored } from '../ui/util';
+import { ago, markSegments, pressable, save, stored } from '../ui/util';
 import { queryWords } from '../codex/data/match';
 import { Bin } from './Bin';
-import { AgentsBlock } from './AgentRow';
-import { openAgent } from './agents';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
-import { CheckIcon, PullState, usePullRequests } from '../ops/pulls';
-import { archiveChat, byUrgency, chatFinder, chatsByStatus, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RenameEvent, type RepoGroup } from './folders';
-import { Badge } from '../ui/Badge';
+import { byUrgency, chatFinder, chatsByStatus, chatState, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, newChatGroups, orderGroups, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { RepoRow } from './RepoRow';
-import { Swipe } from '../codex/Swipe';
-import { showSnack } from '../codex/view';
-import { isMuted, setMuted } from '../app/mute';
-import { draftLine, readDraft } from '../chat/composerLogic';
-import { clock } from '../codex/time';
-import { useChatRun } from './runBands';
+import { ChatRow, LiveRow, SavedRow, WaitingRows, chatActions, metaLine, type Actions, type Pin, type SetChats } from './ChatRows';
+import { NeedsYou } from './NeedsYou';
 
 const PAGE = 5;
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -426,165 +417,6 @@ function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }
   return null;
 }
 
-type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
-type Pin = (on: boolean) => Promise<boolean>;
-type Actions = {
-  rename: (id: string, title: string) => void;
-  archive: (s: { sessionId: string; title: string }) => void;
-  archiveNow: (s: SavedSession, pinned: boolean, pin: Pin) => void;
-};
-
-const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Actions => ({
-  rename: async (id, title) => {
-    if (await renameChat(id, title)) setChats((l) => l.map((x) => (x.sessionId === id ? { ...x, title } : x)));
-  },
-  archive: (s) => ask(archiveChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), notice)),
-  archiveNow: (s, pinned, pin) => removeRequest(s.sessionId, '&archive', () => {
-    setChats((l) => l.filter((x) => x.sessionId !== s.sessionId));
-    showSnack('Archived', async () => {
-      if (!(await restoreChat(s.sessionId))) return notice('Could not restore the chat. It is still in the bin.');
-      setChats((l) => [s, ...l]);
-      if (pinned) await pin(true);
-    });
-  }, notice)(),
-});
-
-function RenameInput({ value, onSave, onCancel }: { value: string; onSave: (title: string) => void; onCancel: () => void }) {
-  const [text, setText] = useState(value);
-  const done = useRef(false);
-  const finish = (event: RenameEvent) => {
-    if (done.current) return;
-    done.current = true;
-    const title = renameTitle(event, text, value);
-    if (title) onSave(title);
-    else onCancel();
-  };
-  return (
-    <input
-      className="chat-rename"
-      autoFocus
-      maxLength={120}
-      aria-label="Chat title"
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-      onFocus={(e) => e.currentTarget.select()}
-      onBlur={() => finish('blur')}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') finish('Enter');
-        if (e.key === 'Escape') {
-          e.stopPropagation();
-          finish('Escape');
-        }
-      }}
-    />
-  );
-}
-
-type ChatRowProps = {
-  sessionId?: string;
-  title: string;
-  cwd: string;
-  lastModified: number;
-  live?: LiveChat;
-  opening?: boolean;
-  meta: ReactNode;
-  state: ChatState | null;
-  selected?: boolean;
-  pinned?: boolean;
-  actions: Actions;
-  onOpen: () => void;
-  onPin?: Pin;
-  onBeside?: () => void;
-  onClose?: () => void;
-};
-
-function RunTag({ chat }: { chat: string }) {
-  const run = useChatRun(chat);
-  if (!run) return null;
-  const warn = run.needsYou || run.state === 'paused';
-  return <span className={`chat-run ${warn ? 'warn' : ''}`}>{run.needsYou ? 'Needs you' : run.state === 'paused' ? 'Paused' : <><Icon name="sync" small />{run.nextAt ? clock(run.nextAt) : 'Running'}</>}</span>;
-}
-
-const BADGE = { needs: 'waiting', failed: 'failed', running: 'running', done: 'done' } as const;
-
-function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
-  const [menu, setMenu] = useState(false);
-  const [renaming, setRenaming] = useState(false);
-  const [retrying, setRetrying] = useState(false);
-  const [muted, setMute] = useState(() => isMuted(sessionId));
-  const more = useRef<HTMLButtonElement>(null);
-  const unread = state === 'done' || state === 'needs';
-  useEffect(() => {
-    if (!retrying) return;
-    if (state !== 'failed') return setRetrying(false);
-    const t = setTimeout(() => setRetrying(false), 3000);
-    return () => clearTimeout(t);
-  }, [retrying, state]);
-  const pick = (act: () => void) => () => { setMenu(false); act(); };
-  const rowKey = (e: React.KeyboardEvent<HTMLElement>) => {
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
-    if (!step) return;
-    if (e.key.startsWith('Arrow')) e.preventDefault();
-    const rows = [...document.querySelectorAll<HTMLElement>('.chats [data-chat-row]')];
-    rows[rows.indexOf(e.currentTarget) + step]?.focus();
-  };
-  if (renaming) {
-    const save = (t: string) => {
-      setRenaming(false);
-      actions.rename(sessionId!, t);
-    };
-    return <div className="chat-row"><Row plain title={<RenameInput value={title} onSave={save} onCancel={() => setRenaming(false)} />} /></div>;
-  }
-  const retry = () => {
-    setRetrying(true);
-    send({ type: 'view', id: live!.id });
-    send({ type: 'retry' }, live!.id);
-  };
-  const swipe = chatSwipe(!!pinned, live);
-  const swipePin = async () => {
-    const on = swipe.right === 'pin';
-    if (await onPin!(on)) showSnack(on ? 'Pinned' : 'Unpinned', () => void onPin!(!on));
-  };
-  const row = (
-    <div className={`chat-row ${unread ? 'unread' : ''}`}>
-      <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={(muted || state || live) && <>{live && <RunTag chat={live.id} />}{muted && <span title="Muted" className="chat-muted"><Icon name="bell-slash" small /></span>}{state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />}</>} onClick={onOpen} onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined} onLongPress={sessionId ? () => setRenaming(true) : undefined} />
-      <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-      {menu && (
-        <Menu trigger={more} onClose={() => setMenu(false)}>
-          {chatMenuItems({ failed: state === 'failed' && !!live, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose, unread: !!sessionId && !state && !selected }).map((key) => {
-            switch (key) {
-              case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={pick(retry)}>Retry</MenuItem>;
-              case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={pick(() => void onPin!(!pinned))}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
-              case 'unread': return <MenuItem key={key} icon="mail" onClick={pick(() => markUnread(sessionId!))}>Mark as unread</MenuItem>;
-              case 'mute': return <MenuItem key={key} icon={muted ? 'bell' : 'bell-slash'} onClick={pick(() => { setMuted(sessionId!, !muted); setMute(!muted); })}>{muted ? 'Unmute' : 'Mute'}</MenuItem>;
-              case 'link': return <MenuItem key={key} icon="link" onClick={pick(() => copyText(`${location.origin}/?session=${sessionId}`).then(() => notice('Copied the chat link'), () => notice('Could not copy')))}>Copy link</MenuItem>;
-              case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={pick(() => setRenaming(true))}>Rename</MenuItem>;
-              case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={pick(onBeside!)}>Open beside</MenuItem>;
-              case 'close': return <MenuItem key={key} icon="close" onClick={pick(onClose!)}>Close chat</MenuItem>;
-              case 'separator': return <MenuSeparator key={key} />;
-              case 'archive': return <MenuItem key={key} icon="archive" danger disabled={!sessionId} onClick={pick(() => actions.archive({ sessionId: sessionId!, title }))}>Archive</MenuItem>;
-            }
-          })}
-        </Menu>
-      )}
-    </div>
-  );
-  if (!sessionId || !onPin) return row;
-  return (
-    <Swipe
-      rightLabel={swipe.right === 'pin' ? 'Pin' : 'Unpin'}
-      rightIcon={swipe.right === 'pin' ? 'pin' : 'pinned'}
-      onRight={swipePin}
-      leftLabel="Archive"
-      leftIcon="archive"
-      onLeft={swipe.left ? () => actions.archiveNow({ sessionId, title, cwd, gitBranch: null, lastModified }, !!pinned, onPin) : undefined}
-    >
-      {row}
-    </Swipe>
-  );
-}
-
 type MessageHit = { sessionId: string; role: 'user' | 'assistant'; text: string; at: string; title: string };
 
 export const messageMeta = (h: Pick<MessageHit, 'title' | 'role' | 'at'>) => metaLine(h.title || 'Untitled', h.role === 'user' ? 'You' : 'Claude', h.at ? ago(h.at) : undefined);
@@ -600,135 +432,5 @@ function useMessageSearch(filter: string) {
     return () => { live = false; clearTimeout(t); };
   }, [filter]);
   return hits;
-}
-
-const metaLine = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ');
-
-const branchOf = (saved?: string | null, repoBranch?: string) => {
-  const b = saved || repoBranch;
-  return isDefault(b) ? undefined : b;
-};
-
-function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
-  const seen = useStore((x) => x.seen);
-  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={metaLine(repo, branchOf(s.gitBranch, branch), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
-}
-
-function WaitingRows({ viewing, ask, pins, setPin, setChats }: { viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
-  const live = useStore((s) => s.live);
-  const actions = chatActions(setChats, ask);
-  return <>{live.filter((c) => c.pending).map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.includes(c.sessionId ?? '')} onPin={(on) => setPin(c.sessionId!, on)} />)}</>;
-}
-
-function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; saved?: SavedSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: Pin; onBeside?: () => void }) {
-  const events = useStore((s) => (s.session.id === c.id ? s.events : null));
-  const seen = useStore((s) => s.seen);
-  const line = chatLine(c, events);
-  const shownCwd = useStore((s) => s.session.cwd);
-  const pr = usePullRequests(c.pr && c.cwd === shownCwd ? shownCwd : '').find((p) => p.number === c.pr);
-  const when = c.pending ? since(c.lastActive) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : since(Math.max(c.lastActive, saved?.lastModified ?? 0));
-  // Slack's sidebar draft line: an unsent composer draft replaces the meta line, except in the chat you are in.
-  const draft = selected ? '' : draftLine(readDraft(c.id));
-  const main = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
-    <>
-      {metaLine(repo, branchOf(saved?.gitBranch, branch), when)}
-      {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>#{c.pr}{pr.checks !== 'none' && <CheckIcon state={pr.checks} />}</a> : `#${c.pr}`}</>}
-      {c.todos && ` · ${c.todos.done}/${c.todos.total}`}
-      {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
-    </>
-  );
-  const meta = c.recap ? <>{main}<span className="chat-recap">{c.recap}</span></> : main;
-  return (
-    <>
-      <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={meta} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
-      {c.agentList && <LiveAgents c={c} />}
-    </>
-  );
-}
-
-const agentsOpen = new Set<string>();
-let stopWaiting: (() => void) | null = null;
-
-// Opens an agent of another chat once the switch to that chat lands, after Brief resets its selection.
-function openAgentIn(chat: string, id: string) {
-  stopWaiting?.();
-  const stop = subscribe(() => {
-    if (getState().session.id !== chat) return;
-    stop();
-    stopWaiting = null;
-    setTimeout(() => openAgent(id), 0);
-  });
-  stopWaiting = stop;
-  setTimeout(() => { if (stopWaiting === stop) { stop(); stopWaiting = null; } }, 10_000);
-  send({ type: 'view', id: chat });
-}
-
-function LiveAgents({ c }: { c: LiveChat }) {
-  const [open, setOpen] = useState(() => agentsOpen.has(c.id));
-  const viewing = useStore((s) => s.session.id);
-  const toggle = () => {
-    if (open) agentsOpen.delete(c.id);
-    else agentsOpen.add(c.id);
-    setOpen(!open);
-  };
-  const pick = (id: string) => {
-    if (c.id === viewing) return openAgent(id);
-    openAgentIn(c.id, id);
-  };
-  return <AgentsBlock agents={c.agentList!} open={open} onToggle={toggle} onOpen={pick} />;
-}
-
-const PR_KINDS = new Set<AttentionItem['kind']>(['review', 'ci', 'changes', 'ready', 'stale']);
-const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues', stale: 'history', commit: 'git-commit', deploy: 'rocket' };
-
-// Chats waiting on the user plus GitHub items the server flagged (failing CI, reviews, assigned issues).
-function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
-  const items = useStore((s) => s.attention);
-  const cwd = useStore((s) => s.session.cwd);
-  const live = useStore((s) => s.live);
-  const prs = usePullRequests(cwd);
-  const [busy, setBusy] = useState<string | null>(null);
-  if (n + items.length === 0) return null;
-  const pullOf = (it: AttentionItem) => (it.cwd === cwd && PR_KINDS.has(it.kind) ? prs.find((p) => p.number === it.number) : undefined);
-  const post = (path: string, id: string) => fetch(api(path), { method: 'POST', body: JSON.stringify({ id }) }).then((r) => r.json());
-  const ask = async (it: AttentionItem) => {
-    setBusy(it.id);
-    try {
-      const r = await post('/api/attention/ask', it.id);
-      if (r.error) notice(r.error);
-      else send({ type: 'view', id: r.id });
-    } catch {
-      notice('Could not ask Claude');
-    } finally {
-      setBusy(null);
-    }
-  };
-  return (
-    <div className="tree needs">
-      <div className="group">Needs you <span className="badge waiting">{n + items.length}</span></div>
-      {children}
-      {items.map((it) => (
-        <div key={it.id} className={`row session live two ${busy === it.id ? 'removing' : ''}`} title={`${ATTENTION_LABEL[it.kind]}\n${it.title}\n${it.url}`} {...pressable(() => { const id = it.chatId ?? it.fixing; id ? send({ type: 'view', id }) : window.open(it.url, '_blank'); })}>
-          <span className={`state ${it.kind}`}><Icon name={ATTENTION_ICON[it.kind]} small /></span>
-          <span className="lines">
-            <span className="l1">
-              <span className="repo">{it.repo}</span>
-              <span className="name">{it.number ? `#${it.number} ` : ''}{it.title}</span>
-              <span className="when">{ago(it.since)}</span>
-            </span>
-            <span className="l2">
-              <span className="sub">{ATTENTION_LABEL[it.kind]}</span>
-              {pullOf(it) && <PullState pr={pullOf(it)!} />}
-              {it.fixing && <span className="sub fixing">Fixing in {live.find((c) => c.id === it.fixing)?.title ?? 'a chat'}</span>}
-            </span>
-          </span>
-          <span className="acts">
-            <button className="icon-btn" title="Ask Claude to handle this" onClick={(e) => { e.stopPropagation(); void ask(it); }}><Icon name="sparkle" small /></button>
-            <button className="icon-btn" title="Dismiss until it changes" onClick={(e) => { e.stopPropagation(); post('/api/attention/dismiss', it.id).catch(() => notice('Could not dismiss. It stays in Needs you.')); }}><Icon name="close" small /></button>
-          </span>
-        </div>
-      ))}
-    </div>
-  );
 }
 
