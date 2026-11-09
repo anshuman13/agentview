@@ -158,7 +158,7 @@ export function Deploy() {
   return (
     <div className="wk" ref={root}><div className="wk-scroll"><div className="mt-page">
       <section>
-      <Section label={s?.app ?? 'Velo'} action={
+      <Section label={s?.app ?? 'Deploy'} action={
         <>
           {s && s.apps.length > 1 && (
             <span className="as-wrap-more">
@@ -173,15 +173,15 @@ export function Deploy() {
           <IconButton icon="refresh" label="Refresh" size="sm" spin={loading} onClick={load} />
         </>
       } />
-      {error && (error.includes('no Velo app')
-        ? <EmptyState size="sm" title="No Velo app here" hint="This repo has no .deploy/app.yaml" />
+      {error && (error.includes('no deploy app')
+        ? <EmptyState size="sm" title="No deploy app here" hint="This repo has no .deploy/app.yaml" />
         : <div className="deploy-error" role="alert"><Icon name="error" small /> {error}</div>)}
       {s && (
         <>
           <div className="as-group">
             {s.envs.map((env) => <EnvRow key={env.name} env={env} s={s} onDeploy={(ref) => deploy(env, ref)} onRollback={() => rollback(env)} />)}
           </div>
-          <div className="as-group"><Row href={s.velodrome} title="Open in the deploy service" /></div>
+          <div className="as-group"><Row href={s.serviceUrl} title="Open in the deploy service" /></div>
         </>
       )}
       </section>

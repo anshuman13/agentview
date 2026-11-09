@@ -71,7 +71,7 @@ async function context(cwd: string, want: string | null) {
     throw new Error('This chat is not in a git repo');
   });
   const apps = await findApps(root);
-  if (!apps.length) throw new Error(`${path.basename(root)} has no Velo app (no .deploy/app.yaml)`);
+  if (!apps.length) throw new Error(`${path.basename(root)} has no deploy app (no .deploy/app.yaml)`);
   const score = (a: App) => (inside(cwd, a.dir) ? a.dir.length : 0);
   apps.sort((a, b) => score(b) - score(a));
   const app = apps.find((a) => a.project === want) ?? apps[0];
@@ -122,7 +122,7 @@ async function deployStatus(cwd: string, want: string | null): Promise<DeploySta
     apps: apps.map((a) => a.project),
     app: app.project,
     repo,
-    velodrome: `${deployUrl()}/repo/${repo.split('/')[1]}/project/${app.project}`,
+    serviceUrl: `${deployUrl()}/repo/${repo.split('/')[1]}/project/${app.project}`,
     head: { sha, branch },
     envs: app.envs.map((e, i) => summarize(e.name, app.project, e.defaultBranchOnly, nodes[i].map((n) => record(n, repo, app.project)))),
   };
@@ -142,7 +142,7 @@ export async function detectDeployUrl() {
   return '';
 }
 
-// Status for the background inbox: null when the repo has no Velo app, so the poll skips it quietly.
+// Status for the background inbox: null when the repo has no deploy app, so the poll skips it quietly.
 export async function deployWatch(cwd: string) {
   if (!deployUrl()) return null;
   const apps = await findApps(await run('git', ['rev-parse', '--show-toplevel'], cwd).catch(() => cwd)).catch(() => []);

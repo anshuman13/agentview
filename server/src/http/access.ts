@@ -80,7 +80,7 @@ export const allowedPeer = (addr = '') => {
 
 const short = (fqdn?: string) => fqdn?.split('.')[0] || undefined;
 
-// The NetBird name of the device a request comes from, such as "macmini"; loopback is this Mac.
+// The NetBird name of the device a request comes from, such as "desktop"; loopback is this Mac.
 export const peerName = (addr = '') => {
   const a = canon(addr);
   if (loopback(a) || a === status?.netbirdIp || a === status?.netbirdIpv6) return short(status?.fqdn) ?? 'local';

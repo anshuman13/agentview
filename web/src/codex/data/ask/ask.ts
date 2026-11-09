@@ -33,7 +33,7 @@ const plansText = (meetings: Meeting[], now = new Date()) => {
 };
 
 const PERSONAL_WORDS = /\b(trip|travel|train|flight|fly|eurostar|hotel|airbnb|holiday|vacation|ferie|reise|museum|tickets?|restaurant|dinner|birthday|family|kids|weekend|booking|upgrade)\b/i;
-const WORK_WORDS = /\b(slack|linear|jira|pr|pull request|oncall|on-call|standup|sprint|deploy|incident|ticket|review|roadmap|okr|oda|team|colleague|1:1)\b/i;
+const WORK_WORDS = /\b(slack|linear|jira|pr|pull request|oncall|on-call|standup|sprint|deploy|incident|ticket|review|roadmap|okr|team|colleague|1:1)\b/i;
 const words = (t: string) => new Set(t.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 4));
 
 // Work or personal for a question asked with the All filter: travel and private words, or a word shared with a

@@ -82,7 +82,7 @@ describe('stale and deploy items', () => {
   it('flags environments whose newest deployment failed', () => {
     const rec = (id: number, state: string) => ({ id, sha: 'abcdef1234', ref: 'main', state, description: state === 'failure' ? 'Build failed' : '', at: '', by: 'me', url: `https://v/${id}` });
     const env = (label: string, latest: ReturnType<typeof rec>) => ({ name: `app/${label}`, label, defaultBranchOnly: false, deployed: null, latest, rollbackTo: rec(1, 'success'), history: [latest] });
-    const status = { apps: ['app'], app: 'app', repo: 'o/r', velodrome: '', head: { sha: '', branch: '' }, envs: [env('prod', rec(3, 'failure')), env('staging', rec(4, 'pending')), env('dev', rec(5, 'success'))] };
+    const status = { apps: ['app'], app: 'app', repo: 'o/r', serviceUrl: '', head: { sha: '', branch: '' }, envs: [env('prod', rec(3, 'failure')), env('staging', rec(4, 'pending')), env('dev', rec(5, 'success'))] };
     const items = deployItems('/w/r', status, 0);
     expect(items.map((i) => i.title)).toEqual(['prod: Build failed (abcdef1)']);
     expect(items[0].prompt).toContain('roll back to abcdef1');

@@ -395,7 +395,7 @@ export type DeployStatus = {
   apps: string[];
   app: string;
   repo: string;
-  velodrome: string;
+  serviceUrl: string;
   head: { sha: string; branch: string };
   envs: DeployEnv[];
 };
