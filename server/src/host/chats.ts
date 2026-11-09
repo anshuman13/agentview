@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 import type { Provider, ServerMessage } from '../../../shared/protocol.js';
 import { getSessionInfo } from '../agent/claude/sessions.js';
 import { rememberAccount } from '../agent/claude/accounts.js';
-import { isProvider, provider, providerOf, rememberProvider } from '../agent/registry.js';
+import { isProvider, provider, providerOf, providerOptions, rememberProvider } from '../agent/registry.js';
 import { codexThread } from '../agent/codex/threads.js';
 import { AgentSession } from '../session/session.js';
 import { loadSettings } from '../settings.js';
@@ -30,10 +30,15 @@ function onChatMessage(chat: AgentSession, m: ServerMessage) {
   if (woke || (m.type === 'event' ? m.event.kind === 'user' : m.type !== 'append')) broadcastLive();
 }
 
+async function defaultChoice(): Promise<Provider> {
+  const { defaultProvider } = loadSettings();
+  if (!isProvider(defaultProvider)) return 'claude';
+  return (await providerOptions()).some((o) => o.id === defaultProvider && o.enabled) ? defaultProvider : 'claude';
+}
+
 export async function createChat(cwd: string, resume?: string, title = '', fork = false, choice?: Provider) {
   // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.
-  const { defaultProvider } = loadSettings();
-  const p = provider(isProvider(choice) ? choice : resume ? providerOf(resume) : isProvider(defaultProvider) ? defaultProvider : 'claude');
+  const p = provider(isProvider(choice) ? choice : resume ? providerOf(resume) : await defaultChoice());
   await p.verifyLimits();
   const chat = new AgentSession(cwd, p.driver(cwd, resume, fork), resume ?? null);
   chat.runs = runs;

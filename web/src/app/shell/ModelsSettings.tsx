@@ -53,7 +53,7 @@ export function ModelsSettings() {
         </div>
         {codex && <Row plain title="Codex" meta={codex.enabled ? 'Pick Codex when you start a chat' : codex.note} />}
         <div className="ui-fields">
-          <select aria-label="Default provider" value={defaultProvider} onChange={(e) => pick(e.target.value as Provider)}>
+          <select aria-label="Default provider" value={enabled.some((p) => p.id === defaultProvider) ? defaultProvider : enabled[0]?.id} onChange={(e) => pick(e.target.value as Provider)}>
             {enabled.map((p) => <option key={p.id} value={p.id}>New chats: {p.label}</option>)}
           </select>
         </div>
