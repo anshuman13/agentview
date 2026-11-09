@@ -19,14 +19,44 @@ const KEYS: [label: string, seq: string, icon?: string][] = [
   ['Right', '\x1b[C', 'arrow-right'],
 ];
 
-export function Terminal({ chat, project, open, onToggle }: Props) {
+type BarProps = { tabs: Tab[]; active: string; pick: (id: string) => void; close: (id: string) => Promise<void>; add: () => Promise<void>; clear: () => void; max: boolean; toggleMax: () => void };
+
+function TermBar({ tabs, active, pick, close, add, clear, max, toggleMax }: BarProps) {
+  return (
+    <span className="term-bar" onClick={(e) => e.stopPropagation()}>
+      {tabs.map((t) => (
+        <span key={t.id} className={`term-tab${t.id === active ? ' on' : ''}`} onClick={() => pick(t.id)} title={t.name}>
+          <Icon name="terminal" small />
+          <button className="term-tab-name" aria-pressed={t.id === active}>{t.name}</button>
+          <button className="icon-btn" title="Kill terminal" aria-label={`Kill ${t.name}`} onClick={(e) => { e.stopPropagation(); close(t.id).catch(() => notice('Could not close the terminal')); }}><Icon name="close" small /></button>
+        </span>
+      ))}
+      <button className="icon-btn" title="New terminal" onClick={() => add().catch(() => notice('Terminal unavailable'))}><Icon name="add" small /></button>
+      <button className="icon-btn" title="Clear (⌘K)" onClick={clear}><Icon name="clear-all" small /></button>
+      <button className="icon-btn" title={max ? 'Restore panel size' : 'Maximize panel size'} onClick={toggleMax}><Icon name={max ? 'screen-normal' : 'screen-full'} small /></button>
+    </span>
+  );
+}
+
+function TermKeys({ send }: { send: (seq: string) => void }) {
+  return (
+    <div className="term-keys mobile-only">
+      {KEYS.map(([label, seq, icon]) => (
+        <button key={label} title={label} onPointerDown={(e) => e.preventDefault()} onClick={() => send(seq)}>
+          {icon ? <Icon name={icon} small /> : label}
+        </button>
+      ))}
+      <button title="Paste" onPointerDown={(e) => e.preventDefault()} onClick={() => (navigator.clipboard?.readText() ?? Promise.reject()).then((t) => t && send(t)).catch(() => notice('Could not read the clipboard'))}>Paste</button>
+    </div>
+  );
+}
+
+// The terminal tabs of a chat: loaded from the server, opened on first show, and reattached after a server restart.
+function useTermTabs(chat: string, open: boolean, onToggle: () => void) {
   const [tabs, setTabs] = useState<Tab[] | null>(null);
   const [active, setActive] = useState('');
-  const [max, setMax] = useState(false);
   const [focus, setFocus] = useState(0);
   const [gens, setGens] = useState<Record<string, number>>({});
-  const clears = useRef(new Map<string, () => void>());
-  const inputs = useRef(new Map<string, (d: string) => void>());
   const wasOpen = useRef(open);
   const starting = useRef(false);
   const retries = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -85,6 +115,14 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
     setActive(id);
     setFocus((f) => f + 1);
   };
+  return { tabs, active, focus, gens, add, close, gone, pick };
+}
+
+export function Terminal({ chat, project, open, onToggle }: Props) {
+  const { tabs, active, focus, gens, add, close, gone, pick } = useTermTabs(chat, open, onToggle);
+  const [max, setMax] = useState(false);
+  const clears = useRef(new Map<string, () => void>());
+  const inputs = useRef(new Map<string, (d: string) => void>());
 
   return (
     <>
@@ -94,18 +132,7 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
         <span className="muted">{project}</span>
         <span className="spacer" />
         {open && tabs && (
-          <span className="term-bar" onClick={(e) => e.stopPropagation()}>
-            {tabs.map((t) => (
-              <span key={t.id} className={`term-tab${t.id === active ? ' on' : ''}`} onClick={() => pick(t.id)} title={t.name}>
-                <Icon name="terminal" small />
-                <button className="term-tab-name" aria-pressed={t.id === active}>{t.name}</button>
-                <button className="icon-btn" title="Kill terminal" aria-label={`Kill ${t.name}`} onClick={(e) => { e.stopPropagation(); close(t.id).catch(() => notice('Could not close the terminal')); }}><Icon name="close" small /></button>
-              </span>
-            ))}
-            <button className="icon-btn" title="New terminal" onClick={() => add().catch(() => notice('Terminal unavailable'))}><Icon name="add" small /></button>
-            <button className="icon-btn" title="Clear (⌘K)" onClick={() => clears.current.get(active)?.()}><Icon name="clear-all" small /></button>
-            <button className="icon-btn" title={max ? 'Restore panel size' : 'Maximize panel size'} onClick={() => setMax((m) => !m)}><Icon name={max ? 'screen-normal' : 'screen-full'} small /></button>
-          </span>
+          <TermBar tabs={tabs} active={active} pick={pick} close={close} add={add} clear={() => clears.current.get(active)?.()} max={max} toggleMax={() => setMax((m) => !m)} />
         )}
         <button className="icon-btn term-toggle" aria-label="Terminal" aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }}>
           <Icon name={open ? 'chevron-down' : 'chevron-up'} small />
@@ -120,14 +147,7 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
               ))}
             </Suspense>
           </div>
-          <div className="term-keys mobile-only">
-            {KEYS.map(([label, seq, icon]) => (
-              <button key={label} title={label} onPointerDown={(e) => e.preventDefault()} onClick={() => inputs.current.get(active)?.(seq)}>
-                {icon ? <Icon name={icon} small /> : label}
-              </button>
-            ))}
-            <button title="Paste" onPointerDown={(e) => e.preventDefault()} onClick={() => (navigator.clipboard?.readText() ?? Promise.reject()).then((t) => t && inputs.current.get(active)?.(t)).catch(() => notice('Could not read the clipboard'))}>Paste</button>
-          </div>
+          <TermKeys send={(seq) => inputs.current.get(active)?.(seq)} />
         </div>
       )}
     </>

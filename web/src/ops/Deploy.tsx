@@ -74,6 +74,28 @@ function EnvRow({ env, s, onDeploy, onRollback }: { env: DeployEnv; s: DeploySta
   );
 }
 
+function DeployLog({ job, close }: { job: DeployJob & { done: boolean }; close: () => void }) {
+  return (
+    <div className={`deploy-log ${job.done ? (job.ok ? 'ok' : 'bad') : ''}`}>
+      <Section
+        label={
+          <>
+            <Icon name={job.done ? (job.ok ? 'check' : 'error') : 'loading'} small spin={!job.done} />
+            <span role="status">{job.done ? (job.ok ? 'Deployed' : 'Deploy did not succeed') : 'Deploying'}</span>
+          </>
+        }
+        action={
+          <>
+            {job.url && <IconButton href={job.url} icon="link-external" label="Open in Velodrome" size="sm" small />}
+            {job.done && <IconButton icon="close" label="Close" size="sm" small onClick={close} />}
+          </>
+        }
+      />
+      <pre className="mono">{job.lines.join('\n')}</pre>
+    </div>
+  );
+}
+
 export function Deploy() {
   const cwd = useStore((s) => s.session.cwd);
   const [status, setStatus] = useState<DeployStatus | null>(null);
@@ -164,25 +186,7 @@ export function Deploy() {
         </>
       )}
       </section>
-      {job && (
-        <div className={`deploy-log ${job.done ? (job.ok ? 'ok' : 'bad') : ''}`}>
-          <Section
-            label={
-              <>
-                <Icon name={job.done ? (job.ok ? 'check' : 'error') : 'loading'} small spin={!job.done} />
-                <span role="status">{job.done ? (job.ok ? 'Deployed' : 'Deploy did not succeed') : 'Deploying'}</span>
-              </>
-            }
-            action={
-              <>
-                {job.url && <IconButton href={job.url} icon="link-external" label="Open in Velodrome" size="sm" small />}
-                {job.done && <IconButton icon="close" label="Close" size="sm" small onClick={() => setJob(cwd, null)} />}
-              </>
-            }
-          />
-          <pre className="mono">{job.lines.join('\n')}</pre>
-        </div>
-      )}
+      {job && <DeployLog job={job} close={() => setJob(cwd, null)} />}
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div></div></div>
   );
