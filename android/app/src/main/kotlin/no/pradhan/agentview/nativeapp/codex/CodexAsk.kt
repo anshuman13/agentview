@@ -30,7 +30,7 @@ private fun plansText(meetings: List<Row>, now: Long): String {
 }
 
 private val PERSONAL_WORDS = Regex("\\b(trip|travel|train|flight|fly|eurostar|hotel|airbnb|holiday|vacation|ferie|reise|museum|tickets?|restaurant|dinner|birthday|family|kids|weekend|booking|upgrade)\\b", RegexOption.IGNORE_CASE)
-private val WORK_WORDS = Regex("\\b(slack|linear|jira|pr|pull request|oncall|on-call|standup|sprint|deploy|incident|ticket|review|roadmap|okr|oda|team|colleague|1:1)\\b", RegexOption.IGNORE_CASE)
+private val WORK_WORDS = Regex("\\b(slack|linear|jira|pr|pull request|oncall|on-call|standup|sprint|deploy|incident|ticket|review|roadmap|okr|team|colleague|1:1)\\b", RegexOption.IGNORE_CASE)
 private fun words(t: String) = t.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 4 }.toSet()
 
 // web/src/codex/data/ask.ts guessProfile: work or personal for a question asked with the All filter.

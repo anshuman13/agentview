@@ -23,6 +23,8 @@ val MORE_PAGES = listOf(
     MoreItem("settings", "Settings", "settings-gear"),
 )
 
+fun morePages(deploy: Boolean) = MORE_PAGES.filter { it.route != "deploy" || deploy }
+
 fun routeFor(link: DeepLink): String? = when {
     link.action == Shortcut.ADD_TASK -> Tab.Codex.route
     link.action == Shortcut.NEW_CHAT -> Tab.Chat.route

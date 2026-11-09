@@ -23,6 +23,11 @@ class ShellTest {
         assertEquals(OfflineState.Hidden, offlineBanner(OfflineState.Pending, OfflineEvent.Up))
     }
 
+    @Test fun deployPageShowsOnlyWhenSetUp() {
+        assertEquals(false, morePages(false).any { it.route == "deploy" })
+        assertEquals(true, morePages(true).any { it.route == "deploy" })
+    }
+
     @Test fun parsesDeepLinks() {
         assertEquals(DeepLink(view = "github"), parseDeepLink("agentview://open?view=github"))
         assertEquals(DeepLink(chat = "a b"), parseDeepLink("agentview://open?chat=a%20b&beside=x"))

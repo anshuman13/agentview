@@ -171,7 +171,7 @@ class PagesLogicTest {
     }
 
     @Test fun deployRowsShowWhatRunsWhere() {
-        val s = parseDeploy("""{"apps":["a"],"app":"a","repo":"o/r","velodrome":"v","head":{"sha":"abcdef123","branch":"main"},"envs":[
+        val s = parseDeploy("""{"apps":["a"],"app":"a","repo":"o/r","serviceUrl":"v","head":{"sha":"abcdef123","branch":"main"},"envs":[
             {"name":"prod","label":"Production","deployed":{"id":1,"sha":"abcdef123","ref":"main","state":"success","at":"2026-11-07T10:00:00Z","by":"ann"},"latest":{"id":2,"state":"in_progress"}},
             {"name":"staging","label":"Staging","defaultBranchOnly":true}]}""")
         val now = isoMillis("2026-11-07T12:00:00Z")
@@ -180,7 +180,7 @@ class PagesLogicTest {
         assertEquals("Deploying" to BadgeTone.Running, envBadge(s.envs[0]))
         assertNull(envBadge(s.envs[1]))
         assertEquals("This is a production environment.", deployWarning(s.envs[0]))
-        assertEquals("Velodrome only deploys the default branch here.", deployWarning(s.envs[1]))
+        assertEquals("Only the default branch deploys here.", deployWarning(s.envs[1]))
         assertEquals("""{"app":"a","env":"prod","ref":"main"}""", deployBody("a", "prod", "main"))
         assertEquals(DeployJob("j", listOf("x"), done = true, ok = true), parseDeployJob("""{"id":"j","lines":["x"],"done":true,"ok":true,"url":""}"""))
     }

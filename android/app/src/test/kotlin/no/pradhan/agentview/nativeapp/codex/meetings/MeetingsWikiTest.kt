@@ -169,13 +169,13 @@ class MeetingsWikiTest {
 
     @Test fun wikiSectionsFollowTheFixedOrder() {
         val pages = listOf(
-            row("pages", "a", WORK, "title" to "Zed", "section" to "Domain"), row("pages", "b", WORK, "title" to "Oda", "section" to "Teams", "sort" to 2),
+            row("pages", "a", WORK, "title" to "Zed", "section" to "Domain"), row("pages", "b", WORK, "title" to "Orca", "section" to "Teams", "sort" to 2),
             row("pages", "c", WORK, "title" to "First", "section" to "Teams", "sort" to 1), row("pages", "o", WORK, "title" to "Over", "section" to "overview"),
             row("pages", "r", WORK, "title" to "Gone", "section" to "Teams", "state" to "retired"), row("pages", "n", WORK, "title" to "Loose"),
         )
         val s = wikiSections(pages)
         assertEquals(listOf("Teams", "Domain", "Pages"), s.map { it.name })
-        assertEquals(listOf("First", "Oda"), s[0].pages.map { it.title })
+        assertEquals(listOf("First", "Orca"), s[0].pages.map { it.title })
     }
 
     @Test fun pageClaimsGroupByHeadingAndKeepReplacedOnes() {

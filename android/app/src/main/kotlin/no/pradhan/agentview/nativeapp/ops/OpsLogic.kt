@@ -77,7 +77,7 @@ fun logClock(iso: String): String = runCatching {
 @Serializable data class DeployRecord(val id: Long = 0, val sha: String = "", val ref: String = "", val state: String = "", val description: String = "", val at: String = "", val by: String = "", val url: String = "")
 @Serializable data class DeployEnv(val name: String, val label: String = name, val defaultBranchOnly: Boolean = false, val deployed: DeployRecord? = null, val latest: DeployRecord? = null, val rollbackTo: DeployRecord? = null, val history: List<DeployRecord> = emptyList())
 @Serializable data class DeployHead(val sha: String = "", val branch: String = "")
-@Serializable data class DeployStatus(val apps: List<String> = emptyList(), val app: String = "", val repo: String = "", val velodrome: String = "", val head: DeployHead = DeployHead(), val envs: List<DeployEnv> = emptyList())
+@Serializable data class DeployStatus(val apps: List<String> = emptyList(), val app: String = "", val repo: String = "", val serviceUrl: String = "", val head: DeployHead = DeployHead(), val envs: List<DeployEnv> = emptyList())
 @Serializable data class DeployJob(val id: String = "", val lines: List<String> = emptyList(), val done: Boolean = false, val ok: Boolean = false, val url: String = "")
 
 fun parseDeploy(body: String): DeployStatus = protocolJson.decodeFromString(DeployStatus.serializer(), body)
@@ -104,7 +104,7 @@ fun envBadge(env: DeployEnv): Pair<String, BadgeTone>? {
 
 fun deployWarning(env: DeployEnv) = when {
     "prod" in env.name -> "This is a production environment."
-    env.defaultBranchOnly -> "Velodrome only deploys the default branch here."
+    env.defaultBranchOnly -> "Only the default branch deploys here."
     else -> null
 }
 

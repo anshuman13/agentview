@@ -73,6 +73,10 @@ data class ReviewFile(val path: String, val hunks: List<ReviewHunk> = emptyList(
 @Serializable
 data class ReviewHunk(val line: Int = 0, val del: List<String> = emptyList(), val add: List<String> = emptyList(), val state: String? = null)
 
+// shared/protocol.ts PublicSettings.
+@Serializable
+data class AppSettings(val deploy: Boolean = false, val accountLabels: Map<String, String> = emptyMap())
+
 @Serializable
 data class AgentUsage(val tokens: Long = 0, val toolUses: Int = 0, val durationMs: Long = 0)
 

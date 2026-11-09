@@ -54,8 +54,7 @@ import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.workspace.appendPrompt
 
-// Same default as the Tauri phone app (web/src/app/api.ts MAC_URL).
-const val DEFAULT_ORIGIN = "http://macmini.netbird.cloud:7777"
+const val DEFAULT_ORIGIN = "http://localhost:7777"
 const val WORKSPACE_MIN_AGE_MS = 30_000L
 private const val CHAT_KEY = "chat"
 private const val FLUSH_RETRY_MS = 15_000L
@@ -104,6 +103,9 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val voiceRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     val fileChanged = MutableSharedFlow<String>(extraBufferCapacity = 8)
+
+    // The integrations the server's settings file turns on (shared/protocol.ts PublicSettings).
+    val deploy = MutableStateFlow(false)
 
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
 
@@ -188,6 +190,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         onConnected = { up ->
             _connected.value = up
             if (up) {
+                viewModelScope.launch { refreshSettings() }
                 viewModelScope.launch { refreshWorkspace(force = true) }
                 flushOutbox()
             }

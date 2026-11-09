@@ -1,6 +1,13 @@
 package no.pradhan.agentview.nativeapp.net
 
+import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.sessions.Workspace
+
+suspend fun Hub.refreshSettings() {
+    val s = runCatching { api.settings() }.getOrNull() ?: return
+    ACCOUNT_LABEL.putAll(s.accountLabels)
+    deploy.value = s.deploy
+}
 
 fun Hub.setMuted(sessionId: String, on: Boolean) {
     muted.value = if (on) muted.value + sessionId else muted.value - sessionId

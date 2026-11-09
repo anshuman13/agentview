@@ -82,7 +82,7 @@ private fun PollDeployJob(hub: Hub, job: MutableState<DeployJob?>, reload: () ->
     }
 }
 
-// Deploy (web/src/ops/Deploy.tsx): the Velo app's environments, what runs where, deploy and roll back with a confirm.
+// Deploy (web/src/ops/Deploy.tsx): the deploy app's environments, what runs where, deploy and roll back with a confirm.
 @Composable
 fun DeployScreen(hub: Hub, onBack: () -> Unit) {
     val st by hub.store.state.collectAsState()
@@ -104,7 +104,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
-                if (load.error.contains("no Velo app")) item { EmptyState("No Velo app here", "This repo has no .deploy/app.yaml", icon = "rocket", small = false) }
+                if (load.error.contains("no deploy app")) item { EmptyState("No deploy app here", "This repo has no .deploy/app.yaml", icon = "rocket", small = false) }
                 else item { ErrorHint(load.error) }
                 if (s == null && load.error.isEmpty()) item { Loading("Loading…") }
                 if (s != null) deployEnvs(s, System.currentTimeMillis(), link, begin) { ask = it }
@@ -120,7 +120,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
 }
 
 private fun LazyListScope.deployEnvs(s: DeployStatus, now: Long, link: (String) -> Unit, begin: (String, String) -> Unit, onAsk: (DeployAsk) -> Unit) {
-    item { SectionHeader(s.app.ifEmpty { "Velo" }) }
+    item { SectionHeader(s.app.ifEmpty { "Deploy" }) }
     item {
         Group {
             s.envs.forEachIndexed { i, env ->
@@ -129,7 +129,7 @@ private fun LazyListScope.deployEnvs(s: DeployStatus, now: Long, link: (String) 
             }
         }
     }
-    if (s.velodrome.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Open in Velodrome", onClick = { link(s.velodrome) }) } }
+    if (s.serviceUrl.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Open in the deploy service", onClick = { link(s.serviceUrl) }) } }
 }
 
 @Composable
@@ -138,7 +138,7 @@ private fun EnvRow(env: DeployEnv, s: DeployStatus, now: Long, link: (String) ->
     fun deploy(ref: String?) {
         onAsk(DeployAsk(
             "Deploy to ${env.label}?",
-            (if (ref != null) "Deploys ${shortSha(ref)} (HEAD of ${s.head.branch}) of ${s.app} to ${env.label} through Velodrome." else "Branch or commit of ${s.app} to deploy to ${env.label} through Velodrome.") + (warn?.let { " $it" } ?: ""),
+            (if (ref != null) "Deploys ${shortSha(ref)} (HEAD of ${s.head.branch}) of ${s.app} to ${env.label} through the deploy service." else "Branch or commit of ${s.app} to deploy to ${env.label} through the deploy service.") + (warn?.let { " $it" } ?: ""),
             "Deploy", { v -> begin("/api/deploy/run", deployBody(s.app, env.name, ref ?: v)) }, if (ref == null) s.head.branch else null,
         ))
     }
@@ -174,7 +174,7 @@ private fun LazyListScope.deployJobSection(j: DeployJob, link: (String) -> Unit,
     item {
         Group {
             Text(j.lines.joinToString("\n"), Modifier.horizontalScroll(rememberScrollState()).padding(Tokens.sp6), style = Mono, color = av.fg, softWrap = false)
-            if (j.url.isNotEmpty()) ListRow("Open in Velodrome", onClick = { link(j.url) })
+            if (j.url.isNotEmpty()) ListRow("Open in the deploy service", onClick = { link(j.url) })
         }
     }
 }
