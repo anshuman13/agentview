@@ -199,8 +199,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   ends ("all tries reported"); it also ends when the parent chat closes or on Keep
 - `@chat:` in the web composer lists the other chats by title; picking one inserts `@chat:<session id>`, and the server
   adds that chat's transcript path to the prompt so Claude can read it (the chat shows the prompt as typed)
-- "Fork chat" in the chat settings menu (web and phone, or the palette) starts a new chat that carries the whole conversation so
-  far, so two directions can be tried from the same point
+- "Fork chat" in the chat settings menu (web and phone, or the palette) starts a new chat in the same folder and model
+  whose first prompt asks Claude to read the old chat (through `@chat:`) and summarise it in at most 15 lines, so the work
+  continues from a short brief instead of the full context
 - In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
   is saved with that one block of changed lines put back to the last commit
 - On the web every finished reply shows a Save as note link on hover (always shown on touch screens), which saves the

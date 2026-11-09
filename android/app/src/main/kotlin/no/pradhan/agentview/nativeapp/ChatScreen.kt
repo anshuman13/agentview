@@ -133,7 +133,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                     hub.notice.value = "Copied. Stop this chat before resuming it in a terminal"
                 }, enabled = sessionId != null)
                 MenuItem("Remind me", "bell", { close(); remindOpen = true }, enabled = sessionId != null)
-                MenuItem("Fork chat", "repo-forked", { close(); hub.newChat(cwd, fork = sessionId) }, enabled = sessionId != null)
+                MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model) }, enabled = sessionId != null)
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
                 MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
                 MenuSeparator()

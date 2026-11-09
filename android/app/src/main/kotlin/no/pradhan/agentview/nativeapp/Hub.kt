@@ -428,6 +428,18 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         }
     }
 
+    // Fork chat: a new chat in the same folder and model that starts by summarising this one.
+    fun forkChat(cwd: String?, sessionId: String, model: String?) {
+        if (readOnly) { notice.value = READ_ONLY_SENT; return }
+        viewModelScope.launch {
+            val id = switchTo(newSessionCmd(cwd = cwd, model = model))
+            if (id == null) notice.value = "The chat did not open" else {
+                submit(handoffText(sessionId), false) { notice.value = "The summary was not requested. Try Fork chat again." }
+                link.value = DeepLink(chat = id)
+            }
+        }
+    }
+
     private suspend fun attachUri(uri: String): String? {
         val r = app.contentResolver
         val mime = r.getType(Uri.parse(uri)) ?: "image/jpeg"

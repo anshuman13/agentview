@@ -1,6 +1,6 @@
-import { embedded, getState, notice, send, setUi, subscribe, useStore } from '../app/store';
+import { embedded, getState, notice, prompt, send, setUi, subscribe, useStore } from '../app/store';
 import { copyText } from '../ui/util';
-import { chatMarkdown, goalChoices, goalInfo, remindChoices, replyNote, resumeCommand, runLine, type GoalChoice } from './composerLogic';
+import { chatMarkdown, goalChoices, handoffText, goalInfo, remindChoices, replyNote, resumeCommand, runLine, type GoalChoice } from './composerLogic';
 import { useChatRun } from '../sessions/runBands';
 import { assistantStore } from '../codex/data';
 import { QuickPick } from '../ui/QuickPick';
@@ -33,6 +33,20 @@ export function sideChat() {
     stop();
     send({ type: 'view', id });
     setUi({ beside: now });
+  });
+  setTimeout(stop, 30_000);
+}
+
+// Fork chat: a new chat in the same folder and model that starts by summarising this one.
+export function forkChat() {
+  const { id, sessionId, model } = getState().session;
+  if (!sessionId) return;
+  send({ type: 'new_session', ...(model && { model }) });
+  const stop = subscribe(() => {
+    const now = getState().session.id;
+    if (!now || now === id) return;
+    stop();
+    prompt(handoffText(sessionId), () => notice('The summary was not requested. Try Fork chat again.'));
   });
   setTimeout(stop, 30_000);
 }
@@ -93,11 +107,11 @@ export function ChatSettings({ pick, setPick, savedCount, goal, setGoal }: { pic
             { value: 'memory', label: 'Memory', detail: 'CLAUDE.md and memory files' },
             { value: 'todos', label: 'TODOs', detail: 'TODO, FIXME and AI! comments in the repo' },
             { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
-            ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'remind', label: 'Remind me', detail: 'Add a task to check this chat later' }, { value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
+            ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'remind', label: 'Remind me', detail: 'Add a task to check this chat later' }, { value: 'fork', label: 'Fork chat', detail: 'Start a new chat from a summary of this one' }, { value: 'terminal', label: 'Continue in terminal', detail: 'Copy a claude --resume command' }] : []),
           ]}
           onPick={(v) => {
             if (v === 'side') { sideChat(); close(); return; }
-            if (v === 'fork') { send({ type: 'new_session', fork: sessionId! }); close(); return; }
+            if (v === 'fork') { forkChat(); close(); return; }
             if (v === 'markdown') {
               const st = getState();
               copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? '')).then(() => notice('Copied the chat as Markdown'), () => notice('Could not copy'));

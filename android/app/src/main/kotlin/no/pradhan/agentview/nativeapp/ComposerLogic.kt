@@ -155,3 +155,7 @@ fun resumeCommand(cwd: String, sessionId: String, account: String?): String {
     val q = if (Regex("^[\\w./~-]+$").matches(cwd)) cwd else "'" + cwd.replace("'", "'\\''") + "'"
     return "cd $q && " + (if (dir != null) "CLAUDE_CONFIG_DIR=$dir " else "") + "claude --resume $sessionId"
 }
+
+// web composerLogic.ts handoffText: Fork chat's new chat reads the old one's transcript (via @chat) and summarises it.
+fun handoffText(sessionId: String) =
+    "Summarise @chat:$sessionId so we can continue its work in this chat: the goal, decisions made, what is done, what is still open, and the files and commands that matter. At most 15 lines. Then wait for my next message."

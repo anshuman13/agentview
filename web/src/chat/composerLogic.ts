@@ -241,3 +241,7 @@ export function resumeCommand(cwd: string, sessionId: string, account: Account) 
   const dir = CONFIG_DIR[account];
   return `cd ${shQuote(cwd)} && ${dir ? `CLAUDE_CONFIG_DIR=${dir} ` : ''}claude --resume ${sessionId}`;
 }
+
+// Fork chat: the new chat reads the old one's transcript (via @chat) and summarises it, so work continues from a short brief.
+export const handoffText = (sessionId: string) =>
+  `Summarise @chat:${sessionId} so we can continue its work in this chat: the goal, decisions made, what is done, what is still open, and the files and commands that matter. At most 15 lines. Then wait for my next message.`;

@@ -16,6 +16,7 @@ import { Row as UiRow } from '../ui/Row';
 import { LISTS } from '../codex/nav';
 import { PINS_URL, get } from '../sessions/folders';
 import { Hl, ago, command, listKeys, save, storedStrings } from '../ui/util';
+import { forkChat } from '../chat/ChatSettings';
 
 export type Command = { id: string; label: string; key?: string; pinned?: boolean };
 export type Match = { score: number; hits: number[] };
@@ -202,10 +203,7 @@ function perform(id: string) {
   else if (kind === 'effort') send({ type: 'set_effort', effort: arg });
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
   else if (id === 'newChat') send({ type: 'new_session' });
-  else if (id === 'forkChat') {
-    const sessionId = getState().session.sessionId;
-    if (sessionId) send({ type: 'new_session', fork: sessionId });
-  }
+  else if (id === 'forkChat') forkChat();
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
   else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });
   else if (id === 'goal') window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: '/goal every 1h ' } }));
