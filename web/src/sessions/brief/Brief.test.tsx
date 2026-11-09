@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { TurnCard } from './Brief';
-import type { Turn } from '../chat/transcript/turns';
+import { TurnCard } from './TurnCard';
+import type { Turn } from '../../chat/transcript/turns';
 
 const turn = (over: Partial<Turn> = {}): Turn => ({
   id: 't1',

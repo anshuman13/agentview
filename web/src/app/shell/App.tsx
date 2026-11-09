@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { connect, embedded, getState, setUi, useStore } from '../store';
+import { connect, embedded, getState, useStore } from '../store';
 import { openAgent } from '../../sessions/agents';
 import { EmptyState } from '../../ui/Panel';
 import { command } from '../../ui/util';
