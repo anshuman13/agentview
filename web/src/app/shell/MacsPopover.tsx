@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Icon } from '../ui/Icon';
-import { stored, useEscape } from '../ui/util';
-import { apiUrl, bundled, knownMacs, macPort, macUrl, setApiBase, trusted, useApiBase } from './api';
-import { switchedMac } from './store';
+import { Icon } from '../../ui/Icon';
+import { stored, useEscape } from '../../ui/util';
+import { apiUrl, bundled, knownMacs, macPort, macUrl, setApiBase, trusted, useApiBase } from '../api';
+import { switchedMac } from '../store';
 import { loadMacName, useMacName, type Connect, type Mac } from './macName';
 
 export async function reachable(url: string) {

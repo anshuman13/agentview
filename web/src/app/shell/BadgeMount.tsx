@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react';
-import { tauriInvoke } from '../codex/data/local';
-import { useNeedsYou } from '../codex/NeedsYou';
-import { useMinute, useSplit } from '../codex/split';
-import { badgeArg, badgeCount, createBadgeSender } from './launcherBadge';
+import { tauriInvoke } from '../../codex/data/local';
+import { useNeedsYou } from '../../codex/NeedsYou';
+import { useMinute, useSplit } from '../../codex/split';
+import { badgeArg, badgeCount, createBadgeSender } from '../runtime/launcherBadge';
 
 function useLauncherBadge() {
   const now = useMinute();

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { isDragging } from '../codex/drag';
-import { haptic } from '../ui/haptic';
+import { isDragging } from '../../codex/drag';
+import { haptic } from '../../ui/haptic';
 
 const EDGE_START = 20;
 const MIN_DX = 70;

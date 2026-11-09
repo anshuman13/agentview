@@ -14,7 +14,7 @@ import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
 import { clock, PickDue, PickTime } from './time';
 import { snoozeText, snoozes } from './AskBar';
-import { Back } from '../app/back';
+import { Back } from '../app/touch/back';
 import { haptic } from '../ui/haptic';
 import { recentPeople } from './data/points';
 import { RaiseWith } from './meetings/Raise';

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { embedded } from './store';
-import { Back } from './back';
-import { useReturnFocus } from '../ui/util';
+import { embedded } from '../store';
+import { Back } from '../touch/back';
+import { useReturnFocus } from '../../ui/util';
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 

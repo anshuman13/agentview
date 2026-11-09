@@ -2,12 +2,12 @@
 import { Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../styles/index.css';
-import { Guard } from './Guard';
-import { touch } from './touch';
+import { Guard } from './shell/Guard';
+import { touch } from './touch/touch';
 import { api } from './store';
 import { DesignPage } from './lazy';
 
-const App = lazy(() => import('./App').then((m) => ({ default: m.App })));
+const App = lazy(() => import('./shell/App').then((m) => ({ default: m.App })));
 
 if (touch()) window.addEventListener('focusout', () => window.scrollTo(0, 0));
 

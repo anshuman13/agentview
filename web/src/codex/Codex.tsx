@@ -28,7 +28,7 @@ import { Overview, Review } from './Overview';
 import { useSplit } from './split';
 import { AssistantNav, LISTS } from './nav';
 import { isDragging, useDrag, type Drop } from './drag';
-import { Back } from '../app/back';
+import { Back } from '../app/touch/back';
 import { usePullRefresh, useScrolledHeader } from './usePullRefresh';
 import { Skeleton } from '../ui/Skeleton';
 import { prefetch } from '../app/lazy';

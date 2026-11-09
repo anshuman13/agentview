@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Back } from '../app/back';
-import { touch } from '../app/touch';
+import { Back } from '../app/touch/back';
+import { touch } from '../app/touch/touch';
 import { listKeys, useReturnFocus } from './util';
 
 type PickItem = { value: string; label: string; detail?: string };

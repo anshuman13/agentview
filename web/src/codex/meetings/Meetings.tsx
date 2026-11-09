@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Guard } from '../../app/Guard';
+import { Guard } from '../../app/shell/Guard';
 import { useCodex } from '../data';
 import { live } from '../data/wiki';
 import { peopleOf } from '../data/meetings';

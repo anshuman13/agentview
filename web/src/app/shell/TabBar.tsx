@@ -1,16 +1,16 @@
 import { Suspense, useRef } from 'react';
-import { setUi, useStore } from './store';
-import { unreadCount } from '../sessions/folders';
-import { AgentsBadge } from '../sessions/AgentsBadge';
-import { ChangesBadge } from '../workspace/gitStatus';
-import { GitHubBadge } from '../ops/pulls';
-import { Icon } from '../ui/Icon';
-import { Sheet } from '../ui/Sheet';
-import { AssistantBadge } from './lazy';
-import { PAGES, type Page } from './pages';
-import { canNotify, toggleNotify, useNotify } from './notify';
-import { THEME_NAMES, type Theme } from './theme';
-import { useMcpHealth } from '../ops/mcpShown';
+import { setUi, useStore } from '../store';
+import { unreadCount } from '../../sessions/folders';
+import { AgentsBadge } from '../../sessions/AgentsBadge';
+import { ChangesBadge } from '../../workspace/gitStatus';
+import { GitHubBadge } from '../../ops/pulls';
+import { Icon } from '../../ui/Icon';
+import { Sheet } from '../../ui/Sheet';
+import { AssistantBadge } from '../lazy';
+import { PAGES, type Page } from '../pages';
+import { canNotify, toggleNotify, useNotify } from '../runtime/notify';
+import { THEME_NAMES, type Theme } from '../theme';
+import { useMcpHealth } from '../../ops/mcpShown';
 
 export type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 export type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions' | 'runs';

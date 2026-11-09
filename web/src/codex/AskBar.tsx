@@ -8,7 +8,7 @@ import { captureTask } from './captureTask';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { Chip, chipClass } from '../ui/Button';
-import { touch } from '../app/touch';
+import { touch } from '../app/touch/touch';
 import { Voice, useDictation } from '../chat/Voice';
 import { readFlag, reveal } from '../ui/util';
 import { FILTER_LABEL, type Filter } from './view';

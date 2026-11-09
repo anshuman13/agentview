@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Icon } from '../ui/Icon';
+import { Icon } from '../../ui/Icon';
 import QRCode from 'qrcode';
-import { useEscape } from '../ui/util';
-import { apiUrl, macPort } from './api';
+import { useEscape } from '../../ui/util';
+import { apiUrl, macPort } from '../api';
 
 export function ConnectPopover({ onClose }: { onClose: () => void }) {
   const [urls, setUrls] = useState<string[] | null>(null);

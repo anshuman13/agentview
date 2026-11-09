@@ -1,8 +1,8 @@
-import { setUi, useStore } from './store';
-import { Icon } from '../ui/Icon';
+import { setUi, useStore } from '../store';
+import { Icon } from '../../ui/Icon';
 import { CacheItem, McpItem, RunsItem, UsageItem } from './StatusItems';
-import { canNotify, toggleNotify, useNotify } from './notify';
-import { THEME_NAMES, type Theme } from './theme';
+import { canNotify, toggleNotify, useNotify } from '../runtime/notify';
+import { THEME_NAMES, type Theme } from '../theme';
 
 type Props = { project?: string; theme: Theme; toggleTheme: () => void; macName: string; onPhone: () => void; onMacs: () => void };
 

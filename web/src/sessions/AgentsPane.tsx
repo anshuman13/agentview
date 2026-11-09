@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import { send, useStore } from '../app/store';
-import { Back } from '../app/back';
+import { Back } from '../app/touch/back';
 import { Button, Chip } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';

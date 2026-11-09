@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { hubDebug } from './hubDebug';
+import { hubDebug } from '../runtime/hubDebug';
 import { Settings, SettingsView, versionText } from './Settings';
 
 vi.hoisted(() => {

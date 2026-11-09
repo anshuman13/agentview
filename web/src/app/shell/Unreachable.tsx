@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { apiBase, bundled } from './api';
-import { Button } from '../ui/Button';
-import { EmptyState } from '../ui/Panel';
+import { apiBase, bundled } from '../api';
+import { Button } from '../../ui/Button';
+import { EmptyState } from '../../ui/Panel';
 import { useMacName } from './macName';
-import { retryNow, useStore } from './store';
+import { retryNow, useStore } from '../store';
 
 export function useUnreachable() {
   const connected = useStore((s) => s.ui.connected);

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from 'react';
 import { createStore } from '../ui/createStore';
-import { useBack } from '../app/back';
+import { useBack } from '../app/touch/back';
 import { rowKey, type Profile } from './data/sync';
 import { errorText } from './data/engine';
 import { seriesKey, seriesTitleOf } from './data/meetings';

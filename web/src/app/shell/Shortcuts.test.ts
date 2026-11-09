@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCommands } from './Palette';
+import { buildCommands } from '../palette/Palette';
 import { SHORTCUTS } from './Shortcuts';
 
 describe('shortcuts', () => {

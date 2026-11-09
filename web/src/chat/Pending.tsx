@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { pressable, useOnUnmount } from '../ui/util';
-import { touch } from '../app/touch';
+import { touch } from '../app/touch/touch';
 import { Markdown } from './Chat';
 import { str } from './steps';
 import type { ChatEvent, PendingPermission, PendingQuestion } from '../../../shared/protocol';

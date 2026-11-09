@@ -7,7 +7,7 @@ import { Meetings } from '../codex/meetings/Meetings';
 import { sharedSplit } from '../codex/split';
 import { setView } from '../codex/view';
 import { DesignPage } from '../design/Stories';
-import { Settings } from './Settings';
+import { Settings } from './shell/Settings';
 
 vi.hoisted(() => {
   const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };

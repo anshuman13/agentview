@@ -20,8 +20,8 @@ const withMd = <T,>(view: Promise<T>) => Promise.all([view, import('../chat/md')
 export const Brief = lazy(() => withMd(import('../sessions/Brief')).then((m) => ({ default: m.Brief })));
 export const AgentsPane = lazy(() => withMd(import('../sessions/AgentsPane')).then((m) => ({ default: m.AgentsPane })));
 export const FileSwitcher = lazy(() => import('../workspace/FileSwitcher').then((m) => ({ default: m.FileSwitcher })));
-export const Palette = lazy(() => import('./Palette').then((m) => ({ default: m.Palette })));
-export const Shortcuts = lazy(() => import('./Shortcuts').then((m) => ({ default: m.Shortcuts })));
+export const Palette = lazy(() => import('./palette/Palette').then((m) => ({ default: m.Palette })));
+export const Shortcuts = lazy(() => import('./shell/Shortcuts').then((m) => ({ default: m.Shortcuts })));
 export const OpenChats = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.OpenChats })));
 export const RepoPicker = lazy(() => import('../sessions/RepoPicker').then((m) => ({ default: m.RepoPicker })));
 export const Runs = lazy(() => import('../sessions/Runs').then((m) => ({ default: m.Runs })));
@@ -39,8 +39,8 @@ export const BrowserPane = lazy(() => import('../workspace/BrowserPane').then((m
 export const Observe = lazy(() => import('../ops/Observe').then((m) => ({ default: m.Observe })));
 export const Deploy = lazy(() => import('../ops/Deploy').then((m) => ({ default: m.Deploy })));
 export const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ default: m.McpPage })));
-export const Settings = lazy(() => import('./Settings').then((m) => ({ default: m.Settings })));
-export const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
-export const MacsPopover = lazy(() => import('./MacsPopover').then((m) => ({ default: m.MacsPopover })));
+export const Settings = lazy(() => import('./shell/Settings').then((m) => ({ default: m.Settings })));
+export const ConnectPopover = lazy(() => import('./shell/ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
+export const MacsPopover = lazy(() => import('./shell/MacsPopover').then((m) => ({ default: m.MacsPopover })));
 export const Loading = () => <div className="loading">Loading…</div>;
 export const DesignPage = lazy(() => import('../design/Stories').then((m) => ({ default: m.DesignPage })));

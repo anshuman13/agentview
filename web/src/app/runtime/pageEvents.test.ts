@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initPage, mergeTail, prependPage } from './pageEvents';
-import type { ChatEvent } from '../../../shared/protocol';
+import type { ChatEvent } from '../../../../shared/protocol';
 
 const ev = (i: number, text = ''): ChatEvent => ({ id: `e${i}`, kind: 'user', text, at: i });
 const range = (from: number, to: number) => Array.from({ length: to - from }, (_, i) => ev(from + i));

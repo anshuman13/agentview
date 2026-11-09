@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Guard } from '../../app/Guard';
+import { Guard } from '../../app/shell/Guard';
 import '../../styles/features/wiki.css';
 import { useView } from '../view';
 import { REVIEW } from './shared';

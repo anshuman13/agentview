@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Icon } from '../ui/Icon';
-import { apiBase, apiUrl, macOrigin, shell } from './api';
+import { Icon } from '../../ui/Icon';
+import { apiBase, apiUrl, macOrigin, shell } from '../api';
 
 export type Mac = { name: string; url: string; running: number; self?: boolean };
 export type Connect = { hostname: string; macs: Mac[]; netbird?: string };

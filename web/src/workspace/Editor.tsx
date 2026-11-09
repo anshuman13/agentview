@@ -6,7 +6,7 @@ import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { unifiedMergeView } from '@codemirror/merge';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { showChat } from '../ui/util';
-import { touch } from '../app/touch';
+import { touch } from '../app/touch/touch';
 import { isDark, useThemeName } from '../app/theme';
 
 async function lang(path: string): Promise<Extension> {

@@ -9,7 +9,7 @@ import { EmptyState } from '../ui/Panel';
 import { Row as UiRow } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { pressable, save, stored } from '../ui/util';
-import { touch } from '../app/touch';
+import { touch } from '../app/touch/touch';
 import { FileIcon } from './FileIcon';
 
 const FolderPicker = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.FolderPicker })));

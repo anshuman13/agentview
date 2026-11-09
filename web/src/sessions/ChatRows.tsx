@@ -14,7 +14,7 @@ import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, 
 import { Badge } from '../ui/Badge';
 import { Swipe } from '../codex/Swipe';
 import { showSnack } from '../codex/view';
-import { isMuted, setMuted } from '../app/mute';
+import { isMuted, setMuted } from '../app/runtime/mute';
 import { draftLine, readDraft } from '../chat/composerLogic';
 import { clock } from '../codex/time';
 import { useChatRun } from './runBands';

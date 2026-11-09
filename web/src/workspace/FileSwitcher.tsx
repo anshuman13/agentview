@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, setUi, useStore } from '../app/store';
 import { useOpened } from './opened';
 import { FileIcon } from './FileIcon';
-import { touch } from '../app/touch';
+import { touch } from '../app/touch/touch';
 import { Hl, listKeys, useReturnFocus } from '../ui/util';
 import { fileCache as cache } from '../chat/composerLogic';
 

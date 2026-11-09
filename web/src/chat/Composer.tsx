@@ -12,7 +12,7 @@ import { TodoCard } from './TodoCard';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../ui/QuickPick';
 import { toolId } from '../ops/mcpHelpers';
-import { touch } from '../app/touch';
+import { touch } from '../app/touch/touch';
 import { readFlag, wsUrl, plural, save, storedStrings } from '../ui/util';
 import type { Meeting } from '../codex/data/wiki';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent, type SavedSession } from '../../../shared/protocol';

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Row } from '../ui/Row';
-import { Section } from '../ui/Section';
-import { Icon } from '../ui/Icon';
-import { tauriInvoke } from '../codex/data/local';
-import { hubDebug } from './hubDebug';
-import { THEME_NAMES, useTheme } from './theme';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
+import { Icon } from '../../ui/Icon';
+import { tauriInvoke } from '../../codex/data/local';
+import { hubDebug } from '../runtime/hubDebug';
+import { THEME_NAMES, useTheme } from '../theme';
 
 const webSha = typeof __APP_SHA__ === 'string' ? __APP_SHA__ : '';
 

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { send, useStore } from './store';
-import { ACCOUNT_LABEL } from '../../../shared/protocol';
-import { Icon } from '../ui/Icon';
-import { command, spendLines, weekPace } from '../ui/util';
-import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from './offlineBanner';
-import { useMcpHealth } from '../ops/mcpShown';
-import { Badge } from '../ui/Badge';
+import { send, useStore } from '../store';
+import { ACCOUNT_LABEL } from '../../../../shared/protocol';
+import { Icon } from '../../ui/Icon';
+import { command, spendLines, weekPace } from '../../ui/util';
+import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from '../runtime/offlineBanner';
+import { useMcpHealth } from '../../ops/mcpShown';
+import { Badge } from '../../ui/Badge';
 
 export function Restarting() {
   const restarting = useStore((s) => s.ui.restarting && s.ui.connected);

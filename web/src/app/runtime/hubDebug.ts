@@ -1,4 +1,4 @@
-import { HUB, tauriInvoke } from '../codex/data/local';
+import { HUB, tauriInvoke } from '../../codex/data/local';
 
 export async function hubDebug(fetcher: typeof fetch = fetch): Promise<boolean> {
   try {

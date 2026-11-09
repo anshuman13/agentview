@@ -1,10 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import { appendTo, ATTENTION_LABEL, ROW_WINDOW, type AttentionItem, type ChatEvent, type ChatRun, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
-import { notify } from './notify';
-import { isMuted } from './mute';
+import { notify } from './runtime/notify';
+import { isMuted } from './runtime/mute';
 import { apiUrl, bundled } from './api';
-import { backoffDelay } from './backoff';
-import { initPage, prependPage } from './pageEvents';
+import { backoffDelay } from './runtime/backoff';
+import { initPage, prependPage } from './runtime/pageEvents';
 
 type UiState = {
   connected: boolean;
