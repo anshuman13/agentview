@@ -81,6 +81,7 @@ export class Turn {
     this.reportTurn = undefined;
     s.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: s.state.session.model });
     s.links.record(r, report);
+    s.review.finish();
     if (repeat?.goal && met) s.repeater.set(null, `Goal met after ${repeat.round} ${repeat.round === 1 ? 'check' : 'checks'}: ${repeat.goal}`, 'goal met');
     this.ended();
   }

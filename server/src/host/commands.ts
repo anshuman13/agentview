@@ -77,6 +77,10 @@ export function command(chat: AgentSession, msg: ClientMessage): Promise<unknown
       return void chat.setAccount(String(msg.account));
     case 'set_permission_mode':
       return void chat.setPermissionMode(msg.mode);
+    case 'set_review':
+      return chat.setReview(Boolean(msg.on));
+    case 'review':
+      return chat.review.act(String(msg.id), msg.action === 'undo' ? 'undo' : 'keep', typeof msg.file === 'string' ? msg.file : undefined, typeof msg.hunk === 'number' ? msg.hunk : undefined);
     case 'run':
       return chat.runControl(String(msg.run), msg.op);
     case 'tries_send':

@@ -159,6 +159,7 @@ export class ClaudeDriver implements AgentDriver {
       chat: () => this.state.session.sessionId,
       canUseTool: (toolName, input, opts) => this.host.canUseTool(toolName, input, opts) as Promise<PermissionResult>,
       beforeAgent: (input, _id, { signal }) => this.toolHooks.beforeAgent(input, signal),
+      beforeEdit: async (input) => this.toolHooks.beforeEdit(input),
       afterTool: async (input) => this.toolHooks.afterTool(input),
       onStop: (input) => this.toolHooks.onStop(input),
       mcp: this.mcp.added,

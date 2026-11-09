@@ -6,6 +6,7 @@ import { touch } from '../../app/touch/touch';
 import { Markdown } from '../Chat';
 import { str } from '../transcript/steps';
 import type { ChatEvent, PendingPermission, PendingQuestion } from '../../../../shared/protocol';
+import { lineDiff } from '../../../../shared/lineDiff';
 
 export function Pending() {
   const pending = useStore((s) => s.pending);
@@ -248,25 +249,6 @@ function Diff({ a, b }: { a: string; b: string }) {
       {lines.length > MAX_LINES && <div className="pd-cut">{lines.length - MAX_LINES} more lines</div>}
     </pre>
   );
-}
-
-export type DiffLine = [' ' | '-' | '+', string];
-
-export function lineDiff(a: string, b: string): DiffLine[] {
-  const x = a ? a.split('\n') : [];
-  const y = b ? b.split('\n') : [];
-  const n = x.length, m = y.length;
-  if (n * m > 250_000) return [...x.map((l): DiffLine => ['-', l]), ...y.map((l): DiffLine => ['+', l])];
-  const L = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
-  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = x[i] === y[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
-  const out: DiffLine[] = [];
-  let i = 0, j = 0;
-  while (i < n || j < m) {
-    if (i < n && j < m && x[i] === y[j]) out.push([' ', x[i++]]), j++;
-    else if (i < n && (j === m || L[i + 1][j] >= L[i][j + 1])) out.push(['-', x[i++]]);
-    else out.push(['+', y[j++]]);
-  }
-  return out;
 }
 
 function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {

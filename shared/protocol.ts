@@ -45,6 +45,12 @@ export type AgentEvent = {
   group?: string;
 };
 
+export type ReviewState = 'kept' | 'undone';
+// A run of changed lines of a file against its text before the turn, from line `line` of the new text.
+export type ReviewHunk = { line: number; del: string[]; add: string[]; state?: ReviewState };
+// A created or binary file has no hunks and is decided as a whole; binary files can only be kept.
+export type ReviewFile = { path: string; hunks: ReviewHunk[]; created?: boolean; binary?: boolean; state?: ReviewState };
+
 export type ChatEvent =
   | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; phase?: LoopPhase; auto?: 'loop' | 'goal'; round?: number }
   | { id: string; kind: 'assistant'; text: string; streaming: boolean; at: number; parent?: string }
@@ -54,6 +60,7 @@ export type ChatEvent =
   | { id: string; kind: 'system'; text: string; at: number; error?: boolean }
   | { id: string; kind: 'status'; text: string; at: number }
   | { id: string; kind: 'plan'; next: string[]; at: number }
+  | { id: string; kind: 'review'; files: ReviewFile[]; result?: string; at: number }
   | { id: string; kind: 'blocked'; rule: string; reason: string; allowed: boolean; at: number }
   | AgentEvent;
 
@@ -83,6 +90,8 @@ export type SessionInfo = {
   cwd: string;
   running: boolean;
   permissionMode: string | null;
+  // Changed files are reviewed after each turn.
+  review?: boolean;
   apiKeySource: string | null;
   models: Array<{ value: string; displayName: string; description?: string }>;
   commands: Array<{ name: string; description: string }>;
@@ -322,6 +331,8 @@ export type ClientMessage =
   | { type: 'set_effort'; effort: string }
   | { type: 'set_account'; account: string }
   | { type: 'set_permission_mode'; mode: string }
+  | { type: 'set_review'; on: boolean }
+  | { type: 'review'; id: string; action: 'keep' | 'undo'; file?: string; hunk?: number }
   | { type: 'set_loop'; on: boolean; max?: number }
   | { type: 'run'; run: string; op: RunOp }
   | { type: 'tries_send'; run: string; text: string }

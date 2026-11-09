@@ -18,6 +18,14 @@ export class ToolHooks {
     return bigBroVerdict(r.behavior);
   }
 
+  beforeEdit(input: HookInput): HookJSONOutput {
+    if (input.hook_event_name !== 'PreToolUse') return {};
+    const { file_path, notebook_path } = (input.tool_input ?? {}) as { file_path?: unknown; notebook_path?: unknown };
+    const file = file_path ?? notebook_path;
+    if (typeof file === 'string') this.host.captureEdit(file);
+    return {};
+  }
+
   afterTool(input: HookInput): HookJSONOutput {
     if (input.agent_id || input.hook_event_name !== 'PostToolUse') return {};
     const notes: string[] = [];

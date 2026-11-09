@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { lineDiff, planFeedback, planParagraphs } from './Pending';
+import { planFeedback, planParagraphs } from './Pending';
+import { lineDiff } from '../../../../shared/lineDiff';
 
 describe('lineDiff', () => {
   it('keeps shared lines and puts removals before additions', () => {

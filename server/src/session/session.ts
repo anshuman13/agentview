@@ -13,6 +13,7 @@ import { Mcp } from './mcp.js';
 import { MessageQueue } from './messageQueue.js';
 import { Compaction } from './compaction.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
+import { Review } from './review.js';
 import { Prompts } from './prompts.js';
 import { PR_URL, createsPr } from './pr.js';
 import { RepeatController, ROUND_INSTRUCTION } from './repeat.js';
@@ -52,6 +53,7 @@ export class AgentSession implements AgentHost {
   readonly prompts = new Prompts(this);
   readonly stopper = new Stopper(this);
   readonly hooks = new Hooks(this);
+  readonly review = new Review(this);
   readonly repeater = new RepeatController(this.links.repeatHost());
   private listeners = new Set<(m: ServerMessage) => void>();
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
@@ -132,6 +134,10 @@ export class AgentSession implements AgentHost {
     if (source === 'tool') this.hooks.noteEdit();
   }
 
+  captureEdit(file: string) {
+    this.review.capture(file);
+  }
+
   fileChangedExternally(rel: string) {
     this.noteFile(rel, 'watcher');
     this.hooks.saved(rel);
@@ -183,6 +189,10 @@ export class AgentSession implements AgentHost {
 
   setPermissionMode(mode: string) {
     return this.settings.setPermissionMode(mode);
+  }
+
+  setReview(on: boolean) {
+    this.settings.setReview(on);
   }
 
   canUseTool(toolName: string, input: Record<string, unknown>, opts: AskOptions) {

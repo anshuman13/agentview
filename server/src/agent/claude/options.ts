@@ -59,6 +59,7 @@ export function agentOptions(o: {
   chat: () => string | null;
   canUseTool: CanUseTool;
   beforeAgent: HookCallback;
+  beforeEdit: HookCallback;
   afterTool: HookCallback;
   onStop: HookCallback;
   mcp?: Record<string, McpServerConfig>;
@@ -95,7 +96,7 @@ export function agentOptions(o: {
       },
     },
     hooks: {
-      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }],
+      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }, { matcher: 'Edit|Write|MultiEdit|NotebookEdit', hooks: [o.beforeEdit] }],
       PostToolUse: [{ hooks: [o.afterTool] }],
       Stop: [{ hooks: [o.onStop] }],
     },

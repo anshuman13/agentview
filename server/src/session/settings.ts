@@ -36,6 +36,11 @@ export class SessionSettings {
     this.s.system(`Permission mode: ${mode}`);
   }
 
+  setReview(on: boolean) {
+    this.s.setSession({ review: on });
+    this.s.system(`Review changes after each turn: ${on ? 'on' : 'off'}`);
+  }
+
   // A message that cannot start in plan mode waits in the queue, where Send now retries it.
   async planFirst() {
     const { team, permissionMode } = this.s.state.session;

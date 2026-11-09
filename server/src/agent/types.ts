@@ -71,6 +71,7 @@ export interface AgentHost {
   setStatus(text: string): void;
   setSession(patch: Partial<SessionInfo>): void;
   noteFile(rel: string, source: 'tool' | 'watcher'): void;
+  captureEdit(file: string): void;
   canUseTool(toolName: string, input: Record<string, unknown>, opts: AskOptions): Promise<Decision>;
   ask(toolName: string, input: Record<string, unknown>, opts: AskOptions): Promise<Decision>;
   takePlanChange(): string | null;
