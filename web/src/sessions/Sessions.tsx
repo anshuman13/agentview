@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { apiUrl } from '../app/api';
 import { api, embedded, getState, notice, send, setUi, subscribe, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
-import { IconButton } from '../ui/Button';
+import { Chip, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
@@ -17,7 +17,7 @@ import { AgentsBlock } from './AgentRow';
 import { openAgent } from './agents';
 import { chatOrder, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { archiveChat, byUrgency, chatFinder, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RenameEvent, type RepoGroup } from './folders';
+import { archiveChat, byUrgency, chatFinder, chatsByStatus, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RenameEvent, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
 import { RepoRow } from './RepoRow';
 import { Swipe } from '../codex/Swipe';
@@ -246,6 +246,7 @@ export function OpenChats() {
   const { folders, chats, setChats } = useWorkspace(current + cwd);
   const savedById = useMemo(() => new Map(chats.map((s) => [s.sessionId, s])), [chats]);
   const [filter, setFilter] = useState('');
+  const [status, setStatus] = useState<ChatState | null>(null);
   const hits = useMessageSearch(filter);
   const viewing = useStore((s) => s.session.id);
   const [collapsed, setCollapsed] = useState(() => stored<Record<string, boolean>>(KEY, {}));
@@ -343,6 +344,10 @@ export function OpenChats() {
         <FilterInput value={filter} set={setFilter} />
         <IconButton icon="add" label="New session in a repo" onClick={() => setUi({ repoPicker: true })} />
       </div>
+      <div className="sessions-status">
+        {STATUS_CHIPS.map(([v, label]) => <Chip key={v} size="sm" on={status === v} aria-pressed={status === v} onClick={() => setStatus(status === v ? null : v)}>{label}</Chip>)}
+      </div>
+      {status ? <StatusList {...chatsByStatus(live, chats, seen, status)} row={row} savedRow={savedRow} repo={(cwd) => repoName(folders, cwd)} /> : <>
       <NeedsYou n={waiting.length}>
         {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
       </NeedsYou>
@@ -379,9 +384,18 @@ export function OpenChats() {
         ))}
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>
+      </>}
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>
   );
+}
+
+const STATUS_CHIPS: [ChatState, string][] = [['running', 'Running'], ['done', 'Unread'], ['failed', 'Failed']];
+
+// The chats in one state across all repos, like the status filter in Claude desktop's sidebar.
+function StatusList({ live, saved, row, savedRow, repo }: { live: LiveChat[]; saved: SavedSession[]; row: (c: LiveChat, repo?: string) => ReactNode; savedRow: (s: SavedSession, repo?: string) => ReactNode; repo: (cwd: string) => string }) {
+  if (!live.length && !saved.length) return <EmptyState size="sm" title="No chats in this state" />;
+  return <div className="tree">{live.map((c) => row(c, repo(c.cwd)))}{saved.map((s) => savedRow(s, repo(s.cwd)))}</div>;
 }
 
 function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }) {

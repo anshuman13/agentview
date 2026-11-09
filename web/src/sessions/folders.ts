@@ -297,6 +297,16 @@ export function chatState({ live, saved }: { live?: LiveChat; saved?: SavedSessi
   return id && seen[id] !== undefined && at > seen[id] ? 'done' : null;
 }
 
+// Chats in one state for the sidebar's status chips: open chats first, then saved ones that are not open.
+export function chatsByStatus(live: LiveChat[], saved: SavedSession[], seen: Record<string, number>, status: ChatState) {
+  const bySession = new Map(saved.map((s) => [s.sessionId, s]));
+  const open = new Set(live.map((c) => c.sessionId));
+  return {
+    live: live.filter((c) => chatState({ live: c, saved: bySession.get(c.sessionId ?? '') }, seen) === status),
+    saved: saved.filter((s) => !open.has(s.sessionId) && chatState({ saved: s }, seen) === status),
+  };
+}
+
 export function groupGlance(g: RepoGroup, seen: Record<string, number>) {
   const n = { running: 0, needs: 0, unread: 0 };
   const count = (state: ChatState | null) => {

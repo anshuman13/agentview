@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { buildFolders, type Folder, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
+import { buildFolders, type Folder, chatFinder, chatState, chatsByStatus, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
 import { RepoRow } from './RepoRow';
 import { AgentsBlock } from './AgentRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
@@ -298,5 +298,20 @@ describe('messageMeta', () => {
     const { messageMeta } = await import('./Sessions');
     expect(messageMeta({ title: 'Importer', role: 'assistant', at: new Date(Date.now() - 3 * 3_600_000).toISOString() })).toBe('Importer · Claude · 3h');
     expect(messageMeta({ title: '', role: 'user', at: '' })).toBe('Untitled · You');
+  });
+});
+
+describe('chatsByStatus', () => {
+  const live = (o: Partial<LiveChat>): LiveChat => ({ id: 'c', sessionId: 's', cwd: '/w/shop', title: 't', running: false, pending: 0, status: '', lastActive: 0, ...o });
+  const saved = (sessionId: string, lastModified: number): SavedSession => ({ sessionId, title: sessionId, cwd: '/w/shop', gitBranch: null, lastModified });
+
+  it('keeps open and saved chats in the state, without listing an open chat twice', () => {
+    const chats = [live({ id: 'a', sessionId: 'sa', running: true }), live({ id: 'b', sessionId: 'sb', lastActive: 90 })];
+    const list = [saved('sb', 90), saved('sc', 80), saved('sd', 10)];
+    const seen = { sb: 50, sc: 50, sd: 50 };
+    expect(chatsByStatus(chats, list, seen, 'running').live.map((c) => c.id)).toEqual(['a']);
+    const done = chatsByStatus(chats, list, seen, 'done');
+    expect(done.live.map((c) => c.id)).toEqual(['b']);
+    expect(done.saved.map((s) => s.sessionId)).toEqual(['sc']);
   });
 });
