@@ -2,222 +2,86 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
-import { readFlag, saveFlag, wsUrl } from '../ui/util';
+import { readFlag, saveFlag } from '../ui/util';
+import { useChromeSocket, type ChromeState, type Tab } from './useChromeSocket';
+import { useFrameInput } from './useFrameInput';
 
-type Tab = { id: string; title: string; url: string };
-type State = { state: 'off' | 'connecting' | 'on'; reason: string; retry?: boolean; own?: boolean };
+type Send = (m: object) => unknown;
 
-const BUTTON = ['left', 'middle', 'right'];
-const mods = (e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }) =>
-  (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0);
+type BarProps = { send: Send; tabs: Tab[]; tab: Tab | undefined; pinned: string | null; phone: boolean; setPhone: (v: boolean) => void; focusKeyboard: () => void; goFull: () => void };
+
+function BrowserBar({ send, tabs, tab, pinned, phone, setPhone, focusKeyboard, goFull }: BarProps) {
+  const [url, setUrl] = useState('');
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    if (!editing) setUrl(tab?.url ?? '');
+  }, [tab?.url, editing]);
+  const go = () => {
+    setEditing(false);
+    if (url.trim()) send({ t: 'nav', url: url.trim() });
+  };
+  return (
+    <div className="pane-bar browser-bar">
+      <button className="icon-btn" title="Back" onClick={() => send({ t: 'back' })}><Icon name="arrow-left" /></button>
+      <button className="icon-btn desktop-only" title="Forward" onClick={() => send({ t: 'forward' })}><Icon name="arrow-right" /></button>
+      <button className="icon-btn" title="Reload" onClick={() => send({ t: 'reload' })}><Icon name="refresh" /></button>
+      <input
+        className="url"
+        placeholder="Address"
+        aria-label="Address"
+        value={url}
+        onFocus={() => setEditing(true)}
+        onBlur={() => setEditing(false)}
+        onChange={(e) => setUrl(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing) { go(); e.currentTarget.blur(); }
+          if (e.key === 'Escape') e.currentTarget.blur();
+        }}
+      />
+      <select className="tab-pick" value={pinned ?? ''} onChange={(e) => send({ t: 'tab', id: e.target.value || null })} title="Which Chrome tab to show">
+        <option value="">Follow Claude</option>
+        {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
+      </select>
+      <button
+        className={`icon-btn phone-only${phone ? ' on' : ''}`}
+        title={phone ? 'Phone layout is on. Chrome on the Mac shows the page at phone size' : 'Show the page at phone size. Chrome on the Mac shrinks while this is on'}
+        aria-pressed={phone}
+        onClick={() => setPhone(!phone)}
+      ><Icon name="device-mobile" /></button>
+      <button className="icon-btn phone-only" title="Keyboard" onClick={focusKeyboard}><Icon name="keyboard" /></button>
+      <button className="icon-btn phone-only" title="Full screen" onClick={goFull}><Icon name="screen-full" /></button>
+    </div>
+  );
+}
 
 export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
-  const ws = useRef<WebSocket | null>(null);
   const img = useRef<HTMLImageElement>(null);
   const kbd = useRef<HTMLTextAreaElement>(null);
   const host = useRef<HTMLDivElement>(null);
-  const vp = useRef({ w: 0, h: 0 });
-  const touch = useRef(false);
-  const tap = useRef({ x: 0, y: 0 });
-  const [state, setState] = useState<State>({ state: 'connecting', reason: '' });
-  const [tabs, setTabs] = useState<Tab[]>([]);
-  const [current, setCurrent] = useState<string | null>(null);
-  const [pinned, setPinned] = useState<string | null>(null);
-  const [hasFrame, setHasFrame] = useState(false);
-  const [url, setUrl] = useState('');
-  const [editing, setEditing] = useState(false);
   const [full, setFull] = useState(false);
   const [phone, setPhone] = useState(() => readFlag('browser-phone', false));
-  const hadTabs = useRef(false);
-  const emptied = useRef(onEmpty);
-  emptied.current = onEmpty;
-
-  const send = (m: object) => ws.current?.readyState === WebSocket.OPEN && ws.current.send(JSON.stringify(m));
-  const phoneNow = useRef(phone);
-  phoneNow.current = phone;
-  const sendSize = () => {
-    const el = host.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    send({ t: 'size', w: Math.round(r.width * dpr), h: Math.round(r.height * dpr), cssW: Math.round(r.width), cssH: Math.round(r.height), dpr, mobile: phoneNow.current && r.width < 700 });
-  };
-  const tab = tabs.find((t) => t.id === current);
-
-  useEffect(() => {
-    let delay = 1000;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const open = () => {
-      timer = undefined;
-      const s = new WebSocket(wsUrl('chrome'));
-      ws.current = s;
-      s.onopen = () => {
-        if (ws.current !== s) return;
-        delay = 1000;
-        sendSize();
-      };
-      s.onmessage = (ev) => {
-        if (ws.current !== s) return;
-        const m = JSON.parse(ev.data);
-        if (m.t === 'state') {
-          setState(m);
-          if (m.state !== 'on') setHasFrame(false);
-        }
-        if (m.t === 'tabs') {
-          setTabs(m.tabs);
-          if (hadTabs.current && m.tabs.length === 0) emptied.current?.();
-          hadTabs.current = m.tabs.length > 0;
-          setCurrent(m.current);
-          setPinned(m.pinned);
-        }
-        if (m.t === 'editable' && !m.on && document.activeElement === kbd.current) kbd.current?.blur();
-        if (m.t === 'frame' && img.current) {
-          vp.current = { w: m.w, h: m.h };
-          img.current.src = `data:image/jpeg;base64,${m.data}`;
-          setHasFrame(true);
-        }
-      };
-      s.onclose = () => {
-        if (ws.current !== s) return;
-        setState({ state: 'off', reason: 'server', retry: true });
-        setHasFrame(false);
-        timer = setTimeout(open, delay);
-        delay = Math.min(delay * 2, 10000);
-      };
-    };
-    const close = () => {
-      clearTimeout(timer);
-      timer = undefined;
-      const s = ws.current;
-      ws.current = null;
-      s?.close();
-    };
-    const onVisibility = () => {
-      if (document.hidden) return close();
-      if (ws.current && ws.current.readyState <= WebSocket.OPEN) return;
-      clearTimeout(timer);
-      delay = 1000;
-      open();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    open();
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      close();
-    };
-  }, []);
+  const { send, vp, state, tabs, current, pinned, hasFrame } = useChromeSocket({ img, kbd, host }, phone, onEmpty);
+  const input = useFrameInput(send, img, kbd, vp);
 
   useEffect(() => {
     document.body.classList.toggle('browser-full', full);
     return () => document.body.classList.remove('browser-full');
   }, [full]);
 
-  useEffect(() => {
-    if (!editing) setUrl(tab?.url ?? '');
-  }, [tab?.url, editing]);
-
-  useEffect(() => {
-    const el = host.current;
-    if (!el) return;
-    const ro = new ResizeObserver(sendSize);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [state.state, phone]);
-
-  const pos = (e: { clientX: number; clientY: number }) => {
-    if (!img.current) return { x: 0, y: 0 };
-    const r = img.current.getBoundingClientRect();
-    return { x: ((e.clientX - r.left) / r.width) * vp.current.w, y: ((e.clientY - r.top) / r.height) * vp.current.h };
-  };
-
-  const onDown = (e: React.PointerEvent) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    if (e.pointerType !== 'mouse') {
-      touch.current = true;
-      tap.current = { x: e.clientX, y: e.clientY };
-      send({ t: 'touch', type: 'touchStart', ...pos(e) });
-      return;
-    }
-    e.preventDefault();
-    kbd.current?.focus({ preventScroll: true });
-    send({ t: 'mouse', type: 'mousePressed', ...pos(e), button: BUTTON[e.button] ?? 'left', buttons: e.buttons, clickCount: e.detail || 1, modifiers: mods(e) });
-  };
-  const onMove = (e: React.PointerEvent) => {
-    if (e.pointerType !== 'mouse') {
-      if (touch.current) send({ t: 'touch', type: 'touchMove', ...pos(e) });
-      return;
-    }
-    send({ t: 'mouse', type: 'mouseMoved', ...pos(e), button: 'none', buttons: e.buttons, modifiers: mods(e) });
-  };
-  const onUp = (e: React.PointerEvent) => {
-    if (e.pointerType !== 'mouse') {
-      if (touch.current) send({ t: 'touch', type: 'touchEnd', ...pos(e) });
-      // Focus inside the tap itself, as phones only open the keyboard from a user gesture.
-      if (touch.current && Math.hypot(e.clientX - tap.current.x, e.clientY - tap.current.y) < 8) kbd.current?.focus({ preventScroll: true });
-      touch.current = false;
-      return;
-    }
-    send({ t: 'mouse', type: 'mouseReleased', ...pos(e), button: BUTTON[e.button] ?? 'left', buttons: e.buttons, clickCount: e.detail || 1, modifiers: mods(e) });
-  };
-
-  const onKey = (e: React.KeyboardEvent) => {
-    if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) return;
-    if (e.key === 'Unidentified' || e.key === 'Process') return;
-    if (e.metaKey && e.key === 'v') return;
-    // A key sent to the page is not also an app shortcut; ⌘I in a page's editor must not open Codex.
-    e.preventDefault();
-    e.stopPropagation();
-    send({ t: 'key', key: e.key, code: e.code, keyCode: e.keyCode, modifiers: mods(e) });
-  };
-  const onText = (e: React.FormEvent<HTMLTextAreaElement>) => {
-    const text = e.currentTarget.value;
-    e.currentTarget.value = '';
-    if (text) send({ t: 'text', text });
-  };
-
-  const go = () => {
-    setEditing(false);
-    if (url.trim()) send({ t: 'nav', url: url.trim() });
-  };
-
   if (state.state !== 'on') return <Connect state={state} onSetup={() => send({ t: 'setup' })} />;
 
   return (
     <div className="browser-pane">
-      <div className="pane-bar browser-bar">
-        <button className="icon-btn" title="Back" onClick={() => send({ t: 'back' })}><Icon name="arrow-left" /></button>
-        <button className="icon-btn desktop-only" title="Forward" onClick={() => send({ t: 'forward' })}><Icon name="arrow-right" /></button>
-        <button className="icon-btn" title="Reload" onClick={() => send({ t: 'reload' })}><Icon name="refresh" /></button>
-        <input
-          className="url"
-          placeholder="Address"
-          aria-label="Address"
-          value={url}
-          onFocus={() => setEditing(true)}
-          onBlur={() => setEditing(false)}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.nativeEvent.isComposing) { go(); e.currentTarget.blur(); }
-            if (e.key === 'Escape') e.currentTarget.blur();
-          }}
-        />
-        <select className="tab-pick" value={pinned ?? ''} onChange={(e) => send({ t: 'tab', id: e.target.value || null })} title="Which Chrome tab to show">
-          <option value="">Follow Claude</option>
-          {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
-        </select>
-        <button
-          className={`icon-btn phone-only${phone ? ' on' : ''}`}
-          title={phone ? 'Phone layout is on. Chrome on the Mac shows the page at phone size' : 'Show the page at phone size. Chrome on the Mac shrinks while this is on'}
-          aria-pressed={phone}
-          onClick={() => {
-            const v = !phone;
-            setPhone(v);
-            saveFlag('browser-phone', v);
-          }}
-        ><Icon name="device-mobile" /></button>
-        <button className="icon-btn phone-only" title="Keyboard" onClick={() => kbd.current?.focus()}><Icon name="keyboard" /></button>
-        <button className="icon-btn phone-only" title="Full screen" onClick={() => setFull(true)}><Icon name="screen-full" /></button>
-      </div>
+      <BrowserBar
+        send={send}
+        tabs={tabs}
+        tab={tabs.find((t) => t.id === current)}
+        pinned={pinned}
+        phone={phone}
+        setPhone={(v) => { setPhone(v); saveFlag('browser-phone', v); }}
+        focusKeyboard={() => kbd.current?.focus()}
+        goFull={() => setFull(true)}
+      />
       <div className="frame-host" ref={host}>
         {full && <button className="icon-btn browser-exit" title="Exit full screen" onClick={() => setFull(false)}><Icon name="screen-normal" /></button>}
         <img
@@ -226,17 +90,17 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           alt=""
           hidden={!hasFrame}
           draggable={false}
-          onPointerDown={onDown}
-          onPointerMove={onMove}
-          onPointerUp={onUp}
-          onPointerCancel={() => { if (touch.current) send({ t: 'touch', type: 'touchCancel', x: 0, y: 0 }); touch.current = false; }}
-          onWheel={(e) => send({ t: 'wheel', ...pos(e), dx: e.deltaX, dy: e.deltaY })}
+          onPointerDown={input.onDown}
+          onPointerMove={input.onMove}
+          onPointerUp={input.onUp}
+          onPointerCancel={input.onCancel}
+          onWheel={input.onWheel}
           onContextMenu={(e) => e.preventDefault()}
         />
         {!hasFrame && (
           <EmptyState size="md" icon="globe" title={tabs.length ? 'Waiting for the tab to draw' : 'No tab open in Chrome'} hint="Chrome only draws the tab that is in front. Pick a tab above to bring it forward" />
         )}
-        <textarea ref={kbd} className="chrome-kbd" aria-label="Type into the page" autoCapitalize="off" autoComplete="off" spellCheck={false} onKeyDown={onKey} onInput={onText} onPaste={(e) => { e.preventDefault(); send({ t: 'text', text: e.clipboardData.getData('text') }); }} />
+        <textarea ref={kbd} className="chrome-kbd" aria-label="Type into the page" autoCapitalize="off" autoComplete="off" spellCheck={false} onKeyDown={input.onKey} onInput={input.onText} onPaste={(e) => { e.preventDefault(); send({ t: 'text', text: e.clipboardData.getData('text') }); }} />
       </div>
     </div>
   );
@@ -252,7 +116,7 @@ const REASONS: Record<string, string> = {
   server: 'The AgentView server is not reachable.',
 };
 
-function Connect({ state, onSetup }: { state: State; onSetup: () => void }) {
+function Connect({ state, onSetup }: { state: ChromeState; onSetup: () => void }) {
   const [asked, setAsked] = useState(false);
   if (state.state === 'connecting') {
     return (
