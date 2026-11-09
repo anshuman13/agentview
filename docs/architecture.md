@@ -81,6 +81,18 @@ fallback hold. The build merges chunks under 20 kB to keep the first load to few
 
 The native Android client in `android/` speaks the same protocol; see [Phone and other Macs](macs.md#native-android-app).
 
+## Code shape
+
+- Layers call downward only. Web: components call hooks and `*Logic.ts` files, which call the API module
+  (`web/src/app/api.ts`) or the Codex data store (`web/src/codex/data/`); components never call `fetch` themselves.
+  Server: `http/` routes call `session/`, `workspace/` and `integrations/`; only `agent/` talks to the Claude SDK.
+  Android mirrors web: screens read state holders, which call `net/`.
+- Logic that both web and Android carry (parsers, queue order, labels) has one case list in `shared/fixtures/*.json`
+  that the vitest and the Kotlin unit test both run, so a fix on one side fails the other side's test until it is mirrored.
+- Size is a hint, not a rule: aim for functions under about 50 lines, components under about 80 and files under about
+  350. A file or function that does one coherent thing (a switch over message types, a route table) may stay longer.
+  Split by responsibility, never just to meet a number.
+
 ## Access
 
 Only this Mac and NetBird peers may connect, and requests from other origins are refused (`server/src/http/access.ts`).
