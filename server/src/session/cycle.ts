@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { LoopState } from '../../../shared/protocol.js';
+import type { Effort, LoopState } from '../../../shared/protocol.js';
 import { providerLabel } from '../../../shared/providers.js';
 import { errText } from '../../../shared/util.js';
 import type { AskOptions, Decision } from '../agent/types.js';
@@ -12,6 +12,7 @@ export class BuildCycle {
   // ExitPlanMode came, or its approval was asked from the reply, so the plan step has no approval left to ask.
   private planAnswered = false;
   private prevModel: string | null = null;
+  private prevEffort: Effort | null = null;
   private replyApproval: AbortController | null = null;
 
   constructor(private s: AgentSession) {}
@@ -33,6 +34,7 @@ export class BuildCycle {
     const { state, links } = this.s;
     this.s.pushEvent({ id, kind: 'user', text: task, at: Date.now() });
     this.prevModel = state.session.model;
+    this.prevEffort = state.session.effort;
     this.planDenied = false;
     this.planAnswered = false;
     this.s.setSession({ loop: { ...state.session.loop, round: 1, phase: 'plan' } });
@@ -105,9 +107,14 @@ export class BuildCycle {
     this.run = undefined;
     this.s.setSession({ loop: { ...this.s.state.session.loop, on: false } });
     if (note) this.s.system(note);
-    const model = this.prevModel;
+    const { prevModel: model, prevEffort: effort } = this;
     this.prevModel = null;
-    if (model && model !== this.s.state.session.model) this.s.settings.setModel(model).catch((err) => this.s.system(`Could not switch back to ${model}: ${errText(err)}`));
+    this.prevEffort = null;
+    const { settings, state } = this.s;
+    const back = model && model !== state.session.model ? settings.setModel(model) : Promise.resolve();
+    back
+      .then(() => (effort && effort !== state.session.effort ? settings.setEffort(effort) : undefined))
+      .catch((err) => this.s.system(`Could not switch back after the build cycle: ${errText(err)}`));
   }
 
   round(before: LoopState, after: LoopState) {
