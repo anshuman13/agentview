@@ -76,7 +76,8 @@ events already paged in (`mergeTail` in `web/src/app/runtime/pageEvents.ts`).
 
 Views, panes, pages and popovers load as their own chunks (`web/src/app/lazy.tsx`), and so does the markdown
 parser, off the chat's startup path. Views that render chat markdown wait for it, so replies never show as plain text
-first.
+first. The Codex feed and the sidebar views load when the browser is idle, so opening one never waits on Suspense's 300 ms
+fallback hold. The build merges chunks under 20 kB to keep the first load to fewer requests.
 
 The native Android client in `android/` speaks the same protocol; see [Phone and other Macs](macs.md#native-android-app).
 
