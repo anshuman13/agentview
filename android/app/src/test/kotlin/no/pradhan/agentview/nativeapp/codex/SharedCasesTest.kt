@@ -38,6 +38,7 @@ import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
+import no.pradhan.agentview.nativeapp.workspace.specPrompt
 import no.pradhan.agentview.nativeapp.workspace.specTasks
 import no.pradhan.agentview.nativeapp.workspace.startTaskPrompt
 import org.junit.Assert.assertEquals
@@ -157,6 +158,10 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.nullable("start")?.jsonPrimitive?.content, tasks.firstOrNull { !it.done }?.let { startTaskPrompt(it, c.str("path")) })
             assertEquals(c.str("name"), c.str("all"), runAllPrompt(c.str("path")))
         }
+    }
+
+    @Test fun specPrompt() {
+        for (c in cases("spec-prompt")) assertEquals(c.str("name"), c.str("expected"), specPrompt(c.str("request")))
     }
 
     @Test fun parseWhen() {

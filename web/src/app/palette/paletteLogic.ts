@@ -56,6 +56,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     { id: 'compact', label: 'Chat: Compact Context' },
     { id: 'loop', label: 'Chat: Toggle Build Cycle' },
     { id: 'goal', label: 'Chat: Start a standing goal' },
+    { id: 'spec', label: 'Chat: Start with a spec' },
     { id: 'stop', label: 'Chat: Stop Claude' },
     { id: 'theme', label: 'Preferences: Toggle Theme' },
     { id: 'notify', label: 'Preferences: Toggle Notifications' },

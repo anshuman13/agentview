@@ -4,6 +4,7 @@ import { openMeeting, openTask, setView, type List } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
 import { ago, command } from '../../ui/util';
 import { forkChat } from '../../chat/ChatSettings';
+import { specPrompt } from '../../../../shared/specTasks';
 import type { PaletteItem } from './paletteLogic';
 
 const KIND_LABEL = { task: 'Task', meeting: 'Meeting', wiki: 'Wiki' };
@@ -41,6 +42,10 @@ export function perform(id: string) {
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
   else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });
   else if (id === 'goal') window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: '/goal every 1h ' } }));
+  else if (id === 'spec') {
+    send({ type: 'set_permission_mode', mode: 'plan' });
+    window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: specPrompt('') } }));
+  }
   else if (id === 'stop') send({ type: 'interrupt' });
   else if (id === 'restart') send({ type: 'restart' });
   else if (id === 'file') setUi({ switcherOpen: true });

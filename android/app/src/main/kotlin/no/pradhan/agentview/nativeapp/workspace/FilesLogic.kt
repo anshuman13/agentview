@@ -127,4 +127,6 @@ fun specProgress(tasks: List<SpecTask>) = "${tasks.count { it.done }} of ${tasks
 
 fun startTaskPrompt(t: SpecTask, path: String) = "Do task ${t.n} in $path: ${t.text}. Tick its box in the file when it is done."
 
+fun specPrompt(request: String) = "Write a spec for the request below in .claude/specs/<slug>.md with three sections: Requirements (numbered, each with testable acceptance criteria), Design, and Tasks (`- [ ]` lines, each one small step). Do not change any code; stop for review when the spec is written.\n\nRequest: $request"
+
 fun runAllPrompt(path: String) = "/goal every task in $path is ticked: do them in order, tick each when done"
