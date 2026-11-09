@@ -106,6 +106,11 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     LaunchedEffect(blank, loading, earlier, settled) { if (blank && settled && !loading && earlier != tried) { tried = earlier; hub.loadEarlier() } }
     val newest = rows.firstOrNull()?.id
     LaunchedEffect(newest, rows.size) { if (stick && newest != null) listState.scrollToItem(0) }
+    val turn by hub.showTurn.collectAsState()
+    LaunchedEffect(turn, rows) {
+        val at = rows.indexOfFirst { it.id == turn }
+        if (at >= 0) { stick = false; listState.animateScrollToItem(at); hub.showTurn.value = null }
+    }
     val sent = view.sent
     LaunchedEffect(sent) {
         if (users > 0) { stick = true; if (rows.isNotEmpty()) listState.scrollToItem(0) }

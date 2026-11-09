@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +46,7 @@ fun LoopCard(hub: Hub, run: ChatRun, phase: String?) {
                 Text(money(run.costUsd), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
             }
             if (last != null) RoundLine(last, showTime = false)
+            run.rounds.lastOrNull { it.report != null }?.takeIf { it !== last }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(r, showTime = false) } }
             if (open) run.rounds.takeLast(10).reversed().forEach { RoundLine(it, showTime = true) }
         }
         Menu(menu, { menu = false }) { MenuItem("Run now", "debug-start", { menu = false; hub.runControl(run, "now") }) }
@@ -87,6 +89,7 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
     }
 
     fun openChat(run: ChatRun) {
+        run.rounds.lastOrNull()?.report?.let { hub.showTurn.value = it }
         if (state.live.any { it.id == run.chatId }) { hub.open(run.chatId); onChat() }
         else scope.launch { if (hub.openSaved(run.sessionId)) onChat() }
     }

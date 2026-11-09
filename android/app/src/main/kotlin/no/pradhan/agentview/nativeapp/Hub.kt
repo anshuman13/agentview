@@ -117,6 +117,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val undoable = MutableSharedFlow<Undoable>(extraBufferCapacity = 1)
 
     val navHidden = MutableStateFlow(false)
+    val showTurn = MutableStateFlow<String?>(null)
 
     private val foregroundNow = MutableStateFlow(false)
 

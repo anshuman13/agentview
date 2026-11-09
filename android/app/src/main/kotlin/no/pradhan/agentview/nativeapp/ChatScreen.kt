@@ -91,7 +91,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     val (prLoad) = rememberLoad(live.id, cwd) { branchPr(parsePulls(hub.read("/api/gh/prs")), parseGitStatus(hub.read("/api/git/status")).branch) }
     var prOpen by rememberSaveable(live.id) { mutableStateOf<Int?>(null) }
     prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
-    val since = remember(live.id) { val left = hub.leftAt(live.id); if (left > 0 && live.lastActive > left) live.recap else null }
+    val since = remember(live.id) { val left = hub.leftAt(live.id); if (left == 0L || live.lastActive > left) live.recap else null }
     var sinceOpen by remember(live.id) { mutableStateOf(true) }
 
     Column(Modifier.fillMaxSize()) {
