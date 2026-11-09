@@ -21,7 +21,7 @@ import { safeHref } from '../../ui/util';
 import { UNROLL, useActions } from '../useActions';
 import { type BadgeSpec, Badge } from '../../ui/Badge';
 
-// Matches STALE in assistant/src/rollover.ts: at this many rolls a task goes back to review.
+// Matches STALE in assistant/src/jobs/rollover.ts: at this many rolls a task goes back to review.
 const STALE_ROLLS = 3;
 
 // Opens Linear's new-issue form filled in; nothing is created until you submit it there.
