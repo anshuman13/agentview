@@ -141,6 +141,11 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             val n = statusCount(of, f, saved, seen)
             if (n > 0 || status == f) Chip("${f.label} $n", { status = if (status == f) StatusFilter.All else f }, on = status == f)
         }
+        // Slack's mark all read, while the Done chip is on.
+        if (status == StatusFilter.Done) {
+            val done = of.flatMap { it.items() }.filter { it.state(saved, seen) == ChatState.Done }.mapNotNull { it.live?.sessionId ?: it.saved?.sessionId }
+            if (done.isNotEmpty()) Chip("Mark all read", { hub.markRead(done) })
+        }
     }
 
     @Composable

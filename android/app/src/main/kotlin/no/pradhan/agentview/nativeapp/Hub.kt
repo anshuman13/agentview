@@ -257,6 +257,8 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         if (!readOnly) viewModelScope.launch { runCatching { api.markSeen(sessionId) } }
     }
 
+    fun markRead(sessionIds: List<String>) = sessionIds.forEach(::markSeen)
+
     // Seen time 0, so the chat shows Done until it is opened again.
     fun markUnread(sessionId: String) {
         workspace.value = workspace.value.let { it.copy(seen = it.seen + (sessionId to 0L)) }
