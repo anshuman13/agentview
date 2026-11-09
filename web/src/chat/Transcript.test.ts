@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker } from './steps';
+import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker, newReplies } from './steps';
 import { editCount, replyLine, sumEdits } from '../../../shared/edits';
 import { chatLine } from '../sessions/folders';
 import type { ChatEvent, LiveChat } from '../../../shared/protocol';
@@ -199,4 +199,14 @@ describe('newMarker', () => {
     expect(newMarker(items, ats, 0, 30)).toBeNull();
     expect(newMarker(items, ats, 25, 30)).toBeNull();
   });
+});
+
+describe('newReplies', () => {
+  const items = [{ id: 'u', kind: 'user' }, { id: 'a', kind: 'assistant' }, { id: 's', kind: 'step' }, { id: 'b', kind: 'assistant' }, { id: 'c', kind: 'assistant', streaming: true }] as never[];
+  it('counts finished replies after the last row seen', () => {
+    expect(newReplies(items, 'u')).toBe(2);
+    expect(newReplies(items, 'a')).toBe(1);
+    expect(newReplies(items, 'b')).toBe(0);
+  });
+  it('counts none for an unknown row', () => expect(newReplies(items, 'gone')).toBe(0));
 });

@@ -6,7 +6,7 @@ import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
-import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, duration, newMarker, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
+import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, duration, newMarker, newReplies, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../ui/util';
 import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../shared/protocol';
@@ -34,6 +34,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
   const size = useRef('');
   const [stuck, setStuck] = useState(true);
   const [behind, setBehind] = useState(false);
+  const [leftAt, setLeftAt] = useState('');
   const lastUser = useRef('');
   const [shown, setShown] = useState(ROW_WINDOW);
   const [staged, setStaged] = useState(FIRST_ROWS);
@@ -129,10 +130,13 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     const now = `${el.scrollHeight},${el.clientHeight}`;
     if (now !== size.current) { size.current = now; return; }
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (stick.current && !near) setLeftAt(items[items.length - 1]?.id ?? '');
     stick.current = near;
     setStuck(near);
     if (near) setBehind(false);
   };
+
+  const replies = stuck ? 0 : newReplies(items, leftAt);
 
   const jump = () => {
     const el = box.current;
@@ -157,7 +161,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
       })}
       </div>
     </div>
-    {!stuck && (behind || running) && <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />Jump to latest</button>}
+    {!stuck && (behind || running) && <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />Jump to latest{replies > 0 && ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}`}</button>}
     </div>
   );
 }

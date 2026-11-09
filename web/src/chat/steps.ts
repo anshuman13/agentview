@@ -167,6 +167,9 @@ type StepItem = Extract<Item, { kind: 'step' }>;
 // Runs of at least min finished Read, Grep and Glob steps in a row, keyed by the first step's id, so the
 // transcript folds each into one Explored row like Slack's compact message groups (the phone does the same).
 // Slack-style New line: the first reply or step that arrived after the chat was last seen and before it was opened; android Steps.kt newMarker says the same.
+// Replies that arrived after the reader scrolled up, for the Jump to latest button.
+export const newReplies = (items: Item[], lastSeenId: string) => items.slice(items.findIndex((it) => it.id === lastSeenId) + 1 || items.length).filter((it) => it.kind === 'assistant' && !it.streaming).length;
+
 export function newMarker(items: Item[], ats: Map<string, number>, seen: number, openedAt: number) {
   if (seen <= 0) return null;
   return items.find((it) => it.kind !== 'user' && (ats.get(it.id) ?? 0) > seen && (ats.get(it.id) ?? 0) <= openedAt)?.id ?? null;
