@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { nextClock, parseLoop } from './repeat.js';
+import { nextClock } from '../../../shared/util.js';
+import { parseLoop } from './repeat.js';
 
 const now = new Date(2026, 9, 24, 9, 0, 0).getTime();
 

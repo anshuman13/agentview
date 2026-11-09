@@ -1,4 +1,4 @@
-import { nextClock } from '../../session/repeat.js';
+import { nextClock } from '../../../../shared/util.js';
 
 // "You've hit your session limit · resets 1:50am (Europe/Oslo)" gives the time a loop may go on, plus a minute.
 // Only a short one-line notice counts, so a normal reply that mentions a limit does not switch accounts.

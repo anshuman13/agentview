@@ -1,5 +1,5 @@
 import { MAX_GOAL_ROUNDS, type ChatRun, type Repeat, type SessionInfo } from '../../../shared/protocol.js';
-import { clock, span } from '../../../shared/util.js';
+import { clock, nextClock, span } from '../../../shared/util.js';
 import type { Cron } from '../agent/types.js';
 
 const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
@@ -80,13 +80,6 @@ const MAX_TIMER = 2 ** 31 - 1;
 export function after(at: number, fn: () => void): NodeJS.Timeout {
   const left = at - Date.now();
   return setTimeout(() => (Date.now() >= at ? fn() : void after(at, fn)), Math.min(Math.max(0, left), MAX_TIMER));
-}
-
-export function nextClock(hours: number, minutes: number, now: number) {
-  const d = new Date(now);
-  d.setHours(hours, minutes, 0, 0);
-  if (d.getTime() <= now) d.setDate(d.getDate() + 1);
-  return d.getTime();
 }
 
 export function fireTime(schedule: string, now = Date.now()) {
