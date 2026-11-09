@@ -21,13 +21,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.flow.update
+import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.chat.AttachButton
 import no.pradhan.agentview.nativeapp.chat.Dictation
 import no.pradhan.agentview.nativeapp.chat.VoiceButton
 import no.pradhan.agentview.nativeapp.chat.appendWord
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.askCodex
 import no.pradhan.agentview.nativeapp.net.codexProfile
+import no.pradhan.agentview.nativeapp.sessions.ChatState
+import no.pradhan.agentview.nativeapp.sessions.chatState
+import no.pradhan.agentview.nativeapp.sessions.folderName
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -46,6 +51,7 @@ import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.select
 
 @Composable
 fun AskBar(hub: Hub, st: CodexState, profile: String?) {
@@ -105,8 +111,11 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     val d = rememberOverviewData(hub, st, profile, now)
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }
     var all by remember { mutableStateOf(false) }
+    val live by hub.store.state.select { it.live }
+    val running = remember(live) { runningChats(live) }
     LazyColumn(Modifier.fillMaxSize()) {
         item { UpNextSection(d, now, actions, onOpen, onNeeds, onAdd, onMeeting) }
+        if (running.isNotEmpty()) runningSection(running) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
         if (goals.isNotEmpty()) goalsSection(st, goals, onGoals)
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
@@ -135,6 +144,24 @@ private fun UpNextSection(d: OverviewData, now: Long, actions: TaskActions, onOp
     }
     if (d.needsTotal > 0) {
         Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Needs you", onClick = onNeeds, trailing = { Badge("${d.needsTotal}", BadgeTone.Quiet); Chevron() }) }
+    }
+}
+
+// Chats that run or wait on me, waiting ones first.
+fun runningChats(live: List<LiveChat>) = live.filter { chatState(it, null, emptyMap()).let { s -> s == ChatState.Needs || s == ChatState.Running } }.sortedByDescending { it.pending > 0 }
+
+private fun LazyListScope.runningSection(chats: List<LiveChat>, onOpen: (String) -> Unit) {
+    item { SectionHeader("Running", count = "${chats.size}") }
+    item {
+        Group {
+            chats.forEachIndexed { i, c ->
+                if (i > 0) Hairline()
+                val doing = if (c.pending > 0) "Waiting for you" else c.status.ifBlank { "Working" }
+                ListRow(c.title.ifBlank { "Untitled" }, "${folderName(c.cwd)} · $doing", onClick = { onOpen(c.id) }, trailing = {
+                    if (c.pending > 0) Badge("Needs you", BadgeTone.Waiting) else Badge("Running", BadgeTone.Running)
+                })
+            }
+        }
     }
 }
 

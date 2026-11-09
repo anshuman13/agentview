@@ -4,6 +4,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
+import no.pradhan.agentview.nativeapp.net.LiveChat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -248,5 +249,9 @@ class CodexLogicTest {
         assertEquals("pay the invoice today", hits.tasks[0].snippet)
         assertEquals(0, searchAll(items, emptyList(), "  ", null).total)
     }
-}
 
+    @Test fun runningChatsListWaitingBeforeRunningAndSkipsStalled() {
+        val live = listOf(LiveChat("a", running = true), LiveChat("b", pending = 1), LiveChat("c", running = true, stalled = true), LiveChat("d"), LiveChat("e", failed = true))
+        assertEquals(listOf("b", "a"), runningChats(live).map { it.id })
+    }
+}
