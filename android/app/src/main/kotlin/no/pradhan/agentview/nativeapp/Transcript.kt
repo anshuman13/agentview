@@ -93,6 +93,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     val ends = remember(items, running) { turnEnds(items, running) }
     val runs = remember(items) { exploreRuns(items) }
     var openRuns by rememberSaveable(chatId) { mutableStateOf(setOf<String>()) }
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val folded = remember(runs, openRuns) { runs.filterKeys { it !in openRuns }.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
     val title = state.live.firstOrNull { it.id == chatId }?.title.orEmpty()
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
@@ -153,6 +154,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                     }
                     if (it is Item.Assistant && it.id in ends) Row {
                         Button("Reply", { hub.draftPrompt(quoteReply(it.text)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                        Button("Copy", { clipboard.setText(androidx.compose.ui.text.AnnotatedString(it.text)); hub.notice.value = "Copied the reply" }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                         Button("Save as note", { hub.saveReply(it.text, title, cwd) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     }
                 }
