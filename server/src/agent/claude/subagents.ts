@@ -54,3 +54,7 @@ export function taskDone(host: AgentHost, agents: AgentIds, toolUseId: string, t
     host.emit({ type: 'event', event: ev });
   });
 }
+
+export function continuedTurn(host: AgentHost) {
+  if (!host.state.session.running) host.turnStarted('Claude continued after a background task');
+}

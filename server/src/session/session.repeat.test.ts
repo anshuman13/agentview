@@ -18,7 +18,7 @@ describe('/loop after Stop', () => {
     const { s, interrupt, result } = fakeSession();
     await s.prompt('/loop until 23:59 do the next round');
     expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['/loop until 23:59 do the next round', 'do the next round']);
-    Object.assign(s.driver, { inputQueue: [] });
+    (s.driver as unknown as { input: { clear(): void } }).input.clear();
     await s.interrupt();
     expect(interrupt).toHaveBeenCalledOnce();
     result('r1', 'error_during_execution');
@@ -315,7 +315,7 @@ describe('send queue fuzz', () => {
   const seeds = Number(process.env.FUZZ_SEEDS ?? 10);
   const base = Number(process.env.FUZZ_FROM ?? 1);
   type Priv = { waiting: { queued: unknown[] }; enqueue: (text: string) => void };
-  type Drv = { q: { interrupt: () => Promise<void> } | null; inputQueue: unknown[]; consume: () => Promise<void>; start: () => void };
+  type Drv = { q: { interrupt: () => Promise<void> } | null; input: { clear(): void }; consume: () => Promise<void>; start: () => void };
 
   function rng(seed: number) {
     let x = seed * 2654435761 + 1;
@@ -341,8 +341,8 @@ describe('send queue fuzz', () => {
       };
       const idOf = (e: Extract<ChatEvent, { kind: 'user' }>) => sent.find((m) => m.id === e.id)?.id ?? e.text;
       const bigBro = () =>
-        void (s.driver as unknown as { confirmBigBro: (i: unknown, sig: AbortSignal) => Promise<unknown> })
-          .confirmBigBro({ hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: { subagent_type: BIG_BRO, description: 'd', prompt: 'p' }, tool_use_id: `t${seed}-${n}` }, new AbortController().signal)
+        void (s.driver as unknown as { toolHooks: { beforeAgent: (i: unknown, sig: AbortSignal) => Promise<unknown> } }).toolHooks
+          .beforeAgent({ hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: { subagent_type: BIG_BRO, description: 'd', prompt: 'p' }, tool_use_id: `t${seed}-${n}` }, new AbortController().signal)
           .catch(() => {});
       let n = 0;
       const user = () => s.state.events.filter((e): e is Extract<ChatEvent, { kind: 'user' }> => e.kind === 'user');
@@ -380,7 +380,7 @@ describe('send queue fuzz', () => {
           check(`resend ${m.id}`);
         } else if (roll < 0.7) {
           // The CLI has taken what was queued for it; a stop can now reach the running turn.
-          if (r() < 0.5) drv.inputQueue = [];
+          if (r() < 0.5) drv.input.clear();
           const q = s.state.session.running && !s.state.session.stopping ? queuedIds() : [];
           await s.interrupt();
           for (const id of q) dropped.add(id);

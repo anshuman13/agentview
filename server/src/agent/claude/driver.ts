@@ -1,30 +1,25 @@
-import { randomUUID } from 'node:crypto';
-import path from 'node:path';
-import { query, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
-import { ACCOUNT_LABEL, type Account, type Effort } from '../../../../shared/protocol.js';
-import type { AgentDriver, AgentHost, History, RunningTask } from '../types.js';
+import { query, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
+import type { Account, Effort } from '../../../../shared/protocol.js';
+import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
+import { InputQueue } from './inputQueue.js';
 import { TranscriptWatch } from './transcriptWatch.js';
-import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
-import { inSettings, mcpFrom } from './mcp.js';
+import type { SystemMessage } from './sdkTypes.js';
+import { TaskTracker } from './taskTracker.js';
+import { Rewinds } from './rewinds.js';
+import { Messages } from './messages.js';
+import { SystemMessages } from './systemMessages.js';
+import { TEAM, agentOptions, userMessage } from './options.js';
+import { mcpFrom } from './mcp.js';
+import { McpControl } from './mcpControl.js';
+import { loadMeta, loadUsage } from './queryInfo.js';
 import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
-import { bigBroRequest, bigBroVerdict } from './approval.js';
-import { ENDED, replayText, usageOf } from './tasks.js';
-import { agentResult, agentToolUse, isAgent, patchAgent, taskDone, taskToolUse } from './subagents.js';
-import { hookLine } from './hooks.js';
-import { sessionUsage } from './usage.js';
+import { ToolHooks } from './toolHooks.js';
+import { continuedTurn } from './subagents.js';
 import { LiveText } from './stream.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
+import { historyFrom } from './transcript.js';
 import { expandChatMentions } from './chatMentions.js';
 
-type SystemMessage = Extract<SDKMessage, { type: 'system' }>;
-type AssistantMessage = Extract<SDKMessage, { type: 'assistant' }>;
-type ToolResultBlock = Extract<Exclude<Extract<SDKMessage, { type: 'user' }>['message']['content'], string>[number], { type: 'tool_result' }>;
-
-type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
-
-const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
-const STATUS_EVERY = 8;
 const USAGE_EVERY = 10 * 60_000;
 
 export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume, cwd)) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
@@ -33,36 +28,35 @@ export const claudeSession = (cwd: string, resume?: string, fork = false, accoun
 export class ClaudeDriver implements AgentDriver {
   readonly capabilities = { rewind: true, mcp: true, effort: true, team: true, stopTask: true };
   private q: Query | null = null;
-  private inputQueue: SDKUserMessage[] = [];
-  private wake: (() => void) | null = null;
   private closed = false;
-  private gen = 0;
-  private sinceStatus = 0;
+  private input = new InputQueue(() => this.closed);
   private usageTimer: ReturnType<typeof setInterval> | undefined;
 
   private live: LiveText;
-  private edits = new Map<string, string>();
 
   private resumedAuto = false;
   private allowed: string[] = [];
-  private mcpServers: Record<string, McpServerConfig> = {};
-  private addedMcp: Record<string, McpServerConfig> = {};
+  private mcp = new McpControl(() => this.cwd, () => this.q, () => this.open());
 
   private watcher: TranscriptWatch;
-  private agents: AgentIds = new Map();
-  private tasks = new Map<string, RunningTask>();
-  private sent: { id: string; text: string }[] = [];
-  private rewindIds = new Map<string, string>();
-  private taskIds = new Map<string, string>();
+  readonly toolHooks: ToolHooks;
+  private tasks: TaskTracker;
+  private rewinds = new Rewinds();
+  private messages: Messages;
+  private systemMessages: SystemMessages;
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
   constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main') {
     this.live = new LiveText(host);
+    this.toolHooks = new ToolHooks(host);
+    this.tasks = new TaskTracker(host);
+    this.messages = new Messages(host, this.tasks, this.rewinds, () => this.account);
+    this.systemMessages = new SystemMessages(host, this.tasks, (msg) => this.onInit(msg));
     this.watcher = new TranscriptWatch({
       host,
       isClosed: () => this.closed,
       attached: () => this.attached,
-      taskCount: () => this.tasks.size,
+      taskCount: () => this.tasks.count,
       restart: () => this.restart(),
       history: (...args) => this.history(...args),
     });
@@ -99,7 +93,7 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   runningTasks() {
-    return [...this.tasks.values()];
+    return this.tasks.list();
   }
 
   private detach() {
@@ -107,11 +101,9 @@ export class ClaudeDriver implements AgentDriver {
     this.restore = { model, team, permissionMode };
     this.resume = sessionId ?? this.resume;
     this.q = null;
-    this.gen++;
-    this.wake?.();
+    this.input.release(true);
     this.tasks.clear();
-    // Edits whose results never came went with the old CLI.
-    this.edits.clear();
+    this.messages.dropEdits();
   }
 
   get attached() {
@@ -143,7 +135,7 @@ export class ClaudeDriver implements AgentDriver {
     this.closed = true;
     clearInterval(this.usageTimer);
     this.watchHistory(false);
-    this.wake?.();
+    this.input.release(false);
     this.q?.close();
   }
 
@@ -154,7 +146,7 @@ export class ClaudeDriver implements AgentDriver {
 
   private history(...args: Parameters<typeof historyFrom>): History {
     const { events, context, cache, agents } = historyFrom(...args);
-    this.agents = agents;
+    this.tasks.agents = agents;
     return { events, context, cache };
   }
 
@@ -166,19 +158,16 @@ export class ClaudeDriver implements AgentDriver {
       onStatus: (text) => this.host.setStatus(text),
       chat: () => this.state.session.sessionId,
       canUseTool: (toolName, input, opts) => this.host.canUseTool(toolName, input, opts) as Promise<PermissionResult>,
-      beforeAgent: (input, _id, { signal }) => this.confirmBigBro(input, signal),
-      afterTool: async (input) => this.afterTool(input),
-      onStop: async (input) => {
-        if (input.hook_event_name === 'Stop' && !input.agent_id) this.host.crons = input.session_crons ?? [];
-        return {};
-      },
-      mcp: this.addedMcp,
+      beforeAgent: (input, _id, { signal }) => this.toolHooks.beforeAgent(input, signal),
+      afterTool: async (input) => this.toolHooks.afterTool(input),
+      onStop: (input) => this.toolHooks.onStop(input),
+      mcp: this.mcp.added,
       effort: this.state.session.effort ?? undefined,
       fork: this.fork,
       configDir: configDir(this.account),
     });
-    this.mcpServers = options.mcpServers ?? {};
-    this.q = query({ prompt: this.inputStream(this.gen), options });
+    this.mcp.servers = options.mcpServers ?? {};
+    this.q = query({ prompt: this.input.stream(), options });
     if (this.restore) {
       const { model, team, permissionMode } = this.restore;
       this.restore = null;
@@ -197,19 +186,7 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   private async loadMeta() {
-    if (!this.q) return;
-    try {
-      const [models, commands] = await Promise.all([this.q.supportedModels(), this.q.supportedCommands()]);
-      this.host.setSession({
-        models: [
-          { value: 'team', displayName: 'Team: Opus plans, Sonnet builds', description: 'Opus plans each task, Sonnet 5.5 builds it with Opus advising. Fable only with your OK' },
-          ...models.map((m) => ({ value: m.value, displayName: m.displayName, description: m.description })),
-        ],
-        commands: commands.map((c) => ({ name: c.name, description: c.description })),
-      });
-    } catch (err) {
-      process.stderr.write(`loadMeta failed: ${String(err)}\n`);
-    }
+    if (this.q) return loadMeta(this.q, this.host);
   }
 
   refreshUsage() {
@@ -218,26 +195,19 @@ export class ClaudeDriver implements AgentDriver {
 
   private async loadUsage() {
     const q = this.q;
-    if (!q) return;
-    try {
-      const u = await q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true });
-      if (q === this.q) this.host.setSession({ usage: sessionUsage(u) });
-    } catch (err) {
-      process.stderr.write(`loadUsage failed: ${String(err)}\n`);
-    }
+    if (q) return loadUsage(q, this.host, () => q === this.q);
   }
 
   async mcpStatus() {
-    const list = await this.q?.mcpServerStatus().catch(() => null);
-    return list ? mcpFrom(list) : null;
+    return this.mcp.status();
   }
 
   async reconnectMcp(name: string) {
-    await this.q?.reconnectMcpServer(name);
+    return this.mcp.reconnect(name);
   }
 
   async toggleMcp(name: string, enabled: boolean) {
-    await this.q?.toggleMcpServer(name, enabled);
+    return this.mcp.toggle(name, enabled);
   }
 
   private open() {
@@ -247,17 +217,11 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   async addMcp(name: string, def: unknown) {
-    this.open();
-    if (await inSettings(this.cwd, name)) return { error: undefined };
-    this.addedMcp[name] = def as McpServerConfig;
-    this.mcpServers = { ...this.mcpServers, [name]: def as McpServerConfig };
-    const r = await this.q!.setMcpServers(this.mcpServers);
-    return { error: r.errors[name] };
+    return this.mcp.add(name, def);
   }
 
-  async loginMcp(name: string): Promise<{ authUrl?: string; callbackPort?: number }> {
-    this.start();
-    return (this.q as Query & McpAuth).mcpAuthenticate(name);
+  async loginMcp(name: string) {
+    return this.mcp.login(name);
   }
 
   async setModel(model: string) {
@@ -287,59 +251,17 @@ export class ClaudeDriver implements AgentDriver {
     return true;
   }
 
-  private async confirmBigBro(input: HookInput, signal: AbortSignal): Promise<HookJSONOutput> {
-    const req = bigBroRequest(input);
-    if (!req) return {};
-    const r = await this.host.ask(req.toolName, req.toolInput, { signal, title: req.title });
-    return bigBroVerdict(r.behavior);
-  }
-
-  afterTool(input: HookInput): HookJSONOutput {
-    if (input.agent_id || input.hook_event_name !== 'PostToolUse') return {};
-    const notes: string[] = [];
-    const plan = this.host.takePlanChange();
-    if (plan) notes.push(plan);
-    if (input.tool_name.endsWith('__set_status')) this.sinceStatus = 0;
-    else if (++this.sinceStatus >= STATUS_EVERY) {
-      this.sinceStatus = 0;
-      notes.push(STATUS_REMINDER);
-    }
-    return notes.length ? { hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: notes.join('\n\n') } } : {};
-  }
-
-  private async *inputStream(gen: number): AsyncGenerator<SDKUserMessage> {
-    while (!this.closed && gen === this.gen) {
-      if (this.inputQueue.length === 0) {
-        await new Promise<void>((r) => (this.wake = r));
-        continue;
-      }
-      yield this.inputQueue.shift()!;
-    }
-  }
-
   send(text: string, id?: string, priority?: 'next') {
-    if (id) this.sent.push({ id, text });
-    this.inputQueue.push({ ...userMessage(expandChatMentions(text)), ...(priority && { priority }) });
-    this.wake?.();
+    if (id) this.rewinds.track(id, text);
+    this.input.push({ ...userMessage(expandChatMentions(text)), ...(priority && { priority }) });
   }
 
   dropInput() {
-    const n = this.inputQueue.filter((m) => !m.priority).length;
-    this.inputQueue = [];
-    return n;
-  }
-
-  // The CLI echoes each prompt with the uuid it saved it under; that uuid is what a file rewind points at.
-  private noteReplay(msg: { uuid?: string; message: { content: unknown } }) {
-    const text = replayText(msg.message.content);
-    const at = this.sent.findIndex((s) => s.text === text);
-    if (at < 0 || !msg.uuid) return;
-    this.rewindIds.set(this.sent[at].id, msg.uuid);
-    this.sent.splice(0, at + 1);
+    return this.input.drop();
   }
 
   async rewind(id: string) {
-    return this.open().rewindFiles(this.rewindIds.get(id) ?? id.replace(/:\d+$/, ''));
+    return this.open().rewindFiles(this.rewinds.uuidOf(id));
   }
 
   // The SDK takes cancelQueued at runtime but its types leave the option out.
@@ -348,9 +270,9 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   async stopTask(toolUseId: string) {
-    const id = this.taskIds.get(toolUseId) ?? [...this.agents].find(([, t]) => t === toolUseId)?.[0];
+    const id = this.tasks.taskIdOf(toolUseId);
     if (!id || !this.q) return false;
-    const live = this.tasks.has(id);
+    const live = this.tasks.isRunning(id);
     const ok = await this.q.stopTask(id).then(() => true, () => false);
     return ok && live;
   }
@@ -373,41 +295,29 @@ export class ClaudeDriver implements AgentDriver {
       if (this.q === q) {
         // The CLI is gone; drop it so the next prompt resumes the session in a fresh process.
         this.detach();
-        this.inputQueue = [];
-        this.sent = [];
+        this.input.clear();
+        this.rewinds.forgetSent();
         if (!this.closed) this.live.end();
         this.host.exited();
       }
     }
   }
 
-  private toolUse(block: { id: string; name: string; input: unknown }, parent?: string) {
-    this.host.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now(), parent, this.agents));
-    if (AGENT_TOOLS.has(block.name)) this.host.pushEvent(agentEvent(block.id, block.input, Date.now(), parent));
-    if (block.name === 'ReportFindings') this.host.reportFindings(block.input);
-    const file = (block.input as { file_path?: unknown })?.file_path;
-    if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
-  }
-
-  private continued() {
-    if (!this.state.session.running) this.host.turnStarted('Claude continued after a background task');
-  }
-
   private handle(msg: SDKMessage) {
     // Turns the CLI starts by itself (a subagent handing back, a scheduled job) come without a prompt from us.
-    if ((msg.type === 'assistant' || msg.type === 'stream_event') && !msg.parent_tool_use_id) this.continued();
+    if ((msg.type === 'assistant' || msg.type === 'stream_event') && !msg.parent_tool_use_id) continuedTurn(this.host);
     switch (msg.type) {
       case 'rate_limit_event':
         return this.onRateLimit(msg);
       case 'system':
-        return this.onSystem(msg);
+        return this.systemMessages.handle(msg);
       case 'stream_event':
         if (!msg.parent_tool_use_id) this.live.event(msg.event);
         return;
       case 'assistant':
-        return msg.parent_tool_use_id ? this.onSubagentMessage(msg, msg.parent_tool_use_id) : this.onAssistant(msg);
+        return msg.parent_tool_use_id ? this.messages.subagent(msg, msg.parent_tool_use_id) : this.messages.assistant(msg);
       case 'user':
-        return this.onUser(msg);
+        return this.messages.user(msg);
       case 'result':
         return this.onResult(msg);
       default:
@@ -422,44 +332,6 @@ export class ClaudeDriver implements AgentDriver {
     const q = this.q;
     this.host.overage(until);
     if (this.q === q) this.interrupt().catch(() => undefined);
-  }
-
-  private onSystem(msg: SystemMessage) {
-    switch (msg.subtype) {
-      case 'init':
-        return this.onInit(msg);
-      case 'session_state_changed':
-        if (msg.state === 'running' && !this.state.session.running) this.host.turnStarted();
-        return;
-      case 'status':
-        return this.onStatus(msg);
-      case 'compact_boundary': {
-        const { pre_tokens, post_tokens } = msg.compact_metadata;
-        this.host.compacted(pre_tokens, post_tokens);
-        return;
-      }
-      case 'permission_denied':
-        if (msg.decision_reason_type !== 'rule') this.host.blocked(msg.tool_use_id, msg.tool_name, msg.decision_reason || msg.message);
-        return;
-      case 'task_started':
-        return this.onTaskStarted(msg);
-      case 'task_progress':
-        if (msg.tool_use_id) patchAgent(this.host, agentToolUse(this.host, msg.tool_use_id), (a) => ({ usage: usageOf(msg.usage), progress: msg.summary || a.progress }));
-        return;
-      case 'task_updated':
-        return this.onTaskUpdated(msg);
-      case 'task_notification':
-        return this.onTaskNotification(msg);
-      case 'hook_response': {
-        const line = hookLine(msg);
-        if (line) this.host.system(line, true);
-        return;
-      }
-      case 'local_command_output':
-        this.host.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
-        this.host.turnEnded();
-        return;
-    }
   }
 
   private onInit(msg: Extract<SystemMessage, { subtype: 'init' }>) {
@@ -479,102 +351,6 @@ export class ClaudeDriver implements AgentDriver {
       void this.q?.setPermissionMode('auto').then(() => host.setSession({ permissionMode: 'auto' }), () => {});
     }
     if (this.state.session.commands.length === 0) void this.loadMeta();
-  }
-
-  private onStatus(msg: Extract<SystemMessage, { subtype: 'status' }>) {
-    const host = this.host;
-    if (msg.permissionMode) host.setSession({ permissionMode: msg.permissionMode });
-    if (msg.status === 'compacting') host.startCompacting();
-    if (msg.compact_result === 'failed') host.compactFailed(msg.compact_error || 'no reason given');
-    else if (msg.compact_result) host.setSession({ compacting: false });
-  }
-
-  private onTaskStarted(msg: Extract<SystemMessage, { subtype: 'task_started' }>) {
-    const toolUseId = msg.tool_use_id && agentToolUse(this.host, msg.tool_use_id);
-    const call = toolUseId ? this.host.eventById(toolUseId) : undefined;
-    const use = call?.kind === 'tool_use' ? call : undefined;
-    this.tasks.set(msg.task_id, { toolUseId: toolUseId || '', tool: use?.name ?? msg.task_type ?? 'task', description: msg.description || use?.summary || '' });
-    if (!toolUseId) return;
-    this.taskIds.set(toolUseId, msg.task_id);
-    this.host.adopt(toolUseId);
-    patchAgent(this.host, toolUseId, (a) => ({
-      status: 'running',
-      background: msg.is_backgrounded ?? a.background,
-      prompt: msg.prompt || a.prompt,
-      subagentType: msg.subagent_type || a.subagentType,
-      ...(a.status !== 'running' && { startedAt: Date.now(), endedAt: null }),
-    }));
-  }
-
-  private onTaskUpdated(msg: Extract<SystemMessage, { subtype: 'task_updated' }>) {
-    if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
-    const toolUseId = taskToolUse(this.taskIds, this.agents, msg.task_id);
-    const { status, end_time, is_backgrounded } = msg.patch;
-    if (toolUseId) patchAgent(this.host, toolUseId, () => ({
-      ...(status && ENDED[status] && { status: ENDED[status], endedAt: end_time ?? Date.now() }),
-      ...(is_backgrounded !== undefined && { background: is_backgrounded }),
-    }));
-  }
-
-  private onTaskNotification(msg: Extract<SystemMessage, { subtype: 'task_notification' }>) {
-    this.tasks.delete(msg.task_id);
-    const toolUseId = msg.tool_use_id ? agentToolUse(this.host, msg.tool_use_id) : taskToolUse(this.taskIds, this.agents, msg.task_id);
-    if (!toolUseId) return;
-    // The CLI writes the report to the transcript before it streams; without this the watcher takes it for another process and restarts the CLI.
-    this.continued();
-    const usage = msg.usage && usageOf(msg.usage);
-    patchAgent(this.host, toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
-    taskDone(this.host, this.agents, toolUseId, msg.task_id, msg.status, msg.summary);
-  }
-
-  private onSubagentMessage(msg: AssistantMessage, parent: string) {
-    const model = msg.message.model;
-    if (model) patchAgent(this.host, parent, () => ({ model }));
-    for (const block of msg.message.content) {
-      if (block.type === 'text' && block.text.trim()) this.host.pushEvent({ id: randomUUID(), kind: 'assistant', text: block.text, streaming: false, at: Date.now(), parent });
-      if (block.type === 'tool_use') this.toolUse(block, parent);
-    }
-  }
-
-  private onAssistant(msg: AssistantMessage) {
-    const host = this.host;
-    host.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), this.state.session.cache), context: contextFrom(msg.message.usage) ?? this.state.session.context });
-    for (const block of msg.message.content) {
-      if (block.type === 'server_tool_use' && block.name === 'advisor') host.pushEvent(advisorEvent(block.id, Date.now()));
-      if (block.type === 'tool_use') this.toolUse(block);
-      // The CLI marks its own usage-limit notice with error 'rate_limit'; Claude's replies never carry it.
-      if (block.type === 'text' && msg.error === 'rate_limit') host.noteLimit(block.text);
-      if (block.type === 'text' && msg.error === 'authentication_failed') host.system(`Logged out of the ${ACCOUNT_LABEL[this.account]} Claude account (${block.text}). Run claude, then /login`);
-    }
-  }
-
-  private onUser(msg: Extract<SDKMessage, { type: 'user' }>) {
-    const parent = msg.parent_tool_use_id ?? undefined;
-    const content = msg.message.content;
-    if (!parent && this.sent.length) this.noteReplay(msg);
-    if (typeof content === 'string' && content.startsWith('<task-notification>')) for (const ev of notificationResults(content, Date.now(), this.agents)) this.host.pushEvent(ev);
-    if (!Array.isArray(content)) return;
-    const output = (msg as { tool_use_result?: unknown }).tool_use_result;
-    for (const block of content) {
-      if (block.type === 'tool_result') this.onToolResult(block, parent, output);
-    }
-  }
-
-  private onToolResult(block: ToolResultBlock, parent: string | undefined, output: unknown) {
-    const host = this.host;
-    const edited = this.edits.get(block.tool_use_id);
-    this.edits.delete(block.tool_use_id);
-    if (edited && !block.is_error) host.noteFile(path.relative(this.cwd, edited), 'tool');
-    const text = toolResultText(block);
-    const agent = isAgent(host, block.tool_use_id);
-    if (agent) agentResult(host, block.tool_use_id, text, Boolean(block.is_error), output);
-    if (!parent && text.startsWith(ASYNC_LAUNCH)) {
-      noteLaunch(this.agents, block.tool_use_id, text);
-      return;
-    }
-    const report = agent ? liveReport(text, output) : text.slice(0, 4000);
-    host.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: report, isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
-    if (!parent) host.notePr(block.tool_use_id, text);
   }
 
   private onResult(msg: Extract<SDKMessage, { type: 'result' }>) {

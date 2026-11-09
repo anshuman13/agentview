@@ -99,7 +99,7 @@ describe('AgentSession turns', () => {
     expect(s.state.events.some((e) => e.id === 'q1')).toBe(true);
     const { s: s2, interrupt: i2 } = fakeSession();
     s2.sendPrompt('long task');
-    Object.assign(s2.driver, { inputQueue: [] });
+    (s2.driver as unknown as { input: { clear(): void } }).input.clear();
     await s2.queueNext('never mind', 'q2');
     await s2.interrupt();
     expect(i2).toHaveBeenLastCalledWith({ cancelQueued: true });
@@ -274,7 +274,7 @@ describe('AgentSession turns', () => {
   it('does not auto-compact after a stop', async () => {
     const { s, result } = fakeSession();
     s.sendPrompt('big task');
-    Object.assign(s.driver, { inputQueue: [] });
+    (s.driver as unknown as { input: { clear(): void } }).input.clear();
     s.state.session.context = 210_000;
     await s.interrupt();
     result('r1', 'error_during_execution');
@@ -341,7 +341,7 @@ describe('AgentSession turns', () => {
     s.sendPrompt('task');
     await s.prompt('A');
     await s.prompt('B');
-    Object.assign(s.driver, { inputQueue: [] });
+    (s.driver as unknown as { input: { clear(): void } }).input.clear();
     await s.interrupt();
     expect(interrupt).toHaveBeenCalledOnce();
     expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['task']);
@@ -354,7 +354,7 @@ describe('AgentSession turns', () => {
 
 describe('Fable approval', () => {
   const call = (s: AgentSession, subagent_type: string) =>
-    (s.driver as unknown as { confirmBigBro: (i: unknown, sig: AbortSignal) => Promise<any> }).confirmBigBro(
+    (s.driver as unknown as { toolHooks: { beforeAgent: (i: unknown, sig: AbortSignal) => Promise<any> } }).toolHooks.beforeAgent(
       { hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: { subagent_type, description: 'race condition', prompt: 'why?' }, tool_use_id: 't1' },
       new AbortController().signal,
     );
@@ -451,16 +451,16 @@ describe('plan changes', () => {
     s.sendPrompt('task');
     s.changePlan(['curl /check', 'stop the server']);
     expect(interrupt).not.toHaveBeenCalled();
-    const out = (s.driver as ClaudeDriver).afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } };
+    const out = (s.driver as ClaudeDriver).toolHooks.afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } };
     expect(out.hookSpecificOutput?.additionalContext).toContain('1. curl /check\n2. stop the server');
-    expect((s.driver as ClaudeDriver).afterTool(hook)).toEqual({});
+    expect((s.driver as ClaudeDriver).toolHooks.afterTool(hook)).toEqual({});
   });
 
   it('skips sub-agent tool calls', () => {
     const { s } = fakeSession();
     s.sendPrompt('task');
     s.changePlan(['a']);
-    expect((s.driver as ClaudeDriver).afterTool({ ...(hook as object), agent_id: 'sub' } as never)).toEqual({});
+    expect((s.driver as ClaudeDriver).toolHooks.afterTool({ ...(hook as object), agent_id: 'sub' } as never)).toEqual({});
   });
 
   it('sends an undelivered plan change as a prompt when the turn ends', () => {
@@ -474,10 +474,10 @@ describe('plan changes', () => {
 
   it('reminds Claude to report progress after 8 tool calls without set_status', () => {
     const { s } = fakeSession();
-    const text = () => ((s.driver as ClaudeDriver).afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } }).hookSpecificOutput?.additionalContext;
+    const text = () => ((s.driver as ClaudeDriver).toolHooks.afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } }).hookSpecificOutput?.additionalContext;
     for (let i = 0; i < 7; i++) expect(text()).toBeUndefined();
     expect(text()).toContain('set_status');
-    (s.driver as ClaudeDriver).afterTool({ ...(hook as object), tool_name: 'mcp__agentview__set_status' } as never);
+    (s.driver as ClaudeDriver).toolHooks.afterTool({ ...(hook as object), tool_name: 'mcp__agentview__set_status' } as never);
     for (let i = 0; i < 7; i++) expect(text()).toBeUndefined();
   });
 
@@ -773,13 +773,13 @@ describe('turns the CLI starts by itself', () => {
 
   it('drops a dead query so the next prompt starts a fresh one', async () => {
     const { s } = fakeSession();
-    const priv = s.driver as unknown as { q: unknown; gen: number; consume: () => Promise<void>; start: () => void };
+    const priv = s.driver as unknown as { q: unknown; input: { stream(): AsyncGenerator }; consume: () => Promise<void>; start: () => void };
     priv.q = { async *[Symbol.asyncIterator]() {} };
-    const gen = priv.gen;
+    const stale = priv.input.stream();
     s.sendPrompt('first');
     await priv.consume();
     expect(priv.q).toBeNull();
-    expect(priv.gen).toBe(gen + 1);
+    expect((await stale.next()).done).toBe(true);
     expect(s.state.session.running).toBe(false);
     const start = vi.spyOn(priv, 'start').mockImplementation(() => {});
     s.sendPrompt('second');
@@ -793,7 +793,7 @@ describe('review findings', () => {
     const got: ServerMessage[] = [];
     s.onMessage((m) => got.push(m));
     s.sendPrompt('/code-review 42');
-    (s.driver as unknown as { toolUse: (b: unknown) => void }).toolUse({ id: 't1', name: 'ReportFindings', input: { findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
+    (s.driver as unknown as { messages: { toolUse: (b: unknown) => void } }).messages.toolUse({ id: 't1', name: 'ReportFindings', input: { findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
     await vi.waitFor(() => expect(got.some((m) => m.type === 'findings')).toBe(true));
     expect(got.find((m) => m.type === 'findings')).toMatchObject({ review: { repo: '/tmp/project', target: '42', findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
   });
