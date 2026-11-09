@@ -85,6 +85,7 @@ export function CodePane() {
   const openFile = useStore((s) => s.ui.openFile);
   const openLine = useStore((s) => s.ui.openLine);
   const follow = useStore((s) => s.ui.follow);
+  const openEdit = useStore((s) => s.ui.openEdit);
   const recent = useStore((s) => s.recentFiles);
   const chat = useStore((s) => s.session.id);
   const cwd = useStore((s) => s.session.cwd);
@@ -103,6 +104,13 @@ export function CodePane() {
     setDirty(false);
     setSaving('');
   }, [openFile]);
+
+  useEffect(() => {
+    if (!openEdit) return;
+    setEdit(true);
+    setPreview(false);
+    setUi({ openEdit: false });
+  }, [openEdit]);
 
   useEffect(() => {
     const files = getOpenedChat() === chat ? getOpened() : recent.slice(0, 5).reverse();

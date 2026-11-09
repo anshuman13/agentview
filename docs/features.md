@@ -231,8 +231,11 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Phone Settings has Notification types under Notifications: it opens Android's page for the app, where Approvals, Finished
   chats and Failed chats are separate channels to turn off or give their own sound
 - "Memory" in the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder
-  (name, description, where it comes from); a tap shows the file (like Windsurf's memories panel). Read-only, from /api/memory.
-  The web has the same list under Memory in the chat settings menu
+  (name, description, where it comes from); a tap shows the file (like Windsurf's memories panel), from /api/memory.
+  The web has the same list under Memory in the chat settings menu. Only the repo CLAUDE.md can be changed: its file view
+  has Edit (the web opens it in the editor tab with the pencil on; the phone shows a field with Save), and the list ends with
+  an Add a rule field whose Enter appends `- <text>` to it (created if missing) and shows Rule added with Undo; a failed write
+  says "Could not save the rule. Your text is still here." Account and memory files stay read-only
 - On the phone, a prompt starting with ! runs as a shell command in the chat's last terminal (or a new one) and opens the
   Terminal page, as on the web
 - Typing 3 or more characters in the phone Sessions search also searches every chat's prompts and replies (from

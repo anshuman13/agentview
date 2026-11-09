@@ -138,7 +138,7 @@ export function ChatSettings({ pick, setPick, savedCount, goal, setGoal }: { pic
         />
       )}
       {pick.kind === 'todos' && <TodosPick anchor={pick.at} onClose={close} />}
-      {pick.kind === 'memory' && <MemoryPick anchor={pick.at} cwd={cwd} onClose={close} />}
+      {pick.kind === 'memory' && <MemoryPick cwd={cwd} onClose={close} />}
       {pick.kind === 'model' && (
         <QuickPick
           anchor={pick.at}

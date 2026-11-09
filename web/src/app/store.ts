@@ -11,6 +11,7 @@ type UiState = {
   restarting?: boolean;
   openFile: string | null;
   openLine?: number | null;
+  openEdit?: boolean;
   follow: boolean;
   switcherOpen: boolean;
   repoPicker: boolean;
