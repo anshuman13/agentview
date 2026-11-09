@@ -155,8 +155,8 @@ class SharedCasesTest {
     @Test fun specTasks() {
         for (c in cases("spec-tasks")) {
             val tasks = specTasks(c.str("md"))
-            val expected = c.getValue("tasks").jsonArray.map { it.jsonObject.let { t -> Triple(t.getValue("n").jsonPrimitive.long.toInt(), t.str("text"), t.getValue("done").jsonPrimitive.booleanOrNull) } }
-            assertEquals(c.str("name"), expected, tasks.map { Triple(it.n, it.text, it.done) })
+            val expected = c.getValue("tasks").jsonArray.map { it.jsonObject.let { t -> listOf(t.getValue("n").jsonPrimitive.long.toInt(), t.str("text"), t.getValue("done").jsonPrimitive.booleanOrNull, t.getValue("doing").jsonPrimitive.booleanOrNull) } }
+            assertEquals(c.str("name"), expected, tasks.map { listOf(it.n, it.text, it.done, it.doing) })
             assertEquals(c.str("name"), c.getValue("isSpec").jsonPrimitive.booleanOrNull, isSpecPath(c.str("path")))
             assertEquals(c.str("name"), c.str("progress"), specProgress(tasks))
             assertEquals(c.str("name"), c.nullable("start")?.jsonPrimitive?.content, tasks.firstOrNull { !it.done }?.let { startTaskPrompt(it, c.str("path")) })

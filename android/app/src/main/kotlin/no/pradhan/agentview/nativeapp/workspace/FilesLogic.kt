@@ -103,8 +103,9 @@ fun fileTag(name: String): String {
 fun isMarkdown(path: String) = Regex("\\.(md|markdown|mdx)$", RegexOption.IGNORE_CASE).containsMatchIn(path)
 
 // shared/specTasks.ts: the checkbox lines of a spec file, its progress and the prompts that start them.
-data class SpecTask(val n: Int, val text: String, val done: Boolean)
+data class SpecTask(val n: Int, val text: String, val done: Boolean, val doing: Boolean)
 
+private val SPEC_DOING = Regex(" \\(in progress\\)$")
 private val SPEC_PATH = Regex("(^|/)\\.(claude|kiro)/specs/.+\\.(md|markdown|mdx)$", RegexOption.IGNORE_CASE)
 private val SPEC_TASK = Regex("^\\s*(?:[-*+]|\\d+[.)])\\s+\\[([ xX])]\\s+(.+?)\\s*$")
 private val FENCE = Regex("^\\s*(`{3,}|~{3,})")
@@ -118,15 +119,22 @@ fun specTasks(markdown: String): List<SpecTask> {
         val mark = FENCE.find(line)?.groupValues?.get(1)
         if (mark != null) fence = if (fence.isEmpty()) mark else if (mark[0] == fence[0] && mark.length >= fence.length) "" else fence
         val m = if (fence.isEmpty() && mark == null) SPEC_TASK.find(line) else null
-        if (m != null) tasks += SpecTask(tasks.size + 1, m.groupValues[2], m.groupValues[1] != " ")
+        if (m != null) {
+            val done = m.groupValues[1] != " "
+            val doing = !done && SPEC_DOING.containsMatchIn(m.groupValues[2])
+            tasks += SpecTask(tasks.size + 1, m.groupValues[2].replace(SPEC_DOING, ""), done, doing)
+        }
     }
     return tasks
 }
 
-fun specProgress(tasks: List<SpecTask>) = "${tasks.count { it.done }} of ${tasks.size} done"
+fun specProgress(tasks: List<SpecTask>): String {
+    val doing = tasks.count { it.doing }
+    return "${tasks.count { it.done }} of ${tasks.size} done" + if (doing > 0) " · $doing in progress" else ""
+}
 
-fun startTaskPrompt(t: SpecTask, path: String) = "Do task ${t.n} in $path: ${t.text}. Tick its box in the file when it is done."
+fun startTaskPrompt(t: SpecTask, path: String) = "Do task ${t.n} in $path: ${t.text}. While you work, append \" (in progress)\" to its line. When done, tick its box and remove that suffix in one edit before moving on."
 
-fun specPrompt(request: String) = "Write a spec for the request below in .claude/specs/<slug>.md with three sections: Requirements (numbered, each with testable acceptance criteria), Design, and Tasks (`- [ ]` lines, each one small step). Do not change any code; stop for review when the spec is written.\n\nRequest: $request"
+fun specPrompt(request: String) = "Write a spec for the request below in .claude/specs/<slug>.md with three sections: Requirements (numbered, each with testable acceptance criteria), Design, and Tasks (`- [ ]` lines, each one small step). Do not change any code; stop for review when the spec is written. When the tasks are done later, tick each box right after finishing it (one edit per task) and mark the one you are on with \" (in progress)\".\n\nRequest: $request"
 
-fun runAllPrompt(path: String) = "/goal every task in $path is ticked: do them in order, tick each when done"
+fun runAllPrompt(path: String) = "/goal every task in $path is ticked: do them in order. While you work on one, append \" (in progress)\" to its line; when done, tick its box and remove that suffix in one edit before the next."
