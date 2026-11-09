@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -30,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -83,28 +86,9 @@ internal fun gapAbove(older: Item?, it: Item): Dp? {
 
 internal fun Modifier.gap(d: Dp?) = if (d == null) this else padding(top = d)
 
+// Hides the bottom bar while scrolling away from the newest message.
 @Composable
-fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList()) {
-    val items = view.items
-    val rows = view.rows
-    val days = view.days
-    val dayOf = view.dayOf
-    val rewinds = view.rewinds
-    val runs = view.runs
-    val noEvents by hub.store.state.select { it.events.isEmpty() }
-    var openRuns by rememberSaveable(chatId) { mutableStateOf(setOf<String>()) }
-    val firstId = items.firstOrNull()?.id
-    val folded = remember(runs, openRuns) { runs.filterKeys { it !in openRuns }.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
-    val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
-    val newId = remember(items, seen) { newMarker(items, view.ats, seen.first, seen.second) }
-    DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
-    val listState = rememberLazyListState()
-    val loading by hub.loadingEarlier.collectAsState()
-    val scope = rememberCoroutineScope()
-    var stick by rememberSaveable { mutableStateOf(true) }
-    var users by remember { mutableStateOf(0) }
-    val atBottom by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 80 } }
-
+private fun HideNavOnScroll(hub: Hub, listState: LazyListState, atBottom: Boolean) {
     LaunchedEffect(listState) {
         var last = Int.MAX_VALUE to Int.MAX_VALUE
         snapshotFlow { Triple(listState.isScrollInProgress, listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) }.collect { (moving, index, offset) ->
@@ -117,27 +101,60 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
         }
     }
     LaunchedEffect(atBottom) { if (atBottom) hub.navHidden.value = false }
-    var leftId by remember(chatId) { mutableStateOf<String?>(null) }
-    LaunchedEffect(atBottom) { leftId = if (atBottom) null else leftId ?: rows.firstOrNull()?.id }
-    val replies = remember(items, leftId) { leftId?.let { newReplies(items, it) } ?: 0 }
+}
+
+// Keeps the newest row in view while the user is at the bottom, and jumps to a turn or a just-sent message.
+@Composable
+private fun FollowNewest(hub: Hub, view: ChatView, listState: LazyListState, stick: MutableState<Boolean>, atBottom: Boolean) {
+    val rows = view.rows
     LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress to atBottom }.collect { (moving, bottom) -> if (moving) stick = bottom }
+        snapshotFlow { listState.isScrollInProgress to atBottom }.collect { (moving, bottom) -> if (moving) stick.value = bottom }
     }
-    val blank = rows.isEmpty() && earlier > 0
-    var tried by remember(chatId) { mutableStateOf(-1) }
-    LaunchedEffect(blank, loading, earlier, settled) { if (blank && settled && !loading && earlier != tried) { tried = earlier; hub.loadEarlier() } }
     val newest = rows.firstOrNull()?.id
-    LaunchedEffect(newest, rows.size) { if (stick && newest != null) listState.scrollToItem(0) }
+    LaunchedEffect(newest, rows.size) { if (stick.value && newest != null) listState.scrollToItem(0) }
     val turn by hub.showTurn.collectAsState()
     LaunchedEffect(turn, rows) {
         val at = rows.indexOfFirst { it.id == turn }
-        if (at >= 0) { stick = false; listState.animateScrollToItem(at); hub.showTurn.value = null }
+        if (at >= 0) { stick.value = false; listState.animateScrollToItem(at); hub.showTurn.value = null }
     }
+    var users by remember { mutableStateOf(0) }
     val sent = view.sent
     LaunchedEffect(sent) {
-        if (users > 0) { stick = true; if (rows.isNotEmpty()) listState.scrollToItem(0) }
+        if (users > 0) { stick.value = true; if (rows.isNotEmpty()) listState.scrollToItem(0) }
         users = sent
     }
+}
+
+// Loads earlier messages once when the newest page holds no rows; returns the hidden count already tried.
+@Composable
+private fun rememberEarlierTried(hub: Hub, chatId: String, blank: Boolean, loading: Boolean, earlier: Int, settled: Boolean): Int {
+    var tried by remember(chatId) { mutableStateOf(-1) }
+    LaunchedEffect(blank, loading, earlier, settled) { if (blank && settled && !loading && earlier != tried) { tried = earlier; hub.loadEarlier() } }
+    return tried
+}
+
+@Composable
+fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList()) {
+    val items = view.items
+    val rows = view.rows
+    val noEvents by hub.store.state.select { it.events.isEmpty() }
+    val openRuns = rememberSaveable(chatId) { mutableStateOf(setOf<String>()) }
+    val folded = remember(view.runs, openRuns.value) { view.runs.filterKeys { it !in openRuns.value }.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
+    val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
+    val newId = remember(items, seen) { newMarker(items, view.ats, seen.first, seen.second) }
+    DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
+    val listState = rememberLazyListState()
+    val loading by hub.loadingEarlier.collectAsState()
+    val scope = rememberCoroutineScope()
+    val stick = rememberSaveable { mutableStateOf(true) }
+    val atBottom by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 80 } }
+    HideNavOnScroll(hub, listState, atBottom)
+    var leftId by remember(chatId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(atBottom) { leftId = if (atBottom) null else leftId ?: rows.firstOrNull()?.id }
+    val replies = remember(items, leftId) { leftId?.let { newReplies(items, it) } ?: 0 }
+    val blank = rows.isEmpty() && earlier > 0
+    val tried = rememberEarlierTried(hub, chatId, blank, loading, earlier, settled)
+    FollowNewest(hub, view, listState, stick, atBottom)
 
     Box(modifier) {
         LazyColumn(
@@ -149,19 +166,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
             lazyItems(queued.asReversed(), key = { "out-${it.id}" }) { q ->
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
             }
-            itemsIndexed(rows, key = { _, it -> it.id }, contentType = { _, it -> it::class }) { i, it ->
-                Column(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) {
-                    if (it is Item.User && it.id !in days && it.id != firstId) HorizontalDivider(Modifier.padding(bottom = Tokens.sp12), color = av.border, thickness = Tokens.hairline)
-                    days[it.id]?.let { DayDivider(it) }
-                    if (it.id == newId) NewLine()
-                    val run = runs[it.id]
-                    when {
-                        it.id in folded -> {}
-                        run != null && it.id !in openRuns -> ExploredRow(exploreLabel(run)) { openRuns = openRuns + it.id }
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && it.id in rewinds)
-                    }
-                }
-            }
+            transcriptRows(hub, view, newId, openRuns, folded, chatId, cwd, running, onOpenAgent)
             if (earlier > 0) item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
                     Text(if (loading) "Loading earlier…" else "Show earlier ($earlier hidden)", style = Type.callout, color = av.accentText)
@@ -171,12 +176,32 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                 if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || tried != earlier))) EmptyState("No messages yet", "Your prompts, Claude's steps and replies show up here") else EmptyState("Loading…")
             }
         }
+        val dayOf = view.dayOf
         val pill by remember(dayOf) { derivedStateOf { if (listState.isScrollInProgress) listState.layoutInfo.visibleItemsInfo.lastOrNull()?.key?.let { dayOf[it] } else null } }
         pill?.let { DayPill(it, Modifier.align(Alignment.TopCenter).padding(top = Tokens.sp4)) }
         if (!atBottom) JumpButton(replies, Modifier.align(Alignment.BottomCenter).padding(bottom = Tokens.sp4)) {
-            stick = true
+            stick.value = true
             hub.navHidden.value = false
             scope.launch { listState.animateScrollToItem(0) }
+        }
+    }
+}
+
+private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String?, openRuns: MutableState<Set<String>>, folded: Set<String>, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit) {
+    val rows = view.rows
+    val days = view.days
+    val firstId = view.items.firstOrNull()?.id
+    itemsIndexed(rows, key = { _, it -> it.id }, contentType = { _, it -> it::class }) { i, it ->
+        Column(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) {
+            if (it is Item.User && it.id !in days && it.id != firstId) HorizontalDivider(Modifier.padding(bottom = Tokens.sp12), color = av.border, thickness = Tokens.hairline)
+            days[it.id]?.let { DayDivider(it) }
+            if (it.id == newId) NewLine()
+            val run = view.runs[it.id]
+            when {
+                it.id in folded -> {}
+                run != null && it.id !in openRuns.value -> ExploredRow(exploreLabel(run)) { openRuns.value = openRuns.value + it.id }
+                else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && it.id in view.rewinds)
+            }
         }
     }
 }
