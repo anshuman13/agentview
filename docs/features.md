@@ -216,7 +216,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   as a Markdown quote, like Slack's reply with quote. On the web every finished reply has the same Reply link next to Save as note,
   plus Copy, which copies the whole reply as Markdown like Slack's Copy text. The phone has the same Copy
 - Hovering a sent prompt in the web transcript shows Use again, which puts that prompt in the composer to edit and send
-  again (like editing a Slack message); queued and stopping prompts do not have it
+  again (like editing a Slack message); queued and stopping prompts do not have it. Phone prompts have the same Use again
+  button, next to Rewind files
 - "TODOs" in the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
   end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer. The web chat settings menu has the same TODOs list
 - Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar; web sidebar rows of open chats do the same, except for the chat you are viewing

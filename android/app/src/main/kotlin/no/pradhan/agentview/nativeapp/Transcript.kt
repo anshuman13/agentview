@@ -268,7 +268,10 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
         }
         if (it.stopping) Text("Stopping Claude to send this", style = Type.footnote, color = av.fgMuted)
         if (it.queued) BubbleFooter("Waiting for Claude's next step", "Send now") { hub.sendNow(it.id) }
-        if (canRewind) BubbleFooter("", "Rewind files") { ask = true }
+        if (!it.queued && !it.stopping) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5)) {
+            Button("Use again", { hub.draftPrompt(it.text) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (canRewind) Button("Rewind files", { ask = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+        }
     }
 }
 
