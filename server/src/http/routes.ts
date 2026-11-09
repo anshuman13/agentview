@@ -100,7 +100,7 @@ export function createRoutes(d: RouteDeps) {
       return r;
     }, true),
     'ANY /api/sessions/pins': entry(({ method, url }) => pinsRoute(method, url.searchParams.get('id'))),
-    'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'))),
+    'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'), url.searchParams.get('unread') === '1')),
     'DELETE /api/sessions/bin': entry(async () => {
       await emptyBin();
       return { ok: true };

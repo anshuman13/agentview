@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { apiUrl } from '../app/api';
-import { api, embedded, getState, notice, send, setUi, subscribe, useStore } from '../app/store';
+import { api, embedded, getState, markUnread, notice, send, setUi, subscribe, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Chip, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
@@ -524,10 +524,11 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>
-          {chatMenuItems({ failed: state === 'failed' && !!live, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose }).map((key) => {
+          {chatMenuItems({ failed: state === 'failed' && !!live, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose, unread: !!sessionId && !state && !selected }).map((key) => {
             switch (key) {
               case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={pick(retry)}>Retry</MenuItem>;
               case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={pick(() => void onPin!(!pinned))}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
+              case 'unread': return <MenuItem key={key} icon="mail" onClick={pick(() => markUnread(sessionId!))}>Mark as unread</MenuItem>;
               case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={pick(() => setRenaming(true))}>Rename</MenuItem>;
               case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={pick(onBeside!)}>Open beside</MenuItem>;
               case 'close': return <MenuItem key={key} icon="close" onClick={pick(onClose!)}>Close chat</MenuItem>;

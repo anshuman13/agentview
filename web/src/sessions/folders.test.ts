@@ -25,5 +25,6 @@ describe('chatMenuItems', () => {
     expect(chatMenuItems({ ...all, failed: false })).toEqual(['pin', 'rename', 'beside', 'close', 'separator', 'archive']);
     expect(chatMenuItems({ failed: false, canPin: false, beside: false, closable: false })).toEqual(['rename', 'separator', 'archive']);
     expect(chatMenuItems({ failed: true, canPin: false, beside: true, closable: false })).toEqual(['retry', 'rename', 'beside', 'separator', 'archive']);
+    expect(chatMenuItems({ ...all, failed: false, unread: true })).toEqual(['pin', 'unread', 'rename', 'beside', 'close', 'separator', 'archive']);
   });
 });

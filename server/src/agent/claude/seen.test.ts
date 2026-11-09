@@ -31,6 +31,11 @@ describe('seen route', () => {
     expect(body.abc).toBeGreaterThanOrEqual(before);
   });
 
+  it('stores 0 for an id marked unread', async () => {
+    await seen.seenRoute('POST', 'abc', true);
+    expect(((await seen.seenRoute('GET', null)).body as Record<string, number>).abc).toBe(0);
+  });
+
   it('rejects a missing id and other methods', async () => {
     expect((await seen.seenRoute('POST', null)).status).toBe(400);
     expect((await seen.seenRoute('DELETE', 'abc')).status).toBe(405);

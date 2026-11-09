@@ -153,6 +153,12 @@ function markSeen(sessionId: string | null | undefined) {
   fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}`), { method: 'POST' }).catch(() => {});
 }
 
+// Slack's Mark as unread: the chat shows as Done until it is opened again.
+export function markUnread(sessionId: string) {
+  set((s) => ({ seen: { ...s.seen, [sessionId]: 0 } }));
+  fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}&unread=1`), { method: 'POST' }).catch(() => {});
+}
+
 // The last rows of the most recently viewed chats, so switching back shows them before the server's init arrives.
 const CACHED_CHATS = 8;
 const cache = new Map<string, { events: ChatEvent[]; earlier: number }>();
