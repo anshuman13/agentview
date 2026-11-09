@@ -63,6 +63,7 @@ export class AgentSession implements AgentHost {
   private listeners = new Set<(m: ServerMessage) => void>();
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
   private reviewTarget: string | null = null;
+  private reported = new Set<string>();
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
       session: { id: this.id, sessionId, model: null, effort: 'medium', team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null, account: 'main', accounts: [] },
@@ -113,10 +114,11 @@ export class AgentSession implements AgentHost {
 
   // What a top-level tool step means to the session, whichever driver ran it: a review's findings, a plan change to pass on, or the PR a command opened.
   private noteTool(ev: ChatEvent) {
-    if (ev.kind === 'tool_use' && !ev.parent) {
-      if (FINDINGS_TOOLS.has(ev.name)) this.reportFindings(ev.input);
-      this.injectPlanChange();
+    if (ev.kind === 'tool_use' && FINDINGS_TOOLS.has(ev.name) && !this.reported.has(ev.id)) {
+      this.reported.add(ev.id);
+      this.reportFindings(ev.input);
     }
+    if (ev.kind === 'tool_use' && !ev.parent) this.injectPlanChange();
     if (ev.kind !== 'tool_result' || ev.parent) return;
     const pr = PR_URL.exec(ev.text)?.[1];
     const use = pr ? this.log.get(ev.toolUseId) : undefined;
