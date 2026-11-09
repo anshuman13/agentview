@@ -5,6 +5,7 @@ import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
 import { inside } from '../../../shared/util';
+import { profileOfPath } from '../../../shared/workspace';
 import { matcher, queryWords } from '../codex/data/ask/match';
 
 export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
@@ -111,7 +112,7 @@ export const KINDS: [RepoKind, string, string][] = [
   ['new', 'New', 'new-folder'], ['web', 'Web apps', 'globe'], ['service', 'Services', 'server'], ['infra', 'Infra', 'layers'], ['data', 'Data', 'database'],
   ['app', 'Apps', 'device-mobile'], ['docs', 'Docs', 'book'], ['other', 'Other', 'repo'],
 ];
-export const segmentOf = (f: Folder) => (f.repo?.root === 'workspace_personal' || f.cwd.includes('/workspace_personal/') ? 'personal' : 'work');
+export const segmentOf = (f: Folder) => profileOfPath(f.cwd);
 
 const isActive = (f: Folder, live: string[], now = Date.now()) =>
   Boolean(f.repo?.dirty) || !isDefault(f.repo?.branch) || f.trees.length > 0 || now - f.last < WEEK ||

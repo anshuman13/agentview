@@ -59,7 +59,7 @@ export async function repoName(cwd: string) {
 
 async function hints(repo: string) {
   if (!/^[\w.-]+$/.test(repo) || repo.startsWith('.')) return '';
-  const files = ROOTS.flatMap((r) => ['centro.yaml', 'catalog-info.yaml'].map((f) => path.join(r, repo, f)));
+  const files = ROOTS.flatMap((r) => path.join(r, repo, 'catalog-info.yaml'));
   return (await Promise.all(files.map((f) => readFile(f, 'utf8').catch(() => '')))).join('\n');
 }
 

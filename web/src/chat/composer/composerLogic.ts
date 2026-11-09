@@ -6,6 +6,7 @@ import { apiUrl, fetchJson } from '../../app/api';
 import { createTerm, listTerms } from '../../workspace/termApi';
 import { clock, isBlock, span } from '../../../../shared/util';
 import { timedMeetings } from '../../../../shared/plan';
+import { profileOfPath } from '../../../../shared/workspace';
 import { live, type Meeting } from '../../codex/data/wiki/wiki';
 
 type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
@@ -220,7 +221,7 @@ export function chatMarkdown(events: ChatEvent[], title: string) {
 
 // A reply saved to Notes: the chat title on the first line, in the profile of the chat's folder.
 export function replyNote(text: string, title: string, cwd: string) {
-  return { text: `${title || 'Saved reply'}\n${text.trim()}`, profile: cwd.includes('/workspace_personal/') || cwd.endsWith('/workspace_personal') ? ('personal' as const) : ('work' as const) };
+  return { text: `${title || 'Saved reply'}\n${text.trim()}`, profile: profileOfPath(cwd) };
 }
 
 // A Markdown quote of a reply to answer it in the next prompt, like Slack's reply with quote: up to 300 characters, cut at a word.

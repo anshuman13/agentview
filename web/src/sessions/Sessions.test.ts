@@ -5,6 +5,7 @@ import { buildFolders, type Folder, chatFinder, chatState, chatsByStatus, findHe
 import { RepoRow } from './RepoRow';
 import { AgentsBlock } from './AgentRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
+import { WORKSPACE } from '../../../shared/workspace';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
 const chat = (cwd: string, lastModified: number, id = cwd + lastModified): SavedSession => ({ sessionId: id, title: id, cwd, gitBranch: null, lastModified });
@@ -58,7 +59,8 @@ describe('groupByKind', () => {
   });
 
   it('puts personal repos in their own segment', () => {
-    const f = buildFolders([repo('shop'), { ...repo('agentview'), root: 'workspace_personal' }], [], [chat('/u/workspace_personal/x', 1)]);
+    WORKSPACE.personalRoot = '/u/workspace_personal';
+    const f = buildFolders([repo('shop'), { ...repo('agentview'), cwd: '/u/workspace_personal/agentview' }], [], [chat('/u/workspace_personal/x', 1)]);
     expect(f.map((x) => [x.name, segmentOf(x)])).toEqual([['x', 'personal'], ['shop', 'work'], ['agentview', 'personal']]);
   });
 });

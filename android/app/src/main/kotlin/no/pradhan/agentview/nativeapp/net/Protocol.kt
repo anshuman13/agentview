@@ -75,7 +75,7 @@ data class ReviewHunk(val line: Int = 0, val del: List<String> = emptyList(), va
 
 // shared/protocol.ts PublicSettings.
 @Serializable
-data class AppSettings(val deploy: Boolean = false, val accountLabels: Map<String, String> = emptyMap(), val providers: List<ProviderOption> = emptyList())
+data class AppSettings(val deploy: Boolean = false, val accountLabels: Map<String, String> = emptyMap(), val providers: List<ProviderOption> = emptyList(), val personalRoot: String = "")
 
 // shared/protocol.ts ProviderOption: what a new chat can run on; a disabled one says what is missing.
 @Serializable

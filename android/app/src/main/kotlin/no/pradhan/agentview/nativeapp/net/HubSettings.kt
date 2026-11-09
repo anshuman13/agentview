@@ -2,10 +2,12 @@ package no.pradhan.agentview.nativeapp.net
 
 import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.sessions.Workspace
+import no.pradhan.agentview.nativeapp.sessions.personalRoot
 
 suspend fun Hub.refreshSettings() {
     val s = runCatching { api.settings() }.getOrNull() ?: return
     ACCOUNT_LABEL.putAll(s.accountLabels)
+    personalRoot = s.personalRoot
     deploy.value = s.deploy
     providers.value = s.providers
 }

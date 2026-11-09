@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
 import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, remember, replyNote, resumeCommand, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, goalText } from './composerLogic';
+import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
 let n = 0;
@@ -211,6 +212,7 @@ describe('chatMarkdown', () => {
 
 describe('replyNote', () => {
   it('puts the chat title first and picks the profile from the folder', () => {
+    WORKSPACE.personalRoot = '/Users/me/workspace_personal';
     expect(replyNote(' Fixed. ', 'Importer', '/Users/me/workspace_personal/app')).toEqual({ text: 'Importer\nFixed.', profile: 'personal' });
     expect(replyNote('Fixed.', '', '/Users/me/workspace/app')).toEqual({ text: 'Saved reply\nFixed.', profile: 'work' });
   });

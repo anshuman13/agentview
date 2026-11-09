@@ -36,7 +36,10 @@ fun folderKey(cwd: String, repos: List<Repo>, trees: List<Worktree>): String {
     return repos.map { it.cwd }.sortedByDescending { it.length }.firstOrNull { inside(cwd, it) } ?: cwd
 }
 
-fun segmentOf(key: String) = if (key.contains("/workspace_personal/") || key.endsWith("/workspace_personal")) PERSONAL else WORK
+// The folder whose chats are personal, from /api/settings; empty means every folder is work.
+var personalRoot = ""
+
+fun segmentOf(key: String, root: String = personalRoot) = if (root.isNotEmpty() && inside(key, root)) PERSONAL else WORK
 
 fun folderName(key: String) = key.substringAfterLast('/').ifEmpty { key }
 

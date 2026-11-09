@@ -335,7 +335,7 @@ data, chat search), `/compact`, chat search and @chat mentions.
 
 ## Workspace
 
-Repos come from `~/workspace` and `~/workspace_personal`. Set `AGENTVIEW_ROOTS` (colon-separated) to change that.
+Repos come from the `roots` and `personalRoot` folders in `~/.agentview/settings.json` (default `~/workspace`). `AGENTVIEW_ROOTS` (colon-separated) overrides them.
 Chats start only inside these folders or Paseo worktrees.
 
 - Chats keep running in the background. Ones that need you are marked and listed first
@@ -385,7 +385,7 @@ setting is Off.
 
 `./claude-alt.sh` sets up `~/.claude-alt` for a work Claude login and `./claude-alt.sh 2` sets up `~/.claude-alt2` for a third
 account, next to the personal one in `~/.claude`. Each shares settings, skills, plugins and chat history with `~/.claude` and keeps its own
-login; log in once with `CLAUDE_CONFIG_DIR=<dir> claude` and `/login`. A new chat under `~/workspace_personal` starts on
+login; log in once with `CLAUDE_CONFIG_DIR=<dir> claude` and `/login`. A new chat under the `personalRoot` folder starts on
 Personal and any other folder on Work; a reopened chat goes back to the account it was last on. Codex questions go to a daily
 chat per profile: work ones run in `~/.agentview/codex-work`, so they get the Work account and the work wiki and data, and
 personal ones in this repo. When a turn ends on a usage limit, the chat moves to the next

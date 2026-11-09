@@ -170,7 +170,7 @@ tokens or file contents.
 ### Profile
 
 Work by default. Personal for personal life (events, family, health, money) and for personal projects: a chat whose
-folder is under `~/workspace_personal` (such as agentview) proposes personal claims. The tool picks the profile from
+folder is under the `personalRoot` folder from the settings file proposes personal claims. The tool picks the profile from
 the chat's folder; Claude can mark a claim personal when it is about my personal life.
 
 ### Data model

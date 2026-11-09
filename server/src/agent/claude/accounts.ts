@@ -3,7 +3,9 @@ import path from 'node:path';
 import { statSync } from 'node:fs';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { ACCOUNT_NOTE, type Account } from '../../../../shared/protocol.js';
+import { profileOfPath } from '../../../../shared/workspace.js';
 import { readJsonSync, writeJsonSync } from '../../json.js';
+import { personalRoot } from '../../settings.js';
 
 const DIRS: Partial<Record<Account, string>> = {
   alt: process.env.AGENTVIEW_ALT_CLAUDE || path.join(os.homedir(), '.claude-alt'),
@@ -136,8 +138,8 @@ export function otherAccount(a: Account, now = Date.now()): Account | null {
   return [...AUTO.slice(i + 1), ...AUTO.slice(0, i)].find((o) => o !== a && usable(o, now)) ?? null;
 }
 
-const PERSONAL = path.join(os.homedir(), 'workspace_personal');
-export const profileOf = (cwd: string) => (cwd === PERSONAL || cwd.startsWith(PERSONAL + path.sep) ? 'personal' : 'work');
+const PERSONAL = personalRoot();
+export const profileOf = (cwd: string) => profileOfPath(cwd, PERSONAL);
 
 // New chats start on the folder's account, personal or work, unless it is out of usage.
 export const freshAccount = (cwd: string, now = Date.now()): Account => {

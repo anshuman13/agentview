@@ -1,4 +1,4 @@
-import { rmSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -8,6 +8,8 @@ process.env.AGENTVIEW_ALT_CLAUDE = path.join(dir, 'alt');
 process.env.AGENTVIEW_ALT2_CLAUDE = path.join(dir, 'alt2');
 process.env.AGENTVIEW_FINDINGS_DIR = dir;
 process.env.AGENTVIEW_SETTINGS = path.join(dir, 'settings.json');
+mkdirSync(dir, { recursive: true });
+writeFileSync(process.env.AGENTVIEW_SETTINGS, JSON.stringify({ personalRoot: '~/workspace_personal' }));
 process.env.CLAUDE_CONFIG_DIR = path.join(dir, 'claude');
 
 const { afterAll } = process.env.VITEST ? await import('vitest') : await import('bun:test');

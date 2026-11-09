@@ -2,14 +2,15 @@ import { open, readFile, readdir, realpath, stat, writeFile } from 'node:fs/prom
 import os from 'node:os';
 import path from 'node:path';
 import { inside } from '../../../shared/util.js';
+import { workspaceRoots } from '../settings.js';
 import { git } from './git.js';
 
 const HIDDEN = new Set(['node_modules', '.git', 'dist']);
 
 const home = os.homedir();
-export const ROOTS = (process.env.AGENTVIEW_ROOTS ?? '~/workspace:~/workspace_personal').split(':').filter(Boolean).map((r) => path.resolve(r.replace(/^~/, home)));
+export const ROOTS = process.env.AGENTVIEW_ROOTS ? process.env.AGENTVIEW_ROOTS.split(':').filter(Boolean).map((r) => path.resolve(r.replace(/^~/, home))) : workspaceRoots();
 const PASEO_TREES = path.join(home, '.paseo/worktrees');
-// Codex questions about work items run here, outside ~/workspace_personal, so they get the work account and profile.
+// Codex questions about work items run here, outside the personal root, so they get the work account and profile.
 export const CODEX_WORK = path.join(home, '.agentview/codex-work');
 
 export const allowedFolder = (dir: string) => dir === CODEX_WORK || [...ROOTS, PASEO_TREES].some((r) => inside(dir, r) && dir !== r);

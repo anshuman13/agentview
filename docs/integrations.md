@@ -56,4 +56,4 @@ MCP. Settings live in `~/.agentview/observe.json`, created with an example on fi
 }
 ```
 
-Repos without settings get a guess from `centro.yaml` or `catalog-info.yaml` and the other repos' Grafana URL.
+Repos without settings get a guess from `catalog-info.yaml` and the other repos' Grafana URL.

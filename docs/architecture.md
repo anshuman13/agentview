@@ -115,7 +115,9 @@ anywhere else it is empty. Keys, all optional:
 | `owner` | "the owner" | Name in the Slack auto-reply texts. |
 | `hubUrl` | `http://localhost:7790` | How phones and other Macs reach the hub; used in push action links and by a server without a local hub. |
 | `accountLabels` | Account 1, Account 2, Account 3 | Names of the `main`, `alt` and `alt2` Claude accounts, for example `{ "main": "Personal", "alt": "Work" }`. |
+| `roots` | `["~/workspace"]` | Folders whose subfolders are the repos listed in Workspace and offered for new projects. `AGENTVIEW_ROOTS` (colon-separated) overrides it. |
+| `personalRoot` | empty | Folder whose chats use the personal profile, wiki and account (`main`); it is also a root. Empty means every folder is work. |
 
 The server reads the file on each request and the host process applies the labels at start, so restart the server after editing
-`accountLabels`. The phone app starts on `http://localhost:7777` until a Mac address is saved in its Mac address screen.
+`accountLabels`, `roots` or `personalRoot`. The phone app starts on `http://localhost:7777` until a Mac address is saved in its Mac address screen.
 Grafana, Snowflake, ntfy and Sentry stay in `~/.agentview/observe.json` and show only when configured there.
