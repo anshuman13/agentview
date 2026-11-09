@@ -34,6 +34,7 @@ import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
+import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.triesKeep
 import no.pradhan.agentview.nativeapp.ui.AvIcon
@@ -77,23 +78,23 @@ fun LoopCard(hub: Hub, run: ChatRun, phase: String?) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Text(run.what, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(money(run.costUsd), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
+                Text(money(run.costUsd, billing(run.provider)), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
             }
-            if (last != null) RoundLine(last, showTime = false)
-            run.rounds.lastOrNull { it.report != null }?.takeIf { it !== last }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(r, showTime = false) } }
-            if (open) run.rounds.takeLast(10).reversed().forEach { RoundLine(it, showTime = true) }
+            if (last != null) RoundLine(last, showTime = false, run.provider)
+            run.rounds.lastOrNull { it.report != null }?.takeIf { it !== last }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(r, showTime = false, run.provider) } }
+            if (open) run.rounds.takeLast(10).reversed().forEach { RoundLine(it, showTime = true, run.provider) }
         }
         Menu(menu, { menu = false }) { MenuItem("Run now", "debug-start", { menu = false; hub.runControl(run, "now") }) }
     }
 }
 
 @Composable
-private fun RoundLine(r: Round, showTime: Boolean) {
+private fun RoundLine(r: Round, showTime: Boolean, provider: String?) {
     Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
         if (showTime) Text(clock(r.at), style = Type.footnote, color = av.fgMuted)
         StatusDot(outcomeDot(r.outcome))
         Text(roundText(r), Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (showTime) Text(money(r.costUsd), style = Type.footnote, color = av.fgMuted)
+        if (showTime) Text(money(r.costUsd, billing(provider)), style = Type.footnote, color = av.fgMuted)
     }
 }
 
@@ -135,7 +136,7 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
             ListRow(
                 e.run.title.ifBlank { "Untitled" }, runLine(e.run), onClick = { if (e.run.kind == "tries") board = e.run.id else openChat(e.run) },
                 below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(roundText(it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
-                trailing = { RowLabel(money(e.run.costUsd)) },
+                trailing = { RowLabel(money(e.run.costUsd, billing(e.run.provider))) },
             )
         }
         is RunEntry.Job -> ListRow(
@@ -190,7 +191,7 @@ private fun TriesSheet(hub: Hub, run: ChatRun, live: List<LiveChat>, onDismiss: 
                         Badge(c.state, when (c.state) { "Needs you" -> BadgeTone.Waiting; "Running" -> BadgeTone.Running; "Failed" -> BadgeTone.Failed; "Done" -> BadgeTone.Done; else -> BadgeTone.Quiet })
                     }
                     Text(c.line.ifEmpty { "No report yet" }, style = Type.subheadline, color = av.fg)
-                    Text((c.edits?.let { "+${it.add} -${it.del}" } ?: "No edits") + " · " + money(c.cost), style = Type.footnote, color = av.fgMuted)
+                    Text((c.edits?.let { "+${it.add} -${it.del}" } ?: "No edits") + " · " + money(c.cost, billing(run.provider)), style = Type.footnote, color = av.fgMuted)
                     if (!c.archived) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                         Button("Open", { onOpen(t) }, size = ButtonSize.Sm)
                         Button("Keep try ${t.n}", { keep = t.n }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)

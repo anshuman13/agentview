@@ -28,6 +28,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
+import no.pradhan.agentview.nativeapp.net.billing
+import no.pradhan.agentview.nativeapp.net.unbilledText
 import no.pradhan.agentview.nativeapp.net.archive
 import no.pradhan.agentview.nativeapp.net.closeChat
 import no.pradhan.agentview.nativeapp.net.forkChat
@@ -84,7 +86,7 @@ fun statusLine(live: LiveChat, session: SessionInfo?): StatusLine = when {
     else -> StatusLine("Idle", Tone2.Idle)
 }
 
-fun costLabel(cost: Double) = if (cost > 0) "$" + String.format(java.util.Locale.US, "%.2f", cost) else ""
+fun costLabel(cost: Double, billing: String = "usd") = unbilledText(billing) ?: if (cost > 0) "$" + String.format(java.util.Locale.US, "%.2f", cost) else ""
 
 class ChatPanels {
     var agents by mutableStateOf(false)
@@ -204,7 +206,7 @@ private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double
     val line = remember(status, cost, toneColor, muted, usage) {
         buildAnnotatedString {
             withStyle(SpanStyle(color = toneColor)) { append(status.text) }
-            costLabel(cost).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = muted)) { append(" · $it") } }
+            costLabel(cost, billing(live.provider)).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = muted)) { append(" · $it") } }
             usageText(usage).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = if (usageHigh(usage)) warn else muted)) { append(" · $it") } }
         }
     }

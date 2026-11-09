@@ -7,6 +7,7 @@ import no.pradhan.agentview.nativeapp.codex.daysFrom
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
 import no.pradhan.agentview.nativeapp.net.Queued
+import no.pradhan.agentview.nativeapp.net.unbilledText
 
 // Jobs of web/src/codex/jobs/schedule.tsx: how a schedule reads, and the state a job shows.
 
@@ -70,7 +71,7 @@ fun jobMeta(j: Row, runs: List<Row>, now: Long): String {
     return listOfNotNull(describeSchedule(j.str("schedule")), extra).joinToString(" · ")
 }
 
-fun money(n: Double) = if (n > 0 && n < 0.005) "<$0.01" else if (n < 10) "$" + String.format(java.util.Locale.ENGLISH, "%.2f", n) else "$" + Math.round(n)
+fun money(n: Double, billing: String = "usd") = unbilledText(billing) ?: if (n > 0 && n < 0.005) "<$0.01" else if (n < 10) "$" + String.format(java.util.Locale.ENGLISH, "%.2f", n) else "$" + Math.round(n)
 
 fun runTime(r: Row): String? = r.long("started_at")?.let { "${weekdayDate(it)} ${clock(it)}" }
 

@@ -46,6 +46,7 @@ import no.pradhan.agentview.nativeapp.net.closeChat
 import no.pradhan.agentview.nativeapp.net.draftSnippet
 import no.pradhan.agentview.nativeapp.net.markUnread
 import no.pradhan.agentview.nativeapp.net.pin
+import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.rename
 import no.pradhan.agentview.nativeapp.net.resume
@@ -173,7 +174,7 @@ class ChatRows(
                 withStyle(SpanStyle(color = av.err)) { append("Draft: ") }
                 append("$draft · ")
             }
-            append(metaLine(repo, branch, c.model?.let(::shortModel), when_, c.todos?.let { "${it.done}/${it.total}" }))
+            append(metaLine(repo, branch, c.model?.let(::shortModel), providerMark(c.provider), when_, c.todos?.let { "${it.done}/${it.total}" }))
             if (line != null) {
                 append(" · ")
                 withStyle(SpanStyle(color = av.ok)) { append("+${line.add}") }
@@ -188,7 +189,7 @@ class ChatRows(
         val branch = (s.gitBranch ?: repoBranch(s.cwd)).takeIf { !isDefaultBranch(it) }
         ChatRow(
             title = (if (opening.value == s.sessionId) "Opening… " else "") + s.title.ifBlank { "Untitled" },
-            meta = buildAnnotatedString { append(metaLine(repo, branch, if (s.provider == "codex") "Codex" else null, since(s.lastModified))) },
+            meta = buildAnnotatedString { append(metaLine(repo, branch, providerMark(s.provider), since(s.lastModified))) },
             state = chatState(null, s, seen),
             selected = false,
             actions = actions(s.sessionId, s.title, null),

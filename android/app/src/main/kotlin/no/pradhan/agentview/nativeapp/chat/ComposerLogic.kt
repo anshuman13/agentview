@@ -6,6 +6,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.Repeats
 import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.PlanUsage
 import no.pradhan.agentview.nativeapp.net.SessionInfo
+import no.pradhan.agentview.nativeapp.net.providerModes
 
 // web/src/chat/composerLogic.ts and ChatSettings.tsx, the parts the phone composer uses.
 
@@ -26,13 +27,7 @@ val EFFORT_LABEL = mapOf("low" to "Low", "medium" to "Medium", "high" to "High",
 
 class ModeInfo(val label: String, val detail: String)
 
-val MODES = mapOf(
-    "default" to ModeInfo("Default", "Ask before edits and risky commands"),
-    "acceptEdits" to ModeInfo("Accept edits", "Edit files without asking, ask for the rest"),
-    "plan" to ModeInfo("Plan", "Read and plan, no edits"),
-    "auto" to ModeInfo("Auto", "Claude runs what is safe and asks only for risky actions"),
-    "dontAsk" to ModeInfo("Don't ask", "Deny anything not pre-approved"),
-)
+val MODES = providerModes("claude").associate { it.value to ModeInfo(it.label, it.detail) }
 
 val MODE_HINTS = mapOf(
     "auto" to "Auto mode asks only for risky actions",

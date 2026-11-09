@@ -44,6 +44,11 @@ import no.pradhan.agentview.nativeapp.chat.can
 import no.pradhan.agentview.nativeapp.chat.modelsFor
 import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.ModelInfo
+import no.pradhan.agentview.nativeapp.net.billing
+import no.pradhan.agentview.nativeapp.net.providerLabel
+import no.pradhan.agentview.nativeapp.net.providerMark
+import no.pradhan.agentview.nativeapp.net.providerModes
+import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
@@ -203,5 +208,19 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.getValue("shown").jsonArray.map { it.jsonPrimitive.content }, modelsFor(models, caps).map { it.value })
             for ((k, v) in c.getValue("can").jsonObject) assertEquals(c.str("name") + ": " + k, v.jsonPrimitive.booleanOrNull, caps.can(k))
         }
+    }
+
+    @Test fun providerTable() {
+        for (c in cases("providers")) {
+            val p = c.nullable("provider")?.jsonPrimitive?.content
+            assertEquals(c.str("name"), c.str("label"), providerLabel(p))
+            assertEquals(c.str("name"), c.str("billing"), billing(p))
+            assertEquals(c.str("name"), c.nullable("mark")?.jsonPrimitive?.content, providerMark(p))
+            assertEquals(c.str("name"), c.getValue("modes").jsonArray.map { it.jsonPrimitive.content }, providerModes(p).map { it.value })
+        }
+    }
+
+    @Test fun moneyByBilling() {
+        for (c in cases("money")) assertEquals(c.str("name"), c.str("expected"), money(c.getValue("n").jsonPrimitive.content.toDouble(), c.str("billing")))
     }
 }
