@@ -125,6 +125,13 @@ fun userParts(text: String): List<Part> {
 // A prompt starting with "!" is a shell command for the chat's terminal, as on the web; null when it is a prompt or empty.
 fun shellCommand(text: String): String? = text.trim().takeIf { it.startsWith("!") }?.drop(1)?.trim()?.ifEmpty { null }
 
+// A shell line that continues this chat in the Claude CLI on the same account; web composerLogic.ts resumeCommand says the same.
+fun resumeCommand(cwd: String, sessionId: String, account: String?): String {
+    val dir = mapOf("alt" to "~/.claude-alt", "alt2" to "~/.claude-alt2")[account]
+    val q = if (Regex("^[\\w./~-]+$").matches(cwd)) cwd else "'" + cwd.replace("'", "'\\''") + "'"
+    return "cd $q && " + (if (dir != null) "CLAUDE_CONFIG_DIR=$dir " else "") + "claude --resume $sessionId"
+}
+
 // A Markdown quote of a reply to answer it in the next prompt, like Slack's reply with quote: up to 300 characters, cut at a word.
 fun quoteReply(text: String, max: Int = 300): String {
     val t = text.trim()

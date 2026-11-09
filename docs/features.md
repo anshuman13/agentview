@@ -224,7 +224,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - "Side chat" in the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
 - "Continue in terminal" in the same menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
-  a Work account, to pick the chat up in the Claude CLI. Stop the chat first so two processes do not write to it
+  a Work account, to pick the chat up in the Claude CLI. Stop the chat first so two processes do not write to it. The phone chat menu has the same Continue in terminal, copying to the clipboard
 - "Rewind files" under the files of a turn puts them back to how they were before that prompt (later turns' edits
   go too); the conversation itself stays. On the phone, a prompt that changed files has the same Rewind files link under it
   while Claude is idle

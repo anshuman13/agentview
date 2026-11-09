@@ -86,4 +86,9 @@ class ComposerLogicTest {
         assertNull(shellCommand("!"))
         assertNull(shellCommand("why ! here"))
     }
+
+    @Test fun resumeCommandQuotesTheFolderAndPicksTheAccountDir() {
+        assertEquals("cd ~/r && claude --resume abc", resumeCommand("~/r", "abc", "main"))
+        assertEquals("cd '/a b' && CLAUDE_CONFIG_DIR=~/.claude-alt claude --resume abc", resumeCommand("/a b", "abc", "alt"))
+    }
 }

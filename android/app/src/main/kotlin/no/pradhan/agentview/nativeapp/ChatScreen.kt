@@ -19,6 +19,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -79,6 +81,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         return
     }
     val sessionId = live.sessionId ?: session?.sessionId
+    val clip = LocalClipboardManager.current
     val (prLoad) = rememberLoad(live.id, cwd) { branchPr(parsePulls(hub.read("/api/gh/prs")), parseGitStatus(hub.read("/api/git/status")).branch) }
     var prOpen by rememberSaveable(live.id) { mutableStateOf<Int?>(null) }
     prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
@@ -116,6 +119,11 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                     val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, state.events))
                     context.startActivity(android.content.Intent.createChooser(send, null))
                 }, enabled = state.events.any { it.kind == "assistant" })
+                MenuItem("Continue in terminal", "terminal", {
+                    close()
+                    clip.setText(AnnotatedString(resumeCommand(cwd, sessionId!!, session?.account)))
+                    hub.notice.value = "Copied. Stop this chat before resuming it in a terminal"
+                }, enabled = sessionId != null)
                 MenuItem("Remind me", "bell", { close(); remindOpen = true }, enabled = sessionId != null)
                 MenuItem("Fork chat", "repo-forked", { close(); hub.newChat(cwd, fork = sessionId) }, enabled = sessionId != null)
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
