@@ -1,13 +1,9 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { wikiTools } from './wiki.js';
+import { wikiSearchTool } from './wiki.js';
 
 afterEach(() => vi.unstubAllGlobals());
 
-const search = async (query: string) => {
-  const tool = wikiTools({ cwd: '/tmp', chat: () => null }).find((t) => t.name === 'wiki_search')!;
-  const out = await tool.handler({ query, profile: 'work' }, {});
-  return (out.content[0] as { text: string }).text;
-};
+const search = (query: string) => wikiSearchTool.handler({ query, profile: 'work' }, { cwd: '/tmp', chatId: null, host: { setStatus: () => undefined } });
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 

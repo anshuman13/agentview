@@ -27,7 +27,7 @@ import { UsageLimit } from './usageLimit.js';
 import { Wakeups } from './wakeups.js';
 
 // The tools whose call carries a review's findings.
-const FINDINGS_TOOLS = new Set(['ReportFindings']);
+const FINDINGS_TOOLS = new Set(['ReportFindings', 'mcp__agentview__report_findings']);
 
 export class AgentSession implements AgentHost {
   readonly driver: AgentDriver;

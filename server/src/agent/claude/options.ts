@@ -1,9 +1,7 @@
 import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpServerConfig, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
-import { z } from 'zod';
 import { BIG_BRO, type Effort } from '../../../../shared/protocol.js';
-import { chatTools } from './chats.js';
-import { DATA_RULES, dataTools } from './data.js';
-import { WIKI_RULES, wikiTools } from './wiki.js';
+import { TOOLS, TOOL_INSTRUCTIONS } from '../tools/index.js';
+import type { ToolCtx } from '../tools/tool.js';
 import { ownProfile, PROFILE_PORT } from '../../chrome/launch.js';
 import { openRouterEnv, type OpenRouterSettings } from './openrouter.js';
 
@@ -12,14 +10,8 @@ export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
 export const STATUS_REMINDER = 'You have not called mcp__agentview__set_status for a while, so the user sees no progress. Call it now with what you are doing, what is done and the next steps.';
 
 const INSTRUCTIONS = [
-  'The user follows your work on a timeline instead of reading the whole chat, often from a phone.',
-  'Use the mcp__agentview__set_status tool for this. Call it when you begin a task, whenever you move to a new step or your plan changes, and when you finish. Keep text to one short sentence about what you are doing right now.',
-  'Pass done whenever you finish a meaningful part of the task: what was achieved, a few words, such as "Bearer prefix now required" or "3 invalid-token tests pass". Not for every tool call.',
-  'Pass next as the remaining steps after the current one, a few words each, in order. Send the full list every time, and an empty list when nothing is left.',
-  'Pass important only for something the user must know without reading the chat: a decision you made on their behalf, a risk, a blocker, or something surprising you found. One or two sentences. Leave it out otherwise.',
+  TOOL_INSTRUCTIONS,
   "For anything in a web browser, use the Claude in Chrome tools. They drive the user's own Chrome, where the user is logged in to work sites, and the user watches that tab in AgentView.",
-  WIKI_RULES,
-  DATA_RULES,
 ].join(' ');
 
 // A Mac with its own AgentView Chrome lets chats drive it too: the Browser tab shows it and it holds its own logins.
@@ -27,36 +19,18 @@ const OWN_CHROME = "This Mac also runs AgentView's own Chrome, driven with the m
 const ownChrome = (): Record<string, McpServerConfig> =>
   ownProfile() ? { browser: { type: 'stdio', command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {};
 
-function statusServer(onStatus: (text: string) => void, o: { cwd: string; chat: () => string | null }) {
+function agentviewServer(o: { cwd: string; chat: () => string | null; host: ToolCtx['host'] }) {
   return createSdkMcpServer({
     name: 'agentview',
     alwaysLoad: true,
-    tools: [
-      tool(
-        'set_status',
-        'Update the one-line status shown to the user about what you are doing right now, and optionally flag something important for them.',
-        {
-          text: z.string().max(200),
-          done: z.string().max(160).optional().describe('A part of the task you just finished, a few words. Omit when nothing new is done.'),
-          next: z.array(z.string().max(120)).max(12).optional().describe('Remaining steps after the current one, in order. Empty when done.'),
-          important: z.string().max(500).optional().describe('A decision, risk, blocker or surprise the user must know about. Omit when there is none.'),
-        },
-        async ({ text }) => {
-          onStatus(text);
-          return { content: [{ type: 'text', text: 'ok' }] };
-        },
-      ),
-      ...wikiTools(o),
-      ...chatTools(o),
-      ...dataTools(o),
-    ],
+    tools: TOOLS.map((t) => tool(t.name, t.description, t.schema, async (args) => ({ content: [{ type: 'text' as const, text: await t.handler(args, { cwd: o.cwd, chatId: o.chat(), host: o.host }) }] }))),
   });
 }
 
 export function agentOptions(o: {
   cwd: string;
   resume?: string;
-  onStatus: (text: string) => void;
+  host: ToolCtx['host'];
   chat: () => string | null;
   canUseTool: CanUseTool;
   beforeAgent: HookCallback;
@@ -80,11 +54,11 @@ export function agentOptions(o: {
     includePartialMessages: true,
     includeHookEvents: true,
     enableFileCheckpointing: true,
-    allowedTools: ['mcp__agentview__set_status', 'mcp__agentview__wiki_search', 'mcp__agentview__wiki_page', 'mcp__agentview__wiki_propose', 'mcp__agentview__chat_search', 'mcp__agentview__data_find', 'mcp__agentview__data_write'],
+    allowedTools: TOOLS.map((t) => `mcp__agentview__${t.name}`),
     disallowedTools: ['mcp__playwright', ...(o.openrouter && Object.values(o.openrouter.models).some((m) => !m.startsWith('anthropic/')) ? ['WebSearch'] : [])],
     extraArgs: { chrome: null },
     permissionMode: 'auto',
-    mcpServers: { agentview: statusServer(o.onStatus, { cwd: o.cwd, chat: o.chat }), ...ownChrome(), ...o.mcp },
+    mcpServers: { agentview: agentviewServer(o), ...ownChrome(), ...o.mcp },
     toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
     canUseTool: o.canUseTool,
     perTaskStopAffordance: true,

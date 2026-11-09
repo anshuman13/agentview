@@ -7,7 +7,7 @@ import { loadOpenRouter, openRouterEnv, openRouterModels, openRouterValue, openR
 const settings: OpenRouterSettings = { key: 'sk-or-test-1234567890', default: 'sonnet', models: { sonnet: 'vendor/model-a', haiku: 'vendor/model-b' } };
 
 const build = (openrouter: OpenRouterSettings | null) =>
-  agentOptions({ cwd: '/tmp', onStatus: vi.fn(), chat: () => null, canUseTool: vi.fn() as unknown as CanUseTool, beforeAgent: vi.fn() as unknown as HookCallback, beforeEdit: vi.fn() as unknown as HookCallback, afterTool: vi.fn() as unknown as HookCallback, onStop: vi.fn() as unknown as HookCallback, openrouter });
+  agentOptions({ cwd: '/tmp', host: { setStatus: vi.fn() }, chat: () => null, canUseTool: vi.fn() as unknown as CanUseTool, beforeAgent: vi.fn() as unknown as HookCallback, beforeEdit: vi.fn() as unknown as HookCallback, afterTool: vi.fn() as unknown as HookCallback, onStop: vi.fn() as unknown as HookCallback, openrouter });
 
 describe('openrouter', () => {
   it('points the SDK at OpenRouter and gives every slot a model', () => {
