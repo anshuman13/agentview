@@ -79,6 +79,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val findings = MutableStateFlow<Map<String, ReviewFindings>>(emptyMap())
     val workspace = MutableStateFlow(Workspace())
     val loadingEarlier = MutableStateFlow(false)
+    // The Codex ask bar's draft and uploads live here, so a photo that finishes after the bar left (camera, page switch) still lands in it.
+    val codexDraft = saved.getStateFlow("codexDraft", "")
+    fun setCodexDraft(text: String) { saved["codexDraft"] = text }
+    val codexUploads = MutableStateFlow(0)
     val api = Api({ origin.value }, client)
     val codex = CodexStore(viewModelScope, api::assistantChanges, api::assistantSync, { !readOnly }, { notice.value = it })
     val notifyOn = MutableStateFlow(prefs.getBoolean("notify", true))

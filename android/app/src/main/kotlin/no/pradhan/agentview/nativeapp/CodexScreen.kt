@@ -26,6 +26,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.update
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -200,27 +201,27 @@ private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String?, onF
 
 @Composable
 private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
-    var text by rememberSaveable { mutableStateOf("") }
-    var uploading by remember { mutableIntStateOf(0) }
+    val text by hub.codexDraft.collectAsState()
+    val uploading by hub.codexUploads.collectAsState()
     val send = {
         val q = text.trim()
         if (q.isNotEmpty() && uploading == 0) {
             val p = profile ?: hub.codexProfile
             hub.askCodex(askText(q, p, st.items.filter { !it.deleted && it.profile == p }, null, st.meetings.filter { it.profile == p }), p)
-            text = ""
+            hub.setCodexDraft("")
         }
     }
     val recipes = remember(text) { matchRecipes(DEFAULT_RECIPES, text) }
     Column {
         if (recipes.isNotEmpty()) Group {
-            recipes.forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title, onClick = { text = r.text }) }
+            recipes.forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title, onClick = { hub.setCodexDraft(r.text) }) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
-            AttachButton(hub, { uploading += it }, choose = false) { path -> text = appendWord(text, "[Image: $path] ") }
-            TextField(text, { text = it }, Modifier.weight(1f), placeholder = if (uploading > 0) "Uploading image…" else "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
+            AttachButton(hub, { n -> hub.codexUploads.update { it + n } }, choose = false) { path -> hub.setCodexDraft(appendWord(hub.codexDraft.value, "[Image: $path] ")) }
+            TextField(text, hub::setCodexDraft, Modifier.weight(1f), placeholder = if (uploading > 0) "Uploading image…" else "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
             val dictation = remember { Dictation() }
-            VoiceButton({ spoken, final -> dictation.apply(text, text.length, spoken, final)?.let { text = it.first } }, { hub.notice.value = it })
+            VoiceButton({ spoken, final -> dictation.apply(text, text.length, spoken, final)?.let { hub.setCodexDraft(it.first) } }, { hub.notice.value = it })
             IconBtn("send", "Send", { send() }, enabled = text.isNotBlank() && uploading == 0, on = text.isNotBlank() && uploading == 0)
         }
     }

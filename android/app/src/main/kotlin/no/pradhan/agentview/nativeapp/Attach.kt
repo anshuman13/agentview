@@ -14,10 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,17 +50,20 @@ private fun readUri(ctx: Context, uri: Uri) = ctx.contentResolver.openInputStrea
 @Composable
 fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, onPath: (String) -> Unit) {
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }
     val shot = remember { File(File(ctx.cacheDir, "camera").apply { mkdirs() }, "shot.jpg") }
 
+    // In the Hub's scope, so leaving the screen mid-upload neither cancels it nor leaves the count stuck.
     fun upload(name: String, mime: String, read: () -> ByteArray?) {
-        scope.launch {
-            onUploading(1)
-            val bytes = withContext(Dispatchers.IO) { runCatching(read).getOrNull() }
-            val path = bytes?.let { hub.attach(name, mime, it) }
-            onUploading(-1)
-            if (path != null) onPath(path) else if (bytes == null) hub.notice.value = "Could not read the image"
+        onUploading(1)
+        hub.viewModelScope.launch {
+            try {
+                val bytes = withContext(Dispatchers.IO) { runCatching(read).getOrNull() }
+                val path = bytes?.let { hub.attach(name, mime, it) }
+                if (path != null) onPath(path) else if (bytes == null) hub.notice.value = "Could not read the image"
+            } finally {
+                onUploading(-1)
+            }
         }
     }
 
