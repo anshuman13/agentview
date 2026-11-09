@@ -3,7 +3,8 @@
 Read the doc for the area before searching the code: `docs/architecture.md` (overview), `docs/features.md`,
 `docs/design-system.md`, `docs/assistant.md` (Codex hub), `docs/macs.md` (phone, native app, other Macs).
 Every change follows the code conventions in `docs/architecture.md`, section Code shape: layers call downward, server
-calls go in the feature's API file, logic web and Android share changes on both sides, sizes are hints.
+calls go in the feature's API file, logic web and Android share changes on both sides, sizes are hints. A change that
+varies by provider follows the Providers section of the same file.
 
 ## Map
 - `server/src`: Bun/TS server on :7777. HTTP routes in `http/routes.ts`, chat host in `host/`, sessions in `session/`, agent tools in `agent/`.

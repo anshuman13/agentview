@@ -99,6 +99,33 @@ The native Android client in `android/` speaks the same protocol; see [Phone and
   350. A file or function that does one coherent thing (a switch over message types, a route table) may stay longer.
   Split by responsibility, never just to meet a number.
 
+## Providers
+
+A chat runs on `claude`, `openrouter` (the Claude driver with another environment) or `codex`. Each difference between
+them uses one mechanism, the first that fits; clients never branch on the provider name for anything else.
+
+1. Step vocabulary: Claude Code tool names (`Bash`, `Edit`, `mcp__<server>__<tool>`...) are the step and card vocabulary.
+   A driver maps its own items onto them (`agent/codex/events.ts`); there are no per-provider `ChatEvent` kinds.
+2. Provider table `shared/providers.ts`, mirrored in Android `net/Providers.kt`: `providerLabel`, `billing`
+   (`usd`, `none`, `plan`) and `providerModes` (the permission modes a provider offers). Fixed per provider.
+3. Capabilities (`SessionInfo.capabilities`) name only the controls a provider cannot serve; the UI hides each and says so
+   (`chat/capabilitiesLogic.ts`, Android `CapabilitiesLogic.kt`). `mcpEdit` is Add, toggle and Log in on MCP servers,
+   `connectors` the claude.ai connectors.
+4. Driver methods (`AgentDriver` in `agent/types.ts`) are what the session asks of the agent: `compact`, `command`,
+   `review`, `roleModel`, `inject`. The session never writes a provider's slash command as text.
+5. `SessionInfo` fields hold what differs by chat or model: `contextWindow`, `models[].efforts`, `resumeCommand`,
+   `instructionFiles`. The registry (`agent/registry.ts`) is the per-provider table on the server: driver, transcript,
+   memory files, resume line, MCP servers.
+6. The session owns what is provider neutral (`session/`): `@chat` expansion, PR and findings pick-up, limits arrive as
+   `host.limit`, every driver calls `host.compacted`, and the command router owns `/loop`, `/goal`, `/tries`, `/compact`
+   and `/code-review`. Drivers only report raw facts.
+7. AgentView tools live once in `agent/tools/`. Claude and OpenRouter get them through the in-process adapter, Codex
+   through a stdio MCP server (`agent/tools/stdio.ts`) the host starts, named `agentview` so steps render the same.
+8. Words: text tied to one chat uses `providerLabel`; text that is not says "the agent". The hub Ask chat and other hub
+   background work stay on Claude.
+9. Which provider runs: `createChat` takes the explicit choice, else the provider of the session being resumed, else
+   `defaultProvider` in settings. Inheritance (Fork chat, tries) passes the provider explicitly.
+
 ## Access
 
 Only this Mac and NetBird peers may connect, and requests from other origins are refused (`server/src/http/access.ts`).

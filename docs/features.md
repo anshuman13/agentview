@@ -280,7 +280,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - "Side chat" in the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
 - "Continue in terminal" in the same menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
-  a Work account, to pick the chat up in the Claude CLI. Stop the chat first so two processes do not write to it. The phone chat menu has the same Continue in terminal, copying to the clipboard
+  a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone chat menu has the same Continue in terminal, copying to the clipboard
 - "Rewind files" under the files of a turn puts them back to how they were before that prompt (later turns' edits
   go too); the conversation itself stays. On the phone, a prompt that changed files has the same Rewind files link under it
   while Claude is idle
@@ -330,15 +330,19 @@ OpenRouter chat shows "-" and a Codex chat "Plan"; the Spend list says such chat
 so. Start one from the command palette (Chat: New Codex Chat) or the Provider section of the phone's new chat sheet. The
 "New chats" select in Settings (Models on web, Providers on the phone) sets the provider a chat starts on when none is picked
 (`defaultProvider` in settings.json); Fork chat and tries keep the parent's provider. The
-model menu lists Codex's models, effort goes to the model when it supports that level, and the permission modes map to
-Codex's approval policy and sandbox: Default asks before leaving the workspace sandbox, Auto never asks, Plan and
-Don't ask only read. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes
+model menu lists Codex's models and the effort menu only the levels the chosen model lists. The permission menu and Shift+Tab
+offer the provider's own modes: Ask first (asks before leaving the workspace sandbox), Auto (never asks, network on) and
+Read only (only reads), with no Plan; Plan first and Spec on the phone's new chat sheet start in Ask first. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes
 (shown as edits with diffs) and MCP calls appear as steps. The usage bar shows the plan's 5-hour and weekly windows;
 there is no cost. No rewind, Team or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
 transcript, and are kept in `~/.agentview/codex-chats.json`. Codex chats get the same AgentView tools as Claude ones
 (status, wiki, data, chat search, report findings) from a stdio MCP server the host starts for the chat, and the same
 instructions; the review buttons send a prompt that ends in report findings, and a plan change reaches the agent
-mid-turn. Not yet for Codex: `/compact`, chat search and @chat mentions.
+mid-turn. Continue in terminal copies `codex resume <id>` (an OpenRouter chat has no such row). The MCP page of a Codex
+chat probes the servers in `~/.codex/config.toml` (read through Codex's own `config/read`), has no Add, Disable or Log in
+and no claude.ai connector rows, and says "Edit ~/.codex/config.toml, then Reconnect". Observe reads the same list: its
+Ask buttons name the chat's provider and are disabled with "Add <server> to ~/.codex/config.toml" while the server is
+missing there. Not yet for Codex: `/compact`, chat search and @chat mentions.
 
 ## Workspace
 
