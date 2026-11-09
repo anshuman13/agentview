@@ -33,6 +33,7 @@ class ProtocolTest {
         val a = parseMessage("""{"type":"append","id":"e","offset":1,"text":"bc"}""") as ServerMessage.Append
         assertEquals(1, a.offset)
         assertEquals("attention", (parseMessage("""{"type":"attention","items":[]}""") as ServerMessage.Other).type)
+        assertEquals("runs", (parseMessage("""{"type":"runs","runs":[{"id":"r","kind":"loop","rounds":[]}]}""") as ServerMessage.Other).type)
     }
 
     @Test

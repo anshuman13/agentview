@@ -26,7 +26,7 @@ import { otherMacs } from './macs.js';
 import { listPorts, openPort } from './preview.js';
 import { devScript } from '../workspace/devScript.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
-import type { ClientMessage, LiveChat } from '../../../shared/protocol.js';
+import type { ChatRun, ClientMessage, LiveChat } from '../../../shared/protocol.js';
 import { gz } from './web.js';
 import { readBody, savePaste } from './body.js';
 import type { Host } from '../host/client.js';
@@ -41,6 +41,7 @@ export type CommandClient = { send: (m: any) => void; sendRaw: (data: string, id
 export type RouteDeps = {
   host: Pick<Host, 'notify' | 'req'>;
   chats: () => Map<string, LiveChat>;
+  runs: () => ChatRun[];
   lastViewed: () => string;
   bySession: (sessionId: string | null) => string | undefined;
   closeByUser: (id: string) => Promise<void>;
@@ -86,6 +87,7 @@ export function createRoutes(d: RouteDeps) {
   const liveCwds = () => [...d.chats().values()].map((c) => c.cwd);
 
   const open: Record<string, Entry<Ctx>> = {
+    'ANY /api/runs': entry(() => d.runs()),
     'ANY /api/link-title': entry(({ url }) => linkTitleRoute(url)),
     'DELETE /api/sessions': entry(async ({ url }) => {
       const id = url.searchParams.get('id') ?? '';

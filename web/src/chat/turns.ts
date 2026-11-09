@@ -1,4 +1,4 @@
-import { editCount } from '../../../shared/edits';
+import { editCount, stripRound } from '../../../shared/edits';
 import { BIG_BRO, type ChatEvent } from '../../../shared/protocol';
 import { chatCost } from '../../../shared/cost';
 export { chatCost };
@@ -100,7 +100,10 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
     const parent = e.kind === 'tool_use' ? e.parent : e.kind === 'tool_result' ? e.toolUseId : undefined;
     const turn = (parent && turnOf.get(parent)) || current();
     turnOf.set(e.id, turn);
-    if (e.kind === 'assistant' && !e.parent && e.text.trim()) turn.reply = { id: e.id, text: e.text.trim(), streaming: e.streaming, at: e.at };
+    if (e.kind === 'assistant' && !e.parent) {
+      const text = stripRound(e.text).trim();
+      if (text) turn.reply = { id: e.id, text, streaming: e.streaming, at: e.at };
+    }
     if (e.kind === 'plan') next = e.next;
     if (e.kind === 'blocked') turn.blocked.push(e);
     if (e.kind === 'result') turn.ended = e.at;

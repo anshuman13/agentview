@@ -109,6 +109,10 @@ describe('RepeatController', () => {
       closed: () => false,
       setSession: (p) => { r = (p.repeat ?? null) as never; },
       system: () => {},
+      startRun: () => 'run',
+      resumeRun: () => 'run',
+      endRun: () => {},
+      patchRun: () => {},
       sendPrompt: (t) => sent.push(t),
     });
     c.set(r as never);

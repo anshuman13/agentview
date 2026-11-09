@@ -1,4 +1,4 @@
-import { MAX_GOAL_ROUNDS, type Repeat, type SessionInfo } from '../../../shared/protocol.js';
+import { MAX_GOAL_ROUNDS, type ChatRun, type Repeat, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, span } from '../../../shared/util.js';
 import type { Cron } from '../agent/types.js';
 
@@ -19,6 +19,8 @@ export function parseGoal(text: string): Repeat | 'off' | 'usage' | null {
   if (!goal) return 'usage';
   return { prompt: goalPrompt(goal), every: 0, until: null, round: 0, nextAt: null, goal };
 }
+
+export const ROUND_INSTRUCTION = 'Finish your reply with one last line: ROUND: <done|progress|blocked|question|nothing> <one-line summary>. Use nothing when there was nothing to do this round.';
 
 export const goalMet = (text: string) => /\bGOAL MET\b/.test(text);
 
@@ -98,6 +100,10 @@ export interface RepeatHost {
   closed(): boolean;
   setSession(patch: Partial<SessionInfo>): void;
   system(text: string): void;
+  startRun(r: Repeat): string;
+  resumeRun(r: Repeat): string;
+  endRun(id: string, why: string): void;
+  patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt'>>): void;
   sendPrompt(text: string, auto: 'loop' | 'goal', round: number): void;
 }
 
@@ -116,14 +122,17 @@ export class RepeatController {
     echo();
     const word = goal ? 'Goal' : 'Loop';
     if (parsed === 'usage') this.host.system(goal ? GOAL_USAGE : USAGE);
-    else if (parsed === 'off') this.set(null, this.host.repeat() ? `${word} off` : `No ${word.toLowerCase()} is running`);
+    else if (parsed === 'off') this.set(null, this.host.repeat() ? `${word} off` : `No ${word.toLowerCase()} is running`, 'you stopped it');
     else this.set(parsed);
     return true;
   }
 
-  set(r: Repeat | null, note?: string) {
+  set(r: Repeat | null, note?: string, why = 'you stopped it') {
     clearTimeout(this.timer);
     this.due = false;
+    const old = this.host.repeat();
+    if (old?.runId && old.runId !== r?.runId) this.host.endRun(old.runId, r ? 'replaced by a new loop' : why);
+    if (r && !r.runId) r = { ...r, runId: this.host.startRun(r) };
     this.host.setSession({ repeat: r });
     if (!r) return this.host.system(note ?? 'Loop off');
     this.host.system(`${r.goal ? 'Goal' : 'Loop'} on, ${describeLoop(r)}`);
@@ -142,6 +151,7 @@ export class RepeatController {
   }
 
   resume(r: Repeat) {
+    r = { ...r, runId: this.host.resumeRun(r) };
     this.host.setSession({ repeat: r });
     this.host.system(`AgentView restarted, the ${r.goal ? 'goal' : 'loop'} continues ${describeLoop(r)}`);
     if (!r.nextAt || r.nextAt <= Date.now()) this.fire();
@@ -151,8 +161,8 @@ export class RepeatController {
   fire() {
     const r = this.host.repeat();
     if (!r || this.held) return;
-    if (r.until && Date.now() >= r.until && !unrun(r)) return this.set(null, `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`);
-    if (r.goal && r.round >= MAX_GOAL_ROUNDS) return this.set(null, `Goal not met after ${r.round} checks: ${r.goal}`);
+    if (r.until && Date.now() >= r.until && !unrun(r)) return this.set(null, `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, `finished at ${clock(r.until)}`);
+    if (r.goal && r.round >= MAX_GOAL_ROUNDS) return this.set(null, `Goal not met after ${r.round} checks: ${r.goal}`, 'goal not met');
     if (this.host.running()) {
       this.due = true;
       return;
@@ -162,20 +172,28 @@ export class RepeatController {
     this.due = false;
     this.roundAt = Date.now();
     const round = r.round + 1;
-    this.host.setSession({ repeat: { ...r, round, nextAt: r.every ? Date.now() + r.every : null } });
+    const nextAt = r.every ? Date.now() + r.every : null;
+    this.host.setSession({ repeat: { ...r, round, nextAt } });
+    this.patchRun({ state: 'running', why: '', round, nextAt });
     this.arm();
     this.host.sendPrompt(r.prompt, r.goal ? 'goal' : 'loop', round);
   }
 
   // A round that failed waits before the next one, so a loop never spins on an error.
-  defer(until = Date.now() + REPEAT_GRACE_MS, why?: string) {
+  defer(until = Date.now() + REPEAT_GRACE_MS, why?: string, limit = false) {
     const r = this.host.repeat();
     if (!r) return;
     this.due = false;
     const nextAt = Math.max(r.nextAt ?? 0, until);
     this.host.setSession({ repeat: { ...r, nextAt } });
+    this.patchRun({ nextAt, ...(limit && { state: 'paused', why: `usage limit until ${clock(nextAt)}` }) });
     this.arm();
     this.host.system(`${why ?? roundWord(r)} ${r.round + 1} at ${clock(nextAt)}, ${offCommand(r)} to end it`);
+  }
+
+  private patchRun(patch: Parameters<RepeatHost['patchRun']>[1]) {
+    const id = this.host.repeat()?.runId;
+    if (id) this.host.patchRun(id, patch);
   }
 
   private arm() {

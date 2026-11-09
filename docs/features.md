@@ -349,6 +349,15 @@ keep the loop; `/loop off` ends it. The composer footer shows the round and the 
 Claude replies GOAL MET to end it; the check also stops by itself after 20 rounds. `/goal off` ends it early, and
 the footer shows the check count the way it shows loop rounds.
 
+Every `/loop`, `/goal` and build cycle is a run, kept in the host in `~/.agentview/runs.json` (active runs and the
+latest 100 ended ones, each with its last 50 rounds) and served at `GET /api/runs`. A round is the outcome of one turn,
+its one-line summary and its cost. Loop rounds and goal checks end with an instruction to finish the reply with
+`ROUND: <done|progress|blocked|question|nothing> <summary>`; the line is read by the server and hidden from the
+transcript, the chat row and push bodies. A round without the line counts as progress. A loop round pushes "Loop in
+<repo>: <outcome>" only for done, blocked, question or failed, and a run that ends pushes its reason unless you
+stopped it. A usage limit or a pending approval marks the run paused until the next round or the answer. A build
+cycle is one run with a round per step.
+
 ## Agents
 
 Agents in the More menu of the task box header opens a pane that lists the subagents of the chat with their status, elapsed time and tokens.

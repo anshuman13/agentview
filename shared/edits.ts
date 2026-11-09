@@ -1,4 +1,4 @@
-import type { ChatEvent } from './protocol.js';
+import type { ChatEvent, RoundOutcome } from './protocol.js';
 
 export type EditCount = { add: number; del: number };
 
@@ -44,11 +44,28 @@ export function sumEdits(events: ChatEvent[]): EditCount | undefined {
   return total;
 }
 
+// A loop round or goal check ends its reply with `ROUND: <done|progress|blocked|question|nothing> <summary>`.
+const ROUND_TAIL = /(?:^|\n)[ \t]*ROUND:([^\n]*)\s*$/i;
+const ROUND_WORD = /^\s*(done|progress|blocked|question|nothing)\b[:\s-]*(.*)$/i;
+
+export const stripRound = (text: string) => {
+  const m = ROUND_TAIL.exec(text);
+  return m ? text.slice(0, m.index).trimEnd() : text;
+};
+
+export function roundOf(text: string): { outcome: RoundOutcome; line: string } | null {
+  const p = ROUND_WORD.exec(ROUND_TAIL.exec(text)?.[1] ?? '');
+  if (!p) return null;
+  const word = p[1].toLowerCase();
+  return { outcome: word === 'nothing' ? 'quiet' : (word as RoundOutcome), line: p[2].trim() };
+}
+
 export function replyLine(events: ChatEvent[], max = 60): string | undefined {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
-    if (e.kind !== 'assistant' || e.parent || !e.text.trim()) continue;
-    const line = e.text.trim().split('\n')[0].replace(/^[#>*\-\s]+/, '').replace(/\*\*/g, '').trim();
+    const text = e.kind === 'assistant' && !e.parent ? stripRound(e.text).trim() : '';
+    if (!text) continue;
+    const line = text.split('\n')[0].replace(/^[#>*\-\s]+/, '').replace(/\*\*/g, '').trim();
     return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
   }
   return undefined;

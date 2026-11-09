@@ -11,7 +11,7 @@ import { ntfyTopic, post } from './integrations/notify.js';
 import { CODEX_WORK } from './workspace/files.js';
 import { attention, onAttention, startAttention } from './integrations/attention.js';
 import { thisMac } from './http/macs.js';
-import { ROW_WINDOW, type AttentionItem, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
+import { ROW_WINDOW, type AttentionItem, type ChatRun, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './http/stream.js';
 import { RingGate } from './http/ringGate.js';
 import { serveWeb } from './http/web.js';
@@ -61,8 +61,12 @@ const streams = new Map<string, Client>();
 const ring = new Ring();
 const gate = new RingGate(ring, (chat) => [...clients].some((c) => c.view === chat));
 let chats = new Map<string, LiveChat>();
+let runs: ChatRun[] = [];
 let lastViewed = '';
 let restarting = false;
+
+// Clients get the last rounds of each run; GET /api/runs has them all.
+const runsMessage = (): ServerMessage => ({ type: 'runs', runs: runs.map((r) => ({ ...r, rounds: r.rounds.slice(-10) })) });
 
 // To every client, or to the viewers of one chat. Each broadcast gets an id so an event stream can resume.
 function broadcast(m: ServerMessage, chat: string | null = null) {
@@ -112,6 +116,10 @@ const host = new Host(PORT, PROJECT, {
     if ('closed' in l) return closeTerminals(l.closed);
     if (l.m.type === 'live') chats = new Map(l.m.chats.map((c) => [c.id, c]));
     if (l.m.type === 'restarting') restarting = true;
+    if (l.m.type === 'runs') {
+      runs = l.m.runs;
+      return broadcast(runsMessage());
+    }
     broadcast(l.m, l.chat);
   },
   up: () => host.call({ op: 'hello' }, (err, r) => {
@@ -119,11 +127,13 @@ const host = new Host(PORT, PROJECT, {
     const hello = r as Hello;
     const before = chats;
     chats = new Map(hello.chats.map((c) => [c.id, c]));
+    runs = hello.runs;
     restarting = hello.restarting;
     lastViewed = chats.has(lastViewed) ? lastViewed : hello.last;
     // After a host restart the chats come back under new ids; a client follows its chat by session id.
     for (const c of clients) view(c, chats.has(c.view) ? c.view : (bySession(before.get(c.view)?.sessionId ?? null) ?? lastViewed));
     broadcast({ type: 'live', chats: hello.chats });
+    broadcast(runsMessage());
     // A new host starts with no viewers, an old one with counts from before; tell it who watches now.
     reportViewers();
     // A host still running older code restarts once its turns end.
@@ -155,6 +165,7 @@ startAttention(attentionSources, fixChat);
 const { dispatch } = createRoutes({
   host,
   chats: () => chats,
+  runs: () => runs,
   lastViewed: () => lastViewed,
   bySession,
   closeByUser,
@@ -237,6 +248,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   const wanted = params.get('session');
   if (wanted && chats.get(chat)?.sessionId !== wanted) host.req<string>({ op: 'open', sessionId: wanted }).then((c) => client.view === chat && view(client, c), () => {});
   client.send({ type: 'live', chats: [...chats.values()] });
+  client.send(runsMessage());
   client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
 
@@ -284,6 +296,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   const wanted = url.searchParams.get('session');
   if (wanted && chats.get(chat)?.sessionId !== wanted) host.req<string>({ op: 'open', sessionId: wanted }).then((c) => client.view === chat && view(client, c), () => {});
   client.send({ type: 'live', chats: [...chats.values()] });
+  client.send(runsMessage());
   client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
   // A named event, not a comment: the client hears it and can tell a dead link from a quiet one.

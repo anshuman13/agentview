@@ -27,6 +27,9 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 - Before exiting, the host writes `~/.agentview/restore.json` (open chats, loops, crons, and any stopped work: the
   tasks that were running and whether a turn was in progress); the next host reopens them from there and asks
   each chat with stopped work to resume it.
+- Loops, goals and build cycles are runs (`session/runs.ts`) in `~/.agentview/runs.json`; a loop's `runId` in
+  `restore.json` links the restarted chat back to its run. The host broadcasts them as `runs` messages, the API
+  server caches them like the chats and sends them to clients (last 10 rounds each).
 - With no API server for five minutes and nothing running, the host saves and exits.
 
 ## Server folders

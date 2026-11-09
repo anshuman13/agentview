@@ -33,6 +33,12 @@ private val AGENT_TOOLS = setOf("Agent", "Task")
 private val DENIED = Regex("^(The user doesn't want to proceed|User denied this action|aborted\\b|Session closed|The user sent a new message instead|Claude exited before this was answered)")
 
 fun firstLine(text: String) = text.trim().lineSequence().firstOrNull() ?: ""
+
+private val ROUND_TAIL = Regex("(?:^|\\n)[ \\t]*ROUND:[^\\n]*\\s*$", RegexOption.IGNORE_CASE)
+
+// shared/edits.ts stripRound: the ROUND line a loop round or goal check ends its reply with is not shown.
+fun stripRound(text: String): String = ROUND_TAIL.find(text)?.let { text.substring(0, it.range.first).trimEnd() } ?: text
+
 fun JsonObject.s(k: String) = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: ""
 
 fun isDenied(result: ChatEvent?) = result != null && result.isError && DENIED.containsMatchIn(result.text.trim())
@@ -139,7 +145,7 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
         when {
             e.kind == "user" && e.auto != null -> items += Item.System(e.id, if (e.auto == "goal") "Goal check ${e.round}" else "Loop round ${e.round} \u00B7 ${firstLine(e.text)}")
             e.kind == "user" -> items += if (e.phase != null) Item.Phase(e.id, e.text) else Item.User(e.id, e.text, e.at, e.stopping, e.queued)
-            e.kind == "assistant" -> if (e.text.isNotBlank()) items += Item.Assistant(e.id, e.text, e.streaming)
+            e.kind == "assistant" -> stripRound(e.text).let { if (it.isNotBlank()) items += Item.Assistant(e.id, it, e.streaming) }
             e.kind == "system" -> items += Item.System(e.id, e.text)
             e.kind == "blocked" -> items += Item.Blocked(e.id, e)
             e.kind == "plan" -> items += Item.System(e.id, if (e.next.isNotEmpty()) "You changed the next steps (${e.next.size})" else "You cleared the next steps")

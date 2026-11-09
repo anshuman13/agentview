@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { ACCOUNT_LABEL, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, MAX_GOAL_ROUNDS, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type RoundOutcome, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, errText } from '../../../shared/util.js';
+import { costRise } from '../../../shared/cost.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from '../host/restore.js';
 import { Approvals } from './approvals.js';
-import { advance, looping, loopOff, needsApproval, planChangeText, planStep, withLoop, type LoopStep } from './loop.js';
-import { RepeatController, after, fireTime, goalMet, limitReset, restorePrompt } from './repeat.js';
+import { advance, looping, loopOff, needsApproval, phaseRound, planChangeText, planStep, withLoop, type LoopStep } from './loop.js';
+import { RepeatController, ROUND_INSTRUCTION, after, fireTime, goalMet, limitReset, restorePrompt } from './repeat.js';
+import { Runs, roundResult } from './runs.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { EventIndex, MAX_EVENTS, stopAgents, trimHistory } from './events.js';
 import { PR_URL, createsPr, prFrom } from './pr.js';
@@ -18,6 +20,7 @@ const CONTINUE = 'You hit a usage limit and now run on another Claude account. C
 
 const RETRY_COMPACT_GROWTH = 20_000;
 const STOP_TIMEOUT = 15_000;
+const WAITING = 'waiting for your approval';
 
 export class AgentSession implements AgentHost {
   readonly driver: AgentDriver;
@@ -49,12 +52,24 @@ export class AgentSession implements AgentHost {
   private limitReset: number | null = null;
   private lastError = false;
   failed = false;
+  // The host replaces this with the one it saves; a chat without a host keeps its runs in memory.
+  runs = new Runs();
+  private cycleRun: string | undefined;
+  // The last turn was a loop round or goal check; its reply ends with a ROUND line.
+  private roundTurn = false;
+  roundNote: { outcome: RoundOutcome; line: string } | null = null;
+  private lastCost = 0;
+  private turnCost = 0;
   private repeater = new RepeatController({
     repeat: () => this.state.session.repeat,
     running: () => this.state.session.running,
     closed: () => this.closed,
     setSession: (patch) => this.setSession(patch),
     system: (text) => this.system(text),
+    startRun: (r) => this.startRun(r),
+    resumeRun: (r) => this.resumeRun(r),
+    endRun: (id, why) => this.runs.end(id, why),
+    patchRun: (id, patch) => this.runs.update(id, patch),
     sendPrompt: (text, auto, round) => this.sendPrompt(text, randomUUID(), { auto, round }),
   });
   private orphans = new Set<string>();
@@ -96,6 +111,8 @@ export class AgentSession implements AgentHost {
   }
 
   emit(m: ServerMessage) {
+    if (m.type === 'pending') this.waitingOnUser(true);
+    else if (m.type === 'resolved' && !this.state.pending.length) this.waitingOnUser(false);
     for (const l of this.listeners) l(m);
   }
 
@@ -175,6 +192,7 @@ export class AgentSession implements AgentHost {
   setSession(patch: Partial<SessionInfo>) {
     const wasRunning = this.state.session.running;
     this.state.session = { ...this.state.session, ...patch };
+    if (patch.sessionId) this.runs.bind(this.id, patch.sessionId);
     if (wasRunning && patch.running === false) this.driver.settled();
     this.emit({ type: 'session', session: this.state.session });
   }
@@ -199,6 +217,8 @@ export class AgentSession implements AgentHost {
 
   close() {
     this.closed = true;
+    this.runs.end(this.state.session.repeat?.runId, 'chat closed');
+    this.runs.end(this.cycleRun, 'chat closed');
     this.repeater.stop();
     this.listeners.clear();
     this.approvals.denyAll();
@@ -352,7 +372,33 @@ export class AgentSession implements AgentHost {
 
   sendPrompt(text: string, id: string = randomUUID(), mark?: { auto: 'loop' | 'goal'; round: number }) {
     this.pushEvent({ id, kind: 'user', text, at: Date.now(), ...mark });
-    this.enqueue(text, id);
+    if (mark) this.roundTurn = true;
+    this.enqueue(mark ? `${text}\n\n${ROUND_INSTRUCTION}` : text, id);
+  }
+
+  private startRun(r: Repeat) {
+    const what = r.goal ?? r.prompt;
+    return this.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.state.session.sessionId ?? '', chatId: this.id, title: this.runTitle(what), what, round: r.round, max: r.goal ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt });
+  }
+
+  // A restart keeps the run of a loop or goal; the chat has a new id.
+  private resumeRun(r: Repeat) {
+    const run = this.runs.get(r.runId);
+    if (!run || run.state === 'done') return this.startRun(r);
+    this.runs.update(run.id, { chatId: this.id });
+    return run.id;
+  }
+
+  private runTitle(what: string) {
+    return (this.title || what.split('\n')[0]).slice(0, 80);
+  }
+
+  private waitingOnUser(on: boolean) {
+    for (const id of [this.state.session.repeat?.runId, this.cycleRun]) {
+      const run = this.runs.get(id);
+      if (on && run?.state === 'running') this.runs.update(id, { state: 'paused', why: WAITING });
+      else if (!on && run?.why === WAITING) this.runs.update(id, { state: 'running', why: '' });
+    }
   }
 
   // A client resends a message it got no echo for; the id tells a repeat from a new message.
@@ -384,7 +430,7 @@ export class AgentSession implements AgentHost {
     this.planChange = null;
     if (looping(this.state.session.loop)) {
       this.setSession({ loop: { ...this.state.session.loop, phase: null } });
-      this.endLoop('Build cycle stopped');
+      this.endLoop('Build cycle stopped', 'you stopped it');
     }
     this.turns -= this.driver.dropInput();
     this.dropQueue();
@@ -491,6 +537,7 @@ export class AgentSession implements AgentHost {
   }
 
   setLoop(on: boolean, max?: number) {
+    if (!on) this.runs.end(this.cycleRun, 'you stopped it');
     const next = withLoop(this.state.session.loop, on, max);
     this.setSession({ loop: next });
     this.system(on ? `Build cycle on: Opus plans and builds, Sonnet tests, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Build cycle off');
@@ -507,6 +554,7 @@ export class AgentSession implements AgentHost {
     this.loopPrevModel = this.state.session.model;
     this.planDenied = false;
     this.setSession({ loop: { ...this.state.session.loop, round: 1, phase: 'plan' } });
+    this.cycleRun = this.runs.start({ kind: 'cycle', sessionId: this.state.session.sessionId ?? '', chatId: this.id, title: this.runTitle(task), what: task, round: 1, max: this.state.session.loop.max });
     await this.runStep(planStep(task), false);
   }
 
@@ -547,7 +595,9 @@ export class AgentSession implements AgentHost {
     return allow ? Promise.resolve({ behavior: 'allow' as const, updatedInput: input }) : null;
   }
 
-  private endLoop(note: string | null) {
+  private endLoop(note: string | null, why = note?.replace(/^Build cycle (?:stopped|passed): /, '') ?? 'ended') {
+    this.runs.end(this.cycleRun, why);
+    this.cycleRun = undefined;
     this.setSession({ loop: { ...this.state.session.loop, on: false } });
     if (note) this.system(note);
     const model = this.loopPrevModel;
@@ -677,9 +727,15 @@ export class AgentSession implements AgentHost {
     this.lastResult = r.ok ? r.text : '';
     this.lastError = !r.ok || Boolean(r.isError);
     this.failed = this.lastError;
+    const repeat = this.state.session.repeat;
+    const met = Boolean(repeat?.goal && goalMet(this.lastResult));
+    this.turnCost = r.costUsd > 0 ? costRise(r.costUsd, this.lastCost) : 0;
+    if (r.costUsd > 0) this.lastCost = r.costUsd;
+    this.roundNote = this.roundTurn && repeat?.runId ? roundResult(r.text, { failed: this.lastError, met }) : null;
+    this.roundTurn = false;
     this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: this.state.session.model });
-    const goal = this.state.session.repeat;
-    if (goal?.goal && goalMet(this.lastResult)) this.repeater.set(null, `Goal met after ${goal.round} ${goal.round === 1 ? 'check' : 'checks'}: ${goal.goal}`);
+    if (repeat?.runId && this.roundNote) this.runs.addRound(repeat.runId, { n: repeat.round, ...this.roundNote, costUsd: this.turnCost });
+    if (repeat?.goal && met) this.repeater.set(null, `Goal met after ${repeat.round} ${repeat.round === 1 ? 'check' : 'checks'}: ${repeat.goal}`, 'goal met');
     this.turnEnded();
   }
 
@@ -697,8 +753,12 @@ export class AgentSession implements AgentHost {
       this.expectTurn = true;
       this.release();
     }
-    const loop = idle ? advance(this.state.session.loop, this.lastResult, { planDenied: this.planDenied, failed: this.lastError }) : null;
-    if (loop) this.setSession({ loop: loop.state });
+    const before = this.state.session.loop;
+    const loop = idle ? advance(before, this.lastResult, { planDenied: this.planDenied, failed: this.lastError }) : null;
+    if (loop) {
+      this.setSession({ loop: loop.state });
+      if (looping(before)) this.cycleRound(before, loop.state);
+    }
     const next = idle && !loop?.step ? this.followUp() : null;
     this.setSession({ running: this.turns > 0 || next !== null || Boolean(loop?.step), compacting: false, stopping: false });
     if (loop && !loop.step && loop.note) this.endLoop(loop.note);
@@ -708,7 +768,7 @@ export class AgentSession implements AgentHost {
       // Messages typed while the stop was in flight go on in a fresh turn.
       this.dequeue();
       this.repeater.defer();
-    } else if (idle && this.limitReset && this.state.session.repeat) this.repeater.defer(this.limitReset, 'Usage limit reached, loop round');
+    } else if (idle && this.limitReset && this.state.session.repeat) this.repeater.defer(this.limitReset, 'Usage limit reached, loop round', true);
     else if (idle && this.limitReset) this.system(`Usage limit reached, resets at ${clock(this.limitReset)}`);
     else if (idle && this.lastError) this.repeater.defer();
     else if (idle && (this.repeater.due || this.state.session.repeat?.every === 0)) this.repeater.fire();
@@ -716,6 +776,14 @@ export class AgentSession implements AgentHost {
     this.limitReset = null;
     this.lastResult = '';
     this.lastError = false;
+    this.turnCost = 0;
+  }
+
+  private cycleRound(before: LoopState, after: LoopState) {
+    const run = this.runs.get(this.cycleRun);
+    if (!run) return;
+    this.runs.addRound(run.id, { n: (run.rounds.at(-1)?.n ?? 0) + 1, ...phaseRound(before, this.lastResult, this.lastError), costUsd: this.turnCost });
+    this.runs.update(run.id, { round: after.round });
   }
 
   // The agent process is gone; its queued input went with it, but the events stay.
@@ -726,6 +794,9 @@ export class AgentSession implements AgentHost {
     this.setSession({ running: false, stopping: false, compacting: false });
     this.planChange = null;
     this.approvals.denyAll('Claude exited before this was answered.');
+    const repeat = this.state.session.repeat;
+    if (this.roundTurn && repeat?.runId) this.runs.addRound(repeat.runId, { n: repeat.round, outcome: 'failed', line: 'Claude exited', costUsd: 0 });
+    this.roundTurn = false;
     // No result comes for the step that was running, so the loop cannot advance.
     const loop = this.state.session.loop;
     if (looping(loop)) {

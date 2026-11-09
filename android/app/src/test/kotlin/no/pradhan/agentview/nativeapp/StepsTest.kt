@@ -34,6 +34,12 @@ class StepsTest {
     }
 
     @Test
+    fun hidesTheRoundLineOfALoopReply() {
+        val items = buildTranscript(listOf(ChatEvent("a", "assistant", text = "Fixed the test.\n\nROUND: done fixed the test"), ChatEvent("b", "assistant", text = "ROUND: nothing")))
+        assertEquals("Fixed the test.", (items.single() as Item.Assistant).text)
+    }
+
+    @Test
     fun mergesConsecutiveEditsOfOneFileAndKeepsFailures() {
         val edit = { id: String, a: String, b: String -> use(id, "Edit", obj("file_path" to "/x/a.kt", "old_string" to a, "new_string" to b)) }
         val items = buildTranscript(listOf(edit("e1", "one", "two\nthree"), res("r1", "e1"), edit("e2", "x", "y"), res("r2", "e2")))

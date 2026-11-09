@@ -11,11 +11,11 @@ import { loggedInAccounts, rememberAccount, verifyLimit } from '../agent/claude/
 import { configDef } from '../agent/claude/mcp.js';
 import type { AgentSession } from '../session/session.js';
 import { desktopActive } from '../presence.js';
-import { notifyAway, notifyStall, stallWatch } from '../integrations/notify.js';
+import { notifyAway, notifyRunEnded, notifyStall, stallWatch } from '../integrations/notify.js';
 import { allowedFolder } from '../workspace/files.js';
 import { parseTries, startTries, TRIES_USAGE } from '../workspace/tries.js';
 import { ownProfile } from '../chrome/chrome.js';
-import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
+import { MCP_BAD, type ChatRun, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../../shared/edits.js';
 import { errText } from '../../../shared/util.js';
 import { applyInitialModel } from './initialModel.js';
@@ -23,6 +23,7 @@ import { sendWhenChanged } from './changed.js';
 import { costsOf, modelField } from './summaryCache.js';
 import { busy, runningAgents, parseSaved, stoppedOf, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
+import { Runs } from '../session/runs.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
 import { readJson, writeJson, writeJsonSync } from '../json.js';
 
@@ -41,6 +42,7 @@ if (ownProfile()) {
 const IGNORED = /(^|\/)(node_modules|\.git|dist|build|coverage|\.next|\.venv|venv|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|\.tox)(\/|$)/;
 const LAST = path.join(os.homedir(), '.agentview-last.json');
 const RESTORE = path.join(os.homedir(), '.agentview', 'restore.json');
+const RUNS = path.join(os.homedir(), '.agentview', 'runs.json');
 const IDLE_MS = 10 * 60 * 1000;
 const ORPHAN_MS = 5 * 60 * 1000;
 
@@ -73,6 +75,12 @@ const get = (id: string) => {
   if (!chat) throw new Error('This chat was closed');
   return chat;
 };
+
+const runs = new Runs(RUNS, () => broadcastLive(), (run) => {
+  const chat = live.get(run.chatId)?.chat;
+  if (run.why === 'you stopped it' || (chat && viewers(chat))) return;
+  notifyRunEnded(run, chat ? path.basename(chat.cwd) : '', !desktopActive(desktopAt));
+});
 
 const stalls = stallWatch((id) => {
   const l = live.get(id);
@@ -117,17 +125,26 @@ function summary(chat: AgentSession): LiveChat {
     last: replyLine(s.events),
     edits: editsOf(chat),
     ...(s.session.pr && { pr: s.session.pr }),
+    ...runField(runs.activeFor(chat.id)),
   };
+}
+
+function runField(run: ChatRun | undefined): Pick<LiveChat, 'run'> {
+  if (!run) return {};
+  const last = run.rounds.at(-1);
+  return { run: { id: run.id, kind: run.kind, state: run.state, ...(run.why && { why: run.why }), nextAt: run.nextAt, round: run.round, ...(last && { outcome: last.outcome, line: last.line }) } };
 }
 
 const liveList = () => [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
 let liveTimer: NodeJS.Timeout | null = null;
 const sendLive = sendWhenChanged((chats: LiveChat[]) => broadcast({ type: 'live', chats }));
+const sendRuns = sendWhenChanged((list: ChatRun[]) => broadcast({ type: 'runs', runs: list }));
 function broadcastLive() {
   liveTimer ??= setTimeout(() => {
     liveTimer = null;
     for (const { chat } of live.values()) chat.watchHistory(viewers(chat) > 0);
     sendLive(liveList());
+    sendRuns(runs.list());
   }, 100);
 }
 
@@ -135,11 +152,12 @@ async function createChat(cwd: string, resume?: string, title = '', fork = false
   // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.
   await Promise.all(loggedInAccounts().map((a) => verifyLimit(a)));
   const chat = claudeSession(cwd, resume, fork);
+  chat.runs = runs;
   chat.title = title;
   await chat.loadHistory();
   chat.onMessage((m) => {
     broadcast(m, chat);
-    notifyAway(m, () => (viewers(chat) ? null : summary(chat)), () => desktopActive(desktopAt));
+    notifyAway(m, () => (viewers(chat) ? null : summary(chat)), () => desktopActive(desktopAt), chat.roundNote);
     if (m.type === 'session' && chat.state.session.sessionId) rememberAccount(chat.state.session.sessionId, chat.state.session.account);
     if (m.type === 'session' && chat === lastViewed) remember(chat);
     if (m.type === 'session') {
@@ -271,6 +289,7 @@ function saveAndExit() {
   });
   const chats = [...open, ...unrestored.filter((u) => !open.some((c) => c.sessionId === u.sessionId))];
   writeJsonSync(RESTORE, { view: lastViewed?.state.session.sessionId, chats });
+  runs.flush();
   try {
     unlinkSync(SOCK);
   } catch {}
@@ -331,6 +350,9 @@ async function restore() {
     for (const q of s.queued ?? []) void chat.prompt(q.text, q.id);
   }));
   await rm(RESTORE, { force: true });
+  // A run that no restored loop or goal took back has no chat to go on in.
+  const taken = [...live.values()].map(({ chat }) => chat.state.session.repeat?.runId).concat(unrestored.map((u) => u.repeat?.runId));
+  runs.endExcept(taken, 'AgentView restarted');
   saveSoon();
   return (saved.view && bySession(saved.view)) || null;
 }
@@ -427,7 +449,7 @@ async function handle(req: HostRequest): Promise<unknown> {
   switch (req.op) {
     case 'hello':
       await ready;
-      return { last: lastViewed.id, restarting: Boolean(restarting), chats: liveList() } satisfies Hello;
+      return { last: lastViewed.id, restarting: Boolean(restarting), chats: liveList(), runs: runs.list() } satisfies Hello;
     case 'state':
       return get(req.id).view(req.limit);
     case 'events_before':

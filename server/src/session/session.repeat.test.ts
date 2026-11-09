@@ -167,6 +167,95 @@ describe('/goal', () => {
   });
 });
 
+describe('runs', () => {
+  const reply = (handle: (m: unknown) => void, uuid: string, text: string, cost = 0, isError = false) => handle({ type: 'result', subtype: 'success', uuid, result: text, total_cost_usd: cost, is_error: isError });
+
+  it('records two rounds and /loop off as one ended run', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    const { s, handle } = fakeSession();
+    const send = vi.spyOn(s.driver, 'send');
+    await s.prompt('/loop 10m check the build');
+    expect(send.mock.calls.at(-1)?.[0]).toMatch(/^check the build\n\n.*ROUND: <done\|progress/);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: 'check the build' });
+    reply(handle, 'r1', 'Build is green.\nROUND: nothing', 0.1);
+    vi.advanceTimersByTime(10 * 60_000 + 1);
+    reply(handle, 'r2', 'Fixed a test.\nROUND: progress fixed a flaky test', 0.3);
+    await s.prompt('/loop off');
+    expect(s.runs.list()).toHaveLength(1);
+    const run = s.runs.list()[0];
+    expect(run).toMatchObject({ kind: 'loop', what: 'check the build', state: 'done', why: 'you stopped it', round: 2, chatId: s.id });
+    expect(run.costUsd).toBeCloseTo(0.3);
+    expect(run.rounds.map((r) => [r.n, r.outcome, r.line, r.costUsd])).toEqual([[1, 'quiet', '', 0.1], [2, 'progress', 'fixed a flaky test', expect.closeTo(0.2)]]);
+    expect(s.state.session.repeat).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('a goal ends done when it is met, and a usage limit pauses the run until the next round', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
+    const { s, handle } = fakeSession();
+    await s.prompt('/goal the tests pass');
+    handle({ type: 'assistant', parent_tool_use_id: null, error: 'rate_limit', message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am" }], usage: {} } });
+    reply(handle, 'r1', "You've hit your session limit · resets 1:50am", 0, true);
+    expect(s.runs.list()[0]).toMatchObject({ state: 'paused', why: 'usage limit until 01:51', nextAt: Date.now() + 111 * 60_000 });
+    expect(s.runs.list()[0].rounds[0].outcome).toBe('failed');
+    vi.advanceTimersByTime(112 * 60_000);
+    expect(s.runs.list()[0]).toMatchObject({ state: 'running', why: '', round: 2 });
+    reply(handle, 'r2', 'All green. GOAL MET');
+    expect(s.runs.list()[0]).toMatchObject({ kind: 'goal', state: 'done', why: 'goal met' });
+    expect(s.runs.list()[0].rounds.map((r) => r.outcome)).toEqual(['failed', 'done']);
+    vi.useRealTimers();
+  });
+
+  it('waits for approval while a permission is pending, and ends with the chat', async () => {
+    vi.useFakeTimers();
+    const { s } = fakeSession();
+    vi.spyOn(s.driver, 'close').mockImplementation(() => {});
+    await s.prompt('/loop 10m check the build');
+    const ask = s.canUseTool('Bash', { command: 'ls' }, { signal: new AbortController().signal } as never);
+    expect(s.runs.list()[0]).toMatchObject({ state: 'paused', why: 'waiting for your approval' });
+    s.answerPermission(s.state.pending[0].id, true);
+    await ask;
+    expect(s.runs.list()[0]).toMatchObject({ state: 'running', why: '' });
+    s.close();
+    expect(s.runs.list()[0]).toMatchObject({ state: 'done', why: 'chat closed' });
+    vi.useRealTimers();
+  });
+
+  it('a restored loop keeps its run and history and moves the run to the new chat', async () => {
+    vi.useFakeTimers();
+    const first = fakeSession();
+    await first.s.prompt('/loop 10m check the build');
+    reply(first.handle, 'r1', 'Nothing new.\nROUND: nothing');
+    const repeat = first.s.state.session.repeat!;
+    const second = fakeSession();
+    second.s.runs = first.s.runs;
+    second.s.resumeRepeat(repeat);
+    expect(first.s.runs.list()).toHaveLength(1);
+    expect(second.s.state.session.repeat?.runId).toBe(repeat.runId);
+    expect(first.s.runs.get(repeat.runId)).toMatchObject({ chatId: second.s.id, state: 'running' });
+    expect(first.s.runs.get(repeat.runId)?.rounds).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  it('a build cycle is one run with a round per step', async () => {
+    const { s, handle } = fakeSession();
+    Object.assign(s.driver, { q: { interrupt: vi.fn(), setModel: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
+    s.setLoop(true, 2);
+    await s.prompt('add the thing');
+    expect(s.runs.list()[0]).toMatchObject({ kind: 'cycle', what: 'add the thing', max: 2, state: 'running' });
+    reply(handle, 'p1', 'Plan: change two files.');
+    await vi.waitFor(() => expect(s.state.session.loop.phase).toBe('build'));
+    reply(handle, 'b1', 'Built it.');
+    await vi.waitFor(() => expect(s.state.session.loop.phase).toBe('test'));
+    reply(handle, 't1', 'Checked.\nVERDICT: PASS', 0.5);
+    const run = s.runs.list()[0];
+    expect(run.rounds.map((r) => r.outcome)).toEqual(['progress', 'progress', 'done']);
+    expect(run).toMatchObject({ state: 'done', why: 'the tester approved after 1 round' });
+  });
+});
+
 // A seeded random walk over the send paths. Run with FUZZ_SEEDS=500 to hammer it.
 describe('send queue fuzz', () => {
   const seeds = Number(process.env.FUZZ_SEEDS ?? 10);

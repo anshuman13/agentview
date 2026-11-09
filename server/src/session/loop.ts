@@ -1,4 +1,5 @@
-import type { LoopPhase, LoopState } from '../../../shared/protocol.js';
+import type { LoopPhase, LoopState, RoundOutcome } from '../../../shared/protocol.js';
+import { firstSentence } from './runs.js';
 
 const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: 'claude-sonnet-5-5' } as const;
 
@@ -22,6 +23,15 @@ export const planChangeText = (next: string[]) =>
 export function verdictOf(text: string): 'pass' | 'fail' | null {
   const m = [...text.matchAll(/^\s*\**VERDICT:?\**\s*\**(PASS|FAIL)\**/gim)].at(-1);
   return m ? (m[1].toUpperCase() === 'PASS' ? 'pass' : 'fail') : null;
+}
+
+// The round a finished step adds to the cycle's run: the tester's verdict decides the test step, the others are progress.
+export function phaseRound(state: LoopState, result: string, failed: boolean): { outcome: RoundOutcome; line: string } {
+  const test = state.phase === 'test';
+  const label = test ? `Test ${state.round}/${state.max}` : state.phase === 'plan' ? 'Plan' : state.round > 1 ? 'Fix' : 'Build';
+  const outcome = failed || (test && verdictOf(result) !== 'pass') ? 'failed' : test ? 'done' : 'progress';
+  const text = firstSentence(result);
+  return { outcome, line: text ? `${label}: ${text}` : label };
 }
 
 export function needsApproval(plan: string): boolean {

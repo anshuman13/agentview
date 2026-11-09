@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { readJson } from '../json.js';
-import type { LiveChat, ServerMessage } from '../../../shared/protocol.js';
+import type { ChatRun, LiveChat, RoundOutcome, ServerMessage } from '../../../shared/protocol.js';
+import { stripRound } from '../../../shared/edits.js';
 
 const last = new Map<string, { at: number; key: string }>();
 const FIFO = path.join(os.homedir(), '.agentview/notify.fifo');
@@ -11,14 +12,20 @@ const APP = 'http://localhost:7777';
 
 function detail(m: ServerMessage) {
   if (m.type === 'pending') return m.request.kind === 'question' ? m.request.questions[0]?.question ?? 'Claude has a question' : m.request.title;
-  if (m.type === 'event' && m.event.kind === 'result') return m.event.text.trim().split('\n')[0] || 'Turn ended';
+  if (m.type === 'event' && m.event.kind === 'result') return stripRound(m.event.text).trim().split('\n')[0] || 'Turn ended';
   return null;
 }
 
+// A loop round or goal check pushes only when it needs the user or ended the work.
+const ROUND_PUSH: Partial<Record<RoundOutcome, string>> = { done: 'done', blocked: 'blocked', question: 'question', failed: 'failed' };
+
 // With a desktop client active in the last 3 minutes the menu bar notification still shows but the ntfy push is skipped.
-export function notifyAway(m: ServerMessage, away: () => LiveChat | null, desktopActive: () => boolean = () => false) {
+export function notifyAway(m: ServerMessage, away: () => LiveChat | null, desktopActive: () => boolean = () => false, round: { outcome: RoundOutcome; line: string } | null = null) {
   const body = detail(m);
   if (body === null) return;
+  const ended = m.type === 'event' ? round : null;
+  const word = ended && ROUND_PUSH[ended.outcome];
+  if (ended && !word) return;
   const chat = away();
   if (!chat) return;
   const kind = m.type === 'pending' ? 'needs' : 'finished';
@@ -26,8 +33,13 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null, deskto
   const prev = last.get(`${chat.id}:${kind}`);
   if (prev && prev.key === key && Date.now() - prev.at < 30_000) return;
   last.set(`${chat.id}:${kind}`, { at: Date.now(), key });
-  const title = `Claude ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
-  post(title, chat.title, body.slice(0, 200), `${APP}/?chat=${chat.id}`, !desktopActive());
+  const title = word ? `Loop in ${path.basename(chat.cwd)}: ${word}` : `Claude ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
+  post(title, chat.title, (ended?.line || body).slice(0, 200), `${APP}/?chat=${chat.id}`, !desktopActive());
+}
+
+export function notifyRunEnded(run: ChatRun, repo: string, push: boolean) {
+  const kind = run.kind === 'cycle' ? 'Build cycle' : run.kind === 'goal' ? 'Goal' : 'Loop';
+  post(`${kind} ended${repo ? ` in ${repo}` : ''}`, run.title, run.why, `${APP}/?view=runs`, push);
 }
 
 // The menu bar app shows the notification and opens url when it is clicked. Without it only the ntfy push goes out.
