@@ -1,4 +1,4 @@
-import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { forgetSeenBefore, getState, loadEarlier, notice, seenBefore, send, setUi, useStore } from '../../app/store';
 import { assistantStore } from '../../codex/data';
 import { quoteReply, replyNote } from '../composer/composerLogic';
@@ -26,27 +26,7 @@ function lastUserId(items: Item[]) {
   return '';
 }
 
-function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean }) {
-  const [build] = useState(createTranscriptBuilder);
-  const items = useMemo(() => build(events), [build, events]);
-  const box = useRef<HTMLDivElement>(null);
-  const rows = useRef<HTMLDivElement>(null);
-  const stick = useRef(true);
-  const size = useRef('');
-  const [stuck, setStuck] = useState(true);
-  const [behind, setBehind] = useState(false);
-  const [leftAt, setLeftAt] = useState('');
-  const lastUser = useRef('');
-  const [shown, setShown] = useState(ROW_WINDOW);
-  const [staged, setStaged] = useState(FIRST_ROWS);
-  const grew = useRef(0);
-  const [loading, setLoading] = useState(false);
-  const start = windowStart(items.length, shown);
-  const from = windowStart(items.length, Math.min(staged, shown));
-  const staging = staged < Math.min(shown, items.length);
-  const last = events[events.length - 1];
-  const runs = useMemo(() => exploreRuns(items), [items]);
-  const [openRuns, setOpenRuns] = useState(() => new Set<string>());
+function useSeenMark(events: ChatEvent[]) {
   const seenTimes = useStore((s) => s.seen);
   const [mark, setMark] = useState(() => ({ seen: -1, openedAt: Date.now() }));
   // After a reload the seen times arrive after mount, so the mark waits for them.
@@ -56,11 +36,19 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     setMark({ ...mark, seen: seenBefore(id) });
     forgetSeenBefore(id);
   }, [seenTimes, mark]);
-  const days = useMemo(() => dayDividers(items, Date.now()), [items]);
-  const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
-  const recap = useStore((s) => s.live.find((c) => c.id === s.session.id)?.recap);
-  const [since, setSince] = useState(true);
-  const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
+  return mark;
+}
+
+// Follows the bottom of the rows while the reader stays there, and tracks how far behind they are when they scroll up.
+function useStickyScroll(items: Item[], last: ChatEvent | undefined, running: boolean) {
+  const box = useRef<HTMLDivElement>(null);
+  const rows = useRef<HTMLDivElement>(null);
+  const stick = useRef(true);
+  const size = useRef('');
+  const lastUser = useRef('');
+  const [stuck, setStuck] = useState(true);
+  const [behind, setBehind] = useState(false);
+  const [leftAt, setLeftAt] = useState('');
 
   useEffect(() => {
     const el = box.current;
@@ -87,6 +75,40 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     return () => ro.disconnect();
   }, []);
 
+  const onScroll = () => {
+    const el = box.current;
+    if (!el) return;
+    // The browser scrolls on its own when the content or box changes size; only a scroll at a steady size is the user's.
+    const now = `${el.scrollHeight},${el.clientHeight}`;
+    if (now !== size.current) { size.current = now; return; }
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (stick.current && !near) setLeftAt(items[items.length - 1]?.id ?? '');
+    stick.current = near;
+    setStuck(near);
+    if (near) setBehind(false);
+  };
+
+  const jump = () => {
+    const el = box.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    stick.current = true;
+    setStuck(true);
+    setBehind(false);
+  };
+
+  return { box, rows, stick, stuck, behind, leftAt, onScroll, jump };
+}
+
+// How many rows are shown, staged in over idle time, and loaded from earlier history on request.
+function useRowWindow(count: number, box: RefObject<HTMLDivElement | null>, stick: RefObject<boolean>) {
+  const [shown, setShown] = useState(ROW_WINDOW);
+  const [staged, setStaged] = useState(FIRST_ROWS);
+  const grew = useRef(0);
+  const [loading, setLoading] = useState(false);
+  const start = windowStart(count, shown);
+  const from = windowStart(count, Math.min(staged, shown));
+  const staging = staged < Math.min(shown, count);
+
   useLayoutEffect(() => {
     const el = box.current;
     const delta = el ? el.scrollHeight - grew.current : 0;
@@ -94,7 +116,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
       el.scrollTop += delta;
       grew.current = 0;
     }
-  }, [shown, staged, items.length]);
+  }, [shown, staged, count]);
 
   useEffect(() => {
     if (!staging) return;
@@ -115,7 +137,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     const mark = () => (grew.current = box.current?.scrollHeight ?? 0);
     if (start > 0) {
       mark();
-      const next = revealMore(shown, items.length);
+      const next = revealMore(shown, count);
       setShown(next);
       setStaged(next);
       return;
@@ -127,28 +149,25 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     if (ok) { mark(); setShown(shown + ROW_WINDOW); setStaged(shown + ROW_WINDOW); }
   };
 
-  const onScroll = () => {
-    const el = box.current;
-    if (!el) return;
-    // The browser scrolls on its own when the content or box changes size; only a scroll at a steady size is the user's.
-    const now = `${el.scrollHeight},${el.clientHeight}`;
-    if (now !== size.current) { size.current = now; return; }
-    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    if (stick.current && !near) setLeftAt(items[items.length - 1]?.id ?? '');
-    stick.current = near;
-    setStuck(near);
-    if (near) setBehind(false);
-  };
+  return { shown, start, from, staging, loading, showEarlier };
+}
 
-  const replies = stuck ? 0 : newReplies(items, leftAt);
-
-  const jump = () => {
-    const el = box.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-    stick.current = true;
-    setStuck(true);
-    setBehind(false);
-  };
+function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean }) {
+  const [build] = useState(createTranscriptBuilder);
+  const items = useMemo(() => build(events), [build, events]);
+  const last = events[events.length - 1];
+  const scroll = useStickyScroll(items, last, running);
+  const { box, rows, stuck, behind, onScroll, jump } = scroll;
+  const { shown, start, from, staging, loading, showEarlier } = useRowWindow(items.length, box, scroll.stick);
+  const runs = useMemo(() => exploreRuns(items), [items]);
+  const [openRuns, setOpenRuns] = useState(() => new Set<string>());
+  const mark = useSeenMark(events);
+  const days = useMemo(() => dayDividers(items, Date.now()), [items]);
+  const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
+  const recap = useStore((s) => s.live.find((c) => c.id === s.session.id)?.recap);
+  const [since, setSince] = useState(true);
+  const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
+  const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
 
   return (
     <div className="tr-host">
