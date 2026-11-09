@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { isDragging } from '../codex/drag';
 import { haptic } from '../ui/haptic';
 
-export const EDGE_START = 20;
-export const MIN_DX = 70;
+const EDGE_START = 20;
+const MIN_DX = 70;
 export const MAX_MS = 600;
 
 type Point = { x: number; y: number };

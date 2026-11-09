@@ -3,7 +3,7 @@ import { dayLabel, dayStart } from './dates';
 import { atTime } from './engine';
 import { parseTimes, type ItemRow } from './sync';
 
-export type HistoryEntry = { field: 'status' | 'at' | 'assignee'; title: string; at: number };
+type HistoryEntry = { field: 'status' | 'at' | 'assignee'; title: string; at: number };
 
 const noun = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 

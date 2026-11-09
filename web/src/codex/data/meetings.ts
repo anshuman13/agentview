@@ -85,7 +85,7 @@ export const displayName = (s: string) => (s.includes('@') ? words(s).map((w) =>
 
 // The same person by name or email, ignoring case.
 export const sameName = (a: string, b: string) => words(a).join(' ').toLowerCase() === words(b).join(' ').toLowerCase();
-export const MAX_PEOPLE = 8;
+const MAX_PEOPLE = 8;
 
 // The best name for a person: a non-email form some meeting lists for them, else one derived from the email.
 export const nameOf = (meetings: Meeting[], person: string) =>

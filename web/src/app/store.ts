@@ -144,7 +144,7 @@ function notifyBackground(chats: LiveChat[]) {
 const SEEN_URL = '/api/sessions/seen';
 
 // Seen times live on the Mac, so every device clears the same unread marks.
-export function loadSeen() {
+function loadSeen() {
   fetch(apiUrl(SEEN_URL)).then((r) => r.json()).then((seen) => {
     if (!seen || typeof seen !== 'object' || Array.isArray(seen)) return;
     seenLoaded = true;

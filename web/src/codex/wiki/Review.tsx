@@ -229,8 +229,3 @@ export function Stale() {
   const { stale, title } = useLook();
   return <Rows label="Stale" list={stale} row={staleRow(title)} />;
 }
-
-export function Drift() {
-  const { drift, title } = useLook();
-  return <Rows label="Maybe changed" list={drift} row={driftRow(title)} />;
-}

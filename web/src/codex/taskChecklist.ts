@@ -1,6 +1,6 @@
 import { withRule } from './data/recur';
 
-export const CHECK_RE = /^\s*[-*] \[([ xX])\](.*)$/gm;
+const CHECK_RE = /^\s*[-*] \[([ xX])\](.*)$/gm;
 
 const LINE_RE = new RegExp(CHECK_RE.source, 'm');
 

@@ -19,12 +19,12 @@ import { Badge } from '../../ui/Badge';
 
 const mine = (r: ItemRow) => tagList(r.tags).includes('needs-you');
 // The scan tags an answer that rests on a live wiki claim with high confidence as faq: safe to send without reading.
-export const isFaq = (r: ItemRow) => tagList(r.tags).includes('faq');
+const isFaq = (r: ItemRow) => tagList(r.tags).includes('faq');
 
 const drafted = (r: ItemRow) => !!r.draft?.trim();
 // Invites, seats and limit bumps: I grant these in an admin console, so the queue offers them as one list.
 const admin = (r: ItemRow) => tagList(r.tags).some((t) => t === 'access' || t === 'limit');
-export const adminList = (rows: ItemRow[]) => rows.filter(admin).map((r) => `- ${r.people || 'Slack'}: ${r.title}${r.source_url ? ` ${r.source_url}` : ''}`).join('\n');
+const adminList = (rows: ItemRow[]) => rows.filter(admin).map((r) => `- ${r.people || 'Slack'}: ${r.title}${r.source_url ? ` ${r.source_url}` : ''}`).join('\n');
 
 // Slack asks with a reply draft, the ones that need me first, then FAQ answers, then oldest first, so a day's asks clear from one screen.
 // Needs-you asks the drafter left without a draft come last: I decide those in the thread.

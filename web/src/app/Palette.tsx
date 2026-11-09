@@ -23,7 +23,7 @@ export type Match = { score: number; hits: number[] };
 export type Row = { cmd: Command; hits: number[]; recent: boolean };
 
 export type PaletteItem = { kind: 'task' | 'meeting' | 'wiki'; profile: string; id: string; title: string; at: number | null };
-export type ItemHit = { item: PaletteItem; hits: number[] };
+type ItemHit = { item: PaletteItem; hits: number[] };
 
 const KEY = 'agentview.palette';
 const ITEMS_KEY = 'agentview.palette.items';

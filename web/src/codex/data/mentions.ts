@@ -3,9 +3,9 @@ import type { ItemRow } from './sync';
 import { byDue } from './tagTasks';
 import { live, type Meeting } from './wiki';
 
-export const MENTIONS_SHOWN = 3;
+const MENTIONS_SHOWN = 3;
 
-export type Mention = { kind: 'task' | 'meeting'; profile: string; id: string; title: string; at: number | null };
+type Mention = { kind: 'task' | 'meeting'; profile: string; id: string; title: string; at: number | null };
 export type Mentions = { shown: Mention[]; rest: Mention[] };
 type Entry = { mention: Mention; hay: string; words: Set<string>; order: number };
 

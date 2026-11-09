@@ -13,7 +13,7 @@ import { when } from './time';
 
 // A reschedule to a future day starts over, so it clears the rollover history; one to today or earlier keeps it.
 export const UNROLL = { rolls: null, rolled_from: null };
-export const unrollFor = (at: number | null | undefined, now = Date.now()) => (at != null && at >= dayEnd(now) ? UNROLL : {});
+const unrollFor = (at: number | null | undefined, now = Date.now()) => (at != null && at >= dayEnd(now) ? UNROLL : {});
 
 const capturing = new Set<string>();
 

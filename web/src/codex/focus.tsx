@@ -57,7 +57,7 @@ export function stopFocus() {
   if (finish()) push('DELETE');
 }
 
-export function discardFocus() {
+function discardFocus() {
   write(null);
   push('DELETE');
 }

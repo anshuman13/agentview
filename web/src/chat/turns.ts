@@ -9,7 +9,7 @@ type CommandFact = { id: string; label: string; done?: boolean; error?: string; 
 type CommitFact = { hash: string; subject: string };
 type AgentFact = { id: string; label: string; type: string; state: 'running' | 'done' | 'failed' | 'stopped' | 'denied' };
 type NoteFact = { id: string; text: string; kind: 'done' | 'important' | 'fable' };
-export type Blocked = Extract<ChatEvent, { kind: 'blocked' }>;
+type Blocked = Extract<ChatEvent, { kind: 'blocked' }>;
 
 // A failed command stops counting once a later command in the same turn succeeds.
 export function openFailures(commands: CommandFact[]) {

@@ -20,10 +20,10 @@ type Pick = { at: number | null; cadence: Cadence; remind?: number | null };
 
 export const PRIORITIES: [number, string][] = [[3, 'High'], [2, 'Medium'], [1, 'Low'], [0, 'No']];
 export const REMINDS: [number | null, string][] = [[null, 'On time'], [5, '5 min early'], [30, '30 min early'], [60, '1 hour early'], [1440, '1 day early'], [-1, 'None']];
-export const remindLabel = (r: number | null | undefined) => REMINDS.find(([v]) => v === (r ?? null))?.[1] ?? `${r} min early`;
+const remindLabel = (r: number | null | undefined) => REMINDS.find(([v]) => v === (r ?? null))?.[1] ?? `${r} min early`;
 export const tagList = (tags: string | null | undefined) => (tags ?? '').split(/\s+/).filter(Boolean);
 // "#home call mum #errands" is the title "call mum" with the tags home and errands.
-export const takeTags = (typed: string) => ({ title: typed.replace(/(^|\s)#[\p{L}\d_-]+/gu, '').replace(/\s+/g, ' ').trim(), tags: [...typed.matchAll(/(?:^|\s)#([\p{L}\d_-]+)/gu)].map((m) => m[1].toLowerCase()) });
+const takeTags = (typed: string) => ({ title: typed.replace(/(^|\s)#[\p{L}\d_-]+/gu, '').replace(/\s+/g, ' ').trim(), tags: [...typed.matchAll(/(?:^|\s)#([\p{L}\d_-]+)/gu)].map((m) => m[1].toLowerCase()) });
 
 // A flag coloured by priority, like TickTick's.
 export function Flag({ priority }: { priority: number | null | undefined }) {

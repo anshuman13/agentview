@@ -7,7 +7,7 @@ const SWIPE = 80;
 // A left swipe past this share of the row deletes instead of snoozing.
 const SWIPE_DELETE = 0.55;
 
-export type SwipeEnd = 'right' | 'left' | 'delete' | null;
+type SwipeEnd = 'right' | 'left' | 'delete' | null;
 // What a finger lifted after dx px (of a row width px wide) fires. Delete needs a left swipe past the delete share
 // (or any left swipe when there is no left action); right needs its action, left needs its action.
 export function swipeEnd(dx: number, width: number, has: { right: boolean; left: boolean; delete: boolean }): SwipeEnd {

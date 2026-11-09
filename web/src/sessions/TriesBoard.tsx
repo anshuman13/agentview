@@ -8,7 +8,7 @@ import { Sheet } from '../ui/Sheet';
 import { money } from '../ui/util';
 import type { ChatRun, LiveChat, Try } from '../../../shared/protocol';
 
-export type TryColumn = { n: number; branch: string; state: BadgeSpec; line: string; edits?: LiveChat['edits']; cost: number; archived: boolean };
+type TryColumn = { n: number; branch: string; state: BadgeSpec; line: string; edits?: LiveChat['edits']; cost: number; archived: boolean };
 
 // One column of the board: the try's chat state, its last report, the diff size and cost.
 export function tryColumn(run: ChatRun, t: Try, live: LiveChat[]): TryColumn {

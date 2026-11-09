@@ -17,7 +17,7 @@ export function goalsOf(items: ItemRow[], now: number, profile?: Profile) {
     .sort((a, b) => madeAt(a) - madeAt(b));
 }
 
-export const linkedTo = (items: ItemRow[], goal: ItemRow) =>
+const linkedTo = (items: ItemRow[], goal: ItemRow) =>
   items.filter((r) => !r.deleted && r.profile === goal.profile && r.goal === goal.id && (r.status === 'open' || r.status === 'done'));
 
 export function goalProgress(items: ItemRow[], goal: ItemRow) {
@@ -39,7 +39,7 @@ export function goalAtRisk(items: ItemRow[], goal: ItemRow, freeMin: number) {
   return need > freeMin;
 }
 
-export const GOAL_WEEKS = 8;
+const GOAL_WEEKS = 8;
 
 // Goals of next week, this week and the 7 before it, newest week first; weeks without goals are left out.
 export function goalHistory(items: ItemRow[], now: number, profile?: Profile) {
