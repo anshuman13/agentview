@@ -68,7 +68,7 @@ The `init` for a client opening a chat is a tail: the host `state` op takes a `l
 last `limit` events (150, `ROW_WINDOW`) plus `earlier`, the count left out. Older events come from
 `GET /api/chat/events?chat=&before=<event id>&limit=` (host op `events_before`, `Session.before`), at most 500 per page.
 `/api/state` and the `init` the session broadcasts hold every event. A tail `init` for the chat on screen keeps the older
-events already paged in (`mergeTail` in `web/src/app/pageEvents.ts`).
+events already paged in (`mergeTail` in `web/src/app/runtime/pageEvents.ts`).
 
 `web/src` is grouped by feature: `app` (shell, store, API, palette), `ui` (shared widgets and helpers), `chat`,
 `sessions`, `workspace` (files, code, terminal, browser), `ops` (Observe, Deploy, GitHub, MCP), `codex` (with `data`, `jobs`,
