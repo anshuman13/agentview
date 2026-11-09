@@ -97,6 +97,69 @@ function applyValid(db: Database, changes: Change[]): { version: number; applied
   return { ...write(db, good), rejected };
 }
 
+type StoredRow = { version: number; updated_at: number; field_times: string | null; deleted: number };
+
+type Merge = {
+  valuesToSet: Record<string, unknown>;
+  fieldTimes: Record<string, number>;
+  deleted: number;
+  hasChanges: boolean;
+};
+
+function mergeChange(change: Change, row: StoredRow | null): Merge {
+  const { deleted, updated_at, fields, field_times } = change;
+  const storedFieldTimes: Record<string, number> = row?.field_times ? JSON.parse(row.field_times) : {};
+  const merge: Merge = { valuesToSet: {}, fieldTimes: { ...storedFieldTimes }, deleted: row?.deleted ?? 0, hasChanges: false };
+
+  for (const [field, value] of Object.entries(fields)) {
+    const changeFieldTime = field_times?.[field] ?? updated_at;
+    if (changeFieldTime > (storedFieldTimes[field] ?? 0)) {
+      merge.valuesToSet[field] = value;
+      merge.fieldTimes[field] = changeFieldTime;
+      merge.hasChanges = true;
+    }
+  }
+
+  if (deleted !== undefined && updated_at > (storedFieldTimes['deleted'] ?? 0)) {
+    merge.deleted = deleted ? 1 : 0;
+    merge.fieldTimes['deleted'] = updated_at;
+    merge.hasChanges = true;
+  }
+  return merge;
+}
+
+function insertRow(db: Database, change: Change, merge: Merge, version: number, updatedAt: number) {
+  const allColumns = ['id', 'profile', 'version', 'updated_at', 'deleted', 'field_times', ...Object.keys(merge.valuesToSet)];
+  const vals = [change.id, change.profile, version, updatedAt, merge.deleted, JSON.stringify(merge.fieldTimes), ...Object.values(merge.valuesToSet)];
+  const sql = `INSERT INTO ${change.table} (${allColumns.join(', ')}) VALUES (${allColumns.map(() => '?').join(', ')})`;
+  stmt(db, sql).run(...(vals as any[]));
+}
+
+function updateRow(db: Database, change: Change, merge: Merge, version: number, updatedAt: number) {
+  const setClauses = ['version = ?', 'updated_at = ?', 'deleted = ?', 'field_times = ?'];
+  const vals: any[] = [version, updatedAt, merge.deleted, JSON.stringify(merge.fieldTimes)];
+  for (const [field, value] of Object.entries(merge.valuesToSet)) {
+    setClauses.push(`${field} = ?`);
+    vals.push(value);
+  }
+  vals.push(change.id, change.profile);
+  stmt(db, `UPDATE ${change.table} SET ${setClauses.join(', ')} WHERE id = ? AND profile = ?`).run(...vals);
+}
+
+// Returns the new row version, or null when every field of the change is older than what is stored.
+function applyChange(db: Database, change: Change): number | null {
+  const row = stmt(db, `SELECT version, updated_at, field_times, deleted FROM ${change.table} WHERE id = ? AND profile = ?`)
+    .get(change.id, change.profile) as StoredRow | null;
+  const merge = mergeChange(change, row);
+  if (!merge.hasChanges) return null;
+
+  const version = nextVersion(db);
+  const updatedAt = Math.max(row?.updated_at ?? 0, change.updated_at);
+  if (row) updateRow(db, change, merge, version, updatedAt);
+  else insertRow(db, change, merge, version, updatedAt);
+  return version;
+}
+
 function write(
   db: Database,
   changes: Change[]
@@ -106,90 +169,9 @@ function write(
 
   const txn = db.transaction(() => {
     for (const change of changes) {
-      const { table, id, profile, deleted, updated_at, fields, field_times } = change;
-
-      const selectStmt = stmt(
-        db,
-        `SELECT version, updated_at, field_times, deleted FROM ${table} WHERE id = ? AND profile = ?`
-      );
-      const row = selectStmt.get(id, profile) as any;
-
-      const storedUpdatedAt = row?.updated_at ?? 0;
-      const storedFieldTimes: Record<string, number> = row?.field_times ? JSON.parse(row.field_times) : {};
-      const storedDeleted = row?.deleted ?? 0;
-
-      const newFieldTimes: Record<string, number> = { ...storedFieldTimes };
-      const valuesToSet: Record<string, unknown> = {};
-      let hasChanges = false;
-
-      for (const [field, value] of Object.entries(fields)) {
-        const changeFieldTime = field_times?.[field] ?? updated_at;
-        const storedFieldTime = storedFieldTimes[field] ?? 0;
-
-        if (changeFieldTime > storedFieldTime) {
-          valuesToSet[field] = value;
-          newFieldTimes[field] = changeFieldTime;
-          hasChanges = true;
-        }
-      }
-
-      let finalDeleted = storedDeleted;
-      if (deleted !== undefined) {
-        const changeDeletedTime = updated_at;
-        const storedDeletedTime = storedFieldTimes['deleted'] ?? 0;
-
-        if (changeDeletedTime > storedDeletedTime) {
-          finalDeleted = deleted ? 1 : 0;
-          newFieldTimes['deleted'] = changeDeletedTime;
-          hasChanges = true;
-        }
-      }
-
-      if (!hasChanges) {
-        continue;
-      }
-
-      const newUpdatedAt = Math.max(storedUpdatedAt, updated_at);
-      const newVersion = nextVersion(db);
-
-      if (!row) {
-        const dataColumns = Object.keys(valuesToSet);
-        const allColumns = ['id', 'profile', 'version', 'updated_at', 'deleted', 'field_times', ...dataColumns];
-        const vals = [id, profile, newVersion, newUpdatedAt, finalDeleted, JSON.stringify(newFieldTimes), ...Object.values(valuesToSet)];
-
-        let sql = `INSERT INTO ${table} (`;
-        sql += allColumns.join(', ');
-        sql += `) VALUES (${allColumns.map(() => '?').join(', ')})`;
-
-        const insertStmt = stmt(db, sql);
-        insertStmt.run(...vals);
-      } else {
-        const setClauses = [];
-        const vals: any[] = [];
-
-        setClauses.push('version = ?');
-        vals.push(newVersion);
-        setClauses.push('updated_at = ?');
-        vals.push(newUpdatedAt);
-        setClauses.push('deleted = ?');
-        vals.push(finalDeleted);
-        setClauses.push('field_times = ?');
-        vals.push(JSON.stringify(newFieldTimes));
-
-        for (const [field, value] of Object.entries(valuesToSet)) {
-          setClauses.push(`${field} = ?`);
-          vals.push(value);
-        }
-
-        vals.push(id);
-        vals.push(profile);
-
-        let sql = `UPDATE ${table} SET ${setClauses.join(', ')} WHERE id = ? AND profile = ?`;
-        const updateStmt = stmt(db, sql);
-        updateStmt.run(...vals);
-      }
-
-      maxVersion = Math.max(maxVersion, newVersion);
+      const version = applyChange(db, change);
+      if (version === null) continue;
+      maxVersion = Math.max(maxVersion, version);
       applied++;
     }
   });
@@ -199,11 +181,27 @@ function write(
   return { version: maxVersion, applied };
 }
 
+
 // Pushes and pulls in one step. The since check runs before the push, which would otherwise raise the hub version past it.
 export function exchange(db: Database, since: number, changes: Change[]): PullResult & { rejected: Rejected[] } {
   if (since > currentVersion(db)) since = 0;
   const { rejected } = applyValid(db, changes);
   return { ...pullChanges(db, since), rejected };
+}
+
+function pulledChange(table: string, row: any): PulledChange {
+  const fields: Record<string, unknown> = {};
+  for (const col of TABLES[table]) fields[col] = row[col];
+  return {
+    table,
+    id: row.id,
+    profile: row.profile,
+    deleted: row.deleted === 1,
+    updated_at: row.updated_at,
+    version: row.version,
+    fields,
+    field_times: JSON.parse(row.field_times),
+  };
 }
 
 export function pullChanges(
@@ -242,28 +240,8 @@ export function pullChanges(
   const changes: PulledChange[] = [];
   let maxVersion = since;
 
-  for (let i = 0; i < Math.min(limit, allRows.length); i++) {
-    const { table, row } = allRows[i];
-    const dataColumns = TABLES[table];
-    const fieldTimes = JSON.parse(row.field_times);
-    const fields: Record<string, unknown> = {};
-
-    for (const col of dataColumns) {
-      fields[col] = row[col];
-    }
-
-    const change: PulledChange = {
-      table,
-      id: row.id,
-      profile: row.profile,
-      deleted: row.deleted === 1,
-      updated_at: row.updated_at,
-      version: row.version,
-      fields,
-      field_times: fieldTimes,
-    };
-
-    changes.push(change);
+  for (const { table, row } of allRows.slice(0, limit)) {
+    changes.push(pulledChange(table, row));
     maxVersion = row.version;
   }
 

@@ -44,16 +44,7 @@ function createIndexSQL(tableName: string): string {
   return `CREATE INDEX IF NOT EXISTS ${tableName}_version_idx ON ${tableName}(version)`;
 }
 
-export function openDb(file: string = DB_PATH): Database {
-  if (file !== ':memory:') {
-    fs.mkdirSync(DB_DIR, { recursive: true });
-  }
-
-  const db = new Database(file);
-  db.run('PRAGMA journal_mode = WAL');
-  db.run('PRAGMA foreign_keys = OFF');
-  db.run('PRAGMA busy_timeout = 5000');
-
+function createHubTables(db: Database) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS meta (
       key TEXT PRIMARY KEY,
@@ -105,28 +96,39 @@ export function openDb(file: string = DB_PATH): Database {
       PRIMARY KEY (profile, id)
     )
   `);
-  const replyCols = new Set((db.prepare('PRAGMA table_info(replies)').all() as { name: string }[]).map((c) => c.name));
-  if (!replyCols.has('edited')) db.exec('ALTER TABLE replies ADD COLUMN edited INTEGER');
-  if (!replyCols.has('claims')) db.exec('ALTER TABLE replies ADD COLUMN claims TEXT');
-  if (!replyCols.has('thread')) db.exec('ALTER TABLE replies ADD COLUMN thread TEXT');
-  if (!replyCols.has('tries')) db.exec('ALTER TABLE replies ADD COLUMN tries INTEGER');
-  if (!replyCols.has('draft_text')) db.exec('ALTER TABLE replies ADD COLUMN draft_text TEXT');
-  if (!replyCols.has('skip_reason')) db.exec('ALTER TABLE replies ADD COLUMN skip_reason TEXT');
+}
 
+const columnsOf = (db: Database, table: string) =>
+  new Set((db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name));
+
+function addRepliesColumns(db: Database) {
+  const existing = columnsOf(db, 'replies');
+  const added = ['edited INTEGER', 'claims TEXT', 'thread TEXT', 'tries INTEGER', 'draft_text TEXT', 'skip_reason TEXT'];
+  for (const column of added) {
+    if (!existing.has(column.split(' ')[0])) db.exec(`ALTER TABLE replies ADD COLUMN ${column}`);
+  }
+}
+
+function syncTables(db: Database) {
   for (const [tableName, dataColumns] of Object.entries(TABLES)) {
     db.exec(createTableSQL(tableName, dataColumns));
     db.exec(createIndexSQL(tableName));
-    const existing = new Set((db.prepare(`PRAGMA table_info(${tableName})`).all() as { name: string }[]).map((c) => c.name));
+    const existing = columnsOf(db, tableName);
     for (const col of dataColumns) {
       if (!existing.has(col)) db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${col}`);
     }
   }
+}
+
+function createLookupIndexes(db: Database) {
   db.exec('CREATE INDEX IF NOT EXISTS items_meeting_idx ON items(profile, meeting_id)');
   db.exec('CREATE INDEX IF NOT EXISTS items_status_idx ON items(profile, status)');
   db.exec('CREATE INDEX IF NOT EXISTS meetings_starts_idx ON meetings(starts_at)');
   db.exec('CREATE INDEX IF NOT EXISTS facts_replaces_idx ON facts(profile, replaces)');
   db.exec('CREATE INDEX IF NOT EXISTS runs_job_idx ON runs(profile, job_id)');
+}
 
+function createSearchIndexes(db: Database) {
   for (const [fts, table, cols] of [['facts_fts', 'facts', ['text']], ['pages_fts', 'pages', ['title', 'summary']]] as const) {
     const fresh = !db.prepare('SELECT 1 FROM sqlite_master WHERE name = ?').get(fts);
     const list = cols.join(', ');
@@ -138,6 +140,23 @@ export function openDb(file: string = DB_PATH): Database {
     db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_au AFTER UPDATE ON ${table} BEGIN INSERT INTO ${fts}(${fts}, rowid, ${list}) VALUES ('delete', old.rowid, ${old}); INSERT INTO ${fts}(rowid, ${list}) VALUES (new.rowid, ${next}); END`);
     if (fresh) db.exec(`INSERT INTO ${fts}(${fts}) VALUES ('rebuild')`);
   }
+}
+
+export function openDb(file: string = DB_PATH): Database {
+  if (file !== ':memory:') {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  }
+
+  const db = new Database(file);
+  db.run('PRAGMA journal_mode = WAL');
+  db.run('PRAGMA foreign_keys = OFF');
+  db.run('PRAGMA busy_timeout = 5000');
+
+  createHubTables(db);
+  addRepliesColumns(db);
+  syncTables(db);
+  createLookupIndexes(db);
+  createSearchIndexes(db);
 
   const versionRow = db.prepare('SELECT value FROM meta WHERE key = ?').get('version');
   if (!versionRow) {
