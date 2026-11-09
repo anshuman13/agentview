@@ -132,6 +132,7 @@ async function createChat(cwd: string, resume?: string, title = '', fork = false
   chat.title = title;
   chat.onIdle = () => learning.later(chat);
   await chat.loadHistory();
+  await chat.hooks.load();
   chat.onMessage((m) => onChatMessage(chat, m));
   if (!resume || fork) chat.start();
   live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });
@@ -363,6 +364,9 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
       return;
     case 'permission':
       chat.answerPermission(msg.id, msg.allow, msg.always);
+      return;
+    case 'run_hook':
+      if (typeof msg.name === 'string') chat.hooks.run(msg.name);
       return;
     case 'retry':
       return chat.retryLast();

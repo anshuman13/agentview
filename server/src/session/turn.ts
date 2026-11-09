@@ -150,8 +150,7 @@ export class Turn {
     const plan = this.takePlanChange();
     if (plan) return plan;
     if (this.s.compaction.due(this.s.state.session.context ?? 0)) return '/compact';
-    this.s.waiting.dequeue();
-    return null;
+    return this.s.waiting.dequeue() ? null : this.s.hooks.afterTurn();
   }
 
   // The agent process is gone; its queued input went with it, but the events stay.

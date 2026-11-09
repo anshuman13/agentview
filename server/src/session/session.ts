@@ -6,6 +6,7 @@ import { resumePrompt, type Stopped } from '../host/restore.js';
 import { Approvals } from './approvals.js';
 import { BuildCycle } from './cycle.js';
 import { EventLog } from './eventLog.js';
+import { Hooks } from './hooks.js';
 import { blockedRule } from './events.js';
 import { loopOff } from './loop.js';
 import { Mcp } from './mcp.js';
@@ -50,6 +51,7 @@ export class AgentSession implements AgentHost {
   readonly compaction = new Compaction(this);
   readonly prompts = new Prompts(this);
   readonly stopper = new Stopper(this);
+  readonly hooks = new Hooks(this);
   readonly repeater = new RepeatController(this.links.repeatHost());
   private listeners = new Set<(m: ServerMessage) => void>();
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
@@ -69,7 +71,6 @@ export class AgentSession implements AgentHost {
     this.state.session.account = this.driver.account;
     this.state.session.accounts = this.driver.accounts();
   }
-
 
   // The state for a client that opens the chat, with accounts logged in since the chat started.
   view(limit?: number) {
@@ -128,10 +129,12 @@ export class AgentSession implements AgentHost {
   noteFile(rel: string, source: 'tool' | 'watcher') {
     this.state.recentFiles = [rel, ...this.state.recentFiles.filter((f) => f !== rel)].slice(0, 30);
     this.emit({ type: 'file_changed', path: rel, source });
+    if (source === 'tool') this.hooks.noteEdit();
   }
 
   fileChangedExternally(rel: string) {
     this.noteFile(rel, 'watcher');
+    this.hooks.saved(rel);
   }
 
   watchHistory(on: boolean) {

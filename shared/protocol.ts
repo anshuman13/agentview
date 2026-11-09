@@ -98,6 +98,8 @@ export type SessionInfo = {
   accounts: Account[];
   usage?: PlanUsage | null;
   capabilities?: Capabilities;
+  // Names of the manual prompt hooks for this chat's repo.
+  hooks?: string[];
 };
 
 // What the agent behind a chat supports.
@@ -329,6 +331,7 @@ export type ClientMessage =
   | { type: 'stop_task'; toolUseId: string }
   | { type: 'view'; id: string }
   | { type: 'retry' }
+  | { type: 'run_hook'; name: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
   | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string }
