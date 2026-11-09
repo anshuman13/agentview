@@ -1,7 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import type { Socket } from 'node:net';
-import type { ChatRun, ClientMessage, LiveChat, ServerMessage } from '../../../shared/protocol.js';
+import type { ChatRun, ClientMessage, LiveChat, Provider, ServerMessage } from '../../../shared/protocol.js';
 
 // The agent host owns the chats and their Claude processes; the API server talks to it over this socket,
 // so the API server can restart without ending a turn.
@@ -13,7 +13,7 @@ export type HostRequest =
   | { op: 'events_before'; id: string; before: string; limit?: number }
   | { op: 'cmd'; id: string; msg: ClientMessage }
   | { op: 'open'; sessionId: string }
-  | { op: 'new'; cwd: string; from: string; fork?: string; model?: string }
+  | { op: 'new'; cwd: string; from: string; fork?: string; model?: string; provider?: Provider }
   | { op: 'close'; id: string }
   | { op: 'rename'; sessionId: string; title: string }
   | { op: 'ask'; cwd: string; prompt: string; from?: string; fresh?: boolean }

@@ -78,10 +78,12 @@ export const ACCOUNT_LABEL: Record<Account, string> = { main: 'Account 1', alt: 
 // Accounts only picked by hand, never for new chats or after a usage limit.
 export const ACCOUNT_NOTE: Partial<Record<Account, string>> = { alt2: 'Only picked by hand' };
 // What the clients read from /api/settings: the features that are on and the account labels.
-export type PublicSettings = { deploy: boolean; accountLabels: Record<Account, string> };
+export type PublicSettings = { deploy: boolean; accountLabels: Record<Account, string>; providers?: ProviderOption[] };
 
-// What runs a chat: the Claude login, or Claude Code on OpenRouter models.
-export type Provider = 'claude' | 'openrouter';
+// What runs a chat: the Claude login, Claude Code on OpenRouter models, or the Codex CLI on a ChatGPT plan.
+export type Provider = 'claude' | 'openrouter' | 'codex';
+// A provider a new chat can pick; a disabled one says what is missing.
+export type ProviderOption = { id: Provider; label: string; enabled: boolean; note?: string };
 
 // Share of the Claude plan's 5-hour and weekly limits used, from the CLI's usage API.
 export type UsageWindow = { pct: number; resetsAt: number | null };
@@ -289,6 +291,7 @@ export type SavedSession = {
   gitBranch: string | null;
   lastModified: number;
   firstPrompt?: string;
+  provider?: Provider;
 };
 
 export const COMPACT_AT = 200_000;
@@ -352,7 +355,7 @@ export type ClientMessage =
   | { type: 'run_hook'; name: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
-  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string }
+  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider }
   | { type: 'mcp_status' }
   | { type: 'usage' }
   | { type: 'mcp_reconnect'; name: string }

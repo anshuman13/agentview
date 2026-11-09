@@ -2,6 +2,8 @@ import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { openInChrome } from '../chrome/chrome.js';
 import { listSessions, renameRoute, savedSession } from '../agent/claude/sessions.js';
+import { codexSessions } from '../agent/codex/threads.js';
+import { providerOptions } from '../agent/registry.js';
 import { cancelFocus, scheduleFocus } from '../integrations/focus.js';
 import { connectorStatus, mcpGroups, setMcpGroup } from '../agent/claude/mcp.js';
 import { emptyBin, listBin, restoreSession } from '../agent/claude/bin.js';
@@ -45,9 +47,9 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return { ok: true };
     }),
     'ANY /api/sessions': entry(async () => {
-      const [list, bin] = await Promise.all([listSessions({ limit: 300 }), listBin()]);
+      const [list, codex, bin] = await Promise.all([listSessions({ limit: 300 }), codexSessions(), listBin()]);
       const binned = new Set(bin.map((b) => b.sessionId));
-      return list.filter((x) => !binned.has(x.sessionId)).map(savedSession);
+      return [...list.filter((x) => !binned.has(x.sessionId)).map(savedSession), ...codex].sort((a, b) => b.lastModified - a.lastModified);
     }),
     'ANY /api/sessions/search': entry(async ({ url }) => {
       const [hits, list, bin] = await Promise.all([searchMessages(url.searchParams.get('q') ?? ''), listSessions({ limit: 300 }), listBin()]);
@@ -95,7 +97,7 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return setMcpGroup(service, String(body.group ?? ''));
     }, true),
     'ANY /api/mcp/groups': entry(() => mcpGroups()),
-    'ANY /api/settings': entry(() => publicSettings()),
+    'ANY /api/settings': entry(async () => ({ ...publicSettings(), providers: await providerOptions() })),
     'POST /api/openrouter': entry(({ body }) => saveOpenRouter(body), true),
     'ANY /api/openrouter': entry(() => openRouterView()),
     'POST /api/restart': entry(({ url }) => {

@@ -1,9 +1,10 @@
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
-import type { ServerMessage } from '../../../shared/protocol.js';
+import type { Provider, ServerMessage } from '../../../shared/protocol.js';
 import { getSessionInfo } from '../agent/claude/sessions.js';
 import { rememberAccount } from '../agent/claude/accounts.js';
-import { provider, providerOf, rememberProvider } from '../agent/registry.js';
+import { isProvider, provider, providerOf, rememberProvider } from '../agent/registry.js';
+import { codexThread } from '../agent/codex/threads.js';
 import { AgentSession } from '../session/session.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway } from '../integrations/notify.js';
@@ -27,9 +28,9 @@ function onChatMessage(chat: AgentSession, m: ServerMessage) {
   if (woke || (m.type === 'event' ? m.event.kind === 'user' : m.type !== 'append')) broadcastLive();
 }
 
-export async function createChat(cwd: string, resume?: string, title = '', fork = false) {
+export async function createChat(cwd: string, resume?: string, title = '', fork = false, choice?: Provider) {
   // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.
-  const p = provider(providerOf(resume));
+  const p = provider(isProvider(choice) ? choice : providerOf(resume));
   await p.verifyLimits();
   const chat = new AgentSession(cwd, p.driver(cwd, resume, fork), resume ?? null);
   chat.runs = runs;
@@ -76,7 +77,7 @@ export function openSaved(sessionId: string) {
 }
 
 async function resumeSaved(sessionId: string) {
-  const info = await getSessionInfo(sessionId);
+  const info = (await codexThread(sessionId)) ?? (await getSessionInfo(sessionId));
   if (!info) throw new Error('Session not found');
   if (!info.cwd) throw new Error('This session has no folder recorded, so it cannot be resumed');
   if (!(await isDir(info.cwd))) throw new Error(`Folder no longer exists: ${info.cwd}`);
@@ -85,11 +86,11 @@ async function resumeSaved(sessionId: string) {
   return createChat(dir, sessionId, info.summary);
 }
 
-export async function newChat(cwd: string, from: AgentSession, fork?: string) {
+export async function newChat(cwd: string, from: AgentSession, fork?: string, choice?: Provider) {
   const dir = path.resolve(cwd);
   if (dir !== from.cwd && dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${dir}`);
   if (!(await isDir(dir))) throw new Error(`Folder no longer exists: ${dir}`);
-  return fork ? createChat(dir, fork, from.title, true) : createChat(dir);
+  return fork ? createChat(dir, fork, from.title, true) : createChat(dir, undefined, '', false, choice);
 }
 
 export async function prompt(cwd: string, text: string, from?: string, fresh = false) {

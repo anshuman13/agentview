@@ -1,8 +1,11 @@
 import path from 'node:path';
-import type { Provider } from '../../../shared/protocol.js';
+import type { Provider, ProviderOption } from '../../../shared/protocol.js';
 import { readJsonSync, writeJsonSync } from '../json.js';
 import { STATE_DIR, loggedInAccounts, verifyLimit } from './claude/accounts.js';
 import { claudeDriver } from './claude/driver.js';
+import { NOT_SIGNED_IN, codexSignedIn } from './codex/binary.js';
+import { codexDriver } from './codex/driver.js';
+import { loadOpenRouter } from './claude/openrouter.js';
 import type { DriverFactory } from './types.js';
 
 type Entry = {
@@ -20,9 +23,27 @@ const PROVIDERS: Record<Provider, Entry> = {
     driver: (cwd, resume, fork) => claudeDriver(cwd, resume, fork, true),
     verifyLimits: () => Promise.resolve(),
   },
+  codex: {
+    driver: (_cwd, resume, fork) => codexDriver(resume, fork),
+    verifyLimits: () => Promise.resolve(),
+  },
 };
 
+const LABEL: Record<Provider, string> = { claude: 'Claude', openrouter: 'OpenRouter', codex: 'Codex' };
+
+// What a new chat can run on: OpenRouter once it has a key and models, Codex once this Mac is signed in to it.
+export async function providerOptions(): Promise<ProviderOption[]> {
+  const codex = await codexSignedIn();
+  const enabled: Record<Provider, { on: boolean; note?: string }> = {
+    claude: { on: true },
+    openrouter: loadOpenRouter() ? { on: true } : { on: false, note: 'Set a key and models in Settings' },
+    codex: codex ? { on: true } : { on: false, note: NOT_SIGNED_IN },
+  };
+  return (Object.keys(PROVIDERS) as Provider[]).map((id) => ({ id, label: LABEL[id], enabled: enabled[id].on, ...(enabled[id].note && { note: enabled[id].note }) }));
+}
+
 export const provider = (id: Provider) => PROVIDERS[id];
+export const isProvider = (v: unknown): v is Provider => typeof v === 'string' && v in PROVIDERS;
 
 // The provider each chat was last on, so a reopened chat goes back to it; a chat not listed runs on Claude.
 const FILE = path.join(STATE_DIR, 'chat-providers.json');

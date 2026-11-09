@@ -99,7 +99,7 @@ async function handle(req: HostRequest): Promise<unknown> {
 }
 
 async function newInFolder(req: Extract<HostRequest, { op: 'new' }>) {
-  const chat = await newChat(req.cwd, get(req.from), req.fork);
+  const chat = await newChat(req.cwd, get(req.from), req.fork, req.provider);
   applyInitialModel(chat, req.model);
   return chat.id;
 }

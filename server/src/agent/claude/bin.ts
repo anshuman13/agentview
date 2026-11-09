@@ -3,6 +3,7 @@ import path from 'node:path';
 import { deleteSession, getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import { BIN_MS, type BinnedSession } from '../../../../shared/protocol.js';
 import { jsonFile } from '../../json.js';
+import { forgetThread } from '../codex/threads.js';
 
 const store = jsonFile<BinnedSession[]>(path.join(os.homedir(), '.agentview', 'bin.json'), []);
 
@@ -14,6 +15,7 @@ export const listBin = (now = Date.now()) => store.update(async (list) => {
 });
 
 export const removeSession = async (id: string, purge: boolean, archive = false) => {
+  if (await forgetThread(id)) return { purged: true };
   let purged = true;
   await store.update(async (list) => {
     const info = await getSessionInfo(id);
