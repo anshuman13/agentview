@@ -6,7 +6,7 @@ import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { leaveOverlay, openMeeting, openTask, setView, takeSearchQuery, useEscapeBack, useView } from './view';
-import { useTranscriptHits } from './meetings/MeetingList';
+import { useTranscriptHits } from './meetings/list/useTranscriptHits';
 import { live } from './data/wiki/wiki';
 import { dayLabel } from './data/dates';
 import '../styles/features/wiki.css';

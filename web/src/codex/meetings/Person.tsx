@@ -17,7 +17,7 @@ import { copyText, openMeeting, openTask, setView, useEscapeBack } from '../view
 import { ago, plural, safeHref } from '../../ui/util';
 import { openTasksOf, personInbox, unanswered } from '../data/tasks/review';
 import type { ItemRow } from '../data/sync';
-import { Avatars, MeetingRow } from './MeetingList';
+import { Avatars, MeetingRow } from './list/MeetingRow';
 import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
 import { AddPoint, PointList, useMarkRaised } from './Raise';
 import { firstName, pointsOf } from '../data/meetings/points';

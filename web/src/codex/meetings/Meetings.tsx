@@ -12,7 +12,7 @@ const SeriesPage = lazy(() => import('./SeriesPage').then((m) => ({ default: m.S
 const Person = lazy(() => import('./Person').then((m) => ({ default: m.Person })));
 
 export { peopleOf };
-export { Avatars, MeetingRow } from './MeetingList';
+export { Avatars, MeetingRow } from './list/MeetingRow';
 export { ActionRow, confirmAll, dismissAll } from './ActionRow';
 
 export function Meetings({ onMenu }: { onMenu: () => void }) {
