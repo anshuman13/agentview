@@ -99,6 +99,8 @@ fun Hub.permission(id: String, allow: Boolean, always: Boolean = false) = post(p
 
 fun Hub.allowBlocked(id: String) = post(allowBlockedCmd(id), store.wanted)
 
+fun Hub.runHook(name: String) = post(runHookCmd(name), store.wanted)
+
 fun Hub.sendNow(id: String) = post(sendNowCmd(id), store.wanted)
 
 // Types the command into the chat's last terminal, or a new one, and opens the Terminal page.

@@ -168,6 +168,7 @@ data class SessionInfo(
     val accounts: List<String> = emptyList(),
     val usage: PlanUsage? = null,
     val loop: LoopInfo? = null,
+    val hooks: List<String> = emptyList(),
 )
 
 @Serializable
@@ -314,6 +315,7 @@ fun answerCmd(id: String, answers: Map<String, String>) = cmd("answer") {
     put("id", id)
     put("answers", buildJsonObject { answers.forEach { (k, v) -> put(k, v) } })
 }
+fun runHookCmd(name: String) = cmd("run_hook") { put("name", name) }
 fun allowBlockedCmd(id: String) = cmd("allow_blocked") { put("id", id) }
 fun sendNowCmd(id: String) = cmd("send_now") { put("id", id) }
 fun setModelCmd(model: String) = cmd("set_model") { put("model", model) }

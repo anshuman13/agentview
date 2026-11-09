@@ -254,6 +254,13 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   new day, like the phone; a chat that stays within today has none
 - "TODOs" in the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
   end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer. The web chat settings menu has the same TODOs list
+- Prompt hooks come from `~/.agentview/hooks.json`, keyed by repo folder name like `autofix` in attention.json:
+  `{"myrepo": [{"name": "tests", "on": "stop", "prompt": "Run the tests"}, {"name": "lint", "on": "save", "glob": "src/**/*.ts", "prompt": "Lint it"}, {"name": "docs", "on": "manual", "prompt": "Update the docs"}]}`.
+  `save` queues the prompt with the path when a matching file changes between turns (once per 30 s per hook), `stop`
+  queues it when a turn that changed files ends, and `manual` hooks are listed under Hooks in the chat menu (phone) and
+  chat settings menu (web), where a tap queues them. The prompt shows in the transcript as "Hook: <name>". A hook turn never
+  triggers stop hooks, nothing fires while a permission or question waits, and without the file or an entry for the repo
+  no hook exists (an invalid entry is skipped with a log line)
 - Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar; web sidebar rows of open chats do the same, except for the chat you are viewing
 - "Remind me" in the phone chat menu adds an open task "Check <chat>" due in 1 hour, 3 hours or tomorrow at 9:00, linked to
   the chat; the hub pushes it when due (like Slack's remind me about this); the web chat settings menu has the same Remind me

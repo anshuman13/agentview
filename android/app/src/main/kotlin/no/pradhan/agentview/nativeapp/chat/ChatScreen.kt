@@ -92,6 +92,7 @@ class ChatPanels {
     var todos by mutableStateOf(false)
     var remind by mutableStateOf(false)
     var memory by mutableStateOf(false)
+    var hooks by mutableStateOf(false)
     var dialog by mutableStateOf<String?>(null)
 }
 
@@ -220,6 +221,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: Chat
         MenuItem("Dev servers", "globe", { close(); panels.servers = true })
         MenuItem("TODOs", "checklist", { close(); panels.todos = true })
         MenuItem("Memory", "book", { close(); panels.memory = true })
+        MenuItem("Hooks", "play", { close(); panels.hooks = true })
         MenuItem("Share chat", "share", {
             close()
             val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, hub.store.state.value.events))
@@ -251,6 +253,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, view: Ch
     if (panels.servers) DevServersSheet(hub) { panels.servers = false }
     if (panels.todos) TodosSheet(hub, cwd) { panels.todos = false }
     if (panels.memory) MemorySheet(hub, cwd) { panels.memory = false }
+    if (panels.hooks) HooksSheet(hub, session?.hooks.orEmpty()) { panels.hooks = false }
     if (panels.remind) Sheet(onDismiss = { panels.remind = false }, title = "Remind me", padded = false, full = false) {
         val choices = remember { remindChoices(System.currentTimeMillis()) }
         Group { choices.forEachIndexed { i, (label, at) -> if (i > 0) Hairline(); ListRow(label, lines = 1, onClick = { hub.remindChat(live.title, sessionId!!, cwd, at); panels.remind = false }) } }
