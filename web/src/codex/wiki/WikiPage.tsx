@@ -1,27 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantTable, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask/ask';
-import { olderClaims, pageClaims, staleClaims, newFact, proposals, type Fact } from '../data/wiki/wiki';
+import { olderClaims, pageClaims, staleClaims, newFact, proposals } from '../data/wiki/wiki';
 import { mentionsOf, type Mentions } from '../data/meetings/mentions';
 import { hasLiveClaims, wikiMarkdown } from '../data/wiki/wikiMarkdown';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
-import { Section, sectionCount } from '../../ui/Section';
+import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import { EmptyState } from '../../ui/Panel';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { copyText, setView, showSnack, useEscapeBack, useView } from '../view';
 import { AskBar } from './AskBar';
-import { Claim } from './Claim';
+import { ClaimGroups, OlderClaims, PendingBanner, ProposeForm } from './WikiPageParts';
 import { PageTile } from './PageTile';
 import { useReview } from './Review';
 import { MEMORY, REVIEW, memoryPage } from './shared';
-import { plural } from '../../ui/util';
-
-const NO_OLD: Fact[] = [];
-const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 export function WikiPage({ id }: { id: string }) {
   const { pages, facts, meetings } = useCodex();
@@ -135,45 +131,13 @@ export function WikiPage({ id }: { id: string }) {
         ) : (
           <div className="wk-doc">
             <article className="wk-article">
-              {proposing !== null && (
-                <div className="wk-contest-form">
-                  <textarea autoFocus rows={2} value={proposing} aria-label="Claim" onChange={(e) => setProposing(e.target.value)}
-                    onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') { e.stopPropagation(); setProposing(null); } if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) propose(); }} />
-                  <div className="wk-contest-btns">
-                    <button className="btn" onClick={() => setProposing(null)}>Cancel</button>
-                    <button className="btn primary" onClick={propose}>Save</button>
-                  </div>
-                </div>
-              )}
+              {proposing !== null && <ProposeForm value={proposing} setValue={setProposing} save={propose} />}
               {pid && <PageTile page={page} />}
               {page.summary && <p className="wk-lede">{page.summary}</p>}
-              {pending.length > 0 ? (
-                <div className="wk-pending">
-                  <span>{page.state === 'proposed' ? 'New page with ' : ''}{pending.length} proposed {pending.length === 1 ? 'claim' : 'claims'}</span>
-                  <span className="spacer" />
-                  <button className="btn" onClick={() => setConfirm({ title: `Reject ${plural(pending.length, 'claim')}?`, detail: page.title ?? '', action: 'Reject all', run: async () => { review.reject(pending); setDecided(`Rejected ${plural(pending.length, 'claim')}`); } })}>Reject all</button>
-                  <button className="btn primary" onClick={() => { review.approve(pending); setDecided(`Approved ${plural(pending.length, 'claim')}`); }}><Icon name="check" small /> Approve all</button>
-                </div>
-              ) : decided && <div className="wk-pending wk-decided"><Icon name="check" small /> {decided}</div>}
-              {visible.map((g) => {
-                const open = g.claims.filter((c) => c.fact.state === 'proposed').map((c) => c.fact);
-                return (
-                <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
-                  <Section label={g.heading} count={sectionCount(g.claims.length)} action={open.length > 1 && <Button size="sm" variant="plain" onClick={() => review.approve(open)}>Approve {open.length}</Button>} />
-                  <ul className="ui-group wk-list">
-                    {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page.title ?? ''} flash={flash === fact.id} mentions={mentions.get(fact.profile + fact.id)} />)}
-                  </ul>
-                </section>
-                );
-              })}
+              <PendingBanner pending={pending} page={page} decided={decided} setDecided={setDecided} review={review} setConfirm={setConfirm} />
+              <ClaimGroups groups={visible} page={page.title ?? ''} flash={flash} mentions={mentions} review={review} />
               <ShowMore shown={shown} total={total} onMore={more} />
-              {older.length > 0 && (
-                <section className="wk-older">
-                  <Section label={<>Older{stale.size > 0 && <span className="muted">{stale.size} to confirm</span>}</>} count={older.length} open={showOlder} onToggle={() => setShowOlder((v) => !v)} />
-                  {showOlder && <div className="wk-older-hint">Retired or over 90 days old. Claude does not use these.</div>}
-                  {showOlder && <ul className="ui-group wk-list">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={NO_OLD} page={page.title ?? ''} flash={flash === f.id} stale={stale.has(f.id)} />)}</ul>}
-                </section>
-              )}
+              <OlderClaims older={older} stale={stale} open={showOlder} toggle={() => setShowOlder((v) => !v)} page={page.title ?? ''} flash={flash} />
               {!groups.length && !older.length && <EmptyState size="sm" icon="book" title="No claims yet" hint={`They appear here as meetings, Slack threads and issues mention ${page.title}`} />}
             </article>
           </div>
