@@ -1,13 +1,12 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { connect, embedded, getState, useStore } from '../store';
 import { EmptyState } from '../../ui/Panel';
-import { command } from '../../ui/util';
 import { haptic } from '../../ui/haptic';
 import { slideFrom, useTabSwipe } from '../touch/tabSwipe';
 import { useEdgeBack } from '../touch/edgeBack';
 import { useKeyboardInset } from '../touch/keyboardInset';
 import { useKeyboardFlag } from '../touch/keyboardFlag';
-import { ActivityBar, VIEWS } from './ActivityBar';
+import { ActivityBar } from './ActivityBar';
 import { EditorTabs } from './EditorTabs';
 import { SideChat, useSideChat } from './SideChat';
 import { SidebarPane } from './SidebarPane';
@@ -19,7 +18,7 @@ import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
 import { deepLink } from '../deepLinks';
 import { isPage, PageView, type Page } from '../pages';
-import { Brief, AgentsPane, FileSwitcher, Palette, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, Terminal, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
+import { Brief, AgentsPane, FileSwitcher, Palette, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
 import { Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
 import { useTheme } from '../theme';
@@ -28,6 +27,8 @@ import { touch } from '../touch/touch';
 import { Back } from '../touch/back';
 import { BadgeMount } from './BadgeMount';
 import { tauriInvoke } from '../../codex/data/local';
+import { EmbeddedApp, TerminalPanel } from './AppParts';
+import { useDeepLink } from './useDeepLink';
 
 const narrow = () => window.innerWidth <= 900;
 
@@ -131,14 +132,7 @@ export function App() {
     openAssistant, openPage, toggleTheme, setView, setSidebar, setTab, setEditor, setBrowse, setChatOpen, setTerminal, setPhone,
   });
 
-  // Applied once the first init is in, so the chat switch does not undo it on the phone.
-  const linked = useRef(false);
-  useEffect(() => {
-    if (!session.id || linked.current) return;
-    linked.current = true;
-    const id = deepLink.page && isPage(deepLink.page) ? `page:${deepLink.page}` : VIEWS.some((v) => v.id === deepLink.view) ? `view:${deepLink.view}` : null;
-    if (id) command(id);
-  }, [session.id]);
+  useDeepLink(session.id);
 
   const showing = tab === 'assistant' ? 'assistant' : tab === 'browser' ? 'browser' : tab === 'agents' ? 'agents' : tab === 'code' && !isPage(editor) ? 'file' : editor;
   const unreachable = useUnreachable();
@@ -172,16 +166,7 @@ export function App() {
     if (row && !el.closest('button') && row.dataset.path === openFile) setBrowse(false);
   };
 
-  if (embedded) {
-    return (
-      <div className="workbench embed" data-tab="chat" data-sidebar="false" data-chat="true" data-editor="false">
-        <SwitchedBanner />
-        <Restarting />
-        <Offline />
-        <div className="body"><section className="main pane center"><Suspense fallback={<Loading />}><Brief /></Suspense></section></div>
-      </div>
-    );
-  }
+  if (embedded) return <EmbeddedApp />;
 
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} data-codex={active === 'assistant'} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
@@ -220,10 +205,7 @@ export function App() {
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
             <EmptyState size="md" icon="files" title="No file open" hint={`Pick a file in the Explorer${touch() ? '' : ' or press ⌘P'}. Files Claude edits open here`} />
           </div>
-          <div className="panel" style={terminal ? { height: termH } : undefined}>
-            {terminal && <div className="panel-sash" onPointerDown={startTermResize} />}
-            <Suspense fallback={null}><Terminal key={session.id} chat={session.id} project={project} open={terminal || tab === 'term'} onToggle={() => tab !== 'term' && setTerminal((v) => !v)} /></Suspense>
-          </div>
+          <TerminalPanel chat={session.id} project={project} height={termH} open={terminal} tab={tab} startResize={startTermResize} toggle={() => setTerminal((v) => !v)} />
         </section>
 
         <div className="sash desktop-only" onPointerDown={startResize} />
