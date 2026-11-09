@@ -197,7 +197,7 @@ async function closeByUser(chat: AgentSession) {
   return next.id;
 }
 
-const idle = (chat: AgentSession) => !busy(chat) && chat.crons.length === 0 && !chat.state.session.repeat && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
+const idle = (chat: AgentSession) => !busy(chat) && chat.crons.length === 0 && !chat.state.session.repeat && !runs.activeFor(chat.id) && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
 
 let orphaned = 0;
 setInterval(() => {
