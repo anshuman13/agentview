@@ -12,6 +12,9 @@ import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
 import { FileIcon } from '../../workspace/FileIcon';
 import { SpecCard } from './SpecCard';
+import { TranscriptBox } from './Box';
+import { Badge } from '../../ui/Badge';
+import { agentSummary } from '../../sessions/agents';
 import { agentBuild, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, relPath, specCards, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
@@ -342,39 +345,25 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
 
 function AgentRow({ it, cwd, card }: { it: Extract<Item, { kind: 'agent' }>; cwd: string; card?: boolean }) {
   const { use, result, steps, running } = it;
-  const [open, setOpen] = useState(false);
   const canStop = useCan('stopTask');
   const desc = typeof use.input.description === 'string' && use.input.description ? use.input.description : 'Sub-agent';
   const type = typeof use.input.subagent_type === 'string' ? use.input.subagent_type : '';
-  const dur = result ? duration(result.at - use.at) : '';
-  const state = running ? 'running' : result?.stopped ? 'stopped' : denied(result) ? 'denied' : result?.isError ? 'failed' : `done${dur ? ` ${dur}` : ''}`;
-  const shown = open ? steps : running ? steps.slice(-3) : [];
-  const canOpen = steps.length > 0 || Boolean(result);
+  const dur = result && !running ? duration(result.at - use.at) : '';
+  const badge = running ? <Badge status="running" /> : result?.stopped ? <Badge status="skipped" reason="Stopped" /> : denied(result) ? <Badge status="skipped" reason="Denied" /> : result?.isError ? <Badge status="failed" /> : <Badge status="done" />;
   const build = card ? agentBuild(use) : null;
   return (
-    <div className="tr-agent-box tr-act">
-      <div className={`tr-agent ${running ? 'running' : result?.isError && !denied(result) ? 'err' : 'done'} ${open ? 'open' : ''}`} onClick={() => canOpen && setOpen((v) => !v)}>
-        <span className="tr-mark"><i className="tr-ring" /></span>
-        <span className="tr-text" title={desc} role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} aria-expanded={canOpen ? open : undefined} onKeyDown={canOpen ? clickOnKey : undefined}>
-          {desc}
-          <span className="tr-state"> · {type && `${type} · `}{state}{steps.length > 0 && ` · ${plural(steps.length, 'step')}`}</span>
-          {running && <Icon name="loading" small spin />}
-        </span>
-        {running && canStop && (
-          <button className="icon-btn tr-stop" title="Stop this agent" aria-label="Stop agent" onClick={(e) => { e.stopPropagation(); send({ type: 'stop_task', toolUseId: use.id }); }}>
-            <Icon name="debug-stop" small />
-          </button>
-        )}
-        {canOpen && <span className="tr-dur"><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></span>}
-      </div>
+    <TranscriptBox
+      id={`agent:${use.id}`}
+      className={running ? 'running' : undefined}
+      title={desc}
+      meta={[type, dur, steps.length > 0 && plural(steps.length, 'step')].filter(Boolean).join(' · ')}
+      state={badge}
+      action={running && canStop ? <IconButton icon="debug-stop" label="Stop agent" size="sm" onClick={() => send({ type: 'stop_task', toolUseId: use.id })} /> : undefined}
+      summary={agentSummary(it)}
+    >
       {build && <SpecCard slug={build.slug} meta={`${stageName(build.stage)} · ${build.slug}`} />}
-      {shown.length > 0 && (
-        <div className="tr-sub">
-          {!open && steps.length > shown.length && <div className="tr-more" {...pressable(() => setOpen(true))}>{steps.length - shown.length} earlier steps</div>}
-          {shown.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}
-        </div>
-      )}
-      {open && result && !running && <div className="tr-report"><Markdown text={result.text || '(no output)'} id={it.id} /></div>}
-    </div>
+      {steps.length > 0 && <div className="tr-sub">{steps.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}</div>}
+      {result && !running && <div className="tr-report"><Markdown text={result.text || '(no output)'} id={it.id} /></div>}
+    </TranscriptBox>
   );
 }
