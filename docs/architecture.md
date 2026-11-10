@@ -71,6 +71,14 @@ last `limit` events (150, `ROW_WINDOW`) plus `earlier`, the count left out. Olde
 for the chat on screen keeps the older events already paged in while the count before its first id still adds up, else it
 stands alone; older events changed in place by a history replace keep their old copy until paged again (`mergeTail` in `web/src/app/runtime/pageEvents.ts` and `chat/ChatStore.kt`, cases in `shared/fixtures/merge-tail.json`).
 
+A `session` message is a merge into the SessionInfo the client holds: `commands` and `mcp` are left out while unchanged
+since the last update (`AgentSession.setSession`), and `init` carries them whole. `web/src/app/main.tsx` calls
+`connect()` before the lazy App chunk loads, after `deepLinks.ts` has preset the chat from `?chat=` or `?session=`.
+
+Slow reads are cached on the server: `listRepos` for 10 s (cleared by `createFolder`), each build's merged state per
+default-branch tip in `session/builds.ts`, and the claude.ai connector status, which after 5 minutes is served stale
+while one refresh runs in the background.
+
 `web/src` is grouped by feature: `app` (shell, store, API, palette), `ui` (shared widgets and helpers), `chat`,
 `sessions`, `workspace` (files, code, terminal, browser), `ops` (Observe, Deploy, GitHub, MCP), `codex` (with `data`, `jobs`,
 `meetings`, `summary`, `wiki`) and `styles`.
