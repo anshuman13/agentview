@@ -1,0 +1,10 @@
+[
+  { "name": "focus then type", "events": ["focus", "textFilled"], "hidden": [true, true] },
+  { "name": "clear while the keyboard is up stays hidden", "events": ["focus", "textFilled", "textEmpty"], "hidden": [true, true, true] },
+  { "name": "keyboard down while empty shows the bar", "events": ["focus", "keyboardDown"], "hidden": [true, false] },
+  { "name": "keyboard down with text stays hidden", "events": ["focus", "textFilled", "keyboardDown"], "hidden": [true, true, true] },
+  { "name": "blur with text stays hidden", "events": ["focus", "textFilled", "blur"], "hidden": [true, true, true] },
+  { "name": "blur while empty shows the bar", "events": ["focus", "blur"], "hidden": [true, false] },
+  { "name": "dictation fills text with no focus", "events": ["textFilled"], "hidden": [true] },
+  { "name": "keyboard down then up while focused hides again", "events": ["focus", "keyboardDown", "keyboardUp"], "hidden": [true, false, true] }
+]

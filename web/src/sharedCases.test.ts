@@ -2,6 +2,7 @@ process.env.TZ = 'UTC';
 
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
@@ -206,6 +207,13 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; n: number; billing: Billing; expected: string }>('money')) {
     it(`money: ${c.name}`, () => expect(money(c.n, c.billing)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; events: BarEvent[]; hidden: boolean[] }>('bottom-bar')) {
+    it(`barState: ${c.name}`, () => {
+      let state = barIdle;
+      expect(c.events.map((e) => barHidden((state = barState(state, e))))).toEqual(c.hidden);
+    });
   }
 
   for (const c of cases<{ name: string; events: unknown[]; cuts: Record<string, string[]>; entries: Record<string, SummaryEntry[]> }>('turn-summary')) {
