@@ -125,6 +125,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val featureUse = MutableStateFlow(false)
 
+    val hiddenFeatures = MutableStateFlow<List<String>>(emptyList())
+
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
 
     internal val _connected = MutableStateFlow(false)

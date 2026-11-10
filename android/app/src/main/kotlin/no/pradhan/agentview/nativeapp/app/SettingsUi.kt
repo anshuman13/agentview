@@ -48,6 +48,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val providers by hub.providers.collectAsState()
     val default by hub.defaultProvider.collectAsState()
     val analytics by hub.featureUse.collectAsState()
+    val anyHidden = hub.hiddenFeatures.collectAsState().value.isNotEmpty()
     var dialog by rememberSaveable { mutableStateOf("") }
     val ctx = LocalContext.current
     val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "Unknown"
@@ -106,7 +107,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                     ListRow("Feature analytics", if (analytics) "On" else "Off", trailing = {
                         Toggle(analytics, enabled = !hub.readOnly) { if (it) hub.setFeatureUse(true) else dialog = "off" }
                     })
-                    if (analytics) {
+                    if (analytics || anyHidden) {
                         Hairline()
                         ListRow("Feature use", onClick = { dialog = "use" }, trailing = { Chevron() })
                     }

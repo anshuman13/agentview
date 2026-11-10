@@ -24,8 +24,14 @@ class ShellTest {
     }
 
     @Test fun deployPageShowsOnlyWhenSetUp() {
-        assertEquals(false, morePages(false).any { it.route == "deploy" })
-        assertEquals(true, morePages(true).any { it.route == "deploy" })
+        assertEquals(false, morePages(false, emptyList()).any { it.route == "deploy" })
+        assertEquals(true, morePages(true, emptyList()).any { it.route == "deploy" })
+    }
+
+    @Test fun hiddenFeaturesLeaveTheMoreSheet() {
+        assertEquals(false, morePages(true, listOf("page:builds")).any { it.route == "builds" })
+        assertEquals(true, morePages(true, listOf("page:builds")).any { it.route == "sketches" })
+        assertEquals(false, moreTools(listOf("more:files")).any { it.route == "files" })
     }
 
     @Test fun parsesDeepLinks() {

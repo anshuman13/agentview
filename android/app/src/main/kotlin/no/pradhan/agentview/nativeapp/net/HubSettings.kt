@@ -15,6 +15,7 @@ suspend fun Hub.refreshSettings() {
     providers.value = s.providers
     defaultProvider.value = s.defaultProvider
     featureUse.value = s.featureUse
+    hiddenFeatures.value = s.hiddenFeatures
 }
 
 fun Hub.setFeatureUse(on: Boolean) {
@@ -23,6 +24,15 @@ fun Hub.setFeatureUse(on: Boolean) {
         runCatching { api.setFeatureUse(on) }
             .onSuccess { featureUse.value = it }
             .onFailure { notice.value = "Could not save feature analytics. Try again." }
+    }
+}
+
+fun Hub.setHiddenFeatures(next: List<String>, text: String, back: List<String>) {
+    if (readOnly) return
+    viewModelScope.launch {
+        runCatching { api.setHiddenFeatures(next) }
+            .onSuccess { hiddenFeatures.value = it; undoable.tryEmit(Undoable(text) { setHiddenFeatures(back, "Undone", next) }) }
+            .onFailure { notice.value = "Could not save. Nothing changed, try again." }
     }
 }
 

@@ -21,6 +21,7 @@ import no.pradhan.agentview.nativeapp.app.BarState
 import no.pradhan.agentview.nativeapp.app.FEATURES
 import no.pradhan.agentview.nativeapp.app.appCounts
 import no.pradhan.agentview.nativeapp.app.featureRows
+import no.pradhan.agentview.nativeapp.app.shownFeature
 import no.pradhan.agentview.nativeapp.app.barHidden
 import no.pradhan.agentview.nativeapp.app.barState
 import no.pradhan.agentview.nativeapp.app.countChat
@@ -352,6 +353,11 @@ class SharedCasesTest {
     @Test fun featureUse() {
         val fixture = Json.parseToJsonElement(File("../../shared/fixtures/feature-use.json").readText()).jsonObject
         assertEquals(fixture.getValue("ids").jsonArray.map { it.jsonPrimitive.content }, FEATURES.map { it.id })
+        assertEquals(fixture.getValue("hideable").jsonArray.map { it.jsonPrimitive.content }, FEATURES.filter { it.hideable }.map { it.id })
+        for (c in fixture.getValue("shown").jsonArray.map { it.jsonObject }) {
+            val hidden = c.getValue("hidden").jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(c.str("id"), c.getValue("expected").jsonPrimitive.boolean, shownFeature(c.str("id"), hidden))
+        }
         for (c in fixture.getValue("rows").jsonArray.map { it.jsonObject }) {
             val days = c.getValue("days").jsonObject.mapValues { (_, v) -> v.jsonObject.mapValues { it.value.jsonPrimitive.int } }
             val rows = featureRows(days, c.str("today"), c.getValue("window").jsonPrimitive.int)

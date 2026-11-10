@@ -7,6 +7,8 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -56,6 +58,8 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
 
     suspend fun setFeatureUse(on: Boolean) = protocolJson.decodeFromString(AppSettings.serializer(), call(url("/api/settings").post(buildJsonObject { put("featureUse", on) }.toString().toRequestBody(json))).decodeToString()).featureUse
     suspend fun trackFeature(id: String) = protocolJson.decodeFromString(TrackReply.serializer(), call(url("/api/feature-use").post(buildJsonObject { put("id", id) }.toString().toRequestBody(json))).decodeToString()).recorded
+    suspend fun setHiddenFeatures(ids: List<String>) = protocolJson.decodeFromString(AppSettings.serializer(), call(url("/api/settings").post(buildJsonObject { put("hiddenFeatures", JsonArray(ids.map(::JsonPrimitive))) }.toString().toRequestBody(json))).decodeToString()).hiddenFeatures
+
     suspend fun featureUse() = protocolJson.decodeFromString(FeatureUseReply.serializer(), call(url("/api/feature-use")).decodeToString()).days
 
     suspend fun settings() = protocolJson.decodeFromString(AppSettings.serializer(), call(url("/api/settings")).decodeToString())

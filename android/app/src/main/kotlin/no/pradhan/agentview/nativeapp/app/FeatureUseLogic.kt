@@ -3,16 +3,17 @@ package no.pradhan.agentview.nativeapp.app
 import java.time.LocalDate
 
 // shared/featureUse.ts: the catalogue and the never used and used split, without the palette helper (the phone has no palette).
-class Feature(val id: String, val label: String, val kind: String)
+class Feature(val id: String, val label: String, val kind: String, val hideable: Boolean)
 
 class UsedFeature(val feature: Feature, val n7: Int, val n30: Int, val last: String)
 
 class FeatureRows(val never: List<Feature>, val used: List<UsedFeature>)
 
-private fun make(kind: String, vararg rows: Pair<String, String>) = rows.map { (id, label) -> Feature("$kind:$id", label, kind) }
+private fun make(kind: String, hideable: (String) -> Boolean, vararg rows: Pair<String, String>) = rows.map { (id, label) -> Feature("$kind:$id", label, kind, hideable(id)) }
 
 private val PALETTE = make(
     "palette",
+    { true },
     "view:explorer" to "Show Explorer", "view:changes" to "Show Source Control", "view:github" to "Show Pull Requests", "view:chats" to "Show Sessions", "view:sessions" to "Show Workspace", "view:runs" to "Show Runs",
     "tab:chat" to "Tab: Chat", "tab:code" to "Tab: Files", "tab:term" to "Tab: Terminal", "tab:browser" to "Tab: Browser", "tab:agents" to "Tab: Agents",
     "codex:today" to "Codex: Overview", "codex:tasks" to "Codex: Tasks", "codex:meetings" to "Codex: Meetings", "codex:jobs" to "Codex: Jobs", "codex:wiki" to "Codex: Wiki", "codex:summary" to "Codex: Slack summary", "codex:goals" to "Codex: All goals", "codex:search" to "Codex: Search", "codex:newtask" to "Codex: New task",
@@ -23,14 +24,17 @@ private val PALETTE = make(
 )
 
 val FEATURES: List<Feature> =
-    make("page", "observe" to "Observe", "deploy" to "Deploy", "mcp" to "MCP Servers", "builds" to "Builds", "sketches" to "Sketches", "settings" to "Settings") +
-        make("tab", "codex" to "Codex", "chat" to "Chat", "sessions" to "Sessions", "agents" to "Agents") +
-        make("list", "overview" to "Overview", "tasks" to "Tasks", "meetings" to "Meetings", "jobs" to "Jobs", "wiki" to "Wiki") +
+    make("page", { it != "settings" }, "observe" to "Observe", "deploy" to "Deploy", "mcp" to "MCP Servers", "builds" to "Builds", "sketches" to "Sketches", "settings" to "Settings") +
+        make("tab", { false }, "codex" to "Codex", "chat" to "Chat", "sessions" to "Sessions", "agents" to "Agents") +
+        make("list", { false }, "overview" to "Overview", "tasks" to "Tasks", "meetings" to "Meetings", "jobs" to "Jobs", "wiki" to "Wiki") +
         PALETTE +
-        make("sheet", "goal" to "Goal sheet", "needsYou" to "Needs you", "more" to "More") +
-        make("action", "startGoal" to "Start a goal", "approveRun" to "Approve a run", "approveSpec" to "Approve a spec phase", "runAll" to "Run all spec tasks", "startTask" to "Start a spec task")
+        make("sheet", { false }, "goal" to "Goal sheet", "needsYou" to "Needs you", "more" to "More") +
+        make("more", { true }, "files" to "Files", "browser" to "Browser", "terminal" to "Terminal", "changes" to "Source Control", "github" to "Pull Requests") +
+        make("action", { it == "runAll" || it == "runAsGoal" }, "startGoal" to "Start a goal", "approveRun" to "Approve a run", "approveSpec" to "Approve a spec phase", "runAll" to "Run all spec tasks", "runAsGoal" to "Run a spec as a goal", "startTask" to "Start a spec task")
 
 private val FEATURE_BY_ID = FEATURES.associateBy { it.id }
+
+fun shownFeature(id: String, hidden: Collection<String>) = id !in hidden
 
 // Recording needs the setting on, a writable app and an id the server knows.
 fun shouldTrack(on: Boolean, readOnly: Boolean, id: String) = on && !readOnly && id in FEATURE_BY_ID

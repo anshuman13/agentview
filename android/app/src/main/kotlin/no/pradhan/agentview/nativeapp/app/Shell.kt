@@ -255,19 +255,19 @@ private fun AppNavHost(hub: Hub, nav: NavHostController, twoPane: Boolean, modif
 }
 
 @Composable
-private fun MoreSheet(deploy: Boolean, onDismiss: () -> Unit, go: (String) -> Unit) {
+private fun MoreSheet(deploy: Boolean, hidden: List<String>, onDismiss: () -> Unit, go: (String) -> Unit) {
     Sheet(onDismiss = onDismiss, title = "More", padded = false) {
         val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = av.fgMuted) } }
         SectionHeader("Workspace")
         Group {
-            MORE_TOOLS.forEachIndexed { i, it ->
+            moreTools(hidden).forEachIndexed { i, it ->
                 if (i > 0) Hairline(lead = true)
                 ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") })
             }
         }
         SectionHeader("Tools")
         Group {
-            morePages(deploy).forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }); Hairline(lead = true) }
+            morePages(deploy, hidden).forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }); Hairline(lead = true) }
             ListRow("Mac address", leading = icon("device-desktop"), onClick = { go(ORIGIN_ROUTE) })
         }
     }
@@ -318,7 +318,12 @@ fun App(hub: Hub) {
 
     shared?.let { ShareSheet(hub, it) }
     GoalSheets(hub)
-    if (more) MoreSheet(hub.deploy.collectAsState().value, { more = false }) { r -> more = false; hub.track("page:${r.removePrefix("more/")}"); nav.openMore(r) }
+    if (more) MoreSheet(hub.deploy.collectAsState().value, hub.hiddenFeatures.collectAsState().value, { more = false }) { r ->
+        more = false
+        val id = r.removePrefix("more/")
+        hub.track(if (MORE_TOOLS.any { it.route == id }) "more:$id" else "page:$id")
+        nav.openMore(r)
+    }
 }
 
 // The Sessions list beside the open chat on wide windows.
