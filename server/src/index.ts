@@ -9,6 +9,8 @@ import { attachTerminal, closeTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, ownProfile } from './chrome/chrome.js';
 import { ntfyTopic, post } from './integrations/notify.js';
 import { CODEX_WORK } from './workspace/files.js';
+import { createAutoMerge } from './integrations/automerge.js';
+import { forgetPrs, gh, useAutoMerge } from './integrations/github.js';
 import { attention, onAttention, startAttention } from './integrations/attention.js';
 import { thisMac } from './http/macs.js';
 import { ROW_WINDOW, type AttentionItem, type ChatRun, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
@@ -163,6 +165,9 @@ function attentionSources(extra: string[] = []) {
 }
 const fixChat = (item: AttentionItem) => host.req<string>({ op: 'ask', cwd: item.cwd, prompt: item.prompt, fresh: true });
 startAttention(attentionSources, fixChat);
+const autoMerge = createAutoMerge({ gh, post, file: path.join(os.homedir(), '.agentview/automerge.json'), changed: forgetPrs });
+useAutoMerge(autoMerge);
+autoMerge.start();
 
 const { dispatch } = createRoutes({
   host,

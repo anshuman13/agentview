@@ -412,6 +412,7 @@ export type PullRequest = {
   deletions: number;
   mine: boolean;
   reviewRequested: boolean;
+  autoMerge?: { note: string; error?: string };
 };
 
 export type PullRequestDetail = {

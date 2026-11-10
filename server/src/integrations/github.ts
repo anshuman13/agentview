@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { parseObject } from '../http/body.js';
+import type { AutoMerge, Method } from './automerge.js';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
 
 const run = promisify(execFile);
@@ -12,7 +13,7 @@ const PREFETCH = 5;
 const KEEP = 20;
 const ENV = { ...process.env, GH_NO_UPDATE_NOTIFIER: '1', GH_PROMPT_DISABLED: '1' };
 
-async function gh(cwd: string, ...args: string[]) {
+export async function gh(cwd: string, ...args: string[]) {
   try {
     return (await run('gh', args, { cwd, maxBuffer: 64 * 1024 * 1024, env: ENV, timeout: 60_000 })).stdout;
   } catch (err) {
@@ -25,16 +26,16 @@ async function gh(cwd: string, ...args: string[]) {
   }
 }
 
-type Check = { conclusion?: string; state?: string; status?: string; name?: string; context?: string; detailsUrl?: string; targetUrl?: string };
+export type Check = { conclusion?: string; state?: string; status?: string; name?: string; context?: string; detailsUrl?: string; targetUrl?: string };
 
-const checkState = (c: Check): CheckState => {
+export const checkState = (c: Check): CheckState => {
   const v = (c.conclusion || c.state || c.status || '').toUpperCase();
   if (['SUCCESS', 'NEUTRAL', 'SKIPPED'].includes(v)) return 'success';
   if (['FAILURE', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED', 'STARTUP_FAILURE'].includes(v)) return 'failure';
   return 'pending';
 };
 
-function rollup(checks: Check[] = []): CheckState {
+export function rollup(checks: Check[] = []): CheckState {
   const states = checks.map(checkState);
   if (!states.length) return 'none';
   return states.includes('failure') ? 'failure' : states.includes('pending') ? 'pending' : 'success';
@@ -86,6 +87,10 @@ export function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
   if (Date.now() - hit.at > 30_000) refresh(cwd).catch(() => {});
   return Promise.resolve(hit.prs);
 }
+
+let auto: AutoMerge | undefined;
+export const useAutoMerge = (a: AutoMerge) => void (auto = a);
+export const forgetPrs = (cwd: string) => void lists.delete(cwd);
 
 const polled = new Map<string, number>();
 
@@ -149,7 +154,11 @@ async function act(cwd: string, n: string, verb: string, ...flags: string[]) {
 export async function github(cwd: string, method: string, url: URL, readBody: () => Promise<string>) {
   const pathname = url.pathname;
   const [, , , what, n, action] = pathname.split('/');
-  if (what === 'prs' && method === 'GET') return listPrs(cwd, url.searchParams.has('fresh'));
+  if (what === 'prs' && method === 'GET') {
+    const prs = await listPrs(cwd, url.searchParams.has('fresh'));
+    const armed = await auto?.state(cwd);
+    return armed?.size ? prs.map((p) => (armed.has(p.number) ? { ...p, autoMerge: armed.get(p.number) } : p)) : prs;
+  }
   if (what !== 'pr' || !/^\d+$/.test(n ?? '')) throw new Error(`Unknown GitHub route ${pathname}`);
   if (method === 'GET' && !action) {
     const pr = lists.get(cwd)?.prs.find((p) => p.number === Number(n));
@@ -165,6 +174,11 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
     return act(cwd, n, 'review', flag, ...(text ? ['--body', text] : []));
   }
   if (action === 'merge') return act(cwd, n, 'merge', MERGE[body.method] ?? '--squash');
+  if (action === 'automerge') {
+    if (!auto) throw new Error('Auto-merge is not running');
+    if (!(body.method in MERGE)) throw new Error('Method must be squash, merge or rebase');
+    return auto.turn(cwd, Number(n), body.on === true, body.method as Method);
+  }
   if (action === 'checkout') return act(cwd, n, 'checkout');
   throw new Error(`Unknown GitHub route ${pathname}`);
 }
