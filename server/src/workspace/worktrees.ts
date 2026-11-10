@@ -6,6 +6,7 @@ import { listSessions } from '../agent/claude/sessions.js';
 import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shared/protocol.js';
 import { inside } from '../../../shared/util.js';
 import { ROOTS } from './files.js';
+import { safeGit } from './git.js';
 
 const run = promisify(execFile);
 const paseoMissing = (err: unknown) => (err as { code?: string }).code === 'ENOENT' || /Executable not found|paseo is not installed/.test((err as Error)?.message ?? '');
@@ -126,6 +127,17 @@ export async function removeWorktree(id: string, openCwds: string[]) {
   if (!w.removable) throw new Error('This worktree is open, has uncommitted changes, or was used in the last 12 hours and its PR has not merged');
   if (id.startsWith('git:')) await git(w.repo, 'worktree', 'remove', w.cwd);
   else await paseo(['workspace', 'archive', id], 60_000).catch(notInstalled);
+}
+
+// A job run's worktree and its local branch: a Paseo workspace is archived, a git worktree removed even with changes in it.
+export async function removeRunWorktree(run: { repo?: string; worktree?: string; branch?: string; paseo?: boolean }) {
+  const { repo, worktree, branch } = run;
+  if (!repo || !worktree || !branch) throw new Error('The run has no worktree');
+  if (run.paseo) {
+    const id = (await paseoSpaces()).find((w) => w.cwd === worktree)?.id;
+    if (id) await paseo(['workspace', 'archive', id], 60_000).catch(notInstalled);
+  } else await safeGit(repo, ['worktree', 'remove', '--force', worktree]);
+  await safeGit(repo, ['branch', '-D', branch]).catch(() => {});
 }
 
 async function paseoProjects() {

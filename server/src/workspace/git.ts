@@ -17,6 +17,10 @@ export async function git(cwd: string, args: string[], ok = [0]) {
   }
 }
 
+// For a folder an agent wrote in: no hooks and no fsmonitor command from its config.
+const SAFE_GIT = ['-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false'];
+export const safeGit = (cwd: string, args: string[], ok?: number[]) => git(cwd, [...SAFE_GIT, ...args], ok);
+
 const KIND: Record<string, GitFile['status']> = { M: 'M', T: 'M', A: 'A', C: 'A', D: 'D', R: 'R' };
 
 export function parseStatus(out: string, prefix = ''): GitStatus {
@@ -89,7 +93,7 @@ export function parseNumstat(out: string): BranchFile[] {
 export const MAX_BRANCH_DIFF = 2_000_000;
 
 // The default branch as a remote ref, origin/main when the repo has no origin/HEAD.
-export const defaultBase = async (cwd: string) => (await git(cwd, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).catch(() => 'origin/main')).trim();
+export const defaultBase = async (cwd: string) => (await safeGit(cwd, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).catch(() => 'origin/main')).trim();
 
 // What this branch committed since it left the default branch, for review before a PR.
 async function branchDiff(cwd: string) {
@@ -99,6 +103,36 @@ async function branchDiff(cwd: string) {
   if (!since) return { base: name, files: [], diff: '' };
   const [numstat, diff] = await Promise.all([git(cwd, ['diff', '--numstat', since, 'HEAD']), git(cwd, ['diff', since, 'HEAD'])]);
   return { base: name, files: parseNumstat(numstat), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff };
+}
+
+const mergeBase = async (cwd: string, base: string) => (await safeGit(cwd, ['merge-base', base, 'HEAD']).catch(() => '')).trim();
+const PLAIN_DIFF = ['--no-ext-diff', '--no-textconv'];
+const MAX_LOOSE = 200;
+
+// Whether a run's branch holds anything to review: files not committed, or commits past the default branch. Without a merge base it counts as work.
+export async function hasWork(cwd: string) {
+  if ((await safeGit(cwd, ['status', '--porcelain'])).trim()) return true;
+  const since = await mergeBase(cwd, await defaultBase(cwd));
+  return !since || Number(await safeGit(cwd, ['rev-list', '--count', `${since}..HEAD`])) > 0;
+}
+
+// Commits and uncommitted changes against the merge base, with untracked files read through --no-index so nothing is staged.
+export async function reviewDiff(cwd: string) {
+  const base = await defaultBase(cwd);
+  const since = (await mergeBase(cwd, base)) || 'HEAD';
+  const loose = (await safeGit(cwd, ['ls-files', '-z', '--others', '--exclude-standard'])).split('\0').filter(Boolean).slice(0, MAX_LOOSE);
+  const files = parseNumstat(await safeGit(cwd, ['diff', '--numstat', ...PLAIN_DIFF, since]));
+  let diff = await safeGit(cwd, ['diff', ...PLAIN_DIFF, since]);
+  for (const p of loose) {
+    const added = ['diff', '--no-index', ...PLAIN_DIFF];
+    files.push(...parseNumstat(await safeGit(cwd, [...added, '--numstat', '--', '/dev/null', p], [1])));
+    diff += await safeGit(cwd, [...added, '--', '/dev/null', p], [1]);
+  }
+  return {
+    base: base.replace(/^origin\//, ''),
+    files: files.map((f) => ({ path: f.path, additions: f.add, deletions: f.del })),
+    diff: diff.length > MAX_BRANCH_DIFF ? '' : diff,
+  };
 }
 
 export type Todo = { path: string; line: number; text: string; ai?: '!' | '?' };

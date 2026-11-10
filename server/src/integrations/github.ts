@@ -168,3 +168,19 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
   if (action === 'checkout') return act(cwd, n, 'checkout');
   throw new Error(`Unknown GitHub route ${pathname}`);
 }
+
+// The URL of the PR of a branch, or undefined when it has none.
+export async function prForBranch(cwd: string, branch: string): Promise<string | undefined> {
+  try {
+    return JSON.parse(await gh(cwd, 'pr', 'view', branch, '--json', 'url')).url;
+  } catch (err) {
+    if (/no pull requests? found/i.test((err as Error).message)) return undefined;
+    throw err;
+  }
+}
+
+export async function openPr(cwd: string, branch: string, base: string, title: string, body: string) {
+  const out = await gh(cwd, 'pr', 'create', '--head', branch, '--base', base, '--title', title, '--body', body);
+  lists.delete(cwd);
+  return out.trim().split('\n').pop()!;
+}
