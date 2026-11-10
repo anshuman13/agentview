@@ -115,7 +115,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
                 if (state != null) StateBadge(state)
             }
         }
-        item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Enabled", jobMeta(job, st.runs, now), trailing = { Toggle(isEnabled(job), { toggleJob(hub, job, it) }) }) } }
+        item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Enabled", jobMeta(job, st.runs, now), trailing = { Toggle(isEnabled(job)) { toggleJob(hub, job, it) } }) } }
         item { SectionHeader("Prompt") }
         item { Group { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp5), style = Type.body, color = av.fg) } }
         item {

@@ -72,6 +72,7 @@ import no.pradhan.agentview.nativeapp.codex.CodexScreen
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheets
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunsScreen
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.net.OFFLINE_DELAY_MS
 import no.pradhan.agentview.nativeapp.net.OfflineEvent
 import no.pradhan.agentview.nativeapp.net.OfflineState
@@ -201,8 +202,8 @@ private fun rememberDests(hub: Hub, nav: NavHostController, route: String?, more
             Tab.Sessions -> counts.chats
             else -> 0
         }
-        Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge, dot = t == Tab.Codex && counts.needsYou > 0) { onMore(false); nav.goTab(t.route) }
-    } + Dest("More", "ellipsis", more || isMore(route), 0) { onMore(true) }
+        Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge, dot = t == Tab.Codex && counts.needsYou > 0) { onMore(false); hub.track("tab:${t.name.lowercase()}"); nav.goTab(t.route) }
+    } + Dest("More", "ellipsis", more || isMore(route), 0) { if (!more) hub.track("sheet:more"); onMore(true) }
 }
 
 @Composable
@@ -317,7 +318,7 @@ fun App(hub: Hub) {
 
     shared?.let { ShareSheet(hub, it) }
     GoalSheets(hub)
-    if (more) MoreSheet(hub.deploy.collectAsState().value, { more = false }) { r -> more = false; nav.openMore(r) }
+    if (more) MoreSheet(hub.deploy.collectAsState().value, { more = false }) { r -> more = false; hub.track("page:${r.removePrefix("more/")}"); nav.openMore(r) }
 }
 
 // The Sessions list beside the open chat on wide windows.

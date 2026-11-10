@@ -42,6 +42,7 @@ import no.pradhan.agentview.nativeapp.app.routeTitle
 import no.pradhan.agentview.nativeapp.app.routesOf
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.net.setCodexFilter
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -175,6 +176,7 @@ fun CodexScreen(hub: Hub) {
 private fun CodexHeader(hub: Hub, st: CodexState, nav: CodexNav, profile: String?, filterKey: String, now: Long) {
     val page = nav.page
     val extra = nav.extra
+    val go = { p: String -> if (p != page) hub.track("list:$p"); nav.go(p) }
     CodexTopBar(
         title = when {
             extra != null -> routeTitle(extra, st)
@@ -194,12 +196,12 @@ private fun CodexHeader(hub: Hub, st: CodexState, nav: CodexNav, profile: String
     )
     if (!nav.sub) Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         val claims = remember(st.facts, profile) { proposals(st.facts.filter { matchesProfile(profile, it) }).size }
-        Chip("Overview", { nav.go("overview") }, on = page == "overview")
-        Chip("Tasks", { nav.go("tasks") }, on = page == "tasks")
-        Chip("Meetings", { nav.go("meetings") }, on = page == "meetings")
-        Chip("Jobs", { nav.go("jobs") }, on = page == "jobs")
-        Chip(if (claims > 0) "Wiki $claims" else "Wiki", { nav.go("wiki") }, on = page == "wiki")
-        Chip("Goals", { nav.go("goals") }, on = page == "goals")
+        Chip("Overview", { go("overview") }, on = page == "overview")
+        Chip("Tasks", { go("tasks") }, on = page == "tasks")
+        Chip("Meetings", { go("meetings") }, on = page == "meetings")
+        Chip("Jobs", { go("jobs") }, on = page == "jobs")
+        Chip(if (claims > 0) "Wiki $claims" else "Wiki", { go("wiki") }, on = page == "wiki")
+        Chip("Goals", { go("goals") }, on = page == "goals")
     }
 }
 
@@ -208,10 +210,11 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
     val page = nav.page
     val extra = nav.extra
     val meeting = { r: Row -> nav.push("meeting:${r.key}") }
+    val openNeeds = { hub.track("sheet:needsYou"); nav.needsOpen = true }
     when {
         !st.loaded -> Loading("Loading Codex…")
-        extra != null -> ExtraContent(extra, hub, st, profile, now, actions, ops, nav.chips, nav.decisions, nav::toggleChip, nav::push, nav::pop, { nav.pop(); nav.needsOpen = true }, nav::openRow)
-        page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, { nav.needsOpen = true }, { nav.page = "goals" }, { nav.adding = true }, meeting)
+        extra != null -> ExtraContent(extra, hub, st, profile, now, actions, ops, nav.chips, nav.decisions, nav::toggleChip, nav::push, nav::pop, { nav.pop(); openNeeds() }, nav::openRow)
+        page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, openNeeds, { nav.page = "goals" }, { nav.adding = true }, meeting)
         page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" })
         page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, nav::openRow)
         page == "search" -> SearchPage(st, profile, nav::openRow, meeting)

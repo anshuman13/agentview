@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -122,6 +123,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val defaultProvider = MutableStateFlow("claude")
 
+    val featureUse = MutableStateFlow(false)
+
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
 
     internal val _connected = MutableStateFlow(false)
@@ -176,6 +179,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val showTurn = MutableStateFlow<String?>(null)
 
     val goalSheet = MutableStateFlow<GoalSheet?>(null)
+
+    init { viewModelScope.launch { goalSheet.filterNotNull().collect { track("sheet:goal") } } }
 
     private val foregroundNow = MutableStateFlow(false)
 

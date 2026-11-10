@@ -32,6 +32,7 @@ import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.newChat
@@ -160,6 +161,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val ready = sheet.plan == null || (read.markdown != null && !read.error)
     val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: what
     val start = {
+        hub.track("action:startGoal")
         val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct), System.currentTimeMillis())
         if (here) {
             hub.submit(text, false) { hub.notice.value = "Could not send the goal. Try again." }

@@ -28,6 +28,7 @@ import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.codex.autopilot.openChatOf
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.ops.DiffFiles
@@ -148,7 +149,7 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
     val saveReview = { key: String, decision: String, note: String, done: (Boolean) -> Unit ->
         postReview(buildJsonObject { put("slug", slug); put("phase", key); put("decision", decision); put("note", note) }.toString(), done)
     }
-    val approve: (String, (Boolean) -> Unit) -> Unit = { key, done -> saveReview(key, "approve", "") { ok -> if (!ok) hub.notice.value = "Could not save the review. Try again."; done(ok) } }
+    val approve: (String, (Boolean) -> Unit) -> Unit = { key, done -> hub.track("action:approveSpec"); saveReview(key, "approve", "") { ok -> if (!ok) hub.notice.value = "Could not save the review. Try again."; done(ok) } }
     val setHold = { decision: String -> postReview(buildJsonObject { put("slug", slug); put("decision", decision) }.toString()) { ok -> if (!ok) hub.notice.value = "Could not save the hold. Try again." } }
     val inMain = ws.repos.any { inside(cwd, it.cwd) } && ws.trees.none { inside(cwd, it.cwd) }
     val now = System.currentTimeMillis()

@@ -54,6 +54,10 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
 
     suspend fun setDefaultProvider(id: String) { call(url("/api/settings").post(buildJsonObject { put("defaultProvider", id) }.toString().toRequestBody(json))) }
 
+    suspend fun setFeatureUse(on: Boolean) = protocolJson.decodeFromString(AppSettings.serializer(), call(url("/api/settings").post(buildJsonObject { put("featureUse", on) }.toString().toRequestBody(json))).decodeToString()).featureUse
+    suspend fun trackFeature(id: String) { call(url("/api/feature-use").post(buildJsonObject { put("id", id) }.toString().toRequestBody(json))) }
+    suspend fun featureUse() = protocolJson.decodeFromString(FeatureUseReply.serializer(), call(url("/api/feature-use")).decodeToString()).days
+
     suspend fun settings() = protocolJson.decodeFromString(AppSettings.serializer(), call(url("/api/settings")).decodeToString())
     suspend fun sessions() = list("/api/sessions", SavedSession.serializer())
     suspend fun repos() = list("/api/repos", Repo.serializer())

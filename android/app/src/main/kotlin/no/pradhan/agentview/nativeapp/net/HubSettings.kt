@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.net
 
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import no.pradhan.agentview.nativeapp.app.shouldTrack
 import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.personalRoot
@@ -13,6 +14,21 @@ suspend fun Hub.refreshSettings() {
     deploy.value = s.deploy
     providers.value = s.providers
     defaultProvider.value = s.defaultProvider
+    featureUse.value = s.featureUse
+}
+
+fun Hub.setFeatureUse(on: Boolean) {
+    if (readOnly) return
+    viewModelScope.launch {
+        runCatching { api.setFeatureUse(on) }
+            .onSuccess { featureUse.value = it }
+            .onFailure { notice.value = "Could not save. Try again." }
+    }
+}
+
+fun Hub.track(id: String) {
+    if (!shouldTrack(featureUse.value, readOnly, id)) return
+    viewModelScope.launch { runCatching { api.trackFeature(id) } }
 }
 
 fun Hub.setDefaultProvider(id: String) {

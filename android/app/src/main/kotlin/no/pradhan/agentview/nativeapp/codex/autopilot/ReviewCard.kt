@@ -16,6 +16,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.runReview
@@ -89,7 +90,7 @@ fun ReviewCard(hub: Hub, run: ChatRun, now: Long, onChat: () -> Unit) {
     when (asking) {
         "approve" -> ConfirmDialog(
             "Push ${run.branch} and open a PR?", "Nothing is merged.", "Approve",
-            { approving = true; hub.runReview("approve", run.id, "Could not open the PR") { approving = false } }, danger = false,
+            { approving = true; hub.track("action:approveRun"); hub.runReview("approve", run.id, "Could not open the PR") { approving = false } }, danger = false,
         ) { asking = null }
         "discard" -> ConfirmDialog(
             "Discard this run?", "The worktree and its branch are deleted.", "Discard",

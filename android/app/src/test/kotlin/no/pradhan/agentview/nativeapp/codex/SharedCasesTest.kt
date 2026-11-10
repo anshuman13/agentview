@@ -18,7 +18,9 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
 import no.pradhan.agentview.nativeapp.app.BarEvent
 import no.pradhan.agentview.nativeapp.app.BarState
+import no.pradhan.agentview.nativeapp.app.FEATURES
 import no.pradhan.agentview.nativeapp.app.appCounts
+import no.pradhan.agentview.nativeapp.app.featureRows
 import no.pradhan.agentview.nativeapp.app.barHidden
 import no.pradhan.agentview.nativeapp.app.barState
 import no.pradhan.agentview.nativeapp.app.countChat
@@ -344,6 +346,18 @@ class SharedCasesTest {
             val events = c.getValue("events").jsonArray.map { e -> BarEvent.valueOf(e.jsonPrimitive.content.replaceFirstChar { it.uppercase() }) }
             val hidden = events.runningFold(BarState(), ::barState).drop(1).map(::barHidden)
             assertEquals(c.str("name"), c.getValue("hidden").jsonArray.map { it.jsonPrimitive.boolean }, hidden)
+        }
+    }
+
+    @Test fun featureUse() {
+        val fixture = Json.parseToJsonElement(File("../../shared/fixtures/feature-use.json").readText()).jsonObject
+        assertEquals(fixture.getValue("ids").jsonArray.map { it.jsonPrimitive.content }, FEATURES.map { it.id })
+        for (c in fixture.getValue("rows").jsonArray.map { it.jsonObject }) {
+            val days = c.getValue("days").jsonObject.mapValues { (_, v) -> v.jsonObject.mapValues { it.value.jsonPrimitive.int } }
+            val rows = featureRows(days, c.str("today"), c.getValue("window").jsonPrimitive.int)
+            assertEquals(c.str("name"), c.getValue("never").jsonArray.map { it.jsonPrimitive.content }, rows.never.map { it.id })
+            val used = rows.used.map { listOf(it.feature.id, it.n7, it.n30, it.last) }
+            assertEquals(c.str("name"), c.getValue("used").jsonArray.map { u -> u.jsonArray.let { listOf(it[0].jsonPrimitive.content, it[1].jsonPrimitive.int, it[2].jsonPrimitive.int, it[3].jsonPrimitive.content) } }, used)
         }
     }
 }

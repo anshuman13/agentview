@@ -170,6 +170,6 @@ fun Fab(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = M
 }
 
 @Composable
-fun Toggle(checked: Boolean, onChange: (Boolean) -> Unit) {
-    Switch(checked, onChange, Modifier.padding(end = Tokens.sp4))
+fun Toggle(checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+    Switch(checked, onChange, Modifier.padding(end = Tokens.sp4), enabled = enabled)
 }

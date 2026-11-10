@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.chat.ChatImage
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.ui.AvIcon
@@ -173,7 +174,7 @@ private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
             Box {
                 Button("Run", { menu = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 Menu(menu, { menu = false }) {
-                    MenuItem("Run all in this chat", "debug-start", { menu = false; hub.askChat(runAllPrompt(path)) }, enabled = !hub.readOnly)
+                    MenuItem("Run all in this chat", "debug-start", { menu = false; hub.track("action:runAll"); hub.askChat(runAllPrompt(path)) }, enabled = !hub.readOnly)
                     MenuItem("Run as goal\u2026", "target", { menu = false; hub.goalSheet.value = GoalSheet.Start(plan = path) })
                 }
             }
@@ -185,7 +186,7 @@ private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
             ListRow(t.text, strike = t.done, muted = t.done, trailing = if (t.done) null else if (t.doing) {
                 { Badge("In progress", BadgeTone.Running) }
             } else {
-                { Button("Start", { hub.askChat(startTaskPrompt(t, path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly) }
+                { Button("Start", { hub.track("action:startTask"); hub.askChat(startTaskPrompt(t, path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly) }
             })
         }
     }

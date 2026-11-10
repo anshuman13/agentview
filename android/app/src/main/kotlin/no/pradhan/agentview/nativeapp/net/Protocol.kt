@@ -75,7 +75,11 @@ data class ReviewHunk(val line: Int = 0, val del: List<String> = emptyList(), va
 
 // shared/protocol.ts PublicSettings.
 @Serializable
-data class AppSettings(val deploy: Boolean = false, val accountLabels: Map<String, String> = emptyMap(), val providers: List<ProviderOption> = emptyList(), val personalRoot: String = "", val defaultProvider: String = "claude")
+data class AppSettings(val deploy: Boolean = false, val accountLabels: Map<String, String> = emptyMap(), val providers: List<ProviderOption> = emptyList(), val personalRoot: String = "", val defaultProvider: String = "claude", val featureUse: Boolean = false)
+
+// GET /api/feature-use: the counts per day and feature, empty while the setting is off.
+@Serializable
+data class FeatureUseReply(val days: Map<String, Map<String, Int>> = emptyMap())
 
 // shared/protocol.ts ProviderOption: what a new chat can run on; a disabled one says what is missing.
 @Serializable
