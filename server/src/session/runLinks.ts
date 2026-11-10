@@ -100,8 +100,9 @@ export class RunLinks {
     const repeat = state.session.repeat;
     const result = { ...roundResult(r.text, { failed: turn.lastError }), costUsd: turn.cost };
     if (state.session.sessionId) runs.reportTry(state.session.sessionId, result);
-    const job = runs.jobFor(this.s.id);
+    const job = runs.jobOfSession(state.session.sessionId) ?? runs.jobFor(this.s.id);
     if (job) {
+      runs.update(job.id, { chatId: this.s.id });
       runs.addRound(job.id, { n: job.rounds.length + 1, ...result });
       this.s.onJobTurn?.(job.id, turn.lastError);
     }

@@ -128,7 +128,10 @@ export class Runs {
   answer(chatId: string) {
     const asked = this.runs.filter((r) => r.chatId === chatId && r.asked);
     for (const r of asked) r.asked = false;
-    if (asked.length) this.touch();
+    // A new turn on the chat of a run waiting for review takes it back from review.
+    const reviewed = this.runs.filter((r) => r.kind === 'job' && r.chatId === chatId && r.review === 'pending');
+    for (const r of reviewed) Object.assign(r, { state: 'running', why: '', review: undefined });
+    if (asked.length || reviewed.length) this.touch();
   }
 
   // A stopped run starts again with its rounds and cost.

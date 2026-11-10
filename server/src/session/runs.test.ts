@@ -46,6 +46,15 @@ describe('Runs needsYou', () => {
     expect(runs.get(id)?.needsYou).toBe(false);
   });
 
+  it('is taken back from review by a user message in its chat', () => {
+    const runs = new Runs();
+    const id = runs.start({ ...init, kind: 'job' });
+    runs.update(id, { state: 'paused', why: 'Ready for review', review: 'pending' });
+    runs.answer('c');
+    expect(runs.get(id)).toMatchObject({ state: 'running', why: '', needsYou: false });
+    expect(runs.get(id)?.review).toBeUndefined();
+  });
+
   it('is set while paused for approval, then falls back to the last round', () => {
     const runs = new Runs();
     const id = runs.start(init);

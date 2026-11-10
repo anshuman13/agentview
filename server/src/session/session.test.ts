@@ -1074,6 +1074,17 @@ describe('job runs', () => {
     expect(s.onJobTurn).toHaveBeenCalledWith(id, false);
   });
 
+  it('finds the run of a chat reopened by hand through its session, and relinks it', () => {
+    const { s, runs, id, result } = jobSession();
+    s.onJobTurn = vi.fn();
+    runs.update(id, { chatId: 'old', sessionId: 'sess-x' });
+    s.state.session.sessionId = 'sess-x';
+    s.sendPrompt('go');
+    result('r1');
+    expect(s.onJobTurn).toHaveBeenCalledWith(id, false);
+    expect(runs.get(id)?.chatId).toBe(s.id);
+  });
+
   it('ends Failed when the CLI exits without a result', () => {
     const { s, runs, id } = jobSession();
     s.exited();
