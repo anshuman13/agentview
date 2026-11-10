@@ -26,7 +26,7 @@ describe('unattendedLimits', () => {
 
   it('drops localhost, IP addresses and NetBird names with one log line, and expands ~', () => {
     const log = vi.fn();
-    const l = unattendedLimits({ allowWrite: ['~/cache'], allowedDomains: ['localhost', '127.0.0.1', '::1', 'x.netbird.cloud', 'example.com'] }, log);
+    const l = unattendedLimits({ allowWrite: ['~/cache'], allowedDomains: ['localhost', '127.0.0.1', '::1', 'x.netbird.cloud', '*', 'a.localhost', '*.local', 'mac.local', 'example.com'] }, log);
     expect(l).toEqual({ allowWrite: [path.join(os.homedir(), 'cache')], allowedDomains: ['example.com'] });
     expect(log).toHaveBeenCalledOnce();
   });

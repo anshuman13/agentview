@@ -32,7 +32,7 @@ const strings = (v: unknown, fallback: string[], name: string, log: (line: strin
   return fallback;
 };
 
-const reachesThisMac = (d: string) => d === 'localhost' || net.isIP(d.replace(/^\[|\]$/g, '')) > 0 || d.toLowerCase().endsWith('.netbird.cloud');
+const reachesThisMac = (d: string) => /^(\*|localhost|(.+\.)?(localhost|local|netbird\.cloud))$/i.test(d) || net.isIP(d.replace(/^\[|\]$/g, '')) > 0;
 
 // The limits of an unattended chat. Domains that reach this Mac or its NetBird peers are dropped, so the chat cannot call the server or the hub.
 export function unattendedLimits(raw: unknown, log: (line: string) => void = console.error): UnattendedLimits {
