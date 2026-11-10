@@ -61,7 +61,7 @@ export function recordBuild(session: AgentSession, ev: ChatEvent) {
   queue = queue.then(() => write(snap)).catch(() => {});
 }
 
-const SLUG = /^[\w.-]+$/;
+const SLUG = /^\w[\w.-]*$/;
 
 const slugValid = (slug: string) => SLUG.test(slug) && slugOk(slug);
 
