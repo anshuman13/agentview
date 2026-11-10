@@ -1,12 +1,17 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { Readable } from 'node:stream';
 import type http from 'node:http';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LiveChat } from '../../../shared/protocol.js';
 
 const mocks = vi.hoisted(() => ({
   scheduleFocus: vi.fn(),
   cancelFocus: vi.fn(),
   listRepos: vi.fn(),
+  createWorktree: vi.fn(),
   listSessions: vi.fn(),
   removeChat: vi.fn(),
   listBin: vi.fn(),
@@ -14,12 +19,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../integrations/focus.js', () => ({ scheduleFocus: mocks.scheduleFocus, cancelFocus: mocks.cancelFocus }));
-vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, listWorktrees: vi.fn(), createWorktree: vi.fn(), createFolder: vi.fn(), removeWorktree: vi.fn() }));
+vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, listWorktrees: vi.fn(), createWorktree: mocks.createWorktree, createFolder: vi.fn(), removeWorktree: vi.fn() }));
 vi.mock('../agent/claude/sessions.js', () => ({ listSessions: mocks.listSessions, savedSession: (x: unknown) => x, renameRoute: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRoute: vi.fn() }));
 vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: vi.fn() }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
 
+import { codingGuard } from './openRoutes.js';
 import { createRoutes, type RouteDeps } from './routes.js';
 
 const chat = { id: 'c1', cwd: '/tmp/x' } as LiveChat;
@@ -65,4 +71,51 @@ describe('routes', () => {
     for (const body of ['{bad', '']) expect((await call('POST', '/api/focus', body)).code).toBe(500);
   });
 
+  describe('POST /api/jobs/start', () => {
+    const start = (deps: Partial<RouteDeps> = {}, repo = '/tmp/none') => call('POST', '/api/jobs/start', JSON.stringify({ jobId: 'j1', title: 'Fix the flaky test', repo, prompt: 'do it' }), deps);
+
+    it('answers 503 while the sandbox guard is in place', async () => {
+      const r = await start();
+      expect([r.code, r.json]).toEqual([503, { error: 'Coding jobs need the sandbox' }]);
+    });
+
+    describe('with the guard off', () => {
+      beforeEach(() => {
+        codingGuard.sandbox = true;
+        mocks.createWorktree.mockRejectedValue(new Error('paseo is not installed'));
+      });
+      afterEach(() => {
+        codingGuard.sandbox = false;
+      });
+
+      it('answers 400 for a repo that is not a workspace repo', async () => {
+        mocks.listRepos.mockResolvedValue([{ cwd: '/tmp/other' }]);
+        const r = await start();
+        expect([r.code, r.json]).toEqual([400, { error: 'Not a workspace repo' }]);
+      });
+
+      it('answers 409 while the job has an open run', async () => {
+        mocks.listRepos.mockResolvedValue([{ cwd: '/tmp/none' }]);
+        const r = await start({ runs: () => [{ kind: 'job', jobId: 'j1', state: 'running' }] } as unknown as Partial<RouteDeps>);
+        expect([r.code, r.json]).toEqual([409, { error: 'The last run is still open' }]);
+      });
+
+      it('makes a jobs/ git worktree and starts the job op', async () => {
+        const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'jobs-')));
+        const repo = path.join(root, 'repo');
+        execFileSync('git', ['init', '-q', '-b', 'main', repo]);
+        execFileSync('git', ['-C', repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init']);
+        mocks.listRepos.mockResolvedValue([{ cwd: repo }]);
+        const req = vi.fn(async () => 'chat9');
+        const r = await start({ host: { req }, runs: () => [] } as unknown as Partial<RouteDeps>, repo);
+        expect(r.json.chatId).toBe('chat9');
+        expect(r.json.branch).toMatch(/^jobs\/fix-the-flaky-test-\d{8}$/);
+        const dir = path.join(root, '.tries', `repo-${r.json.branch.split('/')[1]}`);
+        expect(existsSync(dir)).toBe(true);
+        expect(execFileSync('git', ['-C', dir, 'branch', '--show-current']).toString().trim()).toBe(r.json.branch);
+        expect(req).toHaveBeenCalledWith({ op: 'job', cwd: dir, title: 'Fix the flaky test', prompt: 'do it', jobId: 'j1', branch: r.json.branch, repo, paseo: false });
+        rmSync(root, { recursive: true, force: true });
+      });
+    });
+  });
 });

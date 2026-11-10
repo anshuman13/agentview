@@ -17,6 +17,7 @@ import { otherMacs } from './macs.js';
 import { loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
+import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { readBody, savePaste } from './body.js';
 import { HANDLED, entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 
@@ -61,6 +62,9 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
 }
 
 
+// A coding job's chat runs unsandboxed until the sandbox lands, so it could call this server; the start route stays shut.
+export const codingGuard = { sandbox: false };
+
 export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   const liveCwds = () => [...d.chats().values()].map((c) => c.cwd);
 
@@ -70,6 +74,16 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return { ok: true };
     }),
     'POST /api/worktrees': entry(async ({ body }) => ({ cwd: await createWorktree(String(body.repo ?? ''), String(body.branch ?? '').trim()) }), true),
+    'POST /api/jobs/start': entry(async ({ body }) => {
+      if (!codingGuard.sandbox) return { status: 503, body: { error: 'Coding jobs need the sandbox' } };
+      const [jobId, title, repo, prompt] = ['jobId', 'title', 'repo', 'prompt'].map((k) => String(body[k] ?? ''));
+      if (!jobId || !prompt.trim()) return { status: 400, body: { error: 'jobId and prompt are required' } };
+      if (!(await listRepos()).some((r) => r.cwd === repo)) return { status: 400, body: { error: 'Not a workspace repo' } };
+      if (d.runs().some((r) => r.kind === 'job' && r.jobId === jobId && r.state !== 'done')) return { status: 409, body: { error: 'The last run is still open' } };
+      const branch = `jobs/${branchSlug(title)}`;
+      const { dir, paseo } = await makeWorktree(repo, branch);
+      return { chatId: await d.host.req<string>({ op: 'job', cwd: dir, title, prompt, jobId, branch, repo, paseo }), branch };
+    }, true),
     'POST /api/paste': entry(async ({ req, url }) => ({ path: await savePaste(req, url.searchParams.get('name') ?? '') })),
     'POST /api/folders': entry(async ({ body }) => ({ cwd: await createFolder(String(body.root ?? ''), String(body.name ?? '').trim()) }), true),
     'POST /api/open': entry(({ body }) => {
