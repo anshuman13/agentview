@@ -1,4 +1,5 @@
 import { MCP_BAD, type LiveChat } from '../../../shared/protocol.js';
+import { chatTitle } from '../../../shared/util.js';
 import { recapOf, replyLine } from '../../../shared/edits.js';
 import { latestTodos, todoCount } from '../../../shared/todos.js';
 import { prChecks } from '../integrations/github.js';
@@ -28,7 +29,7 @@ export function summary(chat: AgentSession, { stalled, run, refresh }: SummaryIn
     id: chat.id,
     sessionId: s.session.sessionId,
     cwd: chat.cwd,
-    title: chat.title || (firstPrompt?.kind === 'user' ? firstPrompt.text.split('\n')[0].slice(0, 80) : 'New chat'),
+    title: chat.title || (firstPrompt?.kind === 'user' ? chatTitle(firstPrompt.text) : 'New chat'),
     running: s.session.running,
     agents: agentList.length,
     ...(agentList.length > 0 && { agentList }),
