@@ -15,7 +15,7 @@ const META = /<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
 // The page a sketch frame shows: our own html and head come first, so the policy applies to everything the file adds. http-equiv metas
 // (refresh) are removed and target attributes renamed, so no link or form can navigate the frame.
 export function sketchDoc(html: string, theme: SketchTheme) {
-  const clean = html.replace(META, (m) => (/\bhttp-equiv\b/i.test(m) ? '' : m)).replace(/\starget\s*=/gi, ' data-target=');
+  const clean = html.replace(META, (m) => (/\bhttp-equiv\b/i.test(m) ? '' : m)).replace(/([\s/"'])target\s*=/gi, '$1data-target=');
   const doctype = /^\s*<!doctype[^>]*>/i.exec(clean)?.[0] ?? '';
   return `${doctype}<html data-theme="${theme}"><head>${GUARD}</head>${clean.slice(doctype.length)}`;
 }

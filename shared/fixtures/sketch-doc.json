@@ -64,5 +64,11 @@
     "html": "<a target=\"_self\" href=\"https://evil\">x</a><form TARGET = \"_top\"></form>",
     "theme": "dark",
     "doc": "<html data-theme=\"dark\"><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"></head><a data-target=\"_self\" href=\"https://evil\">x</a><form data-target= \"_top\"></form>"
+  },
+  {
+    "name": "slash and quote separated target attributes",
+    "html": "<a/target=\"_self\" href=\"https://evil\">x</a><a href=\"y\"target=_top>z</a>",
+    "theme": "light",
+    "doc": "<html data-theme=\"light\"><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"></head><a/data-target=\"_self\" href=\"https://evil\">x</a><a href=\"y\"data-target=_top>z</a>"
   }
 ]
