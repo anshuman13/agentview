@@ -196,7 +196,7 @@ export class ClaudeDriver implements AgentDriver {
       canUseTool: (toolName, input, opts) => this.host.canUseTool(toolName, input, opts) as Promise<PermissionResult>,
       beforeAgent: (input, _id, { signal }) => this.toolHooks.beforeAgent(input, signal),
       beforeEdit: async (input) => this.toolHooks.beforeEdit(input, unattended),
-      beforeTool: async (input) => this.toolHooks.beforeTool(input, unattended!),
+      beforeTool: async (input) => (unattended ? this.toolHooks.beforeTool(input, unattended) : {}),
       afterTool: async (input) => this.toolHooks.afterTool(input),
       onStop: (input) => this.toolHooks.onStop(input),
       mcp: this.mcp.added,
