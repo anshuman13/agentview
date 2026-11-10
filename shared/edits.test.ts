@@ -47,10 +47,16 @@ describe('recapOf', () => {
     expect(recapOf([user('u'), tool, reply('a', 'Long text here.\nROUND: done checks pass')], false)).toBe('checks pass');
   });
 
+  it('keeps a long ROUND line whole up to 400 characters', () => {
+    const round = (n: number) => recapOf([user('u'), tool, reply('a', `Done.\nROUND: progress ${'word. '.repeat(n)}`.trimEnd())], false);
+    expect(round(50)).toBe('word. '.repeat(50).trimEnd());
+    expect(round(100)).toBe(`${'word. '.repeat(100).trimEnd().slice(0, 399).trimEnd()}…`);
+  });
+
   it('skips a short reply without tool use and falls back to the turn before', () => {
     const events = [user('u1'), tool, reply('a1', 'Added the route.'), user('u2'), reply('a2', 'Yes.')];
     expect(recapOf(events, false)).toBe('Added the route.');
-    expect(recapOf([user('u'), reply('a', 'x'.repeat(201))], false)).toBe(`${'x'.repeat(139)}…`);
+    expect(recapOf([user('u'), reply('a', 'x'.repeat(201))], false)).toBe(`${'x'.repeat(201)}`);
   });
 
   it('leaves out a turn that is still running', () => {

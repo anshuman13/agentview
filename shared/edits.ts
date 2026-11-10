@@ -73,6 +73,7 @@ export function replyLine(events: ChatEvent[], max = 60): string | undefined {
 }
 
 export const RECAP_MIN = 200;
+const RECAP_MAX = 400;
 
 // The one line a finished turn leaves behind: its ROUND summary, else the first sentence of its last reply. A turn without tool use and a short reply leaves none.
 function turnRecap(turn: ChatEvent[]): string | undefined {
@@ -81,8 +82,8 @@ function turnRecap(turn: ChatEvent[]): string | undefined {
   if (reply?.kind !== 'assistant') return undefined;
   const text = stripRound(reply.text).trim();
   if (text.length <= RECAP_MIN && !top.some((e) => e.kind === 'tool_use')) return undefined;
-  const line = roundOf(reply.text)?.line || firstLine(text);
-  return clip(line.split(/(?<=[.!?])\s/)[0], 140) || undefined;
+  const line = roundOf(reply.text)?.line || firstLine(text).split(/(?<=[.!?])\s/)[0];
+  return clip(line, RECAP_MAX) || undefined;
 }
 
 // The recap of the newest turn that has one; a turn still running is left out.
