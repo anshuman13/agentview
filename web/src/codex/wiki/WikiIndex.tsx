@@ -74,13 +74,13 @@ function PageRow({ page, proposed }: { page: Page; proposed: Set<string | null> 
     <CardRow
       leading={<PageTile page={page} />}
       title={page.title}
-      badge={needsReview(page, proposed) ? { status: 'waiting', label: 'Needs you', reason: 'Needs review' } : undefined}
+      badge={needsReview(page, proposed) ? { status: 'waiting', label: 'Needs you', reason: 'Needs review' } : null}
       onOpen={open}
-      menu={(choose) => (
+      menu={(
         <>
-          <MenuItem icon="file" onClick={choose(open)}>Open</MenuItem>
+          <MenuItem icon="file" onClick={open}>Open</MenuItem>
           <MenuSeparator />
-          <MenuItem icon="archive" danger onClick={choose(archive)}>Archive</MenuItem>
+          <MenuItem icon="archive" danger onClick={archive}>Archive</MenuItem>
         </>
       )}
     />

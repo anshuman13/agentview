@@ -43,13 +43,13 @@ export function Asks({ name, rows }: { name: string; rows: ItemRow[] }) {
             key={r.profile + r.id}
             title={r.title || '(Untitled)'}
             meta={`${gmail ? 'Gmail' : 'Slack'} · ${ago(r.updated_at, ' ago')}`}
-            badge={r.status === 'suggested' ? { status: 'waiting', label: 'Needs you' } : undefined}
+            badge={r.status === 'suggested' ? { status: 'waiting', label: 'Needs you' } : null}
             onOpen={() => openTask(r)}
             button={{ label: 'Done', run: () => act.done(r) }}
-            menu={(choose) => (
+            menu={(
               <>
-                <MenuItem icon="arrow-right" onClick={choose(() => openTask(r))}>Open</MenuItem>
-                {href && <MenuItem icon="link" href={href} onClick={choose(() => undefined)}>Open in {gmail ? 'Gmail' : 'Slack'}</MenuItem>}
+                <MenuItem icon="arrow-right" onClick={() => openTask(r)}>Open</MenuItem>
+                {href && <MenuItem icon="link" href={href}>Open in {gmail ? 'Gmail' : 'Slack'}</MenuItem>}
               </>
             )}
           />
@@ -73,7 +73,7 @@ export function OpenTasks({ name, rows }: { name: string; rows: ItemRow[] }) {
           meta={dueText(r, now)}
           onOpen={() => openTask(r)}
           action={{ icon: 'check', label: 'Done', run: () => act.done(r) }}
-          menu={(choose) => taskMenu(r, act, () => openTask(r))}
+          menu={taskMenu(r, act, () => openTask(r))}
         />
       )} />
     </section>
