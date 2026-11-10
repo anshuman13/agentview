@@ -1,11 +1,7 @@
 package no.pradhan.agentview.nativeapp.sessions
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,12 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -54,15 +50,12 @@ import no.pradhan.agentview.nativeapp.net.setMuted
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
-import no.pradhan.agentview.nativeapp.ui.Button
-import no.pradhan.agentview.nativeapp.ui.ButtonSize
-import no.pradhan.agentview.nativeapp.ui.ButtonVariant
+import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MenuSeparator
-import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
@@ -147,20 +140,18 @@ class ChatRows(
         val branch = (s?.gitBranch ?: repoBranch(c.cwd)).takeIf { !isDefaultBranch(it) }
         ChatRow(
             title = c.title.ifBlank { "Untitled" },
-            meta = liveMeta(c, s, repo, branch),
+            meta = liveMeta(c, s, repo, branch, prFor(c)),
             state = chatState(c, s, seen),
             selected = c.id == shownId,
             actions = actions(c.sessionId, c.title, c),
             run = c.run,
-            recap = c.recap,
-            pr = prFor(c),
             onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
         )
     }
 
     @Composable
-    private fun liveMeta(c: LiveChat, s: SavedSession?, repo: String?, branch: String?): AnnotatedString {
+    private fun liveMeta(c: LiveChat, s: SavedSession?, repo: String?, branch: String?, pr: PrChip?): AnnotatedString {
         val line = c.edits?.takeIf { !c.running && c.pending == 0 && (it.add > 0 || it.del > 0) }
         val when_ = when {
             c.pending > 0 -> since(c.lastActive)
@@ -174,7 +165,7 @@ class ChatRows(
                 withStyle(SpanStyle(color = av.err)) { append("Draft: ") }
                 append("$draft · ")
             }
-            append(metaLine(repo, branch, c.model?.let(::shortModel), providerMark(c.provider), when_, c.todos?.let { "${it.done}/${it.total}" }))
+            append(metaLine(repo, branch, c.model?.let(::shortModel), providerMark(c.provider), when_, pr?.text, c.todos?.let { "${it.done}/${it.total}" }))
             if (line != null) {
                 append(" · ")
                 withStyle(SpanStyle(color = av.ok)) { append("+${line.add}") }
@@ -229,42 +220,36 @@ private fun RepoMark(name: String) {
 }
 
 @Composable
-private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun? = null, recap: String? = null, pr: PrChip? = null, onResume: (() -> Unit)? = null) {
-    val uri = LocalUriHandler.current
+private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun? = null, onResume: (() -> Unit)? = null) {
+    val badge = run?.let { runBadge(it) }
+    val shown = if (badge == RunBadge.Needs) ChatState.Needs else state
     // Like Slack's unread channels, a chat with a reply or question you have not opened has a bold title.
-    val unread = state == ChatState.Done || state == ChatState.Needs
+    val unread = shown == ChatState.Done || shown == ChatState.Needs
+    val dot = when (shown) {
+        ChatState.Needs -> DotState.Warn to "Needs you"
+        ChatState.Failed -> DotState.Bad to "Failed"
+        ChatState.Running -> DotState.Running to "Running"
+        ChatState.Done -> DotState.Unread to "Unread"
+        null -> null
+    }
     ListRow(
         if (unread) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(title) } } else title,
-        meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
-        below = if (pr == null && recap == null) null else ({
-            Column(Modifier.weight(1f)) {
-                if (recap != null) Text(recap, style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (pr != null) Row(Modifier.clip(RoundedCornerShape(Tokens.sp4)).clickable(enabled = pr.url.isNotEmpty()) { uri.openUri(pr.url) }.padding(vertical = Tokens.sp2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                    pr.dot?.let { StatusDot(it) }
-                    Text(pr.text, style = Type.meta, color = av.metaFg)
-                }
-            }
-        }),
-        trailing = {
-            if (onResume != null) Button("Resume", onResume, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
-            if (actions.muted) AvIcon("bell-slash", tint = av.fgMuted)
-            run?.let { r -> runBadge(r)?.takeIf { !(it == RunBadge.Needs && state == ChatState.Needs) }?.let { RunBadgeView(it, r) } }
-            when (state) {
-                ChatState.Needs -> Badge("Needs you", BadgeTone.Waiting)
-                ChatState.Failed -> Badge("Failed", BadgeTone.Failed)
-                ChatState.Running -> Badge("Running", BadgeTone.Running)
-                ChatState.Done -> Badge("Done", BadgeTone.Done)
-                null -> {}
-            }
-            MoreButton { close ->
-                if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", if (actions.pinned) "pinned" else "pin", { close(); actions.onPin() })
-                if (actions.canPin && state == null && !selected) MenuItem("Mark as unread", "mail", { close(); actions.onUnread() })
-                if (actions.canPin) MenuItem(if (actions.muted) "Unmute" else "Mute", if (actions.muted) "bell" else "bell-slash", { close(); actions.onMute() })
-                if (actions.canPin) MenuItem("Copy link", "link", { close(); actions.onLink() })
-                if (actions.canPin) MenuItem("Rename", "edit", { close(); actions.onRename() })
-                actions.onClose?.let { c -> MenuItem("Close chat", "close", { close(); c() }) }
-                if (actions.canPin) { MenuSeparator(); MenuItem("Archive", "archive", { close(); actions.onArchive() }, danger = true) }
-            }
+        meta, lines = 1, metaLines = 1, selected = selected, onClick = onClick,
+        leading = { dot?.let { (d, word) -> Box(Modifier.semantics { contentDescription = word }) { StatusDot(d) } } },
+        stateSlot = true,
+        state = {
+            if (run != null && badge != null && badge != RunBadge.Needs) RunBadgeView(badge, run)
+            else if (actions.muted) AvIcon("bell-slash", tint = av.fgMuted)
+        },
+        menu = { close ->
+            if (onResume != null) MenuItem("Resume", "play", { close(); onResume() })
+            if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", if (actions.pinned) "pinned" else "pin", { close(); actions.onPin() })
+            if (actions.canPin && state == null && !selected) MenuItem("Mark as unread", "mail", { close(); actions.onUnread() })
+            if (actions.canPin) MenuItem(if (actions.muted) "Unmute" else "Mute", if (actions.muted) "bell" else "bell-slash", { close(); actions.onMute() })
+            if (actions.canPin) MenuItem("Copy link", "link", { close(); actions.onLink() })
+            if (actions.canPin) MenuItem("Rename", "edit", { close(); actions.onRename() })
+            actions.onClose?.let { c -> MenuItem("Close chat", "close", { close(); c() }) }
+            if (actions.canPin) { MenuSeparator(); MenuItem("Archive", "archive", { close(); actions.onArchive() }, danger = true) }
         },
     )
 }
