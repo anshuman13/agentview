@@ -39,6 +39,7 @@ import no.pradhan.agentview.nativeapp.codex.TaskActions
 import no.pradhan.agentview.nativeapp.codex.Today
 import no.pradhan.agentview.nativeapp.codex.actionsOf
 import no.pradhan.agentview.nativeapp.codex.dayLabel
+import no.pradhan.agentview.nativeapp.codex.isEvent
 import no.pradhan.agentview.nativeapp.codex.isSolo
 import no.pradhan.agentview.nativeapp.codex.othersOf
 import no.pradhan.agentview.nativeapp.codex.parseWhen
@@ -121,14 +122,21 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val transcript = rememberTranscript(hub, m, state == MState.Done)
     LazyColumn(Modifier.fillMaxWidth()) {
         meetingHeader(c, state)
-        meetingActions(c, all)
-        meetingSummary(c, folds)
-        meetingDecisions(c)
-        prep?.let { meetingPrep(c, it) }
-        item { SectionHeader("My notes") }
-        item { NotesField(hub, m) }
-        item { SectionHeader("More", open = folds.more.value, onToggle = { folds.more.value = !folds.more.value }) }
-        if (folds.more.value) meetingMore(c, state, all, folds, transcript)
+        if (isEvent(m)) {
+            item { SectionHeader("My notes") }
+            item { NotesField(hub, m) }
+            meetingActions(c, all)
+            item { NewActionField(c, folds.newAction) }
+        } else {
+            meetingActions(c, all)
+            meetingSummary(c, folds)
+            meetingDecisions(c)
+            prep?.let { meetingPrep(c, it) }
+            item { SectionHeader("My notes") }
+            item { NotesField(hub, m) }
+            item { SectionHeader("More", open = folds.more.value, onToggle = { folds.more.value = !folds.more.value }) }
+            if (folds.more.value) meetingMore(c, state, all, folds, transcript)
+        }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
     if (folds.pinning.value) PinSheet(m, ops) { folds.pinning.value = false }
@@ -156,6 +164,7 @@ private fun MeetingTitle(c: MeetingCtx, state: MState) {
     val link = safeHref(m.str("calendar_url"))
     val uri = LocalUriHandler.current
     Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        if (isEvent(m)) Text("Event", style = Type.footnote, color = av.fgMuted)
         LRow(verticalAlignment = Alignment.CenterVertically) {
             Text(m.title?.ifEmpty { null } ?: "Untitled", Modifier.weight(1f), style = Type.title)
             if (state == MState.Live && link != null) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)

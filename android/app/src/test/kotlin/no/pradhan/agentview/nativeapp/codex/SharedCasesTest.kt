@@ -280,6 +280,15 @@ class SharedCasesTest {
         for (c in cases("append-rule")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, appendRule(c.str("text"), c.str("rule")))
     }
 
+    @Test fun eventRule() {
+        for (c in cases("event-rule")) {
+            val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()
+            f["people"] = toJson(c.str("people"))
+            c.nullable("links")?.let { f["links"] = toJson(it.jsonPrimitive.content) }
+            assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isEvent(Row("meetings", c.str("id"), "work", f = f)))
+        }
+    }
+
     @Test fun revertBlock() {
         for (c in cases("revert-block")) assertEquals(c.str("name"), c.str("expected"), revertBlock(fileDiff(c.str("original"), c.str("content")), c.getValue("block").jsonPrimitive.int))
     }

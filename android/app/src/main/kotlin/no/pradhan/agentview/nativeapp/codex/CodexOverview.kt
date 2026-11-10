@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import no.pradhan.agentview.nativeapp.codex.meetings.linksOf
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
 import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.net.protocolJson
@@ -16,6 +17,10 @@ import no.pradhan.agentview.nativeapp.sessions.queryWords
 
 fun isBlock(m: Row) = m.id.startsWith("block:")
 fun isSolo(m: Row) = m.id.startsWith("cal:") && m.str("people") == "[]"
+
+private val CALL_HOSTS = listOf("meet.google.com", "zoom.us", "teams.microsoft.com", "teams.live.com", "whereby.com")
+
+fun isEvent(m: Row) = isSolo(m) && linksOf(m).none { l -> l.domain.substringBefore(':').let { h -> CALL_HOSTS.any { h == it || h.endsWith(".$it") } } }
 
 fun peopleOf(m: Row): List<String> {
     val s = m.str("people") ?: return emptyList()

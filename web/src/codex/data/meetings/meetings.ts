@@ -1,7 +1,7 @@
 import { clock } from '../../../../../shared/util';
 import { dayEnd, dayLabel, dayStart } from '../dates';
 import type { ItemRow, Profile } from '../sync';
-import { decisionLog, factTime, listOf, live, matcher, othersOf, queryWords, rowMatcher, type Decision, type Fact, type Meeting } from '../wiki/wiki';
+import { decisionLog, factTime, linksOf, listOf, live, matcher, othersOf, queryWords, rowMatcher, type Decision, type Fact, type Meeting } from '../wiki/wiki';
 
 // Meetings that have started, newest day first and in time order within a day. The future lives in Today and Upcoming.
 export function groupMeetings(meetings: Meeting[], now = Date.now()) {
@@ -213,6 +213,16 @@ export function briefFor(meeting: Meeting, items: ItemRow[], facts: Fact[]): Mee
 
 // A calendar event with no other attendees; the import always stores cal: people as a JSON list.
 export const isSolo = (m: Meeting) => m.id.startsWith('cal:') && m.people === '[]';
+
+const CALL_HOSTS = ['meet.google.com', 'zoom.us', 'teams.microsoft.com', 'teams.live.com', 'whereby.com'];
+
+const isCallLink = (url: string) => {
+  const host = new URL(url).hostname;
+  return CALL_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+};
+
+// A solo calendar event with no call link: a plain page without the meeting sections.
+export const isEvent = (m: Meeting) => isSolo(m) && !linksOf(m).some((l) => isCallLink(l.url));
 
 type MeetingState = 'upcoming' | 'live' | 'waiting' | 'done' | 'missing' | 'manual';
 

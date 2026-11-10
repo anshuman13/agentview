@@ -17,6 +17,7 @@ import no.pradhan.agentview.nativeapp.codex.dayEnd
 import no.pradhan.agentview.nativeapp.codex.dayPlus
 import no.pradhan.agentview.nativeapp.codex.dayStart
 import no.pradhan.agentview.nativeapp.codex.edited
+import no.pradhan.agentview.nativeapp.codex.isEvent
 import no.pradhan.agentview.nativeapp.codex.isSolo
 import no.pradhan.agentview.nativeapp.codex.othersOf
 import no.pradhan.agentview.nativeapp.codex.peopleOf
@@ -177,6 +178,7 @@ fun pageMeta(m: Row): String {
     val start = m.startsAt
     val time = if (start != null) "${weekdayShort(start)} ${clock(start)}${m.endsAt?.let { "-${clock(it)}" } ?: ""}" else ""
     val rec = m.long("recorded_ms")?.takeIf { it > 0 }?.let { "Recorded ${Math.round(it / 60000.0)} min" }
+    if (isEvent(m)) return time
     return listOfNotNull(time.ifEmpty { null }, m.str("room")?.takeIf { it.isNotEmpty() }, if (n > 0) (if (n == 1) "1 person" else "$n people") else null, rec).joinToString(" · ")
 }
 

@@ -1,0 +1,5 @@
+[
+  { "name": "solo with no links", "id": "cal:a", "people": "[]", "links": null, "expected": true },
+  { "name": "solo with a Meet link", "id": "cal:b", "people": "[]", "links": "[{\"title\":\"Join\",\"url\":\"https://meet.google.com/abc-defg-hij\"}]", "expected": false },
+  { "name": "a row with people", "id": "cal:c", "people": "[\"Sam\"]", "links": null, "expected": false }
+]

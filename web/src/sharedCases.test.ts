@@ -28,6 +28,7 @@ import { turnEvents, turnSummary, type SummaryEntry } from './chat/transcript/su
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import type { Meeting } from './codex/data/wiki/wiki';
+import { isEvent } from './codex/data/meetings/meetings';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -110,6 +111,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; text: string; rule: string; expected: string | null }>('append-rule')) {
     it(`appendRule: ${c.name}`, () => expect(appendRule(c.text, c.rule)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; id: string; people: string; links: string | null; expected: boolean }>('event-rule')) {
+    it(`isEvent: ${c.name}`, () => expect(isEvent({ id: c.id, people: c.people, links: c.links } as Meeting)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; request: string; expected: string }>('spec-prompt')) {
