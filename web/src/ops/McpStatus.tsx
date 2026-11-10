@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getState, useStore } from '../app/store';
-import { Button } from '../ui/Button';
+import { Button, IconButton } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
 import { useCan } from '../chat/useCan';
-import { ago, useTick } from '../ui/util';
+import { ago, useSlot, useTick } from '../ui/util';
 import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
 import { useMcpHealth } from './mcpShown';
@@ -58,6 +58,7 @@ export function McpPage() {
   const hiddenList = list.filter(hidden);
   const shownRows = shown.flatMap((s) => s.variants.map((v) => v.row));
   const extra = document.getElementById('page-mcp-extra');
+  const action = useSlot('page-mcp-action');
   const pick = (name: string) => setSel((s) => (s === name ? null : name));
   const renderRows = (s: Service, g: Group, isHidden: boolean) => s.variants.map(({ row }) => (
     <ServiceRow key={rowKey(row)} row={row} selected={rowKey(row) === sel} usage={usageOf(row)} onPick={() => pick(rowKey(row))} group={g} onGroup={(to) => setGroup(groupKey(s.variants[0].row), to)} onHide={() => setGroup(hideKey(s), isHidden ? 'shown' : 'hidden')} isHidden={isHidden} />
@@ -66,6 +67,7 @@ export function McpPage() {
   return (
     <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
       <div className="mcp-main wk"><div className="wk-scroll"><div className="mt-page">
+        {action && createPortal(<IconButton icon="refresh" label="Check" size="sm" spin={busy} disabled={busy} onClick={() => load(true)} />, action)}
         {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={health.ok} total={health.total} attention={shownRows.filter(needsYou).length} onCheck={() => load(true)} />, extra)}
         {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
         {probed === null && !error && (

@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { GrafanaDashboards, GrafanaLogs, GrafanaPanel, GrafanaPanels, GrafanaPatterns, ObserveInfo } from '../../../shared/observe';
 import { api } from '../app/store';
-import { askChat } from '../ui/util';
+import { askChat, useSlot } from '../ui/util';
 import { useCan } from '../chat/useCan';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
@@ -65,8 +66,12 @@ export function Grafana({ info }: { info: ObserveInfo }) {
     );
     setQuestion('');
   };
+  const slot = useSlot('page-observe-action');
+  const refreshButton = <IconButton icon="refresh" label="Refresh" size="sm" small onClick={refresh} />;
   return (
-    <Pane label="Grafana" action={<IconButton icon="refresh" label="Refresh" size="sm" small onClick={refresh} />}>
+    <>
+    {slot && createPortal(refreshButton, slot)}
+    <Pane label="Grafana" action={slot ? undefined : refreshButton}>
       {!info.grafanaServer && <EmptyState size="sm" title="No Grafana server" hint={canEdit ? 'Add one with: claude mcp add grafana -s user -e GRAFANA_URL=… -e GRAFANA_API_KEY=… -- mcp-grafana' : 'Add one with: codex mcp add grafana --env GRAFANA_URL=… --env GRAFANA_API_KEY=… -- mcp-grafana'} />}
       {info.grafanaServer && <>
       <form
@@ -143,6 +148,7 @@ export function Grafana({ info }: { info: ObserveInfo }) {
       {selector && <div className="obs-hint mono">{selector}</div>}
       </>}
     </Pane>
+    </>
   );
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api, useStore } from '../app/store';
 import { fetchJson } from '../app/api';
 import { fetchDeployJob, fetchDeployStatus } from './opsApi';
@@ -10,7 +11,7 @@ import { Section } from '../ui/Section';
 import { EmptyState } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protocol';
-import { ago, usePoll } from '../ui/util';
+import { ago, usePoll, useSlot } from '../ui/util';
 import '../styles/features/deploy.css';
 import { Badge } from '../ui/Badge';
 import { createStore } from '../ui/createStore';
@@ -107,6 +108,7 @@ export function Deploy() {
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const job = useJob(cwd);
   const root = useRef<HTMLDivElement>(null);
+  const slot = useSlot('page-deploy-action');
 
   const seq = useRef(0);
   const load = () => {
@@ -131,6 +133,7 @@ export function Deploy() {
   usePoll(root, 60_000, () => cwd && load(), [cwd, app]);
 
   const s = status;
+  const refresh = <IconButton icon="refresh" label="Refresh" size="sm" spin={loading} onClick={load} />;
   const begin = (call: () => Promise<DeployJob>) => call().then((j) => track(cwd, j), (e: Error) => setJob(cwd, { id: '', lines: [e.message], done: true, ok: false, url: '' }));
   const warning = (env: DeployEnv) => (env.name.includes('prod') ? 'This is a production environment.' : env.defaultBranchOnly ? 'Only the default branch deploys here.' : undefined);
 
@@ -158,7 +161,8 @@ export function Deploy() {
   return (
     <div className="wk" ref={root}><div className="wk-scroll"><div className="mt-page">
       <section>
-      <Section label={s?.app ?? 'Deploy'} action={
+      {slot && createPortal(refresh, slot)}
+      {(s || !slot) && <Section label={s?.app ?? 'Deploy'} action={
         <>
           {s && s.apps.length > 1 && (
             <span className="as-wrap-more">
@@ -170,9 +174,9 @@ export function Deploy() {
               )}
             </span>
           )}
-          <IconButton icon="refresh" label="Refresh" size="sm" spin={loading} onClick={load} />
+          {!slot && refresh}
         </>
-      } />
+      } />}
       {error && (error.includes('no deploy app')
         ? <EmptyState size="sm" title="No deploy app here" hint="This repo has no .deploy/app.yaml" />
         : <div className="deploy-error" role="alert"><Icon name="error" small /> {error}</div>)}
