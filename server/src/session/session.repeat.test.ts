@@ -174,6 +174,22 @@ describe('run controls', () => {
   });
 });
 
+describe('set_status', () => {
+  it('keeps done and next in now, and a server status does not replace them within 10 minutes', () => {
+    vi.useFakeTimers();
+    const { s } = fakeSession();
+    s.setStatus('Writing the spec', { done: 'Plan read', next: ['a', 'b'] });
+    expect(s.now).toMatchObject({ text: 'Writing the spec', next: ['a', 'b'] });
+    s.setStatus('Compacted');
+    expect(s.now?.text).toBe('Writing the spec');
+    vi.advanceTimersByTime(11 * 60_000);
+    s.setStatus('Compacted');
+    expect(s.now).toMatchObject({ text: 'Compacted' });
+    expect(s.now?.next).toBeUndefined();
+    vi.useRealTimers();
+  });
+});
+
 describe('/goal', () => {
   const CHECK = 'Check whether this goal is met: the tests pass. Reply GOAL MET when it is, otherwise keep working on it.';
   const users = (s: AgentSession) => s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text);

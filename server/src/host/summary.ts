@@ -33,6 +33,7 @@ export function summary(chat: AgentSession, { stalled, run, refresh }: SummaryIn
     running: s.session.running,
     agents: agentList.length,
     ...(agentList.length > 0 && { agentList }),
+    ...(chat.now && { now: chat.now }),
     pending: s.pending.length,
     status: s.status,
     lastActive: lastActive(chat),

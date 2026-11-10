@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import type { ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, ServerState, SessionInfo, LoopState } from '../../../shared/protocol.js';
+import type { ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, ServerState, SessionInfo, LoopState, LiveNow } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from '../host/restore.js';
 import { Approvals } from './approvals.js';
@@ -29,6 +29,7 @@ import { UsageLimit } from './usageLimit.js';
 import { Wakeups } from './wakeups.js';
 
 // The tools whose call carries a review's findings.
+const NOW_KEEP_MS = 10 * 60_000;
 const FINDINGS_TOOLS = new Set(['ReportFindings', 'mcp__agentview__report_findings']);
 
 export class AgentSession implements AgentHost {
@@ -46,6 +47,8 @@ export class AgentSession implements AgentHost {
   // The host sets the provider registry's lookup, which a session must not import.
   transcriptPath: (id: string) => string | null = () => null;
   // ends: the run ends with this round, so its own end push is the only one.
+  // The last set_status of the agent, with its detail; the server's own statuses replace it only after 10 minutes.
+  now: LiveNow | null = null;
   roundNote: { outcome: RoundOutcome; line: string; ends: boolean } | null = null;
   readonly approvals: Approvals;
   readonly log: EventLog;
@@ -144,7 +147,9 @@ export class AgentSession implements AgentHost {
   setStatus(text: string, { done, next }: { done?: string; next?: string[] } = {}) {
     this.state.status = text;
     this.emit({ type: 'status', text });
-    this.pushEvent({ id: randomUUID(), kind: 'status', text, at: Date.now(), ...(done && { done }), ...(next && { next }) });
+    const at = Date.now();
+    this.pushEvent({ id: randomUUID(), kind: 'status', text, at, ...(done && { done }), ...(next && { next }) });
+    if (done || next || !this.now || at - this.now.at > NOW_KEEP_MS) this.now = { text, at, ...(done && { done }), ...(next && { next }) };
   }
 
   private setResumeCommand() {

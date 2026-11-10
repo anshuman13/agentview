@@ -242,7 +242,9 @@ export type ServerMessage =
   | { type: 'restarting' }
   | { type: 'error'; text: string };
 
-export type LiveAgent = { id: string; description: string; group?: string; startedAt: number };
+export type LiveAgent = { id: string; description: string; type: string; slug?: string; group?: string; startedAt: number };
+
+export type LiveNow = { text: string; at: number; done?: string; next?: string[] };
 
 export type LiveChat = {
   id: string;
@@ -252,6 +254,7 @@ export type LiveChat = {
   running: boolean;
   agents?: number;
   agentList?: LiveAgent[];
+  now?: LiveNow;
   pending: number;
   status: string;
   lastActive: number;

@@ -35,9 +35,11 @@ it('asks Claude to resume workflows by run id', () => {
 });
 
 it('lists running agents oldest first and leaves out ended ones', () => {
-  const agent = (toolUseId: string, status: string, startedAt: number, group?: string) => ({ kind: 'agent', toolUseId, description: toolUseId, status, startedAt, group });
+  const agent = (toolUseId: string, status: string, startedAt: number, group?: string, prompt = '') => ({ kind: 'agent', toolUseId, description: toolUseId, subagentType: 'implementer', prompt, status, startedAt, group });
   const chat = { state: { events: [agent('b', 'running', 20, 'build'), agent('x', 'done', 5), agent('a', 'running', 10)] } } as any;
-  expect(runningAgents(chat)).toEqual([{ id: 'a', description: 'a', startedAt: 10 }, { id: 'b', description: 'b', group: 'build', startedAt: 20 }]);
+  expect(runningAgents(chat)).toEqual([{ id: 'a', description: 'a', type: 'implementer', startedAt: 10 }, { id: 'b', description: 'b', type: 'implementer', group: 'build', startedAt: 20 }]);
+  const named = { state: { events: [agent('c', 'running', 30, undefined, 'Implement .claude/specs/x-1.md')] } } as any;
+  expect(runningAgents(named)).toEqual([{ id: 'c', description: 'c', type: 'implementer', slug: 'x-1', startedAt: 30 }]);
   expect(runningAgents({ state: { events: [agent('x', 'done', 5)] } } as any)).toEqual([]);
 });
 

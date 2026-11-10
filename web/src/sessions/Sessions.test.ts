@@ -279,7 +279,7 @@ describe('RepoRow', () => {
 });
 
 describe('AgentsBlock', () => {
-  const agents = [{ id: 'a', description: 'Scan repo', startedAt: 1 }, { id: 'b', description: 'Run checks', group: 'build', startedAt: 2 }];
+  const agents = [{ id: 'a', description: 'Scan repo', type: 'Explore', startedAt: 1 }, { id: 'b', description: 'Run checks', type: 'tester', group: 'build', startedAt: 2 }];
   const html = (open: boolean) => renderToStaticMarkup(createElement(AgentsBlock, { agents, open, onToggle: () => {}, onOpen: () => {} }));
 
   it('shows the count and no rows while collapsed', () => {
