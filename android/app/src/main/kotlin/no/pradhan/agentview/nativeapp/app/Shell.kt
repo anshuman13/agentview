@@ -8,6 +8,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -25,18 +28,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,6 +48,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -197,13 +206,22 @@ private fun rememberDests(hub: Hub, nav: NavHostController, route: String?, more
 }
 
 @Composable
-private fun BottomNav(dests: List<Dest>) {
-    NavigationBar(containerColor = av.surface) {
-        val colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
-            unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
-        )
-        dests.forEach { d -> NavigationBarItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
+private fun PillTabBar(dests: List<Dest>) {
+    val shape = RoundedCornerShape(Tokens.radiusPill)
+    Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp2, bottom = Tokens.sp2)) {
+        Row(Modifier.fillMaxWidth().shadow(Tokens.elev2, shape).clip(shape).background(av.raised).padding(Tokens.sp2), horizontalArrangement = Arrangement.SpaceEvenly) {
+            dests.forEach { d ->
+                val tint = if (d.selected) av.fg else av.fgMuted
+                Column(
+                    Modifier.weight(1f).heightIn(min = Tokens.touch).clip(shape).background(if (d.selected) av.accentSoft else Color.Transparent)
+                        .semantics(mergeDescendants = true) { role = Role.Tab; selected = d.selected }
+                        .clickable(onClick = d.onClick).padding(vertical = Tokens.sp2),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+                ) {
+                    CompositionLocalProvider(LocalContentColor provides tint) { DestIcon(d); DestLabel(d) }
+                }
+            }
+        }
     }
 }
 
@@ -268,6 +286,7 @@ fun App(hub: Hub) {
     val width = LocalConfiguration.current.screenWidthDp
     val rail = width >= RAIL_MIN_DP
     val navHidden by hub.navHidden.collectAsState()
+    val composing by hub.composing.collectAsState()
     val shownId by hub.store.state.select { it.shownId }
     LaunchedEffect(route, shownId) { hub.navHidden.value = false }
     val dests = rememberDests(hub, nav, route, more) { more = it }
@@ -279,10 +298,10 @@ fun App(hub: Hub) {
             snackbarHost = { SnackHost(snack) },
             bottomBar = {
                 if (!rail) AnimatedVisibility(
-                    visible = !navHidden && !isAgent(route),
+                    visible = !navHidden && !(composing && route == Tab.Chat.route) && !isAgent(route),
                     enter = slideInVertically(tween(Tokens.dur * 2)) { it } + expandVertically(tween(Tokens.dur * 2)),
                     exit = slideOutVertically(tween(Tokens.dur * 2)) { it } + shrinkVertically(tween(Tokens.dur * 2)),
-                ) { BottomNav(dests) }
+                ) { PillTabBar(dests) }
             },
         ) { pad ->
             Row(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding().windowInsetsPadding(WindowInsets.navigationBars)) {
