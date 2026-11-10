@@ -23,7 +23,7 @@ export function ServiceRow({ row, selected, usage, onPick, group, onGroup, onHid
       meta={meta || undefined}
       trailing={
         <>
-          <Badge status={status} label={row.status === 'needs-auth' && status === 'waiting' ? 'Needs you' : undefined} reason={reason} />
+          <Badge status={status} label={row.status === 'needs-auth' && status === 'waiting' ? 'Needs you' : row.status === 'connected' ? 'Connected' : undefined} reason={reason} />
           <span className="as-wrap-more">
             <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
             {menu && (
