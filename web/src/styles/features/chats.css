@@ -83,7 +83,6 @@
 .gh-state { flex: none; display: inline-flex; align-items: center; gap: var(--sp-3); padding-right: var(--sp-5); font-size: var(--fs-xs); }
 
 .sessions.chats .row.project .acts { display: inline-flex; margin-left: 0; }
-.sessions.chats .row.project .acts .icon-btn, .sessions.chats .row.project .acts .icon-btn .codicon { color: var(--accent-text); }
 .sessions.chats .row.project:has(.acts):hover :is(.count, .when) { display: inline; }
 .sessions.chats .row .meta { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: var(--sp-2); padding-right: var(--sp-1); font-weight: 400; }
 .sessions.chats .row .meta .count { margin-left: 0; padding: 0 var(--sp-5) 0 var(--sp-1); min-width: 22px; }

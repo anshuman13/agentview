@@ -131,7 +131,7 @@ export function Assistant() {
   const nextLater = s.nextLater;
   return (
     <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
-      <TasksHead list={list} heading={heading} filter={filter} searching={query != null} selecting={!!picked} onMenu={() => setDrawer(true)} onSelect={() => setPicked(new Set())} onSearch={() => setQuery('')} />
+      <TasksHead list={list} heading={heading} filter={filter} searching={query != null} selecting={!!picked} onMenu={() => setDrawer(true)} onAdd={() => setAdding(true)} onSelect={() => setPicked(new Set())} onSearch={() => setQuery('')} />
       {gate.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
       {calError && <button className="as-error" onClick={() => void retryCalendar()}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
 

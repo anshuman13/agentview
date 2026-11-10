@@ -71,7 +71,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
         <h1>Jobs</h1>
         <span className="spacer" />
-        <button className="btn primary mt-take" onClick={() => add()}><Icon name="add" small /> <span>New job</span></button>
+        <IconButton icon="add" label="New job" onClick={() => add()} />
       </header>
       {pull.indicator}
       <div className="wk-scroll" ref={pull.ref}>
