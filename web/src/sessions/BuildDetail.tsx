@@ -1,11 +1,12 @@
 import { createPortal } from 'react-dom';
-import { useMemo, useState } from 'react';
-import { setUi, useStore } from '../app/store';
+import { useMemo, useRef, useState } from 'react';
+import { notice, setUi, useStore } from '../app/store';
 import { Back } from '../app/touch/back';
 import { Markdown } from '../chat/Chat';
 import { Badge } from '../ui/Badge';
 import { Button, IconButton } from '../ui/Button';
 import { Files, splitDiff } from '../ui/DiffFiles';
+import { Menu, MenuItem } from '../ui/Menu';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
@@ -13,10 +14,11 @@ import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
 import { ago } from '../ui/util';
 import { decisionTitle, phaseLabel, stageName, type BuildDetail as Detail, type BuildStage } from '../../../shared/builds';
-import { BuildPhases } from './BuildPhases';
-import { byStart, commitTotals, criterionBadge, stageBadge, stageMeta, stageRows, stageTitle, stateBadge, testCounts } from './buildsLogic';
+import { BuildPhases, DecisionRow } from './BuildPhases';
+import { byStart, commitTotals, criterionBadge, holdBadge, stageBadge, stageMeta, stageRows, stageTitle, stateBadge, testCounts } from './buildsLogic';
 import { findHere, useWorkspace } from './folders';
 import { openChat } from './goalLogic';
+import { postBuildHold } from './sessionApi';
 import { useBuild } from './useBuilds';
 
 type Report = { title: string; text: string; chat?: { id: string; session: string | null } };
@@ -26,12 +28,21 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
   const cwd = useStore((s) => s.session.cwd);
   const here = findHere(useWorkspace(cwd).folders, cwd);
   const [report, setReport] = useState<Report | null>(null);
+  const [menu, setMenu] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
   const diffs = useMemo(() => splitDiff(d?.commit?.diff ?? ''), [d?.commit?.diff]);
+  const hold = (decision: 'hold' | 'release') => postBuildHold(slug, decision).then(reload, () => notice('Could not save the hold. Try again.'));
   const head = (
     <div className="bd-head">
       <Back close={onBack} />
       <IconButton icon="arrow-left" label="Back" onClick={onBack} />
       <h2 className="bd-title">{d?.title ?? slug}</h2>
+      {d && (
+        <span className="ov-more">
+          <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+          {menu && <Menu trigger={more} onClose={() => setMenu(false)}><MenuItem onClick={() => { setMenu(false); hold(d.hold ? 'release' : 'hold'); }}>{d.hold ? 'Release hold' : 'Hold'}</MenuItem></Menu>}
+        </span>
+      )}
     </div>
   );
   if (!d) return <>{head}{failed ? <EmptyState size="sm" title="Could not load this build" hint="Try again" action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} /> : <Skeleton />}</>;
@@ -51,7 +62,7 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
       {head}
       <Section label="Conclusion" />
       <div className="ui-group">
-        <Row plain title={d.summary.conclusion} meta={`${stageName(d.summary.stage)} · ${when}`} trailing={d.entries.length ? <Badge {...stateBadge(d.summary.state)} /> : undefined} />
+        <Row plain title={d.summary.conclusion} meta={`${stageName(d.summary.stage)} · ${when}`} trailing={d.hold ? <Badge {...holdBadge} /> : d.entries.length ? <Badge {...stateBadge(d.summary.state)} /> : undefined} />
       </div>
       <BuildPhases
         slug={d.slug}
@@ -85,11 +96,12 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
           </div>
         </>
       )}
-      {review && (
+      {(review || commit) && (
         <>
           <Section label="Code review" />
           <div className="ui-group">
-            {review.findings.length ? review.findings.map((f, i) => <Row key={i} plain lines={2} title={f} />) : <Row plain title="Clean" />}
+            {review && (review.findings.length ? review.findings.map((f, i) => <Row key={i} plain lines={2} title={f} />) : <Row plain title="Clean" />)}
+            {commit && <DecisionRow slug={d.slug} phase="code" review={d.codeReview ?? undefined} onSaved={reload} />}
           </div>
         </>
       )}

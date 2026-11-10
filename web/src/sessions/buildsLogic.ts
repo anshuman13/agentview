@@ -8,6 +8,8 @@ export const stateDot = (state: BuildState) => ({ done: 'ok', failed: 'bad', wai
 
 export const stateBadge = (state: BuildState): BadgeSpec => ({ status: state });
 
+export const holdBadge: BadgeSpec = { status: 'waiting', label: 'Needs you', reason: 'On hold' };
+
 export const stageBadge = (e: Entry): BadgeSpec => ({ status: e.status === 'stopped' ? 'skipped' : e.status });
 
 export const criterionBadge = (c: Criterion): BadgeSpec => ({ status: c.result === 'pass' ? 'done' : c.result === 'fail' ? 'failed' : 'skipped' });
@@ -46,6 +48,6 @@ export type StageRow = { at: number; entry?: Entry; review?: BuildReview };
 
 // The agent stages and the user's decisions in time order.
 export const stageRows = (entries: Entry[], reviews: BuildReview[]): StageRow[] =>
-  [...byStart(entries).map((entry) => ({ at: entry.startedAt, entry })), ...reviews.map((review) => ({ at: review.at, review }))].sort((a, b) => a.at - b.at);
+  [...byStart(entries).map((entry) => ({ at: entry.startedAt, entry })), ...reviews.filter((r) => r.phase !== 'hold').map((review) => ({ at: review.at, review }))].sort((a, b) => a.at - b.at);
 
 export const commitTotals = (files: { add: number; del: number }[]) => ({ add: files.reduce((n, f) => n + f.add, 0), del: files.reduce((n, f) => n + f.del, 0) });

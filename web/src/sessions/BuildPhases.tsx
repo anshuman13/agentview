@@ -13,7 +13,7 @@ import { specProgress, specTasks } from '../../../shared/specTasks';
 import { nextPhase, startPhase } from './buildsLogic';
 import { postBuildReview } from './sessionApi';
 
-function ChangesSheet({ phase, onSend, onClose }: { phase: ReviewPhase; onSend: (note: string) => Promise<void>; onClose: () => void }) {
+function ChangesSheet({ phase, onSend, onClose }: { phase: ReviewPhase | 'code'; onSend: (note: string) => Promise<void>; onClose: () => void }) {
   const [note, setNote] = useState('');
   const [failed, setFailed] = useState(false);
   const send = () => void onSend(note.trim()).then(onClose, () => setFailed(true));
@@ -33,18 +33,40 @@ function ChangesSheet({ phase, onSend, onClose }: { phase: ReviewPhase; onSend: 
   );
 }
 
-// The spec as the phase strip shows it, with the user's latest decision on the shown phase under it.
-export function BuildPhases({ slug, phases, reviews, action, onSaved }: { slug: string; phases: BuildPhase[]; reviews: BuildReview[]; action?: ReactNode; onSaved: () => Promise<void> }) {
-  const [picked, setPicked] = useState<ReviewPhase | null>(null);
+// The user's latest decision on a phase or on the code, with Approve and a menu that opens the changes note.
+export function DecisionRow({ slug, phase, review, onSaved, onApproved }: { slug: string; phase: ReviewPhase | 'code'; review: BuildReview | undefined; onSaved: () => Promise<void>; onApproved?: () => void }) {
   const [asking, setAsking] = useState(false);
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
+  const save = (decision: 'approve' | 'changes', note: string) => postBuildReview(slug, phase, decision, note).then(onSaved);
+  const approve = () => save('approve', '').then(() => onApproved?.(), () => notice('Could not save the review. Try again.'));
+  return (
+    <div className="bd-clamp">
+      <AskRow
+        title={decisionTitle(review)}
+        meta={review && [ago(review.at, ' ago'), review.note].filter(Boolean).join(' · ')}
+        actions={(
+          <>
+            <Button size="sm" variant="filled" onClick={approve}>Approve</Button>
+            <span className="ov-more">
+              <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+              {menu && <Menu trigger={more} onClose={() => setMenu(false)}><MenuItem onClick={() => { setMenu(false); setAsking(true); }}>Request changes</MenuItem></Menu>}
+            </span>
+          </>
+        )}
+      />
+      {asking && createPortal(<ChangesSheet phase={phase} onSend={(note) => save('changes', note)} onClose={() => setAsking(false)} />, document.body)}
+    </div>
+  );
+}
+
+// The spec as the phase strip shows it, with the user's latest decision on the shown phase under it.
+export function BuildPhases({ slug, phases, reviews, action, onSaved }: { slug: string; phases: BuildPhase[]; reviews: BuildReview[]; action?: ReactNode; onSaved: () => Promise<void> }) {
+  const [picked, setPicked] = useState<ReviewPhase | null>(null);
   if (!phases.length) return null;
   const phase = phases.find((p) => p.key === (picked ?? startPhase(phases, reviews))) ?? phases[0];
   const review = reviewDecision(reviews, phase.key);
   const tasks = phase.key === 'tasks' ? specTasks(phase.markdown) : [];
-  const save = (decision: BuildReview['decision'], note: string) => postBuildReview(slug, phase.key, decision, note).then(onSaved);
-  const approve = () => save('approve', '').then(() => setPicked(nextPhase(phases, phase.key)), () => notice('Could not save the review. Try again.'));
   return (
     <>
       <Section label="Spec" action={<>{tasks.length > 0 && <span className="badge quiet">{specProgress(tasks)}</span>}{action}</>} />
@@ -53,23 +75,8 @@ export function BuildPhases({ slug, phases, reviews, action, onSaved }: { slug: 
       </div>
       <div className="ui-group">
         <div className="bd-doc"><Markdown text={phase.markdown} /></div>
-        <div className="bd-clamp">
-          <AskRow
-            title={decisionTitle(review)}
-            meta={review && [ago(review.at, ' ago'), review.note].filter(Boolean).join(' · ')}
-            actions={(
-              <>
-                <Button size="sm" variant="filled" onClick={approve}>Approve</Button>
-                <span className="ov-more">
-                  <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-                  {menu && <Menu trigger={more} onClose={() => setMenu(false)}><MenuItem onClick={() => { setMenu(false); setAsking(true); }}>Request changes</MenuItem></Menu>}
-                </span>
-              </>
-            )}
-          />
-        </div>
+        <DecisionRow slug={slug} phase={phase.key} review={review} onSaved={onSaved} onApproved={() => setPicked(nextPhase(phases, phase.key))} />
       </div>
-      {asking && createPortal(<ChangesSheet phase={phase.key} onSend={(note) => save('changes', note)} onClose={() => setAsking(false)} />, document.body)}
     </>
   );
 }

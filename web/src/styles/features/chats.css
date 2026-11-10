@@ -152,7 +152,7 @@
 .gl-note { font-size: var(--type-meta-size); line-height: var(--type-meta-line); color: var(--meta-fg); }
 .gl-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-4); padding: var(--sp-8) 0 0; }
 .bd-head { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) 0; }
-.bd-title { margin: 0; min-width: 0; font-size: var(--type-headline-size); font-weight: var(--type-headline-weight); line-height: var(--type-headline-line); overflow-wrap: anywhere; }
+.bd-title { flex: 1; margin: 0; min-width: 0; font-size: var(--type-headline-size); font-weight: var(--type-headline-weight); line-height: var(--type-headline-line); overflow-wrap: anywhere; }
 .bd-doc { padding: var(--sp-4) var(--list-pad); overflow-wrap: anywhere; }
 .bd-phases { padding: var(--sp-2) var(--list-pad) var(--sp-4); }
 .gl-note.err { color: var(--err); }

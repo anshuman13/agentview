@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from '../app/store';
+import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
@@ -8,7 +9,7 @@ import { Skeleton } from '../ui/Skeleton';
 import { ago } from '../ui/util';
 import { pipelineLabel, type BuildRow } from '../../../shared/builds';
 import { BuildDetail } from './BuildDetail';
-import { FOLD, buildGroups, stateDot } from './buildsLogic';
+import { FOLD, buildGroups, holdBadge, stateDot } from './buildsLogic';
 import { useBuilds } from './useBuilds';
 
 export function BuildList({ builds, onOpen, expanded, onExpand }: { builds: BuildRow[]; onOpen: (slug: string) => void; expanded: string[]; onExpand: (group: string) => void }) {
@@ -26,6 +27,7 @@ export function BuildList({ builds, onOpen, expanded, onExpand }: { builds: Buil
                   key={b.slug}
                   title={b.title}
                   meta={<>{!b.draft && <span className={`dot ${stateDot(b.state)}`} />} {pipelineLabel(b.pipeline)} · {b.conclusion} · {ago(b.updatedAt, ' ago')}</>}
+                  trailing={b.hold ? <Badge {...holdBadge} /> : undefined}
                   onClick={() => onOpen(b.slug)}
                 />
               ))}
