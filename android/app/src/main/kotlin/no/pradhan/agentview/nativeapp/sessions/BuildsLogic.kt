@@ -9,7 +9,7 @@ import no.pradhan.agentview.nativeapp.ui.DotState
 
 // shared/builds.ts as the server's /api/builds and /api/builds/one return it; the summaries are finished, so nothing is derived here.
 @Serializable
-data class BuildRow(val slug: String, val title: String = "", val stage: String = "", val state: String = "", val conclusion: String = "", val updatedAt: Long = 0)
+data class BuildRow(val slug: String, val title: String = "", val stage: String = "", val state: String = "", val conclusion: String = "", val updatedAt: Long = 0, val pipeline: String = "written", val draft: Boolean = false)
 
 @Serializable
 data class BuildFile(val path: String, val additions: Int = 0, val deletions: Int = 0)
@@ -47,7 +47,22 @@ data class CommitFile(val path: String, val add: Int = 0, val del: Int = 0)
 data class CommitDiff(val files: List<CommitFile> = emptyList(), val diff: String = "")
 
 @Serializable
-data class BuildDetail(val slug: String, val title: String = "", val summary: BuildSummary = BuildSummary(), val spec: String? = null, val entries: List<BuildEntry> = emptyList(), val commit: CommitDiff? = null)
+data class BuildPhase(val key: String, val markdown: String = "")
+
+@Serializable
+data class BuildReview(val phase: String = "", val decision: String = "", val note: String = "", val at: Long = 0)
+
+@Serializable
+data class BuildDetail(
+    val slug: String,
+    val title: String = "",
+    val summary: BuildSummary = BuildSummary(),
+    val specFile: String? = null,
+    val phases: List<BuildPhase> = emptyList(),
+    val reviews: List<BuildReview> = emptyList(),
+    val entries: List<BuildEntry> = emptyList(),
+    val commit: CommitDiff? = null,
+)
 
 fun parseBuilds(body: String): List<BuildRow> = protocolJson.decodeFromString(ListSerializer(BuildRow.serializer()), body)
 
@@ -56,6 +71,10 @@ fun parseBuild(body: String): BuildDetail = protocolJson.decodeFromString(BuildD
 private val STAGE_NAME = mapOf("pm" to "Spec", "review" to "Spec review", "implement" to "Implement", "test" to "Test", "code-review" to "Code review")
 
 fun stageName(stage: String) = STAGE_NAME[stage] ?: stage
+
+private val PIPELINE_LABEL = mapOf("written" to "Spec written", "reviewed" to "Spec reviewed", "implemented" to "Implemented", "tested" to "Tested", "code-reviewed" to "Code reviewed", "merged" to "Merged")
+
+fun pipelineLabel(pipeline: String) = PIPELINE_LABEL[pipeline] ?: pipeline
 
 fun stateDot(state: String) = when (state) { "done" -> DotState.Ok; "failed" -> DotState.Bad; "waiting" -> DotState.Warn; else -> DotState.Faint }
 
@@ -85,3 +104,32 @@ fun stageMeta(e: BuildEntry): String {
     val took = ms?.let { if (it < 60_000) "${Math.round(it / 1000.0)}s" else everyText(it) }
     return listOfNotNull(e.verdict?.replaceFirstChar(Char::uppercase), took).joinToString(" · ")
 }
+
+const val BUILD_FOLD = 3
+
+class BuildGroup(val key: String, val label: String, val rows: List<BuildRow>)
+
+// Active builds stay open; drafts and merged ones fold to BUILD_FOLD rows. An empty group is left out.
+fun buildGroups(builds: List<BuildRow>) = listOf(
+    BuildGroup("active", "Active", builds.filter { !it.draft && it.pipeline != "merged" }),
+    BuildGroup("drafts", "Drafts", builds.filter { it.draft }),
+    BuildGroup("merged", "Merged", builds.filter { it.pipeline == "merged" }),
+).filter { it.rows.isNotEmpty() }
+
+fun phaseLabel(key: String) = key.replaceFirstChar(Char::uppercase)
+
+fun decisionTitle(r: BuildReview?) = when (r?.decision) { null -> "Not reviewed"; "approve" -> "Approved"; else -> "Changes requested" }
+
+fun reviewDecision(reviews: List<BuildReview>, phase: String) = reviews.lastOrNull { it.phase == phase }
+
+fun phaseApproved(reviews: List<BuildReview>, phase: String) = reviewDecision(reviews, phase)?.decision == "approve"
+
+fun startPhase(phases: List<BuildPhase>, reviews: List<BuildReview>) = (phases.firstOrNull { !phaseApproved(reviews, it.key) } ?: phases.first()).key
+
+fun nextPhase(phases: List<BuildPhase>, key: String) = phases.getOrNull(phases.indexOfFirst { it.key == key } + 1)?.key ?: key
+
+class StageRow(val at: Long, val entry: BuildEntry? = null, val review: BuildReview? = null)
+
+// The agent stages and the user's decisions in time order.
+fun stageRows(entries: List<BuildEntry>, reviews: List<BuildReview>) =
+    (byStart(entries).map { StageRow(it.startedAt, entry = it) } + reviews.map { StageRow(it.at, review = it) }).sortedBy { it.at }
