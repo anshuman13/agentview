@@ -68,7 +68,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
 .tabbar { display: none; }
 @media (max-width: 900px) {
   .workbench { padding-top: var(--safe-top); }
-  .body { display: block; height: calc(100% - var(--tabbar-h) - var(--safe-bottom) - var(--sp-2)); overflow: hidden; }
+  .body { flex: none; display: block; height: calc(100% - var(--tabbar-h) - var(--safe-bottom) - var(--sp-2)); overflow: hidden; }
   .statusbar { display: none; }
   .workbench[data-kbd] .tabbar { display: none; }
   .workbench[data-kbd] .body { height: 100%; }
