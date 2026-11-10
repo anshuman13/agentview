@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, goalText } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, goalText, loopNow, agentAge } from './composerLogic';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
@@ -261,4 +261,18 @@ describe('goal choice', () => {
     expect(goalText('1h', '/compact', now)).toBe('/compact');
   });
 
+});
+
+describe('loopNow', () => {
+  const run = (rounds: { at: number; line: string }[], startedAt = 100) => ({ startedAt, nextAt: null, rounds: rounds.map((r) => ({ n: 1, outcome: 'progress', costUsd: 0, ...r })) }) as unknown as ChatRun;
+  it('takes the newer of the status and the last round, and ignores a status from before the run', () => {
+    expect(loopNow(run([{ at: 200, line: 'round' }]), { text: 'Working', at: 300, next: ['a', 'b'] })).toMatchObject({ source: 'status', title: 'Working', next: 'a', stepsLeft: 2 });
+    expect(loopNow(run([{ at: 400, line: 'round' }]), { text: 'Working', at: 300 })).toMatchObject({ source: 'round', title: 'round' });
+    expect(loopNow(run([]), { text: 'Old', at: 50 })).toMatchObject({ source: 'none', title: 'Waiting for the first round' });
+  });
+  it('words agent ages', () => {
+    expect(agentAge(0, 5_000)).toBe('1 min');
+    expect(agentAge(0, 12 * 60_000)).toBe('12 min');
+    expect(agentAge(0, 65 * 60_000)).toBe('1 h 5 min');
+  });
 });

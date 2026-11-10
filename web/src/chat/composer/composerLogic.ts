@@ -1,7 +1,7 @@
 import { parseWhen, stripWhen } from '../../codex/data/tasks/engine';
 import { match } from '../../workspace/FileSwitcher';
 import { toolId } from '../../ops/mcpHelpers';
-import { compactAt, type Account, type ChatEvent, type ChatRun, type LiveChat, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
+import { compactAt, type Account, type ChatEvent, type ChatRun, type LiveChat, type LiveNow, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
 import { apiUrl, fetchJson } from '../../app/api';
 import { createTerm, listTerms } from '../../workspace/termApi';
 import { clock, isBlock } from '../../../../shared/util';
@@ -145,6 +145,24 @@ export function chatState(chat: Pick<LiveChat, 'pending' | 'failed' | 'stalled' 
   if (run?.state === 'paused') return { text: run.why ? `Paused · ${run.why}` : 'Paused', tone: 'warn' };
   if (run) return { text: `Waiting for next round${run.nextAt ? ` · ${clock(run.nextAt)}` : ''}`, tone: 'idle' };
   return { text: 'Idle', tone: 'idle' };
+}
+
+export type LoopNow = { title: string; at: number | null; source: 'status' | 'round' | 'none'; outcome?: RoundOutcome; next?: string; stepsLeft?: number };
+
+// What the loop card's first row shows: the agent's status or the last round, whichever is newer. A status from before the run started is ignored.
+export function loopNow(run: ChatRun, now?: LiveNow): LoopNow {
+  const last = run.rounds.at(-1);
+  if (now && now.at >= run.startedAt && (!last || now.at >= last.at)) {
+    return { title: now.text, at: now.at, source: 'status', ...(now.next?.length && { next: now.next[0], stepsLeft: now.next.length }) };
+  }
+  if (last) return { title: last.line || last.outcome, at: last.at, source: 'round', outcome: last.outcome };
+  return { title: 'Waiting for the first round', at: run.nextAt, source: 'none' };
+}
+
+// How long an agent has run, as "12 min" or "1 h 5 min".
+export function agentAge(startedAt: number, now: number) {
+  const min = Math.max(1, Math.floor((now - startedAt) / 60_000));
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
 }
 
 // The prompt of a round is in the transcript; it may take a moment to show after the chat opens.
