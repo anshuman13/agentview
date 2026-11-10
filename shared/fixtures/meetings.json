@@ -1,0 +1,177 @@
+{
+  "state": [
+    { "name": "not from the calendar", "meeting": { "id": "n1", "startsInHours": -3, "endsInHours": -2, "people": "[\"Sam\"]" }, "expected": "manual" },
+    { "name": "starts later", "meeting": { "id": "cal:a", "startsInHours": 1, "endsInHours": 2, "people": "[\"Sam\"]" }, "expected": "upcoming" },
+    { "name": "running", "meeting": { "id": "cal:a", "startsInHours": -1, "endsInHours": 1, "people": "[\"Sam\"]" }, "expected": "live" },
+    { "name": "starts now with no end", "meeting": { "id": "cal:a", "startsInHours": 0, "people": "[\"Sam\"]" }, "expected": "waiting" },
+    { "name": "solo event that ended", "meeting": { "id": "cal:a", "startsInHours": -3, "endsInHours": -2, "people": "[]" }, "expected": "manual" },
+    { "name": "solo event that is running", "meeting": { "id": "cal:a", "startsInHours": -1, "endsInHours": 1, "people": "[]" }, "expected": "live" },
+    { "name": "ended, no transcript yet", "meeting": { "id": "cal:a", "startsInHours": -3, "endsInHours": -2, "people": "[\"Sam\"]" }, "expected": "waiting" },
+    { "name": "ended, transcript missing", "meeting": { "id": "cal:a", "startsInHours": -3, "endsInHours": -2, "people": "[\"Sam\"]", "transcript": "missing" }, "expected": "missing" },
+    { "name": "ended, transcript done", "meeting": { "id": "cal:a", "startsInHours": -3, "endsInHours": -2, "people": "[\"Sam\"]", "transcript": "done" }, "expected": "done" },
+    { "name": "ended, summary without a transcript state", "meeting": { "id": "cal:a", "startsInHours": -3, "endsInHours": -2, "people": "[\"Sam\"]", "transcript": "", "summary": "Agreed." }, "expected": "done" },
+    { "name": "ended, other transcript state with a summary", "meeting": { "id": "cal:a", "startsInHours": -3, "endsInHours": -2, "people": "[\"Sam\"]", "transcript": "pending", "summary": "Agreed." }, "expected": "waiting" }
+  ],
+  "groups": [
+    {
+      "name": "days newest first, time order within a day",
+      "meetings": [
+        { "id": "a", "startsInHours": -2 },
+        { "id": "b", "startsInHours": -10 },
+        { "id": "c", "startsInHours": -9 },
+        { "id": "d", "startsInHours": -1 }
+      ],
+      "expected": [{ "today": true, "ids": ["a", "d"] }, { "today": false, "ids": ["b", "c"] }]
+    },
+    {
+      "name": "upcoming, cancelled, deleted and undated meetings are left out",
+      "meetings": [
+        { "id": "a", "startsInHours": 1 },
+        { "id": "b", "startsInHours": -1, "state": "cancelled" },
+        { "id": "c", "startsInHours": -1, "deleted": true },
+        { "id": "d" },
+        { "id": "e", "startsInHours": 0 }
+      ],
+      "expected": [{ "today": true, "ids": ["e"] }]
+    },
+    { "name": "nothing started", "meetings": [{ "id": "a", "startsInHours": 3 }], "expected": [] }
+  ],
+  "seriesTitle": [
+    { "name": "plain title", "title": "Standup", "expected": "standup" },
+    { "name": "missing title", "title": null, "expected": "" },
+    { "name": "day and month", "title": "Standup 12 Jan", "expected": "standup" },
+    { "name": "month then day", "title": "Planning Sept 3", "expected": "planning" },
+    { "name": "ISO date", "title": "Weekly sync 2026-01-12", "expected": "weekly sync" },
+    { "name": "number sign", "title": "Sprint #42 review", "expected": "sprint review" },
+    { "name": "parenthesis with a digit", "title": "Retro (week 3)", "expected": "retro" },
+    { "name": "parenthesis without a digit", "title": "Retro (team)", "expected": "retro (team)" },
+    { "name": "bare numbers", "title": "1:1 with Sam 7", "expected": ": with sam" },
+    { "name": "word that starts like a month", "title": "Marketing review", "expected": "marketing review" },
+    { "name": "extra spaces", "title": "  Design   Crit  ", "expected": "design crit" }
+  ],
+  "inSeries": [
+    {
+      "name": "same title and guests",
+      "meetings": [
+        { "id": "a", "title": "Standup 5 Jan", "startsInHours": -50, "people": "[\"Sam\",\"Kim\"]" },
+        { "id": "b", "title": "Standup 6 Jan", "startsInHours": -26, "people": "[\"Sam\",\"Kim\"]" },
+        { "id": "c", "title": "Lunch", "startsInHours": -2, "people": "[\"Sam\"]" }
+      ],
+      "expected": ["a", "b"]
+    },
+    {
+      "name": "no guests in common",
+      "meetings": [
+        { "id": "a", "title": "Sync", "startsInHours": -50, "people": "[\"Sam\",\"Kim\"]" },
+        { "id": "b", "title": "Sync", "startsInHours": -26, "people": "[\"Lee\",\"Ola\"]" }
+      ],
+      "expected": []
+    },
+    {
+      "name": "half of the smaller guest list is enough",
+      "meetings": [
+        { "id": "a", "title": "Sync", "startsInHours": -50, "people": "[\"Sam\",\"Kim\",\"Lee\",\"Ola\"]" },
+        { "id": "b", "title": "Sync", "startsInHours": -26, "people": "[\"Sam\",\"Rex\"]" }
+      ],
+      "expected": ["a", "b"]
+    },
+    {
+      "name": "two meetings without guests",
+      "meetings": [
+        { "id": "a", "title": "Focus", "startsInHours": -50, "people": "[]" },
+        { "id": "b", "title": "Focus", "startsInHours": -26, "people": "[]" }
+      ],
+      "expected": ["a", "b"]
+    },
+    {
+      "name": "one with guests, one without",
+      "meetings": [
+        { "id": "a", "title": "Focus", "startsInHours": -50, "people": "[\"Sam\"]" },
+        { "id": "b", "title": "Focus", "startsInHours": -26, "people": "[]" }
+      ],
+      "expected": []
+    },
+    {
+      "name": "guests by email and by name",
+      "meetings": [
+        { "id": "a", "title": "Sync", "startsInHours": -50, "people": "[\"sam.lee@example.com\"]" },
+        { "id": "b", "title": "Sync", "startsInHours": -26, "people": "[\"Sam Lee\"]" }
+      ],
+      "expected": ["a", "b"]
+    },
+    {
+      "name": "other profile, deleted and undated meetings do not join",
+      "meetings": [
+        { "id": "a", "title": "Sync", "startsInHours": -50, "people": "[\"Sam\"]" },
+        { "id": "b", "profile": "personal", "title": "Sync", "startsInHours": -26, "people": "[\"Sam\"]" },
+        { "id": "c", "title": "Sync", "startsInHours": -20, "people": "[\"Sam\"]", "deleted": true },
+        { "id": "d", "title": "Sync", "people": "[\"Sam\"]" }
+      ],
+      "expected": []
+    }
+  ],
+  "names": [
+    { "name": "plain name", "a": "Sam Lee", "b": "sam lee", "display": "Sam Lee", "same": true },
+    { "name": "email with a dot", "a": "sam.lee@example.com", "b": "Sam Lee", "display": "Sam Lee", "same": true },
+    { "name": "email with plus and underscore", "a": "sam_lee+work@example.com", "b": "Sam Lee Work", "display": "Sam Lee Work", "same": true },
+    { "name": "email in capitals", "a": "SAM.LEE@EXAMPLE.COM", "b": "sam lee", "display": "Sam Lee", "same": true },
+    { "name": "name with spaces around", "a": "  Sam  Lee ", "b": "Sam Lee", "display": "Sam  Lee", "same": true },
+    { "name": "different people", "a": "Sam Lee", "b": "Kim Lee", "display": "Sam Lee", "same": false },
+    { "name": "email with no local part", "a": "@example.com", "b": "x", "display": "@example.com", "same": false }
+  ],
+  "actionCount": [
+    {
+      "name": "each status",
+      "items": [
+        { "meeting": "cal:a", "status": "open" },
+        { "meeting": "cal:a", "status": "done" },
+        { "meeting": "cal:a", "status": "suggested" },
+        { "meeting": "cal:a", "status": "unassigned" },
+        { "meeting": "cal:a", "status": "dismissed" },
+        { "meeting": "cal:a", "status": "note" }
+      ],
+      "expected": { "total": 2, "done": 1, "review": 1, "unassigned": 1, "dismissed": 1 }
+    },
+    {
+      "name": "assigned open and done tasks are not counted",
+      "items": [
+        { "meeting": "cal:a", "status": "open", "assignee": "sam" },
+        { "meeting": "cal:a", "status": "done", "assignee": "sam" },
+        { "meeting": "cal:a", "status": "suggested", "assignee": "sam" }
+      ],
+      "expected": { "total": 0, "done": 0, "review": 1, "unassigned": 0, "dismissed": 0 }
+    },
+    {
+      "name": "other meetings, other profile and deleted rows are not counted",
+      "items": [
+        { "meeting": "cal:b", "status": "open" },
+        { "meeting": "cal:a", "profile": "personal", "status": "open" },
+        { "meeting": "cal:a", "status": "open", "deleted": true }
+      ],
+      "expected": { "total": 0, "done": 0, "review": 0, "unassigned": 0, "dismissed": 0 }
+    }
+  ],
+  "filter": {
+    "meetings": [
+      { "id": "cal:a", "title": "Sync", "startsInHours": -50, "endsInHours": -49, "people": "[\"Sam\"]", "transcript": "done", "organizerMe": 1 },
+      { "id": "cal:b", "title": "Review", "startsInHours": -40, "endsInHours": -39, "people": "[\"Sam\"]", "transcript": "done", "organizerMe": 0 },
+      { "id": "cal:c", "title": "Demo", "startsInHours": -30, "endsInHours": -29, "people": "[\"Kim\"]", "transcript": "missing" },
+      { "id": "cal:d", "title": "Sync", "startsInHours": -20, "endsInHours": -19, "people": "[\"Sam\"]", "transcript": "done" }
+    ],
+    "items": [
+      { "meeting": "cal:a", "status": "open" },
+      { "meeting": "cal:b", "status": "suggested" },
+      { "meeting": "cal:c", "status": "done" },
+      { "meeting": "cal:d", "status": "done" }
+    ],
+    "cases": [
+      { "name": "no chips keeps every meeting", "chips": [], "expected": ["cal:a", "cal:b", "cal:c", "cal:d"] },
+      { "name": "Mine", "chips": ["Mine"], "expected": ["cal:a"] },
+      { "name": "With actions: open or waiting for review, not all done", "chips": ["With actions"], "expected": ["cal:a", "cal:b"] },
+      { "name": "Not recorded", "chips": ["Not recorded"], "expected": ["cal:c"] },
+      { "name": "Series", "chips": ["Series"], "expected": ["cal:a", "cal:d"] },
+      { "name": "Mine and With actions", "chips": ["Mine", "With actions"], "expected": ["cal:a"] },
+      { "name": "Not recorded and Series", "chips": ["Not recorded", "Series"], "expected": [] }
+    ]
+  }
+}

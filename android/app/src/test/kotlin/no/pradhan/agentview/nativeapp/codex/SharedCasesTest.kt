@@ -70,6 +70,14 @@ import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.money
+import no.pradhan.agentview.nativeapp.codex.meetings.actionCount
+import no.pradhan.agentview.nativeapp.codex.meetings.displayName
+import no.pradhan.agentview.nativeapp.codex.meetings.filterMeetings
+import no.pradhan.agentview.nativeapp.codex.meetings.groupMeetings
+import no.pradhan.agentview.nativeapp.codex.meetings.inSeries
+import no.pradhan.agentview.nativeapp.codex.meetings.meetingState
+import no.pradhan.agentview.nativeapp.codex.meetings.sameName
+import no.pradhan.agentview.nativeapp.codex.meetings.seriesTitle
 import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.setupPrompt
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
@@ -299,6 +307,84 @@ class SharedCasesTest {
             f["people"] = toJson(c.str("people"))
             c.nullable("links")?.let { f["links"] = toJson(it.jsonPrimitive.content) }
             assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isEvent(Row("meetings", c.str("id"), "work", f = f)))
+        }
+    }
+
+    private fun JsonObject.prim(k: String) = nullable(k)?.jsonPrimitive
+
+    private val meetingCases get() = Json.parseToJsonElement(File("../../shared/fixtures/meetings.json").readText()).jsonObject
+
+    private fun specMeeting(m: JsonObject, now: Long): Row {
+        val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()
+        m.prim("title")?.let { f["title"] = it }
+        m.prim("startsInHours")?.let { f["starts_at"] = toJson(now + it.long * 3_600_000) }
+        m.prim("endsInHours")?.let { f["ends_at"] = toJson(now + it.long * 3_600_000) }
+        for ((field, key) in listOf("people" to "people", "transcript" to "transcript", "summary" to "summary", "state" to "state")) m.prim(key)?.let { f[field] = it }
+        m.prim("organizerMe")?.let { f["organizer_me"] = it }
+        return Row("meetings", m.str("id"), m.prim("profile")?.content ?: "work", deleted = m.prim("deleted")?.boolean == true, f = f)
+    }
+
+    private fun specItem(r: JsonObject): Row {
+        val f = SYNCED_FIELDS.getValue("items").associateWith { JsonNull as JsonElement }.toMutableMap()
+        f["meeting_id"] = toJson(r.str("meeting"))
+        f["status"] = toJson(r.str("status"))
+        r.prim("assignee")?.let { f["assignee"] = it }
+        return Row("items", "i", r.prim("profile")?.content ?: "work", deleted = r.prim("deleted")?.boolean == true, f = f)
+    }
+
+    @Test fun meetingStates() {
+        val now = 1_800_000_000_000
+        for (c in meetingCases.getValue("state").jsonArray.map { it.jsonObject }) {
+            assertEquals(c.str("name"), c.str("expected"), meetingState(specMeeting(c.getValue("meeting").jsonObject, now), now).name.lowercase())
+        }
+    }
+
+    @Test fun meetingGroups() {
+        val now = 1_800_000_000_000
+        for (c in meetingCases.getValue("groups").jsonArray.map { it.jsonObject }) {
+            val groups = groupMeetings(c.getValue("meetings").jsonArray.map { specMeeting(it.jsonObject, now) }, now)
+            val expected = c.getValue("expected").jsonArray.map { it.jsonObject }
+            assertEquals(c.str("name"), expected.map { it.getValue("today").jsonPrimitive.boolean to it.getValue("ids").jsonArray.map { id -> id.jsonPrimitive.content } }, groups.map { (it.label == "Today") to it.rows.map { m -> m.id } })
+        }
+    }
+
+    @Test fun meetingSeriesTitles() {
+        for (c in meetingCases.getValue("seriesTitle").jsonArray.map { it.jsonObject }) assertEquals(c.str("name"), c.str("expected"), seriesTitle(c.prim("title")?.content))
+    }
+
+    @Test fun meetingsInSeries() {
+        val now = 1_800_000_000_000
+        for (c in meetingCases.getValue("inSeries").jsonArray.map { it.jsonObject }) {
+            val meetings = c.getValue("meetings").jsonArray.map { specMeeting(it.jsonObject, now) }
+            val keys = inSeries(meetings)
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, meetings.filter { it.key in keys }.map { it.id })
+        }
+    }
+
+    @Test fun personNames() {
+        for (c in meetingCases.getValue("names").jsonArray.map { it.jsonObject }) {
+            assertEquals(c.str("name"), c.str("display"), displayName(c.str("a")))
+            assertEquals(c.str("name"), c.getValue("same").jsonPrimitive.boolean, sameName(c.str("a"), c.str("b")))
+        }
+    }
+
+    @Test fun meetingActionCounts() {
+        val meeting = Row("meetings", "cal:a", "work")
+        for (c in meetingCases.getValue("actionCount").jsonArray.map { it.jsonObject }) {
+            val n = actionCount(c.getValue("items").jsonArray.map { specItem(it.jsonObject) }, meeting)
+            val expected = c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.int }
+            assertEquals(c.str("name"), expected, mapOf("total" to n.total, "done" to n.done, "review" to n.review, "unassigned" to n.unassigned, "dismissed" to n.dismissed))
+        }
+    }
+
+    @Test fun meetingFilters() {
+        val now = 1_800_000_000_000
+        val filter = meetingCases.getValue("filter").jsonObject
+        val meetings = filter.getValue("meetings").jsonArray.map { specMeeting(it.jsonObject, now) }
+        val items = filter.getValue("items").jsonArray.map { specItem(it.jsonObject) }
+        for (c in filter.getValue("cases").jsonArray.map { it.jsonObject }) {
+            val chips = c.getValue("chips").jsonArray.map { it.jsonPrimitive.content }.toSet()
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, filterMeetings(meetings, items, chips, now).map { it.id })
         }
     }
 

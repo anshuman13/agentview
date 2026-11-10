@@ -29,7 +29,8 @@ import { turnEvents, turnSummary, type SummaryEntry } from './chat/transcript/su
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import type { Meeting } from './codex/data/wiki/wiki';
-import { isEvent } from './codex/data/meetings/meetings';
+import type { ItemRow } from './codex/data/sync';
+import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -125,6 +126,49 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; id: string; people: string; links: string | null; expected: boolean }>('event-rule')) {
     it(`isEvent: ${c.name}`, () => expect(isEvent({ id: c.id, people: c.people, links: c.links } as Meeting)).toBe(c.expected));
+  }
+
+  type MeetingSpec = { id: string; profile?: Profile; title?: string; startsInHours?: number; endsInHours?: number; people?: string; transcript?: string; summary?: string; organizerMe?: number; state?: string; deleted?: boolean };
+  type ItemSpec = { meeting: string; profile?: Profile; status: string; assignee?: string; deleted?: boolean };
+  const meetingOf = (m: MeetingSpec) =>
+    ({ id: m.id, profile: m.profile ?? 'work', deleted: m.deleted ? 1 : 0, state: m.state ?? 'live', title: m.title ?? null, starts_at: m.startsInHours == null ? null : NOW + m.startsInHours * HOUR, ends_at: m.endsInHours == null ? null : NOW + m.endsInHours * HOUR, people: m.people ?? null, transcript: m.transcript ?? null, summary: m.summary ?? null, organizer_me: m.organizerMe ?? null }) as unknown as Meeting;
+  const itemOf = (r: ItemSpec, i: number) => ({ id: `i${i}`, profile: r.profile ?? 'work', deleted: r.deleted ? 1 : 0, meeting_id: r.meeting, status: r.status, assignee: r.assignee ?? null }) as unknown as ItemRow;
+  const meetingCases = JSON.parse(readFileSync(new URL('../../shared/fixtures/meetings.json', import.meta.url), 'utf8')) as {
+    state: { name: string; meeting: MeetingSpec; expected: string }[];
+    groups: { name: string; meetings: MeetingSpec[]; expected: { today: boolean; ids: string[] }[] }[];
+    seriesTitle: { name: string; title: string | null; expected: string }[];
+    inSeries: { name: string; meetings: MeetingSpec[]; expected: string[] }[];
+    names: { name: string; a: string; b: string; display: string; same: boolean }[];
+    actionCount: { name: string; items: ItemSpec[]; expected: unknown }[];
+    filter: { meetings: MeetingSpec[]; items: ItemSpec[]; cases: { name: string; chips: MeetingChip[]; expected: string[] }[] };
+  };
+  for (const c of meetingCases.state) it(`meetingState: ${c.name}`, () => expect(meetingState(meetingOf(c.meeting), NOW)).toBe(c.expected));
+  for (const c of meetingCases.groups) {
+    it(`groupMeetings: ${c.name}`, () => {
+      const groups = groupMeetings(c.meetings.map(meetingOf), NOW);
+      expect(groups.map((g) => ({ today: g.label === 'Today', ids: g.rows.map((m) => m.id) }))).toEqual(c.expected);
+    });
+  }
+  for (const c of meetingCases.seriesTitle) it(`seriesTitle: ${c.name}`, () => expect(seriesTitle(c.title)).toBe(c.expected));
+  for (const c of meetingCases.inSeries) {
+    it(`inSeries: ${c.name}`, () => {
+      const meetings = c.meetings.map(meetingOf);
+      const keys = inSeries(meetings);
+      expect(meetings.filter((m) => keys.has(m.profile + m.id)).map((m) => m.id)).toEqual(c.expected);
+    });
+  }
+  for (const c of meetingCases.names) {
+    it(`displayName and sameName: ${c.name}`, () => {
+      expect(displayName(c.a)).toBe(c.display);
+      expect(sameName(c.a, c.b)).toBe(c.same);
+    });
+  }
+  for (const c of meetingCases.actionCount) it(`actionCount: ${c.name}`, () => expect(actionCount(c.items.map(itemOf), { profile: 'work', id: 'cal:a' })).toEqual(c.expected));
+  for (const c of meetingCases.filter.cases) {
+    it(`filterMeetings: ${c.name}`, () => {
+      const meetings = meetingCases.filter.meetings.map(meetingOf);
+      expect(filterMeetings(meetings, meetingCases.filter.items.map(itemOf), c.chips, NOW).map((m) => m.id)).toEqual(c.expected);
+    });
   }
 
   for (const c of cases<{ name: string; request: string; expected: string }>('spec-prompt')) {
