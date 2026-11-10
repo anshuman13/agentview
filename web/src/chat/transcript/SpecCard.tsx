@@ -19,8 +19,8 @@ export function SpecCard({ id, slug, path, meta }: { id: string; slug: string; p
 // Mounted only while the box is open, so the file is read only then.
 function SpecTasks({ slug, path }: { slug: string; path: string }) {
   const chat = useStore((s) => s.session.id);
-  const progress = usePlanProgress(path, chat);
-  return <Row title="Tasks" meta={progress && !progress.startsWith('0 of 0 ') ? progress : 'No tasks'} onClick={() => openBuild(slug)} />;
+  const { progress } = usePlanProgress(path, chat);
+  return <Row title="Tasks" meta={progress ?? 'No tasks'} onClick={() => openBuild(slug)} />;
 }
 
 // A build agent's spec, shown plain inside the agent box.
