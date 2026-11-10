@@ -31,6 +31,7 @@ data class ObserveInfo(
     val grafanaServer: Boolean = false,
     val serversFile: String = "~/.claude.json",
     val snowflake: SnowflakeInfo = SnowflakeInfo(),
+    val local: Boolean = false,
 )
 
 @Serializable data class GrafanaDashboard(val uid: String = "", val title: String, val url: String = "", val folder: String? = null)

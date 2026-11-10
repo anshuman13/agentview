@@ -30,6 +30,8 @@ export type ObserveInfo = {
   // Which of these servers the chat's own provider has, and the file it reads them from.
   inChat: { snowflake: boolean };
   serversFile: string;
+  // The chat's own repo with no deploy app, so there is nothing in Grafana to find.
+  local?: boolean;
 };
 
 export type SnowflakeTest = { row: Record<string, unknown>; ms: number };

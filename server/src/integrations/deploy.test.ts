@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { follow, parseApp, summarize } from './deploy.js';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { follow, hasDeployApp, parseApp, summarize } from './deploy.js';
 import type { DeployJob, DeployRecord } from '../../../shared/protocol.js';
 
 const execFileMock = vi.hoisted(() => vi.fn());
@@ -47,5 +50,16 @@ describe('follow', () => {
     await vi.advanceTimersByTimeAsync(5000);
     await settled;
     vi.useRealTimers();
+  });
+});
+
+describe('hasDeployApp', () => {
+  it('is true only for a repo with a .deploy/app.yaml', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'deploy-'));
+    execFileMock.mockImplementation(() => Object.assign(Promise.resolve({ stdout: `${root}\n` }), { child: { stdin: { end() {} } } }));
+    expect(await hasDeployApp(root)).toBe(false);
+    mkdirSync(path.join(root, '.deploy'));
+    writeFileSync(path.join(root, '.deploy', 'app.yaml'), '---\nproject: demo\nenvironments:\n  - name: demo/prod\n');
+    expect(await hasDeployApp(root)).toBe(true);
   });
 });

@@ -8,6 +8,7 @@ import type { Provider } from '../../../shared/protocol.js';
 import { stop } from './mcpClient.js';
 import { CLAUDE, EMPTY_SNOWFLAKE, FILE, configFor, guess, load, repoName, save, userServers, type Settings } from './observeSettings.js';
 import { clearGrafanaCaches, dashboards, grafanaDef, logs, panels, patterns } from './observeGrafana.js';
+import { hasDeployApp } from './deploy.js';
 import { snowflakeDef, snowflakeObjects, snowflakeQuery, snowflakeTest } from './observeSnowflake.js';
 
 const run = promisify(execFile);
@@ -18,7 +19,7 @@ const snowflakeInfo = (s: Settings): SnowflakeInfo => {
 };
 
 async function info(repo: string, cwd: string, prov: Provider): Promise<ObserveInfo> {
-  const [s, servers] = await Promise.all([load(), userServers(cwd, prov)]);
+  const [s, servers, own] = await Promise.all([load(), userServers(cwd, prov), repoName(cwd)]);
   return {
     repo,
     config: s.repos?.[repo] ?? null,
@@ -29,6 +30,7 @@ async function info(repo: string, cwd: string, prov: Provider): Promise<ObserveI
     snowflake: snowflakeInfo(s),
     inChat: { snowflake: !!servers.snowflake },
     serversFile: provider(prov).serversFile,
+    local: repo === own && !(await hasDeployApp(cwd)),
   };
 }
 

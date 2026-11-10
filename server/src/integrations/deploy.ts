@@ -66,6 +66,12 @@ async function findApps(root: string) {
   return apps.filter((a): a is App => a !== null);
 }
 
+// True when the chat's repo has a .deploy/app.yaml; a repo without one runs only on this Mac.
+export async function hasDeployApp(cwd: string) {
+  const root = await run('git', ['rev-parse', '--show-toplevel'], cwd).catch(() => null);
+  return !!root && (await findApps(root)).length > 0;
+}
+
 async function context(cwd: string, want: string | null) {
   const root = await run('git', ['rev-parse', '--show-toplevel'], cwd).catch(() => {
     throw new Error('This chat is not in a git repo');

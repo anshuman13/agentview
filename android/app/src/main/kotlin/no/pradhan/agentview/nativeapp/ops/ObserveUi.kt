@@ -87,7 +87,10 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
                 item { ErrorHint(load.error) }
                 if (info == null) { if (load.error.isEmpty()) item { Loading("Loading…") } }
                 else {
-                    if (info.config == null || info.config is JsonNull) item { EmptyState("No Grafana settings for ${info.repo}", "The agent can find them and save the settings", action = { SetupButton(hub, "observe", info.repo) }, icon = "pulse") }
+                    if (info.config == null || info.config is JsonNull) item {
+                        if (info.local) EmptyState("No Grafana settings for ${info.repo}", "It has no deploy app, so it runs only on this Mac", icon = "pulse")
+                        else EmptyState("No Grafana settings for ${info.repo}", "The agent can find them and save the settings", action = { SetupButton(hub, "observe", info.repo) }, icon = "pulse")
+                    }
                     item(key = "grafana:${info.repo}:$tick") { Grafana(hub, info) }
                     item { Snowflake(info.snowflake) }
                     item(key = "settings:${info.repo}") { ObserveSettings(hub, info) { reload() } }

@@ -142,7 +142,9 @@ export function Observe() {
       {info && (
         <>
           {!info.config && (
-            <EmptyState size="sm" icon="pulse" title={`No Grafana settings for ${info.repo}`} hint="The agent can find them and save the settings" action={<SetupButton kind="observe" repo={info.repo} />} />
+            info.local
+              ? <EmptyState size="sm" icon="pulse" title={`No Grafana settings for ${info.repo}`} hint="It has no deploy app, so it runs only on this Mac" />
+              : <EmptyState size="sm" icon="pulse" title={`No Grafana settings for ${info.repo}`} hint="The agent can find them and save the settings" action={<SetupButton kind="observe" repo={info.repo} />} />
           )}
           <Grafana key={`g-${info.repo}`} info={info} />
           <Snowflake info={info} onInfo={setInfo} />
