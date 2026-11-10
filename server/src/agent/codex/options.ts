@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SOCK } from '../../host/state.js';
+import { SOCK } from '../../socket.js';
 import { TOOL_INSTRUCTIONS } from '../tools/index.js';
 
 const STDIO = path.join(path.dirname(fileURLToPath(import.meta.url)), '../tools/stdio.ts');

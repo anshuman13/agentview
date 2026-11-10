@@ -1,7 +1,6 @@
-import type http from 'node:http';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { parseObject, readBody } from '../http/body.js';
+import { parseObject } from '../json.js';
 import type { ObserveConfig, ObserveInfo, SnowflakeConfig, SnowflakeInfo } from '../../../shared/observe.js';
 import { provider } from '../agent/registry.js';
 import type { Provider } from '../../../shared/protocol.js';
@@ -75,10 +74,10 @@ async function addToClaude(server: string, cwd: string, prov: Provider) {
   return { server, file: CLAUDE, info: await info(await repoName(cwd), cwd, prov) };
 }
 
-export async function observe(req: http.IncomingMessage, url: URL, cwd: string, prov: Provider) {
+export async function observe(method: string, url: URL, cwd: string, prov: Provider, readBody: () => Promise<string>) {
   const p = url.pathname;
-  if (req.method === 'POST') {
-    const b = parseObject(await readBody(req));
+  if (method === 'POST') {
+    const b = parseObject(await readBody());
     if (p === '/api/observe/config') {
       if (typeof b.repo !== 'string' || !b.repo.trim()) throw new Error('Missing repo');
       return saveConfig(b.repo.trim(), b, cwd, prov);

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, ServerState, SessionInfo, LoopState, LiveNow } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
-import { resumePrompt, type Stopped } from '../host/restore.js';
+import { resumePrompt, type Stopped } from './resume.js';
 import { Approvals } from './approvals.js';
 import { recordBuild } from './builds.js';
 import { BuildCycle } from './cycle.js';

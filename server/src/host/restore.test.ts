@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { parseSaved, resumePrompt, runningAgents, stoppedOf } from './restore.js';
+import { resumePrompt } from '../session/resume.js';
+import { parseSaved, runningAgents, stoppedOf } from './restore.js';
 
 const events: any[] = [
   { id: 'w1', kind: 'tool_use', name: 'Workflow', input: { scriptPath: '/p/build.js' }, summary: '', at: 0 },

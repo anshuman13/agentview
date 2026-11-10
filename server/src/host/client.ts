@@ -5,7 +5,8 @@ import { spawn } from 'node:child_process';
 import { closeSync, mkdirSync, openSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { errText } from '../../../shared/util.js';
-import { lines, socketPath, type HostLine, type HostRequest } from './protocol.js';
+import { lines, socketPath, type HostLine } from '../socket.js';
+import type { HostRequest } from './protocol.js';
 
 const MAIN = path.join(path.dirname(fileURLToPath(import.meta.url)), 'main.ts');
 type Reply = (error: string | null, r?: unknown) => void;

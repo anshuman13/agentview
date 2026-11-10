@@ -2,10 +2,9 @@ import { buildStageOf } from '../../../shared/builds.js';
 import type { ChatEvent, LiveAgent, LoopState, Repeat } from '../../../shared/protocol.js';
 import type { Cron, RunningTask } from '../agent/types.js';
 import { RUN_ID } from '../agent/claude/transcript.js';
+import type { Stopped } from '../session/resume.js';
 import type { AgentSession } from '../session/session.js';
 
-type StoppedTask = { description: string; tool: string; runId?: string; scriptPath?: string };
-export type Stopped = { midTurn: boolean; tasks: StoppedTask[] };
 export type Saved = { sessionId: string; crons: Cron[]; repeat?: Repeat | null; loop?: LoopState; queued?: { id: string; text: string }[]; stopped?: Stopped };
 
 export const runningAgents = (chat: AgentSession): LiveAgent[] =>
@@ -37,12 +36,6 @@ export function stoppedOf(events: ChatEvent[], tasks: RunningTask[], midTurn: bo
 }
 
 const wellFormed = (s: any): s is Stopped => Array.isArray(s?.tasks) && s.tasks.every((t: any) => typeof t?.description === 'string');
-
-export const resumePrompt = ({ midTurn, tasks }: Stopped) => {
-  const list = tasks.map((t) => `- ${t.tool}: ${t.description}${t.runId ? ` (run id ${t.runId})` : ''}${t.scriptPath ? ` (script ${t.scriptPath})` : ''}`).join('\n');
-  const resume = list ? `\n\n${list}\n\nResume each Workflow by calling it again with resumeFromRunId set to its run id. Restart the other stopped tasks if they are still needed.` : '';
-  return `The agent host restarted${list ? ', which ended the background work it was running' : ''}.${resume}${midTurn ? ' Carry on with the turn you were in.' : ''}`;
-};
 
 export function parseSaved(raw: string): { view?: string; chats: Saved[] } | null {
   let saved: any;

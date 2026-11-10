@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { parseObject } from '../http/body.js';
+import { parseObject } from '../json.js';
 import type { DeployEnv, DeployJob, DeployRecord, DeployStatus } from '../../../shared/protocol.js';
 import { inside } from '../../../shared/util.js';
 import { deployUrl } from '../settings.js';

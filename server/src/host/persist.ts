@@ -6,7 +6,8 @@ import type { AgentSession } from '../session/session.js';
 import { writeJson, writeJsonSync } from '../json.js';
 import { stoppedOf, type Saved } from './restore.js';
 import { runs } from './listing.js';
-import { SOCK, hub, live } from './state.js';
+import { SOCK } from '../socket.js';
+import { hub, live } from './state.js';
 
 export const LAST = path.join(os.homedir(), '.agentview-last.json');
 export const RESTORE = path.join(os.homedir(), '.agentview', 'restore.json');

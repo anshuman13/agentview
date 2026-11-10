@@ -117,7 +117,7 @@ export function chatMcpRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> {
 
 export const chatPrefixes: Prefix<ChatCtx>[] = [
     { prefix: '/api/git/', run: ({ url, chat, body }) => gitRoute(chat.cwd, url.pathname.slice(9), url.searchParams, body), body: 'POST' },
-    { prefix: '/api/observe', run: ({ req, url, chat }) => observe(req, url, chat.cwd, chat.provider ?? 'claude') },
+    { prefix: '/api/observe', run: ({ req, method, url, chat }) => observe(method, url, chat.cwd, chat.provider ?? 'claude', () => readBody(req)) },
     { prefix: '/api/gh/', run: ({ req, method, url, chat }) => github(chat.cwd, method, url, () => readBody(req)) },
     { prefix: '/api/deploy/', run: ({ req, method, url, chat }) => (deployUrl() ? deployRoute(chat.cwd, method, url, () => readBody(req)) : { status: 404, body: { error: 'Deploy is not set up' } }) },
 ];

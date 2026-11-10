@@ -3,6 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, stat, unlink, writeFile } from 'node:fs/promises';
+import { BadRequest, parseFrame, parseObject } from '../json.js';
+
+export { BadRequest, parseFrame, parseObject };
 
 export async function readBody(req: http.IncomingMessage, max = 1_000_000) {
   const chunks: Buffer[] = [];
@@ -12,32 +15,6 @@ export async function readBody(req: http.IncomingMessage, max = 1_000_000) {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks).toString('utf8');
-}
-
-export class BadRequest extends Error {
-  status = 400;
-}
-
-export function parseObject(raw: string): Record<string, any> {
-  if (!raw.trim()) return {};
-  let v: unknown;
-  try {
-    v = JSON.parse(raw);
-  } catch {
-    throw new BadRequest('Request body is not valid JSON');
-  }
-  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new BadRequest('Request body must be a JSON object');
-  return v as Record<string, any>;
-}
-
-// A frame that is not a JSON object is ignored, so null or a bare number cannot throw in a handler.
-export function parseFrame<T extends object>(raw: unknown): T | null {
-  try {
-    const m: unknown = JSON.parse(String(raw));
-    return m && typeof m === 'object' && !Array.isArray(m) ? (m as T) : null;
-  } catch {
-    return null;
-  }
 }
 
 const PASTES = path.join(os.homedir(), '.agentview', 'pastes');

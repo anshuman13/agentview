@@ -1,5 +1,6 @@
-import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { HookInput, HookJSONOutput, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 
+export type { HookInput, HookJSONOutput };
 export type SystemMessage = Extract<SDKMessage, { type: 'system' }>;
 export type AssistantMessage = Extract<SDKMessage, { type: 'assistant' }>;
 export type UserMessage = Extract<SDKMessage, { type: 'user' }>;

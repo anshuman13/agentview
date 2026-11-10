@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { WebSocket } from 'ws';
-import { parseFrame } from '../http/body.js';
+import { parseFrame } from '../json.js';
 import { OutputBuffer } from './outputBuffer.js';
 
 const MAX = 200_000;

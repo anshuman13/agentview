@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import type { HookInput } from '@anthropic-ai/claude-agent-sdk';
+import type { HookInput } from '../agent/claude/sdkTypes.js';
 import { ToolHooks } from '../agent/claude/toolHooks.js';
 import { UNATTENDED_DOMAINS, unattendedLimits } from '../settings.js';
 import { unattendedRules } from './unattended.js';

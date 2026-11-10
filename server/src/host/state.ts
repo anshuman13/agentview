@@ -1,12 +1,10 @@
 import path from 'node:path';
 import type { ServerMessage } from '../../../shared/protocol.js';
 import type { AgentSession } from '../session/session.js';
-import { socketPath } from './protocol.js';
 import type { Saved } from './restore.js';
 
 export const PORT = Number(process.env.PORT ?? 7777);
 export const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
-export const SOCK = socketPath(PORT);
 
 export const apis = new Set<(v: unknown) => void>();
 export const push = (v: unknown) => apis.forEach((send) => send(v));

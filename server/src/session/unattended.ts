@@ -1,7 +1,7 @@
 import { realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
+import type { HookJSONOutput } from '../agent/claude/sdkTypes.js';
 import type { UnattendedLimits } from '../settings.js';
 
 // What a scheduled coding chat may touch: its worktree, the temp folder and the settings' extra folders and domains.

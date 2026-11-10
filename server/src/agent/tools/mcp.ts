@@ -1,7 +1,7 @@
 import net from 'node:net';
 import { z } from 'zod';
 import { errText } from '../../../../shared/util.js';
-import { lines, type HostLine } from '../../host/protocol.js';
+import { lines, type HostLine } from '../../socket.js';
 import type { Tool } from './tool.js';
 
 type Message = { id?: number | string; method: string; params?: any };

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { mkdtempSync } from 'node:fs';
 import { expect, test } from 'vitest';
 import { connection } from './connection.js';
-import { lines } from './protocol.js';
+import { lines } from '../socket.js';
 import { apis } from './state.js';
 
 const ask = (sock: string, req: object) =>

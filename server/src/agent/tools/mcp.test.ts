@@ -4,7 +4,7 @@ import path from 'node:path';
 import { mkdtempSync } from 'node:fs';
 import { z } from 'zod';
 import { expect, test } from 'vitest';
-import { lines } from '../../host/protocol.js';
+import { lines } from '../../socket.js';
 import { callTool, TOOLS } from './index.js';
 import { callHost, mcpReply } from './mcp.js';
 import { defineTool } from './tool.js';

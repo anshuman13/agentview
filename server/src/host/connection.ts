@@ -1,7 +1,8 @@
 import type { Socket } from 'node:net';
 import { errText } from '../../../shared/util.js';
 import { apis, get, hub } from './state.js';
-import { lines, type HostRequest } from './protocol.js';
+import { lines } from '../socket.js';
+import type { HostRequest } from './protocol.js';
 
 // The state of a chat is sent before any later broadcast for it, since replies and broadcasts share one ordered socket.
 export const connection = (handle: (req: HostRequest) => Promise<unknown>) => (sock: Socket) => {

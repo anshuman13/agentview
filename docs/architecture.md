@@ -12,7 +12,7 @@ any that exit:
 
 The API server starts a fourth process, the agent host (`server/src/host/main.ts`), in its own process group. The
 host owns every chat and its Claude CLI process and listens on `~/.agentview/host-<port>.sock`; its log is
-`~/.agentview/logs/host.log`. Requests and broadcasts travel as newline-delimited JSON (`server/src/host/protocol.ts`).
+`~/.agentview/logs/host.log`. Requests and broadcasts travel as newline-delimited JSON (`server/src/host/protocol.ts`, framing in `server/src/socket.ts`).
 
 ## Restarts
 

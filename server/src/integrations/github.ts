@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { parseObject } from '../http/body.js';
+import { parseObject } from '../json.js';
 import type { AutoMerge, Method } from './automerge.js';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
 
