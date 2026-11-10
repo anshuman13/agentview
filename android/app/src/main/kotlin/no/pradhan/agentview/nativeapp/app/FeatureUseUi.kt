@@ -12,6 +12,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import java.time.LocalDate
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.ButtonSize
+import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -34,8 +37,8 @@ private fun <T> FeatureSection(label: String, rows: List<T>, title: (T) -> Strin
             if (i > 0) Hairline()
             ListRow(title(r), meta(r))
         }
-        if (!all && rows.size > SHOWN) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = true }) }
     }
+    if (!all && rows.size > SHOWN) Button("Show all ${rows.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
 }
 
 // Every feature the Mac has counted (web FeatureUseSheet), split into never used and used, for the last 7 or 30 days.
@@ -54,7 +57,7 @@ fun FeatureUseSheet(hub: Hub, onDismiss: () -> Unit) {
         }
         error?.let { EmptyState("Could not load feature use", it) }
         days?.let { d ->
-            val rows = featureRows(d, today, span)
+            val rows = remember(d, span) { featureRows(d, today, span) }
             FeatureSection("Never used", rows.never, { it.label }, { kindLabel(it) })
             FeatureSection("Used", rows.used, { it.feature.label }, {
                 val n = if (span == 7) it.n7 else it.n30

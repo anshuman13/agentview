@@ -22,13 +22,13 @@ fun Hub.setFeatureUse(on: Boolean) {
     viewModelScope.launch {
         runCatching { api.setFeatureUse(on) }
             .onSuccess { featureUse.value = it }
-            .onFailure { notice.value = "Could not save. Try again." }
+            .onFailure { notice.value = "Could not save feature analytics. Try again." }
     }
 }
 
 fun Hub.track(id: String) {
     if (!shouldTrack(featureUse.value, readOnly, id)) return
-    viewModelScope.launch { runCatching { api.trackFeature(id) } }
+    viewModelScope.launch { runCatching { api.trackFeature(id) }.onSuccess { if (!it) featureUse.value = false } }
 }
 
 fun Hub.setDefaultProvider(id: String) {

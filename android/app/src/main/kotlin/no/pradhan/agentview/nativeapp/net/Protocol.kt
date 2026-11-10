@@ -77,6 +77,10 @@ data class ReviewHunk(val line: Int = 0, val del: List<String> = emptyList(), va
 @Serializable
 data class AppSettings(val deploy: Boolean = false, val accountLabels: Map<String, String> = emptyMap(), val providers: List<ProviderOption> = emptyList(), val personalRoot: String = "", val defaultProvider: String = "claude", val featureUse: Boolean = false)
 
+// POST /api/feature-use: false when the setting is off on the server.
+@Serializable
+data class TrackReply(val recorded: Boolean = false)
+
 // GET /api/feature-use: the counts per day and feature, empty while the setting is off.
 @Serializable
 data class FeatureUseReply(val days: Map<String, Map<String, Int>> = emptyMap())
