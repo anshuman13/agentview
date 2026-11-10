@@ -31,11 +31,11 @@ export async function runWorktree(run: ChatRun) {
   return { cwd: run.worktree!, env: { GIT_DIR: gitDir, GIT_WORK_TREE: run.worktree! } };
 }
 
-// A nested repository would run its own config (filters) when git adds or inspects it.
+// A nested repository (listed as its own dir at any depth) would run its own config (filters) when git adds or inspects it.
 async function refuseNested(git: (args: string[]) => Promise<string>, cwd: string) {
-  const dirs = (await git(['ls-files', '-z', '--others', '--directory', '--exclude-standard'])).split('\0').filter((p) => p.endsWith('/'));
+  const dirs = (await git(['ls-files', '-z', '--others', '--exclude-standard'])).split('\0').filter((p) => p.endsWith('/'));
   const nested = await Promise.all(dirs.map((d) => lstat(path.join(cwd, d, '.git')).then(() => true, () => false)));
-  if (nested.includes(true) || (await git(['ls-files', '-s'])).split('\n').some((l) => l.startsWith('160000'))) throw new ReviewError(409, 'The worktree holds a nested repository');
+  if (nested.includes(true)) throw new ReviewError(409, 'The worktree holds a nested repository');
 }
 
 const subjectOf = (run: ChatRun) => (run.rounds.at(-1)?.line || run.title).replace(/\s+/g, ' ').trim().slice(0, 72);
