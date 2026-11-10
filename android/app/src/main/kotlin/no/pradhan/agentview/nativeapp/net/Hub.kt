@@ -172,6 +172,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val undoable = MutableSharedFlow<Undoable>(extraBufferCapacity = 1)
 
     val navHidden = MutableStateFlow(false)
+    val composing = MutableStateFlow(false)
     val showTurn = MutableStateFlow<String?>(null)
 
     val goalSheet = MutableStateFlow<GoalSheet?>(null)

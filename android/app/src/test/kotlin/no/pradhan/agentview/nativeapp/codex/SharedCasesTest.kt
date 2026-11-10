@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
@@ -15,7 +16,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
+import no.pradhan.agentview.nativeapp.app.BarEvent
+import no.pradhan.agentview.nativeapp.app.BarState
 import no.pradhan.agentview.nativeapp.app.appCounts
+import no.pradhan.agentview.nativeapp.app.barHidden
+import no.pradhan.agentview.nativeapp.app.barState
 import no.pradhan.agentview.nativeapp.app.countChat
 import no.pradhan.agentview.nativeapp.chat.ChecklistItem
 import no.pradhan.agentview.nativeapp.chat.SummaryEntry
@@ -323,5 +328,13 @@ class SharedCasesTest {
 
     @Test fun moneyByBilling() {
         for (c in cases("money")) assertEquals(c.str("name"), c.str("expected"), money(c.getValue("n").jsonPrimitive.content.toDouble(), c.str("billing")))
+    }
+
+    @Test fun bottomBar() {
+        for (c in cases("bottom-bar")) {
+            val events = c.getValue("events").jsonArray.map { e -> BarEvent.valueOf(e.jsonPrimitive.content.replaceFirstChar { it.uppercase() }) }
+            val hidden = events.runningFold(BarState(), ::barState).drop(1).map(::barHidden)
+            assertEquals(c.str("name"), c.getValue("hidden").jsonArray.map { it.jsonPrimitive.boolean }, hidden)
+        }
     }
 }
