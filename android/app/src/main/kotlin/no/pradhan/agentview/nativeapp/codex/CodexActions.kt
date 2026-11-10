@@ -15,6 +15,9 @@ fun withRule(text: String, rule: String?): String {
     return if (rule != null) (if (rest.isNotEmpty()) "$rule\n$rest" else rule) else rest
 }
 
+const val NOTED = "Saved as a note"
+const val NOTE_FAILED = "Could not save the note. The item is still here."
+
 class TaskActions(private val store: CodexStore, private val snack: (String, (() -> Unit)?) -> Unit, private val now: () -> Long = System::currentTimeMillis) {
     fun change(r: Row, patch: Map<String, Any?>, text: String) {
         val before = patch.keys.associateWith { r.col(it) }
@@ -48,6 +51,9 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
     fun accept(r: Row) = change(r, mapOf("status" to "open"), "Added to Today")
     fun restore(r: Row) = change(r, mapOf("status" to "suggested"), "Back to review")
     fun dismiss(r: Row) = change(r, mapOf("status" to "dismissed"), "Dismissed")
+    fun toNote(r: Row) {
+        if (store.update(r, mapOf("status" to "note"))) snack(NOTED) { store.update(r, mapOf("status" to "suggested")) } else say(NOTE_FAILED)
+    }
     fun undoable(text: String, undo: () -> Unit) = snack(text, undo)
     fun say(text: String) = snack(text, null)
     fun snoozeAsk(r: Row, until: Long) = change(r, mapOf("snoozed_until" to until), "Snoozed to ${whenText(until, now())}")
