@@ -47,18 +47,17 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.net.image
 import no.pradhan.agentview.nativeapp.net.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
+import no.pradhan.agentview.nativeapp.ops.agentSummary
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.sessions.stageName
 import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.Badge
+import no.pradhan.agentview.nativeapp.ui.BadgeTone
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
-import no.pradhan.agentview.nativeapp.ui.Button
-import no.pradhan.agentview.nativeapp.ui.ButtonSize
-import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
-import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.MonoFont
-import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
@@ -213,42 +212,30 @@ fun editPairs(use: ChatEvent): List<Pair<String, String>> = when (use.name) {
 
 @Composable
 internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpenAgent: (String) -> Unit, card: Boolean = false) {
-    val desc = it.use.input.s("description").ifEmpty { "Sub-agent" }
-    val type = it.use.input.s("subagent_type")
     val result = it.result
-    val dur = result?.let { r -> duration(r.at - it.use.at) } ?: ""
-    val state = when {
-        it.running -> "running"
-        result?.stopped == true -> "stopped"
-        isDenied(result) -> "denied"
-        result?.isError == true -> "failed"
-        else -> "done" + if (dur.isNotEmpty()) " $dur" else ""
-    }
-    val agentBar = av.agent
+    val dur = if (result != null && !it.running) duration(result.at - it.use.at) else ""
+    val steps = if (it.steps.isNotEmpty()) "${it.steps.size} ${if (it.steps.size == 1) "step" else "steps"}" else ""
     val canStop by hub.store.state.select { it.session?.capabilities?.stopTask ?: true }
-    val shown = if (it.running) it.steps.takeLast(3) else emptyList()
-    Column(Modifier.fillMaxWidth().clickable { onOpenAgent(it.use.id) }) {
-        Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.CenterStart) { StatusDot(DotState.Agent) }
-            Text(
-                androidx.compose.ui.text.buildAnnotatedString {
-                    append(desc)
-                    withStyleColor(if (result?.isError == true && !isDenied(result)) av.err else av.fgMuted) {
-                        append(" · ${if (type.isNotEmpty()) "$type · " else ""}$state${if (it.steps.isNotEmpty()) " · ${it.steps.size} ${if (it.steps.size == 1) "step" else "steps"}" else ""}")
-                    }
-                },
-                Modifier.weight(1f), style = Type.subheadline, color = av.fg, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            )
-            if (it.running && canStop) Button("Stop", { hub.stopTask(it.use.id) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
-            AvIcon("chevron-right", null, Tokens.icon, Modifier.padding(horizontal = Tokens.sp3), tint = av.fgFaint)
-        }
-        if (card) agentBuild(it.use)?.let { b -> SpecCard(hub, b.slug, "${stageName(b.stage)} \u00B7 ${b.slug}") }
-        if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {
-            if (it.steps.size > shown.size) Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
-                Text("${it.steps.size - shown.size} earlier steps", style = Type.footnote, color = av.fgMuted)
+    val shown = it.steps.takeLast(3)
+    val running = it.running
+    TranscriptBox(
+        hub, "agent:${it.use.id}", it.use.input.s("description").ifEmpty { "Sub-agent" },
+        listOf(it.use.input.s("subagent_type"), dur, steps).filter { m -> m.isNotEmpty() }.joinToString(" \u00B7 "),
+        state = {
+            when {
+                running -> Badge("Running", BadgeTone.Running)
+                result?.stopped == true || isDenied(result) -> Badge("Skipped", BadgeTone.Quiet)
+                result?.isError == true -> Badge("Failed", BadgeTone.Failed)
+                else -> Badge("Done", BadgeTone.Done)
             }
-            val running = it.running
+        },
+        action = if (running && canStop) ({ IconBtn("debug-stop", "Stop agent", { hub.stopTask(it.use.id) }) }) else null,
+        summary = agentSummary(it), reserveSummary = running,
+    ) {
+        if (card) agentBuild(it.use)?.let { b -> SpecCard(hub, b.slug, "${stageName(b.stage)} \u00B7 ${b.slug}") }
+        if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(av.agent, Tokens.stroke).padding(start = Tokens.sp7)) {
             shown.forEachIndexed { i, s -> Box(Modifier.gap(gapAbove(shown.getOrNull(i - 1), s)?.coerceAtMost(Tokens.sp2))) { ItemRow(hub, s, chat, cwd, !running, onOpenAgent) } }
         }
+        ListRow("Steps and report", trailing = { Chevron() }, onClick = { onOpenAgent(it.use.id) })
     }
 }
