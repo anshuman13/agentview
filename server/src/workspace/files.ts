@@ -35,6 +35,19 @@ async function walk(root: string, rel: string): Promise<string[]> {
   return out;
 }
 
+const SKETCHES = '.claude/sketches';
+const MAX_SKETCHES = 200;
+
+// Regular .html files directly in the chat's sketch folder, newest first; symlinks and folders are not listed.
+export async function listSketches(cwd: string) {
+  const dir = path.join(cwd, SKETCHES);
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+  const files = await Promise.all(
+    entries.filter((e) => e.isFile() && e.name.endsWith('.html')).map(async (e) => ({ name: e.name, path: `${SKETCHES}/${e.name}`, mtime: (await stat(path.join(dir, e.name))).mtimeMs })),
+  );
+  return files.sort((a, b) => b.mtime - a.mtime).slice(0, MAX_SKETCHES);
+}
+
 export async function listDir(cwd: string, rel: string) {
   const abs = safeResolve(cwd, rel);
   const entries = await readdir(abs, { withFileTypes: true });

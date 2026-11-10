@@ -1,4 +1,5 @@
 import type { Query } from '@anthropic-ai/claude-agent-sdk';
+import { SKETCH_COMMAND } from '../../../../shared/sketches.js';
 import type { AgentHost } from '../types.js';
 import { sessionUsage } from './usage.js';
 
@@ -11,7 +12,7 @@ export async function loadMeta(q: Query, host: AgentHost, extraModels: Array<{ v
         ...models.map((m) => ({ value: m.value, displayName: m.displayName, description: m.description })),
         ...extraModels,
       ],
-      commands: commands.map((c) => ({ name: c.name, description: c.description })),
+      commands: [...commands.map((c) => ({ name: c.name, description: c.description })), SKETCH_COMMAND],
     });
   } catch (err) {
     process.stderr.write(`loadMeta failed: ${String(err)}\n`);

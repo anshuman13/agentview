@@ -3,7 +3,7 @@ import { openInChrome } from '../chrome/chrome.js';
 import { configDef, inSettings, mcpCall, mcpConfig } from '../agent/claude/mcp.js';
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import { provider } from '../agent/registry.js';
-import { listDir, listFiles, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
+import { listDir, listFiles, listSketches, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
 import { github } from '../integrations/github.js';
 import { attention, dismissAttention, refreshAttention } from '../integrations/attention.js';
 import { buildOne, listBuilds, reviewBuild } from '../session/builds.js';
@@ -74,6 +74,7 @@ export function chatFileRoutes(): Record<string, Entry<ChatCtx>> {
     'ANY /api/devscript': entry(({ chat }) => devScript(chat.cwd)),
     'DELETE /api/terms': entry(({ url }) => closeTerminal(url.searchParams.get('id') ?? '')),
     'ANY /api/terms': entry(({ chat }) => listTerminals(chat.id)),
+    'ANY /api/sketches': entry(({ chat }) => listSketches(chat.cwd)),
     'ANY /api/files': entry(({ chat }) => listFiles(chat.cwd)),
     'ANY /api/dir': entry(({ url, chat }) => listDir(chat.cwd, url.searchParams.get('path') ?? '')),
     'PUT /api/file': entry(async ({ req, url, chat }) => writeFileText(chat.cwd, url.searchParams.get('path') ?? '', await readBody(req, MAX_FILE_BODY))),

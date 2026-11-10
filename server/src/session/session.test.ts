@@ -8,6 +8,7 @@ import { claudeSession, type ClaudeDriver } from '../agent/claude/driver.js';
 import { historyFrom } from '../agent/claude/transcript.js';
 import type { History } from '../agent/types.js';
 import { appendTo, BIG_BRO, type ChatEvent, type ServerMessage } from '../../../shared/protocol.js';
+import { sketchPrompt } from '../../../shared/sketches.js';
 
 function fakeSession() {
   const s = claudeSession('/tmp/project');
@@ -885,6 +886,16 @@ describe('review findings', () => {
     (s.driver as unknown as { messages: { toolUse: (b: unknown) => void } }).messages.toolUse({ id: 't1', name: 'ReportFindings', input: { findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
     await vi.waitFor(() => expect(got.some((m) => m.type === 'findings')).toBe(true));
     expect(got.find((m) => m.type === 'findings')).toMatchObject({ review: { repo: '/tmp/project', target: '42', findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
+  });
+});
+
+describe('/sketch', () => {
+  it('sends the sketch prompt to the driver and keeps the typed text in the log', () => {
+    const { s } = fakeSession();
+    const send = vi.spyOn(s.driver, 'send').mockImplementation(() => {});
+    s.sendPrompt('/sketch a settings page');
+    expect(send).toHaveBeenCalledWith(sketchPrompt('a settings page'), expect.any(String));
+    expect(s.state.events.find((e) => e.kind === 'user')).toMatchObject({ text: '/sketch a settings page' });
   });
 });
 

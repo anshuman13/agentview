@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Account, Capabilities, Effort, LoopRole, McpServer, Provider } from '../../../../shared/protocol.js';
 import { reviewPrompt } from '../../../../shared/reviewPrompt.js';
+import { SKETCH_COMMAND } from '../../../../shared/sketches.js';
 import { errText } from '../../../../shared/util.js';
 import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '../types.js';
 import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, type Ask } from './approvals.js';
@@ -17,12 +18,13 @@ import { planUsage } from './usage.js';
 const USAGE_EVERY = 10 * 60_000;
 const MCP_STATUS: Record<string, string> = { connected: 'connected', authenticationRequired: 'needs-auth', failed: 'failed', disabled: 'disabled' };
 
-// Slash commands Codex has no equivalent for; the session owns these four.
+// Slash commands Codex has no equivalent for; the session owns these five.
 const COMMANDS = [
   { name: 'loop', description: 'Repeat a prompt on an interval' },
   { name: 'goal', description: 'Work toward a goal and check it on an interval' },
   { name: 'compact', description: 'Compact the conversation' },
   { name: 'code-review', description: 'Review the working tree or a PR' },
+  SKETCH_COMMAND,
 ];
 
 const ROLE_EFFORT: Record<LoopRole, Effort> = { plan: 'high', build: 'high', test: 'medium' };
