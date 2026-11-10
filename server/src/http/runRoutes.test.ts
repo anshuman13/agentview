@@ -111,7 +111,8 @@ describe('diff', () => {
 
 describe('nested repositories', () => {
   it('never runs a nested repo filter, and approve refuses the worktree', async () => {
-    const nested = path.join(fixture.dir, 'nested');
+    const nested = path.join(fixture.dir, 'a', 'sub');
+    mkdirSync(path.dirname(nested));
     execFileSync('git', ['init', '-q', nested]);
     const marker = path.join(fixture.root, 'marker');
     sh(nested, 'config', 'filter.evil.clean', `touch ${marker}; cat`);
@@ -168,7 +169,7 @@ describe('revise and discard', () => {
   it('removes the worktree and branch, archives the chat, and a repeat gets 409', async () => {
     expect(await call('POST /api/runs/discard')).toEqual({ status: 200, body: { ok: true } });
     expect(req).toHaveBeenCalledWith({ op: 'run_end', id: 'r1', why: 'Discarded' });
-    expect(worktreeGoneAtEnd).toBe(true);
+    expect(worktreeGoneAtEnd).toBe(false);
     expect(mocks.removeChat).toHaveBeenCalledWith('s1', false, true);
     expect(existsSync(fixture.dir)).toBe(false);
     expect(sh(fixture.repo, 'branch', '--list', fixture.branch)).toBe('');

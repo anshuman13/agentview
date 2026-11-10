@@ -50,8 +50,8 @@ export function runRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       if (run.state === 'done') return failed(409, 'The run is over');
       if (chatWorking(run)) return failed(409, 'The chat is working');
       await runWorktree(run);
-      await removeRunWorktree(run);
       await d.host.req({ op: 'run_end', id: run.id, why: 'Discarded' });
+      await removeRunWorktree(run);
       const open = d.bySession(run.sessionId);
       if (open) await d.closeByUser(open);
       if (run.sessionId) await removeChat(run.sessionId, false, true);
