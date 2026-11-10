@@ -43,7 +43,9 @@ describe('jobChat', () => {
 
   it('a chat reopened on a session with an open job run comes back unattended, one without does not', async () => {
     const id = mocks.runs.start({ kind: 'job', sessionId: 'sess-1', chatId: 'old', title: 't', what: 'w', provider: 'claude' });
-    expect(unattended((await createChat('/tmp', 'sess-1')))).toBe(true);
+    const reopened = await createChat('/tmp', 'sess-1');
+    expect(unattended(reopened)).toBe(true);
+    expect(mocks.runs.get(id)?.chatId).toBe(reopened.id);
     expect(unattended((await createChat('/tmp', 'sess-2')))).toBe(false);
     mocks.runs.end(id, 'done');
     expect(unattended((await createChat('/tmp', 'sess-1')))).toBe(false);
