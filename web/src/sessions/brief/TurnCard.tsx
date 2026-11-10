@@ -81,7 +81,7 @@ function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: strin
   const files = allFiles ? turn.files : turn.files.slice(0, FILES_SHOWN);
   const add = turn.files.reduce((n, f) => n + f.add, 0);
   const del = turn.files.reduce((n, f) => n + f.del, 0);
-  const grouped = turn.files.length || turn.commits.length || turn.commands.length || turn.agents.length;
+  const grouped = !!(turn.files.length || turn.commits.length || turn.commands.length || turn.agents.length);
   const reviews = turn.steps.flatMap((s) => (s.kind === 'review' ? [s.ev] : []));
   const any = pending.length || turn.blocked.length || reviews.length || turn.notes.length || grouped;
   if (!any) return null;
