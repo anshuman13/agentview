@@ -177,6 +177,11 @@ export class Turn {
     const repeat = s.state.session.repeat;
     if (this.roundTurn && repeat?.runId) s.runs.addRound(repeat.runId, { n: repeat.round, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0 });
     this.roundTurn = false;
+    const job = s.runs.jobFor(s.id);
+    if (job) {
+      s.runs.addRound(job.id, { n: 1, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0 });
+      s.runs.end(job.id, 'exited');
+    }
     s.cycle.exited();
     // Queued messages are not lost with the process; the first one starts a fresh CLI.
     if (!s.waiting.dequeue()) s.repeater.defer();

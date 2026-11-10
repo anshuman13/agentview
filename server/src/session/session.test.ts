@@ -1073,6 +1073,12 @@ describe('job runs', () => {
     expect(runs.jobFor(s.id)).toBeUndefined();
   });
 
+  it('ends Failed when the CLI exits without a result', () => {
+    const { s, runs, id } = jobSession();
+    s.exited();
+    expect(runs.get(id)).toMatchObject({ state: 'done', why: 'exited', rounds: [{ outcome: 'failed', line: 'Claude exited' }] });
+  });
+
   it('ends Failed with the error line when the turn ends in an error', () => {
     const { s, runs, id, handle } = jobSession();
     s.sendPrompt('go');
