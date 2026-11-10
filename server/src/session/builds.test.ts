@@ -144,6 +144,14 @@ describe('spec review', () => {
     expect(one.pipeline).toBe('reviewed');
   });
 
+  it('writes one Review notes heading for two reviews at once', async () => {
+    writeFileSync(path.join(specs, 'racing.md'), body);
+    await Promise.all([reviewBuild(repo, { slug: 'racing', phase: 'design', decision: 'approve' }), reviewBuild(repo, { slug: 'racing', phase: 'tasks', decision: 'approve' })]);
+    const text = readFileSync(path.join(specs, 'racing.md'), 'utf8');
+    expect(text.match(/^## Review notes$/gm)).toHaveLength(1);
+    expect(reviews('racing')).toHaveLength(2);
+  });
+
   it('leaves a tracked spec file unchanged', async () => {
     expect(await reviewBuild(repo, { slug: 'tracked', phase: 'tasks', decision: 'changes', note: 'x' })).toEqual({ ok: true });
     expect(readFileSync(path.join(specs, 'tracked.md'), 'utf8')).toBe(body);

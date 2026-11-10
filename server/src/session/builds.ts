@@ -210,7 +210,9 @@ export async function reviewBuild(cwd: string, body: { slug?: unknown; phase?: u
   const spec = repo && (await loadSpec(repo, slug));
   if (!repo || !spec) return { status: 404, body: { error: 'No such spec' } };
   const review: BuildReview = { phase, decision, note, at: Date.now() };
-  await reviewStore(repo, slug).update((cur) => [...cur, review]);
-  if (await ignored(repo, spec.file)) await appendNote(spec.file, review);
+  await reviewStore(repo, slug).update(async (cur) => {
+    if (await ignored(repo, spec.file)) await appendNote(spec.file, review);
+    return [...cur, review];
+  });
   return { ok: true };
 }
