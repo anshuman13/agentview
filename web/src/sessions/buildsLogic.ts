@@ -48,4 +48,4 @@ export type StageRow = { at: number; entry?: Entry; review?: BuildReview };
 export const stageRows = (entries: Entry[], reviews: BuildReview[]): StageRow[] =>
   [...byStart(entries).map((entry) => ({ at: entry.startedAt, entry })), ...reviews.map((review) => ({ at: review.at, review }))].sort((a, b) => a.at - b.at);
 
-export const commitTotals =(files: { add: number; del: number }[]) => ({ add: files.reduce((n, f) => n + f.add, 0), del: files.reduce((n, f) => n + f.del, 0) });
+export const commitTotals = (files: { add: number; del: number }[]) => ({ add: files.reduce((n, f) => n + f.add, 0), del: files.reduce((n, f) => n + f.del, 0) });
