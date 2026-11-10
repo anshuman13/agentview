@@ -74,6 +74,7 @@ import no.pradhan.agentview.nativeapp.ops.DeployScreen
 import no.pradhan.agentview.nativeapp.ops.McpScreen
 import no.pradhan.agentview.nativeapp.ops.ObserveScreen
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
+import no.pradhan.agentview.nativeapp.sessions.BuildsScreen
 import no.pradhan.agentview.nativeapp.sessions.SessionsScreen
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -325,5 +326,6 @@ private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onTab: (String) 
     "deploy" -> DeployScreen(hub, onBack)
     "mcp" -> McpScreen(hub, onBack)
     "runs" -> RunsScreen(hub, onBack, { onTab(Tab.Chat.route) }, { onTab(Tab.Codex.route) })
+    "builds" -> BuildsScreen(hub, onBack)
     else -> SettingsScreen(hub, onBack, onOrigin)
 }

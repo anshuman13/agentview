@@ -58,6 +58,7 @@ import no.pradhan.agentview.nativeapp.workspace.Hint
 import no.pradhan.agentview.nativeapp.workspace.Loaded
 import no.pradhan.agentview.nativeapp.workspace.MERGE_METHODS
 import no.pradhan.agentview.nativeapp.workspace.PageBody
+import no.pradhan.agentview.nativeapp.workspace.PrFile
 import no.pradhan.agentview.nativeapp.workspace.PullRequest
 import no.pradhan.agentview.nativeapp.workspace.PullRequestDetail
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
@@ -286,17 +287,19 @@ private fun LazyListScope.pullCommits(d: PullRequestDetail) {
 private fun LazyListScope.pullFiles(d: PullRequestDetail, openFile: String?, onOpenFile: (String?) -> Unit) {
     if (d.files.isEmpty()) return
     item { SectionHeader("Files changed", d.files.size.toString()) }
-    item {
-        val diffs = remember(d.diff) { splitDiff(d.diff) }
-        Group {
-            d.files.forEachIndexed { i, f ->
-                if (i > 0) Hairline(lead = true)
-                val name = f.path.substringAfterLast('/')
-                val shown = openFile == f.path
-                ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { onOpenFile(if (shown) null else f.path) })
-                if (shown) PatchView(diffs[f.path] ?: "No diff", f.path)
-            }
-        }
+    item { Group { DiffFiles(d.files, d.diff, openFile, onOpenFile) } }
+}
+
+// The changed files as rows; a tap shows that file's patch under its row.
+@Composable
+fun DiffFiles(files: List<PrFile>, diff: String, openFile: String?, onOpenFile: (String?) -> Unit) {
+    val diffs = remember(diff) { splitDiff(diff) }
+    files.forEachIndexed { i, f ->
+        if (i > 0) Hairline(lead = true)
+        val name = f.path.substringAfterLast('/')
+        val shown = openFile == f.path
+        ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { onOpenFile(if (shown) null else f.path) })
+        if (shown) PatchView(diffs[f.path] ?: "No diff", f.path)
     }
 }
 

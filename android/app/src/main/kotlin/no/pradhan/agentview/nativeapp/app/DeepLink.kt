@@ -5,7 +5,7 @@ import java.net.URLDecoder
 
 data class DeepLink(val view: String? = null, val page: String? = null, val chat: String? = null, val session: String? = null, val action: String? = null)
 
-val PAGE_IDS = listOf("observe", "deploy", "mcp", "settings")
+val PAGE_IDS = listOf("builds", "observe", "deploy", "mcp", "settings")
 
 fun parseDeepLink(uri: String?): DeepLink? {
     val query = uri?.let { runCatching { URI(it).rawQuery }.getOrNull() } ?: return null

@@ -167,8 +167,12 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
 // Shows the chat of a run, and the report of one round when given; false when it cannot be opened.
 suspend fun Hub.openRun(run: ChatRun, report: String?): Boolean {
     report?.let { showTurn.value = it }
-    if (store.state.value.live.any { it.id == run.chatId }) { open(run.chatId); return true }
-    return openSaved(run.sessionId)
+    return openChatOf(run.chatId, run.sessionId)
+}
+
+suspend fun Hub.openChatOf(chatId: String, sessionId: String): Boolean {
+    if (store.state.value.live.any { it.id == chatId }) { open(chatId); return true }
+    return openSaved(sessionId)
 }
 
 private fun entryKey(e: RunEntry) = when (e) {
