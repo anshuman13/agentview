@@ -39,6 +39,7 @@ export const CodePane = lazy(() => import('../workspace/CodePane').then((m) => (
 export const BrowserPane = lazy(() => import('../workspace/BrowserPane').then((m) => ({ default: m.BrowserPane })));
 export const Observe = lazy(() => import('../ops/Observe').then((m) => ({ default: m.Observe })));
 export const Deploy = lazy(() => import('../ops/Deploy').then((m) => ({ default: m.Deploy })));
+export const Builds = lazy(() => withMd(import('../sessions/Builds')).then((m) => ({ default: m.Builds })));
 export const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ default: m.McpPage })));
 export const Settings = lazy(() => import('./shell/Settings').then((m) => ({ default: m.Settings })));
 export const ConnectPopover = lazy(() => import('./shell/ConnectPopover').then((m) => ({ default: m.ConnectPopover })));

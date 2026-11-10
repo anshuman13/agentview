@@ -18,6 +18,15 @@ export type BuildEntry = {
 };
 export type BuildSummary = { stage: BuildStage; state: BuildState; conclusion: string };
 export type Criterion = { n: number; result: 'pass' | 'fail' | 'unverified'; evidence: string };
+export type BuildRow = BuildSummary & { slug: string; title: string; updatedAt: number };
+export type BuildDetail = {
+  slug: string;
+  title: string;
+  summary: BuildSummary;
+  spec: string | null;
+  entries: (BuildEntry & { verdict: string | null; criteria: Criterion[]; findings: string[] })[];
+  commit: { files: { path: string; add: number; del: number }[]; diff: string } | null;
+};
 
 const HAND: Record<string, BuildStage> = { pm: 'pm', 'spec-reviewer': 'review', implementer: 'implement', tester: 'test', 'code-reviewer': 'code-review' };
 const LABEL: Record<string, BuildStage> = { pm: 'pm', review: 'review', impl: 'implement', test: 'test', 'code-review': 'code-review' };

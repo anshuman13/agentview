@@ -1,11 +1,11 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Findings } from './Findings';
 import { Markdown } from '../chat/Chat';
-import { FileIcon } from '../workspace/FileIcon';
-import { CheckIcon, Counts, StateChip, load, setViewOpen, useList } from './pulls';
+import { Counts, Files, splitDiff } from '../ui/DiffFiles';
+import { CheckIcon, StateChip, load, setViewOpen, useList } from './pulls';
 import { call } from './opsApi';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { PullRequest, PullRequestDetail } from '../../../shared/protocol';
@@ -113,49 +113,11 @@ export function GitHub() {
   );
 }
 
-function splitDiff(diff: string) {
-  const files = new Map<string, string>();
-  for (const part of diff.split(/^(?=diff --git )/m)) {
-    const m = part.match(/^diff --git a\/.* b\/(.*)$/m);
-    if (m) files.set(m[1], part.slice(part.indexOf('\n@@') + 1 || part.length));
-  }
-  return files;
-}
-
-const lineClass = (l: string) => (l[0] === '+' ? 'add' : l[0] === '-' ? 'del' : l.startsWith('@@') ? 'hunk' : '');
-
 function Review({ r }: { r: PullRequestDetail['reviews'][number] }) {
   return (
     <>
       <Row plain leading={<Avatar login={r.author} />} title={r.author} meta={ago(r.at)} trailing={<StateChip state={r.state} />} />
       {r.body && <div className="gh-pad"><Markdown text={r.body} /></div>}
-    </>
-  );
-}
-
-function Files({ files, diffs }: { files: PullRequestDetail['files']; diffs: Map<string, string> }) {
-  const [open, setOpen] = useState<string | null>(null);
-  return (
-    <>
-      {files.map((f) => {
-        const name = f.path.split('/').pop()!;
-        const shown = open === f.path;
-        return (
-          <Fragment key={f.path}>
-            <Row
-              title={name}
-              leading={<FileIcon name={name} />}
-              meta={f.path.slice(0, -name.length - 1)}
-              trailing={<Counts a={f.additions} d={f.deletions} />}
-              aria-expanded={shown}
-              onClick={() => setOpen(shown ? null : f.path)}
-            />
-            {shown && (
-              <pre className="gh-diff">{(diffs.get(f.path) ?? 'No diff').split('\n').map((l, i) => <div key={i} className={lineClass(l)}>{l || ' '}</div>)}</pre>
-            )}
-          </Fragment>
-        );
-      })}
     </>
   );
 }

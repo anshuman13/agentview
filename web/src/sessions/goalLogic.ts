@@ -49,11 +49,14 @@ export function usageLine(run: ChatRun) {
   return parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : 'No cap';
 }
 
-export function openRun(run: ChatRun, report = run.rounds.at(-1)?.report) {
+export function openChat(ids: { chatId?: string | null; sessionId?: string | null }, report?: string) {
   const { live } = getState();
-  const chat = live.find((c) => c.id === run.chatId) ?? live.find((c) => c.sessionId === run.sessionId);
-  send(chat ? { type: 'view', id: chat.id } : { type: 'open_session', sessionId: run.sessionId });
+  const chat = live.find((c) => c.id === ids.chatId) ?? live.find((c) => c.sessionId === ids.sessionId);
+  if (chat) send({ type: 'view', id: chat.id });
+  else if (ids.sessionId) send({ type: 'open_session', sessionId: ids.sessionId });
   if (report) showTurn(report);
 }
 
 export const openGoal = (run?: string) => setUi({ goalSheet: run ? { mode: 'detail', run } : { mode: 'start' } });
+
+export const openRun = (run: ChatRun, report = run.rounds.at(-1)?.report) => openChat(run, report);

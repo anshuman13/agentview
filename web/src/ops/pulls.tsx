@@ -4,6 +4,7 @@ import { errText } from '../../../shared/util';
 import { useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { createStore } from '../ui/createStore';
+import { Counts } from '../ui/DiffFiles';
 import { call } from './opsApi';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
@@ -50,7 +51,6 @@ export const prText = (n: number, pr?: Pick<PullRequest, 'draft' | 'review'>) =>
 export const CheckIcon = ({ state }: { state: CheckState }) => (
   <span className={`gh-check ${state}`} title={CHECKS[state][1]}><Icon name={CHECKS[state][0]} small /></span>
 );
-export const Counts = ({ a, d }: { a: number; d: number }) => <span className="gh-counts"><span className="add">+{a}</span> <span className="del">-{d}</span></span>;
 export const StateChip = ({ state }: { state: string }) => {
   const r = REVIEW[state];
   return r ? <span className={`chip pill sm ${r[1] || 'outline'}`}>{r[0]}</span> : null;

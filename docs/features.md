@@ -486,7 +486,7 @@ are read once and removed from the address bar.
 
 ## Pages
 
-Observe, Deploy (only with `deployUrl` set in `~/.agentview/settings.json`) and MCP Servers open as tabs in the editor area (the lower three activity bar icons, or the command
+Observe, Deploy (only with `deployUrl` set in `~/.agentview/settings.json`), MCP Servers and Builds open as tabs in the editor area (the lower three activity bar icons, or the command
 palette), so they get the full width instead of the sidebar. One page is open at a time; opening another replaces it.
 
 Without a Grafana MCP server, Observe makes no Grafana requests. Observe's Grafana section shows a card per entry in a repo's `grafana.panels` (`{ title, query, unit }`, a PromQL query in
@@ -497,6 +497,10 @@ service's dashboards. The refresh button reloads the panels too.
 Observe's Settings section is a Section header (open by default only for a project with no saved config) with a JSON field and a Save button. The header shows a badge: Unsaved after an edit, Saved after a save, Failed with the error under the field when the JSON is invalid or the save fails. An edit made while saving is kept. Changing the project clears the badge.
 
 Settings is a page of its own (activity bar, More sheet, palette). It has three groups, each a Section header over a grouped list. About holds a read-only App version row (the web build's short commit sha, or "Unknown") and a Design row that opens `/design`; the Design row shows in dev mode or when the hub runs with `ASSISTANT_DEBUG=1`. Appearance holds a Theme row showing Dark or Light; tapping it switches the theme, the same toggle and saved choice as the status bar icon. Phone holds an Installed version row (`0.1.0+<sha>`) and shows only in the phone app.
+
+## Builds
+
+The Builds page (activity bar beaker icon, the phone More sheet, `?page=builds` or "View: Builds" in the palette) lists the specs the build agents worked on in this repo, newest first. A row shows a dot (green done, red failed, amber waiting, plain while running), the stage, the conclusion and the time; the list reloads every 15 s while a build is running. A tap opens the build: Conclusion with one status badge; Spec (collapsed, rendered as chat markdown, with an Open file button when the chat is in the main checkout); Stages in time order, where a tap opens the stage's report in a sheet with Open chat; Implementation with the commit's branch, short sha and a diff per file (the same file list as a pull request); Tests with one row per criterion from the latest test report (Done, Failed or Skipped for unverified); and Code review with one row per finding, or Clean.
 
 ## Shortcuts
 
