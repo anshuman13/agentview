@@ -56,6 +56,7 @@ import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.money
+import no.pradhan.agentview.nativeapp.ops.setupPrompt
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
@@ -234,6 +235,10 @@ class SharedCasesTest {
 
     @Test fun specPrompt() {
         for (c in cases("spec-prompt")) assertEquals(c.str("name"), c.str("expected"), specPrompt(c.str("request")))
+    }
+
+    @Test fun setupPrompt() {
+        for (c in cases("setup-prompts")) assertEquals(c.str("name"), c.str("expected"), setupPrompt(c.str("kind"), c.str("repo"), c.str("mcpCommand")))
     }
 
     @Test fun parseWhen() {

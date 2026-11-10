@@ -239,3 +239,10 @@ fun mcpLoggedInSince(live: List<McpServer>, account: String?, accounts: Map<Stri
 }
 
 fun mcpKey(r: McpRow) = r.name + "\n" + (r.account ?: "")
+
+// shared/setupPrompt.ts: what the setup button asks the chat's agent for.
+fun setupPrompt(kind: String, repo: String, mcpCommand: String) = when (kind) {
+    "observe" -> "Set up Observe for $repo: use the Grafana MCP to find its dashboards and Loki selector, then save them as the Grafana settings for this repo."
+    "deploy" -> "Set up deploys for $repo: add a .deploy/app.yaml that names the app and its environments."
+    else -> "Help me add an MCP server: run `$mcpCommand` with the right arguments, then check the list again."
+}

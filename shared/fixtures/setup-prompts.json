@@ -1,0 +1,6 @@
+[
+  { "name": "observe", "kind": "observe", "repo": "shop", "mcpCommand": "claude mcp add", "expected": "Set up Observe for shop: use the Grafana MCP to find its dashboards and Loki selector, then save them as the Grafana settings for this repo." },
+  { "name": "deploy", "kind": "deploy", "repo": "shop", "mcpCommand": "claude mcp add", "expected": "Set up deploys for shop: add a .deploy/app.yaml that names the app and its environments." },
+  { "name": "mcp on claude", "kind": "mcp", "repo": "shop", "mcpCommand": "claude mcp add", "expected": "Help me add an MCP server: run `claude mcp add` with the right arguments, then check the list again." },
+  { "name": "mcp on codex", "kind": "mcp", "repo": "shop", "mcpCommand": "codex mcp add", "expected": "Help me add an MCP server: run `codex mcp add` with the right arguments, then check the list again." }
+]

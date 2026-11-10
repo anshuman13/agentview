@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { editCount, stripRound } from '../../shared/edits';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
 import { billing, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
+import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
 import { isSpecPath, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
@@ -94,6 +95,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; request: string; expected: string }>('spec-prompt')) {
     it(`specPrompt: ${c.name}`, () => expect(specPrompt(c.request)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; kind: SetupKind; repo: string; mcpCommand: string; expected: string }>('setup-prompts')) {
+    it(`setupPrompt: ${c.name}`, () => expect(setupPrompt(c.kind, c.repo, c.mcpCommand)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; sessionId: string; expected: string }>('handoff-text')) {
