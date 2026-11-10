@@ -4,11 +4,13 @@ import { classHighlighter, highlightCode } from '@lezer/highlight';
 import type { Parser } from '@lezer/common';
 import { isSpecPath, runAllPrompt, specProgress, specTasks, startTaskPrompt, type SpecTask } from '../../../shared/specTasks';
 import { api, sendToChat, setUi } from '../app/store';
+import { appSettings } from '../app/appSettings';
 import { track } from '../app/featureUse';
 import { Button } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
 import { escapeHtml } from '../ui/util';
+import { shownRunItems } from './docLogic';
 import '../styles/features/doc.css';
 
 type Heading = { id: string; text: string; depth: number };
@@ -175,6 +177,7 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
   const last = useRef(path);
   const [runMenu, setRunMenu] = useState(false);
   const runBox = useRef<HTMLSpanElement>(null);
+  const runItems = shownRunItems(appSettings.use((s) => s.hiddenFeatures));
   const tasks = useMemo(() => (isSpecPath(path) ? specTasks(text) : []), [path, text]);
 
   useEffect(() => {
@@ -251,13 +254,13 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
 
   return (
     <div className="doc-scroll" ref={scroller}>
-      {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} action={tasks.some((t) => !t.done) && (
+      {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} action={tasks.some((t) => !t.done) && (runItems.all || runItems.goal) && (
         <span className="doc-run" ref={runBox}>
           <Button size="sm" variant="plain" aria-haspopup="menu" aria-expanded={runMenu} onClick={() => setRunMenu(!runMenu)}>Run</Button>
           {runMenu && (
             <Menu trigger={runBox} onClose={() => setRunMenu(false)}>
-              <MenuItem onClick={() => { setRunMenu(false); track('action:runAll'); sendToChat(runAllPrompt(path)); }}>Run all in this chat</MenuItem>
-              <MenuItem onClick={() => { setRunMenu(false); setUi({ goalSheet: { mode: 'start', plan: path } }); }}>Run as goal…</MenuItem>
+              {runItems.all && <MenuItem onClick={() => { setRunMenu(false); track('action:runAll'); sendToChat(runAllPrompt(path)); }}>Run all in this chat</MenuItem>}
+              {runItems.goal && <MenuItem onClick={() => { setRunMenu(false); track('action:runAsGoal'); setUi({ goalSheet: { mode: 'start', plan: path } }); }}>Run as goal…</MenuItem>}
             </Menu>
           )}
         </span>

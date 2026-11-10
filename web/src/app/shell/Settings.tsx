@@ -23,13 +23,13 @@ const tauriAppVersion = async () => {
   return invoke ? String(await invoke('plugin:app|version')) : '';
 };
 
-export function PrivacyGroup({ on, onToggle, onOpen, onInfo }: { on: boolean; onToggle: () => void; onOpen: () => void; onInfo: () => void }) {
+export function PrivacyGroup({ on, anyHidden, onToggle, onOpen, onInfo }: { on: boolean; anyHidden: boolean; onToggle: () => void; onOpen: () => void; onInfo: () => void }) {
   return (
     <>
       <Section label="Privacy" action={<IconButton icon="info" label="About feature analytics" size="sm" onClick={onInfo} />} />
       <div className="ui-group">
         <Row title="Feature analytics" meta={on ? 'On' : 'Off'} onClick={onToggle} />
-        {on && <Row title="Feature use" trailing={<Icon name="chevron-right" small />} onClick={onOpen} />}
+        {(on || anyHidden) && <Row title="Feature use" trailing={<Icon name="chevron-right" small />} onClick={onOpen} />}
       </div>
     </>
   );
@@ -37,6 +37,7 @@ export function PrivacyGroup({ on, onToggle, onOpen, onInfo }: { on: boolean; on
 
 function PrivacySettings() {
   const on = appSettings.use((s) => s.featureUse);
+  const anyHidden = appSettings.use((s) => s.hiddenFeatures.length > 0);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const [sheet, setSheet] = useState<'use' | 'info' | null>(null);
   const save = (featureUse: boolean) => saveFeatureUse(featureUse).then((r) => appSettings.patch({ featureUse: r.featureUse ?? false }), (err) => notice(err instanceof Error ? err.message : 'Could not save'));
@@ -45,7 +46,7 @@ function PrivacySettings() {
     : void save(true);
   return (
     <>
-      <PrivacyGroup on={on} onToggle={toggle} onOpen={() => setSheet('use')} onInfo={() => setSheet('info')} />
+      <PrivacyGroup on={on} anyHidden={anyHidden} onToggle={toggle} onOpen={() => setSheet('use')} onInfo={() => setSheet('info')} />
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
       {sheet === 'use' && <FeatureUseSheet onClose={() => setSheet(null)} />}
       {sheet === 'info' && (

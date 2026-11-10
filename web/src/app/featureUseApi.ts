@@ -7,3 +7,5 @@ export const postFeatureUse = (id: string) => fetchJson<{ recorded: boolean }>(a
 export const fetchFeatureUse = () => fetchJson<{ on: boolean; days: UseDays }>(apiUrl('/api/feature-use'));
 
 export const saveFeatureUse = (featureUse: boolean) => fetchJson<PublicSettings>(apiUrl('/api/settings'), { method: 'POST', body: JSON.stringify({ featureUse }) });
+
+export const saveHiddenFeatures = (hiddenFeatures: string[]) => fetchJson<PublicSettings>(apiUrl('/api/settings'), { method: 'POST', body: JSON.stringify({ hiddenFeatures }) });

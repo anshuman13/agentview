@@ -145,6 +145,7 @@ anywhere else it is empty. Keys, all optional:
 | `roots` | `["~/workspace"]` | Folders whose subfolders are the repos listed in Workspace and offered for new projects. `AGENTVIEW_ROOTS` (colon-separated) overrides it. |
 | `personalRoot` | empty | Folder whose chats use the personal profile, wiki and account (`main`); it is also a root. Empty means every folder is work. |
 | `featureUse` | `false` | Opt-in counts of which features are used. On, the web app posts a feature id per action to `/api/feature-use` and the server adds it to today's count in `~/.agentview/feature-use.json` (day, feature id, count; 90 days kept; nothing else, nothing sent anywhere). `GET /api/feature-use` returns the kept days. Turning it off deletes the file. |
+| `hiddenFeatures` | `[]` | Feature ids the user hid from the app (see `shared/featureUse.ts`, `hideable`). `POST /api/settings` takes `{ hiddenFeatures }`, drops unknown and non-hideable ids and duplicates, and an empty list is valid. Independent of `featureUse`. |
 | `unattended` | `{ "allowWrite": [], "allowedDomains": ["registry.npmjs.org", "pypi.org", "files.pythonhosted.org"] }` | Limits of a scheduled coding chat: folders it may write besides its worktree and the temp folder, and the hosts its sandbox and WebFetch may reach. `localhost`, IP addresses and `*.netbird.cloud` entries are dropped; github.com is not a default. |
 
 The server reads the file on each request and the host process applies the labels at start, so restart the server after editing

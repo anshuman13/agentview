@@ -1,5 +1,7 @@
 import { Suspense, useRef } from 'react';
 import { setUi, useStore } from '../store';
+import { shownFeature } from '../../../../shared/featureUse';
+import { appSettings } from '../appSettings';
 import { track } from '../featureUse';
 import { AgentsBadge } from '../../sessions/AgentsBadge';
 import { ChangesBadge } from '../../workspace/gitStatus';
@@ -86,7 +88,9 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
   const notifying = useNotify();
   const { mcp } = useCounts();
   const pages = usePages();
+  const hidden = appSettings.use((s) => s.hiddenFeatures);
   if (!open) return null;
+  const shown = (id: string) => shownFeature(`more:${id}`, hidden);
   const act = (f: () => void) => () => { onClose(); f(); };
   return (
     <Sheet label="More" onClose={onClose} className="more-sheet" overlayClassName="more-sheet-overlay mobile-only">
@@ -101,21 +105,31 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
         )}
         <button className="icon-btn" title={`Theme: ${THEME_NAMES[theme]}. Tap to switch`} onClick={toggleTheme}><Icon name="color-mode" /></button>
       </div>
-      <button className={tab === 'code' ? 'active' : ''} onClick={() => goTab('code')}>
-        <Icon name="files" /><span>Files</span>
-      </button>
-      <button className={tab === 'browser' ? 'active' : ''} onClick={() => goTab('browser')}>
-        <Icon name="globe" /><span>Browser</span>
-      </button>
-      <button className={tab === 'term' ? 'active' : ''} onClick={() => goTab('term')}>
-        <Icon name="terminal" /><span>Terminal</span>
-      </button>
-      <button className={tab === 'repos' && view === 'changes' ? 'active' : ''} onClick={() => goSide('changes')}>
-        <Icon name="source-control" /><span>Source Control</span><ChangesBadge />
-      </button>
-      <button className={tab === 'repos' && view === 'github' ? 'active' : ''} onClick={() => goSide('github')}>
-        <Icon name="github" /><span>Pull Requests</span><GitHubBadge />
-      </button>
+      {shown('files') && (
+        <button className={tab === 'code' ? 'active' : ''} onClick={() => { track('more:files'); goTab('code'); }}>
+          <Icon name="files" /><span>Files</span>
+        </button>
+      )}
+      {shown('browser') && (
+        <button className={tab === 'browser' ? 'active' : ''} onClick={() => { track('more:browser'); goTab('browser'); }}>
+          <Icon name="globe" /><span>Browser</span>
+        </button>
+      )}
+      {shown('terminal') && (
+        <button className={tab === 'term' ? 'active' : ''} onClick={() => { track('more:terminal'); goTab('term'); }}>
+          <Icon name="terminal" /><span>Terminal</span>
+        </button>
+      )}
+      {shown('changes') && (
+        <button className={tab === 'repos' && view === 'changes' ? 'active' : ''} onClick={() => { track('more:changes'); goSide('changes'); }}>
+          <Icon name="source-control" /><span>Source Control</span><ChangesBadge />
+        </button>
+      )}
+      {shown('github') && (
+        <button className={tab === 'repos' && view === 'github' ? 'active' : ''} onClick={() => { track('more:github'); goSide('github'); }}>
+          <Icon name="github" /><span>Pull Requests</span><GitHubBadge />
+        </button>
+      )}
       <span className="more-label">Tools</span>
       {pages.map((p) => (
         <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>

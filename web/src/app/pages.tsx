@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { shownFeature } from '../../../shared/featureUse';
 import { Builds, Deploy, Loading, McpPage, Observe, Settings, Sketches } from './lazy';
 import { appSettings } from './appSettings';
 import { PhoneHeader } from './shell/PhoneHeader';
@@ -16,10 +17,8 @@ export const PAGES: { id: Page; icon: string; title: string }[] = [
 ];
 const available = (id: Page, deploy: boolean) => id !== 'deploy' || deploy;
 export const pageOn = (id: Page) => available(id, appSettings.get().deploy);
-export const usePages = () => {
-  const deploy = appSettings.use((s) => s.deploy);
-  return PAGES.filter((p) => available(p.id, deploy));
-};
+export const visiblePages = (deploy: boolean, hidden: string[]) => PAGES.filter((p) => available(p.id, deploy) && shownFeature(`page:${p.id}`, hidden));
+export const usePages = () => visiblePages(appSettings.use((s) => s.deploy), appSettings.use((s) => s.hiddenFeatures));
 export const isPage = (v: string): v is Page => PAGES.some((p) => p.id === v);
 export const pageOf = (id: Page) => PAGES.find((p) => p.id === id)!;
 

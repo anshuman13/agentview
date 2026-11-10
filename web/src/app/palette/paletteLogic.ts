@@ -1,5 +1,6 @@
 import { EFFORT_LABEL, EFFORT_LEVELS, type Effort, type ProviderOption } from '../../../../shared/protocol';
 import { providerModes, type ModeOption } from '../../../../shared/providers';
+import { paletteFeature, shownFeature } from '../../../../shared/featureUse';
 import { isBlock } from '../../../../shared/util';
 import { codexMeetings } from '../../codex/data';
 import { isTask, searchAll } from '../../codex/data/ask/search';
@@ -32,7 +33,7 @@ const VIEWS = [
   ['runs', 'Runs'],
 ];
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];
-export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, efforts: readonly Effort[] = EFFORT_LEVELS, providers: ProviderOption[] = [], modes: ModeOption[] = providerModes(), doc = false): Command[] {
+export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, efforts: readonly Effort[] = EFFORT_LEVELS, providers: ProviderOption[] = [], modes: ModeOption[] = providerModes(), doc = false, hidden: string[] = []): Command[] {
   return [
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
@@ -67,7 +68,10 @@ export function buildCommands(models: { value: string; displayName: string }[], 
     { id: 'shortcuts', label: 'Keyboard shortcuts', key: '?' },
     { id: 'phone', label: 'Open on Phone' },
     { id: 'restart', label: 'Developer: Restart Server When Agents Are Idle' },
-  ];
+  ].filter((c) => {
+    const feature = c.id.startsWith('page:') ? c.id : paletteFeature(c.id);
+    return !feature || shownFeature(feature, hidden);
+  });
 }
 
 export function pinCommands(pins: string[], live: { sessionId: string | null; title: string }[], saved: { sessionId: string; title: string }[]): Command[] {

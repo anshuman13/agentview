@@ -77,12 +77,13 @@ describe('page smoke', () => {
     expect(html).toContain('data-theme=&quot;dark&quot;');
   });
 
-  it('Settings shows Privacy with the Feature use row only while analytics are on', () => {
-    const group = (on: boolean) => renderToStaticMarkup(<PrivacyGroup on={on} onToggle={() => {}} onOpen={() => {}} onInfo={() => {}} />);
+  it('Settings shows Privacy with the Feature use row while analytics are on or a feature is hidden', () => {
+    const group = (on: boolean, anyHidden = false) => renderToStaticMarkup(<PrivacyGroup on={on} anyHidden={anyHidden} onToggle={() => {}} onOpen={() => {}} onInfo={() => {}} />);
     expect(group(false)).toContain('Privacy');
     expect(group(false)).toContain('Off');
     expect(group(false)).not.toContain('Feature use');
     expect(group(true)).toContain('On');
     expect(group(true)).toContain('Feature use');
+    expect(group(false, true)).toContain('Feature use');
   });
 });

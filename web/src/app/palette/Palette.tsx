@@ -33,8 +33,9 @@ export function Palette() {
   const deploy = appSettings.use((s) => s.deploy);
   const doc = useStore((s) => isDocPath(s.ui.openFile ?? ''));
   const providers = appSettings.use((s) => s.providers);
+  const hidden = appSettings.use((s) => s.hiddenFeatures);
   const pinned = useMemo(() => pinCommands(fetched.pins, live, fetched.saved), [fetched, live]);
-  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy, efforts, providers, modes, doc)], [pinned, models, deploy, efforts, providers, modes, doc]);
+  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy, efforts, providers, modes, doc, hidden)], [pinned, models, deploy, efforts, providers, modes, doc, hidden]);
   const rows = useMemo(() => rankCommands(commands, q, recent, MAX_ROWS + pinned.length), [commands, pinned, q, recent]);
 
   const items = useMemo(() => (open ? paletteItems(assistantStore().snapshot()) : []), [open]);
