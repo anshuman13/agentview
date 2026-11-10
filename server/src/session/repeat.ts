@@ -1,4 +1,4 @@
-import { MAX_GOAL_ROUNDS, type ChatRun, type Repeat, type SessionInfo } from '../../../shared/protocol.js';
+import { MAX_GOAL_ROUNDS, type ChatRun, type PlanUsage, type Repeat, type RunEdit, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, nextClock, span } from '../../../shared/util.js';
 import type { Cron } from '../agent/types.js';
 
@@ -6,12 +6,13 @@ const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
 const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
 
-const GOAL_USAGE = 'Usage: /goal <condition>, /goal every 1h <condition> (every 30m or longer), /goal off';
+const GOAL_USAGE = 'Usage: /goal [every 1h] [until 18:00] [cap 70%] <condition> (every 30m or longer), /goal off';
 
 const DAY = 24 * 3_600_000;
 const STANDING_MS = 28 * DAY;
 const REPORT_MS = 7 * DAY;
 const MIN_STANDING_EVERY = 30 * 60_000;
+const FIVE_HOUR_LIMIT = 90;
 const STANDING_ENDED = 'ran for 28 days, start it again to continue';
 
 const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET when it is, otherwise keep working on it.`;
@@ -24,21 +25,39 @@ export const standing = (r: Repeat) => Boolean(r.goal && r.every);
 
 const reportDue = (r: Repeat, now = Date.now()) => standing(r) && r.reportAt !== undefined && now >= r.reportAt;
 
-// /goal <condition> checks the condition whenever the agent goes idle, until it reports GOAL MET or the rounds run out.
-// /goal every 1h <condition> is a standing goal: one heartbeat per interval for up to 28 days.
+// /goal [every 1h] [until 18:00] [cap 70%] <condition> checks the condition whenever the agent goes idle, until it reports GOAL MET or the rounds run out.
+// With every it is a standing goal: one heartbeat per interval for up to 28 days. until sets an end time, cap a weekly usage limit.
 export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usage' | null {
   const m = /^\/goal\b([\s\S]*)$/.exec(text.trim());
   if (!m) return null;
-  const goal = m[1].trim();
+  let goal = m[1].trim();
   if (/^(off|stop)$/i.test(goal)) return 'off';
   if (!goal) return 'usage';
-  const s = /^every\s+(\d+)\s*(m|min|h)\b\s*([\s\S]*)$/i.exec(goal);
-  if (s) {
-    const every = Number(s[1]) * UNIT[s[2].toLowerCase()];
-    if (every < MIN_STANDING_EVERY || every > MAX_EVERY || !s[3].trim()) return 'usage';
-    return { prompt: standingPrompt(s[3].trim()), every, until: now + STANDING_MS, round: 0, nextAt: null, goal: s[3].trim(), reportAt: now + REPORT_MS };
-  }
-  return { prompt: goalPrompt(goal), every: 0, until: null, round: 0, nextAt: null, goal };
+  const take = (re: RegExp) => {
+    const t = re.exec(goal);
+    if (t) goal = t[t.length - 1].trim();
+    return t;
+  };
+  const e = take(/^every\s+(\d+)\s*(m|min|h)\b\s*([\s\S]*)$/i);
+  const u = take(/^until\s+(\d{1,2}):(\d{2})\b\s*([\s\S]*)$/i);
+  const c = take(/^cap\s+(\d+)%\s*([\s\S]*)$/i);
+  const every = e ? Number(e[1]) * UNIT[e[2].toLowerCase()] : 0;
+  const capPct = c ? Number(c[1]) : 0;
+  if ((e || u || c) && !goal) return 'usage';
+  if ((e && (every < MIN_STANDING_EVERY || every > MAX_EVERY)) || (u && (Number(u[1]) > 23 || Number(u[2]) > 59)) || (c && (capPct < 1 || capPct > 100))) return 'usage';
+  const extra = { ...(u && { endAt: nextClock(Number(u[1]), Number(u[2]), now) }), ...(c && { capPct }) };
+  if (e) return { prompt: standingPrompt(goal), every, until: now + STANDING_MS, round: 0, nextAt: null, goal, reportAt: now + REPORT_MS, ...extra };
+  return { prompt: goalPrompt(goal), every: 0, until: null, round: 0, nextAt: null, goal, ...extra };
+}
+
+// What the usage numbers say about a goal with a cap: end it at the weekly cap, skip a round while the 5-hour window is nearly full.
+export function usageGate(r: Repeat, usage: PlanUsage | null, now = Date.now()): { note: string; why: string } | { skipUntil: number | null } | null {
+  if (!r.capPct || !usage) return null;
+  const week = usage.week?.pct ?? 0;
+  if (week >= r.capPct) return { note: `Goal stopped: weekly usage at ${week}%, cap ${r.capPct}%`, why: 'weekly usage cap' };
+  const five = usage.fiveHour;
+  if (five && five.pct > FIVE_HOUR_LIMIT) return { skipUntil: five.resetsAt && five.resetsAt > now ? five.resetsAt : null };
+  return null;
 }
 
 export const ROUND_INSTRUCTION = 'Finish your reply with one last line: ROUND: <done|progress|blocked|question|nothing> <one-line summary>. Use nothing when there was nothing to do this round.';
@@ -108,7 +127,8 @@ interface RepeatHost {
   resumeRun(r: Repeat): string;
   endRun(id: string, why: string): void;
   reopenRun(id: string): void;
-  patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt'>>): void;
+  patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'usage'>>): void;
+  usage(): PlanUsage | null;
   asking(): boolean;
   sendPrompt(text: string, auto: 'loop' | 'goal', round: number, report?: boolean): void;
 }
@@ -215,6 +235,7 @@ export class RepeatController {
   }
 
   private finish(r: Repeat) {
+    if (r.endAt && Date.now() >= r.endAt) return { note: `Goal stopped at ${clock(r.endAt)} after ${r.round} ${r.round === 1 ? 'check' : 'checks'}`, why: `end time ${clock(r.endAt)}` };
     if (r.until && Date.now() >= r.until && !unrun(r)) return standing(r) ? { note: `Goal ${STANDING_ENDED}: ${r.goal}`, why: STANDING_ENDED } : { note: `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, why: `finished at ${clock(r.until)}` };
     if (r.goal && !standing(r) && r.round >= MAX_GOAL_ROUNDS) return { note: `Goal not met after ${r.round} checks: ${r.goal}`, why: 'goal not met' };
     return null;
@@ -225,6 +246,10 @@ export class RepeatController {
     if (!r || this.held || r.paused) return;
     const end = this.finish(r);
     if (end) return this.set(null, end.note, end.why);
+    const usage = this.host.usage();
+    const gate = usageGate(r, usage);
+    if (gate && 'note' in gate) return this.set(null, gate.note, gate.why);
+    if (gate) return standing(r) ? this.skip(r) : this.defer(gate.skipUntil ?? Date.now() + MIN_STANDING_EVERY, `Usage over ${FIVE_HOUR_LIMIT}%, goal check`, true);
     // A standing goal skips a heartbeat that finds Claude busy or waiting for the user; the next one is a full interval away.
     if (standing(r) && (this.host.running() || this.host.asking())) return this.skip(r);
     if (this.host.running()) {
@@ -240,7 +265,7 @@ export class RepeatController {
     const report = reportDue(r);
     const reportAt = report ? r.reportAt! + REPORT_MS * (Math.floor((Date.now() - r.reportAt!) / REPORT_MS) + 1) : r.reportAt;
     this.host.setSession({ repeat: { ...r, round, nextAt, reportAt } });
-    this.patchRun({ state: 'running', why: '', round, nextAt });
+    this.patchRun({ state: 'running', why: '', round, nextAt, usage });
     this.arm();
     this.host.sendPrompt(report ? reportPrompt(r.goal!) : r.prompt, r.goal ? 'goal' : 'loop', round, report);
   }
@@ -264,6 +289,23 @@ export class RepeatController {
     this.host.system(`${why ?? roundWord(r)} ${r.round + 1} at ${clock(nextAt)}, ${offCommand(r)} to end it`);
   }
 
+  // Changes the active goal: every only on a standing goal, in range; anything invalid is ignored.
+  edit(edit: RunEdit) {
+    const r = this.host.repeat();
+    if (!r?.goal) return;
+    const next: Repeat = { ...r };
+    const every = edit.every;
+    if (typeof every === 'number' && standing(r) && every >= MIN_STANDING_EVERY && every <= MAX_EVERY) Object.assign(next, { every, nextAt: Date.now() + every });
+    if (edit.endAt === null) delete next.endAt;
+    else if (typeof edit.endAt === 'number') next.endAt = edit.endAt;
+    if (edit.capPct === null) delete next.capPct;
+    else if (typeof edit.capPct === 'number' && edit.capPct >= 1 && edit.capPct <= 100) next.capPct = edit.capPct;
+    this.host.setSession({ repeat: next });
+    this.patchRun({ every: next.every || undefined, nextAt: next.nextAt, endAt: next.endAt, capPct: next.capPct });
+    this.arm();
+    this.host.system(`Goal changed: ${[standing(next) && `every ${span(next.every)}`, next.endAt ? `until ${clock(next.endAt)}` : 'no end time', next.capPct ? `cap ${next.capPct}%` : 'no cap'].filter(Boolean).join(' · ')}`);
+  }
+
   private patchRun(patch: Parameters<RepeatHost['patchRun']>[1]) {
     const id = this.host.repeat()?.runId;
     if (id) this.host.patchRun(id, patch);
@@ -272,7 +314,7 @@ export class RepeatController {
   private arm() {
     clearTimeout(this.timer);
     const r = this.host.repeat();
-    const at = Math.min(r?.nextAt ?? Infinity, r && unrun(r) ? Infinity : (r?.until ?? Infinity));
+    const at = Math.min(r?.nextAt ?? Infinity, r && unrun(r) ? Infinity : (r?.until ?? Infinity), r?.endAt ?? Infinity);
     // The driver reports its exit after close(); a closed chat must not wake up again.
     if (!r || r.paused || at === Infinity || this.host.closed()) return;
     this.timer = after(at, () => this.fire());

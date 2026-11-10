@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import type { ChatEvent, Repeat, RoundOutcome, RunOp, ServerMessage, ServerState, SessionInfo, LoopState } from '../../../shared/protocol.js';
+import type { ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, ServerState, SessionInfo, LoopState } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from '../host/restore.js';
 import { Approvals } from './approvals.js';
@@ -343,6 +343,10 @@ export class AgentSession implements AgentHost {
 
   runControl(run: string, op: RunOp) {
     this.links.control(run, op);
+  }
+
+  runEdit(run: string, edit: RunEdit) {
+    this.links.edit(run, edit);
   }
 
   setLoop(on: boolean, max?: number) {

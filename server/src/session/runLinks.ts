@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { MAX_GOAL_ROUNDS, type ChatRun, type Repeat, type RunOp } from '../../../shared/protocol.js';
+import { MAX_GOAL_ROUNDS, type ChatRun, type Repeat, type RunEdit, type RunOp } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
 import { ROUND_INSTRUCTION } from './repeat.js';
 import { WAITING, openTries, roundResult } from './runs.js';
@@ -24,6 +24,7 @@ export class RunLinks {
       endRun: (id: string, why: string) => s.runs.end(id, why),
       reopenRun: (id: string) => s.runs.reopen(id),
       patchRun: (id: string, patch: Parameters<AgentSession['runs']['update']>[1]) => s.runs.update(id, patch),
+      usage: () => s.state.session.usage ?? null,
       asking: () => s.state.pending.length > 0,
       sendPrompt: (text: string, auto: 'loop' | 'goal', round: number, report?: boolean) => {
         const id = randomUUID();
@@ -39,7 +40,7 @@ export class RunLinks {
 
   private start(r: Repeat) {
     const what = r.goal ?? r.prompt;
-    return this.s.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.s.state.session.sessionId ?? '', chatId: this.s.id, title: this.title(what), what, provider: this.s.state.session.provider, round: r.round, max: r.goal && !r.every ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt, ...(r.goal && r.every && { every: r.every }) });
+    return this.s.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.s.state.session.sessionId ?? '', chatId: this.s.id, title: this.title(what), what, provider: this.s.state.session.provider, round: r.round, max: r.goal && !r.every ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt, ...(r.goal && r.every && { every: r.every }), ...(r.endAt && { endAt: r.endAt }), ...(r.capPct && { capPct: r.capPct }) });
   }
 
   // A restart keeps the run of a loop or goal; the chat has a new id.
@@ -86,6 +87,10 @@ export class RunLinks {
     else if (op === 'resume') repeater.unpause();
     else if (op === 'now') repeater.runNow();
     else if (op === 'stop') repeater.stopRun();
+  }
+
+  edit(run: string, edit: RunEdit) {
+    if (this.s.state.session.repeat?.runId === run) this.s.repeater.edit(edit);
   }
 
   record(r: TurnResult, report: string | undefined) {

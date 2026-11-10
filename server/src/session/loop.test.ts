@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { advance, loopOff, needsApproval, verdictOf } from './loop.js';
 import { RepeatController, after, parseGoal, parseLoop } from './repeat.js';
 import { limitReset } from '../agent/claude/limitText.js';
-import type { Repeat } from '../../../shared/protocol.js';
+import type { PlanUsage, Repeat } from '../../../shared/protocol.js';
 
 describe('verdictOf', () => {
   it('reads the last verdict line', () => {
@@ -115,6 +115,7 @@ describe('RepeatController', () => {
       resumeRun: () => 'run',
       endRun: () => {},
       patchRun: () => {},
+      usage: () => null,
       asking: () => false,
       reopenRun: () => {},
       sendPrompt: (t) => sent.push(t),
@@ -158,6 +159,7 @@ describe('standing goal', () => {
       endRun: (_id, why) => { state.ended = why; },
       reopenRun: () => {},
       patchRun: () => {},
+      usage: () => null,
       asking: () => state.asking,
       sendPrompt: (text, _auto, _round, report) => state.sent.push({ text, report }),
     });
@@ -212,6 +214,76 @@ describe('standing goal', () => {
     vi.advanceTimersByTime(28 * DAY);
     expect(state.ended).toBe('ran for 28 days, start it again to continue');
     expect(repeat()).toBeNull();
+    vi.useRealTimers();
+  });
+});
+
+describe('goal limits and edits', () => {
+  const HOUR = 3_600_000;
+  const standingGoal = (extra = '') => parseGoal(`/goal every 1h ${extra}x`) as Repeat;
+
+  function host(initial: Repeat, usage: PlanUsage | null = null) {
+    vi.useFakeTimers();
+    let r: Repeat | null = initial;
+    const state = { ended: '', sent: 0, patches: [] as Record<string, unknown>[] };
+    const c = new RepeatController({
+      repeat: () => r,
+      running: () => false,
+      closed: () => false,
+      setSession: (p) => { r = (p.repeat ?? null) as Repeat | null; },
+      system: () => {},
+      startRun: () => 'run',
+      resumeRun: () => 'run',
+      endRun: (_id, why) => { state.ended = why; },
+      reopenRun: () => {},
+      patchRun: (_id, patch) => { state.patches.push(patch); },
+      usage: () => usage,
+      asking: () => false,
+      sendPrompt: () => { state.sent++; },
+    });
+    return { c, state, repeat: () => r };
+  }
+
+  it('ends a goal past its end time before sending a round', () => {
+    const r = { ...standingGoal(), endAt: Date.now() - 1000 };
+    const { c, state } = host(r);
+    c.set(r);
+    expect(state.ended).toMatch(/^end time \d\d:\d\d$/);
+    expect(state.sent).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it('ends at the weekly cap and pauses an until-done goal while the 5-hour window is full', () => {
+    const week = host(standingGoal('cap 70% '), { week: { pct: 72, resetsAt: null }, fiveHour: null });
+    week.c.set(week.repeat()!);
+    expect(week.state.ended).toBe('weekly usage cap');
+    const full = host(parseGoal('/goal cap 70% x') as Repeat, { week: { pct: 10, resetsAt: null }, fiveHour: { pct: 95, resetsAt: Date.now() + HOUR } });
+    full.c.set(full.repeat()!);
+    expect(full.state.sent).toBe(0);
+    expect(full.state.patches.at(-1)).toMatchObject({ state: 'paused', nextAt: Date.now() + HOUR });
+    full.c.stop();
+    vi.useRealTimers();
+  });
+
+  it('edits a standing goal: every moves the next check, a null cap clears it', () => {
+    const { c, state, repeat } = host(standingGoal('cap 70% '));
+    c.set(repeat()!);
+    c.edit({ every: 2 * HOUR, capPct: null });
+    expect(repeat()).toMatchObject({ every: 2 * HOUR, nextAt: Date.now() + 2 * HOUR });
+    expect(repeat()!.capPct).toBeUndefined();
+    expect(state.patches.at(-1)).toMatchObject({ every: 2 * HOUR, nextAt: Date.now() + 2 * HOUR, capPct: undefined });
+    c.edit({ every: 60_000, endAt: 5 });
+    expect(repeat()).toMatchObject({ every: 2 * HOUR, endAt: 5 });
+    c.stop();
+    vi.useRealTimers();
+  });
+
+  it('leaves a loop alone', () => {
+    const loop = parseLoop('/loop 10m check') as Repeat;
+    const { c, state, repeat } = host(loop);
+    c.edit({ every: HOUR, capPct: 70 });
+    expect(repeat()).toEqual(loop);
+    expect(state.patches).toEqual([]);
     vi.useRealTimers();
   });
 });

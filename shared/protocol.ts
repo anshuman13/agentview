@@ -130,7 +130,7 @@ export type SessionInfo = {
 export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; team: boolean; stopTask: boolean };
 
 // A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
-export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean; reportAt?: number };
+export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean; reportAt?: number; endAt?: number; capPct?: number };
 
 export const MAX_GOAL_ROUNDS = 20;
 
@@ -144,6 +144,8 @@ export type LoopState = { on: boolean; max: number; round: number; phase: LoopPh
 
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
 export type RunOp = 'pause' | 'resume' | 'now' | 'stop' | 'restore';
+// endAt is epoch ms, capPct a percent; null clears them.
+export type RunEdit = { every?: number; endAt?: number | null; capPct?: number | null };
 export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number; report?: string };
 
 // One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.
@@ -165,6 +167,9 @@ export type ChatRun = {
   max: number;
   nextAt: number | null;
   every?: number;
+  endAt?: number;
+  capPct?: number;
+  usage?: PlanUsage | null;
   provider?: Provider;
   costUsd: number;
   rounds: Round[];
@@ -358,6 +363,7 @@ export type ClientMessage =
   | { type: 'review'; id: string; action: 'keep' | 'undo'; file?: string; hunk?: number }
   | { type: 'set_loop'; on: boolean; max?: number }
   | { type: 'run'; run: string; op: RunOp }
+  | ({ type: 'run_edit'; run: string } & RunEdit)
   | { type: 'tries_send'; run: string; text: string }
   | { type: 'tries_keep'; run: string; n: number }
   | { type: 'interrupt' }
@@ -368,7 +374,7 @@ export type ClientMessage =
   | { type: 'run_hook'; name: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
-  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider }
+  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string }
   | { type: 'mcp_status' }
   | { type: 'usage' }
   | { type: 'mcp_reconnect'; name: string }

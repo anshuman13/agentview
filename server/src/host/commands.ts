@@ -83,6 +83,8 @@ export function command(chat: AgentSession, msg: ClientMessage): Promise<unknown
       return chat.review.act(String(msg.id), msg.action === 'undo' ? 'undo' : 'keep', typeof msg.file === 'string' ? msg.file : undefined, typeof msg.hunk === 'number' ? msg.hunk : undefined);
     case 'run':
       return chat.runControl(String(msg.run), msg.op);
+    case 'run_edit':
+      return chat.runEdit(String(msg.run), msg);
     case 'tries_send':
       return sendToTries(msg.run, String(msg.text));
     case 'tries_keep':

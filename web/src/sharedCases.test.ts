@@ -6,6 +6,7 @@ import { editCount, stripRound } from '../../shared/edits';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
 import { billing, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
 import { appendRule } from '../../shared/steering';
+import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
 import { isSpecPath, runAllPrompt, specProgress, specPrompt, specTasks, startTaskPrompt, type SpecTask } from '../../shared/specTasks';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { can, modelsFor } from './chat/capabilitiesLogic';
@@ -69,6 +70,13 @@ describe('cases shared with the Android app', () => {
       expect(specProgress(tasks)).toBe(c.progress);
       expect(open && startTaskPrompt(open, c.path)).toBe(c.start ?? undefined);
       expect(runAllPrompt(c.path)).toBe(c.all);
+    });
+  }
+
+  for (const c of cases<{ name: string; form?: GoalForm; now?: number; command?: string; what?: string; plan?: string | null }>('goal-command')) {
+    it(`goalForm: ${c.name}`, () => {
+      if (c.form) expect(goalCommand(c.form, c.now!)).toBe(c.command);
+      else expect(planOf(c.what!)).toBe(c.plan);
     });
   }
 

@@ -436,6 +436,13 @@ heartbeat writes a short weekly report (what moved, what is blocked, what is nex
 progress round; the card and the Runs row show "Weekly report", which jumps to that turn in the chat. "Chat: Start a
 standing goal" in the palette fills the composer with `/goal every 1h `.
 
+Both forms take `until HH:MM` (the next such clock time ends the goal: "Goal stopped at 18:00 after N checks") and
+`cap N%` (1-100) after the interval: `/goal [every 1h] [until 18:00] [cap 70%] <condition>`. With a cap, each round reads
+the chat's active Claude or Codex account usage: weekly usage at the cap ends the goal, and while the 5-hour window is
+over 90% a standing goal skips the round and an until-done goal waits, shown as Paused, for the window to reset. No
+usage figure (OpenRouter) means no cap. The `run_edit` message changes every, the end time and the cap of the running
+goal; a new chat can start with a first message (`new_session` `text`), which is how a goal starts in a new chat.
+
 Every `/loop`, `/goal`, build cycle and `/tries` is a run, kept in the host in `~/.agentview/runs.json` (active runs and the
 latest 100 ended ones, each with its last 50 rounds) and served at `GET /api/runs`. A round is the outcome of one turn,
 its one-line summary and its cost. Loop rounds and goal checks end with an instruction to finish the reply with
