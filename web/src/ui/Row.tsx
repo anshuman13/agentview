@@ -13,7 +13,7 @@ export function Row({ leading, title, meta, state, trailing, menu, lines = 1, hr
   trailing?: ReactNode;
   lines?: 1 | 2;
   onLongPress?: () => void;
-} & ({ href?: undefined; plain?: false; action?: ReactNode; menu?: ReactNode } | { href?: string; plain?: boolean; action?: never; menu?: never })) {
+} & ({ href?: undefined; plain?: boolean; action?: ReactNode; menu?: ReactNode } | { href?: string; plain?: boolean; action?: never; menu?: never })) {
   const [open, setOpen] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const press = useLongPress(onLongPress ?? (menu ? () => setOpen(true) : undefined));
@@ -37,9 +37,10 @@ export function Row({ leading, title, meta, state, trailing, menu, lines = 1, hr
       {trailing && <span className="ui-row-trail">{trailing}</span>}
     </>
   );
-  if (plain) return <div className={cls} {...(rest as ComponentPropsWithoutRef<'div'>)} {...handlers}>{body}</div>;
-  if (href) return <a className={cls} href={href} target="_blank" rel="noreferrer" onMouseDown={rest.onMouseDown as React.MouseEventHandler<HTMLAnchorElement> | undefined}>{body}</a>;
-  const button = <button type="button" className={cls} {...rest} {...handlers}>{body}</button>;
+  if (href && !plain) return <a className={cls} href={href} target="_blank" rel="noreferrer" onMouseDown={rest.onMouseDown as React.MouseEventHandler<HTMLAnchorElement> | undefined}>{body}</a>;
+  const button = plain
+    ? <div className={cls} {...(rest as ComponentPropsWithoutRef<'div'>)} {...handlers}>{body}</div>
+    : <button type="button" className={cls} {...rest} {...handlers}>{body}</button>;
   const kebab = menu && (
     <>
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} />
