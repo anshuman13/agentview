@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { appSettings } from '../app/appSettings';
+import { track } from '../app/featureUse';
 import { notice, prompt, send, useStore } from '../app/store';
 import { Button, Chip } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
@@ -45,6 +46,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const ready = !plan || (markdown !== null && !error);
   const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : what;
   const start = () => {
+    track('action:startGoal');
     const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct }, Date.now());
     if (canHere && inHere) {
       prompt(text, () => notice('Could not send the goal. Try again.'));

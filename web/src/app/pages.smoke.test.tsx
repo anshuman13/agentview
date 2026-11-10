@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BuildList } from '../sessions/Builds';
 import { Runs } from '../sessions/Runs';
+import { PrivacyGroup } from './shell/Settings';
 import { SketchFrame, SketchList, Sketches } from '../workspace/Sketches';
 import type { BuildRow } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
@@ -74,5 +75,14 @@ describe('page smoke', () => {
     expect(html).not.toContain('allow-');
     expect(html).toContain('Content-Security-Policy');
     expect(html).toContain('data-theme=&quot;dark&quot;');
+  });
+
+  it('Settings shows Privacy with the Feature use row only while analytics are on', () => {
+    const group = (on: boolean) => renderToStaticMarkup(<PrivacyGroup on={on} onToggle={() => {}} onOpen={() => {}} onInfo={() => {}} />);
+    expect(group(false)).toContain('Privacy');
+    expect(group(false)).toContain('Off');
+    expect(group(false)).not.toContain('Feature use');
+    expect(group(true)).toContain('On');
+    expect(group(true)).toContain('Feature use');
   });
 });

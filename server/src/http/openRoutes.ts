@@ -14,6 +14,7 @@ import { seenRoute } from '../agent/claude/seen.js';
 import { assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
+import { clearFeatureUse, featureUseDays, recordRoute } from '../featureUse.js';
 import { loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
@@ -108,10 +109,16 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     }, true),
     'ANY /api/mcp/groups': entry(() => mcpGroups()),
     'POST /api/settings': entry(async ({ body }) => {
-      if (!isProvider(body.defaultProvider)) return { status: 400, body: { error: 'defaultProvider is not a provider' } };
-      await saveSettings({ ...loadSettings(), defaultProvider: body.defaultProvider });
+      const { defaultProvider, featureUse } = body;
+      if (defaultProvider === undefined && featureUse === undefined) return { status: 400, body: { error: 'defaultProvider or featureUse is required' } };
+      if (defaultProvider !== undefined && !isProvider(defaultProvider)) return { status: 400, body: { error: 'defaultProvider is not a provider' } };
+      if (featureUse !== undefined && typeof featureUse !== 'boolean') return { status: 400, body: { error: 'featureUse is not a boolean' } };
+      await saveSettings({ ...loadSettings(), ...(defaultProvider !== undefined && { defaultProvider }), ...(featureUse !== undefined && { featureUse }) });
+      if (featureUse === false) await clearFeatureUse();
       return { ...publicSettings(), providers: await providerOptions() };
     }, true),
+    'POST /api/feature-use': entry(({ body }) => recordRoute(body.id), true),
+    'ANY /api/feature-use': entry(async () => ({ on: loadSettings().featureUse, days: await featureUseDays() })),
     'ANY /api/settings': entry(async () => ({ ...publicSettings(), providers: await providerOptions() })),
     'POST /api/openrouter': entry(({ body }) => saveOpenRouter(body), true),
     'ANY /api/openrouter': entry(() => openRouterView()),

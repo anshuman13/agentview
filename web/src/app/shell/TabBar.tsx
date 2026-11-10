@@ -1,5 +1,6 @@
 import { Suspense, useRef } from 'react';
 import { setUi, useStore } from '../store';
+import { track } from '../featureUse';
 import { AgentsBadge } from '../../sessions/AgentsBadge';
 import { ChangesBadge } from '../../workspace/gitStatus';
 import { GitHubBadge } from '../../ops/pulls';
@@ -26,12 +27,12 @@ export function TabBar({ tab, more, inChats, inMore, goTab, goSide, toggleMore }
   const assistantPress = {
     onPointerDown: () => {
       pressed.current = false;
-      pressTimer.current = setTimeout(() => { pressed.current = true; goTab('assistant'); setTimeout(() => window.dispatchEvent(new Event('assistant:voice')), 100); }, LONG_PRESS);
+      pressTimer.current = setTimeout(() => { pressed.current = true; track('tab:codex'); goTab('assistant'); setTimeout(() => window.dispatchEvent(new Event('assistant:voice')), 100); }, LONG_PRESS);
     },
     onPointerUp: () => clearTimeout(pressTimer.current),
     onPointerCancel: () => clearTimeout(pressTimer.current),
     onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
-    onClick: () => { if (!pressed.current) goTab('assistant'); pressed.current = false; },
+    onClick: () => { if (!pressed.current) { track('tab:codex'); goTab('assistant'); } pressed.current = false; },
   };
   return (
     <nav className="tabbar mobile-only">
@@ -41,22 +42,22 @@ export function TabBar({ tab, more, inChats, inMore, goTab, goSide, toggleMore }
         {needsYou > 0 && <span className="dot waiting" role="img" aria-label={`${needsYou} need you`} />}
         <Suspense fallback={null}><AssistantCounts /></Suspense>
       </button>
-      <button className={tab === 'chat' && !more ? 'active' : ''} onClick={() => goTab('chat')}>
+      <button className={tab === 'chat' && !more ? 'active' : ''} onClick={() => { track('tab:chat'); goTab('chat'); }}>
         <Icon name="comment" />
         <span>Chat</span>
         {pendingCount > 0 && <span className="badge" aria-label={`${pendingCount} waiting`}>{pendingCount}</span>}
       </button>
-      <button className={inChats && !more ? 'active' : ''} onClick={() => goSide('chats')}>
+      <button className={inChats && !more ? 'active' : ''} onClick={() => { track('tab:sessions'); goSide('chats'); }}>
         <Icon name="comment-discussion" />
         <span>Sessions</span>
         {chats > 0 && <span className="dot waiting" role="img" aria-label={`${chats} unread`} />}
       </button>
-      <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => goTab('agents')}>
+      <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => { track('tab:agents'); goTab('agents'); }}>
         <Icon name="hubot" />
         <span>Agents</span>
         <AgentsBadge />
       </button>
-      <button className={more || inMore ? 'active' : ''} onClick={toggleMore}>
+      <button className={more || inMore ? 'active' : ''} onClick={() => { if (!more) track('sheet:more'); toggleMore(); }}>
         <Icon name="ellipsis" />
         <span>More</span>
       </button>

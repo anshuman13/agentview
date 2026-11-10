@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useRef, useState, type ReactNode } from 'react';
 import { notice, sendToChat, useStore } from '../app/store';
+import { track } from '../app/featureUse';
 import { Markdown } from '../chat/Chat';
 import { AskRow } from '../ui/AskRow';
 import { Button, Chip, IconButton } from '../ui/Button';
@@ -40,7 +41,10 @@ export function DecisionRow({ slug, phase, review, onSaved, onApproved }: { slug
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const save = (decision: 'approve' | 'changes', note: string) => postBuildReview(slug, phase, decision, note).then(onSaved);
-  const approve = () => save('approve', '').then(() => onApproved?.(), () => notice('Could not save the review. Try again.'));
+  const approve = () => {
+    track('action:approveSpec');
+    return save('approve', '').then(() => onApproved?.(), () => notice('Could not save the review. Try again.'));
+  };
   return (
     <div className="bd-clamp">
       <AskRow
@@ -78,7 +82,7 @@ export function BuildPhases({ slug, phases, reviews, specPath, action, onSaved }
       <Section label="Spec" action={<>{tasks.length > 0 && <span className="badge quiet">{specProgress(tasks)}</span>}{runnable && (
         <span className="ov-more">
           <IconButton ref={runBox} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={runMenu} onClick={() => setRunMenu(!runMenu)} />
-          {runMenu && <Menu trigger={runBox} onClose={() => setRunMenu(false)}><MenuItem onClick={() => { setRunMenu(false); sendToChat(runAllPrompt(runnable)); }}>Run all</MenuItem></Menu>}
+          {runMenu && <Menu trigger={runBox} onClose={() => setRunMenu(false)}><MenuItem onClick={() => { setRunMenu(false); track('action:runAll'); sendToChat(runAllPrompt(runnable)); }}>Run all</MenuItem></Menu>}
         </span>
       )}{action}</>} />
       <div className="gl-chips bd-phases">
@@ -86,7 +90,7 @@ export function BuildPhases({ slug, phases, reviews, specPath, action, onSaved }
       </div>
       <div className="ui-group">
         <div className="bd-doc"><Markdown text={runnable ? withoutOpenTasks(phase.markdown) : phase.markdown} /></div>
-        {runnable && open.map((t) => <Row key={t.n} plain className="bd-clamp" title={t.text} trailing={t.doing ? <span className="badge running">In progress</span> : <Button size="sm" onClick={() => sendToChat(startTaskPrompt(t, runnable))}>Start</Button>} />)}
+        {runnable && open.map((t) => <Row key={t.n} plain className="bd-clamp" title={t.text} trailing={t.doing ? <span className="badge running">In progress</span> : <Button size="sm" onClick={() => { track('action:startTask'); sendToChat(startTaskPrompt(t, runnable)); }}>Start</Button>} />)}
         <DecisionRow slug={slug} phase={phase.key} review={review} onSaved={onSaved} onApproved={() => setPicked(nextPhase(phases, phase.key))} />
       </div>
     </>

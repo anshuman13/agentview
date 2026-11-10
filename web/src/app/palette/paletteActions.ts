@@ -1,4 +1,5 @@
 import { appSettings } from '../appSettings';
+import { track } from '../featureUse';
 import { getState, notice, send, setUi } from '../store';
 import { openGoal } from '../../sessions/goalLogic';
 import { toggleNotify } from '../runtime/notify';
@@ -7,6 +8,7 @@ import { clock } from '../../codex/tasks/time';
 import { ago, command } from '../../ui/util';
 import { forkChat } from '../../chat/chatActions';
 import { specPrompt } from '../../../../shared/specTasks';
+import { paletteFeature } from '../../../../shared/featureUse';
 import type { PaletteItem } from './paletteLogic';
 
 const KIND_LABEL = { task: 'Task', meeting: 'Meeting', wiki: 'Wiki' };
@@ -17,6 +19,7 @@ export function itemMeta(i: PaletteItem) {
 }
 
 export function openItem(i: PaletteItem) {
+  track('palette:open');
   if (i.kind === 'task') openTask(i);
   else if (i.kind === 'meeting') openMeeting(i);
   else setView({ list: 'wiki', open: i.id, anchor: null });
@@ -24,6 +27,8 @@ export function openItem(i: PaletteItem) {
 }
 
 export function perform(id: string) {
+  const feature = paletteFeature(id);
+  if (feature) track(feature);
   const [kind, ...rest] = id.split(':');
   const arg = rest.join(':');
   if (kind === 'codex') {

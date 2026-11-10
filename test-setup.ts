@@ -7,6 +7,7 @@ process.env.AGENTVIEW_LIMITS_DIR = dir;
 process.env.AGENTVIEW_ALT_CLAUDE = path.join(dir, 'alt');
 process.env.AGENTVIEW_ALT2_CLAUDE = path.join(dir, 'alt2');
 process.env.AGENTVIEW_FINDINGS_DIR = dir;
+process.env.AGENTVIEW_FEATURE_USE = path.join(dir, 'feature-use.json');
 process.env.AGENTVIEW_SETTINGS = path.join(dir, 'settings.json');
 mkdirSync(dir, { recursive: true });
 writeFileSync(process.env.AGENTVIEW_SETTINGS, JSON.stringify({ personalRoot: '~/workspace_personal' }));

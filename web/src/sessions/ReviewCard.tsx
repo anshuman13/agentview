@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { notice } from '../app/store';
+import { track } from '../app/featureUse';
 import { AskRow } from '../ui/AskRow';
 import { Badge } from '../ui/Badge';
 import { Button, IconButton } from '../ui/Button';
@@ -79,6 +80,7 @@ export function ReviewCard({ run }: { run: ChatRun }) {
     icon: 'git-pull-request',
     neutral: true,
     run: async () => {
+      track('action:approveRun');
       setApproving(true);
       await postRunApprove(run.id).catch((err) => notice(`Could not open the PR: ${errText(err)}`));
       setApproving(false);

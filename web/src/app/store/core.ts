@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { type AttentionItem, type ChatRun, type LiveChat, type ReviewFindings, type ServerState } from '../../../../shared/protocol';
 import { apiUrl } from '../api';
+import { track } from '../featureUse';
 
 export type GoalSheetState = { mode: 'start'; plan?: string; here?: boolean } | { mode: 'detail'; run: string };
 
@@ -75,6 +76,7 @@ export function notice(text: string) {
 }
 
 export function setUi(patch: Partial<UiState>) {
+  if (patch.goalSheet) track('sheet:goal');
   set((s) => ({ ui: { ...s.ui, ...patch } }));
 }
 

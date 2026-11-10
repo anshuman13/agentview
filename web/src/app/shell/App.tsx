@@ -19,6 +19,7 @@ import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
 import { deepLink } from '../deepLinks';
 import { loadAppSettings } from '../appSettings';
+import { track } from '../featureUse';
 import { isPage, PageView, type Page } from '../pages';
 import { Brief, AgentsPane, FileSwitcher, Palette, GoalSheets, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
 import { Offline, Restarting } from './StatusItems';
@@ -47,7 +48,7 @@ export function App() {
   const [page, setPage] = useState<Page | null>(null);
   const [more, setMore] = useState(false);
   const [browse, setBrowse] = useState(false);
-  const openPage = (p: Page) => { setPage(p); setEditor(p); setTab((t) => (narrow() ? 'code' : t)); };
+  const openPage = (p: Page) => { track(`page:${p}`); setPage(p); setEditor(p); setTab((t) => (narrow() ? 'code' : t)); };
   const closePage = () => { setPage(null); setEditor((e) => (isPage(e) ? 'file' : e)); };
   const [sidebar, setSidebar] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);

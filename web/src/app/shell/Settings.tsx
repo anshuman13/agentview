@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
+import { IconButton } from '../../ui/Button';
+import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
+import { Sheet } from '../../ui/Sheet';
 import { Icon } from '../../ui/Icon';
 import { tauriInvoke } from '../../codex/data/local';
+import { appSettings } from '../appSettings';
+import { saveFeatureUse } from '../featureUseApi';
+import { notice } from '../store';
 import { hubDebug } from '../runtime/hubDebug';
 import { THEME_NAMES, useTheme } from '../theme';
+import { FeatureUseSheet } from './FeatureUseSheet';
 import { ModelsSettings } from './ModelsSettings';
 
 const webSha = typeof __APP_SHA__ === 'string' ? __APP_SHA__ : '';
@@ -15,6 +22,43 @@ const tauriAppVersion = async () => {
   const invoke = tauriInvoke();
   return invoke ? String(await invoke('plugin:app|version')) : '';
 };
+
+export function PrivacyGroup({ on, onToggle, onOpen, onInfo }: { on: boolean; onToggle: () => void; onOpen: () => void; onInfo: () => void }) {
+  return (
+    <>
+      <Section label="Privacy" action={<IconButton icon="info" label="About feature analytics" size="sm" onClick={onInfo} />} />
+      <div className="ui-group">
+        <Row title="Feature analytics" meta={on ? 'On' : 'Off'} onClick={onToggle} />
+        {on && <Row title="Feature use" trailing={<Icon name="chevron-right" small />} onClick={onOpen} />}
+      </div>
+    </>
+  );
+}
+
+function PrivacySettings() {
+  const on = appSettings.use((s) => s.featureUse);
+  const [ask, setAsk] = useState<ConfirmRequest | null>(null);
+  const [sheet, setSheet] = useState<'use' | 'info' | null>(null);
+  const save = (featureUse: boolean) => saveFeatureUse(featureUse).then((r) => appSettings.patch({ featureUse: r.featureUse ?? false }), (err) => notice(err instanceof Error ? err.message : 'Could not save'));
+  const toggle = () => on
+    ? setAsk({ title: 'Turn off feature analytics?', detail: 'The counts so far are deleted.', action: 'Turn off', run: () => save(false) })
+    : void save(true);
+  return (
+    <>
+      <PrivacyGroup on={on} onToggle={toggle} onOpen={() => setSheet('use')} onInfo={() => setSheet('info')} />
+      {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
+      {sheet === 'use' && <FeatureUseSheet onClose={() => setSheet(null)} />}
+      {sheet === 'info' && (
+        <Sheet label="Feature analytics" onClose={() => setSheet(null)} className="as-dialog">
+          <Section label="Feature analytics" />
+          <div className="ui-group">
+            <Row plain lines={2} title="Counts per feature per day, kept on this Mac for 90 days, never sent anywhere." />
+          </div>
+        </Sheet>
+      )}
+    </>
+  );
+}
 
 export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolean; phoneVersion?: string }) {
   const [theme, toggleTheme] = useTheme();
@@ -30,6 +74,7 @@ export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolea
         <Row title="Theme" meta={THEME_NAMES[theme]} onClick={toggleTheme} />
       </div>
       <ModelsSettings />
+      <PrivacySettings />
       {phoneVersion && (
         <>
           <Section label="Phone" />

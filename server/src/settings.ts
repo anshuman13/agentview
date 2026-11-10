@@ -9,15 +9,15 @@ export const SETTINGS_FILE = process.env.AGENTVIEW_SETTINGS ?? path.join(os.home
 // owner: the name in auto-replies. hubUrl: how phones and other Macs reach the hub. deployUrl: the base URL of the deploy
 // service; empty turns Deploy off. accountLabels: names for the Claude accounts. roots: the folders holding repos.
 // personalRoot: the folder whose chats use the personal profile and account, also a root; empty means all work.
-// defaultProvider: what a new chat runs on when the client does not pick one.
+// defaultProvider: what a new chat runs on when the client does not pick one. featureUse: whether this Mac counts which features are used.
 export type UnattendedLimits = { allowWrite: string[]; allowedDomains: string[] };
 
 // unattended: what a scheduled coding chat may write and fetch, besides its worktree.
-export type Settings = { unattended: UnattendedLimits; owner: string; hubUrl: string; deployUrl: string; accountLabels: Partial<Record<Account, string>>; roots: string[]; personalRoot: string; defaultProvider: Provider };
+export type Settings = { unattended: UnattendedLimits; owner: string; hubUrl: string; deployUrl: string; accountLabels: Partial<Record<Account, string>>; roots: string[]; personalRoot: string; defaultProvider: Provider; featureUse: boolean };
 
 export const UNATTENDED_DOMAINS = ['registry.npmjs.org', 'pypi.org', 'files.pythonhosted.org'];
 
-export const EMPTY_SETTINGS: Settings = { unattended: { allowWrite: [], allowedDomains: UNATTENDED_DOMAINS }, owner: '', hubUrl: '', deployUrl: '', accountLabels: {}, roots: ['~/workspace'], personalRoot: '', defaultProvider: 'claude' };
+export const EMPTY_SETTINGS: Settings = { unattended: { allowWrite: [], allowedDomains: UNATTENDED_DOMAINS }, owner: '', hubUrl: '', deployUrl: '', accountLabels: {}, roots: ['~/workspace'], personalRoot: '', defaultProvider: 'claude', featureUse: false };
 
 const expandHome = (dir: string) => path.resolve(dir.replace(/^~/, os.homedir()));
 
@@ -55,4 +55,4 @@ export const accountLabels = (s = loadSettings()): Record<Account, string> => ({
 
 export const applyAccountLabels = () => Object.assign(ACCOUNT_LABEL, accountLabels());
 
-export const publicSettings = (): PublicSettings => ({ deploy: !!deployUrl(), accountLabels: accountLabels(), personalRoot: personalRoot(), defaultProvider: loadSettings().defaultProvider, roots: workspaceRoots().map((r) => path.basename(r)) });
+export const publicSettings = (): PublicSettings => ({ deploy: !!deployUrl(), accountLabels: accountLabels(), personalRoot: personalRoot(), defaultProvider: loadSettings().defaultProvider, featureUse: loadSettings().featureUse, roots: workspaceRoots().map((r) => path.basename(r)) });

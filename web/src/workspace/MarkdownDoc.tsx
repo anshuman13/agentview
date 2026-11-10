@@ -4,6 +4,7 @@ import { classHighlighter, highlightCode } from '@lezer/highlight';
 import type { Parser } from '@lezer/common';
 import { isSpecPath, runAllPrompt, specProgress, specTasks, startTaskPrompt, type SpecTask } from '../../../shared/specTasks';
 import { api, sendToChat, setUi } from '../app/store';
+import { track } from '../app/featureUse';
 import { Button } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
@@ -221,7 +222,10 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
   const onClick = (e: MouseEvent) => {
     const t = e.target as HTMLElement;
     const start = t.closest<HTMLElement>('[data-task]');
-    if (start) return sendToChat(startTaskPrompt(tasks[Number(start.dataset.task)], path));
+    if (start) {
+      track('action:startTask');
+      return sendToChat(startTaskPrompt(tasks[Number(start.dataset.task)], path));
+    }
     const copy = t.closest<HTMLElement>('[data-copy]');
     if (copy) {
       const code = copy.closest('.doc-code')?.querySelector('code')?.textContent ?? '';
@@ -252,7 +256,7 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
           <Button size="sm" variant="plain" aria-haspopup="menu" aria-expanded={runMenu} onClick={() => setRunMenu(!runMenu)}>Run</Button>
           {runMenu && (
             <Menu trigger={runBox} onClose={() => setRunMenu(false)}>
-              <MenuItem onClick={() => { setRunMenu(false); sendToChat(runAllPrompt(path)); }}>Run all in this chat</MenuItem>
+              <MenuItem onClick={() => { setRunMenu(false); track('action:runAll'); sendToChat(runAllPrompt(path)); }}>Run all in this chat</MenuItem>
               <MenuItem onClick={() => { setRunMenu(false); setUi({ goalSheet: { mode: 'start', plan: path } }); }}>Run as goal…</MenuItem>
             </Menu>
           )}

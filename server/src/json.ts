@@ -41,6 +41,7 @@ export function jsonFile<T>(file: string, fallback: T) {
   };
   return {
     read: () => serial(() => readJson<T>(file, fallback)),
+    clear: () => serial(() => rm(file, { force: true })),
     update: (fn: (cur: T) => T | Promise<T>) => serial(async () => {
       const cur = await readJson<T>(file, fallback);
       const next = await fn(cur);

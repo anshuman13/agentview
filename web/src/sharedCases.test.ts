@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
+import { FEATURES, featureRows, paletteFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
 import { billing, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
@@ -221,6 +222,21 @@ describe('cases shared with the Android app', () => {
       const turns = turnEvents(c.events as ChatEvent[]);
       expect(Object.fromEntries(turns.map((t) => [t.id, t.events.map((e) => e.id)]))).toEqual(c.cuts);
       for (const [id, entries] of Object.entries(c.entries)) expect(turnSummary(turns.find((t) => t.id === id)!.events)).toEqual(entries);
+    });
+  }
+
+  const featureUse = JSON.parse(readFileSync(new URL('../../shared/fixtures/feature-use.json', import.meta.url), 'utf8')) as {
+    ids: string[];
+    palette: { id: string; expected: string | null }[];
+    rows: { name: string; today: string; window: 7 | 30; days: UseDays; never: string[]; used: [string, number, number, string][] }[];
+  };
+  it('feature catalogue ids', () => expect(FEATURES.map((f) => f.id)).toEqual(featureUse.ids));
+  for (const c of featureUse.palette) it(`paletteFeature: ${c.id}`, () => expect(paletteFeature(c.id)).toBe(c.expected));
+  for (const c of featureUse.rows) {
+    it(`featureRows: ${c.name}`, () => {
+      const r = featureRows(c.days, c.today, c.window);
+      expect(r.never.map((f) => f.id)).toEqual(c.never);
+      expect(r.used.map((u) => [u.id, u.n7, u.n30, u.last])).toEqual(c.used);
     });
   }
 });

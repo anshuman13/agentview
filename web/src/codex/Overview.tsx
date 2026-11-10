@@ -9,6 +9,7 @@ import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/Panel';
 import { replyQueue } from './overview/ReplyQueue';
 import { useCounts } from '../app/store/counts';
+import { track } from '../app/featureUse';
 import { useNeedsYou } from './NeedsYou';
 import { AddSheet } from './tasks/AddSheet';
 import { useView } from './view';
@@ -65,7 +66,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       )}
       {count > 0 && (
         <div className="as-group" ref={needsRow}>
-          <Row title="Needs you" onClick={() => setSheet(true)} trailing={<><span className="badge quiet">{count}</span><Icon name="chevron-right" small /></>} />
+          <Row title="Needs you" onClick={() => { track('sheet:needsYou'); setSheet(true); }} trailing={<><span className="badge quiet">{count}</span><Icon name="chevron-right" small /></>} />
         </div>
       )}
       <RunningChats />

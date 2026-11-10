@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from 'react';
 import { createStore } from '../ui/createStore';
+import { track } from '../app/featureUse';
 import { useBack } from '../app/touch/back';
 import { rowKey, type Profile } from './data/sync';
 import { errorText } from './data/tasks/engine';
@@ -66,6 +67,7 @@ export const setView = (patch: Partial<View>) => {
   const next = { ...view, ...patch };
   if (next.list !== view.list && patch.tag === undefined) next.tag = null;
   if (next.list !== view.list) {
+    track(`list:${next.list === 'today' ? 'overview' : next.list}`);
     spot = null;
     clearScroll(view.list);
     if (view.list === 'goals' || view.list === 'search') fromWeek = false;
