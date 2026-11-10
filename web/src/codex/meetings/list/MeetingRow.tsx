@@ -1,8 +1,7 @@
-import { memo, useRef, useState } from 'react';
+import { memo } from 'react';
 import { type Meeting } from '../../data/wiki/wiki';
 import { meetingBadge, meetingMeta } from '../../data/meetings/meetings';
-import { IconButton } from '../../../ui/Button';
-import { Menu, MenuItem } from '../../../ui/Menu';
+import { MenuItem } from '../../../ui/Menu';
 import { Row } from '../../../ui/Row';
 import { safeHref } from '../../../ui/util';
 import { openMeeting, openMeetingNotes } from '../../view';
@@ -23,23 +22,9 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
 }
 
 export const MeetingRow = memo(function MeetingRow({ m, now, said, noDay }: { m: Meeting; now: number; said?: string; noDay?: boolean }) {
-  const [menu, setMenu] = useState(false);
-  const more = useRef<HTMLButtonElement>(null);
   const badge = meetingBadge(m, now);
   const calendar = m.id.startsWith('cal:') ? safeHref(m.calendar_url) : undefined;
-  const pick = (act: () => void) => () => { setMenu(false); act(); };
   const open = () => openMeeting(m);
-  const moreBtn = (
-    <span className="mt-more" onClick={(e) => e.stopPropagation()}>
-      <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-      {menu && (
-        <Menu trigger={more} onClose={() => setMenu(false)}>
-          {calendar && <MenuItem icon="calendar" href={calendar} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
-          <MenuItem icon="edit" onClick={pick(() => openMeetingNotes(m))}>Notes</MenuItem>
-        </Menu>
-      )}
-    </span>
-  );
   return (
     <Row
       plain
@@ -48,7 +33,13 @@ export const MeetingRow = memo(function MeetingRow({ m, now, said, noDay }: { m:
       className={(m.ends_at ?? m.starts_at!) <= now ? 'past' : undefined}
       title={<><ProfileDot profile={m.profile} />{m.title}</>}
       meta={said ? <span className="mt-said" title="From the transcript">{said}</span> : meetingMeta(m, now, noDay)}
-      trailing={<>{badge && <Badge status="running" label={badge} />}{moreBtn}</>}
+      state={badge ? <Badge status="running" label={badge} /> : null}
+      menu={(
+        <>
+          {calendar && <MenuItem icon="calendar" href={calendar}>Open calendar</MenuItem>}
+          <MenuItem icon="edit" onClick={() => openMeetingNotes(m)}>Notes</MenuItem>
+        </>
+      )}
       onClick={open}
       onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(); } }}
     />
