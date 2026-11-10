@@ -35,7 +35,7 @@ export const checkState = (c: Check): CheckState => {
   return 'pending';
 };
 
-export function rollup(checks: Check[] = []): CheckState {
+function rollup(checks: Check[] = []): CheckState {
   const states = checks.map(checkState);
   if (!states.length) return 'none';
   return states.includes('failure') ? 'failure' : states.includes('pending') ? 'pending' : 'success';
@@ -176,7 +176,7 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
   if (action === 'merge') return act(cwd, n, 'merge', MERGE[body.method] ?? '--squash');
   if (action === 'automerge') {
     if (!auto) throw new Error('Auto-merge is not running');
-    if (!(body.method in MERGE)) throw new Error('Method must be squash, merge or rebase');
+    if (typeof body.method !== 'string' || !Object.hasOwn(MERGE, body.method)) throw new Error('Method must be squash, merge or rebase');
     return auto.turn(cwd, Number(n), body.on === true, body.method as Method);
   }
   if (action === 'checkout') return act(cwd, n, 'checkout');

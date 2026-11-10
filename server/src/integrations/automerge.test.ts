@@ -81,7 +81,7 @@ describe('createAutoMerge', () => {
     await t.am.turn('/r', 1, true, 'squash');
     expect((await t.am.state('/r')).get(1)).toEqual({ note: 'Waiting for checks' });
     await t.am.poll();
-    expect(t.merges().map((a) => a[3])).toEqual(['--rebase', '--rebase']);
+    expect(t.merges().map((a) => a[3])).toEqual(['--rebase', '--squash']);
     const before = t.calls.length;
     await t.am.turn('/r', 2, true, 'squash');
     await t.am.turn('/r', 2, true, 'squash');
@@ -108,6 +108,23 @@ describe('createAutoMerge', () => {
     head = { rollup: [ok], sha: 'A' };
     await t.am.poll();
     expect(t.merges().map((a) => a[5])).toEqual(['B', 'A']);
+  });
+
+  it('does not merge a PR turned off while its view was running', async () => {
+    let release = () => {};
+    const t = setup(async (a) => {
+      if (a[4] === 'state') return json({ state: 'OPEN' });
+      await new Promise<void>((r) => (release = r));
+      return json(view());
+    });
+    await t.am.turn('/r', 8, true, 'squash');
+    const polling = t.am.poll();
+    await new Promise((r) => setTimeout(r, 5));
+    await t.am.turn('/r', 8, false, 'squash');
+    release();
+    await polling;
+    expect(t.merges()).toEqual([]);
+    expect(t.posts).toEqual([]);
   });
 
   it('keeps the entry and posts nothing when gh pr view fails, and merges once for overlapping polls', async () => {

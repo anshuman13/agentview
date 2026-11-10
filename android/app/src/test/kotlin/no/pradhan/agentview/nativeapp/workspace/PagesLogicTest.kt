@@ -140,7 +140,7 @@ class PagesLogicTest {
         assertEquals("Approved" to Status.Ok, reviewLabel("APPROVED"))
         val armed = parsePulls("""[{"number":3,"autoMerge":{"note":"Waiting for checks"}},{"number":4,"autoMerge":{"note":"x","error":"boom"}},{"number":5}]""")
         assertEquals(listOf(true, false, false), armed.map { it.autoMergeOn })
-        assertEquals(listOf("Waiting for checks", "Merge failed · boom"), armed.take(2).map { it.autoMerge!!.line() })
+        assertEquals(listOf("Waiting for checks", "Merge failed · boom"), armed.take(2).map { it.autoMerge!!.autoMergeMeta() })
         assertEquals("""{"on":true,"method":"squash"}""", autoMergeBody(true, "squash"))
         assertNull(reviewLabel("WHATEVER"))
         assertEquals(DotState.Ok, checkDot(prs[0].checks))

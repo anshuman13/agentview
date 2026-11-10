@@ -22,7 +22,7 @@ export function autoMergeStep(view: View): Step {
   const checks = view.statusCheckRollup ?? [];
   const states = checks.map(checkState);
   if (states.includes('failure')) return wait('Checks failed · waiting for a new commit or a re-run');
-  if (states.includes('pending')) return wait(FIRST_NOTE);
+  if (states.includes('pending') || view.mergeable === 'UNKNOWN') return wait(FIRST_NOTE);
   if (!checks.some((c) => (c.conclusion || c.state || '').toUpperCase() === 'SUCCESS') || !view.headRefOid) return wait('No passing checks');
   return { kind: 'merge', sha: view.headRefOid };
 }
@@ -49,7 +49,11 @@ export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; change
     }
     if (existing && !existing.error) return { ok: true };
     if (JSON.parse(await gh(cwd, 'pr', 'view', String(number), '--json', 'state')).state !== 'OPEN') throw new Error('This pull request is not open');
-    await store.update((cur) => (existing ? cur.map((e) => (same(e, cwd, number) ? { cwd, number, method: e.method, since: e.since } : e)) : [...cur, { cwd, number, method, since: Date.now() }]));
+    await store.update((cur) => {
+      const now = cur.find((e) => same(e, cwd, number));
+      if (!now) return [...cur, { cwd, number, method, since: Date.now() }];
+      return now.error ? cur.map((e) => (e === now ? { cwd, number, method, since: e.since } : e)) : cur;
+    });
     return { ok: true };
   }
 
@@ -67,6 +71,7 @@ export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; change
       const step = autoMergeStep(view);
       if (step.kind === 'delete') return void (await drop(e));
       if (step.kind === 'wait') return void notes.set(k, step.note);
+      if (!(await store.read()).some((x) => same(x, e.cwd, e.number) && !x.error)) return;
       const repo = path.basename(e.cwd);
       try {
         await gh(e.cwd, 'pr', 'merge', String(e.number), `--${e.method}`, '--match-head-commit', step.sha);

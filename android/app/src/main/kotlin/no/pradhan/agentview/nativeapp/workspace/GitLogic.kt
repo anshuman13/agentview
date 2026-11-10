@@ -84,7 +84,7 @@ data class PullRequest(
 // Armed and not stopped by a failed merge.
 val PullRequest.autoMergeOn get() = autoMerge != null && autoMerge.error.isEmpty()
 
-fun PrAutoMerge.line() = if (error.isNotEmpty()) "Merge failed · $error" else note
+fun PrAutoMerge.autoMergeMeta() = if (error.isNotEmpty()) "Merge failed · $error" else note
 
 @Serializable data class PrCheck(val name: String, val state: String = "none", val url: String = "")
 @Serializable data class PrReview(val author: String, val state: String = "", val body: String = "", val at: String = "")

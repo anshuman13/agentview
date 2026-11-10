@@ -200,9 +200,10 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
   };
 
   const armed = pr.autoMerge;
+  const on = !!armed && !armed.error;
   const autoMerge = (on: boolean) => act('automerge', 'automerge', { on, method });
   const toggleAutoMerge = () =>
-    armed && !armed.error
+    on
       ? autoMerge(false)
       : setAsk({
           title: `Merge #${pr.number} when its checks pass?`,
@@ -235,7 +236,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
             plain
             title="Merge when checks pass"
             meta={!armed ? 'Off' : armed.error ? `Merge failed · ${armed.error}` : armed.note}
-            trailing={<Button size="sm" variant="plain" disabled={!!busy} onClick={toggleAutoMerge}>{armed && !armed.error ? 'Turn off' : 'Turn on'}</Button>}
+            trailing={<Button size="sm" variant="plain" disabled={!!busy} onClick={toggleAutoMerge}>{on ? 'Turn off' : 'Turn on'}</Button>}
           />
         </div>
         {busy && <div className="muted small gh-pad" role="status"><Icon name="loading" small spin /> Running {busy.replace('_', ' ')}…</div>}

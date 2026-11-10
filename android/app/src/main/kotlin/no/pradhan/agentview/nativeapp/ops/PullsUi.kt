@@ -65,7 +65,7 @@ import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.autoMergeBody
 import no.pradhan.agentview.nativeapp.workspace.autoMergeOn
-import no.pradhan.agentview.nativeapp.workspace.line
+import no.pradhan.agentview.nativeapp.workspace.autoMergeMeta
 import no.pradhan.agentview.nativeapp.workspace.checkDot
 import no.pradhan.agentview.nativeapp.workspace.fixPrPrompt
 import no.pradhan.agentview.nativeapp.workspace.ghProblem
@@ -250,7 +250,7 @@ private fun PullSummary(pr: PullRequest, now: Long) {
             withStyle(SpanStyle(color = av.diffDel)) { append("-${pr.deletions}") }
         }
         ListRow(pr.title, meta, lines = 3, leading = { StatusDot(checkDot(pr.checks)) }, trailing = { PrState(pr) })
-        pr.autoMerge?.let { Hairline(lead = true); ListRow("Auto-merge", it.line(), lines = 1) }
+        pr.autoMerge?.let { Hairline(lead = true); ListRow("Auto-merge", it.autoMergeMeta(), lines = 1) }
     }
 }
 
