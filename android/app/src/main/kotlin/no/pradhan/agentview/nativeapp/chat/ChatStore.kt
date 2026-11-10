@@ -73,7 +73,7 @@ class ChatStore(
                 if (switching && m.chatId != wanted) { wanted = m.chatId; switching = false }
                 else if (wanted.isNotEmpty() && m.chatId != wanted) return
                 state.update {
-                    val page = if (it.shownId == m.chatId) mergeTail(it.events, it.earlier, m.events, m.earlier) else m.events to m.earlier
+                    val page = if (it.settled && it.shownId == m.chatId) mergeTail(it.events, it.earlier, m.events, m.earlier) else m.events to m.earlier
                     it.copy(shownId = m.chatId, events = page.first, earlier = page.second, settled = true, session = m.session, pending = m.pending)
                 }
             }

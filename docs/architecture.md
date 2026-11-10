@@ -69,7 +69,7 @@ last `limit` events (150, `ROW_WINDOW`) plus `earlier`, the count left out. Olde
 `GET /api/chat/events?chat=&before=<event id>&limit=` (host op `events_before`, `Session.before`), at most 500 per page.
 `/api/state` holds every event; the `init` the session broadcasts (queue changes, history replace) is a tail too. A tail `init`
 for the chat on screen keeps the older events already paged in while the count before its first id still adds up, else it
-stands alone (`mergeTail` in `web/src/app/runtime/pageEvents.ts` and `chat/ChatStore.kt`, cases in `shared/fixtures/merge-tail.json`).
+stands alone; older events changed in place by a history replace keep their old copy until paged again (`mergeTail` in `web/src/app/runtime/pageEvents.ts` and `chat/ChatStore.kt`, cases in `shared/fixtures/merge-tail.json`).
 
 `web/src` is grouped by feature: `app` (shell, store, API, palette), `ui` (shared widgets and helpers), `chat`,
 `sessions`, `workspace` (files, code, terminal, browser), `ops` (Observe, Deploy, GitHub, MCP), `codex` (with `data`, `jobs`,

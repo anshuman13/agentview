@@ -6,24 +6,12 @@ const ev = (i: number, text = ''): ChatEvent => ({ id: `e${i}`, kind: 'user', te
 const range = (from: number, to: number) => Array.from({ length: to - from }, (_, i) => ev(from + i));
 
 describe('mergeTail', () => {
-  it('keeps paged older events after a reconnect init', () => {
-    const m = mergeTail(range(100, 400), 100, range(250, 400), 250);
-    expect(m.events.map((e) => e.id)).toEqual(range(100, 400).map((e) => e.id));
-    expect(m.earlier).toBe(100);
-  });
-
   it('lets the init win on conflict and drops held events it lacks', () => {
     const held = [ev(1), ev(2), ev(3, 'old'), ev(4)];
     const m = mergeTail(held, 0, [ev(3, 'new'), ev(5)], 2);
     expect(m.events.map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e5']);
     expect(m.events[2].kind === 'user' && m.events[2].text).toBe('new');
     expect(m.earlier).toBe(0);
-  });
-
-  it('keeps nothing when the first id is not held', () => {
-    const m = mergeTail(range(100, 200), 100, range(300, 350), 300);
-    expect(m.events.map((e) => e.id)).toEqual(range(300, 350).map((e) => e.id));
-    expect(m.earlier).toBe(300);
   });
 });
 
