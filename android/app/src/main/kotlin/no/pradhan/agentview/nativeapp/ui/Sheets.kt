@@ -63,9 +63,11 @@ fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Bo
     ) {
         Column(Modifier.navigationBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp8)) {
             Row(Modifier.fillMaxWidth().height(Tokens.rowOne).padding(start = Tokens.listPad, end = if (action != null) Tokens.sp2 else Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Text(title, Modifier.weight(1f, fill = false), style = Type.title, color = c.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (count != null) Badge(count, BadgeTone.Quiet)
-                if (action != null) { Spacer(Modifier.weight(1f)); action() }
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    Text(title, Modifier.weight(1f, fill = false), style = Type.title, color = c.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (count != null) Badge(count, BadgeTone.Quiet)
+                }
+                action?.invoke()
             }
             Column(Modifier.padding(horizontal = if (padded) Tokens.sp8 else 0.dp), content = content)
         }
