@@ -19,7 +19,7 @@
 .ov-queue-group { overflow: visible; }
 .ov-queue-group > .ov-ask:first-child .ui-row { border-top-left-radius: 11px; }
 .ov-queue-group > .ov-ask:last-child .ui-row { border-bottom-left-radius: 11px; }
-.ov-ask:not(:last-child) { border-bottom: var(--hairline); }
+.ov-ask:not(:last-child), .ov-queue-group > .as-swipe:has(+ .ov-ask) { border-bottom: var(--hairline); }
 .ov-ask .ui-row-wrap { gap: var(--sp-3); }
 .ov-ask .ui-row-wrap::after { display: none; }
 .ov-ask-actions { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }

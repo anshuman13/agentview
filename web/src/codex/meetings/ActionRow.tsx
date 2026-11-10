@@ -45,7 +45,7 @@ const Pop = ({ anchor, children }: { anchor: RefObject<HTMLElement | null>; chil
 
 // An action from a meeting: a title, a meta line, one button for its status and a kebab with the rest. Suggested ones
 // are kept (Today) or dismissed (Not mine, by swipe or n); unassigned ones can be taken; dismissed ones restored.
-export function ActionRow({ row, meeting, meta: metaText, extraItems }: { row: ItemRow; meeting?: Meeting; meta?: string; extraItems?: (close: (f: () => void) => () => void) => ReactNode }) {
+export function ActionRow({ row, meeting, meta: metaText, noBadge, extraItems }: { row: ItemRow; meeting?: Meeting; meta?: string; noBadge?: boolean; extraItems?: (close: (f: () => void) => () => void) => ReactNode }) {
   const store = useAssistantStore();
   const act = useActions();
   const [menu, setMenu] = useState<'more' | 'assign' | 'snooze' | null>(null);
@@ -115,7 +115,7 @@ export function ActionRow({ row, meeting, meta: metaText, extraItems }: { row: I
       title={row.title}
       meta={meta}
       trailing={<>
-        {badge && <Badge {...badge} />}
+        {badge && !noBadge && <Badge {...badge} />}
         {primary && <Button size="sm" onClick={primary[1]}>{primary[0]}</Button>}
         <IconButton ref={kebab} icon="kebab-horizontal" size="sm" small label="More" aria-haspopup="menu" aria-expanded={menu != null} onClick={() => setMenu(menu === 'more' ? null : 'more')} />
         {menu && <Pop anchor={kebab}>
@@ -150,6 +150,7 @@ export function ActionRow({ row, meeting, meta: metaText, extraItems }: { row: I
       </>}
     />
   );
+  if (status === 'suggested') return <Swipe onLeft={dismiss} leftLabel="Not mine" leftIcon="close">{el}</Swipe>;
   if (status !== 'open') return el;
   return <Swipe onRight={check} onLeft={dismiss} leftLabel="Dismiss" leftIcon="close">{el}</Swipe>;
 }

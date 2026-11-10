@@ -11,7 +11,7 @@ vi.mock('react', async (importOriginal) => {
   const react = await importOriginal<typeof import('react')>();
   return { ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => react.useSyncExternalStore(subscribe, get, get) };
 });
-vi.mock('./data', () => ({ useAssistantData: () => ({ items: [] }), useSyncGate: () => ({ loading: false }) }));
+vi.mock('./data', () => ({ useAssistantData: () => ({ items: [] }), useAssistantStore: () => ({}), useSyncGate: () => ({ loading: false }) }));
 vi.mock('./useActions', () => ({ useActions: () => ({}) }));
 vi.mock('./tasks/AddSheet', () => ({ AddSheet: () => null }));
 vi.mock('./NeedsYou', () => ({ useNeedsYou: () => ({ rows: mocks.needs }) }));
@@ -120,5 +120,21 @@ describe('Overview', () => {
     const html = render({}, [finished]);
     expect(html).not.toContain('Finished job');
     expect(html).toContain('Nothing today');
+  });
+
+  it('renders no row badge in the Needs you sheet', async () => {
+    const { NeedsYou } = await vi.importActual<typeof import('./NeedsYou')>('./NeedsYou');
+    const ask = { ...task('a', 'Confirm the venue', at(-60)), status: 'suggested' } as ItemRow;
+    const rows = [
+      { kind: 'overdue', row: task('o', 'Renew pass', at(-3000)), keys: [] },
+      { kind: 'risk', row: task('r', 'Send invoice', at(60)), due: at(60), short: 20, keys: [] },
+      { kind: 'ask', row: ask, keys: [], marks: [] },
+      { kind: 'dm', chat: { profile: 'work', id: 'c', name: 'Ada', last_at: now, summary: 'Ping', url: null }, keys: [] },
+      { kind: 'slack', x: { title: 'Reply to Bo', why: 'asked twice', url: null }, profile: 'work', keys: ['s'] },
+    ];
+    const html = renderToStaticMarkup(<NeedsYou n={{ rows } as never} now={now} onShowOld={() => {}} />);
+    expect(html).toContain('Overdue · due');
+    expect(html).toContain('At risk · due');
+    expect(html).not.toMatch(/class="badge (?!quiet)/);
   });
 });

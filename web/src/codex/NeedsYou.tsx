@@ -9,6 +9,7 @@ import { atRisk, minutesText, type Span } from './data/tasks/plan';
 import { CAP, collapse, groupNeeds, rankNeeds } from './data/tasks/needsYou';
 import { needsYou } from './summary/needsYou';
 import { ActionRow } from './meetings/ActionRow';
+import { Swipe } from './gestures/Swipe';
 import { useActions } from './useActions';
 import { ago, plural, safeHref, save, stored } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
@@ -22,7 +23,6 @@ import { haptic } from '../ui/haptic';
 import { copyText, openMeeting, openTask, setView, showSnack, useView } from './view';
 import { when } from './tasks/time';
 import type { useSplit } from './tasks/split';
-import { type BadgeSpec } from '../ui/Badge';
 import { createStore } from '../ui/createStore';
 
 const WAIT_HANDLED = 'codex.waitingHandled';
@@ -97,6 +97,13 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   const hideBullet = (x: Bullet) => {
     setHandled('slack', [...handled.get().slack, bulletKey(x)].slice(-50));
   };
+  const dismiss = (key: 'wait' | 'slack', hide: () => void) => {
+    const before = handled.get()[key];
+    hide();
+    showSnack('Dismissed', () => setHandled(key, before));
+  };
+  const dismissChat = (c: Chat) => dismiss('wait', () => hideChat(c));
+  const dismissBullet = (x: Bullet) => dismiss('slack', () => hideBullet(x));
   const capture = (key: string, title: string, profile: Chat['profile'], fill: (r: ItemRow) => Promise<unknown> | undefined, done: () => void) => {
     if (pending.current.has(key)) return;
     pending.current.add(key);
@@ -115,7 +122,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   const bulletTask = (x: Bullet, profile: Chat['profile']) => {
     capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, profile, (r) => (x.url ? store.update(r, { text: x.url }) : undefined), () => hideBullet(x));
   };
-  return { rows, hideChat, hideBullet, chatTask, bulletTask };
+  return { rows, dismissChat, dismissBullet, chatTask, bulletTask };
 }
 
 export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsYou>; now: number; onShowOld: () => void }) {
@@ -124,24 +131,23 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
   if (!n.rows.length) return null;
   const snooze = (r: ItemRow) => { haptic('tap'); act.snoozeLater(r, now); };
   const moveToday = (rows: ItemRow[]) => { haptic('success'); act.moveToToday(rows, now); };
-  const taskRow = (r: ItemRow, badge: BadgeSpec, note: string) => (
-    <CardRow key={r.profile + r.id} title={r.title} meta={note} badge={badge} onOpen={() => openTask(r)}
+  const taskRow = (r: ItemRow, note: string) => (
+    <CardRow key={r.profile + r.id} title={r.title} meta={note} onOpen={() => openTask(r)}
       action={{ icon: 'check', label: 'Done', run: () => { haptic('success'); act.done(r); } }}
       menu={<MenuItem icon="clock" onClick={() => snooze(r)}>Snooze to next 09:00</MenuItem>} />
   );
   const openReview = () => setView({ list: 'wiki', open: 'review', anchor: null, person: null });
-  const needs: BadgeSpec = { status: 'waiting', label: 'Needs you' };
   const slackLink = (url: string | null | undefined) => safeHref(url) && <MenuItem icon="link" href={safeHref(url)!}>Open in Slack</MenuItem>;
   const rowOf = (x: Need) => {
     switch (x.kind) {
-      case 'overdue': return taskRow(x.row, { status: 'late', reason: 'Overdue' }, atTime(x.row.at) != null ? `due ${when(atTime(x.row.at)!, now)}` : '');
-      case 'overdueAll': return <CardRow key="overdue" title={`${x.rows.length} overdue`} meta="Open Tasks to go through them" badge={{ status: 'late', reason: 'Overdue' }} onOpen={() => setView({ list: 'tasks', open: null })} />;
-      case 'risk': return taskRow(x.row, { status: 'waiting', reason: 'At risk' }, `due ${when(x.due, now)} · ${minutesText(x.short)} short`);
-      case 'ask': return <ActionRow key={x.row.profile + x.row.id} row={x.row} />;
+      case 'overdue': return taskRow(x.row, atTime(x.row.at) != null ? `Overdue · due ${when(atTime(x.row.at)!, now)}` : 'Overdue');
+      case 'overdueAll': return <CardRow key="overdue" title={`${x.rows.length} overdue`} meta="Open Tasks to go through them" onOpen={() => setView({ list: 'tasks', open: null })} />;
+      case 'risk': return taskRow(x.row, `At risk · due ${when(x.due, now)} · ${minutesText(x.short)} short`);
+      case 'ask': return <ActionRow key={x.row.profile + x.row.id} row={x.row} noBadge />;
       case 'justEnded': {
         const m = x.meeting;
         return (
-          <ActionRow key={x.row.profile + x.row.id} row={x.row} meta={`Just ended · ${m.title}`} extraItems={(close) => (
+          <ActionRow key={x.row.profile + x.row.id} row={x.row} noBadge meta={`Just ended · ${m.title}`} extraItems={(close) => (
             <>
               <MenuItem icon="mail" onClick={close(() => copyText(followUpText(m, x.actions), 'Follow-up copied'))}>Copy follow-up</MenuItem>
               <MenuItem icon="edit" onClick={close(() => openMeeting(m))}>Notes</MenuItem>
@@ -154,26 +160,30 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
       case 'dm': {
         const c = x.chat;
         return (
-          <CardRow key={c.profile + c.id} title={c.name} meta={`DM · ${c.last_at ? `${ago(c.last_at, ' ago')} · ` : ''}${c.summary ?? ''}`} badge={needs} onOpen={() => setView({ person: c.name })}
-            action={{ icon: 'close', label: `Dismiss ${c.name}`, run: () => n.hideChat(c) }}
-            menu={(
-              <>
-                <MenuItem icon="add" onClick={() => n.chatTask(c)}>Make a task</MenuItem>
-                {slackLink(c.url)}
-              </>
-            )} />
+          <Swipe key={c.profile + c.id} onLeft={() => n.dismissChat(c)} leftLabel="Dismiss" leftIcon="close">
+            <CardRow title={c.name} meta={`DM · ${c.last_at ? `${ago(c.last_at, ' ago')} · ` : ''}${c.summary ?? ''}`} onOpen={() => setView({ person: c.name })}
+              menu={(
+                <>
+                  <MenuItem icon="add" onClick={() => n.chatTask(c)}>Make a task</MenuItem>
+                  {slackLink(c.url)}
+                  <MenuItem icon="close" onClick={() => n.dismissChat(c)}>Dismiss</MenuItem>
+                </>
+              )} />
+          </Swipe>
         );
       }
       case 'slack':
         return (
-          <CardRow key={x.keys[0]} title={x.x.title} meta={`Slack${x.x.why ? ` · ${x.x.why}` : ''}`} badge={needs} onOpen={() => setView({ list: 'summary', open: null })}
-            action={{ icon: 'close', label: `Dismiss ${x.x.title}`, run: () => n.hideBullet(x.x) }}
-            menu={(
-              <>
-                <MenuItem icon="add" onClick={() => n.bulletTask(x.x, x.profile)}>Make a task</MenuItem>
-                {slackLink(x.x.url)}
-              </>
-            )} />
+          <Swipe key={x.keys[0]} onLeft={() => n.dismissBullet(x.x)} leftLabel="Dismiss" leftIcon="close">
+            <CardRow title={x.x.title} meta={`Slack${x.x.why ? ` · ${x.x.why}` : ''}`} onOpen={() => setView({ list: 'summary', open: null })}
+              menu={(
+                <>
+                  <MenuItem icon="add" onClick={() => n.bulletTask(x.x, x.profile)}>Make a task</MenuItem>
+                  {slackLink(x.x.url)}
+                  <MenuItem icon="close" onClick={() => n.dismissBullet(x.x)}>Dismiss</MenuItem>
+                </>
+              )} />
+          </Swipe>
         );
     }
   };
