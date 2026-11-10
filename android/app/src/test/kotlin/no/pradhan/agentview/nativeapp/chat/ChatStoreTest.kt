@@ -2,10 +2,12 @@ package no.pradhan.agentview.nativeapp.chat
 
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.net.ServerMessage
 import no.pradhan.agentview.nativeapp.net.SessionInfo
+import no.pradhan.agentview.nativeapp.net.parseMessage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -117,6 +119,19 @@ class ChatStoreTest {
         assertEquals("x", s.state.value.session?.model)
         s.handle(ServerMessage.SessionUpdate(SessionInfo(id = "a", model = "z")))
         assertEquals("z", s.state.value.session?.model)
+    }
+
+    @Test
+    fun sessionUpdateKeepsCommandsItLeavesOut() {
+        val s = ChatStore()
+        s.show("a")
+        val commands = listOf(CommandInfo("c"))
+        s.handle(ServerMessage.Init("a", listOf(ev("1")), 0, SessionInfo(id = "a", commands = commands)))
+        s.handle(parseMessage("""{"type":"session","session":{"id":"a","running":true}}"""))
+        assertEquals(true, s.state.value.session?.running)
+        assertEquals(commands, s.state.value.session?.commands)
+        s.handle(parseMessage("""{"type":"session","session":{"id":"a","commands":[]}}"""))
+        assertEquals(emptyList<CommandInfo>(), s.state.value.session?.commands)
     }
 
     @Test

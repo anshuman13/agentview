@@ -133,7 +133,7 @@ export function handle(m: ServerMessage) {
     case 'pending': return onPending(m);
     case 'resolved': return set((s) => ({ pending: s.pending.filter((p) => p.id !== m.id) }));
     case 'file_changed': return onFileChanged(m);
-    case 'session': return set({ session: m.session });
+    case 'session': return set((s) => ({ session: { ...s.session, ...m.session } }));
     case 'live': return onLive(m);
     case 'runs': return set({ runs: m.runs });
     case 'attention': return onAttention(m);

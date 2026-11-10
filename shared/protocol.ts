@@ -126,6 +126,8 @@ export type SessionInfo = {
   hooks?: string[];
 };
 
+export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick<SessionInfo, 'commands' | 'mcp'>>;
+
 // What the agent behind a chat supports.
 export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; team: boolean; stopTask: boolean; subagents: boolean };
 
@@ -242,7 +244,8 @@ export type ServerMessage =
   | { type: 'pending'; request: PendingRequest }
   | { type: 'resolved'; id: string }
   | { type: 'file_changed'; path: string; source: 'tool' | 'watcher' }
-  | { type: 'session'; session: SessionInfo }
+  // A merge into the SessionInfo the client holds: `commands` and `mcp` are left out while unchanged since the last update. `init` carries them whole.
+  | { type: 'session'; session: SessionUpdate }
   | { type: 'live'; chats: LiveChat[] }
   | { type: 'runs'; runs: ChatRun[] }
   | { type: 'attention'; items: AttentionItem[] }

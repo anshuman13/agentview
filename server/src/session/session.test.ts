@@ -26,6 +26,24 @@ function limitNotice(handle: (m: unknown) => void, text = "You've hit your sessi
   handle({ type: 'result', subtype: 'success', uuid: 'r1', result: text, total_cost_usd: 0, is_error: Boolean(error) });
 }
 
+describe('session updates', () => {
+  it('leave out commands and mcp while unchanged', () => {
+    const { s } = fakeSession();
+    const last: ServerMessage[] = [];
+    s.onMessage((m) => m.type === 'session' && last.push(m));
+    const sent = () => Object.keys((last.pop() as Extract<ServerMessage, { type: 'session' }>).session).filter((k) => k === 'commands' || k === 'mcp');
+    const a = [{ name: 'a', description: '' }];
+    s.setSession({ commands: a });
+    expect(sent()).toEqual(['commands', 'mcp']);
+    s.setSession({ running: true });
+    expect(sent()).toEqual([]);
+    s.setSession({ commands: [{ name: 'a', description: '' }] });
+    expect(sent()).toEqual([]);
+    s.setSession({ commands: [{ name: 'b', description: '' }] });
+    expect(sent()).toEqual(['commands']);
+  });
+});
+
 describe('AgentSession turns', () => {
 
   it('failed stays set after an errored turn ends and clears when the next turn starts', () => {

@@ -289,7 +289,8 @@ sealed interface ServerMessage {
         val session: SessionInfo? = null,
         val pending: List<Pending> = emptyList(),
     ) : ServerMessage
-    data class SessionUpdate(val session: SessionInfo) : ServerMessage
+    // A merge: `commands` and `mcp` are absent from the payload while unchanged, so `keeps` names the fields to keep.
+    data class SessionUpdate(val session: SessionInfo, val keeps: Set<String> = emptySet()) : ServerMessage
     data class PendingAdded(val request: Pending) : ServerMessage
     data class Resolved(val id: String) : ServerMessage
     data class Error(val text: String) : ServerMessage
@@ -312,7 +313,7 @@ fun parseMessage(data: String): ServerMessage {
             val pending = (state["pending"] as? JsonArray)?.mapNotNull { parsePending(it) } ?: emptyList()
             ServerMessage.Init(chatId, events(state), state["earlier"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: 0, session, pending)
         }
-        "session" -> ServerMessage.SessionUpdate(protocolJson.decodeFromJsonElement(SessionInfo.serializer(), o["session"]!!))
+        "session" -> o["session"]!!.jsonObject.let { s -> ServerMessage.SessionUpdate(protocolJson.decodeFromJsonElement(SessionInfo.serializer(), s), setOf("commands", "mcp").filter { it !in s }.toSet()) }
         "pending" -> parsePending(o["request"]!!)?.let { ServerMessage.PendingAdded(it) } ?: ServerMessage.Other(type)
         "resolved" -> ServerMessage.Resolved(o["id"]!!.jsonPrimitive.content)
         "error" -> ServerMessage.Error(o["text"]?.jsonPrimitive?.contentOrNull ?: "")

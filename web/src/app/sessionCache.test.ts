@@ -42,6 +42,19 @@ beforeEach(() => {
   fetchMock.mockClear();
 });
 
+describe('session update', () => {
+  it('keeps commands and mcp the update leaves out', () => {
+    init('c0', rows('c0', 2));
+    const { session } = getState();
+    const commands = [{ name: 'a', description: '' }];
+    emit({ type: 'session', session: { ...session, commands, running: false } });
+    const { commands: _c, mcp: _m, ...rest } = session;
+    emit({ type: 'session', session: { ...rest, running: true } });
+    expect(getState().session.running).toBe(true);
+    expect(getState().session.commands).toEqual(commands);
+  });
+});
+
 describe('session cache', () => {
   it('shows a chat cached rows on switching back, before its init', () => {
     live('a', 'b');

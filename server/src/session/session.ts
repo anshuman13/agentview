@@ -70,6 +70,7 @@ export class AgentSession implements AgentHost {
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
   private reviewTarget: string | null = null;
   private reported = new Set<string>();
+  private sent: Pick<SessionInfo, 'commands' | 'mcp'> | null = null;
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
       session: { id: this.id, sessionId, model: null, effort: 'medium', team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null, account: 'main', accounts: [] },
@@ -162,7 +163,11 @@ export class AgentSession implements AgentHost {
     if ('sessionId' in patch || 'account' in patch || 'provider' in patch) this.setResumeCommand();
     if (patch.sessionId) this.runs.bind(this.id, patch.sessionId);
     if (wasRunning && patch.running === false) this.driver.settled();
-    this.emit({ type: 'session', session: this.state.session });
+    const { commands, mcp, ...rest } = this.state.session;
+    const last = this.sent;
+    this.sent = { commands, mcp };
+    const changed = (a: unknown, b: unknown) => !last || JSON.stringify(a) !== JSON.stringify(b);
+    this.emit({ type: 'session', session: { ...rest, ...(changed(commands, last?.commands) && { commands }), ...(changed(mcp, last?.mcp) && { mcp }) } });
   }
 
   noteFile(rel: string, source: 'tool' | 'watcher') {
