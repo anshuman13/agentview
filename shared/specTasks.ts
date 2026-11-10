@@ -6,6 +6,9 @@ const SPEC_PATH = /(^|\/)\.(claude|kiro)\/specs\/.+\.(md|markdown|mdx)$/i;
 
 export const isSpecPath = (path: string) => SPEC_PATH.test(path);
 
+// The build slug of a spec file: its name, or for a Kiro spec folder the folder's.
+export const specSlug = (path: string) => /(?:^|\/)\.kiro\/specs\/([^/]+)\//.exec(path)?.[1] ?? path.slice(path.lastIndexOf('/') + 1).replace(/\.\w+$/, '');
+
 // The checkbox lines of a spec in file order, nested ones included, fenced code skipped.
 export function specTasks(markdown: string): SpecTask[] {
   const tasks: SpecTask[] = [];

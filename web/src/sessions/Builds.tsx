@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useStore } from '../app/store';
+import { setUi, useStore } from '../app/store';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
@@ -48,6 +48,12 @@ export function Builds({ shown }: { shown: boolean }) {
   const { data, failed, reload } = useBuilds(shown && !open);
   const chat = useStore((s) => s.session.id);
   useEffect(() => setOpen(null), [chat]);
+  const slug = useStore((s) => s.ui.buildSlug);
+  useEffect(() => {
+    if (!slug) return;
+    setOpen(slug);
+    setUi({ buildSlug: null });
+  }, [slug]);
   const scroll = useRef<HTMLDivElement>(null);
   const listAt = useRef(0);
   useLayoutEffect(() => {

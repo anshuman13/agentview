@@ -1,4 +1,5 @@
 import { editCount, stripRound, type EditCount } from '../../../../shared/edits';
+import { buildStageOf } from '../../../../shared/builds';
 import type { ChatEvent } from '../../../../shared/protocol';
 
 export type ToolUse = Extract<ChatEvent, { kind: 'tool_use' }>;
@@ -188,6 +189,25 @@ export function dayDividers(items: Item[], now: number) {
     prev = day;
   }
   return out;
+}
+
+export const agentBuild = (use: ToolUse) => buildStageOf(str(use.input.subagent_type), str(use.input.description), str(use.input.prompt));
+
+// The agents that show a spec card: the first one per build slug in each turn. Android Steps.kt specCardIds says the same.
+export function specCards(items: Item[]) {
+  const shown = new Set<string>();
+  let seen = new Set<string>();
+  for (const it of items) {
+    if (it.kind === 'user' || it.kind === 'auto' || it.kind === 'phase') seen = new Set();
+    else if (it.kind === 'agent') {
+      const slug = agentBuild(it.use)?.slug;
+      if (slug && !seen.has(slug)) {
+        seen.add(slug);
+        shown.add(it.id);
+      }
+    }
+  }
+  return shown;
 }
 
 // Replies that arrived after the reader scrolled up, for the Jump to latest button.

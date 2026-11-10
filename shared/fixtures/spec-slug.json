@@ -1,0 +1,6 @@
+[
+  { "name": "a Claude spec file", "path": "/w/app/.claude/specs/pink-door.md", "slug": "pink-door" },
+  { "name": "a relative Claude spec file", "path": ".claude/specs/pink-door.md", "slug": "pink-door" },
+  { "name": "a Kiro phase file is titled by its folder", "path": "/w/app/.kiro/specs/kiro-one/requirements.md", "slug": "kiro-one" },
+  { "name": "a relative Kiro phase file", "path": ".kiro/specs/kiro-one/tasks.md", "slug": "kiro-one" }
+]

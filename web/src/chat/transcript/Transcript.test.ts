@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker, newReplies, dayDividers } from './steps';
+import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, specCards, stepLabel, stepTone, newMarker, newReplies, dayDividers } from './steps';
 import { editCount, replyLine, sumEdits } from '../../../../shared/edits';
 import { chatLine } from '../../sessions/folders';
 import type { ChatEvent, LiveChat } from '../../../../shared/protocol';
@@ -227,4 +227,13 @@ describe('dayDividers', () => {
     expect([...d]).toEqual([['a', 'Tuesday 3 November'], ['b', 'Yesterday'], ['d', 'Today']]);
   });
   it('has none for a chat within today', () => expect(dayDividers([user('a', now)], now).size).toBe(0));
+});
+
+describe('specCards', () => {
+  const run = (description: string) => tool('Agent', { description, prompt: '', subagent_type: 'general-purpose' });
+  it('shows the first agent per build slug in a turn and again after the next prompt', () => {
+    const events = [user('go'), run('pm:x'), run('review:x'), run('impl:y'), user('next'), run('review:x'), run('look around')];
+    const ids = events.filter((e) => e.kind === 'tool_use').map((e) => e.id);
+    expect([...specCards(buildTranscript(events))]).toEqual([ids[0], ids[2], ids[3]]);
+  });
 });
