@@ -1,12 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { BuildEntry } from '../../../shared/builds.js';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 import { claudeSession } from '../agent/claude/driver.js';
-import { buildOne, listBuilds } from './builds.js';
+import { buildOne, listBuilds, reviewBuild } from './builds.js';
 
 const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'agentview-builds-')));
 const repo = path.join(root, 'repo');
@@ -96,8 +96,64 @@ describe('build routes', () => {
 
   it('gives the slug as the title and no spec when the spec file is missing, and 404 for a bad slug', async () => {
     const one = await buildOne(repo, 'red-lamp');
-    expect(one).toMatchObject({ title: 'red-lamp', spec: null, commit: { files: [{ path: 'feat.txt' }] } });
+    expect(one).toMatchObject({ title: 'red-lamp', phases: [], commit: { files: [{ path: 'feat.txt' }] } });
     expect(await buildOne(repo, '../x')).toMatchObject({ status: 404 });
     expect(await buildOne(repo, 'missing')).toMatchObject({ status: 404 });
+  });
+});
+
+describe('spec review', () => {
+  const specs = path.join(repo, '.claude', 'specs');
+  const body = '# Pink Door\n\nIntro\n\n## Behaviour\n1. x\n\n### Detail\nkept\n\n## Touches\na.ts\n\n## Acceptance criteria\n- [ ] one\n\n## Other\nstays with tasks\n';
+  const reviews = (slug: string) => JSON.parse(readFileSync(path.join(store, encodeURIComponent(repo), `${slug}.reviews.json`), 'utf8'));
+
+  beforeAll(() => {
+    appendFileSync(path.join(repo, '.git', 'info', 'exclude'), '.claude/specs/\n');
+    mkdirSync(specs, { recursive: true });
+    writeFileSync(path.join(specs, 'pink-door.md'), body);
+    writeFileSync(path.join(specs, 'tracked.md'), body);
+    sh(repo, 'add', '-f', '.claude/specs/tracked.md');
+    mkdirSync(path.join(repo, '.kiro', 'specs', 'kiro-one'), { recursive: true });
+    writeFileSync(path.join(repo, '.kiro', 'specs', 'kiro-one', 'requirements.md'), '# Kiro title\n\nreq\n');
+    writeFileSync(path.join(repo, '.kiro', 'specs', 'kiro-one', 'tasks.md'), '- [ ] t\n');
+  });
+
+  it('lists a spec no agent touched and a Kiro folder, and splits a spec into phases', async () => {
+    const list = await listBuilds(repo);
+    expect(list.find((b) => b.slug === 'pink-door')).toMatchObject({ title: 'Pink Door', pipeline: 'written', draft: true, conclusion: 'Not started' });
+    expect(list.find((b) => b.slug === 'kiro-one')).toMatchObject({ title: 'Kiro title', draft: true });
+    expect(list.some((b) => b.slug.endsWith('.reviews'))).toBe(false);
+    const one = (await buildOne(repo, 'pink-door')) as { entries: unknown[]; phases: { key: string; markdown: string }[] };
+    expect(one.entries).toEqual([]);
+    expect(one.phases.map((p) => p.key)).toEqual(['requirements', 'design', 'tasks']);
+    expect(one.phases[0].markdown).toContain('kept');
+    expect(one.phases[1].markdown).toContain('a.ts');
+    expect(one.phases[2].markdown).toContain('stays with tasks');
+    expect(((await buildOne(repo, 'kiro-one')) as { phases: { key: string }[] }).phases.map((p) => p.key)).toEqual(['requirements', 'tasks']);
+  });
+
+  it('records a decision in the JSON and one line under a single Review notes section of an ignored spec', async () => {
+    expect(await reviewBuild(repo, { slug: 'pink-door', phase: 'requirements', decision: 'approve', note: '' })).toEqual({ ok: true });
+    expect(await reviewBuild(repo, { slug: 'pink-door', phase: 'design', decision: 'changes', note: 'split\nit' })).toEqual({ ok: true });
+    const text = readFileSync(path.join(specs, 'pink-door.md'), 'utf8');
+    expect(text.startsWith(body)).toBe(true);
+    expect(text.slice(body.length).split('\n')).toEqual(['', '## Review notes', expect.stringMatching(/^- \d{4}-\d\d-\d\d \d\d:\d\d Requirements: Approved$/), expect.stringMatching(/^- \d{4}-\d\d-\d\d \d\d:\d\d Design: Changes requested: split it$/), '']);
+    expect(reviews('pink-door')).toMatchObject([{ phase: 'requirements', decision: 'approve' }, { phase: 'design', decision: 'changes', note: 'split it' }]);
+    const one = (await buildOne(repo, 'pink-door')) as { phases: { markdown: string }[]; pipeline: string };
+    expect(one.phases.some((p) => p.markdown.includes('Review notes'))).toBe(false);
+    expect(one.pipeline).toBe('reviewed');
+  });
+
+  it('leaves a tracked spec file unchanged', async () => {
+    expect(await reviewBuild(repo, { slug: 'tracked', phase: 'tasks', decision: 'changes', note: 'x' })).toEqual({ ok: true });
+    expect(readFileSync(path.join(specs, 'tracked.md'), 'utf8')).toBe(body);
+    expect(reviews('tracked')).toMatchObject([{ phase: 'tasks', decision: 'changes' }]);
+  });
+
+  it('answers 400 for bad input and 404 for a missing spec', async () => {
+    for (const bad of [{ slug: '../x', phase: 'design', decision: 'approve' }, { slug: 'pink-door', phase: 'code', decision: 'approve' }, { slug: 'pink-door', phase: 'design', decision: 'hold' }, { slug: 'pink-door', phase: 'design', decision: 'changes', note: '  ' }]) {
+      expect(await reviewBuild(repo, bad)).toMatchObject({ status: 400 });
+    }
+    expect(await reviewBuild(repo, { slug: 'no-such-spec', phase: 'design', decision: 'approve' })).toMatchObject({ status: 404 });
   });
 });

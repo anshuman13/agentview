@@ -1,7 +1,8 @@
-import { readdir, readFile } from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
+import { appendFile, readdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { buildStageOf, buildSummary, criteriaOf, findingsOf, slugOk, verdictOf, type BuildCommit, type BuildEntry, type BuildStage } from '../../../shared/builds.js';
+import { REVIEW_PHASES, buildStageOf, buildSummary, criteriaOf, findingsOf, pipelineOf, slugOk, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase } from '../../../shared/builds.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { jsonFile, readJson } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
@@ -9,6 +10,7 @@ import { mainCheckout } from '../workspace/tries.js';
 import type { AgentSession } from './session.js';
 
 const MAX_REPORT = 20_000;
+const MAX_NOTE = 2000;
 
 const buildsDir = (repo: string) => path.join(process.env.AGENTVIEW_BUILDS ?? path.join(os.homedir(), '.agentview', 'builds'), encodeURIComponent(repo));
 
@@ -61,11 +63,79 @@ export function recordBuild(session: AgentSession, ev: ChatEvent) {
 
 const SLUG = /^[\w.-]+$/;
 
+const slugValid = (slug: string) => SLUG.test(slug) && slugOk(slug);
+
 const readEntries = (repo: string, slug: string) => readJson<BuildEntry[]>(path.join(buildsDir(repo), `${slug}.json`), []);
 
-const specOf = (repo: string, slug: string) => readFile(path.join(repo, '.claude', 'specs', `${slug}.md`), 'utf8').catch(() => null);
+const reviewsPath = (repo: string, slug: string) => path.join(buildsDir(repo), `${slug}.reviews.json`);
+
+const readReviews = (repo: string, slug: string) => readJson<BuildReview[]>(reviewsPath(repo, slug), []);
+
+// jsonFile serialises writes per instance, so every write to one file goes through the same one.
+const reviewStores = new Map<string, ReturnType<typeof jsonFile<BuildReview[]>>>();
+
+const reviewStore = (repo: string, slug: string) => {
+  const file = reviewsPath(repo, slug);
+  if (!reviewStores.has(file)) reviewStores.set(file, jsonFile<BuildReview[]>(file, []));
+  return reviewStores.get(file)!;
+};
 
 const titleOf = (spec: string | null, slug: string) => /^# (.+)$/m.exec(spec ?? '')?.[1].trim() || slug;
+
+const PHASE_OF = new Map<string, ReviewPhase>([
+  ['problem', 'requirements'], ['behaviour', 'requirements'], ['requirements', 'requirements'], ['non-goals', 'requirements'],
+  ['design', 'design'], ['touches', 'design'], ['open questions', 'design'],
+  ['tasks', 'tasks'], ['acceptance criteria', 'tasks'],
+]);
+const NOTES = 'review notes';
+
+// The text above the first level-2 heading, then one section per `## ` heading (lowercased), fenced code skipped.
+function sectionsOf(markdown: string) {
+  const sections: { heading: string | null; lines: string[] }[] = [{ heading: null, lines: [] }];
+  let fence = '';
+  for (const line of markdown.split('\n')) {
+    const mark = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
+    if (mark) fence = !fence ? mark : mark[0] === fence[0] && mark.length >= fence.length ? '' : fence;
+    const heading = !fence && !mark ? /^## +(.+?)\s*$/.exec(line)?.[1] : undefined;
+    if (heading) sections.push({ heading: heading.toLowerCase(), lines: [] });
+    sections.at(-1)!.lines.push(line);
+  }
+  return sections;
+}
+
+export function splitPhases(markdown: string): BuildPhase[] {
+  const lines: Record<ReviewPhase, string[]> = { requirements: [], design: [], tasks: [] };
+  let phase: ReviewPhase | null = 'requirements';
+  for (const s of sectionsOf(markdown)) {
+    if (s.heading !== null) phase = s.heading === NOTES ? null : PHASE_OF.get(s.heading) ?? phase;
+    if (phase) lines[phase].push(...s.lines);
+  }
+  return REVIEW_PHASES.map((key) => ({ key, markdown: lines[key].join('\n').trim() })).filter((p) => p.markdown);
+}
+
+const withoutNotes = (markdown: string) => sectionsOf(markdown).filter((s) => s.heading !== NOTES).flatMap((s) => s.lines).join('\n').trim();
+
+type Spec = { title: string; phases: BuildPhase[]; mtime: number; file: string; kiro: boolean };
+
+// A spec file in .claude/specs, else a Kiro folder in .kiro/specs with one file per phase.
+async function loadSpec(repo: string, slug: string): Promise<Spec | null> {
+  const file = path.join(repo, '.claude', 'specs', `${slug}.md`);
+  const text = await readFile(file, 'utf8').catch(() => null);
+  if (text !== null) return { title: titleOf(text, slug), phases: splitPhases(text), mtime: (await stat(file)).mtimeMs, file, kiro: false };
+  const parts = await Promise.all(REVIEW_PHASES.map(async (key) => {
+    const f = path.join(repo, '.kiro', 'specs', slug, `${key}.md`);
+    const [body, st] = await Promise.all([readFile(f, 'utf8').catch(() => null), stat(f).catch(() => null)]);
+    return { key, file: f, body, mtime: st?.mtimeMs ?? 0 };
+  }));
+  const first = parts.find((p) => p.body !== null);
+  if (!first) return null;
+  const phases = parts.flatMap((p) => (p.body === null ? [] : [{ key: p.key, markdown: withoutNotes(p.body) }])).filter((p) => p.markdown);
+  return { title: titleOf(parts[0].body, slug), phases, mtime: Math.max(...parts.map((p) => p.mtime)), file: first.file, kiro: true };
+}
+
+const DRAFT: BuildSummary = { stage: 'pm', state: 'done', conclusion: 'Not started' };
+
+const names = async (dir: string, keep: (f: Dirent) => string | null) => (await readdir(dir, { withFileTypes: true }).catch(() => [])).flatMap((f) => keep(f) ?? []);
 
 const lastCommit = (entries: BuildEntry[]) => entries.filter((e) => e.stage === 'implement').at(-1)?.commit;
 
@@ -80,29 +150,67 @@ async function merged(repo: string, commit: BuildCommit | undefined) {
 export async function listBuilds(cwd: string) {
   const repo = await mainCheckout(cwd).catch(() => null);
   if (!repo) return [];
-  const dir = buildsDir(repo);
-  const slugs = (await readdir(dir).catch(() => [] as string[])).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5));
-  const builds = await Promise.all(slugs.map(async (slug) => {
-    const entries = await readEntries(repo, slug);
-    const title = titleOf(await specOf(repo, slug), slug);
-    return { slug, title, ...buildSummary(entries, await merged(repo, lastCommit(entries))), updatedAt: Math.max(0, ...entries.map((e) => e.endedAt ?? e.startedAt)) };
+  const [recorded, claude, kiro] = await Promise.all([
+    names(buildsDir(repo), (f) => (f.name.endsWith('.json') && !f.name.endsWith('.reviews.json') ? f.name.slice(0, -5) : null)),
+    names(path.join(repo, '.claude', 'specs'), (f) => (f.name.endsWith('.md') ? f.name.slice(0, -3) : null)),
+    names(path.join(repo, '.kiro', 'specs'), (f) => (f.isDirectory() ? f.name : null)),
+  ]);
+  const builds = await Promise.all([...new Set([...recorded, ...claude, ...kiro])].filter(slugValid).map(async (slug) => {
+    const [entries, reviews, spec] = await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]);
+    const done = await merged(repo, lastCommit(entries));
+    return {
+      slug, title: spec?.title ?? slug, ...(entries.length ? buildSummary(entries, done) : DRAFT), pipeline: pipelineOf(entries, done, reviews), draft: !entries.length,
+      updatedAt: Math.max(spec?.mtime ?? 0, ...entries.map((e) => e.endedAt ?? e.startedAt)),
+    };
   }));
   return builds.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function buildOne(cwd: string, slug: string) {
   const repo = await mainCheckout(cwd).catch(() => null);
-  const entries = repo && SLUG.test(slug) && slugOk(slug) ? await readEntries(repo, slug) : [];
-  if (!repo || !entries.length) return { status: 404, body: { error: 'No such build' } };
-  const spec = await specOf(repo, slug);
+  const [entries, reviews, spec] = repo && slugValid(slug) ? await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]) : [[], [], null];
+  if (!repo || (!entries.length && !spec)) return { status: 404, body: { error: 'No such build' } };
   const commit = lastCommit(entries);
+  const done = await merged(repo, commit);
   const [numstat, diff] = commit ? await Promise.all([git(repo, ['show', '--numstat', '--format=', commit.sha]), git(repo, ['show', '--format=', commit.sha])]).catch(() => ['', '']) : ['', ''];
   return {
     slug,
-    title: titleOf(spec, slug),
-    summary: buildSummary(entries, await merged(repo, commit)),
-    spec,
+    title: spec?.title ?? slug,
+    summary: entries.length ? buildSummary(entries, done) : DRAFT,
+    pipeline: pipelineOf(entries, done, reviews),
+    specFile: spec && !spec.kiro ? `.claude/specs/${slug}.md` : null,
+    phases: spec?.phases ?? [],
+    reviews,
     entries: entries.map((e) => ({ ...e, verdict: verdictOf(e.report), criteria: criteriaOf(e.report), findings: findingsOf(e.report) })),
     commit: commit ? { files: parseNumstat(numstat), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff } : null,
   };
+}
+
+const ignored = (repo: string, file: string) => git(repo, ['check-ignore', '-q', '--', file]).then(() => true, () => false);
+
+const two = (n: number) => String(n).padStart(2, '0');
+
+// One line at the end of the spec file, appended without reading it back for a rewrite so an agent editing it at the same time loses nothing.
+async function appendNote(file: string, r: BuildReview) {
+  const text = await readFile(file, 'utf8');
+  const d = new Date(r.at);
+  const lead = /^## review notes\s*$/im.test(text) ? (text.endsWith('\n') ? '' : '\n') : '\n## Review notes\n';
+  const when = `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
+  await appendFile(file, `${lead}- ${when} ${r.phase[0].toUpperCase()}${r.phase.slice(1)}: ${r.decision === 'approve' ? 'Approved' : 'Changes requested'}${r.note && `: ${r.note}`}\n`);
+}
+
+const isPhase = (v: unknown): v is ReviewPhase => REVIEW_PHASES.includes(v as ReviewPhase);
+
+// The user's decision on one phase of a spec: the JSON record the UI reads, and for a git-ignored spec file also the line agents read.
+export async function reviewBuild(cwd: string, body: { slug?: unknown; phase?: unknown; decision?: unknown; note?: unknown }) {
+  const { slug, phase, decision } = body;
+  const note = typeof body.note === 'string' ? body.note.replace(/\s+/g, ' ').trim().slice(0, MAX_NOTE) : '';
+  if (typeof slug !== 'string' || !slugValid(slug) || !isPhase(phase) || (decision !== 'approve' && decision !== 'changes') || (decision === 'changes' && !note)) return { status: 400, body: { error: 'Bad review' } };
+  const repo = await mainCheckout(cwd).catch(() => null);
+  const spec = repo && (await loadSpec(repo, slug));
+  if (!repo || !spec) return { status: 404, body: { error: 'No such spec' } };
+  const review: BuildReview = { phase, decision, note, at: Date.now() };
+  await reviewStore(repo, slug).update((cur) => [...cur, review]);
+  if (await ignored(repo, spec.file)) await appendNote(spec.file, review);
+  return { ok: true };
 }
