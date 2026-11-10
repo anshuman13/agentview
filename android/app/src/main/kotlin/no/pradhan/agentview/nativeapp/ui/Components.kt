@@ -174,7 +174,7 @@ fun WordClamp(text: AnnotatedString, style: TextStyle, color: Color, maxLines: I
         width[0] = w
         if (grew && end < text.length) { end = text.length; return@Text }
         if (r.hasVisualOverflow && end > 0) {
-            val e = if (end >= text.length) r.getLineEnd(maxLines - 1, visibleEnd = true) else text.text.lastIndexOf(' ', end - 1).let { if (it > 0) it else end - 1 }
+            val e = if (end >= text.length) r.getLineEnd(minOf(maxLines, r.lineCount) - 1, visibleEnd = true) else text.text.lastIndexOf(' ', end - 1).let { if (it > 0) it else end - 1 }
             end = text.text.substring(0, e.coerceIn(0, text.length)).trimEnd().length
         }
     })
