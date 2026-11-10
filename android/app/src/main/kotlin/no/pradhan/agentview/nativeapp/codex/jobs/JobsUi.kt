@@ -96,6 +96,9 @@ fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String>
     if (id == "browser") "Chrome" else servers.firstOrNull { mcpToolId(it) == id } ?: id
 }
 
+// The folder name of a job's repo, or null for a job that only reads.
+fun repoName(repo: String?): String? = repo?.trimEnd('/')?.substringAfterLast('/')?.ifEmpty { null }
+
 @Composable
 fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
     val runs = remember(st.runs, job.key) { runsOf(st.runs, job) }
@@ -117,6 +120,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
         item { Group { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp5), style = Type.body, color = av.fg) } }
         item {
             Group(Modifier.padding(top = Tokens.sp4)) {
+                repoName(job.str("repo"))?.let { ListRow("Repo", it); Hairline() }
                 if (tools != null) { ListRow("Tools", toolLabels(tools, servers).joinToString(", ")); Hairline() }
                 val latest = runs.firstOrNull()
                 if (latest == null) ListRow("Runs", "Not run yet")
