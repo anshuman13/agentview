@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { McpTool } from '../../../shared/protocol';
 import { Icon } from '../ui/Icon';
-import { post, share } from './mcpActions';
+import { share } from './mcpActions';
+import { callMcp } from './opsApi';
 import { argsOf, fieldsOf, initialValues, slug, toolId, type Field } from './mcpHelpers';
 
 type Out = { text: string; isError: boolean; args: Record<string, unknown> };
@@ -22,7 +23,7 @@ export function RunForm({ server, tool }: { server: string; tool: McpTool }) {
     if (tool.destructive && !armed) return setArmed(true);
     setArmed(false);
     setBusy(true);
-    post('/api/mcp/call', { server, tool: tool.name, args })
+    callMcp(server, tool.name, args)
       .then((r: Out) => setOut({ text: r.text, isError: r.isError, args }), (err) => setError(err.message))
       .finally(() => setBusy(false));
   };

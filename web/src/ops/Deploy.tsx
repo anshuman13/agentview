@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { api, useStore } from '../app/store';
-import { fetchJson } from '../app/api';
-import { fetchDeployJob, fetchDeployStatus } from './opsApi';
+import { useStore } from '../app/store';
+import { fetchDeployJob, fetchDeployStatus, rollbackDeploy, runDeploy } from './opsApi';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
@@ -46,7 +45,6 @@ export function track(cwd: string, job: DeployJob, every = 3000) {
   }, every);
 }
 
-const post = (path: string, body: unknown) => fetchJson<DeployJob>(api(path), { method: 'POST', body: JSON.stringify(body) });
 
 function EnvRow({ env, s, onDeploy, onRollback }: { env: DeployEnv; s: DeployStatus; onDeploy: (ref?: string) => void; onRollback: () => void }) {
   const [menu, setMenu] = useState(false);
@@ -146,7 +144,7 @@ export function Deploy() {
       action: 'Deploy',
       icon: 'rocket',
       input: ref ? undefined : { value: s.head.branch, placeholder: 'Branch or commit' },
-      run: (value) => begin(() => post('/api/deploy/run', { app: s.app, env: env.name, ref: ref ?? value })),
+      run: (value) => begin(() => runDeploy(s.app, env.name, ref ?? value)),
     });
 
   const rollback = (env: DeployEnv) =>
@@ -156,7 +154,7 @@ export function Deploy() {
       warning: warning(env),
       action: 'Roll back',
       icon: 'history',
-      run: () => begin(() => post('/api/deploy/rollback', { app: s.app, env: env.name, sha: env.rollbackTo!.sha })),
+      run: () => begin(() => rollbackDeploy(s.app, env.name, env.rollbackTo!.sha)),
     });
 
   return (

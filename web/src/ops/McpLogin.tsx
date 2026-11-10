@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { send } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { command } from '../ui/util';
-import { openConnectors, post } from './mcpActions';
+import { openConnectors } from './mcpActions';
+import { addMcp, loginMcp } from './opsApi';
 
 export function AddToChat({ name }: { name: string }) {
   const [busy, setBusy] = useState(false);
@@ -11,7 +12,7 @@ export function AddToChat({ name }: { name: string }) {
   const add = () => {
     setBusy(true);
     setError('');
-    post(`/api/mcp/add?name=${encodeURIComponent(name)}`).catch((e) => setError(e.message)).finally(() => setBusy(false));
+    addMcp(name).catch((e) => setError(e.message)).finally(() => setBusy(false));
   };
   return (
     <>
@@ -49,8 +50,8 @@ export function Login({ name, live }: { name: string; live: boolean }) {
   const start = () => {
     setBusy(true);
     setError('');
-    (live ? Promise.resolve() : post(`/api/mcp/add?name=${encodeURIComponent(name)}`).catch(() => {}))
-      .then(() => post(`/api/mcp/login?name=${encodeURIComponent(name)}`))
+    (live ? Promise.resolve() : addMcp(name).catch(() => {}))
+      .then(() => loginMcp(name))
       .then((r) => { if (r.authUrl) setOpened(true); else send({ type: 'mcp_status' }); })
       .catch((e) => setError(e.message))
       .finally(() => setBusy(false));

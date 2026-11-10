@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, send, setFindings, setUi, useStore } from '../app/store';
-import { fetchJson } from '../app/api';
+import { send, setFindings, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
@@ -8,10 +7,10 @@ import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { pressable } from '../ui/util';
-import type { Finding, ReviewFindings } from '../../../shared/protocol';
+import type { Finding } from '../../../shared/protocol';
 import '../styles/features/github.css';
 
-const call = <T,>(path: string, body?: object) => fetchJson<T>(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);
+import { dismissFinding, fetchFindings } from './opsApi';
 
 // Review Claude's code review findings for a pull request number or "local" for the working tree.
 export const REVIEW_LOCAL = '/code-review';
@@ -51,12 +50,12 @@ export function Findings({ target }: { target: string }) {
   const cwd = useStore((s) => s.session.cwd);
   // A chat in another repo clears the findings, so fetch that repo's.
   useEffect(() => {
-    call<ReviewFindings | null>(`/api/findings?target=${encodeURIComponent(target)}`).then(setFindings, () => {});
+    fetchFindings(target).then(setFindings, () => {});
   }, [target, cwd]);
   if (!review) return null;
   const open = (f: Finding) => setUi({ openFile: f.file, openLine: f.line, follow: false });
   const fix = (f: Finding) => send({ type: 'prompt', text: `Fix this review finding in ${f.file}:${f.line}: ${f.summary}${f.failure ? ` (${f.failure})` : ''}` });
-  const dismiss = (f: Finding) => call<ReviewFindings | null>('/api/findings/dismiss', { target, key: findingKey(f) }).then(setFindings, () => {});
+  const dismiss = (f: Finding) => dismissFinding(target, findingKey(f)).then(setFindings, () => {});
   return (
     <>
       <Section label="Findings" count={review.findings.length} />

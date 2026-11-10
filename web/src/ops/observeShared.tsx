@@ -1,19 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ObserveInfo } from '../../../shared/observe';
-import { api, useStore } from '../app/store';
+import { useStore } from '../app/store';
 import { providerLabel } from '../../../shared/providers';
-import { fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
+import { addToClaude } from './opsApi';
 import '../styles/features/observe.css';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
-
-export const post = <T,>(url: string, body: unknown) => fetchJson<T>(api(url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-
 
 export type Load<T> = { data: T | null; error: string; busy: boolean };
 
@@ -35,21 +32,21 @@ export function track<T>(set: (l: Load<T>) => void, request: () => Promise<T>) {
   );
 }
 
-export function useLoad<T>(url: string | null): [Load<T>, () => void] {
+export function useLoad<T>(load: (() => Promise<T>) | null, key: string): [Load<T>, () => void] {
   const [state, setState] = useState<Load<T>>({ data: null, error: '', busy: false });
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    if (!url) return;
+    if (!load) return;
     let live = true;
     setState({ data: null, error: '', busy: true });
-    fetchJson<T>(api(url)).then(
+    load().then(
       (data) => live && setState({ data, error: '', busy: false }),
       (e) => live && setState({ data: null, error: e.message, busy: false }),
     );
     return () => {
       live = false;
     };
-  }, [url, tick]);
+  }, [key, !load, tick]);
   return [state, () => setTick((t) => t + 1)];
 }
 
@@ -103,7 +100,7 @@ export function AddToClaude({ server, added, disabled, title, onDone }: { server
   if (added) return <span className="chip st-ok" title={`${server} is in ~/.claude.json`}><Icon name="check" small /> In Claude</span>;
   return (
     <span className="obs-add">
-      <button className="btn xs" disabled={disabled} title={title} onClick={() => post<{ info: ObserveInfo }>('/api/observe/mcp/add', { server }).then((r) => onDone(r.info), (e) => setMsg(e.message))}>
+      <button className="btn xs" disabled={disabled} title={title} onClick={() => addToClaude(server).then((r) => onDone(r.info), (e) => setMsg(e.message))}>
         <Icon name="add" small /> Add to Claude Code config
       </button>
       {msg && <span className="error" role="alert">{msg}</span>}

@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { ObserveInfo, SnowflakeAuth, SnowflakeInfo, SnowflakeObjects, SnowflakeResult, SnowflakeTest } from '../../../shared/observe';
-import { api, useStore } from '../app/store';
+import { useStore } from '../app/store';
 import { providerLabel } from '../../../shared/providers';
 import { useCan } from '../chat/useCan';
-import { fetchJson } from '../app/api';
 import { askChat } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
@@ -11,7 +10,8 @@ import { errText } from '../../../shared/util';
 import '../styles/features/observe.css';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
-import { AddToClaude, Err, type Load, Loading, Pane, bump, cell, post, track } from './observeShared';
+import { AddToClaude, Err, type Load, Loading, Pane, bump, cell, track } from './observeShared';
+import { fetchSnowflakeObjects, querySnowflake, saveSnowflakeConfig, testSnowflake } from './opsApi';
 
 const FIELDS: { key: keyof Omit<SnowflakeInfo, 'auth' | 'hasSecret'>; label: string; hint: string }[] = [
   { key: 'account', label: 'Account', hint: 'orgname-accountname' },
@@ -24,7 +24,7 @@ const FIELDS: { key: keyof Omit<SnowflakeInfo, 'auth' | 'hasSecret'>; label: str
 
 function Picker({ kind, parent, value, onPick, enabled }: { kind: 'database' | 'schema' | 'table'; parent: string; value: string; onPick: (v: string) => void; enabled: boolean }) {
   const [list, setList] = useState<Load<SnowflakeObjects>>({ data: null, error: '', busy: false });
-  const load = () => track(setList, () => fetchJson<SnowflakeObjects>(api(`/api/observe/snowflake/objects?kind=${kind}&${parent}`)));
+  const load = () => track(setList, () => fetchSnowflakeObjects(kind, parent));
   useEffect(() => {
     bump(setList);
     setList({ data: null, error: '', busy: false });
@@ -47,7 +47,7 @@ function ConnectionForm({ sf, connected, missing, onInfo }: Conn & { onInfo: (i:
   const [form, setForm] = useState<SnowflakeInfo & { secret: string }>({ ...sf, secret: '' });
   const [saveMsg, setSaveMsg] = useState('');
   const [test, setTest] = useState<Load<SnowflakeTest>>({ data: null, error: '', busy: false });
-  const testConnection = () => track(setTest, () => post<SnowflakeTest>('/api/observe/snowflake/test', {}));
+  const testConnection = () => track(setTest, () => testSnowflake());
 
   useEffect(() => {
     setForm({ ...sf, secret: '' });
@@ -57,7 +57,7 @@ function ConnectionForm({ sf, connected, missing, onInfo }: Conn & { onInfo: (i:
     setSaveMsg('');
     try {
       const { hasSecret, ...rest } = form;
-      onInfo(await post<ObserveInfo>('/api/observe/snowflake/config', { snowflake: rest }));
+      onInfo(await saveSnowflakeConfig(rest));
       setSaveMsg('Saved');
     } catch (e) {
       setSaveMsg(errText(e));
@@ -135,7 +135,7 @@ function QueryPanel({ sf, connected, missingNote }: Pick<Conn, 'sf' | 'connected
   }, [sf]);
 
   const run = () => {
-    if (sql.trim()) track(setResult, () => post<SnowflakeResult>('/api/observe/snowflake/query', { sql }));
+    if (sql.trim()) track(setResult, () => querySnowflake(sql));
   };
 
   const pickTable = (t: string) => {

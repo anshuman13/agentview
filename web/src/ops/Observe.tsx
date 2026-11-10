@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ObserveInfo } from '../../../shared/observe';
-import type { Repo } from '../../../shared/protocol';
-import { api, useStore } from '../app/store';
-import { apiUrl, fetchJson } from '../app/api';
+import { useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
@@ -14,7 +12,8 @@ import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 import { Grafana } from './Grafana';
 import { Snowflake } from './Snowflake';
-import { Err, Loading, post } from './observeShared';
+import { Err, Loading } from './observeShared';
+import { fetchObserve, fetchRepos, saveObserveConfig } from './opsApi';
 import { SetupButton } from './SetupButton';
 
 const SAVE_BADGE: Record<'unsaved' | 'saved' | 'failed', BadgeSpec> = { unsaved: { status: 'waiting', reason: 'Unsaved' }, saved: { status: 'done' }, failed: { status: 'failed' } };
@@ -77,7 +76,7 @@ export function Observe() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
-    fetchJson<Repo[]>(apiUrl('/api/repos')).then((x) => setNames(x.map((r) => r.name)), () => {});
+    fetchRepos().then((x) => setNames(x.map((r) => r.name)), () => {});
   }, []);
 
   useEffect(() => setPicked(''), [chat]);
@@ -99,7 +98,7 @@ export function Observe() {
     setError('');
     setSaveState('idle');
     setSaveError('');
-    fetchJson<ObserveInfo>(api(`/api/observe${picked ? `?repo=${encodeURIComponent(picked)}` : ''}`)).then(
+    fetchObserve(picked).then(
       (i) => {
         if (!live) return;
         show(i);
@@ -120,7 +119,7 @@ export function Observe() {
     setSaveError('');
     try {
       const config = sent.trim() ? JSON.parse(sent) : null;
-      const saved = await post<ObserveInfo>('/api/observe/config', { repo: info.repo, config });
+      const saved = await saveObserveConfig(info.repo, config);
       setInfo(saved);
       setInput(saved.repo);
       if (draftRef.current === sent) edit(JSON.stringify(saved.config ?? saved.guess, null, 2));

@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { McpServer } from '../../../shared/protocol';
 import { getState, send, notice } from '../app/store';
-import { post } from './mcpActions';
-import { fetchMcpConnectors, fetchMcpGroups, fetchMcpProbe } from './opsApi';
+import { fetchMcpConnectors, fetchMcpGroups, fetchMcpProbe, saveMcpGroup } from './opsApi';
 import type { Group } from './mcpHelpers';
 import type { AccountConnectors } from './mcpRows';
 
@@ -45,7 +44,7 @@ export function useMcpGroups() {
   const setGroup = (service: string, group: Group | 'hidden' | 'shown') => {
     const before = groups;
     setGroups((g) => { const { [service]: _, ...rest } = g; return group === 'shown' ? rest : { ...rest, [service]: group }; });
-    post('/api/mcp/groups', { service, group }).then((g) => { setGroups(g); window.dispatchEvent(new Event('agentview:mcp-groups')); }, (e) => { setGroups(before); notice(`Could not save the group: ${e.message}`); });
+    saveMcpGroup(service, group).then((g) => { setGroups(g); window.dispatchEvent(new Event('agentview:mcp-groups')); }, (e) => { setGroups(before); notice(`Could not save the group: ${e.message}`); });
   };
   return { groups, setGroup };
 }

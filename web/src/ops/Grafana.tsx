@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { GrafanaDashboards, GrafanaLogs, GrafanaPanel, GrafanaPanels, GrafanaPatterns, ObserveInfo } from '../../../shared/observe';
-import { api } from '../app/store';
 import { askChat, useSlot } from '../ui/util';
 import { useCan } from '../chat/useCan';
 import { Icon } from '../ui/Icon';
@@ -11,6 +10,7 @@ import '../styles/features/observe.css';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 import { Err, Loading, Pane, Sub, SubHead, useLoad } from './observeShared';
+import { fetchGrafanaDashboards, fetchGrafanaLogs, fetchGrafanaPanels, fetchGrafanaPatterns } from './opsApi';
 
 const clock = (iso: string) => {
   const t = Date.parse(iso);
@@ -41,11 +41,10 @@ function PanelCard({ p }: { p: GrafanaPanel }) {
 
 export function Grafana({ info }: { info: ObserveInfo }) {
   const canEdit = useCan('mcpEdit');
-  const repo = encodeURIComponent(info.repo);
-  const [dash, refreshDash] = useLoad<GrafanaDashboards>(info.grafanaServer ? `/api/observe/grafana/dashboards?repo=${repo}` : null);
-  const [panels, refreshPanels] = useLoad<GrafanaPanels>(info.grafanaServer ? `/api/observe/grafana/panels?repo=${repo}` : null);
-  const [logs, refreshLogs] = useLoad<GrafanaLogs>(info.grafanaServer ? `/api/observe/grafana/logs?repo=${repo}` : null);
-  const [pats, refreshPats] = useLoad<GrafanaPatterns>(info.grafanaServer ? `/api/observe/grafana/patterns?repo=${repo}` : null);
+  const [dash, refreshDash] = useLoad<GrafanaDashboards>(info.grafanaServer ? () => fetchGrafanaDashboards(info.repo) : null, info.repo);
+  const [panels, refreshPanels] = useLoad<GrafanaPanels>(info.grafanaServer ? () => fetchGrafanaPanels(info.repo) : null, info.repo);
+  const [logs, refreshLogs] = useLoad<GrafanaLogs>(info.grafanaServer ? () => fetchGrafanaLogs(info.repo) : null, info.repo);
+  const [pats, refreshPats] = useLoad<GrafanaPatterns>(info.grafanaServer ? () => fetchGrafanaPatterns(info.repo) : null, info.repo);
   const cfg = info.config ?? info.guess;
   const selector = cfg.grafana?.lokiSelector ?? '';
   const refresh = () => {

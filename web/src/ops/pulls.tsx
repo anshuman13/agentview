@@ -5,7 +5,7 @@ import { useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { createStore } from '../ui/createStore';
 import { Counts } from '../ui/DiffFiles';
-import { call } from './opsApi';
+import { fetchPulls } from './opsApi';
 import '../styles/features/github.css';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
@@ -21,7 +21,7 @@ export async function load(cwd: string, fresh = false) {
   const req = ++latest;
   setList(list.get().cwd === cwd ? { loading: true } : { cwd, prs: [], error: '', loading: true });
   try {
-    const prs = await call<PullRequest[]>(`/api/gh/prs${fresh ? '?fresh=1' : ''}`);
+    const prs = await fetchPulls(fresh);
     if (req === latest) setList({ prs, error: '', loading: false });
   } catch (e) {
     if (req === latest) setList({ prs: [], error: errText(e), loading: false });

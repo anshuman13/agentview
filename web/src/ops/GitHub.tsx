@@ -7,7 +7,7 @@ import { Findings } from './Findings';
 import { Markdown } from '../chat/Chat';
 import { Counts, Files, splitDiff } from '../ui/DiffFiles';
 import { CheckIcon, StateChip, load, setViewOpen, useList } from './pulls';
-import { call } from './opsApi';
+import { actOnPull, fetchPull } from './opsApi';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
@@ -182,14 +182,14 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
   const [method, setMethod] = useState('squash');
   const diffs = useMemo(() => splitDiff(d?.diff ?? ''), [d?.diff]);
 
-  const fetchDetail = () => call<PullRequestDetail>(`/api/gh/pr/${pr.number}`).then(setD, (e) => setError(errText(e)));
+  const fetchDetail = () => fetchPull(pr.number).then(setD, (e) => setError(errText(e)));
   useEffect(() => void fetchDetail(), []);
 
   const act: Act = async (label, path, body) => {
     setBusy(label);
     setError('');
     try {
-      await call(`/api/gh/pr/${pr.number}/${path}`, body);
+      await actOnPull(pr.number, path, body);
       await Promise.all([fetchDetail(), load(cwd, true)]);
       return true;
     } catch (e) {
