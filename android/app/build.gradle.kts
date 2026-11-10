@@ -29,6 +29,10 @@ android {
 
     lint { checkReleaseBuilds = false }
 
+    packaging {
+        resources.excludes += setOf("META-INF/**/LICENSE*", "META-INF/*.version", "META-INF/native-image/**", "**/*.kotlin_builtins", "DebugProbesKt.bin")
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

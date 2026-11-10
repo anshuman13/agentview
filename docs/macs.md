@@ -23,6 +23,7 @@ server as the web app: the `/api/events` stream, `POST /api/cmd` and the `/api/a
 Colors, type and spacing come from `web/src/styles/tokens.css` and the icons from the codicons in `node_modules`:
 `./gradlew generateTokens generateIcons` writes `Tokens.kt` and `Codicons.kt`, so a token change reaches the app on the
 next generate and build. TokenGen applies native overrides, listed under Phone in `design-system.md`. Screens build from the shared components in `Components.kt`.
+The two text fonts in `res/font` are Latin subsets (Basic Latin, Latin-1 and Latin Extended-A, general punctuation, arrows): redo them with `hb-subset <font>.ttf --unicodes=... --layout-features='*'` when the UI needs a glyph outside that.
 
 Each running chat has an ongoing, silent notification on the channel "Running chats": title, status, elapsed time and Stop,
 or Allow and Deny while it waits on a permission request (any other request shows "Needs you" and opens the chat). It has
