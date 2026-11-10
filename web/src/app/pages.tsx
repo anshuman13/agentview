@@ -1,15 +1,17 @@
 import { Suspense } from 'react';
 import { Builds, Deploy, Loading, McpPage, Observe, Settings } from './lazy';
 import { appSettings } from './appSettings';
+import { PhoneHeader } from './shell/PhoneHeader';
+import { useMcpHealth } from '../ops/mcpShown';
 
 export type Page = 'observe' | 'deploy' | 'mcp' | 'builds' | 'settings';
 
-export const PAGES: { id: Page; icon: string; title: string; kicker: string; sub: (repo: string) => string }[] = [
-  { id: 'observe', icon: 'pulse', title: 'Observe', kicker: 'Grafana · Snowflake', sub: (r) => `Dashboards, logs and data for ${r}. Ask Claude to query Grafana for you.` },
-  { id: 'deploy', icon: 'rocket', title: 'Deploy', kicker: 'Deploys', sub: (r) => `Deploys of ${r}: what runs where, and a one-click deploy or rollback.` },
-  { id: 'mcp', icon: 'plug', title: 'MCP Servers', kicker: 'Model Context Protocol', sub: () => 'Work and personal servers, grouped by service. Same config as the Claude CLI, checked live.' },
-  { id: 'builds', icon: 'beaker', title: 'Builds', kicker: 'Plan · build · review', sub: (r) => `Specs and what the agents did with them in ${r}` },
-  { id: 'settings', icon: 'settings-gear', title: 'Settings', kicker: 'AgentView', sub: () => 'App preferences and developer tools.' },
+export const PAGES: { id: Page; icon: string; title: string }[] = [
+  { id: 'observe', icon: 'pulse', title: 'Observe' },
+  { id: 'deploy', icon: 'rocket', title: 'Deploy' },
+  { id: 'mcp', icon: 'plug', title: 'MCP Servers' },
+  { id: 'builds', icon: 'beaker', title: 'Builds' },
+  { id: 'settings', icon: 'settings-gear', title: 'Settings' },
 ];
 const available = (id: Page, deploy: boolean) => id !== 'deploy' || deploy;
 export const pageOn = (id: Page) => available(id, appSettings.get().deploy);
@@ -20,17 +22,18 @@ export const usePages = () => {
 export const isPage = (v: string): v is Page => PAGES.some((p) => p.id === v);
 export const pageOf = (id: Page) => PAGES.find((p) => p.id === id)!;
 
-export function PageView({ page, shown, project }: { page: Page; shown: boolean; project: string }) {
+const WITH_ACTION: Page[] = ['observe', 'deploy', 'mcp'];
+
+export function PageView({ page, shown, project, back }: { page: Page; shown: boolean; project: string; back?: () => void }) {
   const p = pageOf(page);
+  const mcp = useMcpHealth();
+  const sub = page === 'mcp' ? (mcp.total ? `${mcp.ok} connected of ${mcp.total}` : undefined) : page === 'observe' || page === 'deploy' ? project : undefined;
   return (
     <div className={`editor ${shown ? 'shown' : ''}`}>
       <div className={`page page-${page}`}>
+        {back && <PhoneHeader title={p.title} sub={sub} slot={WITH_ACTION.includes(page) ? `page-${page}-action` : undefined} onBack={back} />}
         <header className="page-hero">
-          <div>
-            <div className="page-kicker">{p.kicker}</div>
-            <h1>{p.title}</h1>
-            <div className="page-sub">{p.sub(project)}</div>
-          </div>
+          <h1>{p.title}</h1>
           <div id={`page-${page}-extra`} className="page-extra" />
         </header>
         <div className="page-body"><Suspense fallback={<Loading />}>{page === 'mcp' ? <McpPage /> : page === 'builds' ? <Builds shown={shown} /> : page === 'observe' ? <Observe /> : page === 'settings' ? <Settings /> : <Deploy />}</Suspense></div>

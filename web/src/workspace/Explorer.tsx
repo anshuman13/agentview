@@ -1,10 +1,12 @@
 import { lazy, Suspense, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { setUi, useStore } from '../app/store';
 import { findHere, useWorkspace } from '../sessions/folders';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Row as UiRow } from '../ui/Row';
+import { useSlot } from '../ui/util';
 import { Section } from '../ui/Section';
 import { touch } from '../app/touch/touch';
 import { FileIcon } from './FileIcon';
@@ -13,14 +15,14 @@ import { useFileTree, type Row } from './useFileTree';
 
 const FolderPicker = lazy(() => import('../sessions/FolderPicker').then((m) => ({ default: m.FolderPicker })));
 
-export function Explorer() {
+export function Explorer({ phone }: { phone?: boolean }) {
   const cwd = useStore((s) => s.session.cwd);
-  return <ExplorerView key={cwd} cwd={cwd} />;
+  return <ExplorerView key={cwd} cwd={cwd} phone={phone} />;
 }
 
-type MenuProps = { showHidden: boolean; setShowHidden: (v: boolean) => void; refresh: () => void; collapseAll: () => void };
+type MenuProps = { showHidden: boolean; setShowHidden: (v: boolean) => void; refresh: () => void; collapseAll: () => void; closeFile?: () => void };
 
-function FilesMenu({ showHidden, setShowHidden, refresh, collapseAll }: MenuProps) {
+function FilesMenu({ showHidden, setShowHidden, refresh, collapseAll, closeFile }: MenuProps) {
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   return (
@@ -32,6 +34,7 @@ function FilesMenu({ showHidden, setShowHidden, refresh, collapseAll }: MenuProp
           <MenuItem icon={showHidden ? 'eye' : 'eye-closed'} onClick={() => { setMenu(false); setShowHidden(!showHidden); }}>{showHidden ? 'Hide ignored files' : 'Show ignored files'}</MenuItem>
           <MenuItem icon="refresh" onClick={() => { setMenu(false); refresh(); }}>Refresh Explorer</MenuItem>
           <MenuItem icon="collapse-all" onClick={() => { setMenu(false); collapseAll(); }}>Collapse Folders</MenuItem>
+          {closeFile && <MenuItem icon="close" onClick={() => { setMenu(false); closeFile(); }}>Close file</MenuItem>}
         </Menu>
       )}
     </>
@@ -68,18 +71,20 @@ function TreeRow({ r, id, open, loading, changed, selected, onClick }: TreeRowPr
   );
 }
 
-function ExplorerView({ cwd }: { cwd: string }) {
+function ExplorerView({ cwd, phone }: { cwd: string; phone?: boolean }) {
   const openFile = useStore((s) => s.ui.openFile);
   const recent = useStore((s) => s.recentFiles);
   const [picking, setPicking] = useState(false);
   const here = findHere(useWorkspace(cwd).folders, cwd);
   const treeId = useId();
   const t = useFileTree(cwd, openFile, recent);
+  const slot = useSlot('page-files-action');
+  const menu = <FilesMenu showHidden={t.showHidden} setShowHidden={t.setShowHidden} refresh={() => t.refresh()} collapseAll={t.collapseAll} closeFile={phone && openFile ? () => setUi({ openFile: null }) : undefined} />;
 
   return (
     <div className="explorer ex">
       <OpenEditors />
-      <Section label="Files" action={<FilesMenu showHidden={t.showHidden} setShowHidden={t.setShowHidden} refresh={() => t.refresh()} collapseAll={t.collapseAll} />} />
+      {phone ? slot && createPortal(menu, slot) : <Section label="Files" action={menu} />}
       <UiRow
         className="ex-folder"
         leading={<Icon name={here.tree ? 'git-branch' : 'repo'} small />}

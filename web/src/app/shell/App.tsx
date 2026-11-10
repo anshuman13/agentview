@@ -8,6 +8,7 @@ import { useKeyboardInset } from '../touch/keyboardInset';
 import { useKeyboardFlag } from '../touch/keyboardFlag';
 import { ActivityBar } from './ActivityBar';
 import { EditorTabs } from './EditorTabs';
+import { PhoneHeader } from './PhoneHeader';
 import { SideChat, useSideChat } from './SideChat';
 import { SidebarPane } from './SidebarPane';
 import { useResize } from './useResize';
@@ -161,6 +162,10 @@ export function App() {
     if (t === 'code') setEditor('file');
     if (t === 'assistant') { setEditor('assistant'); window.dispatchEvent(new Event('assistant:shown')); }
   };
+  const home = useRef<Tab>('assistant');
+  useEffect(() => { if (!inMore) home.current = tab; }, [tab, inMore]);
+  const goHome = () => { if (home.current === 'repos') goSide('chats'); else goTab(home.current); };
+  const closeTool = () => { closePage(); goHome(); };
   useEffect(() => { if (showing === 'assistant') setSeenAssistant(true); }, [showing]);
   useKeyboardFlag();
   const goSide = (v: View) => { haptic(); setMore(false); setView(v); setTab('repos'); };
@@ -186,10 +191,18 @@ export function App() {
       <div className="body">
         <ActivityBar showing={showing} sidebar={sidebar} view={view} browserShown={editor === 'browser'} showView={showView} openPage={openPage} switchEditor={() => setEditor((v) => (v === 'file' ? 'browser' : 'file'))} />
 
-        <SidebarPane view={view} tab={tab} chatsView={chatsView} setView={setView} />
+        <SidebarPane view={view} tab={tab} chatsView={chatsView} setView={setView} project={project} back={goHome} />
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
-          {mobileExplorer && <div className="mobile-only mobile-explorer-host" onClick={reopen}><Suspense fallback={null}><Explorer /></Suspense></div>}
+          {tab === 'code' && !isPage(editor) && (
+            <PhoneHeader
+              title={mobileExplorer ? 'Files' : openFile?.split('/').pop()}
+              sub={mobileExplorer ? project : openFile?.split('/').slice(0, -1).join('/') || project}
+              slot={mobileExplorer ? 'page-files-action' : 'page-file-action'}
+              onBack={mobileExplorer ? goHome : () => setBrowse(true)}
+            />
+          )}
+          {mobileExplorer && <div className="mobile-only mobile-explorer-host" onClick={reopen}><Suspense fallback={null}><Explorer phone /></Suspense></div>}
           <EditorTabs
             showing={showing}
             page={page}
@@ -207,7 +220,7 @@ export function App() {
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><Suspense fallback={<Loading />}><CodePane /></Suspense></div>
           <div className={`editor ${active === 'agents' ? 'shown' : ''}`}>{active === 'agents' && <Suspense fallback={<Loading />}><AgentsPane selected={agentSel} onSelect={setAgentSel} /></Suspense>}</div>
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <Suspense fallback={<Loading />}><BrowserPane onEmpty={() => setEditor('file')} /></Suspense>}</div>
-          {page && <PageView key={page} page={page} shown={active === page} project={project ?? 'this repo'} />}
+          {page && <PageView key={page} page={page} shown={active === page} project={project ?? 'this repo'} back={tab === 'code' && active === page ? closeTool : undefined} />}
           <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Suspense fallback={null}><FocusBar /></Suspense><Suspense fallback={<Loading />}><Assistant /></Suspense></Guard>}</div>
           <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>

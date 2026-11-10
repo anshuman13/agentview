@@ -1,8 +1,12 @@
 import { Component, Fragment, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { EditorView } from '@codemirror/view';
 import { api, setUi, useStore } from '../app/store';
 import { fileRequest } from './fileApi';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
+import { Menu, MenuItem } from '../ui/Menu';
+import { useSlot } from '../ui/util';
 import { FileIcon } from './FileIcon';
 import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
 import type { FileData } from './Editor';
@@ -82,6 +86,24 @@ function Toggle({ on, icon, title, onClick }: { on?: boolean; icon: string; titl
   );
 }
 
+function FileMenu() {
+  const slot = useSlot('page-file-action');
+  const [menu, setMenu] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  if (!slot) return null;
+  return createPortal(
+    <>
+      <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" small aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+      {menu && (
+        <Menu trigger={more} onClose={() => setMenu(false)}>
+          <MenuItem icon="close" onClick={() => { setMenu(false); setUi({ openFile: null }); }}>Close file</MenuItem>
+        </Menu>
+      )}
+    </>,
+    slot,
+  );
+}
+
 export function CodePane() {
   const openFile = useStore((s) => s.ui.openFile);
   const openLine = useStore((s) => s.ui.openLine);
@@ -154,6 +176,7 @@ export function CodePane() {
 
   return (
     <div className="cd-pane">
+      <FileMenu />
       <div className="cd-bar">
         <Breadcrumbs path={openFile} />
         <div className="cd-actions">

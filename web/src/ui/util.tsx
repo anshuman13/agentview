@@ -35,6 +35,13 @@ export function showChat() {
   else if (document.querySelector('.workbench')?.getAttribute('data-chat') === 'false') command('toggleChat');
 }
 
+// The element with this id once it is on screen, for a screen that portals its action into a header slot.
+export function useSlot(id: string) {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  useEffect(() => { const found = document.getElementById(id); setEl((prev) => (prev === found ? prev : found)); });
+  return el;
+}
+
 // A pane sends a prompt and shows the chat, so the reply is seen.
 export function askChat(text: string) {
   showChat();

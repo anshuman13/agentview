@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
@@ -10,7 +11,7 @@ import { call } from './opsApi';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
-import { ago, askChat, pressable } from '../ui/util';
+import { ago, askChat, pressable, useSlot } from '../ui/util';
 import { Skeleton } from '../ui/Skeleton';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
@@ -69,9 +70,11 @@ function Problem({ error }: { error: string }) {
 function PrList({ onOpen }: { onOpen: (n: number) => void }) {
   const cwd = useStore((s) => s.session.cwd);
   const { prs, error, loading } = useList();
+  const slot = useSlot('page-github-action');
+  const refresh = <IconButton icon="refresh" label="Refresh" size="sm" spin={loading} disabled={loading} onClick={() => load(cwd, true)} />;
   return (
     <div className="wk"><div className="wk-scroll"><div className="mt-page">
-      <Section label="Pull requests" count={loading && !prs.length ? undefined : prs.length} action={<IconButton icon="refresh" label="Refresh" size="sm" spin={loading} disabled={loading} onClick={() => load(cwd, true)} />} />
+      {slot ? createPortal(refresh, slot) : <Section label="Pull requests" count={loading && !prs.length ? undefined : prs.length} action={refresh} />}
       {error ? (
         <Problem error={error} />
       ) : !prs.length ? (
