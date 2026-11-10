@@ -138,6 +138,8 @@
   .cp-under { display: none; }
   .cp-pop { max-height: 40vh; max-height: 40dvh; }
 }
-.lc .ui-row { min-height: 0; padding: var(--sp-1) 0; }
+@media not ((max-width: 480px) or (pointer: coarse)) {
+  .lc .ui-row { min-height: 0; padding: var(--sp-1) 0; }
+}
 .lc .ui-row::after { display: none; }
 .lc .dot.running { background: var(--accent-fill); }
