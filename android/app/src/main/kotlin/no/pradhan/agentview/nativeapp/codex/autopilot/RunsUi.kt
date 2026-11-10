@@ -104,7 +104,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent
             }
             if (agents.size > MAX_AGENTS) ListRow("${agents.size - MAX_AGENTS} more agents", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, onClick = onOpenAgents)
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Text(progress?.let { "Plan $it" } ?: run.what, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(progress?.let { "Plan $it" } ?: run.what, Modifier.weight(1f).then(if (goal) Modifier.clickable(onClick = detail) else Modifier), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(money(run.costUsd, billing(run.provider)), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
             }
             run.rounds.lastOrNull { it.report != null }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(r, showTime = false, run.provider) } }
