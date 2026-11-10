@@ -31,11 +31,13 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.enc
-import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.grafanaDashboards
+import no.pradhan.agentview.nativeapp.net.grafanaLogs
+import no.pradhan.agentview.nativeapp.net.grafanaPanels
+import no.pradhan.agentview.nativeapp.net.grafanaPatterns
+import no.pradhan.agentview.nativeapp.net.observe
 import no.pradhan.agentview.nativeapp.net.refreshWorkspace
-import no.pradhan.agentview.nativeapp.net.write
+import no.pradhan.agentview.nativeapp.net.saveObserveConfig
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -69,7 +71,7 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
     var picked by rememberSaveable(chat) { mutableStateOf("") }
     var picking by remember { mutableStateOf(false) }
     var tick by remember { mutableIntStateOf(0) }
-    val (load, reload) = rememberLoad(chat, picked) { parseObserve(hub.read("/api/observe" + if (picked.isNotEmpty()) "?repo=${enc(picked)}" else "")) }
+    val (load, reload) = rememberLoad(chat, picked) { hub.observe(picked) }
     val info = load.data
     LaunchedEffect(Unit) { hub.refreshWorkspace() }
 
@@ -124,15 +126,14 @@ private fun Snowflake(sf: SnowflakeInfo) {
 private fun Grafana(hub: Hub, info: ObserveInfo) {
     var open by rememberSaveable { mutableStateOf(true) }
     val link = openLink()
-    val repo = enc(info.repo)
     Column {
         SectionHeader("Grafana", open = open, onToggle = { open = !open })
         if (!open) return@Column
         if (!info.grafanaServer) { EmptyState("No Grafana server", "Add the Grafana MCP server"); return@Column }
-        val (dash) = rememberLoad(info.repo, "dash") { protocolJson.decodeFromString(GrafanaDashboards.serializer(), hub.read("/api/observe/grafana/dashboards?repo=$repo")) }
-        val (panels) = rememberLoad(info.repo, "panels") { protocolJson.decodeFromString(GrafanaPanels.serializer(), hub.read("/api/observe/grafana/panels?repo=$repo")) }
-        val (logs) = rememberLoad(info.repo, "logs") { protocolJson.decodeFromString(GrafanaLogs.serializer(), hub.read("/api/observe/grafana/logs?repo=$repo")) }
-        val (pats) = rememberLoad(info.repo, "patterns") { protocolJson.decodeFromString(GrafanaPatterns.serializer(), hub.read("/api/observe/grafana/patterns?repo=$repo")) }
+        val (dash) = rememberLoad(info.repo, "dash") { hub.grafanaDashboards(info.repo) }
+        val (panels) = rememberLoad(info.repo, "panels") { hub.grafanaPanels(info.repo) }
+        val (logs) = rememberLoad(info.repo, "logs") { hub.grafanaLogs(info.repo) }
+        val (pats) = rememberLoad(info.repo, "patterns") { hub.grafanaPatterns(info.repo) }
 
         val boards = dash.data?.dashboards ?: emptyList()
         SectionHeader(if (dash.busy) "Looking for dashboards…" else plural(boards.size, "dashboard"), action = linkAction("Search", dash.data?.link, link))
@@ -248,7 +249,7 @@ private fun ObserveSettings(hub: Hub, info: ObserveInfo, onSaved: () -> Unit) {
             Row { Button("Save", {
                 val body = runCatching { observeConfigBody(info.repo, draft) }.getOrElse { error = it.message ?: "Invalid JSON"; state = "failed"; return@Button }
                 saving = true
-                hub.write("/api/observe/config", body, "Could not save the settings") { ok -> saving = false; state = if (ok) "saved" else "failed"; if (ok) onSaved() }
+                hub.saveObserveConfig(body) { ok -> saving = false; state = if (ok) "saved" else "failed"; if (ok) onSaved() }
             }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, enabled = !saving) }
         }
     }

@@ -25,9 +25,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.delay
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.enc
-import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.net.write
+import no.pradhan.agentview.nativeapp.net.deployJob
+import no.pradhan.agentview.nativeapp.net.deployStatus
+import no.pradhan.agentview.nativeapp.net.rollbackDeploy
+import no.pradhan.agentview.nativeapp.net.runDeploy
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -75,7 +76,7 @@ private fun PollDeployJob(hub: Hub, job: MutableState<DeployJob?>, reload: () ->
         while (!j.done && j.id.isNotEmpty()) {
             delay(3000)
             val was = j
-            j = runCatching { parseDeployJob(hub.read("/api/deploy/job/${was.id}")) }.getOrElse { was.copy(lines = was.lines + (it.message ?: "Lost the deploy"), done = true) }
+            j = runCatching { hub.deployJob(was.id) }.getOrElse { was.copy(lines = was.lines + (it.message ?: "Lost the deploy"), done = true) }
             job.value = j
         }
         reload()
@@ -88,14 +89,14 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
     val st by hub.store.state.collectAsState()
     val chat = st.shownId
     var app by rememberSaveable(chat) { mutableStateOf("") }
-    val (load, reload) = rememberLoad(chat, app) { parseDeploy(hub.read("/api/deploy/status" + if (app.isNotEmpty()) "?app=${enc(app)}" else "")) }
+    val (load, reload) = rememberLoad(chat, app) { hub.deployStatus(app) }
     WhileStarted(chat, app) { while (true) { delay(60_000); reload() } }
     val job = remember(chat) { mutableStateOf<DeployJob?>(null) }
     var ask by remember { mutableStateOf<DeployAsk?>(null) }
     val link = openLink()
     val s = load.data
     PollDeployJob(hub, job, reload)
-    val begin = { path: String, body: String -> hub.write(path, body, "Could not start the deploy", ::parseDeployJob) { if (it != null) job.value = it } }
+    val started = { j: DeployJob? -> if (j != null) job.value = j }
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Deploy", onBack, sub = s?.app) { IconBtn("refresh", "Refresh", reload) }
@@ -104,7 +105,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
                 if (load.error.contains("no deploy app")) item { EmptyState("No deploy app here", "This repo has no .deploy/app.yaml", action = { SetupButton(hub, "deploy") }, icon = "rocket") }
                 else item { ErrorHint(load.error) }
                 if (s == null && load.error.isEmpty()) item { Loading("Loading…") }
-                if (s != null) deployEnvs(s, System.currentTimeMillis(), link, begin, { app = it }) { ask = it }
+                if (s != null) deployEnvs(s, System.currentTimeMillis(), link, hub, started, { app = it }) { ask = it }
                 job.value?.let { deployJobSection(it, link) { job.value = null } }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }
@@ -116,7 +117,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
     }
 }
 
-private fun LazyListScope.deployEnvs(s: DeployStatus, now: Long, link: (String) -> Unit, begin: (String, String) -> Unit, onApp: (String) -> Unit, onAsk: (DeployAsk) -> Unit) {
+private fun LazyListScope.deployEnvs(s: DeployStatus, now: Long, link: (String) -> Unit, hub: Hub, started: (DeployJob?) -> Unit, onApp: (String) -> Unit, onAsk: (DeployAsk) -> Unit) {
     item {
         SectionHeader(s.app.ifEmpty { "Deploy" }, action = if (s.apps.size > 1) ({ MoreButton("Switch app") { close -> s.apps.forEach { a -> MenuItem(a, "rocket", { close(); onApp(a) }, checked = a == s.app) } } }) else null)
     }
@@ -124,7 +125,7 @@ private fun LazyListScope.deployEnvs(s: DeployStatus, now: Long, link: (String) 
         Group {
             s.envs.forEachIndexed { i, env ->
                 if (i > 0) Hairline()
-                EnvRow(env, s, now, link, begin, onAsk)
+                EnvRow(env, s, now, link, hub, started, onAsk)
             }
         }
     }
@@ -132,13 +133,13 @@ private fun LazyListScope.deployEnvs(s: DeployStatus, now: Long, link: (String) 
 }
 
 @Composable
-private fun EnvRow(env: DeployEnv, s: DeployStatus, now: Long, link: (String) -> Unit, begin: (String, String) -> Unit, onAsk: (DeployAsk) -> Unit) {
+private fun EnvRow(env: DeployEnv, s: DeployStatus, now: Long, link: (String) -> Unit, hub: Hub, started: (DeployJob?) -> Unit, onAsk: (DeployAsk) -> Unit) {
     val warn = deployWarning(env)
     fun deploy(ref: String?) {
         onAsk(DeployAsk(
             "Deploy to ${env.label}?",
             (if (ref != null) "Deploys ${shortSha(ref)} (HEAD of ${s.head.branch}) of ${s.app} to ${env.label} through the deploy service." else "Branch or commit of ${s.app} to deploy to ${env.label} through the deploy service.") + (warn?.let { " $it" } ?: ""),
-            "Deploy", { v -> begin("/api/deploy/run", deployBody(s.app, env.name, ref ?: v)) }, if (ref == null) s.head.branch else null,
+            "Deploy", { v -> hub.runDeploy(s.app, env.name, ref ?: v, started) }, if (ref == null) s.head.branch else null,
         ))
     }
     fun rollBack() {
@@ -147,7 +148,7 @@ private fun EnvRow(env: DeployEnv, s: DeployStatus, now: Long, link: (String) ->
         if (to != null && d != null) onAsk(DeployAsk(
             "Roll back ${env.label}?",
             "Redeploys ${shortSha(to.sha)} (deployed ${agoShort(isoMillis(to.at), now, " ago")}) in place of ${shortSha(d.sha)}." + (warn?.let { " $it" } ?: ""),
-            "Roll back", { begin("/api/deploy/rollback", rollbackBody(s.app, env.name, to.sha)) },
+            "Roll back", { hub.rollbackDeploy(s.app, env.name, to.sha, started) },
         ))
     }
     ListRow(env.label, envMetaLine(env, s, now), trailing = {

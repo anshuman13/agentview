@@ -29,8 +29,9 @@ import no.pradhan.agentview.nativeapp.chat.firstLine
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.providerLabel
-import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.net.write
+import no.pradhan.agentview.nativeapp.net.actOnPull
+import no.pradhan.agentview.nativeapp.net.pullDetail
+import no.pradhan.agentview.nativeapp.net.pulls
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -74,8 +75,6 @@ import no.pradhan.agentview.nativeapp.workspace.langOf
 import no.pradhan.agentview.nativeapp.workspace.mergeBody
 import no.pradhan.agentview.nativeapp.workspace.openLink
 import no.pradhan.agentview.nativeapp.workspace.parentOf
-import no.pradhan.agentview.nativeapp.workspace.parsePullDetail
-import no.pradhan.agentview.nativeapp.workspace.parsePulls
 import no.pradhan.agentview.nativeapp.workspace.patchLines
 import no.pradhan.agentview.nativeapp.workspace.prGroups
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
@@ -90,9 +89,9 @@ fun PullsScreen(hub: Hub, onBack: () -> Unit, initial: Int? = null) {
     val chat = st.shownId
     var fresh by remember { mutableStateOf(false) }
     val (load, reload) = rememberLoad(chat) {
-        val q = if (fresh) "?fresh=1" else ""
+        val was = fresh
         fresh = false
-        parsePulls(hub.read("/api/gh/prs$q"))
+        hub.pulls(was)
     }
     var open by rememberSaveable(chat) { mutableStateOf(initial) }
     val pr = load.data?.firstOrNull { it.number == open }
@@ -156,14 +155,14 @@ private class PullUi {
 private class PullCtx(val hub: Hub, val pr: PullRequest, val ui: PullUi, private val reload: () -> Unit, private val onChanged: () -> Unit) {
     fun act(label: String, path: String, body: String, done: () -> Unit = {}) {
         ui.busy = label
-        hub.write("/api/gh/pr/${pr.number}/$path", body, "Could not $label") { ok -> ui.busy = ""; if (ok) { done(); reload(); onChanged() } }
+        hub.actOnPull(pr.number, path, body, "Could not $label") { ok -> ui.busy = ""; if (ok) { done(); reload(); onChanged() } }
     }
 }
 
 @Composable
 private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged: () -> Unit) {
     BackHandler(onBack = onBack)
-    val (load, reload) = rememberLoad(pr.number, pr.sha) { parsePullDetail(hub.read("/api/gh/pr/${pr.number}")) }
+    val (load, reload) = rememberLoad(pr.number, pr.sha) { hub.pullDetail(pr.number) }
     val ui = remember { PullUi() }
     val c = PullCtx(hub, pr, ui, reload, onChanged)
     var text by rememberSaveable(pr.number) { mutableStateOf("") }

@@ -24,9 +24,10 @@ import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.command
 import no.pradhan.agentview.nativeapp.net.quietCommand
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.mcpConnectors
+import no.pradhan.agentview.nativeapp.net.mcpProbe
 import no.pradhan.agentview.nativeapp.net.refreshMcpGroups
-import no.pradhan.agentview.nativeapp.net.write
+import no.pradhan.agentview.nativeapp.net.saveMcpGroup
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -58,18 +59,18 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     var refresh by remember { mutableStateOf(false) }
     var accounts by remember { mutableStateOf<Map<String, List<McpConnector>>>(emptyMap()) }
     val (probe, reprobe) = rememberLoad(chat) {
-        val q = if (refresh) "?refresh=1" else ""
+        val fresh = refresh
         refresh = false
         hub.quietCommand(mcpStatusCmd())
         coroutineScope {
             if (connectors) launch {
-                runCatching { parseConnectors(hub.read("/api/mcp/connectors$q")) }.onSuccess { a ->
+                runCatching { hub.mcpConnectors(fresh) }.onSuccess { a ->
                     accounts = a
                     val s = hub.store.state.value.session
                     mcpLoggedInSince(s?.mcp ?: emptyList(), s?.account, a).forEach { hub.quietCommand(mcpReconnectCmd(it)) }
                 }
             }
-            parseMcp(hub.read("/api/mcp/probe$q"))
+            hub.mcpProbe(fresh)
         }
     }
     val groups by hub.mcpGroups.collectAsState()
@@ -86,7 +87,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     fun setGroup(service: String, group: String) {
         val before = groups
         hub.mcpGroups.value = if (group == "shown") groups - service else groups + (service to group)
-        hub.write("/api/mcp/groups", mcpGroupBody(service, group), "Could not save the group") { ok -> if (!ok) hub.mcpGroups.value = before }
+        hub.saveMcpGroup(service, group) { ok -> if (!ok) hub.mcpGroups.value = before }
     }
 
     val current = rows.firstOrNull { mcpKey(it) == sel }
