@@ -107,7 +107,17 @@ data class LiveChat(
     val todos: LiveTodos? = null,
     val recap: String? = null,
     val run: LiveRun? = null,
+    val agentList: List<LiveAgent> = emptyList(),
+    val now: LiveNow? = null,
 )
+
+// shared/protocol.ts LiveAgent: a running subagent of a chat.
+@Serializable
+data class LiveAgent(val id: String, val description: String = "", val type: String = "", val slug: String? = null, val startedAt: Long = 0)
+
+// shared/protocol.ts LiveNow: the agent's last set_status with its detail.
+@Serializable
+data class LiveNow(val text: String = "", val at: Long = 0, val done: String? = null, val next: List<String>? = null)
 
 // shared/protocol.ts LiveChat.todos: how far Claude's to-do list is, while it has items left.
 @Serializable
