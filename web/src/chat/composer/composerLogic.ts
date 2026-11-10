@@ -4,7 +4,7 @@ import { toolId } from '../../ops/mcpHelpers';
 import { compactAt, type Account, type ChatEvent, type ChatRun, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
 import { apiUrl, fetchJson } from '../../app/api';
 import { createTerm, listTerms } from '../../workspace/termApi';
-import { clock, isBlock, span } from '../../../../shared/util';
+import { clock, isBlock } from '../../../../shared/util';
 import { timedMeetings } from '../../../../shared/plan';
 import { profileOfPath } from '../../../../shared/workspace';
 import { live, type Meeting } from '../../codex/data/wiki/wiki';
@@ -123,11 +123,12 @@ const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', cycl
 
 export function runLine(run: ChatRun, phase: string | null = null) {
   if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
-  if (run.kind === 'goal' && run.every) return `Standing goal · every ${span(run.every)} · at most ${Math.floor(86_400_000 / run.every)} rounds a day`;
+  const next = run.nextAt ? ` · next ${clock(run.nextAt)}` : '';
+  if (run.kind === 'goal' && run.every) return `Standing goal · round ${run.round}${next}`;
   if (run.kind === 'goal') return `Goal · check ${run.round} of ${run.max}`;
   if (run.kind === 'tries') return `Tries · ${run.tries?.filter((t) => !t.dropped).length ?? 0} chats`;
   if (run.kind === 'cycle') return `Build cycle · round ${run.round}/${run.max}${phase && phase !== 'passed' && phase !== 'failed' ? ` · ${phase[0].toUpperCase()}${phase.slice(1)}` : ''}`;
-  return `Loop · round ${run.round}${run.nextAt ? ` · next ${clock(run.nextAt)}` : ''}`;
+  return `Loop · round ${run.round}${next}`;
 }
 
 // The prompt of a round is in the transcript; it may take a moment to show after the chat opens.

@@ -241,8 +241,8 @@ describe('runLine', () => {
     expect(runLine(run({}))).toBe('Loop · round 4');
     expect(runLine(run({ state: 'paused', why: 'usage limit until 18:00' }))).toBe('Paused · usage limit until 18:00');
     expect(runLine(run({ kind: 'goal', round: 3, max: 20 }))).toBe('Goal · check 3 of 20');
-    expect(runLine(run({ kind: 'goal', round: 3, every: 3_600_000 }))).toBe('Standing goal · every 1h · at most 24 rounds a day');
-    expect(runLine(run({ kind: 'goal', every: 30 * 60_000 }))).toBe('Standing goal · every 30m · at most 48 rounds a day');
+    expect(runLine(run({ kind: 'goal', round: 12, every: 3_600_000, nextAt: new Date(2026, 10, 9, 14, 20).getTime() }))).toBe('Standing goal · round 12 · next 14:20');
+    expect(runLine(run({ kind: 'goal', round: 3, every: 3_600_000 }))).toBe('Standing goal · round 3');
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'test')).toBe('Build cycle · round 2/3 · Test');
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'passed')).toBe('Build cycle · round 2/3');
   });

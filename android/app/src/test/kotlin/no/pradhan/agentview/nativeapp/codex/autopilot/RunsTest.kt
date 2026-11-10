@@ -37,8 +37,7 @@ class RunsTest {
     @Test fun stateLineForRunningPausedAndDone() {
         assertEquals("Loop · round 4 · next 14:20", runLine(run("a")))
         assertEquals("Goal · check 4 of 20", runLine(run("a", kind = "goal")))
-        assertEquals("Standing goal · every 1h · at most 24 rounds a day", runLine(run("a", kind = "goal", every = 3_600_000L)))
-        assertEquals("Standing goal · every 30m · at most 48 rounds a day", runLine(run("a", kind = "goal", every = 1_800_000L)))
+        assertEquals("Standing goal · round 4 · next 14:20", runLine(run("a", kind = "goal", every = 3_600_000L)))
         assertEquals("Build cycle · round 4/20 · Test", runLine(run("a", kind = "cycle"), "test"))
         assertEquals("Build cycle · round 4/20", runLine(run("a", kind = "cycle"), "passed"))
         assertEquals("Paused · usage limit until 18:00", runLine(run("a", "paused", why = "usage limit until 18:00")))

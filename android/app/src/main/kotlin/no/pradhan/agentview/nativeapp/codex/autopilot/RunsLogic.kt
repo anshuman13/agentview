@@ -21,12 +21,14 @@ private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "cycle" to "Build c
 
 fun runLine(run: ChatRun, phase: String? = null): String = when {
     run.state == "paused" -> if (run.why.isNotEmpty()) "Paused · ${run.why}" else "Paused"
-    run.kind == "goal" && run.every != null -> "Standing goal · every ${everyText(run.every)} · at most ${86_400_000L / run.every} rounds a day"
+    run.kind == "goal" && run.every != null -> "Standing goal · round ${run.round}" + nextText(run)
     run.kind == "goal" -> "Goal · check ${run.round} of ${run.max}"
     run.kind == "tries" -> "Tries · ${run.tries.count { !it.dropped }} chats"
     run.kind == "cycle" -> "Build cycle · round ${run.round}/${run.max}" + (phase?.takeIf { it != "passed" && it != "failed" }?.let { " · ${it.replaceFirstChar(Char::uppercase)}" } ?: "")
-    else -> "Loop · round ${run.round}" + (run.nextAt?.let { " · next ${clock(it)}" } ?: "")
+    else -> "Loop · round ${run.round}" + nextText(run)
 }
+
+private fun nextText(run: ChatRun) = run.nextAt?.let { " · next ${clock(it)}" } ?: ""
 
 fun everyText(ms: Long) = if (ms % 3_600_000L == 0L) "${ms / 3_600_000L}h" else "${ms / 60_000L}m"
 
