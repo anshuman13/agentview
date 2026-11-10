@@ -128,7 +128,7 @@ private fun McpGroup(rows: List<McpRow>, calls: Map<String, Pair<Int, Int>>, onO
         rows.forEachIndexed { i, r ->
             if (i > 0) Hairline()
             val (label, tone) = mcpState(r)
-            ListRow(mcpShortName(r.name), mcpMeta(r, calls[mcpSlug(r.name)]).ifEmpty { null }, lines = 1, trailing = { Badge(if (r.status == "needs-auth" && tone == BadgeTone.Waiting) "Needs you" else label, tone) }, onClick = { onOpen(r) })
+            ListRow(mcpShortName(r.name), mcpMeta(r, calls[mcpSlug(r.name)]).ifEmpty { null }, lines = 1, state = { Badge(if (r.status == "needs-auth" && tone == BadgeTone.Waiting) "Needs you" else label, tone) }, onClick = { onOpen(r) })
         }
     }
 }
