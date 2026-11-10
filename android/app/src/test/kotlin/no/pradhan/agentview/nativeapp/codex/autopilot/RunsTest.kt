@@ -12,6 +12,7 @@ import no.pradhan.agentview.nativeapp.net.LiveNow
 import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -70,6 +71,24 @@ class RunsTest {
         assertEquals(setOf("blocked", "approval", "job:bad"), b.needs.map(::name).toSet())
         assertEquals(setOf("cleared", "paused", "job:busy"), b.running.map(::name).toSet())
         assertEquals(listOf("old"), b.finished.map { it.id })
+    }
+
+    @Test fun pendingJobRunsGoToReviewAndOldPayloadsParse() {
+        val pending = ChatRun("p", "job", branch = "job/x", needsYou = true, review = "pending", startedAt = 2)
+        val other = ChatRun("o", "job", needsYou = true, startedAt = 1)
+        val b = runBands(listOf(other, pending, run("loop", needsYou = true)), emptyList(), emptyList(), 10)
+        assertEquals(listOf("p"), b.review.map { it.id })
+        assertEquals(setOf("o", "loop"), b.needs.map(::name).toSet())
+        val old = protocolJson.decodeFromString(ChatRun.serializer(), """{"id":"a","kind":"job"}""")
+        assertEquals(null, old.review)
+        assertEquals(null, old.pr)
+    }
+
+    @Test fun reviewMetaShowsBranchSizeAndAge() {
+        val diff = parseRunDiff("""{"branch":"job/x","files":[{"path":"a.ts","additions":3,"deletions":1},{"path":"b.ts","additions":2,"deletions":0}],"diff":""}""")
+        val r = ChatRun("p", "job", branch = "job/x", startedAt = 60_000)
+        assertEquals("job/x · +5 -1 · 2 files · 2m ago", reviewMeta(r, diff, 180_000))
+        assertEquals("job/x · 2m ago", reviewMeta(r, null, 180_000))
     }
 
     @Test fun badgeAndSessionsCount() {

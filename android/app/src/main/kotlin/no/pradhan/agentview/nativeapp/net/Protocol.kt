@@ -170,6 +170,8 @@ data class ChatRun(
     val tries: List<RunTry> = emptyList(),
     val needsYou: Boolean = false,
     val branch: String = "",
+    val review: String? = null,
+    val pr: String? = null,
 )
 
 @Serializable

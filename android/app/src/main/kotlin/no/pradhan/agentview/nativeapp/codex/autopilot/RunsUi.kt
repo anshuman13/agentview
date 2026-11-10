@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -139,6 +141,7 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
     val state by hub.store.state.collectAsState()
     val codex by hub.codex.state.collectAsState()
     val scope = rememberCoroutineScope()
+    val uri = LocalUriHandler.current
     var finishedOpen by rememberSaveable { mutableStateOf(false) }
     val now = System.currentTimeMillis()
     val bands = remember(state.runs, codex.jobs, codex.runs, now / 60_000) { runBands(state.runs, codex.jobs, codex.runs, now) }
@@ -156,9 +159,12 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
         is RunEntry.Chat -> {
             val last = e.run.rounds.lastOrNull()
             ListRow(
-                e.run.title.ifBlank { "Untitled" }, runLine(e.run), onClick = { when (e.run.kind) { "tries" -> board = e.run.id; "goal" -> hub.goalSheet.value = GoalSheet.Detail(e.run.id); else -> openChat(e.run) } },
+                e.run.title.ifBlank { "Untitled" }, if (e.run.pr != null) "PR opened" else runLine(e.run), onClick = { when (e.run.kind) { "tries" -> board = e.run.id; "goal" -> hub.goalSheet.value = GoalSheet.Detail(e.run.id); else -> openChat(e.run) } },
                 below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(roundText(it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
-                trailing = { RowLabel(money(e.run.costUsd, billing(e.run.provider))) },
+                trailing = {
+                    RowLabel(money(e.run.costUsd, billing(e.run.provider)))
+                    e.run.pr?.let { url -> IconBtn("link-external", "Open PR", { uri.openUri(url) }) }
+                },
             )
         }
         is RunEntry.Job -> ListRow(
@@ -169,11 +175,15 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
 
     Column(Modifier.fillMaxSize()) {
         PageHeader("Runs", onBack) { IconBtn("add", "New goal", { hub.goalSheet.value = GoalSheet.Start() }) }
-        if (bands.needs.isEmpty() && bands.running.isEmpty() && bands.finished.isEmpty()) {
+        if (bands.review.isEmpty() && bands.needs.isEmpty() && bands.running.isEmpty() && bands.finished.isEmpty()) {
             EmptyState("Loops, goals and scheduled jobs you start show here", icon = "sync", action = { Button("New goal", { hub.goalSheet.value = GoalSheet.Start() }, size = ButtonSize.Sm) })
             return@Column
         }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = Tokens.sp8)) {
+            if (bands.review.isNotEmpty()) {
+                item(key = "review-head") { SectionHeader("To review", bands.review.size.toString(), color = av.warn) }
+                items(bands.review, key = { "review-${it.id}" }) { Column { ReviewCard(hub, it, now, onChat) } }
+            }
             if (bands.needs.isNotEmpty()) {
                 item(key = "needs-head") { SectionHeader("Needs you", bands.needs.size.toString(), color = av.warn) }
                 lazyGroup(bands.needs, { entryKey(it) }) { entry(it) }

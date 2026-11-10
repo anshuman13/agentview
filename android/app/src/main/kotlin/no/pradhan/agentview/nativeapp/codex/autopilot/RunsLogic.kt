@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
+import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.JobState
@@ -12,8 +13,12 @@ import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
+import no.pradhan.agentview.nativeapp.net.protocolJson
+import no.pradhan.agentview.nativeapp.ops.plural
 import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.DotState
+import no.pradhan.agentview.nativeapp.workspace.PrFile
+import no.pradhan.agentview.nativeapp.workspace.agoShort
 
 // Loops, goals and build cycles (web/src/chat/composerLogic.ts runLine and the Runs page bands).
 
@@ -98,14 +103,29 @@ sealed interface RunEntry {
     data class Job(val row: Row, val state: JobState) : RunEntry
 }
 
-data class RunBands(val needs: List<RunEntry>, val running: List<RunEntry>, val finished: List<ChatRun>)
+data class RunBands(val review: List<ChatRun>, val needs: List<RunEntry>, val running: List<RunEntry>, val finished: List<ChatRun>)
 
 fun runBands(runs: List<ChatRun>, jobs: List<Row>, jobRuns: List<Row>, now: Long): RunBands {
-    val active = runs.filter { it.state != "done" }.sortedByDescending { it.startedAt }
+    val open = runs.filter { it.state != "done" }.sortedByDescending { it.startedAt }
+    val review = open.filter { it.kind == "job" && it.review == "pending" }
+    val active = open - review.toSet()
     val states = jobs.filter { !it.deleted }.mapNotNull { j -> jobState(j, jobRuns, now)?.let { RunEntry.Job(j, it) } }
     return RunBands(
+        review = review,
         needs = active.filter { it.needsYou }.map { RunEntry.Chat(it) } + states.filter { it.state == JobState.Failed },
         running = active.filterNot { it.needsYou }.map { RunEntry.Chat(it) } + states.filter { it.state == JobState.Running || it.state == JobState.Queued },
         finished = runs.filter { it.state == "done" }.sortedByDescending { it.endedAt ?: it.startedAt }.take(RUNS_FINISHED),
     )
+}
+
+// The diff of a job run for review (web sessionApi RunDiff), from /api/runs/diff.
+@Serializable
+data class RunDiff(val branch: String = "", val files: List<PrFile> = emptyList(), val diff: String = "")
+
+fun parseRunDiff(body: String): RunDiff = protocolJson.decodeFromString(RunDiff.serializer(), body)
+
+// The review summary row's meta (web ReviewCard): "<branch> · +A -D · N files · <ago>".
+fun reviewMeta(run: ChatRun, diff: RunDiff?, now: Long): String {
+    val size = diff?.let { d -> listOf("+${d.files.sumOf { it.additions }} -${d.files.sumOf { it.deletions }}", plural(d.files.size, "file")) } ?: emptyList()
+    return (listOf(run.branch) + size + agoShort(run.rounds.lastOrNull()?.at ?: run.startedAt, now, " ago")).joinToString(" · ")
 }
