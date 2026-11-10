@@ -14,6 +14,7 @@ import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protoco
 import { ago, usePoll, useSlot } from '../ui/util';
 import '../styles/features/deploy.css';
 import { Badge } from '../ui/Badge';
+import { SetupButton } from './SetupButton';
 import { createStore } from '../ui/createStore';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
@@ -178,7 +179,7 @@ export function Deploy() {
         </>
       } />}
       {error && (error.includes('no deploy app')
-        ? <EmptyState size="sm" title="No deploy app here" hint="This repo has no .deploy/app.yaml" />
+        ? <EmptyState size="sm" icon="rocket" title="No deploy app here" hint="This repo has no .deploy/app.yaml" action={<SetupButton kind="deploy" />} />
         : <div className="deploy-error" role="alert"><Icon name="error" small /> {error}</div>)}
       {s && (
         <>

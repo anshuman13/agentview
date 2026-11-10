@@ -5,6 +5,7 @@ import { api, useStore } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
+import { EmptyState } from '../ui/Panel';
 import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
 import '../styles/features/observe.css';
@@ -14,6 +15,7 @@ import '../styles/features/meetings.css';
 import { Grafana } from './Grafana';
 import { Snowflake } from './Snowflake';
 import { Err, Loading, post } from './observeShared';
+import { SetupButton } from './SetupButton';
 
 const SAVE_BADGE: Record<'unsaved' | 'saved' | 'failed', BadgeSpec> = { unsaved: { status: 'waiting', reason: 'Unsaved' }, saved: { status: 'done' }, failed: { status: 'failed' } };
 
@@ -101,7 +103,6 @@ export function Observe() {
       (i) => {
         if (!live) return;
         show(i);
-        setSettingsOpen(!i.config);
       }, (e) => live && setError(e.message),
     );
     return () => void (live = false);
@@ -141,9 +142,7 @@ export function Observe() {
       {info && (
         <>
           {!info.config && (
-            <div className="obs-hint setup">
-              No Grafana settings for <b>{info.repo}</b> yet. The settings below are a guess: check them and click Save. They live in {info.file}.
-            </div>
+            <EmptyState size="sm" icon="pulse" title={`No Grafana settings for ${info.repo}`} hint="The agent can find them and save the settings" action={<SetupButton kind="observe" repo={info.repo} />} />
           )}
           <Grafana key={`g-${info.repo}`} info={info} />
           <Snowflake info={info} onInfo={setInfo} />

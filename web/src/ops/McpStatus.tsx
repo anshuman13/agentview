@@ -12,6 +12,7 @@ import { mcpRows } from './mcpRows';
 import { useMcpHealth } from './mcpShown';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
 import { Detail } from './McpDetail';
+import { SetupButton } from './SetupButton';
 import { ServiceRow } from './McpServiceRow';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
@@ -74,7 +75,7 @@ export function McpPage() {
           <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
         )}
         {probed !== null && rows.length === 0 && (
-          <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint={connectors ? <>Add one with <code>claude mcp add</code> or connect one on claude.ai, then check again.</> : <>Add one with <code>codex mcp add</code>, then check again.</>} />
+          <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint="Servers you add show here" action={<SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} />} />
         )}
         {!connectors && <div className="muted">claude.ai connectors load in Claude chats only</div>}
         {(['work', 'personal'] as Group[]).map((g) => {

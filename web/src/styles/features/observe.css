@@ -11,10 +11,6 @@
 .observe .obs-hint.error { color: var(--err); }
 .observe .obs-hint.warn { color: var(--warn); }
 .observe .obs-hint.ok { color: var(--ok); }
-.observe .obs-hint.setup {
-  margin: 0 0 var(--sp-4); padding: var(--sp-4) var(--sp-5); display: block; color: var(--fg); background: var(--bg);
-  border: 1px solid var(--border); border-left: 2px solid var(--warn); border-radius: var(--radius-sm);
-}
 .observe .obs-hint.mono { font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-muted); }
 
 .observe .obs-body { padding: var(--sp-1) 0 var(--sp-5); }
