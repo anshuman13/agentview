@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
+import path from 'node:path';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { verifyLimit } from '../../../server/src/agent/claude/accounts.js';
@@ -21,7 +22,7 @@ export { nextRun };
 
 const KEEP = 20;
 
-type Job = { id: string; profile: Profile; name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null; tools: string | null };
+type Job = { id: string; profile: Profile; name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null; tools: string | null; repo: string | null };
 
 // The tools a job may use beyond reading: "browser" for AgentView's own Chrome, or MCP tool names, where a trailing * matches a prefix.
 export function jobAllows(tools: string | null) {
@@ -100,10 +101,24 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
   return { result, added, notified, cost };
 }
 
+// A job with a repo starts a worktree chat on the AgentView server of this Mac, which does the work; returns the run's output.
+async function startCoding(job: Job, repo: string) {
+  const res = await fetch(`${process.env.AGENTVIEW_URL ?? 'http://127.0.0.1:7777'}/api/jobs/start`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jobId: job.id, title: job.name ?? 'Job', repo, prompt: job.prompt }),
+    signal: AbortSignal.timeout(2 * MIN),
+  }).catch((err) => Promise.reject(new Error(`Could not start: ${errText(err)}`)));
+  if (res.status === 409) return 'Skipped: the last run is still open';
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(`Could not start: ${body?.error ?? res.status}`);
+  return `Started ${body.branch} in ${path.basename(repo)}`;
+}
+
 // Fills in the next run of enabled jobs that have none and returns the jobs that are due. A job that is off has a next
 // run only when Run now was pressed.
 export function dueJobs(db: Database, now = Date.now()): Job[] {
-  const jobs = db.prepare('SELECT id, profile, name, schedule, prompt, enabled, next_run_at, tools FROM jobs WHERE deleted = 0').all() as Job[];
+  const jobs = db.prepare('SELECT id, profile, name, schedule, prompt, enabled, next_run_at, tools, repo FROM jobs WHERE deleted = 0').all() as Job[];
   const plan: Change[] = [];
   for (const j of jobs) {
     if (j.next_run_at != null || !j.enabled) continue;
@@ -132,9 +147,9 @@ export async function runDue(db: Database, now = Date.now(), run: typeof runJob 
 
 async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof pushNtfy, reply: typeof replyToCommand) {
   // Earlier jobs can run for minutes; skip or update this one if it was turned off, deleted or edited meanwhile.
-  const live = db.prepare('SELECT prompt, tools, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; tools: string | null; next_run_at: number | null; field_times: string } | null;
+  const live = db.prepare('SELECT prompt, tools, repo, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; tools: string | null; repo: string | null; next_run_at: number | null; field_times: string } | null;
   if (!live || live.next_run_at == null || live.next_run_at > Date.now() || !live.prompt?.trim()) return;
-  const job = { ...due, prompt: live.prompt, tools: live.tools };
+  const job = { ...due, prompt: live.prompt, tools: live.tools, repo: live.repo };
   const planned = JSON.parse(live.field_times).next_run_at;
   if (await verifyLimit(ACCOUNT_OF[job.profile])) return;
   const id = randomUUID();
@@ -145,12 +160,15 @@ async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof
   let notified = false;
   let cost: number | null = null;
   try {
-    // Two jobs on AgentView's one Chrome would fight over its tabs, so browser jobs take turns.
-    const go = () => run(db, job, notify);
-    const { result, added, ...r } = await (jobAllows(job.tools).browser ? serial('job-browser', go) : go());
-    notified = r.notified;
-    cost = r.cost;
-    output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n') || 'Finished with nothing to report';
+    if (job.repo) output = await startCoding(job, job.repo);
+    else {
+      // Two jobs on AgentView's one Chrome would fight over its tabs, so browser jobs take turns.
+      const go = () => run(db, job, notify);
+      const { result, added, ...r } = await (jobAllows(job.tools).browser ? serial('job-browser', go) : go());
+      notified = r.notified;
+      cost = r.cost;
+      output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n') || 'Finished with nothing to report';
+    }
   } catch (err) {
     status = 'error';
     output = errText(err);
@@ -168,7 +186,7 @@ async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof
   applyChanges(db, changes);
   prune(db, job, done);
   await reply(db, job.id, status === 'ok', output);
-  if (status !== 'ok' || (!notified && /\b(push|notify)\b/i.test(job.prompt ?? ''))) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
+  if (status !== 'ok' || (!job.repo && !notified && /\b(push|notify)\b/i.test(job.prompt ?? ''))) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
 }
 
 // A run cut off by a hub restart is marked failed; its job runs again at the next tick.

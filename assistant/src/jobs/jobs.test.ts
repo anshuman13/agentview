@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { openDb } from '../core/db.js';
 import { applyChanges } from '../core/sync.js';
 import { canRead, dropOrphanRuns, dueJobs, jobAllows, nextRun, orphansDue, runDue } from './jobs.js';
@@ -124,6 +124,47 @@ describe('runDue', () => {
     const { db, now } = seed(1);
     await runDue(db, now, async () => ({ result: 'done', added: [], notified: false, cost: 0.04 }), async () => true, reply);
     expect(db.prepare('SELECT cost FROM runs').all()).toEqual([{ cost: 0.04 }]);
+  });
+  describe('coding jobs', () => {
+    const realFetch = globalThis.fetch;
+    afterEach(() => {
+      globalThis.fetch = realFetch;
+    });
+    const seedRepo = () => {
+      const db = openDb(':memory:');
+      const now = Date.now();
+      applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: 1, fields: { name: 'Fix tests', schedule: 'daily 09:00', prompt: 'push the fix', enabled: 1, next_run_at: now - 1, repo: '/Users/me/workspace/app' } }]);
+      return { db, now };
+    };
+    const never = async () => {
+      throw new Error('runJob called');
+    };
+    const go = async (answer: () => Response | Promise<Response>) => {
+      const { db, now } = seedRepo();
+      const calls: { url: string; body: unknown }[] = [];
+      globalThis.fetch = (async (url: string, init: RequestInit) => (calls.push({ url, body: JSON.parse(String(init.body)) }), await new Promise((r) => setTimeout(r, 5)), answer())) as never;
+      const pushes: string[] = [];
+      await runDue(db, now, never, async (t: string) => (pushes.push(t), true), reply);
+      return { calls, pushes, run: db.prepare('SELECT status, output FROM runs').get() };
+    };
+    test('posts the job to the server and records the branch it started', async () => {
+      const { calls, pushes, run } = await go(() => Response.json({ chatId: 'c1', branch: 'jobs/fix-tests-1105' }));
+      expect(calls).toEqual([{ url: 'http://127.0.0.1:7777/api/jobs/start', body: { jobId: 'a', title: 'Fix tests', repo: '/Users/me/workspace/app', prompt: 'push the fix' } }]);
+      expect(run).toEqual({ status: 'ok', output: 'Started jobs/fix-tests-1105 in app' });
+      expect(pushes).toEqual([]);
+    });
+    test('an open last run is skipped without a push', async () => {
+      const { pushes, run } = await go(() => Response.json({ error: 'The last run is still open' }, { status: 409 }));
+      expect(run).toEqual({ status: 'ok', output: 'Skipped: the last run is still open' });
+      expect(pushes).toEqual([]);
+    });
+    test('a server that is down or answers an error is a failed run with a push', async () => {
+      const down = await go(() => Promise.reject(new Error('connect refused')));
+      expect(down.run).toEqual({ status: 'error', output: 'Could not start: connect refused' });
+      expect(down.pushes).toEqual(['Fix tests failed']);
+      const bad = await go(() => Response.json({ error: 'Not a workspace repo' }, { status: 400 }));
+      expect(bad.run).toEqual({ status: 'error', output: 'Could not start: Not a workspace repo' });
+    });
   });
   describe('concurrency', () => {
     const seedMany = (ids: string[]) => {
