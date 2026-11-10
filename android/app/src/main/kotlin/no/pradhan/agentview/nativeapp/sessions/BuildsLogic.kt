@@ -77,6 +77,21 @@ fun stageName(stage: String) = STAGE_NAME[stage] ?: stage
 
 private val PIPELINE_LABEL = mapOf("written" to "Spec written", "reviewed" to "Spec reviewed", "implemented" to "Implemented", "tested" to "Tested", "code-reviewed" to "Code reviewed", "merged" to "Merged")
 
+private val HAND = mapOf("pm" to "pm", "spec-reviewer" to "review", "implementer" to "implement", "tester" to "test", "code-reviewer" to "code-review")
+private val LABEL = mapOf("pm" to "pm", "review" to "review", "impl" to "implement", "test" to "test", "code-review" to "code-review")
+private val BUILD_LABEL = Regex("^(pm|review|impl|test|code-review):([\\w.-]+)(?:#(\\w+))?$")
+private val BUILD_SPEC = Regex("\\.claude/specs/([\\w.-]+?)\\.md")
+
+class BuildTarget(val stage: String, val slug: String)
+
+// shared/builds.ts buildStageOf: the stage and slug a build agent works on, from its /build label or the spec path in a hand run's prompt.
+fun buildStageOf(subagentType: String, description: String, prompt: String): BuildTarget? {
+    val ok = { slug: String? -> slug != null && slug.isNotEmpty() && !slug.contains("..") }
+    BUILD_LABEL.find(description.trim())?.let { m -> if (ok(m.groupValues[2])) return BuildTarget(LABEL.getValue(m.groupValues[1]), m.groupValues[2]) }
+    val slug = BUILD_SPEC.find(prompt)?.groupValues?.get(1)
+    return HAND[subagentType]?.takeIf { ok(slug) }?.let { BuildTarget(it, slug!!) }
+}
+
 fun pipelineLabel(pipeline: String) = PIPELINE_LABEL[pipeline] ?: pipeline
 
 fun stateDot(state: String) = when (state) { "done" -> DotState.Ok; "failed" -> DotState.Bad; "waiting" -> DotState.Warn; else -> DotState.Faint }

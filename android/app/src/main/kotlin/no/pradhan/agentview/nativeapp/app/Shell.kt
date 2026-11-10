@@ -157,6 +157,7 @@ private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostStat
     LaunchedEffect(link) {
         val l = link ?: return@LaunchedEffect
         l.chat?.let { hub.open(it) }
+        l.slug?.let { hub.buildSlug.value = it }
         if (l.action == Shortcut.NEW_CHAT) hub.newChat()
         if (l.action == Shortcut.ADD_TASK) hub.addTask.value = true
         routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.openMore(r) else nav.goTab(r) }

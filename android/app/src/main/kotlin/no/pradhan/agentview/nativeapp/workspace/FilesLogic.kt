@@ -112,6 +112,10 @@ private val FENCE = Regex("^\\s*(`{3,}|~{3,})")
 
 fun isSpecPath(path: String) = SPEC_PATH.containsMatchIn(path)
 
+private val KIRO_FOLDER = Regex("(?:^|/)\\.kiro/specs/([^/]+)/")
+
+fun specSlug(path: String) = KIRO_FOLDER.find(path)?.groupValues?.get(1) ?: path.substringAfterLast('/').replace(Regex("\\.\\w+$"), "")
+
 fun specTasks(markdown: String): List<SpecTask> {
     val tasks = mutableListOf<SpecTask>()
     var fence = ""

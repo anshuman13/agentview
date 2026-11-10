@@ -86,6 +86,8 @@ fun BuildsScreen(hub: Hub, onBack: () -> Unit) {
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     val list = rememberLazyListState()
     var expanded by remember(chat) { mutableStateOf(emptySet<String>()) }
+    val slug by hub.buildSlug.collectAsState()
+    LaunchedEffect(slug) { slug?.let { open = it; hub.buildSlug.value = null } }
     PollWhile(open == null && load.data?.any { it.state == "running" } == true, reload)
     open?.let { BuildDetailScreen(hub, it, onBack = { open = null }); return }
     val now = System.currentTimeMillis()

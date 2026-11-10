@@ -48,6 +48,10 @@ class ExtrasLogicTest {
     }
 
 
+    @Test fun buildsLinkCarriesTheSlug() {
+        assertEquals("pink-door", parseDeepLink("agentview://open?page=builds&slug=pink-door")?.slug)
+    }
+
     @Test fun shortcutActionsParse() {
         assertEquals(Shortcut.NEW_CHAT, parseDeepLink("agentview://open?action=new-chat")?.action)
         assertEquals(Shortcut.ADD_TASK, parseDeepLink("agentview://open?action=add-task")?.action)

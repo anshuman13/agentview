@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.sessions
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class BuildsLogicTest {
@@ -32,6 +33,14 @@ class BuildsLogicTest {
         assertEquals("design", nextPhase(phases, "requirements"))
         assertEquals("tasks", nextPhase(phases, "tasks"))
         assertEquals("tasks", nextPhase(phases.filter { it.key != "design" }, "requirements"))
+    }
+
+    @Test
+    fun buildAgentsAreNamedByLabelOrSpecPath() {
+        assertEquals("implement" to "x", buildStageOf("general-purpose", "impl:x#2", "")?.let { it.stage to it.slug })
+        assertEquals("review" to "pink-door", buildStageOf("spec-reviewer", "Review it", "Read .claude/specs/pink-door.md")?.let { it.stage to it.slug })
+        assertNull(buildStageOf("general-purpose", "look around", "Read .claude/specs/pink-door.md"))
+        assertNull(buildStageOf("pm", "pm:..", ""))
     }
 
     @Test

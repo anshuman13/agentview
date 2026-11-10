@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
+import no.pradhan.agentview.nativeapp.sessions.buildStageOf
 
 // Port of web/src/chat/steps.ts: the transcript items built from the flat event list.
 @Immutable
@@ -178,6 +179,20 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
         }
     }
     return items
+}
+
+fun agentBuild(use: ChatEvent) = buildStageOf(use.input.s("subagent_type"), use.input.s("description"), use.input.s("prompt"))
+
+// web steps.ts specCards: the agents that show a spec card, the first one per build slug in each turn.
+fun specCardIds(items: List<Item>): Set<String> {
+    val shown = mutableSetOf<String>()
+    var seen = mutableSetOf<String>()
+    for (it in items) when (it) {
+        is Item.User, is Item.Phase -> seen = mutableSetOf()
+        is Item.Agent -> agentBuild(it.use)?.slug?.let { slug -> if (seen.add(slug)) shown += it.id }
+        else -> {}
+    }
+    return shown
 }
 
 // Slack-style day dividers: the label to draw above each prompt that starts a new day. A chat that stays within today gets none.

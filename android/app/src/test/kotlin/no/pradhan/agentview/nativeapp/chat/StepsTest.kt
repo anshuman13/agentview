@@ -18,6 +18,13 @@ class StepsTest {
     private fun res(id: String, of: String, text: String = "", err: Boolean = false, at: Long = 0) = ChatEvent(id, "tool_result", toolUseId = of, text = text, isError = err, at = at)
 
     @Test
+    fun specCardsGoToTheFirstAgentPerSlugInATurn() {
+        val run = { id: String, description: String -> use(id, "Agent", obj("description" to description, "subagent_type" to "general-purpose")) }
+        val events = listOf(ChatEvent("u1", "user", text = "go"), run("a1", "pm:x"), run("a2", "review:x"), run("a3", "impl:y"), ChatEvent("u2", "user", text = "next"), run("a4", "review:x"), run("a5", "look around"))
+        assertEquals(setOf("a1", "a3", "a4"), specCardIds(buildTranscript(events)))
+    }
+
+    @Test
     fun pairsToolUseWithItsResult() {
         val items = buildTranscript(listOf(ChatEvent("u", "user", text = "go"), use("t1", "Bash", obj("command" to "ls")), res("r1", "t1", "a.txt", at = 3000), ChatEvent("a", "assistant", text = "done")))
         assertEquals(listOf("User", "Step", "Assistant"), items.map { it::class.simpleName })

@@ -125,6 +125,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val notice = MutableStateFlow<String?>(null)
 
     val link = MutableStateFlow<DeepLink?>(null)
+    val buildSlug = MutableStateFlow<String?>(null)
 
     // Review findings by target, a PR number or "local"; null clears one.
     val findings = MutableStateFlow<Map<String, ReviewFindings>>(emptyMap())

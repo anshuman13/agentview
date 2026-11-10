@@ -47,7 +47,10 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.net.image
 import no.pradhan.agentview.nativeapp.net.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
+import no.pradhan.agentview.nativeapp.app.DeepLink
+import no.pradhan.agentview.nativeapp.sessions.stageName
 import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -164,6 +167,14 @@ private fun Pre(text: String, wrap: Boolean = true, error: Boolean = false) {
     }
 }
 
+// A spec the agent wrote or a build agent works on; tapping opens its build page.
+@Composable
+internal fun SpecCard(hub: Hub, slug: String, meta: String) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
+        ListRow(slug, meta, leading = { AvIcon("beaker", null, Tokens.icon) }, onClick = { hub.link.value = DeepLink(page = "builds", slug = slug) })
+    }
+}
+
 @Composable
 internal fun FileCard(it: Item.File, cwd: String) {
     var open by rememberSaveable(it.id) { mutableStateOf(false) }
@@ -201,7 +212,7 @@ fun editPairs(use: ChatEvent): List<Pair<String, String>> = when (use.name) {
 }
 
 @Composable
-internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpenAgent: (String) -> Unit) {
+internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpenAgent: (String) -> Unit, card: Boolean = false) {
     val desc = it.use.input.s("description").ifEmpty { "Sub-agent" }
     val type = it.use.input.s("subagent_type")
     val result = it.result
@@ -231,6 +242,7 @@ internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpe
             if (it.running && canStop) Button("Stop", { hub.stopTask(it.use.id) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
             AvIcon("chevron-right", null, Tokens.icon, Modifier.padding(horizontal = Tokens.sp3), tint = av.fgFaint)
         }
+        if (card) agentBuild(it.use)?.let { b -> SpecCard(hub, b.slug, "${stageName(b.stage)} \u00B7 ${b.slug}") }
         if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {
             if (it.steps.size > shown.size) Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
                 Text("${it.steps.size - shown.size} earlier steps", style = Type.footnote, color = av.fgMuted)
