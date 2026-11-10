@@ -67,7 +67,9 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
+import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
+import no.pradhan.agentview.nativeapp.workspace.sketchName
 import no.pradhan.agentview.nativeapp.workspace.specSlug
 
 internal fun gapAbove(older: Item?, it: Item): Dp? {
@@ -254,7 +256,10 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.Assistant -> Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
-        is Item.File -> if (isSpecPath(it.path) && it.error == null) SpecCard(hub, it.id, specSlug(it.path), it.path, chat, if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}") else FileCard(it, cwd)
+        is Item.File -> if (it.error != null) FileCard(it, cwd)
+            else if (isSpecPath(it.path)) SpecCard(hub, it.id, specSlug(it.path), it.path, chat, if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}")
+            else if (isSketchPath(it.path)) SketchCard(hub, sketchName(it.path), if (it.uses.first().name == "Write") "Sketch written" else "Sketch edited \u00B7 +${it.add} -${it.del}")
+            else FileCard(it, cwd)
         is Item.Agent -> AgentRow(hub, it, chat, cwd, onOpenAgent, card)
         is Item.Blocked -> BlockedCard(it.ev, hub)
         is Item.Review -> ReviewCard(it.ev, hub)

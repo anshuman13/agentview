@@ -65,6 +65,7 @@ import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.well
 import no.pradhan.agentview.nativeapp.workspace.lineDiff
+import no.pradhan.agentview.nativeapp.workspace.sketchTitle
 
 private val pretty = Json { prettyPrint = true }
 
@@ -181,6 +182,14 @@ internal fun SpecCard(hub: Hub, id: String, slug: String, path: String, chat: St
 internal fun SpecRow(hub: Hub, slug: String, meta: String) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
         ListRow(slug, meta, leading = { AvIcon("beaker", null, Tokens.icon) }, onClick = { openBuild(hub, slug) })
+    }
+}
+
+// A mockup the agent wrote with /sketch; a tap opens it on the Sketches page.
+@Composable
+internal fun SketchCard(hub: Hub, name: String, meta: String) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
+        ListRow(sketchTitle(name), meta, leading = { AvIcon("paintcan", null, Tokens.icon) }, onClick = { hub.link.value = DeepLink(page = "sketches", slug = name) })
     }
 }
 
