@@ -33,6 +33,11 @@ fun Hub.hideNeed(key: String) {
     prefs.edit().putString("handledOrder", handled.value.joinToString("\n")).apply()
 }
 
+fun Hub.restoreNeeds(keys: Set<String>) {
+    handled.value = keys
+    prefs.edit().putString("handledOrder", keys.joinToString("\n")).apply()
+}
+
 fun Hub.resolveQuestion(q: Question, meetings: List<Row>, now: Long) {
     val next = withResolved(resolvedQuestions.value, q, meetings, now)
     resolvedQuestions.value = next

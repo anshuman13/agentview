@@ -1,10 +1,13 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -14,16 +17,21 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -37,6 +45,8 @@ import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.codexProfile
 import no.pradhan.agentview.nativeapp.net.hideNeed
+import no.pradhan.agentview.nativeapp.net.restoreNeeds
+import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -273,26 +283,56 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
             trailing = { MoreButton { close -> MenuItem("Snooze to next 09:00", "clock", { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })
         is Need.OverdueAll -> ListRow("${n.rows.size} overdue", "Move them all to today", trailing = { Button("Move to today", { actions.moveToToday(n.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
         is Need.JustEnded -> ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
-        is Need.Ask -> ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · ").atWord(), metaLines = 4, onClick = { onOpen(n.row) },
-            below = { Button("Add", { actions.accept(n.row) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm); Button("Dismiss", { actions.dismiss(n.row) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
+        is Need.Ask -> DismissSwipe({ actions.dismiss(n.row) }) {
+            ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · "), onClick = { onOpen(n.row) },
+                trailing = { Button("Add", { actions.accept(n.row) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) },
+                menu = { close ->
+                    MenuItem("Open", "arrow-right", { close(); onOpen(n.row) })
+                    MenuItem("Dismiss", "close", { close(); actions.dismiss(n.row) })
+                })
+        }
         is Need.Risk -> ListRow(n.row.title ?: "", "At risk · due ${whenText(n.due, now)} · ${minutesText(n.short)} short", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
-        is Need.Slack -> NeedCard(n.bullet.title, "Slack" + (n.bullet.why.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), n.bullet.url, { hub.hideNeed(slackKey(n.bullet)) }, null) {
+        is Need.Slack -> NeedCard(n.bullet.title, "Slack" + (n.bullet.why.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), n.bullet.url, { dismissNeed(hub, actions, slackKey(n.bullet)) }, null) {
             if (hub.codex.capture(listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), "open", n.profile, null, mapOf("text" to n.bullet.url)) != null) hub.hideNeed(slackKey(n.bullet))
         }
-        is Need.Dm -> NeedCard(n.chat.str("name") ?: "DM", listOfNotNull("DM", n.chat.long("last_at")?.let { agoText(it, now) }, n.chat.str("summary")?.ifEmpty { null }).joinToString(" · "), n.chat.str("url"), { hub.hideNeed(waitKey(n.chat)) }, n.chat.str("name")?.let { name -> { onPerson(name) } }) {
+        is Need.Dm -> NeedCard(n.chat.str("name") ?: "DM", listOfNotNull("DM", n.chat.long("last_at")?.let { agoText(it, now) }, n.chat.str("summary")?.ifEmpty { null }).joinToString(" · "), n.chat.str("url"), { dismissNeed(hub, actions, waitKey(n.chat)) }, n.chat.str("name")?.let { name -> { onPerson(name) } }) {
             if (hub.codex.capture("Reply to ${n.chat.str("name") ?: "DM"}", "open", n.chat.profile, null, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM")) != null) hub.hideNeed(waitKey(n.chat))
         }
     }
 }
 
-private fun String.atWord(max: Int = 110) = if (length <= max) this else substring(0, max).substringBeforeLast(' ').trimEnd(',', '.', ';', ':') + "…"
+private fun dismissNeed(hub: Hub, actions: TaskActions, key: String) {
+    val before = hub.handled.value
+    hub.hideNeed(key)
+    if (hub.handled.value != before) actions.undoable("Dismissed") { hub.restoreNeeds(before) }
+}
+
+// A left swipe dismisses; the row leaves with the data, so the box never settles open.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DismissSwipe(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    val current by rememberUpdatedState(onDismiss)
+    val state = rememberSwipeToDismissBoxState(confirmValueChange = { v -> if (v == SwipeToDismissBoxValue.EndToStart) current(); false })
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(Modifier.fillMaxSize().background(if (state.dismissDirection == SwipeToDismissBoxValue.EndToStart) av.warnContainer else av.groupCard).padding(horizontal = Tokens.sp8), contentAlignment = Alignment.CenterEnd) {
+                if (state.dismissDirection == SwipeToDismissBoxValue.EndToStart) Row(verticalAlignment = Alignment.CenterVertically) { Text("Dismiss  ", color = av.onWarnContainer, style = Type.callout); AvIcon("close", null, Tokens.icon, tint = av.onWarnContainer) }
+            }
+        },
+        content = { Box(Modifier.background(av.groupCard)) { content() } },
+    )
+}
 
 @Composable
 private fun NeedCard(title: String, meta: String, url: String?, onDismiss: () -> Unit, onOpen: (() -> Unit)?, onTask: () -> Unit) {
     val uri = LocalUriHandler.current
-    ListRow(title, meta.atWord(), metaLines = 4, onClick = onOpen, below = {
-        Button("Make task", onTask, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
-        Button("Dismiss", onDismiss, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        safeHref(url)?.let { href -> MoreButton { close -> MenuItem("Open in Slack", "link", { close(); uri.openUri(href) }) } }
-    })
+    DismissSwipe(onDismiss) {
+        ListRow(title, meta, onClick = onOpen, menu = { close ->
+            MenuItem("Make task", "add", { close(); onTask() })
+            safeHref(url)?.let { href -> MenuItem("Open in Slack", "link", { close(); uri.openUri(href) }) }
+            MenuItem("Dismiss", "close", { close(); onDismiss() })
+        })
+    }
 }
