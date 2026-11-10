@@ -107,6 +107,10 @@ describe('sync', () => {
 });
 
 describe('openDb', () => {
+  it('gives jobs a repo column', () => {
+    expect(TABLES.jobs).toContain('repo');
+    expect((db.prepare('PRAGMA table_info(jobs)').all() as { name: string }[]).map((c) => c.name)).toContain('repo');
+  });
   it('adds new columns to an existing table', () => {
     fs.mkdirSync(process.env.AGENTVIEW_LIMITS_DIR!, { recursive: true });
     const file = `${process.env.AGENTVIEW_LIMITS_DIR}/migrate.db`;

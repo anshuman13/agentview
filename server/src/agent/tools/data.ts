@@ -6,7 +6,9 @@ import { nextRun, SCHEDULE_HELP } from '../../../../shared/schedule.js';
 import { defineTool } from './tool.js';
 
 // The hub tables an agent may change, with their columns (the hub's TABLES). Wiki pages and claims go through wiki_propose.
-const WRITABLE: Record<string, string[]> = Object.fromEntries(['items', 'meetings', 'actions', 'jobs'].map((t) => [t, TABLES[t].filter((c) => !HUB_ONLY.includes(c))]));
+// A job's repo is set on the job page only, since it lets a job write code.
+const PAGE_ONLY = ['repo'];
+const WRITABLE: Record<string, string[]> = Object.fromEntries(['items', 'meetings', 'actions', 'jobs'].map((t) => [t, TABLES[t].filter((c) => !HUB_ONLY.includes(c) && !PAGE_ONLY.includes(c))]));
 const TABLE_NAMES = Object.keys(WRITABLE) as [string, ...string[]];
 
 export const DATA_RULES =

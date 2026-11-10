@@ -7,7 +7,7 @@ export const TABLES: Record<string, string[]> = {
   people: ['name', 'slack_id', 'emails', 'calendar_names'],
   links: ['from_type', 'from_id', 'to_type', 'to_id', 'kind'],
   embeddings: ['owner_type', 'owner_id', 'model', 'vector'],
-  jobs: ['name', 'schedule', 'prompt', 'enabled', 'next_run_at', 'tools'],
+  jobs: ['name', 'schedule', 'prompt', 'enabled', 'next_run_at', 'tools', 'repo'],
   runs: ['job_id', 'started_at', 'finished_at', 'status', 'output', 'cost'],
   chats: ['name', 'kind', 'url', 'summary', 'last_at', 'waiting'],
   briefs: ['kind', 'text', 'rows', 'from_at', 'to_at'],

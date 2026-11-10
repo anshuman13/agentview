@@ -23,7 +23,7 @@ val SYNCED_FIELDS = mapOf(
     "chats" to listOf("name", "kind", "url", "summary", "last_at", "waiting"),
     "pages" to listOf("title", "section", "summary", "sort", "state"),
     "facts" to listOf("text", "item_id", "superseded_by", "page_id", "heading", "sources", "at", "contested", "state", "replaces", "added_by"),
-    "jobs" to listOf("name", "schedule", "prompt", "enabled", "next_run_at", "tools"),
+    "jobs" to listOf("name", "schedule", "prompt", "enabled", "next_run_at", "tools", "repo"),
     "runs" to listOf("job_id", "started_at", "finished_at", "status", "output", "cost"),
     "briefs" to listOf("kind", "text", "rows", "from_at", "to_at"),
 )
