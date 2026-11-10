@@ -42,6 +42,7 @@ export function agentOptions(o: {
   fork?: boolean;
   configDir?: string;
   openrouter?: OpenRouterSettings | null;
+  unattended?: boolean;
 }): Options {
   return {
     cwd: o.cwd,
@@ -55,7 +56,7 @@ export function agentOptions(o: {
     includeHookEvents: true,
     enableFileCheckpointing: true,
     allowedTools: TOOLS.map((t) => `mcp__agentview__${t.name}`),
-    disallowedTools: ['mcp__playwright', ...(o.openrouter && Object.values(o.openrouter.models).some((m) => !m.startsWith('anthropic/')) ? ['WebSearch'] : [])],
+    disallowedTools: ['mcp__playwright', ...(o.unattended ? ['Bash(git push:*)', 'Bash(gh:*)'] : []), ...(o.openrouter && Object.values(o.openrouter.models).some((m) => !m.startsWith('anthropic/')) ? ['WebSearch'] : [])],
     extraArgs: { chrome: null },
     permissionMode: 'auto',
     mcpServers: { agentview: agentviewServer(o), ...ownChrome(), ...o.mcp },

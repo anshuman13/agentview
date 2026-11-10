@@ -26,7 +26,7 @@ const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: '
 
 const USAGE_EVERY = 10 * 60_000;
 
-export const claudeDriver = (cwd: string, resume?: string, fork = false, openrouter = false, account = reopenAccount(resume, cwd)): DriverFactory => (host) => new ClaudeDriver(host, resume, fork, account, openrouter);
+export const claudeDriver = (cwd: string, resume?: string, fork = false, openrouter = false, account = reopenAccount(resume, cwd), unattended = false): DriverFactory => (host) => new ClaudeDriver(host, resume, fork, account, openrouter, unattended);
 
 export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume, cwd)) => new AgentSession(cwd, claudeDriver(cwd, resume, fork, false, account), resume ?? null);
 
@@ -51,7 +51,7 @@ export class ClaudeDriver implements AgentDriver {
   private systemMessages: SystemMessages;
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
-  constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main', private openrouter = false) {
+  constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main', private openrouter = false, private unattended = false) {
     this.live = new LiveText(host);
     this.toolHooks = new ToolHooks(host);
     this.tasks = new TaskTracker(host);
@@ -200,6 +200,7 @@ export class ClaudeDriver implements AgentDriver {
       fork: this.fork,
       configDir: configDir(this.account),
       openrouter,
+      unattended: this.unattended,
     });
     this.mcp.servers = options.mcpServers ?? {};
     this.q = query({ prompt: this.input.stream(), options });

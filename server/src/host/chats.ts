@@ -6,6 +6,7 @@ import { rememberAccount } from '../agent/claude/accounts.js';
 import { isProvider, provider, providerOf, providerOptions, rememberProvider, transcriptPath } from '../agent/registry.js';
 import { codexThread } from '../agent/codex/threads.js';
 import { AgentSession } from '../session/session.js';
+import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
 import { loadSettings } from '../settings.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway } from '../integrations/notify.js';
@@ -15,6 +16,7 @@ import { watchFiles } from './watchFiles.js';
 import { lastActive } from './summary.js';
 import { broadcastLive, learning, runs, seenRunning, summaryOf } from './listing.js';
 import { remember, saveSoon, saveWhenLoopChanged } from './persist.js';
+import type { HostRequest } from './protocol.js';
 import { PROJECT, broadcast, bySession, get, hub, live, push, viewers } from './state.js';
 
 function onChatMessage(chat: AgentSession, m: ServerMessage) {
@@ -36,11 +38,14 @@ async function defaultChoice(): Promise<Provider> {
   return (await providerOptions()).some((o) => o.id === defaultProvider && o.enabled) ? defaultProvider : 'claude';
 }
 
-export async function createChat(cwd: string, resume?: string, title = '', fork = false, choice?: Provider) {
+// A chat is unattended while it has a job run that is not done, also after a restart.
+const unattendedSession = (sessionId?: string) => Boolean(sessionId) && runs.list().some((r) => r.kind === 'job' && r.sessionId === sessionId && r.state !== 'done');
+
+export async function createChat(cwd: string, resume?: string, title = '', fork = false, choice?: Provider, unattended = unattendedSession(resume)) {
   // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.
   const p = provider(isProvider(choice) ? choice : resume ? providerOf(resume) : await defaultChoice());
   await p.verifyLimits();
-  const chat = new AgentSession(cwd, p.driver(cwd, resume, fork), resume ?? null);
+  const chat = new AgentSession(cwd, p.driver(cwd, resume, fork, unattended), resume ?? null);
   chat.runs = runs;
   chat.transcriptPath = transcriptPath;
   chat.title = title;
@@ -107,5 +112,13 @@ export async function prompt(cwd: string, text: string, from?: string, fresh = f
   const chat = reuse ?? (from ? await newChat(cwd, get(from), undefined, choice) : await createChat(cwd, undefined, '', false, choice));
   if (!reuse) applyInitialModel(chat, model);
   void chat.prompt(text);
+  return chat.id;
+}
+
+// A scheduled coding job: a claude chat in a worktree the server made, with a run that holds the job's branch and worktree.
+export async function jobChat(job: Extract<HostRequest, { op: 'job' }>) {
+  const chat = await createChat(job.cwd, undefined, job.title, false, 'claude', true);
+  runs.start({ kind: 'job', sessionId: '', chatId: chat.id, title: job.title, what: job.prompt, provider: 'claude', jobId: job.jobId, branch: job.branch, repo: job.repo, worktree: job.cwd, paseo: job.paseo });
+  void chat.prompt(`${job.prompt}\n\n${UNATTENDED_INSTRUCTION}`);
   return chat.id;
 }

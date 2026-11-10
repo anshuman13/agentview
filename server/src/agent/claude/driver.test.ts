@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { appendFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { AgentSession } from '../../session/session.js';
+import type { CanUseTool, HookCallback } from '@anthropic-ai/claude-agent-sdk';
 import { claudeSession } from './driver.js';
+import { agentOptions } from './options.js';
 import { workflowAgents } from './history.js';
 import { JsonlTail } from './tail.js';
 import { contextFrom, historyFrom } from './transcript.js';
@@ -150,4 +152,13 @@ describe('history', () => {
     expect(context).toBe(1005);
   });
 
+});
+
+describe('agentOptions unattended', () => {
+  const build = (unattended: boolean) => agentOptions({ cwd: '/tmp', host: { setStatus: vi.fn() }, chat: () => null, canUseTool: vi.fn() as unknown as CanUseTool, beforeAgent: vi.fn() as unknown as HookCallback, beforeEdit: vi.fn() as unknown as HookCallback, afterTool: vi.fn() as unknown as HookCallback, onStop: vi.fn() as unknown as HookCallback, unattended });
+
+  it('disallows git push and gh only for an unattended chat', () => {
+    expect(build(true).disallowedTools).toEqual(expect.arrayContaining(['Bash(git push:*)', 'Bash(gh:*)']));
+    expect(build(false).disallowedTools).not.toContain('Bash(gh:*)');
+  });
 });

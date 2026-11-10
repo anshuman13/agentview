@@ -3,6 +3,9 @@ import { expandChatMentions } from './chatMentions.js';
 import type { UserEvent } from './messageQueue.js';
 import type { AgentSession } from './session.js';
 
+// Added to the prompt of a scheduled coding job, which no one watches.
+export const UNATTENDED_INSTRUCTION = 'No one is watching this chat. Work only in this worktree, leave your changes uncommitted, and do not push or open a pull request. End with one line saying what changed, or "Nothing to do".';
+
 export class Prompts {
   constructor(private s: AgentSession) {}
 
