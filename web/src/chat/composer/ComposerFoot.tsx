@@ -5,22 +5,22 @@ import { Icon } from '../../ui/Icon';
 import { useChatSettings, type Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
 import { Voice, type useDictation } from './Voice';
-import { goalInfo, type GoalChoice, type Use } from './composerLogic';
+import type { Use } from './composerLogic';
 import { providerLabel } from '../../../../shared/providers';
 
-export function useModeText(goal: GoalChoice) {
-  const { effort, modelName, effortName, modeInfo } = useChatSettings();
+export function useModeText() {
+  const { effort, modelName, effortName, menu } = useChatSettings();
   const canEffort = useCan('effort');
   const shortModel = modelName.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);
-  return `${shortModel}${effort && canEffort ? ` · ${effortName}` : ''} · ${modeInfo.label}${goal !== 'off' ? ` · ${goalInfo(goal, Date.now()).chip}` : ''}`;
+  return `${shortModel}${effort && canEffort ? ` · ${effortName}` : ''} · ${menu.label}`;
 }
 
-function ModeChip({ goal, setPick }: { goal: GoalChoice; setPick: (p: Pick) => void }) {
+function ModeChip({ setPick }: { setPick: (p: Pick) => void }) {
   const { loop, modeInfo } = useChatSettings();
-  const modeText = useModeText(goal);
+  const modeText = useModeText();
   return (
     <Chip className={`cp-mode${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Build cycle on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
-      <Icon name={modeInfo.icon} small /><span>{modeText}</span>{(loop.on || goal !== 'off') && <Icon name="sync" small />}<Icon name="chevron-down" small />
+      <Icon name={modeInfo.icon} small /><span>{modeText}</span>{loop.on && <Icon name="sync" small />}<Icon name="chevron-down" small />
     </Chip>
   );
 }
@@ -64,16 +64,16 @@ export function SendButton({ typed, shell, submit }: { typed: boolean; shell: bo
   );
 }
 
-type FootProps = { goal: GoalChoice; uses: Use[]; uploading: number; typed: boolean; shell: boolean; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void>; dictate: ReturnType<typeof useDictation>; submit: (stop?: boolean) => void };
+type FootProps = { uses: Use[]; uploading: number; typed: boolean; shell: boolean; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void>; dictate: ReturnType<typeof useDictation>; submit: (stop?: boolean) => void };
 
-export function ComposerFoot({ goal, uses, uploading, typed, shell, setPick, attach, dictate, submit }: FootProps) {
+export function ComposerFoot({ uses, uploading, typed, shell, setPick, attach, dictate, submit }: FootProps) {
   const canMcp = useCan('mcp');
   const connected = useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
   const hasServers = canMcp && connected;
   const label = useStore((s) => providerLabel(s.session.provider));
   return (
     <div className="cp-foot">
-      <ModeChip goal={goal} setPick={setPick} />
+      <ModeChip setPick={setPick} />
       <span className="cp-spacer" />
       {hasServers && (
         <button className={`icon-btn mcp${uses.length ? ' on' : ''}`} title={`Ask ${label} to use an MCP server or tool`} aria-label="Use an MCP server" onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })}>

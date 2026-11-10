@@ -7,7 +7,7 @@ import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
-import { billing, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
+import { billing, menuModes, modeSteps, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
@@ -263,6 +263,17 @@ describe('cases shared with the Android app', () => {
       expect(providerMark(p) ?? null).toBe(c.mark);
       expect(providerModes(p).map((m) => m.value)).toEqual(c.modes);
     });
+  }
+
+  for (const c of cases<{ name: string; provider: Provider; mode: string; review: boolean; list: string[]; checked: string; label: string }>('menu-modes')) {
+    it(`menuModes: ${c.name}`, () => {
+      const m = menuModes(c.provider, c.mode, c.review);
+      expect({ list: m.list.map((o) => o.value), checked: m.checked, label: m.label }).toEqual({ list: c.list, checked: c.checked, label: c.label });
+    });
+  }
+
+  for (const c of cases<{ name: string; mode: string; review: boolean; picked: string; send: { mode: string | null; review: boolean | null } }>('mode-steps')) {
+    it(`modeSteps: ${c.name}`, () => expect(modeSteps(c.mode, c.review, c.picked)).toEqual(c.send));
   }
 
   for (const c of cases<{ name: string; n: number; billing: Billing; expected: string }>('money')) {

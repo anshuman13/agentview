@@ -16,7 +16,7 @@ const CLAUDE_MODES: Record<(typeof PERMISSION_MODES)[number], Omit<ModeOption, '
 };
 
 const CODEX_MODES: ModeOption[] = [
-  { value: 'default', label: 'Ask first', detail: 'Ask before edits and commands' },
+  { value: 'default', label: 'Default', detail: 'Ask before edits and commands' },
   { value: 'auto', label: 'Auto', detail: 'Edit and run commands, network on' },
   { value: 'readOnly', label: 'Read only', detail: 'Read files, no edits' },
 ];
@@ -29,3 +29,25 @@ export const billing = (p?: Provider): Billing => BILLING[p ?? 'claude'];
 export const providerMark = (p?: Provider) => (p && p !== 'claude' ? LABEL[p] : undefined);
 
 export const providerModes = (p?: Provider): ModeOption[] => (p === 'codex' ? CODEX_MODES : PERMISSION_MODES.map((value) => ({ value, ...CLAUDE_MODES[value] })));
+
+const SUPERVISED: ModeOption = { value: 'supervised', label: 'Supervised', detail: 'Auto, and review each turn' };
+
+// The mode list the pick menus show: Supervised (auto with review each turn) follows Auto. Shift+Tab, the palette and new chats use providerModes.
+export function menuModes(p: Provider | undefined, mode: string, review: boolean) {
+  const modes = providerModes(p);
+  const at = modes.findIndex((m) => m.value === 'auto') + 1;
+  const supervised = mode === 'auto' && review;
+  const name = modes.find((m) => m.value === mode)?.label ?? mode;
+  return {
+    list: [...modes.slice(0, at), SUPERVISED, ...modes.slice(at)],
+    checked: supervised ? SUPERVISED.value : mode,
+    label: supervised ? SUPERVISED.label : review ? `${name} · Review` : name,
+  };
+}
+
+// What picking a row of the menu sends: a permission mode and a review switch, each null when it already holds.
+export function modeSteps(mode: string, review: boolean, picked: string) {
+  if (picked === menuModes(undefined, mode, review).checked) return { mode: null, review: null };
+  if (picked === SUPERVISED.value) return { mode: mode === 'auto' ? null : 'auto', review: review ? null : true };
+  return { mode: picked === mode ? null : picked, review: review ? false : null };
+}

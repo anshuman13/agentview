@@ -58,14 +58,16 @@ import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.interrupt
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.providerLabel
-import no.pradhan.agentview.nativeapp.net.providerModes
+import no.pradhan.agentview.nativeapp.net.menuModes
+import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.refreshUsage
-import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.runInTerminal
 import no.pradhan.agentview.nativeapp.net.setAccount
 import no.pradhan.agentview.nativeapp.net.setEffort
+import no.pradhan.agentview.nativeapp.net.setLoop
 import no.pradhan.agentview.nativeapp.net.setMode
 import no.pradhan.agentview.nativeapp.net.setModel
+import no.pradhan.agentview.nativeapp.net.setReview
 import no.pradhan.agentview.nativeapp.net.submit
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -86,14 +88,14 @@ import no.pradhan.agentview.nativeapp.ui.well
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
-private enum class Picker { Add, Settings, Effort, Account }
+private val LOOP_CHOICES = listOf(Choice("off", "Off", "Prompts run as usual")) + listOf(1, 2, 3, 5).map { Choice(it.toString(), "Up to $it ${if (it == 1) "round" else "rounds"}", "Opus plans and builds, Sonnet tests and reports, Opus fixes what fails") }
+
+private enum class Picker { Add, Settings, Effort, Account, Loop }
 
 private class ComposerState(val hub: Hub, val chatId: String) {
     var text by mutableStateOf(hub.draft(chatId).let { TextFieldValue(it, TextRange(it.length)) })
-    var goal by mutableStateOf("off")
     var dismissed by mutableStateOf("")
     var files by mutableStateOf<List<String>?>(null)
-    val goalOn get() = goal != "off"
 
     fun set(v: TextFieldValue) { text = v; hub.setDraft(chatId, v.text) }
 
@@ -102,9 +104,7 @@ private class ComposerState(val hub: Hub, val chatId: String) {
         if (t.isBlank() || uploading > 0) return
         shellCommand(t)?.let { if (hub.runInTerminal(it)) set(TextFieldValue("")); return }
         set(TextFieldValue(""))
-        val sent = goalText(goal, t, System.currentTimeMillis())
-        if (sent != t) goal = "off"
-        hub.submit(sent, steer) { val back = restoreUnsent(text.text, t); set(TextFieldValue(back, TextRange(back.length))) }
+        hub.submit(t, steer) { val back = restoreUnsent(text.text, t); set(TextFieldValue(back, TextRange(back.length))) }
     }
 }
 
@@ -136,17 +136,16 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
             if (uploading > 0) Box(Modifier.size(Tokens.touch).semantics { contentDescription = "Uploading" }, contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = c.accent, strokeWidth = Tokens.sp1) }
             else IconBtn("add", "Add", { sheet = Picker.Add })
             ComposerInput(
-                s, composerPlaceholder(providerLabel(session?.provider), s.goalOn, waiting, session?.compacting == true, running),
+                s, composerPlaceholder(providerLabel(session?.provider), waiting, session?.compacting == true, running),
                 Modifier.weight(1f).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
             )
             ComposerActions(hub, s, running, uploading, dictation)
         }
     }
-    ComposerSheets(hub, s, session, run, sheet, attach) { sheet = it }
+    ComposerSheets(hub, session, run, sheet, attach) { sheet = it }
 }
 
-private fun composerPlaceholder(label: String, goalOn: Boolean, waiting: Boolean, compacting: Boolean, running: Boolean) = when {
-    goalOn -> GOAL_PLACEHOLDER
+private fun composerPlaceholder(label: String, waiting: Boolean, compacting: Boolean, running: Boolean) = when {
     waiting -> "Answer above, or message $label to stop and send"
     compacting -> "Sends when compacting is done"
     running -> "$label reads this at its next step"
@@ -215,22 +214,23 @@ private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, upload
 }
 
 @Composable
-private fun ComposerSheets(hub: Hub, s: ComposerState, session: SessionInfo?, run: ChatRun?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
+private fun ComposerSheets(hub: Hub, session: SessionInfo?, run: ChatRun?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
     when (sheet) {
-        Picker.Add -> AddSheet(s, session, attach, onSheet)
-        Picker.Settings -> ChatSettingsSheet(hub, s, session, run, onSheet)
+        Picker.Add -> AddSheet(session, attach, onSheet)
+        Picker.Settings -> ChatSettingsSheet(hub, session, run, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
+        Picker.Loop -> PickerSheet("Build cycle", LOOP_CHOICES, session?.loop?.takeIf { it.on }?.max?.toString() ?: "off", { hub.setLoop(it != "off", it.toIntOrNull()) }) { onSheet(null) }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
         null -> {}
     }
 }
 
 @Composable
-private fun AddSheet(s: ComposerState, session: SessionInfo?, attach: Attach, onSheet: (Picker?) -> Unit) {
+private fun AddSheet(session: SessionInfo?, attach: Attach, onSheet: (Picker?) -> Unit) {
     val c = av
     val pct = contextPercent(session?.context, session?.contextWindow)
     val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = c.fgMuted) } }
-    val settings = settingsLabel(modelName(session), session?.permissionMode ?: "default", session?.provider) + (if (s.goalOn) " · ${goalInfo(s.goal, System.currentTimeMillis()).chip}" else "")
+    val settings = settingsLabel(modelName(session), session?.permissionMode ?: "default", session?.review == true, session?.provider)
     Sheet({ onSheet(null) }, "Add", padded = false, full = false) {
         Group {
             ListRow("Photo", leading = icon("file-media"), onClick = { onSheet(null); attach.choosePhoto() })
@@ -247,7 +247,7 @@ private fun AddSheet(s: ComposerState, session: SessionInfo?, attach: Attach, on
 }
 
 @Composable
-private fun ChatSettingsSheet(hub: Hub, s: ComposerState, session: SessionInfo?, run: ChatRun?, onSheet: (Picker?) -> Unit) {
+private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, onSheet: (Picker?) -> Unit) {
     val c = av
     Sheet({ onSheet(null) }, "Chat settings", padded = false, full = false) {
         val account = session?.account ?: "main"
@@ -264,21 +264,25 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, session: SessionInfo?,
                 }
             }
         }
-        SectionHeader("Goal")
+        val loop = session?.loop?.takeIf { it.on }
+        SectionHeader("Goal and build cycle")
         Group {
-            goalChoices(System.currentTimeMillis()).forEachIndexed { i, g ->
-                if (i > 0) Hairline()
-                val detail = if (g.value == "off" && run != null) runLine(run, session?.loop?.phase) else g.detail
-                ListRow(g.label, detail, onClick = { if (g.value == "off" && run != null) hub.runControl(run, "stop"); s.goal = g.value; onSheet(null) }, trailing = if (g.value == s.goal) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
-            }
+            ListRow("Goal", run?.let { runLine(it, session?.loop?.phase) } ?: "Off", onClick = { hub.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }, trailing = { Chevron() })
             Hairline()
-            ListRow("Custom goal\u2026", "Set how often, when to stop and a usage cap", onClick = { hub.goalSheet.value = GoalSheet.Start(here = true); onSheet(null) })
+            ListRow("Build cycle", loop?.let { "Up to ${it.max} ${if (it.max == 1) "round" else "rounds"}" } ?: "Off", onClick = { onSheet(Picker.Loop) }, trailing = { Chevron() })
         }
         SectionHeader("Permission mode")
+        val review = session?.review == true
+        val modes = menuModes(session?.provider, session?.permissionMode ?: "default", review)
         Group {
-            providerModes(session?.provider).forEachIndexed { i, m ->
+            modes.list.forEachIndexed { i, m ->
                 if (i > 0) Hairline()
-                ListRow(m.label, m.detail, onClick = { hub.setMode(m.value); onSheet(null) }, trailing = if (m.value == (session?.permissionMode ?: "default")) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+                ListRow(m.label, m.detail, onClick = {
+                    val (mode, reviewOn) = modeSteps(session?.permissionMode ?: "default", review, m.value)
+                    mode?.let { hub.setMode(it) }
+                    reviewOn?.let { hub.setReview(it) }
+                    onSheet(null)
+                }, trailing = if (m.value == modes.checked) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
             }
         }
         val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main"

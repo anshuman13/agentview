@@ -61,20 +61,6 @@ class ComposerLogicTest {
         assertNull(shellCommand("why ! here"))
     }
 
-    @Test fun goalChoiceWrapsTheNextMessage() {
-        codexZone = java.time.ZoneId.of("UTC")
-        val now = 14 * 3_600_000L + 30 * 60_000L
-        assertEquals("/goal ship it", goalText("done", "ship it", now))
-        assertEquals("/loop until 07:00 ship it", goalText("morning", "ship it", now))
-        assertEquals("/loop until 15:30 ship it", goalText("1h", "ship it", now))
-        assertEquals("/loop until 18:30 ship it", goalText("4h", "ship it", now))
-        assertEquals("/goal every 1h ship it", goalText("hourly", "ship it", now))
-        assertEquals("hi", goalText("off", "hi", now))
-        assertEquals("/compact", goalText("1h", "/compact", now))
-        assertEquals("Until 15:30", goalInfo("1h", now).chip)
-        assertEquals("Every hour", goalInfo("hourly", now).chip)
-    }
-
     @Test fun effortsFollowTheModelsList() {
         val models = listOf(ModelInfo("a", efforts = listOf("low", "high", "minimal")), ModelInfo("b"))
         assertEquals(listOf("low", "high"), effortsFor(models, "a"))

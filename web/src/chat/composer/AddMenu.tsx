@@ -5,17 +5,16 @@ import { Menu, MenuItem } from '../../ui/Menu';
 import type { Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
 import { useModeText } from './ComposerFoot';
-import type { GoalChoice } from './composerLogic';
 
-type AddMenuProps = { goal: GoalChoice; uploading: number; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void> };
+type AddMenuProps = { uploading: number; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void> };
 
-export function AddMenu({ goal, uploading, setPick, attach }: AddMenuProps) {
+export function AddMenu({ uploading, setPick, attach }: AddMenuProps) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const canMcp = useCan('mcp');
   const connected = useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
-  const modeText = useModeText(goal);
+  const modeText = useModeText();
   const pickAt = (kind: Pick['kind']) => () => {
     setOpen(false);
     setPick({ kind, at: trigger.current!.getBoundingClientRect() });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, goalText, loopNow, agentAge } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, loopNow, agentAge } from './composerLogic';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
@@ -247,21 +247,6 @@ describe('runLine', () => {
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'test')).toBe('Build cycle · round 2/3 · Test');
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'passed')).toBe('Build cycle · round 2/3');
   });
-});
-
-describe('goal choice', () => {
-  const now = new Date(2026, 0, 5, 14, 30).getTime();
-
-  it('wraps the next message as a goal or loop', () => {
-    expect(goalText('done', 'ship it', now)).toBe('/goal ship it');
-    expect(goalText('morning', 'ship it', now)).toBe('/loop until 07:00 ship it');
-    expect(goalText('1h', 'ship it', now)).toBe('/loop until 15:30 ship it');
-    expect(goalText('4h', 'ship it', now)).toBe('/loop until 18:30 ship it');
-    expect(goalText('hourly', 'ship it', now)).toBe('/goal every 1h ship it');
-    expect(goalText('off', 'hi', now)).toBe('hi');
-    expect(goalText('1h', '/compact', now)).toBe('/compact');
-  });
-
 });
 
 describe('loopNow', () => {

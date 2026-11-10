@@ -1,8 +1,7 @@
-import { send, setUi, useStore } from '../app/store';
-import { goalChoices, type GoalChoice } from './composer/composerLogic';
-import { useChatRun } from '../sessions/runBands';
+import { send, useStore } from '../app/store';
 import { QuickPick } from '../ui/QuickPick';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL } from '../../../shared/protocol';
+import { modeSteps } from '../../../shared/providers';
 import { effortsFor } from './capabilitiesLogic';
 import { useChatSettings, type Pick } from './ChatSettings';
 
@@ -10,8 +9,6 @@ const LOOP_ITEMS = [
   { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
   ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Up to ${n} ${n === 1 ? 'round' : 'rounds'}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
 ];
-
-const CUSTOM = 'custom';
 
 type Props = { pick: Pick; close: () => void };
 
@@ -72,37 +69,20 @@ export function LoopPick({ pick, close }: Props) {
   );
 }
 
-export function GoalPick({ pick, close, goal, setGoal }: Props & { goal: GoalChoice; setGoal: (g: GoalChoice) => void }) {
-  const run = useChatRun(useStore((s) => s.session.id));
-  return (
-    <QuickPick
-      anchor={pick.at}
-      title="Goal"
-      current={goal}
-      items={[...goalChoices(Date.now()).map((c) => ({ value: c.value, label: c.label, detail: c.detail })), { value: CUSTOM, label: 'Custom goal…', detail: 'Set how often, when to stop and a usage cap' }]}
-      onPick={(v) => {
-        if (v === CUSTOM) {
-          setUi({ goalSheet: { mode: 'start', here: true } });
-          return close();
-        }
-        if (v === 'off' && run) send({ type: 'run', run: run.id, op: 'stop' });
-        setGoal(v as GoalChoice);
-        close();
-      }}
-      onClose={close}
-    />
-  );
-}
-
 export function ModePick({ pick, close }: Props) {
-  const { mode, modes } = useChatSettings();
+  const { mode, review, menu } = useChatSettings();
   return (
     <QuickPick
       anchor={pick.at}
       title="Permission mode"
-      current={mode}
-      items={modes}
-      onPick={(v) => { send({ type: 'set_permission_mode', mode: v }); close(); }}
+      current={menu.checked}
+      items={menu.list}
+      onPick={(v) => {
+        const step = modeSteps(mode, review, v);
+        if (step.mode) send({ type: 'set_permission_mode', mode: step.mode });
+        if (step.review !== null) send({ type: 'set_review', on: step.review });
+        close();
+      }}
       onClose={close}
     />
   );

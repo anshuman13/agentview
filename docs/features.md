@@ -227,13 +227,16 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - On the web every finished reply shows a Save as note link on hover (always shown on touch screens), which saves the
   chat title and the reply as a Codex note in the chat's profile (like Slack's saved messages). The phone has no reply
   buttons; a hairline divider separates each prompt from the turn before it
-- On the phone, the composer's settings chip opens Chat settings with the models and permission modes listed directly
-  (one tap picks), then Account and Effort. The model you pick becomes the default for new chats, including the New chat
-  shortcut
+- On the phone, the composer's settings chip opens Chat settings with the models listed directly (one tap picks), then
+  Goal and Build cycle rows, the permission modes (Supervised follows Auto), Account and Effort. The model you pick
+  becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
+  (Permission mode, Model, Effort, Claude account, Goal, Build cycle, Side chat, Remind me, Fork chat, Copy as Markdown,
+  Tools…); its Tools… pick holds Saved prompts, Memory, Hooks, TODOs and Continue in terminal, and the phone's chat menu
+  has a Tools… sheet with Images, Dev servers, TODOs, Memory, Hooks and Continue in terminal
 - In the web and phone transcripts, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as
   "Explored 4 files, 2 searches"; the header opens the steps, and the group keeps its choice like any transcript box
-- On the phone, the New chat sheet has Start as: Auto (the default for new chats), Plan first, Ask first (asks before edits and risky commands), Spec (plan mode with the spec prefix in the composer) or Supervised (Auto plus Review each turn). The mode is set right after the chat opens
-- Review each turn (a chat setting: the web Chat settings menu and the Chat: Toggle Review Changes palette command, the phone chat menu, or Start as Supervised) lets Claude edit freely, and after a turn that changed files adds a
+- On the phone, the New chat sheet has Start as: Auto (the default for new chats), Plan first or Spec (plan mode with the spec prefix in the composer), for every provider (Plan first starts a Codex chat in Default). The mode is set right after the chat opens
+- Review each turn (the Supervised choice in the permission mode list of web and phone Chat settings, which sets Auto and turns review on; picking another mode turns it off; the Chat: Toggle Review Changes palette command and Shift+Tab leave it alone, so a chat can show "Plan · Review") lets Claude edit freely, and after a turn that changed files adds a
   Review N changes card with each changed file's hunks against the file as it was before the turn. Each hunk has Keep and
   Undo, each file Keep file and Undo file, the card Keep all; once everything is decided it shows "Kept 3, undid 1".
   The server reads a file's text in a PreToolUse hook before the first Edit, Write, MultiEdit or NotebookEdit of the turn,
@@ -243,10 +246,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   ends both
 - Phone Settings has Notification types under Notifications: it opens Android's page for the app, where Approvals, Finished
   chats and Failed chats are separate channels to turn off or give their own sound
-- "Memory" in the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder
+- "Memory" in the Tools sheet of the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder
   (a Codex chat lists the repo's AGENTS.md, or CLAUDE.md when there is none, and ~/.codex/AGENTS.md)
   (name, description, where it comes from); a tap shows the file (like Windsurf's memories panel), from /api/memory.
-  The web has the same list under Memory in the chat settings menu. Only the repo instruction file (the first in the chat's `instructionFiles`) can be changed: its file view
+  The web has the same list under Memory in the Tools pick of the chat settings menu. Only the repo instruction file (the first in the chat's `instructionFiles`) can be changed: its file view
   has Edit (the web opens it in the editor tab with the pencil on; the phone shows a field with Save), and the list ends with
   an Add a rule field whose Enter appends `- <text>` to it (created if missing) and shows Rule added with Undo; a failed write
   says "Could not save the rule. Your text is still here." Account and memory files stay read-only
@@ -266,13 +269,13 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   Jump to latest shows the same count
 - The web transcript draws Slack-style day dividers (Today, Yesterday, "Tuesday 3 November") above each prompt that starts a
   new day, like the phone; a chat that stays within today has none
-- "TODOs" in the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
-  end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer. The web chat settings menu has the same TODOs list
+- "TODOs" in the Tools sheet of the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
+  end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer. The web Tools pick has the same TODOs list
 - Prompt hooks come from `~/.agentview/hooks.json`, keyed by repo folder name like `autofix` in attention.json:
   `{"myrepo": [{"name": "tests", "on": "stop", "prompt": "Run the tests"}, {"name": "lint", "on": "save", "glob": "src/**/*.ts", "prompt": "Lint it"}, {"name": "docs", "on": "manual", "prompt": "Update the docs"}]}`.
   `save` queues the prompt with the path when a matching file changes between turns (once per 30 s per hook), `stop`
-  queues it when a turn that changed files ends, and `manual` hooks are listed under Hooks in the chat menu (phone) and
-  chat settings menu (web), where a tap queues them. The prompt shows in the transcript as "Hook: <name>". A hook turn never
+  queues it when a turn that changed files ends, and `manual` hooks are listed under Hooks in the Tools sheet (phone) and
+  Tools pick (web), where a tap queues them. The prompt shows in the transcript as "Hook: <name>". A hook turn never
   triggers stop hooks, nothing fires while a permission or question waits, and without the file or an entry for the repo
   no hook exists (an invalid entry is skipped with a log line)
 - Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar; web sidebar rows of open chats do the same, except for the chat you are viewing
@@ -284,8 +287,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - "Share chat" in the phone chat menu sends the loaded prompts and replies as Markdown to the Android share sheet
 - "Side chat" in the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
-- "Continue in terminal" in the same menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
-  a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone chat menu has the same Continue in terminal, copying to the clipboard
+- "Continue in terminal" in the Tools pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
+  a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone Tools sheet has the same Continue in terminal, copying to the clipboard
 - "Rewind files" under the files of a turn puts them back to how they were before that prompt (later turns' edits
   go too); the conversation itself stays. On the phone, a prompt that changed files has the same Rewind files link under it
   while Claude is idle
@@ -344,8 +347,8 @@ so. Start one from the command palette (Chat: New Codex Chat) or the Provider se
 "New chats" select in Settings (Models on web, Providers on the phone) sets the provider a chat starts on when none is picked
 (`defaultProvider` in settings.json); Fork chat and tries keep the parent's provider. The
 model menu lists Codex's models and the effort menu only the levels the chosen model lists. The permission menu and Shift+Tab
-offer the provider's own modes: Ask first (asks before leaving the workspace sandbox), Auto (never asks, network on) and
-Read only (only reads), with no Plan; Plan first and Spec on the phone's new chat sheet start in Ask first. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes
+offer the provider's own modes: Default (asks before leaving the workspace sandbox), Auto (never asks, network on) and
+Read only (only reads), with no Plan; Plan first and Spec on the phone's new chat sheet start in Default. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes
 (shown as edits with diffs) and MCP calls appear as steps. The usage bar shows the plan's 5-hour and weekly windows;
 there is no cost. No rewind, Team or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
 transcript, and are kept in `~/.agentview/codex-chats.json`. Codex chats get the same AgentView tools as Claude ones
@@ -395,7 +398,7 @@ in the chat list until its next message.
 
 ## Build cycle
 
-The build cycle setting in the composer turns a prompt into a plan, build, test cycle. Opus plans in plan mode (on Codex the default model, with high effort for plan and build and medium for test), detailed
+The Build cycle row in the chat settings menu (web and phone; Off or Up to N rounds) turns a prompt into a plan, build, test cycle. Opus plans in plan mode (on Codex the default model, with high effort for plan and build and medium for test), detailed
 enough that someone who missed the conversation could build from it, and starts building as soon as the plan is
 ready. A plan that deletes data, changes a schema, auth or security, reaches outside the repo, pushes or deploys,
 or guesses at an open question waits for your approval instead (from its APPROVAL line when the agent has no plan tool), and rejecting it stops the cycle. Sonnet then tests the result as a separate model and ends with a verdict, and
@@ -433,7 +436,7 @@ Claude is still working waits for the round to end. The loop lives in the AgentV
 restart and never depends on the CLI's own scheduled jobs. Your messages and Stop interrupt the current round but
 keep the loop; `/loop off` ends it. The loop card above the composer shows the round and the next fire time.
 
-The Goal row in the chat settings menu (phone: the Goal section of the mode picker) starts a goal or loop without typing the command: Until done, Until morning, For 1 hour, For 4 hours or Every hour wraps the next message you send as `/goal`, `/loop until 07:00` (or the clock time) or `/goal every 1h` and resets to Off, and Off with a run active stops it. Its last item, "Custom goal…", opens the goal sheet.
+The Goal row in the chat settings menu (web and phone) shows Off, or the run line while a goal or loop runs in the chat. A tap opens the goal sheet with Where set to this chat, or the run's detail when one is active.
 
 The goal sheet ("Chat: New goal" in the palette, the add button of the Runs header, "Run as goal…" in the Tasks Run menu of a spec, the target button in the file bar of an open Markdown file and the palette's "File: Run as goal…", and "Run as goal…" in the Android file menu of a Markdown file) builds the `/goal` line from the goal, How often (Until done, 30m, 1h, 2h), Stop at (None, in 1 or 4 hours, 07:00 or a time), Usage cap (50, 70, 90 or Off, hidden for OpenRouter) and Where (a new chat in a folder with a provider, or this chat when none has an active run). A plan goal shows the plan path with its "N of M done" ("No tasks" when the file has none), always starts a new chat in the chat's folder, and runs as "every step is done" when the plan has no unticked tasks. Tapping a goal row in Runs, or the Now row of its loop card, opens the goal detail: one status badge, the condition, plan progress, how often, stop time, usage ("Week 42% of 70% cap · 5-hour 30%"), next check and cost, with How often, Stop at and Usage editable from a menu (`run_edit`), then the rounds (a weekly report opens its turn) and Pause or Resume, Stop and Open chat. The cap reads the usage of the chat's active Claude account only.
 

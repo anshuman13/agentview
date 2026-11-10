@@ -67,6 +67,8 @@ import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.providerLabel
+import no.pradhan.agentview.nativeapp.net.menuModes
+import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.money
@@ -431,6 +433,24 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.str("billing"), billing(p))
             assertEquals(c.str("name"), c.nullable("mark")?.jsonPrimitive?.content, providerMark(p))
             assertEquals(c.str("name"), c.getValue("modes").jsonArray.map { it.jsonPrimitive.content }, providerModes(p).map { it.value })
+        }
+    }
+
+    @Test fun menuModesCases() {
+        for (c in cases("menu-modes")) {
+            val m = menuModes(c.nullable("provider")?.jsonPrimitive?.content, c.str("mode"), c.getValue("review").jsonPrimitive.boolean)
+            assertEquals(c.str("name"), c.getValue("list").jsonArray.map { it.jsonPrimitive.content }, m.list.map { it.value })
+            assertEquals(c.str("name"), c.str("checked"), m.checked)
+            assertEquals(c.str("name"), c.str("label"), m.label)
+        }
+    }
+
+    @Test fun modeStepsCases() {
+        for (c in cases("mode-steps")) {
+            val (mode, review) = modeSteps(c.str("mode"), c.getValue("review").jsonPrimitive.boolean, c.str("picked"))
+            val send = c.getValue("send").jsonObject
+            assertEquals(c.str("name"), send.nullable("mode")?.jsonPrimitive?.content, mode)
+            assertEquals(c.str("name"), send.nullable("review")?.jsonPrimitive?.boolean, review)
         }
     }
 

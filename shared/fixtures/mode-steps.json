@@ -1,0 +1,10 @@
+[
+  { "name": "supervised from plan", "mode": "plan", "review": false, "picked": "supervised", "send": { "mode": "auto", "review": true } },
+  { "name": "supervised from auto", "mode": "auto", "review": false, "picked": "supervised", "send": { "mode": null, "review": true } },
+  { "name": "supervised from plan with review", "mode": "plan", "review": true, "picked": "supervised", "send": { "mode": "auto", "review": null } },
+  { "name": "supervised row is checked", "mode": "auto", "review": true, "picked": "supervised", "send": { "mode": null, "review": null } },
+  { "name": "plan from supervised", "mode": "auto", "review": true, "picked": "plan", "send": { "mode": "plan", "review": false } },
+  { "name": "auto from supervised", "mode": "auto", "review": true, "picked": "auto", "send": { "mode": null, "review": false } },
+  { "name": "plan from default", "mode": "default", "review": false, "picked": "plan", "send": { "mode": "plan", "review": null } },
+  { "name": "checked row sends nothing", "mode": "plan", "review": true, "picked": "plan", "send": { "mode": null, "review": null } }
+]

@@ -28,7 +28,7 @@ fun Hub.lastModel(group: String) = prefs.getString(lastModelKey(group), null)
 fun Hub.setLastModel(group: String, model: String) { prefs.edit().putString(lastModelKey(group), model).apply() }
 
 // A model is sent only when the provider's own list has it, so a Codex id never reaches a Claude chat or the reverse.
-fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, review: Boolean = false, provider: String? = null, text: String? = null, onOpened: () -> Unit = {}) {
+fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, provider: String? = null, text: String? = null, onOpened: () -> Unit = {}) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
     val group = modelGroup(provider ?: defaultProvider.value)
     if (model != null) setLastModel(group, model)
@@ -38,7 +38,6 @@ fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null
         if (id == null) notice.value = "The chat did not open" else {
             onOpened()
             if (mode != null) post(setModeCmd(mode), id)
-            if (review) post(setReviewCmd(true), id)
             if (draft != null) setDraft(id, draft)
             link.value = DeepLink(chat = id)
         }
@@ -145,6 +144,8 @@ fun Hub.refreshUsage() = post(usageCmd(), store.wanted)
 fun Hub.setMode(mode: String) = post(setModeCmd(mode), store.wanted)
 
 fun Hub.setReview(on: Boolean) = post(setReviewCmd(on), store.wanted)
+
+fun Hub.setLoop(on: Boolean, max: Int? = null) = post(setLoopCmd(on, max), store.wanted)
 
 fun Hub.review(id: String, action: String, file: String? = null, hunk: Int? = null) = post(reviewCmd(id, action, file, hunk), store.wanted)
 

@@ -1,0 +1,7 @@
+[
+  { "name": "claude auto off", "provider": "claude", "mode": "auto", "review": false, "list": ["default", "acceptEdits", "plan", "auto", "supervised", "dontAsk"], "checked": "auto", "label": "Auto" },
+  { "name": "claude auto on", "provider": "claude", "mode": "auto", "review": true, "list": ["default", "acceptEdits", "plan", "auto", "supervised", "dontAsk"], "checked": "supervised", "label": "Supervised" },
+  { "name": "claude plan on", "provider": "claude", "mode": "plan", "review": true, "list": ["default", "acceptEdits", "plan", "auto", "supervised", "dontAsk"], "checked": "plan", "label": "Plan · Review" },
+  { "name": "claude default on", "provider": "claude", "mode": "default", "review": true, "list": ["default", "acceptEdits", "plan", "auto", "supervised", "dontAsk"], "checked": "default", "label": "Default · Review" },
+  { "name": "codex auto on", "provider": "codex", "mode": "auto", "review": true, "list": ["default", "auto", "supervised", "readOnly"], "checked": "supervised", "label": "Supervised" }
+]

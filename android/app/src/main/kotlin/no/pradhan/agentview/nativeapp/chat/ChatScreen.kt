@@ -39,7 +39,6 @@ import no.pradhan.agentview.nativeapp.net.forkChat
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.remindChat
 import no.pradhan.agentview.nativeapp.net.rename
-import no.pradhan.agentview.nativeapp.net.setReview
 import no.pradhan.agentview.nativeapp.net.submit
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
@@ -52,6 +51,7 @@ import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
+import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.IconBtn
@@ -102,6 +102,7 @@ class ChatPanels {
     var remind by mutableStateOf(false)
     var memory by mutableStateOf(false)
     var hooks by mutableStateOf(false)
+    var tools by mutableStateOf(false)
     var dialog by mutableStateOf<String?>(null)
 }
 
@@ -230,31 +231,18 @@ private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double
 @Composable
 private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: ChatView, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
     MoreButton { close ->
         MenuItem("Review changes", "source-control", { close(); onReview() }, enabled = canReview)
-        MenuItem("Review each turn", "diff", { close(); hub.setReview(session?.review != true) }, checked = session?.review == true)
-        MenuItem("Images", "file-media", { close(); panels.images = true }, enabled = view.images.isNotEmpty())
-        MenuItem("Dev servers", "globe", { close(); panels.servers = true })
-        MenuItem("TODOs", "checklist", { close(); panels.todos = true })
-        MenuItem("Memory", "book", { close(); panels.memory = true })
-        MenuItem("Hooks", "play", { close(); panels.hooks = true })
+        MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
+        MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
+        MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)
         MenuItem("Share chat", "share", {
             close()
             val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, hub.store.state.value.events))
             context.startActivity(android.content.Intent.createChooser(send, null))
         }, enabled = view.items.any { it is Item.Assistant })
-        session?.resumeCommand?.let { command ->
-            MenuItem("Continue in terminal", "terminal", {
-                close()
-                clip.setText(AnnotatedString(command))
-                hub.notice.value = "Copied. Stop this chat before resuming it in a terminal"
-            })
-        }
-        MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)
-        MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
-        MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
+        MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })
         MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) panels.dialog = "close" else hub.closeChat(live.id) })
         MenuSeparator()
         MenuItem("Archive", "archive", { close(); panels.dialog = "archive" }, danger = true, enabled = sessionId != null)
@@ -263,11 +251,34 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: Chat
 
 @Composable
 private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, view: ChatView, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit) {
+    val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
     val agents = view.agents
     val now = rememberNow(panels.agents && agents.any { it.status == "running" })
     if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false) {
         AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
+    }
+    if (panels.tools) Sheet(onDismiss = { panels.tools = false }, title = "Tools", padded = false, full = false) {
+        val hooks = session?.hooks.orEmpty()
+        val open = { panel: () -> Unit -> { panels.tools = false; panel() } }
+        Group {
+            ListRow("Images", "${view.images.size} ${if (view.images.size == 1) "image" else "images"}", muted = view.images.isEmpty(), onClick = if (view.images.isEmpty()) null else open { panels.images = true }, trailing = { Chevron() })
+            Hairline()
+            ListRow("Dev servers", "Dev servers on this Mac", onClick = open { panels.servers = true }, trailing = { Chevron() })
+            Hairline()
+            ListRow("TODOs", "TODO, FIXME and AI! comments in the repo", onClick = open { panels.todos = true }, trailing = { Chevron() })
+            Hairline()
+            ListRow("Memory", "Instruction and memory files", onClick = open { panels.memory = true }, trailing = { Chevron() })
+            Hairline()
+            ListRow("Hooks", if (hooks.isEmpty()) "None" else "${hooks.size}", onClick = open { panels.hooks = true }, trailing = { Chevron() })
+            session?.resumeCommand?.let { command ->
+                Hairline()
+                ListRow("Continue in terminal", "Copy the command that resumes this chat", onClick = open {
+                    clip.setText(AnnotatedString(command))
+                    hub.notice.value = "Copied. Stop this chat before resuming it in a terminal"
+                }, trailing = { Chevron() })
+            }
+        }
     }
     if (panels.images) ImagesSheet(hub, live.id, view.images, cwd) { panels.images = false }
     if (panels.servers) DevServersSheet(hub) { panels.servers = false }

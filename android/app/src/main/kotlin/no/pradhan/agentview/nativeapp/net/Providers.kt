@@ -13,7 +13,7 @@ private val CLAUDE_MODES = listOf(
 )
 
 private val CODEX_MODES = listOf(
-    ModeOption("default", "Ask first", "Ask before edits and commands"),
+    ModeOption("default", "Default", "Ask before edits and commands"),
     ModeOption("auto", "Auto", "Edit and run commands, network on"),
     ModeOption("readOnly", "Read only", "Read files, no edits"),
 )
@@ -30,3 +30,23 @@ fun unbilledText(billing: String) = when (billing) { "plan" -> "Plan"; "none" ->
 fun providerMark(p: String?) = if (p == null || p == "claude") null else providerLabel(p)
 
 fun providerModes(p: String?) = if (p == "codex") CODEX_MODES else CLAUDE_MODES
+
+private val SUPERVISED = ModeOption("supervised", "Supervised", "Auto, and review each turn")
+
+class MenuModes(val list: List<ModeOption>, val checked: String, val label: String)
+
+// The mode list the pick menus show: Supervised (auto with review each turn) follows Auto. The palette and new chats use providerModes.
+fun menuModes(p: String?, mode: String, review: Boolean): MenuModes {
+    val modes = providerModes(p)
+    val at = modes.indexOfFirst { it.value == "auto" } + 1
+    val supervised = mode == "auto" && review
+    val name = modes.firstOrNull { it.value == mode }?.label ?: mode
+    return MenuModes(modes.take(at) + SUPERVISED + modes.drop(at), if (supervised) SUPERVISED.value else mode, if (supervised) SUPERVISED.label else if (review) "$name · Review" else name)
+}
+
+// What picking a row of the menu sends: a permission mode and a review switch, each null when it already holds.
+fun modeSteps(mode: String, review: Boolean, picked: String): Pair<String?, Boolean?> = when {
+    picked == menuModes(null, mode, review).checked -> null to null
+    picked == SUPERVISED.value -> (if (mode == "auto") null else "auto") to (if (review) null else true)
+    else -> (if (picked == mode) null else picked) to (if (review) false else null)
+}

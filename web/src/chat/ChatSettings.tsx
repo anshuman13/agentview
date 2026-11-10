@@ -1,16 +1,15 @@
 import { useStore } from '../app/store';
-import { type GoalChoice } from './composer/composerLogic';
 import { MemoryPick } from './cards/Memory';
 import { TodosPick } from './cards/Todos';
 import { EFFORT_LABEL } from '../../../shared/protocol';
-import { providerModes } from '../../../shared/providers';
+import { menuModes, providerModes } from '../../../shared/providers';
 import { modelsFor } from './capabilitiesLogic';
-import { HooksPick, RemindPick, SettingsMenu } from './SettingsMenu';
-import { AccountPick, EffortPick, GoalPick, LoopPick, ModePick, ModelPick } from './SettingsPickers';
+import { HooksPick, RemindPick, SettingsMenu, ToolsPick } from './SettingsMenu';
+import { AccountPick, EffortPick, LoopPick, ModePick, ModelPick } from './SettingsPickers';
 
 const MODE_ICON: Record<string, string> = { default: 'shield', acceptEdits: 'edit', plan: 'eye', readOnly: 'eye', auto: 'zap', dontAsk: 'circle-slash' };
 
-export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'goal' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'todos' | 'hooks'; at: DOMRect; server?: string };
+export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'tools' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'todos' | 'hooks'; at: DOMRect; server?: string };
 
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -25,17 +24,18 @@ export function useChatSettings() {
   const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
   const effortName = effort ? EFFORT_LABEL[effort] : 'Default';
   const modes = providerModes(provider);
+  const menu = menuModes(provider, mode, review);
   const modeInfo = { ...(modes.find((m) => m.value === mode) ?? { label: mode, detail: mode }), icon: MODE_ICON[mode] ?? 'shield' };
-  return { mode, modes, model, models, effort, team, loop, review, modelName, effortName, modeInfo };
+  return { mode, modes, model, models, effort, team, loop, review, modelName, effortName, modeInfo, menu };
 }
 
 // The chat settings menu and the pickers it opens; the saved prompt and MCP pickers stay with the composer.
-export function ChatSettings({ pick, setPick, savedCount, goal, setGoal }: { pick: Pick | null; setPick: (p: Pick | null) => void; savedCount: number; goal: GoalChoice; setGoal: (g: GoalChoice) => void }) {
+export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null; setPick: (p: Pick | null) => void; savedCount: number }) {
   const cwd = useStore((s) => s.session.cwd);
   if (!pick) return null;
   const close = () => setPick(null);
   switch (pick.kind) {
-    case 'menu': return <SettingsMenu pick={pick} setPick={setPick} close={close} savedCount={savedCount} goal={goal} />;
+    case 'menu': return <SettingsMenu pick={pick} setPick={setPick} close={close} />;
     case 'remind': return <RemindPick pick={pick} close={close} />;
     case 'hooks': return <HooksPick pick={pick} close={close} />;
     case 'todos': return <TodosPick anchor={pick.at} onClose={close} />;
@@ -44,7 +44,7 @@ export function ChatSettings({ pick, setPick, savedCount, goal, setGoal }: { pic
     case 'effort': return <EffortPick pick={pick} close={close} />;
     case 'account': return <AccountPick pick={pick} close={close} />;
     case 'loop': return <LoopPick pick={pick} close={close} />;
-    case 'goal': return <GoalPick pick={pick} close={close} goal={goal} setGoal={setGoal} />;
+    case 'tools': return <ToolsPick pick={pick} setPick={setPick} close={close} savedCount={savedCount} />;
     case 'mode': return <ModePick pick={pick} close={close} />;
     default: return null;
   }

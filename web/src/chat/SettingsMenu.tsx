@@ -1,6 +1,7 @@
-import { notice, send, useStore } from '../app/store';
-import { goalInfo, remindChoices, runLine, type GoalChoice } from './composer/composerLogic';
+import { notice, send, setUi, useStore } from '../app/store';
+import { remindChoices, runLine } from './composer/composerLogic';
 import { useChatRun } from '../sessions/runBands';
+import { openGoal } from '../sessions/goalLogic';
 import { QuickPick } from '../ui/QuickPick';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { copyChatMarkdown, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
@@ -8,28 +9,23 @@ import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
 
-type Props = { pick: Pick; setPick: (p: Pick | null) => void; close: () => void; savedCount: number; goal: GoalChoice };
+type Props = { pick: Pick; setPick: (p: Pick | null) => void; close: () => void };
 
-export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) {
-  const { loop, review, modelName, effortName, modeInfo } = useChatSettings();
+export function SettingsMenu({ pick, setPick, close }: Props) {
+  const { loop, menu, modelName, effortName } = useChatSettings();
   const canEffort = useCan('effort');
   const sessionId = useStore((s) => s.session.sessionId);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
   const chat = useStore((s) => s.session.id);
-  const cwd = useStore((s) => s.session.cwd);
-  const instructionFiles = useStore((s) => s.session.instructionFiles);
-  const resumeCommand = useStore((s) => s.session.resumeCommand);
-  const hooks = useStore((s) => s.session.hooks) ?? [];
   const phase = useStore((s) => s.session.loop.phase);
   const run = useChatRun(chat);
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
     if (v === 'side') return act(sideChat);
-    if (v === 'review') return act(() => send({ type: 'set_review', on: !review }));
     if (v === 'fork') return act(forkChat);
     if (v === 'markdown') return act(copyChatMarkdown);
-    if (v === 'terminal') return act(() => copyResumeCommand(resumeCommand!));
+    if (v === 'goal') return act(() => (run ? openGoal(run.id) : setUi({ goalSheet: { mode: 'start', here: true } })));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
   return (
@@ -37,22 +33,41 @@ export function SettingsMenu({ pick, setPick, close, savedCount, goal }: Props) 
       anchor={pick.at}
       title="Chat settings"
       items={[
-        { value: 'mode', label: 'Permission mode', detail: modeInfo.label },
-        { value: 'review', label: 'Review each turn', detail: review ? 'On' : 'Off' },
+        { value: 'mode', label: 'Permission mode', detail: menu.label },
         { value: 'model', label: 'Model', detail: modelName },
         ...(canEffort ? [{ value: 'effort', label: 'Effort', detail: effortName }] : []),
         ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),
-        { value: 'goal', label: 'Goal', detail: run ? runLine(run, phase) : goalInfo(goal, Date.now()).label },
+        { value: 'goal', label: 'Goal', detail: run ? runLine(run, phase) : 'Off' },
         { value: 'loop', label: 'Build cycle', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
+        ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'remind', label: 'Remind me', detail: 'Add a task to check this chat later' }, { value: 'fork', label: 'Fork chat', detail: 'Start a new chat from a summary of this one' }] : []),
+        { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
+        { value: 'tools', label: 'Tools…', detail: 'Saved prompts, memory, hooks, TODOs' },
+      ]}
+      onPick={onPick}
+      onClose={close}
+    />
+  );
+}
+
+export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedCount: number }) {
+  const cwd = useStore((s) => s.session.cwd);
+  const instructionFiles = useStore((s) => s.session.instructionFiles);
+  const resumeCommand = useStore((s) => s.session.resumeCommand);
+  const hooks = useStore((s) => s.session.hooks) ?? [];
+  return (
+    <QuickPick
+      anchor={pick.at}
+      title="Tools"
+      items={[
         { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
         { value: 'memory', label: 'Memory', detail: `${ruleFile(cwd, instructionFiles)} and memory files` },
         { value: 'hooks', label: 'Hooks', detail: hooks.length ? `${hooks.length}` : 'None' },
         { value: 'todos', label: 'TODOs', detail: 'TODO, FIXME and AI! comments in the repo' },
-        { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
-        ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'remind', label: 'Remind me', detail: 'Add a task to check this chat later' }, { value: 'fork', label: 'Fork chat', detail: 'Start a new chat from a summary of this one' }] : []),
         ...(resumeCommand ? [{ value: 'terminal', label: 'Continue in terminal', detail: 'Copy the command that resumes this chat' }] : []),
       ]}
-      onPick={onPick}
+      onPick={(v) => {
+        if (v === 'terminal') { copyResumeCommand(resumeCommand!); close(); } else setPick({ kind: v as Pick['kind'], at: pick.at });
+      }}
       onClose={close}
     />
   );
