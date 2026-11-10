@@ -8,6 +8,7 @@ import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.net.answerCmd
+import no.pradhan.agentview.nativeapp.net.interruptCmd
 import no.pradhan.agentview.nativeapp.net.permissionCmd
 import no.pradhan.agentview.nativeapp.net.promptCmd
 import org.junit.Assert.assertEquals
@@ -31,6 +32,14 @@ class NoticeActionsTest {
         assertEquals(ActionResult.Sent, run(f, NoticeOp.ALLOW))
         assertEquals(ActionResult.Sent, run(f, NoticeOp.DENY))
         assertEquals(listOf("c1" to permissionCmd("p1", true), "c1" to permissionCmd("p1", false)), f.sent)
+    }
+
+    @Test fun stopSendsInterruptWithoutReadingRequests() {
+        val f = Fake(fail = true)
+        assertEquals(ActionResult.Sent, run(f, NoticeOp.STOP))
+        assertEquals(listOf("c1" to interruptCmd()), f.sent)
+        assertEquals(ActionResult.ReadOnly, run(f, NoticeOp.STOP, readOnly = true))
+        assertEquals(1, f.sent.size)
     }
 
     @Test fun readOnlySendsNothing() {

@@ -8,6 +8,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.Pending
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
 import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.net.answerCmd
+import no.pradhan.agentview.nativeapp.net.interruptCmd
 import no.pradhan.agentview.nativeapp.net.permissionCmd
 import no.pradhan.agentview.nativeapp.net.promptCmd
 import no.pradhan.agentview.nativeapp.workspace.lineDiff
@@ -16,6 +17,7 @@ object NoticeOp {
     const val ALLOW = "no.pradhan.agentview.native.ALLOW"
     const val DENY = "no.pradhan.agentview.native.DENY"
     const val REPLY = "no.pradhan.agentview.native.REPLY"
+    const val STOP = "no.pradhan.agentview.native.STOP"
 }
 
 // The server calls a notification action makes: read a chat's open requests and send it a command.
@@ -63,12 +65,13 @@ suspend fun noticeAsk(remote: NoticeRemote, n: Notice): Notice {
     }
 }
 
-// The same commands the in-app buttons send: permission for Allow and Deny, answer for a question, prompt for a finished chat.
+// The same commands the in-app buttons send: interrupt for Stop, permission for Allow and Deny, answer for a question, prompt for a finished chat.
 suspend fun runNoticeAction(remote: NoticeRemote, readOnly: Boolean, op: String, chat: String, text: String = "", permissionId: String = "", newId: () -> String = { UUID.randomUUID().toString() }): ActionResult {
     if (readOnly) return ActionResult.ReadOnly
     return try {
-        val open = remote.pending(chat)
+        val open = if (op == NoticeOp.STOP) emptyList() else remote.pending(chat)
         val body = when (op) {
+            NoticeOp.STOP -> interruptCmd()
             NoticeOp.ALLOW, NoticeOp.DENY -> open.permission()?.takeIf { it.id == permissionId }?.let { permissionCmd(it.id, op == NoticeOp.ALLOW) } ?: return ActionResult.Failed("Already answered")
             NoticeOp.REPLY -> {
                 val reply = text.trim()
