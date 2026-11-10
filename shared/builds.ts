@@ -46,6 +46,10 @@ const PIPELINE_LABEL: Record<BuildPipeline, string> = { written: 'Spec written',
 
 export const pipelineLabel = (pipeline: BuildPipeline) => PIPELINE_LABEL[pipeline];
 
+export const phaseLabel = (key: ReviewPhase) => key[0].toUpperCase() + key.slice(1);
+
+export const decisionTitle = (r: BuildReview | undefined) => (!r ? 'Not reviewed' : r.decision === 'approve' ? 'Approved' : 'Changes requested');
+
 export const REVIEW_PHASES: ReviewPhase[] = ['requirements', 'design', 'tasks'];
 
 export const reviewDecision = (reviews: BuildReview[], phase: ReviewPhase) => reviews.filter((r) => r.phase === phase).at(-1);

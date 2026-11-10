@@ -2,7 +2,7 @@ import type { Dirent } from 'node:fs';
 import { appendFile, readdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { REVIEW_PHASES, buildStageOf, buildSummary, criteriaOf, findingsOf, pipelineOf, slugOk, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase } from '../../../shared/builds.js';
+import { REVIEW_PHASES, buildStageOf, buildSummary, criteriaOf, decisionTitle, findingsOf, phaseLabel, pipelineOf, slugOk, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase } from '../../../shared/builds.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { jsonFile, readJson } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
@@ -197,7 +197,7 @@ async function appendNote(file: string, r: BuildReview) {
   const d = new Date(r.at);
   const lead = sectionsOf(text).some((s) => s.heading === NOTES) ? (text.endsWith('\n') ? '' : '\n') : '\n## Review notes\n';
   const when = `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
-  await appendFile(file, `${lead}- ${when} ${r.phase[0].toUpperCase()}${r.phase.slice(1)}: ${r.decision === 'approve' ? 'Approved' : 'Changes requested'}${r.note && `: ${r.note}`}\n`);
+  await appendFile(file, `${lead}- ${when} ${phaseLabel(r.phase)}: ${decisionTitle(r)}${r.note && `: ${r.note}`}\n`);
 }
 
 const isPhase = (v: unknown): v is ReviewPhase => REVIEW_PHASES.includes(v as ReviewPhase);

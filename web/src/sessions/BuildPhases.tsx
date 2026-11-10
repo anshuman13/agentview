@@ -7,9 +7,9 @@ import { Menu, MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { ago } from '../ui/util';
-import { reviewDecision, type BuildPhase, type BuildReview, type ReviewPhase } from '../../../shared/builds';
+import { decisionTitle, phaseLabel, reviewDecision, type BuildPhase, type BuildReview, type ReviewPhase } from '../../../shared/builds';
 import { specProgress, specTasks } from '../../../shared/specTasks';
-import { decisionTitle, nextPhase, phaseLabel, startPhase } from './buildsLogic';
+import { nextPhase, startPhase } from './buildsLogic';
 import { postBuildReview } from './sessionApi';
 
 function ChangesSheet({ phase, onSend, onClose }: { phase: ReviewPhase; onSend: (note: string) => Promise<void>; onClose: () => void }) {

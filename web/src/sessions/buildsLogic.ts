@@ -38,10 +38,6 @@ export function buildGroups(builds: BuildRow[]) {
   ].filter((g) => g.rows.length);
 }
 
-export const phaseLabel = (key: ReviewPhase) => key[0].toUpperCase() + key.slice(1);
-
-export const decisionTitle = (r: BuildReview | undefined) => (!r ? 'Not reviewed' : r.decision === 'approve' ? 'Approved' : 'Changes requested');
-
 export const startPhase = (phases: BuildPhase[], reviews: BuildReview[]) => (phases.find((p) => reviewDecision(reviews, p.key)?.decision !== 'approve') ?? phases[0]).key;
 
 export const nextPhase = (phases: BuildPhase[], key: ReviewPhase) => phases[phases.findIndex((p) => p.key === key) + 1]?.key ?? key;
