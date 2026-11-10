@@ -25,12 +25,15 @@ export const FEATURES: Feature[] = [
 ];
 
 export const FEATURE_IDS = new Set(FEATURES.map((f) => f.id));
+const FEATURE_BY_ID = new Map(FEATURES.map((f) => [f.id, f]));
 
-const FAMILIES = new Map([['model', 'model'], ['effort', 'effort'], ['mode', 'mode'], ['newChat', 'newChat'], ['pin', 'open']]);
+const FAMILY_ALIAS: Record<string, string> = { pin: 'open' };
 
 // Page commands are counted as pages, so they have no palette feature.
 export function paletteFeature(commandId: string): string | null {
-  const id = `palette:${FAMILIES.get(commandId.split(':')[0]) ?? commandId}`;
+  const head = commandId.split(':')[0];
+  const family = `palette:${FAMILY_ALIAS[head] ?? head}`;
+  const id = FEATURE_IDS.has(family) ? family : `palette:${commandId}`;
   return FEATURE_IDS.has(id) ? id : null;
 }
 
@@ -49,7 +52,7 @@ export function featureRows(days: UseDays, today: string, window: 7 | 30): { nev
   for (const [day, counts] of Object.entries(days)) {
     const age = at - dayNumber(day);
     for (const [id, n] of Object.entries(counts)) {
-      const f = FEATURES.find((x) => x.id === id);
+      const f = FEATURE_BY_ID.get(id);
       if (!f || n <= 0) continue;
       const row = rows.get(id) ?? { ...f, n7: 0, n30: 0, last: day };
       if (age < 7) row.n7 += n;

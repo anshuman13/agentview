@@ -7,7 +7,6 @@ import { loadSettings } from './settings.js';
 export const FEATURE_USE_FILE = process.env.AGENTVIEW_FEATURE_USE ?? path.join(os.homedir(), '.agentview/feature-use.json');
 
 const KEEP_DAYS = 90;
-const SHOW_DAYS = 30;
 
 const store = jsonFile<{ days: UseDays }>(FEATURE_USE_FILE, { days: {} });
 
@@ -30,7 +29,7 @@ export async function recordFeature(id: string, now = new Date()) {
 
 export async function featureUseDays(now = new Date()) {
   if (!loadSettings().featureUse) return {};
-  const from = daysAgo(now, SHOW_DAYS - 1);
+  const from = daysAgo(now, KEEP_DAYS);
   return Object.fromEntries(Object.entries((await store.read()).days).filter(([day]) => day >= from));
 }
 

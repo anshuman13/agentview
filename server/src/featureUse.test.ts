@@ -34,7 +34,7 @@ describe('feature use', () => {
     await recordFeature('page:mcp', new Date(2026, 10, 10 - 90, 12));
     await recordFeature('page:builds', now);
     expect(Object.keys(days())).toEqual(['2026-08-12', '2026-11-10']);
-    expect(Object.keys(await featureUseDays(now))).toEqual(['2026-11-10']);
+    expect(Object.keys(await featureUseDays(now))).toEqual(['2026-08-12', '2026-11-10']);
   });
 
   it('the write re-checks the setting, and turning off deletes the file', async () => {

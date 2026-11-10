@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { dayKey, dayNumber, featureRows, type Feature, type FeatureKind, type UseDays } from '../../../../shared/featureUse';
+import { dayKey, dayNumber, featureRows, type Feature, type FeatureKind, type UsedFeature, type UseDays } from '../../../../shared/featureUse';
 import { errText } from '../../../../shared/util';
 import { Button, Chip } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
@@ -37,7 +37,7 @@ export function FeatureUseSheet({ onClose }: { onClose: () => void }) {
   }, []);
   const today = dayKey(new Date());
   const rows = days && featureRows(days, today, span);
-  const usedMeta = (f: { kind: FeatureKind; n7: number; n30: number; last: string }) => {
+  const usedMeta = (f: UsedFeature) => {
     const n = span === 7 ? f.n7 : f.n30;
     return `${KIND[f.kind]} · ${n} ${n === 1 ? 'time' : 'times'} · ${lastUsed(f.last, today)}`;
   };
