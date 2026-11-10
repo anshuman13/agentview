@@ -98,16 +98,13 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
     val begin = { path: String, body: String -> hub.write(path, body, "Could not start the deploy", ::parseDeployJob) { if (it != null) job.value = it } }
 
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "Deploy", onBack, sub = s?.app) {
-            if (s != null && s.apps.size > 1) MoreButton("Switch app") { close -> s.apps.forEach { a -> MenuItem(a, "rocket", { close(); app = a }, checked = a == s.app) } }
-            IconBtn("refresh", "Refresh", reload)
-        }
+        WorkspaceHeader(hub, "Deploy", onBack, sub = s?.app) { IconBtn("refresh", "Refresh", reload) }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
-                if (load.error.contains("no deploy app")) item { EmptyState("No deploy app here", "This repo has no .deploy/app.yaml", icon = "rocket", small = false) }
+                if (load.error.contains("no deploy app")) item { EmptyState("No deploy app here", "This repo has no .deploy/app.yaml", action = { SetupButton(hub, "deploy") }, icon = "rocket") }
                 else item { ErrorHint(load.error) }
                 if (s == null && load.error.isEmpty()) item { Loading("Loading…") }
-                if (s != null) deployEnvs(s, System.currentTimeMillis(), link, begin) { ask = it }
+                if (s != null) deployEnvs(s, System.currentTimeMillis(), link, begin, { app = it }) { ask = it }
                 job.value?.let { deployJobSection(it, link) { job.value = null } }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }
@@ -119,8 +116,10 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
     }
 }
 
-private fun LazyListScope.deployEnvs(s: DeployStatus, now: Long, link: (String) -> Unit, begin: (String, String) -> Unit, onAsk: (DeployAsk) -> Unit) {
-    item { SectionHeader(s.app.ifEmpty { "Deploy" }) }
+private fun LazyListScope.deployEnvs(s: DeployStatus, now: Long, link: (String) -> Unit, begin: (String, String) -> Unit, onApp: (String) -> Unit, onAsk: (DeployAsk) -> Unit) {
+    item {
+        SectionHeader(s.app.ifEmpty { "Deploy" }, action = if (s.apps.size > 1) ({ MoreButton("Switch app") { close -> s.apps.forEach { a -> MenuItem(a, "rocket", { close(); onApp(a) }, checked = a == s.app) } } }) else null)
+    }
     item {
         Group {
             s.envs.forEachIndexed { i, env ->

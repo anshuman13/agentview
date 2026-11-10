@@ -93,8 +93,8 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Source Control", onBack) {
-            IconBtn("refresh", "Refresh", { reload(); reloadBranch() })
             MoreButton { close ->
+                MenuItem("Refresh", "refresh", { close(); reload(); reloadBranch() })
                 MenuItem("Write message with $label", "sparkle", { close(); hub.askChat(DRAFT_PROMPT) }, enabled = files.any { it.staged })
                 MenuItem("Review changes with $label", "sparkle", { close(); hub.askChat(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
             }

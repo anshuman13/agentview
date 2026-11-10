@@ -58,7 +58,6 @@ import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.PrFile
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.agoShort
-import no.pradhan.agentview.nativeapp.workspace.pageFolder
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.startTaskPrompt
@@ -93,7 +92,7 @@ fun BuildsScreen(hub: Hub, onBack: () -> Unit) {
     open?.let { BuildDetailScreen(hub, it, onBack = { open = null }); return }
     val now = System.currentTimeMillis()
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "Builds", onBack, sub = "Specs and what the agents did with them in ${pageFolder(hub)}")
+        WorkspaceHeader(hub, "Builds", onBack)
         PageBody {
             val builds = load.data
             when {

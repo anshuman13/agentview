@@ -104,7 +104,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
             LazyColumn(Modifier.fillMaxSize()) {
                 item { ErrorHint(probe.error) }
                 if (probe.data == null && probe.error.isEmpty()) item { Loading("Checking the servers") }
-                if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", if (connectors) "Add one with claude mcp add or connect one on claude.ai, then check again." else "Add one with codex mcp add, then check again.", icon = "plug", small = false) }
+                if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", "Servers you add show here", action = { SetupButton(hub, "mcp", mcpCommand = if (connectors) "claude mcp add" else "codex mcp add") }, icon = "plug") }
                 if (!connectors) item { Hint("claude.ai connectors load in Claude chats only") }
                 listOf("Work" to sections.work, "Personal" to sections.personal).forEach { (label, list) ->
                     if (list.isNotEmpty()) {
