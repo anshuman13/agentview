@@ -1065,12 +1065,13 @@ describe('job runs', () => {
     expect(runs.get(id)).toMatchObject({ state: 'running', needsYou: false });
   });
 
-  it('adds one round and ends when the turn ends', () => {
+  it('adds a round and hands the run to the host when the turn ends', () => {
     const { s, runs, id, result } = jobSession();
+    s.onJobTurn = vi.fn();
     s.sendPrompt('go');
     result('r1');
-    expect(runs.get(id)).toMatchObject({ state: 'done', why: 'turn finished', rounds: [{ n: 1, line: 'done' }] });
-    expect(runs.jobFor(s.id)).toBeUndefined();
+    expect(runs.get(id)).toMatchObject({ state: 'running', rounds: [{ n: 1, line: 'done' }] });
+    expect(s.onJobTurn).toHaveBeenCalledWith(id, false);
   });
 
   it('ends Failed when the CLI exits without a result', () => {
@@ -1079,10 +1080,12 @@ describe('job runs', () => {
     expect(runs.get(id)).toMatchObject({ state: 'done', why: 'exited', rounds: [{ outcome: 'failed', line: 'Claude exited' }] });
   });
 
-  it('ends Failed with the error line when the turn ends in an error', () => {
+  it('records the error line and reports a failed turn to the host', () => {
     const { s, runs, id, handle } = jobSession();
+    s.onJobTurn = vi.fn();
     s.sendPrompt('go');
     handle({ type: 'result', subtype: 'error_during_execution', uuid: 'r1', errors: ['Sandbox dependencies are missing'], total_cost_usd: 0, is_error: true });
-    expect(runs.get(id)).toMatchObject({ state: 'done', rounds: [{ outcome: 'failed', line: 'Turn ended: error_during_execution: Sandbox dependencies are missing' }] });
+    expect(s.onJobTurn).toHaveBeenCalledWith(id, true);
+    expect(runs.get(id)).toMatchObject({ rounds: [{ outcome: 'failed', line: 'Turn ended: error_during_execution: Sandbox dependencies are missing' }] });
   });
 });

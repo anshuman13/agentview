@@ -16,6 +16,8 @@ export type HostRequest =
   | { op: 'open'; sessionId: string }
   | { op: 'new'; cwd: string; from: string; fork?: string; model?: string; provider?: Provider; text?: string }
   | { op: 'job'; cwd: string; title: string; prompt: string; jobId: string; branch: string; repo: string; paseo: boolean }
+  | { op: 'run_end'; id: string; why: string; pr?: string }
+  | { op: 'run_revise'; id: string; text: string }
   | { op: 'close'; id: string }
   | { op: 'rename'; sessionId: string; title: string }
   | { op: 'ask'; cwd: string; prompt: string; from?: string; fresh?: boolean }

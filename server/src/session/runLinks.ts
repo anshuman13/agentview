@@ -74,7 +74,8 @@ export class RunLinks {
     const { runs, state, cycle, id } = this.s;
     runs.end(state.session.repeat?.runId, 'chat closed');
     runs.end(cycle.run, 'chat closed');
-    runs.end(runs.jobFor(id)?.id, 'chat closed');
+    const job = runs.jobFor(id);
+    if (job?.review !== 'pending') runs.end(job?.id, 'chat closed');
     for (const r of runs.list()) if (r.kind === 'tries' && r.chatId === id) runs.end(r.id, 'chat closed');
   }
 
@@ -101,8 +102,8 @@ export class RunLinks {
     if (state.session.sessionId) runs.reportTry(state.session.sessionId, result);
     const job = runs.jobFor(this.s.id);
     if (job) {
-      runs.addRound(job.id, { n: 1, ...result });
-      runs.end(job.id, 'turn finished');
+      runs.addRound(job.id, { n: job.rounds.length + 1, ...result });
+      this.s.onJobTurn?.(job.id, turn.lastError);
     }
     if (this.compareRun) {
       runs.addRound(this.compareRun, { n: 0, ...result });

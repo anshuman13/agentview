@@ -32,4 +32,11 @@ describe('restoreChats', () => {
     expect(mocks.runs.get(a)).toMatchObject({ state: 'running', chatId: 'new' });
     expect(mocks.runs.get(b)).toMatchObject({ state: 'done', why: 'AgentView restarted' });
   });
+
+  it('keeps a job run waiting for review although its chat did not come back', async () => {
+    const id = mocks.runs.start({ kind: 'job', sessionId: 'B', chatId: 'old', title: 't', what: 'w', provider: 'claude' });
+    mocks.runs.update(id, { state: 'paused', why: 'Ready for review', review: 'pending' });
+    await restoreChats();
+    expect(mocks.runs.get(id)).toMatchObject({ state: 'paused', review: 'pending', needsYou: true });
+  });
 });

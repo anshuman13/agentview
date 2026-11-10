@@ -3,6 +3,7 @@ import { gz } from './web.js';
 import { readBody } from './body.js';
 import { chatFileRoutes, chatMcpRoutes, chatPrefixes, chatSessionRoutes } from './chatRoutes.js';
 import { openPrefixes, sessionRoutes, systemRoutes, workspaceRoutes } from './openRoutes.js';
+import { runRoutes } from './runRoutes.js';
 import { HANDLED, type Ctx, type Entry, type Prefix, type Reply, type RouteDeps } from './routeTypes.js';
 
 export type { RouteDeps };
@@ -29,7 +30,7 @@ function find<C>(table: Record<string, Entry<C>>, prefixes: Prefix<C>[], method:
 }
 
 export function createRoutes(d: RouteDeps) {
-  const open = { ...sessionRoutes(d), ...workspaceRoutes(d), ...systemRoutes(d) };
+  const open = { ...sessionRoutes(d), ...workspaceRoutes(d), ...runRoutes(d), ...systemRoutes(d) };
   const chatRoutes = { ...chatSessionRoutes(d), ...chatFileRoutes(), ...chatMcpRoutes(d) };
 
   async function dispatch(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {

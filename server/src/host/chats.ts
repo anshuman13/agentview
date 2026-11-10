@@ -5,8 +5,14 @@ import { getSessionInfo } from '../agent/claude/sessions.js';
 import { rememberAccount } from '../agent/claude/accounts.js';
 import { isProvider, provider, providerOf, providerOptions, rememberProvider, transcriptPath } from '../agent/registry.js';
 import { codexThread } from '../agent/codex/threads.js';
+import { removeChat } from '../agent/claude/pins.js';
 import { AgentSession } from '../session/session.js';
+import { READY } from '../session/runs.js';
 import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
+import { hasWork } from '../workspace/git.js';
+import { runWorktree } from '../workspace/review.js';
+import { removeRunWorktree } from '../workspace/worktrees.js';
+import { errText } from '../../../shared/util.js';
 import { loadSettings } from '../settings.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway } from '../integrations/notify.js';
@@ -50,6 +56,7 @@ export async function createChat(cwd: string, resume?: string, title = '', fork 
   chat.transcriptPath = transcriptPath;
   chat.title = title;
   chat.onIdle = () => learning.later(chat);
+  chat.onJobTurn = (id, failed) => void reviewJob(chat, id, failed);
   await chat.loadHistory();
   await chat.hooks.load();
   chat.onMessage((m) => onChatMessage(chat, m));
@@ -121,4 +128,38 @@ export async function jobChat(job: Extract<HostRequest, { op: 'job' }>) {
   runs.start({ kind: 'job', sessionId: '', chatId: chat.id, title: job.title, what: job.prompt, provider: 'claude', jobId: job.jobId, branch: job.branch, repo: job.repo, worktree: job.cwd, paseo: job.paseo });
   void chat.prompt(`${job.prompt}\n\n${UNATTENDED_INSTRUCTION}`);
   return chat.id;
+}
+
+// A job turn ended: a run with changes waits for review, an empty one is cleaned up, or ends Failed when its turn failed.
+export async function reviewJob(chat: AgentSession, id: string, failed: boolean) {
+  const run = runs.get(id);
+  if (!run) return;
+  try {
+    if (await hasWork(await runWorktree(run))) return runs.update(id, { state: 'paused', why: READY, review: 'pending' });
+    if (failed) return runs.end(id, 'Failed');
+    // The run ends first, since closing the chat would end it as closed.
+    runs.end(id, 'No changes');
+    await closeByUser(chat);
+    await removeChat(run.sessionId, false, true);
+    await removeRunWorktree(run);
+  } catch (err) {
+    console.error(`could not review job run ${id}: ${errText(err)}`);
+    runs.end(id, errText(err).split('\n')[0]);
+  }
+}
+
+export function endRun(id: string, why: string, pr?: string) {
+  const run = runs.get(id);
+  if (run?.kind !== 'job' || run.state === 'done') throw new Error('The run is not open');
+  runs.update(id, { review: undefined, ...(pr && { pr }) });
+  runs.end(id, why);
+}
+
+// The note goes to the run's chat, which is reopened when it was closed.
+export async function reviseRun(id: string, text: string) {
+  const run = runs.get(id);
+  if (run?.review !== 'pending') throw new Error('The run is not waiting for review');
+  const chat = await openSaved(run.sessionId);
+  runs.update(id, { chatId: chat.id, state: 'running', why: '', review: undefined });
+  void chat.prompt(text);
 }

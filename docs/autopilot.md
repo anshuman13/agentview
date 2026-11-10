@@ -29,8 +29,13 @@ is an assistant, and every send is logged and reversible by me.
 - A job with a repo (picked on the job page, on the web only; the phone shows it read-only) codes instead: the hub posts it to
   `POST /api/jobs/start` on the server of its own Mac, which makes a `jobs/<slug>-<stamp>` worktree of that repo and opens
   an unattended claude chat in it (no push, no `gh`, changes left uncommitted). The run is listed in Runs as
-  "Job · <branch>" and ends when the first turn does; a permission prompt pauses it as Needs you, a restart keeps it, and
-  a job whose last run is still open is skipped. The chat runs in Claude Code's sandbox (see the
+  "Job · <branch>"; a permission prompt pauses it as Needs you, a restart keeps it, and a job whose last run is still
+  open is skipped. When its turn ends the server checks the worktree: a run with nothing changed ends "No changes" and its
+  chat and worktree go (a failed one ends "Failed" and keeps its chat); a run with changes waits as "Ready for review"
+  (Needs you). `GET /api/runs/diff?run=` shows the diff, `POST /api/runs/approve?run=` commits, pushes the branch and
+  opens a PR (the only route that pushes), `/api/runs/revise?run=` sends a note back to the chat and
+  `/api/runs/discard?run=` deletes the chat, worktree and branch. Before running git there the server checks that the
+  worktree still points at its repo and branch (else 409 "The worktree was changed"), with hooks and fsmonitor off. The chat runs in Claude Code's sandbox (see the
   `unattended` key in architecture.md), and nothing runs unsandboxed: if the sandbox cannot start, the run ends Failed.
 - Slack commands: a message I write in my DM with myself that starts with "bot" ("bot, what did the infra channel decide
   about the freeze") is picked up by the next Slack scan (every 15 min on weekdays, every day when away) and becomes a

@@ -27,10 +27,10 @@ export async function restoreChats() {
     for (const q of s.queued ?? []) void chat.prompt(q.text, q.id);
   }));
   await rm(RESTORE, { force: true });
-  // A run that no restored loop or goal took back has no chat to go on in; a job run stays only while its chat came back.
+  // A run that no restored loop or goal took back has no chat to go on in; a job run stays while its chat came back or it waits for review.
   const taken = [...live.values()].map(({ chat }) => chat.state.session.repeat?.runId).concat(hub.unrestored.map((u) => u.repeat?.runId));
   const sessions = new Set([...live.values()].map(({ chat }) => chat.state.session.sessionId));
-  const jobs = runs.list().filter((r) => r.kind === 'job' && sessions.has(r.sessionId)).map((r) => r.id);
+  const jobs = runs.list().filter((r) => r.kind === 'job' && (r.review === 'pending' || sessions.has(r.sessionId))).map((r) => r.id);
   runs.endExcept([...taken, ...jobs], 'AgentView restarted');
   saveSoon();
   return (saved.view && bySession(saved.view)) || null;

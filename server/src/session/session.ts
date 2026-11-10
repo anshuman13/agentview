@@ -38,6 +38,7 @@ export class AgentSession implements AgentHost {
   id = randomUUID();
   title = '';
   onIdle: (() => void) | null = null;
+  onJobTurn: ((runId: string, failed: boolean) => void) | null = null;
   created = Date.now();
   state: ServerState;
   failed = false;
