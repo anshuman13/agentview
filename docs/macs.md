@@ -10,11 +10,6 @@ tab that was in the background catches up without a reload. A link that stays si
 Files and text shared to the phone app are attached in the chat composer, once; reopening the app from recents does
 not attach them again. The desktop window app opens mailto and vscode links in the Mac apps that handle them.
 
-The phone app's WebView shows only AgentView: the bundled page, localhost and NetBird addresses. Any other web link,
-and mailto, tel, sms, geo, intent and market links, opens once in the phone's browser or the app that handles it,
-never in both. An app update link installs the update in place. A frame from another site inside a page is stopped,
-and the Codex unlock only answers the bundled page itself.
-
 AgentView only accepts connections from this Mac and the peers `netbird status` lists, and refuses requests and
 websockets from other websites, including other servers on localhost.
 
@@ -44,10 +39,9 @@ against live data.
 The Mac's name in the status bar (on the phone: the chat header and the More sheet) lists the other Macs on NetBird
 that run AgentView, with a dot for whether an agent is working there. Click one to switch to it; a banner names the
 Mac you landed on. The phone app remembers the Mac you used last and offers the others when it can't reach it.
-In the phone app the web UI is bundled and opens without a Mac; it calls the chosen Mac over NetBird (the server accepts
-the origins `http://tauri.localhost` and `tauri://localhost` only from this Mac and NetBird peers) and shows an offline
-state with Retry and the Mac list when that Mac cannot be reached. Switching Macs there changes the address the app calls
-and reopens the event stream.
+The desktop window app bundles the web UI and calls the chosen Mac (the server accepts the origins
+`http://tauri.localhost` and `tauri://localhost` only from this Mac and NetBird peers); the web UI shows an offline state
+with Retry and the Mac list when that Mac cannot be reached.
 A Mac cannot reach its own NetBird address, so the Mac you are viewing from is marked "you are here" and opens on
 localhost.
 
