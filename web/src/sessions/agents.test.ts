@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { agentCounts, buildAgents, reportText } from './agents';
+import { agentCounts, agentSummary, buildAgents, reportText } from './agents';
+import { buildTranscript } from '../chat/transcript/steps';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol';
 
 const use = (id: string, input: Record<string, unknown>, at: number, parent?: string): ChatEvent => ({ id, kind: 'tool_use', name: 'Agent', input, summary: '', at, ...(parent && { parent }) });
@@ -50,5 +51,31 @@ describe('workflow agents', () => {
   it('carries the group from the agent event', () => {
     const agents = buildAgents([use('w:k', { description: 'impl:chat' }, 1), info('w:k', { group: 'build', description: 'impl:chat' }), use('a', { description: 'Plain' }, 2), info('a', {})]);
     expect(agents.map((a) => a.group)).toEqual(['build', undefined]);
+  });
+});
+
+describe('agentSummary', () => {
+  const read: ChatEvent = { id: 's1', kind: 'tool_use', name: 'Read', input: { file_path: 'steps.ts' }, summary: '', at: 2, parent: 'a1' };
+  const done = (text: string, extra: Partial<Extract<ChatEvent, { kind: 'tool_result' }>> = {}): ChatEvent => ({ id: 'r1', kind: 'tool_result', toolUseId: 'a1', text, isError: false, at: 9, ...extra });
+  const summary = (events: ChatEvent[]) => agentSummary(buildTranscript([use('a1', {}, 1), ...events])[0] as Parameters<typeof agentSummary>[0]);
+
+  it('shows the progress, else the last step, else Starting while running', () => {
+    expect(summary([read, info('a1', { progress: 'Reading the docs' })])).toBe('Reading the docs');
+    expect(summary([read])).toBe('Read steps.ts');
+    expect(summary([])).toBe('Starting…');
+  });
+
+  it('shows the first line of the report when done, and No report for an empty one', () => {
+    expect(summary([done('## Result\nAll good')])).toBe('Result');
+    expect(summary([done('---\n- Found it\nmore')])).toBe('Found it');
+    expect(summary([done('x'.repeat(300))])).toHaveLength(200);
+    expect(summary([done('')])).toBe('No report');
+  });
+
+  it('shows the error, else the progress, when stopped or failed', () => {
+    expect(summary([info('a1', { progress: 'Checking tests' }), done('', { stopped: true, isError: true })])).toBe('Checking tests');
+    expect(summary([done('Boom\nstack', { isError: true })])).toBe('Boom');
+    expect(summary([done('', { isError: true })])).toBe('Agent failed');
+    expect(summary([done('', { stopped: true })])).toBe('Agent stopped');
   });
 });

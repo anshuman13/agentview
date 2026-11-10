@@ -61,6 +61,16 @@ export function reportText(a: Agent): string {
   return '(no report)';
 }
 
+const cleanLine = (text: string) => text.split('\n').map((l) => l.trim().replace(/^[#\-*>\s]+/, '')).find(Boolean) ?? '';
+
+export function agentSummary(it: Extract<Item, { kind: 'agent' }>): string {
+  const { result, progress } = it;
+  if (it.running) return progress || stepText(it.steps[it.steps.length - 1]) || 'Starting…';
+  const stopped = Boolean(result?.stopped) || denied(result);
+  if (stopped || result?.isError) return firstLine(result?.text ?? '') || progress || (stopped ? 'Agent stopped' : 'Agent failed');
+  return cleanLine(result?.text ?? '').slice(0, 200) || 'No report';
+}
+
 export function buildAgents(events: ChatEvent[]): Agent[] {
   const info = new Map<string, AgentEvent>();
   const lastAt = new Map<string, number>();
