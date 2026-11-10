@@ -1,40 +1,48 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from '../app/store';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
-import { Section, sectionCount } from '../ui/Section';
+import { Section } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
 import { ago } from '../ui/util';
-import { stageName, type BuildRow } from '../../../shared/builds';
+import { pipelineLabel, type BuildRow } from '../../../shared/builds';
 import { BuildDetail } from './BuildDetail';
-import { stateDot } from './buildsLogic';
+import { FOLD, buildGroups, stateDot } from './buildsLogic';
 import { useBuilds } from './useBuilds';
 
-export function BuildList({ builds, onOpen }: { builds: BuildRow[]; onOpen: (slug: string) => void }) {
-  return (
+export function BuildList({ builds, onOpen, expanded, onExpand }: { builds: BuildRow[]; onOpen: (slug: string) => void; expanded: string[]; onExpand: (group: string) => void }) {
+  const groups = buildGroups(builds);
+  return groups.length ? (
     <>
-      <Section label="Builds" count={sectionCount(builds.length)} />
-      {builds.length ? (
-        <div className="ui-group">
-          {builds.map((b) => (
-            <Row
-              key={b.slug}
-              title={b.title}
-              meta={<><span className={`dot ${stateDot(b.state)}`} /> {stageName(b.stage)} · {b.conclusion} · {ago(b.updatedAt, ' ago')}</>}
-              onClick={() => onOpen(b.slug)}
-            />
-          ))}
-        </div>
-      ) : (
-        <EmptyState size="sm" icon="beaker" title="No builds yet" hint="Specs the build agents work on show here" />
-      )}
+      {groups.map((g) => {
+        const rows = g.key === 'active' || expanded.includes(g.key) ? g.rows : g.rows.slice(0, FOLD);
+        return (
+          <Fragment key={g.key}>
+            <Section label={g.label} count={g.rows.length} />
+            <div className="ui-group">
+              {rows.map((b) => (
+                <Row
+                  key={b.slug}
+                  title={b.title}
+                  meta={<><span className={`dot ${stateDot(b.state)}`} /> {pipelineLabel(b.pipeline)} · {b.conclusion} · {ago(b.updatedAt, ' ago')}</>}
+                  onClick={() => onOpen(b.slug)}
+                />
+              ))}
+            </div>
+            {rows.length < g.rows.length && <Button variant="quiet" size="sm" className="ov-more" onClick={() => onExpand(g.key)}>Show all {g.rows.length}</Button>}
+          </Fragment>
+        );
+      })}
     </>
+  ) : (
+    <EmptyState size="sm" icon="beaker" title="No builds yet" hint="Specs in .claude/specs show here" />
   );
 }
 
 export function Builds({ shown }: { shown: boolean }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string[]>([]);
   const { data, failed, reload } = useBuilds(shown && !open);
   const chat = useStore((s) => s.session.id);
   useEffect(() => setOpen(null), [chat]);
@@ -52,7 +60,7 @@ export function Builds({ shown }: { shown: boolean }) {
       {open ? (
         <BuildDetail key={open} slug={open} shown={shown} onBack={() => pick(null)} />
       ) : data ? (
-        <BuildList builds={data} onOpen={pick} />
+        <BuildList builds={data} onOpen={pick} expanded={expanded} onExpand={(group) => setExpanded([...expanded, group])} />
       ) : failed ? (
         <EmptyState size="sm" title="Could not load builds" hint="Try again" action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} />
       ) : (
