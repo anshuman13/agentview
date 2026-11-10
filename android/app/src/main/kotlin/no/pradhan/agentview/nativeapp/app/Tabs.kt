@@ -18,6 +18,7 @@ val MORE_TOOLS = listOf(
 val MORE_PAGES = listOf(
     MoreItem("runs", "Runs", "sync"),
     MoreItem("builds", "Builds", "beaker"),
+    MoreItem("sketches", "Sketches", "paintcan"),
     MoreItem("observe", "Observe", "pulse"),
     MoreItem("deploy", "Deploy", "rocket"),
     MoreItem("mcp", "MCP Servers", "plug"),
