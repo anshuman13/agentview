@@ -28,7 +28,7 @@ export const RepoPicker = lazy(() => import('../sessions/RepoPicker').then((m) =
 export const Runs = prefetch(() => import('../sessions/Runs').then((m) => m.Runs));
 export const Sessions = prefetch(() => import('../sessions/Sessions').then((m) => m.Sessions));
 export const AssistantNav = prefetch(() => import('../codex/nav').then((m) => m.AssistantNav));
-export const AssistantBadge = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantBadge })));
+export const AssistantCounts = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantCounts })));
 export const Assistant = prefetch(() => import('../codex/Codex').then((m) => m.Assistant));
 export const FocusBar = lazy(() => import('../codex/focus').then((m) => ({ default: m.FocusBar })));
 export const Explorer = lazy(() => import('../workspace/Explorer').then((m) => ({ default: m.Explorer })));

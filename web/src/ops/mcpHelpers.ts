@@ -11,7 +11,6 @@ export const STATUS: Record<string, [status: BadgeSpec['status'], reason: string
   probing: ['waiting', 'Checking'],
 };
 const statusOf = (s: string): [BadgeSpec['status'], string] => STATUS[s] ?? ['skipped', s];
-export const needsYou = (r: { status: string; live?: boolean }) => r.status === 'failed' || (r.status === 'needs-auth' && !!r.live);
 export const stateOf = (r: { status: string; live?: boolean; account?: string }): [status: BadgeSpec['status'], reason: string] => (r.status === 'needs-auth' && !r.live && !r.account ? ['skipped', 'OAuth via Claude'] : statusOf(r.status));
 
 const SCOPES: [id: string, title: string, where: string][] = [

@@ -1,16 +1,15 @@
 import { Suspense, useRef } from 'react';
 import { setUi, useStore } from '../store';
-import { unreadCount } from '../../sessions/folders';
 import { AgentsBadge } from '../../sessions/AgentsBadge';
 import { ChangesBadge } from '../../workspace/gitStatus';
 import { GitHubBadge } from '../../ops/pulls';
 import { Icon } from '../../ui/Icon';
 import { Sheet } from '../../ui/Sheet';
-import { AssistantBadge } from '../lazy';
+import { AssistantCounts } from '../lazy';
 import { usePages, type Page } from '../pages';
 import { canNotify, toggleNotify, useNotify } from '../runtime/notify';
 import { THEME_NAMES, type Theme } from '../theme';
-import { useMcpHealth } from '../../ops/mcpShown';
+import { mcpDot, useCounts } from '../store/counts';
 
 export type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 export type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions' | 'runs';
@@ -21,7 +20,7 @@ type TabBarProps = { tab: Tab; more: boolean; inChats: boolean; inMore: boolean;
 
 export function TabBar({ tab, more, inChats, inMore, goTab, goSide, toggleMore }: TabBarProps) {
   const pendingCount = useStore((s) => s.pending.length);
-  const elsewhere = useStore((s) => unreadCount(s.live, s.session.id, s.seen, s.attention.length));
+  const { needsYou, chats } = useCounts();
   const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pressed = useRef(false);
   const assistantPress = {
@@ -39,7 +38,8 @@ export function TabBar({ tab, more, inChats, inMore, goTab, goSide, toggleMore }
       <button className={tab === 'assistant' && !more ? 'active' : ''} title="Codex. Hold to talk" {...assistantPress}>
         <Icon name="sparkle" />
         <span>Codex</span>
-        <Suspense fallback={null}><AssistantBadge /></Suspense>
+        {needsYou > 0 && <span className="dot waiting" role="img" aria-label={`${needsYou} need you`} />}
+        <Suspense fallback={null}><AssistantCounts /></Suspense>
       </button>
       <button className={tab === 'chat' && !more ? 'active' : ''} onClick={() => goTab('chat')}>
         <Icon name="comment" />
@@ -49,7 +49,7 @@ export function TabBar({ tab, more, inChats, inMore, goTab, goSide, toggleMore }
       <button className={inChats && !more ? 'active' : ''} onClick={() => goSide('chats')}>
         <Icon name="comment-discussion" />
         <span>Sessions</span>
-        {elsewhere > 0 && <span className="dot waiting" role="img" aria-label={`${elsewhere} unread`} />}
+        {chats > 0 && <span className="dot waiting" role="img" aria-label={`${chats} unread`} />}
       </button>
       <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => goTab('agents')}>
         <Icon name="hubot" />
@@ -83,7 +83,7 @@ type MoreProps = {
 export function MoreSheet({ open, onClose, tab, view, showing, project, theme, toggleTheme, macName, goTab, goSide, openPage, onMacs }: MoreProps) {
   const cwd = useStore((s) => s.session.cwd);
   const notifying = useNotify();
-  const mcp = useMcpHealth();
+  const { mcp } = useCounts();
   const pages = usePages();
   if (!open) return null;
   const act = (f: () => void) => () => { onClose(); f(); };
@@ -120,7 +120,7 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
         <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>
           <Icon name={p.icon} />
           <span>{p.title}</span>
-          {p.id === 'mcp' && mcp.total > 0 && <span className="more-meta"><span className={`dot ${mcp.dot}`} /> {mcp.ok}/{mcp.total}</span>}
+          {p.id === 'mcp' && mcp.total > 0 && <span className="more-meta"><span className={`dot ${mcpDot(mcp)}`} /> {mcp.connected}/{mcp.total}</span>}
         </button>
       ))}
       <span className="more-divider" />

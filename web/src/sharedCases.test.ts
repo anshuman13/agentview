@@ -2,6 +2,7 @@ process.env.TZ = 'UTC';
 
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
 import { billing, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
@@ -10,6 +11,7 @@ import { appendRule } from '../../shared/steering';
 import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
 import { isSpecPath, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
+import { countChat } from './app/store/counts';
 import { can, modelsFor } from './chat/capabilitiesLogic';
 import { chatState, handoffText, runLine } from './chat/composer/composerLogic';
 import { runBands } from './sessions/runBands';
@@ -121,6 +123,14 @@ describe('cases shared with the Android app', () => {
       const { agents = 0, run, ...chat } = c.chat;
       const agentList = Array.from({ length: agents }, (_, i) => ({ id: `a${i}`, description: '', type: '', startedAt: 0 }));
       expect(chatState({ pending: 0, running: false, status: '', ...chat, agentList, run: run && { state: run.state, why: run.why, nextAt: run.nextAtLocal ? new Date(run.nextAtLocal).getTime() : null } })).toEqual(c.expected);
+    });
+  }
+
+  type CountsCase = { name: string; viewing: string; seen?: Record<string, number>; attention?: number; chats: (Partial<LiveChat> & { run?: Partial<NonNullable<LiveChat['run']>> })[]; mcp?: { name: string; status: string }[]; hidden?: Record<string, string>; needsYouRows?: number; replyRows?: number; expected: unknown };
+  for (const c of cases<CountsCase>('counts')) {
+    it(`appCounts: ${c.name}`, () => {
+      const chats = c.chats.map((chat) => countChat({ pending: 0, running: false, status: '', lastActive: 0, cwd: '', title: '', sessionId: null, ...chat } as LiveChat, c.seen ?? {}));
+      expect(appCounts({ chats, viewing: c.viewing, attention: c.attention ?? 0, mcp: c.mcp ?? [], hidden: c.hidden ?? {}, needsYouRows: c.needsYouRows ?? 0, replyRows: c.replyRows ?? 0 })).toEqual(c.expected);
     });
   }
 

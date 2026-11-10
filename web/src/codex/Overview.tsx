@@ -8,6 +8,7 @@ import { Row } from '../ui/Row';
 import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/Panel';
 import { replyQueue } from './overview/ReplyQueue';
+import { useCounts } from '../app/store/counts';
 import { useNeedsYou } from './NeedsYou';
 import { AddSheet } from './tasks/AddSheet';
 import { useView } from './view';
@@ -30,7 +31,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const needs = useNeedsYou(s, now);
   const minute = Math.floor(now / 60000);
   const queue = useMemo(() => replyQueue(s.review, minute * 60000), [s.review, minute]);
-  const count = needs.rows.length + queue.length;
+  const { needsYou: count } = useCounts();
   const [sheet, setSheet] = useState(false);
   const [adding, setAdding] = useState(false);
   const needsRow = useRef<HTMLDivElement>(null);

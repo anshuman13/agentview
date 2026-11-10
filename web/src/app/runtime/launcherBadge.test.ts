@@ -1,13 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { badgeArg, badgeCount, createBadgeSender } from './launcherBadge';
-
-describe('badgeCount', () => {
-  it('counts rows, collapsed rows once each', () => {
-    expect(badgeCount([])).toBe(0);
-    expect(badgeCount([{ kind: 'dm' }])).toBe(1);
-    expect(badgeCount([{ kind: 'overdueAll', rows: [1, 2, 3, 4] }, { kind: 'staleAsks', count: 5 }, { kind: 'wiki', count: 7 }, { kind: 'dm' }])).toBe(4);
-  });
-});
+import { badgeArg, createBadgeSender } from './launcherBadge';
 
 describe('badgeArg', () => {
   it('clamps to 0..99 and floors', () => {

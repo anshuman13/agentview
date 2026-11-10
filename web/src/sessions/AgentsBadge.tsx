@@ -1,7 +1,6 @@
-import { useStore } from '../app/store';
-import { agentCounts, agentsOf } from './agents';
+import { useCounts } from '../app/store/counts';
 
 export function AgentsBadge() {
-  const running = agentCounts(useStore((s) => agentsOf(s.events))).running;
-  return running > 0 ? <span className="dot running" role="img" aria-label={`${running} running`} /> : null;
+  const { agents } = useCounts();
+  return agents > 0 ? <span className="dot running" role="img" aria-label={`${agents} running`} /> : null;
 }

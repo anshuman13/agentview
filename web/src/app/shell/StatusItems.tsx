@@ -5,7 +5,7 @@ import { billing, providerLabel } from '../../../../shared/providers';
 import { Icon } from '../../ui/Icon';
 import { command, spendLines, weekPace } from '../../ui/util';
 import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from '../runtime/offlineBanner';
-import { useMcpHealth } from '../../ops/mcpShown';
+import { mcpDot, useCounts } from '../store/counts';
 import { Badge } from '../../ui/Badge';
 
 export function Restarting() {
@@ -48,21 +48,20 @@ export function Offline() {
 }
 
 export function McpItem() {
-  const { total, ok, dot } = useMcpHealth();
+  const { mcp } = useCounts();
   return (
     <button className="item clickable" title="MCP servers" onClick={() => command('page:mcp')}>
-      <span className={`dot ${dot}`} /> MCP {total ? `${ok}/${total}` : ''}
+      <span className={`dot ${mcpDot(mcp)}`} /> MCP {mcp.total ? `${mcp.connected}/${mcp.total}` : ''}
     </button>
   );
 }
 
 export function RunsItem() {
-  const running = useStore((s) => s.runs.filter((r) => r.state !== 'done').length);
-  const needs = useStore((s) => s.runs.filter((r) => r.needsYou).length);
-  if (!running) return null;
+  const { running, waiting } = useCounts();
+  if (!running && !waiting) return null;
   return (
     <button className="item clickable" title="Loops and goals" onClick={() => command('view:runs')}>
-      <Icon name="sync" small /> {running} running{needs > 0 && <span className="warn"> · {needs} need you</span>}
+      <Icon name="sync" small /> {running} running{waiting > 0 && <span className="warn"> · {waiting} need you</span>}
     </button>
   );
 }

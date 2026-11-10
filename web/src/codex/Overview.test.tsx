@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Overview } from './Overview';
 import { doneCount } from './overview/TodayList';
+import { rowCounts } from '../app/store/counts';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki/wiki';
 
@@ -85,12 +86,14 @@ describe('Overview', () => {
     expect(html).not.toContain('Nothing today');
   });
 
-  it('counts Needs you rows and queued asks, and hides the row at zero', () => {
+  it('shows the Needs you count from the counts store, and hides the row at zero', () => {
     mocks.needs = [{ kind: 'wiki' }, { kind: 'dm' }]; mocks.queue = [{}];
+    rowCounts.set({ needsYouRows: 2, replyRows: 1 });
     const html = render({ later: [] });
     expect(html).toContain('Needs you');
     expect(html).toContain('<span class="badge quiet">3</span>');
     mocks.needs = []; mocks.queue = [];
+    rowCounts.set({ needsYouRows: 0, replyRows: 0 });
     expect(render({ later: [] })).not.toContain('Needs you');
   });
 

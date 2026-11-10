@@ -1,13 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import { tauriInvoke } from '../../codex/data/local';
-import { useNeedsYou } from '../../codex/NeedsYou';
-import { useMinute, useSplit } from '../../codex/tasks/split';
-import { badgeArg, badgeCount, createBadgeSender } from '../runtime/launcherBadge';
+import { badgeArg, createBadgeSender } from '../runtime/launcherBadge';
+import { useCounts } from '../store/counts';
 
 function useLauncherBadge() {
-  const now = useMinute();
-  const { rows } = useNeedsYou(useSplit(), now);
-  const count = badgeArg(badgeCount(rows));
+  const count = badgeArg(useCounts().needsYou);
   const send = useMemo(() => createBadgeSender(tauriInvoke()), []);
   useEffect(() => send(count), [send, count]);
   useEffect(() => {

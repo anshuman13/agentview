@@ -5,7 +5,7 @@ import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { nextRun } from '../../../../shared/schedule';
 import { DAYS, DAY_NAMES, KINDS, type Kind, at, canRunNow, jobState, parseSchedule, removeJob, runNow, scheduleOf, useJobs } from './schedule';
 import { Badge } from '../../ui/Badge';
-import { useMcpHealth } from '../../ops/mcpShown';
+import { useShownMcp } from '../../ops/mcpShown';
 import { scopeInfo, toggleConnector, toolId } from '../../ops/mcpHelpers';
 import { useAssistantStore } from '../data';
 import { useWorkspace } from '../../sessions/folders';
@@ -75,7 +75,7 @@ export function JobWhen({ j, custom, setCustom, customOk, saveCustom }: WhenProp
 
 export function JobTools({ j }: { j: Job }) {
   const store = useAssistantStore();
-  const { servers } = useMcpHealth();
+  const servers = useShownMcp();
   const [adding, setAdding] = useState(false);
   const add = useRef<HTMLButtonElement>(null);
   const picked = (j.tools ?? '').split(',').map((t) => t.trim()).filter(Boolean);

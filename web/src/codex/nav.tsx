@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex, useSyncStatus } from './data';
 import { reviewCount } from './data/wiki/wiki';
 import { atTime } from './data/tasks/engine';
@@ -6,7 +6,9 @@ import { Icon } from '../ui/Icon';
 import { ago } from '../ui/util';
 import { FILTER_LABEL, setView, useView, type Filter, type List } from './view';
 import { sharedSplit, useMinute, useSplit } from './tasks/split';
-import { dayEnd } from './data/dates';
+import { rowCounts } from '../app/store/counts';
+import { useNeedsYou } from './NeedsYou';
+import { replyQueue } from './overview/ReplyQueue';
 import { clock } from './tasks/time';
 import type { Paused, ScanHealth } from './data/sync';
 
@@ -102,20 +104,11 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   );
 }
 
-export function useTodayCount() {
-  const snap = useAssistantData();
-  const minute = useMinute();
-  const ready = snap.phase === 'ready';
-  return useMemo(() => {
-    if (!ready) return 0;
-    const now = Date.now();
-    const s = sharedSplit(snap.items, 'all', now);
-    const endOfDay = dayEnd(now);
-    return taskCount(s, endOfDay);
-  }, [ready, snap.items, minute]);
-}
-
-export function AssistantBadge() {
-  const n = useTodayCount();
-  return n > 0 ? <span className="badge">{n}</span> : null;
+export function AssistantCounts() {
+  const s = useSplit();
+  const now = useMinute();
+  const needsYouRows = useNeedsYou(s, now).rows.length;
+  const replyRows = useMemo(() => replyQueue(s.review, now).length, [s.review, now]);
+  useEffect(() => rowCounts.patch({ needsYouRows, replyRows }), [needsYouRows, replyRows]);
+  return null;
 }

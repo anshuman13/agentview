@@ -7,9 +7,9 @@ import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
 import { useCan } from '../chat/useCan';
 import { ago, useSlot, useTick } from '../ui/util';
-import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
+import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
-import { useMcpHealth } from './mcpShown';
+import { useCounts } from '../app/store/counts';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
 import { Detail } from './McpDetail';
 import { SetupButton } from './SetupButton';
@@ -45,7 +45,7 @@ export function McpPage() {
   const [sel, setSel] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [expanded, setExpanded] = useState<Group[]>([]);
-  const health = useMcpHealth();
+  const { mcp: health } = useCounts();
   useTick(15000);
 
   const rows = useMemo(() => mcpRows(probed, mcp, account, accounts, connectors), [probed, mcp, account, accounts, connectors]);
@@ -57,7 +57,6 @@ export function McpPage() {
   const hidden = (s: Service) => groups[hideKey(s)] === 'hidden';
   const shown = list.filter((s) => !hidden(s));
   const hiddenList = list.filter(hidden);
-  const shownRows = shown.flatMap((s) => s.variants.map((v) => v.row));
   const extra = document.getElementById('page-mcp-extra');
   const action = useSlot('page-mcp-action');
   const pick = (name: string) => setSel((s) => (s === name ? null : name));
@@ -69,7 +68,7 @@ export function McpPage() {
     <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
       <div className="mcp-main wk"><div className="wk-scroll"><div className="mt-page">
         {action && createPortal(<IconButton icon="refresh" label="Check" size="sm" spin={busy} disabled={busy} onClick={() => load(true)} />, action)}
-        {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={health.ok} total={health.total} attention={shownRows.filter(needsYou).length} onCheck={() => load(true)} />, extra)}
+        {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={health.connected} total={health.total} attention={health.needsYou} onCheck={() => load(true)} />, extra)}
         {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
         {probed === null && !error && (
           <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>

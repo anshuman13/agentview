@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { Builds, Deploy, Loading, McpPage, Observe, Settings } from './lazy';
 import { appSettings } from './appSettings';
 import { PhoneHeader } from './shell/PhoneHeader';
-import { useMcpHealth } from '../ops/mcpShown';
+import { useCounts } from './store/counts';
 
 export type Page = 'observe' | 'deploy' | 'mcp' | 'builds' | 'settings';
 
@@ -26,8 +26,8 @@ const WITH_ACTION: Page[] = ['observe', 'deploy', 'mcp'];
 
 export function PageView({ page, shown, project, back }: { page: Page; shown: boolean; project: string; back?: () => void }) {
   const p = pageOf(page);
-  const mcp = useMcpHealth();
-  const sub = page === 'mcp' ? (mcp.total ? `${mcp.ok} connected of ${mcp.total}` : undefined) : page === 'observe' || page === 'deploy' ? project : undefined;
+  const { mcp } = useCounts();
+  const sub = page === 'mcp' ? (mcp.total ? `${mcp.connected} connected of ${mcp.total}` : undefined) : page === 'observe' || page === 'deploy' ? project : undefined;
   return (
     <div className={`editor ${shown ? 'shown' : ''}`}>
       <div className={`page page-${page}`}>

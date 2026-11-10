@@ -19,7 +19,7 @@ export function useMinute() {
   return now;
 }
 
-// useSplit and useTodayCount share one result per items array, filter and minute.
+// useSplit shares one result per items array, filter and minute.
 type Split = ReturnType<typeof split>;
 const splits = new WeakMap<object, { minute: number; byFilter: Map<string, Split> }>();
 export function sharedSplit(items: Parameters<typeof split>[0], filter: Parameters<typeof split>[1], now: number): Split {

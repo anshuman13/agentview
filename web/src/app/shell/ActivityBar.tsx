@@ -1,8 +1,7 @@
-import { useStore } from '../store';
 import { Icon } from '../../ui/Icon';
 import { ChangesBadge } from '../../workspace/gitStatus';
 import { GitHubBadge } from '../../ops/pulls';
-import { unreadCount } from '../../sessions/folders';
+import { useCounts } from '../store/counts';
 import { usePages, type Page } from '../pages';
 import type { View } from './TabBar';
 
@@ -20,13 +19,13 @@ type Props = { showing: string; sidebar: boolean; view: View; browserShown: bool
 
 export function ActivityBar({ showing, sidebar, view, browserShown, showView, openPage, switchEditor }: Props) {
   const pages = usePages();
-  const elsewhere = useStore((s) => unreadCount(s.live, s.session.id, s.seen, s.attention.length));
+  const { chats } = useCounts();
   return (
     <aside className="activitybar desktop-only">
       {VIEWS.map((v) => (
         <button key={v.id} data-view={v.id} className={(v.id === 'assistant' ? showing === 'assistant' : sidebar && view === v.id) ? 'active' : ''} title={v.id === 'assistant' ? 'Codex (⌘I)' : v.title} onClick={() => showView(v.id)}>
           <Icon name={v.icon} />
-          {v.id === 'chats' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
+          {v.id === 'chats' && chats > 0 && <span className="badge">{chats}</span>}
           {v.id === 'changes' && <ChangesBadge />}
           {v.id === 'github' && <GitHubBadge />}
         </button>

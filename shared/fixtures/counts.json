@@ -1,0 +1,56 @@
+[
+  {
+    "name": "the chat on screen is not counted in chats",
+    "viewing": "a",
+    "chats": [{ "id": "a", "pending": 1 }, { "id": "b", "pending": 1 }, { "id": "c" }],
+    "expected": { "needsYou": 0, "chats": 1, "waiting": 2, "running": 0, "agents": 0, "mcp": { "connected": 0, "total": 0, "needsYou": 0 } }
+  },
+  {
+    "name": "done chats and attention count in chats",
+    "viewing": "a",
+    "seen": { "s1": 10 },
+    "attention": 2,
+    "chats": [{ "id": "b", "sessionId": "s1", "lastActive": 20 }, { "id": "c", "sessionId": "s2", "lastActive": 20 }],
+    "expected": { "needsYou": 0, "chats": 3, "waiting": 0, "running": 0, "agents": 0, "mcp": { "connected": 0, "total": 0, "needsYou": 0 } }
+  },
+  {
+    "name": "a stalled chat is not running",
+    "viewing": "",
+    "chats": [{ "id": "a", "running": true, "stalled": true }, { "id": "b", "running": true }],
+    "expected": { "needsYou": 0, "chats": 0, "waiting": 0, "running": 1, "agents": 0, "mcp": { "connected": 0, "total": 0, "needsYou": 0 } }
+  },
+  {
+    "name": "a waiting chat is not running",
+    "viewing": "",
+    "chats": [{ "id": "a", "running": true, "pending": 1 }],
+    "expected": { "needsYou": 0, "chats": 1, "waiting": 1, "running": 0, "agents": 0, "mcp": { "connected": 0, "total": 0, "needsYou": 0 } }
+  },
+  {
+    "name": "a run that needs you is waiting",
+    "viewing": "",
+    "chats": [{ "id": "a", "run": { "state": "running", "needsYou": true } }, { "id": "b", "run": { "state": "running" } }],
+    "expected": { "needsYou": 0, "chats": 0, "waiting": 1, "running": 0, "agents": 0, "mcp": { "connected": 0, "total": 0, "needsYou": 0 } }
+  },
+  {
+    "name": "a hidden MCP service is left out",
+    "viewing": "",
+    "chats": [],
+    "mcp": [{ "name": "github", "status": "connected" }, { "name": "slack_work", "status": "failed" }, { "name": "slack-other", "status": "connected" }, { "name": "docs", "status": "needs-auth" }],
+    "hidden": { "hide:slack": "hidden", "hide:github": "shown" },
+    "expected": { "needsYou": 0, "chats": 0, "waiting": 0, "running": 0, "agents": 0, "mcp": { "connected": 1, "total": 2, "needsYou": 1 } }
+  },
+  {
+    "name": "needs you is the sum of its inputs",
+    "viewing": "",
+    "chats": [],
+    "needsYouRows": 3,
+    "replyRows": 2,
+    "expected": { "needsYou": 5, "chats": 0, "waiting": 0, "running": 0, "agents": 0, "mcp": { "connected": 0, "total": 0, "needsYou": 0 } }
+  },
+  {
+    "name": "agents come from the agentList of the chat on screen",
+    "viewing": "a",
+    "chats": [{ "id": "a", "agentList": [{ "id": "x" }, { "id": "y" }] }, { "id": "b", "agentList": [{ "id": "z" }] }],
+    "expected": { "needsYou": 0, "chats": 0, "waiting": 0, "running": 2, "agents": 2, "mcp": { "connected": 0, "total": 0, "needsYou": 0 } }
+  }
+]
