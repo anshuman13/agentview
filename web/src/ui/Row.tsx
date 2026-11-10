@@ -1,17 +1,22 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import { IconButton } from './Button';
+import { Menu } from './Menu';
 import { useLongPress } from './longPress';
 
 const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
 
-export function Row({ leading, title, meta, trailing, lines = 1, href, plain, action, className, onLongPress, ...rest }: Omit<ComponentPropsWithoutRef<'button'>, 'title' | 'children'> & {
+export function Row({ leading, title, meta, state, trailing, menu, lines = 1, href, plain, action, className, onLongPress, ...rest }: Omit<ComponentPropsWithoutRef<'button'>, 'title' | 'children'> & {
   leading?: ReactNode;
   title: ReactNode;
   meta?: ReactNode;
+  state?: ReactNode;
   trailing?: ReactNode;
   lines?: 1 | 2;
   onLongPress?: () => void;
-} & ({ href?: undefined; plain?: false; action?: ReactNode } | { href?: string; plain?: boolean; action?: never })) {
-  const press = useLongPress(onLongPress);
+} & ({ href?: undefined; plain?: false; action?: ReactNode; menu?: ReactNode } | { href?: string; plain?: boolean; action?: never; menu?: never })) {
+  const [open, setOpen] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  const press = useLongPress(onLongPress ?? (menu ? () => setOpen(true) : undefined));
   const cls = cx('ui-row', !!leading && 'has-lead', className);
   const handlers = (!href && press) ? {
     ref: (el: HTMLElement | null) => el?.setAttribute('data-long-press', ''),
@@ -28,11 +33,18 @@ export function Row({ leading, title, meta, trailing, lines = 1, href, plain, ac
         <span className={cx('ui-row-title', lines === 2 && 'two')}>{title}</span>
         {meta && <span className="ui-row-meta">{meta}</span>}
       </span>
+      {state !== undefined && <span className="ui-row-state">{state}</span>}
       {trailing && <span className="ui-row-trail">{trailing}</span>}
     </>
   );
   if (plain) return <div className={cls} {...(rest as ComponentPropsWithoutRef<'div'>)} {...handlers}>{body}</div>;
   if (href) return <a className={cls} href={href} target="_blank" rel="noreferrer" onMouseDown={rest.onMouseDown as React.MouseEventHandler<HTMLAnchorElement> | undefined}>{body}</a>;
   const button = <button type="button" className={cls} {...rest} {...handlers}>{body}</button>;
-  return action ? <div className="ui-row-wrap">{button}{action}</div> : button;
+  const kebab = menu && (
+    <>
+      <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} />
+      {open && <div className="ui-row-menu" onClick={() => setOpen(false)}><Menu trigger={more} onClose={() => setOpen(false)}>{menu}</Menu></div>}
+    </>
+  );
+  return action || kebab ? <div className="ui-row-wrap">{button}{action}{kebab}</div> : button;
 }

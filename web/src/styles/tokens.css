@@ -33,6 +33,7 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --list-pad: var(--sp-8);
   --row-h: 40px;
+  --row-state-w: 80px;
   --row-title: var(--fs-md);
   --row-meta: var(--fs-sm);
   --meta-fg: var(--fg-muted);

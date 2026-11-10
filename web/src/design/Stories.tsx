@@ -174,6 +174,9 @@ function Stories() {
           <Row title="With action" meta="Sample" action={<IconButton icon="ellipsis" label="More" />} />
           <Row leading="A" title="Leading, meta and trailing" meta="Sample" trailing={<span className="badge quiet">3</span>} />
           <Row lines={2} title="Two lines of title text that wraps onto a second line when it is long enough to need one" meta="Sample" />
+          <Row leading="A" title="State badge" meta="Sample" state={<Badge status="waiting" label="Needs you" />} menu={<MenuItem>Open</MenuItem>} />
+          <Row leading="A" title="No state, slot kept" meta="Sample" state={null} menu={<MenuItem>Open</MenuItem>} />
+          <Row leading="A" title="A long title that ellipsises on one line when it is longer than the width of the row it sits in" meta="Sample" state={<Badge status="failed" />} menu={<MenuItem>Open</MenuItem>} />
           <Row title="A long title that ellipsises when it is longer than the width of the row it sits in, however wide that is" meta="Sample" />
         </Panel>
         <Story label="focused"><Panel padding="sm"><div className="ds-focus"><Row title="Focused row" meta="Sample" /></div></Panel></Story>
