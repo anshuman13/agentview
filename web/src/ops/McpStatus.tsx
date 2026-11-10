@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getState, useStore } from '../app/store';
+import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
@@ -8,6 +9,7 @@ import { useCan } from '../chat/useCan';
 import { ago, useTick } from '../ui/util';
 import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
+import { useMcpHealth } from './mcpShown';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
 import { Detail } from './McpDetail';
 import { ServiceRow } from './McpServiceRow';
@@ -28,6 +30,7 @@ function McpStats({ probed, busy, at, ok, total, attention, onCheck }: Stats) {
   );
 }
 
+const FOLD = 5;
 const rowCount = (of: Service[]) => of.reduce((n, s) => n + s.variants.length, 0);
 
 export function McpPage() {
@@ -40,6 +43,8 @@ export function McpPage() {
   const { groups, setGroup } = useMcpGroups();
   const [sel, setSel] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [expanded, setExpanded] = useState<Group[]>([]);
+  const health = useMcpHealth();
   useTick(15000);
 
   const rows = useMemo(() => mcpRows(probed, mcp, account, accounts, connectors), [probed, mcp, account, accounts, connectors]);
@@ -61,7 +66,7 @@ export function McpPage() {
   return (
     <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
       <div className="mcp-main wk"><div className="wk-scroll"><div className="mt-page">
-        {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={shownRows.filter((r) => r.status === 'connected').length} total={shownRows.length} attention={shownRows.filter(needsYou).length} onCheck={() => load(true)} />, extra)}
+        {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={health.ok} total={health.total} attention={shownRows.filter(needsYou).length} onCheck={() => load(true)} />, extra)}
         {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
         {probed === null && !error && (
           <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
@@ -73,10 +78,13 @@ export function McpPage() {
         {(['work', 'personal'] as Group[]).map((g) => {
           const mine = shown.filter((s) => groupOf(s.variants[0].row) === g);
           if (!mine.length) return null;
+          const all = mine.flatMap((s) => renderRows(s, g, false));
+          const folded = !expanded.includes(g) && all.length > FOLD;
           return (
             <section key={g}>
               <Section label={g === 'work' ? 'Work' : 'Personal'} count={rowCount(mine)} />
-              <div className="as-group">{mine.map((s) => renderRows(s, g, false))}</div>
+              <div className="as-group">{folded ? all.slice(0, FOLD) : all}</div>
+              {folded && <Button variant="quiet" size="sm" onClick={() => setExpanded((e) => [...e, g])}>Show all {all.length}</Button>}
             </section>
           );
         })}
