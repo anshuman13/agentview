@@ -153,6 +153,10 @@ describe('runDue', () => {
       expect(run).toEqual({ status: 'ok', output: 'Started jobs/fix-tests-1105 in app' });
       expect(pushes).toEqual([]);
     });
+    test('a 2xx answer that is not JSON still counts as started', async () => {
+      const { run } = await go(() => new Response('ok'));
+      expect(run).toEqual({ status: 'ok', output: 'Started a chat in app' });
+    });
     test('an open last run is skipped without a push', async () => {
       const { pushes, run } = await go(() => Response.json({ error: 'The last run is still open' }, { status: 409 }));
       expect(run).toEqual({ status: 'ok', output: 'Skipped: the last run is still open' });

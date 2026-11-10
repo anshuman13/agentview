@@ -112,7 +112,7 @@ async function startCoding(job: Job, repo: string) {
   if (res.status === 409) return 'Skipped: the last run is still open';
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`Could not start: ${body?.error ?? res.status}`);
-  return `Started ${body.branch} in ${path.basename(repo)}`;
+  return `Started ${body?.branch ?? 'a chat'} in ${path.basename(repo)}`;
 }
 
 // Fills in the next run of enabled jobs that have none and returns the jobs that are due. A job that is off has a next
