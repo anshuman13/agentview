@@ -48,6 +48,7 @@ export function LoopCard() {
   };
   const details = goal ? () => openGoal(run.id) : undefined;
   const meta = [state.at && clock(state.at), state.source === 'round' && state.outcome && word(state.outcome), state.next && `Next: ${state.next}`, state.stepsLeft && `${state.stepsLeft} ${state.stepsLeft === 1 ? 'step' : 'steps'} left`].filter(Boolean).join(' · ');
+  const nowClick = details ? { onClick: details } : run.kind === 'loop' && state.source === 'round' ? { onClick: () => setOpen(!open), 'aria-expanded': open } : { plain: true };
   const dot = working ? 'running' : OUTCOME_DOT[run.rounds.at(-1)?.outcome ?? 'quiet'];
   return (
     <Panel padding="sm" className="lc">
@@ -71,7 +72,7 @@ export function LoopCard() {
             </>
           )}
       </div>
-      <Row lines={2} leading={<span className={`dot ${dot}`} />} title={state.title} meta={meta || undefined} {...(details ? { onClick: details } : run.kind === 'loop' && state.source === 'round' ? { onClick: () => setOpen(!open), 'aria-expanded': open } : { plain: true })} />
+      <Row lines={2} leading={<span className={`dot ${dot}`} />} title={state.title} meta={meta || undefined} {...nowClick} />
       {agents.slice(0, MAX_AGENTS).map((a) => <Row key={a.id} leading={<Icon name="hubot" />} title={a.slug ?? a.description} meta={`${a.type} · ${agentAge(a.startedAt, now)}`} state="" onClick={() => openAgent(a.id)} />)}
       {agents.length > MAX_AGENTS && <Row leading={<Icon name="hubot" />} title={`${agents.length - MAX_AGENTS} more agents`} onClick={() => openAgent()} />}
       <div className="lc-line"><span className="lc-what">{progress ? `Plan ${progress}` : run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></div>
