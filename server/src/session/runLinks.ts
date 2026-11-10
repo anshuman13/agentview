@@ -63,7 +63,7 @@ export class RunLinks {
 
   waitingOnUser(on: boolean) {
     const { runs, state, cycle } = this.s;
-    for (const id of [state.session.repeat?.runId, cycle.run]) {
+    for (const id of [state.session.repeat?.runId, cycle.run, runs.jobFor(this.s.id)?.id]) {
       const run = runs.get(id);
       if (on && run?.state === 'running') runs.update(id, { state: 'paused', why: WAITING });
       else if (!on && run?.why === WAITING) runs.update(id, { state: 'running', why: '' });
@@ -74,6 +74,7 @@ export class RunLinks {
     const { runs, state, cycle, id } = this.s;
     runs.end(state.session.repeat?.runId, 'chat closed');
     runs.end(cycle.run, 'chat closed');
+    runs.end(runs.jobFor(id)?.id, 'chat closed');
     for (const r of runs.list()) if (r.kind === 'tries' && r.chatId === id) runs.end(r.id, 'chat closed');
   }
 
@@ -98,6 +99,11 @@ export class RunLinks {
     const repeat = state.session.repeat;
     const result = { ...roundResult(r.text, { failed: turn.lastError }), costUsd: turn.cost };
     if (state.session.sessionId) runs.reportTry(state.session.sessionId, result);
+    const job = runs.jobFor(this.s.id);
+    if (job) {
+      runs.addRound(job.id, { n: 1, ...result });
+      runs.end(job.id, 'turn finished');
+    }
     if (this.compareRun) {
       runs.addRound(this.compareRun, { n: 0, ...result });
       runs.end(this.compareRun, 'all tries reported');

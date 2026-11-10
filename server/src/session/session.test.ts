@@ -3,6 +3,7 @@ import type { AgentSession } from './session.js';
 import { prFrom } from './pr.js';
 import { busy } from '../host/restore.js';
 import { fireTime } from './repeat.js';
+import { Runs, WAITING } from './runs.js';
 import { claudeSession, type ClaudeDriver } from '../agent/claude/driver.js';
 import { historyFrom } from '../agent/claude/transcript.js';
 import type { History } from '../agent/types.js';
@@ -1045,5 +1046,30 @@ describe('restart resume', () => {
     const text = users()[0].kind === 'user' ? users()[0].text : '';
     expect(text).toContain('wf_abc');
     expect(text).toContain('resumeFromRunId');
+  });
+});
+
+describe('job runs', () => {
+  const jobSession = () => {
+    const f = fakeSession();
+    f.s.runs = new Runs();
+    const id = f.s.runs.start({ kind: 'job', sessionId: '', chatId: f.s.id, title: 'Fix', what: 'Fix it', provider: 'claude', jobId: 'j1', branch: 'jobs/fix-1', repo: '/r', worktree: '/w', paseo: false });
+    return { ...f, runs: f.s.runs, id };
+  };
+
+  it('is paused as Needs you while a permission waits, and runs again once it is answered', () => {
+    const { s, runs, id } = jobSession();
+    s.links.waitingOnUser(true);
+    expect(runs.get(id)).toMatchObject({ state: 'paused', why: WAITING, needsYou: true });
+    s.links.waitingOnUser(false);
+    expect(runs.get(id)).toMatchObject({ state: 'running', needsYou: false });
+  });
+
+  it('adds one round and ends when the turn ends', () => {
+    const { s, runs, id, result } = jobSession();
+    s.sendPrompt('go');
+    result('r1');
+    expect(runs.get(id)).toMatchObject({ state: 'done', why: 'turn finished', rounds: [{ n: 1, line: 'done' }] });
+    expect(runs.jobFor(s.id)).toBeUndefined();
   });
 });

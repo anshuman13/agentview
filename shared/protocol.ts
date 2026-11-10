@@ -151,10 +151,10 @@ export type Round = { n: number; at: number; outcome: RoundOutcome; line: string
 // One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.
 export type Try = { n: number; chatId: string; sessionId: string; branch: string; dropped?: boolean };
 
-// One /loop, /goal, build cycle or /tries: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
+// One /loop, /goal, build cycle, /tries or scheduled coding job: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
 export type ChatRun = {
   id: string;
-  kind: 'loop' | 'goal' | 'cycle' | 'tries';
+  kind: 'loop' | 'goal' | 'cycle' | 'tries' | 'job';
   sessionId: string;
   chatId: string;
   title: string;
@@ -176,6 +176,11 @@ export type ChatRun = {
   asked?: boolean;
   tries?: Try[];
   needsYou: boolean;
+  jobId?: string;
+  branch?: string;
+  repo?: string;
+  worktree?: string;
+  paseo?: boolean;
 };
 
 export type McpProp = { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown; title?: string; maxLength?: number };

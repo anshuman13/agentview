@@ -9,7 +9,7 @@ const KEEP_ENDED = 100;
 const KEEP_ROUNDS = 50;
 const SAVE_MS = 1000;
 
-type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' | 'provider'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'tries'>>;
+type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' | 'provider'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'tries' | 'jobId' | 'branch' | 'repo' | 'worktree' | 'paseo'>>;
 
 export const firstSentence = (text: string, max = 120) => text.trim().split(/(?<=[.!?])\s|\n/)[0].slice(0, max).trim();
 
@@ -53,6 +53,11 @@ export class Runs {
   // The run a chat is on now, if any.
   activeFor(chatId: string) {
     return this.runs.filter((r) => r.chatId === chatId && r.state !== 'done').at(-1);
+  }
+
+  // The scheduled coding job a chat is working on, until it ends.
+  jobFor(chatId: string) {
+    return this.runs.find((r) => r.kind === 'job' && r.chatId === chatId && r.state !== 'done');
   }
 
   start(init: NewRun) {

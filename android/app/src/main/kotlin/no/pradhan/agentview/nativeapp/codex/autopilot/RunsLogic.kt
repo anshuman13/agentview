@@ -18,13 +18,14 @@ import no.pradhan.agentview.nativeapp.ui.DotState
 // Loops, goals and build cycles (web/src/chat/composerLogic.ts runLine and the Runs page bands).
 
 const val RUNS_FINISHED = 30
-private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "cycle" to "Build cycle", "tries" to "Tries")
+private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "cycle" to "Build cycle", "tries" to "Tries", "job" to "Job")
 
 fun runLine(run: ChatRun, phase: String? = null): String = when {
     run.state == "paused" -> if (run.why.isNotEmpty()) "Paused · ${run.why}" else "Paused"
     run.kind == "goal" && run.every != null -> "Standing goal · round ${run.round}" + nextText(run)
     run.kind == "goal" -> "Goal · check ${run.round} of ${run.max}"
     run.kind == "tries" -> "Tries · ${run.tries.count { !it.dropped }} chats"
+    run.kind == "job" -> "Job · ${run.branch}"
     run.kind == "cycle" -> "Build cycle · round ${run.round}/${run.max}" + (phase?.takeIf { it != "passed" && it != "failed" }?.let { " · ${it.replaceFirstChar(Char::uppercase)}" } ?: "")
     else -> "Loop · round ${run.round}" + nextText(run)
 }

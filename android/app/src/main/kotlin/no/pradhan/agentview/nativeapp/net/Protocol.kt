@@ -169,6 +169,7 @@ data class ChatRun(
     val rounds: List<Round> = emptyList(),
     val tries: List<RunTry> = emptyList(),
     val needsYou: Boolean = false,
+    val branch: String = "",
 )
 
 @Serializable
