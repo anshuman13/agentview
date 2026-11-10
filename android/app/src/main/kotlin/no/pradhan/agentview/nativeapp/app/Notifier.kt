@@ -94,7 +94,7 @@ class Notifier(private val app: Application) {
 
     fun clear(chat: String) = NoticeKind.entries.forEach { manager.cancel((it.channel + chat).hashCode()) }
 
-    fun clearChats() = manager.activeNotifications.filter { it.id != WAITING_ID && it.notification.channelId != RUNNING_CHANNEL }.forEach { manager.cancel(it.id) }
+    fun clearChats() = manager.activeNotifications.filter { it.id != WAITING_ID && !(it.notification.channelId == RUNNING_CHANNEL && it.isOngoing) }.forEach { manager.cancel(it.id) }
 
     private fun runningId(chat: String) = (RUNNING_CHANNEL + chat).hashCode()
 
@@ -104,7 +104,7 @@ class Notifier(private val app: Application) {
     fun running(notes: List<RunningNote>) {
         val active = if (granted()) notes else emptyList()
         val keep = active.map { runningId(it.chatId) }.toSet()
-        manager.activeNotifications.filter { it.notification.channelId == RUNNING_CHANNEL && it.id !in keep }.forEach { manager.cancel(it.id) }
+        manager.activeNotifications.filter { it.notification.channelId == RUNNING_CHANNEL && it.isOngoing && it.id !in keep }.forEach { manager.cancel(it.id) }
         active.forEach { n ->
             val id = runningId(n.chatId)
             val builder = NotificationCompat.Builder(app, RUNNING_CHANNEL)

@@ -16,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
@@ -253,12 +254,12 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         viewModelScope.launch(Dispatchers.Default) {
             var since = emptyMap<String, Long>()
             var shown = emptyList<RunningNote>()
-            combine(store.state.map { it.live }.distinctUntilChanged(), liveLoaded, notifyOn) { live, loaded, on -> if (loaded && on) live else null }.collect { live ->
+            combine(store.state.map { it.live }.distinctUntilChanged(), liveLoaded, notifyOn, granted) { live, loaded, on, ok -> if (loaded && on && ok) live else null }.collectLatest { live ->
                 val notes = if (live == null) emptyList() else runningNotes(live, since, System.currentTimeMillis())
                 since = notes.associate { it.chatId to it.since }
-                if (notes == shown) return@collect
-                shown = notes
+                if (notes == shown) return@collectLatest
                 notifier.running(notes.map { if (it.pending) it.withPermission() else it })
+                shown = notes
             }
         }
     }
