@@ -1,5 +1,9 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
+import { profileOf } from '../claude/accounts.js';
 import { checkFields, dataWriteTool } from './data.js';
+
+const hub = vi.hoisted(() => ({ rows: vi.fn(), push: vi.fn() }));
+vi.mock('../../integrations/assistant.js', () => ({ hubRows: hub.rows, hubPush: hub.push }));
 
 describe('checkFields', () => {
   test('turns date strings into epoch ms and replans a rescheduled job', () => {
@@ -17,5 +21,11 @@ describe('data_write', () => {
   test('rejects a job repo, which only the job page sets', async () => {
     const out = await dataWriteTool.handler({ table: 'jobs', fields: { repo: '/tmp/x' } }, { cwd: '/tmp' } as never);
     expect(out).toMatch(/Unknown fields for jobs: repo/);
+  });
+  test('refuses to change a job that has a repo, and still changes one without', async () => {
+    const cwd = '/tmp';
+    hub.rows.mockResolvedValue([{ id: 'a', profile: profileOf(cwd), repo: '/r' }, { id: 'b', profile: profileOf(cwd), repo: null }]);
+    expect(await dataWriteTool.handler({ table: 'jobs', id: 'a', fields: { prompt: 'x' } }, { cwd } as never)).toBe('A job with a repo is changed on the job page only.');
+    expect(await dataWriteTool.handler({ table: 'jobs', id: 'b', fields: { prompt: 'x' } }, { cwd } as never)).toMatch(/Updated jobs/);
   });
 });

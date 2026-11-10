@@ -67,7 +67,9 @@ export const dataWriteTool = defineTool({
   async handler({ table, id, fields }, { cwd }) {
     const bad = Object.keys(fields).filter((f) => !WRITABLE[table].includes(f));
     if (bad.length) return `Unknown fields for ${table}: ${bad.join(', ')}. Columns: ${WRITABLE[table].join(', ')}.`;
-    if (id && !(await own(cwd, table)).some((r) => r.id === id)) return `No ${table} row ${id}.`;
+    const row = id ? (await own(cwd, table)).find((r) => r.id === id) : undefined;
+    if (id && !row) return `No ${table} row ${id}.`;
+    if (table === 'jobs' && row?.repo) return 'A job with a repo is changed on the job page only.';
     const err = checkFields(table, fields);
     if (err) return err;
     const rowId = id ?? crypto.randomUUID();
