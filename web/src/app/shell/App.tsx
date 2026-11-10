@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { connect, embedded, getState, useStore } from '../store';
+import { embedded, getState, useStore } from '../store';
 import { EmptyState } from '../../ui/Panel';
 import { haptic } from '../../ui/haptic';
 import { slideFrom, useTabSwipe } from '../touch/tabSwipe';
@@ -108,7 +108,6 @@ export function App() {
     return () => window.removeEventListener('agentview:chat', show);
   }, []);
 
-  useEffect(() => { connect(); }, []);
   useEffect(() => void loadAppSettings(), []);
   useWorkbenchKeys({
     toggleChat: () => setChatOpen((v) => !v),

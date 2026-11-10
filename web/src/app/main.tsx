@@ -5,6 +5,8 @@ import '../styles/index.css';
 import { Guard } from './shell/Guard';
 import { touch } from './touch/touch';
 import { openExternal } from './shell/macApi';
+import './deepLinks';
+import { connect } from './store';
 import { DesignPage } from './lazy';
 
 const App = lazy(() => import('./shell/App').then((m) => ({ default: m.App })));
@@ -35,5 +37,7 @@ if (import.meta.hot) {
   import.meta.hot.on('vite:beforeFullReload', () => log('vite full-reload'));
   import.meta.hot.on('vite:ws:disconnect', () => log('vite ws lost'));
 }
+
+if (location.pathname !== '/design') connect();
 
 createRoot(document.getElementById('root')!).render(<Guard><Suspense fallback={null}>{location.pathname === '/design' ? <DesignPage /> : <App />}</Suspense></Guard>);
