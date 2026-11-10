@@ -49,6 +49,7 @@ import no.pradhan.agentview.nativeapp.net.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ops.agentSummary
 import no.pradhan.agentview.nativeapp.app.DeepLink
+import no.pradhan.agentview.nativeapp.codex.autopilot.planProgress
 import no.pradhan.agentview.nativeapp.sessions.stageName
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -94,14 +95,9 @@ fun decodeSampled(bytes: ByteArray, maxWidth: Int): Bitmap? {
 private fun toneColor(t: Tone) = if (t == Tone.Agent) av.agent else av.fgMuted
 
 @Composable
-internal fun ExploredRow(label: String, onOpen: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.CenterStart) { Box(Modifier.size(Tokens.dot).background(toneColor(stepTone("Read")), CircleShape)) }
-        Text(androidx.compose.ui.text.buildAnnotatedString {
-            withStyleColor(toneColor(stepTone("Read"))) { append("Explored ") }
-            withStyleColor(av.fg) { append(label) }
-        }, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Chevron()
+internal fun ExploredRow(hub: Hub, id: String, steps: List<Item.Step>, cwd: String, settled: Boolean) {
+    TranscriptBox(hub, "explore:$id", "Explored ${exploreLabel(steps)}") {
+        Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) { steps.forEach { StepRow(it, cwd, settled) } }
     }
 }
 
@@ -166,11 +162,25 @@ private fun Pre(text: String, wrap: Boolean = true, error: Boolean = false) {
     }
 }
 
-// A spec the agent wrote or a build agent works on; tapping opens its build page.
+private fun openBuild(hub: Hub, slug: String) { hub.link.value = DeepLink(page = "builds", slug = slug) }
+
+// A spec the agent wrote; the box opens to its task count, which links to the build page.
 @Composable
-internal fun SpecCard(hub: Hub, slug: String, meta: String) {
+internal fun SpecCard(hub: Hub, id: String, slug: String, path: String, chat: String, meta: String) {
+    TranscriptBox(hub, "spec:$id", slug, meta) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
+            // Composed only while the box is open, so the file is read only then.
+            val progress = planProgress(hub, path, chat)
+            ListRow("Tasks", progress?.takeUnless { it.startsWith("0 of 0 ") } ?: "No tasks", onClick = { openBuild(hub, slug) })
+        }
+    }
+}
+
+// A build agent's spec, shown plain inside the agent box.
+@Composable
+internal fun SpecRow(hub: Hub, slug: String, meta: String) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
-        ListRow(slug, meta, leading = { AvIcon("beaker", null, Tokens.icon) }, onClick = { hub.link.value = DeepLink(page = "builds", slug = slug) })
+        ListRow(slug, meta, leading = { AvIcon("beaker", null, Tokens.icon) }, onClick = { openBuild(hub, slug) })
     }
 }
 
@@ -232,7 +242,7 @@ internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpe
         action = if (running && canStop) ({ IconBtn("debug-stop", "Stop agent", { hub.stopTask(it.use.id) }) }) else null,
         summary = agentSummary(it), reserveSummary = running,
     ) {
-        if (card) agentBuild(it.use)?.let { b -> SpecCard(hub, b.slug, "${stageName(b.stage)} \u00B7 ${b.slug}") }
+        if (card) agentBuild(it.use)?.let { b -> SpecRow(hub, b.slug, "${stageName(b.stage)} \u00B7 ${b.slug}") }
         if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(av.agent, Tokens.stroke).padding(start = Tokens.sp7)) {
             shown.forEachIndexed { i, s -> Box(Modifier.gap(gapAbove(shown.getOrNull(i - 1), s)?.coerceAtMost(Tokens.sp2))) { ItemRow(hub, s, chat, cwd, !running, onOpenAgent) } }
         }

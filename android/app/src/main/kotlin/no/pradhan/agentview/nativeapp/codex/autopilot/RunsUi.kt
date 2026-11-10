@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import no.pradhan.agentview.nativeapp.chat.TranscriptBox
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.JobState
 import no.pradhan.agentview.nativeapp.codex.jobs.jobMeta
@@ -54,11 +55,11 @@ import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.PageHeader
-import no.pradhan.agentview.nativeapp.ui.Panel
 import no.pradhan.agentview.nativeapp.ui.RowLabel
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.StatusDot
+import no.pradhan.agentview.nativeapp.ui.Panel
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
@@ -69,7 +70,7 @@ private const val MAX_AGENTS = 3
 
 @Composable
 fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
-    var open by rememberSaveable(run.id) { mutableStateOf(false) }
+    var rounds by rememberSaveable(run.id) { mutableStateOf(false) }
     val cycle = run.kind == "cycle" || run.kind == "tries"
     val goal = run.kind == "goal"
     val paused = run.state == "paused"
@@ -87,20 +88,22 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent
         state.stepsLeft.takeIf { it > 0 }?.let { "$it ${if (it == 1) "step" else "steps"} left" },
     ).joinToString(" · ")
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
-        Panel {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(runLine(run, phase), Modifier.weight(1f).then(if (goal) Modifier.clickable(onClick = detail) else Modifier), style = Type.callout, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        TranscriptBox(
+            hub, "loop:${run.id}", runLine(run, phase), defaultOpen = true,
+            action = {
                 if (!cycle) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") })
                 if (cycle) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
                 else MoreButton { close ->
                     if (!paused) MenuItem("Run now", "debug-start", { close(); hub.runControl(run, "now") }, enabled = !hub.readOnly)
                     MenuItem("Stop", "debug-stop", { close(); hub.runControl(run, "stop") }, danger = true, enabled = !hub.readOnly)
                 }
-            }
+            },
+        ) {
+          Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) {
             ListRow(
                 state.title, meta.ifEmpty { null }, lines = 2, compact = true,
                 leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
-                onClick = if (goal) detail else if (run.kind == "loop" && state.outcome != null) ({ open = !open }) else null,
+                onClick = if (goal) detail else if (run.kind == "loop" && state.outcome != null) ({ rounds = !rounds }) else null,
             )
             agents.take(MAX_AGENTS).forEach { a ->
                 ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, compact = true, onClick = { onOpenAgent(a.id) })
@@ -111,7 +114,8 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent
                 Text(money(run.costUsd, billing(run.provider)), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
             }
             run.rounds.lastOrNull { it.report != null }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(r, showTime = false, run.provider) } }
-            if (open && run.kind == "loop") run.rounds.takeLast(10).reversed().forEach { RoundLine(it, showTime = true, run.provider) }
+            if (rounds && run.kind == "loop") run.rounds.takeLast(10).reversed().forEach { RoundLine(it, showTime = true, run.provider) }
+          }
         }
     }
 }

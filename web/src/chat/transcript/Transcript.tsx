@@ -197,7 +197,7 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
 
   return (
     <div className="tr-host">
-    {newId && recap && since && <SinceBox chat={chat} recap={recap} at={fresh.at(-1)?.at} onOpen={() => setSinceOpen(true)} onDismiss={() => setSince(false)} />}
+    {newId && recap && since && <SinceBox chat={chat} recap={recap} at={fresh[0]?.at} onOpen={() => setSinceOpen(true)} onDismiss={() => setSince(false)} />}
     {sinceOpen && recap && <SinceSheet chat={chat} recap={recap} rounds={fresh} run={run} onClose={() => setSinceOpen(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">

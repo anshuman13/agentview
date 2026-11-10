@@ -178,11 +178,17 @@ private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
 private fun SinceYouLeft(hub: Hub, live: LiveChat, run: ChatRun?) {
     val left = remember(live.id) { hub.leftAt(live.id) }
     val since = if (left == 0L || live.lastActive > left) live.recap else null
-    var open by remember(live.id) { mutableStateOf(true) }
+    var shown by remember(live.id) { mutableStateOf(true) }
     var sheet by remember(live.id) { mutableStateOf(false) }
-    if (since == null || !open) return
-    ListRow("Since you left: $since", lines = 2, onClick = { sheet = true }, trailing = { IconBtn("close", "Dismiss", { open = false }) })
-    if (sheet) SinceSheet(hub, live.id, since, roundsSince(run?.rounds.orEmpty(), left), run) { sheet = false }
+    if (since == null || !shown) return
+    val fresh = roundsSince(run?.rounds.orEmpty(), left)
+    TranscriptBox(
+        hub, "since:${live.id}", "Since you left", fresh.firstOrNull()?.let { clock(it.at) } ?: "", defaultOpen = true,
+        action = { IconBtn("close", "Dismiss", { shown = false }) },
+    ) {
+        ListRow("Recap", since, metaLines = 2, onClick = { sheet = true })
+    }
+    if (sheet) SinceSheet(hub, live.id, since, fresh, run) { sheet = false }
 }
 
 @Composable

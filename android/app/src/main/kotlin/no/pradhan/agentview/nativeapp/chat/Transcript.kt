@@ -139,8 +139,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val rows = view.rows
     val noEvents by hub.store.state.select { it.events.isEmpty() }
     val canRewind by hub.store.state.select { it.session?.capabilities?.rewind ?: true }
-    val openRuns = rememberSaveable(chatId) { mutableStateOf(setOf<String>()) }
-    val folded = remember(view.runs, openRuns.value) { view.runs.filterKeys { it !in openRuns.value }.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
+    val folded = remember(view.runs) { view.runs.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, view.ats, seen.first, seen.second) }
     DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
@@ -167,7 +166,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
             lazyItems(queued.asReversed(), key = { "out-${it.id}" }) { q ->
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
             }
-            transcriptRows(hub, view, newId, openRuns, folded, chatId, cwd, running, canRewind, onOpenAgent)
+            transcriptRows(hub, view, newId, folded, chatId, cwd, running, canRewind, onOpenAgent)
             if (earlier > 0) item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
                     Text(if (loading) "Loading earlier…" else "Show earlier ($earlier hidden)", style = Type.callout, color = av.accentText)
@@ -188,7 +187,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     }
 }
 
-private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String?, openRuns: MutableState<Set<String>>, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, onOpenAgent: (String) -> Unit) {
+private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, onOpenAgent: (String) -> Unit) {
     val rows = view.rows
     val days = view.days
     val firstId = view.items.firstOrNull()?.id
@@ -200,7 +199,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String
             val run = view.runs[it.id]
             when {
                 it.id in folded -> {}
-                run != null && it.id !in openRuns.value -> ExploredRow(exploreLabel(run)) { openRuns.value = openRuns.value + it.id }
+                run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                 else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in view.rewinds, it.id in view.specCards)
             }
         }
@@ -254,7 +253,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.Assistant -> Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
-        is Item.File -> if (isSpecPath(it.path) && it.error == null) SpecCard(hub, specSlug(it.path), if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}") else FileCard(it, cwd)
+        is Item.File -> if (isSpecPath(it.path) && it.error == null) SpecCard(hub, it.id, specSlug(it.path), it.path, chat, if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}") else FileCard(it, cwd)
         is Item.Agent -> AgentRow(hub, it, chat, cwd, onOpenAgent, card)
         is Item.Blocked -> BlockedCard(it.ev, hub)
         is Item.Review -> ReviewCard(it.ev, hub)
