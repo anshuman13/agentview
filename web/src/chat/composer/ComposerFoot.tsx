@@ -8,13 +8,19 @@ import { Voice, type useDictation } from './Voice';
 import { goalInfo, type GoalChoice, type Use } from './composerLogic';
 import { providerLabel } from '../../../../shared/providers';
 
-function ModeChip({ goal, setPick }: { goal: GoalChoice; setPick: (p: Pick) => void }) {
-  const { effort, loop, modelName, effortName, modeInfo } = useChatSettings();
+export function useModeText(goal: GoalChoice) {
+  const { effort, modelName, effortName, modeInfo } = useChatSettings();
   const canEffort = useCan('effort');
   const shortModel = modelName.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);
+  return `${shortModel}${effort && canEffort ? ` · ${effortName}` : ''} · ${modeInfo.label}${goal !== 'off' ? ` · ${goalInfo(goal, Date.now()).chip}` : ''}`;
+}
+
+function ModeChip({ goal, setPick }: { goal: GoalChoice; setPick: (p: Pick) => void }) {
+  const { loop, modeInfo } = useChatSettings();
+  const modeText = useModeText(goal);
   return (
     <Chip className={`cp-mode${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Build cycle on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
-      <Icon name={modeInfo.icon} small /><span>{shortModel}{effort && canEffort && ` · ${effortName}`} · {modeInfo.label}{goal !== 'off' && ` · ${goalInfo(goal, Date.now()).chip}`}</span>{(loop.on || goal !== 'off') && <Icon name="sync" small />}<Icon name="chevron-down" small />
+      <Icon name={modeInfo.icon} small /><span>{modeText}</span>{(loop.on || goal !== 'off') && <Icon name="sync" small />}<Icon name="chevron-down" small />
     </Chip>
   );
 }
@@ -31,7 +37,7 @@ function AttachButton({ attach }: { attach: (list: File[]) => Promise<void> }) {
   );
 }
 
-function SendButton({ typed, shell, submit }: { typed: boolean; shell: boolean; submit: (stop?: boolean) => void }) {
+export function SendButton({ typed, shell, submit }: { typed: boolean; shell: boolean; submit: (stop?: boolean) => void }) {
   const running = useStore((s) => s.session.running);
   const stopping = useStore((s) => s.session.stopping);
   const compacting = useStore((s) => s.session.compacting);

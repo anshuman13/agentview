@@ -140,7 +140,7 @@
   .brief { display: contents; --brief-bg: var(--bg); }
   .brief-status { order: 0; flex: 1 1 0; padding: var(--sp-3) var(--sp-6) var(--sp-4); background: var(--bg); border-bottom: 1px solid var(--border); }
   .brief-cards { order: 1; padding: var(--sp-4) var(--sp-6); }
-  .brief-input { order: 2; padding: var(--sp-3) var(--sp-6) var(--sp-4); }
+  .brief-input { order: 2; padding: var(--sp-3) var(--sp-6) var(--sp-2); }
   .timeline-head { height: var(--touch); }
   .timeline-head .icon-btn, .step .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .tl-view { min-height: var(--touch-sm); min-width: 0; white-space: nowrap; }

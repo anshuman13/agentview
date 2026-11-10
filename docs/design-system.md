@@ -325,6 +325,10 @@ Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` 
 - The one extra line is the limit. Settings rows stay title and value (Scandinavian rules); explanations stay
   behind the info button.
 
+## Phone (web)
+
+- **Bottom bar**: at max-width 900px the tab bar is a pill floating `--sp-4` from the sides and `--sp-2` above the safe area (`--raised`, `--elev-2`), with `--accent-soft` filling the selected tab. The composer is a pill (`--radius-pill`, `--elev-1`) just above it, with + and a mic or Send; above one line its radius becomes `--shape-lg`. The bar hides on the Chat tab while composing (`data-composing` on `.workbench`) and slides back in `--dur`; reduced motion shows and hides it instantly.
+
 ## Phone (native Android)
 
 Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NATIVE_COLORS`, `NATIVE_SIZES` and `NATIVE_TYPE` after reading `tokens.css`, so Material wins over the web touch tokens there and `Tokens.kt` stays generated.

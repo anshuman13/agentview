@@ -141,3 +141,16 @@
 }
 .lc-body .ui-row::after { display: none; }
 .lc .dot.running { background: var(--accent-fill); }
+
+@media (max-width: 900px) {
+  .cp-card.pill { border-color: transparent; border-radius: var(--radius-pill); box-shadow: var(--elev-1); }
+  .cp-card.pill:focus-within { border-color: var(--cp-ring); }
+  .cp-card.pill.multi { border-radius: var(--shape-lg); }
+  .cp-row { display: flex; align-items: flex-end; gap: var(--sp-1); padding: var(--sp-1) var(--sp-2); }
+  .cp-row .cp-text { flex: 1; min-width: 0; }
+  .cp-card.pill :is(textarea, .cp-mirror) { padding: calc((var(--touch) - var(--line-lg)) / 2) var(--sp-2); }
+  .cp-card.pill textarea { min-height: var(--touch); }
+  .cp-add { position: relative; flex: none; }
+  .cp-add > .icon-btn, .cp-row > .voice { width: var(--touch); height: var(--touch); border-radius: var(--radius-round); }
+  .cp-add > .ui-menu { top: auto; right: auto; bottom: 100%; left: 0; white-space: nowrap; }
+}

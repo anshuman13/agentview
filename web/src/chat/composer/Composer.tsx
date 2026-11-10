@@ -2,20 +2,23 @@ import { useId, useRef, useState } from 'react';
 import { useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { touch } from '../../app/touch/touch';
+import { useNarrow } from '../../app/shell/useNarrow';
 import { LoopCard } from '../cards/LoopCard';
 import { TodoCard } from '../cards/TodoCard';
-import { useDictation } from './Voice';
+import { useDictation, Voice } from './Voice';
+import { AddMenu } from './AddMenu';
 import { PopItems } from './ComposerPop';
 import { Announcer } from '../Announcer';
 import { ChatSettings, useChatSettings, type Pick } from '../ChatSettings';
 import { ghostFor, goalPlaceholder, type GoalChoice, type Use } from './composerLogic';
-import { ComposerFoot } from './ComposerFoot';
+import { ComposerFoot, SendButton } from './ComposerFoot';
 import { ComposerStats } from './ComposerStats';
 import { PickerSheets } from './PickerSheets';
 import { SharedConfirm, useSharedIntake } from './SharedText';
 import { UsesBar } from './UsesBar';
 import { useAutocomplete } from './useAutocomplete';
 import { useAutoHeight } from './useAutoHeight';
+import { useBarHidden } from './useBarHidden';
 import { useComposerEvents } from './useComposerEvents';
 import { useComposerKeys } from './useComposerKeys';
 import { useDraft, usePromptHistory } from './usePromptHistory';
@@ -42,6 +45,7 @@ export function Composer() {
   const [uses, setUses] = useState<Use[]>([]);
   const [goals, setGoals] = useState<Record<string, GoalChoice>>({});
   const goal = goals[chat] ?? 'off';
+  const narrow = useNarrow();
   const [caret, setCaret] = useState(0);
   const ta = useRef<HTMLTextAreaElement>(null);
   const mirror = useRef<HTMLDivElement>(null);
@@ -57,7 +61,8 @@ export function Composer() {
 
   const ghost = !ac.open && !ac.shell && ac.at === text.length ? ghostFor(text, h.history) : '';
   const typed = text.trim().length > 0;
-  useAutoHeight(ta, mirror, wantCaret, setCaret, [text, ghost]);
+  const multi = useAutoHeight(ta, mirror, wantCaret, setCaret, [text, ghost]);
+  useBarHidden(ta, typed);
 
   const apply = (next: string, c = next.length) => {
     wantCaret.current = c;
@@ -78,11 +83,13 @@ export function Composer() {
       <LoopCard />
       <div
         ref={ac.card}
-        className={`cp-card${ac.shell ? ' shell' : ''}`}
+        className={`cp-card${ac.shell ? ' shell' : ''}${narrow ? ' pill' : ''}${narrow && multi ? ' multi' : ''}`}
         onDragOver={(e) => e.dataTransfer.types.includes('Files') && e.preventDefault()}
         onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }}
       >
         <UsesBar uses={uses} remove={(u) => setUses((l) => l.filter((x) => x !== u))} />
+        <div className={narrow ? 'cp-row' : undefined}>
+        {narrow && <AddMenu goal={goal} uploading={uploading} setPick={setPick} attach={attach} />}
         <div className="cp-text">
           <div ref={mirror} className="cp-mirror" aria-hidden><span className="cp-typed">{text}</span><span className="cp-ghost">{ghost}</span></div>
           <textarea
@@ -102,12 +109,14 @@ export function Composer() {
             onPaste={(e) => { if (e.clipboardData.files.length) { e.preventDefault(); void attach([...e.clipboardData.files]); } }}
           />
         </div>
+        {narrow && (typed || running ? <SendButton typed={typed} shell={ac.shell} submit={submit} /> : <Voice onText={dictate} />)}
+        </div>
         {ghost && touch() && (
           <button className="cp-suggest" title="Use this suggestion" onPointerDown={(e) => e.preventDefault()} onClick={() => apply(text + ghost)}>
             <Icon name="arrow-right" small /><span>{text.length > 12 && '…'}{text.slice(-12)}<b>{ghost}</b></span>
           </button>
         )}
-        <ComposerFoot goal={goal} uses={uses} uploading={uploading} typed={typed} shell={ac.shell} setPick={setPick} attach={attach} dictate={dictate} submit={submit} />
+        {!narrow && <ComposerFoot goal={goal} uses={uses} uploading={uploading} typed={typed} shell={ac.shell} setPick={setPick} attach={attach} dictate={dictate} submit={submit} />}
       </div>
       <ComposerStats hint={ac.shell ? 'Runs in the terminal' : ''} />
       {ac.open && (
