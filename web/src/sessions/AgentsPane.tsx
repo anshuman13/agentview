@@ -22,13 +22,15 @@ const took = (a: Agent, now: number) => elapsed((a.endedAt ?? now) - a.startedAt
 
 export function AgentsPane({ selected, onSelect, stack }: { selected: string | null; onSelect: (id: string | null) => void; stack?: boolean }) {
   const agents = useAgents();
+  const running = useStore((s) => s.live.find((c) => c.id === s.session.id)?.agentList);
+  const unseen = (running ?? []).filter((r) => !agents.some((a) => a.id === r.id));
   const cwd = useStore((s) => s.session.cwd);
-  const now = useTick(1000, agents.some((a) => a.status === 'running'));
+  const now = useTick(1000, unseen.length > 0 || agents.some((a) => a.status === 'running'));
   const list = [...agents].reverse();
   const groups = [...new Set(list.map((a) => a.group))].map((g) => [g, list.filter((a) => a.group === g)] as const).sort(([a], [b]) => Number(a !== undefined) - Number(b !== undefined));
   const current = agents.find((a) => a.id === selected) ?? list[0];
 
-  if (!agents.length) {
+  if (!agents.length && !unseen.length) {
     return (
       <EmptyState size="md" icon="hubot" title="No agents yet" hint="Sub-agents the agent starts in this chat show up here, with their prompt, steps and report" />
     );
@@ -60,6 +62,12 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
             <div className="as-group">{rows.map((a) => agentRow(a))}</div>
           </Fragment>
         ))}
+        {unseen.length > 0 && (
+          <>
+            <Section label="Running" count={unseen.length} />
+            <div className="as-group">{unseen.map((a) => <AgentRow key={a.id} status="running" description={a.description} meta="Running" trailing={elapsed(now - a.startedAt)} />)}</div>
+          </>
+        )}
       </div>
       {current && <AgentDetail key={current.id} a={current} cwd={cwd} now={now} stack={stack} onBack={() => onSelect(null)} />}
     </div>

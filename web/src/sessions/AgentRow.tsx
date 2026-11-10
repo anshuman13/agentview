@@ -8,7 +8,7 @@ import type { AgentStatus, LiveAgent } from '../../../shared/protocol';
 
 export const STATUS_ICON: Record<AgentStatus, string> = { running: 'loading', done: 'check', failed: 'error', stopped: 'debug-stop' };
 
-export function AgentRow({ status, description, meta, trailing, current, onClick }: { status: AgentStatus; description: string; meta: string; trailing: ReactNode; current?: boolean; onClick: () => void }) {
+export function AgentRow({ status, description, meta, trailing, current, onClick }: { status: AgentStatus; description: string; meta: string; trailing: ReactNode; current?: boolean; onClick?: () => void }) {
   return (
     <Row
       className="ag-item"
