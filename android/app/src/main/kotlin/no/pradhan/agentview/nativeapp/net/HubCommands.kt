@@ -28,14 +28,15 @@ fun Hub.lastModel(group: String) = prefs.getString(lastModelKey(group), null)
 fun Hub.setLastModel(group: String, model: String) { prefs.edit().putString(lastModelKey(group), model).apply() }
 
 // A model is sent only when the provider's own list has it, so a Codex id never reaches a Claude chat or the reverse.
-fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, review: Boolean = false, provider: String? = null) {
+fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, review: Boolean = false, provider: String? = null, text: String? = null, onOpened: () -> Unit = {}) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
     val group = modelGroup(provider ?: defaultProvider.value)
     if (model != null) setLastModel(group, model)
     val sent = (model ?: lastModel(group).takeIf { fork == null })?.takeIf { m -> modelsOf(group).value.any { it.value == m } }
     viewModelScope.launch {
-        val id = switchTo(newSessionCmd(cwd = cwd, model = sent, fork = fork, provider = provider))
+        val id = switchTo(newSessionCmd(cwd = cwd, model = sent, fork = fork, provider = provider, text = text))
         if (id == null) notice.value = "The chat did not open" else {
+            onOpened()
             if (mode != null) post(setModeCmd(mode), id)
             if (review) post(setReviewCmd(true), id)
             if (draft != null) setDraft(id, draft)
@@ -98,6 +99,8 @@ fun Hub.runControl(run: ChatRun, op: String) {
     post(runCmd(run.id, op), store.wanted)
     if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run), if (run.kind == "cycle" || run.kind == "tries") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
 }
+
+fun Hub.runEdit(run: ChatRun, edit: Map<String, Long?>) = post(runEditCmd(run.id, edit), store.wanted)
 
 fun Hub.triesKeep(run: ChatRun, n: Int) = post(triesKeepCmd(run.id, n), store.wanted)
 

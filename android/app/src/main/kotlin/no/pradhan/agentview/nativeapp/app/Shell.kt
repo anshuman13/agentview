@@ -60,6 +60,7 @@ import kotlinx.coroutines.flow.collectLatest
 import no.pradhan.agentview.nativeapp.chat.ChatScreen
 import no.pradhan.agentview.nativeapp.chat.VoiceHost
 import no.pradhan.agentview.nativeapp.codex.CodexScreen
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheets
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunsScreen
 import no.pradhan.agentview.nativeapp.codex.autopilot.sessionsBadge
 import no.pradhan.agentview.nativeapp.net.Hub
@@ -291,6 +292,7 @@ fun App(hub: Hub) {
     }
 
     shared?.let { ShareSheet(hub, it) }
+    GoalSheets(hub)
     if (more) MoreSheet(hub.deploy.collectAsState().value, { more = false }) { r -> more = false; nav.openMore(r) }
 }
 

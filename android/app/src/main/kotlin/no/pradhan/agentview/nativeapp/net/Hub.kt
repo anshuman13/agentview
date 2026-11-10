@@ -49,6 +49,7 @@ import no.pradhan.agentview.nativeapp.chat.parseModels
 import no.pradhan.agentview.nativeapp.codex.CodexStore
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.meetings.parseResolved
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.needsList
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.ReviewFindings
@@ -158,6 +159,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val navHidden = MutableStateFlow(false)
     val showTurn = MutableStateFlow<String?>(null)
+
+    val goalSheet = MutableStateFlow<GoalSheet?>(null)
 
     private val foregroundNow = MutableStateFlow(false)
 

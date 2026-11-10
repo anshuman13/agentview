@@ -151,6 +151,9 @@ data class ChatRun(
     val max: Int = 0,
     val nextAt: Long? = null,
     val every: Long? = null,
+    val endAt: Long? = null,
+    val capPct: Int? = null,
+    val usage: PlanUsage? = null,
     val provider: String? = null,
     val costUsd: Double = 0.0,
     val rounds: List<Round> = emptyList(),
@@ -340,6 +343,8 @@ private fun cmd(type: String, build: kotlinx.serialization.json.JsonObjectBuilde
 fun steerCmd(text: String, id: String) = cmd("steer") { put("text", text); put("id", id) }
 fun interruptCmd() = cmd("interrupt")
 fun runCmd(run: String, op: String) = cmd("run") { put("run", run); put("op", op) }
+// A null value clears the end time or the cap; a key left out stays as it is.
+fun runEditCmd(run: String, edit: Map<String, Long?>) = cmd("run_edit") { put("run", run); edit.forEach { (k, v) -> put(k, v) } }
 fun triesKeepCmd(run: String, n: Int) = cmd("tries_keep") { put("run", run); put("n", n) }
 fun permissionCmd(id: String, allow: Boolean, always: Boolean = false) = cmd("permission") {
     put("id", id); put("allow", allow); if (always) put("always", true)
@@ -358,7 +363,7 @@ fun setAccountCmd(account: String) = cmd("set_account") { put("account", account
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
 fun setReviewCmd(on: Boolean) = cmd("set_review") { put("on", on) }
 fun reviewCmd(id: String, action: String, file: String? = null, hunk: Int? = null) = cmd("review") { put("id", id); put("action", action); if (file != null) put("file", file); if (hunk != null) put("hunk", hunk) }
-fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null, provider: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork); if (provider != null) put("provider", provider) }
+fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null, provider: String? = null, text: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork); if (provider != null) put("provider", provider); if (text != null) put("text", text) }
 fun closeCmd(id: String) = cmd("close") { put("id", id) }
 fun openSessionCmd(sessionId: String) = cmd("open_session") { put("sessionId", sessionId) }
 fun rewindCmd(id: String) = cmd("rewind") { put("id", id) }

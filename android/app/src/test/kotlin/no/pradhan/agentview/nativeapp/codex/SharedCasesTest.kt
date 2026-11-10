@@ -22,8 +22,11 @@ import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.latestChecklist
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.stripRound
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunEntry
 import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
+import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
+import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
@@ -171,6 +174,17 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.str("progress"), specProgress(tasks))
             assertEquals(c.str("name"), c.nullable("start")?.jsonPrimitive?.content, tasks.firstOrNull { !it.done }?.let { startTaskPrompt(it, c.str("path")) })
             assertEquals(c.str("name"), c.str("all"), runAllPrompt(c.str("path")))
+        }
+    }
+
+    @Test fun goalCommand() {
+        for (c in cases("goal-command")) {
+            c["command"]?.let {
+                val f = c.getValue("form").jsonObject
+                val form = GoalForm(f.str("what"), f.getValue("every").jsonPrimitive.long, f.nullable("stopIn")?.jsonPrimitive?.long, f.nullable("stopAt")?.jsonPrimitive?.content, f.nullable("capPct")?.jsonPrimitive?.int)
+                assertEquals(c.str("name"), it.jsonPrimitive.content, goalCommand(form, c.getValue("now").jsonPrimitive.long))
+            }
+            if ("plan" in c) assertEquals(c.str("name"), c.nullable("plan")?.jsonPrimitive?.content, planOf(c.str("what")))
         }
     }
 

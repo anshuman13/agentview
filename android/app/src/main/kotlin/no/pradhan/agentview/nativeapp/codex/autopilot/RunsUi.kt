@@ -72,7 +72,7 @@ fun LoopCard(hub: Hub, run: ChatRun, phase: String?) {
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
         Panel(Modifier.combinedClickable(onClick = { open = !open }, onLongClick = { if (!cycle && !paused) menu = true })) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(runLine(run, phase), Modifier.weight(1f), style = Type.callout, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(runLine(run, phase), Modifier.weight(1f).then(if (run.kind == "goal") Modifier.clickable { hub.goalSheet.value = GoalSheet.Detail(run.id) } else Modifier), style = Type.callout, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (!cycle) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") })
                 IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") })
             }
@@ -123,18 +123,14 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
         TriesSheet(hub, run, state.live, { board = null }, { t -> scope.launch { if (hub.openSaved(t.sessionId)) { board = null; onChat() } } })
     }
 
-    fun openChat(run: ChatRun) {
-        run.rounds.lastOrNull()?.report?.let { hub.showTurn.value = it }
-        if (state.live.any { it.id == run.chatId }) { hub.open(run.chatId); onChat() }
-        else scope.launch { if (hub.openSaved(run.sessionId)) onChat() }
-    }
+    fun openChat(run: ChatRun) = scope.launch { if (hub.openRun(run, run.rounds.lastOrNull()?.report)) onChat() }
 
     @Composable
     fun entry(e: RunEntry) = when (e) {
         is RunEntry.Chat -> {
             val last = e.run.rounds.lastOrNull()
             ListRow(
-                e.run.title.ifBlank { "Untitled" }, runLine(e.run), onClick = { if (e.run.kind == "tries") board = e.run.id else openChat(e.run) },
+                e.run.title.ifBlank { "Untitled" }, runLine(e.run), onClick = { when (e.run.kind) { "tries" -> board = e.run.id; "goal" -> hub.goalSheet.value = GoalSheet.Detail(e.run.id); else -> openChat(e.run) } },
                 below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(roundText(it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
                 trailing = { RowLabel(money(e.run.costUsd, billing(e.run.provider))) },
             )
@@ -146,9 +142,9 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
     }
 
     Column(Modifier.fillMaxSize()) {
-        PageHeader("Runs", onBack)
+        PageHeader("Runs", onBack) { IconBtn("add", "New goal", { hub.goalSheet.value = GoalSheet.Start() }) }
         if (bands.needs.isEmpty() && bands.running.isEmpty() && bands.finished.isEmpty()) {
-            EmptyState("Loops, goals and scheduled jobs you start show here", icon = "sync")
+            EmptyState("Loops, goals and scheduled jobs you start show here", icon = "sync", action = { Button("New goal", { hub.goalSheet.value = GoalSheet.Start() }, size = ButtonSize.Sm) })
             return@Column
         }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = Tokens.sp8)) {
@@ -166,6 +162,13 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
             }
         }
     }
+}
+
+// Shows the chat of a run, and the report of one round when given; false when it cannot be opened.
+suspend fun Hub.openRun(run: ChatRun, report: String?): Boolean {
+    report?.let { showTurn.value = it }
+    if (store.state.value.live.any { it.id == run.chatId }) { open(run.chatId); return true }
+    return openSaved(run.sessionId)
 }
 
 private fun entryKey(e: RunEntry) = when (e) {

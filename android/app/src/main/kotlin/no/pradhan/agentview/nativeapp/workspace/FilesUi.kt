@@ -28,6 +28,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.chat.ChatImage
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.read
@@ -42,6 +43,7 @@ import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Markdown
+import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
@@ -165,7 +167,16 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
 @Composable
 private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
     SectionHeader("Tasks", specProgress(tasks)) {
-        if (tasks.any { !it.done }) Button("Run all", { hub.askChat(runAllPrompt(path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly)
+        if (tasks.any { !it.done }) {
+            var menu by remember { mutableStateOf(false) }
+            Box {
+                Button("Run", { menu = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                Menu(menu, { menu = false }) {
+                    MenuItem("Run all in this chat", "debug-start", { menu = false; hub.askChat(runAllPrompt(path)) }, enabled = !hub.readOnly)
+                    MenuItem("Run as goal\u2026", "target", { menu = false; hub.goalSheet.value = GoalSheet.Start(plan = path) })
+                }
+            }
+        }
     }
     Group {
         tasks.forEachIndexed { i, t ->

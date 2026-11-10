@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Capabilities
@@ -235,6 +236,8 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, session: SessionInfo?,
                 val detail = if (g.value == "off" && run != null) runLine(run, session?.loop?.phase) else g.detail
                 ListRow(g.label, detail, onClick = { if (g.value == "off" && run != null) hub.runControl(run, "stop"); s.goal = g.value; onSheet(null) }, trailing = if (g.value == s.goal) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
             }
+            Hairline()
+            ListRow("Custom goal\u2026", "Set how often, when to stop and a usage cap", onClick = { hub.goalSheet.value = GoalSheet.Start(here = true); onSheet(null) })
         }
         SectionHeader("Permission mode")
         Group {
