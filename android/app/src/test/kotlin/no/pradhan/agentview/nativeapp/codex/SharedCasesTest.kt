@@ -63,7 +63,9 @@ import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.setupPrompt
+import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
+import no.pradhan.agentview.nativeapp.workspace.sketchDoc
 import no.pradhan.agentview.nativeapp.workspace.planCondition
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
@@ -247,6 +249,14 @@ class SharedCasesTest {
 
     @Test fun specSlug() {
         for (c in cases("spec-slug")) assertEquals(c.str("name"), c.str("slug"), specSlug(c.str("path")))
+    }
+
+    @Test fun sketchPath() {
+        for (c in cases("sketch-path")) assertEquals(c.str("name"), c.getValue("sketch").jsonPrimitive.booleanOrNull, isSketchPath(c.str("path")))
+    }
+
+    @Test fun sketchDoc() {
+        for (c in cases("sketch-doc")) assertEquals(c.str("name"), c.str("doc"), sketchDoc(c.str("html"), c.str("theme")))
     }
 
     @Test fun goalCommand() {
