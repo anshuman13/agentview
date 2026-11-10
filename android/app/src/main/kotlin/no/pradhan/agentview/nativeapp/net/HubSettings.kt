@@ -27,12 +27,12 @@ fun Hub.setFeatureUse(on: Boolean) {
     }
 }
 
-fun Hub.setHiddenFeatures(next: List<String>, text: String, back: List<String>) {
+fun Hub.setHiddenFeatures(next: List<String>, text: String, back: List<String>, snack: (String, (() -> Unit)?) -> Unit) {
     if (readOnly) return
     viewModelScope.launch {
         runCatching { api.setHiddenFeatures(next) }
-            .onSuccess { hiddenFeatures.value = it; undoable.tryEmit(Undoable(text) { setHiddenFeatures(back, "Undone", next) }) }
-            .onFailure { notice.value = "Could not save. Nothing changed, try again." }
+            .onSuccess { hiddenFeatures.value = it; snack(text) { setHiddenFeatures(back, "Undone", next, snack) } }
+            .onFailure { snack("Could not save. Nothing changed, try again.", null) }
     }
 }
 

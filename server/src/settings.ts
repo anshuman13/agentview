@@ -2,6 +2,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { ACCOUNT_LABEL, type Account, type Provider, type PublicSettings } from '../../shared/protocol.js';
+import { hideableIds } from '../../shared/featureUse.js';
 import { readJsonSync, writeJson } from './json.js';
 
 export const SETTINGS_FILE = process.env.AGENTVIEW_SETTINGS ?? path.join(os.homedir(), '.agentview/settings.json');
@@ -55,4 +56,4 @@ export const accountLabels = (s = loadSettings()): Record<Account, string> => ({
 
 export const applyAccountLabels = () => Object.assign(ACCOUNT_LABEL, accountLabels());
 
-export const publicSettings = (): PublicSettings => ({ deploy: !!deployUrl(), accountLabels: accountLabels(), personalRoot: personalRoot(), defaultProvider: loadSettings().defaultProvider, featureUse: loadSettings().featureUse, hiddenFeatures: loadSettings().hiddenFeatures, roots: workspaceRoots().map((r) => path.basename(r)) });
+export const publicSettings = (): PublicSettings => ({ deploy: !!deployUrl(), accountLabels: accountLabels(), personalRoot: personalRoot(), defaultProvider: loadSettings().defaultProvider, featureUse: loadSettings().featureUse, hiddenFeatures: hideableIds(loadSettings().hiddenFeatures), roots: workspaceRoots().map((r) => path.basename(r)) });

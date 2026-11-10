@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { FEATURE_IDS, HIDEABLE_IDS, dayKey, type UseDays } from '../../shared/featureUse.js';
+import { FEATURE_IDS, dayKey, type UseDays } from '../../shared/featureUse.js';
 import { jsonFile } from './json.js';
 import { loadSettings } from './settings.js';
 
@@ -32,9 +32,6 @@ export async function featureUseDays(now = new Date()) {
   const from = daysAgo(now, KEEP_DAYS);
   return Object.fromEntries(Object.entries((await store.read()).days).filter(([day]) => day >= from));
 }
-
-// The known hideable ids, once each.
-export const hideableIds = (ids: string[]) => [...new Set(ids.filter((id) => HIDEABLE_IDS.has(id)))];
 
 export const clearFeatureUse = () => store.clear();
 

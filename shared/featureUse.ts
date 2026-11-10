@@ -26,7 +26,10 @@ export const FEATURES: Feature[] = [
 ];
 
 export const FEATURE_IDS = new Set(FEATURES.map((f) => f.id));
-export const HIDEABLE_IDS = new Set(FEATURES.filter((f) => f.hideable).map((f) => f.id));
+const HIDEABLE_IDS = new Set(FEATURES.filter((f) => f.hideable).map((f) => f.id));
+
+// The known hideable ids, once each; anything that is not a list gives none.
+export const hideableIds = (ids: unknown): string[] => (Array.isArray(ids) ? [...new Set(ids.filter((id): id is string => HIDEABLE_IDS.has(id)))] : []);
 const FEATURE_BY_ID = new Map(FEATURES.map((f) => [f.id, f]));
 
 const FAMILY_ALIAS: Record<string, string> = { pin: 'open' };

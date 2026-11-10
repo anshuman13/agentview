@@ -53,9 +53,11 @@ export function FeatureUseSheet({ onClose }: { onClose: () => void }) {
     (r) => { appSettings.patch({ hiddenFeatures: r.hiddenFeatures ?? [] }); showSnack(text, () => void save(back, 'Undone', next)); },
     () => showSnack(SAVE_FAILED),
   );
-  const menu = (f: Feature) => f.hideable && (hidden.includes(f.id)
-    ? <MenuItem onClick={() => void save(hidden.filter((id) => id !== f.id), `${f.label} shown`, hidden)}>Show</MenuItem>
-    : <MenuItem onClick={() => void save([...hidden, f.id], `${f.label} hidden`, hidden)}>Hide</MenuItem>);
+  const menu = (f: Feature) => {
+    if (!f.hideable) return null;
+    const isHidden = hidden.includes(f.id);
+    return <MenuItem icon={isHidden ? 'eye' : 'eye-closed'} onClick={() => void save(isHidden ? hidden.filter((id) => id !== f.id) : [...hidden, f.id], `${f.label} ${isHidden ? 'shown' : 'hidden'}`, hidden)}>{isHidden ? 'Show' : 'Hide'}</MenuItem>;
+  };
   const shown = (r: Feature) => !hidden.includes(r.id);
   const hiddenRows = rows ? [...rows.used, ...rows.never].filter((f) => !shown(f)) : [];
   return (

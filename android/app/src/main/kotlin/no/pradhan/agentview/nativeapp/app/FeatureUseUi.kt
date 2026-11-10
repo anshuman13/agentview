@@ -5,7 +5,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import java.time.LocalDate
+import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.setHiddenFeatures
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -26,6 +31,7 @@ import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
+import no.pradhan.agentview.nativeapp.ui.SnackHost
 import no.pradhan.agentview.nativeapp.ui.Tokens
 
 private const val SHOWN = 5
@@ -53,11 +59,21 @@ fun FeatureUseSheet(hub: Hub, onDismiss: () -> Unit) {
     var span by remember { mutableStateOf(30) }
     val on by hub.featureUse.collectAsState()
     val hidden by hub.hiddenFeatures.collectAsState()
+    val snackState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val snack = { text: String, undo: (() -> Unit)? ->
+        scope.launch {
+            snackState.currentSnackbarData?.dismiss()
+            if (snackState.showSnackbar(text, if (undo != null) "Undo" else null, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) undo?.invoke()
+        }
+        Unit
+    }
     LaunchedEffect(Unit) {
         runCatching { hub.api.featureUse() }.onSuccess { days = it }.onFailure { error = it.message ?: "Unknown error" }
     }
     val today = LocalDate.now().toString()
     Sheet(onDismiss, "Feature use") {
+        SnackHost(snackState)
         if (on) Row(Modifier.padding(Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             listOf(7, 30).forEach { n -> Chip("$n days", { span = n }, on = span == n) }
         }
@@ -68,14 +84,13 @@ fun FeatureUseSheet(hub: Hub, onDismiss: () -> Unit) {
                 val n = if (span == 7) u.n7 else u.n30
                 "${kindLabel(u.feature)} · $n ${if (n == 1) "time" else "times"} · ${lastUsed(u.last, today)}"
             }
-            val menu = { f: Feature ->
-                if (!f.hideable) null else {
-                    val isHidden = f.id in hidden
-                    val content: @Composable ColumnScope.(() -> Unit) -> Unit = { close ->
-                        if (isHidden) MenuItem("Show", "eye", { close(); hub.setHiddenFeatures(hidden - f.id, "${f.label} shown", hidden) }, enabled = !hub.readOnly)
-                        else MenuItem("Hide", "eye-closed", { close(); hub.setHiddenFeatures(hidden + f.id, "${f.label} hidden", hidden) }, enabled = !hub.readOnly)
-                    }
-                    content
+            val menu: (Feature) -> (@Composable ColumnScope.(() -> Unit) -> Unit)? = { f ->
+                val isHidden = f.id in hidden
+                if (!f.hideable) null else { close ->
+                    MenuItem(if (isHidden) "Show" else "Hide", if (isHidden) "eye" else "eye-closed", {
+                        close()
+                        hub.setHiddenFeatures(if (isHidden) hidden - f.id else hidden + f.id, "${f.label} ${if (isHidden) "shown" else "hidden"}", hidden, snack)
+                    }, enabled = !hub.readOnly)
                 }
             }
             if (on) {
