@@ -46,7 +46,7 @@ export function saveSoon() {
     if (!hub.serving || hub.restarting) return;
     const chats: Saved[] = [...live.values()].flatMap(({ chat }) => {
       const { sessionId, repeat, loop } = chat.state.session;
-      return sessionId && (repeat || loop.on) ? [{ sessionId, crons: [], repeat, loop }] : [];
+      return sessionId && (repeat || loop.on || runs.jobOfSession(sessionId)) ? [{ sessionId, crons: [], repeat, loop }] : [];
     });
     const kept = hub.unrestored.filter((u) => !chats.some((c) => c.sessionId === u.sessionId));
     writeJson(RESTORE, { view: hub.lastViewed?.state.session.sessionId, chats: [...chats, ...kept] }).catch(() => {});

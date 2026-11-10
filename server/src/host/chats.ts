@@ -39,7 +39,7 @@ async function defaultChoice(): Promise<Provider> {
 }
 
 // A chat is unattended while it has a job run that is not done, also after a restart.
-const unattendedSession = (sessionId?: string) => Boolean(sessionId) && runs.list().some((r) => r.kind === 'job' && r.sessionId === sessionId && r.state !== 'done');
+const unattendedSession = (sessionId?: string) => Boolean(runs.jobOfSession(sessionId));
 
 export async function createChat(cwd: string, resume?: string, title = '', fork = false, choice?: Provider, unattended = unattendedSession(resume)) {
   // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.

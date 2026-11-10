@@ -60,6 +60,11 @@ export class Runs {
     return this.runs.find((r) => r.kind === 'job' && r.chatId === chatId && r.state !== 'done');
   }
 
+  // The open job run of a Claude session, which stays the same across restarts.
+  jobOfSession(sessionId: string | null | undefined) {
+    return sessionId ? this.runs.find((r) => r.kind === 'job' && r.sessionId === sessionId && r.state !== 'done') : undefined;
+  }
+
   start(init: NewRun) {
     const run: ChatRun = { round: 0, max: 0, nextAt: null, ...init, id: randomUUID(), startedAt: Date.now(), endedAt: null, state: 'running', why: '', costUsd: 0, rounds: [], needsYou: false };
     this.runs.push(run);

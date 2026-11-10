@@ -1,0 +1,35 @@
+import { describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({ runs: null as unknown as import('../session/runs.js').Runs, open: vi.fn() }));
+
+vi.mock('node:fs/promises', () => ({
+  readFile: async () => JSON.stringify({ chats: [{ sessionId: 'A', crons: [] }, { sessionId: 'B', crons: [] }] }),
+  rm: async () => {},
+}));
+vi.mock('./listing.js', async () => {
+  const { Runs } = await import('../session/runs.js');
+  mocks.runs = new Runs();
+  return { runs: mocks.runs };
+});
+vi.mock('./persist.js', () => ({ RESTORE: '/nowhere/restore.json', saveSoon: vi.fn() }));
+vi.mock('./chats.js', () => ({ openSaved: mocks.open }));
+
+import { restoreChats } from './restoreChats.js';
+import { live } from './state.js';
+
+describe('restoreChats', () => {
+  it('keeps the job run of a chat that came back, rebinds it and ends the run of one that did not', async () => {
+    const job = (sessionId: string) => mocks.runs.start({ kind: 'job', sessionId, chatId: 'old', title: 't', what: 'w', provider: 'claude' });
+    const a = job('A');
+    const b = job('B');
+    mocks.open.mockImplementation(async (sessionId: string) => {
+      if (sessionId === 'B') throw new Error('gone');
+      const chat = { id: 'new', state: { session: { sessionId } }, wakeups: { restore() {} } };
+      live.set('new', { chat: chat as never, watcher: { close() {} } });
+      return chat;
+    });
+    await restoreChats();
+    expect(mocks.runs.get(a)).toMatchObject({ state: 'running', chatId: 'new' });
+    expect(mocks.runs.get(b)).toMatchObject({ state: 'done', why: 'AgentView restarted' });
+  });
+});
