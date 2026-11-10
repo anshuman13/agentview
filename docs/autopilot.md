@@ -26,6 +26,11 @@ is an assistant, and every send is logged and reversible by me.
   write page (`assistant/src/slack/corrections.ts`)
 - Jobs run a prompt on a schedule with read-only tools plus the MCP tools the job lists (`assistant/src/jobs/jobs.ts`); every
   job can call `ask_context` to read my wiki claims, decisions and open tasks
+- A job with a repo (picked on the job page, on the web only; the phone shows it read-only) codes instead: the hub posts it to
+  `POST /api/jobs/start` on the server of its own Mac, which makes a `jobs/<slug>-<stamp>` worktree of that repo and opens
+  an unattended claude chat in it (no push, no `gh`, changes left uncommitted). The run is listed in Runs as
+  "Job · <branch>" and ends when the first turn does; a permission prompt pauses it as Needs you, a restart keeps it, and
+  a job whose last run is still open is skipped. The route answers 503 until the sandbox for these chats lands.
 - Slack commands: a message I write in my DM with myself that starts with "bot" ("bot, what did the infra channel decide
   about the freeze") is picked up by the next Slack scan (every 15 min on weekdays, every day when away) and becomes a
   one-off job named "Slack: ..." that runs on the mini with my memory and voice. It can read Slack, Gmail, the calendar
