@@ -121,12 +121,14 @@ private fun FollowNewest(hub: Hub, view: ChatView, listState: LazyListState, sti
     }
 }
 
-// Loads earlier messages once when the newest page holds no rows; returns the hidden count already tried.
+// Loads earlier messages while the chat shows too few replies, up to three pages, and not again at a hidden count that failed to load; returns whether a load is due.
 @Composable
-private fun rememberEarlierTried(hub: Hub, chatId: String, blank: Boolean, loading: Boolean, earlier: Int, settled: Boolean): Int {
+private fun rememberEarlierDue(hub: Hub, chatId: String, replies: Int, loading: Boolean, earlier: Int, settled: Boolean): Boolean {
     var tried by remember(chatId) { mutableStateOf(-1) }
-    LaunchedEffect(blank, loading, earlier, settled) { if (blank && settled && !loading && earlier != tried) { tried = earlier; hub.loadEarlier() } }
-    return tried
+    var autoLoads by remember(chatId) { mutableStateOf(0) }
+    val due = settled && !loading && earlier != tried && needsEarlier(replies, earlier, autoLoads)
+    LaunchedEffect(due, earlier) { if (due) { tried = earlier; autoLoads++; hub.loadEarlier() } }
+    return due
 }
 
 @Composable
@@ -150,7 +152,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     LaunchedEffect(atBottom) { leftId = if (atBottom) null else leftId ?: rows.firstOrNull()?.id }
     val replies = remember(items, leftId) { leftId?.let { newReplies(items, it) } ?: 0 }
     val blank = rows.isEmpty() && earlier > 0
-    val tried = rememberEarlierTried(hub, chatId, blank, loading, earlier, settled)
+    val earlierDue = rememberEarlierDue(hub, chatId, remember(items) { items.count { it is Item.Assistant } }, loading, earlier, settled)
     FollowNewest(hub, view, listState, stick, atBottom)
 
     Box(modifier) {
@@ -170,7 +172,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                 }
             }
             if (rows.isEmpty()) item(key = "empty") {
-                if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || tried != earlier))) EmptyState("No messages yet", "Your prompts, the agent's steps and replies show up here") else EmptyState("Loading…")
+                if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || earlierDue))) EmptyState("No messages yet", "Your prompts, the agent's steps and replies show up here") else EmptyState("Loading…")
             }
         }
         val dayOf = view.dayOf

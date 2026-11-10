@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
 import no.pradhan.agentview.nativeapp.codex.clock
+import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
@@ -148,7 +149,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
             Hairline()
         }
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
-        SinceYouLeft(hub, live)
+        SinceYouLeft(hub, live, runs.lastOrNull { it.chatId == live.id && it.state != "done" })
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
             Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, Modifier.fillMaxSize(), queued.filter { it.chat == live.id })
         }
@@ -174,14 +175,14 @@ private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
 }
 
 @Composable
-private fun SinceYouLeft(hub: Hub, live: LiveChat) {
-    val since = remember(live.id) { val left = hub.leftAt(live.id); if (left == 0L || live.lastActive > left) live.recap else null }
+private fun SinceYouLeft(hub: Hub, live: LiveChat, run: ChatRun?) {
+    val left = remember(live.id) { hub.leftAt(live.id) }
+    val since = if (left == 0L || live.lastActive > left) live.recap else null
     var open by remember(live.id) { mutableStateOf(true) }
+    var sheet by remember(live.id) { mutableStateOf(false) }
     if (since == null || !open) return
-    Row(Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-        Text("Since you left: $since", Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        IconBtn("close", "Dismiss", { open = false })
-    }
+    ListRow("Since you left: $since", lines = 2, onClick = { sheet = true }, trailing = { IconBtn("close", "Dismiss", { open = false }) })
+    if (sheet) SinceSheet(hub, live.id, since, roundsSince(run?.rounds.orEmpty(), left), run) { sheet = false }
 }
 
 @Composable
