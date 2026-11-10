@@ -202,6 +202,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String
                 run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                 else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in view.rewinds, it.id in view.specCards)
             }
+            view.summaries[it.id]?.takeIf { s -> !(running && s.latest) }?.let { s -> SummaryRow(s.events) }
         }
     }
 }
