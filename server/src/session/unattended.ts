@@ -54,6 +54,7 @@ export function toolDenied(tool: string, input: Record<string, unknown>, u: Unat
     const listed = u.domains.some((d) => host === d || host.endsWith(`.${d}`));
     return listed ? null : `This unattended run may only fetch ${u.domains.join(', ')}`;
   }
+  if (tool === 'ListMcpResourcesTool' || tool === 'ReadMcpResourceTool') return 'This unattended run may only use the agentview tools';
   return tool.startsWith('mcp__') && !tool.startsWith('mcp__agentview__') ? 'This unattended run may only use the agentview tools' : null;
 }
 

@@ -56,6 +56,7 @@ describe('unattended hooks', () => {
     expect(verdict(hooks.beforeTool(pre('WebFetch', { url: 'https://github.com/a' }), rules))).toMatchObject({ permissionDecision: 'deny', permissionDecisionReason: 'This unattended run may only fetch pypi.org' });
     expect(verdict(hooks.beforeTool(pre('WebFetch', { url: 'https://evilpypi.org/' }), rules))?.permissionDecision).toBe('deny');
     expect(verdict(hooks.beforeTool(pre('mcp__slack__post_message', {}), rules))?.permissionDecision).toBe('deny');
+    for (const tool of ['ListMcpResourcesTool', 'ReadMcpResourceTool']) expect(verdict(hooks.beforeTool(pre(tool, {}), rules))?.permissionDecision).toBe('deny');
     expect(hooks.beforeTool(pre('mcp__agentview__set_status', {}), rules)).toEqual({});
   });
 });

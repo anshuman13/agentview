@@ -76,7 +76,7 @@ export function agentOptions(o: {
       },
     },
     hooks: {
-      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }, { matcher: 'Edit|Write|MultiEdit|NotebookEdit', hooks: [o.beforeEdit] }, ...(o.unattended ? [{ matcher: 'WebFetch|mcp__.*', hooks: [o.beforeTool] }] : [])],
+      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }, { matcher: 'Edit|Write|MultiEdit|NotebookEdit', hooks: [o.beforeEdit] }, ...(o.unattended ? [{ matcher: 'WebFetch|ListMcpResourcesTool|ReadMcpResourceTool|mcp__.*', hooks: [o.beforeTool] }] : [])],
       PostToolUse: [{ hooks: [o.afterTool] }],
       Stop: [{ hooks: [o.onStop] }],
     },
