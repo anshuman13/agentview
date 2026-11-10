@@ -90,6 +90,18 @@ fun reportText(a: Agent): String {
     return "(no report)"
 }
 
+private val SUMMARY_LEAD = Regex("^[#\\-*>\\s]+")
+
+// The one line a transcript agent box shows under its header; web agents.ts agentSummary says the same.
+fun agentSummary(it: Item.Agent): String {
+    val result = it.result
+    if (it.running) return it.progress ?: stepText(it.steps.lastOrNull()).ifEmpty { "Starting\u2026" }
+    val stopped = result?.stopped == true || isDenied(result)
+    if (stopped || result?.isError == true) return firstLine(result?.text ?: "").ifEmpty { it.progress ?: if (stopped) "Agent stopped" else "Agent failed" }
+    val line = result?.text.orEmpty().lineSequence().map { l -> l.trim().replace(SUMMARY_LEAD, "") }.firstOrNull { l -> l.isNotEmpty() }
+    return line?.take(200) ?: "No report"
+}
+
 fun elapsed(ms: Long): String {
     val s = maxOf(0L, Math.round(ms / 1000.0))
     return when {
