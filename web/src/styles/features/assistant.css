@@ -168,7 +168,7 @@
 .as-ask { flex: none; align-self: center; color: var(--fg); font-size: var(--fs-sm); font-weight: 600; }
 
 /* Tasks page: same layout and card language as Meetings. */
-.assistant.tasks { --tk-pad: var(--sp-16); --tk-indent: 30px; max-width: calc(732px + 2 * var(--tk-pad)); container: tasks / inline-size; }
+.assistant.tasks { --tk-pad: var(--sp-16); --tk-indent: 44px; max-width: calc(732px + 2 * var(--tk-pad)); container: tasks / inline-size; }
 .tasks .tasks-head { padding: var(--sp-10) var(--tk-pad) var(--sp-6); }
 .tasks .tasks-head [role='heading'] { font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
@@ -180,7 +180,7 @@
 .tasks .as-scroll .ui-group { min-height: 4px; padding-left: var(--sp-4); }
 .tasks .as-scroll .ui-group:empty { display: none; }
 .as-scroll .ui-group > :last-child .tk-row::after { display: none; }
-.tasks .tk-row { --lead-w: 18px; gap: var(--sp-3); padding: var(--sp-2) 0; }
+.tasks .tk-row { --lead-w: 32px; gap: var(--sp-3); padding: var(--sp-2) 0; }
 .tasks .tk-row::after { display: block; }
 .tasks .tk-row.has-lead::after { left: var(--tk-indent); }
 .tasks .tk-row .ui-row-lead { justify-content: flex-start; }
@@ -292,11 +292,12 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .tasks .as-composer { padding: var(--sp-4) var(--tk-pad) var(--sp-10); }
 
 @media (max-width: 900px) {
-  .assistant.tasks { --tk-pad: var(--sp-8); --tk-indent: 42px; }
+  .assistant.tasks { --tk-pad: var(--sp-8); --tk-indent: 60px; }
   .tasks .tasks-head { padding: var(--sp-6) var(--tk-pad) var(--sp-4); }
   .tasks .tasks-head [role='heading'] { font-size: var(--fs-4xl); }
   .tasks .as-scroll { padding-top: var(--sp-2); gap: var(--sp-6); }
   .tasks .tk-row { padding: var(--sp-1) 0; }
+  .tasks .tk-row { --lead-w: var(--touch); }
   .tasks .as-check { margin: 0; }
   .tasks .as-composer { padding: var(--sp-3) var(--tk-pad) var(--sp-6); }
 }
