@@ -235,8 +235,8 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
     ListRow(
         if (unread) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(title) } } else title,
         meta, lines = 1, metaLines = 1, selected = selected, onClick = onClick,
-        leading = { dot?.let { (d, word) -> Box(Modifier.semantics { contentDescription = word }) { StatusDot(d) } } },
-        stateSlot = true,
+        onLongClick = if (actions.canPin) actions.onRename else null,
+        leading = { dot?.let { (d, word) -> StatusDot(d, Modifier.semantics { contentDescription = word }) } },
         state = {
             if (run != null && badge != null && badge != RunBadge.Needs) RunBadgeView(badge, run)
             else if (actions.muted) AvIcon("bell-slash", tint = av.fgMuted)
@@ -244,7 +244,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
         menu = { close ->
             if (onResume != null) MenuItem("Resume", "play", { close(); onResume() })
             if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", if (actions.pinned) "pinned" else "pin", { close(); actions.onPin() })
-            if (actions.canPin && state == null && !selected) MenuItem("Mark as unread", "mail", { close(); actions.onUnread() })
+            if (actions.canPin && shown == null && !selected) MenuItem("Mark as unread", "mail", { close(); actions.onUnread() })
             if (actions.canPin) MenuItem(if (actions.muted) "Unmute" else "Mute", if (actions.muted) "bell" else "bell-slash", { close(); actions.onMute() })
             if (actions.canPin) MenuItem("Copy link", "link", { close(); actions.onLink() })
             if (actions.canPin) MenuItem("Rename", "edit", { close(); actions.onRename() })

@@ -148,7 +148,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
         onClick={onOpen}
         onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined}
         onLongPress={sessionId ? () => setRenaming(true) : undefined}
-        menu={chatMenuItems({ failed: state === 'failed' && !!live, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose, unread: !!sessionId && !state && !selected }).map((key) => {
+        menu={chatMenuItems({ failed: state === 'failed' && !!live, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose, unread: !!sessionId && !shown && !selected }).map((key) => {
           switch (key) {
             case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={retry}>Retry</MenuItem>;
             case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={() => void onPin!(!pinned)}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
