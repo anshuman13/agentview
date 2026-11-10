@@ -10,7 +10,7 @@ import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
 import { isSpecPath, runAllPrompt, specProgress, specPrompt, specTasks, startTaskPrompt, type SpecTask } from '../../shared/specTasks';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { can, modelsFor } from './chat/capabilitiesLogic';
-import { handoffText, runLine } from './chat/composer/composerLogic';
+import { chatState, handoffText, runLine } from './chat/composer/composerLogic';
 import { runBands } from './sessions/runBands';
 import { tryColumn } from './sessions/TriesBoard';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -100,6 +100,15 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; phase: string | null; expected: string }>('run-line')) {
     it(`runLine: ${c.name}`, () => expect(runLine(run({ ...c.run, tries: c.run.tries?.map((t) => ({ n: 0, chatId: '', sessionId: '', branch: '', ...t })) }), c.phase)).toBe(c.expected));
+  }
+
+  type StateCase = { name: string; chat: Partial<LiveChat> & { agents?: number; run?: { state: ChatRun['state']; why?: string; nextAtLocal?: string } }; expected: unknown };
+  for (const c of cases<StateCase>('chat-state')) {
+    it(`chatState: ${c.name}`, () => {
+      const { agents = 0, run, ...chat } = c.chat;
+      const agentList = Array.from({ length: agents }, (_, i) => ({ id: `a${i}`, description: '', type: '', startedAt: 0 }));
+      expect(chatState({ pending: 0, running: false, status: '', ...chat, agentList, run: run && { state: run.state, why: run.why, nextAt: run.nextAtLocal ? new Date(run.nextAtLocal).getTime() : null } })).toEqual(c.expected);
+    });
   }
 
   for (const c of cases<{ name: string; runs: Partial<ChatRun>[]; expected: { needs: string[]; running: string[]; finished: string[] } }>('run-bands')) {

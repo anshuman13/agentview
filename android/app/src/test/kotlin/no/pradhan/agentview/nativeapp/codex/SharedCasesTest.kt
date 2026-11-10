@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.codex
 
 import java.io.File
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -21,6 +22,7 @@ import no.pradhan.agentview.nativeapp.chat.editCount
 import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.latestChecklist
 import no.pradhan.agentview.nativeapp.chat.s
+import no.pradhan.agentview.nativeapp.chat.statusLine
 import no.pradhan.agentview.nativeapp.chat.stripRound
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunEntry
@@ -33,7 +35,9 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
+import no.pradhan.agentview.nativeapp.net.LiveAgent
 import no.pradhan.agentview.nativeapp.net.LiveChat
+import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.protocolJson
@@ -130,6 +134,28 @@ class SharedCasesTest {
         for (c in cases("run-line")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
             assertEquals(c.str("name"), c.str("expected"), runLine(run, c.nullable("phase")?.jsonPrimitive?.content))
+        }
+    }
+
+    @Test fun chatState() {
+        for (c in cases("chat-state")) {
+            val chat = c.getValue("chat").jsonObject
+            val run = chat.nullable("run")?.jsonObject
+            val nextAt = run?.nullable("nextAtLocal")?.jsonPrimitive?.content?.let { LocalDateTime.parse(it).atZone(codexZone).toInstant().toEpochMilli() }
+            val agents = List(chat.nullable("agents")?.jsonPrimitive?.int ?: 0) { LiveAgent("a$it") }
+            val live = LiveChat(
+                "c",
+                running = chat.nullable("running")?.jsonPrimitive?.booleanOrNull == true,
+                pending = chat.nullable("pending")?.jsonPrimitive?.int ?: 0,
+                status = chat.nullable("status")?.jsonPrimitive?.content ?: "",
+                failed = chat.nullable("failed")?.jsonPrimitive?.booleanOrNull == true,
+                stalled = chat.nullable("stalled")?.jsonPrimitive?.booleanOrNull == true,
+                agentList = agents,
+                run = run?.let { LiveRun("r", state = it.str("state"), why = it.nullable("why")?.jsonPrimitive?.content, nextAt = nextAt) },
+            )
+            val e = c.getValue("expected").jsonObject
+            val got = statusLine(live, null)
+            assertEquals(c.str("name"), e.str("text") to e.str("tone"), got.text to got.tone.name.lowercase())
         }
     }
 

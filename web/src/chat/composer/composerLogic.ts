@@ -1,7 +1,7 @@
 import { parseWhen, stripWhen } from '../../codex/data/tasks/engine';
 import { match } from '../../workspace/FileSwitcher';
 import { toolId } from '../../ops/mcpHelpers';
-import { compactAt, type Account, type ChatEvent, type ChatRun, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
+import { compactAt, type Account, type ChatEvent, type ChatRun, type LiveChat, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
 import { apiUrl, fetchJson } from '../../app/api';
 import { createTerm, listTerms } from '../../workspace/termApi';
 import { clock, isBlock } from '../../../../shared/util';
@@ -129,6 +129,22 @@ export function runLine(run: ChatRun, phase: string | null = null) {
   if (run.kind === 'tries') return `Tries · ${run.tries?.filter((t) => !t.dropped).length ?? 0} chats`;
   if (run.kind === 'cycle') return `Build cycle · round ${run.round}/${run.max}${phase && phase !== 'passed' && phase !== 'failed' ? ` · ${phase[0].toUpperCase()}${phase.slice(1)}` : ''}`;
   return `Loop · round ${run.round}${next}`;
+}
+
+export type ChatState = { text: string; tone: 'running' | 'needs' | 'failed' | 'warn' | 'idle' };
+
+// The state of a chat for the header: what needs the user first, then the running turn, running agents, the run between rounds.
+export function chatState(chat: Pick<LiveChat, 'pending' | 'failed' | 'stalled' | 'running' | 'status' | 'agentList'> & { run?: Pick<NonNullable<LiveChat['run']>, 'state' | 'why' | 'nextAt'> }): ChatState {
+  const agents = chat.agentList?.length ?? 0;
+  const { run } = chat;
+  if (chat.pending > 0) return { text: 'Needs you', tone: 'needs' };
+  if (chat.failed) return { text: 'Failed', tone: 'failed' };
+  if (chat.stalled) return { text: 'No activity for 15 min', tone: 'failed' };
+  if (chat.running) return { text: chat.status && chat.status !== 'Idle' ? chat.status : 'Working', tone: 'running' };
+  if (agents) return { text: `Running · ${agents} ${agents === 1 ? 'agent' : 'agents'}`, tone: 'running' };
+  if (run?.state === 'paused') return { text: run.why ? `Paused · ${run.why}` : 'Paused', tone: 'warn' };
+  if (run) return { text: `Waiting for next round${run.nextAt ? ` · ${clock(run.nextAt)}` : ''}`, tone: 'idle' };
+  return { text: 'Idle', tone: 'idle' };
 }
 
 // The prompt of a round is in the transcript; it may take a moment to show after the chat opens.

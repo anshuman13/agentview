@@ -1,0 +1,14 @@
+[
+  { "name": "needs you comes first", "chat": { "pending": 1, "failed": true, "running": true, "status": "Editing" }, "expected": { "text": "Needs you", "tone": "needs" } },
+  { "name": "failed", "chat": { "failed": true, "running": true, "status": "Editing" }, "expected": { "text": "Failed", "tone": "failed" } },
+  { "name": "stalled", "chat": { "stalled": true, "running": true, "status": "Editing" }, "expected": { "text": "No activity for 15 min", "tone": "failed" } },
+  { "name": "running turn shows the status", "chat": { "running": true, "status": "Writing the spec", "agents": 2 }, "expected": { "text": "Writing the spec", "tone": "running" } },
+  { "name": "running turn without a status", "chat": { "running": true, "status": "Idle" }, "expected": { "text": "Working", "tone": "running" } },
+  { "name": "agents with no turn", "chat": { "status": "Idle", "agents": 2, "run": { "state": "running", "nextAtLocal": "2026-11-09T14:20" } }, "expected": { "text": "Running · 2 agents", "tone": "running" } },
+  { "name": "one agent", "chat": { "status": "Idle", "agents": 1 }, "expected": { "text": "Running · 1 agent", "tone": "running" } },
+  { "name": "paused with a reason", "chat": { "run": { "state": "paused", "why": "usage limit until 18:00" } }, "expected": { "text": "Paused · usage limit until 18:00", "tone": "warn" } },
+  { "name": "paused without a reason", "chat": { "run": { "state": "paused" } }, "expected": { "text": "Paused", "tone": "warn" } },
+  { "name": "waiting with a next time", "chat": { "run": { "state": "running", "nextAtLocal": "2026-11-09T14:20" } }, "expected": { "text": "Waiting for next round · 14:20", "tone": "idle" } },
+  { "name": "waiting without a next time", "chat": { "run": { "state": "running" } }, "expected": { "text": "Waiting for next round", "tone": "idle" } },
+  { "name": "idle", "chat": { "status": "Idle" }, "expected": { "text": "Idle", "tone": "idle" } }
+]
