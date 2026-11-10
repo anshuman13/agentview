@@ -68,6 +68,7 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
         slug={d.slug}
         phases={d.phases}
         reviews={d.reviews}
+        specPath={d.specFile && `${cwd}/${d.specFile}`}
         action={d.specFile && here.folder && !here.tree && <IconButton icon="go-to-file" label="Open spec file" size="sm" onClick={openSpec} />}
         onSaved={reload}
       />

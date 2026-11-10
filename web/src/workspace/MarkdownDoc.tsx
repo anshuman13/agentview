@@ -3,7 +3,7 @@ import { Marked } from 'marked';
 import { classHighlighter, highlightCode } from '@lezer/highlight';
 import type { Parser } from '@lezer/common';
 import { isSpecPath, runAllPrompt, specProgress, specTasks, startTaskPrompt, type SpecTask } from '../../../shared/specTasks';
-import { api, prompt, queueNext, setUi, useStore } from '../app/store';
+import { api, sendToChat, setUi } from '../app/store';
 import { Button } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
@@ -174,7 +174,6 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
   const last = useRef(path);
   const [runMenu, setRunMenu] = useState(false);
   const runBox = useRef<HTMLSpanElement>(null);
-  const running = useStore((s) => s.session.running);
   const tasks = useMemo(() => (isSpecPath(path) ? specTasks(text) : []), [path, text]);
 
   useEffect(() => {
@@ -218,12 +217,6 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
   }, [headings]);
 
   const jump = (id: string) => body.current?.querySelector(`[id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start' });
-
-  const sendToChat = (message: string) => {
-    const lost = () => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: message } }));
-    if (running) queueNext(message, lost);
-    else prompt(message, lost);
-  };
 
   const onClick = (e: MouseEvent) => {
     const t = e.target as HTMLElement;

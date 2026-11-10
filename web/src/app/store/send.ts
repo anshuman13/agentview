@@ -54,6 +54,13 @@ function deliver(msg: { type: 'prompt' | 'steer' | 'queue'; text: string; id: st
   });
 }
 
+// A prompt for the open chat: queued while a turn runs, back in the composer if it is lost.
+export function sendToChat(message: string) {
+  const lost = () => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: message } }));
+  if (getState().session.running) queueNext(message, lost);
+  else prompt(message, lost);
+}
+
 export function steer(text: string, onLost: () => void) {
   const id = uid();
   set((s) => ({ events: [...s.events, { id, kind: 'user', text, at: Date.now(), stopping: true }] }));
