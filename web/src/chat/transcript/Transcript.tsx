@@ -4,6 +4,9 @@ import { assistantStore } from '../../codex/data';
 import { quoteReply, replyNote } from '../composer/composerLogic';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
+import { Row as ListRow } from '../../ui/Row';
+import { SinceSheet } from './SinceSheet';
+import { roundsSince } from './recap';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
@@ -12,7 +15,7 @@ import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers
 import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { providerLabel } from '../../../../shared/providers';
-import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
+import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 
 export function Transcript() {
@@ -21,7 +24,7 @@ export function Transcript() {
   const running = useStore((s) => s.session.running);
   const chat = useStore((s) => s.session.id);
   const earlier = useStore((s) => s.earlier ?? 0);
-  return <TranscriptView key={chat} events={events} earlier={earlier} cwd={cwd} running={running} />;
+  return <TranscriptView key={chat} chat={chat} events={events} earlier={earlier} cwd={cwd} running={running} />;
 }
 
 function lastUserId(items: Item[]) {
@@ -103,7 +106,7 @@ function useStickyScroll(items: Item[], last: ChatEvent | undefined, running: bo
 }
 
 // How many rows are shown, staged in over idle time, and loaded from earlier history on request.
-function useRowWindow(count: number, box: RefObject<HTMLDivElement | null>, stick: RefObject<boolean>) {
+function useRowWindow(count: number, replies: number, earlier: number, box: RefObject<HTMLDivElement | null>, stick: RefObject<boolean>) {
   const [shown, setShown] = useState(ROW_WINDOW);
   const [staged, setStaged] = useState(FIRST_ROWS);
   const grew = useRef(0);
@@ -135,33 +138,43 @@ function useRowWindow(count: number, box: RefObject<HTMLDivElement | null>, stic
     return () => clearTimeout(h);
   }, [staging, staged, shown]);
 
-  const showEarlier = async () => {
-    if (loading) return;
-    const mark = () => (grew.current = box.current?.scrollHeight ?? 0);
+  const showEarlier = async (auto = false) => {
+    if (loading) return false;
+    // A page loaded by itself leaves a reader at the bottom there.
+    const mark = () => { if (!(auto && stick.current)) grew.current = box.current?.scrollHeight ?? 0; };
     if (start > 0) {
       mark();
       const next = revealMore(shown, count);
       setShown(next);
       setStaged(next);
-      return;
+      return true;
     }
     setLoading(true);
     const ok = await loadEarlier();
     setLoading(false);
     // Marked only now: rows streamed in at the bottom during the load would otherwise spend the mark.
     if (ok) { mark(); setShown(shown + ROW_WINDOW); setStaged(shown + ROW_WINDOW); }
+    return ok;
   };
+
+  const autoLoads = useRef({ n: 0, failed: false });
+  useEffect(() => {
+    if (loading || autoLoads.current.failed || !needsEarlier(replies, earlier, autoLoads.current.n)) return;
+    autoLoads.current.n++;
+    showEarlier(true).then((ok) => { if (!ok) autoLoads.current.failed = true; });
+  }, [replies, earlier, loading]);
 
   return { shown, start, from, staging, loading, showEarlier };
 }
 
-function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean }) {
+function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string; events: ChatEvent[]; earlier: number; cwd: string; running: boolean }) {
   const [build] = useState(createTranscriptBuilder);
   const items = useMemo(() => build(events), [build, events]);
   const last = events[events.length - 1];
   const scroll = useStickyScroll(items, last, running);
   const { box, rows, stuck, behind, onScroll, jump } = scroll;
-  const { shown, start, from, staging, loading, showEarlier } = useRowWindow(items.length, box, scroll.stick);
+  const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
+  const { shown, start, from, staging, loading, showEarlier } = useRowWindow(items.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const [openRuns, setOpenRuns] = useState(() => new Set<string>());
   const mark = useSeenMark(events);
@@ -169,16 +182,20 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
   const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
   const recap = useStore((s) => s.live.find((c) => c.id === s.session.id)?.recap);
   const [since, setSince] = useState(true);
+  const [sinceOpen, setSinceOpen] = useState(false);
+  const run = useStore((s) => s.runs.filter((r) => r.chatId === s.session.id && r.state !== 'done').at(-1));
+  const fresh = useMemo(() => roundsSince(run?.rounds ?? [], mark.seen), [run, mark.seen]);
   const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
 
   return (
     <div className="tr-host">
-    {newId && recap && since && <div className="tr-since"><span className="tr-since-text">Since you left: {recap}</span><IconButton icon="close" label="Dismiss" size="sm" onClick={() => setSince(false)} /></div>}
+    {newId && recap && since && <ListRow className="tr-since" lines={2} title={`Since you left: ${recap}`} aria-haspopup="dialog" onClick={() => setSinceOpen(true)} action={<IconButton icon="close" label="Dismiss" size="sm" onClick={() => setSince(false)} />} />}
+    {sinceOpen && recap && <SinceSheet chat={chat} recap={recap} rounds={fresh} run={run} onClose={() => setSinceOpen(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, the agent's steps and replies show up here.</div>}
-      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(showEarlier)}>{loading ? 'Loading earlier…' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
+      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? 'Loading earlier…' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
       {items.slice(from).map((it, i) => {
         if (i > 0 && folded.has(it.id)) return null;
         const run = runs.get(it.id);
