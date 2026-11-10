@@ -1,18 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { getState, markUnread, notice, send, subscribe, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
-import { IconButton } from '../ui/Button';
-import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
+import { MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
 import { type ConfirmRequest } from '../ui/Confirm';
-import { type LiveChat, type SavedSession } from '../../../shared/protocol';
+import { type ChatRun, type LiveChat, type SavedSession } from '../../../shared/protocol';
 import { providerMark } from '../../../shared/providers';
 import { copyText, save } from '../ui/util';
 import { AgentsBlock } from './AgentRow';
 import { openAgent } from './agents';
 import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
 import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, renameTitle, removeRequest, restoreChat, since, type ChatState, type RenameEvent } from './folders';
-import { Badge } from '../ui/Badge';
 import { Swipe } from '../codex/gestures/Swipe';
 import { showSnack } from '../codex/view';
 import { isMuted, setMuted } from '../app/runtime/mute';
@@ -92,29 +90,26 @@ type ChatRowProps = {
   onClose?: () => void;
 };
 
-function RunTag({ chat }: { chat: string }) {
-  const run = useChatRun(chat);
-  if (!run) return null;
-  const warn = run.needsYou || run.state === 'paused';
-  return <span className={`chat-run ${warn ? 'warn' : ''}`}>{run.needsYou ? 'Needs you' : run.state === 'paused' ? 'Paused' : <><Icon name="sync" small />{run.nextAt ? clock(run.nextAt) : 'Running'}</>}</span>;
+function RunTag({ run }: { run: ChatRun }) {
+  const paused = run.state === 'paused';
+  return <span className={`chat-run ${paused ? 'warn' : ''}`}>{paused ? 'Paused' : <><Icon name="sync" small />{run.nextAt ? clock(run.nextAt) : 'Running'}</>}</span>;
 }
 
-const BADGE = { needs: 'waiting', failed: 'failed', running: 'running', done: 'done' } as const;
+const DOT = { needs: ['waiting', 'Needs you'], failed: ['bad', 'Failed'], running: ['running', 'Running'], done: ['unread', 'Unread'] } as const;
 
 function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
-  const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [muted, setMute] = useState(() => isMuted(sessionId));
-  const more = useRef<HTMLButtonElement>(null);
-  const unread = state === 'done' || state === 'needs';
+  const run = useChatRun(live?.id);
+  const shown = run?.needsYou ? 'needs' : state;
+  const unread = shown === 'done' || shown === 'needs';
   useEffect(() => {
     if (!retrying) return;
     if (state !== 'failed') return setRetrying(false);
     const t = setTimeout(() => setRetrying(false), 3000);
     return () => clearTimeout(t);
   }, [retrying, state]);
-  const pick = (act: () => void) => () => { setMenu(false); act(); };
   const rowKey = (e: React.KeyboardEvent<HTMLElement>) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
@@ -142,26 +137,32 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
   };
   const row = (
     <div className={`chat-row ${unread ? 'unread' : ''}`}>
-      <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={(muted || state || live) && <>{live && <RunTag chat={live.id} />}{muted && <span title="Muted" className="chat-muted"><Icon name="bell-slash" small /></span>}{state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />}</>} onClick={onOpen} onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined} onLongPress={sessionId ? () => setRenaming(true) : undefined} />
-      <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-      {menu && (
-        <Menu trigger={more} onClose={() => setMenu(false)}>
-          {chatMenuItems({ failed: state === 'failed' && !!live, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose, unread: !!sessionId && !state && !selected }).map((key) => {
-            switch (key) {
-              case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={pick(retry)}>Retry</MenuItem>;
-              case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={pick(() => void onPin!(!pinned))}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
-              case 'unread': return <MenuItem key={key} icon="mail" onClick={pick(() => markUnread(sessionId!))}>Mark as unread</MenuItem>;
-              case 'mute': return <MenuItem key={key} icon={muted ? 'bell' : 'bell-slash'} onClick={pick(() => { setMuted(sessionId!, !muted); setMute(!muted); })}>{muted ? 'Unmute' : 'Mute'}</MenuItem>;
-              case 'link': return <MenuItem key={key} icon="link" onClick={pick(() => copyText(`${location.origin}/?session=${sessionId}`).then(() => notice('Copied the chat link'), () => notice('Could not copy')))}>Copy link</MenuItem>;
-              case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={pick(() => setRenaming(true))}>Rename</MenuItem>;
-              case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={pick(onBeside!)}>Open beside</MenuItem>;
-              case 'close': return <MenuItem key={key} icon="close" onClick={pick(onClose!)}>Close chat</MenuItem>;
-              case 'separator': return <MenuSeparator key={key} />;
-              case 'archive': return <MenuItem key={key} icon="archive" danger disabled={!sessionId} onClick={pick(() => actions.archive({ sessionId: sessionId!, title }))}>Archive</MenuItem>;
-            }
-          })}
-        </Menu>
-      )}
+      <Row
+        data-chat-row
+        onKeyDown={rowKey}
+        title={`${opening ? 'Opening… ' : ''}${title}`}
+        meta={meta}
+        aria-current={selected || undefined}
+        leading={shown ? <span className={`dot ${DOT[shown][0]}`} role="img" aria-label={DOT[shown][1]} /> : <span />}
+        state={run && !run.needsYou ? <RunTag run={run} /> : muted ? <span title="Muted" className="chat-muted"><Icon name="bell-slash" small /></span> : null}
+        onClick={onOpen}
+        onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined}
+        onLongPress={sessionId ? () => setRenaming(true) : undefined}
+        menu={chatMenuItems({ failed: state === 'failed' && !!live, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose, unread: !!sessionId && !state && !selected }).map((key) => {
+          switch (key) {
+            case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={retry}>Retry</MenuItem>;
+            case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={() => void onPin!(!pinned)}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
+            case 'unread': return <MenuItem key={key} icon="mail" onClick={() => markUnread(sessionId!)}>Mark as unread</MenuItem>;
+            case 'mute': return <MenuItem key={key} icon={muted ? 'bell' : 'bell-slash'} onClick={() => { setMuted(sessionId!, !muted); setMute(!muted); }}>{muted ? 'Unmute' : 'Mute'}</MenuItem>;
+            case 'link': return <MenuItem key={key} icon="link" onClick={() => copyText(`${location.origin}/?session=${sessionId}`).then(() => notice('Copied the chat link'), () => notice('Could not copy'))}>Copy link</MenuItem>;
+            case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={() => setRenaming(true)}>Rename</MenuItem>;
+            case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={onBeside!}>Open beside</MenuItem>;
+            case 'close': return <MenuItem key={key} icon="close" onClick={onClose!}>Close chat</MenuItem>;
+            case 'separator': return <MenuSeparator key={key} />;
+            case 'archive': return <MenuItem key={key} icon="archive" danger disabled={!sessionId} onClick={() => actions.archive({ sessionId: sessionId!, title })}>Archive</MenuItem>;
+          }
+        })}
+      />
     </div>
   );
   if (!sessionId || !onPin) return row;
@@ -216,10 +217,9 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
   );
-  const meta = c.recap ? <>{main}<span className="chat-recap">{c.recap}</span></> : main;
   return (
     <>
-      <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={meta} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
+      <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
       {c.agentList && <LiveAgents c={c} />}
     </>
   );

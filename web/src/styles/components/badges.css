@@ -54,6 +54,7 @@ select.chip.chip-btn { max-width: 14rem; text-overflow: ellipsis; }
 .dot.wait { background: var(--fg-muted); animation: shimmer var(--pulse-fast) var(--ease) infinite; }
 .dot.running { background: var(--accent); animation: pulse-shrink var(--pulse) var(--ease) infinite; }
 .dot.stalled { background: var(--warn); animation: pulse-shrink var(--pulse-slow) var(--ease) infinite; }
+.dot.unread { background: var(--accent-fill); }
 .dot.idle { background: transparent; border: 1.5px solid var(--fg-muted); }
 
 @keyframes pulse { 50% { opacity: 0.35; } }
