@@ -8,7 +8,7 @@ import { useMinute } from '../tasks/split';
 import { nextRun } from '../../../../shared/schedule';
 import { runsOf, useJobs } from './schedule';
 import { RunsRow, RunsSheet } from './RunsSheet';
-import { JobActions, JobTools, JobWhen } from './JobParts';
+import { JobActions, JobRepo, JobTools, JobWhen, repoName } from './JobParts';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
 
@@ -56,9 +56,10 @@ export function JobPage({ j }: { j: Job }) {
           <section className="mt-sec">
             <h2>Prompt</h2>
             <textarea className="jb-prompt" rows={4} value={prompt} placeholder={EXAMPLE} aria-label="Prompt" onChange={(e) => setPrompt(e.target.value)} onBlur={save} />
-            <div className="muted small">Runs on the {j.profile} Claude account. It reads, adds tasks to Codex, can push you a notification, and sends you its reply.</div>
+            <div className="muted small">{j.repo ? `Runs in a new worktree of ${repoName(j.repo)} on the hub's Mac. Nothing is pushed until you approve it.` : `Runs on the ${j.profile} Claude account. It reads, adds tasks to Codex, can push you a notification, and sends you its reply.`}</div>
           </section>
-          <JobTools j={j} />
+          <JobRepo j={j} />
+          {!j.repo && <JobTools j={j} />}
           <div className="as-group" key={j.id}>
             <RunsRow latest={list[0]} onOpen={() => setRunsOpen(true)} />
           </div>

@@ -243,6 +243,7 @@ describe('runLine', () => {
     expect(runLine(run({ kind: 'goal', round: 3, max: 20 }))).toBe('Goal · check 3 of 20');
     expect(runLine(run({ kind: 'goal', round: 12, every: 3_600_000, nextAt: new Date(2026, 10, 9, 14, 20).getTime() }))).toBe('Standing goal · round 12 · next 14:20');
     expect(runLine(run({ kind: 'goal', round: 3, every: 3_600_000 }))).toBe('Standing goal · round 3');
+    expect(runLine(run({ kind: 'job', branch: 'jobs/fix-1105' }))).toBe('Job · jobs/fix-1105');
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'test')).toBe('Build cycle · round 2/3 · Test');
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'passed')).toBe('Build cycle · round 2/3');
   });

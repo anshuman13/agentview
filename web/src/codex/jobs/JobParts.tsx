@@ -8,6 +8,7 @@ import { Badge } from '../../ui/Badge';
 import { useMcpHealth } from '../../ops/mcpShown';
 import { scopeInfo, toggleConnector, toolId } from '../../ops/mcpHelpers';
 import { useAssistantStore } from '../data';
+import { useWorkspace } from '../../sessions/folders';
 
 export function JobActions({ j, prompt, nameInput, back }: { j: Job; prompt: string; nameInput: RefObject<HTMLInputElement | null>; back: () => void }) {
   const store = useAssistantStore();
@@ -94,6 +95,32 @@ export function JobTools({ j }: { j: Job }) {
       )}
       {picked.length > 0 && <div className="jb-tools">{picked.map((id) => <Chip key={id} size="sm" icon="close" aria-label={`Remove ${labelOf(id)}`} onClick={() => toggle(id)}>{labelOf(id)}</Chip>)}</div>}
       <div className="muted small">Connectors it may use beyond reading, with no one watching. Chrome is AgentView's own browser; a server lets it use every tool that server has.</div>
+    </section>
+  );
+}
+
+export const repoName = (repo: string) => repo.split('/').pop() || repo;
+
+export function JobRepo({ j }: { j: Job }) {
+  const store = useAssistantStore();
+  const { folders } = useWorkspace(null);
+  const [picking, setPicking] = useState(false);
+  const pick = useRef<HTMLButtonElement>(null);
+  const set = (repo: string | null) => {
+    setPicking(false);
+    void store.editRow('jobs', j, { repo });
+  };
+  return (
+    <section className="mt-sec">
+      <h2>Repo</h2>
+      <Button ref={pick} size="sm" icon="repo" aria-haspopup="menu" aria-expanded={picking} onClick={() => setPicking(!picking)}>Pick repo</Button>
+      {picking && (
+        <Menu trigger={pick} onClose={() => setPicking(false)}>
+          {folders.filter((f) => f.repo?.branch).map((f) => <MenuItem key={f.cwd} icon={f.cwd === j.repo ? 'check' : undefined} onClick={() => set(f.cwd)}>{f.name}</MenuItem>)}
+          <MenuItem icon={j.repo ? undefined : 'check'} onClick={() => set(null)}>None</MenuItem>
+        </Menu>
+      )}
+      {j.repo && <div className="jb-tools"><Chip size="sm" icon="close" aria-label={`Remove ${repoName(j.repo)}`} onClick={() => set(null)}>{repoName(j.repo)}</Chip></div>}
     </section>
   );
 }
