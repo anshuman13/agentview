@@ -184,7 +184,7 @@ internal fun SpecCard(hub: Hub, id: String, slug: String, path: String, chat: St
                 onClick = if (subagents && !hub.readOnly) ({ hub.askChat("/spec-review $path") }) else null,
             )
         }
-        Findings(hub, "spec:$slug")
+        Findings(hub, "spec:$slug") { openBuild(hub, slug) }
     }
 }
 

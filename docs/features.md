@@ -298,7 +298,7 @@ the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentvi
 with Claude" in the Changes view and "Review changes" under the files of the latest turn run `/code-review` on the
 working tree; those findings show at the bottom of the Changes view.
 
-The spec review reports under the target `spec:<slug>`, shown as a Findings section in the opened Spec card (web and phone): the row opens the spec on that line, and Fix makes the agent edit the spec. A repeat review replaces the list and keeps dismissed findings hidden.
+The spec review reports under the target `spec:<slug>`, shown as a Findings section in the opened Spec card (web and phone): the row opens the spec on that line on web and the build page on the phone, and Fix makes the agent edit the spec. A repeat review replaces the list and keeps dismissed findings hidden.
 
 A pull request Claude opened with `gh pr create` stays linked to its chat: the pull request row shows "Open chat"
 while that chat is open.

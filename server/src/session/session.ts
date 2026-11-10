@@ -284,12 +284,16 @@ export class AgentSession implements AgentHost {
   enqueue(text: string, id?: string) {
     const [, name, args = ''] = /^\/([\w-]+)(?:\s+(.*))?$/s.exec(text.trim()) ?? [];
     if (name === 'compact') return this.compact(args);
-    const specReview = name === SPEC_REVIEW_COMMAND && args.trim() !== '';
-    if (name && name !== 'code-review' && name !== SKETCH_COMMAND.name && !specReview && this.driver.command(name, args)) return;
+    const specReview = name === SPEC_REVIEW_COMMAND && /^\S+$/.test(args);
+    const asPrompt = name === 'code-review' || name === SKETCH_COMMAND.name || specReview;
+    if (name && !asPrompt && this.driver.command(name, args)) return;
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
     this.begin();
     if (name === 'code-review' && /^\d*$/.test(args)) this.driver.review(args ? Number(args) : 'local', id);
-    else this.driver.send(name === SKETCH_COMMAND.name ? sketchPrompt(args) : specReview ? specReviewPrompt(args.trim()) : expandChatMentions(text, this.transcriptPath), id);
+    else {
+      const prompt = name === SKETCH_COMMAND.name ? sketchPrompt(args) : specReview ? specReviewPrompt(args) : expandChatMentions(text, this.transcriptPath);
+      this.driver.send(prompt, id);
+    }
   }
 
   compact(instructions?: string) {

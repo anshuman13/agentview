@@ -44,7 +44,7 @@ function FindingRow({ f, open, fix, dismiss }: { f: Finding; open: () => void; f
   );
 }
 
-// What /code-review reported, most severe first; a row opens the file on its line.
+// What a code or spec review reported, most severe first; a row opens the file on its line.
 export function Findings({ target }: { target: string }) {
   const review = useStore((s) => s.findings[target]);
   const cwd = useStore((s) => s.session.cwd);

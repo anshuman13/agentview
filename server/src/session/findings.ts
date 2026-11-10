@@ -24,7 +24,7 @@ export const findingKey = (f: Finding) => `${f.file}:${f.line}:${f.summary.slice
 
 // The target is a PR number, "local" for the working tree, or spec:<slug> for a spec review.
 export const reviewTarget = (prompt: string) => {
-  const spec = /^\/spec-review\s+(.+)/.exec(prompt.trim());
+  const spec = /^\/spec-review\s+(\S+)$/.exec(prompt.trim());
   if (spec) return `spec:${specSlug(spec[1])}`;
   const m = /^\/code-review\b\s*(\d+)?/.exec(prompt.trim());
   return m ? m[1] ?? 'local' : null;
