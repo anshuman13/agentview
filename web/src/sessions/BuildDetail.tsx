@@ -12,19 +12,19 @@ import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
 import { ago } from '../ui/util';
 import { stageName, type BuildDetail as Detail, type BuildStage } from '../../../shared/builds';
-import { byStart, commitTotals, criterionBadge, stageBadge, stageMeta, stageTitle, stateBadge, testCounts, updatedAt } from './buildsLogic';
+import { BuildPhases } from './BuildPhases';
+import { byStart, commitTotals, criterionBadge, decisionTitle, phaseLabel, stageBadge, stageMeta, stageRows, stageTitle, stateBadge, testCounts, updatedAt } from './buildsLogic';
 import { findHere, useWorkspace } from './folders';
 import { openChat } from './goalLogic';
 import { useBuild } from './useBuilds';
 
-type Entry = Detail['entries'][number];
+type Report = { title: string; text: string; chat?: { id: string; session: string | null } };
 
 export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: boolean; onBack: () => void }) {
   const { data: d, failed, reload } = useBuild(slug, shown);
   const cwd = useStore((s) => s.session.cwd);
   const here = findHere(useWorkspace(cwd).folders, cwd);
-  const [spec, setSpec] = useState(false);
-  const [report, setReport] = useState<Entry | null>(null);
+  const [report, setReport] = useState<Report | null>(null);
   const diffs = useMemo(() => splitDiff(d?.commit?.diff ?? ''), [d?.commit?.diff]);
   const head = (
     <div className="bd-head">
@@ -36,13 +36,15 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
   if (!d) return <>{head}{failed ? <EmptyState size="sm" title="Could not load this build" hint="Try again" action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} /> : <Skeleton />}</>;
 
   const stages = byStart(d.entries);
+  const rows = stageRows(d.entries, d.reviews);
+  const chat = report?.chat;
   const latest = (stage: BuildStage) => stages.filter((e) => e.stage === stage).at(-1);
   const commit = d.commit && latest('implement')?.commit;
   const totals = commitTotals(d.commit?.files ?? []);
   const test = latest('test');
   const review = latest('code-review');
   const when = ago(updatedAt(d.entries), ' ago');
-  const openSpec = () => setUi({ openFile: `.claude/specs/${d.slug}.md`, follow: false });
+  const openSpec = () => setUi({ openFile: d.specFile, follow: false });
   return (
     <>
       {head}
@@ -50,15 +52,18 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
       <div className="ui-group">
         <Row plain title={d.summary.conclusion} meta={`${stageName(d.summary.stage)} · ${when}`} trailing={<Badge {...stateBadge(d.summary.state)} />} />
       </div>
-      {d.spec !== null && (
-        <>
-          <Section label="Spec" open={spec} onToggle={() => setSpec(!spec)} action={here.folder && !here.tree && <IconButton icon="go-to-file" label="Open spec file" size="sm" onClick={openSpec} />} />
-          {spec && <div className="ui-group"><div className="bd-doc"><Markdown text={d.spec} /></div></div>}
-        </>
-      )}
-      <Section label="Stages" count={sectionCount(stages.length)} />
+      <BuildPhases
+        slug={d.slug}
+        phases={d.phases}
+        reviews={d.reviews}
+        action={d.specFile && here.folder && !here.tree && <IconButton icon="go-to-file" label="Open spec file" size="sm" onClick={openSpec} />}
+        onSaved={reload}
+      />
+      <Section label="Stages" count={sectionCount(rows.length)} />
       <div className="ui-group">
-        {stages.map((e) => <Row key={e.id} title={stageTitle(e)} meta={stageMeta(e) || ago(e.startedAt, ' ago')} trailing={<Badge {...stageBadge(e)} />} onClick={() => setReport(e)} />)}
+        {rows.map(({ entry: e, review: r }) => e
+          ? <Row key={e.id} title={stageTitle(e)} meta={stageMeta(e) || ago(e.startedAt, ' ago')} trailing={<Badge {...stageBadge(e)} />} onClick={() => setReport({ title: stageTitle(e), text: e.report, chat: { id: e.chat, session: e.session } })} />
+          : r && <Row key={`${r.phase}-${r.at}`} className="bd-clamp" title={`You · ${phaseLabel(r.phase)}`} meta={r.note || ago(r.at, ' ago')} trailing={<Badge status={r.decision === 'approve' ? 'done' : 'waiting'} />} onClick={() => setReport({ title: `You · ${phaseLabel(r.phase)}`, text: r.note || decisionTitle(r) })} />)}
       </div>
       {commit && d.commit && (
         <>
@@ -88,12 +93,14 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
         </>
       )}
       {report && (
-        <Sheet label={stageTitle(report)} onClose={() => setReport(null)} className="gl-sheet">
-          <Section label={stageTitle(report)} />
-          <div className="bd-doc">{report.report.trim() ? <Markdown text={report.report} /> : <EmptyState size="sm" title="No report yet" />}</div>
-          <div className="gl-actions">
-            <Button size="sm" onClick={() => { openChat({ chatId: report.chat, sessionId: report.session }); window.dispatchEvent(new Event('agentview:chat')); setReport(null); }}>Open chat</Button>
-          </div>
+        <Sheet label={report.title} onClose={() => setReport(null)} className="gl-sheet">
+          <Section label={report.title} />
+          <div className="bd-doc">{report.text.trim() ? <Markdown text={report.text} /> : <EmptyState size="sm" title="No report yet" />}</div>
+          {chat && (
+            <div className="gl-actions">
+              <Button size="sm" onClick={() => { openChat({ chatId: chat.id, sessionId: chat.session }); window.dispatchEvent(new Event('agentview:chat')); setReport(null); }}>Open chat</Button>
+            </div>
+          )}
         </Sheet>
       )}
     </>

@@ -1,6 +1,6 @@
 import { api } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
-import type { BuildDetail, BuildRow } from '../../../shared/builds';
+import type { BuildDetail, BuildReview, BuildRow, ReviewPhase } from '../../../shared/builds';
 
 export const deleteRequest = (url: string) => fetch(apiUrl(url), { method: 'DELETE' }).catch(() => null);
 
@@ -13,3 +13,6 @@ export const attentionPost = (path: string, id: string) => fetch(api(path), { me
 export const fetchBuilds = () => fetchJson<BuildRow[]>(api('/api/builds'));
 
 export const fetchBuild = (slug: string) => fetchJson<BuildDetail>(api(`/api/builds/one?slug=${encodeURIComponent(slug)}`));
+
+export const postBuildReview = (slug: string, phase: ReviewPhase, decision: BuildReview['decision'], note: string) =>
+  fetchJson<{ ok: true }>(api('/api/builds/review'), { method: 'POST', body: JSON.stringify({ slug, phase, decision, note }) });
