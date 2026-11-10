@@ -10,7 +10,7 @@ import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { ago } from '../ui/util';
 import { decisionTitle, phaseLabel, reviewDecision, type BuildPhase, type BuildReview, type ReviewPhase } from '../../../shared/builds';
-import { runAllPrompt, specProgress, specTasks, startTaskPrompt } from '../../../shared/specTasks';
+import { runAllPrompt, specProgress, specTasks, startTaskPrompt, withoutOpenTasks } from '../../../shared/specTasks';
 import { nextPhase, startPhase } from './buildsLogic';
 import { postBuildReview } from './sessionApi';
 
@@ -85,7 +85,7 @@ export function BuildPhases({ slug, phases, reviews, specPath, action, onSaved }
         {phases.map((p) => <Chip key={p.key} on={p.key === phase.key} icon={reviewDecision(reviews, p.key)?.decision === 'approve' ? 'check' : undefined} onClick={() => setPicked(p.key)}>{phaseLabel(p.key)}</Chip>)}
       </div>
       <div className="ui-group">
-        <div className="bd-doc"><Markdown text={phase.markdown} /></div>
+        <div className="bd-doc"><Markdown text={runnable ? withoutOpenTasks(phase.markdown) : phase.markdown} /></div>
         {runnable && open.map((t) => <Row key={t.n} plain className="bd-clamp" title={t.text} trailing={t.doing ? <span className="badge running">In progress</span> : <Button size="sm" onClick={() => sendToChat(startTaskPrompt(t, runnable))}>Start</Button>} />)}
         <DecisionRow slug={slug} phase={phase.key} review={review} onSaved={onSaved} onApproved={() => setPicked(nextPhase(phases, phase.key))} />
       </div>

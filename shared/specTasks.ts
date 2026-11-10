@@ -9,14 +9,22 @@ export const isSpecPath = (path: string) => SPEC_PATH.test(path);
 // The build slug of a spec file: its name, or for a Kiro spec folder the folder's.
 export const specSlug = (path: string) => /(?:^|\/)\.kiro\/specs\/([^/]+)\//.exec(path)?.[1] ?? path.slice(path.lastIndexOf('/') + 1).replace(/\.\w+$/, '');
 
-// The checkbox lines of a spec in file order, nested ones included, fenced code skipped.
-export function specTasks(markdown: string): SpecTask[] {
-  const tasks: SpecTask[] = [];
+// Each line of a spec with its checkbox match, fenced code never matching.
+function taskLines(markdown: string) {
+  const lines: { line: string; m: RegExpExecArray | null }[] = [];
   let fence = '';
   for (const line of markdown.split(/\r?\n/)) {
     const mark = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
     if (mark) fence = !fence ? mark : mark[0] === fence[0] && mark.length >= fence.length ? '' : fence;
-    const m = !fence && !mark ? TASK.exec(line) : null;
+    lines.push({ line, m: !fence && !mark ? TASK.exec(line) : null });
+  }
+  return lines;
+}
+
+// The checkbox lines of a spec in file order, nested ones included, fenced code skipped.
+export function specTasks(markdown: string): SpecTask[] {
+  const tasks: SpecTask[] = [];
+  for (const { m } of taskLines(markdown)) {
     if (m) {
       const done = m[1] !== ' ';
       const doing = !done && DOING.test(m[2]);
@@ -25,6 +33,9 @@ export function specTasks(markdown: string): SpecTask[] {
   }
   return tasks;
 }
+
+// The spec without its unticked task lines, for a page that lists them as rows.
+export const withoutOpenTasks = (markdown: string) => taskLines(markdown).filter(({ m }) => !m || m[1] !== ' ').map(({ line }) => line).join('\n');
 
 export function specProgress(tasks: SpecTask[]) {
   const doing = tasks.filter((t) => t.doing).length;

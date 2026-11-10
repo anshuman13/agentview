@@ -1,0 +1,12 @@
+[
+  {
+    "name": "unticked lines go, ticked and fenced stay",
+    "md": "# Tasks\n\n- [x] Done\n- [ ] Open\n  - [ ] Nested open\n```md\n- [ ] in a fence\n```\n- plain\n",
+    "expected": "# Tasks\n\n- [x] Done\n```md\n- [ ] in a fence\n```\n- plain\n"
+  },
+  {
+    "name": "no tasks is unchanged",
+    "md": "# Notes\n\ntext\n",
+    "expected": "# Notes\n\ntext\n"
+  }
+]

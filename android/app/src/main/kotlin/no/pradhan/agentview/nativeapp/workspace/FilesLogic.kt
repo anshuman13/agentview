@@ -116,13 +116,18 @@ private val KIRO_FOLDER = Regex("(?:^|/)\\.kiro/specs/([^/]+)/")
 
 fun specSlug(path: String) = KIRO_FOLDER.find(path)?.groupValues?.get(1) ?: path.substringAfterLast('/').replace(Regex("\\.\\w+$"), "")
 
-fun specTasks(markdown: String): List<SpecTask> {
-    val tasks = mutableListOf<SpecTask>()
+private fun taskLines(markdown: String): List<Pair<String, MatchResult?>> {
     var fence = ""
-    for (line in markdown.split(Regex("\r?\n"))) {
+    return markdown.split(Regex("\r?\n")).map { line ->
         val mark = FENCE.find(line)?.groupValues?.get(1)
         if (mark != null) fence = if (fence.isEmpty()) mark else if (mark[0] == fence[0] && mark.length >= fence.length) "" else fence
-        val m = if (fence.isEmpty() && mark == null) SPEC_TASK.find(line) else null
+        line to (if (fence.isEmpty() && mark == null) SPEC_TASK.find(line) else null)
+    }
+}
+
+fun specTasks(markdown: String): List<SpecTask> {
+    val tasks = mutableListOf<SpecTask>()
+    for ((_, m) in taskLines(markdown)) {
         if (m != null) {
             val done = m.groupValues[1] != " "
             val doing = !done && SPEC_DOING.containsMatchIn(m.groupValues[2])
@@ -131,6 +136,8 @@ fun specTasks(markdown: String): List<SpecTask> {
     }
     return tasks
 }
+
+fun withoutOpenTasks(markdown: String) = taskLines(markdown).filter { (_, m) -> m == null || m.groupValues[1] != " " }.joinToString("\n") { it.first }
 
 fun specProgress(tasks: List<SpecTask>): String {
     val doing = tasks.count { it.doing }

@@ -64,6 +64,7 @@ import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.startTaskPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
+import no.pradhan.agentview.nativeapp.workspace.withoutOpenTasks
 
 private const val BUILDS_POLL_MS = 15_000L
 
@@ -291,7 +292,7 @@ private fun LazyListScope.phaseItems(d: BuildDetail, picked: String?, now: Long,
     }
     item {
         Group {
-            Column(Modifier.padding(Tokens.listPad)) { Markdown(phase.markdown) }
+            Column(Modifier.padding(Tokens.listPad)) { Markdown(if (runnable != null) withoutOpenTasks(phase.markdown) else phase.markdown) }
             if (runnable != null) open.forEach { t ->
                 Hairline()
                 ListRow(t.text, trailing = if (t.doing) ({ Badge("In progress", BadgeTone.Running) }) else ({ Button("Start", { runnable.send(startTaskPrompt(t, runnable.path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !readOnly) }))

@@ -7,7 +7,7 @@ import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '
 import { billing, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
 import { appendRule } from '../../shared/steering';
 import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
-import { isSpecPath, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, type SpecTask } from '../../shared/specTasks';
+import { isSpecPath, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { can, modelsFor } from './chat/capabilitiesLogic';
 import { chatState, handoffText, runLine } from './chat/composer/composerLogic';
@@ -71,6 +71,10 @@ describe('cases shared with the Android app', () => {
       expect(open && startTaskPrompt(open, c.path)).toBe(c.start ?? undefined);
       expect(runAllPrompt(c.path)).toBe(c.all);
     });
+  }
+
+  for (const c of cases<{ name: string; md: string; expected: string }>('spec-open-tasks')) {
+    it(`withoutOpenTasks: ${c.name}`, () => expect(withoutOpenTasks(c.md)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; path: string; slug: string }>('spec-slug')) {
