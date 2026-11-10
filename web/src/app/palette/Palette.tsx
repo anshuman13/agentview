@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { setUi, useStore } from '../store';
+import { isDocPath } from '../../workspace/fileApi';
 import type { SavedSession } from '../../../../shared/protocol';
 import { providerModes } from '../../../../shared/providers';
 import { Back } from '../touch/back';
@@ -30,9 +31,10 @@ export function Palette() {
   const [recentOpened, setRecentOpened] = useState(() => storedStrings(ITEMS_KEY));
   const list = useRef<HTMLUListElement>(null);
   const deploy = appSettings.use((s) => s.deploy);
+  const doc = useStore((s) => isDocPath(s.ui.openFile ?? ''));
   const providers = appSettings.use((s) => s.providers);
   const pinned = useMemo(() => pinCommands(fetched.pins, live, fetched.saved), [fetched, live]);
-  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy, efforts, providers, modes)], [pinned, models, deploy, efforts, providers, modes]);
+  const commands = useMemo(() => [...pinned, ...buildCommands(models, deploy, efforts, providers, modes, doc)], [pinned, models, deploy, efforts, providers, modes, doc]);
   const rows = useMemo(() => rankCommands(commands, q, recent, MAX_ROWS + pinned.length), [commands, pinned, q, recent]);
 
   const items = useMemo(() => (open ? paletteItems(assistantStore().snapshot()) : []), [open]);

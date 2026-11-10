@@ -9,7 +9,7 @@ import { billing, providerLabel, providerMark, providerModes, type Billing } fro
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
-import { isSpecPath, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
+import { isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { countChat } from './app/store/counts';
 import { can, modelsFor } from './chat/capabilitiesLogic';
@@ -84,9 +84,10 @@ describe('cases shared with the Android app', () => {
     it(`specSlug: ${c.name}`, () => expect(specSlug(c.path)).toBe(c.slug));
   }
 
-  for (const c of cases<{ name: string; form?: GoalForm; now?: number; command?: string; what?: string; plan?: string | null }>('goal-command')) {
+  for (const c of cases<{ name: string; form?: GoalForm; now?: number; command?: string; what?: string; plan?: string | null; path?: string; md?: string; condition?: string }>('goal-command')) {
     it(`goalForm: ${c.name}`, () => {
       if (c.form) expect(goalCommand(c.form, c.now!)).toBe(c.command);
+      else if (c.condition) expect(planCondition(c.path!, c.md!)).toBe(c.condition);
       else expect(planOf(c.what!)).toBe(c.plan);
     });
   }

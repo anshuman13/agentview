@@ -60,6 +60,11 @@ describe('rankCommands', () => {
     expect(buildCommands(models, false).map((c) => c.id)).not.toContain('page:deploy');
     expect(buildCommands(models, true).map((c) => c.id)).toContain('page:deploy');
   });
+  it('lists Run as goal only for a Markdown file', () => {
+    const open = (doc: boolean) => buildCommands(models, false, undefined, [], undefined, doc).map((c) => c.id);
+    expect(open(true)).toContain('goalFile');
+    expect(open(false)).not.toContain('goalFile');
+  });
   it('offers the Codex views', () => {
     expect(ids(rankCommands(cmds, 'tasks', []))).toContain('codex:tasks');
   });

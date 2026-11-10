@@ -32,7 +32,7 @@ const VIEWS = [
   ['runs', 'Runs'],
 ];
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];
-export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, efforts: readonly Effort[] = EFFORT_LEVELS, providers: ProviderOption[] = [], modes: ModeOption[] = providerModes()): Command[] {
+export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, efforts: readonly Effort[] = EFFORT_LEVELS, providers: ProviderOption[] = [], modes: ModeOption[] = providerModes(), doc = false): Command[] {
   return [
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
@@ -58,6 +58,7 @@ export function buildCommands(models: { value: string; displayName: string }[], 
     { id: 'loop', label: 'Chat: Toggle Build Cycle' },
     { id: 'review', label: 'Chat: Toggle Review Changes' },
     { id: 'goal', label: 'Chat: New goal' },
+    ...(doc ? [{ id: 'goalFile', label: 'File: Run as goal…' }] : []),
     { id: 'spec', label: 'Chat: Start with a spec' },
     { id: 'stop', label: 'Chat: Stop the Agent' },
     { id: 'theme', label: 'Preferences: Toggle Theme' },

@@ -60,7 +60,7 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.workspace.parseFile
-import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
+import no.pradhan.agentview.nativeapp.workspace.planCondition
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
 
@@ -77,16 +77,25 @@ fun GoalSheets(hub: Hub) {
     }
 }
 
-// "N of M done" for a plan file, read again when a file changes.
+internal class PlanRead(val markdown: String? = null, val error: Boolean = false) {
+    val progress = markdown?.let { specTasks(it) }?.takeIf { it.isNotEmpty() }?.let { specProgress(it) }
+}
+
+// A plan file's text and "N of M done" (null without tasks), read again when a file changes.
 @Composable
-internal fun planProgress(hub: Hub, path: String?, chat: String): String? {
+internal fun planRead(hub: Hub, path: String?, chat: String): PlanRead {
     var tick by remember { mutableIntStateOf(0) }
     LaunchedEffect(hub) { hub.fileChanged.collect { tick++ } }
-    val progress by produceState<String?>(null, path, chat, tick) {
-        if (path != null) runCatching { specProgress(specTasks(parseFile(hub.api.get("/api/file?path=${enc(path)}", chat)).content)) }.onSuccess { value = it }
+    val read by produceState(PlanRead(), path, chat, tick) {
+        if (path != null) runCatching { parseFile(hub.api.get("/api/file?path=${enc(path)}", chat)).content }
+            .onSuccess { value = PlanRead(it) }
+            .onFailure { value = PlanRead(value.markdown, true) }
     }
-    return progress
+    return read
 }
+
+@Composable
+internal fun planProgress(hub: Hub, path: String?, chat: String): String? = planRead(hub, path, chat).progress
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -147,8 +156,9 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val here = canHere && inHere
     val target = if (here) state.session?.provider else providerId
     val dirs = (ws.repos.map { it.cwd to it.name } + ws.trees.map { it.cwd to it.name.substringAfterLast('/') }).let { l -> if (cwd.isNotEmpty() && l.none { it.first == cwd }) listOf(cwd to folderName(cwd)) + l else l }
-    val condition = sheet.plan?.let { runAllPrompt(it) } ?: what
-    val progress = planProgress(hub, sheet.plan, hub.pageChat)
+    val read = planRead(hub, sheet.plan, hub.pageChat)
+    val ready = sheet.plan == null || (read.markdown != null && !read.error)
+    val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: what
     val start = {
         val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct), System.currentTimeMillis())
         if (here) {
@@ -163,7 +173,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     Sheet(onClose, "New goal", padded = false) {
         SectionHeader("What")
         Group {
-            if (sheet.plan != null) ListRow(sheet.plan, progress, lines = 1)
+            if (sheet.plan != null) ListRow(sheet.plan, if (read.error) "Could not read the plan. Check the file still exists." else read.markdown?.let { read.progress ?: "No tasks" }, lines = 1)
             else Box(Modifier.padding(Tokens.sp6)) { TextField(what, { what = it }, placeholder = "What is the goal?", minLines = 3) }
         }
         SectionHeader("How often")
@@ -190,13 +200,13 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
                     Chip("This chat", { inHere = true }, on = inHere)
                 }
                 if (!here) {
-                    MenuChip(folderName(dir), dirs, { it.second }, { it.first == dir }) { dir = it.first }
+                    if (sheet.plan == null) MenuChip(folderName(dir), dirs, { it.second }, { it.first == dir }) { dir = it.first }
                     MenuChip(providerLabel(providerId), providers, { it.label }, { it.id == providerId }) { providerId = it.id }
                 }
             }
         }
         Box(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad)) {
-            Button("Start", start, Modifier.fillMaxWidth(), variant = ButtonVariant.Filled, size = ButtonSize.Lg, enabled = !hub.readOnly && !sent && condition.isNotBlank())
+            Button("Start", start, Modifier.fillMaxWidth(), variant = ButtonVariant.Filled, size = ButtonSize.Lg, enabled = !hub.readOnly && !sent && ready && condition.isNotBlank())
         }
     }
     if (pickTime) StopTimeDialog({ stopIn = null; stopAt = it }, { pickTime = false })

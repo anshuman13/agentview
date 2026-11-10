@@ -37,7 +37,7 @@ function EditRow({ title, value, options, onEdit }: { title: string; value: Reac
 export function GoalDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const run = useStore((s) => s.runs.find((r) => r.id === id));
   const plan = run ? planOf(run.what) : null;
-  const progress = usePlanProgress(plan, run?.chatId);
+  const { progress } = usePlanProgress(plan, run?.chatId);
   if (!run) return null;
   const ended = run.state === 'done';
   const paused = run.state === 'paused';

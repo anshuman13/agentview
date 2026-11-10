@@ -2,7 +2,7 @@ import { Component, Fragment, lazy, Suspense, useEffect, useRef, useState, type 
 import { createPortal } from 'react-dom';
 import type { EditorView } from '@codemirror/view';
 import { api, setUi, useStore } from '../app/store';
-import { fileRequest } from './fileApi';
+import { fileRequest, isDocPath } from './fileApi';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
@@ -144,7 +144,7 @@ export function CodePane() {
   if (!openFile) return null;
 
   const canDiff = Boolean(file?.original) && file?.original !== file?.content;
-  const isDoc = /\.(md|markdown|mdx)$/i.test(openFile);
+  const isDoc = isDocPath(openFile);
   const showDoc = preview && isDoc;
   const diff = canDiff && mode === 'diff' && !showDoc && !edit;
   const canEdit = Boolean(file) && !file?.error && !file?.image && !file?.binary && !showDoc;
@@ -181,6 +181,7 @@ export function CodePane() {
         <Breadcrumbs path={openFile} />
         <div className="cd-actions">
           {isDoc && <Toggle on={showDoc} icon="open-preview" title={showDoc ? 'Show the Markdown source' : 'Show the rendered document'} onClick={() => setPreview(!showDoc)} />}
+          {isDoc && <Toggle icon="target" title="Run as goal…" onClick={() => setUi({ goalSheet: { mode: 'start', plan: openFile } })} />}
           {canDiff && <Toggle on={diff} icon="diff" title="Show the change against the last commit" onClick={() => { setPreview(false); setMode(diff ? 'file' : 'diff'); }} />}
           {diff && <Toggle on={changesOnly} icon="fold" title="Changes only" onClick={() => setChangesOnly(!changesOnly)} />}
           {!showDoc && <Toggle on={wrap} icon="word-wrap" title="Word wrap" onClick={() => setWrap(!wrap)} />}

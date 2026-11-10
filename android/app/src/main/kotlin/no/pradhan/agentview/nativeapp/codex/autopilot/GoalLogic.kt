@@ -23,7 +23,7 @@ fun goalCommand(form: GoalForm, now: Long): String {
 }
 
 // The plan path of a goal that runs every task of a plan file, else null.
-fun planOf(what: String): String? = Regex("^(?:/goal\\s+)?every task in (\\S+) is ticked").find(what.trim())?.groupValues?.get(1)
+fun planOf(what: String): String? = Regex("^(?:/goal\\s+)?(?:every task in (\\S+) is ticked|every step of the plan in (\\S+) is done)").find(what.trim())?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }
 
 private const val HOUR = 3_600_000L
 

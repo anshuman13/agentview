@@ -9,7 +9,7 @@ import { Sheet } from '../ui/Sheet';
 import { billing, providerLabel } from '../../../shared/providers';
 import type { Provider } from '../../../shared/protocol';
 import { goalCommand } from '../../../shared/goalForm';
-import { runAllPrompt } from '../../../shared/specTasks';
+import { planCondition } from '../../../shared/specTasks';
 import { CAPS, EVERY, STOPS } from './goalLogic';
 import { useWorkspace } from './folders';
 import { useChatRun } from './runBands';
@@ -24,7 +24,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const providers = useMemo(() => allProviders.filter((p) => p.enabled), [allProviders]);
   const defaultProvider = appSettings.use((s) => s.defaultProvider);
   const { folders } = useWorkspace(null);
-  const progress = usePlanProgress(plan ?? null);
+  const { markdown, progress, error } = usePlanProgress(plan ?? null);
   const [what, setWhat] = useState('');
   const [every, setEvery] = useState(0);
   const [stopIn, setStopIn] = useState<number | undefined>();
@@ -42,7 +42,8 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const target = canHere && inHere ? chatProvider : provider;
   const dirs = folders.flatMap((f) => [{ cwd: f.cwd, name: f.name }, ...f.trees.map((w) => ({ cwd: w.cwd, name: w.name.split('/').pop()! }))]);
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
-  const condition = plan ? runAllPrompt(plan) : what;
+  const ready = !plan || (markdown !== null && !error);
+  const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : what;
   const start = () => {
     const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct }, Date.now());
     if (canHere && inHere) {
@@ -61,7 +62,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
     <Sheet label="New goal" onClose={onClose} className="gl-sheet">
       <Section label="What" />
       <div className="ui-group">
-        {plan ? <Row plain title={plan} meta={progress ?? undefined} /> : (
+        {plan ? <Row plain title={plan} meta={error ? 'Could not read the plan. Check the file still exists.' : markdown === null ? undefined : progress ?? 'No tasks'} /> : (
           <div className="ui-fields"><textarea rows={3} aria-label="What is the goal?" placeholder="What is the goal?" value={what} onChange={(e) => setWhat(e.target.value)} /></div>
         )}
       </div>
@@ -91,7 +92,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
           {canHere && chips([{ label: 'New chat' }, { label: 'This chat' }], (i) => (i === 1) === inHere, (i) => setInHere(i === 1))}
           {!(canHere && inHere) && (
             <>
-              <select aria-label="Folder" value={dir} onChange={(e) => setDir(e.target.value)}>
+              <select aria-label="Folder" disabled={Boolean(plan)} value={dir} onChange={(e) => setDir(e.target.value)}>
                 {dirs.map((d) => <option key={d.cwd} value={d.cwd}>{d.name}</option>)}
               </select>
               <span className="gl-anchor" ref={pick}>
@@ -106,7 +107,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
           )}
         </div>
       </div>
-      <div className="gl-actions"><Button variant="filled" size="lg" disabled={sent || !condition.trim()} onClick={start}>Start</Button></div>
+      <div className="gl-actions"><Button variant="filled" size="lg" disabled={sent || !ready || !condition.trim()} onClick={start}>Start</Button></div>
     </Sheet>
   );
 }

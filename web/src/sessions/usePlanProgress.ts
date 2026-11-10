@@ -3,18 +3,26 @@ import { specProgress, specTasks } from '../../../shared/specTasks';
 import { useStore } from '../app/store';
 import { fileRequest } from '../workspace/fileApi';
 
-// "N of M done" for a plan file, read again when a file changes.
-export function usePlanProgress(path: string | null, chat?: string) {
-  const [progress, setProgress] = useState<string | null>(null);
+type PlanRead = { markdown: string | null; progress: string | null; error: boolean };
+
+// A plan file's text and "N of M done" (null without tasks), read again when a file changes.
+export function usePlanProgress(path: string | null, chat?: string): PlanRead {
+  const [read, setRead] = useState<PlanRead>({ markdown: null, progress: null, error: false });
   const changed = useStore((s) => s.recentFiles);
   useEffect(() => {
     if (!path) return;
     let live = true;
     fileRequest(path, undefined, chat)
       .then((r) => (r.ok ? r.json() : null))
-      .then((f) => live && f && setProgress(specProgress(specTasks(f.content ?? ''))))
-      .catch(() => {});
+      .then((f) => {
+        if (!live) return;
+        if (!f || f.error) return setRead((r) => ({ ...r, error: true }));
+        const markdown: string = f.content ?? '';
+        const tasks = specTasks(markdown);
+        setRead({ markdown, progress: tasks.length ? specProgress(tasks) : null, error: false });
+      })
+      .catch(() => live && setRead((r) => ({ ...r, error: true })));
     return () => { live = false; };
   }, [path, chat, changed]);
-  return progress;
+  return read;
 }

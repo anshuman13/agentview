@@ -10,4 +10,4 @@ export function goalCommand(form: GoalForm, now: number) {
 }
 
 // The plan path of a goal that runs every task of a plan file, else null.
-export const planOf = (what: string) => /^(?:\/goal\s+)?every task in (\S+) is ticked/.exec(what.trim())?.[1] ?? null;
+export const planOf = (what: string) => /^(?:\/goal\s+)?(?:every task in (\S+) is ticked|every step of the plan in (\S+) is done)/.exec(what.trim())?.slice(1).find(Boolean) ?? null;

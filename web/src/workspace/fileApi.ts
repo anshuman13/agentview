@@ -11,3 +11,5 @@ export const listFiles = () => fetch(api('/api/files')).then((r) => r.json());
 export const listDir = (path: string) => fetch(api(`/api/dir?path=${encodeURIComponent(path)}`));
 
 export const fetchGitStatus = () => fetch(api('/api/git/status'));
+
+export const isDocPath = (path: string) => /\.(md|markdown|mdx)$/i.test(path);

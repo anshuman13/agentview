@@ -46,4 +46,8 @@ export const startTaskPrompt = (t: SpecTask, path: string) => `Do task ${t.n} in
 
 export const specPrompt = (request: string) => `Write a spec for the request below in .claude/specs/<slug>.md with three sections: Requirements (numbered, each with testable acceptance criteria), Design, and Tasks (\`- [ ]\` lines, each one small step). Do not change any code; stop for review when the spec is written. When the tasks are done later, tick each box right after finishing it (one edit per task) and mark the one you are on with " (in progress)".\n\nRequest: ${request}`;
 
+export const planGoalPrompt = (path: string) => `/goal every step of the plan in ${path} is done: work through it in order and note in the file which steps are finished.`;
+
 export const runAllPrompt = (path: string) => `/goal every task in ${path} is ticked: do them in order. While you work on one, append " (in progress)" to its line; when done, tick its box and remove that suffix in one edit before the next.`;
+
+export const planCondition = (path: string, markdown: string) => (specTasks(markdown).some((t) => !t.done) ? runAllPrompt(path) : planGoalPrompt(path));

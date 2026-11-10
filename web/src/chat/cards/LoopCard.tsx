@@ -27,7 +27,7 @@ export function LoopCard() {
   const live = useStore((s) => s.live.find((c) => c.id === chat));
   const phase = useStore((s) => s.session.loop.phase);
   const plan = run?.kind === 'goal' ? planOf(run.what) : null;
-  const progress = usePlanProgress(plan, run?.chatId);
+  const { progress } = usePlanProgress(plan, run?.chatId);
   const agents = live?.agentList ?? [];
   const now = useTick(30_000, agents.length > 0);
   const [open, setOpen] = useState(false);
