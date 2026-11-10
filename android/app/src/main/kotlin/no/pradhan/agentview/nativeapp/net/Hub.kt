@@ -37,7 +37,10 @@ import no.pradhan.agentview.nativeapp.app.NoticeKind
 import no.pradhan.agentview.nativeapp.app.Notifier
 import no.pradhan.agentview.nativeapp.app.SharedItem
 import no.pradhan.agentview.nativeapp.app.RunningNote
+import no.pradhan.agentview.nativeapp.app.AppCounts
 import no.pradhan.agentview.nativeapp.app.WaitingSnapshot
+import no.pradhan.agentview.nativeapp.app.appCounts
+import no.pradhan.agentview.nativeapp.app.countChat
 import no.pradhan.agentview.nativeapp.app.noticeAsk
 import no.pradhan.agentview.nativeapp.app.notices
 import no.pradhan.agentview.nativeapp.app.runningNotes
@@ -53,7 +56,7 @@ import no.pradhan.agentview.nativeapp.codex.CodexStore
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.meetings.parseResolved
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
-import no.pradhan.agentview.nativeapp.codex.needsList
+import no.pradhan.agentview.nativeapp.codex.needsView
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.ReviewFindings
 import no.pradhan.agentview.nativeapp.sessions.Workspace
@@ -135,6 +138,12 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val workspace = MutableStateFlow(Workspace())
 
+    // The services hidden on the MCP page (/api/mcp/groups); the counts leave them out.
+    val mcpGroups = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    // Every badge number (app/CountsLogic.kt), from the chats, the MCP servers and the Codex row totals.
+    val counts = MutableStateFlow(AppCounts())
+
     val loadingEarlier = MutableStateFlow(false)
 
     // The Codex ask bar's draft and uploads live here, so a photo that finishes after the bar left (camera, page switch) still lands in it.
@@ -207,6 +216,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
             if (up) {
                 viewModelScope.launch { refreshSettings() }
                 viewModelScope.launch { refreshWorkspace(force = true) }
+                refreshMcpGroups()
                 flushOutbox()
             }
         },
@@ -240,7 +250,14 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     init {
         viewModelScope.launch(Dispatchers.Default) {
             val minute = foregroundNow.flatMapLatest { up -> if (up) flow { while (true) { emit(Unit); delay(60_000) } } else emptyFlow() }.onStart { emit(Unit) }
-            val needs = combine(codex.state, minute, codexFilter, handled) { s, _, filter, hidden -> needsList(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden).size }.distinctUntilChanged()
+            val rows = combine(codex.state, minute, codexFilter, handled) { s, _, filter, hidden -> needsView(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden).let { it.list.size to it.queue.size } }.distinctUntilChanged()
+            val needs = rows.map { it.first }.distinctUntilChanged()
+            launch {
+                val chats = store.state.map { Triple(it.live, it.shownId, it.session?.mcp.orEmpty()) }.distinctUntilChanged()
+                combine(chats, workspace.map { it.seen }.distinctUntilChanged(), mcpGroups, rows) { (live, shownId, mcp), seen, groups, (needsRows, replyRows) ->
+                    appCounts(live.map { countChat(it, seen) }, shownId, 0, mcp, groups, needsRows, replyRows)
+                }.collect { counts.value = it }
+            }
             combine(store.state.map { waitingSnapshot(it.live) }.distinctUntilChanged(), liveLoaded, notifyOn, needs) { snap, loaded, on, badge -> Triple(snap, loaded, if (on) badge else -1) }.collect { (snap, loaded, badge) ->
                 if (!loaded) return@collect
                 WaitingStore.write(app, snap)

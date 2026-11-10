@@ -17,17 +17,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 import no.pradhan.agentview.nativeapp.chat.can
 import no.pradhan.agentview.nativeapp.chat.firstLine
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.command
-import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.quietCommand
 import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.refreshMcpGroups
 import no.pradhan.agentview.nativeapp.net.write
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -74,8 +72,9 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
             parseMcp(hub.read("/api/mcp/probe$q"))
         }
     }
-    var groups by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    LaunchedEffect(Unit) { runCatching { groups = protocolJson.decodeFromString(MapSerializer(String.serializer(), String.serializer()), hub.read("/api/mcp/groups")) } }
+    val groups by hub.mcpGroups.collectAsState()
+    val counts by hub.counts.collectAsState()
+    LaunchedEffect(Unit) { hub.refreshMcpGroups() }
     var sel by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var showHidden by rememberSaveable { mutableStateOf(false) }
     val live = st.session?.mcp ?: emptyList()
@@ -86,18 +85,16 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
 
     fun setGroup(service: String, group: String) {
         val before = groups
-        groups = if (group == "shown") groups - service else groups + (service to group)
-        hub.write("/api/mcp/groups", mcpGroupBody(service, group), "Could not save the group") { ok -> if (!ok) groups = before }
+        hub.mcpGroups.value = if (group == "shown") groups - service else groups + (service to group)
+        hub.write("/api/mcp/groups", mcpGroupBody(service, group), "Could not save the group") { ok -> if (!ok) hub.mcpGroups.value = before }
     }
 
     val current = rows.firstOrNull { mcpKey(it) == sel }
     if (current != null) { McpDetail(hub, current, calls[mcpSlug(current.name)], groups, ::setGroup, onBack = { sel = null }); return }
 
-    val shown = sections.work + sections.personal
-    val ok = shown.count { it.status == "connected" }
-    val need = shown.count { mcpNeedsYou(it) }
+    val mcp = counts.mcp
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "MCP Servers", onBack, sub = if (probe.data != null) "$ok connected of ${shown.size}" + if (need > 0) " · $need need you" else "" else null) {
+        WorkspaceHeader(hub, "MCP Servers", onBack, sub = if (probe.data != null) "${mcp.connected} connected of ${mcp.total}" + if (mcp.needsYou > 0) " · ${mcp.needsYou} need you" else "" else null) {
             IconBtn("refresh", "Check", { refresh = true; reprobe() }, enabled = !probe.busy)
         }
         PageBody {

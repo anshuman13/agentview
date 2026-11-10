@@ -162,8 +162,6 @@ fun mcpState(r: McpRow): Pair<String, BadgeTone> = when {
     }
 }
 
-fun mcpNeedsYou(r: McpRow) = r.status == "failed" || (r.status == "needs-auth" && r.live)
-
 fun mcpShortName(name: String) = name.removePrefix("claude.ai ")
 
 private fun splitMcpName(name: String): String {
@@ -172,7 +170,8 @@ private fun splitMcpName(name: String): String {
 }
 
 fun mcpGroupKey(r: McpRow) = splitMcpName(r.name)
-fun mcpHideKey(r: McpRow) = "hide:${splitMcpName(r.name)}"
+fun mcpHideKey(name: String) = "hide:${splitMcpName(name)}"
+fun mcpHideKey(r: McpRow) = mcpHideKey(r.name)
 
 fun mcpScope(scope: String?): Pair<String, String> = when (scope) {
     "user" -> "Your servers" to "~/.claude.json"

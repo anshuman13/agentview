@@ -15,6 +15,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
+import no.pradhan.agentview.nativeapp.app.appCounts
+import no.pradhan.agentview.nativeapp.app.countChat
 import no.pradhan.agentview.nativeapp.chat.ChecklistItem
 import no.pradhan.agentview.nativeapp.chat.checklistCurrent
 import no.pradhan.agentview.nativeapp.chat.checklistProgress
@@ -56,6 +58,7 @@ import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.money
+import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.setupPrompt
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
@@ -159,6 +162,20 @@ class SharedCasesTest {
             val e = c.getValue("expected").jsonObject
             val got = statusLine(live, null)
             assertEquals(c.str("name"), e.str("text") to e.str("tone"), got.text to got.tone.name.lowercase())
+        }
+    }
+
+    @Test fun appCounts() {
+        for (c in cases("counts")) {
+            val seen = c.nullable("seen")?.jsonObject?.mapValues { it.value.jsonPrimitive.long } ?: emptyMap()
+            val chats = c.getValue("chats").jsonArray.map { countChat(it.decode<LiveChat>(), seen) }
+            val mcp = c.nullable("mcp")?.jsonArray?.map { McpServer(it.jsonObject.str("name"), it.jsonObject.str("status")) } ?: emptyList()
+            val hidden = c.nullable("hidden")?.jsonObject?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap()
+            val got = appCounts(chats, c.str("viewing"), c.nullable("attention")?.jsonPrimitive?.int ?: 0, mcp, hidden, c.nullable("needsYouRows")?.jsonPrimitive?.int ?: 0, c.nullable("replyRows")?.jsonPrimitive?.int ?: 0)
+            val e = c.getValue("expected").jsonObject
+            val m = e.getValue("mcp").jsonObject
+            val want = listOf("needsYou", "chats", "waiting", "running", "agents").map { e.getValue(it).jsonPrimitive.int } + listOf("connected", "total", "needsYou").map { m.getValue(it).jsonPrimitive.int }
+            assertEquals(c.str("name"), want, listOf(got.needsYou, got.chats, got.waiting, got.running, got.agents, got.mcp.connected, got.mcp.total, got.mcp.needsYou))
         }
     }
 

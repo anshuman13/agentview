@@ -34,7 +34,6 @@ import no.pradhan.agentview.nativeapp.ops.mcpGroupBody
 import no.pradhan.agentview.nativeapp.ops.mcpKey
 import no.pradhan.agentview.nativeapp.ops.mcpLoggedInSince
 import no.pradhan.agentview.nativeapp.ops.mcpMeta
-import no.pradhan.agentview.nativeapp.ops.mcpNeedsYou
 import no.pradhan.agentview.nativeapp.ops.mcpSections
 import no.pradhan.agentview.nativeapp.ops.mcpShortName
 import no.pradhan.agentview.nativeapp.ops.mcpState
@@ -219,7 +218,7 @@ class PagesLogicTest {
         assertEquals(listOf("grafana_prod", "slack", "claude.ai Linear"), rows.map { it.name })
         assertEquals("user", rows[0].server.scope)
         assertEquals(1, rows[0].server.tools?.size)
-        assertTrue(rows[0].live && mcpNeedsYou(rows[0]))
+        assertTrue(rows[0].live)
         assertEquals("OAuth via Claude" to BadgeTone.Quiet, mcpState(rows[1]))
         assertEquals("Failed" to BadgeTone.Failed, mcpState(rows[0]))
         val sections = mcpSections(rows.map { if (it.server.type == "claudeai") it.copy(account = "main") else it }, mapOf("slack" to "personal", "hide:grafana" to "hidden"))

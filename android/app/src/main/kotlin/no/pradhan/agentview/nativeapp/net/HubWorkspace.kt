@@ -6,6 +6,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 
 fun Hub.refreshWorkspace(force: Boolean = false) {
@@ -25,6 +27,12 @@ fun Hub.refreshWorkspace(force: Boolean = false) {
                 Workspace(repos.await(), trees.await(), saved.await(), pins.await(), seen.await())
             }
         }.onSuccess { if (from == origin.value) workspace.value = it }.onFailure { workspaceAt = 0 }
+    }
+}
+
+fun Hub.refreshMcpGroups() {
+    viewModelScope.launch {
+        runCatching { protocolJson.decodeFromString(MapSerializer(String.serializer(), String.serializer()), read("/api/mcp/groups")) }.onSuccess { mcpGroups.value = it }
     }
 }
 

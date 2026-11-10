@@ -22,7 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.flow.update
 import no.pradhan.agentview.nativeapp.app.DeepLink
+import no.pradhan.agentview.nativeapp.app.countChat
+import no.pradhan.agentview.nativeapp.app.waits
 import no.pradhan.agentview.nativeapp.chat.AttachButton
+import no.pradhan.agentview.nativeapp.chat.Tone2
 import no.pradhan.agentview.nativeapp.chat.Dictation
 import no.pradhan.agentview.nativeapp.chat.VoiceButton
 import no.pradhan.agentview.nativeapp.chat.appendWord
@@ -30,8 +33,6 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.askCodex
 import no.pradhan.agentview.nativeapp.net.codexProfile
-import no.pradhan.agentview.nativeapp.sessions.ChatState
-import no.pradhan.agentview.nativeapp.sessions.chatState
 import no.pradhan.agentview.nativeapp.sessions.folderName
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -96,6 +97,7 @@ private fun rememberOverviewData(hub: Hub, st: CodexState, profile: String?, now
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val mt = remember(st.meetings, profile, now / 60_000) { meetingsOf(st.meetings, profile, now) }
     val hidden by hub.handled.collectAsState()
+    val counts by hub.counts.collectAsState()
     val needsView = remember(st, profile, now / 60_000, hidden) { needsView(st, profile, now, hidden) }
     val needs = needsView.list
     val today = remember(st, profile, s, mt, needs) { overviewToday(s, mt.next, now, riskKeys(needs)) }
@@ -103,7 +105,7 @@ private fun rememberOverviewData(hub: Hub, st: CodexState, profile: String?, now
     val rows = remember(today, others) {
         today.late.map { Triple(it.at ?: 0L, null as Row?, it) } + (others.map { Triple(it.startsAt!!, it, null as Row?) } + today.todo.map { Triple(it.at ?: 0L, null as Row?, it) }).sortedBy { it.first }
     }
-    return OverviewData(s, mt, needs, needsView.total, today, rows)
+    return OverviewData(s, mt, needs, counts.needsYou, today, rows)
 }
 
 @Composable
@@ -113,9 +115,10 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     var all by remember { mutableStateOf(false) }
     val live by hub.store.state.select { it.live }
     val running = remember(live) { runningChats(live) }
+    val counts by hub.counts.collectAsState()
     LazyColumn(Modifier.fillMaxSize()) {
         item { UpNextSection(d, now, actions, onOpen, onNeeds, onAdd, onMeeting) }
-        if (running.isNotEmpty()) runningSection(running) { hub.link.value = DeepLink(chat = it) }
+        if (running.isNotEmpty()) runningSection(running, counts.running + counts.waiting) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
         if (goals.isNotEmpty()) goalsSection(st, goals, onGoals)
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
@@ -148,17 +151,18 @@ private fun UpNextSection(d: OverviewData, now: Long, actions: TaskActions, onOp
 }
 
 // Chats that run or wait on me, waiting ones first.
-fun runningChats(live: List<LiveChat>) = live.filter { chatState(it, null, emptyMap()).let { s -> s == ChatState.Needs || s == ChatState.Running } }.sortedByDescending { it.pending > 0 }
+fun runningChats(live: List<LiveChat>) = live.filter { c -> countChat(c, emptyMap()).let { it.waits || it.tone == Tone2.Running } }.sortedByDescending { countChat(it, emptyMap()).waits }
 
-private fun LazyListScope.runningSection(chats: List<LiveChat>, onOpen: (String) -> Unit) {
-    item { SectionHeader("Running", count = "${chats.size}") }
+private fun LazyListScope.runningSection(chats: List<LiveChat>, count: Int, onOpen: (String) -> Unit) {
+    item { SectionHeader("Running", count = "$count") }
     item {
         Group {
             chats.forEachIndexed { i, c ->
                 if (i > 0) Hairline()
-                val doing = if (c.pending > 0) "Waiting for you" else c.status.ifBlank { "Working" }
+                val waits = countChat(c, emptyMap()).waits
+                val doing = if (waits) "Waiting for you" else c.status.ifBlank { "Working" }
                 ListRow(c.title.ifBlank { "Untitled" }, "${folderName(c.cwd)} · $doing", onClick = { onOpen(c.id) }, trailing = {
-                    if (c.pending > 0) Badge("Needs you", BadgeTone.Waiting) else Badge("Running", BadgeTone.Running)
+                    if (waits) Badge("Needs you", BadgeTone.Waiting) else Badge("Running", BadgeTone.Running)
                 })
             }
         }

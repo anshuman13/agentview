@@ -41,6 +41,7 @@ fun Hub.saveOrigin(value: String) {
     codex.reset()
     workspace.value = Workspace()
     workspaceAt = 0
+    mcpGroups.value = emptyMap()
     stream.resetResume()
     stream.start()
 }

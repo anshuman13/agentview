@@ -62,7 +62,6 @@ import no.pradhan.agentview.nativeapp.chat.VoiceHost
 import no.pradhan.agentview.nativeapp.codex.CodexScreen
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheets
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunsScreen
-import no.pradhan.agentview.nativeapp.codex.autopilot.sessionsBadge
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.OFFLINE_DELAY_MS
 import no.pradhan.agentview.nativeapp.net.OfflineEvent
@@ -79,6 +78,8 @@ import no.pradhan.agentview.nativeapp.sessions.SessionsScreen
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
+import no.pradhan.agentview.nativeapp.ui.DotState
+import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -111,10 +112,10 @@ private const val EXPANDED_MIN_DP = 840
 
 fun isExpanded(widthDp: Int) = widthDp >= EXPANDED_MIN_DP
 
-private class Dest(val label: String, val icon: String, val selected: Boolean, val badge: Int, val onClick: () -> Unit)
+private class Dest(val label: String, val icon: String, val selected: Boolean, val badge: Int, val dot: Boolean = false, val onClick: () -> Unit)
 
 @Composable
-private fun DestIcon(d: Dest) = BadgedBox(badge = { if (d.badge > 0) Badge("${d.badge}", BadgeTone.Waiting) }) { AvIcon(d.icon, null, Tokens.iconLg) }
+private fun DestIcon(d: Dest) = BadgedBox(badge = { if (d.badge > 0) Badge("${d.badge}", BadgeTone.Waiting) else if (d.dot) StatusDot(DotState.Warn) }) { AvIcon(d.icon, null, Tokens.iconLg) }
 
 @Composable
 private fun DestLabel(d: Dest) = Text(d.label, style = Type.label)
@@ -181,15 +182,16 @@ private fun rememberOfflineBanner(connected: Boolean): OfflineState {
 private fun rememberDests(hub: Hub, nav: NavHostController, route: String?, more: Boolean, onMore: (Boolean) -> Unit): List<Dest> {
     val live by hub.store.state.select { it.live }
     val shownId by hub.store.state.select { it.shownId }
+    val counts by hub.counts.collectAsState()
     val shownChat = live.firstOrNull { it.id == shownId }
     val inAgent = isAgent(route)
     return Tab.entries.map { t ->
         val badge = when (t) {
             Tab.Chat -> shownChat?.pending ?: 0
-            Tab.Sessions -> sessionsBadge(live, shownId)
+            Tab.Sessions -> counts.chats
             else -> 0
         }
-        Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge) { onMore(false); nav.goTab(t.route) }
+        Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge, dot = t == Tab.Codex && counts.needsYou > 0) { onMore(false); nav.goTab(t.route) }
     } + Dest("More", "ellipsis", more || isMore(route), 0) { onMore(true) }
 }
 

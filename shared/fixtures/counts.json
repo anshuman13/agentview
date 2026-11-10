@@ -28,7 +28,7 @@
   {
     "name": "a run that needs you is waiting",
     "viewing": "",
-    "chats": [{ "id": "a", "run": { "state": "running", "needsYou": true } }, { "id": "b", "run": { "state": "running" } }],
+    "chats": [{ "id": "a", "run": { "id": "r", "state": "running", "needsYou": true } }, { "id": "b", "run": { "id": "r", "state": "running" } }],
     "expected": { "needsYou": 0, "chats": 0, "waiting": 1, "running": 0, "agents": 0, "mcp": { "connected": 0, "total": 0, "needsYou": 0 } }
   },
   {
