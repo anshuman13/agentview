@@ -29,6 +29,10 @@ Colors, type and spacing come from `web/src/styles/tokens.css` and the icons fro
 `./gradlew generateTokens generateIcons` writes `Tokens.kt` and `Codicons.kt`, so a token change reaches the app on the
 next generate and build. TokenGen applies native overrides, listed under Phone in `design-system.md`. Screens build from the shared components in `Components.kt`.
 
+Each running chat has an ongoing, silent notification on the channel "Running chats": title, status, elapsed time and Stop,
+or Allow and Deny while it waits on a permission request (any other request shows "Needs you" and opens the chat). It has
+no actions in read-only mode and goes when the turn ends or notifications are off.
+
 `npm run native` runs the unit tests and builds a minified release APK signed with the debug key;
 `npm run native -- <adb serial>` also installs it. It needs JDK 17 and the Android SDK
 (`/opt/homebrew/share/android-commandlinetools`). On the emulator, `adb reverse tcp:7777 tcp:7777` lets the app reach
