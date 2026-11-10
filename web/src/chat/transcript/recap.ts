@@ -46,3 +46,22 @@ export function markSeen(chat: string, events: ChatEvent[]) {
   if (!chat || !last) return;
   try { localStorage.setItem(key(chat), last); } catch {}
 }
+
+const QUIET_OUTCOMES: Round['outcome'][] = ['progress', 'quiet', 'done'];
+const QUIET_SHOWN = 3;
+const OUTCOME_ORDER: Round['outcome'][] = ['blocked', 'question', 'failed', 'progress', 'done', 'quiet'];
+
+// The rounds that ended after the time the chat was last shown, newest first.
+export function roundsSince(rounds: Round[], at: number) {
+  return rounds.filter((r) => r.at > at).reverse();
+}
+
+export function outcomeCounts(rounds: Round[]) {
+  return OUTCOME_ORDER.map((outcome) => ({ outcome, n: rounds.filter((r) => r.outcome === outcome).length })).filter((c) => c.n > 0);
+}
+
+// More than three quiet rounds fold; blocked, question and failed rounds always show.
+export function foldedRounds(rounds: Round[], open: boolean) {
+  const quiet = rounds.filter((r) => QUIET_OUTCOMES.includes(r.outcome));
+  return open || quiet.length <= QUIET_SHOWN ? rounds : rounds.filter((r) => !QUIET_OUTCOMES.includes(r.outcome));
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { catchUp, recap, recapText } from './recap';
+import { catchUp, foldedRounds, outcomeCounts, recap, recapText, roundsSince } from './recap';
 import type { ChatEvent, Round } from '../../../../shared/protocol';
 
 let n = 0;
@@ -47,5 +47,21 @@ describe('catchUp', () => {
     expect(catchUp([seen], 'seen', [round(1, 90, 'done')])).toBeNull();
     expect(catchUp([seen], 'gone', [round(1, 190, 'done')])).toBeNull();
     expect(catchUp([seen], null, [round(1, 190, 'done')])).toBeNull();
+  });
+});
+
+describe('rounds since you left', () => {
+  const round = (n: number, outcome: Round['outcome']): Round => ({ n, at: n * 10, outcome, line: '', costUsd: 0 });
+  const rounds = [round(1, 'progress'), round(2, 'blocked'), round(3, 'progress'), round(4, 'done'), round(5, 'quiet')];
+
+  it('takes the rounds after the time, newest first, and counts outcomes', () => {
+    expect(roundsSince(rounds, 10).map((r) => r.n)).toEqual([5, 4, 3, 2]);
+    expect(outcomeCounts(roundsSince(rounds, 10))).toEqual([{ outcome: 'blocked', n: 1 }, { outcome: 'progress', n: 1 }, { outcome: 'done', n: 1 }, { outcome: 'quiet', n: 1 }]);
+  });
+
+  it('folds more than three quiet rounds but keeps blocked ones', () => {
+    expect(foldedRounds(rounds, false).map((r) => r.n)).toEqual([2]);
+    expect(foldedRounds(rounds, true)).toHaveLength(5);
+    expect(foldedRounds(rounds.slice(0, 4), false)).toHaveLength(4);
   });
 });
