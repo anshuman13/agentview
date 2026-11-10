@@ -8,6 +8,7 @@ import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
 import no.pradhan.agentview.nativeapp.net.LiveChat
+import no.pradhan.agentview.nativeapp.net.LiveNow
 import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
@@ -23,6 +24,15 @@ class RunsTest {
         ChatRun(id, kind, round = 4, max = 20, nextAt = 14 * 3_600_000L + 20 * 60_000L, state = state, why = why, rounds = rounds, endedAt = endedAt, needsYou = needsYou, every = every)
 
     private fun name(e: RunEntry) = when (e) { is RunEntry.Chat -> e.run.id; is RunEntry.Job -> "job:${e.row.id}" }
+
+    @Test fun loopNowTakesTheNewerOfStatusAndRound() {
+        val r = run("a", rounds = listOf(Round(1, 400, "progress", "round", 0.0))).copy(startedAt = 100)
+        assertEquals(LoopNow("Working", 500, true, next = "a", stepsLeft = 2), loopNow(r, LiveNow("Working", 500, next = listOf("a", "b"))))
+        assertEquals("round", loopNow(r, LiveNow("Working", 300)).title)
+        assertEquals("Waiting for the first round", loopNow(r.copy(rounds = emptyList()), LiveNow("Old", 50)).title)
+        assertEquals("12 min", agentAge(0, 12 * 60_000))
+        assertEquals("1 h 5 min", agentAge(0, 65 * 60_000))
+    }
 
     @Test fun triesColumnsFollowTheChatAndItsLastReport() {
         val tries = listOf(RunTry(1, "c1", "s1", "tries/a-1"), RunTry(2, "c2", "s2", "tries/a-2"), RunTry(3, "c3", "s3", "tries/a-3", dropped = true))

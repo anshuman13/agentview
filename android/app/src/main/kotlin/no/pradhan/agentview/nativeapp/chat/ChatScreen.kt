@@ -158,7 +158,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         }
         visibleChecklist(view.checklist, running)?.let { ChecklistCard(it) }
         val run = runs.lastOrNull { it.chatId == live.id && it.state != "done" }
-        run?.let { LoopCard(hub, it, session?.loop?.phase) }
+        run?.let { LoopCard(hub, it, live, session?.loop?.phase, onOpenAgent) { panels.agents = true } }
         Composer(hub, live.id, session, running, pending.isNotEmpty(), run)
     }
     ChatSheets(hub, live, session, view, panels, cwd, onOpenAgent)

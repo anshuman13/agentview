@@ -79,7 +79,7 @@ fun GoalSheets(hub: Hub) {
 
 // "N of M done" for a plan file, read again when a file changes.
 @Composable
-private fun planProgress(hub: Hub, path: String?, chat: String): String? {
+internal fun planProgress(hub: Hub, path: String?, chat: String): String? {
     var tick by remember { mutableIntStateOf(0) }
     LaunchedEffect(hub) { hub.fileChanged.collect { tick++ } }
     val progress by produceState<String?>(null, path, chat, tick) {

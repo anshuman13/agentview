@@ -7,6 +7,7 @@ import no.pradhan.agentview.nativeapp.codex.jobs.jobState
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
 import no.pradhan.agentview.nativeapp.net.LiveChat
+import no.pradhan.agentview.nativeapp.net.LiveNow
 import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.Round
@@ -50,6 +51,23 @@ fun tryColumn(run: ChatRun, t: RunTry, live: List<LiveChat>): TryColumn {
 }
 
 fun roundText(r: Round) = if (r.report != null) "Weekly report" else r.line.ifEmpty { r.outcome }
+
+// The loop card's first row (web composerLogic loopNow): the agent's status or the last round, whichever is newer.
+data class LoopNow(val title: String, val at: Long?, val fromStatus: Boolean, val outcome: String? = null, val next: String? = null, val stepsLeft: Int = 0)
+
+fun loopNow(run: ChatRun, now: LiveNow?): LoopNow {
+    val last = run.rounds.lastOrNull()
+    if (now != null && now.at >= run.startedAt && (last == null || now.at >= last.at)) {
+        return LoopNow(now.text, now.at, true, next = now.next?.firstOrNull(), stepsLeft = now.next?.size ?: 0)
+    }
+    if (last != null) return LoopNow(last.line.ifEmpty { last.outcome }, last.at, false, last.outcome)
+    return LoopNow("Waiting for the first round", run.nextAt, false)
+}
+
+fun agentAge(startedAt: Long, now: Long): String {
+    val min = maxOf(1L, (now - startedAt) / 60_000)
+    return if (min < 60) "$min min" else "${min / 60} h ${min % 60} min"
+}
 
 fun stoppedText(run: ChatRun) = "${KIND[run.kind] ?: "Loop"} stopped"
 

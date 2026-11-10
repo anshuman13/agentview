@@ -16,6 +16,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import no.pradhan.agentview.nativeapp.ui.MoreButton
+import no.pradhan.agentview.nativeapp.ui.DotState
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -60,31 +64,55 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
 
-// The loop card above the composer (web/src/chat/LoopCard.tsx): state, last round, Pause and Stop; the rounds on tap, Run now on long press.
-@OptIn(ExperimentalFoundationApi::class)
+// The loop card above the composer (web/src/chat/cards/LoopCard.tsx): state and Pause in the head, what is happening now, the running agents, then the what line.
+private const val MAX_AGENTS = 3
+
 @Composable
-fun LoopCard(hub: Hub, run: ChatRun, phase: String?) {
+fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
     var open by rememberSaveable(run.id) { mutableStateOf(false) }
-    var menu by remember { mutableStateOf(false) }
     val cycle = run.kind == "cycle" || run.kind == "tries"
+    val goal = run.kind == "goal"
     val paused = run.state == "paused"
-    val last = run.rounds.lastOrNull()
+    val agents = live.agentList
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(agents.isNotEmpty()) { while (agents.isNotEmpty()) { delay(30_000); now = System.currentTimeMillis() } }
+    val progress = if (goal) planProgress(hub, planOf(run.what), run.chatId) else null
+    val state = loopNow(run, live.now)
+    val working = live.running || agents.isNotEmpty()
+    val detail = { hub.goalSheet.value = GoalSheet.Detail(run.id) }
+    val meta = listOfNotNull(
+        state.at?.let { clock(it) },
+        state.outcome?.replaceFirstChar(Char::uppercase),
+        state.next?.let { "Next: $it" },
+        state.stepsLeft.takeIf { it > 0 }?.let { "$it ${if (it == 1) "step" else "steps"} left" },
+    ).joinToString(" · ")
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
-        Panel(Modifier.combinedClickable(onClick = { open = !open }, onLongClick = { if (!cycle && !paused) menu = true })) {
+        Panel {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(runLine(run, phase), Modifier.weight(1f).then(if (run.kind == "goal") Modifier.clickable { hub.goalSheet.value = GoalSheet.Detail(run.id) } else Modifier), style = Type.callout, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(runLine(run, phase), Modifier.weight(1f).then(if (goal) Modifier.clickable(onClick = detail) else Modifier), style = Type.callout, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (!cycle) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") })
-                IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") })
+                if (cycle) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
+                else MoreButton { close ->
+                    if (!paused) MenuItem("Run now", "debug-start", { close(); hub.runControl(run, "now") }, enabled = !hub.readOnly)
+                    MenuItem("Stop", "debug-stop", { close(); hub.runControl(run, "stop") }, danger = true, enabled = !hub.readOnly)
+                }
             }
+            ListRow(
+                state.title, meta.ifEmpty { null }, lines = 2,
+                leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
+                onClick = if (goal) detail else if (run.kind == "loop" && state.outcome != null) ({ open = !open }) else null,
+            )
+            agents.take(MAX_AGENTS).forEach { a ->
+                ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, onClick = { onOpenAgent(a.id) })
+            }
+            if (agents.size > MAX_AGENTS) ListRow("${agents.size - MAX_AGENTS} more agents", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, onClick = onOpenAgents)
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Text(run.what, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(progress?.let { "Plan $it" } ?: run.what, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(money(run.costUsd, billing(run.provider)), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
             }
-            if (last != null) RoundLine(last, showTime = false, run.provider)
-            run.rounds.lastOrNull { it.report != null }?.takeIf { it !== last }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(r, showTime = false, run.provider) } }
-            if (open) run.rounds.takeLast(10).reversed().forEach { RoundLine(it, showTime = true, run.provider) }
+            run.rounds.lastOrNull { it.report != null }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(r, showTime = false, run.provider) } }
+            if (open && run.kind == "loop") run.rounds.takeLast(10).reversed().forEach { RoundLine(it, showTime = true, run.provider) }
         }
-        Menu(menu, { menu = false }) { MenuItem("Run now", "debug-start", { menu = false; hub.runControl(run, "now") }) }
     }
 }
 

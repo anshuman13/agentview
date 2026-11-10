@@ -433,7 +433,7 @@ heartbeat: each interval Claude reads where things stand, does what moves the go
 question anything irreversible or outward-facing (push, deploy, delete, send a message) instead of doing it. A heartbeat
 is skipped, with no turn and no round, while Claude is busy, a permission or question is pending or the run is paused.
 There is no check cap: the goal ends on GOAL MET, on Stop, or after 28 days ("ran for 28 days, start it again to
-continue"). The card and the Runs row read "Standing goal · every 1h · at most 24 rounds a day". Every 7 days one
+continue"). The card and the Runs row read "Standing goal · round 12 · next 14:20" (the interval is in the goal detail). Every 7 days one
 heartbeat writes a short weekly report (what moved, what is blocked, what is next, at most 8 lines), recorded as a
 progress round; the card and the Runs row show "Weekly report", which jumps to that turn in the chat. "Chat: New
 goal" in the palette opens the goal sheet.
@@ -455,12 +455,17 @@ stopped it. A usage limit or a pending approval marks the run paused until the n
 cycle is one run with a round per step.
 
 The loop card sits above the composer while the chat has an active run: a state line ("Loop · round 4 · next 14:20",
-"Paused · usage limit until 18:00", "Goal · check 3 of 20", "Build cycle · round 2/3 · Test"), the what text, the total
-cost and the last round's outcome with a dot; tapping that line lists the last 10 rounds. A loop or goal has Pause (or
-Resume) and Stop, and Run now in its More menu; Run now does nothing while Claude is busy. A pause is saved and survives
+"Paused · usage limit until 18:00", "Goal · check 3 of 20", "Build cycle · round 2/3 · Test"), then a Now row with what is
+happening: the agent's latest status (with "Next: ..." and the steps left) or the last round, whichever is newer, with a
+running dot while a turn or an agent runs. One row per running agent follows (slug or description, type and minutes, up to
+3, then "N more agents"); a tap opens the agent. Last comes the what text (a goal with a plan file shows "Plan N of M
+done") and the total cost. A turn the run did not start, such as a background agent finishing, adds a round when its
+reply ends with a ROUND line, with the current round number. Tapping a goal card opens its detail; on a loop the Now row
+lists the last 10 rounds. A loop or goal has Pause (or Resume) and a More menu with Run now and Stop; Run now does nothing
+while Claude is busy. A pause is saved and survives
 a restart. Stop shows "Loop stopped" or "Goal stopped" with Undo, which starts the same run again within 60 s. A build
 cycle only has Stop ("Build cycle stopped", no Undo). The controls take a run id, so they work from any screen. A round
-that ends its run (goal met, last check, end time) sends only the run-end push.
+that ends its run (goal met, last check, end time) sends only the run-end push. The chat header (Android) and the web status bar read "Running · 2 agents" while agents run with no turn, "Waiting for next round · 14:20" between rounds and "Idle" only with no run and no agent.
 
 The Runs view (activity bar, `?view=runs`) lists every run in three bands. Needs you holds active runs whose last round
 is blocked or a question, or that are paused for your approval, until a later round or a message from you in that chat
