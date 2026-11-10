@@ -82,7 +82,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
         <article className="mt-page">
           <Section label={m.title || 'Untitled'} action={(
             <>
-              {state === 'live' && link
+              {state === 'live' && link && !event
                 ? <a className="btn btn-filled btn-sm" href={link} target="_blank" rel="noreferrer"><Icon name="device-camera-video" small />Join</a>
                 : <Button variant="filled" size="sm" icon="edit" onClick={takeNotes}>Notes</Button>}
               {canMenu && <MeetingMenu m={m} all={all} state={state} deleteNotes={deleteNotes} />}

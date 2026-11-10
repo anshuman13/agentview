@@ -125,7 +125,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
         if (isEvent(m)) {
             item { SectionHeader("My notes") }
             item { NotesField(hub, m) }
-            meetingActions(c, all)
+            meetingActions(c, all, alwaysHeader = true)
             item { NewActionField(c, folds.newAction) }
         } else {
             meetingActions(c, all)
@@ -167,7 +167,7 @@ private fun MeetingTitle(c: MeetingCtx, state: MState) {
         if (isEvent(m)) Text("Event", style = Type.footnote, color = av.fgMuted)
         LRow(verticalAlignment = Alignment.CenterVertically) {
             Text(m.title?.ifEmpty { null } ?: "Untitled", Modifier.weight(1f), style = Type.title)
-            if (state == MState.Live && link != null) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (state == MState.Live && link != null && !isEvent(m)) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             else if (link != null && m.id.startsWith("cal:")) IconBtn("link-external", "Open in calendar", { uri.openUri(link) })
         }
         pageMeta(m).takeIf { it.isNotEmpty() }?.let { Text(it, style = Type.subheadline, color = av.fgMuted) }
@@ -175,12 +175,12 @@ private fun MeetingTitle(c: MeetingCtx, state: MState) {
     }
 }
 
-private fun LazyListScope.meetingActions(c: MeetingCtx, all: List<Row>) {
+private fun LazyListScope.meetingActions(c: MeetingCtx, all: List<Row>, alwaysHeader: Boolean = false) {
     val actions = c.actions
     val mine = all.filter { it.status == "open" || it.status == "done" }.sortedBy { if (it.status == "open") 0 else 1 }
     val review = all.filter { it.status == "suggested" }
     val count = actionCount(c.st.items, c.m)
-    if (mine.isNotEmpty()) {
+    if (alwaysHeader || mine.isNotEmpty()) {
         item { SectionHeader("My actions", if (count.total > 0) "${count.done} of ${count.total} done" else null) }
         actionGroup(mine, c.m, c.now, actions, c.onTask)
     }
