@@ -45,6 +45,7 @@ import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.StatusDot
@@ -59,6 +60,8 @@ import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.pageFolder
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
+import no.pradhan.agentview.nativeapp.workspace.startTaskPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
 
@@ -102,7 +105,7 @@ fun BuildsScreen(hub: Hub, onBack: () -> Unit) {
                             Group {
                                 rows.forEachIndexed { i, b ->
                                     if (i > 0) Hairline(lead = true)
-                                    ListRow(b.title, "${pipelineLabel(b.pipeline)} · ${b.conclusion} · ${agoShort(b.updatedAt, now, " ago")}", leading = if (b.draft) null else ({ StatusDot(stateDot(b.state)) }), onClick = { open = b.slug })
+                                    ListRow(b.title, "${pipelineLabel(b.pipeline)} · ${b.conclusion} · ${agoShort(b.updatedAt, now, " ago")}", leading = if (b.draft) null else ({ StatusDot(stateDot(b.state)) }), trailing = if (b.hold) ({ Badge(HOLD_BADGE.first, HOLD_BADGE.second) }) else null, onClick = { open = b.slug })
                                 }
                             }
                         }
@@ -127,23 +130,30 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
     var specFile by rememberSaveable(slug) { mutableStateOf(false) }
     var report by remember { mutableStateOf<Report?>(null) }
     var phase by rememberSaveable(slug) { mutableStateOf<String?>(null) }
-    var asking by remember { mutableStateOf(false) }
+    var asking by remember { mutableStateOf<String?>(null) }
     var openFile by rememberSaveable(slug) { mutableStateOf<String?>(null) }
     val d = load.data
     PollWhile(d?.summary?.state == "running", reload)
     d?.specFile?.let { if (specFile) { FileScreen(hub, it, onBack = { specFile = false }); return } }
-    val saveReview = { key: String, decision: String, note: String, done: (Boolean) -> Unit ->
+    val postReview = { body: String, done: (Boolean) -> Unit ->
         if (!hub.writes.allowed()) done(false)
         else scope.launch {
-            val ok = runCatching { hub.api.post("/api/builds/review", buildJsonObject { put("slug", slug); put("phase", key); put("decision", decision); put("note", note) }.toString(), hub.pageChat) }.isSuccess
+            val ok = runCatching { hub.api.post("/api/builds/review", body, hub.pageChat) }.isSuccess
             if (ok) reload()
             done(ok)
         }
     }
+    val saveReview = { key: String, decision: String, note: String, done: (Boolean) -> Unit ->
+        postReview(buildJsonObject { put("slug", slug); put("phase", key); put("decision", decision); put("note", note) }.toString(), done)
+    }
+    val approve: (String, (Boolean) -> Unit) -> Unit = { key, done -> saveReview(key, "approve", "") { ok -> if (!ok) hub.notice.value = "Could not save the review. Try again."; done(ok) } }
+    val setHold = { decision: String -> postReview(buildJsonObject { put("slug", slug); put("decision", decision) }.toString()) { ok -> if (!ok) hub.notice.value = "Could not save the hold. Try again." } }
     val inMain = ws.repos.any { inside(cwd, it.cwd) } && ws.trees.none { inside(cwd, it.cwd) }
     val now = System.currentTimeMillis()
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, d?.title ?: slug, onBack)
+        WorkspaceHeader(hub, d?.title ?: slug, onBack, actions = {
+            if (d != null && !hub.readOnly) MoreButton { dismiss -> MenuItem(if (d.hold) "Release hold" else "Hold", "debug-pause", { dismiss(); setHold(if (d.hold) "release" else "hold") }) }
+        })
         PageBody {
             when {
                 d == null && load.error.isNotEmpty() -> LoadFailed("this build", reload)
@@ -158,10 +168,11 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
                     item {
                         Group {
                             val (label, tone) = stateBadge(d.summary.state)
-                            ListRow(d.summary.conclusion, "${stageName(d.summary.stage)} · ${agoShort(d.updatedAt, now, " ago")}", trailing = if (d.entries.isEmpty()) null else ({ Badge(label, tone) }))
+                            ListRow(d.summary.conclusion, "${stageName(d.summary.stage)} · ${agoShort(d.updatedAt, now, " ago")}", trailing = if (d.hold) ({ Badge(HOLD_BADGE.first, HOLD_BADGE.second) }) else if (d.entries.isEmpty()) null else ({ Badge(label, tone) }))
                         }
                     }
-                    phaseItems(d, phase, now, inMain && d.specFile != null, { specFile = true }, hub.readOnly, { phase = it }, { asking = true }) { key, done -> saveReview(key, "approve", "") { ok -> if (!ok) hub.notice.value = "Could not save the review. Try again."; done(ok) } }
+                    val run = d.specFile?.takeIf { chat.isNotEmpty() }?.let { "$cwd/$it" }?.let { path -> TaskRun(path) { hub.askChat(it) } }
+                    phaseItems(d, phase, now, inMain && d.specFile != null, { specFile = true }, hub.readOnly, run, { phase = it }, { asking = it }, approve)
                     item { SectionHeader("Stages", rows.size.toString()) }
                     item {
                         Group {
@@ -211,14 +222,18 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
                             }
                         }
                     }
-                    if (review != null) {
+                    if (review != null || commit != null) {
                         item { SectionHeader("Code review") }
                         item {
                             Group {
-                                if (review.findings.isEmpty()) ListRow("Clean")
-                                review.findings.forEachIndexed { i, f ->
+                                if (review != null && review.findings.isEmpty()) ListRow("Clean")
+                                review?.findings?.forEachIndexed { i, f ->
                                     if (i > 0) Hairline()
                                     ListRow(f, lines = 2)
+                                }
+                                if (commit != null) {
+                                    if (review != null) Hairline()
+                                    DecisionRow(d.codeReview, now, hub.readOnly, { approve("code") { } }, { asking = "code" })
                                 }
                             }
                         }
@@ -234,21 +249,36 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
             if (r.chat != null) Button("Open chat", { scope.launch { if (hub.openChatOf(r.chat, r.session)) { hub.link.value = DeepLink(view = "agents"); report = null } } }, Modifier.padding(bottom = Tokens.sp4), size = ButtonSize.Sm)
         }
     }
-    val shown = d?.phases?.takeIf { it.isNotEmpty() }?.let { phase ?: startPhase(it, d.reviews) }
-    if (asking && shown != null) ChangesSheet(shown, { note, done -> saveReview(shown, "changes", note, done) }) { asking = false }
+    asking?.let { key -> ChangesSheet(key, { note, done -> saveReview(key, "changes", note, done) }) { asking = null } }
 }
 
 private class Report(val title: String, val text: String, val chat: String? = null, val session: String = "")
 
+private class TaskRun(val path: String, val send: (String) -> Unit)
+
+// The user's latest decision on a phase or on the code, with Approve and a menu that asks for changes.
+@Composable
+private fun DecisionRow(decision: BuildReview?, now: Long, readOnly: Boolean, approve: () -> Unit, askChanges: () -> Unit) {
+    val meta = decision?.let { listOf(agoShort(it.at, now, " ago"), it.note).filter(String::isNotEmpty).joinToString(" · ") }
+    ListRow(
+        decisionTitle(decision), meta, metaLines = 2,
+        trailing = if (readOnly) null else ({ Button("Approve", approve, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }),
+        menu = if (readOnly) null else ({ dismiss -> MenuItem("Request changes", "comment", { dismiss(); askChanges() }) }),
+    )
+}
+
 // The phase strip, the shown phase rendered expanded and the user's latest decision on it. Approve moves the strip to the next phase.
-private fun LazyListScope.phaseItems(d: BuildDetail, picked: String?, now: Long, canOpen: Boolean, openFile: () -> Unit, readOnly: Boolean, pick: (String) -> Unit, askChanges: () -> Unit, approve: (String, (Boolean) -> Unit) -> Unit) {
+private fun LazyListScope.phaseItems(d: BuildDetail, picked: String?, now: Long, canOpen: Boolean, openFile: () -> Unit, readOnly: Boolean, run: TaskRun?, pick: (String) -> Unit, askChanges: (String) -> Unit, approve: (String, (Boolean) -> Unit) -> Unit) {
     if (d.phases.isEmpty()) return
     val phase = d.phases.firstOrNull { it.key == (picked ?: startPhase(d.phases, d.reviews)) } ?: d.phases.first()
     val decision = reviewDecision(d.reviews, phase.key)
     val tasks = if (phase.key == "tasks") specTasks(phase.markdown) else emptyList()
+    val open = tasks.filter { !it.done }
+    val runnable = run.takeIf { it != null && open.isNotEmpty() }
     item {
         SectionHeader("Spec", action = {
             if (tasks.isNotEmpty()) Badge(specProgress(tasks), BadgeTone.Quiet)
+            if (runnable != null && !readOnly) MoreButton { dismiss -> MenuItem("Run all", "debug-start", { dismiss(); runnable.send(runAllPrompt(runnable.path)) }) }
             if (canOpen) IconBtn("go-to-file", "Open spec file", openFile)
         })
     }
@@ -260,13 +290,12 @@ private fun LazyListScope.phaseItems(d: BuildDetail, picked: String?, now: Long,
     item {
         Group {
             Column(Modifier.padding(Tokens.listPad)) { Markdown(phase.markdown) }
+            if (runnable != null) open.forEach { t ->
+                Hairline()
+                ListRow(t.text, trailing = if (t.doing) ({ Badge("In progress", BadgeTone.Running) }) else ({ Button("Start", { runnable.send(startTaskPrompt(t, runnable.path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !readOnly) }))
+            }
             Hairline()
-            val meta = decision?.let { listOf(agoShort(it.at, now, " ago"), it.note).filter(String::isNotEmpty).joinToString(" · ") }
-            ListRow(
-                decisionTitle(decision), meta, metaLines = 2,
-                trailing = if (readOnly) null else ({ Button("Approve", { approve(phase.key) { ok -> if (ok) pick(nextPhase(d.phases, phase.key)) } }, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }),
-                menu = if (readOnly) null else ({ dismiss -> MenuItem("Request changes", "comment", { dismiss(); askChanges() }) }),
-            )
+            DecisionRow(decision, now, readOnly, { approve(phase.key) { ok -> if (ok) pick(nextPhase(d.phases, phase.key)) } }, { askChanges(phase.key) })
         }
     }
 }

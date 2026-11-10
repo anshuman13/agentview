@@ -9,7 +9,7 @@ import no.pradhan.agentview.nativeapp.ui.DotState
 
 // shared/builds.ts as the server's /api/builds and /api/builds/one return it; the summaries are finished, so nothing is derived here.
 @Serializable
-data class BuildRow(val slug: String, val title: String = "", val stage: String = "", val state: String = "", val conclusion: String = "", val updatedAt: Long = 0, val pipeline: String = "written", val draft: Boolean = false)
+data class BuildRow(val slug: String, val title: String = "", val stage: String = "", val state: String = "", val conclusion: String = "", val updatedAt: Long = 0, val pipeline: String = "written", val draft: Boolean = false, val hold: Boolean = false)
 
 @Serializable
 data class BuildFile(val path: String, val additions: Int = 0, val deletions: Int = 0)
@@ -61,6 +61,8 @@ data class BuildDetail(
     val specFile: String? = null,
     val phases: List<BuildPhase> = emptyList(),
     val reviews: List<BuildReview> = emptyList(),
+    val hold: Boolean = false,
+    val codeReview: BuildReview? = null,
     val entries: List<BuildEntry> = emptyList(),
     val commit: CommitDiff? = null,
 )
@@ -78,6 +80,8 @@ private val PIPELINE_LABEL = mapOf("written" to "Spec written", "reviewed" to "S
 fun pipelineLabel(pipeline: String) = PIPELINE_LABEL[pipeline] ?: pipeline
 
 fun stateDot(state: String) = when (state) { "done" -> DotState.Ok; "failed" -> DotState.Bad; "waiting" -> DotState.Warn; else -> DotState.Faint }
+
+val HOLD_BADGE = "Needs you" to BadgeTone.Waiting
 
 fun stateBadge(state: String): Pair<String, BadgeTone> = when (state) {
     "done" -> "Done" to BadgeTone.Done
@@ -131,4 +135,4 @@ class StageRow(val at: Long, val entry: BuildEntry? = null, val review: BuildRev
 
 // The agent stages and the user's decisions in time order.
 fun stageRows(entries: List<BuildEntry>, reviews: List<BuildReview>) =
-    (byStart(entries).map { StageRow(it.startedAt, entry = it) } + reviews.map { StageRow(it.at, review = it) }).sortedBy { it.at }
+    (byStart(entries).map { StageRow(it.startedAt, entry = it) } + reviews.filter { it.phase != "hold" }.map { StageRow(it.at, review = it) }).sortedBy { it.at }
