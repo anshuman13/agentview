@@ -37,6 +37,7 @@ export type Turn = {
 
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 const PHASE_TEXT: Record<string, string> = { plan: 'Plan · Opus', build: 'Build · Opus', test: 'Test · Sonnet' };
+export const WOKE_UP = /^\w+ woke up/;
 const COMMIT = /^\[([^\]\n]+) ([0-9a-f]{7,40})\] (.+)$/gm;
 
 function handBack(text: string) {
@@ -125,7 +126,7 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
       turns.push({ ...newTurn(e.id, prompt, e.at, Boolean(e.phase)), stopping: e.stopping, queued: e.queued });
       continue;
     }
-    if (e.kind === 'system' && /^\w+ woke up/.test(e.text)) {
+    if (e.kind === 'system' && WOKE_UP.test(e.text)) {
       turns.push(newTurn(e.id, e.text, e.at, true));
       continue;
     }

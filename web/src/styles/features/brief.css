@@ -91,11 +91,11 @@
 .tc-note.fable .mark, .tc-note.fable b { color: var(--agent); }
 .tc-wait { display: flex; align-items: center; gap: var(--sp-3); color: var(--warn); }
 .tc-facts .blocked-card { padding: var(--sp-5) var(--sp-6); gap: var(--sp-4); }
-.tc-steps-toggle, .tc-facts-toggle {
+.tc-facts-toggle {
   align-self: flex-start; display: inline-flex; align-items: center; gap: var(--sp-2); margin-left: 22px; padding: 0 var(--sp-2);
   background: transparent; border: 0; font-size: var(--fs-xs); color: var(--fg-muted);
 }
-@media (hover: hover) { .tc-steps-toggle:hover, .tc-facts-toggle:hover, .steps-toggle:hover { background: transparent; color: var(--fg); } }
+@media (hover: hover) { .tc-facts-toggle:hover, .steps-toggle:hover { background: transparent; color: var(--fg); } }
 
 .tl-state { display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-3); color: var(--accent-text); }
 .tl-send-now { font-size: var(--fs-xs); white-space: nowrap; }
@@ -153,8 +153,8 @@
   .tc-label, .tc-err, .tc-agent .state { font-size: var(--fs-sm); }
   .tc-file, .tc-agent { min-height: var(--touch-md); font-size: var(--fs-md); }
   .tc-facts, .tr.tc-steps { margin-left: 0; }
-  .tc-steps-toggle, .tc-facts-toggle, .tc-earlier, .tc-group > .link, .reply-card .link { min-height: var(--touch-sm); font-size: var(--fs-md); }
-  .tc-steps-toggle, .tc-facts-toggle { margin-left: 0; }
+  .tc-facts-toggle, .tc-earlier, .tc-group > .link, .reply-card .link { min-height: var(--touch-sm); font-size: var(--fs-md); }
+  .tc-facts-toggle { margin-left: 0; }
   .tc .reply-body { font-size: var(--fs-md); }
   .tl-foot { padding: var(--sp-2) var(--sp-5) var(--sp-3); }
   .steps-toggle { min-height: var(--touch-sm); font-size: var(--fs-md); }

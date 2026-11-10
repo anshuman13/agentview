@@ -21,6 +21,7 @@ import { needsYou } from './codex/summary/needsYou';
 import { reviewQueue } from './codex/wiki/reviewQueue';
 import { revertBlock } from './workspace/revertBlock';
 import { ago, money } from './ui/util';
+import { turnEvents, turnSummary, type SummaryEntry } from './chat/transcript/summary';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import type { Meeting } from './codex/data/wiki/wiki';
@@ -192,5 +193,13 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; n: number; billing: Billing; expected: string }>('money')) {
     it(`money: ${c.name}`, () => expect(money(c.n, c.billing)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; events: unknown[]; cuts: Record<string, string[]>; entries: Record<string, SummaryEntry[]> }>('turn-summary')) {
+    it(`turnSummary: ${c.name}`, () => {
+      const turns = turnEvents(c.events as ChatEvent[]);
+      expect(Object.fromEntries(turns.map((t) => [t.id, t.events.map((e) => e.id)]))).toEqual(c.cuts);
+      for (const [id, entries] of Object.entries(c.entries)) expect(turnSummary(turns.find((t) => t.id === id)!.events)).toEqual(entries);
+    });
   }
 });

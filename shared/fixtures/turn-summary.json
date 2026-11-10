@@ -1,0 +1,78 @@
+[
+  {
+    "name": "woke-up and user cuts keep a late result in its parent's turn",
+    "events": [
+      { "id": "s0", "kind": "tool_use", "name": "mcp__agentview__set_status", "input": { "text": "Booting" }, "at": 1800000000000 },
+      { "id": "u1", "kind": "user", "text": "look at the docs", "at": 1800000060000 },
+      { "id": "t1", "kind": "tool_use", "name": "WebFetch", "input": { "url": "https://docs.example.com/guide/" }, "at": 1800000120000 },
+      { "id": "w1", "kind": "system", "text": "Loop woke up for round 2", "at": 1800000180000 },
+      { "id": "t2", "kind": "tool_use", "name": "WebSearch", "input": { "query": "rust async" }, "at": 1800000240000 },
+      { "id": "r2", "kind": "tool_result", "toolUseId": "t2", "text": "results", "at": 1800000250000 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "t1", "text": "404", "isError": true, "at": 1800000300000 }
+    ],
+    "cuts": { "start": ["s0"], "u1": ["u1", "t1", "r1"], "w1": ["w1", "t2", "r2"] },
+    "entries": {
+      "start": [{ "kind": "status", "id": "s0", "at": 1800000000000, "title": "Booting", "meta": "08:00" }],
+      "u1": [{ "kind": "page", "id": "t1", "at": 1800000120000, "title": "docs.example.com/guide", "meta": "08:02", "url": "https://docs.example.com/guide/", "failed": true }],
+      "w1": [{ "kind": "search", "id": "t2", "at": 1800000240000, "title": "\"rust async\"", "meta": "08:04 · Web search" }]
+    }
+  },
+  {
+    "name": "a status equal to the previous one is dropped",
+    "events": [
+      { "id": "u1", "kind": "user", "text": "go", "at": 1800000000000 },
+      { "id": "s1", "kind": "tool_use", "name": "mcp__agentview__set_status", "input": { "text": "Reading code" }, "at": 1800000060000 },
+      { "id": "s2", "kind": "tool_use", "name": "mcp__agentview__set_status", "input": { "text": "Reading code" }, "at": 1800000120000 },
+      { "id": "s3", "kind": "tool_use", "name": "mcp__agentview__set_status", "input": { "text": "Fixing", "done": "Tests pass" }, "at": 1800000180000 },
+      { "id": "s4", "kind": "tool_use", "name": "mcp__agentview__set_status", "input": { "text": "Reading code" }, "at": 1800000240000 },
+      { "id": "a1", "kind": "assistant", "text": "Done.", "at": 1800000300000 }
+    ],
+    "cuts": { "u1": ["u1", "s1", "s2", "s3", "s4", "a1"] },
+    "entries": {
+      "u1": [
+        { "kind": "status", "id": "s1", "at": 1800000060000, "title": "Reading code", "meta": "08:01" },
+        { "kind": "status", "id": "s3", "at": 1800000180000, "title": "Fixing", "meta": "08:03 · Tests pass" },
+        { "kind": "status", "id": "s4", "at": 1800000240000, "title": "Reading code", "meta": "08:04" }
+      ]
+    }
+  },
+  {
+    "name": "reads and searches make one explore entry, edits and commands one work entry, a page without a result has no failure",
+    "events": [
+      { "id": "u1", "kind": "user", "text": "fix it", "at": 1800000000000 },
+      { "id": "t1", "kind": "tool_use", "name": "Read", "input": { "file_path": "/w/a.ts" }, "at": 1800000060000 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "t1", "text": "code", "at": 1800000061000 },
+      { "id": "t2", "kind": "tool_use", "name": "Grep", "input": { "pattern": "foo" }, "at": 1800000120000 },
+      { "id": "r2", "kind": "tool_result", "toolUseId": "t2", "text": "a.ts:1", "at": 1800000121000 },
+      { "id": "t3", "kind": "tool_use", "name": "Edit", "input": { "file_path": "/w/a.ts", "old_string": "a", "new_string": "b" }, "at": 1800000180000 },
+      { "id": "r3", "kind": "tool_result", "toolUseId": "t3", "text": "ok", "at": 1800000181000 },
+      { "id": "t4", "kind": "tool_use", "name": "Bash", "input": { "command": "npm test", "description": "Run tests" }, "at": 1800000240000 },
+      { "id": "r4", "kind": "tool_result", "toolUseId": "t4", "text": "1 failed", "isError": true, "at": 1800000241000 },
+      { "id": "t5", "kind": "tool_use", "name": "WebFetch", "input": { "url": "https://example.com" }, "at": 1800000300000 }
+    ],
+    "cuts": { "u1": ["u1", "t1", "r1", "t2", "r2", "t3", "r3", "t4", "r4", "t5"] },
+    "entries": {
+      "u1": [
+        { "kind": "explore", "id": "t1", "at": 1800000060000, "title": "Explored 1 file, 1 search", "meta": "08:01" },
+        { "kind": "work", "id": "t3", "at": 1800000180000, "title": "Edited 1 file, ran 1 command", "meta": "08:03 · 1 failed" },
+        { "kind": "page", "id": "t5", "at": 1800000300000, "title": "example.com", "meta": "08:05", "url": "https://example.com" }
+      ]
+    }
+  },
+  {
+    "name": "an agent entry shows its report line, a running one is marked running",
+    "events": [
+      { "id": "u1", "kind": "user", "text": "check", "at": 1800000000000 },
+      { "id": "t1", "kind": "tool_use", "name": "Agent", "input": { "description": "Check the tests", "subagent_type": "tester" }, "at": 1800000060000 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "t1", "text": "All green\nthree suites", "at": 1800000120000 },
+      { "id": "t2", "kind": "tool_use", "name": "Agent", "input": { "description": "Write docs" }, "at": 1800000180000 }
+    ],
+    "cuts": { "u1": ["u1", "t1", "r1", "t2"] },
+    "entries": {
+      "u1": [
+        { "kind": "agent", "id": "t1", "at": 1800000060000, "title": "Check the tests", "meta": "08:01 · All green" },
+        { "kind": "agent", "id": "t2", "at": 1800000180000, "title": "Write docs", "meta": "08:03 · Starting…", "running": true }
+      ]
+    }
+  }
+]

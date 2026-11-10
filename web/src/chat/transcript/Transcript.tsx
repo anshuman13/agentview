@@ -6,6 +6,8 @@ import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { Row as ListRow } from '../../ui/Row';
 import { SinceSheet } from './SinceSheet';
+import { SummarySheet } from './SummarySheet';
+import { replyOf, turnEvents, turnSummary } from './summary';
 import { roundsSince } from './recap';
 import { clock } from '../../codex/tasks/time';
 import { Markdown } from '../Chat';
@@ -186,6 +188,7 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
   const cards = useMemo(() => specCards(items), [items]);
   const mark = useSeenMark(events);
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
+  const summaries = useMemo(() => new Map(turnEvents(events).flatMap((t) => { const reply = replyOf(t.events); return reply && !reply.streaming ? [[reply.id, t.events] as const] : []; })), [events]);
   const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
   const recap = useStore((s) => s.live.find((c) => c.id === s.session.id)?.recap);
   const [since, setSince] = useState(true);
@@ -209,11 +212,23 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
         if (run) return <Explored key={it.id} id={it.id} run={run} cwd={cwd} />;
         const row = <Row key={it.id} it={it} cwd={cwd} card={cards.has(it.id)} />;
         const day = days.get(it.id);
-        return day || it.id === newId ? <Fragment key={it.id}>{day && <div className="tr-day"><span>{day}</span></div>}{it.id === newId && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
+        const turn = summaries.get(it.id);
+        return day || it.id === newId || turn ? <Fragment key={it.id}>{day && <div className="tr-day"><span>{day}</span></div>}{it.id === newId && <div className="tr-new"><span>New</span></div>}{row}{turn && <SummaryLink events={turn} />}</Fragment> : row;
       })}
       </div>
     </div>
     {!stuck && (behind || running) && <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />Jump to latest{replies > 0 && ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}`}</button>}
+    </div>
+  );
+}
+
+function SummaryLink({ events }: { events: ChatEvent[] }) {
+  const [open, setOpen] = useState(false);
+  if (turnSummary(events).length === 0) return null;
+  return (
+    <div className="tr-acts">
+      <button className="link" aria-haspopup="dialog" onClick={() => setOpen(true)}>Summary</button>
+      {open && <SummarySheet events={events} onClose={() => setOpen(false)} />}
     </div>
   );
 }
