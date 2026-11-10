@@ -62,11 +62,12 @@ function SketchView({ file, device, theme, onDevice, onTheme, onBack }: { file: 
   const { html, problem } = useSketch(file.path);
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
+  const narrow = useNarrow();
   return (
     <div className="sk-view">
       <div className="bd-head sk-head">
         <Back close={onBack} />
-        <IconButton icon="arrow-left" label="Back" onClick={onBack} />
+        {!narrow && <IconButton icon="arrow-left" label="Back" onClick={onBack} />}
         <h2 className="bd-title">{sketchTitle(file.name)}</h2>
         <span className="sk-pick">
           {(['desktop', 'phone'] as const).map((d) => <Chip key={d} size="sm" on={device === d} onClick={() => onDevice(d)}>{d === 'desktop' ? 'Desktop' : 'Phone'}</Chip>)}
