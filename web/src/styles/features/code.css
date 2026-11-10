@@ -47,6 +47,8 @@
 
 @media (max-width: 900px) {
   .cd-bar { height: var(--touch); padding: 0 var(--sp-2) 0 var(--sp-7); }
+  .cd-crumbs { display: none; }
+  .cd-actions { margin-left: auto; }
   .cd-btn { width: var(--touch-md); height: var(--touch-md); }
   .cd-editor .cm-editor .cm-scroller { font-size: var(--fs-lg); line-height: var(--line-md); }
   .cd-editor .cm-editor .cm-lineNumbers .cm-gutterElement { min-width: 36px; padding: 0 var(--sp-4) 0 var(--sp-5); }
