@@ -11,11 +11,11 @@ import { ntfyTopic, post } from './integrations/notify.js';
 import { CODEX_WORK } from './workspace/files.js';
 import { createAutoMerge } from './integrations/automerge.js';
 import { forgetPrs, gh, useAutoMerge } from './integrations/github.js';
-import { attention, onAttention, startAttention } from './integrations/attention.js';
+import { onAttention, startAttention } from './integrations/attention.js';
 import { thisMac } from './http/macs.js';
-import { ROW_WINDOW, type AttentionItem, type ChatRun, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
+import type { AttentionItem, ClientMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './http/stream.js';
-import { RingGate } from './http/ringGate.js';
+import { createClients, type Client, type Live } from './http/clients.js';
 import { serveWeb } from './http/web.js';
 import { createRoutes, writers } from './http/routes.js';
 import { allowedPeer, allowedRequest, appOrigin, requester } from './http/access.js';
@@ -45,7 +45,6 @@ process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) process.once(sig, () => process.exit(0));
 
 // The chats live in the agent host (host/main.ts); this process serves the web client and relays to it.
-type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: string; waiting?: boolean; close?: () => void; phone?: boolean };
 const presence = createPresence();
 let presenceSent = 0;
 // Tells the host a desktop client is active, at most every 5 s.
@@ -59,69 +58,26 @@ function touchDesktop(client: Client) {
 const BOOT = Date.now();
 // serve.sh leaves this when the web build fails and the previous build is served.
 const BUILD_FAILED = path.join(os.homedir(), '.agentview', 'web-build-failed');
-const clients = new Set<Client>();
 const STALL_MS = 60_000;
 const streams = new Map<string, Client>();
 const ring = new Ring();
-const gate = new RingGate(ring, (chat) => [...clients].some((c) => c.view === chat));
-let chats = new Map<string, LiveChat>();
-let runs: ChatRun[] = [];
-let lastViewed = '';
-let restarting = false;
+const live: Live = { chats: new Map(), runs: [], lastViewed: '', restarting: false };
 
-// Clients get the last rounds of each run; GET /api/runs has them all.
-const runsMessage = (): ServerMessage => ({ type: 'runs', runs: runs.map((r) => ({ ...r, rounds: r.rounds.slice(-10) })) });
-
-// To every client, or to the viewers of one chat. Each broadcast gets an id so an event stream can resume.
-function broadcast(m: ServerMessage, chat: string | null = null) {
-  const data = JSON.stringify(m);
-  const id = gate.push(m.type === 'init' ? null : data, chat);
-  for (const c of clients) if (!chat || (c.view === chat && !c.waiting)) c.sendRaw(data, id);
-}
-
-const bySession = (sessionId: string | null) => [...chats.values()].find((c) => c.sessionId === sessionId)?.id;
-
-let viewersTimer: NodeJS.Timeout | null = null;
-function reportViewers() {
-  viewersTimer ??= setTimeout(() => {
-    viewersTimer = null;
-    const counts: Record<string, number> = {};
-    for (const c of clients) counts[c.view] = (counts[c.view] ?? 0) + 1;
-    host.notify({ op: 'viewers', counts, last: lastViewed });
-  }, 50);
-}
-
-// Broadcasts for the chat are held back until its state arrives; the host sends the state before any later broadcast.
-function view(client: Client, id: string) {
-  const old = client.view;
-  client.view = id;
-  if (old !== id) gate.leave(old);
-  gate.attach(id);
-  client.waiting = true;
-  lastViewed = id;
-  reportViewers();
-  host.call({ op: 'state', id, limit: ROW_WINDOW }, (err, state) => {
-    if (client.view !== id) return;
-    client.waiting = false;
-    if (err) return client.send({ type: 'error', text: err });
-    client.send({ type: 'init', state: state as Extract<ServerMessage, { type: 'init' }>['state'], boot: BOOT });
-    host.notify({ op: 'cmd', id, msg: { type: 'mcp_status' } });
-  });
-}
+const bySession = (sessionId: string | null) => [...live.chats.values()].find((c) => c.sessionId === sessionId)?.id;
 
 async function closeByUser(id: string) {
   const next = await host.req<string>({ op: 'close', id });
-  if (lastViewed === id) lastViewed = next;
+  if (live.lastViewed === id) live.lastViewed = next;
   for (const c of clients) if (c.view === id) view(c, next);
 }
 
 const host = new Host(PORT, PROJECT, {
   push: (l) => {
     if ('closed' in l) return closeTerminals(l.closed);
-    if (l.m.type === 'live') chats = new Map(l.m.chats.map((c) => [c.id, c]));
-    if (l.m.type === 'restarting') restarting = true;
+    if (l.m.type === 'live') live.chats = new Map(l.m.chats.map((c) => [c.id, c]));
+    if (l.m.type === 'restarting') live.restarting = true;
     if (l.m.type === 'runs') {
-      runs = l.m.runs;
+      live.runs = l.m.runs;
       return broadcast(runsMessage());
     }
     broadcast(l.m, l.chat);
@@ -129,25 +85,27 @@ const host = new Host(PORT, PROJECT, {
   up: () => host.call({ op: 'hello' }, (err, r) => {
     if (err) return;
     const hello = r as Hello;
-    const before = chats;
-    chats = new Map(hello.chats.map((c) => [c.id, c]));
-    runs = hello.runs ?? [];
-    restarting = hello.restarting;
-    lastViewed = chats.has(lastViewed) ? lastViewed : hello.last;
+    const before = live.chats;
+    live.chats = new Map(hello.chats.map((c) => [c.id, c]));
+    live.runs = hello.runs ?? [];
+    live.restarting = hello.restarting;
+    live.lastViewed = live.chats.has(live.lastViewed) ? live.lastViewed : hello.last;
     // After a host restart the chats come back under new ids; a client follows its chat by session id.
-    for (const c of clients) view(c, chats.has(c.view) ? c.view : (bySession(before.get(c.view)?.sessionId ?? null) ?? lastViewed));
+    for (const c of clients) view(c, live.chats.has(c.view) ? c.view : (bySession(before.get(c.view)?.sessionId ?? null) ?? live.lastViewed));
     broadcast({ type: 'live', chats: hello.chats });
     broadcast(runsMessage());
     // A new host starts with no viewers, an old one with counts from before; tell it who watches now.
     reportViewers();
     // A host still running older code restarts once its turns end.
-    if (!restarting) host.call({ op: 'restart', now: false, force: false });
+    if (!live.restarting) host.call({ op: 'restart', now: false, force: false });
   }),
   down: () => {
-    if (!restarting) broadcast({ type: 'restarting' });
-    restarting = true;
+    if (!live.restarting) broadcast({ type: 'restarting' });
+    live.restarting = true;
   },
 });
+
+const { clients, gate, runsMessage, broadcast, reportViewers, view, greet } = createClients(host, live, ring, BOOT);
 
 // Restarts this server at once; the host and its chats keep running unless its code changed or `full` asks for it.
 function restart(now: boolean, full: boolean) {
@@ -156,7 +114,7 @@ function restart(now: boolean, full: boolean) {
 
 onAttention((items) => broadcast({ type: 'attention', items }));
 function attentionSources(extra: string[] = []) {
-  const all = [...chats.values()];
+  const all = [...live.chats.values()];
   const idle = all.filter((c) => !c.running && !c.pending && c.edits);
   return {
     cwds: [...new Set([...all.map((c) => c.cwd), ...extra])],
@@ -171,9 +129,9 @@ autoMerge.start();
 
 const { dispatch } = createRoutes({
   host,
-  chats: () => chats,
-  runs: () => runs,
-  lastViewed: () => lastViewed,
+  chats: () => live.chats,
+  runs: () => live.runs,
+  lastViewed: () => live.lastViewed,
   bySession,
   closeByUser,
   restart,
@@ -245,19 +203,13 @@ wss.on('connection', (ws: WebSocket, req) => {
   const term = params.get('term');
   if (term !== null) return attachTerminal(ws, term);
   if (params.has('chrome')) return openChrome(ws, req.headers.origin);
-  const chat = (chats.has(params.get('chat') ?? '') ? params.get('chat')! : undefined) ?? (params.has('session') ? bySession(params.get('session')) : undefined) ?? lastViewed;
+  const chat = (live.chats.has(params.get('chat') ?? '') ? params.get('chat')! : undefined) ?? (params.has('session') ? bySession(params.get('session')) : undefined) ?? live.lastViewed;
   const sendRaw = (data: string) => ws.readyState === WebSocket.OPEN && ws.send(data);
   const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat, phone: isPhone(params.get('client'), req.headers['user-agent']) };
   clients.add(client);
   touchDesktop(client);
   view(client, chat);
-  // A phone coming back after its chat was idle-closed should get that chat back, not whatever was viewed last.
-  const wanted = params.get('session');
-  if (wanted && chats.get(chat)?.sessionId !== wanted) host.req<string>({ op: 'open', sessionId: wanted }).then((c) => client.view === chat && view(client, c), () => {});
-  client.send({ type: 'live', chats: [...chats.values()] });
-  client.send(runsMessage());
-  client.send({ type: 'attention', items: attention() });
-  if (restarting) client.send({ type: 'restarting' });
+  greet(client, chat, params.get('session'));
 
   ws.on('message', (raw) => {
     let msg: ClientMessage;
@@ -300,12 +252,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
     reportViewers();
   } else view(client, chat);
   gate.attach(chat);
-  const wanted = url.searchParams.get('session');
-  if (wanted && chats.get(chat)?.sessionId !== wanted) host.req<string>({ op: 'open', sessionId: wanted }).then((c) => client.view === chat && view(client, c), () => {});
-  client.send({ type: 'live', chats: [...chats.values()] });
-  client.send(runsMessage());
-  client.send({ type: 'attention', items: attention() });
-  if (restarting) client.send({ type: 'restarting' });
+  greet(client, chat, url.searchParams.get('session'));
   // A named event, not a comment: the client hears it and can tell a dead link from a quiet one.
   const ping = setInterval(() => (stalled && Date.now() - stalled > STALL_MS ? res.destroy() : write('event: ping\ndata:\n\n')), 20_000);
   req.on('close', () => {
@@ -322,10 +269,10 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
   const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
   switch (msg.type) {
     case 'close':
-      if (chats.has(msg.id)) closeByUser(msg.id).catch(fail);
+      if (live.chats.has(msg.id)) closeByUser(msg.id).catch(fail);
       break;
     case 'view':
-      if (chats.has(msg.id)) view(client, msg.id);
+      if (live.chats.has(msg.id)) view(client, msg.id);
       else fail(new Error('This chat was closed'));
       break;
     case 'open_session':
@@ -333,14 +280,14 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
       break;
     case 'new_session':
       if (msg.profile === 'work') mkdirSync(CODEX_WORK, { recursive: true });
-      host.req<string>({ op: 'new', cwd: msg.profile === 'work' ? CODEX_WORK : msg.profile === 'personal' ? PROJECT : msg.cwd ?? chats.get(client.view)?.cwd ?? PROJECT, from: client.view, ...(typeof msg.fork === 'string' && { fork: msg.fork }), ...(typeof msg.model === 'string' && { model: msg.model }), ...(typeof msg.provider === 'string' && { provider: msg.provider }), ...(typeof msg.text === 'string' && msg.text && { text: msg.text }) }).then((c) => view(client, c), fail);
+      host.req<string>({ op: 'new', cwd: msg.profile === 'work' ? CODEX_WORK : msg.profile === 'personal' ? PROJECT : msg.cwd ?? live.chats.get(client.view)?.cwd ?? PROJECT, from: client.view, ...(typeof msg.fork === 'string' && { fork: msg.fork }), ...(typeof msg.model === 'string' && { model: msg.model }), ...(typeof msg.provider === 'string' && { provider: msg.provider }), ...(typeof msg.text === 'string' && msg.text && { text: msg.text }) }).then((c) => view(client, c), fail);
       break;
     case 'restart':
       restart(Boolean(msg.now), false);
       break;
     default: {
-      const id = ('run' in msg ? runs.find((r) => r.id === msg.run)?.chatId : undefined) ?? target ?? client.view;
-      if (!chats.has(id)) return fail(new Error('This chat was closed'));
+      const id = ('run' in msg ? live.runs.find((r) => r.id === msg.run)?.chatId : undefined) ?? target ?? client.view;
+      if (!live.chats.has(id)) return fail(new Error('This chat was closed'));
       host.req({ op: 'cmd', id, msg }).catch(fail);
     }
   }
