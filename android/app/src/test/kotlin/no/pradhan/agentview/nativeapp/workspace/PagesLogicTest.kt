@@ -138,6 +138,10 @@ class PagesLogicTest {
         val prs = parsePulls("""[{"number":1,"title":"A","mine":true,"review":"APPROVED","checks":"success","updatedAt":"2026-11-07T10:00:00Z"},{"number":2,"title":"B","reviewRequested":true}]""")
         assertEquals(listOf(1, 1, 2), prGroups(prs).map { it.prs.size })
         assertEquals("Approved" to Status.Ok, reviewLabel("APPROVED"))
+        val armed = parsePulls("""[{"number":3,"autoMerge":{"note":"Waiting for checks"}},{"number":4,"autoMerge":{"note":"x","error":"boom"}},{"number":5}]""")
+        assertEquals(listOf(true, false, false), armed.map { it.autoMergeOn })
+        assertEquals(listOf("Waiting for checks", "Merge failed · boom"), armed.take(2).map { it.autoMerge!!.line() })
+        assertEquals("""{"on":true,"method":"squash"}""", autoMergeBody(true, "squash"))
         assertNull(reviewLabel("WHATEVER"))
         assertEquals(DotState.Ok, checkDot(prs[0].checks))
         val diff = "diff --git a/x.kt b/x.kt\nindex 1..2\n--- a/x.kt\n+++ b/x.kt\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/y.md b/y.md\n@@ -0,0 +1 @@\n+hi\n"

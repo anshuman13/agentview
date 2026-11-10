@@ -299,6 +299,12 @@ working tree; those findings show at the bottom of the Changes view.
 A pull request Claude opened with `gh pr create` stays linked to its chat: the pull request row shows "Open chat"
 while that chat is open.
 
+Merge when checks pass is a per-PR switch in the pull request pane (web Row, phone More menu), off until you turn it on
+and confirm. The server (`integrations/automerge.ts`, entries in `~/.agentview/automerge.json`) checks each armed PR every
+60 s and runs `gh pr merge --match-head-commit <head>` once nothing is draft, conflicting or waiting for review, no check
+failed or is pending and at least one check passed. A new commit or a re-run is picked up by the next poll. The row shows
+why it waits, a merge posts "Merged in <repo>", and a failed merge posts "Auto-merge failed" and stops until you turn it on again.
+
 ## Context
 
 The meter shows the tokens in context and turns red past 200k, or past 80% of the model's context window when the agent

@@ -59,6 +59,8 @@ fun changesOnly(lines: List<DiffLine>, context: Int = 3): List<DiffLine> {
     return out
 }
 
+@Serializable data class PrAutoMerge(val note: String = "", val error: String = "")
+
 // shared/protocol.ts PullRequest and PullRequestDetail, read by web/src/ops/GitHub.tsx.
 @Serializable
 data class PullRequest(
@@ -76,7 +78,13 @@ data class PullRequest(
     val deletions: Int = 0,
     val mine: Boolean = false,
     val reviewRequested: Boolean = false,
+    val autoMerge: PrAutoMerge? = null,
 )
+
+// Armed and not stopped by a failed merge.
+val PullRequest.autoMergeOn get() = autoMerge != null && autoMerge.error.isEmpty()
+
+fun PrAutoMerge.line() = if (error.isNotEmpty()) "Merge failed · $error" else note
 
 @Serializable data class PrCheck(val name: String, val state: String = "none", val url: String = "")
 @Serializable data class PrReview(val author: String, val state: String = "", val body: String = "", val at: String = "")
@@ -158,6 +166,7 @@ fun ghProblem(error: String): GhProblem? = when {
 
 fun reviewBody(event: String, text: String) = buildJsonObject { put("event", event); put("body", text) }.toString()
 fun mergeBody(method: String) = buildJsonObject { put("method", method) }.toString()
+fun autoMergeBody(on: Boolean, method: String) = buildJsonObject { put("on", on); put("method", method) }.toString()
 
 val MERGE_METHODS = listOf("squash" to "Squash", "merge" to "Merge commit", "rebase" to "Rebase")
 

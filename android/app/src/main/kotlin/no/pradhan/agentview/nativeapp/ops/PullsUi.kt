@@ -63,6 +63,9 @@ import no.pradhan.agentview.nativeapp.workspace.PullRequest
 import no.pradhan.agentview.nativeapp.workspace.PullRequestDetail
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.workspace.autoMergeBody
+import no.pradhan.agentview.nativeapp.workspace.autoMergeOn
+import no.pradhan.agentview.nativeapp.workspace.line
 import no.pradhan.agentview.nativeapp.workspace.checkDot
 import no.pradhan.agentview.nativeapp.workspace.fixPrPrompt
 import no.pradhan.agentview.nativeapp.workspace.ghProblem
@@ -135,7 +138,7 @@ private fun PrState(pr: PullRequest) {
 @Composable
 private fun PrRow(pr: PullRequest, now: Long, onClick: () -> Unit) {
     ListRow(
-        pr.title, "#${pr.number} · ${pr.author} · ${pr.branch} · ${agoShort(isoMillis(pr.updatedAt), now)}",
+        pr.title, "#${pr.number} · ${pr.author} · ${pr.branch}${if (pr.autoMerge != null) " · Auto-merge" else ""} · ${agoShort(isoMillis(pr.updatedAt), now)}",
         leading = { StatusDot(checkDot(pr.checks)) },
         trailing = { PrState(pr) },
         onClick = onClick,
@@ -185,6 +188,13 @@ private fun PullMenu(c: PullCtx, d: PullRequestDetail?, onBack: () -> Unit) {
         MenuItem("Fix in chat", "wrench", { close(); fix?.let(hub::draftPrompt); onBack() }, enabled = fix != null)
         MenuItem("Open on GitHub", "link-external", { close(); link(pr.url) })
         MenuSeparator()
+        val on = pr.autoMergeOn
+        MenuItem("Merge when checks pass", "git-merge", {
+            close()
+            val method = MERGE_METHODS.first().first
+            if (on) c.act("automerge", "automerge", autoMergeBody(false, method))
+            else c.ui.confirm = "Merge #${pr.number} when its checks pass?" to { c.act("automerge", "automerge", autoMergeBody(true, method)) }
+        }, enabled = c.ui.idle && !hub.readOnly, checked = on)
         MERGE_METHODS.forEach { (m, label) ->
             MenuItem(if (m == "merge") "Merge with a merge commit" else "Merge: $label", "git-merge", { close(); c.ui.confirm = "Merge #${pr.number} (${label.lowercase()})?" to { c.act("merge", "merge", mergeBody(m)) } }, enabled = c.ui.idle)
         }
@@ -240,6 +250,7 @@ private fun PullSummary(pr: PullRequest, now: Long) {
             withStyle(SpanStyle(color = av.diffDel)) { append("-${pr.deletions}") }
         }
         ListRow(pr.title, meta, lines = 3, leading = { StatusDot(checkDot(pr.checks)) }, trailing = { PrState(pr) })
+        pr.autoMerge?.let { Hairline(lead = true); ListRow("Auto-merge", it.line(), lines = 1) }
     }
 }
 
