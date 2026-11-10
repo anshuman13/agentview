@@ -21,6 +21,7 @@ import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 
 private const val WAITING_CHANNEL = "needs"
 private const val WAITING_ID = 1
+private const val RUNNING_CHANNEL = "running"
 const val EXTRA_CHAT = "chat"
 const val EXTRA_NOTICE_ID = "noticeId"
 const val EXTRA_PERMISSION = "permission"
@@ -38,6 +39,7 @@ class Notifier(private val app: Application) {
             manager.createNotificationChannel(NotificationChannel(k.channel, k.label, importance))
         }
         manager.createNotificationChannel(NotificationChannel(WAITING_CHANNEL, "Needs you", NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(true) })
+        manager.createNotificationChannel(NotificationChannel(RUNNING_CHANNEL, "Running chats", NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null) })
     }
 
     fun granted() = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(app, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -92,7 +94,43 @@ class Notifier(private val app: Application) {
 
     fun clear(chat: String) = NoticeKind.entries.forEach { manager.cancel((it.channel + chat).hashCode()) }
 
-    fun clearChats() = manager.activeNotifications.filter { it.id != WAITING_ID }.forEach { manager.cancel(it.id) }
+    fun clearChats() = manager.activeNotifications.filter { it.id != WAITING_ID && it.notification.channelId != RUNNING_CHANNEL }.forEach { manager.cancel(it.id) }
+
+    private fun runningId(chat: String) = (RUNNING_CHANNEL + chat).hashCode()
+
+    // One ongoing, silent notification per running chat: title, status, elapsed time and Stop, or Allow and Deny for a permission request.
+    // The actions answer under their own id, so a failed one does not replace the notification.
+    @android.annotation.SuppressLint("MissingPermission")
+    fun running(notes: List<RunningNote>) {
+        val active = if (granted()) notes else emptyList()
+        val keep = active.map { runningId(it.chatId) }.toSet()
+        manager.activeNotifications.filter { it.notification.channelId == RUNNING_CHANNEL && it.id !in keep }.forEach { manager.cancel(it.id) }
+        active.forEach { n ->
+            val id = runningId(n.chatId)
+            val builder = NotificationCompat.Builder(app, RUNNING_CHANNEL)
+                .setSmallIcon(R.drawable.ic_notify)
+                .setContentTitle(n.title)
+                .setContentText(if (n.pending) "Needs you" else n.text)
+                .setWhen(n.since)
+                .setUsesChronometer(true)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setSilent(true)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .setContentIntent(open(chatLink(n.chatId), id))
+            if (!AppState.readOnly) {
+                val reply = id + 1
+                when {
+                    n.permissionId.isNotEmpty() -> {
+                        builder.addAction(action(NoticeOp.ALLOW, n.chatId, reply, RUNNING_CHANNEL, "Allow", n.permissionId))
+                        builder.addAction(action(NoticeOp.DENY, n.chatId, reply, RUNNING_CHANNEL, "Deny", n.permissionId))
+                    }
+                    !n.pending -> builder.addAction(action(NoticeOp.STOP, n.chatId, reply, RUNNING_CHANNEL, "Stop"))
+                }
+            }
+            manager.notify(id, builder.build())
+        }
+    }
 
     // One ongoing, silent list of the chats that wait for you; the launcher shows its count on the app icon.
     @android.annotation.SuppressLint("MissingPermission")

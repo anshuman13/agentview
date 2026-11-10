@@ -35,9 +35,11 @@ import no.pradhan.agentview.nativeapp.app.Notice
 import no.pradhan.agentview.nativeapp.app.NoticeKind
 import no.pradhan.agentview.nativeapp.app.Notifier
 import no.pradhan.agentview.nativeapp.app.SharedItem
+import no.pradhan.agentview.nativeapp.app.RunningNote
 import no.pradhan.agentview.nativeapp.app.WaitingSnapshot
 import no.pradhan.agentview.nativeapp.app.noticeAsk
 import no.pradhan.agentview.nativeapp.app.notices
+import no.pradhan.agentview.nativeapp.app.runningNotes
 import no.pradhan.agentview.nativeapp.app.waitingSnapshot
 import no.pradhan.agentview.nativeapp.chat.ChatStore
 import no.pradhan.agentview.nativeapp.chat.RecentChats
@@ -224,6 +226,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     override fun onCleared() {
         runCatching { app.getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(netWatch) }
         notifier.waiting(WaitingSnapshot(), 0)
+        notifier.running(emptyList())
         super.onCleared()
     }
 
@@ -244,6 +247,25 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
                 if (badge >= 0) notifier.waiting(snap, badge) else notifier.waiting(WaitingSnapshot(), 0)
             }
         }
+    }
+
+    init {
+        viewModelScope.launch(Dispatchers.Default) {
+            var since = emptyMap<String, Long>()
+            var shown = emptyList<RunningNote>()
+            combine(store.state.map { it.live }.distinctUntilChanged(), liveLoaded, notifyOn) { live, loaded, on -> if (loaded && on) live else null }.collect { live ->
+                val notes = if (live == null) emptyList() else runningNotes(live, since, System.currentTimeMillis())
+                since = notes.associate { it.chatId to it.since }
+                if (notes == shown) return@collect
+                shown = notes
+                notifier.running(notes.map { if (it.pending) it.withPermission() else it })
+            }
+        }
+    }
+
+    private suspend fun RunningNote.withPermission(): RunningNote {
+        val ask = withContext(Dispatchers.IO) { noticeAsk(api, Notice(NoticeKind.Approval, chatId, title, text)) }
+        return copy(permissionId = ask.permissionId)
     }
 
     fun refreshGranted() { granted.value = notifier.granted() }
