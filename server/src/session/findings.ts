@@ -1,6 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import type { Finding, ReviewFindings } from '../../../shared/protocol.js';
+import { specSlug } from '../../../shared/specTasks.js';
 import { readJson, writeJson } from '../json.js';
 
 const FILE = path.join(process.env.AGENTVIEW_FINDINGS_DIR ?? path.join(os.homedir(), '.agentview'), 'findings.json');
@@ -21,8 +22,10 @@ async function save() {
 
 export const findingKey = (f: Finding) => `${f.file}:${f.line}:${f.summary.slice(0, 60)}`;
 
-// The target is a PR number or "local" for the working tree.
+// The target is a PR number, "local" for the working tree, or spec:<slug> for a spec review.
 export const reviewTarget = (prompt: string) => {
+  const spec = /^\/spec-review\s+(.+)/.exec(prompt.trim());
+  if (spec) return `spec:${specSlug(spec[1])}`;
   const m = /^\/code-review\b\s*(\d+)?/.exec(prompt.trim());
   return m ? m[1] ?? 'local' : null;
 };

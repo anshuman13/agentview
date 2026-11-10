@@ -9,6 +9,12 @@ describe('review findings', () => {
     expect(reviewTarget('fix the tests')).toBeNull();
   });
 
+  it('targets a spec review by the spec slug', () => {
+    expect(reviewTarget('/spec-review a/.claude/specs/y.md')).toBe('spec:y');
+    expect(reviewTarget('/spec-review')).toBeNull();
+    expect(reviewTarget('/code-review 12')).toBe('12');
+  });
+
   it('reads a ReportFindings call and drops what it cannot place', () => {
     const list = parseFindings({
       findings: [

@@ -34,7 +34,7 @@ export const codexDriver = (resume?: string, fork = false): DriverFactory => (ho
 // Runs a chat on `codex app-server`: one process per chat, one thread in it, resumed by thread id when the process ends.
 export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
-  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, team: false, stopTask: false };
+  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, team: false, stopTask: false, subagents: false };
   readonly account: Account = 'main';
   readonly instructionFiles: string[];
 

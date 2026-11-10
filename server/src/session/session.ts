@@ -20,6 +20,7 @@ import { Prompts } from './prompts.js';
 import { PR_URL, createsPr } from './pr.js';
 import { RepeatController, ROUND_INSTRUCTION } from './repeat.js';
 import { SKETCH_COMMAND, sketchPrompt } from '../../../shared/sketches.js';
+import { SPEC_REVIEW_COMMAND, specReviewPrompt } from '../../../shared/specTasks.js';
 import { provider } from '../agent/registry.js';
 import { RunLinks } from './runLinks.js';
 import { Runs } from './runs.js';
@@ -283,11 +284,12 @@ export class AgentSession implements AgentHost {
   enqueue(text: string, id?: string) {
     const [, name, args = ''] = /^\/([\w-]+)(?:\s+(.*))?$/s.exec(text.trim()) ?? [];
     if (name === 'compact') return this.compact(args);
-    if (name && name !== 'code-review' && name !== SKETCH_COMMAND.name && this.driver.command(name, args)) return;
+    const specReview = name === SPEC_REVIEW_COMMAND && args.trim() !== '';
+    if (name && name !== 'code-review' && name !== SKETCH_COMMAND.name && !specReview && this.driver.command(name, args)) return;
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
     this.begin();
     if (name === 'code-review' && /^\d*$/.test(args)) this.driver.review(args ? Number(args) : 'local', id);
-    else this.driver.send(name === SKETCH_COMMAND.name ? sketchPrompt(args) : expandChatMentions(text, this.transcriptPath), id);
+    else this.driver.send(name === SKETCH_COMMAND.name ? sketchPrompt(args) : specReview ? specReviewPrompt(args.trim()) : expandChatMentions(text, this.transcriptPath), id);
   }
 
   compact(instructions?: string) {

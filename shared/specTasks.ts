@@ -46,6 +46,10 @@ export const startTaskPrompt = (t: SpecTask, path: string) => `Do task ${t.n} in
 
 export const specPrompt = (request: string) => `Write a spec for the request below in .claude/specs/<slug>.md with three sections: Requirements (numbered, each with testable acceptance criteria), Design, and Tasks (\`- [ ]\` lines, each one small step). Do not change any code; stop for review when the spec is written. When the tasks are done later, tick each box right after finishing it (one edit per task) and mark the one you are on with " (in progress)".\n\nRequest: ${request}`;
 
+export const SPEC_REVIEW_COMMAND = 'spec-review';
+
+export const specReviewPrompt = (path: string) => `Review the spec at ${path} with two subagents started in parallel. Give each only the spec path and its brief below, and pass nothing from this chat.\n\n(a) Cold reader: open no file but the spec. Read it as someone who has never seen this repo or chat, and list each place you had to guess: a term, file, behaviour or number the spec does not pin down.\n\n(b) Readiness: check every file path, function or type name, route and test command the spec names against the repo, and list what is missing or different.\n\nThen call mcp__agentview__report_findings once with all findings from both, each with file = the repo-relative path of the spec, line = the spec line it concerns, summary, failure_scenario = what the spec should say, and category "guess" or "readiness". Pass an empty list when both are clean. Do not edit the spec.`;
+
 export const planGoalPrompt = (path: string) => `/goal every step of the plan in ${path} is done: work through it in order and note in the file which steps are finished.`;
 
 export const runAllPrompt = (path: string) => `/goal every task in ${path} is ticked: do them in order. While you work on one, append " (in progress)" to its line; when done, tick its box and remove that suffix in one edit before the next.`;

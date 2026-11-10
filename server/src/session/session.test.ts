@@ -9,6 +9,7 @@ import { historyFrom } from '../agent/claude/transcript.js';
 import type { History } from '../agent/types.js';
 import { appendTo, BIG_BRO, type ChatEvent, type ServerMessage } from '../../../shared/protocol.js';
 import { sketchPrompt } from '../../../shared/sketches.js';
+import { specReviewPrompt } from '../../../shared/specTasks.js';
 
 function fakeSession() {
   const s = claudeSession('/tmp/project');
@@ -896,6 +897,40 @@ describe('/sketch', () => {
     s.sendPrompt('/sketch a settings page');
     expect(send).toHaveBeenCalledWith(sketchPrompt('a settings page'), expect.any(String));
     expect(s.state.events.find((e) => e.kind === 'user')).toMatchObject({ text: '/sketch a settings page' });
+  });
+});
+
+describe('/spec-review', () => {
+  const path = '/r/.claude/specs/x.md';
+
+  it('names both reviewer briefs, the subagent rule and the report fields', () => {
+    const prompt = specReviewPrompt(path);
+    for (const part of [path, 'two subagents', 'Cold reader', 'Readiness', 'mcp__agentview__report_findings', 'failure_scenario', '"guess" or "readiness"', 'Do not edit the spec']) expect(prompt).toContain(part);
+  });
+
+  it('sends the review prompt to the driver, not as a command, and saves the report under the spec', async () => {
+    const { s } = fakeSession();
+    const send = vi.spyOn(s.driver, 'send').mockImplementation(() => {});
+    const command = vi.spyOn(s.driver, 'command');
+    const got: ServerMessage[] = [];
+    s.onMessage((m) => got.push(m));
+    s.sendPrompt(`/spec-review ${path}`);
+    expect(send).toHaveBeenCalledWith(specReviewPrompt(path), expect.any(String));
+    expect(command).not.toHaveBeenCalled();
+    (s.driver as unknown as { messages: { toolUse: (b: unknown) => void } }).messages.toolUse({ id: 't1', name: 'ReportFindings', input: { findings: [{ file: '.claude/specs/x.md', line: 4, summary: 'Which file?', category: 'guess' }] } });
+    await vi.waitFor(() => expect(got.some((m) => m.type === 'findings')).toBe(true));
+    expect(got.find((m) => m.type === 'findings')).toMatchObject({ review: { target: 'spec:x', findings: [{ file: '.claude/specs/x.md', line: 4, category: 'guess' }] } });
+  });
+
+  it('without a path goes to the agent as plain text', () => {
+    const { s } = fakeSession();
+    const send = vi.spyOn(s.driver, 'send').mockImplementation(() => {});
+    s.sendPrompt('/spec-review');
+    expect(send).toHaveBeenCalledWith('/spec-review', expect.any(String));
+  });
+
+  it('is a capability of the Claude driver', () => {
+    expect(fakeSession().s.driver.capabilities.subagents).toBe(true);
   });
 });
 

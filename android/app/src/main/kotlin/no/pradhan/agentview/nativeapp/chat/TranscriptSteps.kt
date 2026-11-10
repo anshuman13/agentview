@@ -42,11 +42,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.net.image
 import no.pradhan.agentview.nativeapp.net.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
+import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.agentSummary
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.codex.autopilot.planProgress
@@ -55,6 +57,7 @@ import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.IconBtn
+import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.Mono
@@ -173,7 +176,15 @@ internal fun SpecCard(hub: Hub, id: String, slug: String, path: String, chat: St
             // Composed only while the box is open, so the file is read only then.
             val progress = planProgress(hub, path, chat)
             ListRow("Tasks", progress?.takeUnless { it.startsWith("0 of 0 ") } ?: "No tasks", onClick = { openBuild(hub, slug) })
+            Hairline()
+            val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
+            ListRow(
+                "Review with fresh eyes", if (subagents) "Two reviewers read only this spec" else "Needs subagents, not in this chat",
+                muted = !subagents || hub.readOnly,
+                onClick = if (subagents && !hub.readOnly) ({ hub.askChat("/spec-review $path") }) else null,
+            )
         }
+        Findings(hub, "spec:$slug")
     }
 }
 

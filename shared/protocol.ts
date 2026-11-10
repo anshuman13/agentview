@@ -127,7 +127,7 @@ export type SessionInfo = {
 };
 
 // What the agent behind a chat supports.
-export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; team: boolean; stopTask: boolean };
+export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; team: boolean; stopTask: boolean; subagents: boolean };
 
 // A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
 export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean; reportAt?: number; endAt?: number; capPct?: number };

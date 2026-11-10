@@ -50,7 +50,7 @@ export function Findings({ target }: { target: string }) {
   const cwd = useStore((s) => s.session.cwd);
   // A chat in another repo clears the findings, so fetch that repo's.
   useEffect(() => {
-    call<ReviewFindings | null>(`/api/findings?target=${target}`).then(setFindings, () => {});
+    call<ReviewFindings | null>(`/api/findings?target=${encodeURIComponent(target)}`).then(setFindings, () => {});
   }, [target, cwd]);
   if (!review) return null;
   const open = (f: Finding) => setUi({ openFile: f.file, openLine: f.line, follow: false });
