@@ -19,3 +19,15 @@ const postReview = (body: object) => fetchJson<{ ok: true }>(api('/api/builds/re
 export const postBuildReview = (slug: string, phase: ReviewPhase | 'code', decision: 'approve' | 'changes', note: string) => postReview({ slug, phase, decision, note });
 
 export const postBuildHold = (slug: string, decision: 'hold' | 'release') => postReview({ slug, decision });
+
+export type RunDiff = { branch?: string; base: string; files: { path: string; additions: number; deletions: number }[]; diff: string };
+
+const runUrl = (action: string, run: string) => api(`/api/runs/${action}?run=${encodeURIComponent(run)}`);
+
+export const fetchRunDiff = (run: string) => fetchJson<RunDiff>(runUrl('diff', run));
+
+export const postRunApprove = (run: string) => fetchJson<{ url: string }>(runUrl('approve', run), { method: 'POST' });
+
+export const postRunRevise = (run: string, text: string) => fetchJson<{ ok: true }>(runUrl('revise', run), { method: 'POST', body: JSON.stringify({ text }) });
+
+export const postRunDiscard = (run: string) => fetchJson<{ ok: true }>(runUrl('discard', run), { method: 'POST' });

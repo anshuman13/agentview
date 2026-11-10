@@ -23,6 +23,13 @@ describe('runBands', () => {
     expect(finished.map((r) => r.id)).toEqual(['e', 'd']);
   });
 
+  it('puts a pending job run in review and not in needs', () => {
+    const { review, needs, running } = runBands([run('a', { kind: 'job', state: 'paused', needsYou: true, review: 'pending' }), run('b', { needsYou: true })], []);
+    expect(review.map((r) => r.id)).toEqual(['a']);
+    expect(needs.map(id)).toEqual(['b']);
+    expect(running).toEqual([]);
+  });
+
   it('keeps the latest 30 finished runs', () => {
     const runs = Array.from({ length: 35 }, (_, i) => run(`r${i}`, { state: 'done', endedAt: i }));
     expect(runBands(runs, []).finished).toHaveLength(30);
