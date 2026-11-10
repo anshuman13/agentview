@@ -47,6 +47,8 @@ type Need =
   | { kind: 'staleAsks'; count: number; oldest: number; keys: string[] }
   | { kind: 'wiki'; count: number; keys: string[] };
 
+const NOTED = 'Saved as a note';
+const NOTE_FAILED = 'Could not save the note. The item is still here.';
 const JUST_ENDED_MS = 2 * 3600_000;
 
 const taskKey = (r: ItemRow) => `task:${r.profile}:${r.id}`;
@@ -104,25 +106,48 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   };
   const dismissChat = (c: Chat) => dismiss('wait', () => hideChat(c));
   const dismissBullet = (x: Bullet) => dismiss('slack', () => hideBullet(x));
-  const capture = (key: string, title: string, profile: Chat['profile'], fill: (r: ItemRow) => Promise<unknown> | undefined, done: () => void) => {
+  const capture = (key: string, title: string, profile: Chat['profile'], type: 'task' | 'note', fill: (r: ItemRow) => Promise<unknown> | undefined, done: (r: ItemRow) => void) => {
     if (pending.current.has(key)) return;
     pending.current.add(key);
     haptic('tap');
-    void store.capture(title, 'task', profile)
-      .then(fill)
-      .then(() => { done(); showSnack('Added to Tasks'); }, (err) => {
+    void store.capture(title, type, profile)
+      .then(async (r) => { await fill(r); return r; })
+      .then(done, (err) => {
         pending.current.delete(key);
-        showSnack(`Could not add: ${errorText(err)}`);
+        showSnack(type === 'note' ? NOTE_FAILED : `Could not add: ${errorText(err)}`);
       });
+  };
+  const added = (hide: () => void) => () => { hide(); showSnack('Added to Tasks'); };
+  const noted = (key: string, hide: () => void, unhide: () => void) => (r: ItemRow) => {
+    hide();
+    showSnack(NOTED, () => { pending.current.delete(key); unhide(); void store.update(r, { deleted: 1 }); });
   };
   const chatTask = (c: Chat) => {
     const name = c.name ?? 'DM';
-    capture(waitKey(c), `Reply to ${name}`, c.profile, (r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }), () => hideChat(c));
+    capture(waitKey(c), `Reply to ${name}`, c.profile, 'task', (r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }), added(() => hideChat(c)));
   };
   const bulletTask = (x: Bullet, profile: Chat['profile']) => {
-    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, profile, (r) => (x.url ? store.update(r, { text: x.url }) : undefined), () => hideBullet(x));
+    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, profile, 'task', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), added(() => hideBullet(x)));
   };
-  return { rows, dismissChat, dismissBullet, chatTask, bulletTask };
+  const chatNote = (c: Chat) => {
+    const before = handled.get().wait;
+    capture(waitKey(c), [c.name ?? 'DM', c.summary].filter(Boolean).join(': '), c.profile, 'note', (r) => (safeHref(c.url) ? store.update(r, { text: safeHref(c.url) }) : undefined), noted(waitKey(c), () => hideChat(c), () => setHandled('wait', before)));
+  };
+  const bulletNote = (x: Bullet, profile: Chat['profile']) => {
+    const before = handled.get().slack;
+    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, profile, 'note', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), noted(bulletKey(x), () => hideBullet(x), () => setHandled('slack', before)));
+  };
+  const askNote = (row: ItemRow) => {
+    const key = taskKey(row);
+    if (pending.current.has(key)) return;
+    pending.current.add(key);
+    haptic('tap');
+    store.update(row, { status: 'note' }).then(
+      () => showSnack(NOTED, () => { pending.current.delete(key); void store.update(row, { status: 'suggested' }); }),
+      () => { pending.current.delete(key); showSnack(NOTE_FAILED); },
+    );
+  };
+  return { rows, dismissChat, dismissBullet, chatTask, bulletTask, chatNote, bulletNote, askNote };
 }
 
 export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsYou>; now: number; onShowOld: () => void }) {
@@ -143,7 +168,7 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
       case 'overdue': return taskRow(x.row, atTime(x.row.at) != null ? `Overdue · due ${when(atTime(x.row.at)!, now)}` : 'Overdue');
       case 'overdueAll': return <CardRow key="overdue" title={`${x.rows.length} overdue`} meta="Open Tasks to go through them" onOpen={() => setView({ list: 'tasks', open: null })} />;
       case 'risk': return taskRow(x.row, `At risk · due ${when(x.due, now)} · ${minutesText(x.short)} short`);
-      case 'ask': return <ActionRow key={x.row.profile + x.row.id} row={x.row} noBadge />;
+      case 'ask': return <ActionRow key={x.row.profile + x.row.id} row={x.row} noBadge extraItems={(close) => <MenuItem icon="note" onClick={close(() => n.askNote(x.row))}>Nothing asked</MenuItem>} />;
       case 'justEnded': {
         const m = x.meeting;
         return (
@@ -166,6 +191,7 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
                 <>
                   <MenuItem icon="add" onClick={() => n.chatTask(c)}>Make a task</MenuItem>
                   {slackLink(c.url)}
+                  <MenuItem icon="note" onClick={() => n.chatNote(c)}>Nothing asked</MenuItem>
                   <MenuItem icon="close" onClick={() => n.dismissChat(c)}>Dismiss</MenuItem>
                 </>
               )} />
@@ -180,6 +206,7 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
                 <>
                   <MenuItem icon="add" onClick={() => n.bulletTask(x.x, x.profile)}>Make a task</MenuItem>
                   {slackLink(x.x.url)}
+                  <MenuItem icon="note" onClick={() => n.bulletNote(x.x, x.profile)}>Nothing asked</MenuItem>
                   <MenuItem icon="close" onClick={() => n.dismissBullet(x.x)}>Dismiss</MenuItem>
                 </>
               )} />
