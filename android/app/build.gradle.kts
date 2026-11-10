@@ -27,6 +27,8 @@ android {
 
     buildFeatures { compose = true }
 
+    androidResources { localeFilters += setOf("en", "nb", "nn", "no") }
+
     lint { checkReleaseBuilds = false }
 
     packaging {
