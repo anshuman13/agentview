@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { appSettings } from '../app/appSettings';
 import { notice, prompt, send, useStore } from '../app/store';
 import { Button, Chip } from '../ui/Button';
@@ -20,7 +20,8 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const cwd = useStore((s) => s.session.cwd);
   const chatProvider = useStore((s) => s.session.provider);
   const active = useChatRun(chat);
-  const providers = appSettings.use((s) => s.providers.filter((p) => p.enabled));
+  const allProviders = appSettings.use((s) => s.providers);
+  const providers = useMemo(() => allProviders.filter((p) => p.enabled), [allProviders]);
   const defaultProvider = appSettings.use((s) => s.defaultProvider);
   const { folders } = useWorkspace(null);
   const progress = usePlanProgress(plan ?? null);
