@@ -90,6 +90,7 @@
 .tr-sub > .tr-box { margin: var(--sp-1) 0; }
 .tr-box { border: 1px solid var(--border-card); border-radius: var(--radius); background: var(--raised); overflow: hidden; }
 .tr-box > .ui-row-wrap::after { display: none; }
+.tr-box.lc { overflow: visible; }
 .tr-box-summary {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
   margin: 0 var(--list-pad) var(--sp-3) calc(var(--list-pad) + 24px + var(--sp-6)); font-size: var(--type-meta-size); line-height: var(--type-meta-line); color: var(--meta-fg);
