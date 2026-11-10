@@ -73,7 +73,7 @@ export function OpenTasks({ name, rows }: { name: string; rows: ItemRow[] }) {
           meta={dueText(r, now)}
           onOpen={() => openTask(r)}
           action={{ icon: 'check', label: 'Done', run: () => act.done(r) }}
-          menu={(choose) => taskMenu(r, act, choose, () => openTask(r))}
+          menu={(choose) => taskMenu(r, act, () => openTask(r))}
         />
       )} />
     </section>

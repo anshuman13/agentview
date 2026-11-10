@@ -1,11 +1,9 @@
-import { useRef, useState } from 'react';
 import { atTime, nextNine } from '../data/tasks/engine';
 import { isRepeat } from '../data/tasks/recur';
 import type { ItemRow, Profile } from '../data/sync';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
-import { IconButton } from '../../ui/Button';
-import { Menu, MenuItem } from '../../ui/Menu';
+import { MenuItem } from '../../ui/Menu';
 import { firstLine } from '../../ui/util';
 import { FILTER_LABEL } from '../view';
 import { useActions } from '../useActions';
@@ -19,6 +17,9 @@ import { Badge } from '../../ui/Badge';
 export { UNROLL, useActions } from '../useActions';
 
 const DAY = 86400_000;
+
+// A touch hold on a row starts selection (see the drag gesture), so the row's long press does not open its menu.
+const noHold = () => undefined;
 
 // Checklist lines in the notes, like "- [ ] call" and "- [x] done".
 const checklist = (s: string | null) => {
@@ -38,16 +39,16 @@ export function dueText(row: ItemRow, now: number, inDay?: boolean) {
 }
 
 // The menu items of an open task: Open, Snooze, Tomorrow, Move to the other profile and Delete.
-export function taskMenu(row: ItemRow, act: ReturnType<typeof useActions>, choose: (fn: () => void) => () => void, onOpen: () => void) {
+export function taskMenu(row: ItemRow, act: ReturnType<typeof useActions>, onOpen: () => void) {
   const later = nextNine(new Date(Math.max(atTime(row.at) ?? 0, Date.now())), row.profile);
   const other: Profile = row.profile === 'work' ? 'personal' : 'work';
   return (
     <>
-      <MenuItem icon="arrow-right" onClick={choose(onOpen)}>Open</MenuItem>
-      <MenuItem icon="clock" onClick={choose(() => act.snooze(row, later))}>Snooze</MenuItem>
-      <MenuItem icon="calendar" onClick={choose(() => act.tomorrow(row))}>Tomorrow</MenuItem>
-      <MenuItem icon="arrow-swap" onClick={choose(() => void act.move(row, other))}>Move to {FILTER_LABEL[other]}</MenuItem>
-      <MenuItem icon="trash" danger onClick={choose(() => act.remove(row))}>Delete</MenuItem>
+      <MenuItem icon="arrow-right" onClick={onOpen}>Open</MenuItem>
+      <MenuItem icon="clock" onClick={() => act.snooze(row, later)}>Snooze</MenuItem>
+      <MenuItem icon="calendar" onClick={() => act.tomorrow(row)}>Tomorrow</MenuItem>
+      <MenuItem icon="arrow-swap" onClick={() => void act.move(row, other)}>Move to {FILTER_LABEL[other]}</MenuItem>
+      <MenuItem icon="trash" danger onClick={() => act.remove(row)}>Delete</MenuItem>
     </>
   );
 }
@@ -56,8 +57,6 @@ export function taskMenu(row: ItemRow, act: ReturnType<typeof useActions>, choos
 // picking: selection mode, where a tap on a selectable row calls onOpen to toggle it and selected shows it chosen.
 export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected }: { row: ItemRow; onOpen: () => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean; inDay?: boolean; picking?: boolean; selected?: boolean }) {
   const act = useActions();
-  const [menu, setMenu] = useState(false);
-  const more = useRef<HTMLButtonElement>(null);
   const at = atTime(row.at);
   const now = Date.now();
   const isDone = row.status === 'done';
@@ -69,7 +68,6 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected 
   const preview = isRepeat(row.text) ? '' : firstLine(row.text);
   const extra = isRepeat(row.text) ? 'Repeats' : list.total > 0 ? `${list.done}/${list.total}` : !isDone && row.priority === 3 ? 'High' : !isDone && row.priority === 2 ? 'Medium' : '';
   const later = nextNine(new Date(Math.max(at ?? 0, now)), row.profile);
-  const choose = (fn: () => void) => () => { setMenu(false); fn(); };
   const quote = isNote && !list.total && !row.people && !/^https?:\/\/\S+$/.test(preview) ? preview : '';
   const meta = due || extra ? (
     <>
@@ -79,31 +77,18 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected 
     </>
   ) : quote;
   const body = (
-    <Row plain className={`tk-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}${selected ? ' selected' : ''}`} data-row={row.profile + row.id} onPointerDown={picking ? undefined : (e) => { if (!(e.target as Element).closest('.as-more')) onGrab?.(e); }} onClick={picking && !pickable ? undefined : onOpen} role="button" aria-pressed={picking && pickable ? !!selected : undefined} tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && (picking ? (pickable && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())) : rowKey(e, row, onOpen, act))}
+    <Row plain className={`tk-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}${selected ? ' selected' : ''}`} data-row={row.profile + row.id} onPointerDown={picking ? undefined : onGrab} onLongPress={noHold} onClick={picking && !pickable ? undefined : onOpen} role="button" aria-pressed={picking && pickable ? !!selected : undefined} tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && (picking ? (pickable && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())) : rowKey(e, row, onOpen, act))}
       leading={picking && !isNote ? <span className={`as-check${isDone ? ' on' : selected ? ' picked' : ''}`}><Icon name={selected || isDone ? 'pass-filled' : 'circle-large-outline'} /></span> : <Check row={row} />}
       title={row.title || '(Untitled)'}
       meta={meta}
-      trailing={(row.status === 'suggested' || !picking) && (
+      state={row.status === 'suggested' ? <Badge status="waiting" label="Needs you" /> : null}
+      menu={!picking && (pickable ? taskMenu(row, act, onOpen) : (
         <>
-          {row.status === 'suggested' && <Badge status="waiting" label="Needs you" />}
-          {!picking && (
-            <span className="as-more" onClick={(e) => e.stopPropagation()}>
-              <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-              {menu && (
-                <Menu trigger={more} onClose={() => setMenu(false)}>
-                  {pickable ? taskMenu(row, act, choose, onOpen) : (
-                    <>
-                      <MenuItem icon="arrow-right" onClick={choose(onOpen)}>Open</MenuItem>
-                      {isDone && <MenuItem icon="discard" onClick={choose(() => act.reopen(row))}>Not done</MenuItem>}
-                      <MenuItem icon="trash" danger onClick={choose(() => act.remove(row))}>Delete</MenuItem>
-                    </>
-                  )}
-                </Menu>
-              )}
-            </span>
-          )}
+          <MenuItem icon="arrow-right" onClick={onOpen}>Open</MenuItem>
+          {isDone && <MenuItem icon="discard" onClick={() => act.reopen(row)}>Not done</MenuItem>}
+          <MenuItem icon="trash" danger onClick={() => act.remove(row)}>Delete</MenuItem>
         </>
-      )}
+      ))}
     />
   );
   if (picking) return <Swipe>{body}</Swipe>;

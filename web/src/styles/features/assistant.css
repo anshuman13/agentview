@@ -189,12 +189,11 @@
 .tasks .tk-row.personal:not(.checked) .as-check:not(.on), .tasks .tk-row.personal:not(.checked) .as-check:not(.on) .codicon.icon { color: var(--personal); }
 .tk-row .as-due.today { color: var(--accent-text); }
 .tk-row .as-due.late { color: var(--err); }
-.tasks .as-more { position: relative; flex: none; display: inline-flex; margin-right: var(--sp-2); }
+.tasks .ui-row-wrap { padding-right: var(--sp-2); }
+.tasks .ui-row-wrap:last-child::after { display: block; left: var(--tk-indent); }
+.tasks .ui-row-wrap > .tk-row::after { display: none; }
+.as-scroll .ui-group > :last-child .ui-row-wrap::after { display: none; }
 .tasks .as-swipe:has(.ui-menu) { overflow: visible; }
-@media (hover: hover) and (pointer: fine) {
-  .tasks .as-more { opacity: 0; }
-  .tasks .tk-row:is(:hover, :focus-visible) .as-more, .tasks .as-more:focus-within { opacity: 1; }
-}
 .tasks .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
 .tasks .as-drop-line { margin-left: var(--tk-indent); }
 .as-page .wk-head h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xl); }
