@@ -95,14 +95,14 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent
                 }
             }
             ListRow(
-                state.title, meta.ifEmpty { null }, lines = 2,
+                state.title, meta.ifEmpty { null }, lines = 2, compact = true,
                 leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
                 onClick = if (goal) detail else if (run.kind == "loop" && state.outcome != null) ({ open = !open }) else null,
             )
             agents.take(MAX_AGENTS).forEach { a ->
-                ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, onClick = { onOpenAgent(a.id) })
+                ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, compact = true, onClick = { onOpenAgent(a.id) })
             }
-            if (agents.size > MAX_AGENTS) ListRow("${agents.size - MAX_AGENTS} more agents", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, onClick = onOpenAgents)
+            if (agents.size > MAX_AGENTS) ListRow("${agents.size - MAX_AGENTS} more agents", compact = true, leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, onClick = onOpenAgents)
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Text(progress?.let { "Plan $it" } ?: run.what, Modifier.weight(1f).then(if (goal) Modifier.clickable(onClick = detail) else Modifier), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(money(run.costUsd, billing(run.provider)), style = Type.subheadline, color = av.fgMuted, maxLines = 1)

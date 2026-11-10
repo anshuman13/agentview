@@ -126,6 +126,7 @@ fun ListRow(
     strike: Boolean = false,
     muted: Boolean = false,
     selected: Boolean = false,
+    compact: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
@@ -134,8 +135,8 @@ fun ListRow(
     val longClick = onLongClick ?: menu?.let { { menuOpen.value = true } }
     val click = if (onClick != null || longClick != null) Modifier.combinedClickable(onClick = { onClick?.invoke() }, onLongClick = longClick) else Modifier
     Row(
-        modifier.fillMaxWidth().background(if (selected) av.accentSoft else Color.Transparent).heightIn(min = if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click)
-            .padding(start = Tokens.listPad, end = if (trailing != null || menu != null) Tokens.sp4 else Tokens.listPad, top = Tokens.sp5, bottom = Tokens.sp5),
+        modifier.fillMaxWidth().background(if (selected) av.accentSoft else Color.Transparent).heightIn(min = if (compact) 44.dp else if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click)
+            .padding(start = Tokens.listPad, end = if (trailing != null || menu != null) Tokens.sp4 else Tokens.listPad, top = if (compact) Tokens.sp2 else Tokens.sp5, bottom = if (compact) Tokens.sp2 else Tokens.sp5),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp8),
     ) {
