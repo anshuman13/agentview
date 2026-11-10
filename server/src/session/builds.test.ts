@@ -158,8 +158,25 @@ describe('spec review', () => {
     expect(reviews('tracked')).toMatchObject([{ phase: 'tasks', decision: 'changes' }]);
   });
 
+  it('records a code decision once an implement entry exists, and a hold then its release', async () => {
+    writeFileSync(path.join(specs, 'coded.md'), body);
+    expect(await reviewBuild(repo, { slug: 'coded', phase: 'code', decision: 'approve' })).toMatchObject({ status: 400 });
+    const entry = { id: 'i1', stage: 'implement', round: 1, status: 'done', startedAt: 1, endedAt: 2, report: 'done', chat: 'c', session: null };
+    writeFileSync(path.join(store, encodeURIComponent(repo), 'coded.json'), JSON.stringify([entry]));
+    expect(await reviewBuild(repo, { slug: 'coded', phase: 'code', decision: 'changes', note: 'rename it' })).toEqual({ ok: true });
+    expect(await reviewBuild(repo, { slug: 'coded', decision: 'hold' })).toEqual({ ok: true });
+    const held = (await buildOne(repo, 'coded')) as { hold: boolean; codeReview: { decision: string } };
+    expect(held).toMatchObject({ hold: true, codeReview: { decision: 'changes' } });
+    expect((await listBuilds(repo)).find((b) => b.slug === 'coded')).toMatchObject({ hold: true, codeReview: { note: 'rename it' } });
+    expect(await reviewBuild(repo, { slug: 'coded', decision: 'release' })).toEqual({ ok: true });
+    expect(((await buildOne(repo, 'coded')) as { hold: boolean }).hold).toBe(false);
+    const lines = readFileSync(path.join(specs, 'coded.md'), 'utf8').slice(body.length).split('\n').slice(2, -1);
+    expect(lines).toEqual([expect.stringMatching(/ Code: Changes requested: rename it$/), expect.stringMatching(/ Hold: do not start or continue this spec$/), expect.stringMatching(/ Hold released$/)]);
+    expect(reviews('coded')).toHaveLength(3);
+  });
+
   it('answers 400 for bad input and 404 for a missing spec', async () => {
-    for (const bad of [{ slug: '../x', phase: 'design', decision: 'approve' }, { slug: 'pink-door', phase: 'code', decision: 'approve' }, { slug: 'pink-door', phase: 'design', decision: 'hold' }, { slug: 'pink-door', phase: 'design', decision: 'changes', note: '  ' }]) {
+    for (const bad of [{ slug: '../x', phase: 'design', decision: 'approve' }, { slug: 'pink-door', phase: 'code', decision: 'approve' }, { slug: 'pink-door', phase: 'design', decision: 'hold' }, { slug: 'pink-door', phase: 'hold', decision: 'hold' }, { slug: 'pink-door', decision: 'approve' }, { slug: 'pink-door', phase: 'design', decision: 'changes', note: '  ' }]) {
       expect(await reviewBuild(repo, bad)).toMatchObject({ status: 400 });
     }
     expect(await reviewBuild(repo, { slug: 'no-such-spec', phase: 'design', decision: 'approve' })).toMatchObject({ status: 404 });

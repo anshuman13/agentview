@@ -20,9 +20,10 @@ export type BuildSummary = { stage: BuildStage; state: BuildState; conclusion: s
 export type Criterion = { n: number; result: 'pass' | 'fail' | 'unverified'; evidence: string };
 export type BuildPipeline = 'written' | 'reviewed' | 'implemented' | 'tested' | 'code-reviewed' | 'merged';
 export type ReviewPhase = 'requirements' | 'design' | 'tasks';
-export type BuildReview = { phase: ReviewPhase; decision: 'approve' | 'changes'; note: string; at: number };
+export type ReviewTarget = ReviewPhase | 'code' | 'hold';
+export type BuildReview = { phase: ReviewTarget; decision: 'approve' | 'changes' | 'hold' | 'release'; note: string; at: number };
 export type BuildPhase = { key: ReviewPhase; markdown: string };
-export type BuildRow = BuildSummary & { slug: string; title: string; updatedAt: number; pipeline: BuildPipeline; draft: boolean };
+export type BuildRow = BuildSummary & { slug: string; title: string; updatedAt: number; pipeline: BuildPipeline; draft: boolean; hold: boolean; codeReview: BuildReview | null };
 export type BuildDetail = {
   slug: string;
   title: string;
@@ -32,6 +33,8 @@ export type BuildDetail = {
   specFile: string | null;
   phases: BuildPhase[];
   reviews: BuildReview[];
+  hold: boolean;
+  codeReview: BuildReview | null;
   entries: (BuildEntry & { verdict: string | null; criteria: Criterion[]; findings: string[] })[];
   commit: { files: { path: string; add: number; del: number }[]; diff: string } | null;
 };
@@ -46,13 +49,19 @@ const PIPELINE_LABEL: Record<BuildPipeline, string> = { written: 'Spec written',
 
 export const pipelineLabel = (pipeline: BuildPipeline) => PIPELINE_LABEL[pipeline];
 
-export const phaseLabel = (key: ReviewPhase) => key[0].toUpperCase() + key.slice(1);
+export const phaseLabel = (key: ReviewTarget) => key[0].toUpperCase() + key.slice(1);
 
 export const decisionTitle = (r: BuildReview | undefined) => (!r ? 'Not reviewed' : r.decision === 'approve' ? 'Approved' : 'Changes requested');
 
+// The line a decision adds to a spec's Review notes.
+export const reviewLine = (r: BuildReview) =>
+  r.phase === 'hold' ? (r.decision === 'hold' ? 'Hold: do not start or continue this spec' : 'Hold released') : `${phaseLabel(r.phase)}: ${decisionTitle(r)}${r.note && `: ${r.note}`}`;
+
 export const REVIEW_PHASES: ReviewPhase[] = ['requirements', 'design', 'tasks'];
 
-export const reviewDecision = (reviews: BuildReview[], phase: ReviewPhase) => reviews.filter((r) => r.phase === phase).at(-1);
+export const reviewDecision = (reviews: BuildReview[], phase: ReviewTarget) => reviews.filter((r) => r.phase === phase).at(-1);
+
+export const isHeld = (reviews: BuildReview[]) => reviewDecision(reviews, 'hold')?.decision === 'hold';
 
 export const slugOk = (slug: string | undefined): slug is string => Boolean(slug) && !slug!.includes('..');
 

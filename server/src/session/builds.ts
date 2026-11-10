@@ -2,7 +2,7 @@ import type { Dirent } from 'node:fs';
 import { appendFile, readdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { REVIEW_PHASES, buildStageOf, buildSummary, criteriaOf, decisionTitle, findingsOf, phaseLabel, pipelineOf, slugOk, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase } from '../../../shared/builds.js';
+import { REVIEW_PHASES, buildStageOf, buildSummary, criteriaOf, findingsOf, isHeld, pipelineOf, reviewDecision, reviewLine, slugOk, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase } from '../../../shared/builds.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { jsonFile, readJson } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
@@ -160,6 +160,7 @@ export async function listBuilds(cwd: string) {
     const done = await merged(repo, lastCommit(entries));
     return {
       slug, title: spec?.title ?? slug, ...(entries.length ? buildSummary(entries, done) : DRAFT), pipeline: pipelineOf(entries, done, reviews), draft: !entries.length,
+      hold: isHeld(reviews), codeReview: reviewDecision(reviews, 'code') ?? null,
       updatedAt: Math.max(spec?.mtime ?? 0, ...entries.map((e) => e.endedAt ?? e.startedAt)),
     };
   }));
@@ -182,6 +183,8 @@ export async function buildOne(cwd: string, slug: string) {
     specFile: spec && !spec.kiro ? `.claude/specs/${slug}.md` : null,
     phases: spec?.phases ?? [],
     reviews,
+    hold: isHeld(reviews),
+    codeReview: reviewDecision(reviews, 'code') ?? null,
     entries: entries.map((e) => ({ ...e, verdict: verdictOf(e.report), criteria: criteriaOf(e.report), findings: findingsOf(e.report) })),
     commit: commit ? { files: parseNumstat(numstat), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff } : null,
   };
@@ -197,20 +200,25 @@ async function appendNote(file: string, r: BuildReview) {
   const d = new Date(r.at);
   const lead = sectionsOf(text).some((s) => s.heading === NOTES) ? (text.endsWith('\n') ? '' : '\n') : '\n## Review notes\n';
   const when = `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
-  await appendFile(file, `${lead}- ${when} ${phaseLabel(r.phase)}: ${decisionTitle(r)}${r.note && `: ${r.note}`}\n`);
+  await appendFile(file, `${lead}- ${when} ${reviewLine(r)}\n`);
 }
 
-const isPhase = (v: unknown): v is ReviewPhase => REVIEW_PHASES.includes(v as ReviewPhase);
+const isPhase = (v: unknown): v is ReviewPhase | 'code' => v === 'code' || REVIEW_PHASES.includes(v as ReviewPhase);
 
-// The user's decision on one phase of a spec: the JSON record the UI reads, and for a git-ignored spec file also the line agents read.
+// The user's decision on one phase of a spec or its code, or a hold or release: the JSON record the UI reads, and for a git-ignored spec file also the line agents read.
 export async function reviewBuild(cwd: string, body: { slug?: unknown; phase?: unknown; decision?: unknown; note?: unknown }) {
   const { slug, phase, decision } = body;
   const note = typeof body.note === 'string' ? body.note.replace(/\s+/g, ' ').trim().slice(0, MAX_NOTE) : '';
-  if (typeof slug !== 'string' || !slugValid(slug) || !isPhase(phase) || (decision !== 'approve' && decision !== 'changes') || (decision === 'changes' && !note)) return { status: 400, body: { error: 'Bad review' } };
+  const at = Date.now();
+  const review: BuildReview | null =
+    phase === undefined && (decision === 'hold' || decision === 'release') ? { phase: 'hold', decision, note: '', at }
+    : isPhase(phase) && (decision === 'approve' || (decision === 'changes' && note)) ? { phase, decision, note, at }
+    : null;
+  if (typeof slug !== 'string' || !slugValid(slug) || !review) return { status: 400, body: { error: 'Bad review' } };
   const repo = await mainCheckout(cwd).catch(() => null);
   const spec = repo && (await loadSpec(repo, slug));
   if (!repo || !spec) return { status: 404, body: { error: 'No such spec' } };
-  const review: BuildReview = { phase, decision, note, at: Date.now() };
+  if (review.phase === 'code' && !(await readEntries(repo, slug)).some((e) => e.stage === 'implement')) return { status: 400, body: { error: 'No implementation to review' } };
   await reviewStore(repo, slug).update(async (cur) => {
     if (await ignored(repo, spec.file)) await appendNote(spec.file, review);
     return [...cur, review];
