@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -107,14 +108,18 @@ fun <T> LazyListScope.lazyGroup(rows: List<T>, key: (T) -> Any, lead: Boolean = 
 @Composable
 fun Hairline(lead: Boolean = false) = HorizontalDivider(Modifier.padding(start = Tokens.listPad + if (lead) Tokens.leadWidth + Tokens.sp8 else 0.dp), color = av.border, thickness = Tokens.hairline)
 
-// List row (web Row): leading slot, a title of one or two lines, a meta line and trailing content.
+// List row (web Row): leading slot, a title of one or two lines, a meta line, a fixed-width state slot, trailing content and a More menu.
+// The slot is drawn when stateSlot is true, so rows without a state keep the columns aligned. A long press opens the menu unless onLongClick is set.
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ListRow(
     title: CharSequence,
     meta: CharSequence? = null,
     leading: (@Composable () -> Unit)? = null,
+    state: (@Composable RowScope.() -> Unit)? = null,
+    stateSlot: Boolean = state != null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
+    menu: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
     lines: Int = 2,
     metaLines: Int = 1,
     below: (@Composable RowScope.() -> Unit)? = null,
@@ -125,10 +130,12 @@ fun ListRow(
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
-    val click = if (onClick != null || onLongClick != null) Modifier.combinedClickable(onClick = { onClick?.invoke() }, onLongClick = onLongClick) else Modifier
+    val menuOpen = remember { mutableStateOf(false) }
+    val longClick = onLongClick ?: menu?.let { { menuOpen.value = true } }
+    val click = if (onClick != null || longClick != null) Modifier.combinedClickable(onClick = { onClick?.invoke() }, onLongClick = longClick) else Modifier
     Row(
         modifier.fillMaxWidth().background(if (selected) av.accentSoft else Color.Transparent).heightIn(min = if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click)
-            .padding(start = Tokens.listPad, end = if (trailing != null) Tokens.sp4 else Tokens.listPad, top = Tokens.sp5, bottom = Tokens.sp5),
+            .padding(start = Tokens.listPad, end = if (trailing != null || menu != null) Tokens.sp4 else Tokens.listPad, top = Tokens.sp5, bottom = Tokens.sp5),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp8),
     ) {
@@ -142,9 +149,13 @@ fun ListRow(
                 CompositionLocalProvider(LocalContentColor provides av.fgMuted) { below() }
             }
         }
+        if (stateSlot) Row(Modifier.width(Tokens.rowStateW), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            CompositionLocalProvider(LocalContentColor provides av.fgMuted) { state?.invoke(this) }
+        }
         if (trailing != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             CompositionLocalProvider(LocalContentColor provides av.fgMuted) { trailing() }
         }
+        if (menu != null) MoreButton(expanded = menuOpen, content = menu)
     }
 }
 

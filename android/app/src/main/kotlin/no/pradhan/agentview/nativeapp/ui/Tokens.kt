@@ -342,6 +342,7 @@ val LightColors = AvColors(
 object Tokens {
     val listPad = 16.dp
     val rowH = 40.dp
+    val rowStateW = 80.dp
     val hairline = 1.dp
     val sp1 = 2.dp
     val sp2 = 4.dp
