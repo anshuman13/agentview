@@ -7,15 +7,16 @@ import { IconButton } from '../../ui/Button';
 import { Row as ListRow } from '../../ui/Row';
 import { SinceSheet } from './SinceSheet';
 import { roundsSince } from './recap';
+import { clock } from '../../codex/tasks/time';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
 import { FileIcon } from '../../workspace/FileIcon';
-import { SpecCard } from './SpecCard';
+import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
-import { agentBuild, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, relPath, specCards, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
+import { agentBuild, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, relPath, specCards, stepLabel, stepTone, type Item, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { stageName } from '../../../../shared/builds';
@@ -183,7 +184,6 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
   const { shown, start, from, staging, loading, showEarlier } = useRowWindow(items.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const cards = useMemo(() => specCards(items), [items]);
-  const [openRuns, setOpenRuns] = useState(() => new Set<string>());
   const mark = useSeenMark(events);
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
   const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
@@ -192,12 +192,12 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
   const [sinceOpen, setSinceOpen] = useState(false);
   const run = useStore((s) => s.runs.filter((r) => r.chatId === s.session.id && r.state !== 'done').at(-1));
   const fresh = useMemo(() => roundsSince(run?.rounds ?? [], mark.seen), [run, mark.seen]);
-  const folded = useMemo(() => new Set([...runs].filter(([id]) => !openRuns.has(id)).flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs, openRuns]);
+  const folded = useMemo(() => new Set([...runs].flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs]);
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
 
   return (
     <div className="tr-host">
-    {newId && recap && since && <ListRow className="tr-since" lines={2} title={`Since you left: ${recap}`} aria-haspopup="dialog" onClick={() => setSinceOpen(true)} action={<IconButton icon="close" label="Dismiss" size="sm" onClick={() => setSince(false)} />} />}
+    {newId && recap && since && <SinceBox chat={chat} recap={recap} at={fresh.at(-1)?.at} onOpen={() => setSinceOpen(true)} onDismiss={() => setSince(false)} />}
     {sinceOpen && recap && <SinceSheet chat={chat} recap={recap} rounds={fresh} run={run} onClose={() => setSinceOpen(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
@@ -206,7 +206,7 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
       {items.slice(from).map((it, i) => {
         if (i > 0 && folded.has(it.id)) return null;
         const run = runs.get(it.id);
-        if (run && !openRuns.has(it.id)) return <Explored key={it.id} label={exploreLabel(run)} onOpen={() => setOpenRuns(new Set(openRuns).add(it.id))} />;
+        if (run) return <Explored key={it.id} id={it.id} run={run} cwd={cwd} />;
         const row = <Row key={it.id} it={it} cwd={cwd} card={cards.has(it.id)} />;
         const day = days.get(it.id);
         return day || it.id === newId ? <Fragment key={it.id}>{day && <div className="tr-day"><span>{day}</span></div>}{it.id === newId && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
@@ -273,7 +273,7 @@ function RowImpl({ it, cwd, settled, card }: { it: Item; cwd: string; settled?: 
     case 'step':
       return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':
-      return isSpecPath(it.path) && !it.error ? <SpecCard slug={specSlug(it.path)} meta={it.uses[0].name === 'Write' ? 'Spec written' : `Spec edited · +${it.count.add} -${it.count.del}`} /> : <FileCard it={it} cwd={cwd} />;
+      return isSpecPath(it.path) && !it.error ? <SpecCard id={it.id} slug={specSlug(it.path)} path={it.path} meta={it.uses[0].name === 'Write' ? 'Spec written' : `Spec edited · +${it.count.add} -${it.count.del}`} /> : <FileCard it={it} cwd={cwd} />;
     case 'agent':
       return <AgentRow it={it} cwd={cwd} card={card} />;
     case 'blocked':
@@ -289,12 +289,19 @@ function saveReply(text: string, cwd: string) {
   assistantStore().capture(note.text, 'note', note.profile).then(() => notice('Saved to Notes'), () => notice('Could not save the note. Try again.'));
 }
 
-function Explored({ label, onOpen }: { label: string; onOpen: () => void }) {
+export function SinceBox({ chat, recap, at, onOpen, onDismiss }: { chat: string; recap: string; at?: number; onOpen: () => void; onDismiss: () => void }) {
   return (
-    <div className="tr-step tr-act t-read ok" onClick={onOpen}>
-      <span className="tr-mark"><i className="tr-hex" /></span>
-      <span className="tr-text" role="button" tabIndex={0} aria-expanded={false} onKeyDown={clickOnKey}><span className="tr-verb">Explored </span><span className="tr-obj">{label}</span></span>
-    </div>
+    <TranscriptBox id={`since:${chat}`} className="tr-since" defaultOpen title="Since you left" meta={at ? clock(at) : undefined} action={<IconButton icon="close" label="Dismiss" size="sm" onClick={onDismiss} />}>
+      <ListRow className="bd-clamp" title="Recap" meta={recap} aria-haspopup="dialog" onClick={onOpen} />
+    </TranscriptBox>
+  );
+}
+
+export function Explored({ id, run, cwd }: { id: string; run: StepItem[]; cwd: string }) {
+  return (
+    <TranscriptBox id={`explore:${id}`} title={`Explored ${exploreLabel(run)}`}>
+      <div className="tr-explored">{run.map((s) => <Row key={s.id} it={s} cwd={cwd} />)}</div>
+    </TranscriptBox>
   );
 }
 
@@ -361,7 +368,7 @@ function AgentRow({ it, cwd, card }: { it: Extract<Item, { kind: 'agent' }>; cwd
       action={running && canStop ? <IconButton icon="debug-stop" label="Stop agent" size="sm" onClick={() => send({ type: 'stop_task', toolUseId: use.id })} /> : undefined}
       summary={agentSummary(it)}
     >
-      {build && <SpecCard slug={build.slug} meta={`${stageName(build.stage)} · ${build.slug}`} />}
+      {build && <SpecRow slug={build.slug} meta={`${stageName(build.stage)} · ${build.slug}`} />}
       {steps.length > 0 && <div className="tr-sub">{steps.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}</div>}
       {result && !running && <div className="tr-report"><Markdown text={result.text || '(no output)'} id={it.id} /></div>}
     </TranscriptBox>

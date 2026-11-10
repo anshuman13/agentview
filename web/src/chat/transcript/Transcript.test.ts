@@ -1,4 +1,8 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { Explored, SinceBox } from './Transcript';
+import { SpecCard } from './SpecCard';
 import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, specCards, stepLabel, stepTone, newMarker, newReplies, dayDividers } from './steps';
 import { editCount, replyLine, sumEdits } from '../../../../shared/edits';
 import { chatLine } from '../../sessions/folders';
@@ -246,5 +250,18 @@ describe('specCards', () => {
     const events = [user('go'), run('pm:x'), run('review:x'), run('impl:y'), user('next'), run('review:x'), run('look around')];
     const ids = events.filter((e) => e.kind === 'tool_use').map((e) => e.id);
     expect([...specCards(buildTranscript(events))]).toEqual([ids[0], ids[2], ids[3]]);
+  });
+});
+
+describe('collapsible boxes', () => {
+  it('draw one header button with aria-expanded for a spec card, an Explored group and Since you left', () => {
+    const spec = renderToStaticMarkup(createElement(SpecCard, { id: 'f1', slug: 'x', path: '/w/app/.claude/specs/x.md', meta: 'Spec written' }));
+    const explored = renderToStaticMarkup(createElement(Explored, { id: 's1', run: [], cwd }));
+    const since = renderToStaticMarkup(createElement(SinceBox, { chat: 'c1', recap: 'Since you last looked: 1 turn', onOpen: () => {}, onDismiss: () => {} }));
+    for (const html of [spec, explored]) {
+      expect(html.match(/<button/g)).toHaveLength(1);
+      expect(html).toContain('aria-expanded="false"');
+    }
+    expect(since.match(/aria-expanded="true"/g)).toHaveLength(1);
   });
 });

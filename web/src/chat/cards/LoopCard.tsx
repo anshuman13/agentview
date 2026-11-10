@@ -4,11 +4,11 @@ import { showSnack } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
 import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
-import { Panel } from '../../ui/Panel';
 import { TriesBoard } from '../../sessions/TriesBoard';
 import { openGoal } from '../../sessions/goalLogic';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
+import { TranscriptBox } from '../transcript/Box';
 import { money, plural, useTick } from '../../ui/util';
 import { openAgent } from '../../sessions/agents';
 import { usePlanProgress } from '../../sessions/usePlanProgress';
@@ -51,27 +51,33 @@ export function LoopCard() {
   const nowClick = details ? { onClick: details } : run.kind === 'loop' && state.source === 'round' ? { onClick: () => setOpen(!open), 'aria-expanded': open } : { plain: true };
   const dot = working ? 'running' : OUTCOME_DOT[run.rounds.at(-1)?.outcome ?? 'quiet'];
   return (
-    <Panel padding="sm" className="lc">
-      <div className="lc-head">
-        {goal
-          ? <button className="lc-state lc-link" onClick={details}>{runLine(run, phase)}</button>
-          : <span className="lc-state">{runLine(run, phase)}</span>}
-        {run.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
-        {!cycle && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
-        {cycle
-          ? <IconButton icon="debug-stop" label="Stop" size="sm" onClick={stop} />
-          : (
-            <>
-              <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-              {menu && (
-                <Menu trigger={more} onClose={() => setMenu(false)}>
-                  {!paused && <MenuItem onClick={() => { setMenu(false); control('now'); }}>Run now</MenuItem>}
-                  <MenuItem danger onClick={() => { setMenu(false); stop(); }}>Stop</MenuItem>
-                </Menu>
-              )}
-            </>
-          )}
-      </div>
+    <>
+    <TranscriptBox
+      id={`loop:${run.id}`}
+      className="lc"
+      defaultOpen
+      title={runLine(run, phase)}
+      action={(
+        <>
+          {run.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
+          {!cycle && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
+          {cycle
+            ? <IconButton icon="debug-stop" label="Stop" size="sm" onClick={stop} />
+            : (
+              <>
+                <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+                {menu && (
+                  <Menu trigger={more} onClose={() => setMenu(false)}>
+                    {!paused && <MenuItem onClick={() => { setMenu(false); control('now'); }}>Run now</MenuItem>}
+                    <MenuItem danger onClick={() => { setMenu(false); stop(); }}>Stop</MenuItem>
+                  </Menu>
+                )}
+              </>
+            )}
+        </>
+      )}
+    >
+    <div className="lc-body">
       <Row lines={2} leading={<span className={`dot ${dot}`} />} title={state.title} meta={meta || undefined} {...nowClick} />
       {agents.slice(0, MAX_AGENTS).map((a) => <Row key={a.id} leading={<Icon name="hubot" />} title={a.slug ?? a.description} meta={`${a.type} · ${agentAge(a.startedAt, now)}`} state="" onClick={() => openAgent(a.id)} />)}
       {agents.length > MAX_AGENTS && <Row leading={<Icon name="hubot" />} title={plural(agents.length - MAX_AGENTS, 'more agent')} onClick={() => openAgent()} />}
@@ -89,7 +95,9 @@ export function LoopCard() {
           ))}
         </ul>
       )}
-      {board && <TriesBoard runId={run.id} onClose={() => setBoard(false)} />}
-    </Panel>
+    </div>
+    </TranscriptBox>
+    {board && <TriesBoard runId={run.id} onClose={() => setBoard(false)} />}
+    </>
   );
 }

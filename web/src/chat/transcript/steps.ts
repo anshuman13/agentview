@@ -169,7 +169,7 @@ export function createTranscriptBuilder() {
 }
 
 const EXPLORE = new Set(['Read', 'Grep', 'Glob']);
-type StepItem = Extract<Item, { kind: 'step' }>;
+export type StepItem = Extract<Item, { kind: 'step' }>;
 
 // Runs of at least min finished Read, Grep and Glob steps in a row, keyed by the first step's id, so the
 // transcript folds each into one Explored row like Slack's compact message groups (the phone does the same).

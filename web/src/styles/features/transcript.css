@@ -97,7 +97,8 @@
 .tr-box.running > .tr-box-summary { min-height: calc(2em * var(--type-meta-line)); }
 .tr-box > .tr-sub { margin: 0 var(--sp-4) var(--sp-4) var(--list-pad); }
 .tr-box > .tr-report { margin: 0 var(--sp-4) var(--sp-4); }
-.tr-since { flex: none; border-bottom: 1px solid var(--border); }
+.tr-since { flex: none; }
+.tr-explored { display: flex; flex-direction: column; padding: 0 var(--sp-4) var(--sp-3); }
 .ss-time { margin-left: var(--sp-3); font-size: var(--fs-sm); font-weight: normal; color: var(--fg-muted); }
 .tr-new { display: flex; align-items: center; gap: var(--sp-3); color: var(--danger); font-size: var(--fs-xs); font-weight: var(--type-headline-weight); }
 .tr-new::after { content: ''; flex: 1; border-top: 1px solid var(--danger); }
