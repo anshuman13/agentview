@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FEATURE_USE_FILE, clearFeatureUse, featureUseDays, recordFeature, recordRoute } from './featureUse.js';
+import { systemRoutes } from './http/openRoutes.js';
+import type { Ctx, RouteDeps } from './http/routeTypes.js';
 import { loadSettings, saveSettings } from './settings.js';
 
 const setting = (featureUse: boolean) => saveSettings({ ...loadSettings(), featureUse });
@@ -46,5 +48,16 @@ describe('feature use', () => {
     expect(Object.values(days())).toEqual([{ 'page:builds': 1 }]);
     await clearFeatureUse();
     expect(existsSync(FEATURE_USE_FILE)).toBe(false);
+  });
+
+  it('hiding features keeps the known hideable ids once, and leaves featureUse alone', async () => {
+    await setting(true);
+    const post = (body: unknown) => systemRoutes({} as RouteDeps)['POST /api/settings'].run({ body } as Ctx) as Promise<{ hiddenFeatures: string[]; featureUse: boolean }>;
+    const r = await post({ hiddenFeatures: ['page:builds', 'page:builds', 'page:nope', 'page:settings', 'tab:chat'] });
+    expect(r).toMatchObject({ hiddenFeatures: ['page:builds'], featureUse: true });
+    expect(loadSettings().hiddenFeatures).toEqual(['page:builds']);
+    expect(await post({ hiddenFeatures: [] })).toMatchObject({ hiddenFeatures: [], featureUse: true });
+    expect(await post({ hiddenFeatures: 'page:builds' })).toMatchObject({ status: 400 });
+    await saveSettings({ ...loadSettings(), hiddenFeatures: [] });
   });
 });

@@ -14,7 +14,7 @@ import { seenRoute } from '../agent/claude/seen.js';
 import { assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
-import { clearFeatureUse, featureUseDays, recordRoute } from '../featureUse.js';
+import { clearFeatureUse, featureUseDays, hideableIds, recordRoute } from '../featureUse.js';
 import { loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
@@ -109,11 +109,12 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     }, true),
     'ANY /api/mcp/groups': entry(() => mcpGroups()),
     'POST /api/settings': entry(async ({ body }) => {
-      const { defaultProvider, featureUse } = body;
-      if (defaultProvider === undefined && featureUse === undefined) return { status: 400, body: { error: 'defaultProvider or featureUse is required' } };
+      const { defaultProvider, featureUse, hiddenFeatures } = body;
+      if (defaultProvider === undefined && featureUse === undefined && hiddenFeatures === undefined) return { status: 400, body: { error: 'defaultProvider, featureUse or hiddenFeatures is required' } };
       if (defaultProvider !== undefined && !isProvider(defaultProvider)) return { status: 400, body: { error: 'defaultProvider is not a provider' } };
       if (featureUse !== undefined && typeof featureUse !== 'boolean') return { status: 400, body: { error: 'featureUse is not a boolean' } };
-      await saveSettings({ ...loadSettings(), ...(defaultProvider !== undefined && { defaultProvider }), ...(featureUse !== undefined && { featureUse }) });
+      if (hiddenFeatures !== undefined && !(Array.isArray(hiddenFeatures) && hiddenFeatures.every((id) => typeof id === 'string'))) return { status: 400, body: { error: 'hiddenFeatures is not a list of strings' } };
+      await saveSettings({ ...loadSettings(), ...(defaultProvider !== undefined && { defaultProvider }), ...(featureUse !== undefined && { featureUse }), ...(hiddenFeatures !== undefined && { hiddenFeatures: hideableIds(hiddenFeatures) }) });
       if (featureUse === false) await clearFeatureUse();
       return { ...publicSettings(), providers: await providerOptions() };
     }, true),

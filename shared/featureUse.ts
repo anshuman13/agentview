@@ -1,9 +1,9 @@
-export type FeatureKind = 'page' | 'tab' | 'list' | 'palette' | 'sheet' | 'action';
-export type Feature = { id: string; label: string; kind: FeatureKind };
+export type FeatureKind = 'page' | 'tab' | 'list' | 'palette' | 'sheet' | 'more' | 'action';
+export type Feature = { id: string; label: string; kind: FeatureKind; hideable: boolean };
 export type UseDays = Record<string, Record<string, number>>;
 export type UsedFeature = Feature & { n7: number; n30: number; last: string };
 
-const make = (kind: FeatureKind, rows: [string, string][]): Feature[] => rows.map(([id, label]) => ({ id: `${kind}:${id}`, label, kind }));
+const make = (kind: FeatureKind, rows: [string, string][], hideable: (id: string) => boolean = () => false): Feature[] => rows.map(([id, label]) => ({ id: `${kind}:${id}`, label, kind, hideable: hideable(id) }));
 
 const PALETTE = make('palette', [
   ['view:explorer', 'Show Explorer'], ['view:changes', 'Show Source Control'], ['view:github', 'Show Pull Requests'], ['view:chats', 'Show Sessions'], ['view:sessions', 'Show Workspace'], ['view:runs', 'Show Runs'],
@@ -13,18 +13,20 @@ const PALETTE = make('palette', [
   ['forkChat', 'Fork Chat'], ['compact', 'Compact Context'], ['loop', 'Toggle Build Cycle'], ['review', 'Toggle Review Changes'], ['goal', 'New goal'], ['goalFile', 'Run file as goal'], ['spec', 'Start with a spec'], ['stop', 'Stop the Agent'],
   ['theme', 'Toggle Theme'], ['notify', 'Toggle Notifications'], ['shortcuts', 'Keyboard shortcuts'], ['phone', 'Open on Phone'], ['restart', 'Restart Server When Agents Are Idle'],
   ['model', 'Pick a model'], ['effort', 'Pick an effort'], ['mode', 'Pick a permission mode'], ['newChat', 'New chat'], ['open', 'Open a chat, task, meeting or wiki page'],
-]);
+], () => true);
 
 export const FEATURES: Feature[] = [
-  ...make('page', [['observe', 'Observe'], ['deploy', 'Deploy'], ['mcp', 'MCP Servers'], ['builds', 'Builds'], ['sketches', 'Sketches'], ['settings', 'Settings']]),
+  ...make('page', [['observe', 'Observe'], ['deploy', 'Deploy'], ['mcp', 'MCP Servers'], ['builds', 'Builds'], ['sketches', 'Sketches'], ['settings', 'Settings']], (id) => id !== 'settings'),
   ...make('tab', [['codex', 'Codex'], ['chat', 'Chat'], ['sessions', 'Sessions'], ['agents', 'Agents']]),
   ...make('list', [['overview', 'Overview'], ['tasks', 'Tasks'], ['meetings', 'Meetings'], ['jobs', 'Jobs'], ['wiki', 'Wiki']]),
   ...PALETTE,
   ...make('sheet', [['goal', 'Goal sheet'], ['needsYou', 'Needs you'], ['more', 'More']]),
-  ...make('action', [['startGoal', 'Start a goal'], ['approveRun', 'Approve a run'], ['approveSpec', 'Approve a spec phase'], ['runAll', 'Run all spec tasks'], ['startTask', 'Start a spec task']]),
+  ...make('more', [['files', 'Files'], ['browser', 'Browser'], ['terminal', 'Terminal'], ['changes', 'Source Control'], ['github', 'Pull Requests']], () => true),
+  ...make('action', [['startGoal', 'Start a goal'], ['approveRun', 'Approve a run'], ['approveSpec', 'Approve a spec phase'], ['runAll', 'Run all spec tasks'], ['runAsGoal', 'Run a spec as a goal'], ['startTask', 'Start a spec task']], (id) => id === 'runAll' || id === 'runAsGoal'),
 ];
 
 export const FEATURE_IDS = new Set(FEATURES.map((f) => f.id));
+export const HIDEABLE_IDS = new Set(FEATURES.filter((f) => f.hideable).map((f) => f.id));
 const FEATURE_BY_ID = new Map(FEATURES.map((f) => [f.id, f]));
 
 const FAMILY_ALIAS: Record<string, string> = { pin: 'open' };
@@ -36,6 +38,8 @@ export function paletteFeature(commandId: string): string | null {
   const id = FEATURE_IDS.has(family) ? family : `palette:${commandId}`;
   return FEATURE_IDS.has(id) ? id : null;
 }
+
+export const shownFeature = (id: string, hidden: readonly string[]) => !hidden.includes(id);
 
 const DAY_MS = 86_400_000;
 const pad = (n: number) => String(n).padStart(2, '0');
