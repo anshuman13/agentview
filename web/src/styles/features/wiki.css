@@ -218,6 +218,7 @@
 .wk-mode-n { font-size: var(--fs-sm); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 .wk-mode .wk-scroll { padding: var(--sp-6) var(--sp-8); }
 .wk-mode-card { max-width: 720px; margin: 0 auto; padding: var(--sp-8); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.wk-mode-card :is(.wk-old, .wk-src, .wk-claim-foot) { font-size: var(--fs-sm); }
 .wk-mode-text { margin: var(--sp-5) 0 0; font-size: var(--fs-3xl); line-height: var(--lh); color: var(--fg-strong); }
 .wk-mode-acts { display: flex; gap: var(--sp-4); max-width: 720px; width: 100%; margin: 0 auto; padding: var(--sp-5) var(--sp-8) calc(var(--sp-6) + env(safe-area-inset-bottom)); }
 .wk-mode-acts .btn { flex: 1; height: var(--touch); justify-content: center; font-size: var(--fs-lg); }

@@ -71,9 +71,9 @@ export function ReviewMode() {
       </div>
       {fact && (
         <div className="wk-mode-acts">
-          <button className="btn mt-reject" onClick={() => review.reject([fact])}><Icon name="close" small /> Reject</button>
-          <button className="btn" onClick={skip}>Skip</button>
-          <button className="btn primary" onClick={() => review.approve([fact])}><Icon name="check" small /> Approve</button>
+          <Button icon="close" onClick={() => review.reject([fact])}>Reject</Button>
+          <Button icon="arrow-right" onClick={skip}>Skip</Button>
+          <Button variant="filled" icon="check" onClick={() => review.approve([fact])}>Approve</Button>
         </div>
       )}
     </div>
