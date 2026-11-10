@@ -1,27 +1,21 @@
 import { useMemo, useState } from 'react';
-import { getState, send, useStore } from '../app/store';
+import { setUi, useStore } from '../app/store';
 import { useAssistantData } from '../codex/data';
 import { rowKey } from '../codex/data/sync';
 import { jobState } from '../codex/jobs/schedule';
 import { useMinute } from '../codex/tasks/split';
 import { setView } from '../codex/view';
+import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { command, money } from '../ui/util';
 import { billing } from '../../../shared/providers';
 import type { ChatRun } from '../../../shared/protocol';
-import { OUTCOME_DOT, runLine, showTurn } from '../chat/composer/composerLogic';
+import { OUTCOME_DOT, runLine } from '../chat/composer/composerLogic';
+import { openRun } from './goalLogic';
 import { runBands, type RunItem } from './runBands';
 import { TriesBoard } from './TriesBoard';
-
-function openRun(run: ChatRun) {
-  const { live } = getState();
-  const chat = live.find((c) => c.id === run.chatId) ?? live.find((c) => c.sessionId === run.sessionId);
-  send(chat ? { type: 'view', id: chat.id } : { type: 'open_session', sessionId: run.sessionId });
-  const report = run.rounds.at(-1)?.report;
-  if (report) showTurn(report);
-}
 
 function RunRow({ item, onBoard }: { item: RunItem; onBoard: (id: string) => void }) {
   if (item.kind === 'job') {
@@ -37,7 +31,7 @@ function RunRow({ item, onBoard }: { item: RunItem; onBoard: (id: string) => voi
       {last && <> · <span className={`dot ${OUTCOME_DOT[last.outcome]}`} /> {last.report ? 'Weekly report' : last.line || last.outcome}</>}
     </>
   );
-  return <Row title={run.title} meta={meta} trailing={<span className="rn-cost">{money(run.costUsd, billing(run.provider))}</span>} onClick={() => (run.kind === 'tries' ? onBoard(run.id) : openRun(run))} />;
+  return <Row title={run.title} meta={meta} trailing={<span className="rn-cost">{money(run.costUsd, billing(run.provider))}</span>} onClick={() => (run.kind === 'tries' ? onBoard(run.id) : run.kind === 'goal' ? setUi({ goalSheet: { mode: 'detail', run: run.id } }) : openRun(run))} />;
 }
 
 function Band({ label, items, open, onToggle, onBoard }: { label: string; items: RunItem[]; open?: boolean; onToggle?: () => void; onBoard: (id: string) => void }) {
@@ -60,9 +54,12 @@ export function Runs() {
     const jobs = snap.jobs.filter((j) => !j.deleted).map((job) => ({ job, state: jobState(job, snap.runs, now) }));
     return runBands(runs, jobs);
   }, [runs, snap, now]);
-  if (!bands.needs.length && !bands.running.length && !bands.finished.length) return <EmptyState size="sm" icon="sync" title="No runs yet" hint="Loops, goals and scheduled jobs you start show here" />;
+  const start = () => setUi({ goalSheet: { mode: 'start' } });
+  const header = <Section label="Runs" action={<IconButton icon="add" label="New goal" size="sm" onClick={start} />} />;
+  if (!bands.needs.length && !bands.running.length && !bands.finished.length) return <>{header}<EmptyState size="sm" icon="sync" title="No runs yet" hint="Loops, goals and scheduled jobs you start show here" action={<Button size="sm" onClick={start}>New goal</Button>} /></>;
   return (
     <div className="runs">
+      {header}
       <Band label="Needs you" items={bands.needs} onBoard={setBoard} />
       <Band label="Running" items={bands.running} onBoard={setBoard} />
       <Band label="Finished" items={bands.finished.map((run) => ({ kind: 'run', run }))} open={finished} onToggle={() => setFinished(!finished)} onBoard={setBoard} />

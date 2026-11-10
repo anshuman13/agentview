@@ -5,6 +5,7 @@ import type { Parser } from '@lezer/common';
 import { isSpecPath, runAllPrompt, specProgress, specTasks, startTaskPrompt, type SpecTask } from '../../../shared/specTasks';
 import { api, prompt, queueNext, setUi, useStore } from '../app/store';
 import { Button } from '../ui/Button';
+import { Menu, MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
 import { escapeHtml } from '../ui/util';
 import '../styles/features/doc.css';
@@ -171,6 +172,8 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [active, setActive] = useState('');
   const last = useRef(path);
+  const [runMenu, setRunMenu] = useState(false);
+  const runBox = useRef<HTMLSpanElement>(null);
   const running = useStore((s) => s.session.running);
   const tasks = useMemo(() => (isSpecPath(path) ? specTasks(text) : []), [path, text]);
 
@@ -251,7 +254,17 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
 
   return (
     <div className="doc-scroll" ref={scroller}>
-      {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} action={tasks.some((t) => !t.done) && <Button size="sm" variant="plain" onClick={() => sendToChat(runAllPrompt(path))}>Run all</Button>} />}
+      {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} action={tasks.some((t) => !t.done) && (
+        <span className="gl-anchor" ref={runBox}>
+          <Button size="sm" variant="plain" aria-haspopup="menu" aria-expanded={runMenu} onClick={() => setRunMenu(!runMenu)}>Run</Button>
+          {runMenu && (
+            <Menu trigger={runBox} onClose={() => setRunMenu(false)}>
+              <MenuItem onClick={() => { setRunMenu(false); sendToChat(runAllPrompt(path)); }}>Run all in this chat</MenuItem>
+              <MenuItem onClick={() => { setRunMenu(false); setUi({ goalSheet: { mode: 'start', plan: path } }); }}>Run as goal…</MenuItem>
+            </Menu>
+          )}
+        </span>
+      )} />}
       <div className="doc-layout">
         <article className="doc" ref={body} onClick={onClick} />
         {outline.length >= 3 && (

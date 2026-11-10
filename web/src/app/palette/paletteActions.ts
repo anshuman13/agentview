@@ -48,7 +48,7 @@ export function perform(id: string) {
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
   else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });
   else if (id === 'review') send({ type: 'set_review', on: !getState().session.review });
-  else if (id === 'goal') window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: '/goal every 1h ' } }));
+  else if (id === 'goal') setUi({ goalSheet: { mode: 'start' } });
   else if (id === 'spec') {
     send({ type: 'set_permission_mode', mode: 'plan' });
     window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: specPrompt('') } }));

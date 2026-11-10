@@ -21,6 +21,7 @@ export const Brief = lazy(() => withMd(import('../sessions/brief/Brief')).then((
 export const AgentsPane = lazy(() => withMd(import('../sessions/AgentsPane')).then((m) => ({ default: m.AgentsPane })));
 export const FileSwitcher = lazy(() => import('../workspace/FileSwitcher').then((m) => ({ default: m.FileSwitcher })));
 export const Palette = lazy(() => import('./palette/Palette').then((m) => ({ default: m.Palette })));
+export const GoalSheets = lazy(() => import('../sessions/GoalSheets').then((m) => ({ default: m.GoalSheets })));
 export const Shortcuts = lazy(() => import('./shell/Shortcuts').then((m) => ({ default: m.Shortcuts })));
 export const OpenChats = prefetch(() => import('../sessions/OpenChats').then((m) => m.OpenChats));
 export const RepoPicker = lazy(() => import('../sessions/RepoPicker').then((m) => ({ default: m.RepoPicker })));

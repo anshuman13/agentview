@@ -4,6 +4,7 @@
 .lc { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
 .lc-head { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
 .lc-state { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: 600; color: var(--on-surface); }
+.lc-link { padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-sm); font-weight: 600; text-align: left; cursor: pointer; }
 .lc-line { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-xs); line-height: var(--line-xs); color: var(--on-surface-muted); text-align: left; }
 .lc-what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lc-cost, .lc-time { flex: none; font-variant-numeric: tabular-nums; }

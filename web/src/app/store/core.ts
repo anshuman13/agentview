@@ -2,6 +2,8 @@ import { useSyncExternalStore } from 'react';
 import { type AttentionItem, type ChatRun, type LiveChat, type ReviewFindings, type ServerState } from '../../../../shared/protocol';
 import { apiUrl } from '../api';
 
+export type GoalSheetState = { mode: 'start'; plan?: string; here?: boolean } | { mode: 'detail'; run: string };
+
 type UiState = {
   connected: boolean;
   restarting?: boolean;
@@ -12,6 +14,7 @@ type UiState = {
   switcherOpen: boolean;
   repoPicker: boolean;
   beside: string | null;
+  goalSheet?: GoalSheetState | null;
 };
 
 // A side chat column is this app in an iframe; it shows one chat and nothing else.

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { send, useStore } from '../../app/store';
+import { send, setUi, useStore } from '../../app/store';
 import { showSnack } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
 import { IconButton } from '../../ui/Button';
@@ -32,7 +32,9 @@ export function LoopCard() {
   return (
     <Panel padding="sm" className="lc">
       <div className="lc-head">
-        <span className="lc-state">{runLine(run, phase)}</span>
+        {run.kind === 'goal'
+          ? <button className="lc-state lc-link" onClick={() => setUi({ goalSheet: { mode: 'detail', run: run.id } })}>{runLine(run, phase)}</button>
+          : <span className="lc-state">{runLine(run, phase)}</span>}
         {run.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
         {!cycle && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
         <IconButton icon="debug-stop" label="Stop" size="sm" onClick={stop} />

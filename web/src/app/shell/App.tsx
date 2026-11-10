@@ -19,7 +19,7 @@ import { Guard } from './Guard';
 import { deepLink } from '../deepLinks';
 import { loadAppSettings } from '../appSettings';
 import { isPage, PageView, type Page } from '../pages';
-import { Brief, AgentsPane, FileSwitcher, Palette, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
+import { Brief, AgentsPane, FileSwitcher, Palette, GoalSheets, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
 import { Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
 import { useTheme } from '../theme';
@@ -227,6 +227,7 @@ export function App() {
       <Suspense fallback={null}>
         <FileSwitcher />
         <Palette />
+        <GoalSheets />
         <Shortcuts />
       </Suspense>
       {repoPicker && <Suspense fallback={null}><RepoPicker /></Suspense>}

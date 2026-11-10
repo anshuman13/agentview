@@ -1,0 +1,57 @@
+import { getState, send } from '../app/store';
+import type { BadgeSpec } from '../ui/Badge';
+import type { ChatRun } from '../../../shared/protocol';
+import { nextClock } from '../../../shared/util';
+import { showTurn } from '../chat/composer/composerLogic';
+
+const HOUR = 3_600_000;
+
+export const EVERY = [
+  { label: 'Until done', ms: 0 },
+  { label: 'Every 30m', ms: 30 * 60_000 },
+  { label: 'Every 1h', ms: HOUR },
+  { label: 'Every 2h', ms: 2 * HOUR },
+];
+
+export type Stop = { stopIn?: number; stopAt?: string };
+
+export const STOPS: (Stop & { label: string })[] = [
+  { label: 'None' },
+  { label: 'In 1 hour', stopIn: HOUR },
+  { label: 'In 4 hours', stopIn: 4 * HOUR },
+  { label: '07:00', stopAt: '07:00' },
+];
+
+export const CAPS = [{ label: '50', pct: 50 }, { label: '70', pct: 70 }, { label: '90', pct: 90 }, { label: 'Off', pct: null }];
+
+export function stopAtMs({ stopIn, stopAt }: Stop, now: number) {
+  if (stopIn) return now + stopIn;
+  if (!stopAt) return null;
+  const [h, m] = stopAt.split(':').map(Number);
+  return nextClock(h, m, now);
+}
+
+const PLANNED_ENDS = ['goal met', 'end time', 'weekly usage cap', 'ran for 28 days'];
+
+export function goalBadge(run: ChatRun): BadgeSpec {
+  if (run.state === 'done') {
+    if (PLANNED_ENDS.some((w) => run.why.startsWith(w))) return { status: 'done' };
+    return { status: run.why === 'you stopped it' ? 'skipped' : 'failed', reason: run.why };
+  }
+  if (run.needsYou) return { status: 'waiting', label: 'Needs you' };
+  if (run.state === 'paused') return { status: 'waiting', reason: run.why };
+  return { status: 'running' };
+}
+
+export function usageLine(run: ChatRun) {
+  const { week, fiveHour } = run.usage ?? {};
+  const parts = [week && `Week ${week.pct}%${run.capPct ? ` of ${run.capPct}% cap` : ''}`, fiveHour && `5-hour ${fiveHour.pct}%`].filter(Boolean);
+  return parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : 'No cap';
+}
+
+export function openRun(run: ChatRun, report = run.rounds.at(-1)?.report) {
+  const { live } = getState();
+  const chat = live.find((c) => c.id === run.chatId) ?? live.find((c) => c.sessionId === run.sessionId);
+  send(chat ? { type: 'view', id: chat.id } : { type: 'open_session', sessionId: run.sessionId });
+  if (report) showTurn(report);
+}

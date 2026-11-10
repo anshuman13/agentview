@@ -1,4 +1,4 @@
-import { send, useStore } from '../app/store';
+import { send, setUi, useStore } from '../app/store';
 import { goalChoices, type GoalChoice } from './composer/composerLogic';
 import { useChatRun } from '../sessions/runBands';
 import { QuickPick } from '../ui/QuickPick';
@@ -10,6 +10,8 @@ const LOOP_ITEMS = [
   { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
   ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Up to ${n} ${n === 1 ? 'round' : 'rounds'}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
 ];
+
+const CUSTOM = 'custom';
 
 type Props = { pick: Pick; close: () => void };
 
@@ -77,8 +79,12 @@ export function GoalPick({ pick, close, goal, setGoal }: Props & { goal: GoalCho
       anchor={pick.at}
       title="Goal"
       current={goal}
-      items={goalChoices(Date.now()).map((c) => ({ value: c.value, label: c.label, detail: c.detail }))}
+      items={[...goalChoices(Date.now()).map((c) => ({ value: c.value, label: c.label, detail: c.detail })), { value: CUSTOM, label: 'Custom goal…', detail: 'Set how often, when to stop and a usage cap' }]}
       onPick={(v) => {
+        if (v === CUSTOM) {
+          setUi({ goalSheet: { mode: 'start', here: true } });
+          return close();
+        }
         if (v === 'off' && run) send({ type: 'run', run: run.id, op: 'stop' });
         setGoal(v as GoalChoice);
         close();
