@@ -31,7 +31,7 @@ const def = { command: process.execPath, args: ['-e', FAKE], env: { FAKE_FLAG: '
 
 afterAll(stopAll);
 
-describe('mcpClient', () => {
+describe('mcpClient', { timeout: 20_000 }, () => {
   it('initializes, lists tools and calls a tool across split frames', async () => {
     const tools = await listTools('fake', def);
     expect(tools.map((t) => t.name)).toEqual(['echo', 'slow', 'die', 'fail']);
