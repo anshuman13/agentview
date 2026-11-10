@@ -58,7 +58,7 @@ export function agentOptions(o: {
     includeHookEvents: true,
     enableFileCheckpointing: true,
     allowedTools: TOOLS.map((t) => `mcp__agentview__${t.name}`),
-    disallowedTools: ['mcp__playwright', ...(o.unattended ? ['Bash(git push:*)', 'Bash(gh:*)'] : []), ...(o.openrouter && Object.values(o.openrouter.models).some((m) => !m.startsWith('anthropic/')) ? ['WebSearch'] : [])],
+    disallowedTools: ['mcp__playwright', ...(o.unattended ? ['Bash(git push:*)', 'Bash(gh:*)', ...o.unattended.denyRead.map((d) => `Read(/${d}/**)`)] : []), ...(o.openrouter && Object.values(o.openrouter.models).some((m) => !m.startsWith('anthropic/')) ? ['WebSearch'] : [])],
     extraArgs: o.unattended ? {} : { chrome: null },
     ...(o.unattended && { sandbox: sandboxOf(o.unattended) }),
     permissionMode: 'auto',

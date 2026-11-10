@@ -165,6 +165,11 @@ describe('agentOptions unattended', () => {
     expect(build().disallowedTools).not.toContain('Bash(gh:*)');
   });
 
+  it('denies Read of the credential folders only for an unattended chat', () => {
+    expect(build(rules).disallowedTools).toEqual(expect.arrayContaining([`Read(/${path.join(os.homedir(), '.ssh')}/**)`, 'Read(//home/x/.claude-alt/**)']));
+    expect(build().disallowedTools?.some((t) => t.startsWith('Read('))).toBe(false);
+  });
+
   it('holds the sandbox, with no Chrome, only for an unattended chat', () => {
     const o = build(rules);
     expect(o.sandbox).toMatchObject({
