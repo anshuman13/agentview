@@ -69,7 +69,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
         <div className="ui-group">
           {run.rounds.slice().reverse().map((r) => (
             <Row
-              key={r.n}
+              key={r.at}
               plain={!r.report}
               leading={<span className={`dot ${OUTCOME_DOT[r.outcome]}`} />}
               title={r.report ? 'Weekly report' : r.line || r.outcome}
