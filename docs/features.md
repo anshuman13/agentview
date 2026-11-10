@@ -187,6 +187,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Editing the next steps sends the new plan at Claude's next tool call, without stopping it
 - The composer shows "No update for Ns" when nothing has arrived from the server for 30 s. The link reopens by
   itself after 50 s of silence, and a message that cannot be delivered goes back into the box with a notice
+- A subagent shows in the timeline as a collapsible box: a chevron, its description, a meta line (type, duration once it ended, step count), one Badge (Running, Done, Failed or Skipped) and a summary under the header, clamped to 2 lines. While it runs the summary is the SDK's one-line progress, refreshed about every 30 s, until the first one the last step; once it ends it is the first line of the report. A running agent has a Stop button in the header. Boxes start collapsed; the body shows the steps and the report on the web, the last 3 steps and a Steps and report row that opens the Agents pane on the phone, and the build spec card of a build agent. Whether a box is open is kept per device for the 300 boxes saved last. Summaries are on for Claude chats only (not Codex or OpenRouter), and each costs a small cached fork of the agent every 30 s
 - Questions, plan approvals and permissions show as buttons in the timeline
 - A plan approval card splits the plan into paragraphs; tapping one stages a comment on it. Keep planning with comments
   sends one message that quotes each commented paragraph (first 80 characters, as `> ...`) followed by its comment, and
