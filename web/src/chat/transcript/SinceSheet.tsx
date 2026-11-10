@@ -16,16 +16,11 @@ export function SinceSheet({ chat, recap, rounds, run, onClose }: { chat: string
   const [, redraw] = useState(0);
   const shown = foldedRounds(rounds, unfolded.has(chat));
   const goal = run?.kind === 'goal';
-  const label = (
-    <>
-      Since you left
-      {outcomeCounts(rounds).map((c) => <span key={c.outcome} className="badge quiet">{c.n} {c.outcome === 'quiet' ? 'nothing' : c.outcome}</span>)}
-      {rounds.length > 0 && <span className="ss-time">{clock(rounds[0].at)}</span>}
-    </>
-  );
+  const label = <>Since you left{rounds.length > 0 && <span className="ss-time">{clock(rounds[0].at)}</span>}</>;
+  const counts = outcomeCounts(rounds).map((c) => `${c.n} ${c.outcome === 'quiet' ? 'nothing' : c.outcome}`);
   return (
     <Sheet label="Since you left" onClose={onClose} className="ss-sheet">
-      <Section label={label} action={goal && <Button size="sm" variant="plain" onClick={() => { onClose(); openGoal(run.id); }}>Open goal</Button>} />
+      <Section label={label} count={counts.length ? counts : undefined} action={goal && <Button size="sm" variant="plain" onClick={() => { onClose(); openGoal(run.id); }}>Open goal</Button>} />
       <div className="ui-group">
         <Row plain lines={2} title={recap} className="ss-recap" />
       </div>

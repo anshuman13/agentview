@@ -5,7 +5,7 @@ export const sectionCount = (n: number) => n || undefined;
 
 export function Section({ label, count, action, open, onToggle }: {
   label: ReactNode;
-  count?: number | string;
+  count?: number | string | string[];
   action?: ReactNode;
   open?: boolean;
   onToggle?: () => void;
@@ -14,7 +14,7 @@ export function Section({ label, count, action, open, onToggle }: {
     <>
       {onToggle && <Icon name="chevron-right" small />}
       <span className="ui-section-label">{label}</span>
-      {count != null && <span className="badge quiet">{count}</span>}
+      {count != null && [count].flat().map((c) => <span key={c} className="badge quiet">{c}</span>)}
     </>
   );
   return (
