@@ -20,7 +20,7 @@ sealed interface Item {
     @Immutable data class System(override val id: String, val text: String, val error: Boolean = false) : Item
     @Immutable data class Step(override val id: String, val use: ChatEvent, val result: ChatEvent?) : Item
     @Immutable data class File(override val id: String, val path: String, val add: Int, val del: Int, val uses: List<ChatEvent>, val error: String?, val denied: Boolean) : Item
-    @Immutable data class Agent(override val id: String, val use: ChatEvent, val result: ChatEvent?, val running: Boolean, val steps: List<Item>) : Item
+    @Immutable data class Agent(override val id: String, val use: ChatEvent, val result: ChatEvent?, val running: Boolean, val progress: String?, val steps: List<Item>) : Item
     @Immutable data class Blocked(override val id: String, val ev: ChatEvent) : Item
     @Immutable data class Review(override val id: String, val ev: ChatEvent) : Item
 }
@@ -137,16 +137,18 @@ fun buildTranscript(events: List<ChatEvent>): List<Item> {
     val results = HashMap<String, ChatEvent>()
     val children = HashMap<String, MutableList<ChatEvent>>()
     val resumed = HashMap<String, Long>()
+    val progress = HashMap<String, String>()
     for (e in events) {
+        if (e.kind == "agent") progress[e.toolUseId] = e.progress.orEmpty()
         if (e.kind == "tool_result") results[e.toolUseId] = e
         if (e.kind == "tool_use" && e.agent != null) resumed[e.agent] = e.at
         val parent = if (e.kind == "tool_use" || e.kind == "tool_result" || e.kind == "assistant") e.parent else null
         if (parent != null) children.getOrPut(parent) { mutableListOf() }.add(e)
     }
-    return itemsFrom(events.filter { it.parent == null }, results, children, resumed)
+    return itemsFrom(events.filter { it.parent == null }, results, children, resumed, progress)
 }
 
-private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, children: Map<String, List<ChatEvent>>, resumed: Map<String, Long>): List<Item> {
+private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, children: Map<String, List<ChatEvent>>, resumed: Map<String, Long>, progress: Map<String, String>): List<Item> {
     val items = mutableListOf<Item>()
     for (e in events) {
         when {
@@ -163,7 +165,7 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
                 val path = e.input.s("file_path")
                 if (e.name in AGENT_TOOLS) {
                     val running = result == null || (resumed[e.id] ?: 0) > result.at
-                    items += Item.Agent(e.id, e, result, running, itemsFrom(children[e.id] ?: emptyList(), results, children, resumed))
+                    items += Item.Agent(e.id, e, result, running, progress[e.id]?.ifEmpty { null }, itemsFrom(children[e.id] ?: emptyList(), results, children, resumed, progress))
                 } else if (count == null || path.isEmpty()) {
                     items += Item.Step(e.id, e, result)
                 } else {

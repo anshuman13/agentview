@@ -75,6 +75,15 @@ class StepsTest {
     }
 
     @Test
+    fun takesTheLatestAgentProgress() {
+        val agent = use("ag", "Agent", obj("description" to "Look"))
+        val info = { progress: String? -> ChatEvent("ag:agent", "agent", toolUseId = "ag", progress = progress) }
+        assertNull((buildTranscript(listOf(agent)).single() as Item.Agent).progress)
+        assertEquals("Reading", (buildTranscript(listOf(agent, info("Reading"))).single() as Item.Agent).progress)
+        assertEquals("Writing", (buildTranscript(listOf(agent, info("Writing"))).single() as Item.Agent).progress)
+    }
+
+    @Test
     fun editCountsFollowTheWeb() {
         assertEquals(3 to 0, editCount("Write", obj("content" to "a\nb\nc")))
         assertEquals(1 to 1, editCount("Edit", obj("old_string" to "a", "new_string" to "b")))
