@@ -192,7 +192,9 @@ export function setMcpGroup(service: string, group: string): Promise<McpGroups> 
 
 // claude.ai connector status per Claude account, from `claude mcp list`, so the page knows every account without a chat on each.
 type Connector = { name: string; status: string };
-let connectorCache: { at: number; value: Promise<Record<string, Connector[]>> } | null = null;
+type Connectors = Record<string, Connector[]>;
+let connectorCache: { at: number; value: Connectors } | null = null;
+let connectorLoad: Promise<Connectors> | null = null;
 
 function listConnectors(account: Account): Promise<Connector[]> {
   const env = { ...process.env };
@@ -211,13 +213,19 @@ function listConnectors(account: Account): Promise<Connector[]> {
   });
 }
 
-export function connectorStatus(refresh = false) {
-  if (!connectorCache || refresh || Date.now() - connectorCache.at > 5 * 60_000) {
-    const accounts = loggedInAccounts();
-    const value = Promise.all(accounts.map(listConnectors)).then((lists) => Object.fromEntries(accounts.map((a, i) => [a, lists[i]])));
-    connectorCache = { at: Date.now(), value };
-    // A failed listing is not kept, so the next load tries again.
-    value.catch(() => connectorCache?.value === value && (connectorCache = null));
-  }
+// One listing runs at a time and is shared by every caller. A failed listing is not kept, so the next load tries again.
+function loadConnectors() {
+  if (connectorLoad) return connectorLoad;
+  const accounts = loggedInAccounts();
+  const load = (connectorLoad = Promise.all(accounts.map(listConnectors)).then((lists) => Object.fromEntries(accounts.map((a, i) => [a, lists[i]]))));
+  const done = () => { connectorLoad = null; };
+  load.then((value) => { connectorCache = { at: Date.now(), value }; done(); }, done);
+  return load;
+}
+
+// An expired listing is returned at once and refreshed in the background; the first call and refresh wait.
+export async function connectorStatus(refresh = false) {
+  if (!connectorCache || refresh) return loadConnectors();
+  if (Date.now() - connectorCache.at > 5 * 60_000) loadConnectors().catch(() => undefined);
   return connectorCache.value;
 }

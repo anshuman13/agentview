@@ -94,6 +94,14 @@ describe('build routes', () => {
     expect((await listBuilds(worktree)).find((b) => b.slug === 'red-lamp')?.conclusion).toBe(`Merged as ${commit.slice(0, 7)}`);
   });
 
+  it('keeps a build merged and sees a later build merge as the default branch moves', async () => {
+    const builds = async () => (await listBuilds(repo)).map((b) => [b.slug, b.conclusion]);
+    const before = await builds();
+    expect(await builds()).toEqual(before);
+    sh(repo, 'commit', '-q', '--allow-empty', '-m', 'Unrelated');
+    expect(await builds()).toEqual(before);
+  });
+
   it('gives the slug as the title and no spec when the spec file is missing, and 404 for a bad slug', async () => {
     const one = await buildOne(repo, 'red-lamp');
     expect(one).toMatchObject({ title: 'red-lamp', phases: [], commit: { files: [{ path: 'feat.txt' }] } });

@@ -43,7 +43,19 @@ const detectKind = async (cwd: string) => {
   return inner === 'docs' || inner === 'other' ? kind : inner;
 };
 
-export async function listRepos(): Promise<Repo[]> {
+const REPOS_TTL = 10_000;
+let reposMemo: { at: number; value: Promise<Repo[]> } | null = null;
+
+// One listing is shared by calls within 10 s, and by calls that arrive while it runs. A failed one is not kept.
+export function listRepos(): Promise<Repo[]> {
+  if (reposMemo && Date.now() - reposMemo.at < REPOS_TTL) return reposMemo.value;
+  const value = scanRepos();
+  const memo = (reposMemo = { at: Date.now(), value });
+  value.catch(() => reposMemo === memo && (reposMemo = null));
+  return value;
+}
+
+async function scanRepos(): Promise<Repo[]> {
   const paseo = (await paseoProjects().catch(() => [])).map((p) => p.path);
   const dirs = await Promise.all(ROOTS.map(async (root) => (await readdir(root, { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory() && !d.name.startsWith('.')).map((d) => path.join(root, d.name))));
   const repos = await Promise.all(
@@ -67,6 +79,7 @@ export async function createFolder(root: string, name: string) {
   const dir = path.join(base, name);
   await mkdir(dir).catch((err) => { throw new Error(err.code === 'EEXIST' ? `${name} already exists` : err.message); });
   await git(dir, 'init', '-b', 'main');
+  reposMemo = null;
   return dir;
 }
 

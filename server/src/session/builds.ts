@@ -139,12 +139,25 @@ const names = async (dir: string, keep: (f: Dirent) => string | null) => (await 
 
 const lastCommit = (entries: BuildEntry[]) => entries.filter((e) => e.stage === 'implement').at(-1)?.commit;
 
+const mergedCache = new Map<string, { tip: string; done: Map<string, boolean> }>();
+
 // The default branch holds a commit with this subject made after the build's commit: the build was cherry-picked or merged.
-async function merged(repo: string, commit: BuildCommit | undefined) {
-  if (!commit) return false;
+// Answers are kept per repo while the default branch stays at the same commit, so a new commit on it drops them.
+async function mergedIn(repo: string) {
   const base = (await defaultBase(repo)).replace(/^origin\//, '');
-  const log = await git(repo, ['log', base, '--fixed-strings', `--grep=${commit.subject}`, '--format=%ct%x09%s']).catch(() => '');
-  return log.split('\n').some((l) => Number(l.split('\t')[0]) * 1000 > commit.date && l.split('\t').slice(1).join('\t') === commit.subject);
+  const tip = await git(repo, ['rev-parse', base]).catch(() => '');
+  let cache = mergedCache.get(repo);
+  if (!cache || cache.tip !== tip) mergedCache.set(repo, (cache = { tip, done: new Map() }));
+  const { done } = cache;
+  return async (commit: BuildCommit | undefined) => {
+    if (!commit) return false;
+    const known = done.get(commit.sha);
+    if (known !== undefined) return known;
+    const log = await git(repo, ['log', base, '--fixed-strings', `--grep=${commit.subject}`, '--format=%ct%x09%s']).catch(() => '');
+    const result = log.split('\n').some((l) => Number(l.split('\t')[0]) * 1000 > commit.date && l.split('\t').slice(1).join('\t') === commit.subject);
+    if (tip) done.set(commit.sha, result);
+    return result;
+  };
 }
 
 export async function listBuilds(cwd: string) {
@@ -155,9 +168,10 @@ export async function listBuilds(cwd: string) {
     names(path.join(repo, '.claude', 'specs'), (f) => (f.name.endsWith('.md') ? f.name.slice(0, -3) : null)),
     names(path.join(repo, '.kiro', 'specs'), (f) => (f.isDirectory() ? f.name : null)),
   ]);
+  const isMerged = await mergedIn(repo);
   const builds = await Promise.all([...new Set([...recorded, ...claude, ...kiro])].filter(slugValid).map(async (slug) => {
     const [entries, reviews, spec] = await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]);
-    const done = await merged(repo, lastCommit(entries));
+    const done = await isMerged(lastCommit(entries));
     return {
       slug, title: spec?.title ?? slug, ...(entries.length ? buildSummary(entries, done) : DRAFT), pipeline: pipelineOf(entries, done, reviews), draft: !entries.length,
       hold: isHeld(reviews), codeReview: reviewDecision(reviews, 'code') ?? null,
@@ -172,7 +186,7 @@ export async function buildOne(cwd: string, slug: string) {
   const [entries, reviews, spec] = repo && slugValid(slug) ? await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]) : [[], [], null];
   if (!repo || (!entries.length && !spec)) return { status: 404, body: { error: 'No such build' } };
   const commit = lastCommit(entries);
-  const done = await merged(repo, commit);
+  const done = await (await mergedIn(repo))(commit);
   const [numstat, diff] = commit ? await Promise.all([git(repo, ['show', '--numstat', '--format=', commit.sha]), git(repo, ['show', '--format=', commit.sha])]).catch(() => ['', '']) : ['', ''];
   return {
     slug,
