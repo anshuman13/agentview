@@ -121,11 +121,11 @@ type Spec = { title: string; phases: BuildPhase[]; mtime: number; file: string; 
 async function loadSpec(repo: string, slug: string): Promise<Spec | null> {
   const file = path.join(repo, '.claude', 'specs', `${slug}.md`);
   const text = await readFile(file, 'utf8').catch(() => null);
-  if (text !== null) return { title: titleOf(text, slug), phases: splitPhases(text), mtime: (await stat(file)).mtimeMs, file, kiro: false };
+  if (text !== null) return { title: titleOf(text, slug), phases: splitPhases(text), mtime: Math.round((await stat(file)).mtimeMs), file, kiro: false };
   const parts = await Promise.all(REVIEW_PHASES.map(async (key) => {
     const f = path.join(repo, '.kiro', 'specs', slug, `${key}.md`);
     const [body, st] = await Promise.all([readFile(f, 'utf8').catch(() => null), stat(f).catch(() => null)]);
-    return { key, file: f, body, mtime: st?.mtimeMs ?? 0 };
+    return { key, file: f, body, mtime: Math.round(st?.mtimeMs ?? 0) };
   }));
   const first = parts.find((p) => p.body !== null);
   if (!first) return null;
