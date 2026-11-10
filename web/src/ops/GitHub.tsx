@@ -15,7 +15,7 @@ import { ago, askChat, pressable, useSlot } from '../ui/util';
 import { Skeleton } from '../ui/Skeleton';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
-import { IconButton } from '../ui/Button';
+import { Button, IconButton } from '../ui/Button';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 import { providerLabel } from '../../../shared/providers';
@@ -38,7 +38,7 @@ function PrRow({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
       {...pressable(onOpen)}
       leading={<CheckIcon state={pr.checks} />}
       title={pr.title}
-      meta={`#${pr.number} · ${pr.author} · ${pr.branch} · ${ago(pr.updatedAt)}`}
+      meta={`#${pr.number} · ${pr.author} · ${pr.branch}${pr.autoMerge ? ' · Auto-merge' : ''} · ${ago(pr.updatedAt)}`}
       trailing={
         <>
           {chat && <IconButton icon="comment" label="Open chat" size="sm" title={`Open the chat that created this pull request: ${chat.title}`} onClick={(e) => { e.stopPropagation(); send({ type: 'view', id: chat.id }); }} />}
@@ -129,10 +129,11 @@ function Review({ r }: { r: PullRequestDetail['reviews'][number] }) {
 
 type Act = (label: string, path: string, body: object) => Promise<boolean>;
 
-function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean; act: Act; confirm: (c: ConfirmRequest) => void }) {
+const mergeWord = (method: string) => (method === 'merge' ? 'merge commit' : method);
+
+function ActionBar({ pr, busy, act, confirm, method, setMethod }: { pr: PullRequest; busy: boolean; act: Act; confirm: (c: ConfirmRequest) => void; method: string; setMethod: (m: string) => void }) {
   const [text, setText] = useState('');
   const label = useStore((s) => providerLabel(s.session.provider));
-  const [method, setMethod] = useState('squash');
   const needsText = !text.trim();
   const review = async (event: string) => (await act(event, 'review', { event, body: text })) && setText('');
   const approve = () => confirm({ title: `Approve #${pr.number}?`, detail: pr.title, action: 'Approve', icon: 'check', run: () => review('approve') });
@@ -140,7 +141,7 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
     confirm({
       title: `Merge #${pr.number}?`,
       detail: pr.title,
-      warning: `Merges ${pr.branch} (${method === 'merge' ? 'merge commit' : method}).`,
+      warning: `Merges ${pr.branch} (${mergeWord(method)}).`,
       action: 'Merge',
       icon: 'git-merge',
       run: () => act('merge', 'merge', { method }),
@@ -177,6 +178,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
+  const [method, setMethod] = useState('squash');
   const diffs = useMemo(() => splitDiff(d?.diff ?? ''), [d?.diff]);
 
   const fetchDetail = () => call<PullRequestDetail>(`/api/gh/pr/${pr.number}`).then(setD, (e) => setError(errText(e)));
@@ -197,6 +199,20 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
     }
   };
 
+  const armed = pr.autoMerge;
+  const autoMerge = (on: boolean) => act('automerge', 'automerge', { on, method });
+  const toggleAutoMerge = () =>
+    armed && !armed.error
+      ? autoMerge(false)
+      : setAsk({
+          title: `Merge #${pr.number} when its checks pass?`,
+          detail: pr.title,
+          warning: `Merges ${pr.branch} (${mergeWord(method)}) once every check on the latest commit passes.`,
+          action: 'Turn on',
+          icon: 'git-merge',
+          run: () => autoMerge(true),
+        });
+
   return (
     <div className="gh-detail">
       <div className="gh-bar">
@@ -214,6 +230,12 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
             title={pr.title}
             meta={`${pr.author} · ${pr.branch} · ${ago(pr.updatedAt)}`}
             trailing={<><Counts a={pr.additions} d={pr.deletions} />{pr.draft ? <span className="chip outline pill sm">Draft</span> : <StateChip state={pr.review} />}</>}
+          />
+          <Row
+            plain
+            title="Merge when checks pass"
+            meta={!armed ? 'Off' : armed.error ? `Merge failed · ${armed.error}` : armed.note}
+            trailing={<Button size="sm" variant="plain" disabled={!!busy} onClick={toggleAutoMerge}>{armed && !armed.error ? 'Turn off' : 'Turn on'}</Button>}
           />
         </div>
         {busy && <div className="muted small gh-pad" role="status"><Icon name="loading" small spin /> Running {busy.replace('_', ' ')}…</div>}
@@ -251,7 +273,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
           </>
         )}
       </div>
-      <ActionBar pr={pr} busy={!!busy} act={act} confirm={setAsk} />
+      <ActionBar pr={pr} busy={!!busy} act={act} confirm={setAsk} method={method} setMethod={setMethod} />
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>
   );
