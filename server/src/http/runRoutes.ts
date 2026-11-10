@@ -11,6 +11,7 @@ const failed = (status: number, error: string) => ({ status, body: { error } });
 // Review of a finished coding job: the diff, and the routes that push its branch, send it back or throw it away. Only approve pushes.
 export function runRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   const working = new Set<string>();
+  const chatWorking = (run: ChatRun) => Boolean(d.chats().get(run.chatId)?.running);
 
   const onRun = (fn: (run: ChatRun, ctx: Ctx) => unknown, pending = true, body = false) =>
     entry<Ctx>(async (ctx) => {
@@ -29,8 +30,12 @@ export function runRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     }, body);
 
   return {
-    'GET /api/runs/diff': onRun(async (run) => ({ branch: run.branch, ...(await reviewDiff(await runWorktree(run))) }), false),
+    'GET /api/runs/diff': onRun(async (run) => {
+      const { cwd, env } = await runWorktree(run);
+      return { branch: run.branch, ...(await reviewDiff(cwd, env)) };
+    }, false),
     'POST /api/runs/approve': onRun(async (run) => {
+      if (chatWorking(run)) return failed(409, 'The chat is working');
       const url = await approveRun(run);
       await d.host.req({ op: 'run_end', id: run.id, why: 'PR opened', pr: url });
       return { url };
@@ -43,12 +48,13 @@ export function runRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     }, true, true),
     'POST /api/runs/discard': onRun(async (run) => {
       if (run.state === 'done') return failed(409, 'The run is over');
+      if (chatWorking(run)) return failed(409, 'The chat is working');
       await runWorktree(run);
+      await removeRunWorktree(run);
       await d.host.req({ op: 'run_end', id: run.id, why: 'Discarded' });
       const open = d.bySession(run.sessionId);
       if (open) await d.closeByUser(open);
       if (run.sessionId) await removeChat(run.sessionId, false, true);
-      await removeRunWorktree(run);
       return { ok: true };
     }, false),
   };

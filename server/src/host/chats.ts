@@ -135,7 +135,8 @@ export async function reviewJob(chat: AgentSession, id: string, failed: boolean)
   const run = runs.get(id);
   if (!run) return;
   try {
-    if (await hasWork(await runWorktree(run))) return runs.update(id, { state: 'paused', why: READY, review: 'pending' });
+    const { cwd, env } = await runWorktree(run);
+    if (await hasWork(cwd, env)) return runs.update(id, { state: 'paused', why: READY, review: 'pending' });
     if (failed) return runs.end(id, 'Failed');
     // The run ends first, since closing the chat would end it as closed.
     runs.end(id, 'No changes');
@@ -151,6 +152,7 @@ export async function reviewJob(chat: AgentSession, id: string, failed: boolean)
 export function endRun(id: string, why: string, pr?: string) {
   const run = runs.get(id);
   if (run?.kind !== 'job' || run.state === 'done') throw new Error('The run is not open');
+  if (pr && run.review !== 'pending') throw new Error('The run is not waiting for review');
   runs.update(id, { review: undefined, ...(pr && { pr }) });
   runs.end(id, why);
 }

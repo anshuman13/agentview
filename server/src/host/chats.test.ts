@@ -20,7 +20,7 @@ import { ClaudeDriver } from '../agent/claude/driver.js';
 import { removeChat } from '../agent/claude/pins.js';
 import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
 import { jobRepo } from '../workspace/testRepo.js';
-import { createChat, jobChat, reviewJob } from './chats.js';
+import { createChat, endRun, jobChat, reviewJob } from './chats.js';
 import { live } from './state.js';
 
 const unattended = (chat: { driver: unknown }) => (chat.driver as { unattended: boolean }).unattended;
@@ -66,6 +66,15 @@ describe('reviewJob', () => {
     expect(removeChat).toHaveBeenCalledWith('s1', false, true);
     expect(live.has(chat.id)).toBe(false);
     expect(existsSync(fx.dir)).toBe(false);
+    rmSync(fx.root, { recursive: true, force: true });
+  });
+
+  it('ends a run with a PR only while it waits for review', async () => {
+    const { fx, id } = await jobRun();
+    expect(() => endRun(id, 'PR opened', 'https://example.test/pr/1')).toThrow('not waiting for review');
+    mocks.runs.update(id, { review: 'pending' });
+    endRun(id, 'PR opened', 'https://example.test/pr/1');
+    expect(mocks.runs.get(id)).toMatchObject({ state: 'done', pr: 'https://example.test/pr/1' });
     rmSync(fx.root, { recursive: true, force: true });
   });
 

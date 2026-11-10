@@ -1,9 +1,10 @@
-import { existsSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatRun } from '../../../shared/protocol.js';
 
-const mocks = vi.hoisted(() => ({ calls: [] as string[][], gh: vi.fn(), remote: { head: '' }, removeChat: vi.fn() }));
+const mocks = vi.hoisted(() => ({ calls: [] as string[][], envs: [] as Array<Record<string, string> | undefined>, gh: vi.fn(), remote: { head: '' }, removeChat: vi.fn() }));
 
 // git runs for real in temp repos, except push and ls-remote; gh never runs.
 vi.mock('node:child_process', async (orig) => {
@@ -13,6 +14,7 @@ vi.mock('node:child_process', async (orig) => {
   const execFile = Object.assign((...a: unknown[]) => (real.execFile as (...a: unknown[]) => unknown)(...a), {
     [promisify.custom]: async (cmd: string, args: string[], opts: unknown) => {
       mocks.calls.push([cmd, ...args]);
+      mocks.envs.push((opts as { env?: Record<string, string> }).env);
       if (cmd === 'gh') return mocks.gh(args);
       if (args.includes('push')) return { stdout: '' };
       if (args.includes('ls-remote')) return { stdout: mocks.remote.head ? `${mocks.remote.head}\trefs/heads/x\n` : '' };
@@ -35,17 +37,23 @@ let fixture: ReturnType<typeof jobRepo>;
 let run: ChatRun;
 let req: ReturnType<typeof vi.fn>;
 let routes: ReturnType<typeof runRoutes>;
+let working = false;
+let worktreeGoneAtEnd: boolean | undefined;
 
 beforeEach(() => {
   mocks.calls.length = 0;
+  mocks.envs.length = 0;
   mocks.remote.head = '';
   vi.clearAllMocks();
   fixture = jobRepo();
   run = fixture.run;
+  working = false;
+  worktreeGoneAtEnd = undefined;
   req = vi.fn(async (r: { op: string; why?: string; pr?: string }) => {
+    worktreeGoneAtEnd = !existsSync(fixture.dir);
     if (r.op === 'run_end') Object.assign(run, { state: 'done', review: undefined, why: r.why, pr: r.pr });
   });
-  routes = runRoutes({ runs: () => [run], host: { req }, bySession: () => undefined, closeByUser: vi.fn() } as unknown as RouteDeps);
+  routes = runRoutes({ runs: () => [run], chats: () => new Map([['c1', { running: working }]]), host: { req }, bySession: () => undefined, closeByUser: vi.fn() } as unknown as RouteDeps);
 });
 afterEach(() => rmSync(fixture.root, { recursive: true, force: true }));
 
@@ -72,6 +80,8 @@ describe('git safety', () => {
     await call('GET /api/runs/diff');
     await approve();
     expect(gitCalls().length).toBeGreaterThan(5);
+    const gitdir = sh(fixture.dir, 'rev-parse', '--absolute-git-dir').trim();
+    for (const [i, c] of mocks.calls.entries()) if (c[0] === 'git') expect(mocks.envs[i]).toMatchObject({ GIT_DIR: gitdir, GIT_WORK_TREE: fixture.dir });
     for (const c of gitCalls()) expect(c.slice(1, 5)).toEqual(['-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false']);
   });
 });
@@ -90,6 +100,28 @@ describe('diff', () => {
     expect([sh(fixture.dir, 'ls-files', '-s'), sh(fixture.dir, 'status', '--porcelain')]).toEqual(before);
     expect((await call('GET /api/runs/diff', 'nope')).status).toBe(404);
   });
+
+  it('skips a pipe instead of hanging on it', async () => {
+    execFileSync('mkfifo', [path.join(fixture.dir, 'pipe')]);
+    writeFileSync(path.join(fixture.dir, 'u.txt'), 'u\n');
+    const r = await call('GET /api/runs/diff');
+    expect((r.body as { files: { path: string }[] }).files.map((f) => f.path)).toEqual(['u.txt']);
+  });
+});
+
+describe('nested repositories', () => {
+  it('never runs a nested repo filter, and approve refuses the worktree', async () => {
+    const nested = path.join(fixture.dir, 'nested');
+    execFileSync('git', ['init', '-q', nested]);
+    const marker = path.join(fixture.root, 'marker');
+    sh(nested, 'config', 'filter.evil.clean', `touch ${marker}; cat`);
+    writeFileSync(path.join(nested, '.gitattributes'), '* filter=evil\n');
+    writeFileSync(path.join(nested, 'f.txt'), 'x\n');
+    await call('GET /api/runs/diff');
+    expect(await approve()).toEqual({ status: 409, body: { error: 'The worktree holds a nested repository' } });
+    expect(existsSync(marker)).toBe(false);
+    expect(calling('commit')).toEqual([]);
+  });
 });
 
 describe('approve', () => {
@@ -102,10 +134,16 @@ describe('approve', () => {
     expect(calling('commit')[0]).toContain('--no-verify');
     const push = calling('push');
     expect(push).toHaveLength(1);
-    expect(push[0].slice(5)).toEqual(['push', '-u', 'origin', `refs/heads/${fixture.branch}`]);
+    expect(push[0].slice(7)).toEqual(['push', '-u', 'origin', `refs/heads/${fixture.branch}`]);
     expect(mocks.gh.mock.calls[1][0]).toEqual(expect.arrayContaining(['pr', 'create', '--body', 'Opened from the scheduled job Fix the test.']));
     expect(req).toHaveBeenCalledWith({ op: 'run_end', id: 'r1', why: 'PR opened', pr: 'https://example.test/pr/1' });
     expect((await approve()).status).toBe(409);
+  });
+
+  it('answers 409 while the chat is working', async () => {
+    working = true;
+    for (const route of ['POST /api/runs/approve', 'POST /api/runs/discard']) expect(await call(route)).toEqual({ status: 409, body: { error: 'The chat is working' } });
+    expect(gitCalls()).toEqual([]);
   });
 
   it('stays pending when gh fails, and the retry neither commits nor pushes again and finds the PR', async () => {
@@ -130,6 +168,7 @@ describe('revise and discard', () => {
   it('removes the worktree and branch, archives the chat, and a repeat gets 409', async () => {
     expect(await call('POST /api/runs/discard')).toEqual({ status: 200, body: { ok: true } });
     expect(req).toHaveBeenCalledWith({ op: 'run_end', id: 'r1', why: 'Discarded' });
+    expect(worktreeGoneAtEnd).toBe(true);
     expect(mocks.removeChat).toHaveBeenCalledWith('s1', false, true);
     expect(existsSync(fixture.dir)).toBe(false);
     expect(sh(fixture.repo, 'branch', '--list', fixture.branch)).toBe('');

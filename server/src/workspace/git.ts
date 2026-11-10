@@ -1,15 +1,16 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { safeResolve } from './files.js';
 import type { GitFile, GitStatus } from '../../../shared/protocol.js';
 
 const exec = promisify(execFile);
 
-export async function git(cwd: string, args: string[], ok = [0]) {
+export async function git(cwd: string, args: string[], ok = [0], env?: Record<string, string>) {
   try {
     // Long enough for a signing prompt or a slow hook, short enough that a request never hangs for good.
-    return (await exec('git', args, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 300_000 })).stdout;
+    return (await exec('git', args, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 300_000, ...(env && { env: { ...process.env, ...env } }) })).stdout;
   } catch (err) {
     const e = err as { code?: number; stdout?: string; stderr?: string; message: string };
     if (ok.includes(e.code ?? -1)) return e.stdout ?? '';
@@ -18,8 +19,8 @@ export async function git(cwd: string, args: string[], ok = [0]) {
 }
 
 // For a folder an agent wrote in: no hooks and no fsmonitor command from its config.
-const SAFE_GIT = ['-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false'];
-export const safeGit = (cwd: string, args: string[], ok?: number[]) => git(cwd, [...SAFE_GIT, ...args], ok);
+const SAFE_GIT = ['-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false', '-c', 'diff.ignoreSubmodules=all'];
+export const safeGit = (cwd: string, args: string[], ok?: number[], env?: Record<string, string>) => git(cwd, [...SAFE_GIT, ...args], ok, env);
 
 const KIND: Record<string, GitFile['status']> = { M: 'M', T: 'M', A: 'A', C: 'A', D: 'D', R: 'R' };
 
@@ -93,7 +94,7 @@ export function parseNumstat(out: string): BranchFile[] {
 export const MAX_BRANCH_DIFF = 2_000_000;
 
 // The default branch as a remote ref, origin/main when the repo has no origin/HEAD.
-export const defaultBase = async (cwd: string) => (await safeGit(cwd, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).catch(() => 'origin/main')).trim();
+export const defaultBase = async (cwd: string, env?: Record<string, string>) => (await safeGit(cwd, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], undefined, env).catch(() => 'origin/main')).trim();
 
 // What this branch committed since it left the default branch, for review before a PR.
 async function branchDiff(cwd: string) {
@@ -105,28 +106,34 @@ async function branchDiff(cwd: string) {
   return { base: name, files: parseNumstat(numstat), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff };
 }
 
-const mergeBase = async (cwd: string, base: string) => (await safeGit(cwd, ['merge-base', base, 'HEAD']).catch(() => '')).trim();
+const mergeBase = async (cwd: string, base: string, env?: Record<string, string>) => (await safeGit(cwd, ['merge-base', base, 'HEAD'], undefined, env).catch(() => '')).trim();
 const PLAIN_DIFF = ['--no-ext-diff', '--no-textconv'];
 const MAX_LOOSE = 200;
 
 // Whether a run's branch holds anything to review: files not committed, or commits past the default branch. Without a merge base it counts as work.
-export async function hasWork(cwd: string) {
-  if ((await safeGit(cwd, ['status', '--porcelain'])).trim()) return true;
-  const since = await mergeBase(cwd, await defaultBase(cwd));
-  return !since || Number(await safeGit(cwd, ['rev-list', '--count', `${since}..HEAD`])) > 0;
+export async function hasWork(cwd: string, env?: Record<string, string>) {
+  if ((await safeGit(cwd, ['status', '--porcelain', '--ignore-submodules=all'], undefined, env)).trim()) return true;
+  const since = await mergeBase(cwd, await defaultBase(cwd, env), env);
+  return !since || Number(await safeGit(cwd, ['rev-list', '--count', `${since}..HEAD`], undefined, env)) > 0;
 }
 
 // Commits and uncommitted changes against the merge base, with untracked files read through --no-index so nothing is staged.
-export async function reviewDiff(cwd: string) {
-  const base = await defaultBase(cwd);
-  const since = (await mergeBase(cwd, base)) || 'HEAD';
-  const loose = (await safeGit(cwd, ['ls-files', '-z', '--others', '--exclude-standard'])).split('\0').filter(Boolean).slice(0, MAX_LOOSE);
-  const files = parseNumstat(await safeGit(cwd, ['diff', '--numstat', ...PLAIN_DIFF, since]));
-  let diff = await safeGit(cwd, ['diff', ...PLAIN_DIFF, since]);
-  for (const p of loose) {
+export async function reviewDiff(cwd: string, env?: Record<string, string>) {
+  const base = await defaultBase(cwd, env);
+  const since = (await mergeBase(cwd, base, env)) || 'HEAD';
+  const listed = (await safeGit(cwd, ['ls-files', '-z', '--others', '--exclude-standard'], undefined, env)).split('\0').filter(Boolean);
+  // A pipe or socket would block the diff, and a nested repo is not a file.
+  const loose: string[] = [];
+  for (const p of listed) {
+    const st = await lstat(path.join(cwd, p)).catch(() => null);
+    if (st && (st.isFile() || st.isSymbolicLink())) loose.push(p);
+  }
+  const files = parseNumstat(await safeGit(cwd, ['diff', '--numstat', ...PLAIN_DIFF, since], undefined, env));
+  let diff = await safeGit(cwd, ['diff', ...PLAIN_DIFF, since], undefined, env);
+  for (const p of loose.slice(0, MAX_LOOSE)) {
     const added = ['diff', '--no-index', ...PLAIN_DIFF];
-    files.push(...parseNumstat(await safeGit(cwd, [...added, '--numstat', '--', '/dev/null', p], [1])));
-    diff += await safeGit(cwd, [...added, '--', '/dev/null', p], [1]);
+    files.push(...parseNumstat(await safeGit(cwd, [...added, '--numstat', '--', '/dev/null', p], [1], env)));
+    diff += await safeGit(cwd, [...added, '--', '/dev/null', p], [1], env);
   }
   return {
     base: base.replace(/^origin\//, ''),
