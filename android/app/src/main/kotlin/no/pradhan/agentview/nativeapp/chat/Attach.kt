@@ -54,8 +54,23 @@ private fun readUri(ctx: Context, uri: Uri) = ctx.contentResolver.openInputStrea
 // The add button with Take photo and Choose photo, or with choose off a camera button; each image is uploaded to the Mac and its path handed to onPath.
 @Composable
 fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, onPath: (String) -> Unit) {
-    val ctx = LocalContext.current
     var open by remember { mutableStateOf(false) }
+    val attach = rememberAttach(hub, onUploading, onPath)
+    if (!choose) return IconBtn("device-camera", "Take photo", attach.takePhoto)
+    Box {
+        IconBtn("add", "Attach image", { open = true })
+        Menu(open, { open = false }) {
+            MenuItem("Take photo", "device-camera", { open = false; attach.takePhoto() })
+            MenuItem("Choose photo", "file-media", { open = false; attach.choosePhoto() })
+        }
+    }
+}
+
+class Attach(val takePhoto: () -> Unit, val choosePhoto: () -> Unit)
+
+@Composable
+fun rememberAttach(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Unit): Attach {
+    val ctx = LocalContext.current
     val shot = remember { File(File(ctx.cacheDir, "camera").apply { mkdirs() }, "shot.jpg") }
 
     // In the Hub's scope, so leaving the screen mid-upload neither cancels it nor leaves the count stuck.
@@ -88,15 +103,5 @@ fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, o
         Unit
     }
 
-    if (!choose) return IconBtn("device-camera", "Take photo", takePhoto)
-    Box {
-        IconBtn("add", "Attach image", { open = true })
-        Menu(open, { open = false }) {
-            MenuItem("Take photo", "device-camera", { open = false; takePhoto() })
-            MenuItem("Choose photo", "file-media", {
-                open = false
-                picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            })
-        }
-    }
+    return Attach(takePhoto) { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 }

@@ -7,7 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -18,8 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -29,14 +34,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import no.pradhan.agentview.nativeapp.app.BarEvent
+import no.pradhan.agentview.nativeapp.app.BarState
+import no.pradhan.agentview.nativeapp.app.barHidden
+import no.pradhan.agentview.nativeapp.app.barState
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.net.ChatRun
@@ -60,12 +72,10 @@ import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
-import no.pradhan.agentview.nativeapp.ui.Chip
-import no.pradhan.agentview.nativeapp.ui.ChipTone
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
-import no.pradhan.agentview.nativeapp.ui.RowLabel
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.Tokens
@@ -76,7 +86,7 @@ import no.pradhan.agentview.nativeapp.ui.well
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
-private enum class Picker { Settings, Effort, Account }
+private enum class Picker { Add, Settings, Effort, Account }
 
 private class ComposerState(val hub: Hub, val chatId: String) {
     var text by mutableStateOf(hub.draft(chatId).let { TextFieldValue(it, TextRange(it.length)) })
@@ -98,27 +108,41 @@ private class ComposerState(val hub: Hub, val chatId: String) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean, run: ChatRun?) {
     val s = remember(chatId) { ComposerState(hub, chatId) }
     val dictation = remember(chatId) { Dictation() }
     var sheet by remember { mutableStateOf<Picker?>(null) }
     var uploading by remember { mutableIntStateOf(0) }
+    var multiline by remember(chatId) { mutableStateOf(false) }
     val trigger = commandTrigger(s.text.text, s.text.selection.end)
     val suggestions = rememberSuggestions(s, trigger, session)
+    val attach = rememberAttach(hub, { uploading += it }) { path -> val t = appendWord(s.text.text, "[Image: $path] "); s.set(TextFieldValue(t, TextRange(t.length))) }
+    var bar by remember(chatId) { mutableStateOf(barState(BarState(), if (s.text.text.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled)) }
+    val imeVisible = WindowInsets.isImeVisible
+    LaunchedEffect(imeVisible) { bar = barState(bar, if (imeVisible) BarEvent.KeyboardUp else BarEvent.KeyboardDown) }
+    LaunchedEffect(s.text.text.isEmpty()) { bar = barState(bar, if (s.text.text.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled) }
+    LaunchedEffect(bar) { hub.composing.value = barHidden(bar) }
+    DisposableEffect(chatId) { onDispose { hub.composing.value = false } }
     val c = av
-    val card = RoundedCornerShape(Tokens.radius)
-    Column(Modifier.fillMaxWidth().background(c.bg).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+    val shape = RoundedCornerShape(if (multiline) Tokens.radius else Tokens.radiusPill)
+    Column(Modifier.fillMaxWidth().background(c.bg).padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp4, bottom = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
         if (suggestions.isNotEmpty()) SuggestionList(suggestions) { sg ->
             val r = acceptSuggestion(s.text.text, trigger!!.start, s.text.selection.end, sg.insert)
             s.set(TextFieldValue(r.first, TextRange(r.second)))
         }
-        Column(Modifier.fillMaxWidth().clip(card).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), card)) {
-            ComposerInput(s, composerPlaceholder(providerLabel(session?.provider), s.goalOn, waiting, session?.compacting == true, running))
-            ComposerToolbar(hub, s, session, running, uploading, { uploading += it }, dictation) { sheet = Picker.Settings }
+        Row(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape), verticalAlignment = Alignment.Bottom) {
+            if (uploading > 0) Box(Modifier.size(Tokens.touch).semantics { contentDescription = "Uploading" }, contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = c.accent, strokeWidth = Tokens.sp1) }
+            else IconBtn("add", "Add", { sheet = Picker.Add })
+            ComposerInput(
+                s, composerPlaceholder(providerLabel(session?.provider), s.goalOn, waiting, session?.compacting == true, running),
+                Modifier.weight(1f).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
+            )
+            ComposerActions(hub, s, running, uploading, dictation)
         }
     }
-    ComposerSheets(hub, s, session, run, sheet) { sheet = it }
+    ComposerSheets(hub, s, session, run, sheet, attach) { sheet = it }
 }
 
 private fun composerPlaceholder(label: String, goalOn: Boolean, waiting: Boolean, compacting: Boolean, running: Boolean) = when {
@@ -156,19 +180,20 @@ private fun SuggestionList(suggestions: List<Suggestion>, onPick: (Suggestion) -
 }
 
 @Composable
-private fun ComposerInput(s: ComposerState, placeholder: String) {
+private fun ComposerInput(s: ComposerState, placeholder: String, modifier: Modifier, onMultiline: (Boolean) -> Unit) {
     val c = av
     BasicTextField(
         value = s.text,
         onValueChange = { s.set(it) },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4),
+        modifier = modifier.padding(vertical = Tokens.sp2),
         textStyle = Type.body.copy(color = c.fg),
         cursorBrush = SolidColor(c.accent),
         maxLines = 6,
+        onTextLayout = { onMultiline(it.lineCount > 1) },
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         decorationBox = { inner ->
-            Box(Modifier.heightIn(min = Tokens.sp20)) {
-                if (s.text.text.isEmpty()) WordClamp(androidx.compose.ui.text.AnnotatedString(placeholder), Type.body, c.fgMuted, 2)
+            Box(Modifier.heightIn(min = Tokens.touch - Tokens.sp4), contentAlignment = Alignment.CenterStart) {
+                if (s.text.text.isEmpty()) WordClamp(androidx.compose.ui.text.AnnotatedString(placeholder), Type.body, c.fgMuted, 1)
                 inner()
             }
         },
@@ -176,38 +201,48 @@ private fun ComposerInput(s: ComposerState, placeholder: String) {
 }
 
 @Composable
-private fun ComposerToolbar(hub: Hub, s: ComposerState, session: SessionInfo?, running: Boolean, uploading: Int, onUploading: (Int) -> Unit, dictation: Dictation, onSettings: () -> Unit) {
+private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, uploading: Int, dictation: Dictation) {
     val c = av
     val text = s.text
     val typed = text.text.isNotBlank()
-    val pct = contextPercent(session?.context, session?.contextWindow)
-    Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-        AttachButton(hub, onUploading) { path -> val t = appendWord(text.text, "[Image: $path] "); s.set(TextFieldValue(t, TextRange(t.length))) }
-        Row(Modifier.weight(1f)) {
-            if (!(running && typed)) {
-                val account = session?.account ?: "main"
-                val high = usageHigh(session?.usage)
-                Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default", session?.provider) + (if (s.goalOn) " · ${goalInfo(s.goal, System.currentTimeMillis()).chip}" else ""), onSettings, Modifier.weight(1f, fill = false), warn = high, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, icon = if (high) "warning" else if (s.goalOn) "sync" else null)
-            }
-        }
-        if (uploading > 0) RowLabel("Uploading…", c.fgMuted)
-        if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgMuted)
-        VoiceButton({ spoken, final -> dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> s.set(TextFieldValue(t, TextRange(caret))) } }, { hub.notice.value = it })
-        if (running && typed) Button("Stop and send", { s.submit(true, uploading) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        val canSend = typed && uploading == 0
-        val haptic = LocalHapticFeedback.current
-        if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp6).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
-        else SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); s.submit(false, uploading) }) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.sunken else c.fgFaint) }
-    }
+    var dictating by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    if (!typed || dictating) VoiceButton({ spoken, final -> dictating = !final; dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> s.set(TextFieldValue(t, TextRange(caret))) } }, { hub.notice.value = it })
+    if (running && typed) Button("Stop and send", { s.submit(true, uploading) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+    val canSend = typed && uploading == 0
+    if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp6).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
+    else if (typed && !dictating) SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); s.submit(false, uploading) }) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.sunken else c.fgFaint) }
 }
 
 @Composable
-private fun ComposerSheets(hub: Hub, s: ComposerState, session: SessionInfo?, run: ChatRun?, sheet: Picker?, onSheet: (Picker?) -> Unit) {
+private fun ComposerSheets(hub: Hub, s: ComposerState, session: SessionInfo?, run: ChatRun?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
     when (sheet) {
+        Picker.Add -> AddSheet(s, session, attach, onSheet)
         Picker.Settings -> ChatSettingsSheet(hub, s, session, run, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
         null -> {}
+    }
+}
+
+@Composable
+private fun AddSheet(s: ComposerState, session: SessionInfo?, attach: Attach, onSheet: (Picker?) -> Unit) {
+    val c = av
+    val pct = contextPercent(session?.context, session?.contextWindow)
+    val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = c.fgMuted) } }
+    val settings = settingsLabel(modelName(session), session?.permissionMode ?: "default", session?.provider) + (if (s.goalOn) " · ${goalInfo(s.goal, System.currentTimeMillis()).chip}" else "")
+    Sheet({ onSheet(null) }, "Add", padded = false, full = false) {
+        Group {
+            ListRow("Photo", leading = icon("file-media"), onClick = { onSheet(null); attach.choosePhoto() })
+            Hairline(lead = true)
+            ListRow("Take photo", leading = icon("device-camera"), onClick = { onSheet(null); attach.takePhoto() })
+            Hairline(lead = true)
+            ListRow("Chat settings", settings, leading = icon("settings-gear"), onClick = { onSheet(Picker.Settings) }, trailing = { Chevron() })
+            if (pct != null && pct >= 50) {
+                Hairline(lead = true)
+                ListRow("$pct% context", leading = icon("pulse"))
+            }
+        }
     }
 }
 
