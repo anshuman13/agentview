@@ -1,4 +1,4 @@
-import { clock, span } from './util';
+import { clock, span } from './util.js';
 
 // What the start sheet collects: every in ms (0 for until done), the stop as ms from now or as HH:MM, the weekly cap in percent.
 export type GoalForm = { what: string; every: number; stopIn: number | null; stopAt: string | null; capPct: number | null };

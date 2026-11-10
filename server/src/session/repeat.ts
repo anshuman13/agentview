@@ -53,10 +53,11 @@ export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usa
 // What the usage numbers say about a goal with a cap: end it at the weekly cap, skip a round while the 5-hour window is nearly full.
 export function usageGate(r: Repeat, usage: PlanUsage | null, now = Date.now()): { note: string; why: string } | { skipUntil: number | null } | null {
   if (!r.capPct || !usage) return null;
-  const week = usage.week?.pct ?? 0;
+  // A window whose reset has passed holds a stale number.
+  const pct = (w: PlanUsage['week']) => (w && !(w.resetsAt !== null && w.resetsAt <= now) ? w.pct : 0);
+  const week = pct(usage.week);
   if (week >= r.capPct) return { note: `Goal stopped: weekly usage at ${week}%, cap ${r.capPct}%`, why: 'weekly usage cap' };
-  const five = usage.fiveHour;
-  if (five && five.pct > FIVE_HOUR_LIMIT) return { skipUntil: five.resetsAt && five.resetsAt > now ? five.resetsAt : null };
+  if (pct(usage.fiveHour) > FIVE_HOUR_LIMIT) return { skipUntil: usage.fiveHour!.resetsAt };
   return null;
 }
 

@@ -100,7 +100,7 @@ describe('usageGate', () => {
 
   it('skips while the 5-hour window is over 90%', () => {
     expect(usageGate(r(70), usage(10, 91, now + 1000), now)).toEqual({ skipUntil: now + 1000 });
-    expect(usageGate(r(70), usage(10, 91, now - 1000), now)).toEqual({ skipUntil: null });
+    expect(usageGate(r(70), usage(10, 91, now - 1000), now)).toBeNull();
     expect(usageGate(r(70), usage(10, 90))).toBeNull();
   });
 });
