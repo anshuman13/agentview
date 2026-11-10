@@ -37,6 +37,15 @@ describe('Runs needsYou', () => {
     expect(runs.get(id)?.needsYou).toBe(false);
   });
 
+  it('is set while a job run waits for review', () => {
+    const runs = new Runs();
+    const id = runs.start(init);
+    runs.update(id, { state: 'paused', why: 'Ready for review', review: 'pending' });
+    expect(runs.get(id)?.needsYou).toBe(true);
+    runs.update(id, { state: 'running', review: undefined });
+    expect(runs.get(id)?.needsYou).toBe(false);
+  });
+
   it('is set while paused for approval, then falls back to the last round', () => {
     const runs = new Runs();
     const id = runs.start(init);

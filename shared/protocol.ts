@@ -181,6 +181,8 @@ export type ChatRun = {
   repo?: string;
   worktree?: string;
   paseo?: boolean;
+  review?: 'pending';
+  pr?: string;
 };
 
 export type McpProp = { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown; title?: string; maxLength?: number };

@@ -4,6 +4,7 @@ import { roundOf } from '../../../shared/edits.js';
 import type { ChatRun, Round, RoundOutcome } from '../../../shared/protocol.js';
 
 export const WAITING = 'waiting for your approval';
+export const READY = 'Ready for review';
 
 const KEEP_ENDED = 100;
 const KEEP_ROUNDS = 50;
@@ -28,7 +29,7 @@ const allReported = (run: ChatRun) => openTries(run).every((t) => run.rounds.som
 
 // A blocked or question round, or a pause for approval, until a later round or a message from the user.
 const mark = (r: ChatRun) => {
-  r.needsYou = r.state !== 'done' && (Boolean(r.asked) || (r.state === 'paused' && r.why === WAITING));
+  r.needsYou = r.state !== 'done' && (Boolean(r.asked) || r.review === 'pending' || (r.state === 'paused' && r.why === WAITING));
 };
 
 // All runs of the host. Active ones and the latest ended ones are saved to file, each with its last rounds.
@@ -72,7 +73,7 @@ export class Runs {
     return run.id;
   }
 
-  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'usage'>>) {
+  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'usage' | 'review' | 'pr'>>) {
     const run = this.get(id);
     if (!run || run.state === 'done') return;
     Object.assign(run, patch);
