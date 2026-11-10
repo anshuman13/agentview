@@ -195,7 +195,7 @@ const two = (n: number) => String(n).padStart(2, '0');
 async function appendNote(file: string, r: BuildReview) {
   const text = await readFile(file, 'utf8');
   const d = new Date(r.at);
-  const lead = /^## review notes\s*$/im.test(text) ? (text.endsWith('\n') ? '' : '\n') : '\n## Review notes\n';
+  const lead = sectionsOf(text).some((s) => s.heading === NOTES) ? (text.endsWith('\n') ? '' : '\n') : '\n## Review notes\n';
   const when = `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
   await appendFile(file, `${lead}- ${when} ${r.phase[0].toUpperCase()}${r.phase.slice(1)}: ${r.decision === 'approve' ? 'Approved' : 'Changes requested'}${r.note && `: ${r.note}`}\n`);
 }
