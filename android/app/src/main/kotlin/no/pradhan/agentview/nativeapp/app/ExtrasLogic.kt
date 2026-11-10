@@ -45,6 +45,13 @@ fun waitingSnapshot(live: List<LiveChat>): WaitingSnapshot {
     return WaitingSnapshot(waiting.size, waiting.take(WAITING_MAX).map { WaitingLine(it.id, it.title.ifBlank { "Untitled" }, repoName(it)) })
 }
 
+data class RunningNote(val chatId: String, val title: String, val text: String, val since: Long, val pending: Boolean, val permissionId: String = "")
+
+// The ongoing notification per running chat; a chat counts from the first list that showed it running.
+fun runningNotes(live: List<LiveChat>, was: Map<String, Long>, now: Long): List<RunningNote> = live.filter { it.running }.map {
+    RunningNote(it.id, it.title.ifBlank { "Untitled" }, it.status.takeIf { s -> s != "Idle" }.orEmpty().ifBlank { "Working" }, was[it.id] ?: now, it.pending > 0)
+}
+
 fun WaitingLine.text() = if (repo.isEmpty()) title else "$title · $repo"
 
 const val sessionsLink = "agentview://open?view=sessions"

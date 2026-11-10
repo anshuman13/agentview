@@ -8,6 +8,12 @@ import org.junit.Test
 class ExtrasLogicTest {
     private fun chat(id: String, running: Boolean = false, pending: Int = 0, provider: String? = null) = LiveChat(id = id, title = "Fix tests", cwd = "/Users/me/agentview/", running = running, pending = pending, provider = provider)
 
+    @Test fun runningNotesKeepRunningChatsAndTheirStart() {
+        val live = listOf(chat("a", running = true), chat("b"), chat("c", running = true, pending = 1).copy(status = "Idle"))
+        val notes = runningNotes(live, mapOf("a" to 5L), 100L)
+        assertEquals(listOf(RunningNote("a", "Fix tests", "Working", 5L, false), RunningNote("c", "Fix tests", "Working", 100L, true)), notes)
+    }
+
     @Test fun skipsTheChatOnScreen() {
         assertEquals(emptyList<Notice>(), notices(listOf(chat("a")), listOf(chat("a", pending = 1)), "a"))
     }
