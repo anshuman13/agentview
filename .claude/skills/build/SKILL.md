@@ -5,7 +5,7 @@ description: Build one or more AgentView features through the pm -> spec-reviewe
 
 # /build
 
-Runs `.claude/workflows/build.js`: for each feature brief, `pm` writes `.claude/specs/<slug>.md`, `spec-reviewer` approves or sends it back (3 rounds), `implementer` builds it in a worktree on `anshuman/build/<slug>`, `tester` checks every acceptance criterion and sends failures back (3 rounds). Features run through the pipeline in parallel.
+Runs `.claude/workflows/build.js`: for each feature brief, `pm` writes `.claude/specs/<slug>.md`, `spec-reviewer` approves or sends it back (3 rounds; in round 1 `spec-reader`, a cold reader with no repo, and `zoom-out`, a scope and reuse check, read it too), `implementer` builds it in a worktree on `anshuman/build/<slug>`, `tester` checks every acceptance criterion and sends failures back (3 rounds). Features run through the pipeline in parallel.
 
 ## Before launching
 
