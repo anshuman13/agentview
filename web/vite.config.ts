@@ -64,7 +64,7 @@ export default defineConfig({
   base: './',
   define: { __APP_SHA__: JSON.stringify(buildSha()) },
   plugins: [react(), reloadOnlyOnChange()],
-  build: { rollupOptions: { output: { experimentalMinChunkSize: 20_000 } } },
+  build: { rollupOptions: { output: { experimentalMinChunkSize: 0 } } },
   server: {
     port: 5173,
     strictPort: true,
