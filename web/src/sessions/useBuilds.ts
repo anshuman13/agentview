@@ -15,7 +15,7 @@ function usePolled<T>(load: () => Promise<T>, shown: boolean, running: (data: T)
   useEffect(() => { if (shown) void reload(); }, [shown, chat, reload]);
   useEffect(() => {
     if (!shown || !polling) return;
-    const t = setInterval(reload, POLL_MS);
+    const t = setInterval(() => !document.hidden && reload(), POLL_MS);
     return () => clearInterval(t);
   }, [shown, polling, reload]);
   return { data, failed, reload };

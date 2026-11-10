@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { setUi, useStore } from '../app/store';
+import { Back } from '../app/touch/back';
 import { Markdown } from '../chat/Chat';
 import { Badge } from '../ui/Badge';
 import { Button, IconButton } from '../ui/Button';
@@ -27,6 +28,7 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
   const diffs = useMemo(() => splitDiff(d?.commit?.diff ?? ''), [d?.commit?.diff]);
   const head = (
     <div className="bd-head">
+      <Back close={onBack} />
       <IconButton icon="arrow-left" label="Back" onClick={onBack} />
       <h2 className="bd-title">{d?.title ?? slug}</h2>
     </div>
@@ -90,7 +92,7 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
           <Section label={stageTitle(report)} />
           <div className="bd-doc">{report.report.trim() ? <Markdown text={report.report} /> : <EmptyState size="sm" title="No report yet" />}</div>
           <div className="gl-actions">
-            <Button size="sm" onClick={() => { openChat({ chatId: report.chat, sessionId: report.session }); setReport(null); }}>Open chat</Button>
+            <Button size="sm" onClick={() => { openChat({ chatId: report.chat, sessionId: report.session }); window.dispatchEvent(new Event('agentview:chat')); setReport(null); }}>Open chat</Button>
           </div>
         </Sheet>
       )}

@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useStore } from '../app/store';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
@@ -33,8 +34,10 @@ export function BuildList({ builds, onOpen }: { builds: BuildRow[]; onOpen: (slu
 }
 
 export function Builds({ shown }: { shown: boolean }) {
-  const { data, failed, reload } = useBuilds(shown);
   const [open, setOpen] = useState<string | null>(null);
+  const { data, failed, reload } = useBuilds(shown && !open);
+  const chat = useStore((s) => s.session.id);
+  useEffect(() => setOpen(null), [chat]);
   const scroll = useRef<HTMLDivElement>(null);
   const listAt = useRef(0);
   useLayoutEffect(() => {

@@ -100,6 +100,11 @@ export function App() {
     window.addEventListener('agentview:terminal', show);
     return () => window.removeEventListener('agentview:terminal', show);
   }, []);
+  useEffect(() => {
+    const show = () => setTab((t) => (narrow() ? 'chat' : t));
+    window.addEventListener('agentview:chat', show);
+    return () => window.removeEventListener('agentview:chat', show);
+  }, []);
 
   useEffect(() => { connect(); }, []);
   useEffect(() => void loadAppSettings(), []);
