@@ -5,7 +5,7 @@ import { Sheet } from '../../ui/Sheet';
 import { NeedsYou, type useNeedsYou } from '../NeedsYou';
 import { ReplyQueue, staleAsks } from './ReplyQueue';
 
-// Needs you total, then Tasks, Asks and Replies in a bottom sheet; "asks older than 3 days" narrows the queue to those asks.
+// Needs you total, then Tasks, Asks and Replies in a bottom sheet, a centred dialog from 901px; "asks older than 3 days" narrows the queue to those asks.
 export function NeedsYouSheet({ needs, queue, now, onClose }: { needs: ReturnType<typeof useNeedsYou>; queue: ItemRow[]; now: number; onClose: () => void }) {
   const [onlyStale, setOnlyStale] = useState(false);
   const old = staleAsks(queue, now);
@@ -16,7 +16,7 @@ export function NeedsYouSheet({ needs, queue, now, onClose }: { needs: ReturnTyp
     requestAnimationFrame(() => document.getElementById('reply-queue')?.scrollIntoView({ block: 'start' }));
   };
   return (
-    <Sheet label="Needs you" onClose={onClose}>
+    <Sheet label="Needs you" onClose={onClose} className="as-dialog">
       <Section label="Needs you" count={sectionCount(needs.rows.length + queue.length)} />
       <NeedsYou n={needs} now={now} onShowOld={showOld} />
       <ReplyQueue rows={filtered ? old : queue} filtered={filtered} onClear={() => setOnlyStale(false)} />

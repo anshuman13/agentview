@@ -5,6 +5,11 @@
   .as-sheet-overlay { padding-bottom: var(--kb-inset, 0px); }
   .as-page .wk-scroll { padding-bottom: var(--kb-inset, 0px); }
 }
+@media (min-width: 901px) {
+  .as-sheet-overlay:has(> .as-sheet.as-dialog) { justify-content: center; align-items: center; }
+  .as-sheet.as-dialog { width: min(600px, calc(100% - 2 * var(--sp-8))); max-height: 80%; padding-top: var(--sp-8); border-radius: var(--radius-sheet); }
+  .as-sheet.as-dialog .sheet-handle { display: none; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .as-sheet-overlay { animation: as-sheet-fade var(--dur) var(--ease); }
   .as-sheet { animation: as-sheet-up 200ms ease-out; }
