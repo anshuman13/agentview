@@ -5,6 +5,7 @@
 .lc-body { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; padding: 0 var(--sp-4) var(--sp-3); }
 .lc-line { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-xs); line-height: var(--line-xs); color: var(--on-surface-muted); text-align: left; }
 .lc-what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-what.lc-wrap { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; white-space: normal; }
 .lc-cost, .lc-time { flex: none; font-variant-numeric: tabular-nums; }
 .lc-last { cursor: pointer; }
 .lc-rounds { display: flex; flex-direction: column; gap: var(--sp-1); margin: var(--sp-2) 0 0; padding: 0; list-style: none; }
