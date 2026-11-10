@@ -13,7 +13,7 @@ export type Item =
   | { kind: 'system'; id: string; text: string; error?: boolean }
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
   | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string; denied?: boolean }
-  | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; running: boolean; steps: Item[] }
+  | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; running: boolean; progress: string | null; steps: Item[] }
   | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> }
   | { kind: 'review'; id: string; ev: Extract<ChatEvent, { kind: 'review' }> };
 
@@ -86,7 +86,9 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
   const results = new Map<string, ToolResult>();
   const children = new Map<string, ChatEvent[]>();
   const resumed = new Map<string, number>();
+  const progress = new Map<string, string>();
   for (const e of events) {
+    if (e.kind === 'agent') progress.set(e.toolUseId, e.progress ?? '');
     if (e.kind === 'tool_result') results.set(e.toolUseId, e);
     if (e.kind === 'tool_use' && e.agent) resumed.set(e.agent, e.at);
     const parent = (e.kind === 'tool_use' || e.kind === 'tool_result' || e.kind === 'assistant') && e.parent;
@@ -96,10 +98,10 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
       else children.set(parent, [e]);
     }
   }
-  return itemsFrom(events.filter((e) => !('parent' in e && e.parent)), results, children, resumed);
+  return itemsFrom(events.filter((e) => !('parent' in e && e.parent)), results, children, resumed, progress);
 }
 
-function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>, resumed: Map<string, number>): Item[] {
+function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>, resumed: Map<string, number>, progress: Map<string, string>): Item[] {
   const items: Item[] = [];
   for (const e of events) {
     if (e.kind === 'user' && e.auto) items.push({ kind: 'auto', id: e.id, label: e.auto === 'goal' ? `Goal check ${e.round}` : `Loop round ${e.round} · ${firstLine(e.text)}`, text: e.text });
@@ -113,7 +115,7 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
       const result = results.get(e.id);
       const count = editCount(e.name, e.input);
       const path = typeof e.input.file_path === 'string' ? e.input.file_path : '';
-      if (AGENT_TOOLS.has(e.name)) items.push({ kind: 'agent', id: e.id, use: e, result, running: !result || (resumed.get(e.id) ?? 0) > result.at, steps: itemsFrom(children.get(e.id) ?? [], results, children, resumed) });
+      if (AGENT_TOOLS.has(e.name)) items.push({ kind: 'agent', id: e.id, use: e, result, running: !result || (resumed.get(e.id) ?? 0) > result.at, progress: progress.get(e.id) || null, steps: itemsFrom(children.get(e.id) ?? [], results, children, resumed, progress) });
       else if (!count || !path) items.push({ kind: 'step', id: e.id, use: e, result });
       else {
         const error = result?.isError ? (denied(result) ? 'Denied' : firstLine(result.text)) : undefined;

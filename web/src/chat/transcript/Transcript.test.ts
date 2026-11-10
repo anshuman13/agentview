@@ -140,6 +140,17 @@ describe('subagent steps', () => {
   });
 });
 
+describe('agent progress', () => {
+  it('takes the latest summary of the agent event for its item', () => {
+    const agent = tool('Agent', { description: 'Survey docs' });
+    const info = (progress: string | null): ChatEvent => ({ id: `${agent.id}:agent`, kind: 'agent', toolUseId: agent.id, description: '', subagentType: 'Explore', model: null, background: false, prompt: '', status: 'running', startedAt: 1, endedAt: null, progress, usage: null, at: at() });
+    const build = createTranscriptBuilder();
+    expect(build([agent])[0]).toMatchObject({ kind: 'agent', progress: null });
+    expect(build([agent, info('Reading the docs')])[0]).toMatchObject({ progress: 'Reading the docs' });
+    expect(build([agent, info('Writing the summary')])[0]).toMatchObject({ progress: 'Writing the summary' });
+  });
+});
+
 describe('createTranscriptBuilder', () => {
   it('matches a full rebuild while a chat streams, and reuses untouched items on the fast path', () => {
     const build = createTranscriptBuilder();

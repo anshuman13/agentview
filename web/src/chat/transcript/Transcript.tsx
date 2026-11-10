@@ -229,7 +229,7 @@ function sameItem(a: Item, b: Item): boolean {
     }
     case 'agent': {
       const o = b as typeof a;
-      return a.use === o.use && a.result === o.result && a.running === o.running && a.steps.length === o.steps.length && a.steps.every((s, i) => sameItem(s, o.steps[i]));
+      return a.use === o.use && a.result === o.result && a.running === o.running && a.progress === o.progress && a.steps.length === o.steps.length && a.steps.every((s, i) => sameItem(s, o.steps[i]));
     }
     case 'blocked':
     case 'review':
