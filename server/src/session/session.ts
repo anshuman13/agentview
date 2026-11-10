@@ -141,10 +141,10 @@ export class AgentSession implements AgentHost {
     this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now(), ...(error && { error }) });
   }
 
-  setStatus(text: string) {
+  setStatus(text: string, { done, next }: { done?: string; next?: string[] } = {}) {
     this.state.status = text;
     this.emit({ type: 'status', text });
-    this.pushEvent({ id: randomUUID(), kind: 'status', text, at: Date.now() });
+    this.pushEvent({ id: randomUUID(), kind: 'status', text, at: Date.now(), ...(done && { done }), ...(next && { next }) });
   }
 
   private setResumeCommand() {

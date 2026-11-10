@@ -18,8 +18,8 @@ export const statusTool = defineTool({
     next: z.array(z.string().max(120)).max(12).optional().describe('Remaining steps after the current one, in order. Empty when done.'),
     important: z.string().max(500).optional().describe('A decision, risk, blocker or surprise the user must know about. Omit when there is none.'),
   },
-  async handler({ text }, { host }) {
-    host.setStatus(text);
+  async handler({ text, done, next }, { host }) {
+    host.setStatus(text, { done, next });
     return 'ok';
   },
 });

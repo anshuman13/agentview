@@ -83,7 +83,7 @@ export interface AgentHost {
   eventById(id: string): ChatEvent | undefined;
   agentOf(toolUseId: string): AgentEvent | undefined;
   system(text: string, error?: boolean): void;
-  setStatus(text: string): void;
+  setStatus(text: string, detail?: { done?: string; next?: string[] }): void;
   setSession(patch: Partial<SessionInfo>): void;
   noteFile(rel: string, source: 'tool' | 'watcher'): void;
   captureEdit(file: string): void;
