@@ -232,6 +232,13 @@ describe('replyNow', () => {
     expect(await replyNow(db, { enabled: true, dry_run: false }, askId(url('u2')), now, async () => ANSWERED)).toEqual({ status: 'answered', url: null });
     expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'done' });
   });
+  test('a reply sent in a DM clears its waiting flag', async () => {
+    const now = at(10, 10);
+    const db = withAsks([ask('https://x.slack.com/archives/D1/p1', { chat: 'DM' })], now);
+    applyChanges(db, [{ table: 'chats', id: 'D1', profile: 'work', updated_at: now, fields: { name: 'Per', kind: 'dm', waiting: 1 } }]);
+    await replyNow(db, { enabled: true, dry_run: false }, askId('https://x.slack.com/archives/D1/p1'), now + 1, post);
+    expect(db.prepare('SELECT waiting FROM chats WHERE id = ?').get('D1')).toEqual({ waiting: 0 });
+  });
 });
 
 test('settings are cleaned on save and read back from the database', () => {

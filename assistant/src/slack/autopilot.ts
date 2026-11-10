@@ -309,5 +309,8 @@ export async function replyNow(db: Database, c: AutopilotConfig, id: string, now
   // The draft as the scan wrote it, kept for the corrections run.
   if (edited && row.draft && row.draft.trim() !== draft) db.prepare('UPDATE replies SET draft_text = ? WHERE profile = ? AND id = ? AND draft_text IS NULL').run(row.draft, PROFILE, id);
   if (r.status === 'sent' || r.status === 'answered') applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Math.max(now, row.updated_at + 1), fields: { status: 'done', ...(text !== undefined ? { draft } : {}) } }]);
+  // My reply is now the last message of the DM, so it no longer waits on me before the next scan.
+  const dm = chat === 'DM' && r.status === 'sent' ? /\/archives\/([^/]+)\//.exec(row.source_url)?.[1] : undefined;
+  if (dm && db.prepare('SELECT 1 FROM chats WHERE profile = ? AND id = ? AND waiting = 1').get(PROFILE, dm)) applyChanges(db, [{ table: 'chats', id: dm, profile: PROFILE, updated_at: now, fields: { waiting: 0 } }]);
   return r;
 }
