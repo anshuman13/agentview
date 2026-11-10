@@ -201,7 +201,7 @@ The visible text is the status word in sentence case, or "N word" with `count` (
 ### EmptyState (EuiEmptyPrompt)
 `<EmptyState icon title hint action size>`; `.ui-empty`. Centred: icon in a 48px `--hover`
 circle (40px at sm) in `--on-surface-muted`, title role, hint in body `--on-surface-muted`,
-then at most one action. md for a whole view, sm inside a panel or report. The icon stays grey;
+then at most one action (a setup state names what is missing and its action is "Set up with <provider>", which asks the chat on screen). md for a whole view, sm inside a panel or report. The icon stays grey;
 the accent is for the action.
 Copy (Status language): the title is a sentence-case noun phrase with no trailing period ("No past meetings yet"), the hint is one short line with no period, and the one action is a Button sm directly under `.ui-empty`.
 Status: built; used in `app/App.tsx`, `app/Unreachable.tsx`, `codex/Codex.tsx`, `codex/GoalsPage.tsx`, `codex/Overview.tsx`, `codex/PlanPreview.tsx`, `codex/Search.tsx`, `codex/TagPage.tsx`, `codex/jobs/JobPage.tsx`, `codex/jobs/Jobs.tsx`, `codex/meetings/Decisions.tsx`, `codex/meetings/Load.tsx`, `codex/meetings/MeetingList.tsx`, `codex/meetings/Person.tsx`, `codex/meetings/Review.tsx`, `codex/meetings/SeriesPage.tsx`, `codex/meetings/Week.tsx`, `codex/summary/Summary.tsx`, `codex/wiki/Feed.tsx`, `codex/wiki/ReviewMode.tsx`, `codex/wiki/WikiIndex.tsx`, `codex/wiki/WikiPage.tsx`, `ops/Deploy.tsx`, `ops/Findings.tsx`, `ops/GitHub.tsx`, `ops/McpDetail.tsx`, `ops/McpStatus.tsx`, `ops/Observe.tsx`, `sessions/AgentsPane.tsx`, `sessions/Sessions.tsx`, `workspace/BrowserPane.tsx`, `workspace/Explorer.tsx`.
@@ -348,7 +348,7 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 | label | 12/16 | 500 |
 | Mono | 14/20 | 400 |
 
-- **Header** is 64dp with a 22sp one-line title and an optional muted subheadline subtitle. The scope chip shows only on tab roots, never on a page with a back button.
+- **Header** is 64dp with a 22sp one-line title and an optional muted subheadline subtitle, and at most one action on a page (more go in a More menu). On the web phone the same header is `PhoneHeader` (`.wk-head`: Back, a one-line title, a muted subtitle and one trailing control) for Observe, Deploy, MCP, Settings, Builds, Files, Source Control and Pull Requests; a Section label that repeats that title is not rendered there. The scope chip shows only on tab roots, never on a page with a back button.
 - **Sheet** opens with a title row (56dp, 22sp, an optional count and one trailing icon action), and its rows sit in Groups.
 - **Menu icons** are 24dp, and a menu opened from a kebab keeps 12dp from the screen edge.
 - **Loading and EmptyState**: a loading page shows `Loading` (spinner and one line). A page-level EmptyState has an icon and `small = false`. A section's EmptyState is small and sits under its SectionHeader, never inside a Group.
@@ -467,7 +467,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-series-list | - | Grouped list | Done |
 | mt-up-head | - | Section header | Done |
 | obs-head, obs-subhead | none | Section header | Done |
-| obs-hint empty variants | ops/Observe.tsx | EmptyState | Partial (error, warn, ok, mono, setup, loading stay as layout) |
+| obs-hint empty variants | ops/Observe.tsx | EmptyState | Partial (error, warn, ok, mono, loading stay as layout) |
 | obs-ask | ops/Observe.tsx | Button | Partial (Snowflake action stays) |
 | ov-ask-line | - | Row (AskRow) | Done |
 | settings-* | - | Section and Row | Done |

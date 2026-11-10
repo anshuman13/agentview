@@ -494,14 +494,16 @@ are read once and removed from the address bar.
 ## Pages
 
 Observe, Deploy (only with `deployUrl` set in `~/.agentview/settings.json`), MCP Servers and Builds open as tabs in the editor area (the lower three activity bar icons, or the command
-palette), so they get the full width instead of the sidebar. One page is open at a time; opening another replaces it.
+palette), so they get the full width instead of the sidebar. One page is open at a time; opening another replaces it. The page title shows once: the desktop hero is the title and the page's own controls.
+
+On the phone Observe, Deploy, MCP Servers, Settings, Builds, Files, Source Control and Pull Requests have no editor tab strip. One header row replaces it: Back, the title, a muted one-line subtitle (the repo folder; "N connected of M" on MCP; the file's folder in an open file) and at most one trailing control (Refresh on Observe, Deploy and Pull Requests, Check on MCP, the Explorer's More menu on Files, a More menu with Close file on an open file). Back, the system back and the edge swipe return to the tab that was open before, or to Codex when there was none; in an open file Back shows the Explorer first. With nothing set up, Observe, Deploy and MCP show an empty state with one "Set up with Claude" button (the chat's provider) that asks the chat on screen to do the setup.
 
 Without a Grafana MCP server, Observe makes no Grafana requests. Observe's Grafana section shows a card per entry in a repo's `grafana.panels` (`{ title, query, unit }`, a PromQL query in
 `~/.agentview/observe.json`): the last value, a 6 hour sparkline with min and max in the hover title, and a link to Explore.
 A failing panel shows its error without affecting the others. With no panels, a button asks Claude to suggest some from the
 service's dashboards. The refresh button reloads the panels too.
 
-Observe's Settings section is a Section header (open by default only for a project with no saved config) with a JSON field and a Save button. The header shows a badge: Unsaved after an edit, Saved after a save, Failed with the error under the field when the JSON is invalid or the save fails. An edit made while saving is kept. Changing the project clears the badge.
+Observe's Settings section is a Section header (closed by default) with a JSON field and a Save button. The header shows a badge: Unsaved after an edit, Saved after a save, Failed with the error under the field when the JSON is invalid or the save fails. An edit made while saving is kept. Changing the project clears the badge.
 
 Settings is a page of its own (activity bar, More sheet, palette). It has three groups, each a Section header over a grouped list. About holds a read-only App version row (the web build's short commit sha, or "Unknown") and a Design row that opens `/design`; the Design row shows in dev mode or when the hub runs with `ASSISTANT_DEBUG=1`. Appearance holds a Theme row showing Dark or Light; tapping it switches the theme, the same toggle and saved choice as the status bar icon. Phone holds an Installed version row (`0.1.0+<sha>`) and shows only in the phone app.
 
