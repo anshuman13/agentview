@@ -65,7 +65,7 @@ fun ExtraContent(
         route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
         route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { p, id -> push("wiki:$p:$id") }, onTask)
-        route == "wiki" -> WikiIndexPage(st, profile, now, { push("wiki:${it.key}") }, { f -> claimRoute(f)?.let(push) }, { push("review") })
+        route == "wiki" -> WikiIndexPage(st, profile, now, actions, { push("wiki:${it.key}") }, { f -> claimRoute(f)?.let(push) }, { push("review") })
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == key && !it.deleted }
             if (p == null) EmptyState("This page is gone") else WikiPageView(st, p, now, actions)

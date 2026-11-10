@@ -1,14 +1,18 @@
 package no.pradhan.agentview.nativeapp.codex.wiki
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
@@ -39,6 +44,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.liveRows
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.net.protocolJson
+import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -61,8 +67,19 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
 
+// A coloured tile for a page, the colour fixed by its id and the icon by its section.
 @Composable
-fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit) {
+private fun PageTile(p: Row) {
+    val hues = listOf(av.hueTeal, av.hueViolet, av.hueBlue, av.hueAmber, av.hueMagenta, av.hueSky)
+    val hue = hues[Math.floorMod(p.id.hashCode(), hues.size)]
+    val glyph = when (p.str("section")) { "Company" -> "organization"; "Directory" -> "person"; "Domain" -> "symbol-namespace"; else -> "file" }
+    Box(Modifier.size(Tokens.leadWidth + Tokens.sp2).clip(RoundedCornerShape(Tokens.shapeMd)).background(hue.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+        AvIcon(glyph, null, tint = hue)
+    }
+}
+
+@Composable
+fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val pages = remember(st.pages, profile) { st.pages.filter { matchesProfile(profile, it) } }
     val facts = remember(st.facts, profile) { st.facts.filter { matchesProfile(profile, it) } }
@@ -102,8 +119,13 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> 
                     s.pages.forEachIndexed { i, p ->
                         if (i > 0) Hairline()
                         val n = stats[p.id]?.claims ?: 0
-                        ListRow(p.title ?: "Untitled", "$n ${if (n == 1) "claim" else "claims"}" + if (profile == null) " · ${profileLabel(p.profile)}" else "", onClick = { onOpen(p) },
-                            trailing = { if (pageNeedsReview(p, facts)) Badge("Needs you", BadgeTone.Waiting) })
+                        ListRow(p.title ?: "Untitled", "$n ${if (n == 1) "claim" else "claims"}" + if (profile == null) " · ${profileLabel(p.profile)}" else "", leading = { PageTile(p) }, lines = 1, onClick = { onOpen(p) },
+                            state = { if (pageNeedsReview(p, facts)) Badge("Needs you", BadgeTone.Waiting) }, stateSlot = true,
+                            menu = { dismiss ->
+                                MenuItem("Open", "file", { dismiss(); onOpen(p) })
+                                MenuSeparator()
+                                MenuItem("Archive", "archive", { dismiss(); actions.change(p, mapOf("state" to "retired"), "Archived ${p.title}") }, danger = true)
+                            })
                     }
                 }
             }
