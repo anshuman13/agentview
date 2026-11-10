@@ -113,8 +113,8 @@ describe('swapSQL', () => {
 
   it('turns missing fields into null and uses the table columns', () => {
     const { sql, params } = swapSQL('jobs', { id: 'j', profile: 'work', version: 1, updated_at: 3, deleted: 0, field_times: '{}', dirty: 0 }, undefined);
-    expect(sql).toContain('INSERT OR IGNORE INTO jobs (version, updated_at, deleted, field_times, name, schedule, prompt, enabled, next_run_at, tools, dirty, profile, id)');
-    expect(params).toEqual([1, 3, 0, '{}', null, null, null, null, null, null, 0, 'work', 'j']);
+    expect(sql).toContain('INSERT OR IGNORE INTO jobs (version, updated_at, deleted, field_times, name, schedule, prompt, enabled, next_run_at, tools, repo, dirty, profile, id)');
+    expect(params).toEqual([1, 3, 0, '{}', null, null, null, null, null, null, null, 0, 'work', 'j']);
   });
 });
 
