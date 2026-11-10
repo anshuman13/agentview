@@ -245,6 +245,21 @@ describe('runs', () => {
     vi.useRealTimers();
   });
 
+  it('a wake-up turn with a ROUND line adds a round with the same n, one without adds none', async () => {
+    const { s, handle } = fakeSession();
+    await s.prompt('/goal the tests pass');
+    reply(handle, 'r1', 'Started.\nROUND: progress spec drafted', 0.1);
+    s.turn.started();
+    reply(handle, 'r2', 'Merged.\nROUND: progress Tue spec merged', 0.2);
+    const run = s.runs.list()[0];
+    expect(run.rounds.map((r) => [r.n, r.outcome, r.line])).toEqual([[1, 'progress', 'spec drafted'], [1, 'progress', 'Tue spec merged']]);
+    expect(run.round).toBe(1);
+    expect(run.state).toBe('running');
+    s.turn.started();
+    reply(handle, 'r3', 'Nothing to add.', 0.2);
+    expect(run.rounds).toHaveLength(2);
+  });
+
   it('a goal ends done when it is met, and a usage limit pauses the run until the next round', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));

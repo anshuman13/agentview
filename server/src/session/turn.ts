@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { costRise } from '../../../shared/cost.js';
 import { providerLabel } from '../../../shared/providers.js';
+import { roundOf } from '../../../shared/edits.js';
 import { clock } from '../../../shared/util.js';
 import type { Repeat } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
@@ -95,7 +96,9 @@ export class Turn {
   }
 
   private roundNote(text: string, repeat: Repeat | null, met: boolean, report: string | undefined) {
-    if (!this.roundTurn || !repeat?.runId) return null;
+    if (!repeat?.runId) return null;
+    // A turn the run did not start, such as a background agent finishing, still reports with a ROUND line.
+    if (!this.roundTurn) return roundOf(text) ? { ...roundResult(text, { failed: this.lastError }), ends: false } : null;
     const note = { ...roundResult(text, { failed: this.lastError, met }), ends: met || this.s.repeater.ends() };
     if (report && !this.lastError && !met) note.outcome = 'progress';
     return note;
