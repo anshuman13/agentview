@@ -1,5 +1,5 @@
 import { api } from '../app/store';
-import { apiUrl } from '../app/api';
+import { apiUrl, fetchJson } from '../app/api';
 
 export const fileRequest = (path: string, init?: RequestInit, chat?: string) => {
   const url = `/api/file?path=${encodeURIComponent(path)}`;
@@ -13,3 +13,9 @@ export const listDir = (path: string) => fetch(api(`/api/dir?path=${encodeURICom
 export const fetchGitStatus = () => fetch(api('/api/git/status'));
 
 export const isDocPath = (path: string) => /\.(md|markdown|mdx)$/i.test(path);
+
+export type SketchFile = { name: string; path: string; mtime: number };
+
+export const fetchSketches = () => fetchJson<SketchFile[]>(api('/api/sketches'));
+
+export const readSketch = (path: string) => fetchJson<{ content: string; binary?: boolean }>(api(`/api/file?path=${encodeURIComponent(path)}`));

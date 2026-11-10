@@ -10,6 +10,7 @@ import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
 import { isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
+import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { countChat } from './app/store/counts';
 import { can, modelsFor } from './chat/capabilitiesLogic';
@@ -83,6 +84,18 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; path: string; slug: string }>('spec-slug')) {
     it(`specSlug: ${c.name}`, () => expect(specSlug(c.path)).toBe(c.slug));
+  }
+
+  for (const c of cases<{ name: string; html: string; theme: SketchTheme; doc: string }>('sketch-doc')) {
+    it(`sketchDoc: ${c.name}`, () => {
+      expect(sketchDoc(c.html, c.theme)).toBe(c.doc);
+      expect(c.doc).toContain(`data-theme="${c.theme}"`);
+      expect(c.doc.replace(/^<!doctype html>\s*/i, '').replace(/^<html[^>]*>(<head[^>]*>)?/i, '')).toMatch(/^<meta http-equiv="Content-Security-Policy"/);
+    });
+  }
+
+  for (const c of cases<{ name: string; path: string; sketch: boolean }>('sketch-path')) {
+    it(`isSketchPath: ${c.name}`, () => expect(isSketchPath(c.path)).toBe(c.sketch));
   }
 
   for (const c of cases<{ name: string; form?: GoalForm; now?: number; command?: string; what?: string; plan?: string | null; path?: string; md?: string; condition?: string }>('goal-command')) {

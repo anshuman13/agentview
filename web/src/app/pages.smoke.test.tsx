@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BuildList } from '../sessions/Builds';
 import { Runs } from '../sessions/Runs';
+import { SketchFrame, SketchList, Sketches } from '../workspace/Sketches';
 import type { BuildRow } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
 
-const store = vi.hoisted(() => ({ runs: [] as unknown[] }));
+const store = vi.hoisted(() => ({ runs: [] as unknown[], session: { id: 'c1', cwd: '/w' }, recentFiles: [] as string[], ui: { sketch: null } }));
 vi.mock('./store', async (orig) => ({ ...(await orig<object>()), useStore: (select: (s: unknown) => unknown) => select(store) }));
 vi.mock('../codex/data', () => ({ useAssistantData: () => ({ jobs: [], runs: [] }) }));
 
@@ -54,5 +55,24 @@ describe('page smoke', () => {
     const open = renderToStaticMarkup(<BuildList builds={drafts} onOpen={() => {}} expanded={['drafts']} onExpand={() => {}} />);
     expect(open.match(/class="ui-row[ "]/g)).toHaveLength(5);
     expect(open).not.toContain('Show all');
+  });
+
+  it('Sketches renders on an empty store', () => {
+    expect(renderToStaticMarkup(<Sketches shown />)).toContain('skeleton-list');
+  });
+
+  it('Sketches folds to 5 rows with Show all', () => {
+    const list = [1, 2, 3, 4, 5, 6].map((n) => ({ name: `s${n}.html`, path: `.claude/sketches/s${n}.html`, mtime: Date.now() }));
+    const html = renderToStaticMarkup(<SketchList sketches={list} onOpen={() => {}} />);
+    expect(html.match(/class="ui-row[ "]/g)).toHaveLength(5);
+    expect(html).toContain('Show all 6');
+  });
+
+  it('the sketch frame has an empty sandbox and a srcdoc with the policy', () => {
+    const html = renderToStaticMarkup(<SketchFrame name="login.html" html="<h1>Login</h1><script>fetch('/api/state')</script>" device="phone" theme="dark" />);
+    expect(html).toContain('<iframe sandbox=""');
+    expect(html).not.toContain('allow-');
+    expect(html).toContain('Content-Security-Policy');
+    expect(html).toContain('data-theme=&quot;dark&quot;');
   });
 });

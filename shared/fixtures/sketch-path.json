@@ -1,0 +1,8 @@
+[
+  { "name": "a relative sketch", "path": ".claude/sketches/login.html", "sketch": true },
+  { "name": "an absolute sketch", "path": "/w/app/.claude/sketches/login-v2.html", "sketch": true },
+  { "name": "a sketch in a subfolder", "path": ".claude/sketches/old/login.html", "sketch": false },
+  { "name": "a non-html file in the folder", "path": ".claude/sketches/notes.md", "sketch": false },
+  { "name": "a similar folder name", "path": "x.claude/sketches/login.html", "sketch": false },
+  { "name": "an html file elsewhere", "path": "docs/login.html", "sketch": false }
+]

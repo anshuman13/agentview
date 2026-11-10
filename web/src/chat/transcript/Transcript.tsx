@@ -14,6 +14,7 @@ import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
 import { FileIcon } from '../../workspace/FileIcon';
+import { SketchCard } from './SketchCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { Badge } from '../../ui/Badge';
@@ -23,6 +24,7 @@ import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { stageName } from '../../../../shared/builds';
 import { providerLabel } from '../../../../shared/providers';
+import { isSketchPath } from '../../../../shared/sketches';
 import { isSpecPath, specSlug } from '../../../../shared/specTasks';
 import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
@@ -288,6 +290,7 @@ function RowImpl({ it, cwd, settled, card }: { it: Item; cwd: string; settled?: 
     case 'step':
       return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':
+      if (isSketchPath(it.path) && !it.error) return <SketchCard path={it.path} meta={it.uses[0].name === 'Write' ? 'Sketch written' : `Sketch edited · +${it.count.add} -${it.count.del}`} />;
       return isSpecPath(it.path) && !it.error ? <SpecCard id={it.id} slug={specSlug(it.path)} path={it.path} meta={it.uses[0].name === 'Write' ? 'Spec written' : `Spec edited · +${it.count.add} -${it.count.del}`} /> : <FileCard it={it} cwd={cwd} />;
     case 'agent':
       return <AgentRow it={it} cwd={cwd} card={card} />;

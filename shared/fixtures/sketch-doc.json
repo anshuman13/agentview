@@ -1,0 +1,50 @@
+[
+  {
+    "name": "a fragment with no html tag",
+    "html": "<h1>Login</h1>",
+    "theme": "dark",
+    "doc": "<html data-theme=\"dark\"><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"></head><h1>Login</h1>"
+  },
+  {
+    "name": "a doctype and html with attributes",
+    "html": "<!DOCTYPE html>\n<html lang=\"en\"><head><title>x</title></head><body>hi</body></html>",
+    "theme": "light",
+    "doc": "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"light\"><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"><title>x</title></head><body>hi</body></html>"
+  },
+  {
+    "name": "an existing data-theme is replaced",
+    "html": "<html data-theme=\"light\" lang=\"en\"><body></body></html>",
+    "theme": "dark",
+    "doc": "<html lang=\"en\" data-theme=\"dark\"><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"></head><body></body></html>"
+  },
+  {
+    "name": "uppercase tags",
+    "html": "<HTML><HEAD><TITLE>x</TITLE></HEAD><BODY></BODY></HTML>",
+    "theme": "dark",
+    "doc": "<HTML data-theme=\"dark\"><HEAD><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"><TITLE>x</TITLE></HEAD><BODY></BODY></HTML>"
+  },
+  {
+    "name": "html without a head gets one",
+    "html": "<!doctype html><html><body>x</body></html>",
+    "theme": "light",
+    "doc": "<!doctype html><html data-theme=\"light\"><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"></head><body>x</body></html>"
+  },
+  {
+    "name": "meta refresh and other http-equiv metas are removed",
+    "html": "<head><meta http-equiv=\"refresh\" content=\"0;url=https://example.com\"><META HTTP-EQUIV=Refresh CONTENT=\"1\"><meta charset=\"utf-8\"></head><body></body>",
+    "theme": "light",
+    "doc": "<html data-theme=\"light\"><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"><meta charset=\"utf-8\"></head><body></body>"
+  },
+  {
+    "name": "a head inside a comment is not the head",
+    "html": "<!-- <head> --><html><head></head><body></body></html>",
+    "theme": "dark",
+    "doc": "<html data-theme=\"dark\"><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"></head><body></body></html>"
+  },
+  {
+    "name": "a header tag is not a head",
+    "html": "<html><body><header>x</header></body></html>",
+    "theme": "dark",
+    "doc": "<html data-theme=\"dark\"><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:\"><base target=\"_blank\"></head><body><header>x</header></body></html>"
+  }
+]

@@ -1,16 +1,17 @@
 import { Suspense } from 'react';
-import { Builds, Deploy, Loading, McpPage, Observe, Settings } from './lazy';
+import { Builds, Deploy, Loading, McpPage, Observe, Settings, Sketches } from './lazy';
 import { appSettings } from './appSettings';
 import { PhoneHeader } from './shell/PhoneHeader';
 import { useCounts } from './store/counts';
 
-export type Page = 'observe' | 'deploy' | 'mcp' | 'builds' | 'settings';
+export type Page = 'observe' | 'deploy' | 'mcp' | 'builds' | 'sketches' | 'settings';
 
 export const PAGES: { id: Page; icon: string; title: string }[] = [
   { id: 'observe', icon: 'pulse', title: 'Observe' },
   { id: 'deploy', icon: 'rocket', title: 'Deploy' },
   { id: 'mcp', icon: 'plug', title: 'MCP Servers' },
   { id: 'builds', icon: 'beaker', title: 'Builds' },
+  { id: 'sketches', icon: 'paintcan', title: 'Sketches' },
   { id: 'settings', icon: 'settings-gear', title: 'Settings' },
 ];
 const available = (id: Page, deploy: boolean) => id !== 'deploy' || deploy;
@@ -36,7 +37,7 @@ export function PageView({ page, shown, project, back }: { page: Page; shown: bo
           <h1>{p.title}</h1>
           <div id={`page-${page}-extra`} className="page-extra" />
         </header>
-        <div className="page-body"><Suspense fallback={<Loading />}>{page === 'mcp' ? <McpPage /> : page === 'builds' ? <Builds shown={shown} /> : page === 'observe' ? <Observe /> : page === 'settings' ? <Settings /> : <Deploy />}</Suspense></div>
+        <div className="page-body"><Suspense fallback={<Loading />}>{page === 'mcp' ? <McpPage /> : page === 'builds' ? <Builds shown={shown} /> : page === 'sketches' ? <Sketches shown={shown} /> : page === 'observe' ? <Observe /> : page === 'settings' ? <Settings /> : <Deploy />}</Suspense></div>
       </div>
     </div>
   );
