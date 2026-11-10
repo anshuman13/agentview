@@ -57,6 +57,7 @@ data class BuildDetail(
     val slug: String,
     val title: String = "",
     val summary: BuildSummary = BuildSummary(),
+    val updatedAt: Long = 0,
     val specFile: String? = null,
     val phases: List<BuildPhase> = emptyList(),
     val reviews: List<BuildReview> = emptyList(),
@@ -96,8 +97,6 @@ fun criterionBadge(c: Criterion): Pair<String, BadgeTone> = when (c.result) {
 fun stageTitle(e: BuildEntry) = stageName(e.stage) + if (e.round > 1) " · round ${e.round}" else ""
 
 fun byStart(entries: List<BuildEntry>) = entries.sortedBy { it.startedAt }
-
-fun updatedAt(entries: List<BuildEntry>) = entries.maxOfOrNull { it.endedAt ?: it.startedAt } ?: 0
 
 fun stageMeta(e: BuildEntry): String {
     val ms = e.endedAt?.let { it - e.startedAt }

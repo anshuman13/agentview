@@ -102,7 +102,7 @@ fun BuildsScreen(hub: Hub, onBack: () -> Unit) {
                             Group {
                                 rows.forEachIndexed { i, b ->
                                     if (i > 0) Hairline(lead = true)
-                                    ListRow(b.title, "${pipelineLabel(b.pipeline)} · ${b.conclusion} · ${agoShort(b.updatedAt, now, " ago")}", leading = { StatusDot(stateDot(b.state)) }, onClick = { open = b.slug })
+                                    ListRow(b.title, "${pipelineLabel(b.pipeline)} · ${b.conclusion} · ${agoShort(b.updatedAt, now, " ago")}", leading = if (b.draft) null else ({ StatusDot(stateDot(b.state)) }), onClick = { open = b.slug })
                                 }
                             }
                         }
@@ -158,7 +158,7 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
                     item {
                         Group {
                             val (label, tone) = stateBadge(d.summary.state)
-                            ListRow(d.summary.conclusion, "${stageName(d.summary.stage)} · ${agoShort(updatedAt(d.entries), now, " ago")}", trailing = { Badge(label, tone) })
+                            ListRow(d.summary.conclusion, "${stageName(d.summary.stage)} · ${agoShort(d.updatedAt, now, " ago")}", trailing = if (d.entries.isEmpty()) null else ({ Badge(label, tone) }))
                         }
                     }
                     phaseItems(d, phase, now, inMain && d.specFile != null, { specFile = true }, hub.readOnly, { phase = it }, { asking = true }) { key, done -> review(key, "approve", "") { ok -> if (!ok) hub.notice.value = "Could not save the review. Try again."; done(ok) } }

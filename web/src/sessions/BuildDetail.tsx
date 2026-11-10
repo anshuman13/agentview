@@ -13,7 +13,7 @@ import { Skeleton } from '../ui/Skeleton';
 import { ago } from '../ui/util';
 import { stageName, type BuildDetail as Detail, type BuildStage } from '../../../shared/builds';
 import { BuildPhases } from './BuildPhases';
-import { byStart, commitTotals, criterionBadge, decisionTitle, phaseLabel, stageBadge, stageMeta, stageRows, stageTitle, stateBadge, testCounts, updatedAt } from './buildsLogic';
+import { byStart, commitTotals, criterionBadge, decisionTitle, phaseLabel, stageBadge, stageMeta, stageRows, stageTitle, stateBadge, testCounts } from './buildsLogic';
 import { findHere, useWorkspace } from './folders';
 import { openChat } from './goalLogic';
 import { useBuild } from './useBuilds';
@@ -43,14 +43,14 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
   const totals = commitTotals(d.commit?.files ?? []);
   const test = latest('test');
   const review = latest('code-review');
-  const when = ago(updatedAt(d.entries), ' ago');
+  const when = ago(d.updatedAt, ' ago');
   const openSpec = () => setUi({ openFile: d.specFile, follow: false });
   return (
     <>
       {head}
       <Section label="Conclusion" />
       <div className="ui-group">
-        <Row plain title={d.summary.conclusion} meta={`${stageName(d.summary.stage)} · ${when}`} trailing={<Badge {...stateBadge(d.summary.state)} />} />
+        <Row plain title={d.summary.conclusion} meta={`${stageName(d.summary.stage)} · ${when}`} trailing={d.entries.length ? <Badge {...stateBadge(d.summary.state)} /> : undefined} />
       </div>
       <BuildPhases
         slug={d.slug}

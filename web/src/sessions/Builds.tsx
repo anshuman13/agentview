@@ -25,7 +25,7 @@ export function BuildList({ builds, onOpen, expanded, onExpand }: { builds: Buil
                 <Row
                   key={b.slug}
                   title={b.title}
-                  meta={<><span className={`dot ${stateDot(b.state)}`} /> {pipelineLabel(b.pipeline)} · {b.conclusion} · {ago(b.updatedAt, ' ago')}</>}
+                  meta={<>{!b.draft && <span className={`dot ${stateDot(b.state)}`} />} {pipelineLabel(b.pipeline)} · {b.conclusion} · {ago(b.updatedAt, ' ago')}</>}
                   onClick={() => onOpen(b.slug)}
                 />
               ))}

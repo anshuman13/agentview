@@ -178,6 +178,7 @@ export async function buildOne(cwd: string, slug: string) {
     title: spec?.title ?? slug,
     summary: entries.length ? buildSummary(entries, done) : DRAFT,
     pipeline: pipelineOf(entries, done, reviews),
+    updatedAt: Math.max(spec?.mtime ?? 0, ...entries.map((e) => e.endedAt ?? e.startedAt)),
     specFile: spec && !spec.kiro ? `.claude/specs/${slug}.md` : null,
     phases: spec?.phases ?? [],
     reviews,

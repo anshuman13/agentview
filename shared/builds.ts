@@ -28,6 +28,7 @@ export type BuildDetail = {
   title: string;
   summary: BuildSummary;
   pipeline: BuildPipeline;
+  updatedAt: number;
   specFile: string | null;
   phases: BuildPhase[];
   reviews: BuildReview[];
