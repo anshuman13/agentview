@@ -21,6 +21,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
@@ -163,101 +164,115 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
                 d == null -> Loading("Loading build")
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     val stages = byStart(d.entries)
-                    val rows = stageRows(d.entries, d.reviews)
                     val commit = d.commit?.let { c -> stages.lastOrNull { it.stage == "implement" }?.commit?.let { it to c } }
-                    val test = stages.lastOrNull { it.stage == "test" }
                     val review = stages.lastOrNull { it.stage == "code-review" }
-                    item { SectionHeader("Conclusion") }
-                    item {
-                        Group {
-                            val (label, tone) = stateBadge(d.summary.state)
-                            ListRow(d.summary.conclusion, "${stageName(d.summary.stage)} · ${agoShort(d.updatedAt, now, " ago")}", trailing = if (d.hold) ({ Badge(HOLD_BADGE.first, HOLD_BADGE.second) }) else if (d.entries.isEmpty()) null else ({ Badge(label, tone) }))
-                        }
-                    }
+                    conclusionItems(d, now)
                     val run = d.specFile?.takeIf { chat.isNotEmpty() }?.let { "$cwd/$it" }?.let { path -> TaskRun(path) { hub.askChat(it) } }
                     phaseItems(d, phase, now, inMain && d.specFile != null, { specFile = true }, hub.readOnly, run, { phase = it }, { asking = it }, approve)
-                    item { SectionHeader("Stages", rows.size.toString()) }
-                    item {
-                        Group {
-                            rows.forEachIndexed { i, r ->
-                                if (i > 0) Hairline()
-                                val e = r.entry
-                                val y = r.review
-                                if (e != null) {
-                                    val (label, tone) = stageBadge(e)
-                                    ListRow(stageTitle(e), stageMeta(e).ifEmpty { agoShort(e.startedAt, now, " ago") }, trailing = { Badge(label, tone) }, onClick = { report = Report(stageTitle(e), e.report, e.chat, e.session.orEmpty()) })
-                                } else if (y != null) {
-                                    val (label, tone) = stateBadge(if (y.decision == "approve") "done" else "waiting")
-                                    ListRow("You · ${phaseLabel(y.phase)}", y.note.ifEmpty { agoShort(y.at, now, " ago") }, metaLines = 2, trailing = { Badge(label, tone) }, onClick = { report = Report("You · ${phaseLabel(y.phase)}", y.note.ifEmpty { decisionTitle(y) }) })
-                                }
-                            }
-                        }
-                    }
-                    if (commit != null) {
-                        val (c, diff) = commit
-                        val files = diff.files.map { PrFile(it.path, it.add, it.del) }
-                        item { SectionHeader("Implementation") }
-                        item {
-                            Group {
-                                ListRow(c.branch ?: c.subject, "${c.sha.take(7)} · ${files.size} ${if (files.size == 1) "file" else "files"} +${files.sumOf { it.additions }} -${files.sumOf { it.deletions }}")
-                                if (files.isNotEmpty()) Hairline()
-                                DiffFiles(files, diff.diff, openFile) { openFile = it }
-                            }
-                        }
-                    }
-                    if (test != null) {
-                        item {
-                            SectionHeader("Tests", action = {
-                                val passed = test.criteria.count { it.result == "pass" }
-                                val failed = test.criteria.count { it.result == "fail" }
-                                if (passed > 0) Badge("$passed passed", BadgeTone.Done)
-                                if (failed > 0) Badge("$failed failed", BadgeTone.Failed)
-                            })
-                        }
-                        item {
-                            Group {
-                                if (test.criteria.isEmpty()) ListRow("No per-criterion lines in the report")
-                                test.criteria.forEachIndexed { i, c ->
-                                    if (i > 0) Hairline()
-                                    val (label, tone) = criterionBadge(c)
-                                    ListRow(c.n.toString(), c.evidence, metaLines = 2, trailing = { Badge(label, tone) })
-                                }
-                            }
-                        }
-                    }
-                    if (review != null || commit != null) {
-                        item { SectionHeader("Code review") }
-                        item {
-                            Group {
-                                if (review != null && review.findings.isEmpty()) ListRow("Clean")
-                                review?.findings?.forEachIndexed { i, f ->
-                                    if (i > 0) Hairline()
-                                    ListRow(f, lines = 2)
-                                }
-                                if (commit != null) {
-                                    if (review != null) Hairline()
-                                    DecisionRow(d.codeReview, now, hub.readOnly, { approve("code") { } }, { asking = "code" })
-                                }
-                            }
-                        }
-                    }
+                    stageItems(stageRows(d.entries, d.reviews), now) { report = it }
+                    if (commit != null) implementationItems(commit.first, commit.second, openFile) { openFile = it }
+                    stages.lastOrNull { it.stage == "test" }?.let { testItems(it) }
+                    if (review != null || commit != null) codeReviewItems(d, review, commit != null, now, hub.readOnly, { approve("code") { } }, { asking = "code" })
                     item { Spacer(Modifier.padding(bottom = Tokens.sp8)) }
                 }
             }
         }
     }
-    report?.let { r ->
-        Sheet({ report = null }, r.title) {
-            if (r.text.isBlank()) EmptyState("No report yet") else Markdown(r.text, Modifier.padding(bottom = Tokens.sp6))
-            if (r.chat != null) Button("Open chat", { scope.launch { if (hub.openChatOf(r.chat, r.session)) { hub.link.value = DeepLink(view = "agents"); report = null } } }, Modifier.padding(bottom = Tokens.sp4), size = ButtonSize.Sm)
-        }
-    }
+    report?.let { ReportSheet(hub, scope, it) { report = null } }
     asking?.let { key -> ChangesSheet(key, { note, done -> saveReview(key, "changes", note, done) }) { asking = null } }
 }
 
 private class Report(val title: String, val text: String, val chat: String? = null, val session: String = "")
 
 private class TaskRun(val path: String, val send: (String) -> Unit)
+
+private fun LazyListScope.conclusionItems(d: BuildDetail, now: Long) {
+    item { SectionHeader("Conclusion") }
+    item {
+        Group {
+            val (label, tone) = stateBadge(d.summary.state)
+            ListRow(d.summary.conclusion, "${stageName(d.summary.stage)} · ${agoShort(d.updatedAt, now, " ago")}", trailing = if (d.hold) ({ Badge(HOLD_BADGE.first, HOLD_BADGE.second) }) else if (d.entries.isEmpty()) null else ({ Badge(label, tone) }))
+        }
+    }
+}
+
+private fun LazyListScope.stageItems(rows: List<StageRow>, now: Long, showReport: (Report) -> Unit) {
+    item { SectionHeader("Stages", rows.size.toString()) }
+    item {
+        Group {
+            rows.forEachIndexed { i, r ->
+                if (i > 0) Hairline()
+                val e = r.entry
+                val y = r.review
+                if (e != null) {
+                    val (label, tone) = stageBadge(e)
+                    ListRow(stageTitle(e), stageMeta(e).ifEmpty { agoShort(e.startedAt, now, " ago") }, trailing = { Badge(label, tone) }, onClick = { showReport(Report(stageTitle(e), e.report, e.chat, e.session.orEmpty())) })
+                } else if (y != null) {
+                    val (label, tone) = stateBadge(if (y.decision == "approve") "done" else "waiting")
+                    ListRow("You · ${phaseLabel(y.phase)}", y.note.ifEmpty { agoShort(y.at, now, " ago") }, metaLines = 2, trailing = { Badge(label, tone) }, onClick = { showReport(Report("You · ${phaseLabel(y.phase)}", y.note.ifEmpty { decisionTitle(y) })) })
+                }
+            }
+        }
+    }
+}
+
+private fun LazyListScope.implementationItems(c: BuildCommit, diff: CommitDiff, openFile: String?, openDiff: (String?) -> Unit) {
+    val files = diff.files.map { PrFile(it.path, it.add, it.del) }
+    item { SectionHeader("Implementation") }
+    item {
+        Group {
+            ListRow(c.branch ?: c.subject, "${c.sha.take(7)} · ${files.size} ${if (files.size == 1) "file" else "files"} +${files.sumOf { it.additions }} -${files.sumOf { it.deletions }}")
+            if (files.isNotEmpty()) Hairline()
+            DiffFiles(files, diff.diff, openFile, openDiff)
+        }
+    }
+}
+
+private fun LazyListScope.testItems(test: BuildEntry) {
+    item {
+        SectionHeader("Tests", action = {
+            val passed = test.criteria.count { it.result == "pass" }
+            val failed = test.criteria.count { it.result == "fail" }
+            if (passed > 0) Badge("$passed passed", BadgeTone.Done)
+            if (failed > 0) Badge("$failed failed", BadgeTone.Failed)
+        })
+    }
+    item {
+        Group {
+            if (test.criteria.isEmpty()) ListRow("No per-criterion lines in the report")
+            test.criteria.forEachIndexed { i, c ->
+                if (i > 0) Hairline()
+                val (label, tone) = criterionBadge(c)
+                ListRow(c.n.toString(), c.evidence, metaLines = 2, trailing = { Badge(label, tone) })
+            }
+        }
+    }
+}
+
+private fun LazyListScope.codeReviewItems(d: BuildDetail, review: BuildEntry?, hasCommit: Boolean, now: Long, readOnly: Boolean, approve: () -> Unit, askChanges: () -> Unit) {
+    item { SectionHeader("Code review") }
+    item {
+        Group {
+            if (review != null && review.findings.isEmpty()) ListRow("Clean")
+            review?.findings?.forEachIndexed { i, f ->
+                if (i > 0) Hairline()
+                ListRow(f, lines = 2)
+            }
+            if (hasCommit) {
+                if (review != null) Hairline()
+                DecisionRow(d.codeReview, now, readOnly, approve, askChanges)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportSheet(hub: Hub, scope: CoroutineScope, r: Report, onDismiss: () -> Unit) {
+    Sheet(onDismiss, r.title) {
+        if (r.text.isBlank()) EmptyState("No report yet") else Markdown(r.text, Modifier.padding(bottom = Tokens.sp6))
+        if (r.chat != null) Button("Open chat", { scope.launch { if (hub.openChatOf(r.chat, r.session)) { hub.link.value = DeepLink(view = "agents"); onDismiss() } } }, Modifier.padding(bottom = Tokens.sp4), size = ButtonSize.Sm)
+    }
+}
 
 // The user's latest decision on a phase or on the code, with Approve and a menu that asks for changes.
 @Composable
