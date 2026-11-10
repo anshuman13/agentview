@@ -10,10 +10,7 @@ export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
 
 export const STATUS_REMINDER = 'You have not called mcp__agentview__set_status for a while, so the user sees no progress. Call it now with what you are doing, what is done and the next steps.';
 
-const INSTRUCTIONS = [
-  TOOL_INSTRUCTIONS,
-  "For anything in a web browser, use the Claude in Chrome tools. They drive the user's own Chrome, where the user is logged in to work sites, and the user watches that tab in AgentView.",
-].join(' ');
+const CHROME = "For anything in a web browser, use the Claude in Chrome tools. They drive the user's own Chrome, where the user is logged in to work sites, and the user watches that tab in AgentView.";
 
 // A Mac with its own AgentView Chrome lets chats drive it too: the Browser tab shows it and it holds its own logins.
 const OWN_CHROME = "This Mac also runs AgentView's own Chrome, driven with the mcp__browser tools. Use it when the user asks for the AgentView browser, or when a site in Claude in Chrome is signed in to the wrong account.";
@@ -52,7 +49,7 @@ export function agentOptions(o: {
     forkSession: o.fork,
     effort: o.effort,
     env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(o.configDir && { CLAUDE_CONFIG_DIR: o.configDir }), ...(o.openrouter && openRouterEnv(o.openrouter)) },
-    systemPrompt: { type: 'preset', preset: 'claude_code', append: !o.unattended && ownProfile() ? `${INSTRUCTIONS} ${OWN_CHROME}` : INSTRUCTIONS },
+    systemPrompt: { type: 'preset', preset: 'claude_code', append: o.unattended ? TOOL_INSTRUCTIONS : [TOOL_INSTRUCTIONS, CHROME, ...(ownProfile() ? [OWN_CHROME] : [])].join(' ') },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
     includeHookEvents: true,

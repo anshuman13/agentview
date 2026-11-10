@@ -183,6 +183,8 @@ describe('agentOptions unattended', () => {
     expect(o.sandbox?.filesystem?.denyRead).toEqual(expect.arrayContaining([path.join(os.homedir(), '.ssh'), path.join(os.homedir(), '.agentview'), path.join(os.homedir(), '.claude'), '/home/x/.claude-alt']));
     expect(o.extraArgs).not.toHaveProperty('chrome');
     expect(o.mcpServers).not.toHaveProperty('browser');
+    expect(JSON.stringify(o.systemPrompt)).not.toContain('Claude in Chrome');
+    expect(JSON.stringify(build().systemPrompt)).toContain('Claude in Chrome');
     expect(build().sandbox).toBeUndefined();
     expect(build().extraArgs).toHaveProperty('chrome');
   });
