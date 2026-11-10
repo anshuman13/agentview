@@ -47,7 +47,7 @@ const PROVIDERS: Record<Provider, Entry> = {
     serversFile: '~/.claude.json',
   },
   openrouter: {
-    driver: (cwd, resume, fork) => claudeDriver(cwd, resume, fork, true),
+    driver: (cwd, resume, fork, unattended) => claudeDriver(cwd, resume, fork, true, undefined, unattended),
     verifyLimits: () => Promise.resolve(),
     transcriptPath: claudeTranscript,
     memory: (cwd) => chatMemory(cwd),
