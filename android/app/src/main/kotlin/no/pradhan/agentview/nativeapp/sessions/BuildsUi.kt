@@ -132,7 +132,7 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
     val d = load.data
     PollWhile(d?.summary?.state == "running", reload)
     d?.specFile?.let { if (specFile) { FileScreen(hub, it, onBack = { specFile = false }); return } }
-    val review = { key: String, decision: String, note: String, done: (Boolean) -> Unit ->
+    val saveReview = { key: String, decision: String, note: String, done: (Boolean) -> Unit ->
         if (!hub.writes.allowed()) done(false)
         else scope.launch {
             val ok = runCatching { hub.api.post("/api/builds/review", buildJsonObject { put("slug", slug); put("phase", key); put("decision", decision); put("note", note) }.toString(), hub.pageChat) }.isSuccess
@@ -161,7 +161,7 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
                             ListRow(d.summary.conclusion, "${stageName(d.summary.stage)} · ${agoShort(d.updatedAt, now, " ago")}", trailing = if (d.entries.isEmpty()) null else ({ Badge(label, tone) }))
                         }
                     }
-                    phaseItems(d, phase, now, inMain && d.specFile != null, { specFile = true }, hub.readOnly, { phase = it }, { asking = true }) { key, done -> review(key, "approve", "") { ok -> if (!ok) hub.notice.value = "Could not save the review. Try again."; done(ok) } }
+                    phaseItems(d, phase, now, inMain && d.specFile != null, { specFile = true }, hub.readOnly, { phase = it }, { asking = true }) { key, done -> saveReview(key, "approve", "") { ok -> if (!ok) hub.notice.value = "Could not save the review. Try again."; done(ok) } }
                     item { SectionHeader("Stages", rows.size.toString()) }
                     item {
                         Group {
@@ -235,7 +235,7 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
         }
     }
     val shown = d?.phases?.takeIf { it.isNotEmpty() }?.let { phase ?: startPhase(it, d.reviews) }
-    if (asking && shown != null) ChangesSheet(shown, { note, done -> review(shown, "changes", note, done) }) { asking = false }
+    if (asking && shown != null) ChangesSheet(shown, { note, done -> saveReview(shown, "changes", note, done) }) { asking = false }
 }
 
 private class Report(val title: String, val text: String, val chat: String? = null, val session: String = "")
