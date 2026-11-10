@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useMemo, useState } from 'react';
 import { setUi, useStore } from '../app/store';
 import { Back } from '../app/touch/back';
@@ -92,7 +93,7 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
           </div>
         </>
       )}
-      {report && (
+      {report && createPortal(
         <Sheet label={report.title} onClose={() => setReport(null)} className="gl-sheet">
           <Section label={report.title} />
           <div className="bd-doc">{report.text.trim() ? <Markdown text={report.text} /> : <EmptyState size="sm" title="No report yet" />}</div>
@@ -101,7 +102,8 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
               <Button size="sm" onClick={() => { openChat({ chatId: chat.id, sessionId: chat.session }); window.dispatchEvent(new Event('agentview:chat')); setReport(null); }}>Open chat</Button>
             </div>
           )}
-        </Sheet>
+        </Sheet>,
+        document.body,
       )}
     </>
   );

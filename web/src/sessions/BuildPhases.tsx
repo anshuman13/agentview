@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useRef, useState, type ReactNode } from 'react';
 import { notice } from '../app/store';
 import { Markdown } from '../chat/Chat';
@@ -68,7 +69,7 @@ export function BuildPhases({ slug, phases, reviews, action, onSaved }: { slug: 
           />
         </div>
       </div>
-      {asking && <ChangesSheet phase={phase.key} onSend={(note) => save('changes', note)} onClose={() => setAsking(false)} />}
+      {asking && createPortal(<ChangesSheet phase={phase.key} onSend={(note) => save('changes', note)} onClose={() => setAsking(false)} />, document.body)}
     </>
   );
 }
