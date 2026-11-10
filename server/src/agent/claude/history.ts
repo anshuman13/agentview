@@ -50,7 +50,7 @@ export function parseJournal(text: string): JournalAgent[] {
     if (o?.type === 'started' && o.key && o.agentId) agents.set(o.key, { key: o.key, agentId: o.agentId, label: String(o.label ?? ''), phase: String(o.phase ?? ''), status: 'running', result: '' });
     else if (o?.type === 'result' || o?.type === 'failed') {
       const a = agents.get(o.key);
-      if (a) Object.assign(a, { status: o.type === 'failed' || o.error ? 'failed' : 'done', result: typeof o.result === 'string' ? o.result : '' });
+      if (a) Object.assign(a, { status: o.type === 'failed' || o.error ? 'failed' : 'done', result: typeof o.result === 'string' ? o.result : o.result && typeof o.result === 'object' ? JSON.stringify(o.result) : '' });
     }
   }
   return [...agents.values()];

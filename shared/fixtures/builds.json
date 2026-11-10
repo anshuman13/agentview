@@ -1,0 +1,42 @@
+{
+  "stageOf": [
+    { "name": "hand pm", "subagentType": "pm", "description": "Write the spec", "prompt": "Write .claude/specs/blue-kettle.md", "expected": { "stage": "pm", "slug": "blue-kettle", "round": null } },
+    { "name": "hand reviewer", "subagentType": "spec-reviewer", "description": "", "prompt": "Review the spec at .claude/specs/blue-kettle.md", "expected": { "stage": "review", "slug": "blue-kettle", "round": null } },
+    { "name": "hand tester", "subagentType": "tester", "description": "", "prompt": "Check .claude/specs/blue-kettle.md in the worktree", "expected": { "stage": "test", "slug": "blue-kettle", "round": null } },
+    { "name": "hand run without a spec path", "subagentType": "implementer", "description": "", "prompt": "Build it", "expected": null },
+    { "name": "other agent", "subagentType": "general-purpose", "description": "Search the code", "prompt": "see .claude/specs/blue-kettle.md", "expected": null },
+    { "name": "workflow impl with round", "subagentType": "Build", "description": "impl:red-lamp#2", "prompt": "", "expected": { "stage": "implement", "slug": "red-lamp", "round": 2 } },
+    { "name": "workflow test review round", "subagentType": "Build", "description": "test:red-lamp#review", "prompt": "", "expected": { "stage": "test", "slug": "red-lamp", "round": null } },
+    { "name": "workflow code review", "subagentType": "Build", "description": "code-review:red-lamp", "prompt": "", "expected": { "stage": "code-review", "slug": "red-lamp", "round": null } },
+    { "name": "workflow spec review", "subagentType": "Spec", "description": "review:red-lamp#1", "prompt": "", "expected": { "stage": "review", "slug": "red-lamp", "round": 1 } },
+    { "name": "label slug with dots", "subagentType": "Spec", "description": "pm:../x", "prompt": "", "expected": null }
+  ],
+  "verdict": [
+    { "name": "json verdict", "report": "{\"verdict\":\"Approve\",\"issues\":[]}", "expected": "approve" },
+    { "name": "first word of text", "report": "Verdict: revise. The rest would pass.", "expected": "revise" },
+    { "name": "clean in text", "report": "The diff is clean.", "expected": "clean" },
+    { "name": "no verdict", "report": "Built it.", "expected": null }
+  ],
+  "criteria": [
+    { "name": "lines in text", "report": "1. pass: ran the test\n2. fail: no 404\n3. unverified: needs a browser\nnotes", "expected": [{ "n": 1, "result": "pass", "evidence": "ran the test" }, { "n": 2, "result": "fail", "evidence": "no 404" }, { "n": 3, "result": "unverified", "evidence": "needs a browser" }] },
+    { "name": "inside a json report", "report": "{\"verdict\":\"pass\",\"report\":\"1. pass: ok\",\"fixes\":[]}", "expected": [{ "n": 1, "result": "pass", "evidence": "ok" }] },
+    { "name": "none", "report": "All good.", "expected": [] }
+  ],
+  "findings": [
+    { "name": "json issues", "report": "{\"verdict\":\"changes\",\"issues\":[\"rename a\",\"drop b\"]}", "expected": ["rename a", "drop b"] },
+    { "name": "dash and numbered lines", "report": "Issues:\n- rename a\n2. drop b\nplain line", "expected": ["rename a", "drop b"] }
+  ],
+  "summary": [
+    { "name": "running", "merged": false, "entries": [{ "stage": "implement", "status": "running", "report": "" }], "expected": { "stage": "implement", "state": "running", "conclusion": "Implement running" } },
+    { "name": "waiting on a spec revision", "merged": false, "entries": [{ "stage": "pm", "status": "done", "report": "spec" }, { "stage": "review", "status": "done", "report": "{\"verdict\":\"revise\",\"issues\":[\"x\"]}" }], "expected": { "stage": "review", "state": "waiting", "conclusion": "Spec needs revision" } },
+    { "name": "a later pm entry ends the wait", "merged": false, "entries": [{ "stage": "review", "status": "done", "report": "revise" }, { "stage": "pm", "status": "done", "report": "spec" }], "expected": { "stage": "pm", "state": "done", "conclusion": "Spec done" } },
+    { "name": "failed tests", "merged": false, "entries": [{ "stage": "implement", "status": "done", "report": "abc1234", "commit": true }, { "stage": "test", "status": "done", "report": "{\"verdict\":\"fail\",\"report\":\"1. pass: a\\n2. fail: b\\n3. fail: c\",\"fixes\":[]}" }], "expected": { "stage": "test", "state": "failed", "conclusion": "Tests failed · 2 of 3 criteria" } },
+    { "name": "code review asks for changes", "merged": false, "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }, { "stage": "test", "status": "done", "report": "pass" }, { "stage": "code-review", "status": "done", "report": "{\"verdict\":\"changes\",\"issues\":[\"a\",\"b\",\"c\"]}" }], "expected": { "stage": "code-review", "state": "failed", "conclusion": "Code review asks for 3 changes" } },
+    { "name": "a later implement entry answers the review", "merged": false, "entries": [{ "stage": "code-review", "status": "done", "report": "changes" }, { "stage": "implement", "status": "done", "report": "", "commit": true }], "expected": { "stage": "implement", "state": "done", "conclusion": "Passed · not merged yet" } },
+    { "name": "last entry failed", "merged": false, "entries": [{ "stage": "pm", "status": "failed", "report": "" }], "expected": { "stage": "pm", "state": "failed", "conclusion": "Spec failed" } },
+    { "name": "last entry stopped", "merged": false, "entries": [{ "stage": "test", "status": "stopped", "report": "" }], "expected": { "stage": "test", "state": "done", "conclusion": "Test stopped" } },
+    { "name": "no commit", "merged": false, "entries": [{ "stage": "implement", "status": "done", "report": "done" }], "expected": { "stage": "implement", "state": "done", "conclusion": "No commit found" } },
+    { "name": "passed, not merged", "merged": false, "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }, { "stage": "test", "status": "done", "report": "pass" }], "expected": { "stage": "test", "state": "done", "conclusion": "Passed · not merged yet" } },
+    { "name": "merged", "merged": true, "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }, { "stage": "test", "status": "done", "report": "pass" }], "expected": { "stage": "test", "state": "done", "conclusion": "Merged as abc1234" } }
+  ]
+}

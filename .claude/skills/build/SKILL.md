@@ -13,6 +13,8 @@ Runs `.claude/workflows/build.js`: for each feature brief, `pm` writes `.claude/
 2. Turn the user's ask into briefs: one line each, user-visible outcome, a slug of 2-4 words. Do not pre-design; that is the pm's job.
 3. Call Workflow with `{scriptPath: '<repo>/.claude/workflows/build.js', args: [{slug, brief}, ...]}` (the name registry does not see this file). Optional `specRounds` and `buildRounds` on an object form: `{features: [...], buildRounds: 2}`.
 
+Build agents run by hand (pm, spec-reviewer, implementer, tester, code-reviewer) get `.claude/specs/<slug>.md` in their prompt, so the Builds view can file their reports under the feature.
+
 ## After it returns
 
 For each result with `passed: true`:

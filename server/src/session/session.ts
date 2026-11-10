@@ -4,6 +4,7 @@ import type { ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, Se
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from '../host/restore.js';
 import { Approvals } from './approvals.js';
+import { recordBuild } from './builds.js';
 import { BuildCycle } from './cycle.js';
 import { EventLog } from './eventLog.js';
 import { Hooks } from './hooks.js';
@@ -103,6 +104,7 @@ export class AgentSession implements AgentHost {
   emit(m: ServerMessage) {
     if (m.type === 'pending') this.links.waitingOnUser(true);
     else if (m.type === 'resolved' && !this.state.pending.length) this.links.waitingOnUser(false);
+    if (m.type === 'event') recordBuild(this, m.event);
     for (const l of this.listeners) l(m);
   }
 

@@ -273,7 +273,7 @@ describe('AgentSession turns', () => {
     const send = vi.spyOn(s.driver, 'send');
     Object.assign(s.driver, { q: { close: vi.fn() }, start: vi.fn(), accounts: () => ['main', 'alt'] });
     s.crons = [{ schedule: '*/5 * * * *', prompt: 'check the build', recurring: true }];
-    s.pushEvent({ id: 'a1', kind: 'agent', toolUseId: 'tu1', status: 'running', background: true, prompt: 'p', at: 0 } as ChatEvent);
+    s.pushEvent({ id: 'a1', kind: 'agent', toolUseId: 'tu1', status: 'running', background: true, description: '', prompt: 'p', at: 0 } as ChatEvent);
     s.setAccount('alt');
     expect(s.agentOf('tu1')?.status).toBe('stopped');
     expect(send).toHaveBeenCalledWith(expect.stringMatching(/^Claude restarted on another account\..*check the build/s), expect.any(String));

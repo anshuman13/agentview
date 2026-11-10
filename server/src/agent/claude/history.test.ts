@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const config = await mkdtemp(path.join(os.tmpdir(), 'av-wf-'));
 process.env.CLAUDE_CONFIG_DIR = config;
 const { parseJournal, projectDir, workflowAgents, workflowSize } = await import('./history.js');
-const { historyFrom, workflowName } = await import('./transcript.js');
+const { historyFrom, workflowEvents, workflowName } = await import('./transcript.js');
 
 const lines = (...l: unknown[]) => l.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join('\n');
 const started = (key: string, agentId: string, label = key) => ({ type: 'started', key, agentId, label, phase: 'Build' });
@@ -24,6 +24,14 @@ describe('parseJournal', () => {
 
   it('marks a result that reports an error as failed', () => {
     expect(parseJournal(lines(started('k1', 'a1'), { type: 'result', key: 'k1', error: 'boom' }))[0].status).toBe('failed');
+  });
+
+  it('keeps an object result as JSON and a long result whole in the chat events', () => {
+    const verdict = { verdict: 'pass', report: 'x'.repeat(5000), fixes: [] };
+    const [a] = parseJournal(lines(started('k1', 'a1', 'test:tin-can#1'), { type: 'result', key: 'k1', result: verdict }));
+    expect(JSON.parse(a.result)).toEqual(verdict);
+    const events = workflowEvents({ runId: 'wf_y', agents: [{ ...a, msgs: [] }] }, 'build', 1);
+    expect(events.find((e) => e.kind === 'tool_result')).toMatchObject({ text: a.result });
   });
 });
 

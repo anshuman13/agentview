@@ -20,6 +20,6 @@ Hard rules:
 
 Return:
 - verdict: pass (every criterion passes) or fail
-- per criterion: pass / fail / unverified, one line of evidence
+- per criterion: pass / fail / unverified, one line of evidence, as a line `<n>. pass|fail|unverified: <evidence>` (n is the criterion number; the Builds view reads these lines)
 - for each fail: what to change, specific enough that the implementer needs no further reading
 - notes: anything odd you saw outside the criteria

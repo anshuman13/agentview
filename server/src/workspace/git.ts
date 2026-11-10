@@ -86,11 +86,14 @@ export function parseNumstat(out: string): BranchFile[] {
   });
 }
 
-const MAX_BRANCH_DIFF = 2_000_000;
+export const MAX_BRANCH_DIFF = 2_000_000;
+
+// The default branch as a remote ref, origin/main when the repo has no origin/HEAD.
+export const defaultBase = async (cwd: string) => (await git(cwd, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).catch(() => 'origin/main')).trim();
 
 // What this branch committed since it left the default branch, for review before a PR.
 async function branchDiff(cwd: string) {
-  const base = (await git(cwd, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).catch(() => 'origin/main')).trim();
+  const base = await defaultBase(cwd);
   const since = (await git(cwd, ['merge-base', base, 'HEAD']).catch(() => '')).trim();
   const name = base.replace(/^origin\//, '');
   if (!since) return { base: name, files: [], diff: '' };
