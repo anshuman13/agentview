@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -17,8 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -32,9 +31,7 @@ import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
-import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
-import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
@@ -87,7 +84,6 @@ fun taskMeta(row: Row, now: Long, inDay: Boolean, showProfile: Boolean): android
 @Composable
 fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean, inDay: Boolean = false, onOpen: () -> Unit) {
     val haptic = LocalHapticFeedback.current
-    var menu by remember { mutableStateOf(false) }
     val isDone = row.status == "done"
     val swipeable = row.status == "open"
     val current by rememberUpdatedState(row)
@@ -106,16 +102,12 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
                 title = row.title ?: "(Untitled)",
                 meta = taskMeta(row, now, inDay, showProfile),
                 leading = if (row.status == "note") null else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done") { if (isDone) actions.reopen(row) else actions.done(row) } } },
-                trailing = {
-                    if (row.status == "suggested") Badge("Needs you", BadgeTone.Waiting)
-                    Box {
-                        IconBtn("kebab-vertical", "More", { menu = true })
-                        TaskMenu(row, menu, { menu = false }, actions, onOpen)
-                    }
-                },
+                state = { if (row.status == "suggested") Badge("Needs you", BadgeTone.Waiting) },
+                stateSlot = true,
+                menu = { dismiss -> TaskMenu(row, dismiss, actions, onOpen) },
+                lines = 1,
                 strike = isDone,
                 onClick = onOpen,
-                onLongClick = { menu = true },
             )
         }
     }
@@ -134,16 +126,14 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
 }
 
 @Composable
-fun TaskMenu(row: Row, show: Boolean, dismiss: () -> Unit, actions: TaskActions, onOpen: () -> Unit) {
+fun ColumnScope.TaskMenu(row: Row, dismiss: () -> Unit, actions: TaskActions, onOpen: () -> Unit) {
     val other = if (row.profile == WORK) PERSONAL else WORK
-    Menu(show, dismiss) {
-        MenuItem("Open", "arrow-right", { dismiss(); onOpen() })
-        if (row.status == "open") {
-            MenuItem("Snooze", "clock", { dismiss(); actions.snoozeLater(row) })
-            MenuItem("Tomorrow", "calendar", { dismiss(); actions.tomorrow(row) })
-        }
-        if (row.status == "done") MenuItem("Not done", "discard", { dismiss(); actions.reopen(row) })
-        MenuItem("Move to ${profileLabel(other)}", "arrow-swap", { dismiss(); actions.move(row, other) })
-        MenuItem("Delete", "trash", { dismiss(); actions.delete(row) }, danger = true)
+    MenuItem("Open", "arrow-right", { dismiss(); onOpen() })
+    if (row.status == "open") {
+        MenuItem("Snooze", "clock", { dismiss(); actions.snoozeLater(row) })
+        MenuItem("Tomorrow", "calendar", { dismiss(); actions.tomorrow(row) })
     }
+    if (row.status == "done") MenuItem("Not done", "discard", { dismiss(); actions.reopen(row) })
+    MenuItem("Move to ${profileLabel(other)}", "arrow-swap", { dismiss(); actions.move(row, other) })
+    MenuItem("Delete", "trash", { dismiss(); actions.delete(row) }, danger = true)
 }
