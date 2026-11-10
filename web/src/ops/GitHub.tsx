@@ -74,6 +74,8 @@ function PrList({ onOpen }: { onOpen: (n: number) => void }) {
       <Section label="Pull requests" count={loading && !prs.length ? undefined : prs.length} action={<IconButton icon="refresh" label="Refresh" size="sm" spin={loading} disabled={loading} onClick={() => load(cwd, true)} />} />
       {error ? (
         <Problem error={error} />
+      ) : !prs.length ? (
+        !loading && <EmptyState size="sm" title="No pull requests" />
       ) : (
         <>
           <PrGroup title="Waiting for my review" empty="No pull requests waiting for you" prs={prs.filter((p) => p.reviewRequested)} onOpen={(p) => onOpen(p.number)} />

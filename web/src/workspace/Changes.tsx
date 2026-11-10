@@ -141,12 +141,16 @@ export function Changes() {
   return (
     <div className="scm" ref={root}>
       <BranchBar status={status} onRefresh={() => void refresh()} />
-      <CommitBox branch={status?.branch ?? ''} staged={staged.length} onCommit={(message) => run('commit', { message })} />
-      <div className="scm-commit-actions scm-review">
-        <button className="btn quiet scm-claude" disabled={!files.length} title={files.length ? `${label} reviews the working tree, findings show below` : 'No changes to review'} onClick={() => askChat(REVIEW_LOCAL)}>
-          <Icon name="search" small /> Review changes with {label}
-        </button>
-      </div>
+      {files.length > 0 && (
+        <>
+          <CommitBox branch={status?.branch ?? ''} staged={staged.length} onCommit={(message) => run('commit', { message })} />
+          <div className="scm-commit-actions scm-review">
+            <button className="btn quiet scm-claude" title={`${label} reviews the working tree, findings show below`} onClick={() => askChat(REVIEW_LOCAL)}>
+              <Icon name="search" small /> Review changes with {label}
+            </button>
+          </div>
+        </>
+      )}
       {(failed || error) && <div className="scm-error" role="alert">{failed || error}</div>}
       <div className="scm-tree">
         <Section
