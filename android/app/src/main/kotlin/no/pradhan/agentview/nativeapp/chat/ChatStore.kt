@@ -72,7 +72,10 @@ class ChatStore(
             is ServerMessage.Init -> {
                 if (switching && m.chatId != wanted) { wanted = m.chatId; switching = false }
                 else if (wanted.isNotEmpty() && m.chatId != wanted) return
-                state.update { it.copy(shownId = m.chatId, events = m.events, earlier = m.earlier, settled = true, session = m.session, pending = m.pending) }
+                state.update {
+                    val page = if (it.shownId == m.chatId) mergeTail(it.events, it.earlier, m.events, m.earlier) else m.events to m.earlier
+                    it.copy(shownId = m.chatId, events = page.first, earlier = page.second, settled = true, session = m.session, pending = m.pending)
+                }
             }
             is ServerMessage.Event -> state.update { s ->
                 if (!s.settled) return@update s
@@ -154,3 +157,11 @@ fun merged(held: SessionInfo?, m: ServerMessage.SessionUpdate): SessionInfo =
         commands = if ("commands" in m.keeps) held.commands else m.session.commands,
         mcp = if ("mcp" in m.keeps) held.mcp else m.session.mcp,
     )
+
+// A tail init for the chat on screen keeps the older events already held before the init's first id.
+// They are kept only while the count before that id still adds up; a removed or moved event ahead of it breaks the count and the init alone stands.
+fun mergeTail(held: List<ChatEvent>, heldEarlier: Int, tail: List<ChatEvent>, earlier: Int): Pair<List<ChatEvent>, Int> {
+    val at = if (tail.isEmpty()) -1 else held.indexOfFirst { it.id == tail[0].id }
+    val kept = if (at >= 0 && heldEarlier + at == earlier) held.subList(0, at) else emptyList()
+    return (kept + tail) to maxOf(0, earlier - kept.size)
+}

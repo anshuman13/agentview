@@ -37,16 +37,21 @@ export class EventLog {
     return { events: this.state.events.slice(start, at), earlier: start };
   }
 
+  // The tail only: a client that paged in older events keeps them while their count still adds up (see mergeTail).
+  private reinit() {
+    this.emit({ type: 'init', state: this.window(ROW_WINDOW) });
+  }
+
   remove(drop: (e: ChatEvent) => boolean) {
     this.state.events = this.state.events.filter((e) => !drop(e));
-    this.emit({ type: 'init', state: this.state });
+    this.reinit();
   }
 
   // The events move below the finished turn, in the order given.
   moveToEnd(tail: ChatEvent[]) {
     const moved = new Set(tail);
     this.state.events = [...this.state.events.filter((e) => !moved.has(e)), ...tail];
-    this.emit({ type: 'init', state: this.state });
+    this.reinit();
   }
 
   allow(rule: string) {
@@ -60,7 +65,7 @@ export class EventLog {
 
   replace(h: History) {
     this.state.events = this.apply(h);
-    this.emit({ type: 'init', state: this.state });
+    this.reinit();
   }
 
   append(h: History) {

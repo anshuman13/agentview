@@ -14,6 +14,7 @@ import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
 import { isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
+import { mergeTail } from './app/runtime/pageEvents';
 import { countChat } from './app/store/counts';
 import { can, modelsFor } from './chat/capabilitiesLogic';
 import { chatState, handoffText, runLine } from './chat/composer/composerLogic';
@@ -52,6 +53,15 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; tool: string; input: Record<string, unknown>; expected: { add: number; del: number } | null }>('edit-count')) {
     it(`editCount: ${c.name}`, () => expect(editCount(c.tool, c.input)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; held: string[]; heldEarlier: number; tail: string[]; earlier: number; expected: string[]; expectedEarlier: number }>('merge-tail')) {
+    it(`mergeTail: ${c.name}`, () => {
+      const events = (ids: string[]) => ids.map((id) => ({ id, kind: 'user', text: '', at: 0 }) as ChatEvent);
+      const m = mergeTail(events(c.held), c.heldEarlier, events(c.tail), c.earlier);
+      expect(m.events.map((e) => e.id)).toEqual(c.expected);
+      expect(m.earlier).toBe(c.expectedEarlier);
+    });
   }
 
   for (const c of cases<{ name: string; text: string; expected: string }>('strip-round')) {

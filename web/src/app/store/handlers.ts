@@ -49,7 +49,7 @@ function onInit(m: Extract<ServerMessage, { type: 'init' }>) {
     const same = s.session.id === m.state.session.id;
     const shown = view.shownId === m.state.session.id;
     const old = new Map(s.events.map((e) => [e.id, e]));
-    const page = initPage(s.events, same, m.state.events, m.state.earlier);
+    const page = initPage(s.events, s.earlier ?? 0, same, m.state.events, m.state.earlier);
     const events = page.events.map((e) => {
       const o = shown ? old.get(e.id) : undefined;
       return o && equal(o, e) ? o : e;

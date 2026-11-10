@@ -17,6 +17,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
 import no.pradhan.agentview.nativeapp.app.BarEvent
+import no.pradhan.agentview.nativeapp.chat.mergeTail
 import no.pradhan.agentview.nativeapp.app.BarState
 import no.pradhan.agentview.nativeapp.app.FEATURES
 import no.pradhan.agentview.nativeapp.app.appCounts
@@ -114,6 +115,15 @@ class SharedCasesTest {
         for (c in cases("edit-count")) {
             val expected = c["expected"]?.takeIf { it !is JsonNull }?.jsonObject?.let { it.getValue("add").jsonPrimitive.long.toInt() to it.getValue("del").jsonPrimitive.long.toInt() }
             assertEquals(c.str("name"), expected, editCount(c.str("tool"), c.getValue("input").jsonObject))
+        }
+    }
+
+    @Test fun mergeTail() {
+        fun events(c: JsonObject, k: String) = c.getValue(k).jsonArray.map { ChatEvent(id = it.jsonPrimitive.content, kind = "user") }
+        for (c in cases("merge-tail")) {
+            val (merged, earlier) = mergeTail(events(c, "held"), c.getValue("heldEarlier").jsonPrimitive.int, events(c, "tail"), c.getValue("earlier").jsonPrimitive.int)
+            assertEquals(c.str("name"), events(c, "expected").map { it.id }, merged.map { it.id })
+            assertEquals(c.str("name"), c.getValue("expectedEarlier").jsonPrimitive.int, earlier)
         }
     }
 

@@ -67,8 +67,9 @@ block. The client adds an append only when the offset fits the text it has; the 
 The `init` for a client opening a chat is a tail: the host `state` op takes a `limit` and `Session.view(limit)` returns the
 last `limit` events (150, `ROW_WINDOW`) plus `earlier`, the count left out. Older events come from
 `GET /api/chat/events?chat=&before=<event id>&limit=` (host op `events_before`, `Session.before`), at most 500 per page.
-`/api/state` and the `init` the session broadcasts hold every event. A tail `init` for the chat on screen keeps the older
-events already paged in (`mergeTail` in `web/src/app/runtime/pageEvents.ts`).
+`/api/state` holds every event; the `init` the session broadcasts (queue changes, history replace) is a tail too. A tail `init`
+for the chat on screen keeps the older events already paged in while the count before its first id still adds up, else it
+stands alone (`mergeTail` in `web/src/app/runtime/pageEvents.ts` and `chat/ChatStore.kt`, cases in `shared/fixtures/merge-tail.json`).
 
 `web/src` is grouped by feature: `app` (shell, store, API, palette), `ui` (shared widgets and helpers), `chat`,
 `sessions`, `workspace` (files, code, terminal, browser), `ops` (Observe, Deploy, GitHub, MCP), `codex` (with `data`, `jobs`,

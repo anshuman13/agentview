@@ -1,0 +1,8 @@
+[
+  { "name": "keeps paged older events after a reconnect", "held": ["e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"], "heldEarlier": 2, "tail": ["e6", "e7", "e8", "e9"], "earlier": 6, "expected": ["e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"], "expectedEarlier": 2 },
+  { "name": "drops the held events when one before the tail was removed", "held": ["e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"], "heldEarlier": 2, "tail": ["e6", "e7", "e8", "e9"], "earlier": 5, "expected": ["e6", "e7", "e8", "e9"], "expectedEarlier": 5 },
+  { "name": "keeps the older events when one inside the tail was removed", "held": ["e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"], "heldEarlier": 2, "tail": ["e5", "e6", "e7", "e9"], "earlier": 5, "expected": ["e2", "e3", "e4", "e5", "e6", "e7", "e9"], "expectedEarlier": 2 },
+  { "name": "drops the held events when one of them moved to the end", "held": ["e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"], "heldEarlier": 2, "tail": ["e7", "e8", "e9", "e4"], "earlier": 6, "expected": ["e7", "e8", "e9", "e4"], "expectedEarlier": 6 },
+  { "name": "keeps the older events when one inside the tail moved to the end", "held": ["e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"], "heldEarlier": 2, "tail": ["e6", "e7", "e9", "e8"], "earlier": 6, "expected": ["e2", "e3", "e4", "e5", "e6", "e7", "e9", "e8"], "expectedEarlier": 2 },
+  { "name": "keeps nothing when the first id is not held", "held": ["e2", "e3", "e4", "e5"], "heldEarlier": 2, "tail": ["e6", "e7", "e8", "e9"], "earlier": 6, "expected": ["e6", "e7", "e8", "e9"], "expectedEarlier": 6 }
+]

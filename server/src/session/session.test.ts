@@ -7,7 +7,7 @@ import { Runs, WAITING } from './runs.js';
 import { claudeSession, type ClaudeDriver } from '../agent/claude/driver.js';
 import { historyFrom } from '../agent/claude/transcript.js';
 import type { History } from '../agent/types.js';
-import { appendTo, BIG_BRO, type ChatEvent, type ServerMessage } from '../../../shared/protocol.js';
+import { appendTo, BIG_BRO, ROW_WINDOW, type ChatEvent, type ServerMessage } from '../../../shared/protocol.js';
 import { sketchPrompt } from '../../../shared/sketches.js';
 import { specReviewPrompt } from '../../../shared/specTasks.js';
 
@@ -1073,14 +1073,19 @@ describe('event windows', () => {
     expect(() => s.before('gone')).toThrow();
   });
 
-  it('an init the session emits carries every event and no earlier', () => {
-    const s = filled(400);
-    const seen: { events: unknown[]; earlier?: number }[] = [];
+  it('an init the session emits carries the tail with the count of the rest', () => {
+    const s = filled(3000);
+    const seen: { events: { id: string }[]; earlier?: number }[] = [];
     s.onMessage((m) => { if (m.type === 'init') seen.push(m.state); });
-    s.replaceHistory({ events: s.state.events, context: s.state.session.context, cache: s.state.session.cache } as never);
+    const moved = s.state.events.slice(0, 2);
+    s.log.moveToEnd(moved);
     expect(seen).toHaveLength(1);
-    expect(seen[0].events).toHaveLength(400);
-    expect(seen[0].earlier).toBeUndefined();
+    expect(seen[0].events).toHaveLength(ROW_WINDOW);
+    expect(seen[0].events.at(-1)?.id).toBe(moved[1].id);
+    expect(seen[0].earlier).toBe(3000 - ROW_WINDOW);
+    s.replaceHistory({ events: s.state.events.slice(0, 40), context: s.state.session.context, cache: s.state.session.cache } as never);
+    expect(seen[1].events).toHaveLength(40);
+    expect(seen[1].earlier).toBeUndefined();
   });
 });
 
