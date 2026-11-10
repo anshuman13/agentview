@@ -3,6 +3,7 @@ import { BIG_BRO, type Effort } from '../../../../shared/protocol.js';
 import { TOOLS, TOOL_INSTRUCTIONS } from '../tools/index.js';
 import type { ToolCtx } from '../tools/tool.js';
 import { ownProfile, PROFILE_PORT } from '../../chrome/launch.js';
+import { sandboxOf, type Unattended } from '../../session/unattended.js';
 import { openRouterEnv, type OpenRouterSettings } from './openrouter.js';
 
 export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
@@ -16,8 +17,8 @@ const INSTRUCTIONS = [
 
 // A Mac with its own AgentView Chrome lets chats drive it too: the Browser tab shows it and it holds its own logins.
 const OWN_CHROME = "This Mac also runs AgentView's own Chrome, driven with the mcp__browser tools. Use it when the user asks for the AgentView browser, or when a site in Claude in Chrome is signed in to the wrong account.";
-const ownChrome = (): Record<string, McpServerConfig> =>
-  ownProfile() ? { browser: { type: 'stdio', command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {};
+const ownChrome = (unattended?: Unattended): Record<string, McpServerConfig> =>
+  !unattended && ownProfile() ? { browser: { type: 'stdio', command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {};
 
 function agentviewServer(o: { cwd: string; chat: () => string | null; host: ToolCtx['host']; openrouter?: OpenRouterSettings | null }) {
   return createSdkMcpServer({
@@ -35,6 +36,7 @@ export function agentOptions(o: {
   canUseTool: CanUseTool;
   beforeAgent: HookCallback;
   beforeEdit: HookCallback;
+  beforeTool: HookCallback;
   afterTool: HookCallback;
   onStop: HookCallback;
   mcp?: Record<string, McpServerConfig>;
@@ -42,7 +44,7 @@ export function agentOptions(o: {
   fork?: boolean;
   configDir?: string;
   openrouter?: OpenRouterSettings | null;
-  unattended?: boolean;
+  unattended?: Unattended;
 }): Options {
   return {
     cwd: o.cwd,
@@ -50,16 +52,17 @@ export function agentOptions(o: {
     forkSession: o.fork,
     effort: o.effort,
     env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(o.configDir && { CLAUDE_CONFIG_DIR: o.configDir }), ...(o.openrouter && openRouterEnv(o.openrouter)) },
-    systemPrompt: { type: 'preset', preset: 'claude_code', append: ownProfile() ? `${INSTRUCTIONS} ${OWN_CHROME}` : INSTRUCTIONS },
+    systemPrompt: { type: 'preset', preset: 'claude_code', append: !o.unattended && ownProfile() ? `${INSTRUCTIONS} ${OWN_CHROME}` : INSTRUCTIONS },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
     includeHookEvents: true,
     enableFileCheckpointing: true,
     allowedTools: TOOLS.map((t) => `mcp__agentview__${t.name}`),
     disallowedTools: ['mcp__playwright', ...(o.unattended ? ['Bash(git push:*)', 'Bash(gh:*)'] : []), ...(o.openrouter && Object.values(o.openrouter.models).some((m) => !m.startsWith('anthropic/')) ? ['WebSearch'] : [])],
-    extraArgs: { chrome: null },
+    extraArgs: o.unattended ? {} : { chrome: null },
+    ...(o.unattended && { sandbox: sandboxOf(o.unattended) }),
     permissionMode: 'auto',
-    mcpServers: { agentview: agentviewServer(o), ...ownChrome(), ...o.mcp },
+    mcpServers: { agentview: agentviewServer(o), ...ownChrome(o.unattended), ...o.mcp },
     toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
     canUseTool: o.canUseTool,
     perTaskStopAffordance: true,
@@ -73,7 +76,7 @@ export function agentOptions(o: {
       },
     },
     hooks: {
-      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }, { matcher: 'Edit|Write|MultiEdit|NotebookEdit', hooks: [o.beforeEdit] }],
+      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }, { matcher: 'Edit|Write|MultiEdit|NotebookEdit', hooks: [o.beforeEdit] }, ...(o.unattended ? [{ matcher: 'WebFetch|mcp__.*', hooks: [o.beforeTool] }] : [])],
       PostToolUse: [{ hooks: [o.afterTool] }],
       Stop: [{ hooks: [o.onStop] }],
     },

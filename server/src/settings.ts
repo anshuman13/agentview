@@ -1,3 +1,4 @@
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { ACCOUNT_LABEL, type Account, type Provider, type PublicSettings } from '../../shared/protocol.js';
@@ -9,15 +10,38 @@ export const SETTINGS_FILE = process.env.AGENTVIEW_SETTINGS ?? path.join(os.home
 // service; empty turns Deploy off. accountLabels: names for the Claude accounts. roots: the folders holding repos.
 // personalRoot: the folder whose chats use the personal profile and account, also a root; empty means all work.
 // defaultProvider: what a new chat runs on when the client does not pick one.
-export type Settings = { owner: string; hubUrl: string; deployUrl: string; accountLabels: Partial<Record<Account, string>>; roots: string[]; personalRoot: string; defaultProvider: Provider };
+export type UnattendedLimits = { allowWrite: string[]; allowedDomains: string[] };
 
-export const EMPTY_SETTINGS: Settings = { owner: '', hubUrl: '', deployUrl: '', accountLabels: {}, roots: ['~/workspace'], personalRoot: '', defaultProvider: 'claude' };
+// unattended: what a scheduled coding chat may write and fetch, besides its worktree.
+export type Settings = { unattended: UnattendedLimits; owner: string; hubUrl: string; deployUrl: string; accountLabels: Partial<Record<Account, string>>; roots: string[]; personalRoot: string; defaultProvider: Provider };
+
+export const UNATTENDED_DOMAINS = ['registry.npmjs.org', 'pypi.org', 'files.pythonhosted.org'];
+
+export const EMPTY_SETTINGS: Settings = { unattended: { allowWrite: [], allowedDomains: UNATTENDED_DOMAINS }, owner: '', hubUrl: '', deployUrl: '', accountLabels: {}, roots: ['~/workspace'], personalRoot: '', defaultProvider: 'claude' };
 
 const expandHome = (dir: string) => path.resolve(dir.replace(/^~/, os.homedir()));
 
 export const personalRoot = (s = loadSettings()) => (s.personalRoot ? expandHome(s.personalRoot) : '');
 
 export const workspaceRoots = (s = loadSettings()) => [...new Set([...s.roots.map(expandHome), personalRoot(s)].filter(Boolean))];
+
+const strings = (v: unknown, fallback: string[], name: string, log: (line: string) => void) => {
+  if (v === undefined) return fallback;
+  if (Array.isArray(v) && v.every((x) => typeof x === 'string')) return v as string[];
+  log(`settings: unattended.${name} is not a list of strings, using the default`);
+  return fallback;
+};
+
+const reachesThisMac = (d: string) => d === 'localhost' || net.isIP(d.replace(/^\[|\]$/g, '')) > 0 || d.toLowerCase().endsWith('.netbird.cloud');
+
+// The limits of an unattended chat. Domains that reach this Mac or its NetBird peers are dropped, so the chat cannot call the server or the hub.
+export function unattendedLimits(raw: unknown, log: (line: string) => void = console.error): UnattendedLimits {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const domains = strings(o.allowedDomains, UNATTENDED_DOMAINS, 'allowedDomains', log);
+  const dropped = domains.filter(reachesThisMac);
+  if (dropped.length) log(`settings: unattended.allowedDomains dropped ${dropped.join(', ')}`);
+  return { allowWrite: strings(o.allowWrite, [], 'allowWrite', log).map(expandHome), allowedDomains: domains.filter((d) => !reachesThisMac(d)) };
+}
 
 export const loadSettings = (): Settings => ({ ...EMPTY_SETTINGS, ...readJsonSync<Partial<Settings>>(SETTINGS_FILE, {}) });
 

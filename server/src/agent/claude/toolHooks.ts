@@ -1,6 +1,7 @@
 import type { HookInput, HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentHost } from '../types.js';
 import { STATUS_REMINDER } from './options.js';
+import { denyTool, editDenied, toolDenied, type Unattended } from '../../session/unattended.js';
 import { bigBroRequest, bigBroVerdict } from './approval.js';
 
 const STATUS_EVERY = 8;
@@ -19,12 +20,20 @@ export class ToolHooks {
     return bigBroVerdict(r.behavior);
   }
 
-  beforeEdit(input: HookInput): HookJSONOutput {
+  beforeEdit(input: HookInput, unattended?: Unattended): HookJSONOutput {
     if (input.hook_event_name !== 'PreToolUse') return {};
     const { file_path, notebook_path } = (input.tool_input ?? {}) as { file_path?: unknown; notebook_path?: unknown };
     const file = file_path ?? notebook_path;
+    const denied = typeof file === 'string' && unattended && editDenied(file, unattended);
+    if (denied) return denyTool(denied);
     if (typeof file === 'string') this.host.captureEdit(file);
     return {};
+  }
+
+  beforeTool(input: HookInput, unattended: Unattended): HookJSONOutput {
+    if (input.hook_event_name !== 'PreToolUse') return {};
+    const denied = toolDenied(input.tool_name, (input.tool_input ?? {}) as Record<string, unknown>, unattended);
+    return denied ? denyTool(denied) : {};
   }
 
   afterTool(input: HookInput): HookJSONOutput {

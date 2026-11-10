@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { appendFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type { AgentSession } from '../../session/session.js';
 import type { CanUseTool, HookCallback } from '@anthropic-ai/claude-agent-sdk';
 import { claudeSession } from './driver.js';
 import { agentOptions } from './options.js';
+import { unattendedRules, type Unattended } from '../../session/unattended.js';
 import { workflowAgents } from './history.js';
 import { JsonlTail } from './tail.js';
 import { contextFrom, historyFrom } from './transcript.js';
@@ -155,10 +157,28 @@ describe('history', () => {
 });
 
 describe('agentOptions unattended', () => {
-  const build = (unattended: boolean) => agentOptions({ cwd: '/tmp', host: { setStatus: vi.fn() }, chat: () => null, canUseTool: vi.fn() as unknown as CanUseTool, beforeAgent: vi.fn() as unknown as HookCallback, beforeEdit: vi.fn() as unknown as HookCallback, afterTool: vi.fn() as unknown as HookCallback, onStop: vi.fn() as unknown as HookCallback, unattended });
+  const rules = unattendedRules('/w/job', { allowWrite: ['/extra'], allowedDomains: ['pypi.org'] }, ['/home/x/.claude-alt']);
+  const build = (unattended?: Unattended) => agentOptions({ cwd: '/w/job', host: { setStatus: vi.fn() }, chat: () => null, canUseTool: vi.fn() as unknown as CanUseTool, beforeAgent: vi.fn() as unknown as HookCallback, beforeEdit: vi.fn() as unknown as HookCallback, beforeTool: vi.fn() as unknown as HookCallback, afterTool: vi.fn() as unknown as HookCallback, onStop: vi.fn() as unknown as HookCallback, unattended });
 
   it('disallows git push and gh only for an unattended chat', () => {
-    expect(build(true).disallowedTools).toEqual(expect.arrayContaining(['Bash(git push:*)', 'Bash(gh:*)']));
-    expect(build(false).disallowedTools).not.toContain('Bash(gh:*)');
+    expect(build(rules).disallowedTools).toEqual(expect.arrayContaining(['Bash(git push:*)', 'Bash(gh:*)']));
+    expect(build().disallowedTools).not.toContain('Bash(gh:*)');
+  });
+
+  it('holds the sandbox, with no Chrome, only for an unattended chat', () => {
+    const o = build(rules);
+    expect(o.sandbox).toMatchObject({
+      enabled: true,
+      failIfUnavailable: true,
+      autoAllowBashIfSandboxed: true,
+      allowUnsandboxedCommands: false,
+      filesystem: { allowWrite: ['/w/job', os.tmpdir(), '/extra'], denyWrite: ['/w/job/.git'] },
+      network: { allowedDomains: ['pypi.org'] },
+    });
+    expect(o.sandbox?.filesystem?.denyRead).toEqual(expect.arrayContaining([path.join(os.homedir(), '.ssh'), path.join(os.homedir(), '.agentview'), path.join(os.homedir(), '.claude'), '/home/x/.claude-alt']));
+    expect(o.extraArgs).not.toHaveProperty('chrome');
+    expect(o.mcpServers).not.toHaveProperty('browser');
+    expect(build().sandbox).toBeUndefined();
+    expect(build().extraArgs).toHaveProperty('chrome');
   });
 });

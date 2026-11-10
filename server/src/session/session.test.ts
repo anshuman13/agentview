@@ -1072,4 +1072,11 @@ describe('job runs', () => {
     expect(runs.get(id)).toMatchObject({ state: 'done', why: 'turn finished', rounds: [{ n: 1, line: 'done' }] });
     expect(runs.jobFor(s.id)).toBeUndefined();
   });
+
+  it('ends Failed with the error line when the turn ends in an error', () => {
+    const { s, runs, id, handle } = jobSession();
+    s.sendPrompt('go');
+    handle({ type: 'result', subtype: 'error_during_execution', uuid: 'r1', errors: ['Sandbox dependencies are missing'], total_cost_usd: 0, is_error: true });
+    expect(runs.get(id)).toMatchObject({ state: 'done', rounds: [{ outcome: 'failed', line: 'Turn ended: error_during_execution: Sandbox dependencies are missing' }] });
+  });
 });

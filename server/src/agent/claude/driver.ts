@@ -16,6 +16,8 @@ import { loadOpenRouter, openRouterModels, openRouterValue } from './openrouter.
 import { McpControl } from './mcpControl.js';
 import { loadMeta, loadUsage } from './queryInfo.js';
 import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
+import { unattendedRules } from '../../session/unattended.js';
+import { loadSettings, unattendedLimits } from '../../settings.js';
 import { ToolHooks } from './toolHooks.js';
 import { continuedTurn } from './subagents.js';
 import { LiveText } from './stream.js';
@@ -185,6 +187,7 @@ export class ClaudeDriver implements AgentDriver {
     if (this.q || this.closed) return;
     const openrouter = this.openrouter ? loadOpenRouter() : null;
     if (this.openrouter && !openrouter) throw new Error('The OpenRouter key was removed in Settings');
+    const unattended = this.unattended ? unattendedRules(this.cwd, unattendedLimits(loadSettings().unattended), Object.keys(ACCOUNT_LABEL).map((a) => configDir(a as Account))) : undefined;
     const options = agentOptions({
       cwd: this.cwd,
       resume: this.resume,
@@ -192,7 +195,8 @@ export class ClaudeDriver implements AgentDriver {
       chat: () => this.state.session.sessionId,
       canUseTool: (toolName, input, opts) => this.host.canUseTool(toolName, input, opts) as Promise<PermissionResult>,
       beforeAgent: (input, _id, { signal }) => this.toolHooks.beforeAgent(input, signal),
-      beforeEdit: async (input) => this.toolHooks.beforeEdit(input),
+      beforeEdit: async (input) => this.toolHooks.beforeEdit(input, unattended),
+      beforeTool: async (input) => this.toolHooks.beforeTool(input, unattended!),
       afterTool: async (input) => this.toolHooks.afterTool(input),
       onStop: (input) => this.toolHooks.onStop(input),
       mcp: this.mcp.added,
@@ -200,7 +204,7 @@ export class ClaudeDriver implements AgentDriver {
       fork: this.fork,
       configDir: configDir(this.account),
       openrouter,
-      unattended: this.unattended,
+      unattended,
     });
     this.mcp.servers = options.mcpServers ?? {};
     this.q = query({ prompt: this.input.stream(), options });
@@ -421,6 +425,6 @@ export class ClaudeDriver implements AgentDriver {
   private onResult(msg: Extract<SDKMessage, { type: 'result' }>) {
     this.live.end();
     const ok = msg.subtype === 'success';
-    this.host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}`, costUsd: this.openrouter ? 0 : msg.total_cost_usd, isError: msg.is_error });
+    this.host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}${'errors' in msg && msg.errors[0] ? `: ${msg.errors[0]}` : ''}`, costUsd: this.openrouter ? 0 : msg.total_cost_usd, isError: msg.is_error });
   }
 }

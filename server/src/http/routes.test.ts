@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import type http from 'node:http';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LiveChat } from '../../../shared/protocol.js';
 
 const mocks = vi.hoisted(() => ({
@@ -25,7 +25,6 @@ vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRo
 vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: vi.fn() }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
 
-import { codingGuard } from './openRoutes.js';
 import { createRoutes, type RouteDeps } from './routes.js';
 
 const chat = { id: 'c1', cwd: '/tmp/x' } as LiveChat;
@@ -74,18 +73,9 @@ describe('routes', () => {
   describe('POST /api/jobs/start', () => {
     const start = (deps: Partial<RouteDeps> = {}, repo = '/tmp/none') => call('POST', '/api/jobs/start', JSON.stringify({ jobId: 'j1', title: 'Fix the flaky test', repo, prompt: 'do it' }), deps);
 
-    it('answers 503 while the sandbox guard is in place', async () => {
-      const r = await start();
-      expect([r.code, r.json]).toEqual([503, { error: 'Coding jobs need the sandbox' }]);
-    });
-
-    describe('with the guard off', () => {
+    describe('with a repo', () => {
       beforeEach(() => {
-        codingGuard.sandbox = true;
         mocks.createWorktree.mockRejectedValue(new Error('paseo is not installed'));
-      });
-      afterEach(() => {
-        codingGuard.sandbox = false;
       });
 
       it('answers 400 for a repo that is not a workspace repo', async () => {

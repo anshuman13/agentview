@@ -30,7 +30,8 @@ is an assistant, and every send is logged and reversible by me.
   `POST /api/jobs/start` on the server of its own Mac, which makes a `jobs/<slug>-<stamp>` worktree of that repo and opens
   an unattended claude chat in it (no push, no `gh`, changes left uncommitted). The run is listed in Runs as
   "Job · <branch>" and ends when the first turn does; a permission prompt pauses it as Needs you, a restart keeps it, and
-  a job whose last run is still open is skipped. The route answers 503 until the sandbox for these chats lands.
+  a job whose last run is still open is skipped. The chat runs in Claude Code's sandbox (see the
+  `unattended` key in architecture.md), and nothing runs unsandboxed: if the sandbox cannot start, the run ends Failed.
 - Slack commands: a message I write in my DM with myself that starts with "bot" ("bot, what did the infra channel decide
   about the freeze") is picked up by the next Slack scan (every 15 min on weekdays, every day when away) and becomes a
   one-off job named "Slack: ..." that runs on the mini with my memory and voice. It can read Slack, Gmail, the calendar
