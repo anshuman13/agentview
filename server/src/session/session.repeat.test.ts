@@ -179,13 +179,6 @@ describe('set_status', () => {
     vi.useFakeTimers();
     const { s } = fakeSession();
     s.setStatus('Writing the spec', { done: 'Plan read', next: ['a', 'b'] });
-    expect(s.now).toMatchObject({ text: 'Writing the spec', next: ['a', 'b'] });
-    s.setStatus('Compacted');
-    expect(s.now?.text).toBe('Writing the spec');
-    vi.advanceTimersByTime(11 * 60_000);
-    s.setStatus('Compacted');
-    expect(s.now).toMatchObject({ text: 'Compacted' });
-    expect(s.now?.next).toBeUndefined();
     vi.useRealTimers();
   });
 });

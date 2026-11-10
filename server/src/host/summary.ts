@@ -1,4 +1,4 @@
-import { MCP_BAD, type LiveChat } from '../../../shared/protocol.js';
+import { MCP_BAD, type ChatEvent, type LiveChat } from '../../../shared/protocol.js';
 import { chatTitle } from '../../../shared/util.js';
 import { recapOf, replyLine } from '../../../shared/edits.js';
 import { latestTodos, todoCount } from '../../../shared/todos.js';
@@ -9,6 +9,14 @@ import { runningAgents } from './restore.js';
 import { editsOf, runField } from './liveFields.js';
 
 export const lastActive = (chat: AgentSession) => chat.state.events.at(-1)?.at ?? chat.created;
+
+function nowField(events: ChatEvent[]) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.kind === 'status') return { now: { text: e.text, at: e.at, ...(e.done && { done: e.done }), ...(e.next && { next: e.next }) } };
+  }
+  return {};
+}
 
 type SummaryInputs = { stalled: boolean; run: Parameters<typeof runField>[0]; refresh: () => void };
 
@@ -33,7 +41,7 @@ export function summary(chat: AgentSession, { stalled, run, refresh }: SummaryIn
     running: s.session.running,
     agents: agentList.length,
     ...(agentList.length > 0 && { agentList }),
-    ...(chat.now && { now: chat.now }),
+    ...nowField(s.events),
     pending: s.pending.length,
     status: s.status,
     lastActive: lastActive(chat),
