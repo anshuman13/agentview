@@ -33,20 +33,26 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const [dir, setDir] = useState(cwd);
   const [provider, setProvider] = useState<Provider>(defaultProvider);
   const [menu, setMenu] = useState(false);
+  const [sent, setSent] = useState(false);
   const pick = useRef<HTMLSpanElement>(null);
   const opened = useRef(chat);
   useEffect(() => { if (chat !== opened.current) onClose(); }, [chat, onClose]);
   const canHere = Boolean(here && !active);
   const target = canHere && inHere ? chatProvider : provider;
   const dirs = folders.flatMap((f) => [{ cwd: f.cwd, name: f.name }, ...f.trees.map((w) => ({ cwd: w.cwd, name: w.name.split('/').pop()! }))]);
-  if (!dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
+  if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
   const condition = plan ? runAllPrompt(plan) : what;
   const start = () => {
     const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct }, Date.now());
     if (canHere && inHere) {
       prompt(text, () => notice('Could not send the goal. Try again.'));
       onClose();
-    } else send({ type: 'new_session', cwd: dir, provider, text });
+    } else {
+      // The sheet closes when the new chat opens; a server error re-enables Start.
+      setSent(true);
+      setTimeout(() => setSent(false), 10_000);
+      send({ type: 'new_session', cwd: dir || dirs[0]?.cwd, provider, text });
+    }
   };
   const chips = (items: { label: string }[], on: (i: number) => boolean, set: (i: number) => void) =>
     <div className="gl-chips">{items.map((c, i) => <Chip key={c.label} on={on(i)} onClick={() => set(i)}>{c.label}</Chip>)}</div>;
@@ -99,7 +105,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
           )}
         </div>
       </div>
-      <div className="gl-actions"><Button variant="filled" size="lg" disabled={!condition.trim()} onClick={start}>Start</Button></div>
+      <div className="gl-actions"><Button variant="filled" size="lg" disabled={sent || !condition.trim()} onClick={start}>Start</Button></div>
     </Sheet>
   );
 }

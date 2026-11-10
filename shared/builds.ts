@@ -25,7 +25,7 @@ const STAGE_NAME: Record<BuildStage, string> = { pm: 'Spec', review: 'Spec revie
 
 export const stageName = (stage: BuildStage) => STAGE_NAME[stage];
 
-const slugOk = (slug: string | undefined): slug is string => Boolean(slug) && !slug!.includes('..');
+export const slugOk = (slug: string | undefined): slug is string => Boolean(slug) && !slug!.includes('..');
 
 // The stage and slug a build agent works on: a /build label like `impl:<slug>#2`, else a hand run named by its spec path. `round` is the label's numeric #N.
 export function buildStageOf(subagentType: string, description: string, prompt: string): { stage: BuildStage; slug: string; round: number | null } | null {

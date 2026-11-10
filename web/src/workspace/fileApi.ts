@@ -1,7 +1,10 @@
 import { api } from '../app/store';
+import { apiUrl } from '../app/api';
 
-// api() adds the shown chat after this one, and the server reads the first chat param.
-export const fileRequest = (path: string, init?: RequestInit, chat?: string) => fetch(api(`/api/file?${chat ? `chat=${encodeURIComponent(chat)}&` : ''}path=${encodeURIComponent(path)}`), init);
+export const fileRequest = (path: string, init?: RequestInit, chat?: string) => {
+  const url = `/api/file?path=${encodeURIComponent(path)}`;
+  return fetch(chat ? apiUrl(`${url}&chat=${encodeURIComponent(chat)}`) : api(url), init);
+};
 
 export const listFiles = () => fetch(api('/api/files')).then((r) => r.json());
 

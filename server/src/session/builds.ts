@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { buildStageOf, buildSummary, criteriaOf, findingsOf, verdictOf, type BuildCommit, type BuildEntry, type BuildStage } from '../../../shared/builds.js';
+import { buildStageOf, buildSummary, criteriaOf, findingsOf, slugOk, verdictOf, type BuildCommit, type BuildEntry, type BuildStage } from '../../../shared/builds.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { jsonFile, readJson } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
@@ -44,12 +44,16 @@ async function write(s: Snap) {
 
 // Records run in the order they were emitted, so a hand-back's second emit never lands before its first.
 let queue: Promise<unknown> = Promise.resolve();
+// A running agent re-emits its event on every progress tick; only a status change is worth a write.
+const lastStatus = new Map<string, string>();
 
 // A build agent's start, end or report, from the event the chat emits.
 export function recordBuild(session: AgentSession, ev: ChatEvent) {
   const agent = ev.kind === 'agent' ? ev : ev.kind === 'tool_result' ? session.log.agent(ev.toolUseId) : undefined;
   const target = agent && buildStageOf(agent.subagentType, agent.description, agent.prompt);
   if (!agent || !target) return;
+  if (ev.kind === 'agent' && lastStatus.get(agent.toolUseId) === agent.status) return;
+  lastStatus.set(agent.toolUseId, agent.status);
   const report = ev.kind === 'tool_result' && agent.status !== 'running' ? ev.text.slice(0, MAX_REPORT) : undefined;
   const snap: Snap = { ...target, id: agent.toolUseId, status: agent.status, startedAt: agent.startedAt, endedAt: agent.endedAt, report, chat: session.id, session: session.state.session.sessionId, cwd: session.cwd };
   queue = queue.then(() => write(snap)).catch(() => {});
@@ -87,9 +91,9 @@ export async function listBuilds(cwd: string) {
 }
 
 export async function buildOne(cwd: string, slug: string) {
-  const repo = await mainCheckout(cwd);
-  const entries = SLUG.test(slug) && !slug.includes('..') ? await readEntries(repo, slug) : [];
-  if (!entries.length) return { status: 404, body: { error: 'No such build' } };
+  const repo = await mainCheckout(cwd).catch(() => null);
+  const entries = repo && SLUG.test(slug) && slugOk(slug) ? await readEntries(repo, slug) : [];
+  if (!repo || !entries.length) return { status: 404, body: { error: 'No such build' } };
   const spec = await specOf(repo, slug);
   const commit = lastCommit(entries);
   const [numstat, diff] = commit ? await Promise.all([git(repo, ['show', '--numstat', '--format=', commit.sha]), git(repo, ['show', '--format=', commit.sha])]).catch(() => ['', '']) : ['', ''];

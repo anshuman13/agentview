@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { setUi, useStore } from '../app/store';
+import { useStore } from '../app/store';
 import { useAssistantData } from '../codex/data';
 import { rowKey } from '../codex/data/sync';
 import { jobState } from '../codex/jobs/schedule';
@@ -13,7 +13,7 @@ import { command, money } from '../ui/util';
 import { billing } from '../../../shared/providers';
 import type { ChatRun } from '../../../shared/protocol';
 import { OUTCOME_DOT, runLine } from '../chat/composer/composerLogic';
-import { openRun } from './goalLogic';
+import { openGoal, openRun } from './goalLogic';
 import { runBands, type RunItem } from './runBands';
 import { TriesBoard } from './TriesBoard';
 
@@ -31,7 +31,8 @@ function RunRow({ item, onBoard }: { item: RunItem; onBoard: (id: string) => voi
       {last && <> · <span className={`dot ${OUTCOME_DOT[last.outcome]}`} /> {last.report ? 'Weekly report' : last.line || last.outcome}</>}
     </>
   );
-  return <Row title={run.title} meta={meta} trailing={<span className="rn-cost">{money(run.costUsd, billing(run.provider))}</span>} onClick={() => (run.kind === 'tries' ? onBoard(run.id) : run.kind === 'goal' ? setUi({ goalSheet: { mode: 'detail', run: run.id } }) : openRun(run))} />;
+  const open = () => (run.kind === 'tries' ? onBoard(run.id) : run.kind === 'goal' ? openGoal(run.id) : openRun(run));
+  return <Row title={run.title} meta={meta} trailing={<span className="rn-cost">{money(run.costUsd, billing(run.provider))}</span>} onClick={open} />;
 }
 
 function Band({ label, items, open, onToggle, onBoard }: { label: string; items: RunItem[]; open?: boolean; onToggle?: () => void; onBoard: (id: string) => void }) {
@@ -54,7 +55,7 @@ export function Runs() {
     const jobs = snap.jobs.filter((j) => !j.deleted).map((job) => ({ job, state: jobState(job, snap.runs, now) }));
     return runBands(runs, jobs);
   }, [runs, snap, now]);
-  const start = () => setUi({ goalSheet: { mode: 'start' } });
+  const start = () => openGoal();
   const header = <Section label="Runs" action={<IconButton icon="add" label="New goal" size="sm" onClick={start} />} />;
   if (!bands.needs.length && !bands.running.length && !bands.finished.length) return <>{header}<EmptyState size="sm" icon="sync" title="No runs yet" hint="Loops, goals and scheduled jobs you start show here" action={<Button size="sm" onClick={start}>New goal</Button>} /></>;
   return (

@@ -255,7 +255,7 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
   return (
     <div className="doc-scroll" ref={scroller}>
       {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} action={tasks.some((t) => !t.done) && (
-        <span className="gl-anchor" ref={runBox}>
+        <span className="doc-run" ref={runBox}>
           <Button size="sm" variant="plain" aria-haspopup="menu" aria-expanded={runMenu} onClick={() => setRunMenu(!runMenu)}>Run</Button>
           {runMenu && (
             <Menu trigger={runBox} onClose={() => setRunMenu(false)}>

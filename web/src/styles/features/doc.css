@@ -92,3 +92,5 @@
   .doc-anchor { display: none; }
   .doc-copy { opacity: 1; }
 }
+
+.doc-run { position: relative; }

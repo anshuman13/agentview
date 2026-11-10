@@ -1,4 +1,4 @@
-import { getState, send } from '../app/store';
+import { getState, send, setUi } from '../app/store';
 import type { BadgeSpec } from '../ui/Badge';
 import type { ChatRun } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
@@ -55,3 +55,5 @@ export function openRun(run: ChatRun, report = run.rounds.at(-1)?.report) {
   send(chat ? { type: 'view', id: chat.id } : { type: 'open_session', sessionId: run.sessionId });
   if (report) showTurn(report);
 }
+
+export const openGoal = (run?: string) => setUi({ goalSheet: run ? { mode: 'detail', run } : { mode: 'start' } });

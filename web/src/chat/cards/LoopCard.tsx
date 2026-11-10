@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
-import { send, setUi, useStore } from '../../app/store';
+import { send, useStore } from '../../app/store';
 import { showSnack } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
 import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Panel } from '../../ui/Panel';
 import { TriesBoard } from '../../sessions/TriesBoard';
+import { openGoal } from '../../sessions/goalLogic';
 import { money } from '../../ui/util';
 import { billing } from '../../../../shared/providers';
 import type { RunOp } from '../../../../shared/protocol';
@@ -33,7 +34,7 @@ export function LoopCard() {
     <Panel padding="sm" className="lc">
       <div className="lc-head">
         {run.kind === 'goal'
-          ? <button className="lc-state lc-link" onClick={() => setUi({ goalSheet: { mode: 'detail', run: run.id } })}>{runLine(run, phase)}</button>
+          ? <button className="lc-state lc-link" onClick={() => openGoal(run.id)}>{runLine(run, phase)}</button>
           : <span className="lc-state">{runLine(run, phase)}</span>}
         {run.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
         {!cycle && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
