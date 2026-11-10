@@ -18,12 +18,19 @@ export type BuildEntry = {
 };
 export type BuildSummary = { stage: BuildStage; state: BuildState; conclusion: string };
 export type Criterion = { n: number; result: 'pass' | 'fail' | 'unverified'; evidence: string };
-export type BuildRow = BuildSummary & { slug: string; title: string; updatedAt: number };
+export type BuildPipeline = 'written' | 'reviewed' | 'implemented' | 'tested' | 'code-reviewed' | 'merged';
+export type ReviewPhase = 'requirements' | 'design' | 'tasks';
+export type BuildReview = { phase: ReviewPhase; decision: 'approve' | 'changes'; note: string; at: number };
+export type BuildPhase = { key: ReviewPhase; markdown: string };
+export type BuildRow = BuildSummary & { slug: string; title: string; updatedAt: number; pipeline: BuildPipeline; draft: boolean };
 export type BuildDetail = {
   slug: string;
   title: string;
   summary: BuildSummary;
-  spec: string | null;
+  pipeline: BuildPipeline;
+  specFile: string | null;
+  phases: BuildPhase[];
+  reviews: BuildReview[];
   entries: (BuildEntry & { verdict: string | null; criteria: Criterion[]; findings: string[] })[];
   commit: { files: { path: string; add: number; del: number }[]; diff: string } | null;
 };
@@ -33,6 +40,14 @@ const LABEL: Record<string, BuildStage> = { pm: 'pm', review: 'review', impl: 'i
 const STAGE_NAME: Record<BuildStage, string> = { pm: 'Spec', review: 'Spec review', implement: 'Implement', test: 'Test', 'code-review': 'Code review' };
 
 export const stageName = (stage: BuildStage) => STAGE_NAME[stage];
+
+const PIPELINE_LABEL: Record<BuildPipeline, string> = { written: 'Spec written', reviewed: 'Spec reviewed', implemented: 'Implemented', tested: 'Tested', 'code-reviewed': 'Code reviewed', merged: 'Merged' };
+
+export const pipelineLabel = (pipeline: BuildPipeline) => PIPELINE_LABEL[pipeline];
+
+export const REVIEW_PHASES: ReviewPhase[] = ['requirements', 'design', 'tasks'];
+
+export const reviewDecision = (reviews: BuildReview[], phase: ReviewPhase) => reviews.filter((r) => r.phase === phase).at(-1);
 
 export const slugOk = (slug: string | undefined): slug is string => Boolean(slug) && !slug!.includes('..');
 
@@ -78,9 +93,25 @@ export function findingsOf(report: string): string[] {
   });
 }
 
+const inOrder = (entries: BuildEntry[]) => entries.map((e, i) => [e, i] as const).sort((a, b) => a[0].startedAt - b[0].startedAt || a[1] - b[1]).map(([e]) => e);
+
+// The furthest step the build reached. `merged`: the latest implement commit reached the default branch.
+export function pipelineOf(entries: BuildEntry[], merged: boolean, reviews: BuildReview[]): BuildPipeline {
+  const all = inOrder(entries);
+  const latest = (stage: BuildStage) => all.filter((e) => e.stage === stage).at(-1);
+  const code = latest('code-review');
+  const test = latest('test');
+  if (merged) return 'merged';
+  if (code?.status === 'done' && ['clean', 'approve'].includes(verdictOf(code.report) ?? '')) return 'code-reviewed';
+  if (test?.status === 'done' && verdictOf(test.report) === 'pass') return 'tested';
+  if (all.some((e) => e.stage === 'implement' && e.commit)) return 'implemented';
+  if (all.some((e) => e.stage === 'review' && verdictOf(e.report) === 'approve') || reviewDecision(reviews, 'requirements')?.decision === 'approve') return 'reviewed';
+  return 'written';
+}
+
 // `merged`: the latest implement commit reached the default branch.
 export function buildSummary(entries: BuildEntry[], merged: boolean): BuildSummary {
-  const all = entries.map((e, i) => [e, i] as const).sort((a, b) => a[0].startedAt - b[0].startedAt || a[1] - b[1]).map(([e]) => e);
+  const all = inOrder(entries);
   const tail = all.at(-1);
   if (!tail) return { stage: 'pm', state: 'done', conclusion: '' };
   const latest = (stage: BuildStage) => all.filter((e) => e.stage === stage).at(-1);

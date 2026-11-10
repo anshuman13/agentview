@@ -38,5 +38,19 @@
     { "name": "no commit", "merged": false, "entries": [{ "stage": "implement", "status": "done", "report": "done" }], "expected": { "stage": "implement", "state": "done", "conclusion": "No commit found" } },
     { "name": "passed, not merged", "merged": false, "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }, { "stage": "test", "status": "done", "report": "pass" }], "expected": { "stage": "test", "state": "done", "conclusion": "Passed · not merged yet" } },
     { "name": "merged", "merged": true, "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }, { "stage": "test", "status": "done", "report": "pass" }], "expected": { "stage": "test", "state": "done", "conclusion": "Merged as abc1234" } }
+  ],
+  "pipeline": [
+    { "name": "only a spec", "merged": false, "reviews": [], "entries": [{ "stage": "pm", "status": "done", "report": "spec" }], "expected": "written" },
+    { "name": "a review asking for changes", "merged": false, "reviews": [], "entries": [{ "stage": "review", "status": "done", "report": "{\"verdict\":\"revise\",\"issues\":[]}" }], "expected": "written" },
+    { "name": "review approves", "merged": false, "reviews": [], "entries": [{ "stage": "review", "status": "done", "report": "{\"verdict\":\"approve\",\"issues\":[]}" }], "expected": "reviewed" },
+    { "name": "user approves requirements", "merged": false, "reviews": [{ "phase": "requirements", "decision": "approve", "note": "", "at": 1 }], "entries": [{ "stage": "pm", "status": "done", "report": "spec" }], "expected": "reviewed" },
+    { "name": "user approved then asked for changes", "merged": false, "reviews": [{ "phase": "requirements", "decision": "approve", "note": "", "at": 1 }, { "phase": "requirements", "decision": "changes", "note": "x", "at": 2 }], "entries": [{ "stage": "pm", "status": "done", "report": "spec" }], "expected": "written" },
+    { "name": "implement with a commit", "merged": false, "reviews": [], "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }], "expected": "implemented" },
+    { "name": "implement without a commit", "merged": false, "reviews": [], "entries": [{ "stage": "implement", "status": "done", "report": "done" }], "expected": "written" },
+    { "name": "tests passed", "merged": false, "reviews": [], "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }, { "stage": "test", "status": "done", "report": "pass" }], "expected": "tested" },
+    { "name": "tests failed", "merged": false, "reviews": [], "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }, { "stage": "test", "status": "done", "report": "fail" }], "expected": "implemented" },
+    { "name": "code review clean", "merged": false, "reviews": [], "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }, { "stage": "test", "status": "done", "report": "pass" }, { "stage": "code-review", "status": "done", "report": "{\"verdict\":\"clean\",\"issues\":[]}" }], "expected": "code-reviewed" },
+    { "name": "code review asks for changes", "merged": false, "reviews": [], "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }, { "stage": "test", "status": "done", "report": "pass" }, { "stage": "code-review", "status": "done", "report": "{\"verdict\":\"changes\",\"issues\":[\"a\"]}" }], "expected": "tested" },
+    { "name": "merged", "merged": true, "reviews": [], "entries": [{ "stage": "implement", "status": "done", "report": "", "commit": true }], "expected": "merged" }
   ]
 }
