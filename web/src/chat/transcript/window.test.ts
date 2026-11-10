@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ROW_WINDOW } from '../../../../shared/protocol';
-import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
+import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
 
 describe('staged rows', () => {
   it('steps by a batch and stops at the target', () => {
@@ -31,5 +31,15 @@ describe('hidden count', () => {
     expect(hiddenCount(250, 150, 150)).toBe(250);
     expect(hiddenCount(250, 200, 150)).toBe(300);
     expect(hiddenCount(0, 100, 150)).toBe(0);
+  });
+});
+
+describe('needsEarlier', () => {
+  it('loads while replies are few, history is left and under three automatic pages', () => {
+    expect(needsEarlier(0, 600, 0)).toBe(true);
+    expect(needsEarlier(2, 600, 2)).toBe(true);
+    expect(needsEarlier(3, 600, 0)).toBe(false);
+    expect(needsEarlier(0, 0, 0)).toBe(false);
+    expect(needsEarlier(0, 600, 3)).toBe(false);
   });
 });

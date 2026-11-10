@@ -17,3 +17,11 @@ export function stageRows(rendered: number, target: number, step = FIRST_ROWS): 
 export function revealMore(shown: number, total: number, batch = ROW_WINDOW): number {
   return Math.min(Math.max(total, ROW_WINDOW), shown + batch);
 }
+
+const EARLIER_REPLIES = 3;
+const EARLIER_AUTO_PAGES = 3;
+
+// A chat that opens on too few replies loads earlier pages by itself, a few times.
+export function needsEarlier(replies: number, earlier: number, autoLoads: number): boolean {
+  return replies < EARLIER_REPLIES && earlier > 0 && autoLoads < EARLIER_AUTO_PAGES;
+}
