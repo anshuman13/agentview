@@ -39,6 +39,8 @@ export interface AgentDriver {
   dropInput(): number;
   // Compacts the conversation; the driver reports the end through host.compacted or host.compactFailed.
   compact(instructions?: string): void;
+  // True when the driver's compaction ends with a turn result, which sends the held messages; otherwise the session sends them when it ends.
+  readonly compactEndsTurn: boolean;
   // A /x the session does not own. False means the session sends the text as a prompt; true means the driver handled or refused it.
   command(name: string, args: string): boolean;
   // Adds context to the running turn without a user event; false when no turn is running to take it.

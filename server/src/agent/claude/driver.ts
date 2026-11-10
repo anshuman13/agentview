@@ -78,6 +78,8 @@ export class ClaudeDriver implements AgentDriver {
     return claudeInstructionFiles(this.cwd);
   }
 
+  readonly compactEndsTurn = false;
+
   get provider(): Provider {
     return this.openrouter ? 'openrouter' : 'claude';
   }

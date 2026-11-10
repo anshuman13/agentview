@@ -708,6 +708,17 @@ describe('compacting', () => {
     expect(s.state.session.running).toBe(true);
   });
 
+  it('a manual compact on OpenRouter sends the held message when it ends', async () => {
+    const { s, handle } = fakeSession();
+    Object.assign(s.driver, { openrouter: true });
+    s.sendPrompt('/compact');
+    await s.steer('after compact', 'm1');
+    expect(s.state.events.find((e) => e.id === 'm1')).toMatchObject({ queued: true });
+    handle({ type: 'system', subtype: 'compact_boundary', compact_metadata: { trigger: 'manual', pre_tokens: 295_000, post_tokens: 12_000 } });
+    expect(s.state.events.find((e) => e.id === 'm1')).not.toHaveProperty('queued', true);
+    expect(s.state.session.running).toBe(true);
+  });
+
   it('compacts automatically when a turn ends past 200k, once', () => {
     const { s, result } = fakeSession();
     const compact = vi.spyOn(s.driver, 'compact');

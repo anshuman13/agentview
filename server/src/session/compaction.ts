@@ -38,7 +38,7 @@ export class Compaction {
   private release() {
     const manual = this.manual;
     this.manual = false;
-    if (manual && this.s.driver.provider === 'claude') this.s.waiting.dequeue();
+    if (manual && !this.s.driver.compactEndsTurn) this.s.waiting.dequeue();
   }
 
   private rearm() {
