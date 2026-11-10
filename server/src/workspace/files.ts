@@ -42,9 +42,13 @@ const MAX_SKETCHES = 200;
 export async function listSketches(cwd: string) {
   const dir = path.join(cwd, SKETCHES);
   const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
-  const files = await Promise.all(
-    entries.filter((e) => e.isFile() && e.name.endsWith('.html')).map(async (e) => ({ name: e.name, path: `${SKETCHES}/${e.name}`, mtime: (await stat(path.join(dir, e.name))).mtimeMs })),
+  const found = await Promise.all(
+    entries.filter((e) => e.isFile() && e.name.endsWith('.html')).map(async (e) => {
+      const mtime = (await stat(path.join(dir, e.name)).catch(() => null))?.mtimeMs;
+      return mtime === undefined ? null : { name: e.name, path: `${SKETCHES}/${e.name}`, mtime };
+    }),
   );
+  const files = found.filter((f) => f !== null);
   return files.sort((a, b) => b.mtime - a.mtime).slice(0, MAX_SKETCHES);
 }
 

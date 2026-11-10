@@ -10,17 +10,14 @@ export type SketchTheme = 'light' | 'dark';
 
 const GUARD = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"><base target="_blank">`;
 
-// The page a sketch frame shows: comments and http-equiv metas (refresh) removed, the policy first in <head>, the theme on <html>.
+const META = /<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+
+// The page a sketch frame shows: our own html and head come first, so the policy applies to everything the file adds. http-equiv metas
+// (refresh) are removed and target attributes renamed, so no link or form can navigate the frame.
 export function sketchDoc(html: string, theme: SketchTheme) {
-  const clean = html.replace(/<!--[\s\S]*?(?:-->|$)/g, '').replace(/<meta\b[^>]*\bhttp-equiv\b[^>]*>/gi, '');
+  const clean = html.replace(META, (m) => (/\bhttp-equiv\b/i.test(m) ? '' : m)).replace(/\starget\s*=/gi, ' data-target=');
   const doctype = /^\s*<!doctype[^>]*>/i.exec(clean)?.[0] ?? '';
-  let rest = clean.slice(doctype.length);
-  const attr = ` data-theme="${theme}"`;
-  const tag = /<html\b[^>]*>/i.exec(rest)?.[0];
-  if (tag) rest = rest.replace(tag, () => tag.replace(/\sdata-theme\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '').replace(/\s*\/?>$/, `${attr}>`));
-  else rest = `<html${attr}>${rest}`;
-  if (/<head\b[^>]*>/i.test(rest)) return doctype + rest.replace(/<head\b[^>]*>/i, (m) => m + GUARD);
-  return doctype + rest.replace(/<html\b[^>]*>/i, (m) => `${m}<head>${GUARD}</head>`);
+  return `${doctype}<html data-theme="${theme}"><head>${GUARD}</head>${clean.slice(doctype.length)}`;
 }
 
 export const sketchTitle = (name: string) => name.replace(/\.html$/, '');

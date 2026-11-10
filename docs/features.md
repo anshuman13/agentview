@@ -500,7 +500,7 @@ are read once and removed from the address bar.
 
 ## Pages
 
-Observe, Deploy (only with `deployUrl` set in `~/.agentview/settings.json`), MCP Servers, Builds and Sketches open as tabs in the editor area (the lower three activity bar icons, or the command
+Observe, Deploy (only with `deployUrl` set in `~/.agentview/settings.json`), MCP Servers, Builds and Sketches open as tabs in the editor area (the lower four activity bar icons, or the command
 palette), so they get the full width instead of the sidebar. One page is open at a time; opening another replaces it. The page title shows once: the desktop hero is the title and the page's own controls.
 
 On the phone Observe, Deploy, MCP Servers, Settings, Builds, Files, Source Control and Pull Requests have no editor tab strip. One header row replaces it: Back, the title, a muted one-line subtitle (the repo folder; "N connected of M" on MCP; the file's folder in an open file) and at most one trailing control (Refresh on Observe, Deploy and Pull Requests, Check on MCP, the Explorer's More menu on Files, a More menu with Close file on an open file). Back, the system back and the edge swipe return to the tab that was open before, or to Codex when there was none; in an open file Back shows the Explorer first. With nothing set up, Observe, Deploy and MCP show an empty state with one "Set up with Claude" button (the chat's provider) that asks the chat on screen to do the setup.

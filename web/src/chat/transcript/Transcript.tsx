@@ -290,8 +290,8 @@ function RowImpl({ it, cwd, settled, card }: { it: Item; cwd: string; settled?: 
     case 'step':
       return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':
-      if (isSketchPath(it.path) && !it.error) return <SketchCard path={it.path} meta={it.uses[0].name === 'Write' ? 'Sketch written' : `Sketch edited · +${it.count.add} -${it.count.del}`} />;
-      return isSpecPath(it.path) && !it.error ? <SpecCard id={it.id} slug={specSlug(it.path)} path={it.path} meta={it.uses[0].name === 'Write' ? 'Spec written' : `Spec edited · +${it.count.add} -${it.count.del}`} /> : <FileCard it={it} cwd={cwd} />;
+      if (isSketchPath(it.path) && !it.error) return <SketchCard path={it.path} meta={fileMeta(it, 'Sketch')} />;
+      return isSpecPath(it.path) && !it.error ? <SpecCard id={it.id} slug={specSlug(it.path)} path={it.path} meta={fileMeta(it, 'Spec')} /> : <FileCard it={it} cwd={cwd} />;
     case 'agent':
       return <AgentRow it={it} cwd={cwd} card={card} />;
     case 'blocked':
@@ -350,6 +350,8 @@ function Detail({ use, result }: { use: ToolUse; result?: ToolResult }) {
     </div>
   );
 }
+
+const fileMeta = (it: Extract<Item, { kind: 'file' }>, noun: string) => (it.uses[0].name === 'Write' ? `${noun} written` : `${noun} edited · +${it.count.add} -${it.count.del}`);
 
 function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: string }) {
   const rel = relPath(it.path, cwd);

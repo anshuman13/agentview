@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from '../app/store';
 import { isSketchPath } from '../../../shared/sketches';
 import { fetchSketches, readSketch, type SketchFile } from './fileApi';
@@ -11,13 +11,14 @@ export function useSketches(shown: boolean) {
   const changed = isSketchPath(recent[0] ?? '') ? recent : null;
   const [data, setData] = useState<SketchFile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const reload = useCallback(
-    () => fetchSketches().then(
-      (list) => { setData(list); setError(null); return list; },
-      (e) => { setError(e instanceof Error ? e.message : String(e)); return null; },
-    ),
-    [],
-  );
+  const latest = useRef(0);
+  const reload = useCallback(() => {
+    const mine = ++latest.current;
+    return fetchSketches().then(
+      (list) => { if (mine === latest.current) { setData(list); setError(null); } return list; },
+      (e) => { if (mine === latest.current) setError(e instanceof Error ? e.message : String(e)); return null; },
+    );
+  }, []);
   useEffect(() => { if (shown) void reload(); }, [shown, chat, changed, reload]);
   return { data, error, reload };
 }
