@@ -161,3 +161,4 @@
 .bd-title { margin: 0; min-width: 0; font-size: var(--type-headline-size); font-weight: var(--type-headline-weight); line-height: var(--type-headline-line); overflow-wrap: anywhere; }
 .bd-doc { padding: var(--sp-4) var(--list-pad); overflow-wrap: anywhere; }
 .bd-clamp .ui-row-meta { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
+@media (min-width: 901px) { .as-sheet.gl-sheet { align-self: center; width: min(600px, 100%); } }

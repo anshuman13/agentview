@@ -53,7 +53,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
   };
   const next = paused ? `Paused · ${run.why}` : run.nextAt ? clock(run.nextAt) : 'When the agent goes idle';
   return (
-    <Sheet label={run.title} onClose={onClose}>
+    <Sheet label={run.title} onClose={onClose} className="gl-sheet">
       <Section label="Goal" action={<Badge {...goalBadge(run)} />} />
       <div className="ui-group">
         <Row plain lines={2} title={run.what} meta="Condition" />

@@ -58,7 +58,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const chips = (items: { label: string }[], on: (i: number) => boolean, set: (i: number) => void) =>
     <div className="gl-chips">{items.map((c, i) => <Chip key={c.label} on={on(i)} onClick={() => set(i)}>{c.label}</Chip>)}</div>;
   return (
-    <Sheet label="New goal" onClose={onClose}>
+    <Sheet label="New goal" onClose={onClose} className="gl-sheet">
       <Section label="What" />
       <div className="ui-group">
         {plan ? <Row plain title={plan} meta={progress ?? undefined} /> : (

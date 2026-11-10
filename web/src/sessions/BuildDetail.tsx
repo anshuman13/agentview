@@ -88,7 +88,7 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
         </>
       )}
       {report && (
-        <Sheet label={stageTitle(report)} onClose={() => setReport(null)}>
+        <Sheet label={stageTitle(report)} onClose={() => setReport(null)} className="gl-sheet">
           <Section label={stageTitle(report)} />
           <div className="bd-doc">{report.report.trim() ? <Markdown text={report.report} /> : <EmptyState size="sm" title="No report yet" />}</div>
           <div className="gl-actions">
