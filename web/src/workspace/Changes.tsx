@@ -10,6 +10,7 @@ import { refresh, useGit } from './gitStatus';
 import { Findings, REVIEW_LOCAL } from '../ops/Findings';
 import { askChat, clickOnKey, usePoll } from '../ui/util';
 import { providerLabel } from '../../../shared/providers';
+import '../styles/features/changes.css';
 
 type Run = (action: string, body: object) => Promise<boolean>;
 const paths = (list: GitFile[]) => ({ paths: list.map((f) => f.path) });

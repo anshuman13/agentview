@@ -6,6 +6,7 @@ import { FileIcon } from './FileIcon';
 import { touch } from '../app/touch/touch';
 import { Hl, listKeys, useReturnFocus } from '../ui/util';
 import { fileCache as cache } from '../chat/composer/composerLogic';
+import '../styles/features/palette.css';
 
 export function FileSwitcher() {
   const open = useStore((s) => s.ui.switcherOpen);

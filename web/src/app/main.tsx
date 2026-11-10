@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
+import '@vscode/codicons/dist/codicon.css?used';
 import '../styles/index.css';
 import { Guard } from './shell/Guard';
 import { touch } from './touch/touch';

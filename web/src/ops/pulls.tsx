@@ -6,6 +6,7 @@ import { Icon } from '../ui/Icon';
 import { createStore } from '../ui/createStore';
 import { Counts } from '../ui/DiffFiles';
 import { call } from './opsApi';
+import '../styles/features/github.css';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
 const list = createStore<List>({ cwd: '', prs: [], error: '', loading: false });

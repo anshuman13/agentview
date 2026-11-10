@@ -19,6 +19,7 @@ import { Button, IconButton } from '../ui/Button';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 import { providerLabel } from '../../../shared/providers';
+import '../styles/features/github.css';
 
 const initials = (login: string) => (login.replace(/^app\//, '').match(/[A-Za-z0-9]+/g) ?? ['?']).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 

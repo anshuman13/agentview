@@ -103,6 +103,7 @@ The native Android client in `android/` speaks the same protocol; see [Phone and
   pure logic with its tests. Folders are features (`chat`, `sessions`, `workspace`, `ops`, `codex`), not kinds of file.
 - Logic that web and Android both carry (prompts, parsers, queue order, labels) changes on both sides in the same commit.
   Where a `shared/fixtures/*.json` case list exists, both test suites run it; add a case there when you change that logic.
+- Styles: `styles/index.css` holds only what the first screen needs; a feature's CSS is imported by the views that use it. The build keeps only the codicon rules for icon names that appear as string literals in `web/src` (`web/codicons.ts`), so name an icon as a literal, never from a template; a test fails otherwise.
 - No abstraction with one caller, no generic frameworks, no new dependency for something a few lines do.
 - Size is a hint, not a rule: aim for functions under about 50 lines, components under about 80 and files under about
   350. A file or function that does one coherent thing (a switch over message types, a route table) may stay longer.

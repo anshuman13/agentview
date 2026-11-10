@@ -16,6 +16,7 @@ import { SetupButton } from './SetupButton';
 import { ServiceRow } from './McpServiceRow';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
+import '../styles/features/mcp.css';
 
 type Stats = { probed: boolean; busy: boolean; at: number; ok: number; total: number; attention: number; onCheck: () => void };
 

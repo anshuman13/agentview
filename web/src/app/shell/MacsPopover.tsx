@@ -5,6 +5,7 @@ import { bundled, knownMacs, macPort, macUrl, setApiBase, trusted, useApiBase } 
 import { switchedMac } from '../store';
 import { connectInfo, pingMac } from './macApi';
 import { loadMacName, useMacName, type Mac } from './macName';
+import '../../styles/features/connect.css';
 
 export async function reachable(url: string) {
   try {

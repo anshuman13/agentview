@@ -1,6 +1,7 @@
 import { Fragment, useState } from 'react';
 import { FileIcon } from '../workspace/FileIcon';
 import { Row } from './Row';
+import '../styles/features/github.css';
 
 export const Counts = ({ a, d }: { a: number; d: number }) => <span className="gh-counts"><span className="add">+{a}</span> <span className="del">-{d}</span></span>;
 

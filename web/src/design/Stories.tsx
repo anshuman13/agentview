@@ -12,6 +12,7 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { blockLink, designSearch, parseDesignQuery, type Width } from './url';
+import '../styles/features/design.css';
 
 const sizes = ['sm', 'md', 'lg'] as const;
 const variants = ['filled', 'tinted', 'gray', 'plain', 'danger'] as const;

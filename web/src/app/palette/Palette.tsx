@@ -14,6 +14,7 @@ import { ITEMS_KEY, KEY, MAX_RECENT_ITEMS, MAX_ROWS, buildCommands, itemKey, pal
 import { openItem, perform } from './paletteActions';
 import { appSettings } from '../appSettings';
 import { PaletteEntries, type Entry } from './PaletteEntries';
+import '../../styles/features/palette.css';
 
 export function Palette() {
   const models = modelsFor(useStore((s) => s.session.models), useStore((s) => s.session.capabilities));

@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { codiconSubset } from './codicons';
 import { allowedPeer, allowedRequest } from '../server/src/http/access.js';
 
 function buildSha() {
@@ -63,7 +64,7 @@ async function reloadWhenChanged(since) {
 export default defineConfig({
   base: './',
   define: { __APP_SHA__: JSON.stringify(buildSha()) },
-  plugins: [react(), reloadOnlyOnChange()],
+  plugins: [react(), codiconSubset(), reloadOnlyOnChange()],
   build: { rollupOptions: { output: { experimentalMinChunkSize: 0 } } },
   server: {
     port: 5173,

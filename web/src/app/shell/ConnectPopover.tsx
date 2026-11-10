@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { useEscape } from '../../ui/util';
 import { macPort } from '../api';
 import { connectInfo } from './macApi';
+import '../../styles/features/connect.css';
 
 export function ConnectPopover({ onClose }: { onClose: () => void }) {
   const [urls, setUrls] = useState<string[] | null>(null);

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { embedded } from '../store';
 import { Back } from '../touch/back';
 import { useReturnFocus } from '../../ui/util';
+import '../../styles/features/palette.css';
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 

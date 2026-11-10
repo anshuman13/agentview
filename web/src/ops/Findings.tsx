@@ -9,6 +9,7 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { pressable } from '../ui/util';
 import type { Finding, ReviewFindings } from '../../../shared/protocol';
+import '../styles/features/github.css';
 
 const call = <T,>(path: string, body?: object) => fetchJson<T>(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);
 
