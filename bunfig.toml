@@ -1,2 +1,6 @@
 [test]
 preload = ["./test-setup.ts"]
+
+# Package scripts and their tools (vite, tsc, concurrently) run on Bun, not Node.
+[run]
+bun = true

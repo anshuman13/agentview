@@ -3,9 +3,9 @@
   "private": true,
   "scripts": {
     "tauri": "./env.sh tauri",
-    "build:ui": "npm --prefix ../web run build && rm -rf www/assets && cp -R ../web/dist/. www/",
-    "dev": "npm run build:ui && ./env.sh tauri dev",
-    "build": "npm run build:ui && ./env.sh tauri build"
+    "build:ui": "bun run --cwd ../web build && rm -rf www/assets && cp -R ../web/dist/. www/",
+    "dev": "bun run build:ui && ./env.sh tauri dev",
+    "build": "bun run build:ui && ./env.sh tauri build"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.3"
