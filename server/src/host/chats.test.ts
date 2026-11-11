@@ -1,27 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { existsSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import * as registry from '../agent/registry.js';
+import { Runs } from '../session/runs.js';
 
-const mocks = vi.hoisted(() => ({ runs: null as unknown as import('../session/runs.js').Runs }));
+const mocks = { runs: new Runs() };
+const realRegistry = { ...registry };
 
-vi.mock('./listing.js', async () => {
-  const { Runs } = await import('../session/runs.js');
-  mocks.runs = new Runs();
-  return { runs: mocks.runs, broadcastLive: vi.fn(), learning: { later: vi.fn(), forget: vi.fn() }, seenRunning: () => false, summaryOf: vi.fn() };
-});
+vi.mock('./listing.js', () => ({ runs: mocks.runs, broadcastLive: vi.fn(), learning: { later: vi.fn(), forget: vi.fn() }, seenRunning: () => false, summaryOf: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: vi.fn() }));
 vi.mock('./watchFiles.js', () => ({ watchFiles: () => ({ close() {} }) }));
-vi.mock('../agent/registry.js', async (orig) => {
-  const real = await orig<typeof import('../agent/registry.js')>();
+vi.mock('../agent/registry.js', async (orig?: () => Promise<typeof registry>) => {
+  const real = orig ? await orig() : realRegistry;
   return { ...real, provider: (id: Parameters<typeof real.provider>[0]) => ({ ...real.provider(id), verifyLimits: async () => {} }) };
 });
 
-import { existsSync, rmSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import { ClaudeDriver } from '../agent/claude/driver.js';
-import { removeChat } from '../agent/claude/pins.js';
-import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
-import { jobRepo } from '../workspace/testRepo.js';
-import { createChat, endRun, jobChat, reviewJob } from './chats.js';
-import { live } from './state.js';
+const { ClaudeDriver } = await import('../agent/claude/driver.js');
+const { removeChat } = await import('../agent/claude/pins.js');
+const { UNATTENDED_INSTRUCTION } = await import('../session/prompts.js');
+const { jobRepo } = await import('../workspace/testRepo.js');
+const { createChat, endRun, jobChat, reviewJob } = await import('./chats.js');
+const { live } = await import('./state.js');
 
 const unattended = (chat: { driver: unknown }) => (chat.driver as { unattended: boolean }).unattended;
 

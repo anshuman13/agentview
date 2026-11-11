@@ -15,11 +15,12 @@ const status = JSON.stringify({
 
 beforeEach(() => loadStatus(status));
 
+let fresh = 0;
 async function freshAccess() {
-  vi.resetModules();
   const execFile = vi.fn();
-  vi.doMock('node:child_process', () => ({ execFile, execFileSync: () => { throw new Error('no netbird'); } }));
-  const mod = await import('./access.js');
+  if (!process.versions.bun) vi.resetModules();
+  (process.versions.bun ? vi.mock : vi.doMock)('node:child_process', () => ({ execFile, execFileSync: () => { throw new Error('no netbird'); } }));
+  const mod: typeof import('./access.js') = process.versions.bun ? await import(`./access.js?${++fresh}`) : await import('./access.js');
   return { ...mod, execFile };
 }
 

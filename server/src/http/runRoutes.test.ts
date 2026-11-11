@@ -1,14 +1,17 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import * as childProcess from 'node:child_process';
 import { execFileSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatRun } from '../../../shared/protocol.js';
+import type { RouteDeps } from './routeTypes.js';
 
-const mocks = vi.hoisted(() => ({ calls: [] as string[][], envs: [] as Array<Record<string, string> | undefined>, gh: vi.fn(), remote: { head: '' }, removeChat: vi.fn() }));
+const mocks = { calls: [] as string[][], envs: [] as Array<Record<string, string> | undefined>, gh: vi.fn(), remote: { head: '' }, removeChat: vi.fn() };
+const realChildProcess = { ...childProcess };
 
 // git runs for real in temp repos, except push and ls-remote; gh never runs.
-vi.mock('node:child_process', async (orig) => {
-  const real = await orig<typeof import('node:child_process')>();
+vi.mock('node:child_process', async (orig?: () => Promise<typeof childProcess>) => {
+  const real = orig ? await orig() : realChildProcess;
   const { promisify } = await import('node:util');
   const run = (real.execFile as unknown as Record<symbol, (...a: unknown[]) => Promise<unknown>>)[promisify.custom];
   const execFile = Object.assign((...a: unknown[]) => (real.execFile as (...a: unknown[]) => unknown)(...a), {
@@ -25,9 +28,8 @@ vi.mock('node:child_process', async (orig) => {
 });
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat }));
 
-import { jobRepo, sh } from '../workspace/testRepo.js';
-import type { RouteDeps } from './routeTypes.js';
-import { runRoutes } from './runRoutes.js';
+const { jobRepo, sh } = await import('../workspace/testRepo.js');
+const { runRoutes } = await import('./runRoutes.js');
 
 const gitCalls = () => mocks.calls.filter((c) => c[0] === 'git');
 const calling = (word: string) => gitCalls().filter((c) => c.includes(word));

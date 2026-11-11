@@ -3,6 +3,7 @@ import { advance, loopOff, needsApproval, verdictOf } from './loop.js';
 import { RepeatController, after, parseGoal, parseLoop } from './repeat.js';
 import { limitReset } from '../agent/claude/limitText.js';
 import type { PlanUsage, Repeat } from '../../../shared/protocol.js';
+import { setSystemTime } from '../../../testing.js';
 
 describe('verdictOf', () => {
   it('reads the last verdict line', () => {
@@ -121,13 +122,14 @@ describe('RepeatController', () => {
       sendPrompt: (t) => sent.push(t),
     });
     c.set(r as never);
-    vi.setSystemTime((r as { nextAt: number }).nextAt);
+    setSystemTime((r as { nextAt: number }).nextAt);
     vi.advanceTimersByTime(1);
-    vi.setSystemTime(Date.now() + 5 * 60_000);
+    setSystemTime(Date.now() + 5 * 60_000);
     running = false;
     c.fire();
     expect(sent).toEqual(['check']);
     vi.useRealTimers();
+    setSystemTime();
   });
 });
 
@@ -223,7 +225,7 @@ describe('goal limits and edits', () => {
   const standingGoal = (extra = '') => parseGoal(`/goal every 1h ${extra}x`) as Repeat;
 
   function host(initial: Repeat, usage: PlanUsage | null = null) {
-    vi.useFakeTimers();
+    if (!vi.isFakeTimers()) vi.useFakeTimers();
     let r: Repeat | null = initial;
     const state = { ended: '', sent: 0, patches: [] as Record<string, unknown>[] };
     const c = new RepeatController({

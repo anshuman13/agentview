@@ -1,21 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
+import { Runs } from '../session/runs.js';
 
-const mocks = vi.hoisted(() => ({ runs: null as unknown as import('../session/runs.js').Runs, open: vi.fn() }));
+const mocks = { runs: new Runs(), open: vi.fn() };
 
 vi.mock('node:fs/promises', () => ({
   readFile: async () => JSON.stringify({ chats: [{ sessionId: 'A', crons: [] }, { sessionId: 'B', crons: [] }] }),
   rm: async () => {},
 }));
-vi.mock('./listing.js', async () => {
-  const { Runs } = await import('../session/runs.js');
-  mocks.runs = new Runs();
-  return { runs: mocks.runs };
-});
+vi.mock('./listing.js', () => ({ runs: mocks.runs }));
 vi.mock('./persist.js', () => ({ RESTORE: '/nowhere/restore.json', saveSoon: vi.fn() }));
 vi.mock('./chats.js', () => ({ openSaved: mocks.open }));
 
-import { restoreChats } from './restoreChats.js';
-import { live } from './state.js';
+const { restoreChats } = await import('./restoreChats.js');
+const { live } = await import('./state.js');
 
 describe('restoreChats', () => {
   it('keeps the job run of a chat that came back, rebinds it and ends the run of one that did not', async () => {

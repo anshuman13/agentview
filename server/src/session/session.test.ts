@@ -10,6 +10,7 @@ import type { History } from '../agent/types.js';
 import { appendTo, BIG_BRO, ROW_WINDOW, type ChatEvent, type ServerMessage } from '../../../shared/protocol.js';
 import { sketchPrompt } from '../../../shared/sketches.js';
 import { specReviewPrompt } from '../../../shared/specTasks.js';
+import { waitFor } from '../../../testing.js';
 
 function fakeSession() {
   const s = claudeSession('/tmp/project');
@@ -914,7 +915,7 @@ describe('review findings', () => {
     s.onMessage((m) => got.push(m));
     s.sendPrompt('/code-review 42');
     (s.driver as unknown as { messages: { toolUse: (b: unknown) => void } }).messages.toolUse({ id: 't1', name: 'ReportFindings', input: { findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
-    await vi.waitFor(() => expect(got.some((m) => m.type === 'findings')).toBe(true));
+    await waitFor(() => expect(got.some((m) => m.type === 'findings')).toBe(true));
     expect(got.find((m) => m.type === 'findings')).toMatchObject({ review: { repo: '/tmp/project', target: '42', findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
   });
 });
@@ -947,7 +948,7 @@ describe('/spec-review', () => {
     expect(send).toHaveBeenCalledWith(specReviewPrompt(path), expect.any(String));
     expect(command).not.toHaveBeenCalled();
     (s.driver as unknown as { messages: { toolUse: (b: unknown) => void } }).messages.toolUse({ id: 't1', name: 'ReportFindings', input: { findings: [{ file: '.claude/specs/x.md', line: 4, summary: 'Which file?', category: 'guess' }] } });
-    await vi.waitFor(() => expect(got.some((m) => m.type === 'findings')).toBe(true));
+    await waitFor(() => expect(got.some((m) => m.type === 'findings')).toBe(true));
     expect(got.find((m) => m.type === 'findings')).toMatchObject({ review: { target: 'spec:x', findings: [{ file: '.claude/specs/x.md', line: 4, category: 'guess' }] } });
   });
 

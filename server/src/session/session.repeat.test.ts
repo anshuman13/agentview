@@ -1,7 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AgentSession } from './session.js';
 import { claudeSession } from '../agent/claude/driver.js';
 import { BIG_BRO, type ChatEvent } from '../../../shared/protocol.js';
+import { advanceTimersByTimeAsync, setSystemTime, waitFor } from '../../../testing.js';
+
+afterEach(() => setSystemTime());
 
 function fakeSession() {
   const s = claudeSession('/tmp/project');
@@ -34,7 +37,7 @@ describe('/loop after Stop', () => {
 
   it('a round that ends at once does not spin the loop', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
     const { s, result } = fakeSession();
     await s.prompt('/loop until 06:59 do the next round');
     const users = () => s.state.events.filter((e) => e.kind === 'user').length;
@@ -51,7 +54,7 @@ describe('/loop after Stop', () => {
 
   it('a usage limit holds the loop until the reset time', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
+    setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
     const { s, result, handle } = fakeSession();
     await s.prompt('/loop until 06:59 do the next round');
     handle({ type: 'assistant', parent_tool_use_id: null, error: 'rate_limit', message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
@@ -67,7 +70,7 @@ describe('/loop after Stop', () => {
 
   it('a usage limit without a loop leaves a note, and /loop at sends the prompt once', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
+    setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
     const { s, result, handle } = fakeSession();
     await s.prompt('do the next round');
     handle({ type: 'assistant', parent_tool_use_id: null, error: 'rate_limit', message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
@@ -90,7 +93,7 @@ describe('/loop after Stop', () => {
 
   it('resumeRepeat with a past nextAt fires the next round now', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
     const { s } = fakeSession();
     s.resumeRepeat({ prompt: 'do the next round', every: 10 * 60_000, until: null, round: 3, nextAt: Date.now() - 1000 });
     expect(s.state.events.map((e) => e.kind)).toEqual(['system', 'user']);
@@ -103,14 +106,14 @@ describe('/loop after Stop', () => {
   it('a tick that lands mid turn survives a CLI exit', async () => {
     vi.useFakeTimers();
     // Late in the evening the loop would reach its 23:59 end during the test.
-    vi.setSystemTime(new Date('2026-10-15T12:00:00'));
+    setSystemTime(new Date('2026-10-15T12:00:00'));
     const { s, result } = fakeSession();
     await s.prompt('/loop 10m until 23:59 do the next round');
     vi.advanceTimersByTime(10 * 60_000 + 1);
     expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
     const priv = s.driver as unknown as { consume: () => Promise<void>; start: () => void };
     priv.consume();
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     expect(s.state.session.running).toBe(false);
     vi.spyOn(priv, 'start').mockImplementation(() => {});
     vi.advanceTimersByTime(2 * 60_000 + 1);
@@ -125,7 +128,7 @@ describe('run controls', () => {
 
   it('a paused loop does not fire, stays paused through a restart and fires again on resume', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
     const { s } = fakeSession();
     await s.prompt('/loop 10m until 23:59 do the next round');
     const run = s.state.session.repeat!.runId!;
@@ -148,7 +151,7 @@ describe('run controls', () => {
 
   it('restore brings a stopped loop back with its run and round, only within 60 s', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
     const { s } = fakeSession();
     await s.prompt('/loop 10m until 23:59 do the next round');
     const before = s.state.session.repeat!;
@@ -235,7 +238,7 @@ describe('runs', () => {
 
   it('records two rounds and /loop off as one ended run', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
     const { s, handle } = fakeSession();
     const send = vi.spyOn(s.driver, 'send');
     await s.prompt('/loop 10m check the build');
@@ -271,7 +274,7 @@ describe('runs', () => {
 
   it('a goal ends done when it is met, and a usage limit pauses the run until the next round', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
+    setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
     const { s, handle } = fakeSession();
     await s.prompt('/goal the tests pass');
     handle({ type: 'assistant', parent_tool_use_id: null, error: 'rate_limit', message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am" }], usage: {} } });
@@ -324,9 +327,9 @@ describe('runs', () => {
     await s.prompt('add the thing');
     expect(s.runs.list()[0]).toMatchObject({ kind: 'cycle', what: 'add the thing', max: 2, state: 'running' });
     reply(handle, 'p1', 'Plan: change two files.');
-    await vi.waitFor(() => expect(s.state.session.loop.phase).toBe('build'));
+    await waitFor(() => expect(s.state.session.loop.phase).toBe('build'));
     reply(handle, 'b1', 'Built it.');
-    await vi.waitFor(() => expect(s.state.session.loop.phase).toBe('test'));
+    await waitFor(() => expect(s.state.session.loop.phase).toBe('test'));
     reply(handle, 't1', 'Checked.\nVERDICT: PASS', 0.5);
     const run = s.runs.list()[0];
     expect(run.rounds.map((r) => r.outcome)).toEqual(['progress', 'progress', 'done']);

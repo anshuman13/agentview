@@ -5,6 +5,7 @@ import { Readable } from 'node:stream';
 import type http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BadRequest, parseObject, savePaste } from './body.js';
+import { waitFor } from '../../../testing.js';
 
 let dir: string;
 beforeEach(async () => {
@@ -31,7 +32,7 @@ describe('savePaste', () => {
     const eightDays = new Date(Date.now() - 8 * 86_400_000);
     await utimes(old, eightDays, eightDays);
     const saved = await savePaste(Readable.from([Buffer.from('hi')]) as unknown as http.IncomingMessage, 'a.txt', dir);
-    await expect.poll(() => readdir(dir)).not.toContain('old.txt');
+    await waitFor(async () => expect(await readdir(dir)).not.toContain('old.txt'));
     const left = await readdir(dir);
     expect(left).toContain('fresh.txt');
     expect(left).toContain(path.basename(saved));

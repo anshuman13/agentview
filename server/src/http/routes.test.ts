@@ -7,7 +7,7 @@ import type http from 'node:http';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LiveChat } from '../../../shared/protocol.js';
 
-const mocks = vi.hoisted(() => ({
+const mocks = {
   scheduleFocus: vi.fn(),
   cancelFocus: vi.fn(),
   listRepos: vi.fn(),
@@ -16,16 +16,17 @@ const mocks = vi.hoisted(() => ({
   removeChat: vi.fn(),
   listBin: vi.fn(),
   listTerminals: vi.fn(),
-}));
+};
 
 vi.mock('../integrations/focus.js', () => ({ scheduleFocus: mocks.scheduleFocus, cancelFocus: mocks.cancelFocus }));
-vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, listWorktrees: vi.fn(), createWorktree: mocks.createWorktree, createFolder: vi.fn(), removeWorktree: vi.fn() }));
+vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, listWorktrees: vi.fn(), createWorktree: mocks.createWorktree, createFolder: vi.fn(), removeWorktree: vi.fn(), removeRunWorktree: vi.fn() }));
 vi.mock('../agent/claude/sessions.js', () => ({ listSessions: mocks.listSessions, savedSession: (x: unknown) => x, renameRoute: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRoute: vi.fn() }));
 vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: vi.fn() }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
 
-import { createRoutes, type RouteDeps } from './routes.js';
+import type { RouteDeps } from './routes.js';
+const { createRoutes } = await import('./routes.js');
 
 const chat = { id: 'c1', cwd: '/tmp/x' } as LiveChat;
 

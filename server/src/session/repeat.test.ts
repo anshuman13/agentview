@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextClock } from '../../../shared/util.js';
 import type { PlanUsage, Repeat } from '../../../shared/protocol.js';
 import { parseGoal, parseLoop, usageGate } from './repeat.js';
+import { setSystemTime } from '../../../testing.js';
 
 const now = new Date(2026, 9, 24, 9, 0, 0).getTime();
 
@@ -37,7 +38,10 @@ describe('parseLoop', () => {
 });
 
 describe('nextClock', () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    setSystemTime();
+  });
 
   it('picks today when the time is still ahead', () => {
     expect(nextClock(9, 30, now)).toBe(new Date(2026, 9, 24, 9, 30, 0).getTime());
@@ -50,7 +54,7 @@ describe('nextClock', () => {
 
   it('crosses midnight', () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 23, 45, 0));
+    setSystemTime(new Date(2026, 9, 24, 23, 45, 0));
     expect(nextClock(0, 15, Date.now())).toBe(new Date(2026, 9, 25, 0, 15, 0).getTime());
     expect(parseLoop('/loop until 00:15 wrap up')).toMatchObject({ until: new Date(2026, 9, 25, 0, 15, 0).getTime() });
     expect(parseLoop('/loop at 23:50 wrap up')).toMatchObject({ nextAt: new Date(2026, 9, 24, 23, 50, 0).getTime() });

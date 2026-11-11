@@ -2,11 +2,12 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { BuildEntry } from '../../../shared/builds.js';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 import { claudeSession } from '../agent/claude/driver.js';
 import { buildOne, listBuilds, reviewBuild } from './builds.js';
+import { waitFor } from '../../../testing.js';
 
 const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'agentview-builds-')));
 const repo = path.join(root, 'repo');
@@ -50,11 +51,11 @@ describe('recording builds', () => {
     const s = claudeSession(repo);
     const a = agent('t1', 'test:red-lamp#1');
     s.pushEvent(a);
-    await vi.waitFor(() => expect(stored('red-lamp')).toMatchObject([{ id: 't1', stage: 'test', round: 1, status: 'running', chat: s.id }]));
+    await waitFor(() => expect(stored('red-lamp')).toMatchObject([{ id: 't1', stage: 'test', round: 1, status: 'running', chat: s.id }]));
     Object.assign(a, { status: 'done', endedAt: 2000 });
     s.pushEvent(result('t1', 'Launched'));
     s.emit({ type: 'event', event: result('t1', '1. pass: ok') });
-    await vi.waitFor(() => expect(stored('red-lamp')).toMatchObject([{ id: 't1', status: 'done', endedAt: 2000, report: '1. pass: ok' }]));
+    await waitFor(() => expect(stored('red-lamp')).toMatchObject([{ id: 't1', status: 'done', endedAt: 2000, report: '1. pass: ok' }]));
   });
 
   it('keeps both of two agents that end together, in the next round when the label has none', async () => {
@@ -64,14 +65,14 @@ describe('recording builds', () => {
       s.pushEvent(a);
       s.pushEvent(result(id, `spec ${id}`));
     }
-    await vi.waitFor(() => expect(stored('green-door').map((e) => [e.id, e.round, e.report])).toEqual([['p1', 1, 'spec p1'], ['p2', 2, 'spec p2']]));
+    await waitFor(() => expect(stored('green-door').map((e) => [e.id, e.round, e.report])).toEqual([['p1', 1, 'spec p1'], ['p2', 2, 'spec p2']]));
   });
 
   it('records a chat in a worktree under the main checkout and ignores other agents', async () => {
     const s = claudeSession(worktree);
     s.pushEvent({ ...agent('g1', 'Search the code', 'done'), subagentType: 'general-purpose' });
     s.pushEvent(agent('w1', 'impl:blue-cup', 'done'));
-    await vi.waitFor(() => expect(stored('blue-cup')).toHaveLength(1));
+    await waitFor(() => expect(stored('blue-cup')).toHaveLength(1));
     expect(readdirSync(store)).toEqual([encodeURIComponent(repo)]);
   });
 
@@ -79,10 +80,10 @@ describe('recording builds', () => {
     const s = claudeSession(repo);
     s.pushEvent(agent('i1', 'impl:red-lamp', 'done'));
     s.pushEvent(result('i1', `tree ${tree} commit ${commit}`));
-    await vi.waitFor(() => expect(stored('red-lamp').find((e) => e.id === 'i1')?.commit).toMatchObject({ sha: commit, subject: 'Add the kettle', branch: 'feat/x', files: [{ path: 'feat.txt', additions: 1, deletions: 0 }] }));
+    await waitFor(() => expect(stored('red-lamp').find((e) => e.id === 'i1')?.commit).toMatchObject({ sha: commit, subject: 'Add the kettle', branch: 'feat/x', files: [{ path: 'feat.txt', additions: 1, deletions: 0 }] }));
     s.pushEvent(agent('i2', 'impl:blue-cup', 'done'));
     s.pushEvent(result('i2', `tree ${tree}`));
-    await vi.waitFor(() => expect(stored('blue-cup').find((e) => e.id === 'i2')).toBeTruthy());
+    await waitFor(() => expect(stored('blue-cup').find((e) => e.id === 'i2')).toBeTruthy());
     expect(stored('blue-cup').find((e) => e.id === 'i2')?.commit).toBeUndefined();
   });
 });
