@@ -1,27 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FEATURES } from '../../../shared/featureUse';
-import { appSettings } from './appSettings';
-import { PAGES } from './pages';
-import { track } from './featureUse';
-import { postFeatureUse } from './featureUseApi';
-import { perform } from './palette/paletteActions';
+import { stubGlobal } from '../../../testing';
 
 vi.mock('./featureUseApi', () => ({ postFeatureUse: vi.fn(() => Promise.resolve({ recorded: true })) }));
-vi.mock('./store', () => ({ getState: () => ({ live: [], session: {}, ui: {} }), notice: vi.fn(), send: vi.fn(), setUi: vi.fn() }));
+vi.mock('./store', () => ({ useStore: vi.fn(), api: vi.fn(), getState: () => ({ live: [], session: {}, ui: {} }), notice: vi.fn(), send: vi.fn(), setUi: vi.fn() }));
 vi.mock('./runtime/notify', () => ({ toggleNotify: vi.fn() }));
 vi.mock('../chat/chatActions', () => ({ forkChat: vi.fn() }));
 vi.mock('../codex/view', () => ({ openMeeting: vi.fn(), openTask: vi.fn(), setView: vi.fn() }));
 vi.mock('../sessions/goalLogic', () => ({ openGoal: vi.fn() }));
-vi.mock('../ui/util', () => ({ ago: vi.fn(), command: vi.fn() }));
+vi.mock('../ui/util', () => ({ plural: vi.fn(), useReturnFocus: vi.fn(), listKeys: vi.fn(), Hl: vi.fn(), ago: vi.fn(), command: vi.fn() }));
 vi.mock('../codex/tasks/time', () => ({ clock: vi.fn() }));
 
-const post = vi.mocked(postFeatureUse);
+const { appSettings } = await import('./appSettings');
+const { PAGES } = await import('./pages');
+const { track } = await import('./featureUse');
+const { postFeatureUse } = await import('./featureUseApi');
+const { perform } = await import('./palette/paletteActions');
+
+const post = postFeatureUse as ReturnType<typeof vi.fn>;
 
 describe('track', () => {
   beforeEach(() => {
     post.mockClear();
-    vi.stubGlobal('window', { dispatchEvent: vi.fn() });
-    vi.stubGlobal('CustomEvent', class {});
+    stubGlobal('window', { dispatchEvent: vi.fn() });
+    stubGlobal('CustomEvent', class {});
   });
 
   it('sends nothing while off', () => {

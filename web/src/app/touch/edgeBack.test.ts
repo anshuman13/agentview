@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { edgeBackEnabled, useEdgeBack } from './edgeBack';
+import { createRequire } from 'node:module';
+import { stubGlobal, unstubAllGlobals } from '../../../../testing';
 
-vi.mock('react', () => ({ useEffect: (fn: () => void) => fn() }));
+const react = createRequire(import.meta.url)('react') as typeof import('react');
+
+vi.mock('react', () => ({ ...react, useEffect: (fn: () => void) => fn() }));
+
+const { edgeBackEnabled, useEdgeBack } = await import('./edgeBack');
 
 const ANDROID_14 = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36';
 const ANDROID_10 = 'Mozilla/5.0 (Linux; Android 10; SM-G960F) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36';
@@ -25,17 +30,17 @@ describe('edgeBackEnabled', () => {
 });
 
 describe('useEdgeBack', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => unstubAllGlobals());
 
   const run = (userAgent: string, tauri: boolean) => {
     const handlers: Record<string, (e: unknown) => void> = {};
     const back = vi.fn();
-    vi.stubGlobal('document', { addEventListener: (n: string, f: (e: unknown) => void) => (handlers[n] = f), removeEventListener: () => {} });
-    vi.stubGlobal('window', tauri ? { __TAURI__: {} } : {});
-    vi.stubGlobal('navigator', { userAgent });
-    vi.stubGlobal('innerWidth', 400);
-    vi.stubGlobal('getSelection', () => null);
-    vi.stubGlobal('history', { state: { av: 1 }, back });
+    stubGlobal('document', { addEventListener: (n: string, f: (e: unknown) => void) => (handlers[n] = f), removeEventListener: () => {} });
+    stubGlobal('window', tauri ? { __TAURI__: {} } : {});
+    stubGlobal('navigator', { userAgent });
+    stubGlobal('innerWidth', 400);
+    stubGlobal('getSelection', () => null);
+    stubGlobal('history', { state: { av: 1 }, back });
     useEdgeBack();
     const target = { closest: () => null };
     handlers.touchstart({ touches: [{ clientX: 5, clientY: 100 }], target });

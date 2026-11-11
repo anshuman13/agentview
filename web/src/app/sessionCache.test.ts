@@ -1,19 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROW_WINDOW, type ChatEvent, type LiveChat, type ServerMessage } from '../../../shared/protocol';
 
-const es = vi.hoisted(() => {
-  type Source = { onmessage?: (e: { data: string; lastEventId: string }) => void };
-  const h = { last: null as Source | null };
-  vi.stubGlobal('window', { addEventListener() {}, location: {} });
-  vi.stubGlobal('document', { hidden: false, title: '', visibilityState: 'visible', addEventListener() {} });
-  vi.stubGlobal('EventSource', class implements Source { static CLOSED = 2; readyState = 1; onmessage?: Source['onmessage']; constructor() { h.last = this; } addEventListener() {} close() {} });
-  return h;
-});
+import { stubGlobal } from '../../../testing';
 
-import { connect, getState, loadEarlier, send, switchedMac } from './store';
+type Source = { onmessage?: (e: { data: string; lastEventId: string }) => void };
+const es = { last: null as Source | null };
+stubGlobal('window', { addEventListener() {}, location: {} });
+stubGlobal('document', { hidden: false, title: '', visibilityState: 'visible', addEventListener() {} });
+stubGlobal('EventSource', class implements Source { static CLOSED = 2; readyState = 1; onmessage?: Source['onmessage']; constructor() { es.last = this; } addEventListener() {} close() {} });
+
+const { connect, getState, loadEarlier, send, switchedMac } = await import('./store');
 
 const fetchMock = vi.fn((..._args: unknown[]) => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
-vi.stubGlobal('fetch', fetchMock);
+stubGlobal('fetch', fetchMock);
 
 const ev = (id: string, text = ''): ChatEvent => ({ id, kind: 'user', text, at: 1 });
 const rows = (chat: string, n: number) => Array.from({ length: n }, (_, i) => ev(`${chat}${i}`, chat));

@@ -1,18 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Composer } from './Composer';
+import { createRequire } from 'node:module';
+import { stubGlobal } from '../../../../testing';
 
-const draft = vi.hoisted(() => ({ text: '' }));
+const draft = { text: '' };
 
+const react = createRequire(import.meta.url)('react') as typeof import('react');
+const { useSyncExternalStore } = react;
+vi.mock('react', () => ({ ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) }));
 vi.mock('../../app/shell/useNarrow', () => ({ useNarrow: () => true }));
-vi.mock('./usePromptHistory', async (importOriginal) => ({ ...(await importOriginal<object>()), useDraft: () => [draft.text, () => {}] }));
-vi.mock('react', async (importOriginal) => {
-  const react = await importOriginal<typeof import('react')>();
-  return { ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => react.useSyncExternalStore(subscribe, get, get) };
-});
+const promptHistory = await import('./usePromptHistory');
+vi.mock('./usePromptHistory', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : promptHistory), useDraft: () => [draft.text, () => {}] }));
 
-vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
-vi.stubGlobal('window', { SpeechRecognition: class {} });
+const { Composer } = await import('./Composer');
+
+stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+stubGlobal('window', { SpeechRecognition: class {} });
 
 describe('Composer at phone width', () => {
   it('has Add and a mic with no foot row while empty, and Send in place of the mic once typed', () => {

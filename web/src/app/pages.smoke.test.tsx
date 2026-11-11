@@ -1,24 +1,26 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { BuildList } from '../sessions/Builds';
-import { Runs } from '../sessions/Runs';
-import { PrivacyGroup } from './shell/Settings';
-import { SketchFrame, SketchList, Sketches } from '../workspace/Sketches';
+import { stubGlobal } from '../../../testing';
 import type { BuildRow } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
 
-const store = vi.hoisted(() => ({ runs: [] as unknown[], session: { id: 'c1', cwd: '/w' }, recentFiles: [] as string[], ui: { sketch: null } }));
-vi.mock('./store', async (orig) => ({ ...(await orig<object>()), useStore: (select: (s: unknown) => unknown) => select(store) }));
-vi.mock('../codex/data', () => ({ useAssistantData: () => ({ jobs: [], runs: [] }) }));
+const store = { runs: [] as unknown[], session: { id: 'c1', cwd: '/w' }, recentFiles: [] as string[], ui: { sketch: null } };
+vi.mock('../codex/data', () => ({ useAssistantStore: vi.fn(), assistantStore: vi.fn(), useAssistant: vi.fn(), useAssistantData: () => ({ jobs: [], runs: [] }) }));
 
-vi.hoisted(() => {
-  const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };
-  vi.stubGlobal('document', doc);
-  vi.stubGlobal('window', { matchMedia: () => ({ matches: false }), addEventListener: () => {}, removeEventListener: () => {} });
-  vi.stubGlobal('matchMedia', () => ({ matches: false }));
-  vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-  vi.stubGlobal('location', { search: '', hash: '' });
-});
+const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };
+stubGlobal('document', doc);
+stubGlobal('window', { matchMedia: () => ({ matches: false }), addEventListener: () => {}, removeEventListener: () => {} });
+stubGlobal('matchMedia', () => ({ matches: false }));
+stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} });
+stubGlobal('location', { search: '', hash: '' });
+
+const realStore = await import('./store');
+vi.mock('./store', async (orig) => ({ ...(orig ? await orig<object>() : realStore), useStore: (select: (s: unknown) => unknown) => select(store) }));
+
+const { BuildList } = await import('../sessions/Builds');
+const { Runs } = await import('../sessions/Runs');
+const { PrivacyGroup } = await import('./shell/Settings');
+const { SketchFrame, SketchList, Sketches } = await import('../workspace/Sketches');
 
 const pending = { id: 'r1', kind: 'job', sessionId: 's', chatId: 'c', title: 'Fix the parser', what: '', startedAt: 1, endedAt: null, state: 'paused', why: '', round: 1, max: 1, nextAt: null, costUsd: 0, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [] } as ChatRun;
 

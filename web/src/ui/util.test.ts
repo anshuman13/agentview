@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setSystemTime } from '../../../testing';
 import { ago, escapeHtml, markSegments, matchLabel, spendLines, stepMatch, weekPace } from './util';
 
 describe('ago', () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => { vi.useRealTimers(); setSystemTime(); });
 
   it('rounds to the largest unit and says now under a minute', () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 12, 0, 0));
+    setSystemTime(new Date(2026, 9, 24, 12, 0, 0));
     const now = Date.now();
     expect(ago(now - 30_000)).toBe('now');
     expect(ago(now - 5 * 60_000)).toBe('5m');

@@ -1,22 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { DesignPage } from './Stories';
+import './storyMocks';
 
-vi.hoisted(() => {
-  const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };
-  vi.stubGlobal('document', doc);
-  vi.stubGlobal('window', { matchMedia: () => ({ matches: false }), addEventListener: () => {}, removeEventListener: () => {} });
-  vi.stubGlobal('matchMedia', () => ({ matches: false }));
-  vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-  vi.stubGlobal('location', { search: '', hash: '' });
-});
-
-vi.mock('react', async (importOriginal) => {
-  const react = await importOriginal<typeof import('react')>();
-  return { ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => react.useSyncExternalStore(subscribe, get, get) };
-});
+const { DesignPage } = await import('./Stories');
 
 const HEADING_NAMES: Record<string, string | null> = { 'Section header': 'Section', 'Grouped list': null };
 const EXTRA_PRIMITIVES = ['AskRow'];

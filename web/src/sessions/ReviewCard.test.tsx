@@ -1,18 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { ReviewCard, ReviewFiles } from './ReviewCard';
-import { RunRow } from './Runs';
-import { postRunApprove, postRunDiscard, postRunRevise, type RunDiff } from './sessionApi';
+import { stubGlobal, unstubAllGlobals } from '../../../testing';
+import type { RunDiff } from './sessionApi';
 import type { ChatRun } from '../../../shared/protocol';
 
-vi.hoisted(() => {
-  const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };
-  vi.stubGlobal('document', doc);
-  vi.stubGlobal('window', { matchMedia: () => ({ matches: false }), addEventListener: () => {}, removeEventListener: () => {} });
-  vi.stubGlobal('matchMedia', () => ({ matches: false }));
-  vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-  vi.stubGlobal('location', { search: '', hash: '' });
-});
+const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };
+stubGlobal('document', doc);
+stubGlobal('window', { matchMedia: () => ({ matches: false }), addEventListener: () => {}, removeEventListener: () => {} });
+stubGlobal('matchMedia', () => ({ matches: false }));
+stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} });
+stubGlobal('location', { search: '', hash: '' });
+
+const { ReviewCard, ReviewFiles } = await import('./ReviewCard');
+const { RunRow } = await import('./Runs');
+const { postRunApprove, postRunDiscard, postRunRevise } = await import('./sessionApi');
 
 const run = { id: 'r1', kind: 'job', sessionId: 's', chatId: 'c', title: 'Fix the parser', what: '', startedAt: Date.now(), endedAt: null, state: 'paused', why: 'Ready for review', round: 1, max: 1, nextAt: null, costUsd: 0, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [{ n: 1, at: Date.now(), outcome: 'done', line: 'Patched the parser', costUsd: 0 }] } as ChatRun;
 const diff: RunDiff = { base: 'main', diff: '', files: [1, 2, 3, 4, 5].map((n) => ({ path: `src/f${n}.ts`, additions: n, deletions: 0 })) };
@@ -49,11 +50,11 @@ describe('review card', () => {
 });
 
 describe('review requests', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => unstubAllGlobals());
 
   it('posts each decision once to its own route', async () => {
     const fetch = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, url: 'u' }) }));
-    vi.stubGlobal('fetch', fetch);
+    stubGlobal('fetch', fetch);
     await postRunApprove('r 1');
     await postRunRevise('r1', 'Rename it');
     await postRunDiscard('r1');

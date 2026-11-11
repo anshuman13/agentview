@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { TabBar } from './TabBar';
-import { rowCounts } from '../store/counts';
+import { createRequire } from 'node:module';
 
-vi.mock('react', async (importOriginal) => {
-  const react = await importOriginal<typeof import('react')>();
-  return { ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => react.useSyncExternalStore(subscribe, get, get) };
-});
+const react = createRequire(import.meta.url)('react') as typeof import('react');
+const { useSyncExternalStore } = react;
+vi.mock('react', () => ({ ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) }));
+
+const { TabBar } = await import('./TabBar');
+const { rowCounts } = await import('../store/counts');
 
 const render = () => renderToStaticMarkup(<TabBar tab="chat" more={false} inChats={false} inMore={false} goTab={() => {}} goSide={() => {}} toggleMore={() => {}} />);
 

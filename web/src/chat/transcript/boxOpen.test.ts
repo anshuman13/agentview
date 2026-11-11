@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { stubGlobal } from '../../../../testing';
 import { readBox, saveBox } from './boxOpen';
 
 beforeEach(() => {
   const data = new Map<string, string>();
-  vi.stubGlobal('localStorage', { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => data.set(k, v) });
+  stubGlobal('localStorage', { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => data.set(k, v) });
 });
 
 describe('boxOpen', () => {
