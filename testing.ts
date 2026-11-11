@@ -51,13 +51,16 @@ export async function advanceTimersByTimeAsync(ms: number) {
 }
 
 export async function waitFor<T>(check: () => T | Promise<T>, { timeout = 1000, interval = 20 } = {}): Promise<T> {
-  const end = performance.now() + timeout;
-  for (;;) {
+  // Counts tries: Bun's fake timers freeze performance.now() and every setTimeout, but not setImmediate.
+  for (let left = Math.ceil(timeout / interval); ; left--) {
     try {
       return await check();
     } catch (err) {
-      if (performance.now() > end) throw err;
-      await new Promise((r) => realTimeout(r, interval));
+      if (left <= 0) throw err;
+      if (bun && vi.isFakeTimers()) {
+        (globalThis as unknown as { Bun: { sleepSync(ms: number): void } }).Bun.sleepSync(interval);
+        await tick();
+      } else await new Promise((r) => realTimeout(r, interval));
     }
   }
 }
