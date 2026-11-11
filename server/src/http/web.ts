@@ -1,4 +1,3 @@
-import type http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile, stat } from 'node:fs/promises';
@@ -36,13 +35,11 @@ async function compressed(file: string, body: Buffer, mtime: number) {
   return entry;
 }
 
-// Serves web/dist, or redirects to the dev server; false when there is no build.
-export async function serveWeb(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
-  if (DEV_WEB) {
-    res.writeHead(302, { location: `http://${new URL(`http://${req.headers.host ?? 'localhost'}`).hostname}:${DEV_WEB}${url.pathname}${url.search}` });
-    res.end();
-    return true;
-  }
+const bytes = (b: Buffer) => new Uint8Array(b.buffer as ArrayBuffer, b.byteOffset, b.length);
+
+// Serves web/dist, or redirects to the dev server; null when there is no build.
+export async function serveWeb(req: Request, url: URL) {
+  if (DEV_WEB) return new Response(null, { status: 302, headers: { location: `http://${new URL(`http://${req.headers.get('host') ?? 'localhost'}`).hostname}:${DEV_WEB}${url.pathname}${url.search}` } });
   let file = path.join(WEB_DIST, url.pathname === '/' ? 'index.html' : url.pathname);
   let info = await stat(file).catch(() => null);
   if (!info?.isFile()) {
@@ -50,23 +47,17 @@ export async function serveWeb(req: http.IncomingMessage, res: http.ServerRespon
     info = await stat(file).catch(() => null);
   }
   const body = info && (await readFile(file).catch(() => null));
-  if (!info || !body) return false;
+  if (!info || !body) return null;
   const ext = path.extname(file);
-  const headers: http.OutgoingHttpHeaders = {
+  const headers: Record<string, string> = {
     'content-type': MIME[ext] ?? 'application/octet-stream',
     // Vite puts a content hash in every file name under assets/, so those never change.
     'cache-control': file.startsWith(path.join(WEB_DIST, 'assets') + path.sep) ? 'public, max-age=31536000, immutable' : 'no-cache',
     ...(COMPRESS.has(ext) && { vary: 'accept-encoding' }),
   };
-  const accept = String(req.headers['accept-encoding'] ?? '');
+  const accept = req.headers.get('accept-encoding') ?? '';
   const encoding = !COMPRESS.has(ext) || body.length < 1024 ? null : /\bbr\b/.test(accept) ? 'br' : /\bgzip\b/.test(accept) ? 'gzip' : null;
-  if (!encoding) {
-    res.writeHead(200, headers);
-    res.end(body);
-    return true;
-  }
+  if (!encoding) return new Response(bytes(body), { headers });
   const out = (await compressed(file, body, info.mtimeMs))[encoding];
-  res.writeHead(200, { ...headers, 'content-encoding': encoding });
-  res.end(out);
-  return true;
+  return new Response(bytes(out), { headers: { ...headers, 'content-encoding': encoding } });
 }

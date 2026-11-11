@@ -1,4 +1,3 @@
-import type http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -7,14 +6,18 @@ import { BadRequest, parseFrame, parseObject } from '../json.js';
 
 export { BadRequest, parseFrame, parseObject };
 
-export async function readBody(req: http.IncomingMessage, max = 1_000_000) {
-  const chunks: Buffer[] = [];
+async function readBytes(req: Request, max: number, tooBig: string) {
+  const chunks: Uint8Array[] = [];
   let size = 0;
-  for await (const chunk of req) {
-    if ((size += chunk.length) > max) throw new Error('Request body too large');
+  for await (const chunk of req.body ?? []) {
+    if ((size += chunk.length) > max) throw new Error(tooBig);
     chunks.push(chunk);
   }
-  return Buffer.concat(chunks).toString('utf8');
+  return Buffer.concat(chunks);
+}
+
+export async function readBody(req: Request, max = 1_000_000) {
+  return (await readBytes(req, max, 'Request body too large')).toString('utf8');
 }
 
 const PASTES = path.join(os.homedir(), '.agentview', 'pastes');
@@ -28,18 +31,12 @@ async function prunePastes(dir: string) {
   }
 }
 
-export async function savePaste(req: http.IncomingMessage, name: string, dir = PASTES) {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > 50_000_000) throw new Error('Files over 50 MB cannot be attached');
-    chunks.push(chunk);
-  }
+export async function savePaste(req: Request, name: string, dir = PASTES) {
+  const body = await readBytes(req, 50_000_000, 'Files over 50 MB cannot be attached');
   await mkdir(dir, { recursive: true });
   const safe = path.basename(name).replace(/[^\w.-]+/g, '-').slice(-80) || 'file';
   const file = path.join(dir, `${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}-${randomUUID().slice(0, 6)}-${safe}`);
-  await writeFile(file, Buffer.concat(chunks));
+  await writeFile(file, body);
   void prunePastes(dir).catch(() => {});
   return file;
 }

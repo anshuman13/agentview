@@ -1,10 +1,8 @@
-import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, mkdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, ownProfile } from './chrome/chrome.js';
 import { ntfyTopic, post } from './integrations/notify.js';
@@ -18,6 +16,7 @@ import { Ring, frame } from './http/stream.js';
 import { createClients, type Client, type Live } from './http/clients.js';
 import { serveWeb } from './http/web.js';
 import { createRoutes, writers } from './http/routes.js';
+import { OPEN, Peer, type SocketData } from './http/peer.js';
 import { allowedPeer, allowedRequest, appOrigin, requester } from './http/access.js';
 import { Host } from './host/client.js';
 import { migrateSettings } from './migrateSettings.js';
@@ -36,11 +35,7 @@ if (ownProfile()) {
   process.env.AGENTVIEW_PORT = String(PORT);
 }
 
-process.on('uncaughtException', (err) => {
-  console.error('uncaught:', err);
-  // Bun throws a taken port from inside listen. Without its port this process is useless; the menu bar app starts it again.
-  if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE' && !server.listening) process.exit(1);
-});
+process.on('uncaughtException', (err) => console.error('uncaught:', err));
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 // A signal skips the exit event, which stops the MCP servers in their own process groups; exit so it runs.
 for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) process.once(sig, () => process.exit(0));
@@ -142,49 +137,52 @@ const { dispatch } = createRoutes({
   attentionSources,
   serveWeb,
   allowedPeer,
-  requester,
   thisMac,
   networkInterfaces: os.networkInterfaces,
   PORT,
   APK,
 });
 
-const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url ?? '/', 'http://x');
-  const { json } = writers(req, res);
-  if (!allowedRequest(req.headers, requester(req))) return json({ error: 'Forbidden' }, 403);
-  const app = appOrigin(req.headers, requester(req));
-  if (app) {
-    res.setHeader('access-control-allow-origin', app);
-    res.setHeader('vary', 'origin');
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204, {
+async function handle(req: Request, server: Bun.Server<SocketData>): Promise<Response | undefined> {
+  const addr = server.requestIP(req)?.address;
+  // Only this Mac and NetBird peers; Bun.serve has no hook before the request, so each request is checked.
+  if (!allowedPeer(addr)) return new Response(null, { status: 403 });
+  const ip = requester(addr, req.headers.get('x-forwarded-for'));
+  const headers = Object.fromEntries(req.headers);
+  if (!allowedRequest(headers, ip)) return writers(req).json({ error: 'Forbidden' }, 403);
+  const url = new URL(req.url);
+  if (url.pathname === '/ws') {
+    const data: SocketData = { url: req.url, origin: headers.origin, agent: headers['user-agent'] };
+    return server.upgrade(req, { data }) ? undefined : new Response('Expected a WebSocket upgrade', { status: 400 });
+  }
+  const app = appOrigin(headers, ip);
+  if (app && req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'access-control-allow-origin': app,
+        vary: 'origin',
         'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'access-control-allow-headers': 'content-type, last-event-id',
         'access-control-max-age': '600',
-        ...(req.headers['access-control-request-private-network'] && { 'access-control-allow-private-network': 'true' }),
-      });
-      return res.end();
-    }
+        ...(headers['access-control-request-private-network'] && { 'access-control-allow-private-network': 'true' }),
+      },
+    });
   }
-  await dispatch(req, res, url);
-});
-
-server.on('connection', (socket) => {
-  let ok = false;
-  try {
-    ok = allowedPeer(socket.remoteAddress);
-  } catch {}
-  if (!ok) socket.destroy();
-});
-
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8_000_000, perMessageDeflate: { threshold: 1024 }, verifyClient: ({ req }: { req: http.IncomingMessage }) => allowedRequest(req.headers, requester(req)) });
+  const res = await dispatch(req, url, ip);
+  if (app) {
+    res.headers.set('access-control-allow-origin', app);
+    res.headers.set('vary', [res.headers.get('vary'), 'origin'].filter(Boolean).join(', '));
+  }
+  return res;
+}
 
 // Phones that drop off the VPN leave half-open sockets; without this they count as viewers for hours.
-const alive = new WeakSet<WebSocket>();
-const missed = new WeakMap<WebSocket, number>();
+const sockets = new Set<Peer>();
+const alive = new WeakSet<Peer>();
+const missed = new WeakMap<Peer, number>();
 setInterval(() => {
-  for (const ws of wss.clients) {
+  for (const ws of sockets) {
     // The ping sits behind queued data, so a slow link still downloading a big init gets one more round.
     const n = alive.has(ws) ? 0 : (missed.get(ws) ?? 0) + 1;
     if (n > 1 || (n === 1 && ws.bufferedAmount === 0)) {
@@ -197,16 +195,18 @@ setInterval(() => {
   }
 }, 30_000).unref();
 
-wss.on('connection', (ws: WebSocket, req) => {
+function openSocket(ws: Peer, data: SocketData) {
+  sockets.add(ws);
   alive.add(ws);
   ws.on('pong', () => alive.add(ws));
-  const params = new URL(req.url ?? '', 'http://x').searchParams;
+  ws.on('close', () => sockets.delete(ws));
+  const params = new URL(data.url).searchParams;
   const term = params.get('term');
   if (term !== null) return attachTerminal(ws, term);
-  if (params.has('chrome')) return openChrome(ws, req.headers.origin);
+  if (params.has('chrome')) return openChrome(ws, data.origin);
   const chat = (live.chats.has(params.get('chat') ?? '') ? params.get('chat')! : undefined) ?? (params.has('session') ? bySession(params.get('session')) : undefined) ?? live.lastViewed;
-  const sendRaw = (data: string) => ws.readyState === WebSocket.OPEN && ws.send(data);
-  const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat, phone: isPhone(params.get('client'), req.headers['user-agent']) };
+  const sendRaw = (text: string) => ws.readyState === OPEN && ws.send(text);
+  const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat, phone: isPhone(params.get('client'), data.agent) };
   clients.add(client);
   touchDesktop(client);
   view(client, chat);
@@ -226,27 +226,48 @@ wss.on('connection', (ws: WebSocket, req) => {
     gate.leave(client.view);
     reportViewers();
   });
-});
+}
 
 // Server-Sent Events: the same ServerMessage stream as /ws, resumable from Last-Event-ID through the ring buffer.
 // The browser's own reconnect sends Last-Event-ID; the last param in its URL is from the first connect and stale by then.
 // found: the stream asked for a chat that exists, so a resume may replay deltas; otherwise it gets a full init.
-function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: URL, chat: string, found = true) {
-  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive', 'x-accel-buffering': 'no' });
-  res.flushHeaders();
+function openEvents(req: Request, url: URL, chat: string, found = true) {
+  server.timeout(req, 0);
   const cid = url.searchParams.get('cid') || randomUUID();
   // A tab that reopens its stream replaces the old one, which may be a half-open socket that would count as a viewer for hours.
   streams.get(cid)?.close?.();
-  req.socket.setKeepAlive(true, 15_000);
-  // A write that does not drain for a minute means a half-open socket (a phone that left the VPN); it is no viewer.
+  // Bytes the socket has not taken yet count against this; a write past it that does not drain for a minute means
+  // a half-open socket (a phone that left the VPN), which is no viewer.
+  let out!: ReadableStreamDefaultController<Uint8Array>;
   let stalled = 0;
-  const write = (data: string) => { if (!res.write(data)) stalled ||= Date.now(); };
-  res.on('drain', () => (stalled = 0));
-  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => write(frame(data, id)), view: chat, close: () => res.destroy(), phone: isPhone(url.searchParams.get('client'), req.headers['user-agent']) };
+  let ended = false;
+  const bytes = new TextEncoder();
+  const write = (data: string) => {
+    if (ended) return;
+    out.enqueue(bytes.encode(data));
+    if ((out.desiredSize ?? 0) <= 0) stalled ||= Date.now();
+  };
+  const end = () => {
+    if (ended) return;
+    ended = true;
+    clearInterval(ping);
+    clients.delete(client);
+    gate.leave(client.view);
+    if (streams.get(cid) === client) streams.delete(cid);
+    reportViewers();
+  };
+  const close = () => {
+    const was = ended;
+    end();
+    if (!was) out.close();
+  };
+  const body = new ReadableStream<Uint8Array>({ start: (c) => void (out = c), pull: () => void (stalled = 0), cancel: end }, { highWaterMark: 256_000, size: (c) => c!.byteLength });
+  req.signal.addEventListener('abort', end);
+  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => write(frame(data, id)), view: chat, close, phone: isPhone(url.searchParams.get('client'), req.headers.get('user-agent') ?? undefined) };
   clients.add(client);
   touchDesktop(client);
   streams.set(cid, client);
-  const missed = found ? ring.since(Number(req.headers['last-event-id'] ?? url.searchParams.get('last')), chat) : null;
+  const missed = found ? ring.since(Number(req.headers.get('last-event-id') ?? url.searchParams.get('last')), chat) : null;
   if (missed) {
     client.view = chat;
     for (const e of missed) client.sendRaw(e.data, e.id);
@@ -255,14 +276,8 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   gate.attach(chat);
   greet(client, chat, url.searchParams.get('session'));
   // A named event, not a comment: the client hears it and can tell a dead link from a quiet one.
-  const ping = setInterval(() => (stalled && Date.now() - stalled > STALL_MS ? res.destroy() : write('event: ping\ndata:\n\n')), 20_000);
-  req.on('close', () => {
-    clearInterval(ping);
-    clients.delete(client);
-    gate.leave(client.view);
-    if (streams.get(cid) === client) streams.delete(cid);
-    reportViewers();
-  });
+  const ping = setInterval(() => (stalled && Date.now() - stalled > STALL_MS ? close() : write('event: ping\ndata:\n\n')), 20_000);
+  return new Response(body, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', 'x-accel-buffering': 'no' } });
 }
 
 function handleCommand(client: Client, msg: ClientMessage, target?: string) {
@@ -298,15 +313,52 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
   }
 }
 
-server.listen(PORT, () => console.log(`agentview on http://localhost:${PORT} for ${PROJECT}`));
+let server: Bun.Server<SocketData>;
+try {
+  server = Bun.serve<SocketData>({
+    port: PORT,
+    hostname: '::',
+    // Seconds a request may go without traffic; some routes wait on the agent host for up to a minute.
+    idleTimeout: 255,
+    maxRequestBodySize: 64_000_000,
+    fetch: handle,
+    websocket: {
+      maxPayloadLength: 8_000_000,
+      perMessageDeflate: true,
+      // The ping loop above closes dead sockets.
+      idleTimeout: 0,
+      sendPings: false,
+      open: (ws) => openSocket((ws.data.peer = new Peer(ws)), ws.data),
+      message: (ws, raw) => ws.data.peer!.message(raw),
+      pong: (ws) => ws.data.peer!.pong(),
+      drain: (ws) => ws.data.peer!.drain(),
+      close: (ws) => ws.data.peer!.closed(),
+    },
+    error: (err) => {
+      console.error('request:', err);
+      return Response.json({ error: err.message }, { status: 500 });
+    },
+  });
+} catch (err) {
+  // Without its port this process is useless; the menu bar app starts it again.
+  console.error(err);
+  process.exit(1);
+}
+console.log(`agentview on http://localhost:${PORT} for ${PROJECT}`);
 if (existsSync(BUILD_FAILED)) post('The AgentView web build failed', 'Serving the previous build', 'See ~/.agentview/logs/server.log');
 
 // The web app used to be on :5173; send old bookmarks and phone shells here.
 if (PORT === 7777 && !process.env.AGENTVIEW_DEV_WEB) {
-  http
-    .createServer((req, res) => res.writeHead(301, { location: `http://${new URL(`http://${req.headers.host ?? 'localhost'}`).hostname}:${PORT}${req.url ?? '/'}` }).end())
-    .on('error', () => {})
-    .listen(5173);
+  try {
+    Bun.serve({
+      port: 5173,
+      hostname: '::',
+      fetch: (req) => {
+        const url = new URL(req.url);
+        return new Response(null, { status: 301, headers: { location: `http://${url.hostname}:${PORT}${url.pathname}${url.search}` } });
+      },
+    });
+  } catch {}
 }
 void ntfyTopic().then((t) => console.log(t === 'off' ? 'push off' : 'push on, the ntfy topic is in ~/.agentview/observe.json'));
 void connectChrome();
