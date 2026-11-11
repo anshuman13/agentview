@@ -8,6 +8,7 @@ dist-next
 dist-old
 app/www/index.html
 app/www/assets
+app/www/fonts
 app/www/icon-192.png
 app/www/icon-512.png
 app/www/apple-touch-icon.png
