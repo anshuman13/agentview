@@ -46,6 +46,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
+import no.pradhan.agentview.nativeapp.sessions.withoutCriteria
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
@@ -139,6 +140,10 @@ class SharedCasesTest {
 
     @Test fun stripRound() {
         for (c in cases("strip-round")) assertEquals(c.str("name"), c.str("expected"), stripRound(c.str("text")))
+    }
+
+    @Test fun specCriteria() {
+        for (c in cases("spec-criteria")) assertEquals(c.str("name"), c.str("without"), withoutCriteria(c.str("markdown")))
     }
 
     @Test fun ago() {

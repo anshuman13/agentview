@@ -16,6 +16,18 @@ class BuildsLogicTest {
     }
 
     @Test
+    fun parsesTheCriteriaAndFlowAndDefaultsThemWhenAbsent() {
+        val d = parseBuild("""{"slug":"a","pipeline":"tested","criteria":[{"n":1,"result":"pass","evidence":"ok","text":"Shows","ui":true}],"flow":[{"key":"spec","state":"done","by":"pm","result":"Written","at":5},{"key":"merge","state":"todo","by":"","result":"","at":null}]}""")
+        assertEquals("Tested", pipelineLabel(d.pipeline))
+        assertEquals(listOf(true), d.criteria.map { it.ui })
+        assertEquals(listOf(5L, null), d.flow.map { it.at })
+        val bare = parseBuild("""{"slug":"b"}""")
+        assertEquals("written", bare.pipeline)
+        assertEquals(emptyList<SpecCriterion>(), bare.criteria)
+        assertEquals(emptyList<FlowStep>(), bare.flow)
+    }
+
+    @Test
     fun groupsKeepActiveOpenAndLeaveEmptyGroupsOut() {
         val groups = buildGroups(listOf(row("a", "tested"), row("b", draft = true), row("c", "merged"), row("d", draft = true)))
         assertEquals(listOf("active", "drafts", "merged"), groups.map { it.key })

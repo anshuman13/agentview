@@ -204,7 +204,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String
             when {
                 it.id in folded -> {}
                 run != null -> ExploredRow(hub, it.id, run, cwd, !running)
-                else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in view.rewinds, it.id in view.specCards)
+                else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in view.rewinds, bump = if (it.id in view.specCards) view.specBumps[itemSlug(it)] ?: 0 else null)
             }
             view.summaries[it.id]?.takeIf { s -> !(running && s.latest) }?.let { s -> SummaryRow(s.events) }
         }
@@ -248,7 +248,7 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, card: Boolean = false) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, bump: Int? = null) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat, canRewind)
         is Item.Phase -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
@@ -261,11 +261,15 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.File -> if (it.error != null) FileCard(it, cwd)
             else if (isSpecPath(it.path)) {
                 val meta = if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}"
-                if (card) SpecCard(hub, it.id, specSlug(it.path), it.path, chat, meta) else SpecRow(hub, specSlug(it.path), meta)
+                if (bump != null) SpecCard(hub, chat, specSlug(it.path), it.path, bump) else SpecRow(specSlug(it.path), meta)
             }
             else if (isSketchPath(it.path)) SketchCard(hub, sketchName(it.path), if (it.uses.first().name == "Write") "Sketch written" else "Sketch edited \u00B7 +${it.add} -${it.del}")
             else FileCard(it, cwd)
-        is Item.Agent -> AgentRow(hub, it, chat, cwd, onOpenAgent, card)
+        is Item.Agent -> {
+            AgentRow(hub, it, chat, cwd, onOpenAgent)
+            val build = agentBuild(it.use)
+            if (bump != null && build != null) Box(Modifier.padding(top = Tokens.sp4)) { SpecCard(hub, chat, build.slug, ".claude/specs/${build.slug}.md", bump) }
+        }
         is Item.Blocked -> BlockedCard(it.ev, hub)
         is Item.Review -> ReviewCard(it.ev, hub)
     }

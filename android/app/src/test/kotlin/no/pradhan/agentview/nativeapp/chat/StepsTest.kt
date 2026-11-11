@@ -39,6 +39,19 @@ class StepsTest {
     }
 
     @Test
+    fun specBumpsChangeWhenABuildAgentStartsAndEnds() {
+        fun agent(id: String, label: String, ended: Boolean) = listOfNotNull(use(id, "Agent", obj("description" to label)), res("r$id", id).takeIf { ended })
+        val none = buildTranscript(listOf(use("t", "Bash")))
+        val started = buildTranscript(agent("a1", "impl:x#1", false))
+        val ended = buildTranscript(agent("a1", "impl:x#1", true))
+        val second = buildTranscript(agent("a1", "impl:x#1", true) + agent("a2", "test:x#1", false) + agent("a3", "pm:y", true))
+        assertEquals(emptyMap<String, Int>(), specBumps(none))
+        assertEquals(mapOf("x" to 2), specBumps(started))
+        assertEquals(mapOf("x" to 1), specBumps(ended))
+        assertEquals(mapOf("x" to 3, "y" to 1), specBumps(second))
+    }
+
+    @Test
     fun pairsToolUseWithItsResult() {
         val items = buildTranscript(listOf(ChatEvent("u", "user", text = "go"), use("t1", "Bash", obj("command" to "ls")), res("r1", "t1", "a.txt", at = 3000), ChatEvent("a", "assistant", text = "done")))
         assertEquals(listOf("User", "Step", "Assistant"), items.map { it::class.simpleName })

@@ -26,14 +26,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,33 +48,49 @@ import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.net.Capabilities
+import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.net.image
 import no.pradhan.agentview.nativeapp.net.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.agentSummary
-import no.pradhan.agentview.nativeapp.app.DeepLink
-import no.pradhan.agentview.nativeapp.codex.autopilot.planProgress
-import no.pradhan.agentview.nativeapp.sessions.stageName
+import no.pradhan.agentview.nativeapp.sessions.BUILD_FOLD
+import no.pradhan.agentview.nativeapp.sessions.BuildDetail
+import no.pradhan.agentview.nativeapp.sessions.FLOW_LABEL
+import no.pradhan.agentview.nativeapp.sessions.FlowStep
+import no.pradhan.agentview.nativeapp.sessions.HOLD_BADGE
+import no.pradhan.agentview.nativeapp.sessions.flowBadge
+import no.pradhan.agentview.nativeapp.sessions.pipelineLabel
+import no.pradhan.agentview.nativeapp.sessions.stateBadge
+import no.pradhan.agentview.nativeapp.sessions.stateDot
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
-import no.pradhan.agentview.nativeapp.ui.IconBtn
-import no.pradhan.agentview.nativeapp.ui.Hairline
-import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Chevron
+import no.pradhan.agentview.nativeapp.ui.DotState
+import no.pradhan.agentview.nativeapp.ui.Group
+import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.IconBtn
+import no.pradhan.agentview.nativeapp.ui.ListRow
+import no.pradhan.agentview.nativeapp.ui.Loading
+import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.MonoFont
+import no.pradhan.agentview.nativeapp.ui.MoreButton
+import no.pradhan.agentview.nativeapp.ui.SectionHeader
+import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.well
+import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.lineDiff
+import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.sketchTitle
 
 private val pretty = Json { prettyPrint = true }
@@ -166,33 +189,93 @@ private fun Pre(text: String, wrap: Boolean = true, error: Boolean = false) {
     }
 }
 
-private fun openBuild(hub: Hub, slug: String) { hub.link.value = DeepLink(page = "builds", slug = slug) }
-
-// A spec the agent wrote; the box opens to its task count, which links to the build page.
+// The live card of a spec in a chat: its header and menu load with the box closed; the body shows the flow, the criteria and the findings, and each row opens a sheet.
 @Composable
-internal fun SpecCard(hub: Hub, id: String, slug: String, path: String, chat: String, meta: String) {
-    TranscriptBox(hub, "spec:$id", slug, meta) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
-            // Composed only while the box is open, so the file is read only then.
-            val progress = planProgress(hub, path, chat)
-            ListRow("Tasks", progress?.takeUnless { it.startsWith("0 of 0 ") } ?: "No tasks", onClick = { openBuild(hub, slug) })
-            Hairline()
-            val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
-            ListRow(
-                "Review with fresh eyes", if (subagents) "Two reviewers read only this spec" else "Needs subagents, not in this chat",
-                muted = !subagents || hub.readOnly,
-                onClick = if (subagents && !hub.readOnly) ({ hub.askChat("/spec-review $path") }) else null,
-            )
+internal fun SpecCard(hub: Hub, chat: String, slug: String, path: String, bump: Int) {
+    val (load, reload) = rememberLoad(chat, slug) { loadBuild(hub, slug) }
+    var seen by remember(chat, slug) { mutableIntStateOf(bump) }
+    LaunchedEffect(bump) { if (bump != seen) { seen = bump; reload() } }
+    val d = load.data
+    PollWhile(d?.summary?.state == "running", reload)
+    val gone = d == null && !load.busy && load.error.isEmpty()
+    val stack = remember { mutableStateListOf<BuildSheet>() }
+    val actions = buildActions(hub, slug, reload)
+    val cwd by hub.store.state.select { it.session?.cwd.orEmpty() }
+    val run = d?.specFile?.takeIf { chat.isNotEmpty() }?.let { "$cwd/$it" }?.let { p -> TaskRun(p) { hub.askChat(it) } }
+    TranscriptBox(
+        hub, "build:$chat:$slug", d?.title?.ifEmpty { null } ?: slug,
+        if (gone) "Spec removed" else d?.let { listOf(pipelineLabel(it.pipeline), it.summary.conclusion).filter(String::isNotEmpty).joinToString(" · ") }.orEmpty(),
+        state = {
+            if (d?.hold == true) Badge(HOLD_BADGE.first, HOLD_BADGE.second)
+            else if (d != null && d.entries.isNotEmpty()) stateBadge(d.summary.state).let { Badge(it.first, it.second) }
+        },
+        action = { SpecMenu(hub, d, path, stack, actions) },
+        defaultOpen = true,
+    ) {
+        when {
+            gone -> {}
+            d != null -> SpecBody(hub, d, stack)
+            load.error.isNotEmpty() -> LoadFailed("this build", reload)
+            else -> Loading("Loading build")
         }
-        Findings(hub, "spec:$slug") { openBuild(hub, slug) }
+    }
+    if (d != null) BuildSheets(hub, d, stack, actions, run)
+}
+
+@Composable
+private fun SpecMenu(hub: Hub, d: BuildDetail?, path: String, stack: MutableList<BuildSheet>, actions: BuildActions) {
+    val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
+    MoreButton { dismiss ->
+        if (d != null) MenuItem("Open spec", "go-to-file", { dismiss(); stack.add(BuildSheet.Spec()) })
+        if (d != null && !hub.readOnly) MenuItem(if (d.hold) "Release hold" else "Hold", "debug-pause", { dismiss(); actions.setHold(if (d.hold) "release" else "hold") })
+        MenuItem(if (subagents) "Review with fresh eyes" else "Needs subagents, not in this chat", "eye", { dismiss(); hub.askChat("/spec-review $path") }, enabled = subagents && !hub.readOnly)
     }
 }
 
-// A build agent's spec, shown plain inside the agent box.
+private fun flowSheet(f: FlowStep, d: BuildDetail): BuildSheet? = when {
+    f.state == "todo" -> null
+    f.key == "spec" -> BuildSheet.Spec(d.phases.firstOrNull { it.key == "requirements" }?.key ?: d.phases.firstOrNull()?.key)
+    f.key == "approval" -> BuildSheet.Spec()
+    f.key == "merge" -> null
+    else -> BuildSheet.Step(f.key)
+}
+
+// The flow's marks are joined by a hairline from the row above to the row below.
+private fun Modifier.flowLine(color: Color, first: Boolean, last: Boolean) = drawBehind {
+    val x = (Tokens.listPad + Tokens.leadWidth / 2).toPx()
+    drawLine(color, Offset(x, if (first) size.height / 2 else 0f), Offset(x, if (last) size.height / 2 else size.height), Tokens.hairline.toPx())
+}
+
 @Composable
-internal fun SpecRow(hub: Hub, slug: String, meta: String) {
+private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
+    var all by remember(d.slug) { mutableStateOf(false) }
+    val failed = d.criteria.any { it.result == "fail" }
+    val now = System.currentTimeMillis()
+    val line = av.border
+    SectionHeader("Flow")
+    Group {
+        d.flow.forEachIndexed { i, f ->
+            if (i > 0) Hairline(lead = true)
+            val badge = flowBadge(f)
+            val sheet = flowSheet(f, d)
+            ListRow(
+                FLOW_LABEL[f.key] ?: f.key, listOf(f.by, f.result, f.at?.let { agoShort(it, now) }.orEmpty()).filter(String::isNotEmpty).joinToString(" · "),
+                leading = { StatusDot(if (f.state == "running") DotState.Running else stateDot(f.state)) },
+                state = { if (badge != null) Badge(badge.first, badge.second) }, stateSlot = true,
+                modifier = Modifier.flowLine(line, i == 0, i == d.flow.lastIndex),
+                onClick = sheet?.let { { stack.add(it) } },
+            )
+        }
+    }
+    Criteria(d.criteria, if (all || failed) d.criteria.size else BUILD_FOLD, { all = true }) { stack.add(BuildSheet.Criterion(it)) }
+    Findings(hub, "spec:${d.slug}") { stack.add(BuildSheet.File(it.file)) }
+}
+
+// A spec write that no longer holds the live card, shown plain.
+@Composable
+internal fun SpecRow(slug: String, meta: String) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
-        ListRow(slug, meta, leading = { AvIcon("beaker", null, Tokens.icon) }, onClick = { openBuild(hub, slug) })
+        ListRow(slug, meta, leading = { AvIcon("beaker", null, Tokens.icon) })
     }
 }
 
@@ -241,7 +324,7 @@ fun editPairs(use: ChatEvent): List<Pair<String, String>> = when (use.name) {
 }
 
 @Composable
-internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpenAgent: (String) -> Unit, card: Boolean = false) {
+internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpenAgent: (String) -> Unit) {
     val result = it.result
     val dur = if (result != null && !it.running) duration(result.at - it.use.at) else ""
     val steps = if (it.steps.isNotEmpty()) "${it.steps.size} ${if (it.steps.size == 1) "step" else "steps"}" else ""
@@ -262,7 +345,6 @@ internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpe
         action = if (running && canStop) ({ IconBtn("debug-stop", "Stop agent", { hub.stopTask(it.use.id) }) }) else null,
         summary = agentSummary(it), reserveSummary = running,
     ) {
-        if (card) agentBuild(it.use)?.let { b -> SpecRow(hub, b.slug, "${stageName(b.stage)} \u00B7 ${b.slug}") }
         if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(av.agent, Tokens.stroke).padding(start = Tokens.sp7)) {
             shown.forEachIndexed { i, s -> Box(Modifier.gap(gapAbove(shown.getOrNull(i - 1), s)?.coerceAtMost(Tokens.sp2))) { ItemRow(hub, s, chat, cwd, !running, onOpenAgent) } }
         }

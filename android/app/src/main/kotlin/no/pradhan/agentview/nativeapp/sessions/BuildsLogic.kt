@@ -21,6 +21,12 @@ data class BuildCommit(val sha: String = "", val subject: String = "", val branc
 data class Criterion(val n: Int = 0, val result: String = "", val evidence: String = "")
 
 @Serializable
+data class SpecCriterion(val n: Int = 0, val result: String = "", val evidence: String = "", val text: String = "", val ui: Boolean = false)
+
+@Serializable
+data class FlowStep(val key: String, val state: String = "todo", val by: String = "", val result: String = "", val at: Long? = null)
+
+@Serializable
 data class BuildEntry(
     val id: String,
     val stage: String = "",
@@ -57,12 +63,15 @@ data class BuildDetail(
     val slug: String,
     val title: String = "",
     val summary: BuildSummary = BuildSummary(),
+    val pipeline: String = "written",
     val updatedAt: Long = 0,
     val specFile: String? = null,
     val phases: List<BuildPhase> = emptyList(),
     val reviews: List<BuildReview> = emptyList(),
     val hold: Boolean = false,
     val codeReview: BuildReview? = null,
+    val criteria: List<SpecCriterion> = emptyList(),
+    val flow: List<FlowStep> = emptyList(),
     val entries: List<BuildEntry> = emptyList(),
     val commit: CommitDiff? = null,
 )
@@ -76,6 +85,8 @@ private val STAGE_NAME = mapOf("pm" to "Spec", "review" to "Spec review", "imple
 fun stageName(stage: String) = STAGE_NAME[stage] ?: stage
 
 private val PIPELINE_LABEL = mapOf("written" to "Spec written", "reviewed" to "Spec reviewed", "implemented" to "Implemented", "tested" to "Tested", "code-reviewed" to "Code reviewed", "merged" to "Merged")
+
+val FLOW_LABEL = mapOf("spec" to "Spec", "spec-review" to "Spec review", "approval" to "Your approval", "implement" to "Implement", "test" to "Test", "code-review" to "Code review", "merge" to "Merge")
 
 private val HAND = mapOf("pm" to "pm", "spec-reviewer" to "review", "implementer" to "implement", "tester" to "test", "code-reviewer" to "code-review")
 private val LABEL = mapOf("pm" to "pm", "review" to "review", "impl" to "implement", "test" to "test", "code-review" to "code-review")
@@ -107,10 +118,21 @@ fun stateBadge(state: String): Pair<String, BadgeTone> = when (state) {
 
 fun stageBadge(e: BuildEntry): Pair<String, BadgeTone> = if (e.status == "stopped") "Skipped" to BadgeTone.Quiet else stateBadge(e.status)
 
-fun criterionBadge(c: Criterion): Pair<String, BadgeTone> = when (c.result) {
+private fun resultBadge(result: String): Pair<String, BadgeTone> = when (result) {
     "pass" -> "Done" to BadgeTone.Done
     "fail" -> "Failed" to BadgeTone.Failed
     else -> "Skipped" to BadgeTone.Quiet
+}
+
+fun criterionBadge(c: Criterion) = resultBadge(c.result)
+
+fun criterionBadge(c: SpecCriterion) = if (c.result == "pending") null else resultBadge(c.result)
+
+fun flowBadge(f: FlowStep): Pair<String, BadgeTone>? = when {
+    f.state == "todo" -> null
+    f.state == "waiting" && (f.key == "approval" || f.result == "On hold") -> HOLD_BADGE
+    f.state == "skipped" -> "Skipped" to BadgeTone.Quiet
+    else -> stateBadge(f.state)
 }
 
 fun stageTitle(e: BuildEntry) = stageName(e.stage) + if (e.round > 1) " · round ${e.round}" else ""
@@ -151,3 +173,20 @@ class StageRow(val at: Long, val entry: BuildEntry? = null, val review: BuildRev
 // The agent stages and the user's decisions in time order.
 fun stageRows(entries: List<BuildEntry>, reviews: List<BuildReview>) =
     (byStart(entries).map { StageRow(it.startedAt, entry = it) } + reviews.filter { it.phase != "hold" }.map { StageRow(it.at, review = it) }).sortedBy { it.at }
+
+private val FENCE = Regex("^\\s*(`{3,}|~{3,})")
+private val SECTION = Regex("^## +(.+?)\\s*$")
+
+// shared/builds.ts withoutCriteria: the spec markdown without its Acceptance criteria section, fenced code skipped when looking for headings.
+fun withoutCriteria(markdown: String): String {
+    var fence = ""
+    var skip = false
+    val kept = ArrayList<String>()
+    for (line in markdown.split("\n")) {
+        val mark = FENCE.find(line)?.groupValues?.get(1)
+        if (mark != null) fence = if (fence.isEmpty()) mark else if (mark[0] == fence[0] && mark.length >= fence.length) "" else fence
+        if (fence.isEmpty() && mark == null) SECTION.find(line)?.let { skip = it.groupValues[1].lowercase() == "acceptance criteria" }
+        if (!skip) kept += line
+    }
+    return kept.joinToString("\n").trim()
+}

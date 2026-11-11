@@ -18,10 +18,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import kotlinx.coroutines.launch
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.chat.ChangesSheet
+import no.pradhan.agentview.nativeapp.chat.buildActions
 import no.pradhan.agentview.nativeapp.chat.LoadFailed
 import no.pradhan.agentview.nativeapp.chat.PollWhile
 import no.pradhan.agentview.nativeapp.chat.Report
@@ -35,7 +33,6 @@ import no.pradhan.agentview.nativeapp.chat.testItems
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -115,24 +112,12 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
     val d = load.data
     PollWhile(d?.summary?.state == "running", reload)
     d?.specFile?.let { if (specFile) { FileScreen(hub, it, onBack = { specFile = false }); return } }
-    val postReview = { body: String, done: (Boolean) -> Unit ->
-        if (!hub.writes.allowed()) done(false)
-        else scope.launch {
-            val ok = runCatching { hub.api.post("/api/builds/review", body, hub.pageChat) }.isSuccess
-            if (ok) reload()
-            done(ok)
-        }
-    }
-    val saveReview = { key: String, decision: String, note: String, done: (Boolean) -> Unit ->
-        postReview(buildJsonObject { put("slug", slug); put("phase", key); put("decision", decision); put("note", note) }.toString(), done)
-    }
-    val approve: (String, (Boolean) -> Unit) -> Unit = { key, done -> hub.track("action:approveSpec"); saveReview(key, "approve", "") { ok -> if (!ok) hub.notice.value = "Could not save the review. Try again."; done(ok) } }
-    val setHold = { decision: String -> postReview(buildJsonObject { put("slug", slug); put("decision", decision) }.toString()) { ok -> if (!ok) hub.notice.value = "Could not save the hold. Try again." } }
+    val actions = buildActions(hub, slug, reload)
     val inMain = ws.repos.any { inside(cwd, it.cwd) } && ws.trees.none { inside(cwd, it.cwd) }
     val now = System.currentTimeMillis()
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, d?.title ?: slug, onBack, actions = {
-            if (d != null && !hub.readOnly) MoreButton { dismiss -> MenuItem(if (d.hold) "Release hold" else "Hold", "debug-pause", { dismiss(); setHold(if (d.hold) "release" else "hold") }) }
+            if (d != null && !hub.readOnly) MoreButton { dismiss -> MenuItem(if (d.hold) "Release hold" else "Hold", "debug-pause", { dismiss(); actions.setHold(if (d.hold) "release" else "hold") }) }
         })
         PageBody {
             when {
@@ -144,18 +129,18 @@ private fun BuildDetailScreen(hub: Hub, slug: String, onBack: () -> Unit) {
                     val review = stages.lastOrNull { it.stage == "code-review" }
                     conclusionItems(d, now)
                     val run = d.specFile?.takeIf { chat.isNotEmpty() }?.let { "$cwd/$it" }?.let { path -> TaskRun(path) { hub.askChat(it) } }
-                    phaseItems(d, phase, now, inMain && d.specFile != null, { specFile = true }, hub.readOnly, run, { phase = it }, { asking = it }, approve)
+                    phaseItems(d, phase, now, inMain && d.specFile != null, { specFile = true }, hub.readOnly, run, { phase = it }, { asking = it }, actions.approve)
                     stageItems(stageRows(d.entries, d.reviews), now) { report = it }
                     if (commit != null) implementationItems(commit.first, commit.second, openFile) { openFile = it }
                     stages.lastOrNull { it.stage == "test" }?.let { testItems(it) }
-                    if (review != null || commit != null) codeReviewItems(d, review, commit != null, now, hub.readOnly, { approve("code") { } }, { asking = "code" })
+                    if (review != null || commit != null) codeReviewItems(d, review, commit != null, now, hub.readOnly, { actions.approve("code") { } }, { asking = "code" })
                     item { Spacer(Modifier.padding(bottom = Tokens.sp8)) }
                 }
             }
         }
     }
     report?.let { ReportSheet(hub, scope, it) { report = null } }
-    asking?.let { key -> ChangesSheet(key, { note, done -> saveReview(key, "changes", note, done) }) { asking = null } }
+    asking?.let { key -> ChangesSheet(key, { note, done -> actions.saveReview(key, "changes", note, done) }) { asking = null } }
 }
 
 private fun LazyListScope.conclusionItems(d: BuildDetail, now: Long) {

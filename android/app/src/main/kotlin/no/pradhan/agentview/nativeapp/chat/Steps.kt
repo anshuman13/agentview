@@ -187,18 +187,28 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
 
 fun agentBuild(use: ChatEvent) = buildStageOf(use.input.s("subagent_type"), use.input.s("description"), use.input.s("prompt"))
 
+fun itemSlug(it: Item) = when (it) {
+    is Item.File -> if (it.error == null && isSpecPath(it.path)) specSlug(it.path) else null
+    is Item.Agent -> agentBuild(it.use)?.slug
+    else -> null
+}
+
 // web steps.ts specCards: the item holding each spec's live card, the latest successful spec write or build agent naming that slug.
 fun specCardIds(items: List<Item>): Set<String> {
     val latest = LinkedHashMap<String, String>()
-    for (it in items) {
-        val slug = when (it) {
-            is Item.File -> if (it.error == null && isSpecPath(it.path)) specSlug(it.path) else null
-            is Item.Agent -> agentBuild(it.use)?.slug
-            else -> null
-        }
-        if (slug != null) latest[slug] = it.id
-    }
+    for (it in items) itemSlug(it)?.let { slug -> latest[slug] = it.id }
     return latest.values.toSet()
+}
+
+// web steps.ts specBumps: per slug, the build agents naming it plus those still running, so a card reloads when one starts or ends.
+fun specBumps(items: List<Item>): Map<String, Int> {
+    val bumps = HashMap<String, Int>()
+    for (it in items) {
+        if (it !is Item.Agent) continue
+        val slug = agentBuild(it.use)?.slug ?: continue
+        bumps[slug] = (bumps[slug] ?: 0) + 1 + if (it.running) 1 else 0
+    }
+    return bumps
 }
 
 // Slack-style day dividers: the label to draw above each prompt that starts a new day. A chat that stays within today gets none.
