@@ -14,6 +14,8 @@ mkdirSync(dir, { recursive: true });
 process.env.GIT_CONFIG_GLOBAL ??= path.join(os.homedir(), '.gitconfig');
 process.env.HOME = path.join(dir, 'home');
 mkdirSync(process.env.HOME, { recursive: true });
+// Bun reads HOME once at startup.
+if (process.versions.bun) os.homedir = () => process.env.HOME!;
 writeFileSync(process.env.AGENTVIEW_SETTINGS, JSON.stringify({ personalRoot: '~/workspace_personal' }));
 process.env.CLAUDE_CONFIG_DIR = path.join(dir, 'claude');
 
