@@ -54,8 +54,9 @@ class ExtrasLogicTest {
     }
 
 
-    @Test fun buildsLinkCarriesTheSlug() {
-        assertEquals("pink-door", parseDeepLink("agentview://open?page=builds&slug=pink-door")?.slug)
+    @Test fun sketchesLinkCarriesTheSlugAndBuildsPageIsIgnored() {
+        assertEquals("login.html", parseDeepLink("agentview://open?page=sketches&slug=login.html")?.slug)
+        assertNull(parseDeepLink("agentview://open?page=builds&slug=pink-door")?.page)
     }
 
     @Test fun shortcutActionsParse() {

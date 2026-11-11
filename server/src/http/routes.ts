@@ -51,6 +51,7 @@ export function createRoutes(d: RouteDeps) {
       if (!chat) return await json({ error: 'The agent host is starting' }, 503);
       const mine = find(chatRoutes, chatPrefixes, method, url.pathname);
       if (mine) return await run(mine, { ...ctx, chat });
+      if (url.pathname.startsWith('/api/')) return await json({ error: 'Not found' }, 404);
       if (!(await d.serveWeb(req, res, url))) return await json({ error: 'web client not built, run npm run dev or npm run build' }, 404);
     } catch (err) {
       await json({ error: err instanceof Error ? err.message : String(err) }, 500);

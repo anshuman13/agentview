@@ -28,7 +28,7 @@ describe('track', () => {
 
   it('sends nothing while off', () => {
     appSettings.patch({ featureUse: false });
-    track('page:builds');
+    track('page:mcp');
     perform('model:x');
     expect(post).not.toHaveBeenCalled();
   });
@@ -37,7 +37,7 @@ describe('track', () => {
     appSettings.patch({ featureUse: true });
     track('page:nope');
     perform('model:x');
-    perform('page:builds');
+    perform('page:mcp');
     expect(post.mock.calls).toEqual([['palette:model']]);
   });
 

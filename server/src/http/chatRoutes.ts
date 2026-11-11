@@ -6,7 +6,7 @@ import { provider } from '../agent/registry.js';
 import { listDir, listFiles, listSketches, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
 import { github } from '../integrations/github.js';
 import { attention, dismissAttention, refreshAttention } from '../integrations/attention.js';
-import { buildOne, listBuilds, reviewBuild } from '../session/builds.js';
+import { buildOne, reviewBuild } from '../session/builds.js';
 import { dismissFinding, getFindings } from '../session/findings.js';
 import { deployRoute } from '../integrations/deploy.js';
 import { deployUrl } from '../settings.js';
@@ -68,7 +68,6 @@ export function chatFileRoutes(): Record<string, Entry<ChatCtx>> {
       const dev = await devScript(chat.cwd);
       return dev ? createTerminal(chat.id, chat.cwd, { name: dev.script, command: dev.command }) : { status: 404, body: { error: 'No dev script in package.json' } };
     }),
-    'ANY /api/builds': entry(({ chat }) => listBuilds(chat.cwd)),
     'ANY /api/builds/one': entry(({ url, chat }) => buildOne(chat.cwd, url.searchParams.get('slug') ?? '')),
     'POST /api/builds/review': entry(({ body, chat }) => reviewBuild(chat.cwd, body ?? {}), true),
     'ANY /api/devscript': entry(({ chat }) => devScript(chat.cwd)),

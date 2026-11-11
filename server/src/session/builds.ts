@@ -1,5 +1,4 @@
-import type { Dirent } from 'node:fs';
-import { appendFile, readdir, readFile, stat } from 'node:fs/promises';
+import { appendFile, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { REVIEW_PHASES, buildStageOf, buildSummary, criteriaOf, findingsOf, flowOf, inOrder, isHeld, lastCommit, pipelineOf, reviewDecision, reviewLine, sectionsOf, slugOk, specCriteria, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase, type SpecCriterion } from '../../../shared/builds.js';
@@ -121,8 +120,6 @@ async function loadSpec(repo: string, slug: string): Promise<Spec | null> {
 
 const DRAFT: BuildSummary = { stage: 'pm', state: 'done', conclusion: 'Not started' };
 
-const names = async (dir: string, keep: (f: Dirent) => string | null) => (await readdir(dir, { withFileTypes: true }).catch(() => [])).flatMap((f) => keep(f) ?? []);
-
 const mergedCache = new Map<string, { tip: string; done: Map<string, boolean> }>();
 
 // The default branch holds a commit with this subject made after the build's commit: the build was cherry-picked or merged.
@@ -142,27 +139,6 @@ async function mergedIn(repo: string) {
     if (tip) done.set(commit.sha, result);
     return result;
   };
-}
-
-export async function listBuilds(cwd: string) {
-  const repo = await mainCheckout(cwd).catch(() => null);
-  if (!repo) return [];
-  const [recorded, claude, kiro] = await Promise.all([
-    names(buildsDir(repo), (f) => (f.name.endsWith('.json') && !f.name.endsWith('.reviews.json') ? f.name.slice(0, -5) : null)),
-    names(path.join(repo, '.claude', 'specs'), (f) => (f.name.endsWith('.md') ? f.name.slice(0, -3) : null)),
-    names(path.join(repo, '.kiro', 'specs'), (f) => (f.isDirectory() ? f.name : null)),
-  ]);
-  const isMerged = await mergedIn(repo);
-  const builds = await Promise.all([...new Set([...recorded, ...claude, ...kiro])].filter(slugValid).map(async (slug) => {
-    const [entries, reviews, spec] = await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]);
-    const done = await isMerged(lastCommit(entries));
-    return {
-      slug, title: spec?.title ?? slug, ...(entries.length ? buildSummary(entries, done) : DRAFT), pipeline: pipelineOf(entries, done, reviews), draft: !entries.length,
-      hold: isHeld(reviews), codeReview: reviewDecision(reviews, 'code') ?? null,
-      updatedAt: Math.max(spec?.mtime ?? 0, ...entries.map((e) => e.endedAt ?? e.startedAt)),
-    };
-  }));
-  return builds.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 // The spec's acceptance criteria with the latest test report's result for each; test lines the spec does not list come last.

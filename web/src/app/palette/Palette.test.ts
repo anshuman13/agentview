@@ -62,9 +62,9 @@ describe('rankCommands', () => {
   });
   it('leaves out hidden page and palette commands', () => {
     const labels = (hidden: string[]) => buildCommands(models, true, undefined, [], undefined, false, hidden).map((c) => c.label);
-    expect(labels([])).toContain('View: Builds');
-    expect(labels(['page:builds'])).not.toContain('View: Builds');
-    expect(labels(['page:builds'])).toContain('View: Sketches');
+    expect(labels([])).toContain('View: Sketches');
+    expect(labels(['page:sketches'])).not.toContain('View: Sketches');
+    expect(labels(['page:sketches'])).toContain('View: Deploy');
     expect(labels(['palette:theme'])).not.toContain('Preferences: Toggle Theme');
   });
   it('lists Run as goal only for a Markdown file', () => {

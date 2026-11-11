@@ -83,7 +83,6 @@ import no.pradhan.agentview.nativeapp.ops.DeployScreen
 import no.pradhan.agentview.nativeapp.ops.McpScreen
 import no.pradhan.agentview.nativeapp.ops.ObserveScreen
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
-import no.pradhan.agentview.nativeapp.sessions.BuildsScreen
 import no.pradhan.agentview.nativeapp.sessions.SessionsScreen
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -169,7 +168,7 @@ private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostStat
     LaunchedEffect(link) {
         val l = link ?: return@LaunchedEffect
         l.chat?.let { hub.open(it) }
-        l.slug?.let { (if (l.page == "sketches") hub.sketchSlug else hub.buildSlug).value = it }
+        if (l.page == "sketches") l.slug?.let { hub.sketchSlug.value = it }
         if (l.action == Shortcut.NEW_CHAT) hub.newChat()
         if (l.action == Shortcut.ADD_TASK) hub.addTask.value = true
         routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.openMore(r) else nav.goTab(r) }
@@ -355,7 +354,6 @@ private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onTab: (String) 
     "deploy" -> DeployScreen(hub, onBack)
     "mcp" -> McpScreen(hub, onBack)
     "runs" -> RunsScreen(hub, onBack, { onTab(Tab.Chat.route) }, { onTab(Tab.Codex.route) })
-    "builds" -> BuildsScreen(hub, onBack)
     "sketches" -> SketchesScreen(hub, onBack)
     else -> SettingsScreen(hub, onBack, onOrigin)
 }

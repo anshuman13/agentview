@@ -56,7 +56,9 @@ describe('routes', () => {
     expect((await call('PUT', '/api/terms')).json).toEqual(['t']);
   });
 
-  it('falls to the web fallback 404, and answers 503 with no chat', async () => {
+  it('answers 404 for an unknown /api path, falls to the web fallback otherwise, and 503 with no chat', async () => {
+    const api = await call('GET', '/api/builds');
+    expect([api.code, api.json, api.serveWeb.mock.calls.length]).toEqual([404, { error: 'Not found' }, 0]);
     const r = await call('GET', '/nope');
     expect(r.serveWeb).toHaveBeenCalled();
     expect([r.code, r.json.error]).toEqual([404, 'web client not built, run npm run dev or npm run build']);

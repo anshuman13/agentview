@@ -1,10 +1,8 @@
 import type { BadgeSpec } from '../ui/Badge';
-import { reviewDecision, stageName, type BuildDetail, type BuildPhase, type BuildReview, type BuildRow, type BuildState, type Criterion, type FlowStep, type ReviewPhase } from '../../../shared/builds';
+import { reviewDecision, stageName, type BuildDetail, type BuildPhase, type BuildReview, type BuildState, type Criterion, type FlowStep, type ReviewPhase } from '../../../shared/builds';
 import { span } from '../../../shared/util';
 
 type Entry = BuildDetail['entries'][number];
-
-export const stateDot = (state: BuildState) => ({ done: 'ok', failed: 'bad', waiting: 'warn', running: '' })[state];
 
 export const stateBadge = (state: BuildState): BadgeSpec => ({ status: state });
 
@@ -35,23 +33,8 @@ export function testCounts(criteria: Criterion[]) {
 
 export const FOLD = 3;
 
-// Active builds stay open; drafts and merged ones fold to FOLD rows. An empty group is left out.
-export function buildGroups(builds: BuildRow[]) {
-  return [
-    { key: 'active', label: 'Active', rows: builds.filter((b) => !b.draft && b.pipeline !== 'merged') },
-    { key: 'drafts', label: 'Drafts', rows: builds.filter((b) => b.draft) },
-    { key: 'merged', label: 'Merged', rows: builds.filter((b) => b.pipeline === 'merged') },
-  ].filter((g) => g.rows.length);
-}
-
 export const startPhase = (phases: BuildPhase[], reviews: BuildReview[]) => (phases.find((p) => reviewDecision(reviews, p.key)?.decision !== 'approve') ?? phases[0]).key;
 
 export const nextPhase = (phases: BuildPhase[], key: ReviewPhase) => phases[phases.findIndex((p) => p.key === key) + 1]?.key ?? key;
-
-export type StageRow = { at: number; entry?: Entry; review?: BuildReview };
-
-// The agent stages and the user's decisions in time order.
-export const stageRows = (entries: Entry[], reviews: BuildReview[]): StageRow[] =>
-  [...byStart(entries).map((entry) => ({ at: entry.startedAt, entry })), ...reviews.filter((r) => r.phase !== 'hold').map((review) => ({ at: review.at, review }))].sort((a, b) => a.at - b.at);
 
 export const commitTotals = (files: { add: number; del: number }[]) => ({ add: files.reduce((n, f) => n + f.add, 0), del: files.reduce((n, f) => n + f.del, 0) });

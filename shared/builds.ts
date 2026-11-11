@@ -25,7 +25,6 @@ export type ReviewTarget = ReviewPhase | 'code' | 'hold';
 export type BuildReview = { phase: ReviewTarget; decision: 'approve' | 'changes' | 'hold' | 'release'; note: string; at: number };
 export type BuildPhase = { key: ReviewPhase; markdown: string };
 export type FlowStep = { key: 'spec' | 'spec-review' | 'approval' | 'implement' | 'test' | 'code-review' | 'merge'; state: BuildState | 'skipped' | 'todo'; by: string; result: string; at: number | null };
-export type BuildRow = BuildSummary & { slug: string; title: string; updatedAt: number; pipeline: BuildPipeline; draft: boolean; hold: boolean; codeReview: BuildReview | null };
 export type BuildDetail = {
   slug: string;
   title: string;

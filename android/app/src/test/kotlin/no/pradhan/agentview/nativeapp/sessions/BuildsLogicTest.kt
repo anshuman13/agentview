@@ -5,15 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class BuildsLogicTest {
-    private fun row(slug: String, pipeline: String = "written", draft: Boolean = false) = BuildRow(slug, pipeline = pipeline, draft = draft)
     private val phases = listOf(BuildPhase("requirements", "r"), BuildPhase("design", "d"), BuildPhase("tasks", "t"))
-
-    @Test
-    fun parsesThePipelineAndMapsItToTheServersLabels() {
-        val rows = parseBuilds("""[{"slug":"a","pipeline":"code-reviewed","draft":false},{"slug":"b","pipeline":"written","draft":true}]""")
-        assertEquals(listOf("Code reviewed", "Spec written"), rows.map { pipelineLabel(it.pipeline) })
-        assertEquals(listOf(false, true), rows.map { it.draft })
-    }
 
     @Test
     fun parsesTheCriteriaAndFlowAndDefaultsThemWhenAbsent() {
@@ -25,14 +17,6 @@ class BuildsLogicTest {
         assertEquals("written", bare.pipeline)
         assertEquals(emptyList<SpecCriterion>(), bare.criteria)
         assertEquals(emptyList<FlowStep>(), bare.flow)
-    }
-
-    @Test
-    fun groupsKeepActiveOpenAndLeaveEmptyGroupsOut() {
-        val groups = buildGroups(listOf(row("a", "tested"), row("b", draft = true), row("c", "merged"), row("d", draft = true)))
-        assertEquals(listOf("active", "drafts", "merged"), groups.map { it.key })
-        assertEquals(listOf(1, 2, 1), groups.map { it.rows.size })
-        assertEquals(listOf("drafts"), buildGroups(listOf(row("b", draft = true))).map { it.key })
     }
 
     @Test

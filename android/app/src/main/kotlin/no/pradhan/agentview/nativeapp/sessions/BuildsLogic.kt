@@ -1,16 +1,12 @@
 package no.pradhan.agentview.nativeapp.sessions
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
 import no.pradhan.agentview.nativeapp.codex.autopilot.everyText
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.DotState
 
-// shared/builds.ts as the server's /api/builds and /api/builds/one return it; the summaries are finished, so nothing is derived here.
-@Serializable
-data class BuildRow(val slug: String, val title: String = "", val stage: String = "", val state: String = "", val conclusion: String = "", val updatedAt: Long = 0, val pipeline: String = "written", val draft: Boolean = false, val hold: Boolean = false)
-
+// shared/builds.ts as the server's /api/builds/one returns it; the summaries are finished, so nothing is derived here.
 @Serializable
 data class BuildFile(val path: String, val additions: Int = 0, val deletions: Int = 0)
 
@@ -75,8 +71,6 @@ data class BuildDetail(
     val entries: List<BuildEntry> = emptyList(),
     val commit: CommitDiff? = null,
 )
-
-fun parseBuilds(body: String): List<BuildRow> = protocolJson.decodeFromString(ListSerializer(BuildRow.serializer()), body)
 
 fun parseBuild(body: String): BuildDetail = protocolJson.decodeFromString(BuildDetail.serializer(), body)
 
@@ -146,15 +140,6 @@ fun stageMeta(e: BuildEntry): String {
 }
 
 const val BUILD_FOLD = 3
-
-class BuildGroup(val key: String, val label: String, val rows: List<BuildRow>)
-
-// Active builds stay open; drafts and merged ones fold to BUILD_FOLD rows. An empty group is left out.
-fun buildGroups(builds: List<BuildRow>) = listOf(
-    BuildGroup("active", "Active", builds.filter { !it.draft && it.pipeline != "merged" }),
-    BuildGroup("drafts", "Drafts", builds.filter { it.draft }),
-    BuildGroup("merged", "Merged", builds.filter { it.pipeline == "merged" }),
-).filter { it.rows.isNotEmpty() }
 
 fun phaseLabel(key: String) = key.replaceFirstChar(Char::uppercase)
 

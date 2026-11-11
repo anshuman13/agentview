@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { BuildEntry } from '../../../shared/builds.js';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 import { claudeSession } from '../agent/claude/driver.js';
-import { buildOne, listBuilds, reviewBuild, splitPhases } from './builds.js';
+import { buildOne, reviewBuild, splitPhases } from './builds.js';
 import { waitFor } from '../../../testing.js';
 
 const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'agentview-builds-')));
@@ -90,17 +90,17 @@ describe('recording builds', () => {
 
 describe('build routes', () => {
   it('reports a build merged once its commit is cherry-picked onto the default branch', async () => {
-    expect((await listBuilds(repo)).find((b) => b.slug === 'red-lamp')).toMatchObject({ title: 'red-lamp', state: 'done', conclusion: 'Passed · not merged yet' });
+    expect(await buildOne(repo, 'red-lamp')).toMatchObject({ title: 'red-lamp', summary: { state: 'done', conclusion: 'Passed · not merged yet' } });
     execFileSync('git', ['cherry-pick', commit], { cwd: repo, env: { ...process.env, GIT_COMMITTER_DATE: new Date(Date.now() + 60_000).toISOString() } });
-    expect((await listBuilds(worktree)).find((b) => b.slug === 'red-lamp')?.conclusion).toBe(`Merged as ${commit.slice(0, 7)}`);
+    expect(await buildOne(worktree, 'red-lamp')).toMatchObject({ summary: { conclusion: `Merged as ${commit.slice(0, 7)}` } });
   });
 
   it('keeps a build merged and sees a later build merge as the default branch moves', async () => {
-    const builds = async () => (await listBuilds(repo)).map((b) => [b.slug, b.conclusion]);
-    const before = await builds();
-    expect(await builds()).toEqual(before);
+    const conclusion = async () => ((await buildOne(repo, 'red-lamp')) as { summary: { conclusion: string } }).summary.conclusion;
+    const before = await conclusion();
+    expect(await conclusion()).toEqual(before);
     sh(repo, 'commit', '-q', '--allow-empty', '-m', 'Unrelated');
-    expect(await builds()).toEqual(before);
+    expect(await conclusion()).toEqual(before);
   });
 
   it('gives the slug as the title and no spec when the spec file is missing, and 404 for a bad slug', async () => {
@@ -127,11 +127,9 @@ describe('spec review', () => {
     writeFileSync(path.join(repo, '.kiro', 'specs', 'kiro-one', 'tasks.md'), '- [ ] t\n');
   });
 
-  it('lists a spec no agent touched and a Kiro folder, and splits a spec into phases', async () => {
-    const list = await listBuilds(repo);
-    expect(list.find((b) => b.slug === 'pink-door')).toMatchObject({ title: 'Pink Door', pipeline: 'written', draft: true, conclusion: 'Not started' });
-    expect(list.find((b) => b.slug === 'kiro-one')).toMatchObject({ title: 'Kiro title', draft: true });
-    expect(list.some((b) => b.slug.endsWith('.reviews'))).toBe(false);
+  it('reads a spec no agent touched and a Kiro folder, and splits a spec into phases', async () => {
+    expect(await buildOne(repo, 'pink-door')).toMatchObject({ title: 'Pink Door', pipeline: 'written', summary: { conclusion: 'Not started' } });
+    expect(await buildOne(repo, 'kiro-one')).toMatchObject({ title: 'Kiro title', entries: [] });
     const one = (await buildOne(repo, 'pink-door')) as { entries: unknown[]; phases: { key: string; markdown: string }[] };
     expect(one.entries).toEqual([]);
     expect(one.phases.map((p) => p.key)).toEqual(['requirements', 'design', 'tasks']);
@@ -176,7 +174,6 @@ describe('spec review', () => {
     expect(await reviewBuild(repo, { slug: 'coded', decision: 'hold' })).toEqual({ ok: true });
     const held = (await buildOne(repo, 'coded')) as { hold: boolean; codeReview: { decision: string } };
     expect(held).toMatchObject({ hold: true, codeReview: { decision: 'changes' } });
-    expect((await listBuilds(repo)).find((b) => b.slug === 'coded')).toMatchObject({ hold: true, codeReview: { note: 'rename it' } });
     expect(await reviewBuild(repo, { slug: 'coded', decision: 'release' })).toEqual({ ok: true });
     expect(((await buildOne(repo, 'coded')) as { hold: boolean }).hold).toBe(false);
     const lines = readFileSync(path.join(specs, 'coded.md'), 'utf8').slice(body.length).split('\n').slice(2, -1);

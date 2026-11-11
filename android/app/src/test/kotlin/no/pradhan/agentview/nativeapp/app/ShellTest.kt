@@ -29,8 +29,8 @@ class ShellTest {
     }
 
     @Test fun hiddenFeaturesLeaveTheMoreSheet() {
-        assertEquals(false, morePages(true, listOf("page:builds")).any { it.route == "builds" })
-        assertEquals(true, morePages(true, listOf("page:builds")).any { it.route == "sketches" })
+        assertEquals(false, morePages(true, listOf("page:sketches")).any { it.route == "sketches" })
+        assertEquals(true, morePages(true, listOf("page:sketches")).any { it.route == "mcp" })
         assertEquals(false, moreTools(listOf("more:files")).any { it.route == "files" })
     }
 

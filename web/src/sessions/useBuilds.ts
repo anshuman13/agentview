@@ -1,18 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useStore } from '../app/store';
-import { fetchBuild, fetchBuilds } from './sessionApi';
+import { fetchBuild } from './sessionApi';
 
 const POLL_MS = 15_000;
 
-function usePolled<T>(load: () => Promise<T | null>, shown: boolean, running: (data: T) => boolean, bump = 0) {
+export function useBuild(slug: string, shown: boolean, bump = 0) {
   const chat = useStore((s) => s.session.id);
-  const [data, setData] = useState<T | null>(null);
+  const [data, setData] = useState<Awaited<ReturnType<typeof fetchBuild>>>(null);
   const [failed, setFailed] = useState(false);
   const [gone, setGone] = useState(false);
-  const loader = useRef(load);
-  loader.current = load;
-  const reload = useCallback(() => loader.current().then((v) => { setData(v); setGone(v === null); setFailed(false); }, () => setFailed(true)), []);
-  const polling = data !== null && running(data);
+  const reload = useCallback(() => fetchBuild(slug).then((v) => { setData(v); setGone(v === null); setFailed(false); }, () => setFailed(true)), [slug]);
+  const polling = data !== null && data.summary.state === 'running';
   useEffect(() => { if (shown) void reload(); }, [shown, chat, reload, bump]);
   useEffect(() => {
     if (!shown || !polling) return;
@@ -21,7 +19,3 @@ function usePolled<T>(load: () => Promise<T | null>, shown: boolean, running: (d
   }, [shown, polling, reload]);
   return { data, failed, gone, reload };
 }
-
-export const useBuilds = (shown: boolean) => usePolled(fetchBuilds, shown, (rows) => rows.some((b) => b.state === 'running'));
-
-export const useBuild = (slug: string, shown: boolean, bump?: number) => usePolled(() => fetchBuild(slug), shown, (b) => b.summary.state === 'running', bump);
