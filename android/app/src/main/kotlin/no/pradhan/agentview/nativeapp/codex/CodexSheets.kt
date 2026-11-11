@@ -296,7 +296,7 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
         is Need.Slack -> NeedCard(n.bullet.title, "Slack" + (n.bullet.why.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), n.bullet.url, { dismissNeed(hub, actions, slackKey(n.bullet)) }, null, !hub.readOnly, { noteNeed(hub, actions, listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), n.bullet.url, n.profile, slackKey(n.bullet)) }) {
             if (hub.codex.capture(listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), "open", n.profile, null, mapOf("text" to n.bullet.url)) != null) hub.hideNeed(slackKey(n.bullet))
         }
-        is Need.Dm -> NeedCard(n.chat.str("name") ?: "DM", listOfNotNull("DM", n.chat.long("last_at")?.let { agoText(it, now) }, n.chat.str("summary")?.ifEmpty { null }).joinToString(" · "), n.chat.str("url"), { dismissNeed(hub, actions, waitKey(n.chat)) }, n.chat.str("name")?.let { name -> { onPerson(name) } }, !hub.readOnly, { noteNeed(hub, actions, listOfNotNull(n.chat.str("name") ?: "DM", n.chat.str("summary")?.ifEmpty { null }).joinToString(": "), n.chat.str("url"), n.chat.profile, waitKey(n.chat)) }) {
+        is Need.Dm -> NeedCard(n.chat.str("name") ?: "DM", listOfNotNull(listOfNotNull("DM", n.chat.long("last_at")?.let { agoText(it, now) }).joinToString(" · "), n.chat.str("summary")?.ifEmpty { null }).joinToString("\n"), n.chat.str("url"), { dismissNeed(hub, actions, waitKey(n.chat)) }, n.chat.str("name")?.let { name -> { onPerson(name) } }, !hub.readOnly, { noteNeed(hub, actions, listOfNotNull(n.chat.str("name") ?: "DM", n.chat.str("summary")?.ifEmpty { null }).joinToString(": "), n.chat.str("url"), n.chat.profile, waitKey(n.chat)) }) {
             if (hub.codex.capture("Reply to ${n.chat.str("name") ?: "DM"}", "open", n.chat.profile, null, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM")) != null) hub.hideNeed(waitKey(n.chat))
         }
     }
@@ -338,7 +338,7 @@ private fun DismissSwipe(onDismiss: () -> Unit, content: @Composable () -> Unit)
 private fun NeedCard(title: String, meta: String, url: String?, onDismiss: () -> Unit, onOpen: (() -> Unit)?, canNote: Boolean, onNote: () -> Unit, onTask: () -> Unit) {
     val uri = LocalUriHandler.current
     DismissSwipe(onDismiss) {
-        ListRow(title, meta, onClick = onOpen, menu = { close ->
+        ListRow(title, meta, metaLines = 5, onClick = onOpen, menu = { close ->
             MenuItem("Make task", "add", { close(); onTask() })
             safeHref(url)?.let { href -> MenuItem("Open in Slack", "link", { close(); uri.openUri(href) }) }
             MenuItem("Nothing asked", "note", { close(); onNote() }, enabled = canNote)
