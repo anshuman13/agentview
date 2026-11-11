@@ -5,10 +5,8 @@ import path from 'node:path';
 import type { DeployJob, DeployRecord } from '../../../shared/protocol.js';
 import { advanceTimersByTimeAsync } from '../../../testing.js';
 
-const execFileMock = vi.fn();
-vi.mock('node:child_process', () => ({
-  execFile: Object.assign(vi.fn(), { [Symbol.for('nodejs.util.promisify.custom')]: (...args: unknown[]) => execFileMock(...args) }),
-}));
+const execMock = vi.fn();
+vi.mock('../exec.js', () => ({ exec: (...args: unknown[]) => execMock(...args) }));
 const { follow, hasDeployApp, parseApp, summarize } = await import('./deploy.js');
 
 describe('parseApp', () => {
@@ -45,7 +43,7 @@ describe('summarize', () => {
 describe('follow', () => {
   it('rejects when the status payload is not an array', async () => {
     vi.useFakeTimers();
-    execFileMock.mockReturnValue(Object.assign(Promise.resolve({ stdout: '{"message":"Not Found"}' }), { child: { stdin: { end() {} } } }));
+    execMock.mockResolvedValue({ stdout: '{"message":"Not Found"}' });
     const job: DeployJob = { id: 'j', lines: [], done: false, ok: false, url: '' };
     const p = follow('/tmp', 'o/r', 1, job);
     p.catch(() => {});
@@ -58,7 +56,7 @@ describe('follow', () => {
 describe('hasDeployApp', () => {
   it('is true only for a repo with a .deploy/app.yaml', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'deploy-'));
-    execFileMock.mockImplementation(() => Object.assign(Promise.resolve({ stdout: `${root}\n` }), { child: { stdin: { end() {} } } }));
+    execMock.mockResolvedValue({ stdout: `${root}\n` });
     expect(await hasDeployApp(root)).toBe(false);
     mkdirSync(path.join(root, '.deploy'));
     writeFileSync(path.join(root, '.deploy', 'app.yaml'), '---\nproject: demo\nenvironments:\n  - name: demo/prod\n');

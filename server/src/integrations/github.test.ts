@@ -4,11 +4,13 @@ const calls: string[][] = [];
 const pr = (number: number, updatedAt = '2026-10-23T10:00:00Z') => ({ number, title: `PR ${number}`, author: { login: 'me' }, headRefName: 'b', isDraft: false, reviewDecision: '', statusCheckRollup: [], updatedAt, url: '', additions: 1, deletions: 0 });
 let listed = [pr(1), pr(2)];
 
-vi.mock('node:child_process', () => ({
-  execFile: (_cmd: string, args: string[], _opts: unknown, cb: (err: null, out: { stdout: string; stderr: string }) => void) => {
+const realExec = await import('../exec.js').then((m) => ({ ...m }));
+vi.mock('../exec.js', () => ({
+  ...realExec,
+  exec: async (_cmd: string, args: string[]) => {
     calls.push(args);
     const out = args[1] === 'list' ? (args.includes('user-review-requested:@me') ? [listed[0]] : listed) : args[1] === 'view' ? { body: 'b', reviews: [], comments: [], files: [], commits: [], statusCheckRollup: [] } : 'diff --git a/x b/x';
-    cb(null, { stdout: typeof out === 'string' ? out : JSON.stringify(out), stderr: '' });
+    return { stdout: typeof out === 'string' ? out : JSON.stringify(out), stderr: '' };
   },
 }));
 

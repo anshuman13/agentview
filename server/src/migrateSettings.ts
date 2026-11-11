@@ -1,12 +1,11 @@
-import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { loggedIn } from './agent/claude/accounts.js';
 import { netbirdStatus } from './http/access.js';
 import { detectDeployUrl } from './integrations/deploy.js';
 import { EMPTY_SETTINGS, SETTINGS_FILE, saveSettings, type Settings } from './settings.js';
+import { exec } from './exec.js';
 
 const HUB_DB = path.join(os.homedir(), '.agentview/assistant/assistant.db');
 
@@ -16,7 +15,7 @@ export async function migrateSettings() {
   if (existsSync(SETTINGS_FILE)) return;
   const s: Settings = { ...EMPTY_SETTINGS, deployUrl: await detectDeployUrl() };
   if (existsSync(HUB_DB)) {
-    const name = await promisify(execFile)('git', ['config', '--global', 'user.name']).then((r) => r.stdout.trim().split(/\s+/)[0], () => '');
+    const name = await exec('git', ['config', '--global', 'user.name']).then((r) => r.stdout.trim().split(/\s+/)[0], () => '');
     const fqdn = (await netbirdStatus())?.fqdn;
     Object.assign(s, { owner: name || os.userInfo().username, hubUrl: fqdn ? `http://${fqdn}:7790` : '' });
   }

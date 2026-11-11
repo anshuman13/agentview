@@ -1,7 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
-import { spawn } from 'node:child_process';
 import { closeSync, mkdirSync, openSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { errText } from '../../../shared/util.js';
@@ -87,9 +86,7 @@ export class Host {
       mkdirSync(logs, { recursive: true });
       const log = openSync(path.join(logs, 'host.log'), 'a');
       try {
-        spawn(process.execPath, [MAIN, this.project], { detached: true, stdio: ['ignore', log, log], env: { ...process.env, PORT: String(this.port) } })
-          .on('error', (err) => console.error(`agent host: ${err.message}`))
-          .unref();
+        Bun.spawn([process.execPath, MAIN, this.project], { detached: true, stdin: 'ignore', stdout: log, stderr: log, env: { ...process.env, PORT: String(this.port) } }).unref();
       } finally {
         closeSync(log);
       }

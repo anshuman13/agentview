@@ -1,7 +1,7 @@
-import { execFile } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { exec } from '../../exec.js';
 
 // The server may run under launchd, whose PATH lacks the node version manager's bin directory.
 export function codexBin(env: NodeJS.ProcessEnv = process.env, home = os.homedir()): string {
@@ -20,9 +20,7 @@ let cached: { at: number; value: Promise<boolean> } | null = null;
 // `codex login status` exits 0 only when a login is stored; the answer is kept briefly since settings read it on each load.
 export function codexSignedIn(now = Date.now()): Promise<boolean> {
   if (cached && now - cached.at < TTL) return cached.value;
-  const value = new Promise<boolean>((resolve) => {
-    execFile(codexBin(), ['login', 'status'], { timeout: 10_000 }, (err) => resolve(!err));
-  });
+  const value = exec(codexBin(), ['login', 'status'], { timeout: 10_000 }).then(() => true, () => false);
   cached = { at: now, value };
   return value;
 }

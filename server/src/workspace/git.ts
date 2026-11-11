@@ -1,11 +1,9 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { safeResolve } from './files.js';
 import type { GitFile, GitStatus } from '../../../shared/protocol.js';
+import { exec } from '../exec.js';
 
-const exec = promisify(execFile);
 
 export async function git(cwd: string, args: string[], ok = [0], env?: Record<string, string>) {
   try {

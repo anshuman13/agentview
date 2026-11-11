@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { execFile } from 'node:child_process';
+import { exec } from '../exec.js';
 
 const PORT_FILE = path.join(os.homedir(), 'Library/Application Support/Google/Chrome/DevToolsActivePort');
 // The relay address carries its token. Terminals, Claude and MCP servers inherit process.env, so take it out first.
@@ -39,10 +39,10 @@ export async function endpoint() {
 export function chromeRunning() {
   if (process.platform !== 'darwin') return Promise.resolve(true);
   const args = ownProfile() ? ['-f', `--user-data-dir=${PROFILE}`] : ['-x', 'Google Chrome'];
-  return new Promise<boolean>((resolve) => execFile('pgrep', args, (err) => resolve(!err)));
+  return exec('pgrep', args).then(() => true, () => false);
 }
 
-export const openMac = (label: string, args: string[]) => execFile('open', args, (err) => err && console.error(`${label}:`, err.message));
+export const openMac = (label: string, args: string[]) => void exec('open', args).catch((err) => console.error(`${label}:`, err.message));
 
 export function launchProfile(...urls: string[]) {
   const args = [
