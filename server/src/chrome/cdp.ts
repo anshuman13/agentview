@@ -1,5 +1,4 @@
 import { fileURLToPath } from 'node:url';
-import { WebSocket } from 'ws';
 import type { Peer } from '../http/peer.js';
 import { chromeRunning, endpoint, failure, launchProfile, openMac, ownProfile } from './launch.js';
 import { viewers } from './frames.js';
@@ -113,13 +112,19 @@ export async function connect() {
   }
   let ws: WebSocket;
   try {
-    ws = new WebSocket(url, { maxPayload: 512 * 1024 * 1024, handshakeTimeout: 60000 });
+    ws = new WebSocket(url);
   } catch {
     // A half-written port file gives a URL the constructor rejects; without this the state stays connecting for good.
     return setState('off', 'disabled');
   }
   let failed: Promise<string> | null = null;
-  ws.on('open', async () => {
+  // Bun's client has no handshake timeout of its own.
+  const handshake = setTimeout(() => {
+    failed ??= failure(new Error('handshake has timed out'));
+    ws.close();
+  }, 60_000);
+  ws.addEventListener('open', async () => {
+    clearTimeout(handshake);
     cdp = ws;
     retryDelay = 2000;
     setState('on');
@@ -129,17 +134,18 @@ export async function connect() {
       console.error('chrome:', err);
     }
   });
-  ws.on('message', (raw) => {
+  ws.addEventListener('message', (e) => {
     try {
-      onMessage(JSON.parse(String(raw)));
+      onMessage(JSON.parse(String(e.data)));
     } catch (err) {
       console.error('chrome message:', err);
     }
   });
-  ws.on('error', (err: NodeJS.ErrnoException) => {
-    failed ??= failure(err);
+  ws.addEventListener('error', (e) => {
+    failed ??= failure(new Error((e as ErrorEvent).message));
   });
-  ws.on('close', async () => {
+  ws.addEventListener('close', async () => {
+    clearTimeout(handshake);
     const was = cdp === ws;
     cdp = null;
     calls.forEach((c) => c.reject(new Error('Chrome disconnected')));

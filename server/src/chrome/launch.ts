@@ -54,8 +54,9 @@ export function launchProfile(...urls: string[]) {
   openMac('chrome profile', args);
 }
 
-export async function failure(err: NodeJS.ErrnoException) {
-  if (err.code === 'ECONNREFUSED') return (await chromeRunning()) ? 'disabled' : 'nochrome';
+// Reads why a WebSocket to Chrome failed from the client's error message, which names the HTTP status it got.
+export async function failure(err: Error) {
+  if (/ECONNREFUSED/.test(err.message)) return (await chromeRunning()) ? 'disabled' : 'nochrome';
   if (/\b403\b/.test(err.message)) return 'denied';
   if (/\b404\b/.test(err.message)) return 'disabled';
   if (/\b410\b/.test(err.message)) return 'nochrome';
