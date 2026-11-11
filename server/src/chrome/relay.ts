@@ -1,5 +1,4 @@
-import http from 'node:http';
-import { WebSocket, WebSocketServer, type RawData } from 'ws';
+import type { ServerWebSocket } from 'bun';
 import { chromeRunning, endpoint } from './launch.js';
 
 const PORT = Number(process.env.AGENTVIEW_RELAY_PORT ?? 7779);
@@ -8,17 +7,16 @@ const MAX = 512 * 1024 * 1024;
 
 let chrome: WebSocket | null = null;
 let opening: Promise<WebSocket> | null = null;
-let client: WebSocket | null = null;
+let client: ServerWebSocket | null = null;
 const attaching = new Set<number>();
 const sessions = new Set<string>();
 
 async function statusFor(err: unknown) {
-  const e = err as NodeJS.ErrnoException;
-  const m = e?.message ?? '';
+  const m = (err as Error)?.message ?? '';
   if (m === 'nofda') return 451;
   if (m === 'nochrome') return 410;
   if (m === 'disabled' || /\b404\b/.test(m)) return 404;
-  if (e?.code === 'ECONNREFUSED') return (await chromeRunning()) ? 404 : 410;
+  if (/ECONNREFUSED/.test(m)) return (await chromeRunning()) ? 404 : 410;
   if (/\b403\b/.test(m)) return 403;
   if (/timed out/i.test(m)) return 504;
   return 502;
@@ -27,25 +25,27 @@ async function statusFor(err: unknown) {
 function open(): Promise<WebSocket> {
   if (chrome?.readyState === WebSocket.OPEN) return Promise.resolve(chrome);
   opening ??= (async () => {
-    const ws = new WebSocket(await endpoint(), { maxPayload: MAX, handshakeTimeout: 60000 });
+    const ws = new WebSocket(await endpoint());
+    ws.binaryType = 'arraybuffer';
     await new Promise<void>((resolve, reject) => {
-      ws.once('open', resolve);
-      ws.once('error', reject);
+      const timer = setTimeout(() => {
+        reject(new Error('Opening Chrome timed out'));
+        ws.close();
+      }, 60_000);
+      ws.addEventListener('open', () => (clearTimeout(timer), resolve()), { once: true });
+      ws.addEventListener('error', (e) => (clearTimeout(timer), reject(new Error((e as ErrorEvent).message))), { once: true });
     });
-    ws.on('error', () => {});
-    ws.on('message', (data: RawData, binary: boolean) => {
-      if (attaching.size) {
-        const s = String(data);
-        if (s.startsWith('{"id":')) {
-          try {
-            const m = JSON.parse(s);
-            if (attaching.delete(m.id) && m.result?.sessionId) sessions.add(m.result.sessionId);
-          } catch {}
-        }
+    ws.addEventListener('message', (e) => {
+      const data = e.data as string | ArrayBuffer;
+      if (attaching.size && typeof data === 'string' && data.startsWith('{"id":')) {
+        try {
+          const m = JSON.parse(data);
+          if (attaching.delete(m.id) && m.result?.sessionId) sessions.add(m.result.sessionId);
+        } catch {}
       }
-      if (client?.readyState === WebSocket.OPEN) client.send(data, { binary });
+      if (client?.readyState === WebSocket.OPEN) client.send(data);
     });
-    ws.on('close', () => {
+    ws.addEventListener('close', () => {
       chrome = null;
       sessions.clear();
       attaching.clear();
@@ -66,57 +66,60 @@ function release() {
   attaching.clear();
 }
 
-function attach(ws: WebSocket) {
+function attach(ws: ServerWebSocket) {
   // Chrome closed while this client was upgrading; its close handler already ran, so nothing would end this client.
   if (chrome?.readyState !== WebSocket.OPEN) return ws.close(1011, 'closed');
   client?.close(1000, 'replaced');
   release();
   client = ws;
-  ws.on('error', () => {});
-  ws.on('message', (data: RawData, binary: boolean) => {
-    const s = String(data);
-    if (s.includes('"Target.attachToTarget"')) {
-      try {
-        attaching.add(JSON.parse(s).id);
-      } catch {}
-    } else if (s.includes('"Target.detachFromTarget"')) {
-      try {
-        sessions.delete(JSON.parse(s).params?.sessionId);
-      } catch {}
-    }
-    chrome?.send(data, { binary });
-  });
-  ws.on('close', () => {
-    if (client !== ws) return;
-    client = null;
-    release();
-  });
 }
 
-const wss = new WebSocketServer({ noServer: true, maxPayload: MAX });
-const server = http.createServer((_req, res) => {
-  res.writeHead(200, { 'content-type': 'text/plain' }).end(chrome ? 'on' : 'off');
-});
-
-server.on('upgrade', async (req, socket, head) => {
-  // A client that resets while Chrome opens would otherwise throw an unhandled 'error' and end the relay.
-  socket.on('error', () => {});
-  if (req.headers.origin || req.url !== `/${TOKEN}`) {
-    socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
-    return;
+function relay(data: string | Buffer) {
+  const s = String(data);
+  if (s.includes('"Target.attachToTarget"')) {
+    try {
+      attaching.add(JSON.parse(s).id);
+    } catch {}
+  } else if (s.includes('"Target.detachFromTarget"')) {
+    try {
+      sessions.delete(JSON.parse(s).params?.sessionId);
+    } catch {}
   }
-  try {
-    await open();
-  } catch (err) {
-    const code = await statusFor(err);
-    socket.end(`HTTP/1.1 ${code} ${http.STATUS_CODES[code] ?? 'Error'}\r\nConnection: close\r\n\r\n`);
-    return;
-  }
-  wss.handleUpgrade(req, socket, head, attach);
-});
+  chrome?.send(data);
+}
 
 if (!TOKEN) {
   console.error('relay: AGENTVIEW_RELAY_TOKEN is not set');
   process.exit(1);
 }
-server.listen(PORT, '127.0.0.1', () => console.log(`chrome relay on 127.0.0.1:${PORT}`));
+
+Bun.serve({
+  port: PORT,
+  hostname: '127.0.0.1',
+  async fetch(req, server) {
+    const url = new URL(req.url);
+    if (req.headers.get('upgrade')?.toLowerCase() !== 'websocket') return new Response(chrome ? 'on' : 'off', { headers: { 'content-type': 'text/plain' } });
+    if (req.headers.get('origin') || url.pathname !== `/${TOKEN}`) return new Response(null, { status: 401 });
+    try {
+      await open();
+    } catch (err) {
+      return new Response(null, { status: await statusFor(err) });
+    }
+    return server.upgrade(req) ? undefined : new Response(null, { status: 400 });
+  },
+  websocket: {
+    maxPayloadLength: MAX,
+    idleTimeout: 0,
+    sendPings: false,
+    open: attach,
+    message: (ws, data) => {
+      if (client === ws) relay(data);
+    },
+    close: (ws) => {
+      if (client !== ws) return;
+      client = null;
+      release();
+    },
+  },
+});
+console.log(`chrome relay on 127.0.0.1:${PORT}`);
