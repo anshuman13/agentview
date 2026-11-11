@@ -16,7 +16,7 @@ async function statusFor(err: unknown) {
   if (m === 'nofda') return 451;
   if (m === 'nochrome') return 410;
   if (m === 'disabled' || /\b404\b/.test(m)) return 404;
-  if (/ECONNREFUSED/.test(m)) return (await chromeRunning()) ? 404 : 410;
+  if (/ECONNREFUSED|Failed to connect/.test(m)) return (await chromeRunning()) ? 404 : 410;
   if (/\b403\b/.test(m)) return 403;
   if (/timed out/i.test(m)) return 504;
   return 502;
