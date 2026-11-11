@@ -1,5 +1,3 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { listSessions } from '../agent/claude/sessions.js';
@@ -7,8 +5,8 @@ import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shar
 import { inside } from '../../../shared/util.js';
 import { ROOTS } from './files.js';
 import { safeGit } from './git.js';
+import { exec as run } from '../exec.js';
 
-const run = promisify(execFile);
 const paseoMissing = (err: unknown) => (err as { code?: string }).code === 'ENOENT' || /Executable not found|paseo is not installed/.test((err as Error)?.message ?? '');
 const notInstalled = (err: unknown): never => { throw paseoMissing(err) ? new Error('paseo is not installed') : err; };
 const paseo = (args: string[], timeout: number) => run('paseo', args, { timeout });

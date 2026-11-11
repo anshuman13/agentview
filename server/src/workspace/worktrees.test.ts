@@ -1,13 +1,14 @@
-import * as childProcess from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'bun:test';
 
-const realChildProcess = { ...childProcess };
+const realExec = await import('../exec.js').then((m) => ({ ...m }));
 
-vi.mock('node:child_process', () => ({
-  ...realChildProcess,
-  execFile: (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error) => void) => cb(Object.assign(new Error('Executable not found in $PATH: "paseo"'), { code: 'ENOENT' })),
+vi.mock('../exec.js', () => ({
+  ...realExec,
+  exec: async () => {
+    throw Object.assign(new Error('Executable not found in $PATH: "paseo"'), { code: 'ENOENT' });
+  },
 }));
 
 const home = os.homedir();

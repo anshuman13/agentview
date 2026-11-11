@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
@@ -7,6 +6,7 @@ import { errText } from '../../../../shared/util.js';
 import { configDir, loggedInAccounts } from './accounts.js';
 import { callTool, probe, stop, text, type McpServerDef } from '../../integrations/mcpClient.js';
 import { readJson, writeJson } from '../../json.js';
+import { exec, type ExecError } from '../../exec.js';
 
 type Config = McpServerDef | undefined;
 type Status = {
@@ -196,20 +196,20 @@ type Connectors = Record<string, Connector[]>;
 let connectorCache: { at: number; value: Connectors } | null = null;
 let connectorLoad: Promise<Connectors> | null = null;
 
-function listConnectors(account: Account): Promise<Connector[]> {
+async function listConnectors(account: Account): Promise<Connector[]> {
   const env = { ...process.env };
   delete env.CLAUDE_CONFIG_DIR;
   const dir = configDir(account);
   if (dir) env.CLAUDE_CONFIG_DIR = dir;
-  return new Promise((resolve, reject) => {
-    execFile('claude', ['mcp', 'list'], { cwd: os.tmpdir(), env, timeout: 60_000 }, (err, stdout) => {
-      if (err && !String(stdout ?? '').trim()) return reject(err);
-      resolve(String(stdout ?? '').split('\n').flatMap((line) => {
-        const m = /^(claude\.ai [^:]+): .* - (.+)$/.exec(line.trim());
-        if (!m) return [];
-        return [{ name: m[1], status: /Connected/.test(m[2]) ? 'connected' : /auth/i.test(m[2]) ? 'needs-auth' : 'failed' }];
-      }));
-    });
+  // A failing server makes the command exit non-zero; the list it printed still holds.
+  const stdout = await exec('claude', ['mcp', 'list'], { cwd: os.tmpdir(), env, timeout: 60_000 }).then((r) => r.stdout, (err: ExecError) => {
+    if (!err.stdout?.trim()) throw err;
+    return err.stdout;
+  });
+  return stdout.split('\n').flatMap((line) => {
+    const m = /^(claude\.ai [^:]+): .* - (.+)$/.exec(line.trim());
+    if (!m) return [];
+    return [{ name: m[1], status: /Connected/.test(m[2]) ? 'connected' : /auth/i.test(m[2]) ? 'needs-auth' : 'failed' }];
   });
 }
 

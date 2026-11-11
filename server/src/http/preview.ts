@@ -1,6 +1,6 @@
-import { execFile } from 'node:child_process';
 import net from 'node:net';
 import { allowedPeer, canon, netbirdIp } from './access.js';
+import { exec, type ExecError } from '../exec.js';
 
 export type DevPort = { port: number; name: string; local: boolean };
 
@@ -26,8 +26,9 @@ export function parsePorts(out: string): DevPort[] {
 }
 
 export const listPorts = () =>
-  new Promise<DevPort[]>((resolve) =>
-    execFile('lsof', ['-nP', '-iTCP', '-sTCP:LISTEN', '-F', 'cn'], { timeout: 5000, maxBuffer: 4 * 1024 * 1024 }, (_e, out) => resolve(parsePorts(out ?? ''))),
+  exec('lsof', ['-nP', '-iTCP', '-sTCP:LISTEN', '-F', 'cn'], { timeout: 5000, maxBuffer: 4 * 1024 * 1024 }).then(
+    (r) => parsePorts(r.stdout),
+    (err: ExecError) => parsePorts(err.stdout ?? ''),
   );
 
 const forwards = new Map<number, net.Server>();

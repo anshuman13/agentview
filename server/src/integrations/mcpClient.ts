@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { eachChunk } from '../exec.js';
 
 export type McpServerDef = { type?: string; command?: string; args?: string[]; env?: Record<string, string>; url?: string; headers?: Record<string, string> };
 export type McpTool = { name: string; description?: string; inputSchema?: unknown; annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean } };
@@ -33,7 +33,7 @@ interface Transport {
 }
 
 class Stdio implements Transport {
-  private proc: ChildProcess;
+  private proc: Bun.Subprocess<'pipe', 'pipe', 'pipe'> | null = null;
   private pending = new Map<number, Pending>();
   private buf = '';
   private stderr = '';
@@ -44,12 +44,16 @@ class Stdio implements Transport {
 
   constructor(private key: string, def: McpServerDef, timeout: number, cwd?: string) {
     if (!def.command) throw new Error(`MCP server ${key} has no command`);
-    this.proc = spawn(def.command, def.args ?? [], { cwd, env: { ...process.env, ...def.env }, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
-    this.proc.stdout!.setEncoding('utf8').on('data', (c: string) => this.onData(c));
-    this.proc.stderr!.setEncoding('utf8').on('data', (c: string) => (this.stderr = (this.stderr + c).slice(-4000)));
-    this.proc.stdin!.on('error', (err) => this.die(`${key} stdin failed: ${err.message}`));
-    this.proc.on('error', (err) => this.die(`${key} failed to start: ${err.message}`));
-    this.proc.on('exit', (code, signal) => this.die(`${key} exited (${code ?? signal})`));
+    // Its own process group, so stop() ends the children it starts too.
+    try {
+      const proc = Bun.spawn([def.command, ...(def.args ?? [])], { cwd, env: { ...process.env, ...def.env }, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe', detached: true });
+      this.proc = proc;
+      void eachChunk(proc.stdout, (c) => this.onData(c)).catch(() => undefined);
+      void eachChunk(proc.stderr, (c) => (this.stderr = (this.stderr + c).slice(-4000))).catch(() => undefined);
+      void proc.exited.then((code) => this.die(`${key} exited (${proc.signalCode ?? code})`));
+    } catch (err) {
+      throw new Error(`${key} failed to start: ${(err as Error).message}`);
+    }
     this.ready = this.request('initialize', INIT, timeout).then((r) => {
       this.info = r?.serverInfo;
       this.notify('notifications/initialized');
@@ -59,7 +63,7 @@ class Stdio implements Transport {
   }
 
   get pid() {
-    return this.proc.pid;
+    return this.proc?.pid;
   }
 
   private die(reason: string) {
@@ -100,7 +104,7 @@ class Stdio implements Transport {
   }
 
   private notify(method: string) {
-    this.proc.stdin!.write(JSON.stringify({ jsonrpc: '2.0', method }) + '\n');
+    this.write(JSON.stringify({ jsonrpc: '2.0', method }));
   }
 
   request(method: string, params: unknown, timeout: number): Promise<any> {
@@ -112,19 +116,28 @@ class Stdio implements Transport {
         reject(new Error(`${this.key} ${method} timed out after ${timeout}ms${this.stderr.trim() ? `: ${this.stderr.trim().split('\n').at(-1)}` : ''}`));
       }, timeout);
       this.pending.set(id, { resolve, reject, timer });
-      this.proc.stdin!.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n', (err) => {
-        if (!err) return;
+      try {
+        this.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }));
+      } catch (err) {
         clearTimeout(timer);
         this.pending.delete(id);
         reject(err);
-      });
+        this.die(`${this.key} stdin failed: ${(err as Error).message}`);
+      }
     });
+  }
+
+  private write(line: string) {
+    if (!this.proc) throw new Error(`${this.key} is not running`);
+    this.proc.stdin.write(line + '\n');
+    this.proc.stdin.flush();
   }
 
   stop() {
     this.die(`${this.key} stopped`);
+    if (!this.proc) return;
     try {
-      process.kill(-this.proc.pid!, 'SIGTERM');
+      process.kill(-this.proc.pid, 'SIGTERM');
     } catch {
       this.proc.kill();
     }

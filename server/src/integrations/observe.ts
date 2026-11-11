@@ -1,5 +1,3 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { parseObject } from '../json.js';
 import type { ObserveConfig, ObserveInfo, SnowflakeConfig, SnowflakeInfo } from '../../../shared/observe.js';
 import { provider } from '../agent/registry.js';
@@ -9,8 +7,8 @@ import { CLAUDE, EMPTY_SNOWFLAKE, FILE, configFor, guess, load, repoName, save, 
 import { clearGrafanaCaches, dashboards, grafanaDef, logs, panels, patterns } from './observeGrafana.js';
 import { hasDeployApp } from './deploy.js';
 import { snowflakeDef, snowflakeObjects, snowflakeQuery, snowflakeTest } from './observeSnowflake.js';
+import { exec as run } from '../exec.js';
 
-const run = promisify(execFile);
 
 const snowflakeInfo = (s: Settings): SnowflakeInfo => {
   const { secret, ...rest } = { ...EMPTY_SNOWFLAKE, ...s.snowflake };

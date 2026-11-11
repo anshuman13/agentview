@@ -1,15 +1,13 @@
-import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { parseObject } from '../json.js';
 import type { DeployEnv, DeployJob, DeployRecord, DeployStatus } from '../../../shared/protocol.js';
 import { inside } from '../../../shared/util.js';
 import { deployUrl } from '../settings.js';
 import { ROOTS } from '../workspace/files.js';
+import { exec } from '../exec.js';
 
-const exec = promisify(execFile);
 const FINAL = ['success', 'failure', 'error', 'inactive'];
 
 type App = { project: string; dir: string; envs: { name: string; defaultBranchOnly: boolean }[] };
@@ -25,9 +23,7 @@ type Status = { id: number; state: string; description: string | null; log_url: 
 
 async function run(cmd: string, args: string[], cwd: string, input = '') {
   try {
-    const p = exec(cmd, args, { cwd, timeout: 20_000, maxBuffer: 16 * 1024 * 1024 });
-    p.child.stdin?.end(input);
-    return (await p).stdout.trim();
+    return (await exec(cmd, args, { cwd, timeout: 20_000, maxBuffer: 16 * 1024 * 1024, input })).stdout.trim();
   } catch (err) {
     const e = err as { code?: string | number; killed?: boolean; stderr?: string; message: string };
     if (e.code === 'ENOENT') throw new Error(`${cmd} is not installed`);
