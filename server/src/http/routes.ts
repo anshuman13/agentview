@@ -1,24 +1,18 @@
-import type http from 'node:http';
 import { gz } from './web.js';
 import { readBody } from './body.js';
 import { chatFileRoutes, chatMcpRoutes, chatPrefixes, chatSessionRoutes, streamRoutes } from './chatRoutes.js';
 import { openPrefixes, sessionRoutes, systemRoutes, workspaceRoutes } from './openRoutes.js';
 import { runRoutes } from './runRoutes.js';
-import { HANDLED, type Ctx, type Entry, type Prefix, type Reply, type RouteDeps } from './routeTypes.js';
+import { type Ctx, type Entry, type Prefix, type Reply, type RouteDeps } from './routeTypes.js';
 
 export type { RouteDeps };
 
 const isReply = (v: unknown): v is Reply => typeof v === 'object' && v !== null && 'status' in v && ('body' in v || 'text' in v);
 
-export function writers(req: http.IncomingMessage, res: http.ServerResponse) {
+export function writers(req: Request) {
   const jsonText = async (text: string, code = 200) => {
-    if (text.length < 1024 || !/\bgzip\b/.test(String(req.headers['accept-encoding'] ?? ''))) {
-      res.writeHead(code, { 'content-type': 'application/json' });
-      return res.end(text);
-    }
-    const out = await gz(text);
-    res.writeHead(code, { 'content-type': 'application/json', 'content-encoding': 'gzip', vary: 'accept-encoding, origin' });
-    res.end(out);
+    if (text.length < 1024 || !/\bgzip\b/.test(req.headers.get('accept-encoding') ?? '')) return new Response(text, { status: code, headers: { 'content-type': 'application/json' } });
+    return new Response(await gz(text), { status: code, headers: { 'content-type': 'application/json', 'content-encoding': 'gzip', vary: 'accept-encoding, origin' } });
   };
   const json = (body: unknown, code = 200) => jsonText(JSON.stringify(body), code);
   return { json, jsonText };
@@ -33,15 +27,15 @@ export function createRoutes(d: RouteDeps) {
   const open = { ...sessionRoutes(d), ...workspaceRoutes(d), ...runRoutes(d), ...systemRoutes(d), ...streamRoutes(d) };
   const chatRoutes = { ...chatSessionRoutes(d), ...chatFileRoutes(), ...chatMcpRoutes(d) };
 
-  async function dispatch(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
-    const { json, jsonText } = writers(req, res);
-    const method = req.method ?? 'GET';
+  async function dispatch(req: Request, url: URL, ip: string): Promise<Response> {
+    const { json, jsonText } = writers(req);
+    const method = req.method;
     try {
-      const ctx: Ctx = { req, res, url, method, body: null };
+      const ctx: Ctx = { req, ip, url, method, body: null };
       const run = async <C extends Ctx>(e: Entry<C>, c: C) => {
         if (e.body === true || e.body === method) c.body = JSON.parse(await readBody(req));
         const out = await e.run(c);
-        if (out === HANDLED) return;
+        if (out instanceof Response) return out;
         if (!isReply(out)) return json(out);
         return 'text' in out ? jsonText(out.text, out.status) : json(out.body, out.status);
       };
@@ -52,9 +46,9 @@ export function createRoutes(d: RouteDeps) {
       const mine = find(chatRoutes, chatPrefixes, method, url.pathname);
       if (mine) return await run(mine, { ...ctx, chat });
       if (url.pathname.startsWith('/api/')) return await json({ error: 'Not found' }, 404);
-      if (!(await d.serveWeb(req, res, url))) return await json({ error: 'web client not built, run npm run dev or npm run build' }, 404);
+      return (await d.serveWeb(req, url)) ?? (await json({ error: 'web client not built, run npm run dev or npm run build' }, 404));
     } catch (err) {
-      await json({ error: err instanceof Error ? err.message : String(err) }, 500);
+      return json({ error: err instanceof Error ? err.message : String(err) }, 500);
     }
   }
 

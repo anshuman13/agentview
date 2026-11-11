@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
-import { WebSocket } from 'ws';
+import { OPEN, type Peer } from '../http/peer.js';
 import { frame, hooks, resetFrames, viewers } from './chrome.js';
 
 function viewer() {
   const cbs: (() => void)[] = [];
-  const ws = { readyState: WebSocket.OPEN, send: (_s: string, cb: () => void) => void cbs.push(cb) } as unknown as WebSocket;
+  const ws = { readyState: OPEN, send: (_s: string, cb: () => void) => void cbs.push(cb) } as unknown as Peer;
   viewers.add(ws);
   return {
     sends: () => cbs.length,

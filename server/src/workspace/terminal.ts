@@ -1,11 +1,11 @@
 import path from 'node:path';
-import { WebSocket } from 'ws';
+import { OPEN, type Peer } from '../http/peer.js';
 import { parseFrame } from '../json.js';
 import { OutputBuffer } from './outputBuffer.js';
 
 const MAX = 200_000;
 const TERM_GONE = 4404;
-type Term = { id: string; chat: string; name: string; proc: Bun.Subprocess; out: OutputBuffer; socks: Set<WebSocket> };
+type Term = { id: string; chat: string; name: string; proc: Bun.Subprocess; out: OutputBuffer; socks: Set<Peer> };
 const terms = new Map<string, Term>();
 let seq = 0;
 
@@ -21,7 +21,7 @@ export function createTerminal(chat: string, cwd: string, run?: { name: string; 
   while (used.has(label(n))) n++;
   const utf8 = new TextDecoder();
   const t: Term = { id: String(++seq), chat, name: label(n), proc: null!, out: null!, socks: new Set() };
-  t.out = new OutputBuffer(MAX, 10, (d) => t.socks.forEach((ws) => ws.readyState === WebSocket.OPEN && ws.send(d)));
+  t.out = new OutputBuffer(MAX, 10, (d) => t.socks.forEach((ws) => ws.readyState === OPEN && ws.send(d)));
   t.proc = Bun.spawn([shell, '-l'], {
     cwd,
     env: { ...process.env, TERM: 'xterm-256color' },
@@ -57,7 +57,7 @@ export function closeTerminal(id: string) {
 
 export const closeTerminals = (chat: string) => listTerminals(chat).forEach((t) => closeTerminal(t.id));
 
-export function attachTerminal(ws: WebSocket, id: string) {
+export function attachTerminal(ws: Peer, id: string) {
   const t = terms.get(id);
   if (!t) return ws.close(TERM_GONE);
   const snap = t.out.snapshot();

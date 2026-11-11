@@ -1,8 +1,6 @@
 import { mkdtemp, readdir, rm, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { Readable } from 'node:stream';
-import type http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { BadRequest, parseObject, savePaste } from './body.js';
 import { waitFor } from '../../../testing.js';
@@ -31,7 +29,7 @@ describe('savePaste', () => {
     await writeFile(path.join(dir, 'fresh.txt'), 'x');
     const eightDays = new Date(Date.now() - 8 * 86_400_000);
     await utimes(old, eightDays, eightDays);
-    const saved = await savePaste(Readable.from([Buffer.from('hi')]) as unknown as http.IncomingMessage, 'a.txt', dir);
+    const saved = await savePaste(new Request('http://x', { method: 'POST', body: 'hi' }), 'a.txt', dir);
     await waitFor(async () => expect(await readdir(dir)).not.toContain('old.txt'));
     const left = await readdir(dir);
     expect(left).toContain('fresh.txt');

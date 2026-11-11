@@ -16,7 +16,7 @@ import { devScript } from '../workspace/devScript.js';
 import type { ClientMessage } from '../../../shared/protocol.js';
 import { readBody } from './body.js';
 import { isPhone } from '../presence.js';
-import { HANDLED, entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
+import { entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 
 const MAX_FILE_BODY = 5_000_000;
 
@@ -24,17 +24,16 @@ const MAX_FILE_BODY = 5_000_000;
 export function streamRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   const current = (url: URL) => d.chats().get(url.searchParams.get('chat') ?? '') ?? d.chats().get(d.lastViewed());
   return {
-    'ANY /api/events': entry(({ req, res, url }) => {
+    'ANY /api/events': entry(({ req, url }) => {
       const asked = (url.searchParams.has('session') && d.bySession(url.searchParams.get('session'))) || (d.chats().has(url.searchParams.get('chat') ?? '') ? url.searchParams.get('chat')! : undefined);
-      d.openEvents(req, res, url, asked ?? current(url)?.id ?? '', Boolean(asked));
-      return HANDLED;
+      return d.openEvents(req, url, asked ?? current(url)?.id ?? '', Boolean(asked));
     }),
     'POST /api/cmd': entry(({ req, url, body }) => {
       const msg = body as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
       const client = d.streams.get(url.searchParams.get('cid') ?? '');
       if (!client && !d.chats().has(url.searchParams.get('chat') ?? '')) return { status: 409, body: { error: 'No stream for this command' } };
-      d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: current(url)?.id ?? '', phone: isPhone(url.searchParams.get('client'), req.headers['user-agent']) }, msg, url.searchParams.get('chat') || undefined);
+      d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: current(url)?.id ?? '', phone: isPhone(url.searchParams.get('client'), req.headers.get('user-agent') ?? undefined) }, msg, url.searchParams.get('chat') || undefined);
       return { ok: true };
     }, true),
   };
@@ -85,11 +84,9 @@ export function chatFileRoutes(): Record<string, Entry<ChatCtx>> {
     'ANY /api/dir': entry(({ url, chat }) => listDir(chat.cwd, url.searchParams.get('path') ?? '')),
     'PUT /api/file': entry(async ({ req, url, chat }) => writeFileText(chat.cwd, url.searchParams.get('path') ?? '', await readBody(req, MAX_FILE_BODY))),
     'ANY /api/file': entry(({ url, chat }) => readFileWithOriginal(chat.cwd, url.searchParams.get('path') ?? '')),
-    'ANY /api/image': entry(async ({ res, url, chat }) => {
+    'ANY /api/image': entry(async ({ url, chat }) => {
       const img = await readImage(chat.cwd, url.searchParams.get('path') ?? '');
-      res.writeHead(200, { 'content-type': img.type, 'cache-control': 'no-cache', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'", 'x-content-type-options': 'nosniff' });
-      res.end(img.body);
-      return HANDLED;
+      return new Response(img.body, { headers: { 'content-type': img.type, 'cache-control': 'no-cache', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'", 'x-content-type-options': 'nosniff' } });
     }),
   };
 }

@@ -1,12 +1,12 @@
-import { WebSocket } from 'ws';
+import { OPEN, type Peer } from '../http/peer.js';
 import { call } from './cdp.js';
 import { isEmulating, type Dims } from './screencast.js';
 
 const BUTTONS = new Set(['left', 'right', 'middle', 'none']);
 const EDITABLE = "(() => { const a = document.activeElement; return !!a && (a.isContentEditable || /^(INPUT|TEXTAREA)$/.test(a.tagName)); })()";
-const touches = new Map<WebSocket, { x: number; y: number; moved: boolean }>();
+const touches = new Map<Peer, { x: number; y: number; moved: boolean }>();
 
-export const forgetTouch = (ws: WebSocket) => touches.delete(ws);
+export const forgetTouch = (ws: Peer) => touches.delete(ws);
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 
@@ -22,9 +22,9 @@ export function viewerSize(m: any) {
 }
 
 // The phone opened its keyboard on the tap; it closes again unless the tap landed in a text field.
-async function editable(ws: WebSocket, s: string) {
+async function editable(ws: Peer, s: string) {
   const { result } = await call('Runtime.evaluate', { expression: EDITABLE, returnByValue: true }, s, 3000).catch(() => ({ result: { value: false } }));
-  if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ t: 'editable', on: result?.value === true }));
+  if (ws.readyState === OPEN) ws.send(JSON.stringify({ t: 'editable', on: result?.value === true }));
 }
 
 function navigate(m: any, s: string) {
@@ -59,7 +59,7 @@ async function key(m: any, s: string) {
   return call('Input.dispatchKeyEvent', { ...base, type: 'keyUp' }, s);
 }
 
-async function touch(m: any, ws: WebSocket, s: string) {
+async function touch(m: any, ws: Peer, s: string) {
   if (!['touchStart', 'touchMove', 'touchEnd', 'touchCancel'].includes(m.type)) return;
   const x = num(m.x);
   const y = num(m.y);
@@ -83,7 +83,7 @@ async function touch(m: any, ws: WebSocket, s: string) {
   return editable(ws, s);
 }
 
-export function pageInput(m: any, ws: WebSocket, s: string) {
+export function pageInput(m: any, ws: Peer, s: string) {
   switch (m.t) {
     case 'nav':
       return navigate(m, s);

@@ -1,6 +1,5 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import type http from 'node:http';
 
 const NETBIRD = ['/opt/homebrew/bin/netbird', '/usr/local/bin/netbird'].find((p) => existsSync(p)) ?? 'netbird';
 const TTL = 15_000;
@@ -129,8 +128,8 @@ export const allowedRequest = (h: RequestHeaders, addr?: string) => {
 };
 
 // The address a request comes from. Vite proxies from loopback and adds X-Forwarded-For, which only loopback may claim.
-export function requester(req: http.IncomingMessage) {
-  const sock = canon(req.socket.remoteAddress ?? '');
-  const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim();
+export function requester(addr: string | undefined, forwardedFor: string | null) {
+  const sock = canon(addr ?? '');
+  const fwd = (forwardedFor ?? '').split(',')[0].trim();
   return loopback(sock) && fwd ? canon(fwd) : sock;
 }

@@ -2,8 +2,6 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Readable } from 'node:stream';
-import type http from 'node:http';
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 import type { LiveChat } from '../../../shared/protocol.js';
 
@@ -32,16 +30,11 @@ const { ROOTS } = await import('../workspace/files.js');
 const chat = { id: 'c1', cwd: '/tmp/x' } as LiveChat;
 
 async function call(method: string, path: string, body?: string, deps: Partial<RouteDeps> = {}) {
-  const serveWeb = vi.fn(async () => false);
+  const serveWeb = vi.fn(async () => null);
   const { dispatch } = createRoutes({ chats: () => new Map([['c1', chat]]), lastViewed: () => 'c1', bySession: () => undefined, serveWeb, ...deps } as unknown as RouteDeps);
-  const req = Object.assign(Readable.from(body === undefined ? [] : [Buffer.from(body)]), { method, headers: {} }) as unknown as http.IncomingMessage;
-  const out = { code: 0, text: '' };
-  const res = {
-    writeHead: (code: number) => (out.code = code),
-    end: (text: string) => (out.text = text),
-  } as unknown as http.ServerResponse;
-  await dispatch(req, res, new URL(path, 'http://x'));
-  return { ...out, serveWeb, json: out.text ? JSON.parse(out.text) : undefined };
+  const res = await dispatch(new Request(new URL(path, 'http://x'), { method, body }), new URL(path, 'http://x'), '127.0.0.1');
+  const text = await res.text();
+  return { code: res.status, text, serveWeb, json: text ? JSON.parse(text) : undefined };
 }
 
 beforeEach(() => vi.clearAllMocks());

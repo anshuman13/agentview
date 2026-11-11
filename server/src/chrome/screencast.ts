@@ -1,4 +1,4 @@
-import { WebSocket } from 'ws';
+import type { Peer } from '../http/peer.js';
 import { call } from './cdp.js';
 import { frame, viewport } from './frames.js';
 import { sendTabs, view } from './tabs.js';
@@ -6,7 +6,7 @@ import { sendTabs, view } from './tabs.js';
 export type Dims = { cssW: number; cssH: number; dpr: number; mobile: boolean };
 
 let size = { w: 1600, h: 1200 };
-const sizes = new Map<WebSocket, Dims>();
+const sizes = new Map<Peer, Dims>();
 let emulated: { session: string; key: string } | null = null;
 let watchSeq = 0;
 
@@ -81,7 +81,7 @@ export async function emulate(restart = true) {
   } catch {}
 }
 
-export async function resize(ws: WebSocket, next: typeof size, dims: Dims) {
+export async function resize(ws: Peer, next: typeof size, dims: Dims) {
   size = next;
   sizes.delete(ws);
   sizes.set(ws, dims);
@@ -89,7 +89,7 @@ export async function resize(ws: WebSocket, next: typeof size, dims: Dims) {
   return screencast().catch(() => {});
 }
 
-export function forgetSize(ws: WebSocket) {
+export function forgetSize(ws: Peer) {
   return sizes.delete(ws);
 }
 

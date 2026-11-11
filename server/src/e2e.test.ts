@@ -216,8 +216,8 @@ describe('websocket', () => {
 const lan = Object.values(os.networkInterfaces()).flat().find((a) => a?.family === 'IPv4' && !a.internal && !a.address.startsWith('100.'))?.address;
 
 describe.skipIf(!lan)('peers', () => {
-  it('drops a connection from an address outside NetBird', async () => {
+  it('refuses a request from an address outside NetBird', async () => {
     const r = await fetch(`http://${lan}:${port}/api/runs`, { headers: { host: `127.0.0.1:${port}` } }).then((x) => x.status, () => 'dropped');
-    expect(r).toBe('dropped');
+    expect([403, 'dropped']).toContain(r);
   });
 });
