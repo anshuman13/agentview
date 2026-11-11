@@ -29,8 +29,8 @@ Each running chat has an ongoing, silent notification on the channel "Running ch
 or Allow and Deny while it waits on a permission request (any other request shows "Needs you" and opens the chat). It has
 no actions in read-only mode and goes when the turn ends or notifications are off.
 
-`npm run native` runs the unit tests and builds a minified release APK signed with the debug key;
-`npm run native -- <adb serial>` also installs it. It needs JDK 17 and the Android SDK
+`bun run native` runs the unit tests and builds a minified release APK signed with the debug key;
+`bun run native -- <adb serial>` also installs it. It needs JDK 17 and the Android SDK
 (`/opt/homebrew/share/android-commandlinetools`). On the emulator, `adb reverse tcp:7777 tcp:7777` lets the app reach
 the server at `http://localhost:7777`, and the launch extra `--ez readonly true` blocks every write for checks
 against live data.
@@ -66,11 +66,11 @@ Then paste this into `claude`:
 
 Steps for Claude:
 
-1. `brew install node git uv oven-sh/bun/bun`, then `npm install` in the repo
+1. `brew install git uv oven-sh/bun/bun`, then `bun install` in the repo
 2. Unpack `~/Downloads/mini-config.tgz` into `~` without overwriting existing files, then delete it
 3. Run `./start.sh`
 4. Check that `curl -s http://localhost:7777/api/connect` lists a NetBird address
-5. `brew install rustup && rustup default stable`, then `npm run build -w app` and copy
+5. `brew install rustup && rustup default stable`, then `bun run --cwd app build` and copy
    `app/src-tauri/target/release/bundle/macos/AgentView.app` to `/Applications` (the desktop window app)
 6. Tell me to turn on Open at login in the AgentView menu bar menu, grant Full Disk Access to `dist/AgentView.app`,
    click Allow in Chrome's remote debugging prompt, and add the MCP servers (`claude mcp add`, then `/mcp` to sign in)
