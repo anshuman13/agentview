@@ -174,7 +174,6 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
                 listOf(WORK, PERSONAL).forEach { k ->
                     Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
                 }
-                StatusChips(groups, rows, filters)
             }
             when {
                 live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty() -> OfflineSessions(rows, waitingForServer)
@@ -204,28 +203,25 @@ private fun OfflineSessions(rows: ChatRows, waitingForServer: Boolean) {
 private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<RepoGroup>, pinned: List<ChatItem>, waiting: List<LiveChat>, hits: List<MessageHit>) {
     val ws = rows.ws
     val filter = filters.filter
-    val status = filters.status
-    val byStatus = filters.byStatus
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
-    val recentRows = remember(groups, filter, ws.pins, status, rows.saved, rows.seen) { recentRows(groups, filter, ws.pins.toSet(), status, rows.saved, rows.seen) }
+    val recentRows = remember(groups, filter, ws.pins) { recentRows(groups, filter, ws.pins.toSet()) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
-        if (!byStatus && waiting.isNotEmpty()) {
+        if (waiting.isNotEmpty()) {
             item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
             lazyGroup(waiting, { "needs-${it.id}" }) { rows.LiveRow(it, folderName(folderKey(it.cwd, ws.repos, ws.trees))) }
         }
-        if (!byStatus && pinned.isNotEmpty()) {
+        if (pinned.isNotEmpty()) {
             item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
             lazyGroup(pinned, { "pin-${it.key}" }) { rows.Row(it) }
         }
         if (recentRows.isNotEmpty()) {
-            item(key = "recent-head") { SectionHeader(if (byStatus) status.label else if (filter.isBlank()) "Recent" else "Chats") }
+            item(key = "recent-head") { SectionHeader(if (filter.isBlank()) "Recent" else "Chats") }
             lazyGroup(recentRows, { "rc-${it.key}" }) { rows.Row(it) }
         }
-        if (byStatus && recentRows.isEmpty()) item(key = "none") { EmptyState("No ${status.label.lowercase()} chats") }
-        val repoRows = if (byStatus) emptyList() else if (filters.showIdle || filter.isNotBlank()) busy + idle.sortedBy { it.name.lowercase() } else busy
-        if (!byStatus && (repoRows.isNotEmpty() || idle.isNotEmpty())) item(key = "repos-head") { SectionHeader("Repos", (busy.size + idle.size).toString()) }
+        val repoRows = if (filters.showIdle || filter.isNotBlank()) busy + idle.sortedBy { it.name.lowercase() } else busy
+        if ((repoRows.isNotEmpty() || idle.isNotEmpty())) item(key = "repos-head") { SectionHeader("Repos", (busy.size + idle.size).toString()) }
         lazyGroup(repoRows, { "g-${it.key}" }, lead = true) { g -> RepoRow(g, rows.seen) { filters.repoKey = g.key } }
-        if (!byStatus && idle.isNotEmpty() && filter.isBlank()) item(key = "idle") {
+        if (idle.isNotEmpty() && filter.isBlank()) item(key = "idle") {
             Group { ListRow(if (filters.showIdle) "Show fewer repos" else "More repos", trailing = { Chevron(if (!filters.showIdle) "${idle.size}" else null) }, onClick = { filters.showIdle = !filters.showIdle }) }
         }
         if (hits.isNotEmpty()) messageHits(rows, hits, filter)
