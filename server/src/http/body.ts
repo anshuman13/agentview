@@ -6,17 +6,20 @@ import { BadRequest, parseFrame, parseObject } from '../json.js';
 
 export { BadRequest, parseFrame, parseObject };
 
-async function readBytes(req: Request, max: number, tooBig: string) {
+// A fetch Request, or a Node request stream (the hub still serves with node:http).
+type Body = Request | AsyncIterable<Uint8Array>;
+
+async function readBytes(req: Body, max: number, tooBig: string) {
   const chunks: Uint8Array[] = [];
   let size = 0;
-  for await (const chunk of req.body ?? []) {
+  for await (const chunk of req instanceof Request ? (req.body ?? []) : req) {
     if ((size += chunk.length) > max) throw new Error(tooBig);
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
 }
 
-export async function readBody(req: Request, max = 1_000_000) {
+export async function readBody(req: Body, max = 1_000_000) {
   return (await readBytes(req, max, 'Request body too large')).toString('utf8');
 }
 
@@ -31,7 +34,7 @@ async function prunePastes(dir: string) {
   }
 }
 
-export async function savePaste(req: Request, name: string, dir = PASTES) {
+export async function savePaste(req: Body, name: string, dir = PASTES) {
   const body = await readBytes(req, 50_000_000, 'Files over 50 MB cannot be attached');
   await mkdir(dir, { recursive: true });
   const safe = path.basename(name).replace(/[^\w.-]+/g, '-').slice(-80) || 'file';
