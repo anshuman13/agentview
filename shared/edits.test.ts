@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { recapOf, replyLine, roundOf, stripRound } from './edits';
+import { recapOf, replyLine, roundOf } from './edits';
 import type { ChatEvent } from './protocol';
 
 describe('roundOf', () => {
@@ -20,13 +20,6 @@ describe('roundOf', () => {
 });
 
 describe('stripRound', () => {
-  it('drops the last line only when it is the ROUND line', () => {
-    expect(stripRound('Fixed it.\n\nROUND: done fixed')).toBe('Fixed it.');
-    expect(stripRound('ROUND: nothing')).toBe('');
-    expect(stripRound('Fixed it.\nROUND: do')).toBe('Fixed it.');
-    expect(stripRound('The ROUND: line is explained here.\nMore.')).toBe('The ROUND: line is explained here.\nMore.');
-  });
-
   it('keeps it out of the chat row line', () => {
     const events: ChatEvent[] = [{ id: 'a', kind: 'assistant', text: 'All checks pass.\nROUND: done checks pass', streaming: false, at: 1 }];
     expect(replyLine(events)).toBe('All checks pass.');

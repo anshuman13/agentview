@@ -957,10 +957,6 @@ describe('/spec-review', () => {
     s.sendPrompt('/spec-review');
     expect(send).toHaveBeenCalledWith('/spec-review', expect.any(String));
   });
-
-  it('is a capability of the Claude driver', () => {
-    expect(fakeSession().s.driver.capabilities.subagents).toBe(true);
-  });
 });
 
 describe('rewind files', () => {

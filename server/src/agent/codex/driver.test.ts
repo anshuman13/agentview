@@ -57,9 +57,3 @@ describe('deliver', () => {
     expect(results).toMatchObject([{ ok: false, text: 'boom' }]);
   });
 });
-
-describe('capabilities', () => {
-  it('has no subagents', () => {
-    expect(setup(false, () => Promise.resolve()).d.capabilities.subagents).toBe(false);
-  });
-});

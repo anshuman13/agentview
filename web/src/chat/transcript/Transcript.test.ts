@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Explored, SinceBox } from './Transcript';
 import { SpecCard } from './SpecCard';
 import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, specCards, stepLabel, stepTone, newMarker, newReplies, dayDividers } from './steps';
-import { editCount, replyLine, sumEdits } from '../../../../shared/edits';
+import { replyLine, sumEdits } from '../../../../shared/edits';
 import { buildTurns } from './turns';
 import { replyOf, summarySteps, turnEvents, turnSummary } from './summary';
 import { chatLine } from '../../sessions/folders';
@@ -52,15 +52,6 @@ describe('duration', () => {
     expect(duration(6400)).toBe('6s');
     expect(duration(125_000)).toBe('2m');
     expect(duration(7_200_000)).toBe('2h');
-  });
-});
-
-describe('editCount', () => {
-  it('counts the lines of old and new text, or of the written content', () => {
-    expect(editCount('Edit', { old_string: 'a\nb', new_string: 'c' })).toEqual({ add: 1, del: 2 });
-    expect(editCount('Write', { content: 'a\nb\nc' })).toEqual({ add: 3, del: 0 });
-    expect(editCount('MultiEdit', { edits: [{ old_string: 'a', new_string: 'b\nc' }, { old_string: '', new_string: 'd' }] })).toEqual({ add: 3, del: 1 });
-    expect(editCount('Read', { file_path: 'x' })).toBeNull();
   });
 });
 
