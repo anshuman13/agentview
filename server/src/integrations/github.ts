@@ -1,10 +1,8 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { parseObject } from '../json.js';
 import type { AutoMerge, Method } from './automerge.js';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
+import { exec as run } from '../exec.js';
 
-const run = promisify(execFile);
 const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,headRefOid,additions,deletions';
 const lists = new Map<string, { at: number; prs: PullRequest[] }>();
 const refreshing = new Map<string, Promise<PullRequest[]>>();

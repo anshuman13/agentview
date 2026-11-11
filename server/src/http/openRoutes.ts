@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { openInChrome } from '../chrome/chrome.js';
 import { listSessions, renameRoute, savedSession } from '../agent/claude/sessions.js';
@@ -22,6 +21,7 @@ import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree 
 import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { readBody, savePaste } from './body.js';
 import { entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
+import { exec } from '../exec.js';
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
@@ -87,7 +87,7 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'POST /api/open': entry(({ body }) => {
       const target = String(body.url ?? '');
       if (!/^https?:\/\//.test(target)) return { status: 400, body: { error: 'Only http(s) links open' } };
-      if (body.browser === 'firefox' && process.platform === 'darwin') execFile('open', ['-a', 'Firefox', target], (err) => err && console.error('open in firefox:', err.message));
+      if (body.browser === 'firefox' && process.platform === 'darwin') exec('open', ['-a', 'Firefox', target]).catch((err) => console.error('open in firefox:', err.message));
       else openInChrome(target);
       return { ok: true };
     }, true),

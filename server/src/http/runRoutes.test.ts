@@ -1,31 +1,25 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import * as childProcess from 'node:child_process';
 import { execFileSync } from 'node:child_process';
-import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import type { ChatRun } from '../../../shared/protocol.js';
 import type { RouteDeps } from './routeTypes.js';
 
 const mocks = { calls: [] as string[][], envs: [] as Array<Record<string, string> | undefined>, gh: vi.fn(), remote: { head: '' }, removeChat: vi.fn() };
-const realChildProcess = { ...childProcess };
+const realExec = await import('../exec.js').then((m) => ({ ...m }));
 
 // git runs for real in temp repos, except push and ls-remote; gh never runs.
-vi.mock('node:child_process', () => {
-  const real = realChildProcess;
-  const run = (real.execFile as unknown as Record<symbol, (...a: unknown[]) => Promise<unknown>>)[promisify.custom];
-  const execFile = Object.assign((...a: unknown[]) => (real.execFile as (...a: unknown[]) => unknown)(...a), {
-    [promisify.custom]: async (cmd: string, args: string[], opts: unknown) => {
-      mocks.calls.push([cmd, ...args]);
-      mocks.envs.push((opts as { env?: Record<string, string> }).env);
-      if (cmd === 'gh') return mocks.gh(args);
-      if (args.includes('push')) return { stdout: '' };
-      if (args.includes('ls-remote')) return { stdout: mocks.remote.head ? `${mocks.remote.head}\trefs/heads/x\n` : '' };
-      return run(cmd, args, opts);
-    },
-  });
-  return { ...real, execFile };
-});
+vi.mock('../exec.js', () => ({
+  ...realExec,
+  exec: async (cmd: string, args: string[], opts: { env?: Record<string, string> } = {}) => {
+    mocks.calls.push([cmd, ...args]);
+    mocks.envs.push(opts.env);
+    if (cmd === 'gh') return mocks.gh(args);
+    if (args.includes('push')) return { stdout: '' };
+    if (args.includes('ls-remote')) return { stdout: mocks.remote.head ? `${mocks.remote.head}\trefs/heads/x\n` : '' };
+    return realExec.exec(cmd, args, opts);
+  },
+}));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat }));
 
 const { jobRepo, sh } = await import('../workspace/testRepo.js');

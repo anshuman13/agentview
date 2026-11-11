@@ -1,9 +1,7 @@
-import { execFile } from 'node:child_process';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { createWorktree } from './worktrees.js';
+import { exec as run } from '../exec.js';
 
-const run = promisify(execFile);
 
 export const TRIES_USAGE = 'Usage: /tries <2-4> <prompt>, starts the prompt in that many new worktrees';
 

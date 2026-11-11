@@ -17,10 +17,11 @@ beforeEach(() => loadStatus(status));
 
 let fresh = 0;
 async function freshAccess() {
-  const execFile = vi.fn();
-  vi.mock('node:child_process', () => ({ execFile, execFileSync: () => { throw new Error('no netbird'); } }));
+  const answers: ((out: { stdout: string }) => void)[] = [];
+  const exec = vi.fn(() => new Promise((ok) => answers.push(ok)));
+  vi.mock('../exec.js', () => ({ exec, execSync: () => { throw new Error('no netbird'); } }));
   const mod: typeof import('./access.js') = await import(`./access.js?${++fresh}`);
-  return { ...mod, execFile };
+  return { ...mod, exec, answers };
 }
 
 describe('allowedPeer', () => {
@@ -75,7 +76,7 @@ describe('failed status fetch', () => {
     vi.useFakeTimers();
     try {
       const fresh = await freshAccess();
-      const calls = () => fresh.execFile.mock.calls.length;
+      const calls = () => fresh.exec.mock.calls.length;
       fresh.loadStatus(null);
       const before = calls();
       void fresh.netbirdStatus();
@@ -83,8 +84,8 @@ describe('failed status fetch', () => {
       vi.advanceTimersByTime(2000);
       void fresh.netbirdStatus();
       expect(calls()).toBe(before + 1);
-      fresh.execFile.mock.calls[before][3](null, status);
-      await Promise.resolve();
+      fresh.answers[before]({ stdout: status });
+      for (let i = 0; i < 3; i++) await Promise.resolve();
       vi.advanceTimersByTime(14_000);
       void fresh.netbirdStatus();
       expect(calls()).toBe(before + 1);

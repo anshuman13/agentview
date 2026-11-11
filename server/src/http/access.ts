@@ -1,5 +1,5 @@
-import { execFile, execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { exec, execSync } from '../exec.js';
 
 const NETBIRD = ['/opt/homebrew/bin/netbird', '/usr/local/bin/netbird'].find((p) => existsSync(p)) ?? 'netbird';
 const TTL = 15_000;
@@ -50,17 +50,18 @@ export function loadStatus(json: string | null) {
 
 export function netbirdStatus(): Promise<NetbirdStatus | null> {
   if (Date.now() - fetched < TTL) return Promise.resolve(status);
-  fetching ??= new Promise((resolve) =>
-    execFile(NETBIRD, ['status', '--json'], { timeout: 5000, maxBuffer: 16 * 1024 * 1024 }, (err, out) => {
-      fetching = null;
-      resolve(loadStatus(err ? null : out));
-    }),
-  );
+  fetching ??= exec(NETBIRD, ['status', '--json'], { timeout: 5000, maxBuffer: 16 * 1024 * 1024 }).then(
+    (r) => r.stdout,
+    () => null,
+  ).then((out) => {
+    fetching = null;
+    return loadStatus(out);
+  });
   return fetching;
 }
 
 try {
-  loadStatus(execFileSync(NETBIRD, ['status', '--json'], { timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 16 * 1024 * 1024 }).toString());
+  loadStatus(execSync(NETBIRD, ['status', '--json'], { timeout: 5000, maxBuffer: 16 * 1024 * 1024 }));
 } catch {
   loadStatus(null);
 }

@@ -1,5 +1,5 @@
-import { execFileSync } from 'node:child_process';
 import os from 'node:os';
+import { execSync } from '../exec.js';
 import { canon, netbirdStatus, type NetbirdStatus } from './access.js';
 
 export type Mac = { name: string; url: string; running: number; self: boolean };
@@ -17,7 +17,7 @@ export const macName = (hostname: string) => hostname.replace(/\.local$/, '');
 
 export const thisMac = (() => {
   try {
-    return execFileSync('scutil', ['--get', 'LocalHostName'], { timeout: 2000 }).toString().trim() || macName(os.hostname());
+    return execSync('scutil', ['--get', 'LocalHostName'], { timeout: 2000 }).trim() || macName(os.hostname());
   } catch {
     return macName(os.hostname());
   }

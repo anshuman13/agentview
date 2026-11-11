@@ -1,5 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
-import { createInterface } from 'node:readline';
+import { eachLine } from '../../exec.js';
 import { errText } from '../../../../shared/util.js';
 import { codexBin } from './binary.js';
 
@@ -14,17 +13,21 @@ export type RpcHandlers = {
 
 // JSON-RPC over the stdio of one `codex app-server` process, one message per line.
 export class CodexRpc {
-  private proc: ChildProcess;
+  private proc: Bun.Subprocess<'pipe', 'pipe', 'ignore'> | null = null;
   private next = 1;
   private pending = new Map<number, Pending>();
   private closed = false;
 
   constructor(cwd: string, private handlers: RpcHandlers) {
-    this.proc = spawn(codexBin(), ['app-server'], { cwd, stdio: ['pipe', 'pipe', 'ignore'] });
-    createInterface({ input: this.proc.stdout! }).on('line', (line) => this.onLine(line));
-    this.proc.on('error', (err) => this.end(err));
-    this.proc.on('exit', () => this.end(new Error('The codex process ended')));
-    this.proc.stdin!.on('error', () => undefined);
+    // A command that cannot start fails the requests made right after, as a process that died at once would.
+    try {
+      this.proc = Bun.spawn([codexBin(), 'app-server'], { cwd, stdin: 'pipe', stdout: 'pipe', stderr: 'ignore' });
+    } catch (err) {
+      queueMicrotask(() => this.end(err as Error));
+      return;
+    }
+    void eachLine(this.proc.stdout, (line) => this.onLine(line)).catch(() => undefined);
+    void this.proc.exited.then(() => this.end(new Error('The codex process ended')));
   }
 
   static async open(cwd: string, handlers: RpcHandlers) {
@@ -59,11 +62,14 @@ export class CodexRpc {
 
   close() {
     this.end(new Error('The codex process was closed'), false);
-    this.proc.kill();
+    this.proc?.kill();
   }
 
   private send(msg: object) {
-    this.proc.stdin!.write(JSON.stringify(msg) + '\n');
+    try {
+      this.proc?.stdin.write(JSON.stringify(msg) + '\n');
+      this.proc?.stdin.flush();
+    } catch {}
   }
 
   private end(err: Error, report = true) {
