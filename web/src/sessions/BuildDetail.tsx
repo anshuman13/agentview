@@ -1,11 +1,9 @@
 import { createPortal } from 'react-dom';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { notice, setUi, useStore } from '../app/store';
 import { Back } from '../app/touch/back';
-import { Markdown } from '../chat/Chat';
 import { Badge } from '../ui/Badge';
 import { Button, IconButton } from '../ui/Button';
-import { Files, splitDiff } from '../ui/DiffFiles';
 import { Menu, MenuItem } from '../ui/Menu';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
@@ -13,15 +11,14 @@ import { Section, sectionCount } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
 import { ago } from '../ui/util';
-import { decisionTitle, phaseLabel, stageName, type BuildDetail as Detail, type BuildStage } from '../../../shared/builds';
-import { BuildPhases, DecisionRow } from './BuildPhases';
-import { byStart, commitTotals, criterionBadge, holdBadge, stageBadge, stageMeta, stageRows, stageTitle, stateBadge, testCounts } from './buildsLogic';
+import { decisionTitle, phaseLabel, stageName, type BuildDetail as Detail } from '../../../shared/builds';
+import { BuildPhases } from './BuildPhases';
+import { CodeReview, Implementation, latest, ReportBody, type Report } from './BuildParts';
+import { criterionBadge, holdBadge, stageBadge, stageMeta, stageRows, stageTitle, stateBadge, testCounts } from './buildsLogic';
 import { findHere, useWorkspace } from './folders';
 import { openChat } from './goalLogic';
 import { postBuildHold } from './sessionApi';
 import { useBuild } from './useBuilds';
-
-type Report = { title: string; text: string; chat?: { id: string; session: string | null } };
 
 export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: boolean; onBack: () => void }) {
   const { data: d, failed, gone, reload } = useBuild(slug, shown);
@@ -30,7 +27,6 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
   const [report, setReport] = useState<Report | null>(null);
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
-  const diffs = useMemo(() => splitDiff(d?.commit?.diff ?? ''), [d?.commit?.diff]);
   const hold = (decision: 'hold' | 'release') => postBuildHold(slug, decision).then(reload, () => notice('Could not save the hold. Try again.'));
   const head = (
     <div className="bd-head">
@@ -47,14 +43,8 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
   );
   if (!d) return <>{head}{gone ? <EmptyState size="sm" title="This build was removed" /> : failed ? <EmptyState size="sm" title="Could not load this build" hint="Try again" action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} /> : <Skeleton />}</>;
 
-  const stages = byStart(d.entries);
   const rows = stageRows(d.entries, d.reviews);
-  const chat = report?.chat;
-  const latest = (stage: BuildStage) => stages.filter((e) => e.stage === stage).at(-1);
-  const commit = d.commit && latest('implement')?.commit;
-  const totals = commitTotals(d.commit?.files ?? []);
-  const test = latest('test');
-  const review = latest('code-review');
+  const test = latest(d, 'test');
   const when = ago(d.updatedAt, ' ago');
   const openSpec = () => setUi({ openFile: d.specFile, follow: false });
   return (
@@ -78,15 +68,7 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
           ? <Row key={e.id} title={stageTitle(e)} meta={stageMeta(e) || ago(e.startedAt, ' ago')} trailing={<Badge {...stageBadge(e)} />} onClick={() => setReport({ title: stageTitle(e), text: e.report, chat: { id: e.chat, session: e.session } })} />
           : r && <Row key={`${r.phase}-${r.at}`} className="bd-clamp" title={`You · ${phaseLabel(r.phase)}`} meta={r.note || ago(r.at, ' ago')} trailing={<Badge status={r.decision === 'approve' ? 'done' : 'waiting'} />} onClick={() => setReport({ title: `You · ${phaseLabel(r.phase)}`, text: r.note || decisionTitle(r) })} />)}
       </div>
-      {commit && d.commit && (
-        <>
-          <Section label="Implementation" />
-          <div className="ui-group">
-            <Row plain title={commit.branch ?? commit.subject} meta={`${commit.sha.slice(0, 7)} · ${d.commit.files.length} ${d.commit.files.length === 1 ? 'file' : 'files'} +${totals.add} -${totals.del}`} />
-            <Files files={d.commit.files.map((f) => ({ path: f.path, additions: f.add, deletions: f.del }))} diffs={diffs} />
-          </div>
-        </>
-      )}
+      <Implementation d={d} />
       {test && (
         <>
           <Section label="Tests" action={testCounts(test.criteria).map((c) => <Badge key={c.status} {...c} />)} />
@@ -97,24 +79,10 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
           </div>
         </>
       )}
-      {(review || commit) && (
-        <>
-          <Section label="Code review" />
-          <div className="ui-group">
-            {review && (review.findings.length ? review.findings.map((f, i) => <Row key={i} plain lines={2} title={f} />) : <Row plain title="Clean" />)}
-            {commit && <DecisionRow slug={d.slug} phase="code" review={d.codeReview ?? undefined} onSaved={reload} />}
-          </div>
-        </>
-      )}
+      <CodeReview d={d} onSaved={reload} />
       {report && createPortal(
         <Sheet label={report.title} onClose={() => setReport(null)} className="gl-sheet">
-          <Section label={report.title} />
-          <div className="bd-doc">{report.text.trim() ? <Markdown text={report.text} /> : <EmptyState size="sm" title="No report yet" />}</div>
-          {chat && (
-            <div className="gl-actions">
-              <Button size="sm" onClick={() => { openChat({ chatId: chat.id, sessionId: chat.session }); window.dispatchEvent(new Event('agentview:chat')); setReport(null); }}>Open chat</Button>
-            </div>
-          )}
+          <ReportBody report={report} onOpened={() => setReport(null)} />
         </Sheet>,
         document.body,
       )}

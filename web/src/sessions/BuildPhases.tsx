@@ -10,7 +10,7 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { ago } from '../ui/util';
-import { decisionTitle, phaseLabel, reviewDecision, type BuildPhase, type BuildReview, type ReviewPhase } from '../../../shared/builds';
+import { decisionTitle, phaseLabel, reviewDecision, withoutCriteria, type BuildPhase, type BuildReview, type ReviewPhase } from '../../../shared/builds';
 import { runAllPrompt, specProgress, specTasks, startTaskPrompt, withoutOpenTasks } from '../../../shared/specTasks';
 import { nextPhase, startPhase } from './buildsLogic';
 import { postBuildReview } from './sessionApi';
@@ -66,17 +66,19 @@ export function DecisionRow({ slug, phase, review, onSaved, onApproved }: { slug
 }
 
 // The spec as the phase strip shows it, with the user's latest decision on the shown phase under it.
-export function BuildPhases({ slug, phases, reviews, specPath, action, onSaved }: { slug: string; phases: BuildPhase[]; reviews: BuildReview[]; specPath: string | null; action?: ReactNode; onSaved: () => Promise<void> }) {
+export function BuildPhases({ slug, phases, reviews, specPath, action, initial, hideCriteria, onSaved }: { slug: string; phases: BuildPhase[]; reviews: BuildReview[]; specPath: string | null; action?: ReactNode; initial?: ReviewPhase; hideCriteria?: boolean; onSaved: () => Promise<void> }) {
   const [picked, setPicked] = useState<ReviewPhase | null>(null);
   const [runMenu, setRunMenu] = useState(false);
   const runBox = useRef<HTMLButtonElement>(null);
   const chat = useStore((s) => s.session.id);
   if (!phases.length) return null;
-  const phase = phases.find((p) => p.key === (picked ?? startPhase(phases, reviews))) ?? phases[0];
+  const first = phases.some((p) => p.key === initial) ? initial : startPhase(phases, reviews);
+  const phase = phases.find((p) => p.key === (picked ?? first)) ?? phases[0];
   const review = reviewDecision(reviews, phase.key);
   const tasks = phase.key === 'tasks' ? specTasks(phase.markdown) : [];
   const open = tasks.filter((t) => !t.done);
   const runnable = specPath && chat && open.length > 0 ? specPath : null;
+  const markdown = hideCriteria ? withoutCriteria(phase.markdown) : phase.markdown;
   return (
     <>
       <Section label="Spec" action={<>{tasks.length > 0 && <span className="badge quiet">{specProgress(tasks)}</span>}{runnable && (
@@ -89,7 +91,7 @@ export function BuildPhases({ slug, phases, reviews, specPath, action, onSaved }
         {phases.map((p) => <Chip key={p.key} on={p.key === phase.key} icon={reviewDecision(reviews, p.key)?.decision === 'approve' ? 'check' : undefined} onClick={() => setPicked(p.key)}>{phaseLabel(p.key)}</Chip>)}
       </div>
       <div className="ui-group">
-        <div className="bd-doc"><Markdown text={runnable ? withoutOpenTasks(phase.markdown) : phase.markdown} /></div>
+        <div className="bd-doc"><Markdown text={runnable ? withoutOpenTasks(markdown) : markdown} /></div>
         {runnable && open.map((t) => <Row key={t.n} plain className="bd-clamp" title={t.text} trailing={t.doing ? <span className="badge running">In progress</span> : <Button size="sm" onClick={() => { track('action:startTask'); sendToChat(startTaskPrompt(t, runnable)); }}>Start</Button>} />)}
         <DecisionRow slug={slug} phase={phase.key} review={review} onSaved={onSaved} onApproved={() => setPicked(nextPhase(phases, phase.key))} />
       </div>
