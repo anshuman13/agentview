@@ -1,7 +1,8 @@
 // Test helpers that work under bun test and vitest alike.
 import { vi } from 'vitest';
 
-const bun = process.versions.bun ? await import('bun:test') : null;
+const runner = 'bun:test';
+const bun: { setSystemTime(at?: Date): void } | null = process.versions.bun ? await import(runner) : null;
 const realTimeout = globalThis.setTimeout;
 const realImmediate = globalThis.setImmediate;
 const globals = new Map<string, PropertyDescriptor | undefined>();
