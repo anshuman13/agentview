@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { edited, hasDay, isQuestion, latestDigest, moved, newCapture, nextNine, parseWhen, split, splitTitle, stripWhen } from './engine';
+import { describe, expect, it, vi } from 'vitest';
+import { edited, hasDay, isQuestion, latestDigest, moved, newCapture, nextNine, parseWhen, runSync, split, splitTitle, stripWhen } from './engine';
 import { rowToChange, type ItemRow } from '../sync';
 
 const now = new Date(2026, 9, 26, 17, 3, 20);
@@ -185,9 +185,6 @@ describe('nextNine', () => {
 
 describe('runSync health fields', () => {
   it('asks for a full reply once a minute and leaves state alone when the reply has no health', async () => {
-    const { vi } = await import('vitest');
-    vi.resetModules();
-    const { runSync } = await import('./engine');
     const fulls: unknown[] = [];
     const paused = vi.fn();
     const scans = vi.fn();

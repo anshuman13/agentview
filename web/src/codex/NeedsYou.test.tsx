@@ -1,21 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { createRequire } from 'node:module';
 import type { ItemRow } from './data/sync';
+import * as data from './data';
+import * as view from './view';
 
-const mocks = vi.hoisted(() => ({ store: {} as Record<string, ReturnType<typeof vi.fn>>, snack: vi.fn() }));
+const mocks = { store: {} as Record<string, ReturnType<typeof vi.fn>>, snack: vi.fn() };
 
+const react = createRequire(import.meta.url)('react') as typeof import('react');
 vi.mock('react', async (importOriginal) => {
-  const react = await importOriginal<typeof import('react')>();
-  return { ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => react.useSyncExternalStore(subscribe, get, get) };
+  const real = importOriginal ? await importOriginal<typeof import('react')>() : react;
+  const { useSyncExternalStore } = real;
+  return { ...real, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) };
 });
-vi.mock('./data', () => ({
+vi.mock('./data', async (importOriginal) => ({
+  ...(importOriginal ? await importOriginal<object>() : data),
   useAssistantStore: () => mocks.store,
   useAssistantData: () => ({ meetings: [], chats: [], briefs: [], items: [] }),
   useCodex: () => ({ facts: [] }),
 }));
 vi.mock('./useActions', () => ({ useActions: () => ({}) }));
 vi.mock('../ui/haptic', () => ({ haptic: () => {} }));
-vi.mock('./view', async (importOriginal) => ({ ...(await importOriginal<typeof import('./view')>()), showSnack: mocks.snack }));
+vi.mock('./view', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : view), showSnack: (...args: unknown[]) => mocks.snack(...args) }));
 vi.mock('../ui/Row', () => ({ Row: ({ title, menu }: { title: string; menu?: React.ReactNode }) => <div>{title}{menu}</div> }));
 vi.mock('./meetings/ActionRow', () => ({ ActionRow: ({ row, extraItems }: { row: ItemRow; extraItems?: (c: (f: () => void) => () => void) => React.ReactNode }) => <div>{row.title}{extraItems?.((f) => f)}</div> }));
 

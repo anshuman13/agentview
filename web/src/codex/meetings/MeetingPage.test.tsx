@@ -1,15 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Meeting } from '../data/wiki/wiki';
-import { MeetingPage } from './MeetingPage';
+import * as data from '../data';
+import { stubGlobal } from '../../../../testing';
 
-vi.mock('../data', () => ({
+vi.mock('../data', async (importOriginal) => ({
+  ...(importOriginal ? await importOriginal<object>() : data),
   useAssistantStore: () => ({}),
   useAssistantData: () => ({ items: [], facts: [], meetings: [] }),
   useCodex: () => ({ meetings: [] }),
 }));
 
-vi.stubGlobal('window', {});
+stubGlobal('window', {});
+
+const { MeetingPage } = await import('./MeetingPage');
 
 const start = Date.UTC(2026, 9, 29, 8);
 const meeting = (extra: Partial<Meeting>) =>

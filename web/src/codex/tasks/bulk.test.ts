@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ItemRow } from '../data/sync';
+import * as view from '../view';
 
 const snacks: { text: string; undo?: () => void }[] = [];
-vi.mock('../view', () => ({ FILTER_LABEL: {}, showSnack: (text: string, undo?: () => void) => snacks.push({ text, undo }) }));
+vi.mock('../view', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : view), FILTER_LABEL: {}, showSnack: (text: string, undo?: () => void) => snacks.push({ text, undo }) }));
 vi.mock('../focus', () => ({ stopFocusFor: () => {} }));
 
 const { bulkApply } = await import('../useActions');

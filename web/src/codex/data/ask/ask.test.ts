@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { askText, guessProfile } from './ask';
 import type { ItemRow } from '../sync';
 import type { Meeting } from '../wiki/wiki';
+import { setSystemTime } from '../../../../../testing';
 
 const PARAGRAPH = '\nRead these events in Calendar for location and notes. Then use Calendar, Gmail and web search to suggest concrete alternatives near where I am, each with opening hours and travel time. Change the calendar only after I confirm.';
 const at = (days: number, h: number, m = 0) => new Date(2026, 10, 10 + days, h, m).getTime();
@@ -11,9 +12,12 @@ const item = { id: 'i1', profile: 'work', deleted: 0, status: 'open', title: 'Sh
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date(2026, 10, 10, 12));
+  setSystemTime(new Date(2026, 10, 10, 12));
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  setSystemTime();
+});
 
 it('keeps the work text free of plan context', () => {
   const others = meeting('sync', at(-1, 10), { profile: 'work', others: JSON.stringify([{ who: 'Kim', what: 'send the deck' }]) });

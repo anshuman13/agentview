@@ -3,6 +3,7 @@ import { edited, newCapture } from './tasks/engine';
 import { captureParams, patchSQL, swapSQL, type SqlValue } from './localRows';
 import { WIKI_TABLES } from './store';
 import { TABLE_FIELDS, type ItemRow } from './sync';
+import { stubGlobal, unstubAllGlobals } from '../../../../testing';
 
 const times = (r: { field_times: string }) => JSON.parse(r.field_times);
 const row = (over: Partial<ItemRow> = {}): ItemRow => ({ ...newCapture('Call the bank', 'task', 'work', 1000), ...over });
@@ -128,15 +129,15 @@ describe('captureParams', () => {
 describe('LocalStore', () => {
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
+    unstubAllGlobals();
   });
 
   it('dispose clears the sync interval and removes the global listeners', async () => {
     vi.useFakeTimers();
     const listeners = new Set<unknown>();
     const target = { addEventListener: (_: string, fn: unknown) => listeners.add(fn), removeEventListener: (_: string, fn: unknown) => listeners.delete(fn) };
-    vi.stubGlobal('window', target);
-    vi.stubGlobal('document', { ...target, visibilityState: 'visible' });
+    stubGlobal('window', target);
+    stubGlobal('document', { ...target, visibilityState: 'visible' });
     const { LocalStore } = await import('./local');
     const timers = vi.getTimerCount();
     const store = new LocalStore((async () => null) as never);
@@ -161,10 +162,10 @@ describe('LocalStore', () => {
       return '';
     };
     const target = { addEventListener() {}, removeEventListener() {} };
-    vi.stubGlobal('window', target);
-    vi.stubGlobal('document', { ...target, visibilityState: 'hidden' });
-    vi.stubGlobal('fetch', () => new Promise(() => {}));
-    vi.stubGlobal('setInterval', () => 0);
+    stubGlobal('window', target);
+    stubGlobal('document', { ...target, visibilityState: 'hidden' });
+    stubGlobal('fetch', () => new Promise(() => {}));
+    stubGlobal('setInterval', () => 0);
     const { LocalStore } = await import('./local');
     await new LocalStore(invoke as never).unlock();
     expect(db.prepare(`SELECT value FROM sync_state WHERE key = 'since'`).get()).toEqual({ value: '0' });

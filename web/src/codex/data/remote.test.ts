@@ -1,45 +1,50 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TABLE_FIELDS } from './sync';
+import { RemoteStore } from './remote';
+import { advanceTimersByTimeAsync, stubGlobal, unstubAllGlobals } from '../../../../testing';
 
 async function freshStore() {
-  vi.resetModules();
-  const { RemoteStore } = await import('./remote');
   return new RemoteStore();
 }
 
-function fakeIndexedDb(delays: number[]) {
-  const stored = new Map<string, unknown>();
-  const db = {
-    transaction: () => {
-      const tx: Record<string, any> = {};
-      let open = 0;
-      let failed = false;
-      const request = (run: () => unknown, delay: number) => {
-        const req: Record<string, any> = {};
-        open++;
-        setTimeout(() => {
-          if (failed) return --open === 0 ? tx.onerror?.() : undefined;
-          try {
-            req.result = run();
-          } catch (e) {
-            failed = true;
-            tx.error = req.error = e;
-          }
-          if (--open === 0) failed ? tx.onerror?.() : tx.oncomplete?.();
-        }, delay);
-        return req;
-      };
-      tx.objectStore = () => ({
-        get: (key: string) => request(() => stored.get(key), 0),
-        getAll: (range: { lo: string; hi: string }) => request(() => [...stored].filter(([k]) => k >= range.lo && k <= range.hi).map(([, v]) => v), 0),
-        put: (value: unknown, key: string) => request(() => void stored.set(key, structuredClone(value)), delays.shift() ?? 0),
-        delete: (key: string) => request(() => void stored.delete(key), 0),
-      });
-      return tx;
-    },
-  };
-  vi.stubGlobal('IDBKeyRange', { bound: (lo: string, hi: string) => ({ lo, hi }) });
-  vi.stubGlobal('indexedDB', {
+// The cache module keeps its first open database, so every test shares one db that reads the current test's map.
+let stored = new Map<string, unknown>();
+let delays: number[] = [];
+const db = {
+  transaction: () => {
+    const tx: Record<string, any> = {};
+    let open = 0;
+    let failed = false;
+    const request = (run: () => unknown, delay: number) => {
+      const req: Record<string, any> = {};
+      open++;
+      setTimeout(() => {
+        if (failed) return --open === 0 ? tx.onerror?.() : undefined;
+        try {
+          req.result = run();
+        } catch (e) {
+          failed = true;
+          tx.error = req.error = e;
+        }
+        if (--open === 0) failed ? tx.onerror?.() : tx.oncomplete?.();
+      }, delay);
+      return req;
+    };
+    tx.objectStore = () => ({
+      get: (key: string) => request(() => stored.get(key), 0),
+      getAll: (range: { lo: string; hi: string }) => request(() => [...stored].filter(([k]) => k >= range.lo && k <= range.hi).map(([, v]) => v), 0),
+      put: (value: unknown, key: string) => request(() => void stored.set(key, structuredClone(value)), delays.shift() ?? 0),
+      delete: (key: string) => request(() => void stored.delete(key), 0),
+    });
+    return tx;
+  },
+};
+
+function fakeIndexedDb(next: number[]) {
+  stored = new Map<string, unknown>();
+  delays = next;
+  stubGlobal('IDBKeyRange', { bound: (lo: string, hi: string) => ({ lo, hi }) });
+  stubGlobal('indexedDB', {
     open: () => {
       const req: Record<string, any> = { result: db };
       setTimeout(() => req.onsuccess?.(), 0);
@@ -54,14 +59,14 @@ const rowsOf = (stored: Map<string, unknown>, table: string) => [...stored].filt
 function fakeDom() {
   const listeners = { window: new Set(), document: new Set() };
   const target = (set: Set<unknown>) => ({ addEventListener: (_: string, fn: unknown) => set.add(fn), removeEventListener: (_: string, fn: unknown) => set.delete(fn) });
-  vi.stubGlobal('window', target(listeners.window));
-  vi.stubGlobal('document', { ...target(listeners.document), visibilityState: 'visible' });
+  stubGlobal('window', target(listeners.window));
+  stubGlobal('document', { ...target(listeners.document), visibilityState: 'visible' });
   return listeners;
 }
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
+  unstubAllGlobals();
 });
 
 describe('RemoteStore.dispose', () => {
@@ -75,7 +80,7 @@ describe('RemoteStore.dispose', () => {
     store.dispose();
     expect(listeners.window.size + listeners.document.size).toBe(0);
     expect(vi.getTimerCount()).toBe(running - 1);
-    await vi.advanceTimersByTimeAsync(60000);
+    await advanceTimersByTimeAsync(60000);
     expect(vi.getTimerCount()).toBe(0);
   });
 });
@@ -90,15 +95,15 @@ describe('RemoteStore sync batching', () => {
     fakeIndexedDb([]);
     fakeDom();
     const calls: string[] = [];
-    vi.stubGlobal('fetch', async (path: string) => (calls.push(path), { ok: true, json: async () => ({ changes: [], version: 1 }) }));
+    stubGlobal('fetch', async (path: string) => (calls.push(path), { ok: true, json: async () => ({ changes: [], version: 1 }) }));
     const store = await freshStore();
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     calls.length = 0;
     const rows = [await store.capture('a', 'task', 'work'), await store.capture('b', 'task', 'work')];
     await store.update(rows[0], { title: 'x' });
     expect(store.snapshot().sync.pending).toBe(2);
     expect(calls).toEqual([]);
-    await vi.advanceTimersByTimeAsync(500);
+    await advanceTimersByTimeAsync(500);
     expect(calls.filter((c) => c.includes('/sync'))).toHaveLength(1);
     store.dispose();
   });
@@ -180,7 +185,7 @@ describe('RemoteStore save', () => {
     expect(puts.filter((k) => k.startsWith('row:'))).toHaveLength(1);
     expect(rowsOf(stored, 'items')[0].title).toBe('t8');
     await store.update(row, { title: 'last' });
-    vi.stubGlobal('document', { addEventListener() {}, removeEventListener() {}, visibilityState: 'hidden' });
+    stubGlobal('document', { addEventListener() {}, removeEventListener() {}, visibilityState: 'hidden' });
     (internal as unknown as { onHide(): void }).onHide();
     await internal.saving;
     expect(rowsOf(stored, 'items')[0].title).toBe('last');
@@ -191,7 +196,7 @@ describe('RemoteStore save', () => {
     const stored = fakeIndexedDb([]);
     fakeDom();
     const pages = [{ version: 2, hasMore: true, changes: [{ table: 'items', ...taskRow('a') }] }, { nope: true }];
-    vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => pages.shift() }));
+    stubGlobal('fetch', async () => ({ ok: true, json: async () => pages.shift() }));
     const store = await freshStore();
     const internal = store as unknown as Internal & { loaded: Promise<void>; syncOnce(): Promise<boolean> };
     await internal.loaded;
@@ -209,7 +214,7 @@ describe('RemoteStore save', () => {
     fakeDom();
     let release!: (v: unknown) => void;
     const pages: unknown[] = [{ version: 2, hasMore: true, changes: [{ table: 'items', ...taskRow('a'), version: 2 }] }, new Promise((r) => (release = r))];
-    vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => pages.shift() }));
+    stubGlobal('fetch', async () => ({ ok: true, json: async () => pages.shift() }));
     const store = await freshStore();
     const internal = store as unknown as Internal & { loaded: Promise<void>; syncOnce(): Promise<boolean> };
     await internal.loaded;

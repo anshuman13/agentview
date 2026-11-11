@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { stubGlobal, unstubAllGlobals } from '../../../../testing';
 
 vi.mock('react', () => ({ useRef: (v: unknown) => ({ current: v }), useState: (v: unknown) => [v, () => {}] }));
 vi.mock('../../ui/haptic', () => ({ haptic: vi.fn() }));
 
-import { haptic } from '../../ui/haptic';
-import { useDrag } from './drag';
+const { haptic } = await import('../../ui/haptic');
+const { useDrag } = await import('./drag');
 
 type Handler = (ev: unknown) => void;
 let handlers: Record<string, Handler>;
@@ -12,21 +13,21 @@ let target: unknown;
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.mocked(haptic).mockClear();
+  (haptic as ReturnType<typeof vi.fn>).mockClear();
   handlers = {};
   target = { closest: () => ({ dataset: { drop: 'today' }, querySelectorAll: () => [] }) };
-  vi.stubGlobal('window', {
+  stubGlobal('window', {
     addEventListener: (name: string, fn: Handler) => (handlers[name] = fn),
     removeEventListener: () => {},
   });
-  vi.stubGlobal('document', { elementFromPoint: () => target });
-  vi.stubGlobal('requestAnimationFrame', () => 0);
-  vi.stubGlobal('cancelAnimationFrame', () => {});
+  stubGlobal('document', { elementFromPoint: () => target });
+  stubGlobal('requestAnimationFrame', () => 0);
+  stubGlobal('cancelAnimationFrame', () => {});
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
+  unstubAllGlobals();
 });
 
 function press(pointerType: string, onHold?: () => void) {

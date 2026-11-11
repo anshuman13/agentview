@@ -1,24 +1,33 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Overview } from './Overview';
-import { doneCount } from './overview/TodayList';
-import { rowCounts } from '../app/store/counts';
+import { createRequire } from 'node:module';
+import * as data from './data';
+import * as addSheet from './tasks/AddSheet';
+import * as actions from './useActions';
+import * as replies from './overview/ReplyQueue';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki/wiki';
 
-const mocks = vi.hoisted(() => ({ needs: [] as unknown[], queue: [] as unknown[] }));
+const mocks = { needs: [] as unknown[], queue: [] as unknown[] };
 
+const react = createRequire(import.meta.url)('react') as typeof import('react');
 vi.mock('react', async (importOriginal) => {
-  const react = await importOriginal<typeof import('react')>();
-  return { ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => react.useSyncExternalStore(subscribe, get, get) };
+  const real = importOriginal ? await importOriginal<typeof import('react')>() : react;
+  const { useSyncExternalStore } = real;
+  return { ...real, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) };
 });
-vi.mock('./data', () => ({ useAssistantData: () => ({ items: [] }), useAssistantStore: () => ({}), useSyncGate: () => ({ loading: false }) }));
-vi.mock('./useActions', () => ({ useActions: () => ({}) }));
-vi.mock('./tasks/AddSheet', () => ({ AddSheet: () => null }));
-vi.mock('./NeedsYou', () => ({ useNeedsYou: () => ({ rows: mocks.needs }) }));
-vi.mock('./overview/ReplyQueue', () => ({ replyQueue: () => mocks.queue }));
+vi.mock('./data', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : data), useAssistantData: () => ({ items: [] }), useAssistantStore: () => ({}), useSyncGate: () => ({ loading: false }) }));
+vi.mock('./useActions', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : actions), useActions: () => ({}) }));
+vi.mock('./tasks/AddSheet', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : addSheet), AddSheet: () => null }));
+vi.mock('./overview/ReplyQueue', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : replies), replyQueue: () => mocks.queue }));
 vi.mock('./overview/Review', () => ({ Review: () => null }));
 vi.mock('./overview/NeedsYouSheet', () => ({ NeedsYouSheet: () => null }));
+const realNeedsYou = process.versions.bun ? await import('./NeedsYou') : undefined;
+vi.mock('./NeedsYou', () => ({ useNeedsYou: () => ({ rows: mocks.needs }) }));
+
+const { Overview } = await import('./Overview');
+const { doneCount } = await import('./overview/TodayList');
+const { rowCounts } = await import('../app/store/counts');
 
 const now = Date.now();
 const at = (min: number) => now + min * 60000;
@@ -126,7 +135,7 @@ describe('Overview', () => {
   });
 
   it('renders no row badge in the Needs you sheet', async () => {
-    const { NeedsYou } = await vi.importActual<typeof import('./NeedsYou')>('./NeedsYou');
+    const { NeedsYou } = realNeedsYou ?? await vi.importActual<typeof import('./NeedsYou')>('./NeedsYou');
     const ask = { ...task('a', 'Confirm the venue', at(-60)), status: 'suggested' } as ItemRow;
     const rows = [
       { kind: 'overdue', row: task('o', 'Renew pass', at(-3000)), keys: [] },

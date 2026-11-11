@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { linkPath, linksIn, linkTitle, resetLinkTitles } from './links';
 
-const api = vi.hoisted(() => ({ fetchJson: vi.fn() }));
+const api = { fetchJson: vi.fn() };
 vi.mock('../../../app/api', () => ({ apiUrl: (p: string) => p, fetchJson: api.fetchJson }));
+
+const { linkPath, linksIn, linkTitle, resetLinkTitles } = await import('./links');
 
 describe('linksIn', () => {
   it('finds bare and Markdown links in order, without duplicates', () => {

@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createRequire } from 'node:module';
 
-vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), useSyncExternalStore: (_sub: unknown, get: () => unknown) => get() }));
+const react = createRequire(import.meta.url)('react') as typeof import('react');
 
-import { hideSnack, showSnack, useSnack } from '../view';
+vi.mock('react', () => ({ ...react, useSyncExternalStore: (_sub: unknown, get: () => unknown) => get() }));
+
+const { hideSnack, showSnack, useSnack } = await import('../view');
 
 describe('snack store', () => {
   beforeEach(() => vi.useFakeTimers());

@@ -25,6 +25,7 @@ import { needsYou } from './codex/summary/needsYou';
 import { reviewQueue } from './codex/wiki/reviewQueue';
 import { revertBlock } from './workspace/revertBlock';
 import { ago, money } from './ui/util';
+import { setSystemTime } from '../../testing';
 import { turnEvents, turnSummary, type SummaryEntry } from './chat/transcript/summary';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
@@ -40,9 +41,12 @@ const HOUR = 3_600_000;
 describe('cases shared with the Android app', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(NOW);
+    setSystemTime(NOW);
   });
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    setSystemTime();
+  });
 
   type Guess = { name: string; question: string; fallback: Profile; expected: Profile; meetings: { title: string; profile: Profile; startsInHours: number; deleted?: boolean }[] };
   for (const c of cases<Guess>('guess-profile')) {
