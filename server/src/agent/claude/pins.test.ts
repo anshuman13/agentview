@@ -1,19 +1,20 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { stubEnv, unstubAllEnvs } from '../../../../testing.js';
 
 let home: string;
 let pins: typeof import('./pins.js');
 
 beforeAll(async () => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), 'pins-'));
-  vi.stubEnv('HOME', home);
+  stubEnv('HOME', home);
   pins = await import('./pins.js');
 });
 
 afterAll(() => {
-  vi.unstubAllEnvs();
+  unstubAllEnvs();
   fs.rmSync(home, { recursive: true, force: true });
 });
 
@@ -50,8 +51,9 @@ describe('pins', () => {
   });
 
   it('survives a module reload', async () => {
-    vi.resetModules();
-    const again = await import('./pins.js');
+    const fresh = './pins.js?reload';
+    const again: typeof import('./pins.js') = await import(fresh);
+    expect(again).not.toBe(pins);
     expect(await again.listPins()).toEqual(['y', 'a']);
   });
 });

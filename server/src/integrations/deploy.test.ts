@@ -2,13 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { follow, hasDeployApp, parseApp, summarize } from './deploy.js';
 import type { DeployJob, DeployRecord } from '../../../shared/protocol.js';
+import { advanceTimersByTimeAsync } from '../../../testing.js';
 
-const execFileMock = vi.hoisted(() => vi.fn());
+const execFileMock = vi.fn();
 vi.mock('node:child_process', () => ({
   execFile: Object.assign(vi.fn(), { [Symbol.for('nodejs.util.promisify.custom')]: (...args: unknown[]) => execFileMock(...args) }),
 }));
+const { follow, hasDeployApp, parseApp, summarize } = await import('./deploy.js');
 
 describe('parseApp', () => {
   it('reads the project and environments', () => {
@@ -46,9 +47,10 @@ describe('follow', () => {
     vi.useFakeTimers();
     execFileMock.mockReturnValue(Object.assign(Promise.resolve({ stdout: '{"message":"Not Found"}' }), { child: { stdin: { end() {} } } }));
     const job: DeployJob = { id: 'j', lines: [], done: false, ok: false, url: '' };
-    const settled = expect(follow('/tmp', 'o/r', 1, job)).rejects.toThrow('unexpected deployment status');
-    await vi.advanceTimersByTimeAsync(5000);
-    await settled;
+    const p = follow('/tmp', 'o/r', 1, job);
+    p.catch(() => {});
+    await advanceTimersByTimeAsync(5000);
+    await expect(p).rejects.toThrow('unexpected deployment status');
     vi.useRealTimers();
   });
 });

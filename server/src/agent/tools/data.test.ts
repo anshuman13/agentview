@@ -1,9 +1,9 @@
 import { describe, expect, test, vi } from 'vitest';
 import { profileOf } from '../claude/accounts.js';
-import { checkFields, dataWriteTool } from './data.js';
 
-const hub = vi.hoisted(() => ({ rows: vi.fn(), push: vi.fn() }));
+const hub = { rows: vi.fn(), push: vi.fn() };
 vi.mock('../../integrations/assistant.js', () => ({ hubRows: hub.rows, hubPush: hub.push }));
+const { checkFields, dataWriteTool } = await import('./data.js');
 
 describe('checkFields', () => {
   test('turns date strings into epoch ms and replans a rescheduled job', () => {

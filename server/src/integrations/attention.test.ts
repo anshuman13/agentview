@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, promises as realFs, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { commitItem, deployItems, dismissAttention, fixCi, itemsFor, loadFixes, merge } from './attention.js';
-
-vi.mock('node:fs/promises', async (orig) => ({ ...(await orig<typeof import('node:fs/promises')>()), writeFile: vi.fn(async () => {}) }));
 import type { PullRequest } from '../../../shared/protocol.js';
+
+vi.mock('node:fs/promises', () => ({ ...realFs, writeFile: vi.fn(async () => {}) }));
+const { commitItem, deployItems, dismissAttention, fixCi, itemsFor, loadFixes, merge } = await import('./attention.js');
 
 const pr = (n: number, p: Partial<PullRequest> = {}): PullRequest => ({
   number: n, title: `PR ${n}`, author: 'me', branch: `b${n}`, draft: false, review: '', checks: 'success',

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { applyHubChanges, assistantRoute, learnEvents, type HubRow } from './assistant.js';
+import { stubGlobal, unstubAllGlobals } from '../../../testing.js';
 
 const change = (id: string, deleted = false) => ({ table: 'items', id, profile: 'work' as const, deleted, updated_at: 1, fields: { title: id } });
 
@@ -16,18 +17,18 @@ describe('applyHubChanges', () => {
 describe('assistantRoute', () => {
   it('drops query params a route does not list', async () => {
     const fetchMock = vi.fn(async () => new Response('{"replies":[]}', { headers: { 'content-type': 'application/json' } }));
-    vi.stubGlobal('fetch', fetchMock);
+    stubGlobal('fetch', fetchMock);
     await assistantRoute('GET', new URL('http://x/api/assistant/history?who=A%20B&extra=1'), async () => '');
-    vi.unstubAllGlobals();
+    unstubAllGlobals();
     expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toMatch(/\/history\?who=A%20B$/);
   });
 
   it('returns 404 without fetching for an unknown route or method', async () => {
     const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
+    stubGlobal('fetch', fetchMock);
     const unknown = await assistantRoute('GET', new URL('http://x/api/assistant/nope'), async () => '');
     const wrongMethod = await assistantRoute('GET', new URL('http://x/api/assistant/sync'), async () => '');
-    vi.unstubAllGlobals();
+    unstubAllGlobals();
     expect(unknown.status).toBe(404);
     expect(wrongMethod.status).toBe(404);
     expect(fetchMock).not.toHaveBeenCalled();

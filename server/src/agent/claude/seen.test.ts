@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { stubEnv, unstubAllEnvs } from '../../../../testing.js';
 
 let home: string;
 let seen: typeof import('./seen.js');
@@ -9,13 +10,13 @@ let pins: typeof import('./pins.js');
 
 beforeAll(async () => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), 'seen-'));
-  vi.stubEnv('HOME', home);
+  stubEnv('HOME', home);
   seen = await import('./seen.js');
   pins = await import('./pins.js');
 });
 
 afterAll(() => {
-  vi.unstubAllEnvs();
+  unstubAllEnvs();
   fs.rmSync(home, { recursive: true, force: true });
 });
 

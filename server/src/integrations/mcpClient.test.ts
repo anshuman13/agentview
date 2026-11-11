@@ -1,5 +1,6 @@
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { callTool, data, expandDef, listTools, pidOf, stopAll, text } from './mcpClient.js';
+import { stubGlobal, unstubAllGlobals } from '../../../testing.js';
 
 const FAKE = `
 let buf = '';
@@ -78,7 +79,7 @@ describe('expandDef', () => {
 
 describe('http transport', () => {
   afterEach(() => {
-    vi.unstubAllGlobals();
+    unstubAllGlobals();
     stopAll('web');
   });
 
@@ -87,7 +88,7 @@ describe('http transport', () => {
   it('starts a new session after the server answers 404 to an expired one', async () => {
     let inits = 0;
     let expired = false;
-    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+    stubGlobal('fetch', async (_url: string, init: RequestInit) => {
       const m = JSON.parse(init.body as string);
       if (m.method === 'initialize') {
         inits++;
@@ -107,7 +108,7 @@ describe('http transport', () => {
   });
 
   it('skips SSE data lines that are not JSON', async () => {
-    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+    stubGlobal('fetch', async (_url: string, init: RequestInit) => {
       const m = JSON.parse(init.body as string);
       if (!m.id) return reply('', { status: 202 });
       const result = m.method === 'initialize' ? {} : { tools: [{ name: 'b' }] };

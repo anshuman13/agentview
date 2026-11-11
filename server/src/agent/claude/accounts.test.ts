@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { describe, expect, it, vi } from 'vitest';
+import { setSystemTime } from '../../../../testing.js';
 
 const dir = process.env.AGENTVIEW_LIMITS_DIR!;
 const HOME = `${os.homedir()}/workspace_personal/app`;
@@ -78,12 +79,12 @@ describe('accounts', () => {
     expect(free).not.toHaveBeenCalled();
     markLimited('alt', soon);
     expect(await verifyLimit('alt', async () => usage(100, 20))).toBe(true);
-    vi.setSystemTime(Date.now() + 6 * 60_000);
+    setSystemTime(Date.now() + 6 * 60_000);
     expect(await verifyLimit('alt', async () => ({ rate_limits: { ...usage(10, 20).rate_limits, seven_day_opus: { utilization: 100 } } }))).toBe(true);
-    vi.setSystemTime(Date.now() + 6 * 60_000);
+    setSystemTime(Date.now() + 6 * 60_000);
     expect(await verifyLimit('alt', free)).toBe(false);
     expect(isLimited('alt')).toBe(false);
     expect(JSON.parse(readFileSync(`${dir}/limits.json`, 'utf8')).alt).toBeUndefined();
-    vi.useRealTimers();
+    setSystemTime();
   });
 });

@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BIN_MS } from '../../../../shared/protocol.js';
+import { stubEnv, unstubAllEnvs } from '../../../../testing.js';
 
 let home: string;
 let cwd: string;
@@ -24,8 +25,8 @@ beforeAll(async () => {
   home = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'bin-')));
   cwd = path.join(home, 'repo');
   fs.mkdirSync(cwd);
-  vi.stubEnv('HOME', home);
-  vi.stubEnv('CLAUDE_CONFIG_DIR', path.join(home, '.claude'));
+  stubEnv('HOME', home);
+  stubEnv('CLAUDE_CONFIG_DIR', path.join(home, '.claude'));
   transcript(ID);
   transcript(OLD, 3);
   bin = await import('./bin.js');
@@ -33,7 +34,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  vi.unstubAllEnvs();
+  unstubAllEnvs();
   fs.rmSync(home, { recursive: true, force: true });
 });
 

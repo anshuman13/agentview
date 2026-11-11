@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const notify = vi.hoisted(() => ({ pushNtfy: vi.fn(async (..._a: string[]) => true), ntfyTopic: vi.fn(async () => 'topic') }));
+import { advanceTimersByTimeAsync } from '../../../testing.js';
+
+const notify = { pushNtfy: vi.fn(async (..._a: string[]) => true), ntfyTopic: vi.fn(async () => 'topic') };
 vi.mock('./notify.js', () => notify);
-import { cancelFocus, scheduleFocus } from './focus.js';
+const { cancelFocus, scheduleFocus } = await import('./focus.js');
 
 const MIN = 60_000;
 
@@ -19,9 +21,9 @@ describe('focus push', () => {
 
   it('sends one push at end', async () => {
     expect(scheduleFocus('Write', Date.now() + 25 * MIN)).toEqual({ ok: true });
-    await vi.advanceTimersByTimeAsync(25 * MIN - 1);
+    await advanceTimersByTimeAsync(25 * MIN - 1);
     expect(notify.pushNtfy).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(2);
+    await advanceTimersByTimeAsync(2);
     expect(notify.pushNtfy).toHaveBeenCalledTimes(1);
     expect(notify.pushNtfy.mock.calls[0][0]).toBe('Focus done: Write');
   });
@@ -29,18 +31,18 @@ describe('focus push', () => {
   it('cancel and a second schedule drop the first', async () => {
     scheduleFocus('A', Date.now() + 10 * MIN);
     cancelFocus();
-    await vi.advanceTimersByTimeAsync(11 * MIN);
+    await advanceTimersByTimeAsync(11 * MIN);
     expect(notify.pushNtfy).not.toHaveBeenCalled();
     scheduleFocus('A', Date.now() + 10 * MIN);
     scheduleFocus('B', Date.now() + 12 * MIN);
-    await vi.advanceTimersByTimeAsync(13 * MIN);
+    await advanceTimersByTimeAsync(13 * MIN);
     expect(notify.pushNtfy).toHaveBeenCalledTimes(1);
     expect(notify.pushNtfy.mock.calls[0][0]).toBe('Focus done: B');
   });
 
   it('sends nothing when end is past', async () => {
     expect(scheduleFocus('A', Date.now() - 1000)).toEqual({ ok: true });
-    await vi.advanceTimersByTimeAsync(MIN);
+    await advanceTimersByTimeAsync(MIN);
     expect(notify.pushNtfy).not.toHaveBeenCalled();
   });
 

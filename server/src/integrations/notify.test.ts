@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { promises as realFs } from 'node:fs';
+import { advanceTimersByTimeAsync, stubGlobal, unstubAllGlobals } from '../../../testing.js';
 
-const files = vi.hoisted(() => ({ observe: '', tmp: '' }));
-vi.mock('node:fs/promises', async (orig) => ({
-  ...(await orig<typeof import('node:fs/promises')>()),
+const files = { observe: '', tmp: '' };
+vi.mock('node:fs/promises', () => ({
+  ...realFs,
   readFile: vi.fn(async () => {
     if (!files.observe) throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
     return files.observe;
@@ -11,17 +13,17 @@ vi.mock('node:fs/promises', async (orig) => ({
   writeFile: vi.fn(async (_p: string, data: string) => void (files.tmp = data)),
   rename: vi.fn(async () => void (files.observe = files.tmp)),
 }));
-import { notifyAway, pushNtfy, stallWatch } from './notify.js';
+const { notifyAway, pushNtfy, stallWatch } = await import('./notify.js');
 
 describe('pushNtfy', () => {
   const sent = vi.fn(async () => new Response(''));
   beforeEach(() => {
-    vi.stubGlobal('fetch', sent);
+    stubGlobal('fetch', sent);
     delete process.env.AGENTVIEW_NTFY;
     files.observe = '';
   });
   afterEach(() => {
-    vi.unstubAllGlobals();
+    unstubAllGlobals();
     sent.mockClear();
   });
 
@@ -105,12 +107,12 @@ describe('notifyAway', () => {
   const sent = vi.fn(async () => new Response(''));
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.stubGlobal('fetch', sent);
+    stubGlobal('fetch', sent);
     process.env.AGENTVIEW_NTFY = 'topic';
   });
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
+    unstubAllGlobals();
     delete process.env.AGENTVIEW_NTFY;
     sent.mockClear();
   });
@@ -121,7 +123,7 @@ describe('notifyAway', () => {
     notifyAway({ type: 'event', event: { kind: 'result', text: 'Done' } } as any, away);
     vi.advanceTimersByTime(5_000);
     notifyAway({ type: 'pending', request: { id: 'p1', kind: 'permission', title: 'Allow?' } } as any, away);
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     expect(sent).toHaveBeenCalledTimes(2);
   });
 
@@ -130,19 +132,19 @@ describe('notifyAway', () => {
     const chat = (id: string) => ({ id, cwd: '/x/repo', title: 'T' }) as any;
     notifyAway(done('Nothing new.\nROUND: nothing'), () => chat('q'), () => false, { outcome: 'quiet', line: '' });
     notifyAway(done('Fixed a test.\nROUND: progress fixed'), () => chat('p'), () => false, { outcome: 'progress', line: 'fixed' });
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     expect(sent).not.toHaveBeenCalled();
     notifyAway(done('Needs a token.\nROUND: blocked needs a token'), () => chat('b'), () => false, { outcome: 'blocked', line: 'needs a token' });
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     expect(sent).toHaveBeenCalledTimes(1);
     const [, init] = sent.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>).Title).toBe('Loop in repo: blocked');
     expect(init.body).toBe('T\nneeds a token');
     notifyAway(done('GOAL MET'), () => chat('e'), () => false, { outcome: 'done', line: 'Goal met', ends: true });
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     expect(sent).toHaveBeenCalledTimes(1);
     notifyAway(done('Plain reply.\nROUND: done x'), () => chat('n'));
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     const [, plain] = sent.mock.calls[1] as unknown as [string, RequestInit];
     expect((plain.headers as Record<string, string>).Title).toBe('Claude finished in repo');
     expect(plain.body).toBe('T\nPlain reply.');
@@ -151,11 +153,11 @@ describe('notifyAway', () => {
   it('skips the ntfy push while a desktop client is active', async () => {
     const chat = { id: 'c1', cwd: '/x/repo', title: 'T' } as any;
     notifyAway({ type: 'event', event: { kind: 'result', text: 'Done' } } as any, () => chat, () => true);
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     expect(sent).not.toHaveBeenCalled();
     vi.advanceTimersByTime(60_000);
     notifyAway({ type: 'event', event: { kind: 'result', text: 'Done again' } } as any, () => chat, () => false);
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     expect(sent).toHaveBeenCalledTimes(1);
   });
 });

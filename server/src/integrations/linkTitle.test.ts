@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearLinkTitles, linkTitleRoute, privateAddress, type Deps } from './linkTitle.js';
+import { advanceTimersByTimeAsync } from '../../../testing.js';
 
 const page = (body: string, status = 200, location?: string) => ({ status, body, location });
 const ask = (url: string | null, deps: Deps) => linkTitleRoute(new URL(`http://x/api/link-title${url == null ? '' : `?url=${encodeURIComponent(url)}`}`), deps);
@@ -32,7 +33,7 @@ describe('link title route', () => {
     expect((await ask('https://a.test/r', hop)).body).toEqual({ title: null });
     vi.useFakeTimers();
     const slow = ask('https://slow.test/', deps((_u, _ip, signal) => new Promise((_r, reject) => signal.addEventListener('abort', () => reject(new Error('aborted'))))));
-    await vi.advanceTimersByTimeAsync(4000);
+    await advanceTimersByTimeAsync(4000);
     expect((await slow).body).toEqual({ title: null });
   });
 
