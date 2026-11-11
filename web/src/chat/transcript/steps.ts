@@ -1,4 +1,5 @@
 import { editCount, stripRound, type EditCount } from '../../../../shared/edits';
+import { isSpecPath, specSlug } from '../../../../shared/specTasks';
 import { buildStageOf } from '../../../../shared/builds';
 import type { ChatEvent } from '../../../../shared/protocol';
 
@@ -195,21 +196,27 @@ export function dayDividers(items: Item[], now: number) {
 
 export const agentBuild = (use: ToolUse) => buildStageOf(str(use.input.subagent_type), str(use.input.description), str(use.input.prompt));
 
-// The agents that show a spec card: the first one per build slug in each turn. Android Steps.kt specCardIds says the same.
+export const itemSpecSlug = (it: Item) => (it.kind === 'file' ? (!it.error && isSpecPath(it.path) ? specSlug(it.path) : undefined) : it.kind === 'agent' ? agentBuild(it.use)?.slug : undefined);
+
+// The item that holds each spec's live card: the latest successful spec write or build agent naming that slug. Android Steps.kt specCardIds says the same.
 export function specCards(items: Item[]) {
-  const shown = new Set<string>();
-  let seen = new Set<string>();
+  const latest = new Map<string, string>();
   for (const it of items) {
-    if (it.kind === 'user' || it.kind === 'auto' || it.kind === 'phase') seen = new Set();
-    else if (it.kind === 'agent') {
-      const slug = agentBuild(it.use)?.slug;
-      if (slug && !seen.has(slug)) {
-        seen.add(slug);
-        shown.add(it.id);
-      }
-    }
+    const slug = itemSpecSlug(it);
+    if (slug) latest.set(slug, it.id);
   }
-  return shown;
+  return new Set(latest.values());
+}
+
+// Per slug, the build agents naming it plus those still running, so a card reloads when one starts or ends.
+export function specBumps(items: Item[]) {
+  const bumps = new Map<string, number>();
+  for (const it of items) {
+    if (it.kind !== 'agent') continue;
+    const slug = agentBuild(it.use)?.slug;
+    if (slug) bumps.set(slug, (bumps.get(slug) ?? 0) + 1 + (it.running ? 1 : 0));
+  }
+  return bumps;
 }
 
 // Replies that arrived after the reader scrolled up, for the Jump to latest button.

@@ -12,7 +12,14 @@ export const attentionPost = (path: string, id: string) => fetch(api(path), { me
 
 export const fetchBuilds = () => fetchJson<BuildRow[]>(api('/api/builds'));
 
-export const fetchBuild = (slug: string) => fetchJson<BuildDetail>(api(`/api/builds/one?slug=${encodeURIComponent(slug)}`));
+// Resolves null when the build does not exist (404).
+export async function fetchBuild(slug: string): Promise<BuildDetail | null> {
+  const r = await fetch(api(`/api/builds/one?slug=${encodeURIComponent(slug)}`));
+  if (r.status === 404) return null;
+  const body = await r.json().catch(() => null);
+  if (!r.ok || body?.error) throw new Error(body?.error ?? `Request failed (${r.status})`);
+  return body;
+}
 
 const postReview = (body: object) => fetchJson<{ ok: true }>(api('/api/builds/review'), { method: 'POST', body: JSON.stringify(body) });
 

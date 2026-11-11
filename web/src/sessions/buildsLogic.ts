@@ -1,5 +1,5 @@
 import type { BadgeSpec } from '../ui/Badge';
-import { reviewDecision, stageName, type BuildDetail, type BuildPhase, type BuildReview, type BuildRow, type BuildState, type Criterion, type ReviewPhase } from '../../../shared/builds';
+import { reviewDecision, stageName, type BuildDetail, type BuildPhase, type BuildReview, type BuildRow, type BuildState, type Criterion, type FlowStep, type ReviewPhase } from '../../../shared/builds';
 import { span } from '../../../shared/util';
 
 type Entry = BuildDetail['entries'][number];
@@ -12,7 +12,11 @@ export const holdBadge: BadgeSpec = { status: 'waiting', label: 'Needs you', rea
 
 export const stageBadge = (e: Entry): BadgeSpec => ({ status: e.status === 'stopped' ? 'skipped' : e.status });
 
-export const criterionBadge = (c: Criterion): BadgeSpec => ({ status: c.result === 'pass' ? 'done' : c.result === 'fail' ? 'failed' : 'skipped' });
+export const criterionBadge = (c: Criterion): BadgeSpec | null => c.result === 'pending' ? null : { status: c.result === 'pass' ? 'done' : c.result === 'fail' ? 'failed' : 'skipped' };
+
+export const FLOW_LABEL: Record<FlowStep['key'], string> = { spec: 'Spec', 'spec-review': 'Spec review', approval: 'Your approval', implement: 'Implement', test: 'Test', 'code-review': 'Code review', merge: 'Merge' };
+
+export const flowBadge = (s: FlowStep): BadgeSpec | null => s.state === 'todo' ? null : s.state === 'waiting' && (s.key === 'approval' || s.result === 'On hold') ? holdBadge : { status: s.state };
 
 export const stageTitle = (e: Entry) => stageName(e.stage) + (e.round > 1 ? ` · round ${e.round}` : '');
 

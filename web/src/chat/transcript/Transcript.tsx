@@ -19,10 +19,9 @@ import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
-import { agentBuild, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, relPath, specCards, stepLabel, stepTone, type Item, type StepItem, type ToolResult, type ToolUse } from './steps';
+import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, stepLabel, stepTone, type Item, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
-import { stageName } from '../../../../shared/builds';
 import { providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
 import { isSpecPath, specSlug } from '../../../../shared/specTasks';
@@ -188,6 +187,7 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
   const { shown, start, from, staging, loading, showEarlier } = useRowWindow(items.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const cards = useMemo(() => specCards(items), [items]);
+  const bumps = useMemo(() => specBumps(items), [items]);
   const mark = useSeenMark(events);
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
   const summaries = useMemo(() => new Map(turnEvents(events).flatMap((t) => { const reply = replyOf(t.events); return reply && !reply.streaming ? [[reply.id, t.events] as const] : []; })), [events]);
@@ -212,10 +212,14 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
         if (i > 0 && folded.has(it.id)) return null;
         const run = runs.get(it.id);
         if (run) return <Explored key={it.id} id={it.id} run={run} cwd={cwd} />;
-        const row = <Row key={it.id} it={it} cwd={cwd} card={cards.has(it.id)} />;
+        const slug = itemSpecSlug(it);
+        const bump = slug ? bumps.get(slug) ?? 0 : 0;
+        const card = cards.has(it.id);
+        const row = <Row key={it.id} it={it} cwd={cwd} card={card} bump={card && it.kind === 'file' ? bump : undefined} />;
         const day = days.get(it.id);
         const turn = summaries.get(it.id);
-        return day || it.id === newId || turn ? <Fragment key={it.id}>{day && <div className="tr-day"><span>{day}</span></div>}{it.id === newId && <div className="tr-new"><span>New</span></div>}{row}{turn && <SummaryLink events={turn} />}</Fragment> : row;
+        const agentCard = card && it.kind === 'agent' && slug ? <SpecCard slug={slug} bump={bump} /> : null;
+        return day || it.id === newId || turn || agentCard ? <Fragment key={it.id}>{day && <div className="tr-day"><span>{day}</span></div>}{it.id === newId && <div className="tr-new"><span>New</span></div>}{row}{agentCard}{turn && <SummaryLink events={turn} />}</Fragment> : row;
       })}
       </div>
     </div>
@@ -262,7 +266,7 @@ function sameItem(a: Item, b: Item): boolean {
   }
 }
 
-export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && sameItem(p.it, n.it));
+export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.bump === n.bump && sameItem(p.it, n.it));
 
 function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
   const [open, setOpen] = useState(false);
@@ -274,7 +278,7 @@ function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
   );
 }
 
-function RowImpl({ it, cwd, settled, card }: { it: Item; cwd: string; settled?: boolean; card?: boolean }) {
+function RowImpl({ it, cwd, settled, card, bump = 0 }: { it: Item; cwd: string; settled?: boolean; card?: boolean; bump?: number }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
@@ -291,9 +295,10 @@ function RowImpl({ it, cwd, settled, card }: { it: Item; cwd: string; settled?: 
       return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':
       if (isSketchPath(it.path) && !it.error) return <SketchCard path={it.path} meta={fileMeta(it, 'Sketch')} />;
-      return isSpecPath(it.path) && !it.error ? <SpecCard id={it.id} slug={specSlug(it.path)} path={it.path} meta={fileMeta(it, 'Spec')} /> : <FileCard it={it} cwd={cwd} />;
+      if (!isSpecPath(it.path) || it.error) return <FileCard it={it} cwd={cwd} />;
+      return card ? <SpecCard slug={specSlug(it.path)} path={it.path} bump={bump} /> : <SpecRow slug={specSlug(it.path)} meta={fileMeta(it, 'Spec')} />;
     case 'agent':
-      return <AgentRow it={it} cwd={cwd} card={card} />;
+      return <AgentRow it={it} cwd={cwd} />;
     case 'blocked':
       return <BlockedCard ev={it.ev} />;
     case 'review':
@@ -370,14 +375,13 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
   );
 }
 
-function AgentRow({ it, cwd, card }: { it: Extract<Item, { kind: 'agent' }>; cwd: string; card?: boolean }) {
+function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: string }) {
   const { use, result, steps, running } = it;
   const canStop = useCan('stopTask');
   const desc = typeof use.input.description === 'string' && use.input.description ? use.input.description : 'Sub-agent';
   const type = typeof use.input.subagent_type === 'string' ? use.input.subagent_type : '';
   const dur = result && !running ? duration(result.at - use.at) : '';
   const badge = running ? <Badge status="running" /> : result?.stopped ? <Badge status="skipped" reason="Stopped" /> : denied(result) ? <Badge status="skipped" reason="Denied" /> : result?.isError ? <Badge status="failed" /> : <Badge status="done" />;
-  const build = card ? agentBuild(use) : null;
   return (
     <TranscriptBox
       id={`agent:${use.id}`}
@@ -388,7 +392,6 @@ function AgentRow({ it, cwd, card }: { it: Extract<Item, { kind: 'agent' }>; cwd
       action={running && canStop ? <IconButton icon="debug-stop" label="Stop agent" size="sm" onClick={() => send({ type: 'stop_task', toolUseId: use.id })} /> : undefined}
       summary={agentSummary(it)}
     >
-      {build && <SpecRow slug={build.slug} meta={`${stageName(build.stage)} · ${build.slug}`} />}
       {steps.length > 0 && <div className="tr-sub">{steps.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}</div>}
       {result && !running && <div className="tr-report"><Markdown text={result.text || '(no output)'} id={it.id} /></div>}
     </TranscriptBox>

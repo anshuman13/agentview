@@ -24,7 +24,7 @@ import { useBuild } from './useBuilds';
 type Report = { title: string; text: string; chat?: { id: string; session: string | null } };
 
 export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: boolean; onBack: () => void }) {
-  const { data: d, failed, reload } = useBuild(slug, shown);
+  const { data: d, failed, gone, reload } = useBuild(slug, shown);
   const cwd = useStore((s) => s.session.cwd);
   const here = findHere(useWorkspace(cwd).folders, cwd);
   const [report, setReport] = useState<Report | null>(null);
@@ -45,7 +45,7 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
       )}
     </div>
   );
-  if (!d) return <>{head}{failed ? <EmptyState size="sm" title="Could not load this build" hint="Try again" action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} /> : <Skeleton />}</>;
+  if (!d) return <>{head}{gone ? <EmptyState size="sm" title="This build was removed" /> : failed ? <EmptyState size="sm" title="Could not load this build" hint="Try again" action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} /> : <Skeleton />}</>;
 
   const stages = byStart(d.entries);
   const rows = stageRows(d.entries, d.reviews);
@@ -92,7 +92,7 @@ export function BuildDetail({ slug, shown, onBack }: { slug: string; shown: bool
           <Section label="Tests" action={testCounts(test.criteria).map((c) => <Badge key={c.status} {...c} />)} />
           <div className="ui-group">
             {test.criteria.length
-              ? test.criteria.map((c) => <Row key={c.n} plain className="bd-clamp" title={c.n} meta={c.evidence} trailing={<Badge {...criterionBadge(c)} />} />)
+              ? test.criteria.map((c) => { const badge = criterionBadge(c); return <Row key={c.n} plain className="bd-clamp" title={c.n} meta={c.evidence} trailing={badge && <Badge {...badge} />} />; })
               : <Row plain title="No per-criterion lines in the report" />}
           </div>
         </>

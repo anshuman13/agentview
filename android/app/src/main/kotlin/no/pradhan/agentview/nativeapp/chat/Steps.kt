@@ -8,6 +8,8 @@ import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.sessions.buildStageOf
+import no.pradhan.agentview.nativeapp.workspace.isSpecPath
+import no.pradhan.agentview.nativeapp.workspace.specSlug
 
 // Port of web/src/chat/steps.ts: the transcript items built from the flat event list.
 @Immutable
@@ -185,16 +187,18 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
 
 fun agentBuild(use: ChatEvent) = buildStageOf(use.input.s("subagent_type"), use.input.s("description"), use.input.s("prompt"))
 
-// web steps.ts specCards: the agents that show a spec card, the first one per build slug in each turn.
+// web steps.ts specCards: the item holding each spec's live card, the latest successful spec write or build agent naming that slug.
 fun specCardIds(items: List<Item>): Set<String> {
-    val shown = mutableSetOf<String>()
-    var seen = mutableSetOf<String>()
-    for (it in items) when (it) {
-        is Item.User, is Item.Phase -> seen = mutableSetOf()
-        is Item.Agent -> agentBuild(it.use)?.slug?.let { slug -> if (seen.add(slug)) shown += it.id }
-        else -> {}
+    val latest = LinkedHashMap<String, String>()
+    for (it in items) {
+        val slug = when (it) {
+            is Item.File -> if (it.error == null && isSpecPath(it.path)) specSlug(it.path) else null
+            is Item.Agent -> agentBuild(it.use)?.slug
+            else -> null
+        }
+        if (slug != null) latest[slug] = it.id
     }
-    return shown
+    return latest.values.toSet()
 }
 
 // Slack-style day dividers: the label to draw above each prompt that starts a new day. A chat that stays within today gets none.

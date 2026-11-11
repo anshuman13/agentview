@@ -1,0 +1,8 @@
+[
+  { "name": "two writes in different turns", "items": [{ "id": "u1", "kind": "user" }, { "id": "f1", "kind": "file", "path": ".claude/specs/x.md" }, { "id": "u2", "kind": "user" }, { "id": "f2", "kind": "file", "path": ".claude/specs/x.md" }], "expected": ["f2"] },
+  { "name": "an agent after a write", "items": [{ "id": "f1", "kind": "file", "path": ".claude/specs/x.md" }, { "id": "a1", "kind": "agent", "subagentType": "pm", "prompt": "Write .claude/specs/x.md" }], "expected": ["a1"] },
+  { "name": "a write after an agent", "items": [{ "id": "a1", "kind": "agent", "subagentType": "pm", "prompt": "Write .claude/specs/x.md" }, { "id": "f1", "kind": "file", "path": ".claude/specs/x.md" }], "expected": ["f1"] },
+  { "name": "several agents for one slug", "items": [{ "id": "a1", "kind": "agent", "subagentType": "pm", "prompt": "Write .claude/specs/x.md" }, { "id": "a2", "kind": "agent", "subagentType": "spec-reviewer", "prompt": "Review the spec at .claude/specs/x.md" }], "expected": ["a2"] },
+  { "name": "one card per slug", "items": [{ "id": "f1", "kind": "file", "path": ".claude/specs/x.md" }, { "id": "f2", "kind": "file", "path": ".claude/specs/y.md" }, { "id": "a1", "kind": "agent", "subagentType": "pm", "prompt": "Write .claude/specs/x.md" }], "expected": ["a1", "f2"] },
+  { "name": "other files and agents", "items": [{ "id": "f1", "kind": "file", "path": "src/a.ts" }, { "id": "a1", "kind": "agent", "subagentType": "general-purpose", "prompt": "look around" }], "expected": [] }
+]

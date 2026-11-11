@@ -3,7 +3,7 @@ import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
 import { readBox, saveBox } from './boxOpen';
 
-export function TranscriptBox({ id, title, meta, state, action, summary, defaultOpen = false, className, children }: {
+export function TranscriptBox({ id, title, meta, state, action, summary, defaultOpen = false, onToggle, className, children }: {
   id: string;
   title: ReactNode;
   meta?: ReactNode;
@@ -11,6 +11,7 @@ export function TranscriptBox({ id, title, meta, state, action, summary, default
   action?: ReactNode;
   summary?: ReactNode;
   defaultOpen?: boolean;
+  onToggle?: (open: boolean) => void;
   className?: string;
   children?: ReactNode;
 }) {
@@ -18,6 +19,7 @@ export function TranscriptBox({ id, title, meta, state, action, summary, default
   const toggle = () => {
     saveBox(id, !open);
     setOpen(!open);
+    onToggle?.(!open);
   };
   return (
     <div className={`tr-box tr-act${className ? ` ${className}` : ''}`}>

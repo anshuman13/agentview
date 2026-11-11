@@ -2,8 +2,9 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
 import { Explored, SinceBox } from './Transcript';
-import { SpecCard } from './SpecCard';
-import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, specCards, stepLabel, stepTone, newMarker, newReplies, dayDividers } from './steps';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, specCards, stepLabel, stepTone, newMarker, newReplies, dayDividers, type Item } from './steps';
 import { replyLine, sumEdits } from '../../../../shared/edits';
 import { buildTurns } from './turns';
 import { replyOf, summarySteps, turnEvents, turnSummary } from './summary';
@@ -238,23 +239,22 @@ describe('dayDividers', () => {
 });
 
 describe('specCards', () => {
-  const run = (description: string) => tool('Agent', { description, prompt: '', subagent_type: 'general-purpose' });
-  it('shows the first agent per build slug in a turn and again after the next prompt', () => {
-    const events = [user('go'), run('pm:x'), run('review:x'), run('impl:y'), user('next'), run('review:x'), run('look around')];
-    const ids = events.filter((e) => e.kind === 'tool_use').map((e) => e.id);
-    expect([...specCards(buildTranscript(events))]).toEqual([ids[0], ids[2], ids[3]]);
-  });
+  type Case = { name: string; items: { id: string; kind: 'user' | 'file' | 'agent'; path?: string; subagentType?: string; prompt?: string }[]; expected: string[] };
+  const cases = JSON.parse(readFileSync(path.join(__dirname, '../../../../shared/fixtures/spec-cards.json'), 'utf8')) as Case[];
+  for (const c of cases) {
+    it(c.name, () => {
+      const items = c.items.map((i) => i.kind === 'agent' ? { kind: 'agent', id: i.id, use: { id: i.id, kind: 'tool_use', name: 'Agent', input: { subagent_type: i.subagentType, prompt: i.prompt }, summary: '', at: 0 }, running: false, progress: null, steps: [] } : i.kind === 'file' ? { kind: 'file', id: i.id, path: i.path, count: { add: 0, del: 0 }, uses: [] } : { kind: 'user', id: i.id, text: '', at: 0 }) as Item[];
+      expect([...specCards(items)]).toEqual(c.expected);
+    });
+  }
 });
 
 describe('collapsible boxes', () => {
-  it('draw one header button with aria-expanded for a spec card, an Explored group and Since you left', () => {
-    const spec = renderToStaticMarkup(createElement(SpecCard, { id: 'f1', slug: 'x', path: '/w/app/.claude/specs/x.md', meta: 'Spec written' }));
+  it('draw one header button with aria-expanded for an Explored group and Since you left', () => {
     const explored = renderToStaticMarkup(createElement(Explored, { id: 's1', run: [], cwd }));
     const since = renderToStaticMarkup(createElement(SinceBox, { chat: 'c1', recap: 'Since you last looked: 1 turn', onOpen: () => {}, onDismiss: () => {} }));
-    for (const html of [spec, explored]) {
-      expect(html.match(/<button/g)).toHaveLength(1);
-      expect(html).toContain('aria-expanded="false"');
-    }
+    expect(explored.match(/<button/g)).toHaveLength(1);
+    expect(explored).toContain('aria-expanded="false"');
     expect(since.match(/aria-expanded="true"/g)).toHaveLength(1);
   });
 });

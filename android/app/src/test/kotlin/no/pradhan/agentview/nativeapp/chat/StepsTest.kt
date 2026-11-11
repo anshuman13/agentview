@@ -1,7 +1,12 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import java.io.File
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
@@ -18,10 +23,19 @@ class StepsTest {
     private fun res(id: String, of: String, text: String = "", err: Boolean = false, at: Long = 0) = ChatEvent(id, "tool_result", toolUseId = of, text = text, isError = err, at = at)
 
     @Test
-    fun specCardsGoToTheFirstAgentPerSlugInATurn() {
-        val run = { id: String, description: String -> use(id, "Agent", obj("description" to description, "subagent_type" to "general-purpose")) }
-        val events = listOf(ChatEvent("u1", "user", text = "go"), run("a1", "pm:x"), run("a2", "review:x"), run("a3", "impl:y"), ChatEvent("u2", "user", text = "next"), run("a4", "review:x"), run("a5", "look around"))
-        assertEquals(setOf("a1", "a3", "a4"), specCardIds(buildTranscript(events)))
+    fun specCardsGoToTheLatestItemPerSlug() {
+        val cases = Json.parseToJsonElement(File("../../shared/fixtures/spec-cards.json").readText()).jsonArray.map { it.jsonObject }
+        for (c in cases) {
+            val items = c.getValue("items").jsonArray.map { it.jsonObject }.map { i ->
+                fun str(k: String) = i[k]?.jsonPrimitive?.content ?: ""
+                when (str("kind")) {
+                    "user" -> Item.User(str("id"), "", 0, false, false)
+                    "file" -> Item.File(str("id"), str("path"), 0, 0, emptyList(), null, false)
+                    else -> Item.Agent(str("id"), use(str("id"), "Agent", obj("subagent_type" to str("subagentType"), "prompt" to str("prompt"))), null, false, null, emptyList())
+                }
+            }
+            assertEquals(c.getValue("name").jsonPrimitive.content, c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }.toSet(), specCardIds(items))
+        }
     }
 
     @Test
