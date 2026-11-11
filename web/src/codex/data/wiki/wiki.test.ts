@@ -3,7 +3,7 @@ import type { ItemRow } from '../sync';
 import { dayLabel } from '../dates';
 import { clock } from '../../../../../shared/util';
 import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
-import { actionCount, briefFor, filterMeetings, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, joinMinutes, meetingBadge, meetingMeta, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from '../meetings/meetings';
+import { briefFor, decisionsWith, commitmentsOf, priorWith, seriesOf, seriesMeetings, seriesRepeats, seriesTitle, joinMinutes, meetingBadge, meetingMeta, openQuestions, searchMeetings, topicTimeline, trackedTopics } from '../meetings/meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -133,15 +133,6 @@ describe('meetings', () => {
   const meeting = (id: string, starts_at: number): Meeting => ({
     ...common(id), title: id, starts_at, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null, links: null,
   });
-  const action = (id: string, meeting_id: string, status: string): ItemRow => ({
-    ...common(id), meeting_id, title: id, text: null, source: 'action', source_url: null, people: null, at: null, status, rolls: null, rolled_from: null, rank: null,
-  });
-
-  it('groups meetings that have started by day, newest day first', () => {
-    const g = groupMeetings([meeting('later', at(2, 9)), meeting('soon', at(0, 14)), meeting('today', at(0, 10)), meeting('past2', at(-1, 14)), meeting('past1', at(-1, 9)), meeting('old', at(-3, 9))], now);
-    expect(g[0].label).toBe('Today');
-    expect(g.map((x) => x.rows.map((m) => m.id))).toEqual([['today'], ['past1', 'past2'], ['old']]);
-  });
 
   it('searches decisions and transcript hits as well as titles', () => {
     const a = { ...meeting('Planning', at(0, 9)), decisions: 'Ship the Pricing page' };
@@ -158,11 +149,6 @@ describe('meetings', () => {
     const m = { ...meeting('Sync', at(0, 10)), summary: 'Agreed the Q4 Budget', notes: 'hiring plan', transcript: 'done' };
     expect(trackedTopics(m, ['budget', 'hiring', 'launch', 'q4 budget', 'done', ' '])).toEqual(['budget', 'hiring', 'q4 budget']);
     expect(trackedTopics(m, [])).toEqual([]);
-  });
-
-  it('leaves actions assigned to others out of the counts', () => {
-    const actions = [{ ...action('a1', 'm', 'open'), assignee: 'Ada Lovelace' }, { ...action('a2', 'm', 'done'), assignee: 'Ada Lovelace' }, { ...action('a3', 'm', 'open'), assignee: null }, { ...action('a4', 'm', 'done'), assignee: '' }, { ...action('a5', 'm', 'suggested'), assignee: 'Ada Lovelace' }];
-    expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, done: 1, review: 1, unassigned: 0, dismissed: 0 });
   });
 
   it('counts whole minutes in the 10 minute join window', () => {
@@ -190,23 +176,6 @@ describe('meetings', () => {
     expect(meetingBadge(m({ recorded_ms: 60000 }), now)).toBeNull();
     expect(meetingBadge(m({}), now)).toBeNull();
     expect(meetingBadge(m({ starts_at: at(0, 13), ends_at: at(0, 14), recorded_ms: 1 }), now)).toBeNull();
-  });
-
-  it('tells where a meeting is between the calendar and its transcript', () => {
-    const cal = (patch: Partial<Meeting>) => ({ ...meeting('cal:x', at(0, 9)), ends_at: at(0, 10), ...patch });
-    expect(meetingState(cal({ starts_at: at(0, 13), ends_at: at(0, 14) }), now)).toBe('upcoming');
-    expect(meetingState(cal({ ends_at: at(0, 13) }), now)).toBe('live');
-    expect(meetingState(cal({}), now)).toBe('waiting');
-    expect(meetingState(cal({ summary: 'x' }), now)).toBe('done');
-    expect(meetingState(cal({ summary: 'x', transcript: 'waiting' }), now)).toBe('waiting');
-    expect(meetingState(cal({ transcript: 'missing' }), now)).toBe('missing');
-    expect(meetingState(meeting('notes', at(0, 9)), now)).toBe('manual');
-  });
-
-  it('counts my actions per meeting', () => {
-    const actions = [action('a1', 'm', 'open'), action('a2', 'm', 'done'), action('a3', 'm', 'suggested'), action('a7', 'm', 'unassigned'), action('a8', 'm', 'dismissed'), action('a4', 'n', 'open'), { ...action('a5', 'm', 'done'), profile: 'personal' as const }, { ...action('a6', 'm', 'open'), deleted: 1 }];
-    expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, done: 1, review: 1, unassigned: 1, dismissed: 1 });
-    expect(actionCount(actions, { profile: 'personal', id: 'm' })).toEqual({ total: 1, done: 1, review: 0, unassigned: 0, dismissed: 0 });
   });
 });
 
@@ -310,11 +279,6 @@ describe('seriesOf', () => {
     expect(ids(cur, [mtg('w', 'Team stand-up', 100, { people: four, profile: 'personal' })])).toEqual([]);
   });
 
-  it('marks only meetings with a matching partner as in a series', () => {
-    const all = [mtg('a', '1:1 Oct 1', 100, { people: 'Ola' }), mtg('b', '1:1 Oct 8', 200, { people: 'Ola' }), mtg('c', '1:1 Oct 9', 300, { people: 'Kari' }), mtg('d', 'Retro', 400, { people: 'Ola' }), mtg('e', '1:1', 500, { people: 'Ola', profile: 'personal' })];
-    expect([...inSeries(all)].sort()).toEqual(['worka', 'workb']);
-  });
-
   it('lists live past members of one profile and title, newest first, merging disjoint guests', () => {
     const all = [
       mtg('a', '1:1 Oct 1', 100, { people: 'Ola' }), mtg('b', '1:1 Oct 8', 300, { people: 'Kari' }), mtg('c', '1:1', 200, { people: 'Ola' }), mtg('d', '1:1', 50, { people: 'Kari' }),
@@ -412,32 +376,5 @@ describe('staleFacts', () => {
     const meeting = { ...common('m'), title: 'Hiring sync', starts_at: 190 * day, summary: null, decisions: null } as unknown as Meeting;
     expect(staleFacts(fs, ps, [], now).map((f) => f.id)).toEqual(['old', 'hire']);
     expect(staleFacts(fs, ps, [meeting], now).map((f) => f.id)).toEqual(['old']);
-  });
-});
-
-describe('filterMeetings', () => {
-  const m = (id: string, title: string, startsAt: number, extra: Partial<Meeting> = {}): Meeting => ({
-    ...common(id), title, starts_at: startsAt, ends_at: startsAt + 1, people: '["Kari"]', calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null, links: null, ...extra,
-  });
-  const task = (id: string, meetingId: string, status: string): ItemRow => ({
-    ...common(id), title: id, text: null, source: 'meeting', source_url: null, people: null, at: null, status, meeting_id: meetingId, rolls: null, rolled_from: null, rank: null,
-  });
-  const list = [
-    m('cal:a', 'Sync', 10, { organizer_me: 1 }),
-    m('cal:b', 'Sync', 20, { organizer_me: 0, transcript: 'missing' }),
-    m('cal:c', 'Solo', 30, { transcript: 'waiting' }),
-  ];
-  const items = [task('t1', 'cal:a', 'open'), task('t2', 'cal:c', 'done')];
-  const ids = (chips: Parameters<typeof filterMeetings>[2]) => filterMeetings(list, items, chips, 1000).map((x) => x.id);
-  it('keeps what each chip describes', () => {
-    expect(ids([])).toEqual(['cal:a', 'cal:b', 'cal:c']);
-    expect(ids(['Mine'])).toEqual(['cal:a']);
-    expect(ids(['With actions'])).toEqual(['cal:a']);
-    expect(ids(['Not recorded'])).toEqual(['cal:b']);
-    expect(ids(['Series'])).toEqual(['cal:a', 'cal:b']);
-  });
-  it('intersects chips', () => {
-    expect(ids(['Series', 'Not recorded'])).toEqual(['cal:b']);
-    expect(ids(['Mine', 'Not recorded'])).toEqual([]);
   });
 });
