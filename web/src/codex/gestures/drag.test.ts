@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { stubGlobal, unstubAllGlobals } from '../../../../testing';
 
 vi.mock('react', () => ({ useRef: (v: unknown) => ({ current: v }), useState: (v: unknown) => [v, () => {}] }));

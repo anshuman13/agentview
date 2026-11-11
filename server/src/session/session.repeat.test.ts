@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 import type { AgentSession } from './session.js';
 import { claudeSession } from '../agent/claude/driver.js';
 import { BIG_BRO, type ChatEvent } from '../../../shared/protocol.js';

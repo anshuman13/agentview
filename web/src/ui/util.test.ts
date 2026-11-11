@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { setSystemTime } from '../../../testing';
 import { ago, escapeHtml, markSegments, matchLabel, spendLines, stepMatch, weekPace } from './util';
 

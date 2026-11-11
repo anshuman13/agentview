@@ -1,18 +1,13 @@
-// Test helpers that work under bun test and vitest alike.
-import { vi } from 'vitest';
+// Helpers for what bun:test's vi lacks.
+import { setSystemTime as setBunTime, vi } from 'bun:test';
 
-const runner = 'bun:test';
-const bun: { setSystemTime(at?: Date): void } | null = process.versions.bun ? await import(runner) : null;
-const realTimeout = globalThis.setTimeout;
 const realImmediate = globalThis.setImmediate;
 const globals = new Map<string, PropertyDescriptor | undefined>();
 const envs = new Map<string, string | undefined>();
 
 // Without a time, goes back to the real clock.
 export function setSystemTime(at?: Date | number | string) {
-  if (bun) bun.setSystemTime(at === undefined ? undefined : new Date(at));
-  else if (at === undefined) vi.useRealTimers();
-  else vi.setSystemTime(at);
+  setBunTime(at === undefined ? undefined : new Date(at));
 }
 
 export function stubGlobal(key: string, value: unknown) {
@@ -36,11 +31,11 @@ export function unstubAllEnvs() {
   envs.clear();
 }
 
-const tick = () => new Promise<void>((r) => (realImmediate ? realImmediate(r) : realTimeout(r, 0)));
+// Fake timers freeze every setTimeout, but not setImmediate.
+const tick = () => new Promise<void>((r) => realImmediate(r));
 
 // Moves fake time forward in small steps, letting promises and I/O settle between steps.
 export async function advanceTimersByTimeAsync(ms: number) {
-  if (!bun) return void (await vi.advanceTimersByTimeAsync(ms));
   await tick();
   for (let left = ms; left > 0; ) {
     const step = Math.min(left, 10);
@@ -50,17 +45,17 @@ export async function advanceTimersByTimeAsync(ms: number) {
   }
 }
 
+// Counts tries: fake timers also freeze performance.now().
 export async function waitFor<T>(check: () => T | Promise<T>, { timeout = 1000, interval = 20 } = {}): Promise<T> {
-  // Counts tries: Bun's fake timers freeze performance.now() and every setTimeout, but not setImmediate.
   for (let left = Math.ceil(timeout / interval); ; left--) {
     try {
       return await check();
     } catch (err) {
       if (left <= 0) throw err;
-      if (bun && vi.isFakeTimers()) {
-        (globalThis as unknown as { Bun: { sleepSync(ms: number): void } }).Bun.sleepSync(interval);
+      if (vi.isFakeTimers()) {
+        Bun.sleepSync(interval);
         await tick();
-      } else await new Promise((r) => realTimeout(r, interval));
+      } else await Bun.sleep(interval);
     }
   }
 }

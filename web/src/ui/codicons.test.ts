@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { codiconNames, subsetCodicons, usedCodicons } from '../../codicons';
 
 const css = readFileSync(path.join(__dirname, '../../../node_modules/@vscode/codicons/dist/codicon.css'), 'utf8');

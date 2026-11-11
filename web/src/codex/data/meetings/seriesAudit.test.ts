@@ -1,6 +1,6 @@
 process.env.TZ = 'Europe/Oslo';
 
-import { expect, it } from 'vitest';
+import { expect, it } from 'bun:test';
 import { seriesAudit } from './seriesAudit';
 import type { ItemRow } from '../sync';
 import type { Meeting } from '../wiki/wiki';

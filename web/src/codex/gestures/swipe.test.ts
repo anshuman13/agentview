@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { swipeEnd } from './Swipe';
 
 const all = { right: true, left: true, delete: true };

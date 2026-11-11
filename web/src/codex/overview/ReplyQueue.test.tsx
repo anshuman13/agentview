@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import type { ItemRow } from '../data/sync';
 import { askKey, replyQueue, snoozeOptions, staleAsks } from './ReplyQueue';
 

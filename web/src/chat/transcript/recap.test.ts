@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { catchUp, foldedRounds, outcomeCounts, recap, recapText, roundsSince } from './recap';
 import type { ChatEvent, Round } from '../../../../shared/protocol';
 

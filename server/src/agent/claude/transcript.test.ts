@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { cacheFrom, historyFrom, toolUseEvent, usageFrom } from './transcript.js';
 import { editCount } from '../../../../shared/edits.js';
 

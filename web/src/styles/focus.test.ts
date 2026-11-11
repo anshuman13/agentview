@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 
 const dir = join(__dirname, 'components')
 const strip = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')

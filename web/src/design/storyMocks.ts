@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { vi } from 'vitest';
+import { vi } from 'bun:test';
 import { stubGlobal } from '../../../testing';
 
 const react = createRequire(import.meta.url)('react') as typeof import('react');

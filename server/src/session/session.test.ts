@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import type { AgentSession } from './session.js';
 import { prFrom } from './pr.js';
 import { busy } from '../host/restore.js';

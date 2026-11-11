@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'bun:test';
 import { profileOf } from '../claude/accounts.js';
 
 const hub = { rows: vi.fn(), push: vi.fn() };

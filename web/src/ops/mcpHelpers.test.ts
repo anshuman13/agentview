@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import type { ChatEvent } from '../../../shared/protocol';
 import { argsOf, fieldsOf, initialValues, mcpCalls, merge, services, stateOf, toggleConnector, toolId } from './mcpHelpers';
 

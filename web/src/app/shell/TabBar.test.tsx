@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createRequire } from 'node:module';
 

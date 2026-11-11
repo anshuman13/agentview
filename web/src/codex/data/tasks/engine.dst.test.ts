@@ -1,6 +1,6 @@
 process.env.TZ = 'Europe/Oslo';
 
-import { expect, it } from 'vitest';
+import { expect, it } from 'bun:test';
 import { parseWhen } from './engine';
 
 it('adds calendar days across the spring-forward change', () => {

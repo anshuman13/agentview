@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createRequire } from 'node:module';
 import * as data from './data';
@@ -11,18 +11,18 @@ import type { Meeting } from './data/wiki/wiki';
 const mocks = { needs: [] as unknown[], queue: [] as unknown[] };
 
 const react = createRequire(import.meta.url)('react') as typeof import('react');
-vi.mock('react', async (importOriginal) => {
-  const real = importOriginal ? await importOriginal<typeof import('react')>() : react;
+vi.mock('react', () => {
+  const real = react;
   const { useSyncExternalStore } = real;
   return { ...real, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) };
 });
-vi.mock('./data', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : data), useAssistantData: () => ({ items: [] }), useAssistantStore: () => ({}), useSyncGate: () => ({ loading: false }) }));
-vi.mock('./useActions', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : actions), useActions: () => ({}) }));
-vi.mock('./tasks/AddSheet', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : addSheet), AddSheet: () => null }));
-vi.mock('./overview/ReplyQueue', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : replies), replyQueue: () => mocks.queue }));
+vi.mock('./data', () => ({ ...data, useAssistantData: () => ({ items: [] }), useAssistantStore: () => ({}), useSyncGate: () => ({ loading: false }) }));
+vi.mock('./useActions', () => ({ ...actions, useActions: () => ({}) }));
+vi.mock('./tasks/AddSheet', () => ({ ...addSheet, AddSheet: () => null }));
+vi.mock('./overview/ReplyQueue', () => ({ ...replies, replyQueue: () => mocks.queue }));
 vi.mock('./overview/Review', () => ({ Review: () => null }));
 vi.mock('./overview/NeedsYouSheet', () => ({ NeedsYouSheet: () => null }));
-const realNeedsYou = process.versions.bun ? await import('./NeedsYou') : undefined;
+const realNeedsYou = await import('./NeedsYou');
 vi.mock('./NeedsYou', () => ({ useNeedsYou: () => ({ rows: mocks.needs }) }));
 
 const { Overview } = await import('./Overview');
@@ -135,7 +135,7 @@ describe('Overview', () => {
   });
 
   it('renders no row badge in the Needs you sheet', async () => {
-    const { NeedsYou } = realNeedsYou ?? await vi.importActual<typeof import('./NeedsYou')>('./NeedsYou');
+    const { NeedsYou } = realNeedsYou;
     const ask = { ...task('a', 'Confirm the venue', at(-60)), status: 'suggested' } as ItemRow;
     const rows = [
       { kind: 'overdue', row: task('o', 'Renew pass', at(-3000)), keys: [] },

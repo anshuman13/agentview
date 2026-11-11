@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { edited, hasDay, isQuestion, latestDigest, moved, newCapture, nextNine, parseWhen, runSync, split, splitTitle, stripWhen } from './engine';
 import { rowToChange, type ItemRow } from '../sync';
 

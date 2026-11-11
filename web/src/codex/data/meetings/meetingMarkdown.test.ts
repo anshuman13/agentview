@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { agendaMarkdown, decisionsMarkdown, followUpText, hasContent, personMarkdown, toMarkdown } from './meetingMarkdown';
 import type { ItemRow } from '../sync';
 import type { Decision, Meeting } from '../wiki/wiki';

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 const api = { fetchJson: vi.fn() };
 vi.mock('../../../app/api', () => ({ apiUrl: (p: string) => p, fetchJson: api.fetchJson }));

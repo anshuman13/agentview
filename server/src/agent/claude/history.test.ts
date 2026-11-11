@@ -1,7 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 const config = await mkdtemp(path.join(os.tmpdir(), 'av-wf-'));
 process.env.CLAUDE_CONFIG_DIR = config;

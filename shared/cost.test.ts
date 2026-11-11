@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import type { ChatEvent } from './protocol.js';
 import { costByModel } from './cost.js';
 

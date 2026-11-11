@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it } from 'bun:test';
 import { cadenceOf, countdown, isSolo, meetingState, nextInSeries, seriesPeople } from './meetings';
 import type { Meeting } from '../wiki/wiki';
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { stubGlobal } from '../../../testing';
 import type { BuildRow } from '../../../shared/builds';
@@ -15,7 +15,7 @@ stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem:
 stubGlobal('location', { search: '', hash: '' });
 
 const realStore = await import('./store');
-vi.mock('./store', async (orig) => ({ ...(orig ? await orig<object>() : realStore), useStore: (select: (s: unknown) => unknown) => select(store) }));
+vi.mock('./store', () => ({ ...realStore, useStore: (select: (s: unknown) => unknown) => select(store) }));
 
 const { BuildList } = await import('../sessions/Builds');
 const { Runs } = await import('../sessions/Runs');

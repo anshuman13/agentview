@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { WebSocket } from 'ws';
 import { frame, hooks, resetFrames, viewers } from './chrome.js';
 

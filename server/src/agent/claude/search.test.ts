@@ -2,7 +2,7 @@ import { appendFileSync, mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileS
 import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'bun:test';
 import { lineHit, searchChats, searchMessages } from './search.js';
 
 const root = mkdtempSync(path.join(os.tmpdir(), 'agentview-search-'));

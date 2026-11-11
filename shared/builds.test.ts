@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { buildStageOf, buildSummary, criteriaOf, findingsOf, pipelineOf, verdictOf, type BuildEntry, type BuildReview } from './builds.js';
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'builds.json'), 'utf8'));

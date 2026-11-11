@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import type { ChatEvent, ServerMessage } from '../../../../shared/protocol.js';
 import { historyEvents, splitDiff } from './events.js';
 import type { ThreadItem } from './protocol.js';

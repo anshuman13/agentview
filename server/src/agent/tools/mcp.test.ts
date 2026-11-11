@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtempSync } from 'node:fs';
 import { z } from 'zod';
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { lines } from '../../socket.js';
 import { callTool, TOOLS } from './index.js';
 import { callHost, mcpReply } from './mcp.js';

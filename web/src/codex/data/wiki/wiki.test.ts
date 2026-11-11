@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import type { ItemRow } from '../sync';
 import { dayLabel } from '../dates';
 import { clock } from '../../../../../shared/util';

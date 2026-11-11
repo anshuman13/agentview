@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { stubGlobal } from '../../../../testing';
 import { readBox, saveBox } from './boxOpen';
 

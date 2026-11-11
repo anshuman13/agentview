@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'bun:test';
 import { askText, guessProfile } from './ask';
 import type { ItemRow } from '../sync';
 import type { Meeting } from '../wiki/wiki';

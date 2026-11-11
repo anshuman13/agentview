@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { CodexDriver } from './driver.js';
 
 function setup(running: boolean, steer: () => Promise<unknown>) {

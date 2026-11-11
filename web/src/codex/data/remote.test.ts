@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { TABLE_FIELDS } from './sync';
 import { RemoteStore } from './remote';
 import { advanceTimersByTimeAsync, stubGlobal, unstubAllGlobals } from '../../../../testing';

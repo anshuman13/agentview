@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { Approvals, permissionTitle } from './approvals.js';
 import type { ServerMessage, ServerState } from '../../../shared/protocol.js';
 

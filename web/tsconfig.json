@@ -11,5 +11,6 @@
     "isolatedModules": true,
     "types": ["node"]
   },
-  "include": ["src", "../shared"]
+  "include": ["src", "../shared"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/design/storyMocks.ts", "../shared/**/*.test.ts"]
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { hookLine } from './hooks';
 
 const hook = (over: Partial<Parameters<typeof hookLine>[0]>) => ({ hook_name: 'PreToolUse:Bash', hook_event: 'PreToolUse', outcome: 'error' as const, exit_code: 2, stderr: '', output: '', stdout: '', ...over });

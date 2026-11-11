@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { afterNextMeeting, atRisk, defaultBlock, estimateMin, fitBlock, freeMinutes, nextFreeSlot, packDay, suggestEstimate, takeEstimate, timedMeetings, weekFreeMinutes, withEstimate, workGaps } from './plan';
 import { parseWhen, stripWhen } from './engine';
 import { parseRepeat } from './recur';

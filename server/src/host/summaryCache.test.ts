@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'bun:test';
 import { chatCost, costByModel } from '../../../shared/cost.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { costScans, costsOf, modelField } from './summaryCache.js';

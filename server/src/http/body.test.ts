@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import type http from 'node:http';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { BadRequest, parseObject, savePaste } from './body.js';
 import { waitFor } from '../../../testing.js';
 

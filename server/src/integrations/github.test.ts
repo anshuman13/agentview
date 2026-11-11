@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 const calls: string[][] = [];
 const pr = (number: number, updatedAt = '2026-10-23T10:00:00Z') => ({ number, title: `PR ${number}`, author: { login: 'me' }, headRefName: 'b', isDraft: false, reviewDecision: '', statusCheckRollup: [], updatedAt, url: '', additions: 1, deletions: 0 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { KEYBOARD_MIN, keyboardInset } from './keyboardInset';
 
 describe('keyboardInset', () => {

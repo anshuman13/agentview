@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { templateFor } from './summaryTemplates';
 import type { Meeting } from '../wiki/wiki';
 

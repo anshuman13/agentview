@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
 import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import * as registry from '../agent/registry.js';
@@ -10,8 +10,8 @@ const realRegistry = { ...registry };
 vi.mock('./listing.js', () => ({ runs: mocks.runs, broadcastLive: vi.fn(), learning: { later: vi.fn(), forget: vi.fn() }, seenRunning: () => false, summaryOf: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: vi.fn() }));
 vi.mock('./watchFiles.js', () => ({ watchFiles: () => ({ close() {} }) }));
-vi.mock('../agent/registry.js', async (orig?: () => Promise<typeof registry>) => {
-  const real = orig ? await orig() : realRegistry;
+vi.mock('../agent/registry.js', () => {
+  const real = realRegistry;
   return { ...real, provider: (id: Parameters<typeof real.provider>[0]) => ({ ...real.provider(id), verifyLimits: async () => {} }) };
 });
 

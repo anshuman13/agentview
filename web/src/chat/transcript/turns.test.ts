@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { buildTurns, chatCost, createTurnsBuilder } from './turns';
 import type { ChatEvent } from '../../../../shared/protocol';
 

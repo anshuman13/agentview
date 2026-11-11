@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { blockLink, designSearch, parseDesignQuery } from './url';
 
 describe('design url', () => {

@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it } from 'bun:test';
 import { addCheck, checkItems, moveCheck, noteView, toggleCheck } from './taskChecklist';
 
 it('flips only the nth checklist line', () => {

@@ -1,6 +1,6 @@
 import { createElement, type ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { MenuItem } from './Menu';
 import { Row } from './Row';
 

@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'bun:test';
 import type { HookInput } from '../agent/claude/sdkTypes.js';
 import { ToolHooks } from '../agent/claude/toolHooks.js';
 import { UNATTENDED_DOMAINS, unattendedLimits } from '../settings.js';

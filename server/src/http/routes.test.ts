@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import type http from 'node:http';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
 import type { LiveChat } from '../../../shared/protocol.js';
 
 const mocks = {

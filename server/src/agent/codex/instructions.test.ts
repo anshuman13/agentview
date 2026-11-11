@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, expect, it } from 'vitest';
+import { afterAll, expect, it } from 'bun:test';
 import { codexInstructionFiles } from './instructions.js';
 
 const root = mkdtempSync(path.join(os.tmpdir(), 'agentview-codex-'));

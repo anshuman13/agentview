@@ -1,4 +1,4 @@
-import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'bun:test';
 import { callTool, data, expandDef, listTools, pidOf, stopAll, text } from './mcpClient.js';
 import { stubGlobal, unstubAllGlobals } from '../../../testing.js';
 

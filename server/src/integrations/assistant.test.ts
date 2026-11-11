@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { applyHubChanges, assistantRoute, learnEvents, type HubRow } from './assistant.js';
 import { stubGlobal, unstubAllGlobals } from '../../../testing.js';
 

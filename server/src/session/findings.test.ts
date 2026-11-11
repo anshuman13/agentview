@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { dismissFinding, findingKey, getFindings, parseFindings, reviewTarget, saveFindings } from './findings.js';
 
 describe('review findings', () => {

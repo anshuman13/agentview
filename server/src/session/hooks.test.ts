@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'bun:test';
 import { claudeSession } from '../agent/claude/driver.js';
 import { globMatch, Hooks, parseHooks } from './hooks.js';
 

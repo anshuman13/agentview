@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { BuildEntry } from '../../../shared/builds.js';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 import { claudeSession } from '../agent/claude/driver.js';

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { stubGlobal, unstubAllGlobals } from '../../../testing';
 import type { RunDiff } from './sessionApi';

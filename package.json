@@ -9,12 +9,11 @@
     "build": "npm run build -w web && npm run build -w server",
     "start": "npm run start -w server",
     "up": "./start.sh",
-    "test": "vitest run",
+    "test": "bun test --parallel ./server ./shared ./web",
     "app": "npm run dev -w app",
     "native": "./android/build.sh"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0",
-    "vitest": "^3.2.7"
+    "concurrently": "^9.1.0"
   }
 }

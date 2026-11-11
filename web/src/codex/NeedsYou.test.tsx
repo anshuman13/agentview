@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createRequire } from 'node:module';
 import type { ItemRow } from './data/sync';
@@ -8,20 +8,20 @@ import * as view from './view';
 const mocks = { store: {} as Record<string, ReturnType<typeof vi.fn>>, snack: vi.fn() };
 
 const react = createRequire(import.meta.url)('react') as typeof import('react');
-vi.mock('react', async (importOriginal) => {
-  const real = importOriginal ? await importOriginal<typeof import('react')>() : react;
+vi.mock('react', () => {
+  const real = react;
   const { useSyncExternalStore } = real;
   return { ...real, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) };
 });
-vi.mock('./data', async (importOriginal) => ({
-  ...(importOriginal ? await importOriginal<object>() : data),
+vi.mock('./data', () => ({
+  ...data,
   useAssistantStore: () => mocks.store,
   useAssistantData: () => ({ meetings: [], chats: [], briefs: [], items: [] }),
   useCodex: () => ({ facts: [] }),
 }));
 vi.mock('./useActions', () => ({ useActions: () => ({}) }));
 vi.mock('../ui/haptic', () => ({ haptic: () => {} }));
-vi.mock('./view', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : view), showSnack: (...args: unknown[]) => mocks.snack(...args) }));
+vi.mock('./view', () => ({ ...view, showSnack: (...args: unknown[]) => mocks.snack(...args) }));
 vi.mock('../ui/Row', () => ({ Row: ({ title, menu }: { title: string; menu?: React.ReactNode }) => <div>{title}{menu}</div> }));
 vi.mock('./meetings/ActionRow', () => ({ ActionRow: ({ row, extraItems }: { row: ItemRow; extraItems?: (c: (f: () => void) => () => void) => React.ReactNode }) => <div>{row.title}{extraItems?.((f) => f)}</div> }));
 

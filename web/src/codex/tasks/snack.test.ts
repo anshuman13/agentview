@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { createRequire } from 'node:module';
 
 const react = createRequire(import.meta.url)('react') as typeof import('react');

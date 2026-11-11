@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { clearLinkTitles, linkTitleRoute, privateAddress, type Deps } from './linkTitle.js';
 import { advanceTimersByTimeAsync } from '../../../testing.js';
 

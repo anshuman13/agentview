@@ -1,3 +1,4 @@
+import { afterAll } from 'bun:test';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,9 +16,8 @@ process.env.GIT_CONFIG_GLOBAL ??= path.join(os.homedir(), '.gitconfig');
 process.env.HOME = path.join(dir, 'home');
 mkdirSync(process.env.HOME, { recursive: true });
 // Bun reads HOME once at startup.
-if (process.versions.bun) os.homedir = () => process.env.HOME!;
+os.homedir = () => process.env.HOME!;
 writeFileSync(process.env.AGENTVIEW_SETTINGS, JSON.stringify({ personalRoot: '~/workspace_personal' }));
 process.env.CLAUDE_CONFIG_DIR = path.join(dir, 'claude');
 
-const { afterAll } = process.env.VITEST ? await import('vitest') : await import('bun:test');
 afterAll(() => rmSync(dir, { recursive: true, force: true }));

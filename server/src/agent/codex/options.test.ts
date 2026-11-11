@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { threadParams } from './options.js';
 
 test('the thread config adds the agentview server and leaves the user\'s other servers alone', () => {

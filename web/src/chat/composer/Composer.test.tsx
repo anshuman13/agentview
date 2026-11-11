@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createRequire } from 'node:module';
 import { stubGlobal } from '../../../../testing';
@@ -10,7 +10,7 @@ const { useSyncExternalStore } = react;
 vi.mock('react', () => ({ ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) }));
 vi.mock('../../app/shell/useNarrow', () => ({ useNarrow: () => true }));
 const promptHistory = await import('./usePromptHistory');
-vi.mock('./usePromptHistory', async (importOriginal) => ({ ...(importOriginal ? await importOriginal<object>() : promptHistory), useDraft: () => [draft.text, () => {}] }));
+vi.mock('./usePromptHistory', () => ({ ...promptHistory, useDraft: () => [draft.text, () => {}] }));
 
 const { Composer } = await import('./Composer');
 

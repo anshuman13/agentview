@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { answersFor, askFor, decisionFor, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk } from './approvals.js';
 import { planUsage } from './usage.js';
 

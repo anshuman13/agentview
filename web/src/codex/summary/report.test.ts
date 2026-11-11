@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { buildReport } from './report';
 import type { ItemRow } from '../data/sync';
 

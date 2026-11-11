@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { moveTo } from './days';
 
 const d = (day: number, h = 0, m = 0) => new Date(2026, 10, day, h, m).getTime();

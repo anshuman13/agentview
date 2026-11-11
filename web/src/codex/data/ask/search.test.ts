@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { GROUP_CAP, related, relatedToTask, searchAll, snippet } from './search';
 import type { ItemRow } from '../sync';
 import type { Fact, Job, Meeting, Page } from '../wiki/wiki';

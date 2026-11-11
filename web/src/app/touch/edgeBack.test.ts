@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { createRequire } from 'node:module';
 import { stubGlobal, unstubAllGlobals } from '../../../../testing';
 

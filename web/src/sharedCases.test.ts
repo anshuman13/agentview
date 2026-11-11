@@ -1,7 +1,7 @@
 process.env.TZ = 'UTC';
 
 import { readFileSync } from 'node:fs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';

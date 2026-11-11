@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { buildFolders, type Folder, chatFinder, chatState, chatsByStatus, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
 import { RepoRow } from './RepoRow';
 import { AgentsBlock } from './AgentRow';

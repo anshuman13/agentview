@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { snoozeLaterAt, todayAt } from './reschedule';
 
 const d = (day: number, h: number, m = 0) => new Date(2026, 10, day, h, m).getTime();

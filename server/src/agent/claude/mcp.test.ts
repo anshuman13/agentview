@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { approved, authError, configDefs, configEntries, mcpFrom, probeOne } from './mcp.js';
 
 describe('mcpFrom', () => {

@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'bun:test';
 import { listSketches, readFileWithOriginal, safeResolve } from './files.js';
 
 describe('readFileWithOriginal access', () => {

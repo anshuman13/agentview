@@ -1,6 +1,6 @@
 process.env.TZ = 'Europe/Oslo';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { meetingLoad, meetingTimeLeft, weekReview } from './load';
 import type { ItemRow } from './sync';
 import type { Chat, Fact, Meeting } from './wiki/wiki';

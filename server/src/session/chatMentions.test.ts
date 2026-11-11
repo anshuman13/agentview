@@ -1,7 +1,7 @@
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { claudeTranscript } from '../agent/claude/chatMentions.js';
 import { expandChatMentions } from './chatMentions.js';
 

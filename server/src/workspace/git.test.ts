@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'bun:test';
 import { gitRoute, parseStatus, parseNumstat, parseTodos } from './git.js';
 
 const repo = mkdtempSync(path.join(os.tmpdir(), 'agentview-git-'));

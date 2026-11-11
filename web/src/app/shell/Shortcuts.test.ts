@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { buildCommands } from '../palette/paletteLogic';
 import { SHORTCUTS } from './Shortcuts';
 

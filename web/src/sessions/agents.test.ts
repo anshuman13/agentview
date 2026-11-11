@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { agentCounts, agentSummary, buildAgents, reportText } from './agents';
 import { buildTranscript } from '../chat/transcript/steps';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol';

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { planFeedback, planParagraphs } from './Pending';
 import { lineDiff } from '../../../../shared/lineDiff';
 

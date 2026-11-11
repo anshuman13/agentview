@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { endedPoints, pointMeeting, pointsFor } from './points';
 import type { ItemRow } from '../sync';
 import type { Meeting } from '../wiki/wiki';

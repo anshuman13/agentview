@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
 import { allowedPeer, allowedRequest, appOrigin, canon, loadStatus, peerName, requester } from './access.js';
 
 const status = JSON.stringify({
@@ -18,9 +18,8 @@ beforeEach(() => loadStatus(status));
 let fresh = 0;
 async function freshAccess() {
   const execFile = vi.fn();
-  if (!process.versions.bun) vi.resetModules();
-  (process.versions.bun ? vi.mock : vi.doMock)('node:child_process', () => ({ execFile, execFileSync: () => { throw new Error('no netbird'); } }));
-  const mod: typeof import('./access.js') = process.versions.bun ? await import(`./access.js?${++fresh}`) : await import('./access.js');
+  vi.mock('node:child_process', () => ({ execFile, execFileSync: () => { throw new Error('no netbird'); } }));
+  const mod: typeof import('./access.js') = await import(`./access.js?${++fresh}`);
   return { ...mod, execFile };
 }
 

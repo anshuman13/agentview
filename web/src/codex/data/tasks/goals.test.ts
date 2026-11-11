@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { goalAtRisk, goalHistory, goalSummary, moveBlock, reopenBlock } from './goals';
 import { weekFreeMinutes, type Span } from './plan';
 import type { ItemRow } from '../sync';

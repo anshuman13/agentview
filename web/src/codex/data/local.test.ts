@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { edited, newCapture } from './tasks/engine';
 import { captureParams, patchSQL, swapSQL, type SqlValue } from './localRows';
 import { WIKI_TABLES } from './store';

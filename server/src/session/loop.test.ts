@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { advance, loopOff, needsApproval, verdictOf } from './loop.js';
 import { RepeatController, after, parseGoal, parseLoop } from './repeat.js';
 import { limitReset } from '../agent/claude/limitText.js';

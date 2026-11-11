@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { mentionsOf } from './mentions';
 import type { ItemRow } from '../sync';
 import type { Meeting } from '../wiki/wiki';

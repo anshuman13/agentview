@@ -1,4 +1,4 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, test, vi } from 'bun:test';
 import { wikiSearchTool } from './wiki.js';
 import { stubGlobal, unstubAllGlobals } from '../../../../testing.js';
 

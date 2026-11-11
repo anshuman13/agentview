@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { nextClock } from '../../../shared/util.js';
 import type { PlanUsage, Repeat } from '../../../shared/protocol.js';
 import { parseGoal, parseLoop, usageGate } from './repeat.js';

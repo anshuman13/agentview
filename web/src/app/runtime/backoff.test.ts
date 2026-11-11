@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { backoffDelay } from './backoff';
 
 const steps = [1000, 2000, 4000, 8000, 15000, 15000];

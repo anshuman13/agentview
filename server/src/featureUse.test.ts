@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { FEATURE_USE_FILE, clearFeatureUse, featureUseDays, recordFeature, recordRoute } from './featureUse.js';
 import { systemRoutes } from './http/openRoutes.js';
 import type { Ctx, RouteDeps } from './http/routeTypes.js';

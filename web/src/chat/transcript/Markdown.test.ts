@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { md, renderBlocks, splitBlocks } from './md';
 
 const full = (t: string) => md.parse(t, { async: false }) as string;

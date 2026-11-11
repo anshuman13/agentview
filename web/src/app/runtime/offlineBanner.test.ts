@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { offlineBanner, type OfflineEvent, type OfflineState } from './offlineBanner';
 
 const table: Array<[OfflineState, OfflineEvent, OfflineState]> = [

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { Ring, frame } from './stream.js';
 import { GRACE_MS, RingGate } from './ringGate.js';
 

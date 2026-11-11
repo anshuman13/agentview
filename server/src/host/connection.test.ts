@@ -2,7 +2,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { mkdtempSync } from 'node:fs';
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { connection } from './connection.js';
 import { lines } from '../socket.js';
 import { apis } from './state.js';

@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Meeting } from '../data/wiki/wiki';
 import * as data from '../data';
 import { stubGlobal } from '../../../../testing';
 
-vi.mock('../data', async (importOriginal) => ({
-  ...(importOriginal ? await importOriginal<object>() : data),
+vi.mock('../data', () => ({
+  ...data,
   useAssistantStore: () => ({}),
   useAssistantData: () => ({ items: [], facts: [], meetings: [] }),
   useCodex: () => ({ meetings: [] }),

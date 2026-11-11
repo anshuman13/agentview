@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { FIELDS, rowToChange, mergeIncoming, type Change, type ItemRow, type PulledChange } from './sync';
 import { runSync } from './tasks/engine';
 

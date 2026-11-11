@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { Runs } from '../session/runs.js';
 
 const mocks = { runs: new Runs(), open: vi.fn() };

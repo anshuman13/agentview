@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { initPage, mergeTail, prependPage } from './pageEvents';
 import type { ChatEvent } from '../../../../shared/protocol';
 

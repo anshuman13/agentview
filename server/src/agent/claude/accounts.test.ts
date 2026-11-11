@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 import { setSystemTime } from '../../../../testing.js';
 
 const dir = process.env.AGENTVIEW_LIMITS_DIR!;
