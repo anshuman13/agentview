@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -107,8 +108,9 @@ private fun HideNavOnScroll(hub: Hub, listState: LazyListState, atBottom: Boolea
 @Composable
 private fun FollowNewest(hub: Hub, view: ChatView, listState: LazyListState, stick: MutableState<Boolean>, atBottom: Boolean) {
     val rows = view.rows
+    val bottom by rememberUpdatedState(atBottom)
     LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress to atBottom }.collect { (moving, bottom) -> if (moving) stick.value = bottom }
+        snapshotFlow { listState.isScrollInProgress to bottom }.collect { (moving, at) -> if (moving) stick.value = at }
     }
     val newest = rows.firstOrNull()?.id
     LaunchedEffect(newest, rows.size) { if (stick.value && newest != null) listState.scrollToItem(0) }
@@ -117,11 +119,11 @@ private fun FollowNewest(hub: Hub, view: ChatView, listState: LazyListState, sti
         val at = rows.indexOfFirst { it.id == turn }
         if (at >= 0) { stick.value = false; listState.animateScrollToItem(at); hub.showTurn.value = null }
     }
-    var users by remember { mutableStateOf(0) }
+    var lastSent by remember { mutableStateOf<String?>(null) }
     val sent = view.sent
     LaunchedEffect(sent) {
-        if (users > 0) { stick.value = true; if (rows.isNotEmpty()) listState.scrollToItem(0) }
-        users = sent
+        if (lastSent != null) { stick.value = true; if (rows.isNotEmpty()) listState.scrollToItem(0) }
+        lastSent = sent
     }
 }
 

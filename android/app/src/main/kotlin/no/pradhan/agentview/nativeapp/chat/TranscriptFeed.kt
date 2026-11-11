@@ -31,7 +31,7 @@ class ChatView(
     val days: Map<String, String>,
     val dayOf: Map<String, String>,
     val ats: Map<String, Long>,
-    val sent: Int,
+    val sent: String?,
     val checklist: List<ChecklistItem>?,
     val specCards: Set<String>,
     val summaries: Map<String, SummaryTurn>,
@@ -55,7 +55,7 @@ fun buildView(chat: String, events: List<ChatEvent>, now: Long, prev: ChatView?)
         chat, events, items, buildAgents(events, items), chatCost(events), chatImages(events),
         items.filterIsInstance<Item.File>().filter { it.error == null }.map { it.path }.distinct(),
         rewindable(items), exploreRuns(items), days, dayOfRows(items, days),
-        events.associate { it.id to it.at }, items.count { it is Item.User }, latestChecklist(events), specCardIds(items), summaryTurns(events),
+        events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), specCardIds(items), summaryTurns(events),
     )
 }
 
