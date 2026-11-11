@@ -17,12 +17,14 @@ export type BuildEntry = {
   commit?: BuildCommit;
 };
 export type BuildSummary = { stage: BuildStage; state: BuildState; conclusion: string };
-export type Criterion = { n: number; result: 'pass' | 'fail' | 'unverified'; evidence: string };
+export type Criterion = { n: number; result: 'pass' | 'fail' | 'unverified' | 'pending'; evidence: string };
+export type SpecCriterion = Criterion & { text: string; ui: boolean };
 export type BuildPipeline = 'written' | 'reviewed' | 'implemented' | 'tested' | 'code-reviewed' | 'merged';
 export type ReviewPhase = 'requirements' | 'design' | 'tasks';
 export type ReviewTarget = ReviewPhase | 'code' | 'hold';
 export type BuildReview = { phase: ReviewTarget; decision: 'approve' | 'changes' | 'hold' | 'release'; note: string; at: number };
 export type BuildPhase = { key: ReviewPhase; markdown: string };
+export type FlowStep = { key: 'spec' | 'spec-review' | 'approval' | 'implement' | 'test' | 'code-review' | 'merge'; state: BuildState | 'skipped' | 'todo'; by: string; result: string; at: number | null };
 export type BuildRow = BuildSummary & { slug: string; title: string; updatedAt: number; pipeline: BuildPipeline; draft: boolean; hold: boolean; codeReview: BuildReview | null };
 export type BuildDetail = {
   slug: string;
@@ -35,6 +37,8 @@ export type BuildDetail = {
   reviews: BuildReview[];
   hold: boolean;
   codeReview: BuildReview | null;
+  criteria: SpecCriterion[];
+  flow: FlowStep[];
   entries: (BuildEntry & { verdict: string | null; criteria: Criterion[]; findings: string[] })[];
   commit: { files: { path: string; add: number; del: number }[]; diff: string } | null;
 };
@@ -89,6 +93,43 @@ export function verdictOf(report: string) {
   return /\b(approve|revise|pass|fail|clean|changes)\b/i.exec(report)?.[1].toLowerCase() ?? null;
 }
 
+// The text above the first level-2 heading, then one section per `## ` heading (lowercased), fenced code skipped. `prose` is the lines outside fenced code.
+export function sectionsOf(markdown: string) {
+  const sections: { heading: string | null; lines: string[]; prose: string[] }[] = [{ heading: null, lines: [], prose: [] }];
+  let fence = '';
+  for (const line of markdown.split('\n')) {
+    const mark = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
+    if (mark) fence = !fence ? mark : mark[0] === fence[0] && mark.length >= fence.length ? '' : fence;
+    const heading = !fence && !mark ? /^## +(.+?)\s*$/.exec(line)?.[1] : undefined;
+    if (heading) sections.push({ heading: heading.toLowerCase(), lines: [], prose: [] });
+    sections.at(-1)!.lines.push(line);
+    if (!fence && !mark) sections.at(-1)!.prose.push(line);
+  }
+  return sections;
+}
+
+const CRITERIA = 'acceptance criteria';
+const ITEM = /^(\d+)[.)]\s+/;
+
+export function specCriteria(markdown: string): { n: number; text: string; ui: boolean }[] {
+  const items: { n: number; text: string }[] = [];
+  let open = false;
+  for (const line of sectionsOf(markdown).find((s) => s.heading === CRITERIA)?.prose ?? []) {
+    const m = ITEM.exec(line);
+    const more = /^\s/.test(line) && line.trim() !== '';
+    if (m) items.push({ n: Number(m[1]), text: line.slice(m[0].length).trim() });
+    else if (open && more) items.at(-1)!.text += ` ${line.trim()}`;
+    open = Boolean(m) || (open && more);
+  }
+  return items.map(({ n, text }) => ({
+    n,
+    text: text.replaceAll('(UI)', '').replace(/\s*\(\d+(,\s*\d+)*\)\s*$/, '').replace(/\s+/g, ' ').trim(),
+    ui: text.includes('(UI)'),
+  }));
+}
+
+export const withoutCriteria = (markdown: string) => sectionsOf(markdown).filter((s) => s.heading !== CRITERIA).flatMap((s) => s.lines).join('\n').trim();
+
 export function criteriaOf(report: string): Criterion[] {
   const inner = jsonObject(report)?.report;
   const text = typeof inner === 'string' ? inner : report;
@@ -107,7 +148,9 @@ export function findingsOf(report: string): string[] {
   });
 }
 
-const inOrder = (entries: BuildEntry[]) => entries.map((e, i) => [e, i] as const).sort((a, b) => a[0].startedAt - b[0].startedAt || a[1] - b[1]).map(([e]) => e);
+export const inOrder = (entries: BuildEntry[]) => entries.map((e, i) => [e, i] as const).sort((a, b) => a[0].startedAt - b[0].startedAt || a[1] - b[1]).map(([e]) => e);
+
+export const lastCommit = (entries: BuildEntry[]) => inOrder(entries).filter((e) => e.stage === 'implement').at(-1)?.commit;
 
 // The furthest step the build reached. `merged`: the latest implement commit reached the default branch.
 export function pipelineOf(entries: BuildEntry[], merged: boolean, reviews: BuildReview[]): BuildPipeline {
@@ -152,4 +195,87 @@ export function buildSummary(entries: BuildEntry[], merged: boolean): BuildSumma
   if (!impl) return { stage: tail.stage, state: 'done', conclusion: `${name} done` };
   const conclusion = !impl.commit ? 'No commit found' : merged ? `Merged as ${impl.commit.sha.slice(0, 7)}` : 'Passed · not merged yet';
   return { stage: tail.stage, state: 'done', conclusion };
+}
+
+
+// Where the build stands in the pipeline, one step per stage from spec to merge. `merged`: the latest implement commit reached the default branch.
+export function flowOf(entries: BuildEntry[], reviews: BuildReview[], phases: BuildPhase[], merged: boolean): FlowStep[] {
+  const all = inOrder(entries);
+  const latest = (stage: BuildStage) => all.filter((e) => e.stage === stage).at(-1);
+  const after = (e: BuildEntry, stage: BuildStage) => all.some((x, i) => x.stage === stage && i > all.indexOf(e));
+  const at = (e: BuildEntry | undefined) => (e ? e.endedAt ?? e.startedAt : null);
+  const verdict = (e: BuildEntry) => verdictOf(e.report) ?? '';
+  const step = (key: FlowStep['key'], by: string, state: FlowStep['state'], result: string, when: number | null = null): FlowStep => ({ key, state, by, result, at: when });
+  const run = (key: FlowStep['key'], by: string, e: BuildEntry) => (state: FlowStep['state'], result: string) => step(key, by, state, result, at(e));
+  const none = (key: FlowStep['key'], by: string) => step(key, by, 'todo', '');
+
+  const pms = all.filter((e) => e.stage === 'pm');
+  const pm = pms.at(-1);
+  const spec = pm?.status === 'running' ? step('spec', 'pm', 'running', 'Running', at(pm)) : pm?.status === 'failed' ? step('spec', 'pm', 'failed', 'Failed', at(pm)) : step('spec', pm ? 'pm' : 'You', 'done', pms.length > 1 ? `${pms.length} rounds` : 'Written', at(pm));
+
+  const R = latest('review');
+  const specReview = ((): FlowStep => {
+    if (!R) return none('spec-review', 'spec-reviewer');
+    const make = run('spec-review', 'spec-reviewer', R);
+    if (R.status === 'running') return make('running', 'Running');
+    if (R.status === 'failed' || R.status === 'stopped') return make('failed', 'Failed');
+    const v = verdict(R);
+    if (v === 'approve') return make('done', 'Approved');
+    if (v !== 'revise') return make('done', 'Reviewed');
+    if (!after(R, 'pm')) return make('waiting', `Revise · ${findingsOf(R.report).length} issues`);
+    return pm?.status === 'running' ? make('running', 'Revising') : make('todo', 'Revised, not re-reviewed');
+  })();
+
+  const decided = reviews.filter((r) => REVIEW_PHASES.includes(r.phase as ReviewPhase)).at(-1)?.at ?? null;
+  const decision = (p: BuildPhase) => reviewDecision(reviews, p.key)?.decision;
+  const approved = phases.filter((p) => decision(p) === 'approve').length;
+  const approval =
+    !phases.length ? step('approval', 'You', 'todo', '0 of 0 phases approved', decided)
+    : approved === phases.length ? step('approval', 'You', 'done', 'Approved', decided)
+    : phases.some((p) => decision(p) === 'changes') ? step('approval', 'You', 'waiting', 'Changes requested', decided)
+    : all.some((e) => e.stage === 'implement') ? step('approval', 'You', 'skipped', 'Built without approval', decided)
+    : step('approval', 'You', 'todo', `${approved} of ${phases.length} phases approved`, decided);
+
+  const I = latest('implement');
+  const implement = ((): FlowStep => {
+    if (!I) return none('implement', 'implementer');
+    const make = run('implement', 'implementer', I);
+    if (I.status === 'running') return make('running', 'Running');
+    if (I.commit) return make('done', I.commit.branch ? `${I.commit.branch} · ${I.commit.sha.slice(0, 7)}` : I.commit.sha.slice(0, 7));
+    return make('failed', I.status === 'failed' ? 'Failed' : 'No commit found');
+  })();
+
+  const T = latest('test');
+  const test = ((): FlowStep => {
+    if (!T) return none('test', 'tester');
+    const make = run('test', 'tester', T);
+    const lines = criteriaOf(T.report);
+    const counts = `${lines.filter((c) => c.result === 'pass').length} of ${lines.length} pass`;
+    if (T.status === 'running') return make('running', 'Running');
+    if (T.status === 'failed' || verdict(T) === 'fail') return make('failed', lines.length ? counts : 'Failed');
+    if (verdict(T) === 'pass') return make('done', lines.length ? counts : 'Passed');
+    return make('todo', 'No verdict');
+  })();
+
+  const C = latest('code-review');
+  const codeReview = ((): FlowStep => {
+    if (!C) return none('code-review', 'code-reviewer');
+    const make = run('code-review', 'code-reviewer', C);
+    if (C.status === 'running') return make('running', 'Running');
+    if (C.status === 'failed') return make('failed', 'Failed');
+    const v = verdict(C);
+    if (v === 'clean' || v === 'approve') return make('done', 'Clean');
+    if (v !== 'changes') return make('todo', 'No verdict');
+    return after(C, 'implement') ? make('todo', 'Fixed, not re-reviewed') : make('failed', `${findingsOf(C.report).length} findings`);
+  })();
+
+  const commit = lastCommit(entries);
+  const merge = merged ? step('merge', '', 'done', `Merged as ${commit?.sha.slice(0, 7) ?? ''}`, commit?.date ?? null) : test.state === 'done' ? step('merge', '', 'waiting', 'Not merged yet') : none('merge', '');
+
+  const flow = [spec, specReview, approval, implement, test, codeReview, merge];
+  if (isHeld(reviews)) {
+    const i = flow.findIndex((f) => ['todo', 'waiting', 'failed'].includes(f.state));
+    if (i >= 0) flow[i] = { ...flow[i], state: 'waiting', result: 'On hold' };
+  }
+  return flow;
 }

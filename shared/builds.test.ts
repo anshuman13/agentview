@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { buildStageOf, buildSummary, criteriaOf, findingsOf, pipelineOf, verdictOf, type BuildEntry, type BuildReview } from './builds.js';
+import { buildStageOf, buildSummary, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'builds.json'), 'utf8'));
+
+const specCases = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'spec-criteria.json'), 'utf8')) as Named<{ markdown: string; criteria: unknown; without: string }>[];
 
 type Named<T> = { name: string } & T;
 
@@ -23,5 +25,21 @@ describe('builds fixture', () => {
   }
   for (const c of fixture.pipeline as Named<{ merged: boolean; reviews: BuildReview[]; entries: (Partial<BuildEntry> & { commit?: boolean })[]; expected: unknown }>[]) {
     it(`pipelineOf: ${c.name}`, () => expect(pipelineOf(entriesOf(c.entries), c.merged, c.reviews)).toEqual(c.expected));
+  }
+  for (const c of fixture.flow as Named<{ merged: boolean; phases: string[]; reviews: BuildReview[]; entries: (Partial<BuildEntry> & { commit?: boolean })[]; states: string[]; results?: Record<string, string> }>[]) {
+    it(`flowOf: ${c.name}`, () => {
+      const flow = flowOf(entriesOf(c.entries), c.reviews, c.phases.map((key) => ({ key, markdown: 'x' })) as BuildPhase[], c.merged);
+      expect(flow.map((f) => f.state)).toEqual(c.states);
+      for (const [key, result] of Object.entries(c.results ?? {})) expect(flow.find((f) => f.key === key)?.result).toBe(result);
+    });
+  }
+});
+
+describe('spec criteria fixture', () => {
+  for (const c of specCases) {
+    it(`specCriteria and withoutCriteria: ${c.name}`, () => {
+      expect(specCriteria(c.markdown)).toEqual(c.criteria);
+      expect(withoutCriteria(c.markdown)).toBe(c.without);
+    });
   }
 });

@@ -1,0 +1,6 @@
+[
+  {"name": "ui marker mid-line and a ref", "markdown": "# T\n\n## Acceptance criteria\n1. Shows the card (UI) in the chat (1, 3)\n2. Plain (2)\n", "criteria": [{"n": 1, "text": "Shows the card in the chat", "ui": true}, {"n": 2, "text": "Plain", "ui": false}], "without": "# T"},
+  {"name": "continuation line and paren numbering", "markdown": "## Problem\np\n\n## Acceptance criteria\n1) First line\n   continues here (UI)\n2. Second\nnot indented\n\n## Other\nkept\n", "criteria": [{"n": 1, "text": "First line continues here", "ui": true}, {"n": 2, "text": "Second", "ui": false}], "without": "## Problem\np\n\n## Other\nkept"},
+  {"name": "numbered line inside fenced code", "markdown": "## Acceptance criteria\n1. Real\n```\n2. Not a criterion\n```\n", "criteria": [{"n": 1, "text": "Real", "ui": false}], "without": ""},
+  {"name": "no section", "markdown": "# T\n\n## Behaviour\n1. Not a criterion\n", "criteria": [], "without": "# T\n\n## Behaviour\n1. Not a criterion"}
+]

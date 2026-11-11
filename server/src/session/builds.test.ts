@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { BuildEntry } from '../../../shared/builds.js';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 import { claudeSession } from '../agent/claude/driver.js';
-import { buildOne, listBuilds, reviewBuild } from './builds.js';
+import { buildOne, listBuilds, reviewBuild, splitPhases } from './builds.js';
 import { waitFor } from '../../../testing.js';
 
 const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'agentview-builds-')));
@@ -189,5 +189,40 @@ describe('spec review', () => {
       expect(await reviewBuild(repo, bad)).toMatchObject({ status: 400 });
     }
     expect(await reviewBuild(repo, { slug: 'no-such-spec', phase: 'design', decision: 'approve' })).toMatchObject({ status: 404 });
+  });
+});
+
+describe('spec criteria and flow', () => {
+  const specs = path.join(repo, '.claude', 'specs');
+  const spec = '# Crit\n\n## Behaviour\n```\n## Fake\n```\nb\n\n## Acceptance criteria\n1. One (1)\n2. Two (UI)\n3. Three\n\n## Review notes\n- note\n';
+  const write = (slug: string, reports: string[]) =>
+    writeFileSync(path.join(store, encodeURIComponent(repo), `${slug}.json`), JSON.stringify(reports.map((report, i) => ({ id: `t${i}`, stage: 'test', round: i + 1, status: 'done', startedAt: i, endedAt: i, report, chat: 'c', session: null }))));
+
+  it('splits a spec into phases without its Review notes', () => {
+    const phases = splitPhases(spec);
+    expect(phases.map((p) => p.key)).toEqual(['requirements', 'tasks']);
+    expect(phases[0].markdown).toBe('# Crit\n\n## Behaviour\n```\n## Fake\n```\nb');
+    expect(phases[1].markdown).not.toContain('note');
+  });
+
+  it('joins spec criteria with the latest test report, and lists test lines the spec lacks', async () => {
+    writeFileSync(path.join(specs, 'crit-one.md'), spec);
+    write('crit-one', ['1. fail: old', '', '1. pass: ok\n2. fail: no\n9. unverified: later']);
+    const one = (await buildOne(repo, 'crit-one')) as { criteria: unknown[]; flow: unknown[] };
+    expect(one.criteria).toEqual([
+      { n: 1, text: 'One', ui: false, result: 'pass', evidence: 'ok' },
+      { n: 2, text: 'Two', ui: true, result: 'fail', evidence: 'no' },
+      { n: 3, text: 'Three', ui: false, result: 'pending', evidence: '' },
+      { n: 9, text: 'Criterion 9', ui: false, result: 'unverified', evidence: 'later' },
+    ]);
+    expect(one.flow).toHaveLength(7);
+  });
+
+  it('gives pending criteria and a seven-step flow for a spec with no entries', async () => {
+    writeFileSync(path.join(specs, 'crit-none.md'), spec);
+    const one = (await buildOne(repo, 'crit-none')) as { criteria: { result: string }[]; flow: unknown[]; entries: unknown[]; hold: boolean };
+    expect(one.criteria.map((c) => c.result)).toEqual(['pending', 'pending', 'pending']);
+    expect(one).toMatchObject({ entries: [], hold: false });
+    expect(one.flow).toHaveLength(7);
   });
 });

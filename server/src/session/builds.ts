@@ -2,7 +2,7 @@ import type { Dirent } from 'node:fs';
 import { appendFile, readdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { REVIEW_PHASES, buildStageOf, buildSummary, criteriaOf, findingsOf, isHeld, pipelineOf, reviewDecision, reviewLine, slugOk, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase } from '../../../shared/builds.js';
+import { REVIEW_PHASES, buildStageOf, buildSummary, criteriaOf, findingsOf, flowOf, inOrder, isHeld, lastCommit, pipelineOf, reviewDecision, reviewLine, sectionsOf, slugOk, specCriteria, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase, type SpecCriterion } from '../../../shared/builds.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { jsonFile, readJson } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
@@ -89,20 +89,6 @@ const PHASE_OF = new Map<string, ReviewPhase>([
 ]);
 const NOTES = 'review notes';
 
-// The text above the first level-2 heading, then one section per `## ` heading (lowercased), fenced code skipped.
-function sectionsOf(markdown: string) {
-  const sections: { heading: string | null; lines: string[] }[] = [{ heading: null, lines: [] }];
-  let fence = '';
-  for (const line of markdown.split('\n')) {
-    const mark = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
-    if (mark) fence = !fence ? mark : mark[0] === fence[0] && mark.length >= fence.length ? '' : fence;
-    const heading = !fence && !mark ? /^## +(.+?)\s*$/.exec(line)?.[1] : undefined;
-    if (heading) sections.push({ heading: heading.toLowerCase(), lines: [] });
-    sections.at(-1)!.lines.push(line);
-  }
-  return sections;
-}
-
 export function splitPhases(markdown: string): BuildPhase[] {
   const lines: Record<ReviewPhase, string[]> = { requirements: [], design: [], tasks: [] };
   let phase: ReviewPhase | null = 'requirements';
@@ -136,8 +122,6 @@ async function loadSpec(repo: string, slug: string): Promise<Spec | null> {
 const DRAFT: BuildSummary = { stage: 'pm', state: 'done', conclusion: 'Not started' };
 
 const names = async (dir: string, keep: (f: Dirent) => string | null) => (await readdir(dir, { withFileTypes: true }).catch(() => [])).flatMap((f) => keep(f) ?? []);
-
-const lastCommit = (entries: BuildEntry[]) => entries.filter((e) => e.stage === 'implement').at(-1)?.commit;
 
 const mergedCache = new Map<string, { tip: string; done: Map<string, boolean> }>();
 
@@ -181,6 +165,17 @@ export async function listBuilds(cwd: string) {
   return builds.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+// The spec's acceptance criteria with the latest test report's result for each; test lines the spec does not list come last.
+function criteriaFor(spec: Spec | null, entries: BuildEntry[]): SpecCriterion[] {
+  const tasks = spec && !spec.kiro ? spec.phases.find((p) => p.key === 'tasks') : undefined;
+  if (!tasks) return [];
+  const test = inOrder(entries).filter((e) => e.stage === 'test' && e.report.trim()).at(-1);
+  const lines = new Map((test ? criteriaOf(test.report) : []).reverse().map((c) => [c.n, c]));
+  const listed = specCriteria(tasks.markdown).map((c) => ({ ...c, result: lines.get(c.n)?.result ?? 'pending', evidence: lines.get(c.n)?.evidence ?? '' }));
+  const extra = [...lines.values()].filter((c) => !listed.some((l) => l.n === c.n)).sort((a, b) => a.n - b.n);
+  return [...listed, ...extra.map((c) => ({ ...c, text: `Criterion ${c.n}`, ui: false }))];
+}
+
 export async function buildOne(cwd: string, slug: string) {
   const repo = await mainCheckout(cwd).catch(() => null);
   const [entries, reviews, spec] = repo && slugValid(slug) ? await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]) : [[], [], null];
@@ -196,6 +191,8 @@ export async function buildOne(cwd: string, slug: string) {
     updatedAt: Math.max(spec?.mtime ?? 0, ...entries.map((e) => e.endedAt ?? e.startedAt)),
     specFile: spec && !spec.kiro ? `.claude/specs/${slug}.md` : null,
     phases: spec?.phases ?? [],
+    criteria: criteriaFor(spec, entries),
+    flow: flowOf(entries, reviews, spec?.phases ?? [], done),
     reviews,
     hold: isHeld(reviews),
     codeReview: reviewDecision(reviews, 'code') ?? null,
