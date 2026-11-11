@@ -15,7 +15,7 @@ varies by provider follows the Providers section of the same file.
 - `app/`: the Tauri desktop window app (macOS only). The phone app is `android/`.
 
 ## Checks
-- Server, web, shared: `npm test` from the root (`bun test --parallel`, about 3 s), and `npx tsc --noEmit -p .` in `server/`, `web/`, `assistant/`. The type checks skip test files.
+- Server, web, shared: `bun run test` from the root (`bun test --parallel`, about 3 s), and `bunx --bun tsc --noEmit -p .` in `server/`, `web/`, `assistant/`. The type checks skip test files.
 - Tests use `bun:test`. Helpers for what its `vi` lacks (`setSystemTime`, `stubGlobal`, `stubEnv`, `waitFor`, `advanceTimersByTimeAsync`) are in `testing.ts`. `vi.mock` is not hoisted: mock first, then `await import` the module under test. A mock must export every name its importers use. Never create `expect(p).rejects` before the code that settles `p`: Bun blocks on it.
 - Hub: `cd assistant && bun test`.
 - Android: `ANDROID_HOME=/opt/homebrew/share/android-commandlinetools android/build.sh` runs the unit tests and builds the minified release APK. Test the release build: R8 can strip classes the debug build keeps. `build.sh --fast` builds the debug APK in seconds for iterating; R8 is about 30 s of the release build. With a device serial, `build.sh <serial>` also installs and compiles it with speed-profile.

@@ -17,7 +17,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 ## Restarts
 
 - The API server builds `web/` each time it starts, so web changes go live on its next restart.
-- Restarting the API server (menu item, `POST /api/restart`, a file change under `npm run dev`) leaves the host and
+- Restarting the API server (menu item, `POST /api/restart`, a file change under `bun run dev`) leaves the host and
   running turns alone. Clients reconnect and resume.
 - The host hashes its own import graph at boot. On a restart request, and whenever an API server connects, it
   restarts only if that hash changed, after running turns end (at most 10 minutes). `POST /api/restart?full`

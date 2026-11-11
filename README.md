@@ -6,7 +6,7 @@ A web UI for Claude Code, built on the Agent SDK. VS Code layout on the desktop,
 
 ```bash
 brew install oven-sh/bun/bun
-npm install
+bun install
 ./start.sh
 ```
 
@@ -17,11 +17,11 @@ installed and its login.
 
 | Command | |
 | --- | --- |
-| `npm run serve` | Server and vite, no reload on server changes |
-| `npm run dev` | Same, with server reload |
-| `npm run native [-- <adb serial>]` | Test and build the native Android app (`android/`), and install it on that device |
-| `npm test` | Unit tests (bun test; server, web and shared) |
-| `npm test -w assistant` | Hub tests (bun test) |
+| `bun run serve` | Server and vite, no reload on server changes |
+| `bun run dev` | Same, with server reload |
+| `bun run native [-- <adb serial>]` | Test and build the native Android app (`android/`), and install it on that device |
+| `bun run test` | Unit tests (bun test; server, web and shared) |
+| `cd assistant && bun test` | Hub tests (bun test) |
 
 Both test runs load `test-setup.ts`, which points the Claude config, usage limit and findings folders at a temp dir.
 
