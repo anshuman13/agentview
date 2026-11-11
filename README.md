@@ -20,7 +20,7 @@ installed and its login.
 | `npm run serve` | Server and vite, no reload on server changes |
 | `npm run dev` | Same, with server reload |
 | `npm run native [-- <adb serial>]` | Test and build the native Android app (`android/`), and install it on that device |
-| `npm test` | Unit tests (vitest; server, web and shared) |
+| `npm test` | Unit tests (bun test; server, web and shared) |
 | `npm test -w assistant` | Hub tests (bun test) |
 
 Both test runs load `test-setup.ts`, which points the Claude config, usage limit and findings folders at a temp dir.

@@ -8,7 +8,7 @@ You verify one implementation of an AgentView spec. You are given the spec and t
 
 Steps:
 1. `cd` to the worktree and `git log -1 --stat` to confirm the commit is there. Read the diff (`git show`).
-2. Run the checks for the packages the diff touches: `npx tsc --noEmit -p web|server|assistant`, `cd web && npx vitest run`, `cd server && npx vitest run`, `cd assistant && bun test`. Missing `node_modules` in the worktree: symlink from /Users/oda/workspace_personal/agentview as the implementer did.
+2. Run the checks for the packages the diff touches: `npx tsc --noEmit -p web|server|assistant`, `npm test` from the root, `cd assistant && bun test`. Missing `node_modules` in the worktree: symlink from /Users/oda/workspace_personal/agentview as the implementer did.
 3. Go through the acceptance criteria one by one. For each, say how you checked it and pass or fail with the evidence (test output, a grep of the code path, a screenshot description).
 4. (UI) criteria: start the web app on a spare port from the worktree (`cd web && npx vite --port 5199`, proxies to the running server on :7777), launch headless Chrome with `--user-data-dir=/tmp/avchk/profile --remote-debugging-port=9334 --headless=new` from `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`, drive it over CDP, check at 390x844 and 1280x800, light and dark. Never port 9333. macOS has no `timeout`.
 5. Clean up: `pkill -f user-data-dir=/tmp/avchk; pkill -f "main.ts /tmp/avhub"; lsof -ti tcp:5199 -ti tcp:7788 -ti tcp:7799 | xargs kill; rm -rf /tmp/avhub`; delete temp scripts and screenshots.

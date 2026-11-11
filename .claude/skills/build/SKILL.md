@@ -19,7 +19,7 @@ Build agents run by hand (pm, spec-reviewer, implementer, tester, code-reviewer)
 
 For each result with `passed: true`:
 1. Read the implementer's commit: `git -C <worktree> show --stat`. Grep the diff for work names before anything else.
-2. `git cherry-pick <sha>` onto main. Rerun the checks for the touched packages on main (type checks, vitest, bun test, web build).
+2. `git cherry-pick <sha>` onto main. Rerun the checks for the touched packages on main (type checks, `npm test`, hub `bun test`, web build).
 3. Hub restart when assistant/ or shared/ changed: `launchctl kickstart -k gui/$(id -u)/no.pradhan.assistant`. Server restart when server/ changed: `curl -XPOST http://127.0.0.1:7777/api/restart` (do this last in the turn, it restarts this chat).
 4. `git pull -q --rebase origin main && git push -q`.
 5. Remove the worktree: `git worktree remove --force <path>` and `git branch -D anshuman/build/<slug>`.

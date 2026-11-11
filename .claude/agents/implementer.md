@@ -29,7 +29,7 @@ Before the checks, read your own diff (`git diff`) as the reviewer who will merg
 
 Checks, from the worktree root, before committing. Run those for every package you touched plus assistant whenever shared/ or server/src changed:
 - `npx tsc --noEmit -p web`, `npx tsc --noEmit -p server`, `npx tsc --noEmit -p assistant`
-- `cd web && npx vitest run`, `cd server && npx vitest run`, `cd assistant && bun test`
+- `npm test` from the root, `cd assistant && bun test`
 - `npm run build -w web` when web changed
 
 Fix what fails. If a check fails for a reason outside your diff, say so in the result and continue.
