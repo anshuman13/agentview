@@ -152,7 +152,11 @@ export const inOrder = (entries: BuildEntry[]) => entries.map((e, i) => [e, i] a
 export const lastCommit = (entries: BuildEntry[]) => inOrder(entries).filter((e) => e.stage === 'implement').at(-1)?.commit;
 
 // The furthest step the build reached. `merged`: the latest implement commit reached the default branch.
-export function pipelineOf(entries: BuildEntry[], merged: boolean, reviews: BuildReview[]): BuildPipeline {
+// True or the sha the default branch holds the build under (a cherry-pick gets a new sha); false when not merged.
+export type Merged = boolean | string;
+const mergedSha = (merged: Merged, commit: BuildCommit | undefined) => (typeof merged === 'string' ? merged : commit?.sha ?? '').slice(0, 7);
+
+export function pipelineOf(entries: BuildEntry[], merged: Merged, reviews: BuildReview[]): BuildPipeline {
   const all = inOrder(entries);
   const latest = (stage: BuildStage) => all.filter((e) => e.stage === stage).at(-1);
   const code = latest('code-review');
@@ -166,7 +170,7 @@ export function pipelineOf(entries: BuildEntry[], merged: boolean, reviews: Buil
 }
 
 // `merged`: the latest implement commit reached the default branch.
-export function buildSummary(entries: BuildEntry[], merged: boolean): BuildSummary {
+export function buildSummary(entries: BuildEntry[], merged: Merged): BuildSummary {
   const all = inOrder(entries);
   const tail = all.at(-1);
   if (!tail) return { stage: 'pm', state: 'done', conclusion: '' };
@@ -192,13 +196,13 @@ export function buildSummary(entries: BuildEntry[], merged: boolean): BuildSumma
   if (tail.status === 'stopped') return { stage: tail.stage, state: 'done', conclusion: `${name} stopped` };
   const impl = latest('implement');
   if (!impl) return { stage: tail.stage, state: 'done', conclusion: `${name} done` };
-  const conclusion = !impl.commit ? 'No commit found' : merged ? `Merged as ${impl.commit.sha.slice(0, 7)}` : 'Passed · not merged yet';
+  const conclusion = !impl.commit ? 'No commit found' : merged ? `Merged as ${mergedSha(merged, impl.commit)}` : 'Passed · not merged yet';
   return { stage: tail.stage, state: 'done', conclusion };
 }
 
 
 // Where the build stands in the pipeline, one step per stage from spec to merge. `merged`: the latest implement commit reached the default branch.
-export function flowOf(entries: BuildEntry[], reviews: BuildReview[], phases: BuildPhase[], merged: boolean): FlowStep[] {
+export function flowOf(entries: BuildEntry[], reviews: BuildReview[], phases: BuildPhase[], merged: Merged): FlowStep[] {
   const all = inOrder(entries);
   const latest = (stage: BuildStage) => all.filter((e) => e.stage === stage).at(-1);
   const after = (e: BuildEntry, stage: BuildStage) => all.some((x, i) => x.stage === stage && i > all.indexOf(e));
@@ -265,11 +269,13 @@ export function flowOf(entries: BuildEntry[], reviews: BuildReview[], phases: Bu
     const v = verdict(C);
     if (v === 'clean' || v === 'approve') return make('done', 'Clean');
     if (v !== 'changes') return make('todo', 'No verdict');
-    return after(C, 'implement') ? make('todo', 'Fixed, not re-reviewed') : make('failed', `${findingsOf(C.report).length} findings`);
+    const n = findingsOf(C.report).length;
+    if (!after(C, 'implement')) return make('failed', `${n} findings`);
+    return test.state === 'done' && after(C, 'test') ? make('done', `${n} findings fixed`) : make('todo', 'Fixed, not re-reviewed');
   })();
 
   const commit = lastCommit(entries);
-  const merge = merged ? step('merge', '', 'done', `Merged as ${commit?.sha.slice(0, 7) ?? ''}`, commit?.date ?? null) : test.state === 'done' ? step('merge', '', 'waiting', 'Not merged yet') : none('merge', '');
+  const merge = merged ? step('merge', '', 'done', `Merged as ${mergedSha(merged, commit)}`, commit?.date ?? null) : test.state === 'done' ? step('merge', '', 'waiting', 'Not merged yet') : none('merge', '');
 
   const flow = [spec, specReview, approval, implement, test, codeReview, merge];
   if (isHeld(reviews)) {

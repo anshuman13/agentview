@@ -120,7 +120,7 @@ async function loadSpec(repo: string, slug: string): Promise<Spec | null> {
 
 const DRAFT: BuildSummary = { stage: 'pm', state: 'done', conclusion: 'Not started' };
 
-const mergedCache = new Map<string, { tip: string; done: Map<string, boolean> }>();
+const mergedCache = new Map<string, { tip: string; done: Map<string, string | false> }>();
 
 // The default branch holds a commit with this subject made after the build's commit: the build was cherry-picked or merged.
 // Answers are kept per repo while the default branch stays at the same commit, so a new commit on it drops them.
@@ -131,11 +131,12 @@ async function mergedIn(repo: string) {
   if (!cache || cache.tip !== tip) mergedCache.set(repo, (cache = { tip, done: new Map() }));
   const { done } = cache;
   return async (commit: BuildCommit | undefined) => {
-    if (!commit) return false;
+    if (!commit) return false as const;
     const known = done.get(commit.sha);
     if (known !== undefined) return known;
-    const log = await git(repo, ['log', base, '--fixed-strings', `--grep=${commit.subject}`, '--format=%ct%x09%s']).catch(() => '');
-    const result = log.split('\n').some((l) => Number(l.split('\t')[0]) * 1000 > commit.date && l.split('\t').slice(1).join('\t') === commit.subject);
+    const log = await git(repo, ['log', base, '--fixed-strings', `--grep=${commit.subject}`, '--format=%H%x09%ct%x09%s']).catch(() => '');
+    const hit = log.split('\n').map((l) => l.split('\t')).find(([, ct, ...s]) => Number(ct) * 1000 > commit.date && s.join('\t') === commit.subject);
+    const result = hit ? hit[0] : false;
     if (tip) done.set(commit.sha, result);
     return result;
   };

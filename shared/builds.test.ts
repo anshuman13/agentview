@@ -26,7 +26,7 @@ describe('builds fixture', () => {
   for (const c of fixture.pipeline as Named<{ merged: boolean; reviews: BuildReview[]; entries: (Partial<BuildEntry> & { commit?: boolean })[]; expected: unknown }>[]) {
     it(`pipelineOf: ${c.name}`, () => expect(pipelineOf(entriesOf(c.entries), c.merged, c.reviews)).toEqual(c.expected));
   }
-  for (const c of fixture.flow as Named<{ merged: boolean; phases: string[]; reviews: BuildReview[]; entries: (Partial<BuildEntry> & { commit?: boolean })[]; states: string[]; results?: Record<string, string> }>[]) {
+  for (const c of fixture.flow as Named<{ merged: boolean | string; phases: string[]; reviews: BuildReview[]; entries: (Partial<BuildEntry> & { commit?: boolean })[]; states: string[]; results?: Record<string, string> }>[]) {
     it(`flowOf: ${c.name}`, () => {
       const flow = flowOf(entriesOf(c.entries), c.reviews, c.phases.map((key) => ({ key, markdown: 'x' })) as BuildPhase[], c.merged);
       expect(flow.map((f) => f.state)).toEqual(c.states);

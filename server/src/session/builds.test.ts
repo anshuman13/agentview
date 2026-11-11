@@ -92,7 +92,9 @@ describe('build routes', () => {
   it('reports a build merged once its commit is cherry-picked onto the default branch', async () => {
     expect(await buildOne(repo, 'red-lamp')).toMatchObject({ title: 'red-lamp', summary: { state: 'done', conclusion: 'Passed · not merged yet' } });
     execFileSync('git', ['cherry-pick', commit], { cwd: repo, env: { ...process.env, GIT_COMMITTER_DATE: new Date(Date.now() + 60_000).toISOString() } });
-    expect(await buildOne(worktree, 'red-lamp')).toMatchObject({ summary: { conclusion: `Merged as ${commit.slice(0, 7)}` } });
+    const picked = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo }).toString().trim();
+    expect(picked).not.toBe(commit);
+    expect(await buildOne(worktree, 'red-lamp')).toMatchObject({ summary: { conclusion: `Merged as ${picked.slice(0, 7)}` } });
   });
 
   it('keeps a build merged and sees a later build merge as the default branch moves', async () => {
