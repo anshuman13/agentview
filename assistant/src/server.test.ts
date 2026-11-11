@@ -1,11 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { Readable } from 'node:stream';
-import http from 'node:http';
 import { BadRequest } from '../../server/src/http/body.js';
-import { createServer, fromAllowedPage } from './server.js';
+import { fromAllowedPage, serve } from './server.js';
 import { readJson } from './routes/http.js';
 
-const req = (body: string) => Readable.from([Buffer.from(body)]) as unknown as http.IncomingMessage;
+const req = (body: string) => new Request('http://x', { method: 'POST', body });
 
 describe('readJson', () => {
   test('rejects null, arrays, scalars and bad JSON as a bad request', async () => {
@@ -27,17 +25,9 @@ test('fromAllowedPage lets the phone app and non-browser callers in, not other p
 });
 
 test('the hub refuses a Host that is not this Mac', async () => {
-  const server = createServer().listen(0, '127.0.0.1');
-  await new Promise((r) => server.once('listening', r));
-  const { port } = server.address() as { port: number };
-  const status = (host: string) =>
-    new Promise<number>((resolve) =>
-      http.get({ port, host: '127.0.0.1', path: '/nope', headers: { host } }, (res) => {
-        res.resume();
-        resolve(res.statusCode ?? 0);
-      }),
-    );
+  const server = serve(0, '127.0.0.1');
+  const status = async (host: string) => (await fetch(`http://127.0.0.1:${server.port}/nope`, { headers: { host } })).status;
   expect(await status('evil.test:7790')).toBe(403);
-  expect(await status(`localhost:${port}`)).toBe(404);
-  server.close();
+  expect(await status(`localhost:${server.port}`)).toBe(404);
+  server.stop(true);
 });

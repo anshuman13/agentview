@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
-import type http from 'node:http';
 import { openDb } from './db.js';
 import { backoff, checkStalls, noteCost, runScan, scanCosts, scanHealth } from './scan.js';
 import { MIN } from './time.js';
 import { scanRoutes } from '../routes/scan.js';
+import { Reply } from '../routes/http.js';
 
 test('a failing scan keeps its last success and records the error', async () => {
   const db = openDb(':memory:');
@@ -23,10 +23,11 @@ test('scan now joins a running scan', async () => {
   const route = scanRoutes({
     test: { setUp: () => true, paused: async () => false, run: (d) => runScan(d, 'test', async () => { runs++; await gate; return { n: 1 }; }) },
   })['POST /scan'];
-  const call = () => {
-    const out: { status?: number; body?: string } = {};
-    const res = { writeHead: (s: number) => (out.status = s), end: (b: string) => (out.body = b) } as unknown as http.ServerResponse;
-    return Promise.resolve(route({ req: {} as http.IncomingMessage, res, url: new URL('http://x/scan?name=test'), device: 'd', getDb: () => db })).then(() => out);
+  const call = async () => {
+    const res = new Reply();
+    await route({ req: new Request('http://x'), res, url: new URL('http://x/scan?name=test'), device: 'd', getDb: () => db });
+    const r = await res.response;
+    return { status: r.status, body: await r.text() };
   };
   const a = call();
   const b = call();

@@ -6,6 +6,7 @@ import { openDb } from '../core/db.js';
 import { wikiRoutes } from '../routes/wiki.js';
 import { applyChanges } from '../core/sync.js';
 import { searchWiki } from './wikiSearch.js';
+import { Reply } from '../routes/http.js';
 
 let tick = 1_000;
 const row = (table: string, id: string, fields: Record<string, unknown>, profile: 'work' | 'personal' = 'work') => ({ table, id, profile, updated_at: ++tick, fields });
@@ -59,14 +60,14 @@ test('opening a hub db without the FTS tables indexes existing rows', () => {
   expect(ids(searchWiki(again, 'billing', 'work').pages)).toEqual(['p1']);
 });
 
-test('GET /wiki/search needs a profile and returns empty lists for an empty query', () => {
+test('GET /wiki/search needs a profile and returns empty lists for an empty query', async () => {
   const db = openDb(':memory:');
-  const call = (qs: string) => {
-    const out = { status: 0, body: '' };
-    const res = { writeHead: (status: number) => (out.status = status), end: (body: string) => (out.body = body) };
+  const call = async (qs: string) => {
+    const res = new Reply();
     wikiRoutes['GET /wiki/search']({ res, url: new URL(`http://x/wiki/search${qs}`), getDb: () => db } as never);
-    return out;
+    const r = await res.response;
+    return { status: r.status, body: await r.text() };
   };
-  expect(call('?q=a').status).toBe(400);
-  expect(call('?profile=work&q=')).toEqual({ status: 200, body: JSON.stringify({ pages: [], claims: [] }) });
+  expect((await call('?q=a')).status).toBe(400);
+  expect(await call('?profile=work&q=')).toEqual({ status: 200, body: JSON.stringify({ pages: [], claims: [] }) });
 });
