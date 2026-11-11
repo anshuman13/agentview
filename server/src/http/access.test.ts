@@ -168,13 +168,12 @@ describe('bundled app origin', () => {
 });
 
 describe('requester', () => {
-  const req = (remoteAddress: string, fwd?: string) => ({ socket: { remoteAddress }, headers: fwd ? { 'x-forwarded-for': fwd } : {} }) as never;
 
   it('trusts X-Forwarded-For only from the local proxy', () => {
-    expect(requester(req('::ffff:127.0.0.1', '100.102.26.124'))).toBe('100.102.26.124');
-    expect(requester(req('127.0.0.1', '100.102.26.124, 10.0.0.1'))).toBe('100.102.26.124');
-    expect(requester(req('100.102.26.124', '127.0.0.1'))).toBe('100.102.26.124');
-    expect(requester(req('::ffff:100.102.26.124'))).toBe('100.102.26.124');
-    expect(requester(req('127.0.0.1'))).toBe('127.0.0.1');
+    expect(requester('::ffff:127.0.0.1', '100.102.26.124')).toBe('100.102.26.124');
+    expect(requester('127.0.0.1', '100.102.26.124, 10.0.0.1')).toBe('100.102.26.124');
+    expect(requester('100.102.26.124', '127.0.0.1')).toBe('100.102.26.124');
+    expect(requester('::ffff:100.102.26.124', null)).toBe('100.102.26.124');
+    expect(requester('127.0.0.1', null)).toBe('127.0.0.1');
   });
 });

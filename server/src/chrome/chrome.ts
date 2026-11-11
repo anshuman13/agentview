@@ -1,4 +1,4 @@
-import { WebSocket } from 'ws';
+import type { Peer } from '../http/peer.js';
 import { call, connect, connected, events, sendState, setup, stopRetrying, type Msg } from './cdp.js';
 import { chromeRunning, endpoint, launchProfile, openMac, ownProfile } from './launch.js';
 import { forgetViewer, frame, hooks, resetFrames, viewers, viewport } from './frames.js';
@@ -65,7 +65,7 @@ events.message = (m: Msg) => {
 
 hooks.ack = ({ session, id }) => void call('Page.screencastFrameAck', { sessionId: id }, session).catch(() => {});
 
-async function input(m: any, ws: WebSocket) {
+async function input(m: any, ws: Peer) {
   switch (m.t) {
     case 'connect':
       return connect();
@@ -82,7 +82,7 @@ async function input(m: any, ws: WebSocket) {
   if (s) return pageInput(m, ws, s);
 }
 
-function closeViewer(ws: WebSocket) {
+function closeViewer(ws: Peer) {
   viewers.delete(ws);
   forgetTouch(ws);
   forgetViewer(ws);
@@ -94,7 +94,7 @@ function closeViewer(ws: WebSocket) {
   if (was) void emulate();
 }
 
-export function openChrome(ws: WebSocket, origin: string | undefined) {
+export function openChrome(ws: Peer, origin: string | undefined) {
   if (origin) trustOrigin(origin);
   viewers.add(ws);
   sendState(ws);

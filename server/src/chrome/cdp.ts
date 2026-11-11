@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
+import type { Peer } from '../http/peer.js';
 import { chromeRunning, endpoint, failure, launchProfile, openMac, ownProfile } from './launch.js';
 import { viewers } from './frames.js';
 import { errText } from '../../../shared/util.js';
@@ -30,7 +31,7 @@ export function broadcast(m: object) {
   viewers.forEach((v) => v.readyState === WebSocket.OPEN && v.send(s));
 }
 
-export function sendState(ws: WebSocket) {
+export function sendState(ws: Peer) {
   ws.send(JSON.stringify({ t: 'state', state, reason, own: ownProfile() }));
 }
 

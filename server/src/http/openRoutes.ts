@@ -21,7 +21,7 @@ import { listPorts, openPort } from './preview.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
 import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { readBody, savePaste } from './body.js';
-import { HANDLED, entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
+import { entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
@@ -94,7 +94,7 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'ANY /api/worktrees': entry(() => listWorktrees(liveCwds())),
     'ANY /api/repos': entry(() => listRepos()),
     'ANY /api/ports': entry(() => listPorts()),
-    'ANY /api/ports/open': entry(({ req, url }) => openPort(Number(url.searchParams.get('port')), req.headers.host)),
+    'ANY /api/ports/open': entry(({ req, url }) => openPort(Number(url.searchParams.get('port')), req.headers.get('host') ?? undefined)),
   };
 }
 
@@ -128,20 +128,15 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       d.restart(url.searchParams.has('now'), url.searchParams.has('full'));
       return { ok: true };
     }),
-    'ANY /api/app.apk': entry(async ({ res }) => {
-      const body = await readFile(d.APK);
-      res.writeHead(200, { 'content-type': 'application/vnd.android.package-archive', 'content-disposition': 'attachment; filename="AgentView.apk"' });
-      res.end(body);
-      return HANDLED;
-    }),
-    'ANY /api/connect': entry(async ({ req, url }) => {
-      const port = [url.searchParams.get('port'), req.headers.host?.match(/:(\d+)$/)?.[1]].find((p) => p && /^\d{1,5}$/.test(p)) ?? String(d.PORT);
+    'ANY /api/app.apk': entry(async () => new Response(await readFile(d.APK), { headers: { 'content-type': 'application/vnd.android.package-archive', 'content-disposition': 'attachment; filename="AgentView.apk"' } })),
+    'ANY /api/connect': entry(async ({ req, ip, url }) => {
+      const port = [url.searchParams.get('port'), req.headers.get('host')?.match(/:(\d+)$/)?.[1]].find((p) => p && /^\d{1,5}$/.test(p)) ?? String(d.PORT);
       const ips = Object.values(d.networkInterfaces())
         .flat()
         .filter((a) => a && a.family === 'IPv4' && !a.internal && d.allowedPeer(a.address))
         .map((a) => a!.address);
       const running = [...d.chats().values()].filter((c) => c.running).length;
-      const { macs, problem } = url.searchParams.has('peer') ? { macs: [] } : await otherMacs(port, d.requester(req));
+      const { macs, problem } = url.searchParams.has('peer') ? { macs: [] } : await otherMacs(port, ip);
       return { hostname: d.thisMac, urls: ips.map((ip) => `http://${ip}:${port}`), running, macs, netbird: problem };
     }),
     'POST /api/focus': entry(({ body }) => {
