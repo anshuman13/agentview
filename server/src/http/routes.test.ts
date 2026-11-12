@@ -66,6 +66,14 @@ describe('routes', () => {
     expect([none.code, none.json, none.serveWeb.mock.calls.length]).toEqual([503, { error: 'The agent host is starting' }, 0]);
   });
 
+  it('takes a command with no chat open, so a new chat can start', async () => {
+    const handleCommand = vi.fn();
+    const client = { send: vi.fn(), sendRaw: vi.fn(), view: 'gone' };
+    const r = await call('POST', '/api/cmd?cid=t&chat=gone', '{"type":"new_session"}', { chats: () => new Map(), lastViewed: () => '', streams: { get: () => client }, handleCommand });
+    expect([r.code, r.json]).toEqual([200, { ok: true }]);
+    expect(handleCommand).toHaveBeenCalledWith(client, { type: 'new_session' }, 'gone');
+  });
+
   it('turns a thrown error or malformed JSON into a 500', async () => {
     mocks.listRepos.mockRejectedValueOnce(new Error('boom'));
     const thrown = await call('GET', '/api/repos');

@@ -42,6 +42,8 @@ export function createClients(host: Host, live: Live, ring: Ring, boot: number) 
     client.waiting = true;
     live.lastViewed = id;
     reportViewers();
+    // No chat open: the client gets the live list and opens one through a command.
+    if (!id) return void (client.waiting = false);
     host.call({ op: 'state', id, limit: ROW_WINDOW }, (err, state) => {
       if (client.view !== id) return;
       client.waiting = false;

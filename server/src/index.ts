@@ -287,7 +287,7 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
       break;
     default: {
       const id = ('run' in msg ? live.runs.find((r) => r.id === msg.run)?.chatId : undefined) ?? target ?? client.view;
-      if (!live.chats.has(id)) return fail(new Error('This chat was closed'));
+      if (!live.chats.has(id)) return fail(new Error(live.chats.size ? 'This chat was closed' : 'The agent host is starting, try again in a moment'));
       host.req({ op: 'cmd', id, msg }).catch(fail);
     }
   }

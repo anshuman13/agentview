@@ -16,25 +16,32 @@ import { devScript } from '../workspace/devScript.js';
 import type { ClientMessage } from '../../../shared/protocol.js';
 import { readBody } from './body.js';
 import { isPhone } from '../presence.js';
-import { HANDLED, entry, type ChatCtx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
+import { HANDLED, entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 
 const MAX_FILE_BODY = 5_000_000;
 
-export function chatSessionRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> {
+// The stream and commands work with no chat open: a new chat is opened through them.
+export function streamRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
+  const current = (url: URL) => d.chats().get(url.searchParams.get('chat') ?? '') ?? d.chats().get(d.lastViewed());
   return {
-    'ANY /api/events': entry(({ req, res, url, chat }) => {
+    'ANY /api/events': entry(({ req, res, url }) => {
       const asked = (url.searchParams.has('session') && d.bySession(url.searchParams.get('session'))) || (d.chats().has(url.searchParams.get('chat') ?? '') ? url.searchParams.get('chat')! : undefined);
-      d.openEvents(req, res, url, asked ?? chat.id, Boolean(asked));
+      d.openEvents(req, res, url, asked ?? current(url)?.id ?? '', Boolean(asked));
       return HANDLED;
     }),
-    'POST /api/cmd': entry(({ req, url, body, chat }) => {
+    'POST /api/cmd': entry(({ req, url, body }) => {
       const msg = body as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
       const client = d.streams.get(url.searchParams.get('cid') ?? '');
       if (!client && !d.chats().has(url.searchParams.get('chat') ?? '')) return { status: 409, body: { error: 'No stream for this command' } };
-      d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat.id, phone: isPhone(url.searchParams.get('client'), req.headers['user-agent']) }, msg, url.searchParams.get('chat') || undefined);
+      d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: current(url)?.id ?? '', phone: isPhone(url.searchParams.get('client'), req.headers['user-agent']) }, msg, url.searchParams.get('chat') || undefined);
       return { ok: true };
     }, true),
+  };
+}
+
+export function chatSessionRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> {
+  return {
     'ANY /api/chat/events': entry(async ({ url, chat }) => {
       const limit = parseInt(url.searchParams.get('limit') ?? '', 10);
       try {

@@ -112,7 +112,7 @@ async function handle(req: HostRequest): Promise<unknown> {
 }
 
 async function newInFolder(req: Extract<HostRequest, { op: 'new' }>) {
-  const chat = await newChat(req.cwd, get(req.from), req.fork, req.provider);
+  const chat = await newChat(req.cwd, live.get(req.from)?.chat, req.fork, req.provider);
   applyInitialModel(chat, req.model);
   if (req.text) void chat.prompt(req.text);
   return chat.id;

@@ -109,11 +109,11 @@ async function resumeSaved(sessionId: string) {
   return createChat(dir, sessionId, info.summary);
 }
 
-export async function newChat(cwd: string, from: AgentSession, fork?: string, choice?: Provider) {
+export async function newChat(cwd: string, from: AgentSession | undefined, fork?: string, choice?: Provider) {
   const dir = path.resolve(cwd);
-  if (dir !== from.cwd && dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${dir}`);
+  if (dir !== from?.cwd && dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${dir}`);
   if (!(await isDir(dir))) throw new Error(`Folder no longer exists: ${dir}`);
-  return fork ? createChat(dir, fork, from.title, true) : createChat(dir, undefined, '', false, choice);
+  return fork ? createChat(dir, fork, from?.title ?? '', true) : createChat(dir, undefined, '', false, choice);
 }
 
 export async function prompt(cwd: string, text: string, from?: string, fresh = false, choice: Provider = 'claude', model?: string) {
