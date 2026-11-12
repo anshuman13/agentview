@@ -34,6 +34,7 @@ async function write(s: Snap) {
   await jsonFile<BuildEntry[]>(path.join(buildsDir(repo), `${s.slug}.json`), []).update(async (cur) => {
     const old = cur.find((e) => e.id === s.id);
     const report = s.report ?? old?.report ?? '';
+    if (old && old.status === s.status && old.endedAt === s.endedAt && old.report === report) return cur;
     const commit = s.stage !== 'implement' ? undefined : old?.commit && old.report === report ? old.commit : report ? await commitIn(repo, report) : undefined;
     const entry: BuildEntry = {
       id: s.id, stage: s.stage, round: old?.round ?? s.round ?? cur.filter((e) => e.stage === s.stage).length + 1,
@@ -45,7 +46,7 @@ async function write(s: Snap) {
 
 // Records run in the order they were emitted, so a hand-back's second emit never lands before its first.
 let queue: Promise<unknown> = Promise.resolve();
-// A running agent re-emits its event on every progress tick; only a status change is worth a write.
+// A running agent re-emits its event on every progress tick, and a history load replays every event; only a change is worth a write.
 const lastStatus = new Map<string, string>();
 
 // A build agent's start, end or report, from the event the chat emits.
@@ -53,11 +54,18 @@ export function recordBuild(session: AgentSession, ev: ChatEvent) {
   const agent = ev.kind === 'agent' ? ev : ev.kind === 'tool_result' ? session.log.agent(ev.toolUseId) : undefined;
   const target = agent && buildStageOf(agent.subagentType, agent.description, agent.prompt);
   if (!agent || !target) return;
-  if (ev.kind === 'agent' && lastStatus.get(agent.toolUseId) === agent.status) return;
-  lastStatus.set(agent.toolUseId, agent.status);
   const report = ev.kind === 'tool_result' && agent.status !== 'running' ? ev.text.slice(0, MAX_REPORT) : undefined;
+  const key = `${agent.toolUseId}:${ev.kind}`;
+  const seen = `${agent.status}:${report?.length ?? ''}`;
+  if (lastStatus.get(key) === seen) return;
+  lastStatus.set(key, seen);
   const snap: Snap = { ...target, id: agent.toolUseId, status: agent.status, startedAt: agent.startedAt, endedAt: agent.endedAt, report, chat: session.id, session: session.state.session.sessionId, cwd: session.cwd };
   queue = queue.then(() => write(snap)).catch(() => {});
+}
+
+// Records the build agents of a loaded history, so a record a restart or a missed live event left behind catches up.
+export function recordHistory(session: AgentSession) {
+  for (const ev of session.state.events) if (ev.kind === 'agent' || ev.kind === 'tool_result') recordBuild(session, ev);
 }
 
 const SLUG = /^\w[\w.-]*$/;

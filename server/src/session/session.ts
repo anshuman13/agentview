@@ -4,7 +4,7 @@ import type { ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, Se
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from './resume.js';
 import { Approvals } from './approvals.js';
-import { recordBuild } from './builds.js';
+import { recordBuild, recordHistory } from './builds.js';
 import { BuildCycle } from './cycle.js';
 import { EventLog } from './eventLog.js';
 import { Hooks } from './hooks.js';
@@ -191,11 +191,13 @@ export class AgentSession implements AgentHost {
 
   replaceHistory(h: History) {
     this.log.replace(h);
+    recordHistory(this);
   }
 
   async loadHistory() {
     const h = await this.driver.loadHistory();
     if (h) this.log.append(h);
+    recordHistory(this);
   }
 
   close() {

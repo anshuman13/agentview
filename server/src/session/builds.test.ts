@@ -47,6 +47,14 @@ const result = (id: string, text: string): ChatEvent => ({ id: `${id}:result${n+
 const stored = (slug: string) => JSON.parse(readFileSync(path.join(store, encodeURIComponent(repo), `${slug}.json`), 'utf8')) as BuildEntry[];
 
 describe('recording builds', () => {
+  it('catches a stale running entry up from a loaded history', async () => {
+    const s = claudeSession(repo);
+    s.pushEvent(agent('h1', 'test:blue-cup#1'));
+    await waitFor(() => expect(stored('blue-cup')).toMatchObject([{ id: 'h1', status: 'running' }]));
+    s.replaceHistory({ events: [agent('h1', 'test:blue-cup#1', 'done'), result('h1', '1. pass: ok')], context: null, cache: null } as never);
+    await waitFor(() => expect(stored('blue-cup')).toMatchObject([{ id: 'h1', status: 'done', report: '1. pass: ok' }]));
+  });
+
   it('keeps one entry for a running agent that ends, and one for a hand-back emitted twice', async () => {
     const s = claudeSession(repo);
     const a = agent('t1', 'test:red-lamp#1');

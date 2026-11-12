@@ -21,6 +21,7 @@ export class TranscriptWatch {
   private watchedId: string | undefined;
   private transcriptTimer: NodeJS.Timeout | undefined;
   private workflowTimer: NodeJS.Timeout | undefined;
+  private rewatchTimer: NodeJS.Timeout | undefined;
   private seen = '';
   private seenSubs = 0;
   private endedAt = 0;
@@ -46,6 +47,7 @@ export class TranscriptWatch {
   }
 
   watchHistory(on: boolean) {
+    clearTimeout(this.rewatchTimer);
     const sessionId = this.state.session.sessionId;
     if (!on || !sessionId || this.owner.isClosed()) {
       this.transcript?.close();
@@ -71,7 +73,11 @@ export class TranscriptWatch {
         if (!file?.includes('/subagents/workflows/')) return;
         clearTimeout(this.workflowTimer);
         this.workflowTimer = setTimeout(() => void this.syncWorkflows(), 300);
-      }).on('error', () => this.watchHistory(false));
+      }).on('error', () => {
+        // A watcher error would otherwise end live updates, workflow agents and build records with them, until a restart.
+        this.watchHistory(false);
+        this.rewatchTimer = setTimeout(() => this.watchHistory(true), 5000);
+      });
     } catch {
       return;
     }
@@ -108,7 +114,12 @@ export class TranscriptWatch {
     for (const run of wf.runs) {
       const call = this.owner.host.eventById(calls.get(run.runId) ?? '');
       if (call?.kind !== 'tool_use' || call.name !== 'Workflow') continue;
-      this.pushWorkflowRun(run, workflowName(call.input), call.at);
+      // One run that fails to push must not stop the runs after it.
+      try {
+        this.pushWorkflowRun(run, workflowName(call.input), call.at);
+      } catch (err) {
+        console.error(`workflow ${run.runId}: ${err instanceof Error ? err.message : err}`);
+      }
     }
   }
 
