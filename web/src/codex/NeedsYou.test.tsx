@@ -43,6 +43,8 @@ beforeEach(() => {
   mocks.snack.mockClear();
   mocks.store.capture = vi.fn();
   mocks.store.update = vi.fn(() => Promise.resolve());
+  mocks.store.editRow = vi.fn(() => Promise.resolve());
+  mocks.store.snapshot = vi.fn(() => ({ briefs: [] }));
 });
 
 describe('NeedsYou triage', () => {
@@ -76,5 +78,18 @@ describe('NeedsYou triage', () => {
     expect(mocks.store.update).toHaveBeenCalledWith(ask, { status: 'note' });
     mocks.snack.mock.calls[0][1]();
     expect(mocks.store.update).toHaveBeenLastCalledWith(ask, { status: 'suggested' });
+  });
+
+  it('dismisses on the hub rows, so other devices hide them too, and Undo restores them', () => {
+    const n = rendered();
+    n.dismissChat(dm as never);
+    expect(mocks.store.editRow).toHaveBeenLastCalledWith('chats', dm, { waiting: 0 });
+    mocks.snack.mock.calls[0][1]();
+    expect(mocks.store.editRow).toHaveBeenLastCalledWith('chats', dm, { waiting: 1 });
+    const brief = { profile: 'work', id: 'b', dismissed: 'https://x/1' };
+    n.dismissBullet(brief as never, { title: 'Reply to Bo', why: '', url: 'https://x/2' });
+    expect(mocks.store.editRow).toHaveBeenLastCalledWith('briefs', brief, { dismissed: 'https://x/1\nhttps://x/2' });
+    mocks.snack.mock.calls[1][1]();
+    expect(mocks.store.editRow).toHaveBeenLastCalledWith('briefs', brief, { dismissed: 'https://x/1' });
   });
 });

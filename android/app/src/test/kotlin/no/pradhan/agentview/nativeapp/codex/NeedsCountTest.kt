@@ -34,7 +34,8 @@ class NeedsCountTest {
     @Test fun hiddenDmsAndBriefBulletsCount() {
         val st = CodexState(chats = listOf(chat("a"), chat("b")), briefs = listOf(brief("**Needs you**\n- [Plan](https://x.test/1): Do it now. Later.\n  - sub\n- **Bold**: why\n\n**Decided**\n- [Other](https://x.test/2): no")))
         assertEquals(4, needsView(st, null, NOW).total)
-        assertEquals(2, needsView(st, null, NOW, setOf(waitKey(chat("a")), slackKey(Bullet("Plan", "https://x.test/1", "")))).total)
+        val hidden = st.copy(chats = listOf(chat("a", 0), chat("b")), briefs = listOf(edited(st.briefs[0], mapOf("dismissed" to "https://x.test/1"), NOW)))
+        assertEquals(2, needsView(hidden, null, NOW).total)
         assertEquals("Do it now.", briefBullets((st.briefs[0].str("text"))!!)[0].why)
     }
 

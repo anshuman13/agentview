@@ -96,9 +96,8 @@ private class OverviewData(val s: Split, val mt: Meetings, val needs: List<Need>
 private fun rememberOverviewData(hub: Hub, st: CodexState, profile: String?, now: Long): OverviewData {
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val mt = remember(st.meetings, profile, now / 60_000) { meetingsOf(st.meetings, profile, now) }
-    val hidden by hub.handled.collectAsState()
     val counts by hub.counts.collectAsState()
-    val needsView = remember(st, profile, now / 60_000, hidden) { needsView(st, profile, now, hidden) }
+    val needsView = remember(st, profile, now / 60_000) { needsView(st, profile, now) }
     val needs = needsView.list
     val today = remember(st, profile, s, mt, needs) { overviewToday(s, mt.next, now, riskKeys(needs)) }
     val others = mt.today.filter { it != mt.next && (it.endsAt ?: it.startsAt!!) > now }

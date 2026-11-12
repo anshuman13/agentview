@@ -45,7 +45,7 @@ import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.codexProfile
 import no.pradhan.agentview.nativeapp.net.hideNeed
-import no.pradhan.agentview.nativeapp.net.restoreNeeds
+import no.pradhan.agentview.nativeapp.net.restoreNeed
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -293,27 +293,24 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
                 })
         }
         is Need.Risk -> ListRow(n.row.title ?: "", "At risk · due ${whenText(n.due, now)} · ${minutesText(n.short)} short", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
-        is Need.Slack -> NeedCard(n.bullet.title, "Slack" + (n.bullet.why.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), n.bullet.url, { dismissNeed(hub, actions, slackKey(n.bullet)) }, null, !hub.readOnly, { noteNeed(hub, actions, listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), n.bullet.url, n.profile, slackKey(n.bullet)) }) {
-            if (hub.codex.capture(listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), "open", n.profile, null, mapOf("text" to n.bullet.url)) != null) hub.hideNeed(slackKey(n.bullet))
+        is Need.Slack -> NeedCard(n.bullet.title, "Slack" + (n.bullet.why.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), n.bullet.url, { dismissNeed(hub, actions, n) }, null, !hub.readOnly, { noteNeed(hub, actions, listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), n.bullet.url, n.profile, n) }) {
+            if (hub.codex.capture(listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), "open", n.profile, null, mapOf("text" to n.bullet.url)) != null) hub.hideNeed(n)
         }
-        is Need.Dm -> NeedCard(n.chat.str("name") ?: "DM", listOfNotNull(listOfNotNull("DM", n.chat.long("last_at")?.let { agoText(it, now) }).joinToString(" · "), n.chat.str("summary")?.ifEmpty { null }).joinToString("\n"), n.chat.str("url"), { dismissNeed(hub, actions, waitKey(n.chat)) }, n.chat.str("name")?.let { name -> { onPerson(name) } }, !hub.readOnly, { noteNeed(hub, actions, listOfNotNull(n.chat.str("name") ?: "DM", n.chat.str("summary")?.ifEmpty { null }).joinToString(": "), n.chat.str("url"), n.chat.profile, waitKey(n.chat)) }) {
-            if (hub.codex.capture("Reply to ${n.chat.str("name") ?: "DM"}", "open", n.chat.profile, null, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM")) != null) hub.hideNeed(waitKey(n.chat))
+        is Need.Dm -> NeedCard(n.chat.str("name") ?: "DM", listOfNotNull(listOfNotNull("DM", n.chat.long("last_at")?.let { agoText(it, now) }).joinToString(" · "), n.chat.str("summary")?.ifEmpty { null }).joinToString("\n"), n.chat.str("url"), { dismissNeed(hub, actions, n) }, n.chat.str("name")?.let { name -> { onPerson(name) } }, !hub.readOnly, { noteNeed(hub, actions, listOfNotNull(n.chat.str("name") ?: "DM", n.chat.str("summary")?.ifEmpty { null }).joinToString(": "), n.chat.str("url"), n.chat.profile, n) }) {
+            if (hub.codex.capture("Reply to ${n.chat.str("name") ?: "DM"}", "open", n.chat.profile, null, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM")) != null) hub.hideNeed(n)
         }
     }
 }
 
-private fun dismissNeed(hub: Hub, actions: TaskActions, key: String) {
-    val before = hub.handled.value
-    hub.hideNeed(key)
-    if (hub.handled.value != before) actions.undoable("Dismissed") { hub.restoreNeeds(before) }
+private fun dismissNeed(hub: Hub, actions: TaskActions, n: Need) {
+    if (hub.hideNeed(n)) actions.undoable("Dismissed") { hub.restoreNeed(n) }
 }
 
-private fun noteNeed(hub: Hub, actions: TaskActions, title: String, text: String?, profile: String, key: String) {
-    val before = hub.handled.value
+private fun noteNeed(hub: Hub, actions: TaskActions, title: String, text: String?, profile: String, n: Need) {
     val made = hub.codex.capture(title, "note", profile, null, mapOf("text" to text))
     if (made == null) { actions.say(NOTE_FAILED); return }
-    hub.hideNeed(key)
-    actions.undoable(NOTED) { hub.codex.update(made, mapOf("deleted" to true)); hub.restoreNeeds(before) }
+    hub.hideNeed(n)
+    actions.undoable(NOTED) { hub.codex.update(made, mapOf("deleted" to true)); hub.restoreNeed(n) }
 }
 
 // A left swipe dismisses; the row leaves with the data, so the box never settles open.

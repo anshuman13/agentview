@@ -90,7 +90,7 @@ const val JUST_ENDED_MS = 2 * 3_600_000L
 sealed class Need(val keys: List<String>, val marks: List<String> = emptyList()) {
     class Overdue(val row: Row) : Need(listOf("task:${row.key}"))
     class Risk(val row: Row, val due: Long, val short: Long) : Need(listOf("task:${row.key}"))
-    class Slack(val bullet: Bullet, val profile: String) : Need(listOf(bullet.url?.let { "url:$it" } ?: "slack:${bullet.title}"))
+    class Slack(val bullet: Bullet, val brief: Row) : Need(listOf(bullet.url?.let { "url:$it" } ?: "slack:${bullet.title}")) { val profile get() = brief.profile }
     class OverdueAll(val rows: List<Row>) : Need(emptyList())
     class Ask(val row: Row) : Need(listOf("task:${row.key}"), listOfNotNull(row.sourceUrl?.takeIf { it.startsWith("http") }?.let { "url:$it" }))
     class Dm(val chat: Row) : Need(listOf("chat:${chat.key}") + listOfNotNull(chat.str("url")?.let { "url:$it" }))
@@ -103,17 +103,17 @@ sealed class Need(val keys: List<String>, val marks: List<String> = emptyList())
 
 // Each item once, in rank order: overdue tasks, asks to confirm, DMs waiting on me, then actions of meetings that just ended.
 // Three or more overdue tasks collapse into one entry.
-fun waitKey(c: Row) = "wait:${c.key}:${c.long("last_at") ?: ""}"
-fun slackKey(b: Bullet) = "slack:${b.key}"
+// Dismissed bullets are stored on the brief row, so every device hides them.
+fun dismissedOf(brief: Row) = brief.str("dismissed").orEmpty().split("\n").filter { it.isNotEmpty() }
 
-fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList(), briefs: List<Row> = emptyList(), hidden: Set<String> = emptySet()): List<Need> {
+fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList(), briefs: List<Row> = emptyList()): List<Need> {
     val s = split(items, profile, now)
     val mt = meetingsOf(meetings, profile, now)
     val ended = mt.today.filter { it.endsAt != null && it.endsAt!! <= now && now - it.endsAt!! < JUST_ENDED_MS }
-    val dms = chats.filter { !it.deleted && it.str("kind") == "dm" && it.long("waiting") == 1L && matchesProfile(profile, it) && waitKey(it) !in hidden }.sortedByDescending { it.long("last_at") ?: 0L }
+    val dms = chats.filter { !it.deleted && it.str("kind") == "dm" && it.long("waiting") == 1L && matchesProfile(profile, it) }.sortedByDescending { it.long("last_at") ?: 0L }
     // A Slack summary older than the stale-ask age is out of date; its bullets are not shown.
     val brief = briefs.filter { !it.deleted && it.str("kind") == "slack" && matchesProfile(profile, it) && now - (it.long("to_at") ?: 0L) <= STALE_DAYS * DAY_MS }.maxByOrNull { it.long("to_at") ?: 0L }
-    val bullets = brief?.str("text")?.let(::briefBullets)?.filter { slackKey(it) !in hidden } ?: emptyList()
+    val bullets = brief?.str("text")?.let(::briefBullets)?.filter { it.key !in dismissedOf(brief) } ?: emptyList()
     val timed = meetings.filter { !it.deleted && matchesProfile(profile, it) && it.startsAt != null && it.endsAt != null && it.endsAt!! > it.startsAt!! && it.endsAt!! - it.startsAt!! < 20 * 3_600_000L }
     val minute = now / 60_000 * 60_000
     val blocked = timed.filter { isBlock(it) && it.endsAt!! > minute }.map { "${it.profile}:${it.id}" }.toSet()
@@ -126,7 +126,7 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
         risk.map { (row, short) -> Need.Risk(row, row.at!!, short) },
         s.review.filter { !(it.source == "slack" && drafted(it)) }.map { Need.Ask(it) },
         dms.map { Need.Dm(it) },
-        bullets.map { Need.Slack(it, brief!!.profile) },
+        bullets.map { Need.Slack(it, brief!!) },
         ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.map { Need.JustEnded(it, m) } },
         if (old.isNotEmpty()) listOf(Need.StaleAsks(old.size, old.minOf { it.statusTime })) else emptyList(),
         if (claims > 0) listOf(Need.Wiki(claims)) else emptyList(),
@@ -141,12 +141,12 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
     return ranked.subList(0, first) + Need.OverdueAll(overdue.map { it.row }) + ranked.subList(first, ranked.size).filter { it !is Need.Overdue }
 }
 
-fun needsList(st: CodexState, profile: String?, now: Long, hidden: Set<String> = emptySet()) = needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs, hidden)
+fun needsList(st: CodexState, profile: String?, now: Long) = needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs)
 
 class NeedsView(val list: List<Need>, val queue: List<Row>) { val total get() = list.size + queue.size }
 
-fun needsView(st: CodexState, profile: String?, now: Long, hidden: Set<String> = emptySet()) =
-    NeedsView(needsList(st, profile, now, hidden), replyQueue(split(st.items, profile, now).review, profile, now))
+fun needsView(st: CodexState, profile: String?, now: Long) =
+    NeedsView(needsList(st, profile, now), replyQueue(split(st.items, profile, now).review, profile, now))
 
 fun doneCount(done: Int, open: Int) = if (done > 0) "$done of ${done + open} done" else null
 

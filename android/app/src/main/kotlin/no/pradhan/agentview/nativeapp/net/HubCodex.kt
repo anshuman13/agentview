@@ -22,20 +22,23 @@ import no.pradhan.agentview.nativeapp.codex.openDaily
 import no.pradhan.agentview.nativeapp.codex.parseDaily
 import no.pradhan.agentview.nativeapp.codex.reusableDaily
 import no.pradhan.agentview.nativeapp.codex.today
-import no.pradhan.agentview.nativeapp.codex.waitKey
+import no.pradhan.agentview.nativeapp.codex.Need
+import no.pradhan.agentview.nativeapp.codex.dismissedOf
 import no.pradhan.agentview.nativeapp.sessions.segmentOf
 
-fun Hub.hideNeed(key: String) {
-    if (readOnly) { notice.value = READ_ONLY_SENT; return }
-    val live = codex.state.value.chats.filter { !it.deleted }.map(::waitKey).toSet()
-    val all = (handled.value - key) + key
-    handled.value = (all.filter { !it.startsWith("wait:") || it in live || it == key } .filter { !it.startsWith("slack:") } + all.filter { it.startsWith("slack:") }.takeLast(50)).toCollection(LinkedHashSet())
-    prefs.edit().putString("handledOrder", handled.value.joinToString("\n")).apply()
+// A dismissed DM stops waiting and a dismissed bullet is stored on its brief, so every device hides them.
+fun Hub.hideNeed(n: Need): Boolean = when (n) {
+    is Need.Dm -> codex.update(n.chat, mapOf("waiting" to 0))
+    is Need.Slack -> codex.update(n.brief, mapOf("dismissed" to (dismissedOf(codex.current(n.brief)) + n.bullet.key).joinToString("\n")))
+    else -> false
 }
 
-fun Hub.restoreNeeds(keys: Set<String>) {
-    handled.value = keys
-    prefs.edit().putString("handledOrder", keys.joinToString("\n")).apply()
+fun Hub.restoreNeed(n: Need) {
+    when (n) {
+        is Need.Dm -> codex.update(n.chat, mapOf("waiting" to 1))
+        is Need.Slack -> codex.update(n.brief, mapOf("dismissed" to (dismissedOf(codex.current(n.brief)) - n.bullet.key).joinToString("\n").ifEmpty { null }))
+        else -> {}
+    }
 }
 
 fun Hub.resolveQuestion(q: Question, meetings: List<Row>, now: Long) {

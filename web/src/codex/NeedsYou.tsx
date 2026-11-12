@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
-import { live, proposals, type Chat, type Meeting } from './data/wiki/wiki';
+import { live, proposals, type Brief, type Chat, type Meeting } from './data/wiki/wiki';
 import { atTime, errorText, reviewedSince } from './data/tasks/engine';
 import { actionsOf } from './data/meetings/meetings';
 import { followUpText } from './data/meetings/meetingMarkdown';
@@ -11,7 +11,7 @@ import { needsYou } from './summary/needsYou';
 import { ActionRow } from './meetings/ActionRow';
 import { Swipe } from './gestures/Swipe';
 import { useActions } from './useActions';
-import { ago, plural, safeHref, save, stored } from '../ui/util';
+import { ago, plural, safeHref } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
 import { AskRow } from '../ui/AskRow';
 import { Button } from '../ui/Button';
@@ -23,16 +23,8 @@ import { haptic } from '../ui/haptic';
 import { copyText, openMeeting, openTask, setView, showSnack, useView } from './view';
 import { when } from './tasks/time';
 import type { useSplit } from './tasks/split';
-import { createStore } from '../ui/createStore';
 
-const WAIT_HANDLED = 'codex.waitingHandled';
-const SLACK_HANDLED = 'codex.slackHandled';
 const waitKey = (c: Chat) => `${c.profile}:${c.id}:${c.last_at ?? ''}`;
-const handled = createStore({ wait: stored<string[]>(WAIT_HANDLED, []), slack: stored<string[]>(SLACK_HANDLED, []) });
-const setHandled = (key: 'wait' | 'slack', next: string[]) => {
-  save(key === 'wait' ? WAIT_HANDLED : SLACK_HANDLED, next);
-  handled.patch({ [key]: next });
-};
 const urlKey = (u: string | null | undefined) => (safeHref(u) ? [`url:${safeHref(u)}`] : []);
 
 type Bullet = { title: string; url: string | null; why: string };
@@ -42,7 +34,7 @@ type Need =
   | { kind: 'risk'; row: ItemRow; due: number; short: number; keys: string[] }
   | { kind: 'ask'; row: ItemRow; keys: string[]; marks: string[] }
   | { kind: 'dm'; chat: Chat; keys: string[] }
-  | { kind: 'slack'; x: Bullet; profile: Chat['profile']; keys: string[] }
+  | { kind: 'slack'; x: Bullet; brief: Brief; keys: string[] }
   | { kind: 'justEnded'; row: ItemRow; meeting: Meeting; actions: ItemRow[]; keys: string[] }
   | { kind: 'staleAsks'; count: number; oldest: number; keys: string[] }
   | { kind: 'wiki'; count: number; keys: string[] };
@@ -53,6 +45,8 @@ const JUST_ENDED_MS = 2 * 3600_000;
 
 const taskKey = (r: ItemRow) => `task:${r.profile}:${r.id}`;
 const bulletKey = (x: Bullet) => x.url ?? x.title;
+// Dismissed bullets are stored on the brief row, so every device hides them.
+const dismissedOf = (b: Brief) => (b.dismissed ?? '').split('\n').filter(Boolean);
 
 // Overdue and at-risk tasks, asks and promises to confirm, DMs waiting on me and the Slack brief's "Needs you" bullets, once each.
 export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
@@ -60,8 +54,6 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   const snap = useAssistantData();
   const { facts } = useCodex();
   const { filter } = useView();
-  const waitDone = handled.use((h) => h.wait);
-  const slackDone = handled.use((h) => h.slack);
   const pending = useRef(new Set<string>());
   const minute = Math.floor(now / 60000);
   const rows = useMemo(() => {
@@ -72,10 +64,10 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
       return due != null && !blocked.has(`${r.profile}:${blockId(r.id)}`) ? [{ title: r.title, due, r }] : [];
     });
     const risk = atRisk(tasks, timed.map((m) => [m.starts_at!, m.ends_at!] as Span), minute * 60000);
-    const dms = live(snap.chats).filter((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter) && !waitDone.includes(waitKey(c))).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
+    const dms = live(snap.chats).filter((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter)).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
     // A Slack summary older than the stale-ask age is out of date; its bullets are not shown.
     const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack' && (filter === 'all' || b.profile === filter) && minute * 60000 - (b.to_at ?? 0) <= STALE_DAYS * 86400_000).sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
-    const bullets = brief?.text ? needsYou(brief.text).filter((x) => !slackDone.includes(bulletKey(x))) : [];
+    const bullets = brief?.text ? needsYou(brief.text).filter((x) => !dismissedOf(brief).includes(bulletKey(x))) : [];
     const ended = s.meetingsToday.filter((m) => m.ends_at != null && m.ends_at <= minute * 60000 && minute * 60000 - m.ends_at < JUST_ENDED_MS);
     const old = staleAsks(replyQueue(s.review, minute * 60000), minute * 60000);
     const claims = proposals(facts).length;
@@ -84,7 +76,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
       risk.map(({ task, short }) => ({ kind: 'risk', row: task.r, due: task.due, short, keys: [taskKey(task.r)] })),
       s.review.filter((row) => !(row.source === 'slack' && row.draft?.trim())).map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
       dms.map((chat) => ({ kind: 'dm', chat, keys: [`chat:${chat.profile}:${chat.id}`, ...urlKey(chat.url)] })),
-      bullets.map((x) => ({ kind: 'slack', x, profile: brief!.profile, keys: urlKey(x.url).length ? urlKey(x.url) : [`slack:${x.title}`] })),
+      bullets.map((x) => ({ kind: 'slack', x, brief: brief!, keys: urlKey(x.url).length ? urlKey(x.url) : [`slack:${x.title}`] })),
       ended.flatMap((meeting) => {
         const actions = actionsOf(snap.items, meeting).filter((r) => r.status === 'open');
         return actions.map((row) => ({ kind: 'justEnded', row, meeting, actions, keys: [taskKey(row)] }));
@@ -93,20 +85,15 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
       claims ? [{ kind: 'wiki', count: claims, keys: ['wiki-claims'] }] : [],
     ]);
     return collapse<Need>(ranked, (x) => x.kind === 'overdue', 3, (xs) => ({ kind: 'overdueAll', rows: xs.flatMap((x) => (x.kind === 'overdue' ? [x.row] : [])), keys: [] }));
-  }, [snap.meetings, snap.chats, snap.briefs, snap.items, facts, filter, s, minute, waitDone, slackDone]);
-  const hideChat = (c: Chat) => {
-    setHandled('wait', [...handled.get().wait.filter((k) => live(snap.chats).some((r) => waitKey(r) === k)), waitKey(c)]);
-  };
-  const hideBullet = (x: Bullet) => {
-    setHandled('slack', [...handled.get().slack, bulletKey(x)].slice(-50));
-  };
-  const dismiss = (key: 'wait' | 'slack', hide: () => void) => {
-    const before = handled.get()[key];
-    hide();
-    showSnack('Dismissed', () => setHandled(key, before));
-  };
-  const dismissChat = (c: Chat) => dismiss('wait', () => hideChat(c));
-  const dismissBullet = (x: Bullet) => dismiss('slack', () => hideBullet(x));
+  }, [snap.meetings, snap.chats, snap.briefs, snap.items, facts, filter, s, minute]);
+  // A dismissed DM stops waiting on the hub, so every device hides it until a new message.
+  const hideChat = (c: Chat) => void store.editRow('chats', c, { waiting: 0 });
+  const unhideChat = (c: Chat) => void store.editRow('chats', c, { waiting: 1 });
+  const current = (b: Brief) => store.snapshot().briefs.find((r) => r.profile === b.profile && r.id === b.id) ?? b;
+  const hideBullet = (b: Brief, x: Bullet) => void store.editRow('briefs', b, { dismissed: [...dismissedOf(current(b)), bulletKey(x)].join('\n') });
+  const unhideBullet = (b: Brief, x: Bullet) => void store.editRow('briefs', b, { dismissed: dismissedOf(current(b)).filter((k) => k !== bulletKey(x)).join('\n') || null });
+  const dismissChat = (c: Chat) => { hideChat(c); showSnack('Dismissed', () => unhideChat(c)); };
+  const dismissBullet = (b: Brief, x: Bullet) => { hideBullet(b, x); showSnack('Dismissed', () => unhideBullet(b, x)); };
   const capture = (key: string, title: string, profile: Chat['profile'], type: 'task' | 'note', fill: (r: ItemRow) => Promise<unknown> | undefined, done: (r: ItemRow) => void) => {
     if (pending.current.has(key)) return;
     pending.current.add(key);
@@ -127,16 +114,14 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     const name = c.name ?? 'DM';
     capture(waitKey(c), `Reply to ${name}`, c.profile, 'task', (r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }), added(() => hideChat(c)));
   };
-  const bulletTask = (x: Bullet, profile: Chat['profile']) => {
-    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, profile, 'task', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), added(() => hideBullet(x)));
+  const bulletTask = (b: Brief, x: Bullet) => {
+    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, b.profile, 'task', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), added(() => hideBullet(b, x)));
   };
   const chatNote = (c: Chat) => {
-    const before = handled.get().wait;
-    capture(waitKey(c), [c.name ?? 'DM', c.summary].filter(Boolean).join(': '), c.profile, 'note', (r) => (safeHref(c.url) ? store.update(r, { text: safeHref(c.url) }) : undefined), noted(waitKey(c), () => hideChat(c), () => setHandled('wait', before)));
+    capture(waitKey(c), [c.name ?? 'DM', c.summary].filter(Boolean).join(': '), c.profile, 'note', (r) => (safeHref(c.url) ? store.update(r, { text: safeHref(c.url) }) : undefined), noted(waitKey(c), () => hideChat(c), () => unhideChat(c)));
   };
-  const bulletNote = (x: Bullet, profile: Chat['profile']) => {
-    const before = handled.get().slack;
-    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, profile, 'note', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), noted(bulletKey(x), () => hideBullet(x), () => setHandled('slack', before)));
+  const bulletNote = (b: Brief, x: Bullet) => {
+    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, b.profile, 'note', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), noted(bulletKey(x), () => hideBullet(b, x), () => unhideBullet(b, x)));
   };
   const askNote = (row: ItemRow) => {
     const key = taskKey(row);
@@ -201,14 +186,14 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
       }
       case 'slack':
         return (
-          <Swipe key={x.keys[0]} onLeft={() => n.dismissBullet(x.x)} leftLabel="Dismiss" leftIcon="close">
+          <Swipe key={x.keys[0]} onLeft={() => n.dismissBullet(x.brief, x.x)} leftLabel="Dismiss" leftIcon="close">
             <CardRow title={x.x.title} meta={`Slack${x.x.why ? ` · ${x.x.why}` : ''}`} onOpen={() => setView({ list: 'summary', open: null })}
               menu={(
                 <>
-                  <MenuItem icon="add" onClick={() => n.bulletTask(x.x, x.profile)}>Make a task</MenuItem>
+                  <MenuItem icon="add" onClick={() => n.bulletTask(x.brief, x.x)}>Make a task</MenuItem>
                   {slackLink(x.x.url)}
-                  <MenuItem icon="note" onClick={() => n.bulletNote(x.x, x.profile)}>Nothing asked</MenuItem>
-                  <MenuItem icon="close" onClick={() => n.dismissBullet(x.x)}>Dismiss</MenuItem>
+                  <MenuItem icon="note" onClick={() => n.bulletNote(x.brief, x.x)}>Nothing asked</MenuItem>
+                  <MenuItem icon="close" onClick={() => n.dismissBullet(x.brief, x.x)}>Dismiss</MenuItem>
                 </>
               )} />
           </Swipe>

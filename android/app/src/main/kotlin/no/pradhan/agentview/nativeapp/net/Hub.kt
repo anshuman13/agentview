@@ -191,10 +191,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
 
-    val handled = MutableStateFlow(
-        prefs.getString("handledOrder", null)?.split("\n")?.filter { it.isNotEmpty() }?.toCollection(LinkedHashSet()) ?: emptySet(),
-    )
-
     val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
 
     val writes = Writes(viewModelScope, { readOnly }, { notice.value = it })
@@ -258,7 +254,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     init {
         viewModelScope.launch(Dispatchers.Default) {
             val minute = foregroundNow.flatMapLatest { up -> if (up) flow { while (true) { emit(Unit); delay(60_000) } } else emptyFlow() }.onStart { emit(Unit) }
-            val rows = combine(codex.state, minute, codexFilter, handled) { s, _, filter, hidden -> needsView(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden).let { it.list.size to it.queue.size } }.distinctUntilChanged()
+            val rows = combine(codex.state, minute, codexFilter) { s, _, filter -> needsView(s, filter.takeIf { it != "all" }, System.currentTimeMillis()).let { it.list.size to it.queue.size } }.distinctUntilChanged()
             val needs = rows.map { it.first }.distinctUntilChanged()
             launch {
                 val chats = store.state.map { Triple(it.live, it.shownId, it.session?.mcp.orEmpty()) }.distinctUntilChanged()
