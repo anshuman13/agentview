@@ -28,9 +28,11 @@ describe('openrouter', () => {
     const on = build(settings);
     expect(on.env).toMatchObject(openRouterEnv(settings));
     expect(on.agents).toEqual({});
+    expect(on.plugins).toBeUndefined();
     const off = build(null);
     expect(off.env?.ANTHROPIC_BASE_URL).toBe(process.env.ANTHROPIC_BASE_URL);
     expect(Object.keys(off.agents ?? {})).toEqual(['big-bro']);
+    expect(off.plugins).toEqual([{ type: 'local', path: expect.stringMatching(/server[\\/]build-kit$/), skipMcpDiscovery: true }]);
   });
 
   it('disallows WebSearch when a slot is not an Anthropic model', () => {

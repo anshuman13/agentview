@@ -72,7 +72,7 @@ export const slugOk = (slug: string | undefined): slug is string => Boolean(slug
 export function buildStageOf(subagentType: string, description: string, prompt: string): { stage: BuildStage; slug: string; round: number | null } | null {
   const label = /^(pm|review|impl|test|code-review):([\w.-]+)(?:#(\w+))?$/.exec(description.trim());
   if (label && slugOk(label[2])) return { stage: LABEL[label[1]], slug: label[2], round: label[3] && /^\d+$/.test(label[3]) ? Number(label[3]) : null };
-  const stage = HAND[subagentType];
+  const stage = HAND[subagentType?.replace(/^agentview:/, '')];
   const slug = /\.claude\/specs\/([\w.-]+?)\.md/.exec(prompt)?.[1];
   return stage && slugOk(slug) ? { stage, slug, round: null } : null;
 }

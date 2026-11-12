@@ -170,6 +170,11 @@ describe('agentOptions unattended', () => {
     expect(build().disallowedTools?.some((t) => t.startsWith('Read('))).toBe(false);
   });
 
+  it('loads the build kit plugin for attended and unattended chats', () => {
+    for (const o of [build(), build(rules)]) expect(o.plugins).toEqual([{ type: 'local', path: expect.stringMatching(/server[\\/]build-kit$/), skipMcpDiscovery: true }]);
+    expect(Object.keys(build().agents ?? {})).toEqual(['big-bro']);
+  });
+
   it('holds the sandbox, with no Chrome, only for an unattended chat', () => {
     const o = build(rules);
     expect(o.sandbox).toMatchObject({

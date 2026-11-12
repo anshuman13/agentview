@@ -7,7 +7,7 @@ description: Weekly docs drift report for AgentView. Compares each doc under doc
 
 Runs `.claude/workflows/drift.js`: one `drift-checker` per doc under `docs/`, each a fresh agent that reads one doc and the code it names, and returns only the claims the code no longer matches.
 
-1. `cd server && node ../.claude/usage.mjs --chat`. About 9 Sonnet agent runs; skip when the 5-hour window is over 80%.
+1. `node server/build-kit/usage.mjs --chat` from the repo root. About 9 Sonnet agent runs; skip when the 5-hour window is over 80%.
 2. Call Workflow with `{scriptPath: '<repo>/.claude/workflows/drift.js'}`, or `args: ['docs/features.md']` for some docs only.
 3. Write `.claude/drift/<YYYY-MM-DD>.md` (git-excluded with the rest of `.claude/drift`): one section per doc, one bullet per finding (claim, what the code does, fix doc or code). A doc with `findings: null` failed; say so.
 4. Findings with fix "doc": fix the doc in one commit, subject "Bring docs in line with the code".

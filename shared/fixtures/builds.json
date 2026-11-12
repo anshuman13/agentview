@@ -3,6 +3,7 @@
     { "name": "hand pm", "subagentType": "pm", "description": "Write the spec", "prompt": "Write .claude/specs/blue-kettle.md", "expected": { "stage": "pm", "slug": "blue-kettle", "round": null } },
     { "name": "hand reviewer", "subagentType": "spec-reviewer", "description": "", "prompt": "Review the spec at .claude/specs/blue-kettle.md", "expected": { "stage": "review", "slug": "blue-kettle", "round": null } },
     { "name": "hand tester", "subagentType": "tester", "description": "", "prompt": "Check .claude/specs/blue-kettle.md in the worktree", "expected": { "stage": "test", "slug": "blue-kettle", "round": null } },
+    { "name": "kit tester", "subagentType": "agentview:tester", "description": "", "prompt": "see .claude/specs/x.md", "expected": { "stage": "test", "slug": "x", "round": null } },
     { "name": "hand run without a spec path", "subagentType": "implementer", "description": "", "prompt": "Build it", "expected": null },
     { "name": "other agent", "subagentType": "general-purpose", "description": "Search the code", "prompt": "see .claude/specs/blue-kettle.md", "expected": null },
     { "name": "workflow impl with round", "subagentType": "Build", "description": "impl:red-lamp#2", "prompt": "", "expected": { "stage": "implement", "slug": "red-lamp", "round": 2 } },

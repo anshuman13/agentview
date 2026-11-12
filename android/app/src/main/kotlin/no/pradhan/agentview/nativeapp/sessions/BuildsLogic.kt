@@ -94,7 +94,7 @@ fun buildStageOf(subagentType: String, description: String, prompt: String): Bui
     val ok = { slug: String? -> slug != null && slug.isNotEmpty() && !slug.contains("..") }
     BUILD_LABEL.find(description.trim())?.let { m -> if (ok(m.groupValues[2])) return BuildTarget(LABEL.getValue(m.groupValues[1]), m.groupValues[2]) }
     val slug = BUILD_SPEC.find(prompt)?.groupValues?.get(1)
-    return HAND[subagentType]?.takeIf { ok(slug) }?.let { BuildTarget(it, slug!!) }
+    return HAND[subagentType.removePrefix("agentview:")]?.takeIf { ok(slug) }?.let { BuildTarget(it, slug!!) }
 }
 
 fun pipelineLabel(pipeline: String) = PIPELINE_LABEL[pipeline] ?: pipeline

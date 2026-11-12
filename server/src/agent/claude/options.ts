@@ -1,10 +1,14 @@
 import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpServerConfig, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { BIG_BRO, type Effort } from '../../../../shared/protocol.js';
 import { TOOLS, TOOL_INSTRUCTIONS } from '../tools/index.js';
 import type { ToolCtx } from '../tools/tool.js';
 import { ownProfile, PROFILE_PORT } from '../../chrome/launch.js';
 import { sandboxOf, type Unattended } from '../../session/unattended.js';
 import { openRouterEnv, type OpenRouterSettings } from './openrouter.js';
+
+const BUILD_KIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../build-kit');
 
 export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
 
@@ -64,6 +68,7 @@ export function agentOptions(o: {
     canUseTool: o.canUseTool,
     perTaskStopAffordance: true,
     ...(!o.openrouter && { agentProgressSummaries: true }),
+    ...(!o.openrouter && { plugins: [{ type: 'local' as const, path: BUILD_KIT, skipMcpDiscovery: true }] }),
     agents: o.openrouter ? {} : {
       [BIG_BRO]: {
         description:

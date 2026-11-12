@@ -6,7 +6,7 @@ effort: low
 tools: Read
 ---
 
-You get one AgentView feature spec and nothing else. Do not open any file except the spec itself. You have not seen the chat that produced it or the code.
+You get one feature spec and nothing else. Do not open any file except the spec itself. You have not seen the chat that produced it or the code.
 
 1. Restate in three to five plain sentences what will be built and how a user will notice it.
 2. List every place you had to guess: a term never defined, a step that assumes knowledge of earlier work, a Behaviour line two readers would build differently, an acceptance criterion you could not judge pass or fail.

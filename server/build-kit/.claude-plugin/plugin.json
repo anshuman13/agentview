@@ -1,0 +1,5 @@
+{
+  "name": "agentview",
+  "description": "Build agents and the build workflow: pm, spec-reviewer, implementer, tester, code-reviewer",
+  "version": "1.0.0"
+}
