@@ -73,7 +73,8 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     });
     const risk = atRisk(tasks, timed.map((m) => [m.starts_at!, m.ends_at!] as Span), minute * 60000);
     const dms = live(snap.chats).filter((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter) && !waitDone.includes(waitKey(c))).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
-    const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack' && (filter === 'all' || b.profile === filter)).sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
+    // A Slack summary older than the stale-ask age is out of date; its bullets are not shown.
+    const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack' && (filter === 'all' || b.profile === filter) && minute * 60000 - (b.to_at ?? 0) <= STALE_DAYS * 86400_000).sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
     const bullets = brief?.text ? needsYou(brief.text).filter((x) => !slackDone.includes(bulletKey(x))) : [];
     const ended = s.meetingsToday.filter((m) => m.ends_at != null && m.ends_at <= minute * 60000 && minute * 60000 - m.ends_at < JUST_ENDED_MS);
     const old = staleAsks(replyQueue(s.review, minute * 60000), minute * 60000);

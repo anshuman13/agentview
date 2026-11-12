@@ -120,6 +120,12 @@ export function expireSuggested(db: Database, source: 'slack' | 'gmail', now: nu
   return rows.map((r) => ({ table: 'items', id: r.id, profile: PROFILE, updated_at: now, fields: { status: 'dismissed' } }));
 }
 
+// A DM still waiting on me after 3 days without a new message was settled elsewhere (a reaction, a call, another chat); a scan never rereads it.
+export function expireWaiting(db: Database, now: number): Change[] {
+  const rows = db.prepare("SELECT id FROM chats WHERE profile = ? AND deleted = 0 AND kind = 'dm' AND waiting = 1 AND last_at < ?").all(PROFILE, now - 3 * DAY) as { id: string }[];
+  return rows.map((r) => ({ table: 'chats', id: r.id, profile: PROFILE, updated_at: now, fields: { waiting: 0 } }));
+}
+
 type Asked = ScanResult['asks'][number] & { id: string };
 type Has = { get(...args: [string, string]): unknown };
 
@@ -141,7 +147,7 @@ function askChanges(db: Database, r: ScanResult, seen: ReturnType<typeof seenIte
   for (const a of r.asks) {
     const id = askId(a.url);
     const people = `${a.from} · ${a.chat}`;
-    if (answeredIds.has(id) || has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people) || replied(a)) continue;
+    if (answeredIds.has(id) || a.answered_by_other || has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people) || replied(a)) continue;
     seen.add(id, a.title, people);
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null, tags: askTags(db, a) } });
     newAsks.push({ ...a, id });
@@ -213,9 +219,8 @@ function noteChanges(db: Database, r: ScanResult, answeredOpen: string[], now: n
 // closes asks I have replied to. Returns how many chats had new messages and how many messages were read, how many asks and promises are new and which asks are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
-  const changes: Change[] = expireSuggested(db, 'slack', now);
   const chats = chatChanges(r, now);
-  changes.push(...chats);
+  const changes: Change[] = [...expireSuggested(db, 'slack', now), ...expireWaiting(db, now).filter((w) => !chats.some((c) => c.id === w.id)), ...chats];
   const messages = chats.reduce((n, c) => n + (r.chats.find((x) => x.id === c.id)?.new_messages ?? 0), 0);
   const seen = seenItems(db, 'slack', now);
   const { urgent, newAsks } = askChanges(db, r, seen, has, changes, now);

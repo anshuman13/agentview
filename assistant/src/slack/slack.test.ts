@@ -99,6 +99,20 @@ describe('saveScan', () => {
     expect(db.prepare('SELECT id, waiting FROM chats ORDER BY id').all()).toEqual([{ id: 'C1', waiting: null }, { id: 'D1', waiting: 1 }, { id: 'D2', waiting: 0 }]);
   });
 
+  test('clears a DM still waiting after 3 days without a new message', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [{ id: 'D1', name: 'Kim', kind: 'dm', summary: 'Asks for the doc.', waiting: true }, { id: 'D2', name: 'Ola', kind: 'dm', summary: 'Asks again.', waiting: true }], asks: [], answered: [] }, at(23, 10));
+    saveScan(db, { chats: [{ id: 'D2', name: 'Ola', kind: 'dm', summary: 'Asks again.', waiting: true }], asks: [], answered: [] }, at(26, 10));
+    saveScan(db, { chats: [], asks: [], answered: [] }, at(27, 10));
+    expect(db.prepare('SELECT id, waiting FROM chats ORDER BY id').all()).toEqual([{ id: 'D1', waiting: 0 }, { id: 'D2', waiting: 1 }]);
+  });
+
+  test('does not suggest an ask someone else already answered', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [], asks: [{ ...ask('u1'), answered_by_other: true }, ask('u2')], answered: [] }, at(27, 10));
+    expect(db.prepare("SELECT id FROM items WHERE status = 'suggested'").all()).toEqual([{ id: askId('u2') }]);
+  });
+
   test('notes a reply once on an accepted ask and keeps it open', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [ask('u1')], answered: [] }, at(27, 10));

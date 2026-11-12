@@ -111,7 +111,8 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
     val mt = meetingsOf(meetings, profile, now)
     val ended = mt.today.filter { it.endsAt != null && it.endsAt!! <= now && now - it.endsAt!! < JUST_ENDED_MS }
     val dms = chats.filter { !it.deleted && it.str("kind") == "dm" && it.long("waiting") == 1L && matchesProfile(profile, it) && waitKey(it) !in hidden }.sortedByDescending { it.long("last_at") ?: 0L }
-    val brief = briefs.filter { !it.deleted && it.str("kind") == "slack" && matchesProfile(profile, it) }.maxByOrNull { it.long("to_at") ?: 0L }
+    // A Slack summary older than the stale-ask age is out of date; its bullets are not shown.
+    val brief = briefs.filter { !it.deleted && it.str("kind") == "slack" && matchesProfile(profile, it) && now - (it.long("to_at") ?: 0L) <= STALE_DAYS * DAY_MS }.maxByOrNull { it.long("to_at") ?: 0L }
     val bullets = brief?.str("text")?.let(::briefBullets)?.filter { slackKey(it) !in hidden } ?: emptyList()
     val timed = meetings.filter { !it.deleted && matchesProfile(profile, it) && it.startsAt != null && it.endsAt != null && it.endsAt!! > it.startsAt!! && it.endsAt!! - it.startsAt!! < 20 * 3_600_000L }
     val minute = now / 60_000 * 60_000

@@ -13,7 +13,7 @@ class NeedsCountTest {
     @Before fun zone() { codexZone = ZoneId.of("UTC") }
 
     private fun chat(id: String, waiting: Int = 1) = Row("chats", id, WORK, f = mapOf("name" to JsonPrimitive(id), "kind" to JsonPrimitive("dm"), "waiting" to JsonPrimitive(waiting), "last_at" to JsonPrimitive(NOW)))
-    private fun brief(text: String) = Row("briefs", "b", WORK, f = mapOf("kind" to JsonPrimitive("slack"), "text" to JsonPrimitive(text), "to_at" to JsonPrimitive(NOW)))
+    private fun brief(text: String, toAt: Long = NOW) = Row("briefs", "b", WORK, f = mapOf("kind" to JsonPrimitive("slack"), "text" to JsonPrimitive(text), "to_at" to JsonPrimitive(toAt)))
 
     @Test fun onlyLiveOpenWorkCounts() {
         val yesterday = ms(6, 9)
@@ -36,6 +36,11 @@ class NeedsCountTest {
         assertEquals(4, needsView(st, null, NOW).total)
         assertEquals(2, needsView(st, null, NOW, setOf(waitKey(chat("a")), slackKey(Bullet("Plan", "https://x.test/1", "")))).total)
         assertEquals("Do it now.", briefBullets((st.briefs[0].str("text"))!!)[0].why)
+    }
+
+    @Test fun aSlackSummaryOlderThanThreeDaysAddsNothing() {
+        val st = CodexState(briefs = listOf(brief("**Needs you**\n- [Plan](https://x.test/1): Do it now.", NOW - 4 * DAY_MS)))
+        assertEquals(0, needsView(st, null, NOW).total)
     }
 
     @Test fun aTaskThatCannotFitBeforeItsDueTimeIsAtRisk() {
