@@ -433,52 +433,6 @@ describe('Fable approval', () => {
 
 });
 
-describe('Team mode', () => {
-  function teamSession() {
-    const s = claudeSession('/tmp/p');
-    const q = { interrupt: vi.fn(async () => {}), setModel: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}) };
-    Object.assign(s.driver, { q });
-    return { s, q };
-  }
-
-  it('uses opusplan with an Opus advisor, and clears the advisor when leaving', async () => {
-    const { s, q } = teamSession();
-    await s.setModel('team');
-    expect(q.applyFlagSettings).toHaveBeenLastCalledWith({ advisorModel: 'claude-opus-5-5' });
-    expect(q.setModel).toHaveBeenLastCalledWith('opusplan');
-    expect(s.state.session.team).toBe(true);
-    await s.setModel('claude-opus-5-5');
-    expect(q.applyFlagSettings).toHaveBeenLastCalledWith({ advisorModel: null });
-    expect(s.state.session.team).toBe(false);
-  });
-
-  it('starts every new task in plan mode', async () => {
-    const { s, q } = teamSession();
-    await s.setModel('team');
-    await s.prompt('add a feature');
-    expect(q.setPermissionMode).toHaveBeenCalledWith('plan');
-    expect(s.state.session.permissionMode).toBe('plan');
-  });
-
-  it('queues the message with a notice when plan mode fails', async () => {
-    const { s, q } = teamSession();
-    await s.setModel('team');
-    q.setPermissionMode.mockRejectedValueOnce(new Error('CLI gone'));
-    await s.prompt('add a feature', 'm1');
-    expect(s.queuedMessages).toEqual([{ id: 'm1', text: 'add a feature' }]);
-    expect(s.state.events.some((e) => e.kind === 'system' && e.text.includes('CLI gone'))).toBe(true);
-  });
-
-  it('does not force plan mode outside Team mode or mid-turn', async () => {
-    const { s, q } = teamSession();
-    await s.prompt('hi');
-    expect(q.setPermissionMode).not.toHaveBeenCalled();
-    await s.setModel('team');
-    await s.prompt('queued while running');
-    expect(q.setPermissionMode).not.toHaveBeenCalled();
-  });
-});
-
 describe('changed files', () => {
   const run = (isError: boolean) => {
     const s = claudeSession('/repo');

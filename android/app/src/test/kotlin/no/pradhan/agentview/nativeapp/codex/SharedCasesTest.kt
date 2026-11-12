@@ -63,9 +63,7 @@ import no.pradhan.agentview.nativeapp.workspace.revertBlock
 import no.pradhan.agentview.nativeapp.workspace.reviewQueue
 import no.pradhan.agentview.nativeapp.chat.appendRule
 import no.pradhan.agentview.nativeapp.chat.can
-import no.pradhan.agentview.nativeapp.chat.modelsFor
 import no.pradhan.agentview.nativeapp.net.Capabilities
-import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.menuModes
@@ -87,6 +85,7 @@ import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.sketchDoc
 import no.pradhan.agentview.nativeapp.workspace.planCondition
+import no.pradhan.agentview.nativeapp.workspace.buildPrompt
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specPrompt
@@ -276,6 +275,10 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun buildPromptText() {
+        for (c in cases("build-prompt")) assertEquals(c.str("name"), c.str("expected"), buildPrompt(c.str("brief")))
+    }
+
     @Test fun specOpenTasks() {
         for (c in cases("spec-open-tasks")) assertEquals(c.str("name"), c.str("expected"), withoutOpenTasks(c.str("md")))
     }
@@ -425,8 +428,6 @@ class SharedCasesTest {
     @Test fun capabilities() {
         for (c in cases("capabilities")) {
             val caps = c.nullable("capabilities")?.let { protocolJson.decodeFromJsonElement<Capabilities>(it) } ?: Capabilities()
-            val models = c.getValue("models").jsonArray.map { ModelInfo(it.jsonPrimitive.content) }
-            assertEquals(c.str("name"), c.getValue("shown").jsonArray.map { it.jsonPrimitive.content }, modelsFor(models, caps).map { it.value })
             for ((k, v) in c.getValue("can").jsonObject) assertEquals(c.str("name") + ": " + k, v.jsonPrimitive.booleanOrNull, caps.can(k))
         }
     }

@@ -4,6 +4,7 @@ import no.pradhan.agentview.nativeapp.codex.Week
 import no.pradhan.agentview.nativeapp.codex.meetings.Repeats
 import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.PlanUsage
+import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.menuModes
 
@@ -76,6 +77,19 @@ fun acceptSuggestion(text: String, start: Int, caret: Int, insert: String): Pair
 // The field after a send that did not go through: the unsent text goes back in front of anything typed since.
 fun restoreUnsent(current: String, sent: String) = if (current.isBlank()) sent else "$sent\n$current"
 
+// What Build does with the composer: a notice that keeps the text, or the trimmed brief to send.
+sealed interface BuildStep {
+    data class Notice(val text: String) : BuildStep
+    data class Send(val brief: String) : BuildStep
+}
+
+fun buildStep(text: String, uploading: Int, readOnly: Boolean): BuildStep = when {
+    readOnly -> BuildStep.Notice(READ_ONLY_SENT)
+    text.isBlank() -> BuildStep.Notice("Type the brief in the composer first")
+    uploading > 0 -> BuildStep.Notice("Wait for the upload to finish")
+    else -> BuildStep.Send(text.trim())
+}
+
 fun appendWord(text: String, add: String) = "$text${if (text.isNotEmpty() && !text.last().isWhitespace()) " " else ""}$add"
 
 // 80% of the model's window, or COMPACT_AT when the agent does not report it (shared/protocol.ts compactAt).
@@ -93,7 +107,6 @@ fun settingsLabel(model: String, mode: String, review: Boolean, provider: String
 
 fun modelName(s: SessionInfo?): String {
     if (s == null) return "Model"
-    if (s.team) return "Team"
     return s.models.firstOrNull { it.value == (s.model ?: "default") }?.displayName ?: s.model ?: "Default"
 }
 

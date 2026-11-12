@@ -3,6 +3,7 @@ import { QuickPick } from '../ui/QuickPick';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL } from '../../../shared/protocol';
 import { modeSteps } from '../../../shared/providers';
 import { effortsFor } from './capabilitiesLogic';
+import { useCan } from './useCan';
 import { useChatSettings, type Pick } from './ChatSettings';
 
 const LOOP_ITEMS = [
@@ -10,17 +11,24 @@ const LOOP_ITEMS = [
   ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Up to ${n} ${n === 1 ? 'round' : 'rounds'}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
 ];
 
+const BUILD = { value: '\0build', label: 'Build', detail: 'Spec, review, build and test the brief in the composer' };
+
 type Props = { pick: Pick; close: () => void };
 
 export function ModelPick({ pick, close }: Props) {
-  const { model, models, team } = useChatSettings();
+  const { model, models } = useChatSettings();
+  const build = useCan('build');
   return (
     <QuickPick
       anchor={pick.at}
       title="Select model"
-      current={team ? 'team' : model}
-      items={models.map((m) => ({ value: m.value, label: m.displayName, detail: m.description }))}
-      onPick={(v) => { send({ type: 'set_model', model: v }); close(); }}
+      current={model}
+      items={[...models.map((m) => ({ value: m.value, label: m.displayName, detail: m.description })), ...(build ? [BUILD] : [])]}
+      onPick={(v) => {
+        if (v === BUILD.value) window.dispatchEvent(new CustomEvent('agentview:build'));
+        else send({ type: 'set_model', model: v });
+        close();
+      }}
       onClose={close}
     />
   );

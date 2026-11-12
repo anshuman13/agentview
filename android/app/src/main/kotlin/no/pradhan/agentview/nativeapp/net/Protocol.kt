@@ -190,7 +190,7 @@ data class ModelInfo(val value: String, val displayName: String = "", val descri
 
 // shared/protocol.ts Capabilities: what the chat's driver supports; a missing field counts as supported.
 @Serializable
-data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val mcpEdit: Boolean = true, val connectors: Boolean = true, val effort: Boolean = true, val team: Boolean = true, val stopTask: Boolean = true, val subagents: Boolean = true)
+data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val mcpEdit: Boolean = true, val connectors: Boolean = true, val effort: Boolean = true, val build: Boolean = true, val stopTask: Boolean = true, val subagents: Boolean = true)
 
 @Serializable
 data class CommandInfo(val name: String, val description: String = "")
@@ -202,7 +202,6 @@ data class SessionInfo(
     val sessionId: String? = null,
     val model: String? = null,
     val effort: String? = null,
-    val team: Boolean = false,
     val cwd: String = "",
     val running: Boolean = false,
     val permissionMode: String? = null,

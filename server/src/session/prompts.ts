@@ -24,12 +24,9 @@ export class Prompts {
   }
 
   async prompt(text: string, id: string = randomUUID()) {
-    const { state, waiting, settings, cycle } = this.s;
+    const { state, waiting, cycle } = this.s;
     if (this.known(id)) return;
     if (this.loopCommand(text, id)) return;
-    if (state.session.running) return waiting.queue(text, id);
-    if (!(await settings.planFirst())) return waiting.queue(text, id);
-    // Another prompt may have started a turn while plan mode was being set.
     if (state.session.running) return waiting.queue(text, id);
     if (state.session.loop.on && !text.trim().startsWith('/')) return cycle.start(text, id);
     this.s.sendPrompt(text, id);
@@ -63,7 +60,7 @@ export class Prompts {
   }
 
   async steer(text: string, id: string = randomUUID()) {
-    const { state, waiting, approvals, turn, driver, settings, log } = this.s;
+    const { state, waiting, approvals, turn, driver } = this.s;
     if (this.known(id)) return;
     if (this.loopCommand(text, id)) return;
     if (state.session.compacting) return waiting.queue(text, id);
@@ -78,9 +75,6 @@ export class Prompts {
       turn.finish();
       ev.stopping = false;
       this.s.emit({ type: 'event', event: ev });
-    } else if (!(await settings.planFirst())) {
-      log.remove((e) => e === ev);
-      return waiting.queue(text, id);
     }
     this.s.enqueue(text, id);
   }

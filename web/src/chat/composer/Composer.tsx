@@ -54,7 +54,6 @@ export function Composer() {
   const dictate = useDictation(text, setText);
   const { uploading, attach } = useUploads(setText, ta);
   const [shared, setShared] = useSharedIntake(attach);
-  useComposerEvents({ ta, wantCaret, setText, setUses });
 
   const ghost = !ac.open && !ac.shell && ac.at === text.length ? ghostFor(text, h.history) : '';
   const typed = text.trim().length > 0;
@@ -65,10 +64,12 @@ export function Composer() {
     wantCaret.current = c;
     setText(next);
   };
-  const submit = useSubmit({
+  const { submit, sendBuild } = useSubmit({
     text, setText, shell: ac.shell, uploading, uses, setUses, apply,
     sentHistory: h.sentHistory, setSentHistory: h.setSentHistory, clearHistoryStep: () => h.setHist(null),
   });
+
+  useComposerEvents({ ta, wantCaret, setText, setUses, sendBuild });
 
   const { choose, onKeyDown } = useComposerKeys({ text, mode, modes, ghost, ac, h, apply, submit });
 

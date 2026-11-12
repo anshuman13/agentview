@@ -11,12 +11,12 @@ import { billing, menuModes, modeSteps, providerLabel, providerMark, providerMod
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
-import { isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
+import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail } from './app/runtime/pageEvents';
 import { countChat } from './app/store/counts';
-import { can, modelsFor } from './chat/capabilitiesLogic';
+import { can } from './chat/capabilitiesLogic';
 import { chatState, handoffText, runLine } from './chat/composer/composerLogic';
 import { runBands } from './sessions/runBands';
 import { tryColumn } from './sessions/TriesBoard';
@@ -94,6 +94,10 @@ describe('cases shared with the Android app', () => {
       expect(open && startTaskPrompt(open, c.path)).toBe(c.start ?? undefined);
       expect(runAllPrompt(c.path)).toBe(c.all);
     });
+  }
+
+  for (const c of cases<{ name: string; brief: string; expected: string }>('build-prompt')) {
+    it(`buildPrompt: ${c.name}`, () => expect(buildPrompt(c.brief)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; md: string; expected: string }>('spec-open-tasks')) {
@@ -249,11 +253,10 @@ describe('cases shared with the Android app', () => {
     it(`reviewQueue: ${c.name}`, () => expect(reviewQueue(c.order, c.skipped, new Set(c.open))).toEqual(c.expected));
   }
 
-  type Caps = { name: string; capabilities: Capabilities | null; models: string[]; shown: string[]; can: Record<keyof Capabilities, boolean> };
+  type Caps = { name: string; capabilities: Capabilities | null; can: Record<keyof Capabilities, boolean> };
   for (const c of cases<Caps>('capabilities')) {
     it(`capabilities: ${c.name}`, () => {
       const caps = c.capabilities ?? undefined;
-      expect(modelsFor(c.models.map((value) => ({ value })), caps).map((m) => m.value)).toEqual(c.shown);
       expect(Object.fromEntries(Object.keys(c.can).map((k) => [k, can(caps, k as keyof Capabilities)]))).toEqual(c.can);
     });
   }

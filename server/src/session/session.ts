@@ -73,7 +73,7 @@ export class AgentSession implements AgentHost {
   private sent: Pick<SessionInfo, 'commands' | 'mcp'> | null = null;
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
-      session: { id: this.id, sessionId, model: null, effort: 'medium', team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null, account: 'main', accounts: [] },
+      session: { id: this.id, sessionId, model: null, effort: 'medium', cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null, account: 'main', accounts: [] },
       status: 'Idle',
       events: [],
       pending: [],

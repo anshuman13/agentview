@@ -10,8 +10,6 @@ import { openRouterEnv, type OpenRouterSettings } from './openrouter.js';
 
 const BUILD_KIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../build-kit');
 
-export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
-
 export const STATUS_REMINDER = 'You have not called mcp__agentview__set_status for a while, so the user sees no progress. Call it now with what you are doing, what is done and the next steps.';
 
 const CHROME = "For anything in a web browser, use the Claude in Chrome tools. They drive the user's own Chrome, where the user is logged in to work sites, and the user watches that tab in AgentView.";

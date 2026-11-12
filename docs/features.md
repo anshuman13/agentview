@@ -3,7 +3,7 @@
 ## Layout
 
 - **Task box** (right): prompt, mode and model menus, context meter, and the timeline below it. A More menu at the
-  right of its header holds Agents (the chat's subagents), what is waiting elsewhere, usage, the Mac name and team or advisor counts. ⌥⌘B hides it
+  right of its header holds Agents (the chat's subagents), what is waiting elsewhere, usage, the Mac name and advisor counts. ⌥⌘B hides it
 - **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Markdown files open as a rendered document with an outline, and the preview button shows the source. In the diff, a long press or a right click on a line quotes it into the composer as `path:line`; on a changed block the same gesture opens a menu with Quote line and Revert this change, which asks first and then saves the file with that block put back to the last commit (not offered for new or binary files). The pencil in the file bar turns the file into an editor; Save or Cmd+S writes it back (project files only, never inside credential folders). Gitignored `.env` files show in the explorer without the eye toggle. Browser tab shows your Chrome. Observe, Deploy and MCP open as further tabs here
 - **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Sessions (open and recent chats; one bar holds the search box and a New session in a repo button) and Workspace (repos, chats, Paseo worktrees). In Workspace a repo with no live chat starts folded to its header, and a repo shows its 5 latest chats with Show more. The search box in both views finds chats by every word of the query across title, first prompt, repo and (Workspace) branch
 - **Status chips** under the Sessions search (Running, Unread, Failed) replace the repo groups with a flat list of the
@@ -181,7 +181,7 @@ and subagents fold into one line ("3 files +40 -2 · 1 commit · 5 commands, 1 f
 so Review changes and Rewind files take one more tap; pending requests, blocked cards and notes stay visible, and a
 running turn shows everything open.
 A finished card ends with the turn's cost and how long it took; a chat row in the Sessions view shows the chat's
-cost so far. The status bar usage tooltip adds a Spend block with today's and the last 7 days' cost per model across the chats open on the Mac (today is the Mac's day, and a team-mode chat counts under its session model). Spend from before a host restart is not counted, since history reloaded from the CLI transcript has no cost, and a chat past the event cap is approximate because trimming old events counts the first kept total again. Switch to the transcript for every message and step in order.
+cost so far. The status bar usage tooltip adds a Spend block with today's and the last 7 days' cost per model across the chats open on the Mac (today is the Mac's day). Spend from before a host restart is not counted, since history reloaded from the CLI transcript has no cost, and a chat past the event cap is approximate because trimming old events counts the first kept total again. Switch to the transcript for every message and step in order.
 
 - Sending while Claude works stops whatever it is doing, including an open permission or question, and continues
   with your message
@@ -322,9 +322,12 @@ A failed compact is retried once the context has grown by another 20k tokens.
 
 New chats start in Auto mode: Claude asks only before risky actions.
 
-**Team** in the model menu: Opus 5.5 plans each task, Sonnet 5.5 builds it and asks Opus for advice. Advisor calls
-re-read the conversation, so they cost more in long chats. When the chat cannot switch to plan mode, the message
-waits in the queue with a notice.
+**Build** in the model menu (last item, never checked, Claude chats only) starts the build workflow (spec, review,
+implement, test) on the brief in the composer. It sends the brief inside a prompt that asks for the Workflow tool, so
+the spec cards show the build agents, and the chat's model stays as it is. While Claude works it queues like a normal
+message and never steers. With an empty composer it shows "Type the brief in the composer first", and during an upload
+"Wait for the upload to finish". The folder needs `.claude/workflows/build.js`; without it the Workflow tool says so in
+the chat.
 
 Any chat can ask Fable 5.1 about a hard problem. Each call needs your approval.
 
@@ -337,7 +340,7 @@ never in the repo. With a key and at least one model, the model menus (chat sett
 those models by their OpenRouter id next to Claude's. Picking one runs the Claude Code CLI against OpenRouter; picking
 it in a running chat restarts the CLI on the new provider (and says so), so stop the chat first. Each chat remembers its
 provider, and a chat without a mark runs on Claude. An OpenRouter chat has no plan usage bar, no cost (the SDK prices
-are Anthropic's), no Team, effort or Fable agent and no account menu, because the controls a driver lacks come from
+are Anthropic's), no Build, effort or Fable agent and no account menu, because the controls a driver lacks come from
 the chat's `capabilities` and are hidden on web and the phone. Without a key nothing new shows. Rows of a chat on OpenRouter or Codex show the provider name before the time, and where a cost would show an
 OpenRouter chat shows "-" and a Codex chat "Plan"; the Spend list says such chats are not priced.
 
@@ -350,7 +353,7 @@ model menu lists Codex's models and the effort menu only the levels the chosen m
 offer the provider's own modes: Default (asks before leaving the workspace sandbox), Auto (never asks, network on) and
 Read only (only reads), with no Plan; Plan first and Spec on the phone's new chat sheet start in Default. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes
 (shown as edits with diffs) and MCP calls appear as steps. The usage bar shows the plan's 5-hour and weekly windows;
-there is no cost. No rewind, Team or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
+there is no cost. No rewind, Build or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
 transcript, and are kept in `~/.agentview/codex-chats.json`. Codex chats get the same AgentView tools as Claude ones
 (status, wiki, data, chat search, report findings) from a stdio MCP server the host starts for the chat, and the same
 instructions; the review buttons send a prompt that ends in report findings, and a plan change reaches the agent

@@ -33,7 +33,6 @@ export function Brief() {
   const events = useStore((s) => s.events);
   const status = useStore((s) => s.status);
   const running = useStore((s) => s.session.running);
-  const team = useStore((s) => s.session.team);
   const macName = useMacName();
   const stopping = useStore((s) => s.session.stopping);
   const loop = useStore((s) => s.session.loop);
@@ -58,7 +57,7 @@ export function Brief() {
   const root = useRef<HTMLDivElement>(null);
   const from = all ? 0 : Math.max(0, turns.length - SHOWN_TURNS);
   const shown = turns.slice(from);
-  const extras = [team && 'Team', advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
+  const extras = [advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const hasActions = agents.length > 0 || showAgents || waitingElsewhere > 0 || Boolean(usage);
   const lastReply = lastReplyOf(turns);
   const limit = useMemo(() => usageLimitOf(turns), [turns]);

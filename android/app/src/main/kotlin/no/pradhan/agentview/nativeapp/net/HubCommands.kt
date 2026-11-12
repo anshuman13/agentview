@@ -133,7 +133,7 @@ fun Hub.rewind(id: String) = post(rewindCmd(id), store.wanted)
 
 fun Hub.stopTask(toolUseId: String) = post(stopTaskCmd(toolUseId), store.wanted)
 
-fun Hub.setModel(model: String) { if (model != "team") setLastModel(modelGroup(store.state.value.session?.provider), model); post(setModelCmd(model), store.wanted) }
+fun Hub.setModel(model: String) { setLastModel(modelGroup(store.state.value.session?.provider), model); post(setModelCmd(model), store.wanted) }
 
 fun Hub.setEffort(effort: String) = post(setEffortCmd(effort), store.wanted)
 

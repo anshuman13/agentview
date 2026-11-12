@@ -54,4 +54,6 @@ export const planGoalPrompt = (path: string) => `/goal every step of the plan in
 
 export const runAllPrompt = (path: string) => `/goal every task in ${path} is ticked: do them in order. While you work on one, append " (in progress)" to its line; when done, tick its box and remove that suffix in one edit before the next.`;
 
+export const buildPrompt = (brief: string) => `Run the build workflow on the brief below. Call the Workflow tool with name "build" and args [{"slug": "<slug>", "brief": "<brief>"}]. Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\n${brief}\n</brief>`;
+
 export const planCondition = (path: string, markdown: string) => (specTasks(markdown).some((t) => !t.done) ? runAllPrompt(path) : planGoalPrompt(path));

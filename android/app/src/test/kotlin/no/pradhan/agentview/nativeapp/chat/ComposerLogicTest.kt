@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.chat
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.ModelInfo
+import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -71,5 +72,13 @@ class ComposerLogicTest {
         assertEquals("default", startModeFor("plan", "codex"))
         assertEquals("plan", startModeFor("plan", "claude"))
         assertNull(startModeFor(null, "codex"))
+    }
+
+    @Test
+    fun buildSendsTheTrimmedBriefOrShowsANotice() {
+        assertEquals(BuildStep.Send("!ls"), buildStep("  !ls\n", 0, false))
+        assertEquals(BuildStep.Notice(READ_ONLY_SENT), buildStep("brief", 0, true))
+        assertEquals(BuildStep.Notice("Type the brief in the composer first"), buildStep(" \n", 0, false))
+        assertEquals(BuildStep.Notice("Wait for the upload to finish"), buildStep("brief", 1, false))
     }
 }

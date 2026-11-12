@@ -10,7 +10,7 @@ import { Rewinds } from './rewinds.js';
 import { Messages } from './messages.js';
 import { SystemMessages } from './systemMessages.js';
 import { claudeInstructionFiles } from './memory.js';
-import { TEAM, agentOptions, userMessage } from './options.js';
+import { agentOptions, userMessage } from './options.js';
 import { mcpFrom } from './mcp.js';
 import { loadOpenRouter, openRouterModels, openRouterValue } from './openrouter.js';
 import { McpControl } from './mcpControl.js';
@@ -51,7 +51,7 @@ export class ClaudeDriver implements AgentDriver {
   private rewinds = new Rewinds();
   private messages: Messages;
   private systemMessages: SystemMessages;
-  private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
+  private restore: { model: string | null; permissionMode: string | null } | null = null;
 
   constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main', private openrouter = false, private unattended = false) {
     this.live = new LiveText(host);
@@ -71,7 +71,7 @@ export class ClaudeDriver implements AgentDriver {
 
   // On OpenRouter the models, effort and the Opus advisor are not Anthropic's, so they are left out.
   get capabilities(): Capabilities {
-    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, team: !this.openrouter, stopTask: true, subagents: true };
+    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, build: !this.openrouter, stopTask: true, subagents: true };
   }
 
   get instructionFiles() {
@@ -132,8 +132,8 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   private detach() {
-    const { model, team, permissionMode, sessionId } = this.state.session;
-    this.restore = { model, team, permissionMode };
+    const { model, permissionMode, sessionId } = this.state.session;
+    this.restore = { model, permissionMode };
     this.resume = sessionId ?? this.resume;
     this.q = null;
     this.input.release(true);
@@ -213,9 +213,8 @@ export class ClaudeDriver implements AgentDriver {
     this.mcp.servers = options.mcpServers ?? {};
     this.q = query({ prompt: this.input.stream(), options });
     if (this.restore) {
-      const { model, team, permissionMode } = this.restore;
+      const { model, permissionMode } = this.restore;
       this.restore = null;
-      if (team) void this.q.applyFlagSettings({ advisorModel: TEAM.advisor }).catch(() => {});
       if (model) void this.q.setModel(model).catch(() => {});
       if (permissionMode) void this.q.setPermissionMode(permissionMode as PermissionMode).catch(() => {});
     }
@@ -272,10 +271,8 @@ export class ClaudeDriver implements AgentDriver {
     const openrouter = model.startsWith(OPENROUTER_PREFIX);
     if (openrouter !== this.openrouter) this.switchProvider(openrouter);
     this.start();
-    const team = model === 'team';
-    if (team || this.state.session.team) await this.q?.applyFlagSettings({ advisorModel: team ? TEAM.advisor : null });
-    await this.q?.setModel(team ? TEAM.model : openrouter ? model.slice(OPENROUTER_PREFIX.length) : model);
-    return { model: team ? TEAM.model : model, team };
+    await this.q?.setModel(openrouter ? model.slice(OPENROUTER_PREFIX.length) : model);
+    return { model };
   }
 
   async setEffort(level: Effort) {

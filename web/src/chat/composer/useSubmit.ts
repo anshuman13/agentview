@@ -1,6 +1,7 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { api, notice, prompt, queueNext, steer, useStore } from '../../app/store';
 import { save, wsUrl } from '../../ui/util';
+import { buildPrompt } from '../../../../shared/specTasks';
 import { remember, STORED_KEY, terminalId, withUses, type Use } from './composerLogic';
 
 async function runInTerminal(cmd: string) {
@@ -33,12 +34,16 @@ export function useSubmit(i: Input) {
   const waiting = useStore((s) => s.pending.length > 0);
   const sendAfter = useRef<boolean | null>(null);
 
-  const sendPrompt = (t: string, stop: boolean) => {
+  const record = (t: string) => {
     const next = remember(t, i.sentHistory);
     i.setSentHistory(next);
     save(STORED_KEY, next);
+    return () => i.setText((cur) => (cur.trim() ? cur : t));
+  };
+
+  const sendPrompt = (t: string, stop: boolean) => {
+    const lost = record(t);
     const used = withUses(t, i.uses);
-    const lost = () => i.setText((cur) => (cur.trim() ? cur : t));
     if (running && (stop || waiting)) steer(used, lost);
     else if (running) queueNext(used, lost);
     else prompt(used, lost);
@@ -60,9 +65,22 @@ export function useSubmit(i: Input) {
     i.apply('');
   };
 
+  const sendBuild = () => {
+    const brief = i.text.trim();
+    if (!brief) return notice('Type the brief in the composer first');
+    if (i.uploading > 0) return notice('Wait for the upload to finish');
+    const lost = record(brief);
+    const used = buildPrompt(withUses(brief, i.uses));
+    if (running) queueNext(used, lost);
+    else prompt(used, lost);
+    i.setUses([]);
+    i.clearHistoryStep();
+    i.apply('');
+  };
+
   useEffect(() => {
     if (i.uploading === 0 && sendAfter.current !== null) submit(sendAfter.current);
   }, [i.uploading]);
 
-  return submit;
+  return { submit, sendBuild };
 }

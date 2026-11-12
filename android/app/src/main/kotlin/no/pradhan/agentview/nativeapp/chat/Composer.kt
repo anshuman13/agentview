@@ -85,6 +85,7 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.well
+import no.pradhan.agentview.nativeapp.workspace.buildPrompt
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
@@ -99,12 +100,27 @@ private class ComposerState(val hub: Hub, val chatId: String) {
 
     fun set(v: TextFieldValue) { text = v; hub.setDraft(chatId, v.text) }
 
+    private fun restore(sent: String) {
+        val back = restoreUnsent(text.text, sent)
+        set(TextFieldValue(back, TextRange(back.length)))
+    }
+
+    fun build(uploading: Int) {
+        when (val step = buildStep(text.text, uploading, hub.readOnly)) {
+            is BuildStep.Notice -> hub.notice.value = step.text
+            is BuildStep.Send -> {
+                set(TextFieldValue(""))
+                hub.submit(buildPrompt(step.brief), false) { restore(step.brief) }
+            }
+        }
+    }
+
     fun submit(steer: Boolean, uploading: Int) {
         val t = text.text
         if (t.isBlank() || uploading > 0) return
         shellCommand(t)?.let { if (hub.runInTerminal(it)) set(TextFieldValue("")); return }
         set(TextFieldValue(""))
-        hub.submit(t, steer) { val back = restoreUnsent(text.text, t); set(TextFieldValue(back, TextRange(back.length))) }
+        hub.submit(t, steer) { restore(t) }
     }
 }
 
@@ -142,7 +158,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
             ComposerActions(hub, s, running, uploading, dictation)
         }
     }
-    ComposerSheets(hub, session, run, sheet, attach) { sheet = it }
+    ComposerSheets(hub, s, uploading, session, run, sheet, attach) { sheet = it }
 }
 
 private fun composerPlaceholder(label: String, waiting: Boolean, compacting: Boolean, running: Boolean) = when {
@@ -214,10 +230,10 @@ private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, upload
 }
 
 @Composable
-private fun ComposerSheets(hub: Hub, session: SessionInfo?, run: ChatRun?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
+private fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, run: ChatRun?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
     when (sheet) {
         Picker.Add -> AddSheet(session, attach, onSheet)
-        Picker.Settings -> ChatSettingsSheet(hub, session, run, onSheet)
+        Picker.Settings -> ChatSettingsSheet(hub, s, uploading, session, run, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
         Picker.Loop -> PickerSheet("Build cycle", LOOP_CHOICES, session?.loop?.takeIf { it.on }?.max?.toString() ?: "off", { hub.setLoop(it != "off", it.toIntOrNull()) }) { onSheet(null) }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
@@ -247,20 +263,24 @@ private fun AddSheet(session: SessionInfo?, attach: Attach, onSheet: (Picker?) -
 }
 
 @Composable
-private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, onSheet: (Picker?) -> Unit) {
+private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, run: ChatRun?, onSheet: (Picker?) -> Unit) {
     val c = av
     Sheet({ onSheet(null) }, "Chat settings", padded = false, full = false) {
         val account = session?.account ?: "main"
         val caps = session?.capabilities ?: Capabilities()
-        val models = modelsFor(session?.models.orEmpty(), caps)
+        val models = session?.models.orEmpty()
         val effort = session?.effort?.takeIf { caps.effort }
         if (models.isNotEmpty()) {
             SectionHeader("Model")
-            val current = if (session?.team == true) "team" else session?.model
+            val current = session?.model
             Group {
                 models.forEachIndexed { i, m ->
                     if (i > 0) Hairline()
                     ListRow(m.displayName.ifBlank { m.value }, m.description, onClick = { hub.setModel(m.value); onSheet(null) }, trailing = if (m.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+                }
+                if (caps.build) {
+                    Hairline()
+                    ListRow("Build", "Spec, review, build and test the brief in the composer", onClick = { onSheet(null); s.build(uploading) })
                 }
             }
         }

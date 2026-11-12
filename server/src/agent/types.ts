@@ -54,7 +54,7 @@ export interface AgentDriver {
   roleModel(role: LoopRole): { model: string; effort?: Effort } | null;
   // cancelQueued also drops messages sent with 'next' that Claude has not read yet.
   interrupt(cancelQueued?: boolean): Promise<void>;
-  setModel(model: string): Promise<{ model: string; team: boolean }>;
+  setModel(model: string): Promise<{ model: string }>;
   setEffort(level: Effort): Promise<void>;
   setPermissionMode(mode: string): Promise<void>;
   allow(rule: string): Promise<boolean>;

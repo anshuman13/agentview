@@ -1,6 +1,5 @@
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LEVELS, type Account, type Effort } from '../../../shared/protocol.js';
 import { providerLabel } from '../../../shared/providers.js';
-import { errText } from '../../../shared/util.js';
 import type { AgentSession } from './session.js';
 
 export class SessionSettings {
@@ -9,7 +8,7 @@ export class SessionSettings {
   async setModel(model: string) {
     const r = await this.s.driver.setModel(model);
     this.s.setSession(r);
-    this.s.system(r.team ? 'Team mode: Opus plans each task, Sonnet 5.5 builds it with Opus advising, Fable only with your OK' : `Model set to ${model}`);
+    this.s.system(`Model set to ${model}`);
   }
 
   async setEffort(level: string) {
@@ -43,18 +42,5 @@ export class SessionSettings {
   setReview(on: boolean) {
     this.s.setSession({ review: on });
     this.s.system(`Review changes after each turn: ${on ? 'on' : 'off'}`);
-  }
-
-  // A message that cannot start in plan mode waits in the queue, where Send now retries it.
-  async planFirst() {
-    const { team, permissionMode } = this.s.state.session;
-    if (!team || permissionMode === 'plan') return true;
-    try {
-      await this.setPermissionMode('plan');
-      return true;
-    } catch (err) {
-      this.s.system(`Could not switch to plan mode (${errText(err)}), so the message is queued`);
-      return false;
-    }
   }
 }

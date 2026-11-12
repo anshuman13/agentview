@@ -3,7 +3,6 @@ import { MemoryPick } from './cards/Memory';
 import { TodosPick } from './cards/Todos';
 import { EFFORT_LABEL } from '../../../shared/protocol';
 import { menuModes, providerModes } from '../../../shared/providers';
-import { modelsFor } from './capabilitiesLogic';
 import { HooksPick, RemindPick, SettingsMenu, ToolsPick } from './SettingsMenu';
 import { AccountPick, EffortPick, LoopPick, ModePick, ModelPick } from './SettingsPickers';
 
@@ -14,19 +13,17 @@ export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'l
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
   const model = useStore((s) => s.session.model);
-  const caps = useStore((s) => s.session.capabilities);
   const provider = useStore((s) => s.session.provider);
-  const models = modelsFor(useStore((s) => s.session.models), caps);
+  const models = useStore((s) => s.session.models);
   const effort = useStore((s) => s.session.effort);
-  const team = useStore((s) => s.session.team);
   const loop = useStore((s) => s.session.loop);
   const review = useStore((s) => s.session.review) ?? false;
-  const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
+  const modelName = models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
   const effortName = effort ? EFFORT_LABEL[effort] : 'Default';
   const modes = providerModes(provider);
   const menu = menuModes(provider, mode, review);
   const modeInfo = { ...(modes.find((m) => m.value === mode) ?? { label: mode, detail: mode }), icon: MODE_ICON[mode] ?? 'shield' };
-  return { mode, modes, model, models, effort, team, loop, review, modelName, effortName, modeInfo, menu };
+  return { mode, modes, model, models, effort, loop, review, modelName, effortName, modeInfo, menu };
 }
 
 // The chat settings menu and the pickers it opens; the saved prompt and MCP pickers stay with the composer.

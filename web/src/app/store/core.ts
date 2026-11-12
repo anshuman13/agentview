@@ -26,7 +26,7 @@ const storedBeside = () => { try { return embedded ? null : localStorage.getItem
 export type State = ServerState & { live: LiveChat[]; runs: ChatRun[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; ui: UiState };
 
 let state: State = {
-  session: { id: '', sessionId: null, model: null, effort: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null }, repeat: null, pr: null, account: 'main', accounts: [] },
+  session: { id: '', sessionId: null, model: null, effort: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null }, repeat: null, pr: null, account: 'main', accounts: [] },
   status: 'Connecting',
   events: [],
   pending: [],

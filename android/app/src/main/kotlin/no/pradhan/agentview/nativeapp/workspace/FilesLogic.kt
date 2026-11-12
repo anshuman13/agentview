@@ -150,6 +150,8 @@ fun specPrompt(request: String) = "Write a spec for the request below in .claude
 
 fun planGoalPrompt(path: String) = "/goal every step of the plan in $path is done: work through it in order and note in the file which steps are finished."
 
+fun buildPrompt(brief: String) = "Run the build workflow on the brief below. Call the Workflow tool with name \"build\" and args [{\"slug\": \"<slug>\", \"brief\": \"<brief>\"}]. Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\n$brief\n</brief>"
+
 fun planCondition(path: String, markdown: String) = if (specTasks(markdown).any { !it.done }) runAllPrompt(path) else planGoalPrompt(path)
 
 fun runAllPrompt(path: String) = "/goal every task in $path is ticked: do them in order. While you work on one, append \" (in progress)\" to its line; when done, tick its box and remove that suffix in one edit before the next."

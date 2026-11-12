@@ -9,14 +9,11 @@ fun Capabilities.can(what: String) = when (what) {
     "mcpEdit" -> mcpEdit
     "connectors" -> connectors
     "effort" -> effort
-    "team" -> team
+    "build" -> build
     "stopTask" -> stopTask
     "subagents" -> subagents
     else -> true
 }
-
-// The Team entry is the Opus advisor setup, which only Claude chats have.
-fun modelsFor(models: List<ModelInfo>, caps: Capabilities) = if (caps.team) models else models.filter { it.value != "team" }
 
 // The effort levels the chat's model lists, or all of them when it lists none.
 fun effortsFor(models: List<ModelInfo>, model: String?): List<String> {

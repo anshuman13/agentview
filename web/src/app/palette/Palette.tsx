@@ -4,7 +4,7 @@ import { isDocPath } from '../../workspace/fileApi';
 import type { SavedSession } from '../../../../shared/protocol';
 import { providerModes } from '../../../../shared/providers';
 import { Back } from '../touch/back';
-import { effortsFor, modelsFor } from '../../chat/capabilitiesLogic';
+import { effortsFor } from '../../chat/capabilitiesLogic';
 import { useCan } from '../../chat/useCan';
 import { openSearch, useView } from '../../codex/view';
 import { assistantStore } from '../../codex/data';
@@ -17,7 +17,7 @@ import { PaletteEntries, type Entry } from './PaletteEntries';
 import '../../styles/features/palette.css';
 
 export function Palette() {
-  const models = modelsFor(useStore((s) => s.session.models), useStore((s) => s.session.capabilities));
+  const models = useStore((s) => s.session.models);
   const model = useStore((s) => s.session.model);
   const provider = useStore((s) => s.session.provider);
   const canEffort = useCan('effort');
