@@ -21,7 +21,7 @@ import { loadSettings, unattendedLimits } from '../../settings.js';
 import { ToolHooks } from './toolHooks.js';
 import { continuedTurn } from './subagents.js';
 import { LiveText } from './stream.js';
-import { historyFrom } from './transcript.js';
+import { historyFrom, workflowEvents } from './transcript.js';
 import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
 
 const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: 'claude-sonnet-5-5' } as const;
@@ -182,7 +182,9 @@ export class ClaudeDriver implements AgentDriver {
   private history(...args: Parameters<typeof historyFrom>): History {
     const { events, context, cache, agents } = historyFrom(...args);
     this.tasks.agents = agents;
-    return { events, context, cache };
+    const shown = new Set(events.map((e) => e.id));
+    const unshown = (args[2] ?? []).flatMap((run) => workflowEvents(run, '', 0)).filter((e) => !shown.has(e.id));
+    return { events, context, cache, unshown };
   }
 
   start() {

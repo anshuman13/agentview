@@ -55,6 +55,13 @@ describe('recording builds', () => {
     await waitFor(() => expect(stored('blue-cup')).toMatchObject([{ id: 'h1', status: 'done', report: '1. pass: ok' }]));
   });
 
+  it('records the agents of a run whose call is before a compaction', async () => {
+    const s = claudeSession(repo);
+    s.replaceHistory({ events: [], context: null, cache: null, unshown: [agent('u1', 'test:gold-key#1', 'done'), result('u1', '1. pass: ok')] } as never);
+    await waitFor(() => expect(stored('gold-key')).toMatchObject([{ id: 'u1', status: 'done', report: '1. pass: ok' }]));
+    expect(s.state.events).toHaveLength(0);
+  });
+
   it('keeps one entry for a running agent that ends, and one for a hand-back emitted twice', async () => {
     const s = claudeSession(repo);
     const a = agent('t1', 'test:red-lamp#1');

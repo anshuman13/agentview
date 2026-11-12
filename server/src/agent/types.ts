@@ -16,7 +16,8 @@ export type Cron = { schedule: string; prompt: string; recurring: boolean };
 
 export type RunningTask = { toolUseId: string; tool: string; description: string };
 
-export type History = { events: ChatEvent[]; context: number | null; cache: CacheInfo | null };
+// unshown: agent events kept out of the transcript (a workflow run whose call is before a compaction), still used for build records.
+export type History = { events: ChatEvent[]; context: number | null; cache: CacheInfo | null; unshown?: ChatEvent[] };
 
 export type TurnResult = { id: string; ok: boolean; text: string; costUsd: number; isError: boolean };
 

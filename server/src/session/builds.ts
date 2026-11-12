@@ -50,8 +50,8 @@ let queue: Promise<unknown> = Promise.resolve();
 const lastStatus = new Map<string, string>();
 
 // A build agent's start, end or report, from the event the chat emits.
-export function recordBuild(session: AgentSession, ev: ChatEvent) {
-  const agent = ev.kind === 'agent' ? ev : ev.kind === 'tool_result' ? session.log.agent(ev.toolUseId) : undefined;
+export function recordBuild(session: AgentSession, ev: ChatEvent, agentOf = (id: string) => session.log.agent(id)) {
+  const agent = ev.kind === 'agent' ? ev : ev.kind === 'tool_result' ? agentOf(ev.toolUseId) : undefined;
   const target = agent && buildStageOf(agent.subagentType, agent.description, agent.prompt);
   if (!agent || !target) return;
   const report = ev.kind === 'tool_result' && agent.status !== 'running' ? ev.text.slice(0, MAX_REPORT) : undefined;
@@ -63,9 +63,11 @@ export function recordBuild(session: AgentSession, ev: ChatEvent) {
   queue = queue.then(() => write(snap)).catch(() => {});
 }
 
-// Records the build agents of a loaded history, so a record a restart or a missed live event left behind catches up.
-export function recordHistory(session: AgentSession) {
+// Records the build agents of a loaded history and of its unshown runs, so a record a restart, a compaction or a missed live event left behind catches up.
+export function recordHistory(session: AgentSession, unshown: ChatEvent[] = []) {
   for (const ev of session.state.events) if (ev.kind === 'agent' || ev.kind === 'tool_result') recordBuild(session, ev);
+  const agents = new Map(unshown.flatMap((e) => (e.kind === 'agent' ? [[e.toolUseId, e] as const] : [])));
+  for (const ev of unshown) if (ev.kind === 'agent' || ev.kind === 'tool_result') recordBuild(session, ev, (id) => agents.get(id));
 }
 
 const SLUG = /^\w[\w.-]*$/;

@@ -191,13 +191,13 @@ export class AgentSession implements AgentHost {
 
   replaceHistory(h: History) {
     this.log.replace(h);
-    recordHistory(this);
+    recordHistory(this, h.unshown);
   }
 
   async loadHistory() {
     const h = await this.driver.loadHistory();
     if (h) this.log.append(h);
-    recordHistory(this);
+    recordHistory(this, h?.unshown);
   }
 
   close() {
