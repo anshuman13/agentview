@@ -66,6 +66,23 @@ export const reviewDecision = (reviews: BuildReview[], phase: ReviewTarget) => r
 
 export const isHeld = (reviews: BuildReview[]) => reviewDecision(reviews, 'hold')?.decision === 'hold';
 
+const phaseDecision = (reviews: BuildReview[], p: BuildPhase) => reviewDecision(reviews, p.key)?.decision;
+
+// Latest changes requests newer than the latest pm start, so the pm has not seen them yet.
+const unhandledChanges = (pm: BuildEntry | undefined, reviews: BuildReview[], phases: BuildPhase[]) =>
+  phases.map((p) => reviewDecision(reviews, p.key)).filter((r): r is BuildReview => r?.decision === 'changes' && (!pm || r.at > pm.startedAt));
+
+export type ApprovalGate = { decision: 'approve' | 'changes' | 'wait'; note: string };
+
+// What a build waits for before implementing: the user's approval of every phase, or changes for the pm.
+export function approvalGate(entries: BuildEntry[], reviews: BuildReview[], phases: BuildPhase[]): ApprovalGate {
+  const pm = inOrder(entries).filter((e) => e.stage === 'pm').at(-1);
+  if (isHeld(reviews) || pm?.status === 'running') return { decision: 'wait', note: '' };
+  const changes = unhandledChanges(pm, reviews, phases);
+  if (changes.length) return { decision: 'changes', note: changes.map((r) => `${phaseLabel(r.phase)}: ${r.note}`).join('\n') };
+  return { decision: phases.every((p) => phaseDecision(reviews, p) === 'approve') ? 'approve' : 'wait', note: '' };
+}
+
 export const slugOk = (slug: string | undefined): slug is string => Boolean(slug) && !slug!.includes('..');
 
 // The stage and slug a build agent works on: a /build label like `impl:<slug>#2`, else a hand run named by its spec path. `round` is the label's numeric #N.
@@ -230,12 +247,13 @@ export function flowOf(entries: BuildEntry[], reviews: BuildReview[], phases: Bu
   })();
 
   const decided = reviews.filter((r) => REVIEW_PHASES.includes(r.phase as ReviewPhase)).at(-1)?.at ?? null;
-  const decision = (p: BuildPhase) => reviewDecision(reviews, p.key)?.decision;
-  const approved = phases.filter((p) => decision(p) === 'approve').length;
+  const approved = phases.filter((p) => phaseDecision(reviews, p) === 'approve').length;
+  const reviewed = all.some((e) => e.stage === 'review' && e.status === 'done') && !all.some((e) => e.stage === 'implement') && pm?.status !== 'running';
   const approval =
     !phases.length ? step('approval', 'You', 'todo', '0 of 0 phases approved', decided)
     : approved === phases.length ? step('approval', 'You', 'done', 'Approved', decided)
-    : phases.some((p) => decision(p) === 'changes') ? step('approval', 'You', 'waiting', 'Changes requested', decided)
+    : unhandledChanges(pm, reviews, phases).length ? step('approval', 'You', 'waiting', 'Changes requested', decided)
+    : reviewed ? step('approval', 'You', 'waiting', 'Waiting for you', decided)
     : all.some((e) => e.stage === 'implement') ? step('approval', 'You', 'skipped', 'Built without approval', decided)
     : step('approval', 'You', 'todo', `${approved} of ${phases.length} phases approved`, decided);
 

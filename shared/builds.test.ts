@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { buildStageOf, buildSummary, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
+import { approvalGate, buildStageOf, buildSummary, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'builds.json'), 'utf8'));
 
@@ -42,4 +42,37 @@ describe('spec criteria fixture', () => {
       expect(withoutCriteria(c.markdown)).toBe(c.without);
     });
   }
+});
+
+describe('approvalGate and the approval step', () => {
+  const phases = (['requirements', 'design', 'tasks'] as const).map((key) => ({ key, markdown: 'x' })) as BuildPhase[];
+  const review = (phase: BuildReview['phase'], decision: BuildReview['decision'], at: number, note = ''): BuildReview => ({ phase, decision, note, at });
+  const approveAll = phases.map((p, i) => review(p.key, 'approve', i + 1));
+  const pm = (startedAt: number, status: BuildEntry['status'] = 'done') => ({ stage: 'pm', status, startedAt });
+  const gate = (e: Parameters<typeof entriesOf>[0], r: BuildReview[], p = phases) => approvalGate(entriesOf(e), r, p);
+  const approval = (e: Parameters<typeof entriesOf>[0], r: BuildReview[]) => flowOf(entriesOf(e), r, phases, false).find((f) => f.key === 'approval')!;
+  const reviewed = [pm(1), { stage: 'review', status: 'done', startedAt: 2 }] as const;
+
+  it('approves when every phase is approved or there are no phases', () => {
+    expect(gate([], approveAll).decision).toBe('approve');
+    expect(gate([], [], []).decision).toBe('approve');
+  });
+  it('waits while a phase is undecided', () => expect(gate([], approveAll.slice(1)).decision).toBe('wait'));
+  it('sends changes newer than the latest pm start to the pm with the phase title', () => {
+    const r = [...approveAll.slice(1), review('requirements', 'changes', 10, 'too big')];
+    expect(gate([pm(5)], r)).toEqual({ decision: 'changes', note: 'Requirements: too big' });
+    expect(gate([pm(20)], r).decision).toBe('wait');
+    expect(gate([], r).decision).toBe('changes');
+  });
+  it('waits while the pm runs', () => expect(gate([pm(5, 'running')], [review('design', 'changes', 10, 'x')]).decision).toBe('wait'));
+  it('waits while held and approves after the release', () => {
+    expect(gate([], [...approveAll, review('hold', 'hold', 9)]).decision).toBe('wait');
+    expect(gate([], [...approveAll, review('hold', 'hold', 9), review('hold', 'release', 10)]).decision).toBe('approve');
+  });
+  it('shows Waiting for you for a reviewed, unapproved, unbuilt spec', () => {
+    expect(approval([...reviewed], [])).toMatchObject({ state: 'waiting', result: 'Waiting for you' });
+    expect(approval([pm(1)], [])).toMatchObject({ state: 'todo', result: '0 of 3 phases approved' });
+    expect(approval([...reviewed, pm(3)], [review('design', 'changes', 2, 'x')])).toMatchObject({ result: 'Waiting for you' });
+    expect(approval([...reviewed], [review('design', 'changes', 2, 'x')])).toMatchObject({ result: 'Changes requested' });
+  });
 });

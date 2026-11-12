@@ -5,7 +5,7 @@ description: Build one or more features of this repo through the pm -> spec-revi
 
 # /agentview:build
 
-Runs the kit's `workflows/build.js`: for each feature brief, `agentview:pm` writes `.claude/specs/<slug>.md`, `agentview:spec-reviewer` approves or sends it back (3 rounds; in round 1 `agentview:spec-reader`, a cold reader with no repo, and `agentview:zoom-out`, a scope and reuse check, read it too), `agentview:implementer` builds it in a worktree on `<branch prefix><slug>`, `agentview:tester` checks every acceptance criterion and sends failures back (3 rounds). Features run through the pipeline in parallel.
+Runs the kit's `workflows/build.js`: for each feature brief, `agentview:pm` writes `.claude/specs/<slug>.md`, `agentview:spec-reviewer` approves or sends it back (3 rounds; in round 1 `agentview:spec-reader`, a cold reader with no repo, and `agentview:zoom-out`, a scope and reuse check, read it too), the `agentview:approval-gate` agent then waits until you approve every phase in the Spec card (a note sent back goes to `agentview:pm`, which rewrites the spec), `agentview:implementer` builds it in a worktree on `<branch prefix><slug>`, `agentview:tester` checks every acceptance criterion and sends failures back (3 rounds). Features run through the pipeline in parallel.
 
 The kit is two folders up from the "Base directory for this skill" line (that base is `<kit>/skills/build`). Call it `<kit>` below, as an absolute path.
 
@@ -14,7 +14,9 @@ The kit is two folders up from the "Base directory for this skill" line (that ba
 1. `node <kit>/usage.mjs --chat`. Each feature costs roughly 4 to 8 Sonnet agent runs. Batch size by the 5-hour window: under 50% up to 4 features, 50-80% up to 2, over 80% none; wait for the window to reset. Weekly over 85%: stop.
 2. Turn the user's ask into briefs: one line each, user-visible outcome, a slug of 2-4 words. Do not pre-design; that is the pm's job.
 3. Read the repo's CLAUDE.md and `.claude/build.md` when it exists. When `.claude/build.md` has a `Branch prefix:` line, pass its value as `branchPrefix`.
-4. Call Workflow with `{scriptPath: '<kit>/workflows/build.js', args: {features: [{slug, brief}, ...], branchPrefix}}` (the name registry does not see this file). Leave out `branchPrefix` when there is no such line (the branch is then `build/<slug>`). Optional `specRounds` and `buildRounds` go next to `features`.
+4. Call Workflow with `{scriptPath: '<kit>/workflows/build.js', args: {features: [{slug, brief}, ...], kit: '<kit>', branchPrefix}}` (the name registry does not see this file). Leave out `branchPrefix` when there is no such line (the branch is then `build/<slug>`). Optional `specRounds` and `buildRounds` go next to `features`.
+
+By default every feature waits for approval before it is implemented. `approval: false` next to `features` skips the gate for unattended loops. A held spec keeps the gate re-running its haiku agent every 9 minutes with no limit, which costs a run each time. A Kiro spec has no spec file, so its gate returns an error and the feature is not built while approval is on.
 
 Build agents run by hand (`agentview:pm`, `agentview:spec-reviewer`, `agentview:implementer`, `agentview:tester`, `agentview:code-reviewer`) get `.claude/specs/<slug>.md` in their prompt, so the Builds view can file their reports under the feature.
 
