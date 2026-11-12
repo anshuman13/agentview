@@ -2,21 +2,21 @@
   {
     "name": "one line",
     "brief": "Add a dark mode toggle",
-    "expected": "Run the build workflow on the brief below. Call the Workflow tool with name \"build\" and args [{\"slug\": \"<slug>\", \"brief\": \"<brief>\"}]. Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\nAdd a dark mode toggle\n</brief>"
+    "expected": "Run the agentview:build skill on the brief below (call the Skill tool with skill \"agentview:build\"). Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\nAdd a dark mode toggle\n</brief>"
   },
   {
     "name": "multiline",
     "brief": "Add a toggle\n\n- in settings\n- remembered per device",
-    "expected": "Run the build workflow on the brief below. Call the Workflow tool with name \"build\" and args [{\"slug\": \"<slug>\", \"brief\": \"<brief>\"}]. Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\nAdd a toggle\n\n- in settings\n- remembered per device\n</brief>"
+    "expected": "Run the agentview:build skill on the brief below (call the Skill tool with skill \"agentview:build\"). Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\nAdd a toggle\n\n- in settings\n- remembered per device\n</brief>"
   },
   {
     "name": "double quotes and backslashes",
     "brief": "Rename \"foo\" to \"bar\" in C:\\temp\\x and \\n stays",
-    "expected": "Run the build workflow on the brief below. Call the Workflow tool with name \"build\" and args [{\"slug\": \"<slug>\", \"brief\": \"<brief>\"}]. Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\nRename \"foo\" to \"bar\" in C:\\temp\\x and \\n stays\n</brief>"
+    "expected": "Run the agentview:build skill on the brief below (call the Skill tool with skill \"agentview:build\"). Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\nRename \"foo\" to \"bar\" in C:\\temp\\x and \\n stays\n</brief>"
   },
   {
     "name": "starts with a slash",
     "brief": "/goal ship it",
-    "expected": "Run the build workflow on the brief below. Call the Workflow tool with name \"build\" and args [{\"slug\": \"<slug>\", \"brief\": \"<brief>\"}]. Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\n/goal ship it\n</brief>"
+    "expected": "Run the agentview:build skill on the brief below (call the Skill tool with skill \"agentview:build\"). Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\n/goal ship it\n</brief>"
   }
 ]

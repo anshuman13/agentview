@@ -326,8 +326,8 @@ New chats start in Auto mode: Claude asks only before risky actions.
 implement, test) on the brief in the composer. It sends the brief inside a prompt that asks for the Workflow tool, so
 the spec cards show the build agents, and the chat's model stays as it is. While Claude works it queues like a normal
 message and never steers. With an empty composer it shows "Type the brief in the composer first", and during an upload
-"Wait for the upload to finish". The folder needs `.claude/workflows/build.js`; without it the Workflow tool says so in
-the chat.
+"Wait for the upload to finish". The prompt asks for the `/agentview:build` skill of the [build kit](#build-kit), so it
+works in any repo.
 
 Any chat can ask Fable 5.1 about a hard problem. Each call needs your approval.
 
