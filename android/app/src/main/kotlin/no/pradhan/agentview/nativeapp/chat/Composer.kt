@@ -271,8 +271,21 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
         val caps = session?.capabilities ?: Capabilities()
         val models = session?.models.orEmpty()
         val effort = session?.effort?.takeIf { caps.effort }
+        SectionHeader("Run")
+        val review = session?.review == true
+        val modes = menuModes(session?.provider, session?.permissionMode ?: "default", review)
+        Group {
+            modes.list.forEachIndexed { i, m ->
+                if (i > 0) Hairline()
+                ListRow(m.label, m.detail, onClick = {
+                    val (mode, reviewOn) = modeSteps(session?.permissionMode ?: "default", review, m.value)
+                    mode?.let { hub.setMode(it) }
+                    reviewOn?.let { hub.setReview(it) }
+                    onSheet(null)
+                }, trailing = if (m.value == modes.checked) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+            }
+        }
         if (models.isNotEmpty()) {
-            SectionHeader("Model")
             val current = session?.model
             var all by remember { mutableStateOf(false) }
             val newest = newestModels(models, current)
@@ -291,32 +304,17 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
                 }
             }
         }
+        val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main"
+        if (showAccount || effort != null) Group {
+            effort?.let { ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { onSheet(Picker.Effort) }, trailing = { Chevron() }) }
+            if (showAccount) { if (effort != null) Hairline(); ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); onSheet(Picker.Account) }, trailing = { Chevron() }) }
+        }
         val loop = session?.loop?.takeIf { it.on }
-        SectionHeader("Goal and build cycle")
+        SectionHeader("Goal")
         Group {
             ListRow("Goal", run?.let { runLine(it, session?.loop?.phase) } ?: "Off", onClick = { hub.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }, trailing = { Chevron() })
             Hairline()
             ListRow("Build cycle", loop?.let { "Up to ${it.max} ${if (it.max == 1) "round" else "rounds"}" } ?: "Off", onClick = { onSheet(Picker.Loop) }, trailing = { Chevron() })
-        }
-        SectionHeader("Permission mode")
-        val review = session?.review == true
-        val modes = menuModes(session?.provider, session?.permissionMode ?: "default", review)
-        Group {
-            modes.list.forEachIndexed { i, m ->
-                if (i > 0) Hairline()
-                ListRow(m.label, m.detail, onClick = {
-                    val (mode, reviewOn) = modeSteps(session?.permissionMode ?: "default", review, m.value)
-                    mode?.let { hub.setMode(it) }
-                    reviewOn?.let { hub.setReview(it) }
-                    onSheet(null)
-                }, trailing = if (m.value == modes.checked) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
-            }
-        }
-        val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main"
-        if (showAccount || effort != null) SectionHeader("Account and effort")
-        if (showAccount || effort != null) Group {
-            if (showAccount) ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); onSheet(Picker.Account) }, trailing = { Chevron() })
-            effort?.let { if (showAccount) Hairline(); ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { onSheet(Picker.Effort) }, trailing = { Chevron() }) }
         }
     }
 }
