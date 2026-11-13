@@ -175,7 +175,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: if (loop) (if (root.isEmpty()) "" else advisorLoopGoal(root)) else what
     val start = {
         hub.track("action:startGoal")
-        val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct), System.currentTimeMillis())
+        val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct, if (loop) ADVISOR_LOOP_BUILDS else null), System.currentTimeMillis())
         if (loop) {
             scope.askAdvisor(hub, "pm", text, onClose)
         } else if (here) {

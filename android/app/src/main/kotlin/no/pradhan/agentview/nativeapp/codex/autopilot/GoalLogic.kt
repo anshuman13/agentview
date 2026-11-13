@@ -14,12 +14,12 @@ sealed interface GoalSheet {
 }
 
 // What the start sheet collects: every in ms (0 for until done), the stop as ms from now or as HH:MM, the weekly cap in percent.
-class GoalForm(val what: String, val every: Long, val stopIn: Long?, val stopAt: String?, val capPct: Int?)
+class GoalForm(val what: String, val every: Long, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val builds: Int? = null)
 
 fun goalCommand(form: GoalForm, now: Long): String {
     val stop = form.stopAt ?: form.stopIn?.takeIf { it > 0 }?.let { clock(now + it) }
     val what = form.what.trim().replace(Regex("^/goal\\s+"), "")
-    return listOfNotNull("/goal", form.every.takeIf { it > 0 }?.let { "every ${everyText(it)}" }, stop?.let { "until $it" }, form.capPct?.takeIf { it > 0 }?.let { "cap $it%" }, what.ifEmpty { null }).joinToString(" ")
+    return listOfNotNull("/goal", form.every.takeIf { it > 0 }?.let { "every ${everyText(it)}" }, stop?.let { "until $it" }, form.capPct?.takeIf { it > 0 }?.let { "cap $it%" }, form.builds?.takeIf { it > 0 }?.let { "builds $it" }, what.ifEmpty { null }).joinToString(" ")
 }
 
 // shared/goalForm.ts parseEvery: a custom How often such as "45m", "45 min" or "3h", 10 minutes to 7 days, in ms.
@@ -36,6 +36,7 @@ private const val HOUR = 3_600_000L
 
 const val ADVISOR_LOOP_EVERY = 4 * HOUR
 const val ADVISOR_LOOP_CAP = 70
+const val ADVISOR_LOOP_BUILDS = 5
 
 class EveryChoice(val label: String, val ms: Long)
 

@@ -8,7 +8,9 @@ const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
 const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
 
-const GOAL_USAGE = 'Usage: /goal [every 1h] [until 18:00] [cap 70%] <condition> (every 10m or longer), /goal off';
+const GOAL_USAGE = 'Usage: /goal [every 1h] [until 18:00] [cap 70%] [builds 5] <condition> (every 10m or longer), /goal off';
+
+const MAX_BUILDS = 50;
 
 const DAY = 24 * 3_600_000;
 const STANDING_MS = 28 * DAY;
@@ -29,8 +31,8 @@ export const standing = (r: Repeat) => Boolean(r.goal && r.every);
 
 const reportDue = (r: Repeat, now = Date.now()) => standing(r) && r.reportAt !== undefined && now >= r.reportAt;
 
-// /goal [every 1h] [until 18:00] [cap 70%] <condition> checks the condition whenever the agent goes idle, until it reports GOAL MET or the rounds run out.
-// With every it is a standing goal: one heartbeat per interval for up to 28 days. until sets an end time, cap a weekly usage limit.
+// /goal [every 1h] [until 18:00] [cap 70%] [builds 5] <condition> checks the condition whenever the agent goes idle, until it reports GOAL MET or the rounds run out.
+// With every it is a standing goal: one heartbeat per interval for up to 28 days. until sets an end time, cap a weekly usage limit, builds a limit on builds started.
 export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usage' | null {
   const m = /^\/goal\b([\s\S]*)$/.exec(text.trim());
   if (!m) return null;
@@ -45,11 +47,13 @@ export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usa
   const e = take(/^every\s+(\d+)\s*(m|min|h)\b\s*([\s\S]*)$/i);
   const u = take(/^until\s+(\d{1,2}):(\d{2})\b\s*([\s\S]*)$/i);
   const c = take(/^cap\s+(\d+)%\s*([\s\S]*)$/i);
+  const b = take(/^builds(?:\s+(\d+)\b|\s*$)\s*([\s\S]*)$/i);
   const every = e ? Number(e[1]) * UNIT[e[2].toLowerCase()] : 0;
   const capPct = c ? Number(c[1]) : 0;
-  if ((e || u || c) && !goal) return 'usage';
-  if ((e && (every < MIN_EVERY || every > MAX_EVERY)) || (u && (Number(u[1]) > 23 || Number(u[2]) > 59)) || (c && (capPct < 1 || capPct > 100))) return 'usage';
-  const extra = { ...(u && { endAt: nextClock(Number(u[1]), Number(u[2]), now) }), ...(c && { capPct }) };
+  const maxBuilds = Number(b?.[1] ?? 0);
+  if ((e || u || c || b) && !goal) return 'usage';
+  if ((e && (every < MIN_EVERY || every > MAX_EVERY)) || (u && (Number(u[1]) > 23 || Number(u[2]) > 59)) || (c && (capPct < 1 || capPct > 100)) || (b && (maxBuilds < 1 || maxBuilds > MAX_BUILDS))) return 'usage';
+  const extra = { ...(u && { endAt: nextClock(Number(u[1]), Number(u[2]), now) }), ...(c && { capPct }), ...(b && { maxBuilds, builds: [] }) };
   if (e) return { prompt: standingPrompt(goal), every, until: now + STANDING_MS, round: 0, nextAt: null, goal, reportAt: now + REPORT_MS, ...extra };
   return { prompt: goalPrompt(goal), every: 0, until: null, round: 0, nextAt: null, goal, ...extra };
 }
@@ -129,7 +133,8 @@ interface RepeatHost {
   resumeRun(r: Repeat): string;
   endRun(id: string, why: string): void;
   reopenRun(id: string): void;
-  patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'usage'>>): void;
+  patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'usage' | 'builds'>>): void;
+  push(title: string, body: string): void;
   usage(): PlanUsage | null;
   asking(): boolean;
   sendPrompt(text: string, auto: 'loop' | 'goal', round: number, report?: boolean): void;
@@ -200,11 +205,20 @@ export class RepeatController {
   unpause() {
     const r = this.host.repeat();
     if (!r?.paused) return;
-    this.host.setSession({ repeat: { ...r, paused: false } });
-    this.patchRun({ state: 'running', why: '' });
+    this.host.setSession({ repeat: { ...r, paused: false, ...(r.builds && { builds: [] }) } });
+    this.patchRun({ state: 'running', why: '', ...(r.maxBuilds && { builds: 0 }) });
     this.host.system(`${r.goal ? 'Goal' : 'Loop'} resumed`);
     if (!r.nextAt || r.nextAt <= Date.now()) this.fire();
     else this.arm();
+  }
+
+  // A build the loop's chat started; the limit pauses the run at the next round.
+  noteBuild(slug: string) {
+    const r = this.host.repeat();
+    if (!r?.maxBuilds || r.builds?.includes(slug)) return;
+    const builds = [...(r.builds ?? []), slug];
+    this.host.setSession({ repeat: { ...r, builds } });
+    this.patchRun({ builds: builds.length });
   }
 
   runNow() {
@@ -248,6 +262,7 @@ export class RepeatController {
     if (!r || this.held || r.paused) return;
     const end = this.finish(r);
     if (end) return this.set(null, end.note, end.why);
+    if (r.maxBuilds && (r.builds?.length ?? 0) >= r.maxBuilds) return this.pauseAtLimit(r, r.maxBuilds);
     const usage = this.host.usage();
     const gate = usageGate(r, usage);
     if (gate && 'note' in gate) return this.set(null, gate.note);
@@ -270,6 +285,15 @@ export class RepeatController {
     this.patchRun({ state: 'running', why: '', round, nextAt, usage });
     this.arm();
     this.host.sendPrompt(report ? reportPrompt(r.goal!) : r.prompt, r.goal ? 'goal' : 'loop', round, report);
+  }
+
+  private pauseAtLimit(r: Repeat, max: number) {
+    clearTimeout(this.timer);
+    this.due = false;
+    this.host.setSession({ repeat: { ...r, paused: true } });
+    this.patchRun({ state: 'paused', why: `build limit ${max} reached` });
+    this.host.system(`Build limit reached: ${max} builds started. Resume to count ${max} more.`);
+    this.host.push(`Loop paused: build limit ${max}`, 'Resume to count more');
   }
 
   private skip(r: Repeat, why: string) {

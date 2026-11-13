@@ -10,7 +10,7 @@ import { Sheet } from '../ui/Sheet';
 import { billing, providerLabel } from '../../../shared/providers';
 import type { Provider } from '../../../shared/protocol';
 import { goalCommand, parseEvery } from '../../../shared/goalForm';
-import { ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, advisorOf } from '../../../shared/advisors';
+import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, advisorOf } from '../../../shared/advisors';
 import { planCondition } from '../../../shared/specTasks';
 import { CAPS, EVERY, STOPS } from './goalLogic';
 import { useWorkspace } from './folders';
@@ -56,7 +56,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : loop ? (root ? advisorLoopGoal(root) : '') : what;
   const start = () => {
     track('action:startGoal');
-    const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct }, Date.now());
+    const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct, builds: loop ? ADVISOR_LOOP_BUILDS : null }, Date.now());
     if (loop) {
       askAdvisor('pm', text);
       onClose();

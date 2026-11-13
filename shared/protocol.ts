@@ -133,7 +133,7 @@ export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick
 export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; build: boolean; stopTask: boolean; subagents: boolean };
 
 // A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
-export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean; reportAt?: number; endAt?: number; capPct?: number };
+export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean; reportAt?: number; endAt?: number; capPct?: number; maxBuilds?: number; builds?: string[] };
 
 export const MAX_GOAL_ROUNDS = 20;
 
@@ -172,6 +172,8 @@ export type ChatRun = {
   every?: number;
   endAt?: number;
   capPct?: number;
+  maxBuilds?: number;
+  builds?: number;
   usage?: PlanUsage | null;
   provider?: Provider;
   costUsd: number;

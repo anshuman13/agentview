@@ -59,5 +59,6 @@ const HOUR = 3_600_000;
 
 export const ADVISOR_LOOP_EVERY = 4 * HOUR;
 export const ADVISOR_LOOP_CAP = 70;
+export const ADVISOR_LOOP_BUILDS = 5;
 
 export const advisorLoopGoal = (root: string) => `Advisor loop for ${root}, never met on its own. Each round, as PM: reread ${root}/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to ${root}/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build (/agentview:build <slug>, the build card's Build action) and mark the item building; one build in flight per project; mark it done when merged. If the backlog is empty, ask the Designer for an audit when the newest ${root}/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing.`;

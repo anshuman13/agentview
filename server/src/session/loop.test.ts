@@ -149,7 +149,7 @@ describe('standing goal', () => {
   function setup(goal: string) {
     vi.useFakeTimers();
     let r = parseGoal(`/goal every 1h ${goal}`) as Repeat;
-    const state = { running: false, asking: false, sent: [] as { text: string; report?: boolean }[], ended: '', notes: [] as string[] };
+    const state = { running: false, asking: false, sent: [] as { text: string; report?: boolean }[], ended: '', notes: [] as string[], pushes: [] as string[], why: '' };
     const c = new RepeatController({
       repeat: () => r,
       running: () => state.running,
@@ -160,13 +160,39 @@ describe('standing goal', () => {
       resumeRun: () => 'run',
       endRun: (_id, why) => { state.ended = why; },
       reopenRun: () => {},
-      patchRun: () => {},
+      patchRun: (_id, patch) => { if (patch.why !== undefined) state.why = patch.why; },
+      push: (title) => { state.pushes.push(title); },
       usage: () => null,
       asking: () => state.asking,
       sendPrompt: (text, _auto, _round, report) => state.sent.push({ text, report }),
     });
     return { c, state, repeat: () => r };
   }
+
+  it('parses builds and rejects 0, 51 and none', () => {
+    expect(parseGoal('/goal every 4h cap 70% builds 5 x')).toMatchObject({ capPct: 70, maxBuilds: 5, goal: 'x' });
+    for (const n of ['builds 0 x', 'builds 51 x', 'builds']) expect(parseGoal(`/goal every 4h cap 70% ${n}`)).toBe('usage');
+  });
+
+  it('pauses at the build limit before the usage cap and counts again after Resume', () => {
+    const { c, state, repeat } = setup('x');
+    c.set({ ...repeat(), maxBuilds: 2, builds: [], capPct: 70 });
+    c.noteBuild('a');
+    c.noteBuild('a');
+    c.noteBuild('b');
+    expect(repeat().builds).toEqual(['a', 'b']);
+    vi.advanceTimersByTime(HOUR);
+    expect(state.sent).toHaveLength(1);
+    expect(repeat().paused).toBe(true);
+    expect(state.why).toBe('build limit 2 reached');
+    expect(state.notes.at(-1)).toBe('Build limit reached: 2 builds started. Resume to count 2 more.');
+    expect(state.pushes).toEqual(['Loop paused: build limit 2']);
+    c.unpause();
+    expect(state.sent).toHaveLength(2);
+    expect(repeat().builds).toEqual([]);
+    c.stop();
+    vi.useRealTimers();
+  });
 
   it('skips a heartbeat while Claude is busy or waiting, records no round and re-arms', () => {
     const { c, state, repeat } = setup('x');

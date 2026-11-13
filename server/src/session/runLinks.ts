@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { MAX_GOAL_ROUNDS, type ChatRun, type Repeat, type RunEdit, type RunOp } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
+import { APP, post } from '../integrations/notify.js';
 import { ROUND_INSTRUCTION } from './repeat.js';
 import { WAITING, openTries, roundResult } from './runs.js';
 import type { AgentSession } from './session.js';
@@ -24,6 +25,7 @@ export class RunLinks {
       endRun: (id: string, why: string) => s.runs.end(id, why),
       reopenRun: (id: string) => s.runs.reopen(id),
       patchRun: (id: string, patch: Parameters<AgentSession['runs']['update']>[1]) => s.runs.update(id, patch),
+      push: (title: string, body: string) => post(title, s.runs.get(s.state.session.repeat?.runId)?.title ?? '', body, `${APP}/?view=runs`),
       usage: () => s.state.session.usage ?? null,
       asking: () => s.state.pending.length > 0,
       sendPrompt: (text: string, auto: 'loop' | 'goal', round: number, report?: boolean) => {
@@ -40,7 +42,7 @@ export class RunLinks {
 
   private start(r: Repeat) {
     const what = r.goal ?? r.prompt;
-    return this.s.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.s.state.session.sessionId ?? '', chatId: this.s.id, title: this.title(what), what, provider: this.s.state.session.provider, round: r.round, max: r.goal && !r.every ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt, ...(r.goal && r.every && { every: r.every }), ...(r.endAt && { endAt: r.endAt }), ...(r.capPct && { capPct: r.capPct }) });
+    return this.s.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.s.state.session.sessionId ?? '', chatId: this.s.id, title: this.title(what), what, provider: this.s.state.session.provider, round: r.round, max: r.goal && !r.every ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt, ...(r.goal && r.every && { every: r.every }), ...(r.endAt && { endAt: r.endAt }), ...(r.capPct && { capPct: r.capPct }), ...(r.maxBuilds && { maxBuilds: r.maxBuilds, builds: r.builds?.length ?? 0 }) });
   }
 
   // A restart keeps the run of a loop or goal; the chat has a new id.

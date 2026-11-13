@@ -6,9 +6,9 @@ export const rounds = (n: number) => `${n} ${n === 1 ? 'round' : 'rounds'}`;
 export const interval = (ms: number) => (ms % 3_600_000 === 0 ? `${ms / 3_600_000} h` : `${Math.round(ms / 60_000)} min`);
 
 // The system note of a goal that starts or changes: how often, until when and the usage cap. An edit also says "no cap".
-export function goalPlan({ every, endAt, capPct }: { every: number; endAt?: number; capPct?: number }, edit = false) {
+export function goalPlan({ every, endAt, capPct, maxBuilds }: { every: number; endAt?: number; capPct?: number; maxBuilds?: number }, edit = false) {
   const head = `${every ? `Goal every ${interval(every)}` : 'Goal when idle'}${endAt ? ` until ${clock(endAt)}` : ''}`;
-  return [head, !every && `up to ${rounds(MAX_GOAL_ROUNDS)}`, capPct ? `cap ${capPct}%` : edit && 'no cap'].filter(Boolean).join(' · ');
+  return [head, !every && `up to ${rounds(MAX_GOAL_ROUNDS)}`, capPct ? `cap ${capPct}%` : edit && 'no cap', maxBuilds && `builds ${maxBuilds}`].filter(Boolean).join(' · ');
 }
 
 export const runLine = (word: string, { round, max, nextAt }: { round: number; max: number; nextAt: number | null }) =>
