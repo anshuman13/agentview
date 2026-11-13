@@ -291,7 +291,8 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
       break;
     default: {
       const id = ('run' in msg ? live.runs.find((r) => r.id === msg.run)?.chatId : undefined) ?? target ?? client.view;
-      if (!live.chats.has(id)) return fail(new Error(live.chats.size ? 'This chat was closed' : 'The agent host is starting, try again in a moment'));
+      // No pre-check against live.chats: the host's live broadcast is debounced, so a prompt sent right after a new
+      // chat's init would be dropped. The host itself answers "This chat was closed" for an unknown id.
       host.req({ op: 'cmd', id, msg }).catch(fail);
     }
   }
