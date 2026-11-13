@@ -40,6 +40,7 @@ import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.runEdit
 import no.pradhan.agentview.nativeapp.net.submit
+import no.pradhan.agentview.nativeapp.sessions.advisorLoopGoal
 import no.pradhan.agentview.nativeapp.sessions.folderName
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -144,6 +145,8 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val active = state.runs.any { it.chatId == state.shownId && it.state != "done" }
     val canHere = sheet.here && !active
     var what by remember { mutableStateOf("") }
+    var advisor by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     var every by remember { mutableStateOf(EVERY.first().ms) }
     var custom by remember { mutableStateOf("") }
     var stopIn by remember { mutableStateOf<Long?>(null) }
@@ -155,17 +158,20 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     var pickTime by remember { mutableStateOf(false) }
     var sent by remember { mutableStateOf(false) }
     LaunchedEffect(sent) { if (sent) { delay(10_000); sent = false } }
-    val here = canHere && inHere
-    val target = if (here) state.session?.provider else providerId
+    val loop = advisor && sheet.plan == null
+    val here = canHere && inHere && !loop
+    val target = if (loop) "claude" else if (here) state.session?.provider else providerId
     val dirs = (ws.repos.map { it.cwd to it.name } + ws.trees.map { it.cwd to it.name.substringAfterLast('/') }).let { l -> if (cwd.isNotEmpty() && l.none { it.first == cwd }) listOf(cwd to folderName(cwd)) + l else l }
     val read = planRead(hub, sheet.plan, hub.pageChat)
     val badEvery = custom.isNotBlank() && parseEvery(custom) == null
     val ready = !badEvery && (sheet.plan == null || (read.markdown != null && !read.error))
-    val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: what
+    val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: if (loop) advisorLoopGoal(dir) else what
     val start = {
         hub.track("action:startGoal")
         val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct), System.currentTimeMillis())
-        if (here) {
+        if (loop) {
+            scope.launch { if (hub.openAdvisor("pm", false)) { hub.askChat(text); onClose() } }; Unit
+        } else if (here) {
             hub.submit(text, false) { hub.notice.value = "Could not send the goal. Try again." }
             onClose()
         } else {
@@ -177,8 +183,14 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     Sheet(onClose, "New goal", padded = false) {
         SectionHeader("What")
         Group {
+            if (sheet.plan == null) Chips {
+                Chip("Advisor loop", {
+                    advisor = !advisor
+                    if (advisor) { custom = ""; every = ADVISOR_LOOP_EVERY; stopIn = null; stopAt = null; capPct = ADVISOR_LOOP_CAP; inHere = false }
+                }, on = advisor)
+            }
             if (sheet.plan != null) ListRow(sheet.plan, if (read.error) "Could not read the plan. Check the file still exists." else read.markdown?.let { read.progress ?: "No tasks" }, lines = 1)
-            else Box(Modifier.padding(Tokens.sp6)) { TextField(what, { what = it }, placeholder = "What is the goal?", minLines = 3) }
+            else Box(Modifier.padding(Tokens.sp6)) { TextField(if (loop) condition else what, { advisor = false; what = it }, placeholder = "What is the goal?", minLines = 3) }
         }
         SectionHeader("How often")
         Group {
@@ -205,13 +217,13 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
         SectionHeader("Where")
         Group {
             Chips {
-                if (canHere) {
+                if (canHere && !loop) {
                     Chip("New chat", { inHere = false }, on = !inHere)
                     Chip("This chat", { inHere = true }, on = inHere)
                 }
                 if (!here) {
                     if (sheet.plan == null) MenuChip(folderName(dir), dirs, { it.second }, { it.first == dir }) { dir = it.first }
-                    MenuChip(providerLabel(providerId), providers, { it.label }, { it.id == providerId }) { providerId = it.id }
+                    if (!loop) MenuChip(providerLabel(providerId), providers, { it.label }, { it.id == providerId }) { providerId = it.id }
                 }
             }
         }

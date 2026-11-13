@@ -11,6 +11,7 @@ export const EVERY = [
   { label: 'Every 30m', ms: 30 * 60_000 },
   { label: 'Every 1h', ms: HOUR },
   { label: 'Every 2h', ms: 2 * HOUR },
+  { label: 'Every 4h', ms: 4 * HOUR },
 ];
 
 export type Stop = { stopIn?: number; stopAt?: string };

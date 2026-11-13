@@ -59,6 +59,8 @@ data class AdvisorInfo(val id: String, val memory: String = "", val chats: List<
 @Serializable
 data class BacklogItem(val rank: Int, val slug: String, val title: String, val why: String = "", val status: String, val spec: Boolean = false)
 
+internal fun advisorLoopGoal(root: String) = "Advisor loop for $root, never met on its own. Each round, as PM: reread $root/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to $root/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build (/agentview:build <slug>, the build card's Build action) and mark the item building; one build in flight per project; mark it done when merged. If the backlog is empty, ask the Designer for an audit when the newest $root/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing."
+
 private fun rankPrompt(root: String) = "Read $root/.claude/backlog.md and the project's code and recent changes, then rank what to build next. Rewrite the backlog file (at most 10 lines) and reply with the top three."
 
 // The newest .claude/audits/<date>.md, from /api/advisors/audit; mirrors Audit in shared/advisors.ts.
