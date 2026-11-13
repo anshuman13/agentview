@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Back } from '../app/touch/back';
 import { useEscape } from './util';
 import { useSheetDrag } from './useSheetDrag';
@@ -15,13 +16,14 @@ export function Sheet({ label, onClose, className, overlayClassName, active = tr
     return () => { stack.splice(stack.lastIndexOf(me), 1); };
   }, [active]);
   useEscape(() => { if (stack[stack.length - 1] === id.current) sheet.close(); });
-  return (
+  return createPortal(
     <div className={overlayClassName ?? 'as-sheet-overlay'} ref={sheet.overlay} onClick={sheet.close}>
       {active && <Back close={onClose} />}
       <div className={className ? `as-sheet ${className}` : 'as-sheet'} ref={sheet.sheet} role="dialog" aria-label={label} onClick={(e) => e.stopPropagation()} data-no-swipe={noSwipe || undefined}>
         <div className="sheet-handle" {...sheet.handle} />
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
