@@ -99,7 +99,19 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
       else children.set(parent, [e]);
     }
   }
-  return itemsFrom(events.filter((e) => !('parent' in e && e.parent)), results, children, resumed, progress);
+  const top = events.filter((e) => !('parent' in e && e.parent));
+  const ids = new Set(events.map((e) => e.id));
+  for (const [id, list] of children) {
+    if (ids.has(id)) continue;
+    const at = top.findIndex((e) => e.at > list[0].at);
+    top.splice(at < 0 ? top.length : at, 0, orphanAgent(id, list[0].at));
+  }
+  return itemsFrom(top, results, children, resumed, progress);
+}
+
+// Steps of a sub-agent whose Agent call is on an earlier page get a stand-in for that call.
+function orphanAgent(id: string, at: number): ToolUse {
+  return { kind: 'tool_use', id, at, name: 'Agent', input: { description: 'Sub-agent started earlier' }, summary: '' };
 }
 
 function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>, resumed: Map<string, number>, progress: Map<string, string>): Item[] {

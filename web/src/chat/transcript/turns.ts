@@ -133,6 +133,7 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
     const parent = e.kind === 'tool_use' ? e.parent : e.kind === 'tool_result' ? e.toolUseId : undefined;
     const turn = (parent && turnOf.get(parent)) || current();
     turnOf.set(e.id, turn);
+    if (parent && !turnOf.has(parent)) turnOf.set(parent, turn);
     if (e.kind === 'assistant' && !e.parent) {
       const text = stripRound(e.text).trim();
       if (text) turn.reply = { id: e.id, text, streaming: e.streaming, at: e.at };

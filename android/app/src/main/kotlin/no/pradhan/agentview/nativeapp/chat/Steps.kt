@@ -147,8 +147,19 @@ fun buildTranscript(events: List<ChatEvent>): List<Item> {
         val parent = if (e.kind == "tool_use" || e.kind == "tool_result" || e.kind == "assistant") e.parent else null
         if (parent != null) children.getOrPut(parent) { mutableListOf() }.add(e)
     }
-    return itemsFrom(events.filter { it.parent == null }, results, children, resumed, progress)
+    val top = events.filter { it.parent == null }.toMutableList()
+    val ids = events.mapTo(HashSet()) { it.id }
+    for ((id, list) in children) {
+        if (id in ids) continue
+        val at = top.indexOfFirst { it.at > list[0].at }
+        top.add(if (at < 0) top.size else at, orphanAgent(id, list[0].at))
+    }
+    return itemsFrom(top, results, children, resumed, progress)
 }
+
+// Steps of a sub-agent whose Agent call is on an earlier page get a stand-in for that call.
+private fun orphanAgent(id: String, at: Long) =
+    ChatEvent(id = id, kind = "tool_use", at = at, name = "Agent", input = JsonObject(mapOf("description" to JsonPrimitive("Sub-agent started earlier"))))
 
 private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, children: Map<String, List<ChatEvent>>, resumed: Map<String, Long>, progress: Map<String, String>): List<Item> {
     val items = mutableListOf<Item>()
