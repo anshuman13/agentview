@@ -55,6 +55,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   if (narrow) {
     return (
       <Sheet label="Chat settings" onClose={close}>
+        <h2>Chat settings</h2>
         {groups.map(([label, rows]) => (
           <div key={label}>
             <Section label={label} />
