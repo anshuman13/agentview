@@ -2,7 +2,7 @@ export const meta = {
   name: 'build',
   description: 'For each feature brief: pm writes a spec, reviewer approves it, designer sketches it, you approve it, implementer builds it in a worktree, tester checks it; loops until pass or out of rounds',
   phases: [
-    { title: 'Spec', detail: 'pm writes; spec-reviewer approves (up to 3 rounds); a cold reader and a zoom-out reviewer read round 1; designer sketches UI specs' },
+    { title: 'Spec', detail: 'pm writes; spec-reviewer approves (up to 3 rounds); a cold reader, a zoom-out reviewer and an architect read round 1; designer sketches UI specs' },
     { title: 'Build', detail: 'waits for your approval, then implementer in a worktree, tester verifies (up to 3 rounds)' },
   ],
 }
@@ -62,7 +62,7 @@ async function spec(f) {
   for (let round = 1; round <= specRounds; round++) {
     const ask = `Review round ${round} of ${specRounds}. Feature brief: ${f.brief}\n\nSpec, found at ${path}:\n\n${text}`
     const reviewers = [['review', 'spec-reviewer']]
-    if (round === 1) reviewers.push(['reader', 'spec-reader'], ['zoom-out', 'zoom-out'])
+    if (round === 1) reviewers.push(['reader', 'spec-reader'], ['zoom-out', 'zoom-out'], ['architect', 'architect'])
     const reviews = await parallel(reviewers.map(([tag, agentType]) => () =>
       agent(ask, { label: `${tag}:${f.slug}#${round}`, phase: 'Spec', agentType: `agentview:${agentType}`, schema: REVIEW })
         .then(r => r && { ...r, issues: r.issues.map(i => tag === 'review' ? i : `[${tag}] ${i}`) })))
