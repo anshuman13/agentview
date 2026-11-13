@@ -63,6 +63,8 @@ import no.pradhan.agentview.nativeapp.net.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.agentSummary
+import no.pradhan.agentview.nativeapp.ops.tokensText
+import no.pradhan.agentview.nativeapp.sessions.buildTotals
 import no.pradhan.agentview.nativeapp.sessions.currentStep
 import no.pradhan.agentview.nativeapp.sessions.BuildDetail
 import no.pradhan.agentview.nativeapp.sessions.canBuild
@@ -294,6 +296,11 @@ private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
         }
     }
     if (scroll.value < scroll.maxValue) Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(Tokens.sp12).background(Brush.horizontalGradient(listOf(Color.Transparent, av.raised))))
+    }
+    val total = buildTotals(d.entries, now)
+    if (total.runs > 0) {
+        val line = listOf("${total.runs} agent run${if (total.runs == 1) "" else "s"}", duration(total.ms), if (total.tokens > 0) (if (total.partial) "~" else "") + tokensText(total.tokens) else "").filter(String::isNotEmpty).joinToString(" · ")
+        Text(line, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2))
     }
     if (step != null) {
         val badge = flowBadge(step)

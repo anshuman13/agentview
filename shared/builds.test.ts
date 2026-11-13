@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { approvalGate, canBuild, canSketch, buildStageOf, gateSlugOf, buildSummary, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildDetail, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
+import { approvalGate, canBuild, canSketch, buildStageOf, gateSlugOf, buildSummary, buildTotals, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildDetail, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'builds.json'), 'utf8'));
 
@@ -40,6 +40,12 @@ describe('builds fixture', () => {
       expect(flow.map((f) => f.state)).toEqual(c.states);
       for (const [key, result] of Object.entries(c.results ?? {})) expect(flow.find((f) => f.key === key)?.result).toBe(result);
     });
+  }
+});
+
+describe('buildTotals', () => {
+  for (const c of fixture.totals as Named<{ now: number; entries: Partial<BuildEntry>[]; expected: unknown }>[]) {
+    it(c.name, () => expect(buildTotals(c.entries as BuildEntry[], c.now)).toEqual(c.expected));
   }
 });
 

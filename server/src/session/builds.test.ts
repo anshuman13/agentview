@@ -105,6 +105,22 @@ describe('recording builds', () => {
   });
 });
 
+describe('recorded tokens', () => {
+  it('stores the final usage, none while running, and keeps it through a replay without usage', async () => {
+    const s = claudeSession(repo);
+    const a = agent('k1', 'test:pink-vase#1');
+    s.pushEvent({ ...a, usage: { tokens: 10, toolUses: 1, durationMs: 1 } });
+    await waitFor(() => expect(stored('pink-vase')).toMatchObject([{ id: 'k1', status: 'running' }]));
+    expect(stored('pink-vase')[0].tokens).toBeUndefined();
+    const done = { ...a, status: 'done' as const, endedAt: 2000, usage: { tokens: 4200, toolUses: 3, durationMs: 900 } };
+    s.pushEvent(done);
+    await waitFor(() => expect(stored('pink-vase')[0].tokens).toBe(4200));
+    s.replaceHistory({ events: [{ ...done, usage: null }, result('k1', '1. pass: ok')], context: null, cache: null } as never);
+    await waitFor(() => expect(stored('pink-vase')[0].report).toBe('1. pass: ok'));
+    expect(stored('pink-vase')[0].tokens).toBe(4200);
+  });
+});
+
 describe('build routes', () => {
   it('reports a build merged once its commit is cherry-picked onto the default branch', async () => {
     expect(await buildOne(repo, 'red-lamp')).toMatchObject({ title: 'red-lamp', summary: { state: 'done', conclusion: 'Passed · not merged yet' } });

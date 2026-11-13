@@ -44,6 +44,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
+import no.pradhan.agentview.nativeapp.sessions.BuildEntry
+import no.pradhan.agentview.nativeapp.sessions.buildTotals
 import no.pradhan.agentview.nativeapp.sessions.withoutCriteria
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.ChatRun
@@ -143,6 +145,18 @@ class SharedCasesTest {
 
     @Test fun specCriteria() {
         for (c in cases("spec-criteria")) assertEquals(c.str("name"), c.str("without"), withoutCriteria(c.str("markdown")))
+    }
+
+    @Test fun buildTotals() {
+        val fixture = Json.parseToJsonElement(File("../../shared/fixtures/builds.json").readText()).jsonObject
+        for (c in fixture.getValue("totals").jsonArray.map { it.jsonObject }) {
+            val entries = c.getValue("entries").jsonArray.mapIndexed { i, e -> e.jsonObject.let { o ->
+                BuildEntry("e$i", status = o.str("status"), startedAt = o.getValue("startedAt").jsonPrimitive.long, endedAt = o["endedAt"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.long, tokens = o["tokens"]?.jsonPrimitive?.long)
+            } }
+            val t = buildTotals(entries, c.getValue("now").jsonPrimitive.long)
+            val want = c.getValue("expected").jsonObject
+            assertEquals(c.str("name"), listOf(want.getValue("runs").jsonPrimitive.int, want.getValue("ms").jsonPrimitive.long, want.getValue("tokens").jsonPrimitive.long, want.getValue("partial").jsonPrimitive.boolean), listOf(t.runs, t.ms, t.tokens, t.partial))
+        }
     }
 
     @Test fun ago() {

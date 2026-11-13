@@ -34,6 +34,7 @@ data class BuildEntry(
     val chat: String = "",
     val session: String? = null,
     val commit: BuildCommit? = null,
+    val tokens: Long? = null,
     val verdict: String? = null,
     val criteria: List<Criterion> = emptyList(),
     val findings: List<String> = emptyList(),
@@ -134,6 +135,20 @@ fun flowBadge(f: FlowStep): Pair<String, BadgeTone>? = when {
 // The step that is running, waiting or failed, else the last one that happened.
 fun currentStep(flow: List<FlowStep>) = flow.firstOrNull { it.state == "running" || it.state == "waiting" || it.state == "failed" }
     ?: flow.lastOrNull { it.state != "todo" && it.state != "skipped" }
+
+data class BuildTotals(val runs: Int, val ms: Long, val tokens: Long, val partial: Boolean)
+
+// shared/builds.ts buildTotals: the time any agent ran, overlapping runs counted once.
+fun buildTotals(entries: List<BuildEntry>, now: Long): BuildTotals {
+    var ms = 0L
+    var end = 0L
+    for (e in byStart(entries)) {
+        val to = if (e.status == "running") now else e.endedAt ?: e.startedAt
+        ms += maxOf(0L, to - maxOf(e.startedAt, end))
+        end = maxOf(end, to)
+    }
+    return BuildTotals(entries.size, ms, entries.sumOf { it.tokens ?: 0L }, entries.any { it.status != "running" && it.tokens == null })
+}
 
 fun stageTitle(e: BuildEntry) = stageName(e.stage) + if (e.round > 1) " · round ${e.round}" else ""
 

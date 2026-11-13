@@ -29,18 +29,19 @@ async function commitIn(repo: string, report: string): Promise<BuildCommit | und
   }
 }
 
-type Snap = { id: string; stage: BuildStage; slug: string; round: number | null; status: BuildEntry['status']; startedAt: number; endedAt: number | null; report?: string; chat: string; session: string | null; cwd: string };
+type Snap = { id: string; tokens?: number; stage: BuildStage; slug: string; round: number | null; status: BuildEntry['status']; startedAt: number; endedAt: number | null; report?: string; chat: string; session: string | null; cwd: string };
 
 async function write(s: Snap) {
   const repo = await mainCheckout(s.cwd);
   await jsonFile<BuildEntry[]>(path.join(buildsDir(repo), `${s.slug}.json`), []).update(async (cur) => {
     const old = cur.find((e) => e.id === s.id);
     const report = s.report ?? old?.report ?? '';
-    if (old && old.status === s.status && old.endedAt === s.endedAt && old.report === report) return cur;
+    const tokens = s.tokens ?? old?.tokens;
+    if (old && old.status === s.status && old.endedAt === s.endedAt && old.report === report && old.tokens === tokens) return cur;
     const commit = s.stage !== 'implement' ? undefined : old?.commit && old.report === report ? old.commit : report ? await commitIn(repo, report) : undefined;
     const entry: BuildEntry = {
       id: s.id, stage: s.stage, round: old?.round ?? s.round ?? cur.filter((e) => e.stage === s.stage).length + 1,
-      status: s.status, startedAt: s.startedAt, endedAt: s.endedAt, report, chat: s.chat, session: s.session, ...(commit && { commit }),
+      status: s.status, startedAt: s.startedAt, endedAt: s.endedAt, report, chat: s.chat, session: s.session, ...(commit && { commit }), ...(tokens !== undefined && { tokens }),
     };
     return old ? cur.map((e) => (e === old ? entry : e)) : [...cur, entry];
   });
@@ -58,10 +59,11 @@ export function recordBuild(session: AgentSession, ev: ChatEvent, agentOf = (id:
   if (!agent || !target) return;
   const report = ev.kind === 'tool_result' && agent.status !== 'running' ? ev.text.slice(0, MAX_REPORT) : undefined;
   const key = `${agent.toolUseId}:${ev.kind}`;
-  const seen = `${agent.status}:${report?.length ?? ''}`;
+  const tokens = agent.status === 'running' ? undefined : agent.usage?.tokens;
+  const seen = `${agent.status}:${report?.length ?? ''}:${tokens ?? ''}`;
   if (lastStatus.get(key) === seen) return;
   lastStatus.set(key, seen);
-  const snap: Snap = { ...target, id: agent.toolUseId, status: agent.status, startedAt: agent.startedAt, endedAt: agent.endedAt, report, chat: session.id, session: session.state.session.sessionId, cwd: session.cwd };
+  const snap: Snap = { ...target, id: agent.toolUseId, tokens, status: agent.status, startedAt: agent.startedAt, endedAt: agent.endedAt, report, chat: session.id, session: session.state.session.sessionId, cwd: session.cwd };
   queue = queue.then(() => write(snap)).catch(() => {});
 }
 

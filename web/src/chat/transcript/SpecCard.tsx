@@ -8,13 +8,15 @@ import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
 import { Skeleton } from '../../ui/Skeleton';
 import { ago } from '../../ui/util';
+import { tokens } from '../../sessions/agents';
+import { duration } from './steps';
 import { findHere, useWorkspace } from '../../sessions/folders';
 import { postBuildHold } from '../../sessions/sessionApi';
 import { useBuild } from '../../sessions/useBuilds';
 import { currentStep, FLOW_LABEL, flowBadge, holdBadge, stateBadge } from '../../sessions/buildsLogic';
 import { useCan } from '../useCan';
 import { Findings } from '../../ops/Findings';
-import { canBuild, canSketch, pipelineLabel, type BuildDetail, type FlowStep } from '../../../../shared/builds';
+import { buildTotals, canBuild, canSketch, pipelineLabel, type BuildDetail, type FlowStep } from '../../../../shared/builds';
 import { SPEC_REVIEW_COMMAND, buildSpecPrompt, sketchSpecPrompt } from '../../../../shared/specTasks';
 import { TranscriptBox } from './Box';
 import { readBox } from './boxOpen';
@@ -117,6 +119,8 @@ function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
     return () => watch.disconnect();
   }, []);
   useEffect(measure);
+  const total = buildTotals(d.entries, Date.now());
+  const totalLine = total.runs === 0 ? '' : [`${total.runs} agent run${total.runs === 1 ? '' : 's'}`, duration(total.ms), total.tokens > 0 && `${total.partial ? '~' : ''}${tokens(total.tokens)}`].filter(Boolean).join(' · ');
   return (
     <>
       <div ref={strip} className={`bd-steps${more ? ' more' : ''}`} onScroll={measure}>
@@ -129,6 +133,7 @@ function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
           );
         })}
       </div>
+      {totalLine && <div className="bd-total">{totalLine}</div>}
       {now && (
         <div className="ui-group">
           <Row className="state-fit" plain={!nowSheet} onClick={nowSheet && ((e) => sheets.open(nowSheet(d), e.currentTarget))} title={FLOW_LABEL[now.key]} meta={[now.by, now.result, now.at && ago(now.at)].filter(Boolean).join(' · ')} state={badge && <Badge {...badge} />} />

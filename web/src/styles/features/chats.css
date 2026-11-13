@@ -165,6 +165,7 @@
 .bd-flow-mark.hollow { --tone: var(--fg-muted); background: transparent; }
 .bd-steps { position: relative; display: flex; align-items: center; gap: var(--sp-1); padding: 0 var(--list-pad) var(--sp-2); overflow-x: auto; scrollbar-width: none; }
 .bd-steps.more { mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); }
+.bd-total { padding: 0 var(--list-pad) var(--sp-2); font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bd-step { display: flex; flex: none; align-items: center; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); border: 0; border-radius: var(--radius-sm); background: none; font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; }
 .bd-step + .bd-step::before { content: ''; width: var(--sp-3); height: 1px; margin-right: var(--sp-1); background: var(--border); }
 .bd-step.now { color: var(--fg); font-weight: var(--type-headline-weight); }

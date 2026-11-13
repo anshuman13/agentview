@@ -72,5 +72,18 @@
     {"name": "sketch written waits for you on four phases", "merged": false, "phases": ["requirements", "design", "tasks", "sketch"], "reviews": [], "entries": [{"stage": "pm", "status": "done", "report": "spec"}, {"stage": "review", "status": "done", "report": "{\"verdict\":\"approve\",\"issues\":[]}"}, {"stage": "sketch", "status": "done", "report": "done"}], "states": ["done", "done", "done", "waiting", "todo", "todo", "todo", "todo"], "results": {"sketch": "Written", "approval": "Waiting for you"}},
     {"name": "failed sketch, built without it", "merged": false, "phases": ["requirements", "design", "tasks"], "reviews": [], "entries": [{"stage": "pm", "status": "done", "report": "spec"}, {"stage": "review", "status": "done", "report": "{\"verdict\":\"approve\",\"issues\":[]}"}, {"stage": "sketch", "status": "failed", "report": ""}, {"stage": "implement", "status": "running", "report": ""}], "states": ["done", "done", "skipped", "skipped", "running", "todo", "todo", "todo"], "results": {"sketch": "Failed · built without it"}},
     {"name": "sketch file without a run", "merged": false, "phases": ["requirements", "design", "tasks", "sketch"], "reviews": [], "entries": [{"stage": "pm", "status": "done", "report": "spec"}], "states": ["done", "todo", "done", "todo", "todo", "todo", "todo", "todo"], "results": {"sketch": "Written"}}
+  ],
+  "totals": [
+    { "name": "overlap, gap and a running entry", "now": 1000000, "entries": [
+      { "status": "done", "startedAt": 0, "endedAt": 100000, "tokens": 1000 },
+      { "status": "done", "startedAt": 50000, "endedAt": 150000, "tokens": 2000 },
+      { "status": "done", "startedAt": 500000, "endedAt": 600000, "tokens": 3000 },
+      { "status": "running", "startedAt": 900000, "endedAt": null }
+    ], "expected": { "runs": 4, "ms": 350000, "tokens": 6000, "partial": false } },
+    { "name": "finished entry without tokens", "now": 1000000, "entries": [
+      { "status": "done", "startedAt": 0, "endedAt": 60000, "tokens": 500 },
+      { "status": "failed", "startedAt": 70000, "endedAt": 90000 }
+    ], "expected": { "runs": 2, "ms": 80000, "tokens": 500, "partial": true } },
+    { "name": "no entries", "now": 5, "entries": [], "expected": { "runs": 0, "ms": 0, "tokens": 0, "partial": false } }
   ]
 }

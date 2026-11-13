@@ -15,6 +15,7 @@ export type BuildEntry = {
   chat: string;
   session: string | null;
   commit?: BuildCommit;
+  tokens?: number;
 };
 export type BuildSummary = { stage: BuildStage; state: BuildState; conclusion: string };
 export type Criterion = { n: number; result: 'pass' | 'fail' | 'unverified' | 'pending'; evidence: string };
@@ -184,6 +185,22 @@ export function findingsOf(report: string): string[] {
 }
 
 export const inOrder = (entries: BuildEntry[]) => entries.map((e, i) => [e, i] as const).sort((a, b) => a[0].startedAt - b[0].startedAt || a[1] - b[1]).map(([e]) => e);
+
+export function buildTotals(entries: BuildEntry[], now: number) {
+  let ms = 0;
+  let end = 0;
+  for (const e of [...entries].sort((a, b) => a.startedAt - b.startedAt)) {
+    const to = e.status === 'running' ? now : e.endedAt ?? e.startedAt;
+    ms += Math.max(0, to - Math.max(e.startedAt, end));
+    end = Math.max(end, to);
+  }
+  return {
+    runs: entries.length,
+    ms,
+    tokens: entries.reduce((n, e) => n + (e.tokens ?? 0), 0),
+    partial: entries.some((e) => e.status !== 'running' && e.tokens === undefined),
+  };
+}
 
 export const lastCommit = (entries: BuildEntry[]) => inOrder(entries).filter((e) => e.stage === 'implement').at(-1)?.commit;
 
