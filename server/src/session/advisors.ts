@@ -1,14 +1,14 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { ADVISORS, type Advisor, type AdvisorId, type AdvisorInfo } from '../../../shared/advisors.js';
+import { ADVISORS, parseBacklog, type Advisor, type AdvisorId, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors.js';
 import { listSessions, savedSession } from '../agent/claude/sessions.js';
 import { ADVISOR_HOME, ROOTS } from '../workspace/files.js';
 
 const ROLES = path.join(import.meta.dirname, '../../advisors');
 const KIT = path.join(import.meta.dirname, '../../build-kit');
-// The one folder each advisor may write in, inside any project.
-const WRITES: Partial<Record<AdvisorId, string>> = { pm: '.claude/specs', designer: '.claude/sketches' };
+// What each advisor may write in any project: the PM its specs and backlog, the Designer its sketches.
+const WRITES: Partial<Record<AdvisorId, string[]>> = { pm: ['.claude/specs/**', '.claude/backlog.md'], designer: ['.claude/sketches/**'] };
 
 export const advisor = (id: AdvisorId) => ADVISORS.find((a) => a.id === id);
 
@@ -68,12 +68,12 @@ const writeIfChanged = async (file: string, text: string) => {
   if ((await readFile(file, 'utf8').catch(() => null)) !== text) await writeFile(file, text);
 };
 
-// Every root is readable; the PM and Designer may edit their one folder in any project, the Architect nothing there.
+// Every root is readable; the PM and Designer may edit only their own paths in any project, the Architect nothing there.
 // Its memory is in ~/.agentview, outside the roots. An edit elsewhere in a root is not allowed by a rule.
 const settings = (a: Advisor, roots: string[]) => {
   const w = WRITES[a.id];
   const read = roots.map((r) => `Read(/${r}/**)`);
-  return { permissions: w ? { allow: [...read, ...roots.map((r) => `Edit(/${r}/*/${w}/**)`)] } : { allow: read, deny: roots.map((r) => `Edit(/${r}/**)`) } };
+  return { permissions: w ? { allow: [...read, ...roots.flatMap((r) => w.map((f) => `Edit(/${r}/*/${f})`))] } : { allow: read, deny: roots.map((r) => `Edit(/${r}/**)`) } };
 };
 
 // Writes the role, project index and settings on every open, so edits reach the next conversation; memory.md is the agent's own.
@@ -95,3 +95,9 @@ export const advisorsInfo = (home = ADVISOR_HOME): Promise<AdvisorInfo[]> =>
     const [memory, list] = await Promise.all([readFile(path.join(dir, 'memory.md'), 'utf8').catch(() => ''), existsSync(dir) ? listSessions({ dir, limit: 5 }) : []]);
     return { id: a.id, memory, chats: list.map(savedSession).map(({ sessionId, title, lastModified }) => ({ sessionId, title, lastModified })) };
   }));
+
+// A project's ranked backlog, each item with whether its spec file exists.
+export async function readBacklog(root: string): Promise<BacklogItem[]> {
+  const items = parseBacklog(await readFile(path.join(root, '.claude/backlog.md'), 'utf8').catch(() => ''));
+  return items.map((i) => ({ ...i, spec: existsSync(path.join(root, '.claude/specs', `${i.slug}.md`)) }));
+}

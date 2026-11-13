@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ADVISORS, advisorOf } from '../../../shared/advisors.js';
-import { prepareAdvisor, projectIndex } from './advisors.js';
+import { prepareAdvisor, projectIndex, readBacklog } from './advisors.js';
 
 describe('prepareAdvisor', () => {
   it('writes the role with the memory import and keeps an existing memory', async () => {
@@ -13,7 +13,7 @@ describe('prepareAdvisor', () => {
     expect(claude.startsWith('# PM')).toBe(true);
     expect(claude).toContain('build-kit/agents/pm.md');
     expect(claude.trimEnd().endsWith('@projects.md\n\n@memory.md')).toBe(true);
-    expect(JSON.parse(await readFile(path.join(dir, '.claude/settings.json'), 'utf8'))).toEqual({ permissions: { allow: ['Read(//w/a/**)', 'Read(//w/b/**)', 'Edit(//w/a/*/.claude/specs/**)', 'Edit(//w/b/*/.claude/specs/**)'] } });
+    expect(JSON.parse(await readFile(path.join(dir, '.claude/settings.json'), 'utf8'))).toEqual({ permissions: { allow: ['Read(//w/a/**)', 'Read(//w/b/**)', 'Edit(//w/a/*/.claude/specs/**)', 'Edit(//w/a/*/.claude/backlog.md)', 'Edit(//w/b/*/.claude/specs/**)', 'Edit(//w/b/*/.claude/backlog.md)'] } });
     await writeFile(path.join(dir, 'memory.md'), '# PM memory\n- AgentView: ship the sketch step first\n');
     await prepareAdvisor(ADVISORS[0], ['/w/a', '/w/b'], home);
     expect(await readFile(path.join(dir, 'memory.md'), 'utf8')).toContain('sketch step');
@@ -29,6 +29,18 @@ describe('prepareAdvisor', () => {
     expect(text).toContain(`### ${root}\n- shop (active `);
     expect(text).toContain('): The shop backend for orders and payments.\n');
     expect(text.trimEnd().endsWith('- notes')).toBe(true);
+  });
+
+  it('reads the backlog and marks items with a spec', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'backlog-'));
+    await mkdir(path.join(root, '.claude/specs'), { recursive: true });
+    await writeFile(path.join(root, '.claude/specs/cards.md'), '# Cards\n');
+    await writeFile(path.join(root, '.claude/backlog.md'), '# Backlog\n1. cards | Sketch cards | one tap | specced\n2. audit | Usability audit | nobody checks | a or b | proposed\nnot a line\n3. ../x | Bad | slug | proposed\n');
+    expect(await readBacklog(root)).toEqual([
+      { rank: 1, slug: 'cards', title: 'Sketch cards', why: 'one tap', status: 'specced', spec: true },
+      { rank: 2, slug: 'audit', title: 'Usability audit', why: 'nobody checks | a or b', status: 'proposed', spec: false },
+    ]);
+    expect(await readBacklog(path.join(root, 'none'))).toEqual([]);
   });
 
   it('matches advisor folders only', () => {

@@ -22,7 +22,8 @@ import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree 
 import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { readBody, savePaste } from './body.js';
 import { HANDLED, entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
-import { advisorsInfo } from '../session/advisors.js';
+import { advisorsInfo, readBacklog } from '../session/advisors.js';
+import { allowedFolder } from '../workspace/files.js';
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
@@ -40,6 +41,10 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return r;
     }, true),
     'GET /api/advisors': entry(() => advisorsInfo()),
+    'GET /api/advisors/backlog': entry(({ url }) => {
+      const root = url.searchParams.get('root') ?? '';
+      return allowedFolder(root) ? readBacklog(root) : { status: 400, body: { error: 'Not a project folder' } };
+    }),
     'ANY /api/sessions/pins': entry(({ method, url }) => pinsRoute(method, url.searchParams.get('id'))),
     'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'), url.searchParams.get('unread') === '1')),
     'DELETE /api/sessions/bin': entry(async () => {

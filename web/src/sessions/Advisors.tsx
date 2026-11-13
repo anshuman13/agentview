@@ -1,16 +1,18 @@
-import { Fragment, useEffect, useState } from 'react';
-import { send, useStore } from '../app/store';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { getState, notice, prompt, queueNext, send, useStore } from '../app/store';
 import { Markdown } from '../chat/Chat';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
+import { Menu, MenuItem } from '../ui/Menu';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, advisorOf, memoryFacts, type Advisor, type AdvisorInfo } from '../../../shared/advisors';
+import { ADVISORS, advisorOf, canBuildItem, memoryFacts, moveUpPrompt, rankPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import type { ClientMessage } from '../../../shared/protocol';
+import { buildItemPrompt, buildSpecPrompt } from '../../../shared/specTasks';
 import { StateDot } from './ChatRows';
-import { chatState, since } from './folders';
-import { fetchAdvisors } from './sessionApi';
+import { chatState, since, useWorkspace } from './folders';
+import { fetchAdvisors, fetchBacklog } from './sessionApi';
 
 // Opens a chat and, on the phone layout, shows it.
 const go = (m: ClientMessage) => {
@@ -18,6 +20,75 @@ const go = (m: ClientMessage) => {
   window.dispatchEvent(new Event('agentview:chat'));
 };
 const open = (a: Advisor, fresh = false) => go({ type: 'open_advisor', id: a.id, ...(fresh && { fresh }) });
+
+// Opens the PM chat, then sends it a prompt once that chat is the one shown.
+function askPm(text: string) {
+  go({ type: 'open_advisor', id: 'pm' });
+  const started = Date.now();
+  const t = setInterval(() => {
+    const { session } = getState();
+    if (advisorOf(session.cwd)?.id === 'pm') {
+      clearInterval(t);
+      (session.running ? queueNext : prompt)(text, () => {});
+    } else if (Date.now() - started > 15000) {
+      clearInterval(t);
+      notice('The PM chat did not open. The message was not sent.');
+    }
+  }, 150);
+}
+
+// The Build action of a backlog row: a new chat in the project that builds from the spec, or has the pm agent write it first.
+const buildItem = (root: string, i: BacklogItem) => go({ type: 'new_session', cwd: root, text: i.spec ? buildSpecPrompt(`.claude/specs/${i.slug}.md`) : buildItemPrompt(i.title, i.why, i.slug) });
+
+let chosenRoot: string | null = null;
+
+// The PM's ranked backlog for one project, chosen from the repos; reloads after a PM turn, which may have rewritten it.
+function Backlog({ shown, turns }: { shown: boolean; turns: string }) {
+  const { folders } = useWorkspace('advisors');
+  const [root, setRoot] = useState(chosenRoot);
+  const [items, setItems] = useState<BacklogItem[] | null>(null);
+  const [picking, setPicking] = useState(false);
+  const pick = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!shown || !root) return;
+    let stale = false;
+    void fetchBacklog(root).then((x) => !stale && setItems(x));
+    return () => { stale = true; };
+  }, [shown, root, turns]);
+  const choose = (cwd: string) => {
+    chosenRoot = cwd;
+    setRoot(cwd);
+    setItems(null);
+    setPicking(false);
+  };
+  return (
+    <>
+      <Section label="Backlog" count={items?.length || undefined} action={<Button ref={pick} size="sm" variant="quiet" onClick={() => setPicking(!picking)}>{root?.split('/').pop() ?? 'Project'}</Button>} />
+      {!root ? (
+        <div className="ui-group"><Row title="Project" meta="Pick one to see its backlog" trailing="Choose" onClick={() => setPicking(true)} /></div>
+      ) : !items ? <Skeleton rows={2} /> : !items.length ? (
+        <EmptyState size="sm" icon="list-ordered" title="No backlog yet" hint="The PM ranks what to build next" action={<Button size="sm" variant="tinted" onClick={() => askPm(rankPrompt(root))}>Ask PM to rank</Button>} />
+      ) : (
+        <div className="ui-group">
+          {items.map((i) => (
+            <Row
+              key={i.rank}
+              leading={i.rank}
+              title={i.title}
+              meta={`${i.status[0].toUpperCase()}${i.status.slice(1)} · ${i.why}`}
+              plain
+              menu={<>
+                {canBuildItem(i) && <MenuItem icon="play" onClick={() => buildItem(root, i)}>Build</MenuItem>}
+                <MenuItem icon="arrow-up" disabled={i.rank === 1} onClick={() => askPm(moveUpPrompt(root, i))}>Ask PM to move up</MenuItem>
+              </>}
+            />
+          ))}
+        </div>
+      )}
+      {picking && <Menu trigger={pick} onClose={() => setPicking(false)}>{folders.filter((f) => f.repo).map((f) => <MenuItem key={f.cwd} onClick={() => choose(f.cwd)}>{f.name}</MenuItem>)}</Menu>}
+    </>
+  );
+}
 
 // The Advisors page: PM, Architect and Designer, each with its current conversation, earlier ones and its memory.
 export function Advisors({ shown }: { shown: boolean }) {
@@ -61,6 +132,7 @@ export function Advisors({ shown }: { shown: boolean }) {
               <Row title="Memory" meta={facts ? `${facts} ${facts === 1 ? 'fact' : 'facts'}` : 'Nothing yet'} plain={!facts} onClick={facts ? () => setMemory(memory === a.id ? null : a.id) : undefined} aria-expanded={facts ? memory === a.id : undefined} />
             </div>
             {memory === a.id && got && <div className="advisor-memory"><Markdown text={got.memory.replace(/^# .*\n/, '')} /></div>}
+            {a.id === 'pm' && <Backlog shown={shown} turns={turns} />}
           </Fragment>
         );
       })}
