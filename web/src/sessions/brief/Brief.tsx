@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../app/store';
+import { loadEarlier } from '../../app/store/view';
 import { Icon } from '../../ui/Icon';
 import { Pending } from '../../chat/cards/Pending';
 import { Composer } from '../../chat/Chat';
@@ -17,6 +18,7 @@ import { TurnCard } from './TurnCard';
 import { useBriefScroll, useRecap } from './briefHooks';
 
 const SHOWN_TURNS = 5;
+const AUTO_PAGES = 5;
 
 function lastReplyOf(turns: Turn[]) {
   for (let i = turns.length - 1; i >= 0; i--) if (turns[i].reply) return turns[i].reply;
@@ -46,6 +48,16 @@ export function Brief() {
   const { turns, next, lastTool, advisor, fable } = useMemo(() => build(events), [build, events]);
   const cuts = useMemo(() => new Map(turnEvents(events).map((t) => [t.id, t.events])), [events]);
   const [all, setAll] = useState(false);
+  const earlier = useStore((s) => s.earlier ?? 0);
+  const [loading, setLoading] = useState(false);
+  const autoPages = useRef(0);
+  const more = async () => {
+    setLoading(true);
+    const ok = await loadEarlier();
+    setLoading(false);
+    if (ok) setAll(true);
+    return ok;
+  };
   const [full, setFull] = useState(() => readFlag('agentview.transcript', false));
   const pick = (v: boolean) => { setFull(v); saveFlag('agentview.transcript', v); };
   const agents = useMemo(() => agentsOf(events), [events]);
@@ -75,7 +87,14 @@ export function Brief() {
     window.addEventListener('open-agent', open);
     return () => window.removeEventListener('open-agent', open);
   }, []);
-  useEffect(() => { setShowAgents(false); setAgentSel(null); setAll(false); }, [sessionId]);
+  useEffect(() => { setShowAgents(false); setAgentSel(null); setAll(false); autoPages.current = 0; }, [sessionId]);
+  // A page that holds only the middle of a long turn has no prompt to show: fetch earlier pages until one arrives.
+  const noPrompt = turns.length === 0 || turns[0].id === 'start';
+  useEffect(() => {
+    if (full || loading || !noPrompt || earlier <= 0 || autoPages.current >= AUTO_PAGES) return;
+    autoPages.current++;
+    more().then((ok) => { if (!ok) autoPages.current = AUTO_PAGES; });
+  }, [full, loading, noPrompt, earlier]);
 
   const { since, dismiss } = useRecap(sessionId, events, waiting, root);
   const end = useBriefScroll(root, { turns: turns.length, next: next.length, running, waiting }, [sessionId, full, showAgents]);
@@ -98,8 +117,10 @@ export function Brief() {
         )}
         {showAgents ? <AgentsPane stack selected={agentSel} onSelect={setAgentSel} /> : full ? <Transcript /> : (
           <div className="turns">
-            {turns.length === 0 && <div className="tl-empty">Send a prompt. Each prompt shows up here with the agent's reply, the files it changed and the commands it ran.</div>}
-            {from > 0 && <button className="link tc-earlier" onClick={() => setAll(true)}>Show {from} earlier turn{from === 1 ? '' : 's'}</button>}
+            {(from > 0 || earlier > 0) && (from > 0
+              ? <button className="link tc-earlier" onClick={() => setAll(true)}>Show {from} earlier turn{from === 1 ? '' : 's'}</button>
+              : <button className="link tc-earlier" disabled={loading} onClick={() => void more()}>{loading ? 'Loading earlier…' : 'Load earlier'}</button>)}
+            {turns.length === 0 && !earlier && <div className="tl-empty">Send a prompt. Each prompt shows up here with the agent's reply, the files it changed and the commands it ran.</div>}
             {shown.map((t, i) => {
               const latest = i === shown.length - 1;
               return <TurnCard key={t.id} turn={t} events={cuts.get(t.id) ?? []} latest={latest} live={latest && running} cwd={cwd} pending={latest ? pending : []} />;
