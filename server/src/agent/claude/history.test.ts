@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 const config = await mkdtemp(path.join(os.tmpdir(), 'av-wf-'));
 process.env.CLAUDE_CONFIG_DIR = config;
-const { parseJournal, projectDir, workflowAgents, workflowSize } = await import('./history.js');
+const { parseJournal, projectDir, sessionMessages, workflowAgents, workflowSize } = await import('./history.js');
 const { historyFrom, workflowEvents, workflowName } = await import('./transcript.js');
 
 const lines = (...l: unknown[]) => l.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join('\n');
@@ -78,5 +78,18 @@ describe('workflow runs', () => {
     expect(workflowName({ scriptPath: '/a/.claude/workflows/native.js' })).toBe('native');
     expect(workflowName({ script: "export const meta = { name: 'batch-ab', description: 'x' }" })).toBe('batch-ab');
     expect(workflowName({})).toBe('Workflow');
+  });
+});
+
+describe('sessionMessages', () => {
+  const sid = '11111111-2222-4333-8444-000000000001';
+  const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const e = (n: number, type: string, parent: number | null, extra: object = {}) => ({ type, uuid: u(n), parentUuid: parent && u(parent), sessionId: sid, isSidechain: false, timestamp: new Date(1_800_000_000_000 + n * 1000).toISOString(), message: type === 'user' ? { role: 'user', content: `m${n}` } : { role: 'assistant', content: [{ type: 'text', text: `m${n}` }] }, ...extra });
+
+  it('keeps the conversation from before a compaction', async () => {
+    const entries = [e(1, 'user', null), e(2, 'assistant', 1), e(3, 'system', null, { subtype: 'compact_boundary', logicalParentUuid: u(2), message: undefined }), e(4, 'user', 3), e(5, 'assistant', 4)];
+    const msgs = await sessionMessages(sid, '/tmp', entries);
+    expect(msgs.map((m) => m.uuid)).toEqual([u(1), u(2), ...msgs.slice(2).map((m) => m.uuid)]);
+    expect(msgs.at(-1)?.uuid).toBe(u(5));
   });
 });

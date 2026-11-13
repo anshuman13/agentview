@@ -111,7 +111,7 @@ export async function workflowAgents(cwd: string, sessionId: string, cache = new
 export const workflowSize = (runs: WorkflowRun[]) => runs.reduce((n, r) => n + r.agents.reduce((m, a) => m + a.msgs.length + (a.status === 'running' ? 1 : 2), 0), 0);
 
 // The SDK builds the conversation chain from the raw entries we already hold, so nothing is re-read from disk.
-// A retry message can point at a parent the CLI never saved; the SDK then drops everything before it.
+// The SDK drops everything before a parent the CLI never saved (a retry) or before a compaction boundary.
 export async function sessionMessages(sessionId: string, cwd: string, entries: any[]) {
   const msgs = await getSessionMessages(sessionId, { dir: cwd, sessionStore: { load: async () => entries, append: async () => {} } });
   const first = msgs[0];
@@ -120,7 +120,7 @@ export async function sessionMessages(sessionId: string, cwd: string, entries: a
   const byId = new Map(raw.map((e) => [e.uuid, e]));
   let root = byId.get(first.uuid);
   while (root?.parentUuid && byId.has(root.parentUuid)) root = byId.get(root.parentUuid);
-  if (!root?.parentUuid) return msgs;
+  if (!root?.parentUuid && root?.subtype !== 'compact_boundary') return msgs;
   const before = raw.slice(0, raw.indexOf(root)).filter((e) => e.type === 'user' || e.type === 'assistant');
   return [...before.map((e) => ({ type: e.type, uuid: e.uuid, session_id: sessionId, message: e.message, parent_tool_use_id: null, parent_agent_id: null, timestamp: e.timestamp }) as SessionMessage), ...msgs];
 }
