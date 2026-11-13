@@ -99,7 +99,7 @@ describe('usageGate', () => {
   });
 
   it('ends at the weekly cap', () => {
-    expect(usageGate(r(70), usage(70, 10))).toEqual({ note: 'Usage cap 70% reached', why: 'Usage cap 70% reached' });
+    expect(usageGate(r(70), usage(70, 10))).toEqual({ note: 'Usage cap 70% reached' });
   });
 
   it('skips while the 5-hour window is over 90%', () => {

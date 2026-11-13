@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { send, useStore } from '../../app/store';
+import { useStore } from '../../app/store';
 import { REVIEW_LOCAL } from '../../ops/Findings';
 import { Icon } from '../../ui/Icon';
 import { Pending } from '../../chat/cards/Pending';
@@ -8,7 +8,7 @@ import { Transcript } from '../../chat/transcript/Transcript';
 import { createTurnsBuilder, type Turn } from '../../chat/transcript/turns';
 import { AgentsPane } from '../AgentsPane';
 import { agentCounts, agentsOf } from '../agents';
-import { readFlag, saveFlag, useTick } from '../../ui/util';
+import { askChat, readFlag, saveFlag, useTick } from '../../ui/util';
 import { useMacName } from '../../app/shell/macName';
 import { useUsage } from '../../app/shell/StatusItems';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
@@ -77,7 +77,7 @@ export function Brief() {
         <div className="timeline-head">
           <span className="mobile-only tl-name"><b>{chatTitle || turns[0]?.prompt || 'New chat'}</b>{cwd && <small>{cwd.split('/').pop()}</small>}</span>
           <span className="spacer" />
-          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} canReview={!running && turns.some((t) => t.files.length > 0)} review={() => send({ type: 'prompt', text: REVIEW_LOCAL })} />
+          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} canReview={!running && turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} />
         </div>
         {since?.chat === sessionId && (
           <button className="tl-recap" title="Tap to dismiss" onClick={dismiss}><Icon name="history" small /><span className="tl-recap-lines">{since.lines.map((l) => <span key={l}>{l}</span>)}</span></button>

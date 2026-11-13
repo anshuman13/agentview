@@ -1,10 +1,10 @@
 # Build notes for this repo
 
-Read by the build agents (pm, spec-reviewer, spec-reader, zoom-out, implementer, tester, code-reviewer) and the build skill after CLAUDE.md.
+Read by the build agents (pm, spec-reviewer, architect, spec-reader, zoom-out, implementer, tester, code-reviewer) and the build skill after CLAUDE.md.
 
 Branch prefix: anshuman/build/
 
-## Spec (pm, spec-reviewer, zoom-out)
+## Spec (pm, spec-reviewer, architect, zoom-out)
 - For anything with UI, read the Components and Patterns sections of docs/design-system.md and name under Behaviour which component and pattern each screen element uses (Report card, Row density, Status language). A spec that shows hub text as a text block, a bare URL, or more than two actions on a row is wrong.
 - New hub columns go through the ensure-column path in assistant/src/core/db.ts; say so in Touches. Say which packages need their type check and tests run (web, server, assistant).
 - Reuse the store, hub jobs, shared types, ensure-column migrations and design tokens.

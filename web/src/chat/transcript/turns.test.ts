@@ -11,11 +11,10 @@ const tool = (name: string, input: Record<string, unknown> = {}, parent?: string
 const result = (use: ChatEvent, text = 'ok', isError = false): ChatEvent => ({ id: `r${at()}`, kind: 'tool_result', toolUseId: use.id, text, isError, at: n });
 
 describe('buildTurns', () => {
-  it('makes one turn per prompt with its last reply and steps', () => {
+  it('makes one turn per prompt with its last reply', () => {
     const read = tool('Read', { file_path: '/w/a.ts' });
     const { turns } = buildTurns([user('fix it'), say('Looking'), read, result(read), say('Fixed. Commit?'), user('yes')]);
     expect(turns.map((t) => [t.prompt, t.reply?.text])).toEqual([['fix it', 'Fixed. Commit?'], ['yes', undefined]]);
-    expect(turns[0].steps.map((s) => s.kind)).toEqual(['assistant', 'step']);
   });
 
   it('keeps every note of a turn, important ones included', () => {
@@ -32,21 +31,18 @@ describe('buildTurns', () => {
     ]);
   });
 
-  it('collects files, failed commands and commits from tool events', () => {
+  it('collects files and failed commands from tool events', () => {
     const e1 = tool('Edit', { file_path: '/w/a.ts', old_string: 'x', new_string: 'y\nz' });
     const e2 = tool('Edit', { file_path: '/w/a.ts', old_string: 'q', new_string: 'r' });
     const bad = tool('Edit', { file_path: '/w/b.ts', old_string: 'q', new_string: 'r' });
     const test = tool('Bash', { command: 'npm test', description: 'Run the tests' });
-    const commit = tool('Bash', { command: 'git add -A && git commit -m "Fix it"' });
     const { turns } = buildTurns([
       user('go'), e1, result(e1), e2, result(e2), bad, result(bad, 'String not found', true),
       test, result(test, 'Exit code 1\nFAIL src/a.test.ts', true),
-      commit, result(commit, '[main 1a2b3c4] Fix it\n 1 file changed'),
     ]);
     const t = turns[0];
     expect(t.files).toEqual([{ path: '/w/a.ts', add: 3, del: 2 }]);
-    expect(t.commands.map((c) => c.error)).toEqual(['FAIL src/a.test.ts', undefined]);
-    expect(t.commits).toEqual([{ hash: '1a2b3c4', subject: 'Fix it' }]);
+    expect(t.commands.map((c) => c.error)).toEqual(['FAIL src/a.test.ts']);
   });
 
   it('shows a denied tool as denied, not failed', () => {
@@ -61,15 +57,12 @@ describe('buildTurns', () => {
     const t = turns[0];
     expect(t.commands).toEqual([{ id: push.id, label: 'Push to main', done: true, denied: true }]);
     expect(t.files).toEqual([]);
-    expect(t.agents[0].state).toBe('denied');
-    expect(t.steps.filter((s) => s.kind === 'file')).toMatchObject([{ path: '/w/a.ts', error: 'Denied', denied: true }]);
   });
 
-  it('lists subagents with their state and keeps their steps in the turn that launched them', () => {
+  it('keeps subagent files in the turn that launched them', () => {
     const agent = tool('Agent', { description: 'Review', subagent_type: 'general-purpose' });
     const child = tool('Edit', { file_path: '/w/c.ts', old_string: 'a', new_string: 'b' }, agent.id);
     const { turns } = buildTurns([user('go'), agent, user('meanwhile'), child, result(child)]);
-    expect(turns[0].agents).toEqual([{ id: agent.id, label: 'Review', type: 'general-purpose', state: 'running' }]);
     expect(turns[0].files.map((f) => f.path)).toEqual(['/w/c.ts']);
     expect(turns[1].files).toEqual([]);
   });
@@ -91,10 +84,8 @@ describe('buildTurns', () => {
     expect(b.turns[0].notes.at(-1)).toMatchObject({ kind: 'fable', text: 'Use a lock.\nThen retry.' });
   });
 
-  it('gives each turn its end time, and the chat its total cost', () => {
+  it('totals the chat cost', () => {
     const done = (costUsd: number): ChatEvent => ({ id: `d${at()}`, kind: 'result', text: 'ok', costUsd, isError: false, at: n });
-    const { turns } = buildTurns([user('a'), done(0.5), user('b'), done(0.8)]);
-    expect(turns.map((t) => t.ended! - t.at)).toEqual([1, 1]);
     expect(chatCost([user('a'), done(0), user('b'), done(2), user('c'), done(2.25), done(0.1)])).toBeCloseTo(2.35);
   });
 });

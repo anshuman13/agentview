@@ -89,7 +89,7 @@ export class Turn {
     s.links.record(r, report);
     if (repeat?.goal && met) {
       const text = goalMetText(repeat.round);
-      s.repeater.set(null, text, text);
+      s.repeater.set(null, text);
     }
     this.ended();
   }

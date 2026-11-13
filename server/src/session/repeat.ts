@@ -15,7 +15,6 @@ const STANDING_MS = 28 * DAY;
 const REPORT_MS = 7 * DAY;
 const FIVE_HOUR_LIMIT = 90;
 const USAGE_SKIP = `5-hour usage over ${FIVE_HOUR_LIMIT}%`;
-const ended = (text: string) => ({ note: text, why: text });
 const GATE_RETRY_MS = 30 * 60_000;
 
 const SEEN = 'You are the only one who sees the reply and the ROUND line.';
@@ -56,12 +55,12 @@ export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usa
 }
 
 // What the usage numbers say about a goal with a cap: end it at the weekly cap, skip a round while the 5-hour window is nearly full.
-export function usageGate(r: Repeat, usage: PlanUsage | null, now = Date.now()): { note: string; why: string } | { skipUntil: number | null } | null {
+export function usageGate(r: Repeat, usage: PlanUsage | null, now = Date.now()): { note: string } | { skipUntil: number | null } | null {
   if (!r.capPct || !usage) return null;
   // A window whose reset has passed holds a stale number.
   const pct = (w: PlanUsage['week']) => (w && !(w.resetsAt !== null && w.resetsAt <= now) ? w.pct : 0);
   const week = pct(usage.week);
-  if (week >= r.capPct) return ended(goalCapReached(r.capPct));
+  if (week >= r.capPct) return { note: goalCapReached(r.capPct) };
   if (pct(usage.fiveHour) > FIVE_HOUR_LIMIT) return { skipUntil: usage.fiveHour!.resetsAt };
   return null;
 }
@@ -157,7 +156,7 @@ export class RepeatController {
     return true;
   }
 
-  set(r: Repeat | null, note?: string, why = 'you stopped it') {
+  set(r: Repeat | null, note?: string, why = note ?? 'you stopped it') {
     clearTimeout(this.timer);
     this.due = false;
     const old = this.host.repeat();
@@ -220,7 +219,7 @@ export class RepeatController {
     const r = this.host.repeat();
     if (!r) return;
     this.stopped = { r, at: Date.now() };
-    this.set(null, `${r.goal ? 'Goal' : 'Loop'} stopped`);
+    this.set(null, `${r.goal ? 'Goal' : 'Loop'} stopped`, 'you stopped it');
   }
 
   restore(runId: string) {
@@ -238,9 +237,9 @@ export class RepeatController {
   }
 
   private finish(r: Repeat) {
-    if (r.endAt && Date.now() >= r.endAt) return ended(goalStoppedAt(r.endAt, r.round));
-    if (r.until && Date.now() >= r.until && !unrun(r)) return standing(r) ? ended(GOAL_RAN_OUT) : { note: `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, why: `finished at ${clock(r.until)}` };
-    if (r.goal && !standing(r) && r.round >= MAX_GOAL_ROUNDS) return ended(goalNotMet(r.round));
+    if (r.endAt && Date.now() >= r.endAt) return { note: goalStoppedAt(r.endAt, r.round) };
+    if (r.until && Date.now() >= r.until && !unrun(r)) return standing(r) ? { note: GOAL_RAN_OUT } : { note: `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, why: `finished at ${clock(r.until)}` };
+    if (r.goal && !standing(r) && r.round >= MAX_GOAL_ROUNDS) return { note: goalNotMet(r.round) };
     return null;
   }
 
@@ -251,7 +250,7 @@ export class RepeatController {
     if (end) return this.set(null, end.note, end.why);
     const usage = this.host.usage();
     const gate = usageGate(r, usage);
-    if (gate && 'note' in gate) return this.set(null, gate.note, gate.why);
+    if (gate && 'note' in gate) return this.set(null, gate.note);
     if (gate) return standing(r) ? this.skip(r, USAGE_SKIP) : this.defer(gate.skipUntil ?? Date.now() + GATE_RETRY_MS, skipText(USAGE_SKIP), true);
     // A standing goal skips a heartbeat that finds Claude busy or waiting for the user; the next one is a full interval away.
     if (standing(r) && (this.host.running() || this.host.asking())) return this.skip(r, this.host.asking() ? 'waiting for you' : 'still working');
