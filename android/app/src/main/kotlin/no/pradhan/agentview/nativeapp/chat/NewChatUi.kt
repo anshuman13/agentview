@@ -1,11 +1,13 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.lastModel
@@ -42,7 +44,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
         hub.newChat(repo, model, mode = startModeFor(startMode.mode, provider?.id ?: default), draft = startMode.draft, provider = provider?.id)
         onDismiss()
     }
-    Sheet(onDismiss, "New chat", padded = false, full = false, action = { Button("Start", start, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }) {
+    Sheet(onDismiss, "New chat", padded = false, full = false, action = { Button("Start", start, Modifier.padding(end = Tokens.sp5), variant = ButtonVariant.Filled, size = ButtonSize.Sm) }) {
         SectionHeader("Start as")
         Group {
             START_MODES.forEachIndexed { i, m ->
