@@ -1,0 +1,5 @@
+[
+  { "name": "keeps the newest of each family and names without a version", "current": "default", "models": ["Default (recommended)", "Opus 5.5", "Sonnet 5.5", "Fable 5.1", "Haiku 4.5", "Sonnet 5", "Opus 5", "Fable 5", "Opus 4.8", "Opus 4.7", "Opus 4.6", "Sonnet 4.6", "gpt-5.1-codex"], "shown": ["Default (recommended)", "Opus 5.5", "Sonnet 5.5", "Fable 5.1", "Haiku 4.5", "gpt-5.1-codex"] },
+  { "name": "keeps an older current model and every variant of the newest", "current": "Opus 4.7", "models": ["Opus 5.5", "Opus 5.5 (1M context)", "Opus 4.7", "Opus 4.6"], "shown": ["Opus 5.5", "Opus 5.5 (1M context)", "Opus 4.7"] },
+  { "name": "compares versions as numbers", "current": null, "models": ["Opus 4.10", "Opus 4.9"], "shown": ["Opus 4.10"] }
+]

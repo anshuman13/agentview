@@ -51,6 +51,7 @@ import no.pradhan.agentview.nativeapp.app.barHidden
 import no.pradhan.agentview.nativeapp.app.barState
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
+import no.pradhan.agentview.nativeapp.net.newestModels
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.Hub
@@ -273,10 +274,16 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
         if (models.isNotEmpty()) {
             SectionHeader("Model")
             val current = session?.model
+            var all by remember { mutableStateOf(false) }
+            val newest = newestModels(models, current)
             Group {
-                models.forEachIndexed { i, m ->
+                (if (all) models else newest).forEachIndexed { i, m ->
                     if (i > 0) Hairline()
                     ListRow(m.displayName.ifBlank { m.value }, m.description, onClick = { hub.setModel(m.value); onSheet(null) }, trailing = if (m.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+                }
+                if (!all && newest.size < models.size) {
+                    Hairline()
+                    ListRow("Older models", "${models.size - newest.size} more", onClick = { all = true }, trailing = { Chevron() })
                 }
                 if (caps.build) {
                     Hairline()

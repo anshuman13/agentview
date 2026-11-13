@@ -50,3 +50,27 @@ fun modeSteps(mode: String, review: Boolean, picked: String): Pair<String?, Bool
     picked == SUPERVISED.value -> (if (mode == "auto") null else "auto") to (if (review) null else true)
     else -> (if (picked == mode) null else picked) to (if (review) false else null)
 }
+
+private val MODEL_VERSION = Regex("""^(\D+?)\s+(\d+(?:\.\d+)*)\b""")
+
+private fun versionParts(v: String) = v.split('.').map { it.toInt() }
+
+private fun newerVersion(a: String, b: String): Boolean {
+    val (x, y) = versionParts(a) to versionParts(b)
+    for (i in 0 until maxOf(x.size, y.size)) if (x.getOrElse(i) { 0 } != y.getOrElse(i) { 0 }) return x.getOrElse(i) { 0 } > y.getOrElse(i) { 0 }
+    return false
+}
+
+// shared/providers.ts newestModels: the newest version of each family, names without a version, and the current model.
+fun newestModels(models: List<ModelInfo>, current: String?): List<ModelInfo> {
+    val top = HashMap<String, String>()
+    for (m in models) {
+        val p = MODEL_VERSION.find(m.displayName) ?: continue
+        val (family, v) = p.destructured
+        if (top[family]?.let { newerVersion(v, it) } != false) top[family] = v
+    }
+    return models.filter { m ->
+        val p = MODEL_VERSION.find(m.displayName)
+        p == null || m.value == current || versionParts(p.groupValues[2]) == versionParts(top.getValue(p.groupValues[1]))
+    }
+}

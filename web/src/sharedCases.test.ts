@@ -7,7 +7,7 @@ import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
-import { billing, menuModes, modeSteps, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
+import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
@@ -277,6 +277,10 @@ describe('cases shared with the Android app', () => {
       const m = menuModes(c.provider, c.mode, c.review);
       expect({ list: m.list.map((o) => o.value), checked: m.checked, label: m.label }).toEqual({ list: c.list, checked: c.checked, label: c.label });
     });
+  }
+
+  for (const c of cases<{ name: string; current: string | null; models: string[]; shown: string[] }>('newest-models')) {
+    it(`newestModels: ${c.name}`, () => expect(newestModels(c.models.map((n) => ({ value: n, displayName: n })), c.current).map((m) => m.value)).toEqual(c.shown));
   }
 
   for (const c of cases<{ name: string; mode: string; review: boolean; picked: string; send: { mode: string | null; review: boolean | null } }>('mode-steps')) {

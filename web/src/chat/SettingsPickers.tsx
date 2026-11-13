@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { send, useStore } from '../app/store';
 import { QuickPick } from '../ui/QuickPick';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL } from '../../../shared/protocol';
-import { modeSteps } from '../../../shared/providers';
+import { modeSteps, newestModels } from '../../../shared/providers';
 import { effortsFor } from './capabilitiesLogic';
 import { useCan } from './useCan';
 import { useChatSettings, type Pick } from './ChatSettings';
@@ -12,19 +13,28 @@ const LOOP_ITEMS = [
 ];
 
 const BUILD = { value: '\0build', label: 'Build', detail: 'Spec, review, build and test the brief in the composer' };
+const OLDER = '\0older';
 
 type Props = { pick: Pick; close: () => void };
 
 export function ModelPick({ pick, close }: Props) {
   const { model, models } = useChatSettings();
   const build = useCan('build');
+  const [all, setAll] = useState(false);
+  const newest = newestModels(models, model);
+  const more = all ? 0 : models.length - newest.length;
   return (
     <QuickPick
       anchor={pick.at}
       title="Select model"
       current={model}
-      items={[...models.map((m) => ({ value: m.value, label: m.displayName, detail: m.description })), ...(build ? [BUILD] : [])]}
+      items={[
+        ...(more ? newest : models).map((m) => ({ value: m.value, label: m.displayName, detail: m.description })),
+        ...(more ? [{ value: OLDER, label: 'Older models', detail: `${more} more` }] : []),
+        ...(build ? [BUILD] : []),
+      ]}
       onPick={(v) => {
+        if (v === OLDER) return setAll(true);
         if (v === BUILD.value) window.dispatchEvent(new CustomEvent('agentview:build'));
         else send({ type: 'set_model', model: v });
         close();

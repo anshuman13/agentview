@@ -51,3 +51,23 @@ export function modeSteps(mode: string, review: boolean, picked: string) {
   if (picked === SUPERVISED.value) return { mode: mode === 'auto' ? null : 'auto', review: review ? null : true };
   return { mode: picked === mode ? null : picked, review: review ? false : null };
 }
+
+// The model menu shows the newest version of each family ("Opus 5.5", not "Opus 4.6"), names without a version, and the current model.
+export function newestModels<T extends { value: string; displayName: string }>(models: T[], current?: string | null): T[] {
+  const parse = (m: T) => /^(\D+?)\s+(\d+(?:\.\d+)*)\b/.exec(m.displayName);
+  const num = (v: string) => v.split('.').map(Number);
+  const newer = (a: string, b: string) => {
+    const [x, y] = [num(a), num(b)];
+    for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
+    return false;
+  };
+  const top = new Map<string, string>();
+  for (const m of models) {
+    const p = parse(m);
+    if (p && (!top.has(p[1]) || newer(p[2], top.get(p[1])!))) top.set(p[1], p[2]);
+  }
+  return models.filter((m) => {
+    const p = parse(m);
+    return !p || m.value === current || num(p[2]).join('.') === num(top.get(p[1])!).join('.');
+  });
+}

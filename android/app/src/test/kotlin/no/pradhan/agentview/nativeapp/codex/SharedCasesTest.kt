@@ -53,6 +53,8 @@ import no.pradhan.agentview.nativeapp.net.Edits
 import no.pradhan.agentview.nativeapp.net.LiveAgent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.LiveRun
+import no.pradhan.agentview.nativeapp.net.ModelInfo
+import no.pradhan.agentview.nativeapp.net.newestModels
 import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.protocolJson
@@ -448,6 +450,14 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.getValue("list").jsonArray.map { it.jsonPrimitive.content }, m.list.map { it.value })
             assertEquals(c.str("name"), c.str("checked"), m.checked)
             assertEquals(c.str("name"), c.str("label"), m.label)
+        }
+    }
+
+    @Test fun newestModelsCases() {
+        for (c in cases("newest-models")) {
+            val models = c.getValue("models").jsonArray.map { ModelInfo(it.jsonPrimitive.content, it.jsonPrimitive.content) }
+            val shown = newestModels(models, c.nullable("current")?.jsonPrimitive?.content).map { it.value }
+            assertEquals(c.str("name"), c.getValue("shown").jsonArray.map { it.jsonPrimitive.content }, shown)
         }
     }
 
