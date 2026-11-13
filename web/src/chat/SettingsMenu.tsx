@@ -3,11 +3,17 @@ import { remindChoices, runLine } from './composer/composerLogic';
 import { useChatRun } from '../sessions/runBands';
 import { openGoal } from '../sessions/goalLogic';
 import { QuickPick } from '../ui/QuickPick';
+import { Icon } from '../ui/Icon';
+import { Row } from '../ui/Row';
+import { Section } from '../ui/Section';
+import { Sheet } from '../ui/Sheet';
+import { useNarrow } from '../app/shell/useNarrow';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { copyChatMarkdown, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
 import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
+import { ChoicePick } from './SettingsPickers';
 
 type Props = { pick: Pick; setPick: (p: Pick | null) => void; close: () => void };
 
@@ -28,21 +34,46 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     if (v === 'goal') return act(() => (run ? openGoal(run.id) : setUi({ goalSheet: { mode: 'start', here: true } })));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
+  const narrow = useNarrow();
+  const picker = (value: string, label: string, detail: string) => ({ value, label, detail, picker: true });
+  const action = (value: string, label: string, detail: string) => ({ value, label, detail, picker: false });
+  const groups = [
+    ['Run', [
+      picker('mode', 'Permission mode', menu.label),
+      picker('model', 'Model', modelName),
+      ...(canEffort ? [picker('effort', 'Effort', effortName)] : []),
+      ...(accounts.length > 1 || account !== 'main' ? [picker('account', 'Claude account', ACCOUNT_LABEL[account])] : []),
+    ]],
+    ['Goal', [
+      action('goal', 'Goal', run ? runLine(run, phase) : 'Off'),
+      picker('loop', 'Build cycle', loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off'),
+    ]],
+    ['Chat', [
+      ...(sessionId ? [action('side', 'Side chat', 'Ask in a fork beside this chat (⌘;)'), picker('remind', 'Remind me', 'Add a task to check this chat later'), action('fork', 'Fork chat', 'Start a new chat from a summary of this one')] : []),
+      action('markdown', 'Copy as Markdown', 'Prompts and replies loaded here'),
+      picker('tools', 'Tools…', 'Saved prompts, memory, hooks, TODOs'),
+    ]],
+  ] as const;
+  if (narrow) {
+    return (
+      <Sheet label="Chat settings" onClose={close}>
+        <Section label="Chat settings" />
+        {groups.map(([label, rows]) => (
+          <div key={label}>
+            <Section label={label} />
+            <div className="ui-group">
+              {rows.map((r) => <Row key={r.value} title={r.label} meta={r.detail} trailing={r.picker && <Icon name="chevron-right" small />} onClick={() => onPick(r.value)} />)}
+            </div>
+          </div>
+        ))}
+      </Sheet>
+    );
+  }
   return (
     <QuickPick
       anchor={pick.at}
       title="Chat settings"
-      items={[
-        { value: 'mode', label: 'Permission mode', detail: menu.label },
-        { value: 'model', label: 'Model', detail: modelName },
-        ...(canEffort ? [{ value: 'effort', label: 'Effort', detail: effortName }] : []),
-        ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),
-        { value: 'goal', label: 'Goal', detail: run ? runLine(run, phase) : 'Off' },
-        { value: 'loop', label: 'Build cycle', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
-        ...(sessionId ? [{ value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' }, { value: 'remind', label: 'Remind me', detail: 'Add a task to check this chat later' }, { value: 'fork', label: 'Fork chat', detail: 'Start a new chat from a summary of this one' }] : []),
-        { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
-        { value: 'tools', label: 'Tools…', detail: 'Saved prompts, memory, hooks, TODOs' },
-      ]}
+      items={groups.flatMap(([, rows]) => rows)}
       onPick={onPick}
       onClose={close}
     />
@@ -55,7 +86,8 @@ export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedC
   const resumeCommand = useStore((s) => s.session.resumeCommand);
   const hooks = useStore((s) => s.session.hooks) ?? [];
   return (
-    <QuickPick
+    <ChoicePick
+      back={() => setPick({ kind: 'menu', at: pick.at })}
       anchor={pick.at}
       title="Tools"
       items={[
@@ -73,9 +105,10 @@ export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedC
   );
 }
 
-export function RemindPick({ pick, close }: { pick: Pick; close: () => void }) {
+export function RemindPick({ pick, close, back }: { pick: Pick; close: () => void; back: () => void }) {
   return (
-    <QuickPick
+    <ChoicePick
+      back={back}
       anchor={pick.at}
       title="Remind me"
       items={remindChoices(Date.now()).map((c) => ({ value: String(c.at), label: c.label }))}
@@ -85,10 +118,11 @@ export function RemindPick({ pick, close }: { pick: Pick; close: () => void }) {
   );
 }
 
-export function HooksPick({ pick, close }: { pick: Pick; close: () => void }) {
+export function HooksPick({ pick, close, back }: { pick: Pick; close: () => void; back: () => void }) {
   const hooks = useStore((s) => s.session.hooks) ?? [];
   return (
-    <QuickPick
+    <ChoicePick
+      back={back}
       anchor={pick.at}
       title="Hooks"
       items={hooks.length ? hooks.map((name) => ({ value: name, label: name })) : [{ value: '', label: 'No hooks for this repo' }]}

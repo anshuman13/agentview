@@ -31,18 +31,19 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
   const cwd = useStore((s) => s.session.cwd);
   if (!pick) return null;
   const close = () => setPick(null);
+  const back = () => setPick({ kind: pick.kind === 'hooks' ? 'tools' : 'menu', at: pick.at });
   switch (pick.kind) {
     case 'menu': return <SettingsMenu pick={pick} setPick={setPick} close={close} />;
-    case 'remind': return <RemindPick pick={pick} close={close} />;
-    case 'hooks': return <HooksPick pick={pick} close={close} />;
+    case 'remind': return <RemindPick pick={pick} close={close} back={back} />;
+    case 'hooks': return <HooksPick pick={pick} close={close} back={back} />;
     case 'todos': return <TodosPick anchor={pick.at} onClose={close} />;
     case 'memory': return <MemoryPick cwd={cwd} onClose={close} />;
-    case 'model': return <ModelPick pick={pick} close={close} />;
-    case 'effort': return <EffortPick pick={pick} close={close} />;
-    case 'account': return <AccountPick pick={pick} close={close} />;
-    case 'loop': return <LoopPick pick={pick} close={close} />;
+    case 'model': return <ModelPick pick={pick} close={close} back={back} />;
+    case 'effort': return <EffortPick pick={pick} close={close} back={back} />;
+    case 'account': return <AccountPick pick={pick} close={close} back={back} />;
+    case 'loop': return <LoopPick pick={pick} close={close} back={back} />;
     case 'tools': return <ToolsPick pick={pick} setPick={setPick} close={close} savedCount={savedCount} />;
-    case 'mode': return <ModePick pick={pick} close={close} />;
+    case 'mode': return <ModePick pick={pick} close={close} back={back} />;
     default: return null;
   }
 }

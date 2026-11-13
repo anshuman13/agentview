@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { send, useStore } from '../app/store';
 import { QuickPick } from '../ui/QuickPick';
+import { Icon } from '../ui/Icon';
+import { Row } from '../ui/Row';
+import { Section } from '../ui/Section';
+import { Sheet } from '../ui/Sheet';
+import { useNarrow } from '../app/shell/useNarrow';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL } from '../../../shared/protocol';
 import { modeSteps, newestModels } from '../../../shared/providers';
 import { effortsFor } from './capabilitiesLogic';
@@ -15,16 +20,30 @@ const LOOP_ITEMS = [
 const BUILD = { value: '\0build', label: 'Build', detail: 'Spec, review, build and test the brief in the composer' };
 const OLDER = '\0older';
 
-type Props = { pick: Pick; close: () => void };
+type Props = { pick: Pick; close: () => void; back: () => void };
 
-export function ModelPick({ pick, close }: Props) {
+export function ChoicePick({ back, ...props }: ComponentProps<typeof QuickPick> & { back: () => void }) {
+  const narrow = useNarrow();
+  if (!narrow) return <QuickPick {...props} />;
+  return (
+    <Sheet label={props.title} onClose={back}>
+      <Section label={props.title} />
+      <div className="ui-group">
+        {props.items.map((i) => <Row key={i.value} title={i.label} meta={i.detail} trailing={i.value === props.current && <Icon name="check" small />} onClick={() => props.onPick(i.value)} />)}
+      </div>
+    </Sheet>
+  );
+}
+
+export function ModelPick({ pick, close, back }: Props) {
   const { model, models } = useChatSettings();
   const build = useCan('build');
   const [all, setAll] = useState(false);
   const newest = newestModels(models, model);
   const more = all ? 0 : models.length - newest.length;
   return (
-    <QuickPick
+    <ChoicePick
+      back={back}
       anchor={pick.at}
       title="Select model"
       current={model}
@@ -44,10 +63,11 @@ export function ModelPick({ pick, close }: Props) {
   );
 }
 
-export function EffortPick({ pick, close }: Props) {
+export function EffortPick({ pick, close, back }: Props) {
   const { effort, model, models } = useChatSettings();
   return (
-    <QuickPick
+    <ChoicePick
+      back={back}
       anchor={pick.at}
       title="Select effort"
       current={effort}
@@ -58,11 +78,12 @@ export function EffortPick({ pick, close }: Props) {
   );
 }
 
-export function AccountPick({ pick, close }: Props) {
+export function AccountPick({ pick, close, back }: Props) {
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
   return (
-    <QuickPick
+    <ChoicePick
+      back={back}
       anchor={pick.at}
       title="Select Claude account"
       current={account}
@@ -73,10 +94,11 @@ export function AccountPick({ pick, close }: Props) {
   );
 }
 
-export function LoopPick({ pick, close }: Props) {
+export function LoopPick({ pick, close, back }: Props) {
   const { loop } = useChatSettings();
   return (
-    <QuickPick
+    <ChoicePick
+      back={back}
       anchor={pick.at}
       title="Build cycle"
       current={loop.on ? String(loop.max) : 'off'}
@@ -87,10 +109,11 @@ export function LoopPick({ pick, close }: Props) {
   );
 }
 
-export function ModePick({ pick, close }: Props) {
+export function ModePick({ pick, close, back }: Props) {
   const { mode, review, menu } = useChatSettings();
   return (
-    <QuickPick
+    <ChoicePick
+      back={back}
       anchor={pick.at}
       title="Permission mode"
       current={menu.checked}
