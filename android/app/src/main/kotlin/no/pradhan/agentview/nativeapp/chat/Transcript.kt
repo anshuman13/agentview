@@ -199,7 +199,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
         val dayOf = view.dayOf
         val pill by remember(dayOf) { derivedStateOf { if (listState.isScrollInProgress) listState.layoutInfo.visibleItemsInfo.lastOrNull()?.key?.let { dayOf[it] } else null } }
         pill?.let { DayPill(it, Modifier.align(Alignment.TopCenter).padding(top = Tokens.sp4)) }
-        if (!atBottom) JumpButton(replies, Modifier.align(Alignment.BottomCenter).padding(bottom = Tokens.sp4)) {
+        if (!atBottom) JumpButton(replies, Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp4, bottom = Tokens.sp4)) {
             stick.value = true
             hub.navHidden.value = false
             scope.launch { listState.animateScrollToItem(0) }

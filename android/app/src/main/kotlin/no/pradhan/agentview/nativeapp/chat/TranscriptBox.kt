@@ -37,23 +37,26 @@ internal fun TranscriptBox(
     summary: String? = null,
     reserveSummary: Boolean = false,
     defaultOpen: Boolean = false,
+    open: Boolean? = null,
+    onToggle: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val kv = remember(hub) { PrefsKeyValue(hub.prefs) }
-    var open by remember(id) { mutableStateOf(readBox(kv, id, defaultOpen)) }
+    var saved by remember(id) { mutableStateOf(readBox(kv, id, defaultOpen)) }
+    val shown = open ?: saved
     val shape = RoundedCornerShape(Tokens.radius)
     Column(Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape)) {
         ListRow(
             title, meta.ifEmpty { null },
-            leading = { AvIcon(if (open) "chevron-down" else "chevron-right", null, Tokens.iconSm) },
+            leading = { AvIcon(if (shown) "chevron-down" else "chevron-right", null, Tokens.iconSm) },
             state = state, trailing = action, lines = 1,
-            onClick = { open = !open; saveBox(kv, id, open) },
+            onClick = { if (onToggle != null) onToggle() else { saved = !saved; saveBox(kv, id, saved) } },
         )
         if (!summary.isNullOrEmpty()) Text(
             summary,
             Modifier.padding(start = Tokens.listPad + Tokens.leadWidth + Tokens.sp8, end = Tokens.listPad, bottom = Tokens.sp5),
             style = Type.meta, color = av.metaFg, minLines = if (reserveSummary) 2 else 1, maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
-        if (open) content()
+        if (shown) content()
     }
 }

@@ -176,6 +176,9 @@ export const stoppedText = (run: ChatRun) => `${KIND[run.kind]} stopped`;
 
 export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', question: 'warn', failed: 'bad', done: 'ok', quiet: '', progress: '' };
 
+const NEEDS_YOU: RoundOutcome[] = ['blocked', 'question', 'failed'];
+export const runNeedsYou = (run: ChatRun) => run.needsYou || NEEDS_YOU.includes(run.rounds.at(-1)?.outcome as RoundOutcome);
+
 export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? ENDED[loop.phase] ?? `Build cycle${loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 export const fileCache = new Map<string, string[]>();
 

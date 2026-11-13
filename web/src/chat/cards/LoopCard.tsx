@@ -16,7 +16,8 @@ import { planOf } from '../../../../shared/goalForm';
 import { billing } from '../../../../shared/providers';
 import { roundText } from '../../../../shared/goalText';
 import type { RunOp } from '../../../../shared/protocol';
-import { OUTCOME_DOT, agentAge, loopNow, runLine, showTurn, stoppedText } from '../composer/composerLogic';
+import { useCardOpen } from './useCardOpen';
+import { OUTCOME_DOT, agentAge, loopNow, runLine, runNeedsYou, showTurn, stoppedText } from '../composer/composerLogic';
 
 export function LoopCard() {
   const chat = useStore((s) => s.session.id);
@@ -27,10 +28,12 @@ export function LoopCard() {
   const { progress } = usePlanProgress(plan, run?.chatId);
   const agents = live?.agentList ?? [];
   const now = useTick(30_000, agents.length > 0);
+  const waiting = useStore((s) => s.pending.length > 0);
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const [board, setBoard] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
+  const phone = useCardOpen(`${chat}:loop`, waiting || (run ? runNeedsYou(run) : false));
   if (!run) return null;
   const control = (op: RunOp) => send({ type: 'run', run: run.id, op });
   const cycle = run.kind === 'cycle' || run.kind === 'tries';
@@ -53,6 +56,8 @@ export function LoopCard() {
       id={`loop:${run.id}`}
       className="lc"
       defaultOpen
+      open={phone?.open}
+      onToggle={phone?.toggle}
       title={runLine(run, phase)}
       action={(
         <>

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.TranscriptBox
+import no.pradhan.agentview.nativeapp.chat.rememberCardOpen
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.JobState
 import no.pradhan.agentview.nativeapp.codex.jobs.jobMeta
@@ -68,7 +69,7 @@ import no.pradhan.agentview.nativeapp.ui.lazyGroup
 // The loop card above the composer (web/src/chat/cards/LoopCard.tsx): state and Pause in the head, what is happening now, the running agents, then the what line.
 
 @Composable
-fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
+fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, needsYou: Boolean, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
     var rounds by rememberSaveable(run.id) { mutableStateOf(false) }
     val cycle = run.kind == "cycle" || run.kind == "tries"
     val goal = run.kind == "goal"
@@ -76,6 +77,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent
     val agents = live.agentList
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(agents.isNotEmpty()) { while (agents.isNotEmpty()) { delay(30_000); now = System.currentTimeMillis() } }
+    val (cardOpen, toggleCard) = rememberCardOpen("${run.chatId}:loop", needsYou || runNeedsYou(run))
     val progress = if (goal) planProgress(hub, planOf(run.what), run.chatId) else null
     val state = loopNow(run, live.now)
     val working = live.running || agents.isNotEmpty()
@@ -87,7 +89,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent
     ).joinToString(" · ")
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
         TranscriptBox(
-            hub, "loop:${run.id}", runLine(run, phase), defaultOpen = true,
+            hub, "loop:${run.id}", runLine(run, phase), open = cardOpen, onToggle = toggleCard,
             action = {
                 if (!cycle) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") })
                 if (cycle) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)

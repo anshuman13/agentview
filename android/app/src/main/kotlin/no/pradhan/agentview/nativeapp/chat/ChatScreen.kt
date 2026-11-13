@@ -160,9 +160,9 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }
-        visibleChecklist(view.checklist, running)?.let { ChecklistCard(it) }
+        visibleChecklist(view.checklist, running)?.let { ChecklistCard(it, live.id, pending.isNotEmpty()) }
         val run = runs.lastOrNull { it.chatId == live.id && it.state != "done" }
-        run?.let { LoopCard(hub, it, live, session?.loop?.phase, onOpenAgent) { panels.agents = true } }
+        run?.let { LoopCard(hub, it, live, session?.loop?.phase, pending.isNotEmpty(), onOpenAgent) { panels.agents = true } }
         Composer(hub, live.id, session, running, pending.isNotEmpty(), run)
     }
     ChatSheets(hub, live, session, view, panels, cwd, onOpenAgent)

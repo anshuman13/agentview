@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, loopNow, agentAge } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, runNeedsYou, loopNow, agentAge } from './composerLogic';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
@@ -246,6 +246,17 @@ describe('runLine', () => {
     expect(runLine(run({ kind: 'job', branch: 'jobs/fix-1105' }))).toBe('Job · jobs/fix-1105');
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'test')).toBe('Build cycle · round 2/3 · Test');
     expect(runLine(run({ kind: 'cycle', round: 2, max: 3 }), 'passed')).toBe('Build cycle · round 2/3');
+  });
+});
+
+describe('runNeedsYou', () => {
+  const run = (needsYou: boolean, ...outcomes: string[]) => ({ needsYou, rounds: outcomes.map((outcome) => ({ outcome })) }) as unknown as ChatRun;
+  it('is true for a run that asks or whose last round is blocked, a question or failed', () => {
+    expect(runNeedsYou(run(true))).toBe(true);
+    expect(runNeedsYou(run(false, 'progress', 'failed'))).toBe(true);
+    expect(runNeedsYou(run(false, 'blocked'))).toBe(true);
+    expect(runNeedsYou(run(false, 'failed', 'done'))).toBe(false);
+    expect(runNeedsYou(run(false))).toBe(false);
   });
 });
 

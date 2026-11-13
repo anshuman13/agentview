@@ -4,13 +4,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,13 +67,23 @@ private fun statusIcon(status: String) = when (status) {
     else -> "circle-large-outline"
 }
 
+private val cardChoices = mutableStateMapOf<String, Boolean>()
+
+// Web chat/cards/useCardOpen.ts: a card is closed until tapped, opens itself while it needs you and then stays as the last tap left it; kept in memory per chat and card.
 @Composable
-fun ChecklistCard(items: List<ChecklistItem>) {
-    var open by rememberSaveable { mutableStateOf(false) }
+fun rememberCardOpen(key: String, needsYou: Boolean): Pair<Boolean, () -> Unit> {
+    LaunchedEffect(key, needsYou) { if (needsYou && key !in cardChoices) cardChoices[key] = true }
+    val open = cardChoices[key] ?: needsYou
+    return open to { cardChoices[key] = !open }
+}
+
+@Composable
+fun ChecklistCard(items: List<ChecklistItem>, chat: String, needsYou: Boolean) {
+    val (open, toggle) = rememberCardOpen("$chat:todo", needsYou)
     val current = checklistCurrent(items)
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
-        Panel(Modifier.clickable { open = !open }) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+        Panel(Modifier.clickable(onClick = toggle)) {
+            Row(Modifier.heightIn(min = Tokens.touch), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
                 AvIcon(if (open) "chevron-down" else "chevron-right", tint = av.fgMuted)
                 Text(checklistProgress(items), style = Type.callout, color = av.fg, maxLines = 1)
                 if (current.isNotEmpty()) Text(current, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -143,6 +143,7 @@
 .lc .dot.running { background: var(--accent-fill); }
 
 @media (max-width: 900px) {
+  .td-head { min-height: var(--touch); }
   .cp-card.pill { border-color: transparent; border-radius: var(--radius-pill); box-shadow: var(--elev-1); }
   .cp-card.pill:focus-within { border-color: var(--cp-ring); }
   .cp-card.pill.multi { border-radius: var(--shape-lg); }
