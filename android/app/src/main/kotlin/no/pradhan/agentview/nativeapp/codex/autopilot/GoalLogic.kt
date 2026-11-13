@@ -22,6 +22,13 @@ fun goalCommand(form: GoalForm, now: Long): String {
     return listOfNotNull("/goal", form.every.takeIf { it > 0 }?.let { "every ${everyText(it)}" }, stop?.let { "until $it" }, form.capPct?.takeIf { it > 0 }?.let { "cap $it%" }, what.ifEmpty { null }).joinToString(" ")
 }
 
+// shared/goalForm.ts parseEvery: a custom How often such as "45m", "45 min" or "3h", 10 minutes to 7 days, in ms.
+fun parseEvery(text: String): Long? {
+    val m = Regex("^(\\d+)\\s*(m|min|h)$", RegexOption.IGNORE_CASE).find(text.trim()) ?: return null
+    val ms = (m.groupValues[1].toLongOrNull() ?: return null) * (if (m.groupValues[2].equals("h", true)) HOUR else 60_000L)
+    return ms.takeIf { it in 10 * 60_000L..7 * 24 * HOUR }
+}
+
 // The plan path of a goal that runs every task of a plan file, else null.
 fun planOf(what: String): String? = Regex("^(?:/goal\\s+)?(?:every task in (\\S+) is ticked|every step of the plan in (\\S+) is done)").find(what.trim())?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }
 

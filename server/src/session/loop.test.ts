@@ -137,10 +137,10 @@ describe('standing goal', () => {
   const HOUR = 3_600_000;
   const DAY = 24 * HOUR;
 
-  it('parses /goal every 1h and rejects intervals under 30m', () => {
+  it('parses /goal every 1h and rejects intervals under 10m', () => {
     expect(parseGoal('/goal every 1h keep CI green', 1000)).toMatchObject({ every: HOUR, goal: 'keep CI green', until: 1000 + 28 * DAY, reportAt: 1000 + 7 * DAY });
     expect(parseGoal('/goal every 30m x')).toMatchObject({ every: 30 * 60_000 });
-    expect(parseGoal('/goal every 20m x')).toBe('usage');
+    expect(parseGoal('/goal every 5m x')).toBe('usage');
     expect(parseGoal('/goal every 169h x')).toBe('usage');
     expect(parseGoal('/goal every 1h')).toBe('usage');
     expect(parseGoal('/goal every bug is fixed')).toMatchObject({ every: 0 });

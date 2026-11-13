@@ -42,6 +42,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunEntry
 import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
 import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
+import no.pradhan.agentview.nativeapp.codex.autopilot.parseEvery
 import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
@@ -306,6 +307,7 @@ class SharedCasesTest {
             }
             c["condition"]?.let { assertEquals(c.str("name"), it.jsonPrimitive.content, planCondition(c.str("path"), c.str("md"))) }
             if ("plan" in c) assertEquals(c.str("name"), c.nullable("plan")?.jsonPrimitive?.content, planOf(c.str("what")))
+            if ("every" in c) assertEquals(c.str("name"), c.nullable("ms")?.jsonPrimitive?.long, parseEvery(c.str("every")))
         }
     }
 

@@ -322,6 +322,9 @@ A failed compact is retried once the context has grown by another 20k tokens.
 
 New chats start in Auto mode: Claude asks only before risky actions.
 
+The model menu (web and phone) lists the newest version of each family, models without a version and the current
+model; **Older models** ("7 more") shows the rest (`newestModels` in `shared/providers.ts`).
+
 **Build** in the model menu (last item, never checked, Claude chats only) starts the build workflow (spec, review,
 implement, test) on the brief in the composer. It sends the brief inside a prompt that asks for the Workflow tool, so
 the spec cards show the build agents, and the chat's model stays as it is. While Claude works it queues like a normal
@@ -441,7 +444,7 @@ keep the loop; `/loop off` ends it. The loop card above the composer shows the r
 
 The Goal row in the chat settings menu (web and phone) shows Off, or the run line while a goal or loop runs in the chat. A tap opens the goal sheet with Where set to this chat, or the run's detail when one is active.
 
-The goal sheet ("Chat: New goal" in the palette, the add button of the Runs header, "Run as goal…" in the Tasks Run menu of a spec, the target button in the file bar of an open Markdown file and the palette's "File: Run as goal…", and "Run as goal…" in the Android file menu of a Markdown file) builds the `/goal` line from the goal, How often (Until done, 30m, 1h, 2h), Stop at (None, in 1 or 4 hours, 07:00 or a time), Usage cap (50, 70, 90 or Off, hidden for OpenRouter) and Where (a new chat in a folder with a provider, or this chat when none has an active run). A plan goal shows the plan path with its "N of M done" ("No tasks" when the file has none), always starts a new chat in the chat's folder, and runs as "every step is done" when the plan has no unticked tasks. Tapping a goal row in Runs, or the Now row of its loop card, opens the goal detail: one status badge, the condition, plan progress, how often, stop time, usage ("Week 42% of 70% cap · 5-hour 30%"), next check and cost, with How often, Stop at and Usage editable from a menu (`run_edit`), then the rounds (a weekly report opens its turn) and Pause or Resume, Stop and Open chat. The cap reads the usage of the chat's active Claude account only.
+The goal sheet ("Chat: New goal" in the palette, the add button of the Runs header, "Run as goal…" in the Tasks Run menu of a spec, the target button in the file bar of an open Markdown file and the palette's "File: Run as goal…", and "Run as goal…" in the Android file menu of a Markdown file) builds the `/goal` line from the goal, How often (Until done, 30m, 1h, 2h, or a custom 10m to 168h typed as "45m" or "3h"), Stop at (None, in 1 or 4 hours, 07:00 or a time), Usage cap (50, 70, 90 or Off, hidden for OpenRouter) and Where (a new chat in a folder with a provider, or this chat when none has an active run). A plan goal shows the plan path with its "N of M done" ("No tasks" when the file has none), always starts a new chat in the chat's folder, and runs as "every step is done" when the plan has no unticked tasks. Tapping a goal row in Runs, or the Now row of its loop card, opens the goal detail: one status badge, the condition, plan progress, how often, stop time, usage ("Week 42% of 70% cap · 5-hour 30%"), next check and cost, with How often, Stop at and Usage editable from a menu (`run_edit`), then the rounds (a weekly report opens its turn) and Pause or Resume, Stop and Open chat. The cap reads the usage of the chat's active Claude account only.
 
 `/goal <condition>` asks Claude to check the condition whenever it goes idle and to keep working until it is met.
 Claude replies GOAL MET to end it; the check also stops by itself after 20 rounds. `/goal off` ends it early, and

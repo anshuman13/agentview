@@ -9,7 +9,7 @@ import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { billing, providerLabel } from '../../../shared/providers';
 import type { Provider } from '../../../shared/protocol';
-import { goalCommand } from '../../../shared/goalForm';
+import { goalCommand, parseEvery } from '../../../shared/goalForm';
 import { planCondition } from '../../../shared/specTasks';
 import { CAPS, EVERY, STOPS } from './goalLogic';
 import { useWorkspace } from './folders';
@@ -28,6 +28,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const { markdown, progress, error } = usePlanProgress(plan ?? null);
   const [what, setWhat] = useState('');
   const [every, setEvery] = useState(0);
+  const [custom, setCustom] = useState('');
   const [stopIn, setStopIn] = useState<number | undefined>();
   const [stopAt, setStopAt] = useState<string | undefined>();
   const [capPct, setCapPct] = useState<number | null>(70);
@@ -43,7 +44,8 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const target = canHere && inHere ? chatProvider : provider;
   const dirs = folders.flatMap((f) => [{ cwd: f.cwd, name: f.name }, ...f.trees.map((w) => ({ cwd: w.cwd, name: w.name.split('/').pop()! }))]);
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
-  const ready = !plan || (markdown !== null && !error);
+  const badEvery = Boolean(custom.trim()) && parseEvery(custom) === null;
+  const ready = !badEvery && (!plan || (markdown !== null && !error));
   const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : what;
   const start = () => {
     track('action:startGoal');
@@ -69,7 +71,13 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
         )}
       </div>
       <Section label="How often" />
-      <div className="ui-group"><div className="ui-fields">{chips(EVERY, (i) => EVERY[i].ms === every, (i) => setEvery(EVERY[i].ms))}</div></div>
+      <div className="ui-group">
+        <div className="ui-fields">
+          {chips(EVERY, (i) => !custom.trim() && EVERY[i].ms === every, (i) => { setCustom(''); setEvery(EVERY[i].ms); })}
+          <input aria-label="Custom interval" placeholder="Custom, like 10m or 3h" value={custom} onChange={(e) => { setCustom(e.target.value); setEvery(parseEvery(e.target.value) ?? 0); }} />
+          {badEvery && <div className="gl-note">Use minutes or hours from 10m to 168h, like 45m or 3h</div>}
+        </div>
+      </div>
       <Section label="Stop at" />
       <div className="ui-group">
         <div className="ui-fields">

@@ -145,6 +145,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val canHere = sheet.here && !active
     var what by remember { mutableStateOf("") }
     var every by remember { mutableStateOf(EVERY.first().ms) }
+    var custom by remember { mutableStateOf("") }
     var stopIn by remember { mutableStateOf<Long?>(null) }
     var stopAt by remember { mutableStateOf<String?>(null) }
     var capPct by remember { mutableStateOf<Int?>(70) }
@@ -158,7 +159,8 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val target = if (here) state.session?.provider else providerId
     val dirs = (ws.repos.map { it.cwd to it.name } + ws.trees.map { it.cwd to it.name.substringAfterLast('/') }).let { l -> if (cwd.isNotEmpty() && l.none { it.first == cwd }) listOf(cwd to folderName(cwd)) + l else l }
     val read = planRead(hub, sheet.plan, hub.pageChat)
-    val ready = sheet.plan == null || (read.markdown != null && !read.error)
+    val badEvery = custom.isNotBlank() && parseEvery(custom) == null
+    val ready = !badEvery && (sheet.plan == null || (read.markdown != null && !read.error))
     val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: what
     val start = {
         hub.track("action:startGoal")
@@ -179,7 +181,13 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
             else Box(Modifier.padding(Tokens.sp6)) { TextField(what, { what = it }, placeholder = "What is the goal?", minLines = 3) }
         }
         SectionHeader("How often")
-        Group { Chips { EVERY.forEach { Chip(it.label, { every = it.ms }, on = it.ms == every) } } }
+        Group {
+            Chips { EVERY.forEach { Chip(it.label, { custom = ""; every = it.ms }, on = custom.isBlank() && it.ms == every) } }
+            Box(Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, bottom = Tokens.sp6)) {
+                TextField(custom, { custom = it; every = parseEvery(it) ?: 0 }, placeholder = "Custom, like 10m or 3h", singleLine = true)
+            }
+            if (badEvery) Text("Use minutes or hours from 10m to 168h, like 45m or 3h", Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, bottom = Tokens.sp6), style = Type.footnote, color = av.fgMuted)
+        }
         SectionHeader("Stop at")
         Group {
             Chips {

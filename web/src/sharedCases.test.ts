@@ -10,7 +10,7 @@ import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '
 import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
-import { goalCommand, planOf, type GoalForm } from '../../shared/goalForm';
+import { goalCommand, parseEvery, planOf, type GoalForm } from '../../shared/goalForm';
 import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
@@ -120,9 +120,10 @@ describe('cases shared with the Android app', () => {
     it(`isSketchPath: ${c.name}`, () => expect(isSketchPath(c.path)).toBe(c.sketch));
   }
 
-  for (const c of cases<{ name: string; form?: GoalForm; now?: number; command?: string; what?: string; plan?: string | null; path?: string; md?: string; condition?: string }>('goal-command')) {
+  for (const c of cases<{ name: string; form?: GoalForm; now?: number; command?: string; what?: string; plan?: string | null; path?: string; md?: string; condition?: string; every?: string; ms?: number | null }>('goal-command')) {
     it(`goalForm: ${c.name}`, () => {
-      if (c.form) expect(goalCommand(c.form, c.now!)).toBe(c.command);
+      if (c.every !== undefined) expect(parseEvery(c.every)).toBe(c.ms!);
+      else if (c.form) expect(goalCommand(c.form, c.now!)).toBe(c.command);
       else if (c.condition) expect(planCondition(c.path!, c.md!)).toBe(c.condition);
       else expect(planOf(c.what!)).toBe(c.plan);
     });

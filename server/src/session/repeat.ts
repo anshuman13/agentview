@@ -1,18 +1,19 @@
 import { MAX_GOAL_ROUNDS, type ChatRun, type PlanUsage, type Repeat, type RunEdit, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, nextClock, span } from '../../../shared/util.js';
+import { MAX_EVERY, MIN_EVERY } from '../../../shared/goalForm.js';
 import type { Cron } from '../agent/types.js';
 
 const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
 const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
 
-const GOAL_USAGE = 'Usage: /goal [every 1h] [until 18:00] [cap 70%] <condition> (every 30m or longer), /goal off';
+const GOAL_USAGE = 'Usage: /goal [every 1h] [until 18:00] [cap 70%] <condition> (every 10m or longer), /goal off';
 
 const DAY = 24 * 3_600_000;
 const STANDING_MS = 28 * DAY;
 const REPORT_MS = 7 * DAY;
-const MIN_STANDING_EVERY = 30 * 60_000;
 const FIVE_HOUR_LIMIT = 90;
+const GATE_RETRY_MS = 30 * 60_000;
 const STANDING_ENDED = 'ran for 28 days, start it again to continue';
 
 const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET when it is, otherwise keep working on it.`;
@@ -44,7 +45,7 @@ export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usa
   const every = e ? Number(e[1]) * UNIT[e[2].toLowerCase()] : 0;
   const capPct = c ? Number(c[1]) : 0;
   if ((e || u || c) && !goal) return 'usage';
-  if ((e && (every < MIN_STANDING_EVERY || every > MAX_EVERY)) || (u && (Number(u[1]) > 23 || Number(u[2]) > 59)) || (c && (capPct < 1 || capPct > 100))) return 'usage';
+  if ((e && (every < MIN_EVERY || every > MAX_EVERY)) || (u && (Number(u[1]) > 23 || Number(u[2]) > 59)) || (c && (capPct < 1 || capPct > 100))) return 'usage';
   const extra = { ...(u && { endAt: nextClock(Number(u[1]), Number(u[2]), now) }), ...(c && { capPct }) };
   if (e) return { prompt: standingPrompt(goal), every, until: now + STANDING_MS, round: 0, nextAt: null, goal, reportAt: now + REPORT_MS, ...extra };
   return { prompt: goalPrompt(goal), every: 0, until: null, round: 0, nextAt: null, goal, ...extra };
@@ -93,7 +94,6 @@ export const once = (r: Repeat) => !r.every && r.until !== null && r.nextAt !== 
 // A one-shot loop that has not run yet waits for its round even past until, when Claude was busy or the round was deferred.
 const unrun = (r: Repeat) => once(r) && r.round === 0;
 
-const MAX_EVERY = 7 * 24 * 3_600_000;
 const MAX_TIMER = 2 ** 31 - 1;
 
 // Node clamps setTimeout at 24.8 days and fires at once past it; longer waits go in chunks.
@@ -250,7 +250,7 @@ export class RepeatController {
     const usage = this.host.usage();
     const gate = usageGate(r, usage);
     if (gate && 'note' in gate) return this.set(null, gate.note, gate.why);
-    if (gate) return standing(r) ? this.skip(r) : this.defer(gate.skipUntil ?? Date.now() + MIN_STANDING_EVERY, `Usage over ${FIVE_HOUR_LIMIT}%, goal check`, true);
+    if (gate) return standing(r) ? this.skip(r) : this.defer(gate.skipUntil ?? Date.now() + GATE_RETRY_MS, `Usage over ${FIVE_HOUR_LIMIT}%, goal check`, true);
     // A standing goal skips a heartbeat that finds Claude busy or waiting for the user; the next one is a full interval away.
     if (standing(r) && (this.host.running() || this.host.asking())) return this.skip(r);
     if (this.host.running()) {
@@ -296,7 +296,7 @@ export class RepeatController {
     if (!r?.goal) return;
     const next: Repeat = { ...r };
     const every = edit.every;
-    if (typeof every === 'number' && standing(r) && every >= MIN_STANDING_EVERY && every <= MAX_EVERY) Object.assign(next, { every, nextAt: Date.now() + every });
+    if (typeof every === 'number' && standing(r) && every >= MIN_EVERY && every <= MAX_EVERY) Object.assign(next, { every, nextAt: Date.now() + every });
     if (edit.endAt === null) delete next.endAt;
     else if (typeof edit.endAt === 'number') next.endAt = edit.endAt;
     if (edit.capPct === null) delete next.capPct;
