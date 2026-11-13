@@ -66,7 +66,6 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
 
 // The loop card above the composer (web/src/chat/cards/LoopCard.tsx): state and Pause in the head, what is happening now, the running agents, then the what line.
-private const val MAX_AGENTS = 3
 
 @Composable
 fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
@@ -105,12 +104,12 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent
                 leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
                 onClick = if (goal) detail else if (run.kind == "loop" && state.outcome != null) ({ rounds = !rounds }) else null,
             )
-            agents.take(MAX_AGENTS).forEach { a ->
+            agents.singleOrNull()?.let { a ->
                 ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, compact = true, onClick = { onOpenAgent(a.id) })
             }
-            if (agents.size > MAX_AGENTS) ListRow(plural(agents.size - MAX_AGENTS, "more agent"), compact = true, leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, onClick = onOpenAgents)
+            if (agents.size > 1) ListRow(plural(agents.size, "agent"), agents.joinToString(", ") { it.slug ?: it.description }, compact = true, leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, onClick = onOpenAgents)
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Text(progress?.let { "Plan $it" } ?: run.what, Modifier.weight(1f).then(if (goal) Modifier.clickable(onClick = detail) else Modifier), style = Type.subheadline, color = av.fgMuted, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Text(progress?.let { "Plan $it" } ?: run.what, Modifier.weight(1f).then(if (goal) Modifier.clickable(onClick = detail) else Modifier), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(money(run.costUsd, billing(run.provider)), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
             }
             run.rounds.lastOrNull { it.report != null }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(r, showTime = false, run.provider) } }

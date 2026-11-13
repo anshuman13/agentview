@@ -17,8 +17,6 @@ import { billing } from '../../../../shared/providers';
 import type { RunOp } from '../../../../shared/protocol';
 import { OUTCOME_DOT, agentAge, loopNow, runLine, showTurn, stoppedText } from '../composer/composerLogic';
 
-const MAX_AGENTS = 3;
-
 const word = (text: string) => text[0].toUpperCase() + text.slice(1);
 
 export function LoopCard() {
@@ -79,9 +77,9 @@ export function LoopCard() {
     >
     <div className="lc-body">
       <Row lines={2} leading={<span className={`dot ${dot}`} />} title={state.title} meta={meta || undefined} {...nowClick} />
-      {agents.slice(0, MAX_AGENTS).map((a) => <Row key={a.id} leading={<Icon name="hubot" />} title={a.slug ?? a.description} meta={`${a.type} · ${agentAge(a.startedAt, now)}`} state="" onClick={() => openAgent(a.id)} />)}
-      {agents.length > MAX_AGENTS && <Row leading={<Icon name="hubot" />} title={plural(agents.length - MAX_AGENTS, 'more agent')} onClick={() => openAgent()} />}
-      <div className="lc-line" onClick={details}><span className="lc-what lc-wrap">{progress ? `Plan ${progress}` : run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></div>
+      {agents.length === 1 && <Row leading={<Icon name="hubot" />} title={agents[0].slug ?? agents[0].description} meta={`${agents[0].type} · ${agentAge(agents[0].startedAt, now)}`} state="" onClick={() => openAgent(agents[0].id)} />}
+      {agents.length > 1 && <Row leading={<Icon name="hubot" />} title={plural(agents.length, 'agent')} meta={agents.map((a) => a.slug ?? a.description).join(', ')} state="" onClick={() => openAgent()} />}
+      <div className="lc-line" onClick={details}><span className="lc-what">{progress ? `Plan ${progress}` : run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></div>
       {report && <button className="lc-line lc-last" onClick={() => showTurn(report.report!)}><span className="lc-time">{clock(report.at)}</span><span className="lc-what">Weekly report</span></button>}
       {open && run.kind === 'loop' && (
         <ul className="lc-rounds">

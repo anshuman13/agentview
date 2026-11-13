@@ -479,9 +479,9 @@ cycle is one run with a round per step.
 The loop card sits above the composer while the chat has an active run, as a box that opens by default and collapses to its header (the state line with Pause and More): a state line ("Loop · round 4 · next 14:20",
 "Paused · usage limit until 18:00", "Goal · check 3 of 20", "Build cycle · round 2/3 · Test"), then a Now row with what is
 happening: the agent's latest status (with "Next: ..." and the steps left) or the last round, whichever is newer, with a
-running dot while a turn or an agent runs. One row per running agent follows (slug or description, type and minutes, up to
-3, then "N more agents"); a tap opens the agent. Last comes the what text (a goal with a plan file shows "Plan N of M
-done") and the total cost. A turn the run did not start, such as a background agent finishing, adds a round when its
+running dot while a turn or an agent runs. One running agent gets a row (slug or description, type and minutes) that
+opens it; two or more share one "N agents" row listing their names, which opens the agents list. Last comes the what
+text on one line (a goal with a plan file shows "Plan N of M done") and the total cost. A turn the run did not start, such as a background agent finishing, adds a round when its
 reply ends with a ROUND line, with the current round number. Tapping the Now row of a goal card opens its detail; on a loop the Now row
 lists the last 10 rounds. A loop or goal has Pause (or Resume) and a More menu with Run now and Stop; Run now does nothing
 while Claude is busy. A pause is saved and survives
