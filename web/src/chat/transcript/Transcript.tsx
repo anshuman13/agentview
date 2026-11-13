@@ -4,11 +4,10 @@ import { assistantStore } from '../../codex/data';
 import { quoteReply, replyNote } from '../composer/composerLogic';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
-import { Row as ListRow } from '../../ui/Row';
 import { SinceSheet } from './SinceSheet';
 import { SummarySheet } from './SummarySheet';
 import { replyOf, turnEvents, turnSummary } from './summary';
-import { roundsSince } from './recap';
+import { outcomeCounts, roundsSince } from './recap';
 import { clock } from '../../codex/tasks/time';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
@@ -26,7 +25,7 @@ import { providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
 import { isSpecPath, specSlug } from '../../../../shared/specTasks';
 import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
-import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
+import { ROW_WINDOW, type ChatEvent, type Round } from '../../../../shared/protocol';
 
 export function Transcript() {
   const events = useStore((s) => s.events);
@@ -202,7 +201,7 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
 
   return (
     <div className="tr-host">
-    {newId && recap && since && <SinceBox chat={chat} recap={recap} at={fresh[0]?.at} onOpen={() => setSinceOpen(true)} onDismiss={() => setSince(false)} />}
+    {newId && recap && since && <SinceBox recap={recap} rounds={fresh} onOpen={() => setSinceOpen(true)} onDismiss={() => setSince(false)} />}
     {sinceOpen && recap && <SinceSheet chat={chat} recap={recap} rounds={fresh} run={run} onClose={() => setSinceOpen(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
@@ -312,11 +311,17 @@ function saveReply(text: string, cwd: string) {
   assistantStore().capture(note.text, 'note', note.profile).then(() => notice('Saved to Notes'), () => notice('Could not save the note. Try again.'));
 }
 
-export function SinceBox({ chat, recap, at, onOpen, onDismiss }: { chat: string; recap: string; at?: number; onOpen: () => void; onDismiss: () => void }) {
+export function SinceBox({ recap, rounds, onOpen, onDismiss }: { recap: string; rounds: Round[]; onOpen: () => void; onDismiss: () => void }) {
+  const counts = outcomeCounts(rounds).map((c) => `${c.n} ${c.outcome === 'quiet' ? 'nothing' : c.outcome}`).join(', ');
   return (
-    <TranscriptBox id={`since:${chat}`} className="tr-since" defaultOpen title="Since you left" meta={at ? clock(at) : undefined} action={<IconButton icon="close" label="Dismiss" size="sm" onClick={onDismiss} />}>
-      <ListRow className="bd-clamp" title="Recap" meta={recap} aria-haspopup="dialog" onClick={onOpen} />
-    </TranscriptBox>
+    <div className="tr-since">
+      <button className="tr-since-main" aria-haspopup="dialog" title={recap} onClick={onOpen}>
+        <Icon name="history" small />
+        <b>Since you left</b>
+        <span className="tr-since-text">{rounds.length > 0 ? `${plural(rounds.length, 'round')}: ${counts} \u00b7 ${recap}` : recap}</span>
+      </button>
+      <IconButton icon="close" label="Dismiss" size="sm" onClick={onDismiss} />
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
-import { Explored, SinceBox } from './Transcript';
+import { Explored } from './Transcript';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, specCards, stepLabel, stepTone, newMarker, newReplies, dayDividers, type Item } from './steps';
@@ -250,12 +250,10 @@ describe('specCards', () => {
 });
 
 describe('collapsible boxes', () => {
-  it('draw one header button with aria-expanded for an Explored group and Since you left', () => {
+  it('draw one header button with aria-expanded for an Explored group', () => {
     const explored = renderToStaticMarkup(createElement(Explored, { id: 's1', run: [], cwd }));
-    const since = renderToStaticMarkup(createElement(SinceBox, { chat: 'c1', recap: 'Since you last looked: 1 turn', onOpen: () => {}, onDismiss: () => {} }));
     expect(explored.match(/<button/g)).toHaveLength(1);
     expect(explored).toContain('aria-expanded="false"');
-    expect(since.match(/aria-expanded="true"/g)).toHaveLength(1);
   });
 });
 
