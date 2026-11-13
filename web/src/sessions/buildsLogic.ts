@@ -31,7 +31,6 @@ export function testCounts(criteria: Criterion[]) {
   return ([['done', count('pass')], ['failed', count('fail')]] as const).filter(([, n]) => n).map(([status, count]) => ({ status, count }));
 }
 
-export const FOLD = 3;
 
 export const startPhase = (phases: BuildPhase[], reviews: BuildReview[]) => (phases.find((p) => reviewDecision(reviews, p.key)?.decision !== 'approve') ?? phases[0]).key;
 

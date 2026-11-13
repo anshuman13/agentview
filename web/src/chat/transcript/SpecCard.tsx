@@ -12,7 +12,7 @@ import { ago } from '../../ui/util';
 import { findHere, useWorkspace } from '../../sessions/folders';
 import { postBuildHold } from '../../sessions/sessionApi';
 import { useBuild } from '../../sessions/useBuilds';
-import { FLOW_LABEL, FOLD, flowBadge, holdBadge, stateBadge } from '../../sessions/buildsLogic';
+import { FLOW_LABEL, flowBadge, holdBadge, stateBadge } from '../../sessions/buildsLogic';
 import { useCan } from '../useCan';
 import { Findings } from '../../ops/Findings';
 import { pipelineLabel, type BuildDetail, type FlowStep } from '../../../../shared/builds';
@@ -74,32 +74,45 @@ const OPEN: Partial<Record<FlowStep['key'], (d: BuildDetail) => OpenSheet>> = {
   'code-review': () => ({ kind: 'step', key: 'code-review' }),
 };
 
+// The flow as one strip of steps, then the step that matters now as a row.
 function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
   const failed = d.criteria.some((c) => c.result === 'fail');
+  const sheetOf = (f: FlowStep) => (f.state !== 'todo' ? OPEN[f.key] : undefined);
+  const now = d.summary.state === 'done' ? undefined : currentStep(d.flow);
+  const nowSheet = now && sheetOf(now);
+  const badge = now && flowBadge(now);
   return (
     <>
-      <Section label="Flow" />
-      <div className="ui-group">
+      <div className="bd-steps">
         {d.flow.map((f) => {
-          const badge = flowBadge(f);
-          const sheet = f.state !== 'todo' ? OPEN[f.key] : undefined;
-          return <Row key={f.key} plain={!sheet} onClick={sheet && ((e) => sheets.open(sheet(d), e.currentTarget))} leading={<FlowMark state={f.state} />} title={FLOW_LABEL[f.key]} meta={[f.by, f.result, f.at && ago(f.at)].filter(Boolean).join(' · ')} state={badge && <Badge {...badge} />} />;
+          const sheet = sheetOf(f);
+          return (
+            <button key={f.key} className={`bd-step ${f.state} ${f === now ? 'now' : ''}`} disabled={!sheet} title={[FLOW_LABEL[f.key], f.by, f.result, f.at && ago(f.at)].filter(Boolean).join(' · ')} onClick={sheet && ((e) => sheets.open(sheet(d), e.currentTarget))}>
+              <FlowMark state={f.state} />{FLOW_LABEL[f.key]}
+            </button>
+          );
         })}
       </div>
-      <Criteria criteria={d.criteria} limit={failed ? d.criteria.length : FOLD} onOpen={(n, from) => sheets.open({ kind: 'criterion', n }, from)} />
+      {now && (
+        <div className="ui-group">
+          <Row plain={!nowSheet} onClick={nowSheet && ((e) => sheets.open(nowSheet(d), e.currentTarget))} title={FLOW_LABEL[now.key]} meta={[now.by, now.result, now.at && ago(now.at)].filter(Boolean).join(' · ')} state={badge && <Badge {...badge} />} />
+        </div>
+      )}
+      <Criteria criteria={d.criteria} limit={failed ? d.criteria.length : 0} onOpen={(n, from) => sheets.open({ kind: 'criterion', n }, from)} />
       <Findings target={`spec:${d.slug}`} />
     </>
   );
 }
 
+// The step that is running, waiting or failed, else the last one that happened.
+function currentStep(flow: FlowStep[]) {
+  return flow.find((f) => f.state === 'running' || f.state === 'waiting' || f.state === 'failed') ?? flow.filter((f) => f.state !== 'todo' && f.state !== 'skipped').at(-1);
+}
+
 const MARK_TONE: Record<string, string> = { done: 'ok', failed: 'err', waiting: 'warn' };
 
-function FlowMark({ state }: { state: BuildDetail['flow'][number]['state'] }) {
-  return (
-    <span className="bd-flow">
-      {state === 'running' ? <span className="dot running" /> : <span className={`bd-flow-mark ${MARK_TONE[state] ?? 'hollow'}`} />}
-    </span>
-  );
+function FlowMark({ state }: { state: FlowStep['state'] }) {
+  return state === 'running' ? <span className="dot running" /> : <span className={`bd-flow-mark ${MARK_TONE[state] ?? 'hollow'}`} />;
 }
 
 // A spec write that no longer holds the live card, shown plain.
