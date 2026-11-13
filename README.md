@@ -25,7 +25,7 @@ installed and its login.
 
 Both test runs load `test-setup.ts`, which points the Claude config, usage limit and findings folders at a temp dir.
 
-`PROJECT_DIR=/path` sets the folder for the very first chat; after that AgentView reopens the last chat you viewed.
+`PROJECT_DIR=/path` sets the folder for the very first chat (default: the repo root); after that AgentView reopens the last chat you viewed.
 Restarting the server keeps running chats alive; see [architecture](docs/architecture.md).
 
 ## What it does

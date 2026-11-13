@@ -26,8 +26,9 @@ import { createPresence, isPhone } from './presence.js';
 import type { Hello } from './host/protocol.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
-const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
 const here = path.dirname(fileURLToPath(import.meta.url));
+// Without a folder given, chats start in the repo root, not in server/ where the start scripts run.
+const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? path.join(here, '../..'));
 const APK = path.resolve(here, '../../dist/AgentView.apk');
 
 if (ownProfile()) {
