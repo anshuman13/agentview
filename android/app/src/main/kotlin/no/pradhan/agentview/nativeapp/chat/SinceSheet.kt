@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,7 +62,7 @@ fun SinceStrip(recap: String, rounds: List<Round>, modifier: Modifier = Modifier
     val counts = outcomeCounts(rounds).joinToString(", ") { (o, n) -> "$n ${if (o == "quiet") "nothing" else o}" }
     val text = if (rounds.isEmpty()) recap else "${rounds.size} round${if (rounds.size == 1) "" else "s"}: $counts \u00B7 $recap"
     Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.radiusSm)).border(Tokens.hairline, av.borderCard, RoundedCornerShape(Tokens.radiusSm)).clickable(onClickLabel = "Open", onClick = onOpen).padding(start = Tokens.sp4),
+        modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.radiusSm)).background(av.bg).border(Tokens.hairline, av.borderCard, RoundedCornerShape(Tokens.radiusSm)).clickable(onClickLabel = "Open", onClick = onOpen).padding(start = Tokens.sp4),
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
