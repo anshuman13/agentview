@@ -12,16 +12,16 @@ export type FoldRow =
 
 type Span = { at: number; end: number; cost: number };
 
-// Each prompt's time, the time of its last result and the cost its results add; rows before the first prompt belong to ''.
+// Each prompt's time, the time of its last result and the cost its results add over the result before them (the first loaded result has none); rows before the first prompt belong to ''.
 function spans(events: ChatEvent[]) {
   const out = new Map<string, Span>([['', { at: events[0]?.at ?? 0, end: 0, cost: 0 }]]);
   let cur = out.get('')!;
-  let last = 0;
+  let last: number | null = null;
   for (const e of events) {
     if (e.kind === 'user') out.set(e.id, (cur = { at: e.at, end: 0, cost: 0 }));
     else if (e.kind === 'result') {
       cur.end = e.at;
-      if (e.costUsd > 0) { cur.cost += costRise(e.costUsd, last); last = e.costUsd; }
+      if (e.costUsd > 0) { if (last !== null) cur.cost += costRise(e.costUsd, last); last = e.costUsd; }
     }
   }
   return out;

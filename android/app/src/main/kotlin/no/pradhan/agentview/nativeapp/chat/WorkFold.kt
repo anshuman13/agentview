@@ -27,16 +27,16 @@ private class Span(val at: Long) {
     var cost = 0.0
 }
 
-// Each prompt's time, the time of its last result and the cost its results add; rows before the first prompt belong to "".
+// Each prompt's time, the time of its last result and the cost its results add over the result before them (the first loaded result has none); rows before the first prompt belong to "".
 private fun spans(events: List<ChatEvent>): Map<String, Span> {
     val out = HashMap<String, Span>()
     var cur = Span(events.firstOrNull()?.at ?: 0L).also { out[""] = it }
-    var last = 0.0
+    var last: Double? = null
     for (e in events) {
         if (e.kind == "user") cur = Span(e.at).also { out[e.id] = it }
         else if (e.kind == "result") {
             cur.end = e.at
-            if (e.costUsd > 0) { cur.cost += if (e.costUsd >= last) e.costUsd - last else e.costUsd; last = e.costUsd }
+            if (e.costUsd > 0) { last?.let { cur.cost += if (e.costUsd >= it) e.costUsd - it else e.costUsd }; last = e.costUsd }
         }
     }
     return out

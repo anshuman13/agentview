@@ -234,6 +234,24 @@ export function specBumps(items: Item[]) {
 // Replies that arrived after the reader scrolled up, for the Jump to latest button.
 export const newReplies = (items: Item[], lastSeenId: string) => items.slice(items.findIndex((it) => it.id === lastSeenId) + 1 || items.length).filter((it) => it.kind === 'assistant' && !it.streaming).length;
 
+export type Rewind = { id: string; prompt: string };
+
+// The last reply of each prompt that changed files, with the prompt a rewind goes back to.
+export function rewindReplies(items: Item[]) {
+  const out = new Map<string, Rewind>();
+  let prompt: Rewind | null = null;
+  let reply = '';
+  let changed = false;
+  const flush = () => { if (prompt && reply && changed) out.set(reply, prompt); };
+  for (const it of items) {
+    if (it.kind === 'user') { flush(); prompt = { id: it.id, prompt: it.text }; reply = ''; changed = false; }
+    else if (it.kind === 'assistant') reply = it.id;
+    else if (it.kind === 'file' && !it.error && !it.denied) changed = true;
+  }
+  flush();
+  return out;
+}
+
 export function newMarker(items: Item[], ats: Map<string, number>, seen: number, openedAt: number) {
   if (seen <= 0) return null;
   return items.find((it) => it.kind !== 'user' && (ats.get(it.id) ?? 0) > seen && (ats.get(it.id) ?? 0) <= openedAt)?.id ?? null;

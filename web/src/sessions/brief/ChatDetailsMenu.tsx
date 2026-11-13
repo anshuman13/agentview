@@ -15,9 +15,11 @@ type Props = {
   macName: string | null | undefined;
   extras: string;
   openAgents: () => void;
+  canReview: boolean;
+  review: () => void;
 };
 
-export function ChatDetailsMenu({ showWork, toggleWork, hasAgents, showAgents, agentsRunning, agentsDone, waitingElsewhere, usage, macName, extras, openAgents }: Props) {
+export function ChatDetailsMenu({ showWork, toggleWork, hasAgents, showAgents, agentsRunning, agentsDone, waitingElsewhere, usage, macName, extras, openAgents, canReview, review }: Props) {
   const [more, setMore] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const choose = (fn: () => void) => () => { setMore(false); fn(); };
@@ -27,6 +29,7 @@ export function ChatDetailsMenu({ showWork, toggleWork, hasAgents, showAgents, a
       {more && (
         <Menu trigger={moreBtn} onClose={() => setMore(false)}>
           <MenuItem icon={showWork ? 'check' : undefined} role="menuitemcheckbox" aria-checked={showWork} onClick={choose(toggleWork)}>Show work</MenuItem>
+          <MenuItem icon="source-control" disabled={!canReview} title="The agent reviews the working tree, findings show in the Changes view" onClick={choose(review)}>Review changes</MenuItem>
           {(hasAgents || showAgents) && (
             <MenuItem icon={agentsRunning ? 'loading' : 'hubot'} spin={agentsRunning > 0} onClick={choose(openAgents)}>
               {showAgents ? 'Back to chat' : `Agents · ${[agentsRunning && `${agentsRunning} running`, agentsDone && `${agentsDone} done`].filter(Boolean).join(', ')}`}

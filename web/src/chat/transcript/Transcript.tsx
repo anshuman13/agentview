@@ -15,10 +15,11 @@ import { SketchCard } from './SketchCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { WorkBox } from './WorkBox';
+import { RewindLink } from './Rewind';
 import { foldTurns, type FoldRow } from './workFold';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
-import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, stepLabel, stepTone, type Item, type StepItem, type ToolResult, type ToolUse } from './steps';
+import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { billing, providerLabel } from '../../../../shared/providers';
@@ -183,6 +184,8 @@ function TranscriptView({ chat, events, earlier, cwd, running, showWork, bill }:
   const last = events[events.length - 1];
   const scroll = useStickyScroll(items, last, running);
   const { box, rows, stuck, behind, onScroll, jump } = scroll;
+  const canRewind = useCan('rewind');
+  const rewinds = useMemo(() => rewindReplies(items), [items]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const list = useMemo<FoldRow[]>(() => (showWork ? items.map((it) => ({ kind: 'item', it })) : foldTurns(items, events)), [showWork, items, events]);
   const { shown, start, from, staging, loading, showEarlier } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
@@ -210,7 +213,7 @@ function TranscriptView({ chat, events, earlier, cwd, running, showWork, bill }:
     const card = cards.has(it.id);
     const agentCard = card && it.kind === 'agent' && slug && where !== 'hidden' ? <SpecCard slug={slug} bump={bump} /> : null;
     if (where === 'shown' && agentCard) return <Fragment key={it.id}>{agentCard}</Fragment>;
-    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
+    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
   };
 
   return (
@@ -263,7 +266,7 @@ function sameItem(a: Item, b: Item): boolean {
   }
 }
 
-export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.bump === n.bump && sameItem(p.it, n.it));
+export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.rewind?.id === n.rewind?.id && p.bump === n.bump && sameItem(p.it, n.it));
 
 function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
   const [open, setOpen] = useState(false);
@@ -275,7 +278,7 @@ function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
   );
 }
 
-function RowImpl({ it, cwd, settled, card, bump = 0 }: { it: Item; cwd: string; settled?: boolean; card?: boolean; bump?: number }) {
+function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: string; settled?: boolean; card?: boolean; rewind?: Rewind; bump?: number }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
@@ -285,7 +288,7 @@ function RowImpl({ it, cwd, settled, card, bump = 0 }: { it: Item; cwd: string; 
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <div className="tr-acts"><button className="link" title="Quote this reply in the composer" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: quoteReply(it.text) } }))}>Reply</button><button className="link" title="Copy this reply as Markdown" onClick={() => copyText(it.text).then(() => notice('Copied the reply'), () => notice('Copy failed'))}>Copy</button><button className="link" title="Save this reply to Notes" onClick={() => saveReply(it.text, cwd)}>Save as note</button></div>}</div>;
+      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <div className="tr-acts"><button className="link" title="Quote this reply in the composer" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: quoteReply(it.text) } }))}>Reply</button><button className="link" title="Copy this reply as Markdown" onClick={() => copyText(it.text).then(() => notice('Copied the reply'), () => notice('Copy failed'))}>Copy</button><button className="link" title="Save this reply to Notes" onClick={() => saveReply(it.text, cwd)}>Save as note</button>{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':

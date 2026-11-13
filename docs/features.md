@@ -291,16 +291,17 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
 - "Continue in terminal" in the Tools pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone Tools sheet has the same Continue in terminal, copying to the clipboard
-- On the phone, a prompt that changed files has a Rewind files link under it while Claude is idle: it puts the files back to how
-  they were before that prompt (later turns' edits go too); the conversation itself stays
+- A prompt that changed files has a Rewind files link: on the web beside Reply, Copy and Save as note on the turn's last reply, on the
+  phone under the prompt, while Claude is idle. It puts the files back to how they were before that prompt (later turns' edits go
+  too); the conversation itself stays
 
 ## Review findings
 
 "Ask Claude to review" on a pull request and the inbox's review prompt run `/code-review <number>`. The findings
 it reports show up in the pull request's pane, most severe first: a row opens the file on that line, Fix sends
 the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentview/findings.json`). "Review changes
-with Claude" in the Changes view and "Review changes" in the phone chat menu run `/code-review` on the
-working tree; those findings show at the bottom of the Changes view.
+with Claude" in the Changes view and "Review changes" in the chat menu (web and phone; off while Claude runs or when no file changed)
+run `/code-review` on the working tree; those findings show at the bottom of the Changes view.
 
 The spec review reports under the target `spec:<slug>`, shown as a Findings section in the opened Spec card (web and phone): the row opens the spec on that line on web and the file on the phone, and Fix makes the agent edit the spec. A repeat review replaces the list and keeps dismissed findings hidden.
 

@@ -4,7 +4,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WorkFoldTest {
@@ -59,7 +58,7 @@ class WorkFoldTest {
     }
 
     @Test
-    fun foldCountsToolsDistinctFilesAgentsFailuresAndCost() {
+    fun foldCountsToolsDistinctFilesAgentsAndFailures() {
         val bad = tool("Bash")
         val agent = tool("Agent")
         val e1 = tool("Edit", JsonObject(mapOf("file_path" to JsonPrimitive("/w/a.ts"), "old_string" to JsonPrimitive("a"), "new_string" to JsonPrimitive("b"))))
@@ -67,7 +66,14 @@ class WorkFoldTest {
         val refused = tool("Bash")
         val events = listOf(user(), bad, result(bad, true, "boom"), agent, e1, result(e1), e2, result(e2), refused, result(refused, true, "The user doesn't want to proceed"), say("ok"), done(0.3), user(), say("hi"), done(0.5))
         val first = fold(events).filterIsInstance<FoldRow.Fold>().first()
-        assertEquals(Work(5, 2, 1, 1, events.first { it.kind == "result" }.at - events[0].at, first.work.cost), first.work)
-        assertTrue(Math.abs(first.work.cost - 0.3) < 1e-9)
+        assertEquals(Work(5, 2, 1, 1, events.first { it.kind == "result" }.at - events[0].at, 0.0), first.work)
+    }
+
+    @Test
+    fun costIsTheRiseOverThePreviousLoadedResultAndNoneForTheFirst() {
+        val events = listOf(user(), tool("Bash"), say("ok"), done(52.0), user(), tool("Bash"), say("hi"), done(52.3))
+        val costs = fold(events).filterIsInstance<FoldRow.Fold>().map { it.work.cost }
+        assertEquals(0.0, costs[0], 1e-9)
+        assertEquals(0.3, costs[1], 1e-9)
     }
 }

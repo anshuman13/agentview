@@ -60,7 +60,7 @@ describe('foldTurns', () => {
     expect(kinds(fold(events))).toEqual(['user', 'blocked', 'system', 'file', 'file', 'fold', 'assistant']);
   });
 
-  it('counts tools, distinct files, agents and failures, and sums the cost of the results', () => {
+  it('counts tools, distinct files, agents and failures', () => {
     const bad = tool('Bash');
     const a = tool('Agent', { description: 'look' });
     const e1 = tool('Edit', { file_path: '/w/a.ts', old_string: 'a', new_string: 'b' });
@@ -69,7 +69,13 @@ describe('foldTurns', () => {
     const events = [user('go'), bad, result(bad.id, true, 'boom'), a, e1, result(e1.id), e2, result(e2.id), denied, result(denied.id, true, "The user doesn't want to proceed"), say('ok'), done(0.3), user('again'), say('hi'), done(0.5)];
     const first = fold(events).find((r) => r.kind === 'fold') as Extract<FoldRow, { kind: 'fold' }>;
     expect(first.work).toMatchObject({ tools: 5, files: 2, agents: 1, failed: 1 });
-    expect(first.work.cost).toBeCloseTo(0.3);
     expect(first.work.ms).toBe(events.find((e) => e.kind === 'result')!.at - events[0].at);
+  });
+
+  it('adds the rise over the previous loaded result, and none for the first loaded result', () => {
+    const events = [user('go'), tool('Bash'), say('ok'), done(52), user('again'), tool('Bash'), say('hi'), done(52.3)];
+    const costs = fold(events).flatMap((r) => (r.kind === 'fold' ? [r.work.cost] : []));
+    expect(costs[0]).toBe(0);
+    expect(costs[1]).toBeCloseTo(0.3);
   });
 });
