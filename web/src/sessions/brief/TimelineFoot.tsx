@@ -6,6 +6,7 @@ import { loopLabel } from '../../chat/composer/composerLogic';
 import type { ToolUse } from '../../chat/transcript/steps';
 import { clock } from '../../../../shared/util';
 import { readFlag, saveFlag } from '../../ui/util';
+import { useNarrow } from '../../app/shell/useNarrow';
 import { time } from './time';
 
 type Loop = { phase: string | null; round: number; max: number };
@@ -80,7 +81,8 @@ function nowText({ state, status, loop, repeat, lastReply }: Pick<Props, 'state'
 export function TimelineFoot(p: Props) {
   const { state, repeat, lastReply, lastTool, limit, next, running, end } = p;
   const [adding, setAdding] = useState(false);
-  const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', !touch()));
+  const narrow = useNarrow();
+  const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', !touch() && !narrow));
   const toggleSteps = () => { setStepsOpen(!stepsOpen); saveFlag('agentview.steps', !stepsOpen); };
   const hasSteps = next.length > 0 || adding || running;
   return (
