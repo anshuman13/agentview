@@ -290,7 +290,8 @@ internal fun SpecRow(slug: String, meta: String) {
 @Composable
 internal fun SketchCard(hub: Hub, chat: String, name: String, meta: String) {
     val slug = sketchTitle(name)
-    val (load, reload) = rememberLoad(chat, slug) { loadBuild(hub, slug) }
+    var asked by remember { mutableStateOf(false) }
+    val (load, reload) = rememberLoad(chat, slug, asked) { if (asked) loadBuild(hub, slug) else null }
     val spec = load.data?.takeIf { it.specFile != null }
     val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
     val stack = remember { mutableStateListOf<BuildSheet>() }
@@ -298,9 +299,11 @@ internal fun SketchCard(hub: Hub, chat: String, name: String, meta: String) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
         ListRow(
             slug, meta, leading = { AvIcon("paintcan", null, Tokens.icon) }, onClick = { hub.link.value = DeepLink(page = "sketches", slug = name) },
-            menu = spec?.let { d ->
-                { dismiss ->
-                    if (subagents && !hub.readOnly && canBuild(d)) MenuItem("Build", "play", { dismiss(); hub.askChat(buildSpecPrompt(d.specFile!!)) })
+            menu = { dismiss ->
+                LaunchedEffect(Unit) { asked = true }
+                if (spec == null) MenuItem(if (load.busy) "Loading" else "No spec for this sketch", "go-to-file", {}, enabled = false)
+                else {
+                    if (subagents && !hub.readOnly && canBuild(spec)) MenuItem("Build", "play", { dismiss(); hub.askChat(buildSpecPrompt(spec.specFile!!)) })
                     MenuItem("Open spec", "go-to-file", { dismiss(); stack.add(BuildSheet.Spec()) })
                 }
             },
