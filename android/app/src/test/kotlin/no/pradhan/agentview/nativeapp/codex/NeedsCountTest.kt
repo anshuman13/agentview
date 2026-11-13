@@ -27,8 +27,8 @@ class NeedsCountTest {
             item("draft", "suggested", null, WORK, "source" to "slack", "draft" to "ok"),
         )
         val st = CodexState(items = items, chats = listOf(chat("a"), chat("b", 0), chat("c").copy(deleted = true)))
-        assertEquals(listOf("Overdue", "Ask", "Ask", "Ask", "Dm"), needsList(st, null, NOW).map { it::class.simpleName })
-        assertEquals(6, needsView(st, null, NOW).total)
+        assertEquals(listOf("Overdue", "Ask", "Dm"), needsList(st, null, NOW).map { it::class.simpleName })
+        assertEquals(4, needsView(st, null, NOW).total)
     }
 
     @Test fun hiddenDmsAndBriefBulletsCount() {

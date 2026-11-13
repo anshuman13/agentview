@@ -18,7 +18,7 @@ import { Button } from '../ui/Button';
 import { MenuItem } from '../ui/Menu';
 import { Section, sectionCount } from '../ui/Section';
 import { CardRow } from './overview/CardRow';
-import { replyQueue, staleAsks, STALE_DAYS } from './overview/ReplyQueue';
+import { queued, replyQueue, staleAsks, STALE_DAYS } from './overview/ReplyQueue';
 import { haptic } from '../ui/haptic';
 import { copyText, openMeeting, openTask, setView, showSnack, useView } from './view';
 import { when } from './tasks/time';
@@ -74,7 +74,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     const ranked = rankNeeds<Need>([
       s.overdue.map((row) => ({ kind: 'overdue', row, keys: [taskKey(row)] })),
       risk.map(({ task, short }) => ({ kind: 'risk', row: task.r, due: task.due, short, keys: [taskKey(task.r)] })),
-      s.review.filter((row) => !(row.source === 'slack' && row.draft?.trim())).map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
+      s.review.filter((row) => !queued(row)).map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
       dms.map((chat) => ({ kind: 'dm', chat, keys: [`chat:${chat.profile}:${chat.id}`, ...urlKey(chat.url)] })),
       bullets.map((x) => ({ kind: 'slack', x, brief: brief!, keys: urlKey(x.url).length ? urlKey(x.url) : [`slack:${x.title}`] })),
       ended.flatMap((meeting) => {

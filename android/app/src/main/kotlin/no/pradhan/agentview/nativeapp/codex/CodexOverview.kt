@@ -124,7 +124,7 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
     val groups = listOf<List<Need>>(
         s.overdue.map { Need.Overdue(it) },
         risk.map { (row, short) -> Need.Risk(row, row.at!!, short) },
-        s.review.filter { !(it.source == "slack" && drafted(it)) }.map { Need.Ask(it) },
+        s.review.filter { !queued(it) }.map { Need.Ask(it) },
         dms.map { Need.Dm(it) },
         bullets.map { Need.Slack(it, brief!!) },
         ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.map { Need.JustEnded(it, m) } },

@@ -29,8 +29,10 @@ const adminList = (rows: ItemRow[]) => rows.filter(admin).map((r) => `- ${r.peop
 // Slack asks with a reply draft, the ones that need me first, then FAQ answers, then oldest first, so a day's asks clear from one screen.
 // Needs-you asks the drafter left without a draft come last: I decide those in the thread.
 // A snoozed ask is left out until its time passes; a missing snoozed_until counts as not snoozed.
+// A Slack ask with a draft or tagged needs-you belongs to the reply queue, so Needs you leaves it out.
+export const queued = (r: ItemRow) => r.source === 'slack' && (drafted(r) || mine(r));
 export const replyQueue = (review: ItemRow[], now: number) => review
-  .filter((r) => r.source === 'slack' && (r.status === 'suggested' || r.status === 'open') && !r.deleted && (drafted(r) || mine(r)) && !isSaid(r) && !((r.snoozed_until ?? 0) > now))
+  .filter((r) => queued(r) && (r.status === 'suggested' || r.status === 'open') && !r.deleted && !isSaid(r) && !((r.snoozed_until ?? 0) > now))
   .sort((a, b) => Number(drafted(b)) - Number(drafted(a)) || Number(mine(b)) - Number(mine(a)) || Number(isFaq(b)) - Number(isFaq(a)) || reviewedSince(a) - reviewedSince(b));
 
 export const STALE_DAYS = 3;

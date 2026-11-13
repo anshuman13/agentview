@@ -220,6 +220,8 @@ class CodexLogicTest {
         assertEquals(listOf("Overdue", "Overdue", "Ask"), two.map { it::class.simpleName })
         val chat = Row("chats", "c", WORK, f = mapOf("name" to JsonPrimitive("Kim"), "kind" to JsonPrimitive("dm"), "waiting" to JsonPrimitive(1), "last_at" to JsonPrimitive(NOW)))
         assertEquals(listOf("Ask", "Dm"), needsYou(listOf(ask), emptyList(), listOf(chat, chat.copy(f = chat.f + ("waiting" to JsonNull))), null, NOW).map { it::class.simpleName })
+        val held = item("held", "suggested", null, WORK, "source" to "slack", "tags" to "needs-you")
+        assertEquals(listOf("Ask"), needsYou(listOf(held, ask), emptyList(), emptyList(), null, NOW).map { it::class.simpleName })
     }
 
     @Test fun todayShowsTheNextTaskOnlyWithoutAMeeting() {
