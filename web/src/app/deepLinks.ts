@@ -8,9 +8,9 @@ export const deepLink = { view: params.get('view'), page: params.get('page'), sl
 if (deepLink.chat || deepLink.session) presetChat(deepLink.chat, deepLink.session);
 if (deepLink.page === 'sketches' && deepLink.slug) setUi({ sketch: deepLink.slug });
 if (deepLink.chat && deepLink.slug && deepLink.page !== 'sketches') {
-  // The Spec card opens the sheet once it loads; give up after 30 s or when another chat is open.
+  // The Spec card opens the sheet once it loads and clears the value; give up after 30 s or when another chat is open.
   const stop = () => { off(); clearTimeout(timer); setUi({ spec: null }); };
-  const off = subscribe(() => { if (getState().session.id !== deepLink.chat) stop(); });
+  const off = subscribe(() => { const s = getState(); if (s.session.id !== deepLink.chat || s.ui.spec !== deepLink.slug) stop(); });
   const timer = setTimeout(stop, 30_000);
   setUi({ spec: deepLink.slug });
 }

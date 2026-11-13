@@ -27,9 +27,9 @@ export function SpecCard({ slug, path, bump }: { slug: string; path?: string; bu
   const chat = useStore((s) => s.session.id);
   const id = `build:${chat}:${slug}`;
   const [open, setOpen] = useState(() => readBox(id, true));
-  const { data: d, failed, gone, reload } = useBuild(slug, open, bump);
-  const sheets = useBuildSheets();
   const want = useStore((s) => s.ui.spec) === slug;
+  const { data: d, failed, gone, reload } = useBuild(slug, open || want, bump);
+  const sheets = useBuildSheets();
   useEffect(() => {
     if (!want || !(d || gone)) return;
     setUi({ spec: null });
