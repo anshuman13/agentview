@@ -93,7 +93,7 @@ function AuditRow({ shown, turns, root, running, picker }: { shown: boolean; tur
         <div className="ui-group">
           <Row
             title="Audit"
-            meta={`${root.split('/').pop()} · ${audit ? `${audit.date} · ${audit.findings.length} ${audit.findings.length === 1 ? 'finding' : 'findings'}` : 'not run yet'}`}
+            meta={audit ? `${audit.date} · ${audit.findings.length} ${audit.findings.length === 1 ? 'finding' : 'findings'}` : 'Not run yet'}
             action={running ? <Badge status="running" /> : <Button size="sm" variant="tinted" disabled={!audit} onClick={() => askAdvisor('pm', specsFromAuditPrompt(root))}>Specs from audit</Button>}
             menu={<>
               <MenuItem icon="list-flat" disabled={!audit} onClick={() => setOpen(true)}>Open latest audit</MenuItem>
@@ -103,7 +103,7 @@ function AuditRow({ shown, turns, root, running, picker }: { shown: boolean; tur
         </div>
       )}
       {open && audit && (
-        <Sheet label="Audit" onClose={() => setOpen(false)}>
+        <Sheet label="Audit" onClose={() => setOpen(false)} className="au-sheet">
           <h2>Audit, {audit.date}</h2>
           {audit.findings.map((f) => <Row key={f.rank} leading={f.rank} title={f.screen} meta={`${f.severity[0].toUpperCase()}${f.severity.slice(1)} · ${f.problem}. ${f.fix}`} className="bd-clamp" plain />)}
         </Sheet>

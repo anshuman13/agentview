@@ -155,7 +155,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                 list == null -> Loading("Loading audit")
                                 else -> Group {
                                     ListRow(
-                                        "Audit", "${folderName(project)} · ${audit?.let { "${it.date} · ${it.findings.size} ${if (it.findings.size == 1) "finding" else "findings"}" } ?: "not run yet"}",
+                                        "Audit", audit?.let { "${it.date} · ${it.findings.size} ${if (it.findings.size == 1) "finding" else "findings"}" } ?: "Not run yet",
                                         lines = 1, metaLines = 1,
                                         state = {
                                             if (running) Badge("Running", BadgeTone.Running)

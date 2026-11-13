@@ -10,7 +10,7 @@ import { Sheet } from '../ui/Sheet';
 import { billing, providerLabel } from '../../../shared/providers';
 import type { Provider } from '../../../shared/protocol';
 import { goalCommand, parseEvery } from '../../../shared/goalForm';
-import { ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal } from '../../../shared/advisors';
+import { ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, advisorOf } from '../../../shared/advisors';
 import { planCondition } from '../../../shared/specTasks';
 import { CAPS, EVERY, STOPS } from './goalLogic';
 import { useWorkspace } from './folders';
@@ -51,7 +51,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
   const badEvery = Boolean(custom.trim()) && parseEvery(custom) === null;
   const ready = !badEvery && (!plan || (markdown !== null && !error));
-  const root = dir || dirs[0]?.cwd;
+  const root = (dir && !(loop && advisorOf(dir)) ? dir : '') || dirs.find((d) => !advisorOf(d.cwd))?.cwd;
   const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : loop ? (root ? advisorLoopGoal(root) : '') : what;
   const start = () => {
     track('action:startGoal');

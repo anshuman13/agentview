@@ -169,4 +169,4 @@
 .bd-step.now { color: var(--fg); font-weight: var(--type-headline-weight); }
 .bd-step.todo { opacity: 0.6; }
 @media (hover: hover) { .bd-step:not(:disabled):hover { background: var(--hover); color: var(--fg); } }
-@media (min-width: 901px) { .as-sheet.gl-sheet { align-self: center; width: min(600px, 100%); } }
+@media (min-width: 901px) { .as-sheet.gl-sheet, .as-sheet.au-sheet { align-self: center; width: min(600px, 100%); } }

@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
+import no.pradhan.agentview.nativeapp.sessions.advisorOf
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -169,7 +170,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val read = planRead(hub, sheet.plan, hub.pageChat)
     val badEvery = custom.isNotBlank() && parseEvery(custom) == null
     val ready = !badEvery && (sheet.plan == null || (read.markdown != null && !read.error))
-    val root = dir.ifEmpty { dirs.firstOrNull()?.first.orEmpty() }
+    val root = dir.takeIf { it.isNotEmpty() && !(loop && advisorOf(it) != null) } ?: dirs.firstOrNull { advisorOf(it.first) == null }?.first.orEmpty()
     val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: if (loop) (if (root.isEmpty()) "" else advisorLoopGoal(root)) else what
     val start = {
         hub.track("action:startGoal")
