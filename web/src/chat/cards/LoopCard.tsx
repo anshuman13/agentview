@@ -14,6 +14,7 @@ import { openAgent } from '../../sessions/agents';
 import { usePlanProgress } from '../../sessions/usePlanProgress';
 import { planOf } from '../../../../shared/goalForm';
 import { billing } from '../../../../shared/providers';
+import { roundText } from '../../../../shared/goalText';
 import type { RunOp } from '../../../../shared/protocol';
 import { OUTCOME_DOT, agentAge, loopNow, runLine, showTurn, stoppedText } from '../composer/composerLogic';
 
@@ -83,9 +84,8 @@ export function LoopCard() {
         <ul className="lc-rounds">
           {run.rounds.slice(-10).reverse().map((r) => (
             <li key={r.at} className="lc-line">
-              <span className="lc-time">{clock(r.at)}</span>
               <span className={`dot ${OUTCOME_DOT[r.outcome]}`} />
-              <span className="lc-what">{r.line || r.outcome}</span>
+              <span className="lc-what">{roundText(r)}</span>
               <span className="lc-cost">{money(r.costUsd, billing(run.provider))}</span>
             </li>
           ))}

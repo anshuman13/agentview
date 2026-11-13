@@ -31,11 +31,11 @@ export function stopAtMs({ stopIn, stopAt }: Stop, now: number) {
   return nextClock(h, m, now);
 }
 
-const PLANNED_ENDS = ['Goal met', 'Stopped at', 'Usage cap', 'Ran for 28 days', 'goal met', 'end time', 'weekly usage cap', 'ran for 28 days'];
+const PLANNED_ENDS = ['goal met', 'stopped at', 'usage cap', 'ran for 28 days', 'end time', 'weekly usage cap'];
 
 export function goalBadge(run: ChatRun): BadgeSpec {
   if (run.state === 'done') {
-    if (PLANNED_ENDS.some((w) => run.why.startsWith(w))) return { status: 'done' };
+    if (PLANNED_ENDS.some((w) => run.why.toLowerCase().startsWith(w))) return { status: 'done' };
     return { status: run.why === 'you stopped it' ? 'skipped' : 'failed', reason: run.why };
   }
   if (run.needsYou) return { status: 'waiting', label: 'Needs you' };

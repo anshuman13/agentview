@@ -6,11 +6,11 @@ import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import type { ChatRun, Round } from '../../../../shared/protocol';
+import { roundText } from '../../../../shared/goalText';
 import { OUTCOME_DOT, showTurn } from '../composer/composerLogic';
 import { foldedRounds, outcomeCounts } from './recap';
 
 const unfolded = new Set<string>();
-const word = (text: string) => text[0].toUpperCase() + text.slice(1);
 
 export function SinceSheet({ chat, recap, rounds, run, onClose }: { chat: string; recap: string; rounds: Round[]; run?: ChatRun; onClose: () => void }) {
   const [, redraw] = useState(0);
@@ -31,8 +31,7 @@ export function SinceSheet({ chat, recap, rounds, run, onClose }: { chat: string
               key={r.at}
               plain={!r.report}
               leading={<span className={`dot ${OUTCOME_DOT[r.outcome]}`} />}
-              title={r.report ? 'Weekly report' : r.line || r.outcome}
-              meta={`${clock(r.at)} \u00b7 ${word(r.outcome)}`}
+              title={r.report ? 'Weekly report' : roundText(r)}
               onClick={r.report ? () => { onClose(); showTurn(r.report!); } : undefined}
             />
           ))}

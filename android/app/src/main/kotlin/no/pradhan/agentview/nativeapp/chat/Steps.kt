@@ -124,12 +124,15 @@ fun editCount(name: String, input: JsonObject): Pair<Int, Int>? = when (name) {
     else -> null
 }
 
+// A result carries the running total of its session, which starts over after /clear (web shared/cost.ts costRise).
+fun costRise(costUsd: Double, last: Double) = if (costUsd >= last) costUsd - last else costUsd
+
 fun chatCost(events: List<ChatEvent>): Double {
     var last = 0.0
     var total = 0.0
     for (e in events) {
         if (e.kind != "result" || e.costUsd <= 0) continue
-        total += if (e.costUsd >= last) e.costUsd - last else e.costUsd
+        total += costRise(e.costUsd, last)
         last = e.costUsd
     }
     return total

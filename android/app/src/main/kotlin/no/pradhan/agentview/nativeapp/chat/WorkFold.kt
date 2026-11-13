@@ -36,7 +36,7 @@ private fun spans(events: List<ChatEvent>): Map<String, Span> {
         if (e.kind == "user") cur = Span(e.at).also { out[e.id] = it }
         else if (e.kind == "result") {
             cur.end = e.at
-            if (e.costUsd > 0) { last?.let { cur.cost += if (e.costUsd >= it) e.costUsd - it else e.costUsd }; last = e.costUsd }
+            if (e.costUsd > 0) { last?.let { cur.cost += costRise(e.costUsd, it) }; last = e.costUsd }
         }
     }
     return out

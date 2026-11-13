@@ -91,7 +91,7 @@ fun SinceSheet(hub: Hub, chat: String, recap: String, rounds: List<Round>, run: 
             shown.forEachIndexed { i, r ->
                 if (i > 0) Hairline(lead = true)
                 ListRow(
-                    roundText(r), "${clock(r.at)} · ${r.outcome.replaceFirstChar(Char::uppercase)}",
+                    roundText(r),
                     leading = { StatusDot(outcomeDot(r.outcome)) },
                     onClick = r.report?.let { report -> { onClose(); hub.showTurn.value = report } },
                 )

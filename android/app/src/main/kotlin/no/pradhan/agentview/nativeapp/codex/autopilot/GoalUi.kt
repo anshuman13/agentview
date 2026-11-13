@@ -263,7 +263,7 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
             run.rounds.asReversed().forEachIndexed { i, r ->
                 if (i > 0) Hairline(lead = true)
                 ListRow(
-                    roundRow(r), money(r.costUsd, billing(run.provider)),
+                    roundText(r), money(r.costUsd, billing(run.provider)),
                     leading = { StatusDot(outcomeDot(r.outcome)) }, onClick = r.report?.let { report -> { open(report) } },
                 )
             }

@@ -59,27 +59,25 @@ fun tryColumn(run: ChatRun, t: RunTry, live: List<LiveChat>): TryColumn {
     return TryColumn(t.n, t.branch, state, last?.line?.replace(Regex("^Try \\d+: "), "") ?: chat?.last ?: "", chat?.edits, chat?.cost ?: rounds.sumOf { it.costUsd }, t.dropped)
 }
 
-fun roundText(r: Round) = if (r.report != null) "Weekly report" else r.line.ifEmpty { r.outcome }
-
 private fun roundSummary(r: Round) = "Round ${r.n} · ${clock(r.at)} · " + when {
     r.outcome == "quiet" -> "nothing to do"
     r.line.isEmpty() -> r.outcome
     else -> "${r.outcome}: ${r.line}"
 }
 
-// A round row of the goal detail and the Runs list (web shared/goalText.ts roundText).
-fun roundRow(r: Round) = if (r.report != null) "Weekly report" else roundSummary(r)
+// A round as every list shows it (web shared/goalText.ts roundText).
+fun roundText(r: Round) = if (r.report != null) "Weekly report" else roundSummary(r)
 
 // The loop card's first row (web composerLogic loopNow): the agent's status or the last round, whichever is newer.
-data class LoopNow(val title: String, val at: Long?, val fromStatus: Boolean, val outcome: String? = null, val next: String? = null, val stepsLeft: Int = 0)
+data class LoopNow(val title: String, val at: Long?, val source: String, val next: String? = null, val stepsLeft: Int = 0)
 
 fun loopNow(run: ChatRun, now: LiveNow?): LoopNow {
     val last = run.rounds.lastOrNull()
     if (now != null && now.at >= run.startedAt && (last == null || now.at >= last.at)) {
-        return LoopNow(now.text, now.at, true, next = now.next?.firstOrNull(), stepsLeft = now.next?.size ?: 0)
+        return LoopNow(now.text, now.at, "status", next = now.next?.firstOrNull(), stepsLeft = now.next?.size ?: 0)
     }
-    if (last != null) return LoopNow(roundSummary(last), null, false, last.outcome)
-    return LoopNow(firstRoundText(run.nextAt), null, false)
+    if (last != null) return LoopNow(roundSummary(last), null, "round")
+    return LoopNow(firstRoundText(run.nextAt), null, "none")
 }
 
 fun agentAge(startedAt: Long, now: Long): String {

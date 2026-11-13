@@ -29,7 +29,7 @@ class RunsTest {
 
     @Test fun loopNowTakesTheNewerOfStatusAndRound() {
         val r = run("a", rounds = listOf(Round(1, 400, "progress", "round", 0.0))).copy(startedAt = 100)
-        assertEquals(LoopNow("Working", 500, true, next = "a", stepsLeft = 2), loopNow(r, LiveNow("Working", 500, next = listOf("a", "b"))))
+        assertEquals(LoopNow("Working", 500, "status", next = "a", stepsLeft = 2), loopNow(r, LiveNow("Working", 500, next = listOf("a", "b"))))
         assertTrue(Regex("Round 1 · \\d\\d:\\d\\d · progress: round").matches(loopNow(r, LiveNow("Working", 300)).title))
         assertEquals("First round 14:20", loopNow(r.copy(rounds = emptyList()), LiveNow("Old", 50)).title)
         assertEquals("12 min", agentAge(0, 12 * 60_000))

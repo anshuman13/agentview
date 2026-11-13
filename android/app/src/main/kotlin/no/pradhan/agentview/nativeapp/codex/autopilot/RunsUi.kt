@@ -101,7 +101,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent
             ListRow(
                 state.title, meta.ifEmpty { null }, lines = 2, compact = true,
                 leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
-                onClick = if (goal) detail else if (run.kind == "loop" && state.outcome != null) ({ rounds = !rounds }) else null,
+                onClick = if (goal) detail else if (run.kind == "loop" && state.source == "round") ({ rounds = !rounds }) else null,
             )
             agents.singleOrNull()?.let { a ->
                 ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, compact = true, onClick = { onOpenAgent(a.id) })
@@ -121,7 +121,6 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, onOpenAgent
 @Composable
 private fun RoundLine(r: Round, showTime: Boolean, provider: String?) {
     Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-        if (showTime) Text(clock(r.at), style = Type.footnote, color = av.fgMuted)
         StatusDot(outcomeDot(r.outcome))
         Text(roundText(r), Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (showTime) Text(money(r.costUsd, billing(provider)), style = Type.footnote, color = av.fgMuted)
@@ -162,7 +161,7 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
             val last = e.run.rounds.lastOrNull()
             ListRow(
                 e.run.title.ifBlank { "Untitled" }, if (e.run.pr != null) "PR opened" else runLine(e.run), onClick = { when (e.run.kind) { "tries" -> board = e.run.id; "goal" -> hub.goalSheet.value = GoalSheet.Detail(e.run.id); else -> openChat(e.run) } },
-                below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(roundRow(it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+                below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(roundText(it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
                 trailing = {
                     RowLabel(money(e.run.costUsd, billing(e.run.provider)))
                     e.run.pr?.let { url -> IconBtn("link-external", "Open PR", { uri.openUri(url) }) }
