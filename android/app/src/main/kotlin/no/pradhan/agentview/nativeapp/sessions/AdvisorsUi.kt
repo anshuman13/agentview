@@ -60,20 +60,20 @@ data class AdvisorInfo(val id: String, val memory: String = "", val chats: List<
 @Serializable
 data class BacklogItem(val rank: Int, val slug: String, val title: String, val why: String = "", val status: String, val spec: Boolean = false)
 
-internal fun advisorLoopGoal(root: String) = "Advisor loop for $root, never met on its own. Each round, as PM: reread $root/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to $root/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build (/agentview:build <slug>, the build card's Build action) and mark the item building; one build in flight per project; mark it done when merged. If the backlog is empty, ask the Designer for an audit when the newest $root/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing."
+internal fun advisorLoopGoal(root: String) = "Advisor loop for $root, never met on its own. Each round, as PM: reread $root/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to $root/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build (/agentview:build <slug>, the build card's Build action) and mark the item building; one build in flight per project; mark it done when merged, and if its spec has a Fixes: line ask the Designer advisor to recheck those findings, and say in the ROUND line if you cannot reach it. A claimed finding the Designer leaves open goes back to proposed, keeping its slug: next round move that line from done back to proposed and note the finding in the why. If the backlog is empty, ask the Designer for an audit when the newest $root/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing."
 
 private fun rankPrompt(root: String) = "Read $root/.claude/backlog.md and the project's code and recent changes, then rank what to build next. Rewrite the backlog file (at most 10 lines) and reply with the top three."
 
 // The newest .claude/audits/<date>.md, from /api/advisors/audit; mirrors Audit in shared/advisors.ts.
 @Serializable
-data class AuditFinding(val rank: Int, val screen: String, val problem: String, val severity: String, val fix: String)
+data class AuditFinding(val rank: Int, val screen: String, val problem: String, val severity: String, val fix: String, val status: String = "open", val by: String = "")
 
 @Serializable
 data class AuditInfo(val date: String, val path: String, val findings: List<AuditFinding> = emptyList())
 
 private fun auditPrompt(root: String) = "Audit the usability of the app in $root. If it has no running app, say so and write no file. Otherwise start it with the project's own start command, then walk each screen in headless Chrome on port 9334 (never 9333) at 390px wide, then at 1280px, and clean up the browser and the app when done. Write $root/.claude/audits/<YYYY-MM-DD>.md with today's date: at most 15 findings, ranked, one per line as `<rank>. <screen> | <problem in one line> | <severity high|med|low> | <fix in one line>`. Reply with the top three."
 
-private fun specsFromAuditPrompt(root: String) = "Read the newest file in $root/.claude/audits and add its top findings to $root/.claude/backlog.md as `proposed` lines, with the audit line as the why. Keep the existing lines, reread the file before you edit it and renumber the ranks. Reply with the lines you added."
+private fun specsFromAuditPrompt(root: String) = "Read the newest file in $root/.claude/audits and add its top findings to $root/.claude/backlog.md as `proposed` lines, with the audit line as the why. Skip findings marked fixed and ones a done backlog line names. A spec written from a finding has a line Fixes: <audit date> #<rank>, #<rank> under its title. Keep the existing lines, reread the file before you edit it and renumber the ranks. Reply with the lines you added."
 
 private fun moveUpPrompt(root: String, i: BacklogItem) = "In $root/.claude/backlog.md, move \"${i.title}\" (${i.slug}) up one rank and renumber the lines. Reread the file before you edit it."
 
@@ -170,7 +170,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                 }
                             }
                             if (auditOpen && audit != null) Sheet({ auditOpen = false }, "Audit, ${audit.date}", padded = false) {
-                                for (f in audit.findings) ListRow(f.screen, "${f.severity.replaceFirstChar { it.uppercase() }} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 2)
+                                for (f in audit.findings) ListRow(f.screen, "${if (f.status == "fixed") "Fixed · " else ""}${f.severity.replaceFirstChar { it.uppercase() }} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 2)
                             }
                         }
                         if (a.id == "pm") {

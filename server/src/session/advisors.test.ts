@@ -57,8 +57,8 @@ describe('prepareAdvisor', () => {
     const audit = await readAudit(root);
     expect(audit?.date).toBe('2026-11-12');
     expect(audit?.findings).toEqual([
-      { rank: 1, screen: 'Goal sheet', problem: 'Cap field under keyboard', severity: 'high', fix: 'Scroll it into view' },
-      { rank: 3, screen: 'Menu', problem: 'Target is 28px', severity: 'low', fix: 'Make it 44px' },
+      { rank: 1, screen: 'Goal sheet', problem: 'Cap field under keyboard', severity: 'high', fix: 'Scroll it into view', status: 'open', by: '' },
+      { rank: 3, screen: 'Menu', problem: 'Target is 28px', severity: 'low', fix: 'Make it 44px', status: 'open', by: '' },
     ]);
     expect(await readAudit(path.join(root, 'none'))).toBeNull();
   });

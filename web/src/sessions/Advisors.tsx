@@ -105,7 +105,7 @@ function AuditRow({ shown, turns, root, running, picker }: { shown: boolean; tur
       {open && audit && (
         <Sheet label="Audit" onClose={() => setOpen(false)} className="au-sheet">
           <h2>Audit, {audit.date}</h2>
-          {audit.findings.map((f) => <Row key={f.rank} leading={f.rank} title={f.screen} meta={`${f.severity[0].toUpperCase()}${f.severity.slice(1)} · ${f.problem}. ${f.fix}`} className="bd-clamp" plain />)}
+          {audit.findings.map((f) => <Row key={f.rank} leading={f.rank} title={f.screen} meta={`${f.status === 'fixed' ? 'Fixed · ' : ''}${f.severity[0].toUpperCase()}${f.severity.slice(1)} · ${f.problem}. ${f.fix}`} className="bd-clamp" plain />)}
         </Sheet>
       )}
     </>
