@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useStore } from '../app/store';
+import { notice, useStore } from '../app/store';
 import { Markdown } from '../chat/Chat';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -9,12 +9,12 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, advisorOf, auditPrompt, canBuildItem, memoryFacts, moveUpPrompt, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
+import { ADVISORS, advisorOf, auditPrompt, canBuildItem, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import { buildItemPrompt, buildSpecPrompt } from '../../../shared/specTasks';
 import { askAdvisor, go } from './advisorChat';
 import { StateDot } from './ChatRows';
 import { chatState, since, useWorkspace, type Folder } from './folders';
-import { fetchAdvisors, fetchAudit, fetchBacklog } from './sessionApi';
+import { fetchAdvisors, fetchAudit, fetchBacklog, moveBacklogItem } from './sessionApi';
 
 const open = (a: Advisor, fresh = false) => go({ type: 'open_advisor', id: a.id, ...(fresh && { fresh }) });
 
@@ -49,7 +49,11 @@ function useRootFetch<T>(fetcher: (root: string) => Promise<T>, root: string | n
 
 // The PM's ranked backlog for one project; reloads after a PM turn, which may have rewritten it.
 function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string; root: string | null; picker: ReactNode }) {
-  const items = useRootFetch(fetchBacklog, root, shown, turns).data;
+  const fetched = useRootFetch(fetchBacklog, root, shown, turns).data;
+  const [moved, setMoved] = useState<BacklogItem[] | null>(null);
+  useEffect(() => setMoved(null), [fetched]);
+  const items = moved ?? fetched;
+  const move = (slug: string, dir: 'up' | 'down') => moveBacklogItem(root!, slug, dir).then((list) => (list ? setMoved(list) : notice('Could not move the item')));
   return (
     <>
       <Section label="Backlog" count={items?.length || undefined} action={picker} />
@@ -68,7 +72,8 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
               plain
               menu={<>
                 {canBuildItem(i) && <MenuItem icon="play" onClick={() => buildItem(root, i)}>Build</MenuItem>}
-                <MenuItem icon="arrow-up" disabled={i.rank === 1} onClick={() => askAdvisor('pm', moveUpPrompt(root, i))}>Ask PM to move up</MenuItem>
+                <MenuItem icon="arrow-up" disabled={i.rank === 1} onClick={() => move(i.slug, 'up')}>Move up</MenuItem>
+                <MenuItem icon="arrow-down" disabled={i.rank === items.length} onClick={() => move(i.slug, 'down')}>Move down</MenuItem>
               </>}
             />
           ))}

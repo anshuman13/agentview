@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'bun:test';
-import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, auditPrompt, parseAudit, specsFromAuditPrompt } from './advisors.js';
+import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, auditPrompt, moveBacklog, parseAudit, specsFromAuditPrompt } from './advisors.js';
 import { goalCommand } from './goalForm.js';
 
 const kotlin = readFileSync(new URL('../android/app/src/main/kotlin/no/pradhan/agentview/nativeapp/sessions/AdvisorsUi.kt', import.meta.url), 'utf8');
@@ -42,5 +42,20 @@ describe('parseAudit', () => {
 
   it('keeps an unknown fifth field in the fix and the line open', () => {
     expect(read('1. Home | Tiny tap | med | Enlarge | later')).toMatchObject({ status: 'open', fix: 'Enlarge | later' });
+  });
+});
+
+describe('moveBacklog', () => {
+  const md = '# Backlog\n\n1. a | A | why | proposed\n2. b | B | x | y, z | specced\n\nnote\n3. c | C | w | done\n';
+
+  it('swaps a middle row and renumbers, leaving other lines in place', () => {
+    expect(moveBacklog(md, 'b', 'up')).toBe('# Backlog\n\n1. b | B | x | y, z | specced\n2. a | A | why | proposed\n\nnote\n3. c | C | w | done\n');
+    expect(moveBacklog(md, 'b', 'down')).toBe('# Backlog\n\n1. a | A | why | proposed\n2. c | C | w | done\n\nnote\n3. b | B | x | y, z | specced\n');
+  });
+
+  it('keeps the first row up and the last row down, and returns null for an unknown slug', () => {
+    expect(moveBacklog(md, 'a', 'up')).toBe(md);
+    expect(moveBacklog(md, 'c', 'down')).toBe(md);
+    expect(moveBacklog(md, 'zzz', 'up')).toBeNull();
   });
 });

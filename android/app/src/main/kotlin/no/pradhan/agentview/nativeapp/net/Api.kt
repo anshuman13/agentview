@@ -19,6 +19,7 @@ import no.pradhan.agentview.nativeapp.app.NoticeRemote
 import no.pradhan.agentview.nativeapp.chat.ROW_WINDOW
 import no.pradhan.agentview.nativeapp.codex.AssistantRemote
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
+import no.pradhan.agentview.nativeapp.sessions.BacklogItem
 import no.pradhan.agentview.nativeapp.sessions.Repo
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.Worktree
@@ -122,6 +123,8 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
     private fun scoped(path: String, chat: String) = if (chat.isEmpty()) path else path + (if ('?' in path) "&" else "?") + "chat=${enc(chat)}"
     suspend fun get(path: String, chat: String = ""): String = call(url(scoped(path, chat))).decodeToString()
     suspend fun post(path: String, body: String, chat: String = ""): String = call(url(scoped(path, chat)).post(body.toRequestBody(json))).decodeToString()
+    suspend fun moveBacklog(root: String, slug: String, dir: String): List<BacklogItem> =
+        protocolJson.decodeFromString(post("/api/advisors/backlog/move?root=${enc(root)}", buildJsonObject { put("slug", slug); put("dir", dir) }.toString()))
     suspend fun put(path: String, body: String, chat: String = ""): String = call(url(scoped(path, chat)).put(body.toRequestBody("text/plain".toMediaType()))).decodeToString()
 
     override suspend fun pending(chat: String): List<Pending> =

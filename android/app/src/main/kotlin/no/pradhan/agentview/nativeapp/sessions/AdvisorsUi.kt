@@ -75,8 +75,6 @@ private fun auditPrompt(root: String) = "Audit the usability of the app in $root
 
 private fun specsFromAuditPrompt(root: String) = "Read the newest file in $root/.claude/audits and add its top findings to $root/.claude/backlog.md as `proposed` lines, with the audit line as the why. Skip findings marked fixed and ones a done backlog line names. A spec written from a finding has a line Fixes: <audit date> #<rank>, #<rank> under its title. Keep the existing lines, reread the file before you edit it and renumber the ranks. Reply with the lines you added."
 
-private fun moveUpPrompt(root: String, i: BacklogItem) = "In $root/.claude/backlog.md, move \"${i.title}\" (${i.slug}) up one rank and renumber the lines. Reread the file before you edit it."
-
 // Opens an advisor's chat and sends it a prompt, then calls onOpen.
 internal fun CoroutineScope.askAdvisor(hub: Hub, id: String, text: String, onOpen: () -> Unit) {
     launch { if (hub.openAdvisor(id, false)) { hub.askChat(text); onOpen() } }
@@ -97,10 +95,11 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     val (load, reload) = rememberLoad { protocolJson.decodeFromString<List<AdvisorInfo>>(hub.read("/api/advisors")) }
     var memory by rememberSaveable { mutableStateOf<String?>(null) }
     var root by rememberSaveable { mutableStateOf<String?>(null) }
+    var moved by remember(root) { mutableStateOf<List<BacklogItem>?>(null) }
     val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<BacklogItem>>(hub.read("/api/advisors/backlog?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
     val (audits, reloadAudit) = rememberLoad(root) { root?.let { listOfNotNull(protocolJson.decodeFromString<AuditInfo?>(hub.read("/api/advisors/audit?root=${java.net.URLEncoder.encode(it, "UTF-8")}"))) } }
     var loadedTurns by remember { mutableStateOf(turns) }
-    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadAudit() } }
+    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; moved = null; reload(); reloadBacklog(); reloadAudit() } }
     var auditOpen by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     fun go(open: suspend () -> Boolean) = scope.launch { if (open()) onOpen() }
@@ -174,7 +173,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                             }
                         }
                         if (a.id == "pm") {
-                            val items = backlog.data
+                            val items = moved ?: backlog.data
                             SectionHeader("Backlog", items?.size?.takeIf { it > 0 }?.toString(), action = {
                                 MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); root = r.cwd }, checked = r.cwd == root) }
                             })
@@ -197,7 +196,9 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                                     dismiss()
                                                     hub.newChat(project, text = if (i.spec) buildSpecPrompt(".claude/specs/${i.slug}.md") else buildItemPrompt(i.title, i.why, i.slug), onOpened = onOpen)
                                                 })
-                                                MenuItem("Ask PM to move up", "arrow-up", { dismiss(); scope.askAdvisor(hub, "pm", moveUpPrompt(project, i), onOpen) }, enabled = i.rank > 1)
+                                                val move = { dir: String -> dismiss(); scope.launch { runCatching { hub.api.moveBacklog(project, i.slug, dir) }.onSuccess { moved = it }.onFailure { hub.notice.value = "Could not move the item" } }; Unit }
+                                                MenuItem("Move up", "arrow-up", { move("up") }, enabled = n > 0)
+                                                MenuItem("Move down", "arrow-down", { move("down") }, enabled = n < items.size - 1)
                                             }),
                                         )
                                     }

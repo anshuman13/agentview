@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { ADVISORS, parseAudit, parseBacklog, type Advisor, type AdvisorId, type AdvisorInfo, type Audit, type BacklogItem } from '../../../shared/advisors.js';
+import { ADVISORS, moveBacklog, parseAudit, parseBacklog, type Advisor, type AdvisorId, type AdvisorInfo, type Audit, type BacklogItem } from '../../../shared/advisors.js';
 import { listSessions, savedSession } from '../agent/claude/sessions.js';
 import { ADVISOR_HOME, ROOTS } from '../workspace/files.js';
 
@@ -100,6 +100,17 @@ export const advisorsInfo = (home = ADVISOR_HOME): Promise<AdvisorInfo[]> =>
 export async function readBacklog(root: string): Promise<BacklogItem[]> {
   const items = parseBacklog(await readFile(path.join(root, '.claude/backlog.md'), 'utf8').catch(() => ''));
   return items.map((i) => ({ ...i, spec: existsSync(path.join(root, '.claude/specs', `${i.slug}.md`)) }));
+}
+
+// Moves one backlog line up or down in the project's file, through a temp file so a failed write keeps the old one; false when the slug is not in it.
+export async function moveBacklogFile(root: string, slug: string, dir: 'up' | 'down'): Promise<boolean> {
+  const file = path.join(root, '.claude/backlog.md');
+  const next = moveBacklog(await readFile(file, 'utf8').catch(() => ''), slug, dir);
+  if (next === null) return false;
+  const tmp = `${file}.${process.pid}.tmp`;
+  await writeFile(tmp, next);
+  await rename(tmp, file);
+  return true;
 }
 
 // A project's newest audit with its parsed findings, null when none was written.

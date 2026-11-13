@@ -22,7 +22,7 @@ import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree 
 import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { readBody, savePaste } from './body.js';
 import { HANDLED, entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
-import { advisorsInfo, readAudit, readBacklog } from '../session/advisors.js';
+import { advisorsInfo, moveBacklogFile, readAudit, readBacklog } from '../session/advisors.js';
 import { allowedFolder } from '../workspace/files.js';
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
@@ -45,6 +45,12 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       const root = url.searchParams.get('root') ?? '';
       return allowedFolder(root) ? readBacklog(root) : { status: 400, body: { error: 'Not a project folder' } };
     }),
+    'POST /api/advisors/backlog/move': entry(async ({ url, body }) => {
+      const root = url.searchParams.get('root') ?? '';
+      if (!allowedFolder(root)) return { status: 400, body: { error: 'Not a project folder' } };
+      if (body.dir !== 'up' && body.dir !== 'down') return { status: 400, body: { error: 'dir must be up or down' } };
+      return (await moveBacklogFile(root, String(body.slug), body.dir)) ? readBacklog(root) : { status: 404, body: { error: 'Not in the backlog' } };
+    }, true),
     'GET /api/advisors/audit': entry(({ url }) => {
       const root = url.searchParams.get('root') ?? '';
       return allowedFolder(root) ? readAudit(root) : { status: 400, body: { error: 'Not a project folder' } };

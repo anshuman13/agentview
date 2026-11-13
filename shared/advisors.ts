@@ -36,7 +36,18 @@ export const canBuildItem = (i: Pick<BacklogItem, 'status'>) => i.status === 'pr
 
 export const rankPrompt = (root: string) => `Read ${root}/.claude/backlog.md and the project's code and recent changes, then rank what to build next. Rewrite the backlog file (at most 10 lines) and reply with the top three.`;
 
-export const moveUpPrompt = (root: string, item: Pick<BacklogItem, 'slug' | 'title'>) => `In ${root}/.claude/backlog.md, move "${item.title}" (${item.slug}) up one rank and renumber the lines. Reread the file before you edit it.`;
+// Swaps a backlog line with its neighbour and renumbers the backlog lines 1 to n; null when the slug is not in the file.
+export const moveBacklog = (md: string, slug: string, dir: 'up' | 'down'): string | null => {
+  const lines = md.split('\n');
+  const at = lines.flatMap((l, n) => (BACKLOG_LINE.test(l.trim()) ? [n] : []));
+  const from = at.findIndex((n) => BACKLOG_LINE.exec(lines[n].trim())?.[2] === slug);
+  if (from < 0) return null;
+  const to = from + (dir === 'up' ? -1 : 1);
+  if (to < 0 || to >= at.length) return md;
+  [lines[at[from]], lines[at[to]]] = [lines[at[to]], lines[at[from]]];
+  at.forEach((n, i) => { lines[n] = lines[n].replace(/^(\s*)\d+/, `$1${i + 1}`); });
+  return lines.join('\n');
+};
 
 // A project's newest .claude/audits/<date>.md: one line per finding, `<rank>. <screen> | <problem> | <severity> | <fix>[ | fixed <slug> | open]`, the Designer's usability audit.
 export type AuditSeverity = 'high' | 'med' | 'low';
