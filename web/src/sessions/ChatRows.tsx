@@ -97,6 +97,8 @@ function RunTag({ run }: { run: ChatRun }) {
 
 const DOT = { needs: ['waiting', 'Needs you'], failed: ['bad', 'Failed'], running: ['running', 'Running'], done: ['unread', 'Unread'] } as const;
 
+export const StateDot = ({ state }: { state?: ChatState | null }) => (state ? <span className={`dot ${DOT[state][0]}`} role="img" aria-label={DOT[state][1]} /> : <span />);
+
 function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
   const [renaming, setRenaming] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -143,7 +145,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
         title={`${opening ? 'Opening… ' : ''}${title}`}
         meta={meta}
         aria-current={selected || undefined}
-        leading={shown ? <span className={`dot ${DOT[shown][0]}`} role="img" aria-label={DOT[shown][1]} /> : <span />}
+        leading={<StateDot state={shown} />}
         state={run && !run.needsYou ? <RunTag run={run} /> : muted ? <span title="Muted" className="chat-muted"><Icon name="bell-slash" small /></span> : null}
         onClick={onOpen}
         onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined}

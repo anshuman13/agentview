@@ -1,6 +1,7 @@
 import { open, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { ADVISOR_DIR } from '../../../shared/advisors.js';
 import { inside } from '../../../shared/util.js';
 import { workspaceRoots } from '../settings.js';
 import { git } from './git.js';
@@ -12,8 +13,10 @@ export const ROOTS = process.env.AGENTVIEW_ROOTS ? process.env.AGENTVIEW_ROOTS.s
 const PASEO_TREES = path.join(home, '.paseo/worktrees');
 // Codex questions about work items run here, outside the personal root, so they get the work account and profile.
 export const CODEX_WORK = path.join(home, '.agentview/codex-work');
+// The long-lived advisor chats, one folder each.
+export const ADVISOR_HOME = path.join(home, ADVISOR_DIR);
 
-export const allowedFolder = (dir: string) => dir === CODEX_WORK || [...ROOTS, PASEO_TREES].some((r) => inside(dir, r) && dir !== r);
+export const allowedFolder = (dir: string) => dir === CODEX_WORK || [...ROOTS, PASEO_TREES, ADVISOR_HOME].some((r) => inside(dir, r) && dir !== r);
 
 export async function listFiles(cwd: string): Promise<string[]> {
   try {

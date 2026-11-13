@@ -33,6 +33,18 @@ class FoldersTest {
     }
 
     @Test
+    fun advisorChatsLeaveTheRepoGroupsUnlessSearched() {
+        val ws = Workspace(repos, trees, listOf(saved("s1", "/u/.agentview/advisors/pm", title = "Roadmap")))
+        val l = listOf(live("l1", "/u/.agentview/advisors/architect", title = "Cost of polling"))
+        assertEquals("Architect", advisorOf(l[0].cwd)?.name)
+        assertEquals("pm", advisorOf("/u/.agentview/advisors/pm/")?.id)
+        assertEquals(null, advisorOf("/w/pm"))
+        assertEquals(listOf("agentview", "shop"), groupByRepo(l, ws).map { it.name }.sorted())
+        assertEquals(listOf("pm"), groupByRepo(l, ws, "roadmap").map { it.name })
+        assertEquals(listOf("architect"), groupByRepo(l, ws, "polling").map { it.name })
+    }
+
+    @Test
     fun searchMatchesTitleRepoAndSavedFirstPrompt() {
         val ws = Workspace(repos, trees, listOf(saved("s1", "/w/agentview", title = "Fix", first = "migrate the database")))
         val l = listOf(live("l1", "/w/shop", title = "Checkout flow", sid = null))

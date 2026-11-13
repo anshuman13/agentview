@@ -61,6 +61,7 @@ import no.pradhan.agentview.nativeapp.codex.needsView
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.ReviewFindings
 import no.pradhan.agentview.nativeapp.sessions.Workspace
+import no.pradhan.agentview.nativeapp.sessions.advisorOf
 import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.workspace.appendPrompt
 
@@ -370,6 +371,13 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         val chat = store.state.value.live.firstOrNull { it.sessionId == sessionId }
         if (chat != null) { open(chat.id); return true }
         return switchTo(openSessionCmd(sessionId)) != null
+    }
+
+    suspend fun openAdvisor(id: String, fresh: Boolean): Boolean {
+        val chat = if (fresh) null else store.state.value.live.firstOrNull { advisorOf(it.cwd)?.id == id }
+        if (chat != null) { open(chat.id); return true }
+        if (readOnly) { notice.value = READ_ONLY_OPEN; return false }
+        return switchTo(openAdvisorCmd(id, fresh)) != null
     }
 
     // Sends a command that makes the server show another chat and waits for that chat's init.

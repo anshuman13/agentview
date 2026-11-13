@@ -210,6 +210,10 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
             item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
             lazyGroup(waiting, { "needs-${it.id}" }) { rows.LiveRow(it, folderName(folderKey(it.cwd, ws.repos, ws.trees))) }
         }
+        if (filter.isBlank()) {
+            item(key = "adv-head") { SectionHeader("Advisors") }
+            lazyGroup(ADVISORS, { "adv-${it.id}" }) { rows.AdvisorRow(it) }
+        }
         if (pinned.isNotEmpty()) {
             item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
             lazyGroup(pinned, { "pin-${it.key}" }) { rows.Row(it) }

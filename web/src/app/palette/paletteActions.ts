@@ -8,6 +8,7 @@ import { clock } from '../../codex/tasks/time';
 import { ago, command } from '../../ui/util';
 import { forkChat } from '../../chat/chatActions';
 import { specPrompt } from '../../../../shared/specTasks';
+import type { AdvisorId } from '../../../../shared/advisors';
 import { paletteFeature } from '../../../../shared/featureUse';
 import type { PaletteItem } from './paletteLogic';
 
@@ -41,7 +42,8 @@ export function perform(id: string) {
   if (kind === 'pin') {
     const chat = getState().live.find((c) => c.sessionId === arg);
     send(chat ? { type: 'view', id: chat.id } : { type: 'open_session', sessionId: arg });
-  } else if (kind === 'model') send({ type: 'set_model', model: arg });
+  } else if (kind === 'advisor') send({ type: 'open_advisor', id: arg as AdvisorId });
+  else if (kind === 'model') send({ type: 'set_model', model: arg });
   else if (kind === 'effort') send({ type: 'set_effort', effort: arg });
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
   else if (id === 'newChat') send({ type: 'new_session' });

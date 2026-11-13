@@ -1,3 +1,5 @@
+import type { AdvisorId } from './advisors.js';
+
 export type PendingQuestion = {
   id: string;
   kind: 'question';
@@ -386,6 +388,7 @@ export type ClientMessage =
   | { type: 'run_hook'; name: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
+  | { type: 'open_advisor'; id: AdvisorId; fresh?: boolean }
   | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string }
   | { type: 'mcp_status' }
   | { type: 'usage' }

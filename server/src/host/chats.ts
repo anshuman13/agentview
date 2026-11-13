@@ -1,11 +1,13 @@
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
 import type { Provider, ServerMessage } from '../../../shared/protocol.js';
-import { getSessionInfo } from '../agent/claude/sessions.js';
+import type { AdvisorId } from '../../../shared/advisors.js';
+import { getSessionInfo, listSessions } from '../agent/claude/sessions.js';
 import { rememberAccount } from '../agent/claude/accounts.js';
 import { isProvider, provider, providerOf, providerOptions, rememberProvider, transcriptPath } from '../agent/registry.js';
 import { codexThread } from '../agent/codex/threads.js';
 import { removeChat } from '../agent/claude/pins.js';
+import { advisor, prepareAdvisor } from '../session/advisors.js';
 import { AgentSession } from '../session/session.js';
 import { READY } from '../session/runs.js';
 import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
@@ -107,6 +109,30 @@ async function resumeSaved(sessionId: string) {
   const dir = path.resolve(info.cwd);
   if (dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${info.cwd}`);
   return createChat(dir, sessionId, info.summary);
+}
+
+// One live chat per advisor: its open chat, else its latest saved one, else a new one on its model. Fresh replaces an idle
+// open chat with a new one; two opens at once share one chat.
+const advisorOpening = new Map<AdvisorId, Promise<AgentSession>>();
+export function openAdvisor(id: AdvisorId, fresh: boolean) {
+  const pending = advisorOpening.get(id) ?? startAdvisor(id, fresh).finally(() => advisorOpening.delete(id));
+  advisorOpening.set(id, pending);
+  return pending;
+}
+
+async function startAdvisor(id: AdvisorId, fresh: boolean) {
+  const a = advisor(id);
+  if (!a) throw new Error(`Unknown advisor: ${id}`);
+  const dir = await prepareAdvisor(a);
+  const open = [...live.values()].map((l) => l.chat).find((c) => c.cwd === dir);
+  if (open && !fresh) return open;
+  if (open && (open.state.session.running || open.state.pending.length)) throw new Error(`${a.name} is still working; stop it first or wait`);
+  const last = fresh ? undefined : (await listSessions({ dir, limit: 1 }))[0];
+  if (last) return openSaved(last.sessionId);
+  const chat = await createChat(dir, undefined, '', false, 'claude');
+  applyInitialModel(chat, a.model);
+  if (open) closeChat(open);
+  return chat;
 }
 
 export async function newChat(cwd: string, from: AgentSession | undefined, fork?: string, choice?: Provider) {

@@ -129,6 +129,26 @@ class ChatRows(
         scope.launch { if (hub.openSaved(sessionId)) onOpen() }
     }
 
+    // Tapping goes to the advisor's open chat or resumes its latest; New conversation starts over with its memory.
+    @Composable
+    fun AdvisorRow(a: Advisor) {
+        val c = live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
+        val state = c?.let { chatState(it, it.sessionId?.let(saved::get), seen) }
+        val meta = when {
+            c == null -> a.hint
+            c.pending > 0 -> "Needs you"
+            c.running -> "Working"
+            else -> "${c.title.ifBlank { a.hint }} · ${since(c.lastActive)}"
+        }
+        fun open(fresh: Boolean) = scope.launch { if (hub.openAdvisor(a.id, fresh)) onOpen() }
+        ListRow(
+            boldIf(state == ChatState.Done || state == ChatState.Needs, a.name), meta, lines = 1, metaLines = 1, selected = c != null && c.id == shownId,
+            leading = { StateDot(state) },
+            onClick = { open(false) },
+            menu = { close -> MenuItem("New conversation", "add", { close(); open(true) }) },
+        )
+    }
+
     @Composable
     fun Row(item: ChatItem) {
         if (item.live != null) LiveRow(item.live, item.repo) else SavedRow(item.saved!!, item.repo)
@@ -219,24 +239,31 @@ private fun RepoMark(name: String) {
     }
 }
 
+private fun boldIf(on: Boolean, title: String): CharSequence = if (on) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(title) } } else title
+
+@Composable
+private fun StateDot(state: ChatState?) {
+    val (d, word) = when (state) {
+        ChatState.Needs -> DotState.Warn to "Needs you"
+        ChatState.Failed -> DotState.Bad to "Failed"
+        ChatState.Running -> DotState.Running to "Running"
+        ChatState.Done -> DotState.Unread to "Unread"
+        null -> return
+    }
+    StatusDot(d, Modifier.semantics { contentDescription = word })
+}
+
 @Composable
 private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun? = null, onResume: (() -> Unit)? = null) {
     val badge = run?.let { runBadge(it) }
     val shown = if (badge == RunBadge.Needs) ChatState.Needs else state
     // Like Slack's unread channels, a chat with a reply or question you have not opened has a bold title.
     val unread = shown == ChatState.Done || shown == ChatState.Needs
-    val dot = when (shown) {
-        ChatState.Needs -> DotState.Warn to "Needs you"
-        ChatState.Failed -> DotState.Bad to "Failed"
-        ChatState.Running -> DotState.Running to "Running"
-        ChatState.Done -> DotState.Unread to "Unread"
-        null -> null
-    }
     ListRow(
-        if (unread) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(title) } } else title,
+        boldIf(unread, title),
         meta, lines = 1, metaLines = 1, selected = selected, onClick = onClick,
         onLongClick = if (actions.canPin) actions.onRename else null,
-        leading = { dot?.let { (d, word) -> StatusDot(d, Modifier.semantics { contentDescription = word }) } },
+        leading = { StateDot(shown) },
         state = {
             if (run != null && badge != null && badge != RunBadge.Needs) RunBadgeView(badge, run)
             else if (actions.muted) AvIcon("bell-slash", tint = av.fgMuted)

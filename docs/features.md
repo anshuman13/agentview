@@ -518,6 +518,10 @@ Click one for its report, prompt and steps. On the phone it is a tab of its own.
 Agents started by a Workflow call are listed under a section named after the workflow, and update live while it runs, while the chat is open, also during a turn.
 An agent the chat reports as running but whose start is not in the loaded events shows as a Running row, so the pane says "No agents yet" only when none runs. In Sessions, a live chat with running agents has an Agents section under its row; tapping an agent switches to that chat if needed and opens it here.
 
+## Advisors
+
+Two long-lived chats to talk to about AgentView or any other project: PM (what to build next and why, on Sonnet) and Architect (how it fits the code, cost and risk, on Opus). The Sessions view lists them in an Advisors group above Pinned, on web and the phone, and the palette has "Chat: Talk to PM" and "Chat: Talk to Architect". Tapping one goes to its open chat, else resumes its latest conversation, else starts one (`open_advisor`); the row menu's New conversation starts over. Each advisor lives in `~/.agentview/advisors/<id>`: the server writes its CLAUDE.md on every open from the role in `server/advisors/<id>.md`, lets it read every workspace root (`.claude/settings.json` additionalDirectories), and the agent keeps `memory.md` there (under 150 lines, loaded by the CLAUDE.md), so a new conversation starts with what the earlier ones learned. They advise and write briefs; they do not edit code. Their chats stay out of the repo groups unless a search matches them.
+
 ## Deep links
 
 `?view=github` opens a sidebar view (explorer, changes, github, chats, sessions, runs), `?page=observe` opens a page

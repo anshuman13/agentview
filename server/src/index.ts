@@ -279,6 +279,9 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
     case 'open_session':
       host.req<string>({ op: 'open', sessionId: msg.sessionId }).then((c) => view(client, c), fail);
       break;
+    case 'open_advisor':
+      host.req<string>({ op: 'advisor', id: msg.id, fresh: Boolean(msg.fresh) }).then((c) => view(client, c), fail);
+      break;
     case 'new_session':
       if (msg.profile === 'work') mkdirSync(CODEX_WORK, { recursive: true });
       host.req<string>({ op: 'new', cwd: msg.profile === 'work' ? CODEX_WORK : msg.profile === 'personal' ? PROJECT : msg.cwd ?? live.chats.get(client.view)?.cwd ?? PROJECT, from: client.view, ...(typeof msg.fork === 'string' && { fork: msg.fork }), ...(typeof msg.model === 'string' && { model: msg.model }), ...(typeof msg.provider === 'string' && { provider: msg.provider }), ...(typeof msg.text === 'string' && msg.text && { text: msg.text }) }).then((c) => view(client, c), fail);

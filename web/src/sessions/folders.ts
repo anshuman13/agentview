@@ -5,6 +5,7 @@ import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
 import { inside } from '../../../shared/util';
+import { advisorOf } from '../../../shared/advisors';
 import { profileOfPath } from '../../../shared/workspace';
 import { matcher, queryWords } from '../codex/data/ask/match';
 
@@ -245,6 +246,8 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
   const find = chatFinder(filter, chats);
   const m = new Map<string, RepoGroup>();
   const add = (cwd: string, title: string, sessionId: string | null, last: number) => {
+    // Advisor chats show in Advisors; a search still finds their earlier conversations.
+    if (!find.active && advisorOf(cwd)) return null;
     const key = findHere(folders, cwd).folder?.cwd ?? cwd;
     const name = repoName(folders, cwd);
     if (find.active && !find.match(title, sessionId, name)) return null;

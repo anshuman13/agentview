@@ -1,3 +1,4 @@
+import { ADVISORS } from '../../../../shared/advisors';
 import { EFFORT_LABEL, EFFORT_LEVELS, type Effort, type ProviderOption } from '../../../../shared/protocol';
 import { providerModes, type ModeOption } from '../../../../shared/providers';
 import { paletteFeature, shownFeature } from '../../../../shared/featureUse';
@@ -51,6 +52,7 @@ export function buildCommands(models: { value: string; displayName: string }[], 
     { id: 'repo', label: 'Chat: Open Repository', key: '⌘O' },
     { id: 'newChat', label: 'Chat: New Chat' },
     ...providers.filter((p) => p.id !== 'claude').map((p) => ({ id: `newChat:${p.id}`, label: `Chat: New ${p.label} Chat${p.enabled ? '' : ` (${p.note})`}` })),
+    ...ADVISORS.map((a) => ({ id: `advisor:${a.id}`, label: `Chat: Talk to ${a.name}` })),
     { id: 'forkChat', label: 'Chat: Fork Chat' },
     ...models.map((m) => ({ id: `model:${m.value}`, label: `Model: ${m.displayName}` })),
     ...efforts.map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),
