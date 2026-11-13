@@ -20,7 +20,7 @@ sealed interface FoldRow {
     }
 }
 
-data class WorkTitle(val text: String, val failed: String)
+data class WorkTitle(val text: String, val failed: String, val detail: String)
 
 private class Span(val at: Long) {
     var end = 0L
@@ -99,13 +99,15 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
 
 // The fold's title, and its failed count apart so it can be drawn in the error colour. The duration waits for the turn to end.
 fun workTitle(work: Work, live: Boolean, billing: String): WorkTitle {
-    val parts = listOfNotNull(
+    val text = listOfNotNull(
         plural(work.tools, "tool").takeIf { work.tools > 0 },
         plural(work.files, "file").takeIf { work.files > 0 },
+    ).joinToString(" \u00B7 ")
+    val detail = listOfNotNull(
         plural(work.agents, "agent").takeIf { work.agents > 0 },
         duration(work.ms).takeIf { !live && it.isNotEmpty() },
         ("$" + String.format(Locale.US, "%.2f", work.cost)).takeIf { billing == "usd" && work.cost > 0 },
-    )
+    ).joinToString(" \u00B7 ")
     val failed = if (work.failed > 0) "${work.failed} failed" else ""
-    return WorkTitle(parts.joinToString(" \u00B7 ").ifEmpty { if (failed.isEmpty()) "Work" else "" }, failed)
+    return WorkTitle(text.ifEmpty { if (failed.isEmpty() && detail.isEmpty()) "Work" else "" }, failed, detail)
 }

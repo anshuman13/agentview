@@ -81,15 +81,19 @@ export function foldTurns(items: Item[], events: ChatEvent[]): FoldRow[] {
   return out;
 }
 
-// The fold's title, and its failed count apart so it can be drawn in the error colour. The duration waits for the turn to end.
-export function workTitle(work: Work, live: boolean, billing: string) {
-  const parts = [
+// The fold's title: its failed count apart so it can be drawn first in the error colour, and on a narrow screen the agents, duration and cost apart as a first line inside the fold. The duration waits for the turn to end.
+export function workTitle(work: Work, live: boolean, billing: string, narrow = false) {
+  const counts = [
     work.tools > 0 && plural(work.tools, 'tool'),
     work.files > 0 && plural(work.files, 'file'),
+  ];
+  const rest = [
     work.agents > 0 && plural(work.agents, 'agent'),
     !live && duration(work.ms),
     billing === 'usd' && work.cost > 0 && `$${work.cost.toFixed(2)}`,
-  ].filter(Boolean);
+  ];
+  const join = (parts: (string | false)[]) => parts.filter(Boolean).join(' \u00b7 ');
   const failed = work.failed > 0 ? `${work.failed} failed` : '';
-  return { text: parts.join(' \u00b7 ') || (failed ? '' : 'Work'), failed };
+  const text = join(narrow ? counts : [...counts, ...rest]);
+  return { text: text || (failed ? '' : 'Work'), failed, detail: narrow ? join(rest) : '' };
 }

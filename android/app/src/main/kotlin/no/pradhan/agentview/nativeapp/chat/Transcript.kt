@@ -240,14 +240,15 @@ private fun WorkFoldRow(hub: Hub, view: ChatView, fold: FoldRow.Fold, folded: Se
     val live = running && fold.last
     val title = workTitle(fold.work, live, bill)
     val text = buildAnnotatedString {
-        append(title.text)
         if (title.failed.isNotEmpty()) {
-            if (title.text.isNotEmpty()) append(" \u00B7 ")
             withStyle(SpanStyle(color = av.err)) { append(title.failed) }
+            if (title.text.isNotEmpty()) append(" \u00B7 ")
         }
+        append(title.text)
     }
     TranscriptBox(hub, "work:${fold.id}", text, state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null) {
         Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) {
+            if (title.detail.isNotEmpty()) Text(title.detail, Modifier.padding(bottom = Tokens.sp2), style = Type.meta, color = av.metaFg)
             val rows = fold.hidden.filter { it.id !in folded }
             rows.forEachIndexed { i, it ->
                 Box(Modifier.gap(gapAbove(rows.getOrNull(i - 1), it)?.coerceAtMost(Tokens.sp2))) {

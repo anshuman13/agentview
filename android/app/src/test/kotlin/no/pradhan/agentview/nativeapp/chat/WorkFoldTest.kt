@@ -20,14 +20,15 @@ class WorkFoldTest {
     private val work = Work(12, 3, 1, 0, 120_000, 0.4)
 
     @Test
-    fun titleListsToolsFilesAgentsDurationAndCost() {
-        assertEquals(WorkTitle("12 tools · 3 files · 1 agent · 2m · $0.40", ""), workTitle(work, false, "usd"))
+    fun titleKeepsToolsAndFilesAndMovesTheRestToTheDetail() {
+        assertEquals(WorkTitle("12 tools · 3 files", "", "1 agent · 2m · $0.40"), workTitle(work, false, "usd"))
+        assertEquals(WorkTitle("18 tools · 3 files", "4 failed", "1 agent · 2m · $0.40"), workTitle(work.copy(tools = 18, failed = 4), false, "usd"))
     }
 
     @Test
     fun titleOmitsZeroPartsUnbilledCostAndTheRunningDuration() {
-        assertEquals("1 tool · 2m", workTitle(work.copy(tools = 1, files = 0, agents = 0, cost = 0.0), false, "usd").text)
-        assertEquals("12 tools · 3 files · 1 agent", workTitle(work, true, "plan").text)
+        assertEquals("2m", workTitle(work.copy(tools = 1, files = 0, agents = 0, cost = 0.0), false, "usd").detail)
+        assertEquals("1 agent", workTitle(work, true, "plan").detail)
         assertEquals("2 failed", workTitle(work.copy(failed = 2), false, "usd").failed)
     }
 

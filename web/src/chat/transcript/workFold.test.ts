@@ -16,7 +16,7 @@ const work = { tools: 12, files: 3, agents: 1, failed: 0, ms: 120_000, cost: 0.4
 
 describe('workTitle', () => {
   it('lists tools, files, agents, duration and cost', () => {
-    expect(workTitle(work, false, 'usd')).toEqual({ text: '12 tools · 3 files · 1 agent · 2m · $0.40', failed: '' });
+    expect(workTitle(work, false, 'usd')).toEqual({ text: '12 tools · 3 files · 1 agent · 2m · $0.40', failed: '', detail: '' });
   });
 
   it('omits zero parts, the cost of an unbilled chat and the duration while running', () => {
@@ -26,6 +26,11 @@ describe('workTitle', () => {
 
   it('returns the failed count apart', () => {
     expect(workTitle({ ...work, failed: 2 }, false, 'usd').failed).toBe('2 failed');
+  });
+
+  it('moves agents, duration and cost into the detail on a narrow screen', () => {
+    expect(workTitle({ ...work, failed: 4, tools: 18 }, false, 'usd', true)).toEqual({ text: '18 tools · 3 files', failed: '4 failed', detail: '1 agent · 2m · $0.40' });
+    expect(workTitle({ ...work, agents: 0, ms: 0, cost: 0 }, false, 'usd', true).detail).toBe('');
   });
 });
 
