@@ -110,11 +110,6 @@ fun modelName(s: SessionInfo?): String {
     return s.models.firstOrNull { it.value == (s.model ?: "default") }?.displayName ?: s.model ?: "Default"
 }
 
-// Which button a message goes with while Claude runs: queue it for the next step, or stop and send now.
-enum class SendKind { Prompt, Queue, Steer }
-
-fun sendKind(running: Boolean, steer: Boolean) = if (!running) SendKind.Prompt else if (steer) SendKind.Steer else SendKind.Queue
-
 val IMAGE_MARK = Regex("\\[Image: ([^\\]]+)]")
 
 // A user message split into text and the pasted images it names.

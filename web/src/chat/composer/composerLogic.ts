@@ -1,7 +1,7 @@
 import { parseWhen, stripWhen } from '../../codex/data/tasks/engine';
 import { match } from '../../workspace/FileSwitcher';
 import { toolId } from '../../ops/mcpHelpers';
-import { compactAt, type Account, type ChatEvent, type ChatRun, type LiveChat, type LiveNow, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
+import { compactAt, type ChatEvent, type ChatRun, type LiveChat, type LiveNow, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
 import { apiUrl, fetchJson } from '../../app/api';
 import { createTerm, listTerms } from '../../workspace/termApi';
 import { isBlock } from '../../../../shared/util';

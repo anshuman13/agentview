@@ -139,27 +139,6 @@ internal fun LazyListScope.implementationItems(c: BuildCommit, diff: CommitDiff,
     }
 }
 
-internal fun LazyListScope.testItems(test: BuildEntry) {
-    item {
-        SectionHeader("Tests", action = {
-            val passed = test.criteria.count { it.result == "pass" }
-            val failed = test.criteria.count { it.result == "fail" }
-            if (passed > 0) Badge("$passed passed", BadgeTone.Done)
-            if (failed > 0) Badge("$failed failed", BadgeTone.Failed)
-        })
-    }
-    item {
-        Group {
-            if (test.criteria.isEmpty()) ListRow("No per-criterion lines in the report")
-            test.criteria.forEachIndexed { i, c ->
-                if (i > 0) Hairline()
-                val (label, tone) = criterionBadge(c)
-                ListRow(c.n.toString(), c.evidence, metaLines = 2, trailing = { Badge(label, tone) })
-            }
-        }
-    }
-}
-
 internal fun LazyListScope.codeReviewItems(d: BuildDetail, review: BuildEntry?, hasCommit: Boolean, now: Long, readOnly: Boolean, approve: () -> Unit, askChanges: () -> Unit) {
     item { SectionHeader("Code review") }
     item {

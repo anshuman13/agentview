@@ -122,8 +122,6 @@ private fun resultBadge(result: String): Pair<String, BadgeTone> = when (result)
     else -> "Skipped" to BadgeTone.Quiet
 }
 
-fun criterionBadge(c: Criterion) = resultBadge(c.result)
-
 fun criterionBadge(c: SpecCriterion) = if (c.result == "pending") null else resultBadge(c.result)
 
 fun flowBadge(f: FlowStep): Pair<String, BadgeTone>? = when {

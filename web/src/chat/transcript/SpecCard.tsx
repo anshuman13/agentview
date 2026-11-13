@@ -6,7 +6,6 @@ import { Icon } from '../../ui/Icon';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
-import { Section } from '../../ui/Section';
 import { Skeleton } from '../../ui/Skeleton';
 import { ago } from '../../ui/util';
 import { findHere, useWorkspace } from '../../sessions/folders';

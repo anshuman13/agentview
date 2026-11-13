@@ -6,7 +6,6 @@ import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { SinceSheet } from './SinceSheet';
 import { outcomeCounts, roundsSince } from './recap';
-import { clock } from '../../codex/tasks/time';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
@@ -43,7 +42,7 @@ function lastUserId(items: Item[]) {
   return '';
 }
 
-function useSeenMark(events: ChatEvent[]) {
+function useSeenMark() {
   const seenTimes = useStore((s) => s.seen);
   const [mark, setMark] = useState(() => ({ seen: -1, openedAt: Date.now() }));
   // After a reload the seen times arrive after mount, so the mark waits for them.
@@ -192,7 +191,7 @@ function TranscriptView({ chat, events, earlier, cwd, running, showWork, bill }:
   const runs = useMemo(() => exploreRuns(items), [items]);
   const cards = useMemo(() => specCards(items), [items]);
   const bumps = useMemo(() => specBumps(items), [items]);
-  const mark = useSeenMark(events);
+  const mark = useSeenMark();
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
   const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
   const newRow = useMemo(() => list.find((r) => (r.kind === 'item' ? r.it.id === newId : r.hidden.some((h) => h.id === newId))), [list, newId]);

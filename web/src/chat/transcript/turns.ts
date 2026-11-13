@@ -25,7 +25,7 @@ export type Turn = {
 };
 
 const PHASE_TEXT: Record<string, string> = { plan: 'Plan · Opus', build: 'Build · Opus', test: 'Test · Sonnet' };
-export const WOKE_UP = /^\w+ woke up/;
+const WOKE_UP = /^\w+ woke up/;
 
 function handBack(text: string) {
   if (!text.startsWith('[Subagent hand-back]')) return text.trim();
