@@ -13,7 +13,6 @@ import { useMacName } from '../../app/shell/macName';
 import { useUsage } from '../../app/shell/StatusItems';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
 import { TimelineFoot } from './TimelineFoot';
-import { turnEvents } from '../../chat/transcript/summary';
 import { TurnCard } from './TurnCard';
 import { useBriefScroll, useRecap } from './briefHooks';
 
@@ -46,7 +45,6 @@ export function Brief() {
   const waiting = pending.length > 0;
   const [build] = useState(createTurnsBuilder);
   const { turns, next, lastTool, advisor, fable } = useMemo(() => build(events), [build, events]);
-  const cuts = useMemo(() => new Map(turnEvents(events).map((t) => [t.id, t.events])), [events]);
   const [all, setAll] = useState(false);
   const earlier = useStore((s) => s.earlier ?? 0);
   const [loading, setLoading] = useState(false);
@@ -123,7 +121,7 @@ export function Brief() {
             {turns.length === 0 && !earlier && <div className="tl-empty">Send a prompt. Each prompt shows up here with the agent's reply, the files it changed and the commands it ran.</div>}
             {shown.map((t, i) => {
               const latest = i === shown.length - 1;
-              return <TurnCard key={t.id} turn={t} events={cuts.get(t.id) ?? []} latest={latest} live={latest && running} cwd={cwd} pending={latest ? pending : []} />;
+              return <TurnCard key={t.id} turn={t} latest={latest} live={latest && running} cwd={cwd} pending={latest ? pending : []} />;
             })}
           </div>
         )}

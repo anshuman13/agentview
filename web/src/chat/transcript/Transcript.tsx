@@ -5,8 +5,6 @@ import { quoteReply, replyNote } from '../composer/composerLogic';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { SinceSheet } from './SinceSheet';
-import { SummarySheet } from './SummarySheet';
-import { replyOf, turnEvents, turnSummary } from './summary';
 import { outcomeCounts, roundsSince } from './recap';
 import { clock } from '../../codex/tasks/time';
 import { Markdown } from '../Chat';
@@ -189,7 +187,6 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
   const bumps = useMemo(() => specBumps(items), [items]);
   const mark = useSeenMark(events);
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
-  const summaries = useMemo(() => new Map(turnEvents(events).flatMap((t) => { const reply = replyOf(t.events); return reply && !reply.streaming ? [[reply.id, t.events] as const] : []; })), [events]);
   const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
   const recap = useStore((s) => s.live.find((c) => c.id === s.session.id)?.recap);
   const [since, setSince] = useState(true);
@@ -216,24 +213,12 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
         const card = cards.has(it.id);
         const row = <Row key={it.id} it={it} cwd={cwd} card={card} bump={card && it.kind === 'file' ? bump : undefined} />;
         const day = days.get(it.id);
-        const turn = summaries.get(it.id);
         const agentCard = card && it.kind === 'agent' && slug ? <SpecCard slug={slug} bump={bump} /> : null;
-        return day || it.id === newId || turn || agentCard ? <Fragment key={it.id}>{day && <div className="tr-day"><span>{day}</span></div>}{it.id === newId && <div className="tr-new"><span>New</span></div>}{row}{agentCard}{turn && <SummaryLink events={turn} />}</Fragment> : row;
+        return day || it.id === newId || agentCard ? <Fragment key={it.id}>{day && <div className="tr-day"><span>{day}</span></div>}{it.id === newId && <div className="tr-new"><span>New</span></div>}{row}{agentCard}</Fragment> : row;
       })}
       </div>
     </div>
     {!stuck && (behind || running) && <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />Jump to latest{replies > 0 && ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}`}</button>}
-    </div>
-  );
-}
-
-function SummaryLink({ events }: { events: ChatEvent[] }) {
-  const [open, setOpen] = useState(false);
-  if (turnSummary(events).length === 0) return null;
-  return (
-    <div className="tr-acts">
-      <button className="link" aria-haspopup="dialog" onClick={() => setOpen(true)}>Summary</button>
-      {open && <SummarySheet events={events} onClose={() => setOpen(false)} />}
     </div>
   );
 }

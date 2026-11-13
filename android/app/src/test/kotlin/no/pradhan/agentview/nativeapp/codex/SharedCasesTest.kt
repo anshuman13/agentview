@@ -27,9 +27,6 @@ import no.pradhan.agentview.nativeapp.app.barHidden
 import no.pradhan.agentview.nativeapp.app.barState
 import no.pradhan.agentview.nativeapp.app.countChat
 import no.pradhan.agentview.nativeapp.chat.ChecklistItem
-import no.pradhan.agentview.nativeapp.chat.SummaryEntry
-import no.pradhan.agentview.nativeapp.chat.turnEvents
-import no.pradhan.agentview.nativeapp.chat.turnSummary
 import no.pradhan.agentview.nativeapp.chat.checklistCurrent
 import no.pradhan.agentview.nativeapp.chat.checklistProgress
 import no.pradhan.agentview.nativeapp.chat.editCount
@@ -174,20 +171,6 @@ class SharedCasesTest {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
             val expected = c.nullable("expected")?.jsonArray?.map { ChecklistItem(it.jsonObject.str("content"), it.jsonObject.str("activeForm"), it.jsonObject.str("status")) }
             assertEquals(c.str("name"), expected, latestChecklist(events))
-        }
-    }
-
-    @Test fun turnSummary() {
-        for (c in cases("turn-summary")) {
-            val turns = turnEvents(c.getValue("events").jsonArray.map { it.decode<ChatEvent>() })
-            val cuts = c.getValue("cuts").jsonObject.mapValues { (_, v) -> v.jsonArray.map { it.jsonPrimitive.content } }
-            assertEquals(c.str("name"), cuts, turns.associate { t -> t.id to t.events.map { it.id } })
-            for ((id, expected) in c.getValue("entries").jsonObject) {
-                val entries = expected.jsonArray.map { it.jsonObject }.map { o ->
-                    SummaryEntry(o.str("kind"), o.str("id"), o.getValue("at").jsonPrimitive.long, o.str("title"), o.str("meta"), o["url"]?.jsonPrimitive?.content, o["failed"]?.jsonPrimitive?.booleanOrNull == true, o["running"]?.jsonPrimitive?.booleanOrNull == true)
-                }
-                assertEquals(c.str("name"), entries, turnSummary(turns.first { it.id == id }.events))
-            }
         }
     }
 

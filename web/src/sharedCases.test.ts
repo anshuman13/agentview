@@ -26,7 +26,6 @@ import { reviewQueue } from './codex/wiki/reviewQueue';
 import { revertBlock } from './workspace/revertBlock';
 import { ago, money } from './ui/util';
 import { setSystemTime } from '../../testing';
-import { turnEvents, turnSummary, type SummaryEntry } from './chat/transcript/summary';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import type { Meeting } from './codex/data/wiki/wiki';
@@ -299,13 +298,7 @@ describe('cases shared with the Android app', () => {
     });
   }
 
-  for (const c of cases<{ name: string; events: unknown[]; cuts: Record<string, string[]>; entries: Record<string, SummaryEntry[]> }>('turn-summary')) {
-    it(`turnSummary: ${c.name}`, () => {
-      const turns = turnEvents(c.events as ChatEvent[]);
-      expect(Object.fromEntries(turns.map((t) => [t.id, t.events.map((e) => e.id)]))).toEqual(c.cuts);
-      for (const [id, entries] of Object.entries(c.entries)) expect(turnSummary(turns.find((t) => t.id === id)!.events)).toEqual(entries);
-    });
-  }
+
 
   const featureUse = JSON.parse(readFileSync(new URL('../../shared/fixtures/feature-use.json', import.meta.url), 'utf8')) as {
     ids: string[];

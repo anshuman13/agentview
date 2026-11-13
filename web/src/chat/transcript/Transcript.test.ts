@@ -7,7 +7,6 @@ import path from 'node:path';
 import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, specCards, stepLabel, stepTone, newMarker, newReplies, dayDividers, type Item } from './steps';
 import { replyLine, sumEdits } from '../../../../shared/edits';
 import { buildTurns } from './turns';
-import { replyOf, summarySteps, turnEvents, turnSummary } from './summary';
 import { chatLine } from '../../sessions/folders';
 import type { ChatEvent, LiveChat } from '../../../../shared/protocol';
 
@@ -257,16 +256,3 @@ describe('collapsible boxes', () => {
   });
 });
 
-describe('turnSummary', () => {
-  it('returns the same entries for unchanged turn events and counts steps like Turn.steps', () => {
-    const u = user('go');
-    const search = tool('WebSearch', { query: 'x' });
-    const events = [u, search, result(search.id), tool('Read', { file_path: '/w/a.ts' }), say('done')];
-    const [turn] = turnEvents(events);
-    const entries = turnSummary(turn.events);
-    expect(turnSummary([...turn.events])).toBe(entries);
-    expect(turnSummary([...turn.events, say('more')])).not.toBe(entries);
-    expect(summarySteps(turn.events)).toBe(buildTurns(events).turns[0].steps.length);
-    expect(replyOf(turn.events)?.id).toBe(buildTurns(events).turns[0].reply?.id);
-  });
-});

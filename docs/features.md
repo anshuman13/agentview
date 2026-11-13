@@ -176,7 +176,7 @@ Each Jobs list row is one line of title and one line of meta: the schedule in wo
 
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
 and notes. The timeline shows one card per prompt: Claude's final reply, the files changed with line counts,
-commands run and the first error of each failed one, commits, subagents, these notes and a collapsed Summary box (counts of searches, pages and steps; opened it lists the turn's status lines, web searches, pages with an Open page link, explored files, subagents and edits, and an All N steps row shows the raw steps; while the turn runs the box shows the newest status). In the transcript the last reply of a turn has a Summary link that opens the same rows in a sheet, and on the phone a Summary row under a finished turn's reply (only with a status, search or page) does. Once a turn is finished, its files, commits, commands
+commands run and the first error of each failed one, commits, subagents, these notes and a collapsed Steps box with the turn's raw steps. Once a turn is finished, its files, commits, commands
 and subagents fold into one line ("3 files +40 -2 · 1 commit · 5 commands, 1 failed · 2 agents") that opens on a tap,
 so Review changes and Rewind files take one more tap; pending requests, blocked cards and notes stay visible, and a
 running turn shows everything open.

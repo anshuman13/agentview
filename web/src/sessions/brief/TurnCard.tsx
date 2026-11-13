@@ -6,27 +6,22 @@ import { BlockedCard } from '../../chat/cards/Pending';
 import { ReviewCard } from '../../chat/cards/ReviewCard';
 import { Markdown } from '../../chat/Chat';
 import { Row as StepRow } from '../../chat/transcript/Transcript';
-import { Row } from '../../ui/Row';
 import { TranscriptBox } from '../../chat/transcript/Box';
-import { SummaryRows } from '../../chat/transcript/SummarySheet';
-import { summaryCounts, turnSummary } from '../../chat/transcript/summary';
 import { FileIcon } from '../../workspace/FileIcon';
 import { relPath } from '../../chat/transcript/steps';
 import { openFailures, type Turn } from '../../chat/transcript/turns';
 import { openAgent } from '../agents';
 import { REVIEW_LOCAL } from '../../ops/Findings';
 import { plural } from '../../ui/util';
-import { BIG_BRO, type ChatEvent, type PendingRequest } from '../../../../shared/protocol';
+import { BIG_BRO, type PendingRequest } from '../../../../shared/protocol';
 import { time } from './time';
 import { useCan } from '../../chat/useCan';
 
 const CLAUDE = <svg viewBox="0 0 16 16" width="12" height="12"><path d="M8 1.5v13M1.5 8h13M3.4 3.4l9.2 9.2M12.6 3.4l-9.2 9.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 const FILES_SHOWN = 6;
 
-export function TurnCard({ turn, events, latest, live, cwd, pending }: { turn: Turn; events: ChatEvent[]; latest: boolean; live: boolean; cwd: string; pending: PendingRequest[] }) {
+export function TurnCard({ turn, latest, live, cwd, pending }: { turn: Turn; latest: boolean; live: boolean; cwd: string; pending: PendingRequest[] }) {
   const [promptOpen, setPromptOpen] = useState(false);
-  const [stepsOpen, setStepsOpen] = useState(false);
-  const entries = turnSummary(events);
   const when = turn.queued ? <span className="tl-state" title="Waiting for the agent's next step"><Icon name="clock" small /><button className="link tl-send-now" title="Stop the current step and send this now" onClick={(e) => { e.stopPropagation(); send({ type: 'send_now', id: turn.id }); }}>Send now</button></span> : turn.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(turn.at).toLocaleString()}>{time(turn.at)}</span>;
   return (
     <section className={`tc ${latest ? 'latest' : ''}`}>
@@ -40,10 +35,8 @@ export function TurnCard({ turn, events, latest, live, cwd, pending }: { turn: T
       {turn.reply && <Reply text={turn.reply.text} clip={!latest} />}
       <Facts turn={turn} cwd={cwd} pending={pending} latest={latest && !live} settled={!live} />
       {turn.steps.length > 0 && (
-        <TranscriptBox id={`summary:${turn.id}`} className={live ? 'running' : undefined} title="Summary" meta={summaryCounts(entries, turn.steps.length).join(' \u00b7 ')} summary={live ? entries.filter((e) => e.kind === 'status').at(-1)?.title : undefined}>
-          <SummaryRows entries={entries} />
-          <div className="ui-group"><Row leading={<Icon name={stepsOpen ? 'chevron-down' : 'chevron-right'} small />} title={stepsOpen ? 'Hide steps' : `All ${turn.steps.length} steps`} aria-expanded={stepsOpen} onClick={() => setStepsOpen((v) => !v)} /></div>
-          {stepsOpen && <div className="tr tc-steps">{turn.steps.map((it) => <StepRow key={it.id} it={it} cwd={cwd} settled={!live} />)}</div>}
+        <TranscriptBox id={`steps:${turn.id}`} className={live ? 'running' : undefined} title="Steps" meta={plural(turn.steps.length, 'step')}>
+          <div className="tr tc-steps">{turn.steps.map((it) => <StepRow key={it.id} it={it} cwd={cwd} settled={!live} />)}</div>
         </TranscriptBox>
       )}
     </section>
