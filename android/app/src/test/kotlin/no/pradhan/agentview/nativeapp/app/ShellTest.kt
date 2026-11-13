@@ -38,6 +38,7 @@ class ShellTest {
         assertEquals(DeepLink(view = "github"), parseDeepLink("agentview://open?view=github"))
         assertEquals(DeepLink(chat = "a b"), parseDeepLink("agentview://open?chat=a%20b&beside=x"))
         assertEquals(DeepLink(session = "s1", page = "observe"), parseDeepLink("http://h:7777/?session=s1&page=observe"))
+        assertEquals(DeepLink(chat = "c", slug = "s"), parseDeepLink("agentview://open?chat=c&slug=s&page=nope"))
         assertNull(parseDeepLink("agentview://open?page=nope"))
         assertNull(parseDeepLink("agentview://open"))
         assertNull(parseDeepLink(null))

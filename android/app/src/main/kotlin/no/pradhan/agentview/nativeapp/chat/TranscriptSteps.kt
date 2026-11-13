@@ -28,6 +28,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -206,6 +207,12 @@ internal fun SpecCard(hub: Hub, chat: String, slug: String, path: String, bump: 
     PollWhile(d?.summary?.state == "running", reload)
     val gone = d == null && !load.busy && load.error.isEmpty()
     val stack = remember { mutableStateListOf<BuildSheet>() }
+    val want by hub.specSlug.collectAsState()
+    LaunchedEffect(want, d, gone) {
+        if (want != slug || (d == null && !gone)) return@LaunchedEffect
+        hub.specSlug.value = null
+        if (d != null) stack.add(BuildSheet.Spec())
+    }
     val actions = buildActions(hub, slug, reload)
     val cwd by hub.store.state.select { it.session?.cwd.orEmpty() }
     val run = d?.specFile?.takeIf { chat.isNotEmpty() }?.let { "$cwd/$it" }?.let { p -> TaskRun(p) { hub.askChat(it) } }

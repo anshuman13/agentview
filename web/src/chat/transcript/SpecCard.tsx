@@ -27,6 +27,12 @@ export function SpecCard({ slug, path, bump }: { slug: string; path?: string; bu
   const [open, setOpen] = useState(() => readBox(id, true));
   const { data: d, failed, gone, reload } = useBuild(slug, open, bump);
   const sheets = useBuildSheets();
+  const want = useStore((s) => s.ui.spec) === slug;
+  useEffect(() => {
+    if (!want || !(d || gone)) return;
+    setUi({ spec: null });
+    if (d) sheets.open({ kind: 'spec' });
+  }, [want, d, gone]);
   const meta = gone ? 'Spec removed' : d && [pipelineLabel(d.pipeline), d.summary.conclusion].filter(Boolean).join(' · ');
   const state = d?.hold ? <Badge {...holdBadge} /> : d?.entries.length ? <Badge {...stateBadge(d.summary.state)} /> : undefined;
   return (

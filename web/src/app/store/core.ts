@@ -16,6 +16,7 @@ type UiState = {
   repoPicker: boolean;
   beside: string | null;
   sketch: string | null;
+  spec: string | null;
   goalSheet?: GoalSheetState | null;
 };
 
@@ -36,7 +37,7 @@ let state: State = {
   attention: [],
   findings: {},
   seen: {},
-  ui: { connected: false, openFile: null, follow: false, switcherOpen: false, repoPicker: false, beside: storedBeside(), sketch: null },
+  ui: { connected: false, openFile: null, follow: false, switcherOpen: false, repoPicker: false, beside: storedBeside(), sketch: null, spec: null },
 };
 
 const listeners = new Set<() => void>();

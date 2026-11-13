@@ -44,6 +44,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -66,6 +67,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.ChatScreen
 import no.pradhan.agentview.nativeapp.chat.VoiceHost
 import no.pradhan.agentview.nativeapp.codex.CodexScreen
@@ -110,6 +112,7 @@ import no.pradhan.agentview.nativeapp.sessions.AdvisorsScreen
 import no.pradhan.agentview.nativeapp.workspace.TerminalScreen
 
 private const val ORIGIN_ROUTE = "origin"
+private const val SPEC_LINK_MS = 30_000L
 
 internal fun icon(t: Tab): String = when (t) {
     Tab.Codex -> "sparkle"
@@ -159,6 +162,7 @@ private fun NavHostController.goTab(route: String) {
 private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostState) {
     val notice by hub.notice.collectAsState()
     val link by hub.link.collectAsState()
+    val scope = rememberCoroutineScope()
     LaunchedEffect(notice) { notice?.let { snack.showSnackbar(it); hub.notice.value = null } }
     LaunchedEffect(Unit) {
         hub.undoable.collectLatest { u ->
@@ -170,6 +174,10 @@ private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostStat
         val l = link ?: return@LaunchedEffect
         l.chat?.let { hub.open(it) }
         if (l.page == "sketches") l.slug?.let { hub.sketchSlug.value = it }
+        else if (l.chat != null && l.slug != null) {
+            hub.specSlug.value = l.slug
+            scope.launch { delay(SPEC_LINK_MS); if (hub.specSlug.value == l.slug) hub.specSlug.value = null }
+        }
         if (l.action == Shortcut.NEW_CHAT) hub.newChat()
         if (l.action == Shortcut.ADD_TASK) hub.addTask.value = true
         routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.openMore(r) else nav.goTab(r) }
