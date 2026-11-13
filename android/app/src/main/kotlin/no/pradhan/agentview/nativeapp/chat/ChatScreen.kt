@@ -1,7 +1,6 @@
 package no.pradhan.agentview.nativeapp.chat
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -184,14 +183,7 @@ private fun SinceYouLeft(hub: Hub, live: LiveChat, run: ChatRun?) {
     var sheet by remember(live.id) { mutableStateOf(false) }
     if (since == null || !shown) return
     val fresh = roundsSince(run?.rounds.orEmpty(), left)
-    Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
-        TranscriptBox(
-            hub, "since:${live.id}", "Since you left", fresh.firstOrNull()?.let { clock(it.at) } ?: "", defaultOpen = true,
-            action = { IconBtn("close", "Dismiss", { shown = false }) },
-        ) {
-            ListRow("Recap", since, metaLines = 2, onClick = { sheet = true })
-        }
-    }
+    SinceStrip(since, fresh, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), onOpen = { sheet = true }, onDismiss = { shown = false })
     if (sheet) SinceSheet(hub, live.id, since, fresh, run) { sheet = false }
 }
 

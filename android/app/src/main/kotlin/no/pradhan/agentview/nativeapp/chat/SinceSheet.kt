@@ -1,5 +1,12 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
+import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,6 +55,22 @@ fun outcomeCounts(rounds: List<Round>) = OUTCOME_ORDER.map { o -> o to rounds.co
 // More than three quiet rounds fold; blocked, question and failed rounds always show.
 fun foldedRounds(rounds: List<Round>, open: Boolean) =
     if (open || rounds.count { it.outcome in QUIET_OUTCOMES } <= QUIET_SHOWN) rounds else rounds.filter { it.outcome !in QUIET_OUTCOMES }
+
+@Composable
+fun SinceStrip(recap: String, rounds: List<Round>, modifier: Modifier = Modifier, onOpen: () -> Unit, onDismiss: () -> Unit) {
+    val counts = outcomeCounts(rounds).joinToString(", ") { (o, n) -> "$n ${if (o == "quiet") "nothing" else o}" }
+    val text = if (rounds.isEmpty()) recap else "${rounds.size} round${if (rounds.size == 1) "" else "s"}: $counts \u00B7 $recap"
+    Row(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.radiusSm)).border(Tokens.hairline, av.borderCard, RoundedCornerShape(Tokens.radiusSm)).clickable(onClickLabel = "Open", onClick = onOpen).padding(start = Tokens.sp4),
+        horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AvIcon("history", size = Tokens.iconSm, tint = av.fgMuted)
+        Text("Since you left", style = Type.label, color = av.fg)
+        Text(text, Modifier.weight(1f), style = Type.caption, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        IconBtn("close", "Dismiss", onDismiss)
+    }
+}
 
 private val unfolded = mutableSetOf<String>()
 
