@@ -57,6 +57,8 @@ function workEntry(items: Item[]): SummaryEntry {
 function build(events: ChatEvent[]) {
   const items = buildTranscript(events);
   const order = new Map(events.map((e, i) => [e.id, i]));
+  // A sub-agent whose Agent call is on an earlier page sorts at its first step.
+  events.forEach((e, i) => { if ('parent' in e && e.parent && !order.has(e.parent)) order.set(e.parent, i); });
   const statuses = events.filter((e): e is ToolUse => e.kind === 'tool_use' && !e.parent && e.name.endsWith('__set_status'));
   const seq = [...items, ...statuses].sort((a, b) => order.get(a.id)! - order.get(b.id)!);
   const entries: SummaryEntry[] = [];

@@ -65,7 +65,9 @@ private class Built(val entries: List<SummaryEntry>, val steps: Int)
 
 private fun build(events: List<ChatEvent>): Built {
     val items = buildTranscript(events)
-    val order = events.withIndex().associate { (i, e) -> e.id to i }
+    val order = events.withIndex().associateTo(HashMap()) { (i, e) -> e.id to i }
+    // A sub-agent whose Agent call is on an earlier page sorts at its first step.
+    events.forEachIndexed { i, e -> if (e.parent != null) order.putIfAbsent(e.parent, i) }
     val statuses = events.filter { it.kind == "tool_use" && it.parent == null && it.name.endsWith("__set_status") }
     val seq = (items.map { it.id to (it as Any) } + statuses.map { it.id to (it as Any) }).sortedBy { order.getValue(it.first) }.map { it.second }
     val entries = mutableListOf<SummaryEntry>()
