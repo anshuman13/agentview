@@ -41,6 +41,7 @@ import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.runEdit
 import no.pradhan.agentview.nativeapp.net.submit
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopGoal
+import no.pradhan.agentview.nativeapp.sessions.askAdvisor
 import no.pradhan.agentview.nativeapp.sessions.folderName
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -65,6 +66,8 @@ import no.pradhan.agentview.nativeapp.workspace.parseFile
 import no.pradhan.agentview.nativeapp.workspace.planCondition
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
+
+private class BeforeLoop(val every: Long, val custom: String, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val inHere: Boolean)
 
 // The goal sheets (web/src/sessions/GoalSheets.tsx), mounted once in the app shell.
 @Composable
@@ -154,6 +157,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     var capPct by remember { mutableStateOf<Int?>(70) }
     var inHere by remember { mutableStateOf(false) }
     var dir by remember { mutableStateOf(cwd) }
+    var beforeLoop by remember { mutableStateOf<BeforeLoop?>(null) }
     var providerId by remember { mutableStateOf(defaultProvider) }
     var pickTime by remember { mutableStateOf(false) }
     var sent by remember { mutableStateOf(false) }
@@ -165,18 +169,19 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val read = planRead(hub, sheet.plan, hub.pageChat)
     val badEvery = custom.isNotBlank() && parseEvery(custom) == null
     val ready = !badEvery && (sheet.plan == null || (read.markdown != null && !read.error))
-    val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: if (loop) advisorLoopGoal(dir) else what
+    val root = dir.ifEmpty { dirs.firstOrNull()?.first.orEmpty() }
+    val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: if (loop) (if (root.isEmpty()) "" else advisorLoopGoal(root)) else what
     val start = {
         hub.track("action:startGoal")
         val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct), System.currentTimeMillis())
         if (loop) {
-            scope.launch { if (hub.openAdvisor("pm", false)) { hub.askChat(text); onClose() } }; Unit
+            scope.askAdvisor(hub, "pm", text, onClose)
         } else if (here) {
             hub.submit(text, false) { hub.notice.value = "Could not send the goal. Try again." }
             onClose()
         } else {
             sent = true
-            hub.newChat(cwd = dir.ifEmpty { dirs.firstOrNull()?.first }, provider = providerId, text = text, onOpened = onClose)
+            hub.newChat(cwd = root.ifEmpty { null }, provider = providerId, text = text, onOpened = onClose)
         }
     }
     val presetStop = STOPS.any { it.stopIn == stopIn && it.stopAt == stopAt }
@@ -186,11 +191,14 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
             if (sheet.plan == null) Chips {
                 Chip("Advisor loop", {
                     advisor = !advisor
-                    if (advisor) { custom = ""; every = ADVISOR_LOOP_EVERY; stopIn = null; stopAt = null; capPct = ADVISOR_LOOP_CAP; inHere = false }
+                    if (advisor) {
+                        beforeLoop = BeforeLoop(every, custom, stopIn, stopAt, capPct, inHere)
+                        custom = ""; every = ADVISOR_LOOP_EVERY; stopIn = null; stopAt = null; capPct = ADVISOR_LOOP_CAP; inHere = false
+                    } else beforeLoop?.let { what = ""; custom = it.custom; every = it.every; stopIn = it.stopIn; stopAt = it.stopAt; capPct = it.capPct; inHere = it.inHere }
                 }, on = advisor)
             }
             if (sheet.plan != null) ListRow(sheet.plan, if (read.error) "Could not read the plan. Check the file still exists." else read.markdown?.let { read.progress ?: "No tasks" }, lines = 1)
-            else Box(Modifier.padding(Tokens.sp6)) { TextField(if (loop) condition else what, { advisor = false; what = it }, placeholder = "What is the goal?", minLines = 3) }
+            else Box(Modifier.padding(Tokens.sp6)) { TextField(if (loop) condition else what, { what = it }, enabled = !loop, placeholder = "What is the goal?", minLines = 3) }
         }
         SectionHeader("How often")
         Group {
@@ -222,7 +230,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
                     Chip("This chat", { inHere = true }, on = inHere)
                 }
                 if (!here) {
-                    if (sheet.plan == null) MenuChip(folderName(dir), dirs, { it.second }, { it.first == dir }) { dir = it.first }
+                    if (sheet.plan == null) MenuChip(folderName(root), dirs, { it.second }, { it.first == root }) { dir = it.first }
                     if (!loop) MenuChip(providerLabel(providerId), providers, { it.label }, { it.id == providerId }) { providerId = it.id }
                 }
             }

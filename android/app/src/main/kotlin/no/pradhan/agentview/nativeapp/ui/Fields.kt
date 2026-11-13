@@ -41,6 +41,7 @@ fun TextField(
     trailing: (@Composable () -> Unit)? = null,
     pill: Boolean = false,
     style: TextStyle = Type.body,
+    enabled: Boolean = true,
 ) {
     val c = av
     val interaction = remember { MutableInteractionSource() }
@@ -49,7 +50,8 @@ fun TextField(
     BasicTextField(
         value, onValueChange,
         modifier.fillMaxWidth(),
-        textStyle = style.copy(color = c.fg),
+        enabled = enabled,
+        textStyle = style.copy(color = if (enabled) c.fg else c.fgMuted),
         cursorBrush = SolidColor(c.accent),
         singleLine = singleLine, minLines = minLines, maxLines = maxLines,
         keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,

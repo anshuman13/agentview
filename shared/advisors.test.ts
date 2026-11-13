@@ -10,6 +10,7 @@ describe('Android prompts', () => {
   it('match the shared ones', () => {
     expect(kotlinPrompt('auditPrompt', '/w/app')).toBe(auditPrompt('/w/app'));
     expect(kotlinPrompt('specsFromAuditPrompt', '/w/app')).toBe(specsFromAuditPrompt('/w/app'));
+    expect(kotlinPrompt('advisorLoopGoal', '/w/app')).toBe(advisorLoopGoal('/w/app'));
   });
 });
 

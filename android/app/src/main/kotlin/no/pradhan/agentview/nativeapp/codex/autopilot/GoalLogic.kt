@@ -39,7 +39,7 @@ const val ADVISOR_LOOP_CAP = 70
 
 class EveryChoice(val label: String, val ms: Long)
 
-val EVERY = listOf(EveryChoice("Until done", 0), EveryChoice("Every 30m", 30 * 60_000L), EveryChoice("Every 1h", HOUR), EveryChoice("Every 2h", 2 * HOUR), EveryChoice("Every 4h", 4 * HOUR))
+val EVERY = listOf(EveryChoice("Until done", 0), EveryChoice("Every 30m", 30 * 60_000L), EveryChoice("Every 1h", HOUR), EveryChoice("Every 2h", 2 * HOUR), EveryChoice("Every 4h", ADVISOR_LOOP_EVERY))
 
 class StopChoice(val label: String, val stopIn: Long? = null, val stopAt: String? = null)
 

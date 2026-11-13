@@ -42,6 +42,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const [sent, setSent] = useState(false);
   const pick = useRef<HTMLSpanElement>(null);
   const opened = useRef(chat);
+  const beforeLoop = useRef({ every, custom, stopIn, stopAt, capPct, inHere });
   useEffect(() => { if (chat !== opened.current) onClose(); }, [chat, onClose]);
   const loop = advisor && !plan;
   const canHere = Boolean(here && !active);
@@ -50,7 +51,8 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
   const badEvery = Boolean(custom.trim()) && parseEvery(custom) === null;
   const ready = !badEvery && (!plan || (markdown !== null && !error));
-  const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : loop ? advisorLoopGoal(dir) : what;
+  const root = dir || dirs[0]?.cwd;
+  const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : loop ? (root ? advisorLoopGoal(root) : '') : what;
   const start = () => {
     track('action:startGoal');
     const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct }, Date.now());
@@ -64,12 +66,18 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
       // The sheet closes when the new chat opens; a server error re-enables Start.
       setSent(true);
       setTimeout(() => setSent(false), 10_000);
-      send({ type: 'new_session', cwd: dir || dirs[0]?.cwd, provider, text });
+      send({ type: 'new_session', cwd: root, provider, text });
     }
   };
   const pickLoop = () => {
     setAdvisor(!advisor);
-    if (!advisor) { setCustom(''); setEvery(ADVISOR_LOOP_EVERY); setStopIn(undefined); setStopAt(undefined); setCapPct(ADVISOR_LOOP_CAP); setInHere(false); }
+    if (!advisor) {
+      beforeLoop.current = { every, custom, stopIn, stopAt, capPct, inHere };
+      setCustom(''); setEvery(ADVISOR_LOOP_EVERY); setStopIn(undefined); setStopAt(undefined); setCapPct(ADVISOR_LOOP_CAP); setInHere(false);
+    } else {
+      const b = beforeLoop.current;
+      setWhat(''); setCustom(b.custom); setEvery(b.every); setStopIn(b.stopIn); setStopAt(b.stopAt); setCapPct(b.capPct); setInHere(b.inHere);
+    }
   };
   const chips = (items: { label: string }[], on: (i: number) => boolean, set: (i: number) => void) =>
     <div className="gl-chips">{items.map((c, i) => <Chip key={c.label} on={on(i)} onClick={() => set(i)}>{c.label}</Chip>)}</div>;
@@ -79,7 +87,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
       <div className="ui-group">
         {!plan && <div className="ui-fields"><div className="gl-chips"><Chip on={advisor} onClick={pickLoop}>Advisor loop</Chip></div></div>}
         {plan ? <Row plain title={plan} meta={error ? 'Could not read the plan. Check the file still exists.' : markdown === null ? undefined : progress ?? 'No tasks'} /> : (
-          <div className="ui-fields"><textarea rows={3} aria-label="What is the goal?" placeholder="What is the goal?" value={condition} onChange={(e) => { setAdvisor(false); setWhat(e.target.value); }} /></div>
+          <div className="ui-fields"><textarea rows={3} aria-label="What is the goal?" placeholder="What is the goal?" value={condition} disabled={loop} onChange={(e) => setWhat(e.target.value)} /></div>
         )}
       </div>
       <Section label="How often" />

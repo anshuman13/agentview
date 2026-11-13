@@ -2,6 +2,7 @@ import { getState, send, setUi } from '../app/store';
 import type { BadgeSpec } from '../ui/Badge';
 import type { ChatRun } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
+import { ADVISOR_LOOP_EVERY } from '../../../shared/advisors';
 import { showTurn } from '../chat/composer/composerLogic';
 
 const HOUR = 3_600_000;
@@ -11,7 +12,7 @@ export const EVERY = [
   { label: 'Every 30m', ms: 30 * 60_000 },
   { label: 'Every 1h', ms: HOUR },
   { label: 'Every 2h', ms: 2 * HOUR },
-  { label: 'Every 4h', ms: 4 * HOUR },
+  { label: 'Every 4h', ms: ADVISOR_LOOP_EVERY },
 ];
 
 export type Stop = { stopIn?: number; stopAt?: string };
