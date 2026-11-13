@@ -22,6 +22,7 @@ import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree 
 import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { readBody, savePaste } from './body.js';
 import { HANDLED, entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
+import { advisorsInfo } from '../session/advisors.js';
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
@@ -38,6 +39,7 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       if (r.status === 200) d.host.notify({ op: 'rename', sessionId: id!, title: body.title.trim() });
       return r;
     }, true),
+    'GET /api/advisors': entry(() => advisorsInfo()),
     'ANY /api/sessions/pins': entry(({ method, url }) => pinsRoute(method, url.searchParams.get('id'))),
     'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'), url.searchParams.get('unread') === '1')),
     'DELETE /api/sessions/bin': entry(async () => {

@@ -24,7 +24,7 @@ private val PALETTE = make(
 )
 
 val FEATURES: List<Feature> =
-    make("page", { it != "settings" }, "observe" to "Observe", "deploy" to "Deploy", "mcp" to "MCP Servers", "sketches" to "Sketches", "settings" to "Settings") +
+    make("page", { it != "settings" }, "advisors" to "Advisors", "observe" to "Observe", "deploy" to "Deploy", "mcp" to "MCP Servers", "sketches" to "Sketches", "settings" to "Settings") +
         make("tab", { false }, "codex" to "Codex", "chat" to "Chat", "sessions" to "Sessions", "agents" to "Agents") +
         make("list", { false }, "overview" to "Overview", "tasks" to "Tasks", "meetings" to "Meetings", "jobs" to "Jobs", "wiki" to "Wiki") +
         PALETTE +

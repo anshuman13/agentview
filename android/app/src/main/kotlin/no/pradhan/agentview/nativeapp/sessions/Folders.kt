@@ -77,10 +77,15 @@ fun matchesWords(words: List<String>, vararg texts: String?): Boolean {
     return words.all { hay.contains(it) }
 }
 
-// The long-lived PM and Architect chats, one folder each under ~/.agentview/advisors; mirrors shared/advisors.ts.
-data class Advisor(val id: String, val name: String, val hint: String)
+// The long-lived advisor chats, one folder each under ~/.agentview/advisors; mirrors shared/advisors.ts.
+data class Advisor(val id: String, val name: String, val hint: String, val model: String)
 
-val ADVISORS = listOf(Advisor("pm", "PM", "What to build next and why"), Advisor("architect", "Architect", "How it fits the code, cost and risk"))
+val ADVISORS = listOf(
+    Advisor("pm", "PM", "What to build next and why", "sonnet"),
+    Advisor("architect", "Architect", "How it fits the code, cost and risk", "opus"),
+    Advisor("designer", "Designer", "Sketches screens before they are built", "sonnet"),
+)
+
 
 fun advisorOf(cwd: String) = ADVISORS.firstOrNull { cwd.trimEnd('/').endsWith("/.agentview/advisors/${it.id}") }
 
@@ -90,7 +95,7 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = ""): List<
     val saved = ws.saved.associateBy { it.sessionId }
     val m = LinkedHashMap<String, RepoGroup>()
     fun add(cwd: String, title: String, sessionId: String?, last: Long): RepoGroup? {
-        // Advisor chats show in Advisors; a search still finds their earlier conversations.
+        // Advisor chats show on the Advisors page; a search still finds them here.
         if (words.isEmpty() && advisorOf(cwd) != null) return null
         val key = folderKey(cwd, ws.repos, ws.trees)
         val name = folderName(key)

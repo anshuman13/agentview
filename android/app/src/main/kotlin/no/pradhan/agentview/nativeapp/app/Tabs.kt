@@ -16,6 +16,7 @@ val MORE_TOOLS = listOf(
     MoreItem("github", "Pull Requests", "git-pull-request"),
 )
 val MORE_PAGES = listOf(
+    MoreItem("advisors", "Advisors", "organization"),
     MoreItem("runs", "Runs", "sync"),
     MoreItem("sketches", "Sketches", "paintcan"),
     MoreItem("observe", "Observe", "pulse"),

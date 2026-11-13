@@ -129,26 +129,6 @@ class ChatRows(
         scope.launch { if (hub.openSaved(sessionId)) onOpen() }
     }
 
-    // Tapping goes to the advisor's open chat or resumes its latest; New conversation starts over with its memory.
-    @Composable
-    fun AdvisorRow(a: Advisor) {
-        val c = live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
-        val state = c?.let { chatState(it, it.sessionId?.let(saved::get), seen) }
-        val meta = when {
-            c == null -> a.hint
-            c.pending > 0 -> "Needs you"
-            c.running -> "Working"
-            else -> "${c.title.ifBlank { a.hint }} · ${since(c.lastActive)}"
-        }
-        fun open(fresh: Boolean) = scope.launch { if (hub.openAdvisor(a.id, fresh)) onOpen() }
-        ListRow(
-            boldIf(state == ChatState.Done || state == ChatState.Needs, a.name), meta, lines = 1, metaLines = 1, selected = c != null && c.id == shownId,
-            leading = { StateDot(state) },
-            onClick = { open(false) },
-            menu = { close -> MenuItem("New conversation", "add", { close(); open(true) }) },
-        )
-    }
-
     @Composable
     fun Row(item: ChatItem) {
         if (item.live != null) LiveRow(item.live, item.repo) else SavedRow(item.saved!!, item.repo)
@@ -239,10 +219,10 @@ private fun RepoMark(name: String) {
     }
 }
 
-private fun boldIf(on: Boolean, title: String): CharSequence = if (on) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(title) } } else title
+internal fun boldIf(on: Boolean, title: String): CharSequence = if (on) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(title) } } else title
 
 @Composable
-private fun StateDot(state: ChatState?) {
+internal fun StateDot(state: ChatState?) {
     val (d, word) = when (state) {
         ChatState.Needs -> DotState.Warn to "Needs you"
         ChatState.Failed -> DotState.Bad to "Failed"

@@ -106,6 +106,7 @@ import no.pradhan.agentview.nativeapp.workspace.BrowserScreen
 import no.pradhan.agentview.nativeapp.workspace.ChangesScreen
 import no.pradhan.agentview.nativeapp.workspace.FilesScreen
 import no.pradhan.agentview.nativeapp.workspace.SketchesScreen
+import no.pradhan.agentview.nativeapp.sessions.AdvisorsScreen
 import no.pradhan.agentview.nativeapp.workspace.TerminalScreen
 
 private const val ORIGIN_ROUTE = "origin"
@@ -355,5 +356,6 @@ private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onTab: (String) 
     "mcp" -> McpScreen(hub, onBack)
     "runs" -> RunsScreen(hub, onBack, { onTab(Tab.Chat.route) }, { onTab(Tab.Codex.route) })
     "sketches" -> SketchesScreen(hub, onBack)
+    "advisors" -> AdvisorsScreen(hub, onBack) { onTab(Tab.Chat.route) }
     else -> SettingsScreen(hub, onBack, onOrigin)
 }

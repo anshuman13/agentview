@@ -246,7 +246,7 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
   const find = chatFinder(filter, chats);
   const m = new Map<string, RepoGroup>();
   const add = (cwd: string, title: string, sessionId: string | null, last: number) => {
-    // Advisor chats show in Advisors; a search still finds their earlier conversations.
+    // Advisor chats show on the Advisors page; a search still finds them here.
     if (!find.active && advisorOf(cwd)) return null;
     const key = findHere(folders, cwd).folder?.cwd ?? cwd;
     const name = repoName(folders, cwd);

@@ -1,33 +1,97 @@
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { ADVISORS, type Advisor, type AdvisorId } from '../../../shared/advisors.js';
+import { ADVISORS, type Advisor, type AdvisorId, type AdvisorInfo } from '../../../shared/advisors.js';
+import { listSessions, savedSession } from '../agent/claude/sessions.js';
 import { ADVISOR_HOME, ROOTS } from '../workspace/files.js';
 
 const ROLES = path.join(import.meta.dirname, '../../advisors');
+const KIT = path.join(import.meta.dirname, '../../build-kit');
+// The one folder each advisor may write in, inside any project.
+const WRITES: Partial<Record<AdvisorId, string>> = { pm: '.claude/specs', designer: '.claude/sketches' };
 
 export const advisor = (id: AdvisorId) => ADVISORS.find((a) => a.id === id);
 
-const memoryRules = (roots: string[]) => `## Projects
-The user's projects are the folders under ${roots.join(' and ')}; you may read any of them. Ask which project when it is unclear.
-
-## Memory
+const rules = `## Memory
 memory.md in this folder is your memory across conversations and is loaded below. When you learn something that should outlast this conversation (a decision, a priority, a project fact, a preference of the user), update it in the same turn. Keep it under 150 lines: one line per fact, grouped by project, dated, oldest facts removed when they no longer hold.
+
+@projects.md
 
 @memory.md
 `;
+
+// The first sentence-like line of a README or CLAUDE.md: not a heading, badge, list item, table, quote or html.
+const firstLine = (md: string) => {
+  const line = md.split('\n').map((l) => l.trim()).find((l) => !/^(#|<|!\[|\[!|```|---|\||>|[-*] |\d+\.)/.test(l) && !/<br|&#|^\$ |guidance to Claude/.test(l) && l.split(/\s+/).length >= 5);
+  const text = line?.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[`*_]/g, '') ?? '';
+  return (/^.{20,160}?[.!?](\s|$)/.exec(text)?.[0] ?? text.slice(0, 160)).trim();
+};
+
+async function describe(dir: string) {
+  for (const f of ['README.md', 'readme.md', 'CLAUDE.md']) {
+    const line = firstLine(await readFile(path.join(dir, f), 'utf8').catch(() => ''));
+    if (line) return line;
+  }
+  try {
+    return String(JSON.parse(await readFile(path.join(dir, 'package.json'), 'utf8')).description ?? '');
+  } catch {
+    return '';
+  }
+}
+
+// One line per project folder under each root, newest activity first, so an advisor knows where to start reading.
+export async function projectIndex(roots: string[]) {
+  const groups = await Promise.all(roots.map(async (root) => {
+    const names = await readdir(root, { withFileTypes: true }).catch(() => []);
+    const rows = await Promise.all(names.filter((d) => d.isDirectory() && !d.name.startsWith('.')).map(async (d) => {
+      const dir = path.join(root, d.name);
+      const at = (await stat(path.join(dir, '.git/index')).catch(() => null))?.mtimeMs ?? 0;
+      return { name: d.name, at, about: await describe(dir) };
+    }));
+    const date = (t: number) => (t ? ` (active ${new Date(t).toISOString().slice(0, 10)})` : '');
+    return `### ${root}\n${rows.sort((x, y) => y.at - x.at).map((r) => `- ${r.name}${date(r.at)}${r.about ? `: ${r.about}` : ''}`).join('\n')}`;
+  }));
+  return `## Projects\nThe user's projects, one folder each under these roots, most recently active first. Read a project's CLAUDE.md before advising on it; ask which one when it is unclear.\n\n${groups.join('\n\n')}\n`;
+}
+
+let index: { at: number; text: Promise<string> } | null = null;
+const cachedIndex = () => {
+  if (!index || Date.now() - index.at > 10 * 60_000) {
+    const text = projectIndex(ROOTS);
+    index = { at: Date.now(), text };
+    text.catch(() => index?.text === text && (index = null));
+  }
+  return index.text;
+};
 
 const writeIfChanged = async (file: string, text: string) => {
   if ((await readFile(file, 'utf8').catch(() => null)) !== text) await writeFile(file, text);
 };
 
-// Writes the role and settings on every open, so an edited role reaches the next conversation; memory.md is the agent's own.
+// Every root is readable; the PM and Designer may edit their one folder in any project, the Architect nothing there.
+// Its memory is in ~/.agentview, outside the roots. An edit elsewhere in a root is not allowed by a rule.
+const settings = (a: Advisor, roots: string[]) => {
+  const w = WRITES[a.id];
+  const read = roots.map((r) => `Read(/${r}/**)`);
+  return { permissions: w ? { allow: [...read, ...roots.map((r) => `Edit(/${r}/*/${w}/**)`)] } : { allow: read, deny: roots.map((r) => `Edit(/${r}/**)`) } };
+};
+
+// Writes the role, project index and settings on every open, so edits reach the next conversation; memory.md is the agent's own.
 export async function prepareAdvisor(a: Advisor, roots = ROOTS, home = ADVISOR_HOME) {
   const dir = path.join(home, a.id);
   await mkdir(path.join(dir, '.claude'), { recursive: true });
-  const role = await readFile(path.join(ROLES, `${a.id}.md`), 'utf8');
-  await writeIfChanged(path.join(dir, 'CLAUDE.md'), `${role.trim()}\n\n${memoryRules(roots)}`);
-  await writeIfChanged(path.join(dir, '.claude/settings.json'), `${JSON.stringify({ permissions: { additionalDirectories: roots } }, null, 2)}\n`);
+  const role = (await readFile(path.join(ROLES, `${a.id}.md`), 'utf8')).replaceAll('{{kit}}', KIT);
+  await writeIfChanged(path.join(dir, 'CLAUDE.md'), `${role.trim()}\n\n${rules}`);
+  await writeIfChanged(path.join(dir, 'projects.md'), roots === ROOTS ? await cachedIndex() : await projectIndex(roots));
+  await writeIfChanged(path.join(dir, '.claude/settings.json'), `${JSON.stringify(settings(a, roots), null, 2)}\n`);
   if (!existsSync(path.join(dir, 'memory.md'))) await writeFile(path.join(dir, 'memory.md'), `# ${a.name} memory\n`);
   return dir;
 }
+
+// The Advisors page: each advisor's memory and its five latest conversations.
+export const advisorsInfo = (home = ADVISOR_HOME): Promise<AdvisorInfo[]> =>
+  Promise.all(ADVISORS.map(async (a) => {
+    const dir = path.join(home, a.id);
+    const [memory, list] = await Promise.all([readFile(path.join(dir, 'memory.md'), 'utf8').catch(() => ''), existsSync(dir) ? listSessions({ dir, limit: 5 }) : []]);
+    return { id: a.id, memory, chats: list.map(savedSession).map(({ sessionId, title, lastModified }) => ({ sessionId, title, lastModified })) };
+  }));

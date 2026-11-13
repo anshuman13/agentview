@@ -15,7 +15,6 @@ import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
 import { NeedsYou } from './NeedsYou';
-import { Advisors } from './Advisors';
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 const RECENT = 5;
@@ -159,7 +158,6 @@ export function OpenChats() {
       <NeedsYou n={waiting.length}>
         {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
       </NeedsYou>
-      {!filter && <Advisors live={live} saved={savedById} seen={seen} viewing={viewing} />}
       {pinnedRows.length > 0 && (
         <div className="tree needs">
           <div className="group">Pinned</div>

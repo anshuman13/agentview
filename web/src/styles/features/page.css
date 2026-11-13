@@ -20,3 +20,4 @@
 .sk-device { flex: none; overflow: hidden; background: var(--bg); }
 .sk-device.sk-phone { border-radius: var(--radius-sheet); box-shadow: var(--elev-2); }
 .sk-device iframe { display: block; border: 0; transform-origin: top left; }
+.advisor-memory { padding: var(--sp-3) var(--sp-4); }
