@@ -305,6 +305,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     private fun handle(m: ServerMessage) {
         if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, store.state.value.shownId, muted.value).forEach(::notify)
+        if (m is ServerMessage.Approval && !foreground && notifyOn.value) notifier.post(Notice(NoticeKind.Approval, m.chat, m.title, "Spec waiting for your approval", slug = m.slug))
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         if (m is ServerMessage.FileChanged) fileChanged.tryEmit(m.path)

@@ -10,6 +10,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -125,6 +126,11 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
 
     override suspend fun pending(chat: String): List<Pending> =
         (protocolJson.parseToJsonElement(get("/api/state?limit=0", chat)).jsonObject["pending"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { parsePending(it) } ?: emptyList()
+
+    override suspend fun review(chat: String, slug: String): Boolean {
+        val body = buildJsonObject { put("slug", slug); put("phase", "all"); put("decision", "approve") }.toString()
+        return protocolJson.parseToJsonElement(post("/api/builds/review", body, chat)).jsonObject["already"]?.jsonPrimitive?.booleanOrNull == true
+    }
 
     override suspend fun send(chat: String, body: String) { post("/api/cmd?cid=${enc(java.util.UUID.randomUUID().toString())}&client=phone", body, chat) }
 }

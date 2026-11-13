@@ -14,7 +14,9 @@ enum class NoticeKind(val channel: String, val label: String) {
 
 enum class NoticeAsk { None, Permission, Question }
 
-data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None, val permissionId: String = "", val detail: String = "")
+data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None, val permissionId: String = "", val detail: String = "", val slug: String = "")
+
+fun noticeId(n: Notice) = (n.kind.channel + n.chatId + n.slug).hashCode()
 
 fun repoName(c: LiveChat) = c.cwd.trimEnd('/').substringAfterLast('/')
 
@@ -56,7 +58,7 @@ fun WaitingLine.text() = if (repo.isEmpty()) title else "$title · $repo"
 
 const val sessionsLink = "agentview://open?view=sessions"
 
-fun chatLink(id: String) = "agentview://open?chat=${URLEncoder.encode(id, "UTF-8")}"
+fun chatLink(id: String, slug: String = "") = "agentview://open?chat=${URLEncoder.encode(id, "UTF-8")}" + if (slug.isEmpty()) "" else "&slug=${URLEncoder.encode(slug, "UTF-8")}"
 
 data class SharedItem(val text: String?, val subject: String?, val images: List<String>)
 

@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
+import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.net.answerCmd
 import no.pradhan.agentview.nativeapp.net.interruptCmd
@@ -18,12 +19,14 @@ object NoticeOp {
     const val DENY = "no.pradhan.agentview.native.DENY"
     const val REPLY = "no.pradhan.agentview.native.REPLY"
     const val STOP = "no.pradhan.agentview.native.STOP"
+    const val APPROVE = "no.pradhan.agentview.native.APPROVE"
 }
 
 // The server calls a notification action makes: read a chat's open requests and send it a command.
 interface NoticeRemote {
     suspend fun pending(chat: String): List<Pending>
     suspend fun send(chat: String, body: String)
+    suspend fun review(chat: String, slug: String): Boolean
 }
 
 sealed interface ActionResult {
@@ -66,9 +69,10 @@ suspend fun noticeAsk(remote: NoticeRemote, n: Notice): Notice {
 }
 
 // The same commands the in-app buttons send: interrupt for Stop, permission for Allow and Deny, answer for a question, prompt for a finished chat.
-suspend fun runNoticeAction(remote: NoticeRemote, readOnly: Boolean, op: String, chat: String, text: String = "", permissionId: String = "", newId: () -> String = { UUID.randomUUID().toString() }): ActionResult {
+suspend fun runNoticeAction(remote: NoticeRemote, readOnly: Boolean, op: String, chat: String, text: String = "", permissionId: String = "", slug: String = "", newId: () -> String = { UUID.randomUUID().toString() }): ActionResult {
     if (readOnly) return ActionResult.ReadOnly
     return try {
+        if (op == NoticeOp.APPROVE) return if (remote.review(chat, slug)) ActionResult.Failed("Already approved") else ActionResult.Sent
         val open = if (op == NoticeOp.STOP) emptyList() else remote.pending(chat)
         val body = when (op) {
             NoticeOp.STOP -> interruptCmd()
@@ -89,7 +93,8 @@ suspend fun runNoticeAction(remote: NoticeRemote, readOnly: Boolean, op: String,
         remote.send(chat, body)
         ActionResult.Sent
     } catch (e: Exception) {
-        ActionResult.Failed("Not sent: ${e.message ?: "no connection"}")
+        val held = if (op == NoticeOp.APPROVE && e is ApiError) mapOf(400 to "On hold", 404 to "Spec removed")[e.code] else null
+        ActionResult.Failed(held ?: "Not sent: ${e.message ?: "no connection"}")
     }
 }
 

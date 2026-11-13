@@ -11,12 +11,17 @@ import no.pradhan.agentview.nativeapp.net.answerCmd
 import no.pradhan.agentview.nativeapp.net.interruptCmd
 import no.pradhan.agentview.nativeapp.net.permissionCmd
 import no.pradhan.agentview.nativeapp.net.promptCmd
+import no.pradhan.agentview.nativeapp.net.ApiError
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NoticeActionsTest {
-    private class Fake(var open: List<Pending> = emptyList(), var fail: Boolean = false) : NoticeRemote {
+    private class Fake(var open: List<Pending> = emptyList(), var fail: Boolean = false, var review: () -> Boolean = { false }) : NoticeRemote {
+        val reviewed = mutableListOf<Pair<String, String>>()
+        override suspend fun review(chat: String, slug: String): Boolean { reviewed += chat to slug; return review() }
         val sent = mutableListOf<Pair<String, String>>()
         override suspend fun pending(chat: String): List<Pending> { if (fail) error("down"); return open }
         override suspend fun send(chat: String, body: String) { sent += chat to body }
@@ -25,7 +30,7 @@ class NoticeActionsTest {
     private val notice = Notice(NoticeKind.Approval, "c1", "Claude needs you", "Fix")
     private fun perm(id: String = "p1", tool: String = "Bash") = Pending.Permission(id, tool, "Run", "", JsonObject(emptyMap()), true, false)
     private fun ask(vararg q: String) = Pending.Question("q1", q.map { Ask(it, "", false, emptyList()) })
-    private fun run(f: Fake, op: String, text: String = "", readOnly: Boolean = false, permissionId: String = "p1") = runBlocking { runNoticeAction(f, readOnly, op, "c1", text, permissionId) { "id1" } }
+    private fun run(f: Fake, op: String, text: String = "", readOnly: Boolean = false, permissionId: String = "p1") = runBlocking { runNoticeAction(f, readOnly, op, "c1", text, permissionId, "foo") { "id1" } }
 
     @Test fun allowAndDenySendThePermissionCommand() {
         val f = Fake(listOf(perm()))
@@ -126,5 +131,47 @@ class NoticeActionsTest {
         assertEquals("Write n.txt +12 -0", title)
         assertEquals(8, body.lines().size)
         assertEquals(null, editPreview(perm()))
+    }
+
+    @Test fun approveReviewsTheBuildAndMapsTheAnswers() {
+        val f = Fake()
+        assertEquals(ActionResult.Sent, run(f, NoticeOp.APPROVE))
+        assertEquals(listOf("c1" to "foo"), f.reviewed)
+        f.review = { true }
+        assertEquals(ActionResult.Failed("Already approved"), run(f, NoticeOp.APPROVE))
+        f.review = { throw ApiError("Held", 400) }
+        assertEquals(ActionResult.Failed("On hold"), run(f, NoticeOp.APPROVE))
+        f.review = { throw ApiError("No such spec", 404) }
+        assertEquals(ActionResult.Failed("Spec removed"), run(f, NoticeOp.APPROVE))
+        f.review = { error("down") }
+        assertEquals(ActionResult.Failed("Not sent: down"), run(f, NoticeOp.APPROVE))
+    }
+
+    @Test fun approveWhenReadOnlyMakesNoCall() {
+        val f = Fake()
+        assertEquals(ActionResult.ReadOnly, run(f, NoticeOp.APPROVE, readOnly = true))
+        assertTrue(f.reviewed.isEmpty())
+    }
+
+    @Test fun noticeIdSeparatesBuildsInOneChat() {
+        val a = notice.copy(slug = "a")
+        assertTrue(noticeId(a) != noticeId(notice.copy(slug = "b")))
+        assertEquals(noticeId(a), noticeId(a.copy()))
+        assertEquals(("approvals" + "c1").hashCode(), noticeId(notice))
+    }
+
+    @Test fun apiReviewPostsTheApproveAllBody() {
+        var seen: okhttp3.Request? = null
+        var sent = ""
+        val http = okhttp3.OkHttpClient.Builder().addInterceptor { chain ->
+            seen = chain.request()
+            val buf = okio.Buffer().also { seen!!.body!!.writeTo(it) }
+            sent = buf.readUtf8()
+            okhttp3.Response.Builder().request(seen!!).protocol(okhttp3.Protocol.HTTP_1_1).code(200).message("OK")
+                .body("""{"ok":true,"already":true}""".toResponseBody("application/json".toMediaType())).build()
+        }.build()
+        assertTrue(runBlocking { no.pradhan.agentview.nativeapp.net.Api({ "http://x" }, http).review("c 1", "foo") })
+        assertEquals("http://x/api/builds/review?chat=c+1", seen!!.url.toString())
+        assertEquals("""{"slug":"foo","phase":"all","decision":"approve"}""", sent)
     }
 }

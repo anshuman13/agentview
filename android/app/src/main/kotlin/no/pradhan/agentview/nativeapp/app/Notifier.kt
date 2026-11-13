@@ -24,6 +24,7 @@ private const val WAITING_ID = 1
 private const val RUNNING_CHANNEL = "running"
 const val EXTRA_CHAT = "chat"
 const val EXTRA_NOTICE_ID = "noticeId"
+const val EXTRA_SLUG = "slug"
 const val EXTRA_PERMISSION = "permission"
 const val EXTRA_CHANNEL = "channel"
 const val EXTRA_READONLY = "readonly"
@@ -49,9 +50,9 @@ class Notifier(private val app: Application) {
         return PendingIntent.getActivity(app, code, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
-    private fun action(op: String, chat: String, id: Int, channel: String, label: String, permissionId: String = "", reply: Boolean = false): NotificationCompat.Action {
+    private fun action(op: String, chat: String, id: Int, channel: String, label: String, permissionId: String = "", reply: Boolean = false, slug: String = ""): NotificationCompat.Action {
         val intent = Intent(op).setClass(app, NoticeReceiver::class.java)
-            .putExtra(EXTRA_CHAT, chat).putExtra(EXTRA_NOTICE_ID, id).putExtra(EXTRA_CHANNEL, channel).putExtra(EXTRA_PERMISSION, permissionId).putExtra(EXTRA_READONLY, AppState.readOnly)
+            .putExtra(EXTRA_CHAT, chat).putExtra(EXTRA_NOTICE_ID, id).putExtra(EXTRA_CHANNEL, channel).putExtra(EXTRA_PERMISSION, permissionId).putExtra(EXTRA_SLUG, slug).putExtra(EXTRA_READONLY, AppState.readOnly)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (reply) PendingIntent.FLAG_MUTABLE else PendingIntent.FLAG_IMMUTABLE
         val builder = NotificationCompat.Action.Builder(0, label, PendingIntent.getBroadcast(app, (op + id).hashCode(), intent, flags))
         if (reply) builder.addRemoteInput(RemoteInput.Builder(KEY_REPLY).setLabel("Reply").build())
@@ -61,12 +62,12 @@ class Notifier(private val app: Application) {
     @android.annotation.SuppressLint("MissingPermission")
     fun post(n: Notice) {
         if (!granted()) return
-        val id = (n.kind.channel + n.chatId).hashCode()
+        val id = noticeId(n)
         val builder = NotificationCompat.Builder(app, n.kind.channel)
             .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle(n.title)
             .setContentText(n.body)
-            .setContentIntent(open(chatLink(n.chatId), id))
+            .setContentIntent(open(chatLink(n.chatId, n.slug), id))
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
         if (n.detail.isNotEmpty()) builder.setStyle(NotificationCompat.BigTextStyle().bigText(n.detail))
@@ -76,6 +77,7 @@ class Notifier(private val app: Application) {
             builder.addAction(action(NoticeOp.DENY, n.chatId, id, n.kind.channel, "Deny", n.permissionId))
         }
         if (replies) builder.addAction(action(NoticeOp.REPLY, n.chatId, id, n.kind.channel, "Reply", reply = true))
+        if (n.slug.isNotEmpty() && !AppState.readOnly) builder.addAction(action(NoticeOp.APPROVE, n.chatId, id, n.kind.channel, "Approve", slug = n.slug))
         manager.notify(id, builder.build())
     }
 
