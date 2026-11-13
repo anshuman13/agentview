@@ -88,7 +88,9 @@ fun agentAge(startedAt: Long, now: Long): String {
 fun stoppedText(run: ChatRun) = "${KIND[run.kind] ?: "Loop"} stopped"
 
 // Web composerLogic.ts runNeedsYou: the run asks, or its last round is blocked, a question or failed.
-fun runNeedsYou(run: ChatRun) = run.needsYou || run.rounds.lastOrNull()?.outcome in setOf("blocked", "question", "failed")
+private val NEEDS_YOU = setOf("blocked", "question", "failed")
+
+fun runNeedsYou(run: ChatRun) = run.needsYou || run.rounds.lastOrNull()?.outcome in NEEDS_YOU
 
 fun outcomeDot(outcome: String) = when (outcome) {
     "blocked", "question" -> DotState.Warn

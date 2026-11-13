@@ -72,7 +72,11 @@ private val cardChoices = mutableStateMapOf<String, Boolean>()
 // Web chat/cards/useCardOpen.ts: a card is closed until tapped, opens itself while it needs you and then stays as the last tap left it; kept in memory per chat and card.
 @Composable
 fun rememberCardOpen(key: String, needsYou: Boolean): Pair<Boolean, () -> Unit> {
-    LaunchedEffect(key, needsYou) { if (needsYou && key !in cardChoices) cardChoices[key] = true }
+    LaunchedEffect(key, needsYou) {
+        val chat = key.substringBeforeLast(':')
+        cardChoices.keys.removeAll { !it.startsWith("$chat:") }
+        if (needsYou && key !in cardChoices) cardChoices[key] = true
+    }
     val open = cardChoices[key] ?: needsYou
     return open to { cardChoices[key] = !open }
 }

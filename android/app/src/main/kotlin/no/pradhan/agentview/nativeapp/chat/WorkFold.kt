@@ -97,7 +97,6 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
     return out
 }
 
-// The fold's title, and its failed count apart so it can be drawn in the error colour. The duration waits for the turn to end.
 fun workTitle(work: Work, live: Boolean, billing: String): WorkTitle {
     val text = listOfNotNull(
         plural(work.tools, "tool").takeIf { work.tools > 0 },
@@ -109,5 +108,5 @@ fun workTitle(work: Work, live: Boolean, billing: String): WorkTitle {
         ("$" + String.format(Locale.US, "%.2f", work.cost)).takeIf { billing == "usd" && work.cost > 0 },
     ).joinToString(" \u00B7 ")
     val failed = if (work.failed > 0) "${work.failed} failed" else ""
-    return WorkTitle(text.ifEmpty { if (failed.isEmpty() && detail.isEmpty()) "Work" else "" }, failed, detail)
+    return WorkTitle(text.ifEmpty { if (failed.isEmpty()) "Work" else "" }, failed, detail)
 }

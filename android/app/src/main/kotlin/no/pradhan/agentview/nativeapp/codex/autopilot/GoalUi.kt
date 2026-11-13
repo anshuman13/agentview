@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
-import no.pradhan.agentview.nativeapp.sessions.advisorOf
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -42,6 +41,7 @@ import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.runEdit
 import no.pradhan.agentview.nativeapp.net.submit
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopGoal
+import no.pradhan.agentview.nativeapp.sessions.advisorOf
 import no.pradhan.agentview.nativeapp.sessions.askAdvisor
 import no.pradhan.agentview.nativeapp.sessions.folderName
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -170,7 +170,8 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val read = planRead(hub, sheet.plan, hub.pageChat)
     val badEvery = custom.isNotBlank() && parseEvery(custom) == null
     val ready = !badEvery && (sheet.plan == null || (read.markdown != null && !read.error))
-    val root = dir.takeIf { it.isNotEmpty() && !(loop && advisorOf(it) != null) } ?: dirs.firstOrNull { advisorOf(it.first) == null }?.first.orEmpty()
+    val usable = { d: String -> !(loop && advisorOf(d) != null) }
+    val root = if (dir.isNotEmpty() && usable(dir)) dir else dirs.firstOrNull { usable(it.first) }?.first.orEmpty()
     val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: if (loop) (if (root.isEmpty()) "" else advisorLoopGoal(root)) else what
     val start = {
         hub.track("action:startGoal")
