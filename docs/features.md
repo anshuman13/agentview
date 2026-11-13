@@ -175,13 +175,15 @@ Each Jobs list row is one line of title and one line of meta: the schedule in wo
 ## Timeline and steering
 
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
-and notes. The timeline shows one card per prompt: Claude's final reply, the files changed with line counts,
-commands run and the first error of each failed one, commits, subagents, these notes and a collapsed Steps box with the turn's raw steps. Once a turn is finished, its files, commits, commands
-and subagents fold into one line ("3 files +40 -2 · 1 commit · 5 commands, 1 failed · 2 agents") that opens on a tap,
-so Review changes and Rewind files take one more tap; pending requests, blocked cards and notes stay visible, and a
-running turn shows everything open.
-A finished card ends with the turn's cost and how long it took; a chat row in the Sessions view shows the chat's
-cost so far. The status bar usage tooltip adds a Spend block with today's and the last 7 days' cost per model across the chats open on the Mac (today is the Mac's day). Spend from before a host restart is not counted, since history reloaded from the CLI transcript has no cost, and a chat past the event cap is approximate because trimming old events counts the first kept total again. Switch to the transcript for every message and step in order.
+and notes. The chat shows each turn as its prompt and Claude's final reply, with the turn's work folded into one row
+above the reply: "12 tools · 3 files · 1 agent · 2m · $0.40", plus "N failed" in the error colour when a tool failed. The row
+is closed by default and kept open per device (id `work:<turn>`); opened, it lists the turn's steps, Explored groups, files,
+agents and earlier text in order. A running turn shows a spinner and counts that grow, and no duration. Blocked and Review
+cards, error system rows, spec and sketch cards stay visible, and pending requests, the loop card and the to-do card stay above
+the composer. A turn with nothing to hide has no row. The More menu's Show work switch (per device, off by default) turns
+the folds off and shows every row. The web and the phone share the rule (`workFold.ts`, `WorkFold.kt`).
+A chat row in the Sessions view shows the chat's
+cost so far. The status bar usage tooltip adds a Spend block with today's and the last 7 days' cost per model across the chats open on the Mac (today is the Mac's day). Spend from before a host restart is not counted, since history reloaded from the CLI transcript has no cost, and a chat past the event cap is approximate because trimming old events counts the first kept total again.
 
 - Sending while Claude works stops whatever it is doing, including an open permission or question, and continues
   with your message
@@ -189,15 +191,15 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Editing the next steps sends the new plan at Claude's next tool call, without stopping it
 - The composer shows "No update for Ns" when nothing has arrived from the server for 30 s. The link reopens by
   itself after 50 s of silence, and a message that cannot be delivered goes back into the box with a notice
-- A subagent shows in the timeline as a collapsible box: a chevron, its description, a meta line (type, duration once it ended, step count), one Badge (Running, Done, Failed or Skipped) and a summary under the header, clamped to 2 lines. While it runs the summary is the SDK's one-line progress, refreshed about every 30 s, until the first one the last step; once it ends it is the first line of the report. A running agent has a Stop button in the header. Boxes start collapsed; the body shows the steps and the report on the web, the last 3 steps and a Steps and report row that opens the Agents pane on the phone. A build agent's live card follows its box on the phone, not inside the box. Every transcript box (agents, the loop card, Since you left, spec cards, Explored groups) collapses from its header, and whether it is open is kept per device for the 300 boxes saved last. Summaries are on for Claude chats only (not Codex or OpenRouter), and each costs a small cached fork of the agent every 30 s
-- Questions, plan approvals and permissions show as buttons in the timeline
+- A subagent shows in the chat as a collapsible box: a chevron, its description, a meta line (type, duration once it ended, step count), one Badge (Running, Done, Failed or Skipped) and a summary under the header, clamped to 2 lines. While it runs the summary is the SDK's one-line progress, refreshed about every 30 s, until the first one the last step; once it ends it is the first line of the report. A running agent has a Stop button in the header. Boxes start collapsed; the body shows the steps and the report on the web, the last 3 steps and a Steps and report row that opens the Agents pane on the phone. A build agent's live card follows its box on the phone, not inside the box. Every transcript box (agents, the loop card, Since you left, spec cards, Explored groups) collapses from its header, and whether it is open is kept per device for the 300 boxes saved last. Summaries are on for Claude chats only (not Codex or OpenRouter), and each costs a small cached fork of the agent every 30 s
+- Questions, plan approvals and permissions show as buttons in the chat
 - A plan approval card splits the plan into paragraphs; tapping one stages a comment on it. Keep planning with comments
   sends one message that quotes each commented paragraph (first 80 characters, as `> ...`) followed by its comment, and
   without comments just declines the plan
 - The latest to-do list Claude wrote (TodoWrite) shows as a card above the composer: "3 of 7" and the item in progress,
   tap for every item with its status. It hides when there is no list, or when all items are done and the turn has ended.
   A chat row in Sessions adds "3/7" to its meta line while the list has items left
-- A hook that blocks a tool or fails shows in the timeline in the error colour, for example "Hook blocked Bash: reason" or
+- A hook that blocks a tool or fails shows in the chat in the error colour, for example "Hook blocked Bash: reason" or
   "PostToolUse hook failed: reason". Hooks that run fine show nothing
 - A chat has a recap: the ROUND summary, else the first sentence of the last reply of
   the newest finished turn, up to 400 characters. A turn only counts when it used a tool or replied with more than 200 characters. It is read
@@ -289,16 +291,15 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
 - "Continue in terminal" in the Tools pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone Tools sheet has the same Continue in terminal, copying to the clipboard
-- "Rewind files" under the files of a turn puts them back to how they were before that prompt (later turns' edits
-  go too); the conversation itself stays. On the phone, a prompt that changed files has the same Rewind files link under it
-  while Claude is idle
+- On the phone, a prompt that changed files has a Rewind files link under it while Claude is idle: it puts the files back to how
+  they were before that prompt (later turns' edits go too); the conversation itself stays
 
 ## Review findings
 
 "Ask Claude to review" on a pull request and the inbox's review prompt run `/code-review <number>`. The findings
 it reports show up in the pull request's pane, most severe first: a row opens the file on that line, Fix sends
 the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentview/findings.json`). "Review changes
-with Claude" in the Changes view and "Review changes" under the files of the latest turn run `/code-review` on the
+with Claude" in the Changes view and "Review changes" in the phone chat menu run `/code-review` on the
 working tree; those findings show at the bottom of the Changes view.
 
 The spec review reports under the target `spec:<slug>`, shown as a Findings section in the opened Spec card (web and phone): the row opens the spec on that line on web and the file on the phone, and Fix makes the agent edit the spec. A repeat review replaces the list and keeps dismissed findings hidden.

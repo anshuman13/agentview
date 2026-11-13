@@ -14,24 +14,27 @@ import { FileIcon } from '../../workspace/FileIcon';
 import { SketchCard } from './SketchCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
+import { WorkBox } from './WorkBox';
+import { foldTurns, type FoldRow } from './workFold';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, stepLabel, stepTone, type Item, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
-import { providerLabel } from '../../../../shared/providers';
+import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
 import { isSpecPath, specSlug } from '../../../../shared/specTasks';
 import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent, type Round } from '../../../../shared/protocol';
 
-export function Transcript() {
+export function Transcript({ showWork }: { showWork: boolean }) {
   const events = useStore((s) => s.events);
   const cwd = useStore((s) => s.session.cwd);
   const running = useStore((s) => s.session.running);
   const chat = useStore((s) => s.session.id);
   const earlier = useStore((s) => s.earlier ?? 0);
-  return <TranscriptView key={chat} chat={chat} events={events} earlier={earlier} cwd={cwd} running={running} />;
+  const provider = useStore((s) => s.session.provider);
+  return <TranscriptView key={chat} chat={chat} events={events} earlier={earlier} cwd={cwd} running={running} showWork={showWork} bill={billing(provider)} />;
 }
 
 function lastUserId(items: Item[]) {
@@ -174,20 +177,22 @@ function useRowWindow(count: number, replies: number, earlier: number, box: RefO
   return { shown, start, from, staging, loading, showEarlier };
 }
 
-function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string; events: ChatEvent[]; earlier: number; cwd: string; running: boolean }) {
+function TranscriptView({ chat, events, earlier, cwd, running, showWork, bill }: { chat: string; events: ChatEvent[]; earlier: number; cwd: string; running: boolean; showWork: boolean; bill: string }) {
   const [build] = useState(createTranscriptBuilder);
   const items = useMemo(() => build(events), [build, events]);
   const last = events[events.length - 1];
   const scroll = useStickyScroll(items, last, running);
   const { box, rows, stuck, behind, onScroll, jump } = scroll;
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
-  const { shown, start, from, staging, loading, showEarlier } = useRowWindow(items.length, replyCount, earlier, box, scroll.stick);
+  const list = useMemo<FoldRow[]>(() => (showWork ? items.map((it) => ({ kind: 'item', it })) : foldTurns(items, events)), [showWork, items, events]);
+  const { shown, start, from, staging, loading, showEarlier } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const cards = useMemo(() => specCards(items), [items]);
   const bumps = useMemo(() => specBumps(items), [items]);
   const mark = useSeenMark(events);
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
   const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
+  const newRow = useMemo(() => list.find((r) => (r.kind === 'item' ? r.it.id === newId : r.hidden.some((h) => h.id === newId))), [list, newId]);
   const recap = useStore((s) => s.live.find((c) => c.id === s.session.id)?.recap);
   const [since, setSince] = useState(true);
   const [sinceOpen, setSinceOpen] = useState(false);
@@ -196,6 +201,18 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
   const folded = useMemo(() => new Set([...runs].flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs]);
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
 
+  const rowOf = (it: Item, first: boolean, where: 'flat' | 'shown' | 'hidden') => {
+    if (!first && folded.has(it.id)) return null;
+    const run = runs.get(it.id);
+    if (run) return <Explored key={it.id} id={it.id} run={run} cwd={cwd} />;
+    const slug = itemSpecSlug(it);
+    const bump = slug ? bumps.get(slug) ?? 0 : 0;
+    const card = cards.has(it.id);
+    const agentCard = card && it.kind === 'agent' && slug && where !== 'hidden' ? <SpecCard slug={slug} bump={bump} /> : null;
+    if (where === 'shown' && agentCard) return <Fragment key={it.id}>{agentCard}</Fragment>;
+    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
+  };
+
   return (
     <div className="tr-host">
     {newId && recap && since && <SinceBox recap={recap} rounds={fresh} onOpen={() => setSinceOpen(true)} onDismiss={() => setSince(false)} />}
@@ -203,18 +220,14 @@ function TranscriptView({ chat, events, earlier, cwd, running }: { chat: string;
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, the agent's steps and replies show up here.</div>}
-      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? 'Loading earlier…' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
-      {items.slice(from).map((it, i) => {
-        if (i > 0 && folded.has(it.id)) return null;
-        const run = runs.get(it.id);
-        if (run) return <Explored key={it.id} id={it.id} run={run} cwd={cwd} />;
-        const slug = itemSpecSlug(it);
-        const bump = slug ? bumps.get(slug) ?? 0 : 0;
-        const card = cards.has(it.id);
-        const row = <Row key={it.id} it={it} cwd={cwd} card={card} bump={card && it.kind === 'file' ? bump : undefined} />;
-        const day = days.get(it.id);
-        const agentCard = card && it.kind === 'agent' && slug ? <SpecCard slug={slug} bump={bump} /> : null;
-        return day || it.id === newId || agentCard ? <Fragment key={it.id}>{day && <div className="tr-day"><span>{day}</span></div>}{it.id === newId && <div className="tr-new"><span>New</span></div>}{row}{agentCard}</Fragment> : row;
+      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? 'Loading earlier…' : `Show earlier (${hiddenCount(earlier, list.length, shown)} hidden)`}</div>}
+      {list.slice(from).map((r, i) => {
+        const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
+        const day = r.kind === 'item' ? days.get(r.it.id) : undefined;
+        const row = r.kind === 'fold'
+          ? <WorkBox key={id} id={r.id} work={r.work} live={running && r.last} billing={bill}>{r.hidden.map((it) => rowOf(it, false, 'hidden'))}</WorkBox>
+          : rowOf(r.it, i === 0, showWork ? 'flat' : 'shown');
+        return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
       </div>
     </div>

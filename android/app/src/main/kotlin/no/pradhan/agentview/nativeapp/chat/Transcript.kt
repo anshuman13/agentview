@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,11 +48,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
+import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.loadEarlier
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.rewind
@@ -85,6 +90,13 @@ internal fun gapAbove(older: Item?, it: Item): Dp? {
     }
 }
 
+internal fun gapAbove(older: FoldRow?, row: FoldRow): Dp? = when {
+    older == null -> null
+    older is FoldRow.Row && row is FoldRow.Row -> gapAbove(older.it, row.it)
+    (older as? FoldRow.Row)?.it is Item.User || (row as? FoldRow.Row)?.it is Item.User -> Tokens.sp12
+    else -> Tokens.sp4
+}
+
 internal fun Modifier.gap(d: Dp?) = if (d == null) this else padding(top = d)
 
 // Hides the bottom bar while scrolling away from the newest message.
@@ -106,7 +118,7 @@ private fun HideNavOnScroll(hub: Hub, listState: LazyListState, atBottom: Boolea
 
 // Keeps the newest row in view while the user is at the bottom, and jumps to a turn or a just-sent message.
 @Composable
-private fun FollowNewest(hub: Hub, view: ChatView, listState: LazyListState, stick: MutableState<Boolean>, atBottom: Boolean) {
+private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listState: LazyListState, stick: MutableState<Boolean>, atBottom: Boolean) {
     val rows = view.rows
     val bottom by rememberUpdatedState(atBottom)
     LaunchedEffect(listState) {
@@ -115,8 +127,8 @@ private fun FollowNewest(hub: Hub, view: ChatView, listState: LazyListState, sti
     val newest = rows.firstOrNull()?.id
     LaunchedEffect(newest, rows.size) { if (stick.value && newest != null) listState.scrollToItem(0) }
     val turn by hub.showTurn.collectAsState()
-    LaunchedEffect(turn, rows) {
-        val at = rows.indexOfFirst { it.id == turn }
+    LaunchedEffect(turn, list) {
+        val at = list.indexOfFirst { it.key == turn }
         if (at >= 0) { stick.value = false; listState.animateScrollToItem(at); hub.showTurn.value = null }
     }
     var lastSent by remember { mutableStateOf<String?>(null) }
@@ -143,9 +155,13 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val rows = view.rows
     val noEvents by hub.store.state.select { it.events.isEmpty() }
     val canRewind by hub.store.state.select { it.session?.capabilities?.rewind ?: true }
+    val showWork by hub.showWork.collectAsState()
+    val bill by hub.store.state.select { billing(it.session?.provider) }
+    val list = remember(view, showWork) { if (showWork) view.rows.map { FoldRow.Row(it) } else view.foldRows }
     val folded = remember(view.runs) { view.runs.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, view.ats, seen.first, seen.second) }
+    val newKey = remember(list, newId) { newId?.let { id -> list.firstOrNull { r -> if (r is FoldRow.Fold) r.hidden.any { it.id == id } else r.key == id }?.key } }
     DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
     val listState = rememberLazyListState()
     val loading by hub.loadingEarlier.collectAsState()
@@ -158,7 +174,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val replies = remember(items, leftId) { leftId?.let { newReplies(items, it) } ?: 0 }
     val blank = rows.isEmpty() && earlier > 0
     val earlierDue = rememberEarlierDue(hub, chatId, remember(items) { items.count { it is Item.Assistant } }, loading, earlier, settled)
-    FollowNewest(hub, view, listState, stick, atBottom)
+    FollowNewest(hub, view, list, listState, stick, atBottom)
 
     Box(modifier) {
         LazyColumn(
@@ -170,7 +186,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
             lazyItems(queued.asReversed(), key = { "out-${it.id}" }) { q ->
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
             }
-            transcriptRows(hub, view, newId, folded, chatId, cwd, running, canRewind, onOpenAgent)
+            transcriptRows(hub, view, list, showWork, bill, newKey, folded, chatId, cwd, running, canRewind, onOpenAgent)
             if (earlier > 0) item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
                     Text(if (loading) "Loading earlier…" else "Show earlier ($earlier hidden)", style = Type.callout, color = av.accentText)
@@ -191,20 +207,53 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     }
 }
 
-private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, newId: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, onOpenAgent: (String) -> Unit) {
-    val rows = view.rows
+private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<FoldRow>, showWork: Boolean, bill: String, newKey: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, onOpenAgent: (String) -> Unit) {
     val days = view.days
     val firstId = view.items.firstOrNull()?.id
-    itemsIndexed(rows, key = { _, it -> it.id }, contentType = { _, it -> it::class }) { i, it ->
-        Column(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) {
+    itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
+        Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
+            val it = (r as? FoldRow.Row)?.it
             if (it is Item.User && it.id !in days && it.id != firstId) HorizontalDivider(Modifier.padding(bottom = Tokens.sp12), color = av.border, thickness = Tokens.hairline)
-            days[it.id]?.let { DayDivider(it) }
-            if (it.id == newId) NewLine()
-            val run = view.runs[it.id]
+            it?.let { row -> days[row.id]?.let { DayDivider(it) } }
+            if (r.key == newKey) NewLine()
             when {
-                it.id in folded -> {}
-                run != null -> ExploredRow(hub, it.id, run, cwd, !running)
-                else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in view.rewinds, bump = if (it.id in view.specCards) view.specBumps[itemSlug(it)] ?: 0 else null)
+                r is FoldRow.Fold -> WorkFoldRow(hub, view, r, folded, chatId, cwd, running, bill, onOpenAgent)
+                it == null || it.id in folded -> {}
+                else -> {
+                    val run = view.runs[it.id]
+                    val bump = if (it.id in view.specCards) view.specBumps[itemSlug(it)] ?: 0 else null
+                    val build = (it as? Item.Agent)?.let { a -> agentBuild(a.use) }
+                    when {
+                        run != null -> ExploredRow(hub, it.id, run, cwd, !running)
+                        !showWork && build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in view.rewinds, bump = bump)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// One turn's work, closed until opened: its steps, files, agents and earlier text in transcript order.
+@Composable
+private fun WorkFoldRow(hub: Hub, view: ChatView, fold: FoldRow.Fold, folded: Set<String>, chatId: String, cwd: String, running: Boolean, bill: String, onOpenAgent: (String) -> Unit) {
+    val live = running && fold.last
+    val title = workTitle(fold.work, live, bill)
+    val text = buildAnnotatedString {
+        append(title.text)
+        if (title.failed.isNotEmpty()) {
+            if (title.text.isNotEmpty()) append(" \u00B7 ")
+            withStyle(SpanStyle(color = av.err)) { append(title.failed) }
+        }
+    }
+    TranscriptBox(hub, "work:${fold.id}", text, state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null) {
+        Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) {
+            val rows = fold.hidden.filter { it.id !in folded }
+            rows.forEachIndexed { i, it ->
+                Box(Modifier.gap(gapAbove(rows.getOrNull(i - 1), it)?.coerceAtMost(Tokens.sp2))) {
+                    val run = view.runs[it.id]
+                    if (run != null) ExploredRow(hub, it.id, run, cwd, !running) else ItemRow(hub, it, chatId, cwd, !running, onOpenAgent)
+                }
             }
         }
     }

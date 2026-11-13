@@ -395,6 +395,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     }
 
     val chatSegment = MutableStateFlow(prefs.getString("chatSegment", null) ?: WORK)
+    val showWork = MutableStateFlow(prefs.getBoolean("showWork", false))
 
     internal var asking = false
 

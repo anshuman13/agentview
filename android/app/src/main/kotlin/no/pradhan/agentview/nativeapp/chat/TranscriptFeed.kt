@@ -35,11 +35,13 @@ class ChatView(
     val checklist: List<ChecklistItem>?,
     val specCards: Set<String>,
     val specBumps: Map<String, Int>,
+    val folds: List<FoldRow>,
 ) {
     // Newest first, the order the reversed list draws.
     val rows: List<Item> = items.asReversed()
+    val foldRows: List<FoldRow> = folds.asReversed()
 
-    fun withItems(events: List<ChatEvent>, items: List<Item>) = ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent, checklist, specCards, specBumps)
+    fun withItem(events: List<ChatEvent>, items: List<Item>, item: Item) = ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent, checklist, specCards, specBumps, folds.map { it.with(item) })
 
     companion object {
         val EMPTY = buildView("", emptyList(), 0L, null)
@@ -56,7 +58,13 @@ fun buildView(chat: String, events: List<ChatEvent>, now: Long, prev: ChatView?)
         items.filterIsInstance<Item.File>().filter { it.error == null }.map { it.path }.distinct(),
         rewindable(items), exploreRuns(items), days, dayOfRows(items, days),
         events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), specCardIds(items), specBumps(items),
+        foldTurns(items, events),
     )
+}
+
+private fun FoldRow.with(item: Item): FoldRow = when (this) {
+    is FoldRow.Row -> if (it.id == item.id) FoldRow.Row(item) else this
+    is FoldRow.Fold -> if (hidden.any { it.id == item.id }) copy(hidden = hidden.map { if (it.id == item.id) item else it }) else this
 }
 
 // A streamed token only changes the text of one reply: every other item, and all that is derived from the rows, stays.
@@ -71,7 +79,8 @@ private fun patched(prev: ChatView, events: List<ChatEvent>): ChatView? {
     val text = stripRound(new.text)
     val row = prev.items.indexOfFirst { it.id == new.id }
     if (text.isBlank() || row < 0 || prev.items[row] !is Item.Assistant) return null
-    return prev.withItems(events, prev.items.toMutableList().also { it[row] = Item.Assistant(new.id, text, new.streaming) })
+    val item = Item.Assistant(new.id, text, new.streaming)
+    return prev.withItem(events, prev.items.toMutableList().also { it[row] = item }, item)
 }
 
 fun nextView(prev: ChatView, chat: String, events: List<ChatEvent>, now: Long): ChatView =

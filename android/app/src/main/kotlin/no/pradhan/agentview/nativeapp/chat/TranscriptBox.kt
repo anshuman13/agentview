@@ -30,7 +30,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 internal fun TranscriptBox(
     hub: Hub,
     id: String,
-    title: String,
+    title: CharSequence,
     meta: String = "",
     state: (@Composable RowScope.() -> Unit)? = null,
     action: (@Composable RowScope.() -> Unit)? = null,

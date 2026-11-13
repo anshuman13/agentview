@@ -38,6 +38,7 @@ import no.pradhan.agentview.nativeapp.net.forkChat
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.remindChat
 import no.pradhan.agentview.nativeapp.net.rename
+import no.pradhan.agentview.nativeapp.net.setShowWork
 import no.pradhan.agentview.nativeapp.net.submit
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
@@ -224,6 +225,7 @@ private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double
 private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: ChatView, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val sessionId = live.sessionId ?: session?.sessionId
+    val showWork by hub.showWork.collectAsState()
     MoreButton { close ->
         MenuItem("Review changes", "source-control", { close(); onReview() }, enabled = canReview)
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
@@ -235,6 +237,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: Chat
             context.startActivity(android.content.Intent.createChooser(send, null))
         }, enabled = view.items.any { it is Item.Assistant })
         MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })
+        MenuItem("Show work", "list-tree", { close(); hub.setShowWork(!showWork) }, checked = showWork)
         MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) panels.dialog = "close" else hub.closeChat(live.id) })
         MenuSeparator()
         MenuItem("Archive", "archive", { close(); panels.dialog = "archive" }, danger = true, enabled = sessionId != null)
