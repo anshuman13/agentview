@@ -299,6 +299,7 @@ sealed interface ServerMessage {
     data class Runs(val runs: List<ChatRun>) : ServerMessage
     data class Findings(val review: ReviewFindings) : ServerMessage
     data class FileChanged(val path: String) : ServerMessage
+    data class Approval(val chat: String, val slug: String, val title: String) : ServerMessage
     data class Other(val type: String) : ServerMessage
 }
 
@@ -328,6 +329,7 @@ fun parseMessage(data: String): ServerMessage {
         "runs" -> ServerMessage.Runs(protocolJson.decodeFromJsonElement(ListSerializer(ChatRun.serializer()), o["runs"]!!))
         "findings" -> ServerMessage.Findings(protocolJson.decodeFromJsonElement(ReviewFindings.serializer(), o["review"]!!))
         "file_changed" -> ServerMessage.FileChanged(o["path"]!!.jsonPrimitive.content)
+        "approval" -> ServerMessage.Approval(o["chat"]!!.jsonPrimitive.content, o["slug"]!!.jsonPrimitive.content, o["title"]!!.jsonPrimitive.content)
         else -> ServerMessage.Other(type)
     }
 }

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { approvalGate, canBuild, canSketch, buildStageOf, buildSummary, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildDetail, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
+import { approvalGate, canBuild, canSketch, buildStageOf, gateSlugOf, buildSummary, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildDetail, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'builds.json'), 'utf8'));
 
@@ -10,6 +10,14 @@ const specCases = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'spec
 type Named<T> = { name: string } & T;
 
 const entriesOf = (list: (Partial<BuildEntry> & { commit?: boolean })[]) => list.map((e, i) => ({ id: `e${i}`, round: 1, startedAt: i, endedAt: i, chat: 'c1', session: null, ...e, commit: e.commit ? { sha: 'abc1234def', subject: 's', date: 1, branch: null, files: [] } : undefined }) as BuildEntry);
+
+describe('gateSlugOf', () => {
+  it('reads only a gate label with a usable slug, and leaves buildStageOf alone', () => {
+    expect(gateSlugOf('gate:foo')).toBe('foo');
+    for (const d of ['impl:foo', 'gate:../x', '']) expect(gateSlugOf(d)).toBeNull();
+    expect(buildStageOf('Build', 'gate:foo', '')).toBeNull();
+  });
+});
 
 describe('builds fixture', () => {
   for (const c of fixture.stageOf as Named<{ subagentType: string; description: string; prompt: string; expected: unknown }>[]) {

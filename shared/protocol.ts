@@ -251,6 +251,8 @@ export type ServerMessage =
   | { type: 'runs'; runs: ChatRun[] }
   | { type: 'attention'; items: AttentionItem[] }
   | { type: 'restarting' }
+  // A build in this chat waits for approval and nobody is viewing the chat.
+  | { type: 'approval'; chat: string; slug: string; title: string }
   | { type: 'error'; text: string };
 
 export type LiveAgent = { id: string; description: string; type: string; slug?: string; group?: string; startedAt: number };

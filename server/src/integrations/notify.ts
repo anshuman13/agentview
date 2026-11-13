@@ -38,6 +38,15 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null, deskto
   post(title, chat.title, (ended?.line || body).split(/(?<=[.!?])\s|\n/)[0].slice(0, 200), `${APP}/?chat=${chat.id}`, !desktopActive());
 }
 
+// Whether the push went out; the same slug in the same chat within 30 s is skipped.
+export function notifyApproval(chat: LiveChat, slug: string, title: string, body: string) {
+  const prev = last.get(`${chat.id}:approval`);
+  if (prev && prev.key === `approval:${slug}` && Date.now() - prev.at < 30_000) return false;
+  last.set(`${chat.id}:approval`, { at: Date.now(), key: `approval:${slug}` });
+  post(`Approve ${title}?`, chat.title, body, `${APP}/?chat=${chat.id}&slug=${encodeURIComponent(slug)}`);
+  return true;
+}
+
 export function notifyRunEnded(run: ChatRun, repo: string, push: boolean) {
   const kind = run.kind === 'cycle' ? 'Build cycle' : run.kind === 'tries' ? 'Tries' : 'Loop';
   const title = run.kind === 'goal' ? (/^Goal met/.test(run.why) ? 'Goal met' : /^Not met/.test(run.why) ? 'Goal not met' : 'Goal stopped') : `${kind} ended`;

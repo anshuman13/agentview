@@ -2,12 +2,14 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'bun:test';
 import type { BuildEntry } from '../../../shared/builds.js';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 import { claudeSession } from '../agent/claude/driver.js';
 import { buildOne, reviewBuild, splitPhases } from './builds.js';
-import { waitFor } from '../../../testing.js';
+import { stubGlobal, unstubAllGlobals, waitFor } from '../../../testing.js';
+import { announceApproval } from '../host/approval.js';
+import { firstSeen } from './approvalSeen.js';
 
 const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'agentview-builds-')));
 const repo = path.join(root, 'repo');
@@ -215,6 +217,85 @@ describe('spec review', () => {
       expect(await reviewBuild(repo, bad)).toMatchObject({ status: 400 });
     }
     expect(await reviewBuild(repo, { slug: 'no-such-spec', phase: 'design', decision: 'approve' })).toMatchObject({ status: 404 });
+  });
+});
+
+describe('approval', () => {
+  const specs = path.join(repo, '.claude', 'specs');
+  const sent = vi.fn(async (_url: string, _init: RequestInit) => new Response(''));
+  const tell = vi.fn();
+  const live = (id: string) => ({ id, cwd: repo, title: 'T' }) as never;
+  const gate = (toolUseId: string, slug: string, over: Partial<AgentEvent> = {}) => ({ ...agent(toolUseId, `gate:${slug}`), startedAt: Date.now(), ...over });
+  const start = (chatId: string, ev: AgentEvent, away = true) => announceApproval({ id: chatId, cwd: repo }, ev, () => (away ? live(chatId) : null), tell).then(() => waitFor(() => undefined));
+  const decisions = (slug: string) => JSON.parse(readFileSync(path.join(store, encodeURIComponent(repo), `${slug}.reviews.json`), 'utf8')).map((r: { phase: string }) => r.phase);
+
+  beforeAll(() => {
+    appendFileSync(path.join(repo, '.git', 'info', 'exclude'), '.claude/specs/\n.claude/sketches/\n');
+    mkdirSync(specs, { recursive: true });
+    writeFileSync(path.join(specs, 'warm-lamp.md'), '# Warm Lamp\n\n## Problem\nThe lamp is cold. It stays cold.\n\n## Behaviour\n1. x\n\n## Design\nd\n\n## Acceptance criteria\n- [ ] one\n');
+    writeFileSync(path.join(specs, 'bare.md'), 'Just words\n\n## Behaviour\n1. x\n');
+  });
+  beforeEach(() => {
+    process.env.AGENTVIEW_NTFY = 'topic';
+    stubGlobal('fetch', sent);
+  });
+  afterEach(() => {
+    unstubAllGlobals();
+    delete process.env.AGENTVIEW_NTFY;
+    sent.mockClear();
+    tell.mockClear();
+  });
+
+  it('pushes a running gate once, with the spec title, problem and link, and tells the clients', async () => {
+    await start('a1', gate('g1', 'warm-lamp'));
+    await waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+    const [, init] = sent.mock.calls[0];
+    expect(init.headers).toMatchObject({ Title: 'Approve Warm Lamp?', Click: 'http://localhost:7777/?chat=a1&slug=warm-lamp' });
+    expect(init.body).toBe('T\nThe lamp is cold.');
+    expect(tell).toHaveBeenCalledWith({ type: 'approval', chat: 'a1', slug: 'warm-lamp', title: 'Warm Lamp' });
+    await start('a1', gate('g1', 'warm-lamp'));
+    await start('a2', gate('g2', 'warm-lamp', { status: 'done' }));
+    await start('a2', gate('g3', 'warm-lamp', { startedAt: Date.now() - 120_000 }));
+    await start('a2', gate('g4', 'warm-lamp'), false);
+    expect(sent).toHaveBeenCalledTimes(1);
+    expect(tell).toHaveBeenCalledTimes(1);
+  });
+
+  it('never repeats a chat and slug from the stored set, and pushes the same slug for another chat', async () => {
+    expect(await firstSeen('a1:warm-lamp')).toBe(false);
+    expect(await firstSeen('a9:warm-lamp')).toBe(true);
+    await start('a1', gate('g5', 'warm-lamp'));
+    await start('a3', gate('g6', 'warm-lamp'));
+    await waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+    expect(tell).toHaveBeenCalledWith(expect.objectContaining({ chat: 'a3' }));
+  });
+
+  it('falls back to the slug and a ready line, and skips a held, removed or fully approved spec', async () => {
+    await start('b1', gate('h1', 'bare'));
+    await waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+    expect(sent.mock.calls[0][1].headers).toMatchObject({ Title: 'Approve bare?' });
+    expect(sent.mock.calls[0][1].body).toBe('T\nSpec bare is ready');
+    await reviewBuild(repo, { slug: 'warm-lamp', decision: 'hold' });
+    await start('b2', gate('h2', 'warm-lamp'));
+    await start('b2', gate('h3', 'no-such-spec'));
+    await reviewBuild(repo, { slug: 'warm-lamp', decision: 'release' });
+    await reviewBuild(repo, { slug: 'warm-lamp', phase: 'all', decision: 'approve' });
+    await start('b2', gate('h4', 'warm-lamp'));
+    expect(sent).toHaveBeenCalledTimes(1);
+  });
+
+  it('approves the missing phases in one update, with the sketch when present, never code, and only once', async () => {
+    writeFileSync(path.join(specs, 'flat-cap.md'), '# Flat Cap\n\n## Problem\np\n\n## Design\nd\n\n## Acceptance criteria\n- [ ] one\n');
+    mkdirSync(path.join(repo, '.claude', 'sketches'), { recursive: true });
+    writeFileSync(path.join(repo, '.claude', 'sketches', 'flat-cap.html'), '<p>x</p>');
+    await reviewBuild(repo, { slug: 'flat-cap', phase: 'design', decision: 'approve' });
+    expect(await reviewBuild(repo, { slug: 'flat-cap', phase: 'all', decision: 'approve' })).toEqual({ ok: true });
+    expect(decisions('flat-cap')).toEqual(['design', 'requirements', 'tasks', 'sketch']);
+    expect(await reviewBuild(repo, { slug: 'flat-cap', phase: 'all', decision: 'approve' })).toEqual({ ok: true, already: true });
+    expect(decisions('flat-cap')).toHaveLength(4);
+    expect(await reviewBuild(repo, { slug: 'flat-cap', phase: 'all', decision: 'changes', note: 'x' })).toMatchObject({ status: 400 });
+    await reviewBuild(repo, { slug: 'bare', decision: 'hold' });
+    expect(await reviewBuild(repo, { slug: 'bare', phase: 'all', decision: 'approve' })).toEqual({ status: 400, body: { error: 'Held' } });
   });
 });
 

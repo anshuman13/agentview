@@ -19,6 +19,7 @@ import { loadSettings } from '../settings.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway } from '../integrations/notify.js';
 import { allowedFolder } from '../workspace/files.js';
+import { announceApproval } from './approval.js';
 import { applyInitialModel } from './initialModel.js';
 import { watchFiles } from './watchFiles.js';
 import { lastActive } from './summary.js';
@@ -29,7 +30,9 @@ import { PROJECT, broadcast, bySession, get, hub, live, push, viewers } from './
 
 function onChatMessage(chat: AgentSession, m: ServerMessage) {
   broadcast(m, chat);
-  notifyAway(m, () => (viewers(chat) ? null : summaryOf(chat)), () => desktopActive(hub.desktopAt), chat.roundNote);
+  const away = () => (viewers(chat) ? null : summaryOf(chat));
+  notifyAway(m, away, () => desktopActive(hub.desktopAt), chat.roundNote);
+  if (m.type === 'event' && m.event.kind === 'agent') void announceApproval(chat, m.event, away, (a) => broadcast(a, chat));
   if (m.type === 'session' && chat.state.session.sessionId) {
     rememberAccount(chat.state.session.sessionId, chat.state.session.account);
     rememberProvider(chat.state.session.sessionId, chat.driver.provider);

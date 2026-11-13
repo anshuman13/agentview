@@ -107,6 +107,12 @@ export function buildStageOf(subagentType: string, description: string, prompt: 
   return stage && slugOk(slug) ? { stage, slug, round: null } : null;
 }
 
+// The slug of the approval gate agent, labelled `gate:<slug>`; it is not a build stage.
+export const gateSlugOf = (description: string) => {
+  const slug = /^gate:([\w.-]+)$/.exec(description.trim())?.[1];
+  return slugOk(slug) ? slug : null;
+};
+
 const jsonObject = (text: string): Record<string, unknown> | null => {
   try {
     const v = JSON.parse(text);

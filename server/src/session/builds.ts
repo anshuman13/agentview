@@ -11,7 +11,9 @@ import type { AgentSession } from './session.js';
 const MAX_REPORT = 20_000;
 const MAX_NOTE = 2000;
 
-const buildsDir = (repo: string) => path.join(process.env.AGENTVIEW_BUILDS ?? path.join(os.homedir(), '.agentview', 'builds'), encodeURIComponent(repo));
+export const buildsRoot = () => process.env.AGENTVIEW_BUILDS ?? path.join(os.homedir(), '.agentview', 'builds');
+
+const buildsDir = (repo: string) => path.join(buildsRoot(), encodeURIComponent(repo));
 
 // The first 7 to 40 char hex token of a report that is a commit of the repo, with what the commit changed.
 async function commitIn(repo: string, report: string): Promise<BuildCommit | undefined> {
@@ -201,6 +203,18 @@ export async function buildOne(cwd: string, slug: string) {
   };
 }
 
+const unapproved = (spec: Spec, reviews: BuildReview[]) => spec.phases.filter((p) => reviewDecision(reviews, p.key)?.decision !== 'approve');
+
+// The title and first sentence of the Problem section of a spec that still has phases to approve, else null.
+export async function approvalOf(cwd: string, slug: string) {
+  const repo = await mainCheckout(cwd).catch(() => null);
+  if (!repo || !slugValid(slug)) return null;
+  const [spec, reviews] = await Promise.all([loadSpec(repo, slug), readReviews(repo, slug)]);
+  if (!spec || isHeld(reviews) || !unapproved(spec, reviews).length) return null;
+  const problem = sectionsOf(spec.phases.find((p) => p.key === 'requirements')?.markdown ?? '').find((s) => s.heading === 'problem')?.lines.slice(1).join('\n').trim();
+  return { title: spec.title, body: problem?.split(/(?<=[.!?])\s|\n/)[0].slice(0, 200) || `Spec ${slug} is ready` };
+}
+
 const ignored = (repo: string, file: string) => git(repo, ['check-ignore', '-q', '--', file]).then(() => true, () => false);
 
 const two = (n: number) => String(n).padStart(2, '0');
@@ -217,12 +231,15 @@ async function appendNote(file: string, r: BuildReview) {
 const isPhase = (v: unknown): v is ReviewPhase | 'code' => v === 'code' || isReviewPhase(v);
 
 // The user's decision on one phase of a spec or its code, or a hold or release: the JSON record the UI reads, and for a git-ignored spec file also the line agents read.
+// Phase `all` approves every phase of the spec not yet approved, never the code.
 export async function reviewBuild(cwd: string, body: { slug?: unknown; phase?: unknown; decision?: unknown; note?: unknown }) {
   const { slug, phase, decision } = body;
   const note = typeof body.note === 'string' ? body.note.replace(/\s+/g, ' ').trim().slice(0, MAX_NOTE) : '';
   const at = Date.now();
+  const all = phase === 'all' && decision === 'approve';
   const review: BuildReview | null =
-    phase === undefined && (decision === 'hold' || decision === 'release') ? { phase: 'hold', decision, note: '', at }
+    all ? { phase: 'requirements', decision, note: '', at }
+    : phase === undefined && (decision === 'hold' || decision === 'release') ? { phase: 'hold', decision, note: '', at }
     : isPhase(phase) && (decision === 'approve' || (decision === 'changes' && note)) ? { phase, decision, note, at }
     : null;
   if (typeof slug !== 'string' || !slugValid(slug) || !review) return { status: 400, body: { error: 'Bad review' } };
@@ -230,9 +247,16 @@ export async function reviewBuild(cwd: string, body: { slug?: unknown; phase?: u
   const spec = repo && (await loadSpec(repo, slug));
   if (!repo || !spec) return { status: 404, body: { error: 'No such spec' } };
   if (review.phase === 'code' && !(await readEntries(repo, slug)).some((e) => e.stage === 'implement')) return { status: 400, body: { error: 'No implementation to review' } };
+  let held = false;
+  let added = 0;
   await reviewStore(repo, slug).update(async (cur) => {
-    if (await ignored(repo, spec.file)) await appendNote(spec.file, review);
-    return [...cur, review];
+    held = all && isHeld(cur);
+    const adds = held ? [] : all ? unapproved(spec, cur).map((p) => ({ ...review, phase: p.key })) : [review];
+    added = adds.length;
+    if (!adds.length) return cur;
+    if (await ignored(repo, spec.file)) for (const r of adds) await appendNote(spec.file, r);
+    return [...cur, ...adds];
   });
-  return { ok: true };
+  if (held) return { status: 400, body: { error: 'Held' } };
+  return { ok: true, ...(all && !added && { already: true }) };
 }

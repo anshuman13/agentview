@@ -35,6 +35,8 @@ class ProtocolTest {
         assertTrue(e.event.streaming)
         val a = parseMessage("""{"type":"append","id":"e","offset":1,"text":"bc"}""") as ServerMessage.Append
         assertEquals(1, a.offset)
+        val p = parseMessage("""{"type":"approval","chat":"c1","slug":"foo","title":"Foo"}""") as ServerMessage.Approval
+        assertEquals(ServerMessage.Approval("c1", "foo", "Foo"), p)
         assertEquals("attention", (parseMessage("""{"type":"attention","items":[]}""") as ServerMessage.Other).type)
     }
 
