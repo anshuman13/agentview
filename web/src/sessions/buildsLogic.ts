@@ -16,6 +16,9 @@ export const FLOW_LABEL: Record<FlowStep['key'], string> = { spec: 'Spec', 'spec
 
 export const flowBadge = (s: FlowStep): BadgeSpec | null => s.state === 'todo' ? null : s.state === 'waiting' && (s.key === 'approval' || s.result === 'On hold') ? holdBadge : { status: s.state };
 
+// The step that is running, waiting or failed, else the last one that happened.
+export const currentStep = (flow: FlowStep[]) => flow.find((f) => f.state === 'running' || f.state === 'waiting' || f.state === 'failed') ?? flow.filter((f) => f.state !== 'todo' && f.state !== 'skipped').at(-1);
+
 export const stageTitle = (e: Entry) => stageName(e.stage) + (e.round > 1 ? ` · round ${e.round}` : '');
 
 export const byStart = (entries: Entry[]) => entries.map((e, i) => [e, i] as const).sort((a, b) => a[0].startedAt - b[0].startedAt || a[1] - b[1]).map(([e]) => e);

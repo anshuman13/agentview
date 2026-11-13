@@ -129,6 +129,10 @@ fun flowBadge(f: FlowStep): Pair<String, BadgeTone>? = when {
     else -> stateBadge(f.state)
 }
 
+// The step that is running, waiting or failed, else the last one that happened.
+fun currentStep(flow: List<FlowStep>) = flow.firstOrNull { it.state == "running" || it.state == "waiting" || it.state == "failed" }
+    ?: flow.lastOrNull { it.state != "todo" && it.state != "skipped" }
+
 fun stageTitle(e: BuildEntry) = stageName(e.stage) + if (e.round > 1) " · round ${e.round}" else ""
 
 fun byStart(entries: List<BuildEntry>) = entries.sortedBy { it.startedAt }
@@ -139,7 +143,6 @@ fun stageMeta(e: BuildEntry): String {
     return listOfNotNull(e.verdict?.replaceFirstChar(Char::uppercase), took).joinToString(" · ")
 }
 
-const val BUILD_FOLD = 3
 
 fun phaseLabel(key: String) = key.replaceFirstChar(Char::uppercase)
 

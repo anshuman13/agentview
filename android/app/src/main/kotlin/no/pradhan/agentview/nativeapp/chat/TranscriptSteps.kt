@@ -38,8 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -57,7 +55,7 @@ import no.pradhan.agentview.nativeapp.net.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.agentSummary
-import no.pradhan.agentview.nativeapp.sessions.BUILD_FOLD
+import no.pradhan.agentview.nativeapp.sessions.currentStep
 import no.pradhan.agentview.nativeapp.sessions.BuildDetail
 import no.pradhan.agentview.nativeapp.sessions.FLOW_LABEL
 import no.pradhan.agentview.nativeapp.sessions.FlowStep
@@ -72,7 +70,6 @@ import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.Group
-import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Loading
@@ -80,7 +77,6 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.MonoFont
 import no.pradhan.agentview.nativeapp.ui.MoreButton
-import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
@@ -240,34 +236,38 @@ private fun flowSheet(f: FlowStep, d: BuildDetail): BuildSheet? = when {
     else -> BuildSheet.Step(f.key)
 }
 
-// The flow's marks are joined by a hairline from the row above to the row below.
-private fun Modifier.flowLine(color: Color, first: Boolean, last: Boolean) = drawBehind {
-    val x = (Tokens.listPad + Tokens.leadWidth / 2).toPx()
-    drawLine(color, Offset(x, if (first) size.height / 2 else 0f), Offset(x, if (last) size.height / 2 else size.height), Tokens.hairline.toPx())
-}
-
+// The flow as one strip of steps, then the step that matters now as a row.
 @Composable
 private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
     var all by remember(d.slug) { mutableStateOf(false) }
     val failed = d.criteria.any { it.result == "fail" }
     val now = System.currentTimeMillis()
-    val line = av.border
-    SectionHeader("Flow")
-    Group {
-        d.flow.forEachIndexed { i, f ->
-            if (i > 0) Hairline(lead = true)
-            val badge = flowBadge(f)
+    val step = if (d.summary.state == "done") null else currentStep(d.flow)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
+        d.flow.forEach { f ->
             val sheet = flowSheet(f, d)
+            Row(
+                Modifier.heightIn(min = Tokens.touchSm).then(if (sheet != null) Modifier.clickable { stack.add(sheet) } else Modifier),
+                horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StatusDot(if (f.state == "running") DotState.Running else stateDot(f.state))
+                Text(FLOW_LABEL[f.key] ?: f.key, style = if (f == step) Type.callout else Type.subheadline, color = if (f.state == "todo") av.fgMuted else av.fg)
+            }
+        }
+    }
+    if (step != null) {
+        val badge = flowBadge(step)
+        val sheet = flowSheet(step, d)
+        Group {
             ListRow(
-                FLOW_LABEL[f.key] ?: f.key, listOf(f.by, f.result, f.at?.let { agoShort(it, now) }.orEmpty()).filter(String::isNotEmpty).joinToString(" · "),
-                leading = { StatusDot(if (f.state == "running") DotState.Running else stateDot(f.state)) },
+                FLOW_LABEL[step.key] ?: step.key, listOf(step.by, step.result, step.at?.let { agoShort(it, now) }.orEmpty()).filter(String::isNotEmpty).joinToString(" · "),
+                leading = { StatusDot(if (step.state == "running") DotState.Running else stateDot(step.state)) },
                 state = { if (badge != null) Badge(badge.first, badge.second) }, stateSlot = true,
-                modifier = Modifier.flowLine(line, i == 0, i == d.flow.lastIndex),
                 onClick = sheet?.let { { stack.add(it) } },
             )
         }
     }
-    Criteria(d.criteria, if (all || failed) d.criteria.size else BUILD_FOLD, { all = true }) { stack.add(BuildSheet.Criterion(it)) }
+    Criteria(d.criteria, if (all || failed) d.criteria.size else 0, { all = true }) { stack.add(BuildSheet.Criterion(it)) }
     Findings(hub, "spec:${d.slug}") { stack.add(BuildSheet.File(it.file)) }
 }
 

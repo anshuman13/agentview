@@ -287,7 +287,7 @@ internal fun Criteria(criteria: List<SpecCriterion>, limit: Int, showAll: () -> 
         if (passed > 0) Badge("$passed passed", BadgeTone.Done)
         if (failed > 0) Badge("$failed failed", BadgeTone.Failed)
     })
-    Group {
+    if (limit > 0) Group {
         criteria.take(limit).forEachIndexed { i, c ->
             if (i > 0) Hairline()
             val badge = criterionBadge(c)

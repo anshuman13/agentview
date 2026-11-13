@@ -12,7 +12,7 @@ import { ago } from '../../ui/util';
 import { findHere, useWorkspace } from '../../sessions/folders';
 import { postBuildHold } from '../../sessions/sessionApi';
 import { useBuild } from '../../sessions/useBuilds';
-import { FLOW_LABEL, flowBadge, holdBadge, stateBadge } from '../../sessions/buildsLogic';
+import { currentStep, FLOW_LABEL, flowBadge, holdBadge, stateBadge } from '../../sessions/buildsLogic';
 import { useCan } from '../useCan';
 import { Findings } from '../../ops/Findings';
 import { pipelineLabel, type BuildDetail, type FlowStep } from '../../../../shared/builds';
@@ -102,11 +102,6 @@ function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
       <Findings target={`spec:${d.slug}`} />
     </>
   );
-}
-
-// The step that is running, waiting or failed, else the last one that happened.
-function currentStep(flow: FlowStep[]) {
-  return flow.find((f) => f.state === 'running' || f.state === 'waiting' || f.state === 'failed') ?? flow.filter((f) => f.state !== 'todo' && f.state !== 'skipped').at(-1);
 }
 
 const MARK_TONE: Record<string, string> = { done: 'ok', failed: 'err', waiting: 'warn' };
