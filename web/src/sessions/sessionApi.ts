@@ -1,6 +1,6 @@
 import { api } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
-import type { AdvisorInfo, BacklogItem } from '../../../shared/advisors';
+import type { AdvisorInfo, Audit, BacklogItem } from '../../../shared/advisors';
 import type { BuildDetail, ReviewPhase } from '../../../shared/builds';
 
 export const deleteRequest = (url: string) => fetch(apiUrl(url), { method: 'DELETE' }).catch(() => null);
@@ -12,6 +12,8 @@ export const searchMessages = (q: string) => fetch(api(`/api/sessions/search?q=$
 export const fetchAdvisors = (): Promise<AdvisorInfo[] | null> => fetch(api('/api/advisors')).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
 export const fetchBacklog = (root: string): Promise<BacklogItem[] | null> => fetch(api(`/api/advisors/backlog?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+export const fetchAudit = (root: string): Promise<Audit | null> => fetch(api(`/api/advisors/audit?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
 export const attentionPost = (path: string, id: string) => fetch(api(path), { method: 'POST', body: JSON.stringify({ id }) }).then((r) => r.json());
 

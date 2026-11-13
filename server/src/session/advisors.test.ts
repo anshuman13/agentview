@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ADVISORS, advisorOf } from '../../../shared/advisors.js';
-import { prepareAdvisor, projectIndex, readBacklog } from './advisors.js';
+import { prepareAdvisor, projectIndex, readAudit, readBacklog } from './advisors.js';
 
 describe('prepareAdvisor', () => {
   it('writes the role with the memory import and keeps an existing memory', async () => {
@@ -41,6 +41,26 @@ describe('prepareAdvisor', () => {
       { rank: 2, slug: 'audit', title: 'Usability audit', why: 'nobody checks | a or b', status: 'proposed', spec: false },
     ]);
     expect(await readBacklog(path.join(root, 'none'))).toEqual([]);
+  });
+
+  it('lets the designer edit sketches and audits only', async () => {
+    const home = await mkdtemp(path.join(os.tmpdir(), 'advisors-'));
+    const dir = await prepareAdvisor(ADVISORS[2], ['/w/a'], home);
+    expect(JSON.parse(await readFile(path.join(dir, '.claude/settings.json'), 'utf8'))).toEqual({ permissions: { allow: ['Read(//w/a/**)', 'Edit(//w/a/*/.claude/sketches/**)', 'Edit(//w/a/*/.claude/audits/**)'] } });
+  });
+
+  it('reads the newest audit with its findings', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'audit-'));
+    await mkdir(path.join(root, '.claude/audits'), { recursive: true });
+    await writeFile(path.join(root, '.claude/audits/2026-11-01.md'), '1. Old | gone | low | x\n');
+    await writeFile(path.join(root, '.claude/audits/2026-11-12.md'), '# Audit\n1. Goal sheet | Cap field under keyboard | high | Scroll it into view\nnot a line\n2. Home | A | b | med | c\n3. Menu | Target is 28px | low | Make it 44px\n');
+    const audit = await readAudit(root);
+    expect(audit?.date).toBe('2026-11-12');
+    expect(audit?.findings).toEqual([
+      { rank: 1, screen: 'Goal sheet', problem: 'Cap field under keyboard', severity: 'high', fix: 'Scroll it into view' },
+      { rank: 3, screen: 'Menu', problem: 'Target is 28px', severity: 'low', fix: 'Make it 44px' },
+    ]);
+    expect(await readAudit(path.join(root, 'none'))).toBeNull();
   });
 
   it('matches advisor folders only', () => {

@@ -37,3 +37,20 @@ export const canBuildItem = (i: Pick<BacklogItem, 'status'>) => i.status === 'pr
 export const rankPrompt = (root: string) => `Read ${root}/.claude/backlog.md and the project's code and recent changes, then rank what to build next. Rewrite the backlog file (at most 10 lines) and reply with the top three.`;
 
 export const moveUpPrompt = (root: string, item: Pick<BacklogItem, 'slug' | 'title'>) => `In ${root}/.claude/backlog.md, move "${item.title}" (${item.slug}) up one rank and renumber the lines. Reread the file before you edit it.`;
+
+// A project's newest .claude/audits/<date>.md: one line per finding, `<rank>. <screen> | <problem> | <severity> | <fix>`, the Designer's usability audit.
+export type AuditSeverity = 'high' | 'med' | 'low';
+export type AuditFinding = { rank: number; screen: string; problem: string; severity: AuditSeverity; fix: string };
+export type Audit = { date: string; path: string; findings: AuditFinding[] };
+
+const AUDIT_LINE = /^(\d+)\.\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(high|med|low)\s*\|\s*(.+?)\s*$/;
+
+export const parseAudit = (md: string): AuditFinding[] =>
+  md.split('\n').flatMap((l) => {
+    const m = AUDIT_LINE.exec(l.trim());
+    return m ? [{ rank: Number(m[1]), screen: m[2], problem: m[3], severity: m[4] as AuditSeverity, fix: m[5] }] : [];
+  });
+
+export const auditPrompt = (root: string) => `Audit the usability of the app in ${root}. If it has no running app, say so and write no file. Otherwise start it with the project's own start command, then walk each screen in headless Chrome on port 9334 (never 9333) at 390px wide, then at 1280px, and clean up the browser and the app when done. Write ${root}/.claude/audits/<YYYY-MM-DD>.md with today's date: at most 15 findings, ranked, one per line as \`<rank>. <screen> | <problem in one line> | <severity high|med|low> | <fix in one line>\`. Reply with the top three.`;
+
+export const specsFromAuditPrompt = (root: string) => `Read the newest file in ${root}/.claude/audits and add its top findings to ${root}/.claude/backlog.md as \`proposed\` lines, with the audit line as the why. Keep the existing lines, reread the file before you edit it and renumber the ranks. Reply with the lines you added.`;

@@ -1,73 +1,57 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { getState, notice, prompt, queueNext, send, useStore } from '../app/store';
+import { useStore } from '../app/store';
 import { Markdown } from '../chat/Chat';
+import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
+import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, advisorOf, canBuildItem, memoryFacts, moveUpPrompt, rankPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
-import type { ClientMessage } from '../../../shared/protocol';
+import { ADVISORS, advisorOf, auditPrompt, canBuildItem, memoryFacts, moveUpPrompt, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type Audit, type BacklogItem } from '../../../shared/advisors';
 import { buildItemPrompt, buildSpecPrompt } from '../../../shared/specTasks';
+import { askAdvisor, go } from './advisorChat';
 import { StateDot } from './ChatRows';
 import { chatState, since, useWorkspace } from './folders';
-import { fetchAdvisors, fetchBacklog } from './sessionApi';
+import { fetchAdvisors, fetchAudit, fetchBacklog } from './sessionApi';
 
-// Opens a chat and, on the phone layout, shows it.
-const go = (m: ClientMessage) => {
-  send(m);
-  window.dispatchEvent(new Event('agentview:chat'));
-};
 const open = (a: Advisor, fresh = false) => go({ type: 'open_advisor', id: a.id, ...(fresh && { fresh }) });
-
-// Opens the PM chat, then sends it a prompt once that chat is the one shown.
-function askPm(text: string) {
-  go({ type: 'open_advisor', id: 'pm' });
-  const started = Date.now();
-  const t = setInterval(() => {
-    const { session } = getState();
-    if (advisorOf(session.cwd)?.id === 'pm') {
-      clearInterval(t);
-      (session.running ? queueNext : prompt)(text, () => {});
-    } else if (Date.now() - started > 15000) {
-      clearInterval(t);
-      notice('The PM chat did not open. The message was not sent.');
-    }
-  }, 150);
-}
 
 // The Build action of a backlog row: a new chat in the project that builds from the spec, or has the pm agent write it first.
 const buildItem = (root: string, i: BacklogItem) => go({ type: 'new_session', cwd: root, text: i.spec ? buildSpecPrompt(`.claude/specs/${i.slug}.md`) : buildItemPrompt(i.title, i.why, i.slug) });
 
 let chosenRoot: string | null = null;
 
-// The PM's ranked backlog for one project, chosen from the repos; reloads after a PM turn, which may have rewritten it.
-function Backlog({ shown, turns }: { shown: boolean; turns: string }) {
+// The project the Backlog and Audit sections show, chosen from the repos.
+function ProjectPicker({ root, onPick }: { root: string | null; onPick: (cwd: string) => void }) {
   const { folders } = useWorkspace('advisors');
-  const [root, setRoot] = useState(chosenRoot);
-  const [items, setItems] = useState<BacklogItem[] | null>(null);
   const [picking, setPicking] = useState(false);
   const pick = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <Button ref={pick} size="sm" variant="quiet" onClick={() => setPicking(!picking)}>{root?.split('/').pop() ?? 'Project'}</Button>
+      {picking && <Menu trigger={pick} onClose={() => setPicking(false)}>{folders.filter((f) => f.repo).map((f) => <MenuItem key={f.cwd} onClick={() => { setPicking(false); onPick(f.cwd); }}>{f.name}</MenuItem>)}</Menu>}
+    </>
+  );
+}
+
+// The PM's ranked backlog for one project; reloads after a PM turn, which may have rewritten it.
+function Backlog({ shown, turns, root, onPick }: { shown: boolean; turns: string; root: string | null; onPick: (cwd: string) => void }) {
+  const [items, setItems] = useState<BacklogItem[] | null>(null);
   useEffect(() => {
     if (!shown || !root) return;
     let stale = false;
     void fetchBacklog(root).then((x) => !stale && setItems(x));
     return () => { stale = true; };
   }, [shown, root, turns]);
-  const choose = (cwd: string) => {
-    chosenRoot = cwd;
-    setRoot(cwd);
-    setItems(null);
-    setPicking(false);
-  };
   return (
     <>
-      <Section label="Backlog" count={items?.length || undefined} action={<Button ref={pick} size="sm" variant="quiet" onClick={() => setPicking(!picking)}>{root?.split('/').pop() ?? 'Project'}</Button>} />
+      <Section label="Backlog" count={items?.length || undefined} action={<ProjectPicker root={root} onPick={onPick} />} />
       {!root ? (
-        <div className="ui-group"><Row title="Project" meta="Pick one to see its backlog" trailing="Choose" onClick={() => setPicking(true)} /></div>
+        <div className="ui-group"><Row title="Project" meta="Pick one to see its backlog" plain /></div>
       ) : !items ? <Skeleton rows={2} /> : !items.length ? (
-        <EmptyState size="sm" icon="list-ordered" title="No backlog yet" hint="The PM ranks what to build next" action={<Button size="sm" variant="tinted" onClick={() => askPm(rankPrompt(root))}>Ask PM to rank</Button>} />
+        <EmptyState size="sm" icon="list-ordered" title="No backlog yet" hint="The PM ranks what to build next" action={<Button size="sm" variant="tinted" onClick={() => askAdvisor('pm', rankPrompt(root))}>Ask PM to rank</Button>} />
       ) : (
         <div className="ui-group">
           {items.map((i) => (
@@ -79,13 +63,51 @@ function Backlog({ shown, turns }: { shown: boolean; turns: string }) {
               plain
               menu={<>
                 {canBuildItem(i) && <MenuItem icon="play" onClick={() => buildItem(root, i)}>Build</MenuItem>}
-                <MenuItem icon="arrow-up" disabled={i.rank === 1} onClick={() => askPm(moveUpPrompt(root, i))}>Ask PM to move up</MenuItem>
+                <MenuItem icon="arrow-up" disabled={i.rank === 1} onClick={() => askAdvisor('pm', moveUpPrompt(root, i))}>Ask PM to move up</MenuItem>
               </>}
             />
           ))}
         </div>
       )}
-      {picking && <Menu trigger={pick} onClose={() => setPicking(false)}>{folders.filter((f) => f.repo).map((f) => <MenuItem key={f.cwd} onClick={() => choose(f.cwd)}>{f.name}</MenuItem>)}</Menu>}
+    </>
+  );
+}
+
+// The Designer's newest usability audit for the chosen project: tap to run a new one, Specs from audit hands it to the PM.
+function AuditRow({ shown, turns, root, running, onPick }: { shown: boolean; turns: string; root: string | null; running: boolean; onPick: (cwd: string) => void }) {
+  const [audit, setAudit] = useState<Audit | null | undefined>(undefined);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!shown || !root) return;
+    let stale = false;
+    void fetchAudit(root).then((x) => !stale && setAudit(x));
+    return () => { stale = true; };
+  }, [shown, root, turns]);
+  return (
+    <>
+      <Section label="Usability audit" action={<ProjectPicker root={root} onPick={onPick} />} />
+      {!root ? (
+        <div className="ui-group"><Row title="Project" meta="Pick one to audit it" plain /></div>
+      ) : audit === undefined ? <Skeleton rows={1} /> : (
+        <div className="ui-group">
+          <Row
+            title="Audit"
+            meta={`${root.split('/').pop()} · ${audit ? `${audit.date} · ${audit.findings.length} ${audit.findings.length === 1 ? 'finding' : 'findings'}` : 'not run yet'}`}
+            onClick={running ? undefined : () => askAdvisor('designer', auditPrompt(root))}
+            action={running ? <Badge status="running" /> : <Button size="sm" variant="tinted" disabled={!audit} onClick={() => askAdvisor('pm', specsFromAuditPrompt(root))}>Specs from audit</Button>}
+            menu={<>
+              <MenuItem icon="list-flat" disabled={!audit} onClick={() => setOpen(true)}>Open latest audit</MenuItem>
+              <MenuItem icon="play" disabled={running} onClick={() => askAdvisor('designer', auditPrompt(root))}>Run audit</MenuItem>
+            </>}
+          />
+        </div>
+      )}
+      {open && audit && (
+        <Sheet label="Audit" onClose={() => setOpen(false)}>
+          <h2>Audit, {audit.date}</h2>
+          {audit.findings.map((f) => <Row key={f.rank} leading={f.rank} title={f.screen} meta={`${f.severity} · ${f.problem}. ${f.fix}`} lines={2} plain />)}
+        </Sheet>
+      )}
     </>
   );
 }
@@ -97,6 +119,11 @@ export function Advisors({ shown }: { shown: boolean }) {
   const viewing = useStore((s) => s.session.id);
   const [info, setInfo] = useState<AdvisorInfo[] | null | undefined>(undefined);
   const [memory, setMemory] = useState<string | null>(null);
+  const [root, setRoot] = useState(chosenRoot);
+  const pickRoot = (cwd: string) => {
+    chosenRoot = cwd;
+    setRoot(cwd);
+  };
   // Reloads when the page shows and after an advisor's turn, which may have changed its memory.
   const turns = live.filter((c) => advisorOf(c.cwd) && !c.running).map((c) => `${c.id}:${c.lastActive}`).join();
   useEffect(() => {
@@ -132,7 +159,8 @@ export function Advisors({ shown }: { shown: boolean }) {
               <Row title="Memory" meta={facts ? `${facts} ${facts === 1 ? 'fact' : 'facts'}` : 'Nothing yet'} plain={!facts} onClick={facts ? () => setMemory(memory === a.id ? null : a.id) : undefined} aria-expanded={facts ? memory === a.id : undefined} />
             </div>
             {memory === a.id && got && <div className="advisor-memory"><Markdown text={got.memory.replace(/^# .*\n/, '')} /></div>}
-            {a.id === 'pm' && <Backlog shown={shown} turns={turns} />}
+            {a.id === 'pm' && <Backlog key={root} shown={shown} turns={turns} root={root} onPick={pickRoot} />}
+            {a.id === 'designer' && <AuditRow key={root} shown={shown} turns={turns} root={root} running={!!c?.running} onPick={pickRoot} />}
           </Fragment>
         );
       })}

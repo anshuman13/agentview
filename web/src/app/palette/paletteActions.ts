@@ -6,9 +6,10 @@ import { toggleNotify } from '../runtime/notify';
 import { openMeeting, openTask, setView, type List } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
 import { ago, command } from '../../ui/util';
+import { askAdvisor } from '../../sessions/advisorChat';
 import { forkChat } from '../../chat/chatActions';
 import { specPrompt } from '../../../../shared/specTasks';
-import type { AdvisorId } from '../../../../shared/advisors';
+import { advisorOf, auditPrompt, type AdvisorId } from '../../../../shared/advisors';
 import { paletteFeature } from '../../../../shared/featureUse';
 import type { PaletteItem } from './paletteLogic';
 
@@ -51,6 +52,11 @@ export function perform(id: string) {
     const p = appSettings.get().providers.find((o) => o.id === arg);
     if (p?.enabled) send({ type: 'new_session', provider: p.id });
     else notice(p?.note ?? 'That provider is not available');
+  }
+  else if (id === 'audit') {
+    const { cwd } = getState().session;
+    if (!cwd || advisorOf(cwd)) notice('Open a project chat to audit it');
+    else askAdvisor('designer', auditPrompt(cwd));
   }
   else if (id === 'forkChat') forkChat();
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });

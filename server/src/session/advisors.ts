@@ -1,14 +1,14 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { ADVISORS, parseBacklog, type Advisor, type AdvisorId, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors.js';
+import { ADVISORS, parseAudit, parseBacklog, type Advisor, type AdvisorId, type AdvisorInfo, type Audit, type BacklogItem } from '../../../shared/advisors.js';
 import { listSessions, savedSession } from '../agent/claude/sessions.js';
 import { ADVISOR_HOME, ROOTS } from '../workspace/files.js';
 
 const ROLES = path.join(import.meta.dirname, '../../advisors');
 const KIT = path.join(import.meta.dirname, '../../build-kit');
-// What each advisor may write in any project: the PM its specs and backlog, the Designer its sketches.
-const WRITES: Partial<Record<AdvisorId, string[]>> = { pm: ['.claude/specs/**', '.claude/backlog.md'], designer: ['.claude/sketches/**'] };
+// What each advisor may write in any project: the PM its specs and backlog, the Designer its sketches and audits.
+const WRITES: Partial<Record<AdvisorId, string[]>> = { pm: ['.claude/specs/**', '.claude/backlog.md'], designer: ['.claude/sketches/**', '.claude/audits/**'] };
 
 export const advisor = (id: AdvisorId) => ADVISORS.find((a) => a.id === id);
 
@@ -100,4 +100,12 @@ export const advisorsInfo = (home = ADVISOR_HOME): Promise<AdvisorInfo[]> =>
 export async function readBacklog(root: string): Promise<BacklogItem[]> {
   const items = parseBacklog(await readFile(path.join(root, '.claude/backlog.md'), 'utf8').catch(() => ''));
   return items.map((i) => ({ ...i, spec: existsSync(path.join(root, '.claude/specs', `${i.slug}.md`)) }));
+}
+
+// A project's newest audit with its parsed findings, null when none was written.
+export async function readAudit(root: string): Promise<Audit | null> {
+  const dir = path.join(root, '.claude/audits');
+  const name = (await readdir(dir).catch(() => [] as string[])).filter((f) => /^\d{4}-\d{2}-\d{2}\.md$/.test(f)).sort().pop();
+  if (!name) return null;
+  return { date: name.slice(0, -3), path: path.join(dir, name), findings: parseAudit(await readFile(path.join(dir, name), 'utf8')) };
 }
