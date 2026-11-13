@@ -402,6 +402,17 @@ or dismissed meanwhile are left out, and a queued push for an ask you already re
 A chat that runs for 15 minutes without sending anything is reported once the same way and gets a slow yellow dot
 in the chat list until its next message.
 
+## Plan, spec and build
+
+Four ways to have a change built, lightest first:
+
+- **Plan first** (permission mode Plan, or Start as Plan first on the phone): Claude writes a plan and waits in plan mode; approving it lets Claude build in the same chat. For a change small enough to read as one plan.
+- **Start with a spec** (palette "Chat: Start with a spec", Start as Spec on the phone): Claude writes `.claude/specs/<slug>.md` with Requirements, Design and `- [ ]` Tasks, then stops. Open the file to see its Tasks header: Start on one task, or Run all in this chat or Run as goal for all of them. For work you steer task by task.
+- **[Build cycle](#build-cycle)** (chat settings, Up to N rounds): plan, build and test rounds in the chat, with Sonnet testing what Opus built. No spec file.
+- **Build** (model menu, last item, or asking Claude to build a feature): the `/agentview:build` skill of the [build kit](#build-kit). The pm agent writes the spec, the spec reviewer checks it (with a cold reader and a scope check in the first round), you approve it, an implementer builds it on a branch in a worktree, a tester checks each acceptance criterion and a code reviewer reads the diff. Claude then cherry-picks what passed onto the main branch.
+
+A build shows as its [Build card](#build-card) in the chat that started it: a strip of seven steps (Spec, Spec review, Your approval, Implement, Test, Code review, Merge), the step that needs you or is running, and the acceptance criteria counts. Tap a step to open its sheet; Your approval is where you approve or request changes. A goal can also run a spec: Run as goal on the Tasks header starts `/goal every task in <path> is ticked`, shown in Runs like any goal.
+
 ## Build cycle
 
 The Build cycle row in the chat settings menu (web and phone; Off or Up to N rounds) turns a prompt into a plan, build, test cycle. Opus plans in plan mode (on Codex the default model, with high effort for plan and build and medium for test), detailed
