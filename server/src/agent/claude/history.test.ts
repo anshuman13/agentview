@@ -92,4 +92,12 @@ describe('sessionMessages', () => {
     expect(msgs.map((m) => m.uuid)).toEqual([u(1), u(2), ...msgs.slice(2).map((m) => m.uuid)]);
     expect(msgs.at(-1)?.uuid).toBe(u(5));
   });
+
+  it('puts back a task notification the CLI saved as an attachment', async () => {
+    const att = (n: number, parent: number, prompt: string) => ({ ...e(n, 'attachment', parent), message: undefined, attachment: { type: 'queued_command', prompt } });
+    const entries = [e(1, 'user', null), e(2, 'assistant', 1), att(3, 2, '<agent-message from="a1">hi</agent-message>'), att(4, 3, '<task-notification><status>completed</status></task-notification>'), e(5, 'user', 2)];
+    const msgs = await sessionMessages(sid, '/tmp', entries);
+    expect(msgs.map((m) => m.uuid)).toEqual([u(1), u(2), u(4), u(5)]);
+    expect(msgs[2]).toMatchObject({ type: 'user', message: { content: '<task-notification><status>completed</status></task-notification>' } });
+  });
 });

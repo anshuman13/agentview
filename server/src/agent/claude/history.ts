@@ -115,16 +115,34 @@ export const workflowSize = (runs: WorkflowRun[]) => runs.reduce((n, r) => n + r
 export async function sessionMessages(sessionId: string, cwd: string, entries: any[]) {
   const msgs = await getSessionMessages(sessionId, { dir: cwd, sessionStore: { load: async () => entries, append: async () => {} } });
   const first = msgs[0];
-  if (!first) return msgs;
   const raw = entries.filter((e) => e?.uuid && !e.isSidechain);
+  if (!first) return withNotices(msgs, raw, sessionId);
   const byId = new Map(raw.map((e) => [e.uuid, e]));
   let root = byId.get(first.uuid);
   while (root?.parentUuid && byId.has(root.parentUuid)) root = byId.get(root.parentUuid);
-  if (!root?.parentUuid && root?.subtype !== 'compact_boundary') return msgs;
+  if (!root?.parentUuid && root?.subtype !== 'compact_boundary') return withNotices(msgs, raw, sessionId);
   const before = raw.slice(0, raw.indexOf(root)).filter((e) => e.type === 'user' || e.type === 'assistant');
   // A compaction keeps its last messages, and the SDK lists them again after the boundary.
   const kept = new Set(before.map((e) => e.uuid));
-  return [...before.map((e) => ({ type: e.type, uuid: e.uuid, session_id: sessionId, message: e.message, parent_tool_use_id: null, parent_agent_id: null, timestamp: e.timestamp }) as SessionMessage), ...msgs.filter((m) => !kept.has(m.uuid))];
+  return withNotices([...before.map((e) => asMessage(e, sessionId, e.message)), ...msgs.filter((m) => !kept.has(m.uuid))], raw, sessionId);
+}
+
+const asMessage = (e: any, sessionId: string, message: unknown) =>
+  ({ type: e.type === 'attachment' ? 'user' : e.type, uuid: e.uuid, session_id: sessionId, message, parent_tool_use_id: null, parent_agent_id: null, timestamp: e.timestamp }) as SessionMessage;
+
+// The CLI saves a background agent's task notification as an attachment, which the SDK mostly leaves out; each goes back in after the nearest message it follows.
+function withNotices(msgs: SessionMessage[], raw: any[], sessionId: string) {
+  const listed = new Set(msgs.map((m) => m.uuid));
+  const notices = raw.filter((e) => e.type === 'attachment' && !listed.has(e.uuid) && e.attachment?.type === 'queued_command' && String(e.attachment.prompt).startsWith('<task-notification>'));
+  if (!notices.length) return msgs;
+  const byId = new Map(raw.map((e) => [e.uuid, e]));
+  const after = new Map<string, SessionMessage[]>();
+  for (const e of notices) {
+    let parent = byId.get(e.parentUuid);
+    while (parent && !listed.has(parent.uuid)) parent = byId.get(parent.parentUuid);
+    if (parent) after.set(parent.uuid, [...(after.get(parent.uuid) ?? []), asMessage(e, sessionId, { role: 'user', content: e.attachment.prompt })]);
+  }
+  return msgs.flatMap((m) => [m, ...(after.get(m.uuid) ?? [])]);
 }
 
 export const countAll = (subs: Record<string, SessionMessage[]>) => Object.values(subs).reduce((n, m) => n + m.length, 0);
