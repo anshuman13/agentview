@@ -122,7 +122,9 @@ export async function sessionMessages(sessionId: string, cwd: string, entries: a
   while (root?.parentUuid && byId.has(root.parentUuid)) root = byId.get(root.parentUuid);
   if (!root?.parentUuid && root?.subtype !== 'compact_boundary') return msgs;
   const before = raw.slice(0, raw.indexOf(root)).filter((e) => e.type === 'user' || e.type === 'assistant');
-  return [...before.map((e) => ({ type: e.type, uuid: e.uuid, session_id: sessionId, message: e.message, parent_tool_use_id: null, parent_agent_id: null, timestamp: e.timestamp }) as SessionMessage), ...msgs];
+  // A compaction keeps its last messages, and the SDK lists them again after the boundary.
+  const kept = new Set(before.map((e) => e.uuid));
+  return [...before.map((e) => ({ type: e.type, uuid: e.uuid, session_id: sessionId, message: e.message, parent_tool_use_id: null, parent_agent_id: null, timestamp: e.timestamp }) as SessionMessage), ...msgs.filter((m) => !kept.has(m.uuid))];
 }
 
 export const countAll = (subs: Record<string, SessionMessage[]>) => Object.values(subs).reduce((n, m) => n + m.length, 0);
