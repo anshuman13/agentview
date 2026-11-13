@@ -448,3 +448,15 @@ describe('send queue fuzz', () => {
     });
   }
 });
+
+describe('start_goal', () => {
+  it('starts a valid goal line and refuses an interval under 10m', () => {
+    vi.useFakeTimers();
+    const { s } = fakeSession();
+    expect(s.goal('/goal every 5m tests pass')).toBe(false);
+    expect(s.state.session.repeat).toBeNull();
+    expect(s.goal('/goal every 30m tests pass')).toBe(true);
+    expect(s.state.session.repeat).toMatchObject({ goal: 'tests pass', every: 1_800_000 });
+    vi.useRealTimers();
+  });
+});

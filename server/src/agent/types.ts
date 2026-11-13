@@ -87,6 +87,8 @@ export interface AgentHost {
   agentOf(toolUseId: string): AgentEvent | undefined;
   system(text: string, error?: boolean): void;
   setStatus(text: string, detail?: { done?: string; next?: string[] }): void;
+  // Runs a /goal line from a tool call; false when the line is not a valid goal.
+  goal(line: string): boolean;
   setSession(patch: Partial<SessionInfo>): void;
   noteFile(rel: string, source: 'tool' | 'watcher'): void;
   captureEdit(file: string): void;

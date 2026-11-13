@@ -148,7 +148,7 @@ The data lives only in the hub database, never in this repo.
 ### Tools
 
 The `agentview` MCP server has the wiki tools from `server/src/agent/tools/wiki.ts` next to `set_status`, and
-`data_find` and `data_write` (`data.ts`) for tasks, meetings, actions and jobs, `chat_search` and `report_findings`.
+`data_find` and `data_write` (`data.ts`) for tasks, meetings, actions and jobs, `chat_search`, `report_findings` and `start_goal`.
 One registry (`tools/index.ts`) serves Claude as an in-process server (`claude/options.ts`) and Codex as a stdio server
 (`tools/stdio.ts`) whose calls run in the agent host. They read and write the hub through its `/sync` API (`HUB` in `server/src/integrations/assistant.ts`).
 
@@ -158,6 +158,7 @@ One registry (`tools/index.ts`) serves Claude as an in-process server (`claude/o
 | `chat_search(query)` | Past Claude chats of the chat's own profile, ranked by how many query words they hold (not a wiki search); returns title, folder, date, session id and a snippet |
 | `wiki_page(id)` | One page's current claims by heading |
 | `wiki_propose(text, sources, page?, heading?, replaces?)` | Proposes a one-sentence claim. No page means memory. `replaces` names a live claim it would supersede. `page` can be an existing id or a new title and section |
+| `start_goal(condition?, every?, until?, cap?, off?)` | Runs the matching `/goal` line in the calling chat (`goal.ts`), so a user who asks in words for a goal gets one; refuses a line `/goal` would refuse. Its rules in the system prompt also say how a goal works and that a feature build goes through the `agentview:build` skill |
 
 There is no delete or edit tool; contest, resolve and delete stay with me.
 

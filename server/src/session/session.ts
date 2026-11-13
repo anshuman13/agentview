@@ -18,7 +18,7 @@ import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { Review } from './review.js';
 import { Prompts } from './prompts.js';
 import { PR_URL, createsPr } from './pr.js';
-import { RepeatController, ROUND_INSTRUCTION } from './repeat.js';
+import { parseGoal, RepeatController, ROUND_INSTRUCTION } from './repeat.js';
 import { SKETCH_COMMAND, sketchPrompt } from '../../../shared/sketches.js';
 import { SPEC_REVIEW_COMMAND, specReviewPrompt } from '../../../shared/specTasks.js';
 import { provider } from '../agent/registry.js';
@@ -150,6 +150,11 @@ export class AgentSession implements AgentHost {
     this.emit({ type: 'status', text });
     const at = Date.now();
     this.pushEvent({ id: randomUUID(), kind: 'status', text, at, ...(done && { done }), ...(next && { next }) });
+  }
+
+  goal(line: string) {
+    const parsed = parseGoal(line);
+    return parsed !== null && parsed !== 'usage' && this.repeater.command(line, () => undefined);
   }
 
   private setResumeCommand() {
