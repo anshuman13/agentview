@@ -12,7 +12,7 @@ import type { Provider } from '../../../shared/protocol';
 import { goalCommand, parseEvery } from '../../../shared/goalForm';
 import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, advisorOf } from '../../../shared/advisors';
 import { planCondition } from '../../../shared/specTasks';
-import { CAPS, EVERY, STOPS } from './goalLogic';
+import { BUILDS, CAPS, EVERY, STOPS } from './goalLogic';
 import { useWorkspace } from './folders';
 import { askAdvisor } from './advisorChat';
 import { useChatRun } from './runBands';
@@ -35,6 +35,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const [stopIn, setStopIn] = useState<number | undefined>();
   const [stopAt, setStopAt] = useState<string | undefined>();
   const [capPct, setCapPct] = useState<number | null>(70);
+  const [builds, setBuilds] = useState<number | null>(null);
   const [inHere, setInHere] = useState(false);
   const [dir, setDir] = useState(cwd);
   const [provider, setProvider] = useState<Provider>(defaultProvider);
@@ -42,7 +43,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const [sent, setSent] = useState(false);
   const pick = useRef<HTMLSpanElement>(null);
   const opened = useRef(chat);
-  const beforeLoop = useRef({ every, custom, stopIn, stopAt, capPct, inHere });
+  const beforeLoop = useRef({ every, custom, stopIn, stopAt, capPct, builds, inHere });
   useEffect(() => { if (chat !== opened.current) onClose(); }, [chat, onClose]);
   const loop = advisor && !plan;
   const canHere = Boolean(here && !active);
@@ -56,7 +57,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : loop ? (root ? advisorLoopGoal(root) : '') : what;
   const start = () => {
     track('action:startGoal');
-    const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct, builds: loop ? ADVISOR_LOOP_BUILDS : null }, Date.now());
+    const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct, builds }, Date.now());
     if (loop) {
       askAdvisor('pm', text);
       onClose();
@@ -73,11 +74,11 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const pickLoop = () => {
     setAdvisor(!advisor);
     if (!advisor) {
-      beforeLoop.current = { every, custom, stopIn, stopAt, capPct, inHere };
-      setCustom(''); setEvery(ADVISOR_LOOP_EVERY); setStopIn(undefined); setStopAt(undefined); setCapPct(ADVISOR_LOOP_CAP); setInHere(false);
+      beforeLoop.current = { every, custom, stopIn, stopAt, capPct, builds, inHere };
+      setCustom(''); setEvery(ADVISOR_LOOP_EVERY); setStopIn(undefined); setStopAt(undefined); setCapPct(ADVISOR_LOOP_CAP); setBuilds(ADVISOR_LOOP_BUILDS); setInHere(false);
     } else {
       const b = beforeLoop.current;
-      setWhat(''); setCustom(b.custom); setEvery(b.every); setStopIn(b.stopIn); setStopAt(b.stopAt); setCapPct(b.capPct); setInHere(b.inHere);
+      setWhat(''); setCustom(b.custom); setEvery(b.every); setStopIn(b.stopIn); setStopAt(b.stopAt); setCapPct(b.capPct); setBuilds(b.builds); setInHere(b.inHere);
     }
   };
   const chips = (items: { label: string }[], on: (i: number) => boolean, set: (i: number) => void) =>
@@ -117,6 +118,12 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
           </div>
         </>
       )}
+      <Section label="Build limit" />
+      <div className="ui-group">
+        <div className="ui-fields">
+          {chips(BUILDS, (i) => BUILDS[i].n === builds, (i) => setBuilds(BUILDS[i].n))}
+        </div>
+      </div>
       <Section label="Where" />
       <div className="ui-group">
         <div className="ui-fields">

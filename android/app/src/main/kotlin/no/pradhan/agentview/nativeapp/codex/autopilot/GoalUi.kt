@@ -68,7 +68,7 @@ import no.pradhan.agentview.nativeapp.workspace.planCondition
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
 
-private class BeforeLoop(val every: Long, val custom: String, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val inHere: Boolean)
+private class BeforeLoop(val every: Long, val custom: String, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val builds: Int?, val inHere: Boolean)
 
 // The goal sheets (web/src/sessions/GoalSheets.tsx), mounted once in the app shell.
 @Composable
@@ -156,6 +156,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     var stopIn by remember { mutableStateOf<Long?>(null) }
     var stopAt by remember { mutableStateOf<String?>(null) }
     var capPct by remember { mutableStateOf<Int?>(70) }
+    var builds by remember { mutableStateOf<Int?>(null) }
     var inHere by remember { mutableStateOf(false) }
     var dir by remember { mutableStateOf(cwd) }
     var beforeLoop by remember { mutableStateOf<BeforeLoop?>(null) }
@@ -175,7 +176,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: if (loop) (if (root.isEmpty()) "" else advisorLoopGoal(root)) else what
     val start = {
         hub.track("action:startGoal")
-        val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct, if (loop) ADVISOR_LOOP_BUILDS else null), System.currentTimeMillis())
+        val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct, builds), System.currentTimeMillis())
         if (loop) {
             scope.askAdvisor(hub, "pm", text, onClose)
         } else if (here) {
@@ -194,9 +195,9 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
                 Chip("Advisor loop", {
                     advisor = !advisor
                     if (advisor) {
-                        beforeLoop = BeforeLoop(every, custom, stopIn, stopAt, capPct, inHere)
-                        custom = ""; every = ADVISOR_LOOP_EVERY; stopIn = null; stopAt = null; capPct = ADVISOR_LOOP_CAP; inHere = false
-                    } else beforeLoop?.let { what = ""; custom = it.custom; every = it.every; stopIn = it.stopIn; stopAt = it.stopAt; capPct = it.capPct; inHere = it.inHere }
+                        beforeLoop = BeforeLoop(every, custom, stopIn, stopAt, capPct, builds, inHere)
+                        custom = ""; every = ADVISOR_LOOP_EVERY; stopIn = null; stopAt = null; capPct = ADVISOR_LOOP_CAP; builds = ADVISOR_LOOP_BUILDS; inHere = false
+                    } else beforeLoop?.let { what = ""; custom = it.custom; every = it.every; stopIn = it.stopIn; stopAt = it.stopAt; capPct = it.capPct; builds = it.builds; inHere = it.inHere }
                 }, on = advisor)
             }
             if (sheet.plan != null) ListRow(sheet.plan, if (read.error) "Could not read the plan. Check the file still exists." else read.markdown?.let { read.progress ?: "No tasks" }, lines = 1)
@@ -223,6 +224,10 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
                 Chips { CAPS.forEach { Chip(it.label, { capPct = it.pct }, on = it.pct == capPct) } }
                 Text("Skips rounds while the 5-hour window is over 90%", Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, bottom = Tokens.sp6), style = Type.footnote, color = av.fgMuted)
             }
+        }
+        SectionHeader("Build limit")
+        Group {
+            Chips { BUILDS.forEach { Chip(it.label, { builds = it.n }, on = it.n == builds) } }
         }
         SectionHeader("Where")
         Group {
@@ -272,7 +277,7 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         if (plan != null) add { ListRow("Plan", trailing = { RowLabel(progress.orEmpty()) }) }
         add { EditRow("How often", run.every?.let { "Every ${everyText(it)}" } ?: "Until done", if (run.every != null && editable) EVERY.filter { it.ms > 0 }.map { it.label to mapOf("every" to it.ms) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Stop at", run.endAt?.let { clock(it) } ?: "None", if (editable) STOPS.map { it.label to mapOf("endAt" to stopAtMs(it, now)) } else null) { hub.runEdit(run, it) } }
-        if (billing(run.provider) != "none") add { EditRow("Usage", usageLine(run), if (editable) CAPS.map { (it.pct?.let { p -> "$p% cap" } ?: "No cap") to mapOf("capPct" to it.pct?.toLong()) } else null) { hub.runEdit(run, it) } }
+        if (billing(run.provider) != "none" || run.maxBuilds != null) add { EditRow("Usage", usageLine(run), if (editable && billing(run.provider) != "none") CAPS.map { (it.pct?.let { p -> "$p% cap" } ?: "No cap") to mapOf("capPct" to it.pct?.toLong()) } else null) { hub.runEdit(run, it) } }
         if (!ended) add { ListRow("Next round", trailing = { RowLabel(next) }) }
         add { ListRow("Cost", trailing = { RowLabel(money(run.costUsd, billing(run.provider))) }) }
     }

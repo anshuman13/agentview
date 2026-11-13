@@ -50,6 +50,10 @@ class CapChoice(val label: String, val pct: Int?)
 
 val CAPS = listOf(CapChoice("50", 50), CapChoice("70", 70), CapChoice("90", 90), CapChoice("Off", null))
 
+class BuildChoice(val label: String, val n: Int?)
+
+val BUILDS = listOf(BuildChoice("None", null), BuildChoice("3", 3), BuildChoice("5", 5), BuildChoice("10", 10))
+
 fun stopAtMs(stop: StopChoice, now: Long): Long? {
     if (stop.stopIn != null) return now + stop.stopIn
     val (h, m) = (stop.stopAt ?: return null).split(':').map { it.toInt() }
@@ -73,5 +77,7 @@ fun goalBadge(run: ChatRun): Pair<String, BadgeTone> = when {
 fun usageLine(run: ChatRun): String {
     val week = run.usage?.week?.let { "Week ${Math.round(it.pct)}%${run.capPct?.let { c -> " of $c% cap" } ?: ""}" }
     val five = run.usage?.fiveHour?.let { "5-hour ${Math.round(it.pct)}%" }
-    return listOfNotNull(week, five).joinToString(" · ").ifEmpty { run.capPct?.let { "$it% cap" } ?: "No cap" }
+    val builds = run.maxBuilds?.takeIf { it > 0 }?.let { "Builds ${run.builds ?: 0} of $it" }
+    val usage = listOfNotNull(week, five).joinToString(" · ").ifEmpty { run.capPct?.let { "$it% cap" } ?: if (builds == null) "No cap" else "" }
+    return listOfNotNull(usage.ifEmpty { null }, builds).joinToString(" · ")
 }

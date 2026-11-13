@@ -26,6 +26,8 @@ export const STOPS: (Stop & { label: string })[] = [
 
 export const CAPS = [{ label: '50', pct: 50 }, { label: '70', pct: 70 }, { label: '90', pct: 90 }, { label: 'Off', pct: null }];
 
+export const BUILDS = [{ label: 'None', n: null }, { label: '3', n: 3 }, { label: '5', n: 5 }, { label: '10', n: 10 }];
+
 export function stopAtMs({ stopIn, stopAt }: Stop, now: number) {
   if (stopIn) return now + stopIn;
   if (!stopAt) return null;
@@ -48,7 +50,9 @@ export function goalBadge(run: ChatRun): BadgeSpec {
 export function usageLine(run: ChatRun) {
   const { week, fiveHour } = run.usage ?? {};
   const parts = [week && `Week ${week.pct}%${run.capPct ? ` of ${run.capPct}% cap` : ''}`, fiveHour && `5-hour ${fiveHour.pct}%`].filter(Boolean);
-  return parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : 'No cap';
+  const builds = run.maxBuilds ? `Builds ${run.builds ?? 0} of ${run.maxBuilds}` : '';
+  const usage = parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : builds ? '' : 'No cap';
+  return [usage, builds].filter(Boolean).join(' · ');
 }
 
 export function openChat(ids: { chatId?: string | null; sessionId?: string | null }, report?: string) {

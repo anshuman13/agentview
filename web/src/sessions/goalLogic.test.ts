@@ -37,5 +37,8 @@ describe('usageLine', () => {
     expect(usageLine(run({ capPct: 70, usage: { week: { pct: 42, resetsAt: null }, fiveHour: { pct: 30, resetsAt: null } } }))).toBe('Week 42% of 70% cap · 5-hour 30%');
     expect(usageLine(run({ capPct: 70 }))).toBe('70% cap');
     expect(usageLine(run())).toBe('No cap');
+    expect(usageLine(run({ capPct: 70, maxBuilds: 5, builds: 2, usage: { week: { pct: 42, resetsAt: null } } }))).toBe('Week 42% of 70% cap · Builds 2 of 5');
+    expect(usageLine(run({ capPct: 70, maxBuilds: 5, builds: 2 }))).toBe('70% cap · Builds 2 of 5');
+    expect(usageLine(run({ maxBuilds: 5, builds: 2 }))).toBe('Builds 2 of 5');
   });
 });
