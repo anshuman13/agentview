@@ -1,5 +1,6 @@
 import { MAX_GOAL_ROUNDS, type ChatRun, type PlanUsage, type Repeat, type RunEdit, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, nextClock, span } from '../../../shared/util.js';
+import { GOAL_RAN_OUT, goalCapReached, goalNotMet, goalPlan, goalStoppedAt, nextRound, skipText } from '../../../shared/goalText.js';
 import { MAX_EVERY, MIN_EVERY } from '../../../shared/goalForm.js';
 import type { Cron } from '../agent/types.js';
 
@@ -13,14 +14,17 @@ const DAY = 24 * 3_600_000;
 const STANDING_MS = 28 * DAY;
 const REPORT_MS = 7 * DAY;
 const FIVE_HOUR_LIMIT = 90;
+const USAGE_SKIP = `5-hour usage over ${FIVE_HOUR_LIMIT}%`;
+const ended = (text: string) => ({ note: text, why: text });
 const GATE_RETRY_MS = 30 * 60_000;
-const STANDING_ENDED = 'ran for 28 days, start it again to continue';
 
-const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET when it is, otherwise keep working on it.`;
+const SEEN = 'You are the only one who sees the reply and the ROUND line.';
 
-const standingPrompt = (goal: string) => `Standing goal: ${goal}. Read where things stand. Do whatever moves the goal forward without the user. Do not do anything irreversible or outward-facing (push, deploy, delete, send a message to someone): ask it as a question instead. Reply GOAL MET when the goal is met.`;
+const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET when it is, otherwise keep working on it. Do not do anything irreversible or outward-facing (push, deploy, delete, send a message to someone): ask it as a question instead. ${SEEN}`;
 
-const reportPrompt = (goal: string) => `Standing goal: ${goal}. Write a short weekly report: what moved, what is blocked, what is next, in at most 8 lines. Do not change anything this round.`;
+const standingPrompt = (goal: string) => `Standing goal: ${goal}. Read where things stand. Do whatever moves the goal forward without the user. Do not do anything irreversible or outward-facing (push, deploy, delete, send a message to someone): ask it as a question instead. Reply GOAL MET when the goal is met. ${SEEN}`;
+
+const reportPrompt = (goal: string) => `Standing goal: ${goal}. Write a short weekly report: what moved, what is blocked, what is next, in at most 8 lines, the first line being the headline. Do not change anything this round.`;
 
 export const standing = (r: Repeat) => Boolean(r.goal && r.every);
 
@@ -57,16 +61,14 @@ export function usageGate(r: Repeat, usage: PlanUsage | null, now = Date.now()):
   // A window whose reset has passed holds a stale number.
   const pct = (w: PlanUsage['week']) => (w && !(w.resetsAt !== null && w.resetsAt <= now) ? w.pct : 0);
   const week = pct(usage.week);
-  if (week >= r.capPct) return { note: `Goal stopped: weekly usage at ${week}%, cap ${r.capPct}%`, why: 'weekly usage cap' };
+  if (week >= r.capPct) return ended(goalCapReached(r.capPct));
   if (pct(usage.fiveHour) > FIVE_HOUR_LIMIT) return { skipUntil: usage.fiveHour!.resetsAt };
   return null;
 }
 
-export const ROUND_INSTRUCTION = 'Finish your reply with one last line: ROUND: <done|progress|blocked|question|nothing> <one-line summary>. Use nothing when there was nothing to do this round.';
+export const ROUND_INSTRUCTION = 'Reply with the answer or result first, in plain sentences, with no narration of what you did. Then finish with one last line: ROUND: <done|progress|blocked|question|nothing> <one sentence>. The line is shown on the chat row and the loop card and its first sentence is the push text, so name what changed, in at most 100 characters; use nothing when there was nothing to do.';
 
 export const goalMet = (text: string) => /\bGOAL MET\b/.test(text);
-
-const roundWord = (r: Repeat) => (r.goal ? 'Goal check' : 'Loop round');
 
 const offCommand = (r: Repeat) => (r.goal ? '/goal off' : '/loop off');
 
@@ -111,7 +113,7 @@ export function fireTime(schedule: string, now = Date.now()) {
 }
 
 const describeLoop = (r: Repeat) =>
-  standing(r) ? `standing goal every ${span(r.every)} for up to 28 days: "${r.goal}"` : r.goal ? `checked whenever the agent goes idle until "${r.goal}" is met, up to ${MAX_GOAL_ROUNDS} checks` : once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
+  once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
 
 // A loop goes on after Stop or a CLI exit, with time to type /loop off first.
 const REPEAT_GRACE_MS = 2 * 60_000;
@@ -163,7 +165,7 @@ export class RepeatController {
     if (r && !r.runId) r = { ...r, runId: this.host.startRun(r) };
     this.host.setSession({ repeat: r });
     if (!r) return this.host.system(note ?? 'Loop off');
-    this.host.system(`${r.goal ? 'Goal' : 'Loop'} on, ${describeLoop(r)}`);
+    this.host.system(r.goal ? goalPlan(r) : `Loop on, ${describeLoop(r)}`);
     if (r.nextAt && r.nextAt > Date.now()) this.arm();
     else this.fire();
   }
@@ -181,7 +183,7 @@ export class RepeatController {
   resume(r: Repeat) {
     r = { ...r, runId: this.host.resumeRun(r) };
     this.host.setSession({ repeat: r });
-    this.host.system(`AgentView restarted, the ${r.goal ? 'goal' : 'loop'} ${r.paused ? 'stays paused' : `continues ${describeLoop(r)}`}`);
+    this.host.system(`AgentView restarted, the ${r.goal ? 'goal' : 'loop'} ${r.paused ? 'stays paused' : `continues ${r.goal ? `: ${goalPlan(r)}` : describeLoop(r)}`}`);
     if (!r.nextAt || r.nextAt <= Date.now()) this.fire();
     else this.arm();
   }
@@ -236,9 +238,9 @@ export class RepeatController {
   }
 
   private finish(r: Repeat) {
-    if (r.endAt && Date.now() >= r.endAt) return { note: `Goal stopped at ${clock(r.endAt)} after ${r.round} ${r.round === 1 ? 'check' : 'checks'}`, why: `end time ${clock(r.endAt)}` };
-    if (r.until && Date.now() >= r.until && !unrun(r)) return standing(r) ? { note: `Goal ${STANDING_ENDED}: ${r.goal}`, why: STANDING_ENDED } : { note: `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, why: `finished at ${clock(r.until)}` };
-    if (r.goal && !standing(r) && r.round >= MAX_GOAL_ROUNDS) return { note: `Goal not met after ${r.round} checks: ${r.goal}`, why: 'goal not met' };
+    if (r.endAt && Date.now() >= r.endAt) return ended(goalStoppedAt(r.endAt, r.round));
+    if (r.until && Date.now() >= r.until && !unrun(r)) return standing(r) ? ended(GOAL_RAN_OUT) : { note: `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, why: `finished at ${clock(r.until)}` };
+    if (r.goal && !standing(r) && r.round >= MAX_GOAL_ROUNDS) return ended(goalNotMet(r.round));
     return null;
   }
 
@@ -250,9 +252,9 @@ export class RepeatController {
     const usage = this.host.usage();
     const gate = usageGate(r, usage);
     if (gate && 'note' in gate) return this.set(null, gate.note, gate.why);
-    if (gate) return standing(r) ? this.skip(r) : this.defer(gate.skipUntil ?? Date.now() + GATE_RETRY_MS, `Usage over ${FIVE_HOUR_LIMIT}%, goal check`, true);
+    if (gate) return standing(r) ? this.skip(r, USAGE_SKIP) : this.defer(gate.skipUntil ?? Date.now() + GATE_RETRY_MS, skipText(USAGE_SKIP), true);
     // A standing goal skips a heartbeat that finds Claude busy or waiting for the user; the next one is a full interval away.
-    if (standing(r) && (this.host.running() || this.host.asking())) return this.skip(r);
+    if (standing(r) && (this.host.running() || this.host.asking())) return this.skip(r, this.host.asking() ? 'waiting for you' : 'still working');
     if (this.host.running()) {
       this.due = true;
       return;
@@ -271,11 +273,12 @@ export class RepeatController {
     this.host.sendPrompt(report ? reportPrompt(r.goal!) : r.prompt, r.goal ? 'goal' : 'loop', round, report);
   }
 
-  private skip(r: Repeat) {
+  private skip(r: Repeat, why: string) {
     const nextAt = Date.now() + r.every;
     this.host.setSession({ repeat: { ...r, nextAt } });
     this.patchRun({ nextAt });
     this.arm();
+    this.host.system(skipText(why));
   }
 
   // A round that failed waits before the next one, so a loop never spins on an error.
@@ -287,7 +290,7 @@ export class RepeatController {
     this.host.setSession({ repeat: { ...r, nextAt } });
     this.patchRun({ nextAt, ...(limit && !r.paused && { state: 'paused', why: `usage limit until ${clock(nextAt)}` }) });
     this.arm();
-    this.host.system(`${why ?? roundWord(r)} ${r.round + 1} at ${clock(nextAt)}, ${offCommand(r)} to end it`);
+    this.host.system(`${why ? `${why}. ` : ''}${nextRound(nextAt)}, ${offCommand(r)} to end it`);
   }
 
   // Changes the active goal: every only on a standing goal, in range; anything invalid is ignored.
@@ -304,7 +307,7 @@ export class RepeatController {
     this.host.setSession({ repeat: next });
     this.patchRun({ every: next.every || undefined, nextAt: next.nextAt, endAt: next.endAt, capPct: next.capPct });
     this.arm();
-    this.host.system(`Goal changed: ${[standing(next) && `every ${span(next.every)}`, next.endAt ? `until ${clock(next.endAt)}` : 'no end time', next.capPct ? `cap ${next.capPct}%` : 'no cap'].filter(Boolean).join(' · ')}`);
+    this.host.system(goalPlan(next, true));
   }
 
   private patchRun(patch: Parameters<RepeatHost['patchRun']>[1]) {

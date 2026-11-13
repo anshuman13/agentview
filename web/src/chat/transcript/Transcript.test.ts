@@ -23,7 +23,7 @@ describe('automatic prompts', () => {
   it('turn into compact labelled items instead of user bubbles', () => {
     const loop: ChatEvent = { id: 'l1', kind: 'user', text: 'check the build\nthen report', at: 1, auto: 'loop', round: 3 };
     const goal: ChatEvent = { id: 'g1', kind: 'user', text: 'Check whether this goal is met', at: 2, auto: 'goal', round: 2 };
-    expect(buildTranscript([loop, goal, user('hi')]).map((i) => i.kind === 'auto' ? i.label : i.kind)).toEqual(['Loop round 3 · check the build', 'Goal check 2', 'user']);
+    expect(buildTranscript([loop, goal, user('hi')]).map((i) => i.kind === 'auto' ? i.label : i.kind)).toEqual(['Loop round 3 · check the build', 'Goal round 2', 'user']);
   });
 });
 

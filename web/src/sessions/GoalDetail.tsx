@@ -14,6 +14,7 @@ import { billing } from '../../../shared/providers';
 import type { RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
+import { roundText } from '../../../shared/goalText';
 import { OUTCOME_DOT, stoppedText } from '../chat/composer/composerLogic';
 import { CAPS, EVERY, STOPS, goalBadge, openRun, stopAtMs, usageLine } from './goalLogic';
 import { usePlanProgress } from './usePlanProgress';
@@ -61,7 +62,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
         <EditRow title="How often" value={run.every ? `Every ${span(run.every)}` : 'Until done'} options={run.every && !ended ? EVERY.filter((e) => e.ms).map((e) => ({ label: e.label, edit: { every: e.ms } })) : undefined} onEdit={edit} />
         <EditRow title="Stop at" value={run.endAt ? clock(run.endAt) : 'None'} options={ended ? undefined : STOPS.map((s) => ({ label: s.label, edit: { endAt: stopAtMs(s, Date.now()) } }))} onEdit={edit} />
         {billing(run.provider) !== 'none' && <EditRow title="Usage" value={usageLine(run)} options={ended ? undefined : CAPS.map((c) => ({ label: c.pct ? `${c.pct}% cap` : 'No cap', edit: { capPct: c.pct } }))} onEdit={edit} />}
-        {!ended && <Row plain title="Next check" trailing={next} />}
+        {!ended && <Row plain title="Next round" trailing={next} />}
         <Row plain title="Cost" trailing={money(run.costUsd, billing(run.provider))} />
       </div>
       <Section label="Rounds" count={sectionCount(run.rounds.length)} />
@@ -72,13 +73,13 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
               key={r.at}
               plain={!r.report}
               leading={<span className={`dot ${OUTCOME_DOT[r.outcome]}`} />}
-              title={r.report ? 'Weekly report' : r.line || r.outcome}
-              meta={`${clock(r.at)} · ${r.outcome[0].toUpperCase()}${r.outcome.slice(1)} · ${money(r.costUsd, billing(run.provider))}`}
+              title={r.report ? 'Weekly report' : roundText(r)}
+              meta={money(r.costUsd, billing(run.provider))}
               onClick={r.report ? () => open(r.report) : undefined}
             />
           ))}
         </div>
-      ) : <EmptyState size="sm" icon="history" title="No rounds yet" hint="The first check runs when the agent goes idle" />}
+      ) : <EmptyState size="sm" icon="history" title="No rounds yet" hint="The first round runs when the agent goes idle" />}
       <div className="gl-actions">
         {!ended && <Button onClick={() => control(paused ? 'resume' : 'pause')}>{paused ? 'Resume' : 'Pause'}</Button>}
         {!ended && <Button variant="danger" onClick={stop}>Stop</Button>}

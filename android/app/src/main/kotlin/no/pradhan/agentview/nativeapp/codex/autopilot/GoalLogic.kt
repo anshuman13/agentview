@@ -53,7 +53,7 @@ fun stopAtMs(stop: StopChoice, now: Long): Long? {
     return (if (t.toInstant().toEpochMilli() <= now) t.plusDays(1) else t).toInstant().toEpochMilli()
 }
 
-private val PLANNED_ENDS = listOf("goal met", "end time", "weekly usage cap", "ran for 28 days")
+private val PLANNED_ENDS = listOf("Goal met", "Stopped at", "Usage cap", "Ran for 28 days", "goal met", "end time", "weekly usage cap", "ran for 28 days")
 
 fun goalBadge(run: ChatRun): Pair<String, BadgeTone> = when {
     run.state == "done" -> when {

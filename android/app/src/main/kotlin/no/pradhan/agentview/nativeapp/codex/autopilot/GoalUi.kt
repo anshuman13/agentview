@@ -251,19 +251,19 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         add { EditRow("How often", run.every?.let { "Every ${everyText(it)}" } ?: "Until done", if (run.every != null && editable) EVERY.filter { it.ms > 0 }.map { it.label to mapOf("every" to it.ms) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Stop at", run.endAt?.let { clock(it) } ?: "None", if (editable) STOPS.map { it.label to mapOf("endAt" to stopAtMs(it, now)) } else null) { hub.runEdit(run, it) } }
         if (billing(run.provider) != "none") add { EditRow("Usage", usageLine(run), if (editable) CAPS.map { (it.pct?.let { p -> "$p% cap" } ?: "No cap") to mapOf("capPct" to it.pct?.toLong()) } else null) { hub.runEdit(run, it) } }
-        if (!ended) add { ListRow("Next check", trailing = { RowLabel(next) }) }
+        if (!ended) add { ListRow("Next round", trailing = { RowLabel(next) }) }
         add { ListRow("Cost", trailing = { RowLabel(money(run.costUsd, billing(run.provider))) }) }
     }
     Sheet(onClose, run.title.ifBlank { "Goal" }, padded = false) {
         SectionHeader("Goal", action = { Badge(badge, tone) })
         Group { rows.forEachIndexed { i, row -> if (i > 0) Hairline(); row() } }
         SectionHeader("Rounds", run.rounds.size.toString())
-        if (run.rounds.isEmpty()) EmptyState("No rounds yet", "The first check runs when the agent goes idle", icon = "history")
+        if (run.rounds.isEmpty()) EmptyState("No rounds yet", "The first round runs when the agent goes idle", icon = "history")
         else Group {
             run.rounds.asReversed().forEachIndexed { i, r ->
                 if (i > 0) Hairline(lead = true)
                 ListRow(
-                    roundText(r), "${clock(r.at)} · ${r.outcome.replaceFirstChar(Char::uppercase)} · ${money(r.costUsd, billing(run.provider))}",
+                    roundRow(r), money(r.costUsd, billing(run.provider)),
                     leading = { StatusDot(outcomeDot(r.outcome)) }, onClick = r.report?.let { report -> { open(report) } },
                 )
             }

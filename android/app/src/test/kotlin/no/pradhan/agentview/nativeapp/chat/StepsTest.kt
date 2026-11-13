@@ -61,7 +61,7 @@ class StepsTest {
     @Test
     fun showsLoopRoundsAndGoalChecksAsCompactLines() {
         val items = buildTranscript(listOf(ChatEvent("l", "user", text = "check it\nthen report", auto = "loop", round = 3), ChatEvent("g", "user", text = "goal prompt", auto = "goal", round = 2)))
-        assertEquals(listOf("Loop round 3 \u00B7 check it", "Goal check 2"), items.map { (it as Item.System).text })
+        assertEquals(listOf("Loop round 3 \u00B7 check it", "Goal round 2"), items.map { (it as Item.System).text })
     }
 
     @Test

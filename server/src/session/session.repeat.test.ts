@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 import type { AgentSession } from './session.js';
+import { parseGoal } from './repeat.js';
 import { claudeSession } from '../agent/claude/driver.js';
 import { BIG_BRO, type ChatEvent } from '../../../shared/protocol.js';
 import { advanceTimersByTimeAsync, setSystemTime, waitFor } from '../../../testing.js';
@@ -26,7 +27,7 @@ describe('/loop after Stop', () => {
     expect(interrupt).toHaveBeenCalledOnce();
     result('r1', 'error_during_execution');
     expect(s.state.session.running).toBe(false);
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Loop round 2 at \d\d:\d\d/) });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Next round \d\d:\d\d, \/loop off to end it$/) });
     vi.advanceTimersByTime(60_000);
     expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
     vi.advanceTimersByTime(61_000);
@@ -45,7 +46,7 @@ describe('/loop after Stop', () => {
     result('r1');
     expect(s.state.session.running).toBe(false);
     expect(users()).toBe(2);
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Loop round 2 at 03:02/) });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Next round 03:02/) });
     vi.advanceTimersByTime(2 * 60_000 + 1000);
     expect(users()).toBe(3);
     expect(s.state.session.repeat?.round).toBe(2);
@@ -60,7 +61,7 @@ describe('/loop after Stop', () => {
     handle({ type: 'assistant', parent_tool_use_id: null, error: 'rate_limit', message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
     result('r1');
     expect(s.state.session.running).toBe(false);
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Usage limit reached, loop round 2 at 01:51, /loop off to end it' });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Skipped: usage limit reached. Next round 01:51, /loop off to end it' });
     vi.advanceTimersByTime(110 * 60_000);
     expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
     vi.advanceTimersByTime(2 * 60_000);
@@ -187,11 +188,11 @@ describe('set_status', () => {
 });
 
 describe('/goal', () => {
-  const CHECK = 'Check whether this goal is met: the tests pass. Reply GOAL MET when it is, otherwise keep working on it.';
+  const CHECK = (parseGoal('/goal the tests pass') as { prompt: string }).prompt;
   const users = (s: AgentSession) => s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text);
   const reply = (s: AgentSession, uuid: string, text: string) => (s.driver as unknown as { handle: (m: unknown) => void }).handle({ type: 'result', subtype: 'success', uuid, result: text, total_cost_usd: 0, is_error: false });
 
-  it('sends the check when idle and stops on GOAL MET', async () => {
+  it('sends the round when idle and stops on GOAL MET', async () => {
     vi.useFakeTimers();
     const { s } = fakeSession();
     await s.prompt('/goal the tests pass');
@@ -199,18 +200,18 @@ describe('/goal', () => {
     expect(s.state.session.repeat).toMatchObject({ goal: 'the tests pass', round: 1, every: 0, until: null });
     reply(s, 'r1', 'Two tests fail, fixing them');
     expect(s.state.session.running).toBe(false);
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Goal check 2 at \d\d:\d\d, \/goal off to end it$/) });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Next round \d\d:\d\d, \/goal off to end it$/) });
     vi.advanceTimersByTime(2 * 60_000 + 1);
     expect(users(s)).toHaveLength(3);
     expect(s.state.session.repeat?.round).toBe(2);
     reply(s, 'r2', 'All green. GOAL MET');
     expect(s.state.session.repeat).toBeNull();
     expect(users(s)).toHaveLength(3);
-    expect(s.state.events.some((e) => e.kind === 'system' && e.text === 'Goal met after 2 checks: the tests pass')).toBe(true);
+    expect(s.state.events.some((e) => e.kind === 'system' && e.text === 'Goal met after 2 rounds')).toBe(true);
     vi.useRealTimers();
   });
 
-  it('gives up after 20 checks, and /goal off ends it early', async () => {
+  it('gives up after 20 rounds, and /goal off ends it early', async () => {
     vi.useFakeTimers();
     const { s } = fakeSession();
     await s.prompt('/goal the build is green');
@@ -222,13 +223,13 @@ describe('/goal', () => {
     reply(s, 'r20', 'still red');
     expect(s.state.session.repeat).toBeNull();
     expect(users(s)).toHaveLength(21);
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Goal not met after 20 checks: the build is green' });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Not met after 20 rounds' });
     await s.prompt('/goal ship it');
     expect(s.state.session.repeat?.goal).toBe('ship it');
     await s.prompt('/goal off');
     expect(s.state.session.repeat).toBeNull();
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Goal off' });
-    expect(s.state.events.filter((e) => e.kind === 'system' && e.text === 'Goal on, checked whenever the agent goes idle until "ship it" is met, up to 20 checks')).toHaveLength(1);
+    expect(s.state.events.filter((e) => e.kind === 'system' && e.text === 'Goal when idle · up to 20 rounds')).toHaveLength(2);
     vi.useRealTimers();
   });
 });
@@ -284,7 +285,7 @@ describe('runs', () => {
     vi.advanceTimersByTime(112 * 60_000);
     expect(s.runs.list()[0]).toMatchObject({ state: 'running', why: '', round: 2 });
     reply(handle, 'r2', 'All green. GOAL MET');
-    expect(s.runs.list()[0]).toMatchObject({ kind: 'goal', state: 'done', why: 'goal met' });
+    expect(s.runs.list()[0]).toMatchObject({ kind: 'goal', state: 'done', why: 'Goal met after 2 rounds' });
     expect(s.runs.list()[0].rounds.map((r) => r.outcome)).toEqual(['failed', 'done']);
     vi.useRealTimers();
   });

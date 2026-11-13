@@ -17,8 +17,6 @@ import { billing } from '../../../../shared/providers';
 import type { RunOp } from '../../../../shared/protocol';
 import { OUTCOME_DOT, agentAge, loopNow, runLine, showTurn, stoppedText } from '../composer/composerLogic';
 
-const word = (text: string) => text[0].toUpperCase() + text.slice(1);
-
 export function LoopCard() {
   const chat = useStore((s) => s.session.id);
   const run = useStore((s) => s.runs.filter((r) => r.chatId === chat && r.state !== 'done').at(-1));
@@ -45,7 +43,7 @@ export function LoopCard() {
     showSnack(stoppedText(run), cycle ? undefined : () => control('restore'));
   };
   const details = goal ? () => openGoal(run.id) : undefined;
-  const meta = [state.at && clock(state.at), state.source === 'round' && state.outcome && word(state.outcome), state.next && `Next: ${state.next}`, state.stepsLeft && `${state.stepsLeft} ${state.stepsLeft === 1 ? 'step' : 'steps'} left`].filter(Boolean).join(' · ');
+  const meta = [state.at && clock(state.at), state.next && `Next: ${state.next}`, state.stepsLeft && `${state.stepsLeft} ${state.stepsLeft === 1 ? 'step' : 'steps'} left`].filter(Boolean).join(' · ');
   const nowClick = details ? { onClick: details } : run.kind === 'loop' && state.source === 'round' ? { onClick: () => setOpen(!open), 'aria-expanded': open } : { plain: true };
   const dot = working ? 'running' : OUTCOME_DOT[run.rounds.at(-1)?.outcome ?? 'quiet'];
   return (

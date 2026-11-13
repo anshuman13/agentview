@@ -8,7 +8,7 @@
   { "name": "one agent", "chat": { "status": "Idle", "agents": 1 }, "expected": { "text": "Running · 1 agent", "tone": "running" } },
   { "name": "paused with a reason", "chat": { "run": { "state": "paused", "why": "usage limit until 18:00" } }, "expected": { "text": "Paused · usage limit until 18:00", "tone": "warn" } },
   { "name": "paused without a reason", "chat": { "run": { "state": "paused" } }, "expected": { "text": "Paused", "tone": "warn" } },
-  { "name": "waiting with a next time", "chat": { "run": { "state": "running", "nextAtLocal": "2026-11-09T14:20" } }, "expected": { "text": "Waiting for next round · 14:20", "tone": "idle" } },
-  { "name": "waiting without a next time", "chat": { "run": { "state": "running" } }, "expected": { "text": "Waiting for next round", "tone": "idle" } },
+  { "name": "waiting with a next time", "chat": { "run": { "state": "running", "nextAtLocal": "2026-11-09T14:20" } }, "expected": { "text": "Next round 14:20", "tone": "idle" } },
+  { "name": "waiting without a next time", "chat": { "run": { "state": "running" } }, "expected": { "text": "Next round", "tone": "idle" } },
   { "name": "idle", "chat": { "status": "Idle" }, "expected": { "text": "Idle", "tone": "idle" } }
 ]

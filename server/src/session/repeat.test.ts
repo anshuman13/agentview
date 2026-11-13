@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { nextClock } from '../../../shared/util.js';
 import type { PlanUsage, Repeat } from '../../../shared/protocol.js';
-import { parseGoal, parseLoop, usageGate } from './repeat.js';
+import { ROUND_INSTRUCTION, parseGoal, parseLoop, usageGate } from './repeat.js';
 import { setSystemTime } from '../../../testing.js';
 
 const now = new Date(2026, 9, 24, 9, 0, 0).getTime();
@@ -99,12 +99,25 @@ describe('usageGate', () => {
   });
 
   it('ends at the weekly cap', () => {
-    expect(usageGate(r(70), usage(70, 10))).toEqual({ note: 'Goal stopped: weekly usage at 70%, cap 70%', why: 'weekly usage cap' });
+    expect(usageGate(r(70), usage(70, 10))).toEqual({ note: 'Usage cap 70% reached', why: 'Usage cap 70% reached' });
   });
 
   it('skips while the 5-hour window is over 90%', () => {
     expect(usageGate(r(70), usage(10, 91, now + 1000), now)).toEqual({ skipUntil: now + 1000 });
     expect(usageGate(r(70), usage(10, 91, now - 1000), now)).toBeNull();
     expect(usageGate(r(70), usage(10, 90))).toBeNull();
+  });
+});
+
+describe('goal prompts', () => {
+  it('keep the safety line, GOAL MET and the ROUND wording, and give no push permission', () => {
+    const prompts = [(parseGoal('/goal every 1h x') as Repeat).prompt, (parseGoal('/goal x') as Repeat).prompt];
+    for (const p of prompts) {
+      expect(p).toContain('irreversible or outward-facing');
+      expect(p).toContain('GOAL MET');
+      expect(p).not.toMatch(/allowed to push|you may push/i);
+    }
+    expect(ROUND_INSTRUCTION).toContain('first sentence is the push text');
+    expect(ROUND_INSTRUCTION).not.toMatch(/allowed to push|you may push/i);
   });
 });

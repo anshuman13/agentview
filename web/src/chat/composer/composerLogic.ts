@@ -4,7 +4,8 @@ import { toolId } from '../../ops/mcpHelpers';
 import { compactAt, type Account, type ChatEvent, type ChatRun, type LiveChat, type LiveNow, type RoundOutcome, type SavedSession } from '../../../../shared/protocol';
 import { apiUrl, fetchJson } from '../../app/api';
 import { createTerm, listTerms } from '../../workspace/termApi';
-import { clock, isBlock } from '../../../../shared/util';
+import { isBlock } from '../../../../shared/util';
+import { firstRound, nextRound, roundText, runLine as roundLine } from '../../../../shared/goalText';
 import { timedMeetings } from '../../../../shared/plan';
 import { profileOfPath } from '../../../../shared/workspace';
 import { live, type Meeting } from '../../codex/data/wiki/wiki';
@@ -123,13 +124,11 @@ const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', cycl
 
 export function runLine(run: ChatRun, phase: string | null = null) {
   if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
-  const next = run.nextAt ? ` · next ${clock(run.nextAt)}` : '';
-  if (run.kind === 'goal' && run.every) return `Standing goal · round ${run.round}${next}`;
-  if (run.kind === 'goal') return `Goal · check ${run.round} of ${run.max}`;
+  if (run.kind === 'goal') return roundLine(KIND.goal, run);
   if (run.kind === 'tries') return `Tries · ${run.tries?.filter((t) => !t.dropped).length ?? 0} chats`;
   if (run.kind === 'job') return `Job · ${run.branch}`;
   if (run.kind === 'cycle') return `Build cycle · round ${run.round}/${run.max}${phase && phase !== 'passed' && phase !== 'failed' ? ` · ${phase[0].toUpperCase()}${phase.slice(1)}` : ''}`;
-  return `Loop · round ${run.round}${next}`;
+  return roundLine(KIND.loop, run);
 }
 
 export type ChatState = { text: string; tone: 'running' | 'needs' | 'failed' | 'warn' | 'idle' };
@@ -144,11 +143,11 @@ export function chatState(chat: Pick<LiveChat, 'pending' | 'failed' | 'stalled' 
   if (chat.running) return { text: chat.status && chat.status !== 'Idle' ? chat.status : 'Working', tone: 'running' };
   if (agents) return { text: `Running · ${agents} ${agents === 1 ? 'agent' : 'agents'}`, tone: 'running' };
   if (run?.state === 'paused') return { text: run.why ? `Paused · ${run.why}` : 'Paused', tone: 'warn' };
-  if (run) return { text: `Waiting for next round${run.nextAt ? ` · ${clock(run.nextAt)}` : ''}`, tone: 'idle' };
+  if (run) return { text: nextRound(run.nextAt), tone: 'idle' };
   return { text: 'Idle', tone: 'idle' };
 }
 
-export type LoopNow = { title: string; at: number | null; source: 'status' | 'round' | 'none'; outcome?: RoundOutcome; next?: string; stepsLeft?: number };
+export type LoopNow = { title: string; at: number | null; source: 'status' | 'round' | 'none'; next?: string; stepsLeft?: number };
 
 // What the loop card's first row shows: the agent's status or the last round, whichever is newer. A status from before the run started is ignored.
 export function loopNow(run: ChatRun, now?: LiveNow): LoopNow {
@@ -156,8 +155,8 @@ export function loopNow(run: ChatRun, now?: LiveNow): LoopNow {
   if (now && now.at >= run.startedAt && (!last || now.at >= last.at)) {
     return { title: now.text, at: now.at, source: 'status', ...(now.next?.length && { next: now.next[0], stepsLeft: now.next.length }) };
   }
-  if (last) return { title: last.line || last.outcome, at: last.at, source: 'round', outcome: last.outcome };
-  return { title: 'Waiting for the first round', at: run.nextAt, source: 'none' };
+  if (last) return { title: roundText(last), at: null, source: 'round' };
+  return { title: firstRound(run.nextAt), at: null, source: 'none' };
 }
 
 // How long an agent has run, as "12 min" or "1 h 5 min".

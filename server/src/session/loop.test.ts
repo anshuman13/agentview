@@ -149,13 +149,13 @@ describe('standing goal', () => {
   function setup(goal: string) {
     vi.useFakeTimers();
     let r = parseGoal(`/goal every 1h ${goal}`) as Repeat;
-    const state = { running: false, asking: false, sent: [] as { text: string; report?: boolean }[], ended: '' };
+    const state = { running: false, asking: false, sent: [] as { text: string; report?: boolean }[], ended: '', notes: [] as string[] };
     const c = new RepeatController({
       repeat: () => r,
       running: () => state.running,
       closed: () => false,
       setSession: (p) => { r = p.repeat as Repeat; },
-      system: () => {},
+      system: (text) => { state.notes.push(text); },
       startRun: () => 'run',
       resumeRun: () => 'run',
       endRun: (_id, why) => { state.ended = why; },
@@ -178,6 +178,7 @@ describe('standing goal', () => {
     state.asking = true;
     vi.advanceTimersByTime(HOUR);
     expect(state.sent).toHaveLength(1);
+    expect(state.notes.slice(-2)).toEqual(['Skipped: still working', 'Skipped: waiting for you']);
     expect(repeat().round).toBe(1);
     state.asking = false;
     vi.advanceTimersByTime(HOUR);
@@ -187,7 +188,7 @@ describe('standing goal', () => {
     vi.useRealTimers();
   });
 
-  it('runs a heartbeat right after a short round and has no 20 check cap', () => {
+  it('runs a heartbeat right after a short round and has no 20 round cap', () => {
     const { c, state, repeat } = setup('x');
     c.set({ ...repeat(), round: 25 });
     vi.advanceTimersByTime(HOUR);
@@ -213,8 +214,9 @@ describe('standing goal', () => {
   it('ends after 28 days with its own reason', () => {
     const { c, state, repeat } = setup('x');
     c.set(repeat());
+    expect(state.notes[0]).toBe('Goal every 1 h');
     vi.advanceTimersByTime(28 * DAY);
-    expect(state.ended).toBe('ran for 28 days, start it again to continue');
+    expect(state.ended).toBe('Ran for 28 days, start it again to continue');
     expect(repeat()).toBeNull();
     vi.useRealTimers();
   });
@@ -227,13 +229,13 @@ describe('goal limits and edits', () => {
   function host(initial: Repeat, usage: PlanUsage | null = null) {
     if (!vi.isFakeTimers()) vi.useFakeTimers();
     let r: Repeat | null = initial;
-    const state = { ended: '', sent: 0, patches: [] as Record<string, unknown>[] };
+    const state = { ended: '', sent: 0, patches: [] as Record<string, unknown>[], notes: [] as string[] };
     const c = new RepeatController({
       repeat: () => r,
       running: () => false,
       closed: () => false,
       setSession: (p) => { r = (p.repeat ?? null) as Repeat | null; },
-      system: () => {},
+      system: (text) => { state.notes.push(text); },
       startRun: () => 'run',
       resumeRun: () => 'run',
       endRun: (_id, why) => { state.ended = why; },
@@ -250,7 +252,7 @@ describe('goal limits and edits', () => {
     const r = { ...standingGoal(), endAt: Date.now() - 1000 };
     const { c, state } = host(r);
     c.set(r);
-    expect(state.ended).toMatch(/^end time \d\d:\d\d$/);
+    expect(state.ended).toMatch(/^Stopped at \d\d:\d\d · 0 rounds$/);
     expect(state.sent).toBe(0);
     vi.useRealTimers();
   });
@@ -258,7 +260,7 @@ describe('goal limits and edits', () => {
   it('ends at the weekly cap and pauses an until-done goal while the 5-hour window is full', () => {
     const week = host(standingGoal('cap 70% '), { week: { pct: 72, resetsAt: null }, fiveHour: null });
     week.c.set(week.repeat()!);
-    expect(week.state.ended).toBe('weekly usage cap');
+    expect(week.state.ended).toBe('Usage cap 70% reached');
     const full = host(parseGoal('/goal cap 70% x') as Repeat, { week: { pct: 10, resetsAt: null }, fiveHour: { pct: 95, resetsAt: Date.now() + HOUR } });
     full.c.set(full.repeat()!);
     expect(full.state.sent).toBe(0);
@@ -267,12 +269,13 @@ describe('goal limits and edits', () => {
     vi.useRealTimers();
   });
 
-  it('edits a standing goal: every moves the next check, a null cap clears it', () => {
+  it('edits a standing goal: every moves the next round, a null cap clears it', () => {
     const { c, state, repeat } = host(standingGoal('cap 70% '));
     c.set(repeat()!);
     c.edit({ every: 2 * HOUR, capPct: null });
     expect(repeat()).toMatchObject({ every: 2 * HOUR, nextAt: Date.now() + 2 * HOUR });
     expect(repeat()!.capPct).toBeUndefined();
+    expect(state.notes.at(-1)).toBe('Goal every 2 h · no cap');
     expect(state.patches.at(-1)).toMatchObject({ every: 2 * HOUR, nextAt: Date.now() + 2 * HOUR, capPct: undefined });
     c.edit({ every: 60_000, endAt: 5 });
     expect(repeat()).toMatchObject({ every: 2 * HOUR, endAt: 5 });

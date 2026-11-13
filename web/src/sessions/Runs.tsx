@@ -12,6 +12,7 @@ import { Section, sectionCount } from '../ui/Section';
 import { command, money } from '../ui/util';
 import { billing } from '../../../shared/providers';
 import type { ChatRun } from '../../../shared/protocol';
+import { roundText } from '../../../shared/goalText';
 import { OUTCOME_DOT, runLine } from '../chat/composer/composerLogic';
 import { openGoal, openRun } from './goalLogic';
 import { ReviewCard } from './ReviewCard';
@@ -29,7 +30,7 @@ export function RunRow({ item, onBoard }: { item: RunItem; onBoard: (id: string)
   const meta = run.pr ? 'PR opened' : (
     <>
       {runLine(run)}
-      {last && <> · <span className={`dot ${OUTCOME_DOT[last.outcome]}`} /> {last.report ? 'Weekly report' : last.line || last.outcome}</>}
+      {last && <> · <span className={`dot ${OUTCOME_DOT[last.outcome]}`} /> {last.report ? 'Weekly report' : roundText(last)}</>}
     </>
   );
   const open = () => (run.kind === 'tries' ? onBoard(run.id) : run.kind === 'goal' ? openGoal(run.id) : openRun(run));

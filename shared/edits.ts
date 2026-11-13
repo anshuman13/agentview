@@ -44,7 +44,7 @@ export function sumEdits(events: ChatEvent[]): EditCount | undefined {
   return total;
 }
 
-// A loop round or goal check ends its reply with `ROUND: <done|progress|blocked|question|nothing> <summary>`.
+// A loop round or goal round ends its reply with `ROUND: <done|progress|blocked|question|nothing> <summary>`.
 const ROUND_TAIL = /(?:^|\n)[ \t]*ROUND:([^\n]*)\s*$/i;
 const ROUND_WORD = /^\s*(done|progress|blocked|question|nothing)\b[:\s-]*(.*)$/i;
 

@@ -45,7 +45,7 @@ fun firstLine(text: String) = text.trim().lineSequence().firstOrNull() ?: ""
 
 private val ROUND_TAIL = Regex("(?:^|\\n)[ \\t]*ROUND:[^\\n]*\\s*$", RegexOption.IGNORE_CASE)
 
-// shared/edits.ts stripRound: the ROUND line a loop round or goal check ends its reply with is not shown.
+// shared/edits.ts stripRound: the ROUND line a loop round or goal round ends its reply with is not shown.
 fun stripRound(text: String): String = ROUND_TAIL.find(text)?.let { text.substring(0, it.range.first).trimEnd() } ?: text
 
 fun JsonObject.s(k: String) = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: ""
@@ -165,7 +165,7 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
     val items = mutableListOf<Item>()
     for (e in events) {
         when {
-            e.kind == "user" && e.auto != null -> items += Item.System(e.id, if (e.auto == "goal") "Goal check ${e.round}" else "Loop round ${e.round} \u00B7 ${firstLine(e.text)}")
+            e.kind == "user" && e.auto != null -> items += Item.System(e.id, if (e.auto == "goal") "Goal round ${e.round}" else "Loop round ${e.round} \u00B7 ${firstLine(e.text)}")
             e.kind == "user" -> items += if (e.phase != null) Item.Phase(e.id, e.text) else Item.User(e.id, e.text, e.at, e.stopping, e.queued)
             e.kind == "assistant" -> stripRound(e.text).let { if (it.isNotBlank()) items += Item.Assistant(e.id, it, e.streaming) }
             e.kind == "system" -> items += Item.System(e.id, e.text, e.error)

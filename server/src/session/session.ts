@@ -49,7 +49,7 @@ export class AgentSession implements AgentHost {
   // The host sets the provider registry's lookup, which a session must not import.
   transcriptPath: (id: string) => string | null = () => null;
   // ends: the run ends with this round, so its own end push is the only one.
-  roundNote: { outcome: RoundOutcome; line: string; ends: boolean } | null = null;
+  roundNote: { outcome: RoundOutcome; line: string; goal: boolean; ends: boolean } | null = null;
   readonly approvals: Approvals;
   readonly log: EventLog;
   readonly waiting = new MessageQueue(this);

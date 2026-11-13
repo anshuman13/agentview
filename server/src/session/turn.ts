@@ -3,6 +3,7 @@ import { costRise } from '../../../shared/cost.js';
 import { providerLabel } from '../../../shared/providers.js';
 import { roundOf } from '../../../shared/edits.js';
 import { clock } from '../../../shared/util.js';
+import { goalMet as goalMetText, skipText } from '../../../shared/goalText.js';
 import type { Repeat } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
 import { advance, looping, planChangeText } from './loop.js';
@@ -17,7 +18,7 @@ export class Turn {
   lastResult = '';
   lastError = false;
   cost = 0;
-  // The last turn was a loop round or goal check; its reply ends with a ROUND line.
+  // The last turn was a loop round or goal round; its reply ends with a ROUND line.
   roundTurn = false;
   // The id of the prompt of the weekly report round of a standing goal, while that round runs.
   reportTurn: string | undefined;
@@ -86,7 +87,10 @@ export class Turn {
     this.reportTurn = undefined;
     s.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: s.state.session.model });
     s.links.record(r, report);
-    if (repeat?.goal && met) s.repeater.set(null, `Goal met after ${repeat.round} ${repeat.round === 1 ? 'check' : 'checks'}: ${repeat.goal}`, 'goal met');
+    if (repeat?.goal && met) {
+      const text = goalMetText(repeat.round);
+      s.repeater.set(null, text, text);
+    }
     this.ended();
   }
 
@@ -98,8 +102,9 @@ export class Turn {
   private roundNote(text: string, repeat: Repeat | null, met: boolean, report: string | undefined) {
     if (!repeat?.runId) return null;
     // A turn the run did not start, such as a background agent finishing, still reports with a ROUND line.
-    if (!this.roundTurn) return roundOf(text) ? { ...roundResult(text, { failed: this.lastError, met }), ends: met } : null;
-    const note = { ...roundResult(text, { failed: this.lastError, met }), ends: met || this.s.repeater.ends() };
+    const goal = Boolean(repeat.goal);
+    if (!this.roundTurn) return roundOf(text) ? { ...roundResult(text, { failed: this.lastError, met }), goal, ends: met } : null;
+    const note = { ...roundResult(text, { failed: this.lastError, met }), goal, ends: met || this.s.repeater.ends() };
     if (report && !this.lastError && !met) note.outcome = 'progress';
     return note;
   }
@@ -150,7 +155,7 @@ export class Turn {
 
   private repeatWhenIdle() {
     const { usage, repeater, state } = this.s;
-    if (usage.reset && state.session.repeat) repeater.defer(usage.reset, 'Usage limit reached, loop round', true);
+    if (usage.reset && state.session.repeat) repeater.defer(usage.reset, skipText('usage limit reached'), true);
     else if (usage.reset) this.s.system(`Usage limit reached, resets at ${clock(usage.reset)}`);
     else if (this.lastError) repeater.defer();
     else if (repeater.due || state.session.repeat?.every === 0) repeater.fire();

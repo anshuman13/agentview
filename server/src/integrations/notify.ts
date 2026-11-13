@@ -17,11 +17,11 @@ function detail(m: ServerMessage) {
   return null;
 }
 
-// A loop round or goal check pushes only when it needs the user or ended the work.
+// A loop or goal round pushes only when it needs the user or ended the work.
 const ROUND_PUSH: Partial<Record<RoundOutcome, string>> = { done: 'done', blocked: 'blocked', question: 'question', failed: 'failed' };
 
 // With a desktop client active in the last 3 minutes the menu bar notification still shows but the ntfy push is skipped.
-export function notifyAway(m: ServerMessage, away: () => LiveChat | null, desktopActive: () => boolean = () => false, round: { outcome: RoundOutcome; line: string; ends?: boolean } | null = null) {
+export function notifyAway(m: ServerMessage, away: () => LiveChat | null, desktopActive: () => boolean = () => false, round: { outcome: RoundOutcome; line: string; goal?: boolean; ends?: boolean } | null = null) {
   const body = detail(m);
   if (body === null) return;
   const ended = m.type === 'event' ? round : null;
@@ -34,13 +34,14 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null, deskto
   const prev = last.get(`${chat.id}:${kind}`);
   if (prev && prev.key === key && Date.now() - prev.at < 30_000) return;
   last.set(`${chat.id}:${kind}`, { at: Date.now(), key });
-  const title = word ? `Loop in ${path.basename(chat.cwd)}: ${word}` : `${providerLabel(chat.provider)} ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
-  post(title, chat.title, (ended?.line || body).slice(0, 200), `${APP}/?chat=${chat.id}`, !desktopActive());
+  const title = word ? `${ended?.goal ? 'Goal' : 'Loop'} in ${path.basename(chat.cwd)}: ${word}` : `${providerLabel(chat.provider)} ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
+  post(title, chat.title, (ended?.line || body).split(/(?<=[.!?])\s|\n/)[0].slice(0, 200), `${APP}/?chat=${chat.id}`, !desktopActive());
 }
 
 export function notifyRunEnded(run: ChatRun, repo: string, push: boolean) {
-  const kind = run.kind === 'cycle' ? 'Build cycle' : run.kind === 'goal' ? 'Goal' : run.kind === 'tries' ? 'Tries' : 'Loop';
-  post(`${kind} ended${repo ? ` in ${repo}` : ''}`, run.title, run.why, `${APP}/?view=runs`, push);
+  const kind = run.kind === 'cycle' ? 'Build cycle' : run.kind === 'tries' ? 'Tries' : 'Loop';
+  const title = run.kind === 'goal' ? (/^Goal met/.test(run.why) ? 'Goal met' : /^Not met/.test(run.why) ? 'Goal not met' : 'Goal stopped') : `${kind} ended`;
+  post(`${title}${repo ? ` in ${repo}` : ''}`, run.title, run.why, `${APP}/?view=runs`, push);
 }
 
 // The menu bar app shows the notification and opens url when it is clicked. Without it only the ntfy push goes out.

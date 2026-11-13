@@ -9,6 +9,11 @@ describe('goalBadge', () => {
     expect(goalBadge(run()).status).toBe('running');
     expect(goalBadge(run({ needsYou: true }))).toEqual({ status: 'waiting', label: 'Needs you' });
     expect(goalBadge(run({ state: 'paused', why: 'you paused it' }))).toEqual({ status: 'waiting', reason: 'you paused it' });
+    expect(goalBadge(run({ state: 'done', why: 'Goal met after 12 rounds' })).status).toBe('done');
+    expect(goalBadge(run({ state: 'done', why: 'Stopped at 09:00 · 41 rounds' })).status).toBe('done');
+    expect(goalBadge(run({ state: 'done', why: 'Usage cap 100% reached' })).status).toBe('done');
+    expect(goalBadge(run({ state: 'done', why: 'Ran for 28 days, start it again to continue' })).status).toBe('done');
+    expect(goalBadge(run({ state: 'done', why: 'Not met after 20 rounds' })).status).toBe('failed');
     expect(goalBadge(run({ state: 'done', why: 'goal met' })).status).toBe('done');
     expect(goalBadge(run({ state: 'done', why: 'end time 18:00' })).status).toBe('done');
     expect(goalBadge(run({ state: 'done', why: 'weekly usage cap' })).status).toBe('done');

@@ -14,7 +14,7 @@ type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' |
 
 export const firstSentence = (text: string, max = 120) => text.trim().split(/(?<=[.!?])\s|\n/)[0].slice(0, max).trim();
 
-// The outcome of a loop round or goal check from its reply: the ROUND line, else progress with the first sentence.
+// The outcome of a loop round or goal round from its reply: the ROUND line, else progress with the first sentence.
 export function roundResult(text: string, { failed = false, met = false } = {}): { outcome: RoundOutcome; line: string } {
   const parsed = roundOf(text);
   if (failed) return { outcome: 'failed', line: parsed?.line || firstSentence(text) };

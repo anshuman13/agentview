@@ -25,6 +25,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
+import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
@@ -88,7 +89,7 @@ fun statusLine(live: LiveChat, session: SessionInfo?): StatusLine = when {
     (session?.running ?: live.running) -> StatusLine(live.status.takeIf { it != "Idle" }.orEmpty().ifBlank { "Working" }, Tone2.Running)
     live.agentList.isNotEmpty() -> StatusLine("Running · ${live.agentList.size} ${if (live.agentList.size == 1) "agent" else "agents"}", Tone2.Running)
     live.run?.state == "paused" -> StatusLine(live.run.why?.takeIf { it.isNotEmpty() }?.let { "Paused · $it" } ?: "Paused", Tone2.Warn)
-    live.run != null -> StatusLine("Waiting for next round" + (live.run.nextAt?.let { " · ${clock(it)}" } ?: ""), Tone2.Idle)
+    live.run != null -> StatusLine(nextRoundText(live.run.nextAt), Tone2.Idle)
     else -> StatusLine("Idle", Tone2.Idle)
 }
 

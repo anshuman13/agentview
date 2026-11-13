@@ -117,7 +117,7 @@ function orphanAgent(id: string, at: number): ToolUse {
 function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>, resumed: Map<string, number>, progress: Map<string, string>): Item[] {
   const items: Item[] = [];
   for (const e of events) {
-    if (e.kind === 'user' && e.auto) items.push({ kind: 'auto', id: e.id, label: e.auto === 'goal' ? `Goal check ${e.round}` : `Loop round ${e.round} · ${firstLine(e.text)}`, text: e.text });
+    if (e.kind === 'user' && e.auto) items.push({ kind: 'auto', id: e.id, label: e.auto === 'goal' ? `Goal round ${e.round}` : `Loop round ${e.round} · ${firstLine(e.text)}`, text: e.text });
     else if (e.kind === 'user') items.push(e.phase ? { kind: 'phase', id: e.id, text: e.text } : { kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued });
     else if (e.kind === 'assistant') { const text = stripRound(e.text); if (text.trim()) items.push({ kind: 'assistant', id: e.id, text, streaming: e.streaming }); }
     else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text, ...(e.error && { error: true }) });

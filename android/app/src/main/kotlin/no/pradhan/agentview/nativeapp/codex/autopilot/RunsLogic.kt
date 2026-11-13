@@ -27,15 +27,18 @@ private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "cycle" to "Build c
 
 fun runLine(run: ChatRun, phase: String? = null): String = when {
     run.state == "paused" -> if (run.why.isNotEmpty()) "Paused · ${run.why}" else "Paused"
-    run.kind == "goal" && run.every != null -> "Standing goal · round ${run.round}" + nextText(run)
-    run.kind == "goal" -> "Goal · check ${run.round} of ${run.max}"
+    run.kind == "goal" -> roundLine("Goal", run)
     run.kind == "tries" -> "Tries · ${run.tries.count { !it.dropped }} chats"
     run.kind == "job" -> "Job · ${run.branch}"
     run.kind == "cycle" -> "Build cycle · round ${run.round}/${run.max}" + (phase?.takeIf { it != "passed" && it != "failed" }?.let { " · ${it.replaceFirstChar(Char::uppercase)}" } ?: "")
-    else -> "Loop · round ${run.round}" + nextText(run)
+    else -> roundLine("Loop", run)
 }
 
-private fun nextText(run: ChatRun) = run.nextAt?.let { " · next ${clock(it)}" } ?: ""
+private fun roundLine(word: String, run: ChatRun) = "$word · round ${run.round}" + (if (run.max > 0) " of ${run.max}" else "") + (run.nextAt?.let { " · next ${clock(it)}" } ?: "")
+
+fun firstRoundText(at: Long?) = "First round" + (at?.let { " ${clock(it)}" } ?: "")
+
+fun nextRoundText(at: Long?) = "Next round" + (at?.let { " ${clock(it)}" } ?: "")
 
 fun everyText(ms: Long) = if (ms % 3_600_000L == 0L) "${ms / 3_600_000L}h" else "${ms / 60_000L}m"
 
@@ -58,6 +61,15 @@ fun tryColumn(run: ChatRun, t: RunTry, live: List<LiveChat>): TryColumn {
 
 fun roundText(r: Round) = if (r.report != null) "Weekly report" else r.line.ifEmpty { r.outcome }
 
+private fun roundSummary(r: Round) = "Round ${r.n} · ${clock(r.at)} · " + when {
+    r.outcome == "quiet" -> "nothing to do"
+    r.line.isEmpty() -> r.outcome
+    else -> "${r.outcome}: ${r.line}"
+}
+
+// A round row of the goal detail and the Runs list (web shared/goalText.ts roundText).
+fun roundRow(r: Round) = if (r.report != null) "Weekly report" else roundSummary(r)
+
 // The loop card's first row (web composerLogic loopNow): the agent's status or the last round, whichever is newer.
 data class LoopNow(val title: String, val at: Long?, val fromStatus: Boolean, val outcome: String? = null, val next: String? = null, val stepsLeft: Int = 0)
 
@@ -66,8 +78,8 @@ fun loopNow(run: ChatRun, now: LiveNow?): LoopNow {
     if (now != null && now.at >= run.startedAt && (last == null || now.at >= last.at)) {
         return LoopNow(now.text, now.at, true, next = now.next?.firstOrNull(), stepsLeft = now.next?.size ?: 0)
     }
-    if (last != null) return LoopNow(last.line.ifEmpty { last.outcome }, last.at, false, last.outcome)
-    return LoopNow("Waiting for the first round", run.nextAt, false)
+    if (last != null) return LoopNow(roundSummary(last), null, false, last.outcome)
+    return LoopNow(firstRoundText(run.nextAt), null, false)
 }
 
 fun agentAge(startedAt: Long, now: Long): String {

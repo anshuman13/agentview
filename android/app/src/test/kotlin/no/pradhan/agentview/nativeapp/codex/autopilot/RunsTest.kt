@@ -14,6 +14,7 @@ import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -29,8 +30,8 @@ class RunsTest {
     @Test fun loopNowTakesTheNewerOfStatusAndRound() {
         val r = run("a", rounds = listOf(Round(1, 400, "progress", "round", 0.0))).copy(startedAt = 100)
         assertEquals(LoopNow("Working", 500, true, next = "a", stepsLeft = 2), loopNow(r, LiveNow("Working", 500, next = listOf("a", "b"))))
-        assertEquals("round", loopNow(r, LiveNow("Working", 300)).title)
-        assertEquals("Waiting for the first round", loopNow(r.copy(rounds = emptyList()), LiveNow("Old", 50)).title)
+        assertTrue(Regex("Round 1 · \\d\\d:\\d\\d · progress: round").matches(loopNow(r, LiveNow("Working", 300)).title))
+        assertEquals("First round 14:20", loopNow(r.copy(rounds = emptyList()), LiveNow("Old", 50)).title)
         assertEquals("12 min", agentAge(0, 12 * 60_000))
         assertEquals("1 h 5 min", agentAge(0, 65 * 60_000))
     }
@@ -46,15 +47,21 @@ class RunsTest {
     }
 
     @Test fun stateLineForRunningPausedAndDone() {
-        assertEquals("Loop · round 4 · next 14:20", runLine(run("a")))
-        assertEquals("Goal · check 4 of 20", runLine(run("a", kind = "goal")))
-        assertEquals("Standing goal · round 4 · next 14:20", runLine(run("a", kind = "goal", every = 3_600_000L)))
+        assertEquals("Loop · round 4 · next 14:20", runLine(run("a").copy(max = 0)))
+        assertEquals("Goal · round 4 of 20 · next 14:20", runLine(run("a", kind = "goal")))
+        assertEquals("Goal · round 4 · next 14:20", runLine(run("a", kind = "goal", every = 3_600_000L).copy(max = 0)))
         assertEquals("Build cycle · round 4/20 · Test", runLine(run("a", kind = "cycle"), "test"))
         assertEquals("Build cycle · round 4/20", runLine(run("a", kind = "cycle"), "passed"))
         assertEquals("Paused · usage limit until 18:00", runLine(run("a", "paused", why = "usage limit until 18:00")))
         assertEquals("Paused", runLine(run("a", "paused")))
-        assertEquals("Loop · round 4 · next 14:20", runLine(run("a", "done")))
+        assertEquals("Loop · round 4 · next 14:20", runLine(run("a", "done").copy(max = 0)))
         assertEquals("Build cycle stopped", stoppedText(run("a", kind = "cycle")))
+    }
+
+    @Test fun plannedEndsStayDoneForNewAndOldReasons() {
+        for (why in listOf("Goal met after 12 rounds", "Stopped at 09:00 · 41 rounds", "Usage cap 100% reached", "Ran for 28 days, start it again to continue", "goal met", "end time 18:00"))
+            assertEquals(why, "Done", goalBadge(run("a", "done", why = why, kind = "goal")).first)
+        assertEquals("Failed", goalBadge(run("a", "done", why = "Not met after 20 rounds", kind = "goal")).first)
     }
 
     @Test fun bandsSplitNeedsRunningAndFinished() {

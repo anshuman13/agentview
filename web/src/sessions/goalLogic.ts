@@ -31,7 +31,7 @@ export function stopAtMs({ stopIn, stopAt }: Stop, now: number) {
   return nextClock(h, m, now);
 }
 
-const PLANNED_ENDS = ['goal met', 'end time', 'weekly usage cap', 'ran for 28 days'];
+const PLANNED_ENDS = ['Goal met', 'Stopped at', 'Usage cap', 'Ran for 28 days', 'goal met', 'end time', 'weekly usage cap', 'ran for 28 days'];
 
 export function goalBadge(run: ChatRun): BadgeSpec {
   if (run.state === 'done') {
