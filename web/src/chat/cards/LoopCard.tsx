@@ -55,7 +55,7 @@ export function LoopCard() {
     <TranscriptBox
       id={`loop:${run.id}`}
       className="lc"
-      defaultOpen
+      defaultOpen={!phone}
       open={phone?.open}
       onToggle={phone?.toggle}
       title={runLine(run, phase)}

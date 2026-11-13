@@ -3,8 +3,6 @@ import { remindChoices, runLine } from './composer/composerLogic';
 import { useChatRun } from '../sessions/runBands';
 import { openGoal } from '../sessions/goalLogic';
 import { QuickPick } from '../ui/QuickPick';
-import { Icon } from '../ui/Icon';
-import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
@@ -13,7 +11,7 @@ import { copyChatMarkdown, copyResumeCommand, forkChat, remindChat, sideChat } f
 import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
-import { ChoicePick } from './SettingsPickers';
+import { ChoicePick, SheetRows } from './SettingsPickers';
 
 type Props = { pick: Pick; setPick: (p: Pick | null) => void; close: () => void };
 
@@ -57,13 +55,10 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   if (narrow) {
     return (
       <Sheet label="Chat settings" onClose={close}>
-        <Section label="Chat settings" />
         {groups.map(([label, rows]) => (
           <div key={label}>
             <Section label={label} />
-            <div className="ui-group">
-              {rows.map((r) => <Row key={r.value} title={r.label} meta={r.detail} trailing={r.picker && <Icon name="chevron-right" small />} onClick={() => onPick(r.value)} />)}
-            </div>
+            <SheetRows items={rows} onPick={onPick} />
           </div>
         ))}
       </Sheet>
@@ -73,7 +68,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     <QuickPick
       anchor={pick.at}
       title="Chat settings"
-      items={groups.flatMap(([, rows]) => rows)}
+      items={groups.flatMap(([, rows]) => rows.map(({ value, label, detail }) => ({ value, label, detail })))}
       onPick={onPick}
       onClose={close}
     />

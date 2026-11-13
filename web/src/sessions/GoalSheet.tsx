@@ -51,7 +51,8 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
   const badEvery = Boolean(custom.trim()) && parseEvery(custom) === null;
   const ready = !badEvery && (!plan || (markdown !== null && !error));
-  const root = (dir && !(loop && advisorOf(dir)) ? dir : '') || dirs.find((d) => !advisorOf(d.cwd))?.cwd;
+  const usable = (d: string) => !(loop && advisorOf(d));
+  const root = dir && usable(dir) ? dir : dirs.find((d) => usable(d.cwd))?.cwd;
   const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : loop ? (root ? advisorLoopGoal(root) : '') : what;
   const start = () => {
     track('action:startGoal');
