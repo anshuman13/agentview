@@ -57,6 +57,8 @@ import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.agentSummary
 import no.pradhan.agentview.nativeapp.sessions.currentStep
 import no.pradhan.agentview.nativeapp.sessions.BuildDetail
+import no.pradhan.agentview.nativeapp.sessions.canBuild
+import no.pradhan.agentview.nativeapp.sessions.canSketch
 import no.pradhan.agentview.nativeapp.sessions.FLOW_LABEL
 import no.pradhan.agentview.nativeapp.sessions.FlowStep
 import no.pradhan.agentview.nativeapp.sessions.HOLD_BADGE
@@ -85,8 +87,10 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.well
 import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.workspace.buildSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.lineDiff
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.sketchTitle
 
 private val pretty = Json { prettyPrint = true }
@@ -225,6 +229,8 @@ private fun SpecMenu(hub: Hub, d: BuildDetail?, path: String, stack: MutableList
         if (d != null) MenuItem("Open spec", "go-to-file", { dismiss(); stack.add(BuildSheet.Spec()) })
         if (d != null && !hub.readOnly) MenuItem(if (d.hold) "Release hold" else "Hold", "debug-pause", { dismiss(); actions.setHold(if (d.hold) "release" else "hold") })
         MenuItem(if (subagents) "Review with fresh eyes" else "Needs subagents, not in this chat", "eye", { dismiss(); hub.askChat("/spec-review $path") }, enabled = subagents && !hub.readOnly)
+        if (d != null && subagents && !hub.readOnly && canSketch(d)) MenuItem("Sketch", "paintcan", { dismiss(); hub.askChat(sketchSpecPrompt(path)) })
+        if (d != null && subagents && !hub.readOnly && canBuild(d)) MenuItem("Build", "play", { dismiss(); hub.askChat(buildSpecPrompt(path)) })
     }
 }
 
@@ -280,12 +286,27 @@ internal fun SpecRow(slug: String, meta: String) {
     }
 }
 
-// A mockup the agent wrote with /sketch; a tap opens it on the Sketches page.
+// A mockup the agent wrote with /sketch; a tap opens it on the Sketches page, the menu offers its spec when one has the same slug.
 @Composable
-internal fun SketchCard(hub: Hub, name: String, meta: String) {
+internal fun SketchCard(hub: Hub, chat: String, name: String, meta: String) {
+    val slug = sketchTitle(name)
+    val (load, reload) = rememberLoad(chat, slug) { loadBuild(hub, slug) }
+    val spec = load.data?.takeIf { it.specFile != null }
+    val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
+    val stack = remember { mutableStateListOf<BuildSheet>() }
+    val actions = buildActions(hub, slug, reload)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
-        ListRow(sketchTitle(name), meta, leading = { AvIcon("paintcan", null, Tokens.icon) }, onClick = { hub.link.value = DeepLink(page = "sketches", slug = name) })
+        ListRow(
+            slug, meta, leading = { AvIcon("paintcan", null, Tokens.icon) }, onClick = { hub.link.value = DeepLink(page = "sketches", slug = name) },
+            menu = spec?.let { d ->
+                { dismiss ->
+                    if (subagents && !hub.readOnly && canBuild(d)) MenuItem("Build", "play", { dismiss(); hub.askChat(buildSpecPrompt(d.specFile!!)) })
+                    MenuItem("Open spec", "go-to-file", { dismiss(); stack.add(BuildSheet.Spec()) })
+                }
+            },
+        )
     }
+    if (spec != null) BuildSheets(hub, spec, stack, actions, null)
 }
 
 @Composable

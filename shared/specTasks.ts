@@ -56,4 +56,8 @@ export const runAllPrompt = (path: string) => `/goal every task in ${path} is ti
 
 export const buildPrompt = (brief: string) => `Run the agentview:build skill on the brief below (call the Skill tool with skill "agentview:build"). Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\n${brief}\n</brief>`;
 
+export const sketchSpecPrompt = (path: string) => `Start the agentview:designer subagent on the spec at ${path}. Give it only that path; it writes the sketch to .claude/sketches/<slug>.html. Reply with the sketch path.`;
+
+export const buildSpecPrompt = (path: string) => `Run the agentview:build skill on the existing spec at ${path} (call the Skill tool with skill "agentview:build"). Use the file name as the slug and the spec's title as the brief; the pm starts from that file and changes it only where review finds a problem.`;
+
 export const planCondition = (path: string, markdown: string) => (specTasks(markdown).some((t) => !t.done) ? runAllPrompt(path) : planGoalPrompt(path));

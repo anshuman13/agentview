@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { notice, send, setUi, useStore } from '../../app/store';
+import { notice, send, sendToChat, setUi, useStore } from '../../app/store';
 import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
@@ -15,8 +15,8 @@ import { useBuild } from '../../sessions/useBuilds';
 import { currentStep, FLOW_LABEL, flowBadge, holdBadge, stateBadge } from '../../sessions/buildsLogic';
 import { useCan } from '../useCan';
 import { Findings } from '../../ops/Findings';
-import { pipelineLabel, type BuildDetail, type FlowStep } from '../../../../shared/builds';
-import { SPEC_REVIEW_COMMAND } from '../../../../shared/specTasks';
+import { canBuild, canSketch, pipelineLabel, type BuildDetail, type FlowStep } from '../../../../shared/builds';
+import { SPEC_REVIEW_COMMAND, buildSpecPrompt, sketchSpecPrompt } from '../../../../shared/specTasks';
 import { TranscriptBox } from './Box';
 import { readBox } from './boxOpen';
 import { BuildSheets, Criteria, useBuildSheets, type BuildSheetState, type OpenSheet } from './BuildSheets';
@@ -59,6 +59,8 @@ function SpecMenu({ path, d, reload, sheets }: { path: string; d: BuildDetail | 
           {d?.specFile && here.folder && !here.tree && <MenuItem onClick={pick(() => setUi({ openFile: d.specFile, follow: false }))}>Open spec file</MenuItem>}
           {d && <MenuItem onClick={pick(() => void hold(d.slug, d.hold ? 'release' : 'hold'))}>{d.hold ? 'Release hold' : 'Hold'}</MenuItem>}
           <MenuItem disabled={!can} title={can ? undefined : 'Needs subagents, not in this chat'} onClick={pick(() => send({ type: 'prompt', text: `/${SPEC_REVIEW_COMMAND} ${path}` }))}>Review with fresh eyes</MenuItem>
+          {d && canSketch(d) && <MenuItem disabled={!can} title={can ? undefined : 'Needs subagents, not in this chat'} onClick={pick(() => sendToChat(sketchSpecPrompt(path)))}>Sketch</MenuItem>}
+          {d && canBuild(d) && <MenuItem disabled={!can} title={can ? undefined : 'Needs subagents, not in this chat'} onClick={pick(() => sendToChat(buildSpecPrompt(path)))}>Build</MenuItem>}
         </Menu>
       )}
     </span>

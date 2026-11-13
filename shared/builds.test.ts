@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { approvalGate, buildStageOf, buildSummary, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
+import { approvalGate, canBuild, canSketch, buildStageOf, buildSummary, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildDetail, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'builds.json'), 'utf8'));
 
@@ -84,5 +84,18 @@ describe('approvalGate and the approval step', () => {
     expect(approval([pm(1)], [])).toMatchObject({ state: 'todo', result: '0 of 3 phases approved' });
     expect(approval([...reviewed, pm(3)], [review('design', 'changes', 2, 'x')])).toMatchObject({ result: 'Waiting for you' });
     expect(approval([...reviewed], [review('design', 'changes', 2, 'x')])).toMatchObject({ result: 'Changes requested' });
+  });
+});
+
+describe('card actions', () => {
+  const detail = (specFile: string | null, flow: string[], stages: string[]) => ({ specFile, flow: flow.map((key) => ({ key })), entries: stages.map((stage) => ({ stage })) }) as unknown as BuildDetail;
+  it('offers Sketch only while the flow has no sketch step', () => {
+    expect(canSketch(detail('s.md', ['spec'], []))).toBe(true);
+    expect(canSketch(detail('s.md', ['spec', 'sketch'], []))).toBe(false);
+  });
+  it('offers Build for a spec file no implementer has run on', () => {
+    expect(canBuild(detail('s.md', [], ['pm']))).toBe(true);
+    expect(canBuild(detail('s.md', [], ['pm', 'implement']))).toBe(false);
+    expect(canBuild(detail(null, [], []))).toBe(false);
   });
 });

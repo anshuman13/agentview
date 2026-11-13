@@ -48,6 +48,10 @@ const HAND: Record<string, BuildStage> = { pm: 'pm', 'spec-reviewer': 'review', 
 const LABEL: Record<string, BuildStage> = { pm: 'pm', review: 'review', sketch: 'sketch', impl: 'implement', test: 'test', 'code-review': 'code-review' };
 const STAGE_NAME: Record<BuildStage, string> = { pm: 'Spec', review: 'Spec review', sketch: 'Sketch', implement: 'Implement', test: 'Test', 'code-review': 'Code review' };
 
+// Whether a spec card offers Sketch (no sketch yet) and Build (a spec file, no implementer run yet).
+export const canSketch = (d: BuildDetail) => !d.flow.some((f) => f.key === 'sketch');
+export const canBuild = (d: BuildDetail) => d.specFile !== null && !d.entries.some((e) => e.stage === 'implement');
+
 export const stageName = (stage: BuildStage) => STAGE_NAME[stage];
 
 const PIPELINE_LABEL: Record<BuildPipeline, string> = { written: 'Spec written', reviewed: 'Spec reviewed', implemented: 'Implemented', tested: 'Tested', 'code-reviewed': 'Code reviewed', merged: 'Merged' };

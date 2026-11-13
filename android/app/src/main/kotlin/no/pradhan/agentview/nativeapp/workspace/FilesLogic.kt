@@ -152,6 +152,10 @@ fun planGoalPrompt(path: String) = "/goal every step of the plan in $path is don
 
 fun buildPrompt(brief: String) = "Run the agentview:build skill on the brief below (call the Skill tool with skill \"agentview:build\"). Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\n$brief\n</brief>"
 
+fun sketchSpecPrompt(path: String) = "Start the agentview:designer subagent on the spec at $path. Give it only that path; it writes the sketch to .claude/sketches/<slug>.html. Reply with the sketch path."
+
+fun buildSpecPrompt(path: String) = "Run the agentview:build skill on the existing spec at $path (call the Skill tool with skill \"agentview:build\"). Use the file name as the slug and the spec's title as the brief; the pm starts from that file and changes it only where review finds a problem."
+
 fun planCondition(path: String, markdown: String) = if (specTasks(markdown).any { !it.done }) runAllPrompt(path) else planGoalPrompt(path)
 
 fun runAllPrompt(path: String) = "/goal every task in $path is ticked: do them in order. While you work on one, append \" (in progress)\" to its line; when done, tick its box and remove that suffix in one edit before the next."

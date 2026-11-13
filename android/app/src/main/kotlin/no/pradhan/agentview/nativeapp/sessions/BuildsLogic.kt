@@ -72,6 +72,10 @@ data class BuildDetail(
     val commit: CommitDiff? = null,
 )
 
+fun canSketch(d: BuildDetail) = d.flow.none { it.key == "sketch" }
+
+fun canBuild(d: BuildDetail) = d.specFile != null && d.entries.none { it.stage == "implement" }
+
 fun parseBuild(body: String): BuildDetail = protocolJson.decodeFromString(BuildDetail.serializer(), body)
 
 private val STAGE_NAME = mapOf("pm" to "Spec", "review" to "Spec review", "sketch" to "Sketch", "implement" to "Implement", "test" to "Test", "code-review" to "Code review")
