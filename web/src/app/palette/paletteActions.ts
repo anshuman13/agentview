@@ -7,6 +7,7 @@ import { openMeeting, openTask, setView, type List } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
 import { ago, command } from '../../ui/util';
 import { askAdvisor } from '../../sessions/advisorChat';
+import { repoRootOf } from '../../sessions/folders';
 import { forkChat } from '../../chat/chatActions';
 import { specPrompt } from '../../../../shared/specTasks';
 import { advisorOf, auditPrompt, type AdvisorId } from '../../../../shared/advisors';
@@ -55,8 +56,9 @@ export function perform(id: string) {
   }
   else if (id === 'audit') {
     const { cwd } = getState().session;
-    if (!cwd || advisorOf(cwd)) notice('Open a project chat to audit it');
-    else askAdvisor('designer', auditPrompt(cwd));
+    const root = cwd && !advisorOf(cwd) ? repoRootOf(cwd) : undefined;
+    if (root) askAdvisor('designer', auditPrompt(root));
+    else notice('Open a project chat to audit it');
   }
   else if (id === 'forkChat') forkChat();
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../app/store';
 import { Markdown } from '../chat/Chat';
 import { Badge } from '../ui/Badge';
@@ -9,11 +9,11 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, advisorOf, auditPrompt, canBuildItem, memoryFacts, moveUpPrompt, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type Audit, type BacklogItem } from '../../../shared/advisors';
+import { ADVISORS, advisorOf, auditPrompt, canBuildItem, memoryFacts, moveUpPrompt, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import { buildItemPrompt, buildSpecPrompt } from '../../../shared/specTasks';
 import { askAdvisor, go } from './advisorChat';
 import { StateDot } from './ChatRows';
-import { chatState, since, useWorkspace } from './folders';
+import { chatState, since, useWorkspace, type Folder } from './folders';
 import { fetchAdvisors, fetchAudit, fetchBacklog } from './sessionApi';
 
 const open = (a: Advisor, fresh = false) => go({ type: 'open_advisor', id: a.id, ...(fresh && { fresh }) });
@@ -24,8 +24,7 @@ const buildItem = (root: string, i: BacklogItem) => go({ type: 'new_session', cw
 let chosenRoot: string | null = null;
 
 // The project the Backlog and Audit sections show, chosen from the repos.
-function ProjectPicker({ root, onPick }: { root: string | null; onPick: (cwd: string) => void }) {
-  const { folders } = useWorkspace('advisors');
+function ProjectPicker({ root, folders, onPick }: { root: string | null; folders: Folder[]; onPick: (cwd: string) => void }) {
   const [picking, setPicking] = useState(false);
   const pick = useRef<HTMLButtonElement>(null);
   return (
@@ -36,18 +35,24 @@ function ProjectPicker({ root, onPick }: { root: string | null; onPick: (cwd: st
   );
 }
 
-// The PM's ranked backlog for one project; reloads after a PM turn, which may have rewritten it.
-function Backlog({ shown, turns, root, onPick }: { shown: boolean; turns: string; root: string | null; onPick: (cwd: string) => void }) {
-  const [items, setItems] = useState<BacklogItem[] | null>(null);
+// Loads one project's data when the page shows and after an advisor's turn; failed is set when the request rejects.
+function useRootFetch<T>(fetcher: (root: string) => Promise<T>, root: string | null, shown: boolean, turns: string) {
+  const [state, setState] = useState<{ data?: T; failed?: boolean }>({});
   useEffect(() => {
     if (!shown || !root) return;
     let stale = false;
-    void fetchBacklog(root).then((x) => !stale && setItems(x));
+    fetcher(root).then((data) => !stale && setState({ data }), () => !stale && setState({ failed: true }));
     return () => { stale = true; };
-  }, [shown, root, turns]);
+  }, [fetcher, shown, root, turns]);
+  return state;
+}
+
+// The PM's ranked backlog for one project; reloads after a PM turn, which may have rewritten it.
+function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string; root: string | null; picker: ReactNode }) {
+  const items = useRootFetch(fetchBacklog, root, shown, turns).data;
   return (
     <>
-      <Section label="Backlog" count={items?.length || undefined} action={<ProjectPicker root={root} onPick={onPick} />} />
+      <Section label="Backlog" count={items?.length || undefined} action={picker} />
       {!root ? (
         <div className="ui-group"><Row title="Project" meta="Pick one to see its backlog" plain /></div>
       ) : !items ? <Skeleton rows={2} /> : !items.length ? (
@@ -73,27 +78,22 @@ function Backlog({ shown, turns, root, onPick }: { shown: boolean; turns: string
   );
 }
 
-// The Designer's newest usability audit for the chosen project: tap to run a new one, Specs from audit hands it to the PM.
-function AuditRow({ shown, turns, root, running, onPick }: { shown: boolean; turns: string; root: string | null; running: boolean; onPick: (cwd: string) => void }) {
-  const [audit, setAudit] = useState<Audit | null | undefined>(undefined);
+// The Designer's newest usability audit for the chosen project: Run audit is in the menu, Specs from audit hands it to the PM.
+function AuditRow({ shown, turns, root, running, picker }: { shown: boolean; turns: string; root: string | null; running: boolean; picker: ReactNode }) {
+  const { data: audit, failed } = useRootFetch(fetchAudit, root, shown, turns);
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (!shown || !root) return;
-    let stale = false;
-    void fetchAudit(root).then((x) => !stale && setAudit(x));
-    return () => { stale = true; };
-  }, [shown, root, turns]);
   return (
     <>
-      <Section label="Usability audit" action={<ProjectPicker root={root} onPick={onPick} />} />
+      <Section label="Usability audit" action={picker} />
       {!root ? (
         <div className="ui-group"><Row title="Project" meta="Pick one to audit it" plain /></div>
+      ) : failed ? (
+        <div className="ui-group"><Row title="Audit" meta="Could not load the audit" plain /></div>
       ) : audit === undefined ? <Skeleton rows={1} /> : (
         <div className="ui-group">
           <Row
             title="Audit"
             meta={`${root.split('/').pop()} · ${audit ? `${audit.date} · ${audit.findings.length} ${audit.findings.length === 1 ? 'finding' : 'findings'}` : 'not run yet'}`}
-            onClick={running ? undefined : () => askAdvisor('designer', auditPrompt(root))}
             action={running ? <Badge status="running" /> : <Button size="sm" variant="tinted" disabled={!audit} onClick={() => askAdvisor('pm', specsFromAuditPrompt(root))}>Specs from audit</Button>}
             menu={<>
               <MenuItem icon="list-flat" disabled={!audit} onClick={() => setOpen(true)}>Open latest audit</MenuItem>
@@ -105,7 +105,7 @@ function AuditRow({ shown, turns, root, running, onPick }: { shown: boolean; tur
       {open && audit && (
         <Sheet label="Audit" onClose={() => setOpen(false)}>
           <h2>Audit, {audit.date}</h2>
-          {audit.findings.map((f) => <Row key={f.rank} leading={f.rank} title={f.screen} meta={`${f.severity} · ${f.problem}. ${f.fix}`} lines={2} plain />)}
+          {audit.findings.map((f) => <Row key={f.rank} leading={f.rank} title={f.screen} meta={`${f.severity[0].toUpperCase()}${f.severity.slice(1)} · ${f.problem}. ${f.fix}`} className="bd-clamp" plain />)}
         </Sheet>
       )}
     </>
@@ -119,11 +119,13 @@ export function Advisors({ shown }: { shown: boolean }) {
   const viewing = useStore((s) => s.session.id);
   const [info, setInfo] = useState<AdvisorInfo[] | null | undefined>(undefined);
   const [memory, setMemory] = useState<string | null>(null);
+  const { folders } = useWorkspace('advisors');
   const [root, setRoot] = useState(chosenRoot);
   const pickRoot = (cwd: string) => {
     chosenRoot = cwd;
     setRoot(cwd);
   };
+  const picker = <ProjectPicker root={root} folders={folders} onPick={pickRoot} />;
   // Reloads when the page shows and after an advisor's turn, which may have changed its memory.
   const turns = live.filter((c) => advisorOf(c.cwd) && !c.running).map((c) => `${c.id}:${c.lastActive}`).join();
   useEffect(() => {
@@ -159,8 +161,8 @@ export function Advisors({ shown }: { shown: boolean }) {
               <Row title="Memory" meta={facts ? `${facts} ${facts === 1 ? 'fact' : 'facts'}` : 'Nothing yet'} plain={!facts} onClick={facts ? () => setMemory(memory === a.id ? null : a.id) : undefined} aria-expanded={facts ? memory === a.id : undefined} />
             </div>
             {memory === a.id && got && <div className="advisor-memory"><Markdown text={got.memory.replace(/^# .*\n/, '')} /></div>}
-            {a.id === 'pm' && <Backlog key={root} shown={shown} turns={turns} root={root} onPick={pickRoot} />}
-            {a.id === 'designer' && <AuditRow key={root} shown={shown} turns={turns} root={root} running={!!c?.running} onPick={pickRoot} />}
+            {a.id === 'pm' && <Backlog key={root} shown={shown} turns={turns} root={root} picker={picker} />}
+            {a.id === 'designer' && <AuditRow key={root} shown={shown} turns={turns} root={root} running={!!c?.running} picker={picker} />}
           </Fragment>
         );
       })}

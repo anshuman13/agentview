@@ -1,6 +1,17 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'bun:test';
-import { ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal } from './advisors.js';
+import { ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, auditPrompt, specsFromAuditPrompt } from './advisors.js';
 import { goalCommand } from './goalForm.js';
+
+const kotlin = readFileSync(new URL('../android/app/src/main/kotlin/no/pradhan/agentview/nativeapp/sessions/AdvisorsUi.kt', import.meta.url), 'utf8');
+const kotlinPrompt = (name: string, root: string) => new RegExp(`fun ${name}\\(root: String\\) = "(.*)"$`, 'm').exec(kotlin)?.[1].replaceAll('$root', root);
+
+describe('Android prompts', () => {
+  it('match the shared ones', () => {
+    expect(kotlinPrompt('auditPrompt', '/w/app')).toBe(auditPrompt('/w/app'));
+    expect(kotlinPrompt('specsFromAuditPrompt', '/w/app')).toBe(specsFromAuditPrompt('/w/app'));
+  });
+});
 
 describe('advisorLoopGoal', () => {
   const goal = advisorLoopGoal('/w/app');

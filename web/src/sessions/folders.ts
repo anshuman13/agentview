@@ -45,6 +45,9 @@ let cachedFor = apiBase();
 export const staleKeys = (at: Record<WorkspaceKey, number>, now: number, minAge = WORKSPACE_MIN_AGE) =>
   (Object.keys(at) as WorkspaceKey[]).filter((k) => now - at[k] >= minAge);
 
+// The repo a folder belongs to, from the cached repos and worktrees.
+export const repoRootOf = (cwd: string) => cached.trees.find((w) => inside(cwd, w.cwd))?.repo || cached.repos.find((r) => inside(cwd, r.cwd))?.cwd;
+
 export const invalidateWorkspace = () => {
   fetchedAt.repos = fetchedAt.chats = fetchedAt.trees = 0;
 };

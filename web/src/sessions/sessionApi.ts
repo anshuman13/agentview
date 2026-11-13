@@ -13,7 +13,8 @@ export const fetchAdvisors = (): Promise<AdvisorInfo[] | null> => fetch(api('/ap
 
 export const fetchBacklog = (root: string): Promise<BacklogItem[] | null> => fetch(api(`/api/advisors/backlog?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
-export const fetchAudit = (root: string): Promise<Audit | null> => fetch(api(`/api/advisors/audit?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+// Resolves null when there is no audit and rejects when the request fails.
+export const fetchAudit = (root: string): Promise<Audit | null> => fetch(api(`/api/advisors/audit?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Request failed (${r.status})`))));
 
 export const attentionPost = (path: string, id: string) => fetch(api(path), { method: 'POST', body: JSON.stringify({ id }) }).then((r) => r.json());
 

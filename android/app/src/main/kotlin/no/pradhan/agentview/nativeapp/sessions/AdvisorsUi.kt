@@ -17,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.net.Hub
@@ -75,6 +76,11 @@ private fun auditPrompt(root: String) = "Audit the usability of the app in $root
 private fun specsFromAuditPrompt(root: String) = "Read the newest file in $root/.claude/audits and add its top findings to $root/.claude/backlog.md as `proposed` lines, with the audit line as the why. Keep the existing lines, reread the file before you edit it and renumber the ranks. Reply with the lines you added."
 
 private fun moveUpPrompt(root: String, i: BacklogItem) = "In $root/.claude/backlog.md, move \"${i.title}\" (${i.slug}) up one rank and renumber the lines. Reread the file before you edit it."
+
+// Opens an advisor's chat and sends it a prompt, then calls onOpen.
+internal fun CoroutineScope.askAdvisor(hub: Hub, id: String, text: String, onOpen: () -> Unit) {
+    launch { if (hub.openAdvisor(id, false)) { hub.askChat(text); onOpen() } }
+}
 
 // The facts in a memory file: its list lines.
 private val FACT = Regex("""^\s*[-*] """)
@@ -144,9 +150,10 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                             val list = audits.data
                             val audit = list?.firstOrNull()
                             val running = c?.running == true
-                            val runAudit = { scope.launch { if (hub.openAdvisor("designer", false)) { hub.askChat(auditPrompt(project!!)); onOpen() } }; Unit }
+                            val runAudit = { scope.askAdvisor(hub, "designer", auditPrompt(project!!), onOpen) }
                             when {
                                 project == null -> Group { ListRow("Project", "Pick one in the menu to audit it", lines = 1) }
+                                list == null && audits.error.isNotEmpty() -> Group { ListRow("Audit", "Could not load the audit", lines = 1) }
                                 list == null -> Loading("Loading audit")
                                 else -> Group {
                                     ListRow(
@@ -154,19 +161,18 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                         lines = 1, metaLines = 1,
                                         state = {
                                             if (running) Badge("Running", BadgeTone.Running)
-                                            else Button("Specs from audit", { scope.launch { if (hub.openAdvisor("pm", false)) { hub.askChat(specsFromAuditPrompt(project)); onOpen() } } }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = audit != null && !hub.readOnly)
+                                            else Button("Specs from audit", { scope.askAdvisor(hub, "pm", specsFromAuditPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = audit != null && !hub.readOnly)
                                         },
                                         stateSlot = true,
                                         menu = { dismiss ->
                                             MenuItem("Open latest audit", "list-flat", { dismiss(); auditOpen = true }, enabled = audit != null)
                                             MenuItem("Run audit", "play", { dismiss(); runAudit() }, enabled = !running && !hub.readOnly)
                                         },
-                                        onClick = if (running || hub.readOnly) null else ({ runAudit() }),
                                     )
                                 }
                             }
                             if (auditOpen && audit != null) Sheet({ auditOpen = false }, "Audit, ${audit.date}", padded = false) {
-                                for (f in audit.findings) ListRow(f.screen, "${f.severity} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 2)
+                                for (f in audit.findings) ListRow(f.screen, "${f.severity.replaceFirstChar { it.uppercase() }} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 2)
                             }
                         }
                         if (a.id == "pm") {
@@ -179,7 +185,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                 project == null -> Group { ListRow("Project", "Pick one in the menu to see its backlog", lines = 1) }
                                 items == null -> Loading("Loading backlog")
                                 items.isEmpty() -> EmptyState("No backlog yet", "The PM ranks what to build next", "list-ordered", action = if (hub.readOnly) null else ({
-                                    Button("Ask PM to rank", { scope.launch { if (hub.openAdvisor("pm", false)) { hub.askChat(rankPrompt(project)); onOpen() } } }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
+                                    Button("Ask PM to rank", { scope.askAdvisor(hub, "pm", rankPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
                                 }))
                                 else -> Group {
                                     items.forEachIndexed { n, i ->
@@ -193,7 +199,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                                     dismiss()
                                                     hub.newChat(project, text = if (i.spec) buildSpecPrompt(".claude/specs/${i.slug}.md") else buildItemPrompt(i.title, i.why, i.slug), onOpened = onOpen)
                                                 })
-                                                MenuItem("Ask PM to move up", "arrow-up", { dismiss(); scope.launch { if (hub.openAdvisor("pm", false)) { hub.askChat(moveUpPrompt(project, i)); onOpen() } } }, enabled = i.rank > 1)
+                                                MenuItem("Ask PM to move up", "arrow-up", { dismiss(); scope.askAdvisor(hub, "pm", moveUpPrompt(project, i), onOpen) }, enabled = i.rank > 1)
                                             }),
                                         )
                                     }
