@@ -36,6 +36,7 @@ internal fun TranscriptBox(
     action: (@Composable RowScope.() -> Unit)? = null,
     summary: String? = null,
     reserveSummary: Boolean = false,
+    fitState: Boolean = false,
     defaultOpen: Boolean = false,
     open: Boolean? = null,
     onToggle: (() -> Unit)? = null,
@@ -49,7 +50,7 @@ internal fun TranscriptBox(
         ListRow(
             title, meta.ifEmpty { null },
             leading = { AvIcon(if (shown) "chevron-down" else "chevron-right", null, Tokens.iconSm) },
-            state = state, trailing = action, lines = 1,
+            state = state, fitState = fitState, trailing = action, lines = if (fitState) 2 else 1,
             onClick = { if (onToggle != null) onToggle() else { saved = !saved; saveBox(kv, id, saved) } },
         )
         if (!summary.isNullOrEmpty()) Text(

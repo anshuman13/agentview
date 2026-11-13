@@ -109,7 +109,7 @@ fun <T> LazyListScope.lazyGroup(rows: List<T>, key: (T) -> Any, lead: Boolean = 
 fun Hairline(lead: Boolean = false) = HorizontalDivider(Modifier.padding(start = Tokens.listPad + if (lead) Tokens.leadWidth + Tokens.sp8 else 0.dp), color = av.border, thickness = Tokens.hairline)
 
 // List row (web Row): leading slot, a title of one or two lines, a meta line, a fixed-width state slot, trailing content and a More menu.
-// The slot is drawn when stateSlot is true, so rows without a state keep the columns aligned. A long press opens the menu unless onLongClick is set.
+// The slot is drawn when stateSlot is true, so rows without a state keep the columns aligned; fitState sizes it to the state instead of the column. A long press opens the menu unless onLongClick is set.
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ListRow(
@@ -118,6 +118,7 @@ fun ListRow(
     leading: (@Composable () -> Unit)? = null,
     state: (@Composable RowScope.() -> Unit)? = null,
     stateSlot: Boolean = state != null,
+    fitState: Boolean = false,
     trailing: (@Composable RowScope.() -> Unit)? = null,
     menu: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
     lines: Int = 2,
@@ -150,7 +151,7 @@ fun ListRow(
                 CompositionLocalProvider(LocalContentColor provides av.fgMuted) { below() }
             }
         }
-        if (stateSlot) Row(Modifier.width(Tokens.rowStateW), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+        if (stateSlot) Row(if (fitState) Modifier else Modifier.width(Tokens.rowStateW), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             CompositionLocalProvider(LocalContentColor provides av.fgMuted) { state?.invoke(this) }
         }
         if (trailing != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {

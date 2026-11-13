@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -38,11 +39,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -211,6 +217,7 @@ internal fun SpecCard(hub: Hub, chat: String, slug: String, path: String, bump: 
         },
         action = { SpecMenu(hub, d, path, stack, actions) },
         defaultOpen = true,
+        fitState = true,
     ) {
         when {
             gone -> {}
@@ -250,17 +257,35 @@ private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
     val failed = d.criteria.any { it.result == "fail" }
     val now = System.currentTimeMillis()
     val step = if (d.summary.state == "done") null else currentStep(d.flow)
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
-        d.flow.forEach { f ->
+    val scroll = rememberScrollState()
+    val density = LocalDensity.current
+    val spans = remember(d.slug) { mutableMapOf<Int, IntRange>() }
+    var placed by remember(d.slug) { mutableStateOf(false) }
+    val at = if (step != null) d.flow.indexOf(step) else d.flow.indexOfFirst { it.state != "done" }
+    LaunchedEffect(d.slug, scroll.maxValue) {
+        val cur = spans[at]
+        if (placed || scroll.maxValue == 0 || cur == null) return@LaunchedEffect
+        placed = true
+        val pad = with(density) { Tokens.listPad.roundToPx() }
+        val prev = spans[at - 1]
+        val left = if (prev != null) (prev.first + prev.last) / 2 else cur.first
+        scroll.scrollTo((minOf(left, cur.last - scroll.viewportSize) + pad).coerceAtLeast(0))
+    }
+    Box(Modifier.fillMaxWidth()) {
+    Row(Modifier.fillMaxWidth().horizontalScroll(scroll).padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
+        d.flow.forEachIndexed { i, f ->
             val sheet = flowSheet(f, d)
             Row(
-                Modifier.heightIn(min = Tokens.touchSm).then(if (sheet != null) Modifier.clickable { stack.add(sheet) } else Modifier),
+                Modifier.heightIn(min = Tokens.touchSm).onGloballyPositioned { spans[i] = it.positionInParent().x.roundToInt()..(it.positionInParent().x.roundToInt() + it.size.width) }
+                    .then(if (sheet != null) Modifier.clickable { stack.add(sheet) } else Modifier),
                 horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically,
             ) {
                 StatusDot(if (f.state == "running") DotState.Running else stateDot(f.state))
                 Text(FLOW_LABEL[f.key] ?: f.key, style = if (f == step) Type.callout else Type.subheadline, color = if (f.state == "todo") av.fgMuted else av.fg)
             }
         }
+    }
+    if (scroll.value < scroll.maxValue) Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(Tokens.sp12).background(Brush.horizontalGradient(listOf(Color.Transparent, av.raised))))
     }
     if (step != null) {
         val badge = flowBadge(step)
@@ -269,7 +294,7 @@ private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
             ListRow(
                 FLOW_LABEL[step.key] ?: step.key, listOf(step.by, step.result, step.at?.let { agoShort(it, now) }.orEmpty()).filter(String::isNotEmpty).joinToString(" · "),
                 leading = { StatusDot(if (step.state == "running") DotState.Running else stateDot(step.state)) },
-                state = { if (badge != null) Badge(badge.first, badge.second) }, stateSlot = true,
+                state = { if (badge != null) Badge(badge.first, badge.second) }, stateSlot = badge != null, fitState = true,
                 onClick = sheet?.let { { stack.add(it) } },
             )
         }

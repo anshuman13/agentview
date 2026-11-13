@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { notice, send, sendToChat, setUi, useStore } from '../../app/store';
 import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
@@ -31,7 +31,7 @@ export function SpecCard({ slug, path, bump }: { slug: string; path?: string; bu
   const state = d?.hold ? <Badge {...holdBadge} /> : d?.entries.length ? <Badge {...stateBadge(d.summary.state)} /> : undefined;
   return (
     <>
-    <TranscriptBox id={id} defaultOpen onToggle={setOpen} title={d?.title ?? slug} meta={meta} state={state} action={<SpecMenu path={path ?? `.claude/specs/${slug}.md`} d={d} reload={reload} sheets={sheets} />}>
+    <TranscriptBox id={id} className="state-fit" defaultOpen onToggle={setOpen} title={d?.title ?? slug} meta={meta} state={state} action={<SpecMenu path={path ?? `.claude/specs/${slug}.md`} d={d} reload={reload} sheets={sheets} />}>
       {!gone && (d
         ? <SpecBody d={d} sheets={sheets} />
         : failed ? <EmptyState size="sm" title="Could not load this build" hint="Try again" action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} /> : <Skeleton />)}
@@ -83,9 +83,32 @@ function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
   const now = d.summary.state === 'done' ? undefined : currentStep(d.flow);
   const nowSheet = now && sheetOf(now);
   const badge = now && flowBadge(now);
+  const strip = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
+  const measure = () => {
+    const el = strip.current;
+    if (el) setMore(el.scrollWidth - el.clientWidth - el.scrollLeft > 1);
+  };
+  useLayoutEffect(() => {
+    const el = strip.current;
+    const at = now ? d.flow.indexOf(now) : d.flow.findIndex((f) => f.state !== 'done');
+    const cur = el?.children[at] as HTMLElement | undefined;
+    if (!el || !cur) return;
+    const prev = el.children[at - 1] as HTMLElement | undefined;
+    const left = prev ? prev.offsetLeft + prev.offsetWidth / 2 : cur.offsetLeft;
+    el.scrollLeft = Math.min(left, cur.offsetLeft + cur.offsetWidth - el.clientWidth);
+  }, []);
+  useEffect(() => {
+    const el = strip.current;
+    if (!el) return;
+    const watch = new ResizeObserver(measure);
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, []);
+  useEffect(measure);
   return (
     <>
-      <div className="bd-steps">
+      <div ref={strip} className={`bd-steps${more ? ' more' : ''}`} onScroll={measure}>
         {d.flow.map((f) => {
           const sheet = sheetOf(f);
           return (
@@ -97,7 +120,7 @@ function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
       </div>
       {now && (
         <div className="ui-group">
-          <Row plain={!nowSheet} onClick={nowSheet && ((e) => sheets.open(nowSheet(d), e.currentTarget))} title={FLOW_LABEL[now.key]} meta={[now.by, now.result, now.at && ago(now.at)].filter(Boolean).join(' · ')} state={badge && <Badge {...badge} />} />
+          <Row className="state-fit" plain={!nowSheet} onClick={nowSheet && ((e) => sheets.open(nowSheet(d), e.currentTarget))} title={FLOW_LABEL[now.key]} meta={[now.by, now.result, now.at && ago(now.at)].filter(Boolean).join(' · ')} state={badge && <Badge {...badge} />} />
         </div>
       )}
       <Criteria criteria={d.criteria} limit={failed ? d.criteria.length : 0} onOpen={(n, from) => sheets.open({ kind: 'criterion', n }, from)} />
