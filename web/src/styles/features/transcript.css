@@ -123,5 +123,6 @@
   .tr-mark { height: var(--touch-sm); }
   .tr-file { min-height: var(--touch); font-size: var(--fs-md); }
   .tr-user { padding: var(--sp-6) var(--sp-7); }
+  .tr-assistant .tr-acts { align-items: center; visibility: visible; }
   .tr-detail pre, .tr-report { font-size: var(--fs-sm); max-height: 40vh; max-height: 40dvh; }
 }

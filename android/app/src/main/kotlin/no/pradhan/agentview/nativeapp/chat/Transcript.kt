@@ -303,7 +303,10 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
             Text(it.text, style = Type.label, color = av.agent, fontWeight = FontWeight.SemiBold)
             HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
         }
-        is Item.Assistant -> Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
+        is Item.Assistant -> Column {
+            Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
+            if (!it.streaming) ReplyActions(hub, it.text, chat, cwd)
+        }
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
         is Item.File -> if (it.error != null) FileCard(it, cwd)

@@ -10,6 +10,12 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ComposerLogicTest {
+    @Test fun aReplyIsQuotedAndNoted() {
+        assertEquals("> one\n>\n> two\n\n", quoteReply(" one\n\ntwo "))
+        assertEquals("> " + "word ".repeat(60).trim() + "\u2026\n\n", quoteReply("word ".repeat(100)))
+        assertEquals("Saved reply\nhi", replyNote(" hi ", ""))
+    }
+
     private val cmds = listOf(CommandInfo("compact"), CommandInfo("clear"), CommandInfo("code-review"), CommandInfo("review"), CommandInfo("init"))
 
     @Test

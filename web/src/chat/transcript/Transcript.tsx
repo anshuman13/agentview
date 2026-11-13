@@ -1,7 +1,5 @@
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { forgetSeenBefore, getState, loadEarlier, notice, seenBefore, send, setUi, useStore } from '../../app/store';
-import { assistantStore } from '../../codex/data';
-import { quoteReply, replyNote } from '../composer/composerLogic';
+import { forgetSeenBefore, getState, loadEarlier, seenBefore, send, setUi, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { SinceSheet } from './SinceSheet';
@@ -14,12 +12,13 @@ import { SketchCard } from './SketchCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { WorkBox } from './WorkBox';
+import { ReplyActions } from './ReplyActions';
 import { RewindLink } from './Rewind';
 import { foldTurns, type FoldRow } from './workFold';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
-import { clickOnKey, copyText, plural, pressable } from '../../ui/util';
+import { clickOnKey, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
@@ -287,7 +286,7 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: 
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <div className="tr-acts"><button className="link" title="Quote this reply in the composer" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: quoteReply(it.text) } }))}>Reply</button><button className="link" title="Copy this reply as Markdown" onClick={() => copyText(it.text).then(() => notice('Copied the reply'), () => notice('Copy failed'))}>Copy</button><button className="link" title="Save this reply to Notes" onClick={() => saveReply(it.text, cwd)}>Save as note</button>{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
+      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <div className="tr-acts"><ReplyActions text={it.text} cwd={cwd} />{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':
@@ -303,12 +302,6 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: 
     case 'review':
       return <ReviewCard ev={it.ev} />;
   }
-}
-
-function saveReply(text: string, cwd: string) {
-  const st = getState();
-  const note = replyNote(text, st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd);
-  assistantStore().capture(note.text, 'note', note.profile).then(() => notice('Saved to Notes'), () => notice('Could not save the note. Try again.'));
 }
 
 export function SinceBox({ recap, rounds, onOpen, onDismiss }: { recap: string; rounds: Round[]; onOpen: () => void; onDismiss: () => void }) {
