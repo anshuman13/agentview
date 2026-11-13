@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { notice, send, sendToChat, setUi, useStore } from '../../app/store';
 import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
@@ -85,19 +85,24 @@ function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
   const badge = now && flowBadge(now);
   const strip = useRef<HTMLDivElement>(null);
   const [more, setMore] = useState(false);
-  const measure = () => {
-    const el = strip.current;
-    if (el) setMore(el.scrollWidth - el.clientWidth - el.scrollLeft > 1);
-  };
-  useLayoutEffect(() => {
-    const el = strip.current;
+  const placed = useRef(false);
+  // Once the strip overflows, scroll so the current step shows with half of the one before it; later polls leave it alone.
+  const place = (el: HTMLDivElement) => {
+    if (placed.current || el.scrollWidth <= el.clientWidth) return;
     const at = now ? d.flow.indexOf(now) : d.flow.findIndex((f) => f.state !== 'done');
-    const cur = el?.children[at] as HTMLElement | undefined;
-    if (!el || !cur) return;
+    const cur = el.children[at] as HTMLElement | undefined;
+    if (!cur) return;
+    placed.current = true;
     const prev = el.children[at - 1] as HTMLElement | undefined;
     const left = prev ? prev.offsetLeft + prev.offsetWidth / 2 : cur.offsetLeft;
     el.scrollLeft = Math.min(left, cur.offsetLeft + cur.offsetWidth - el.clientWidth);
-  }, []);
+  };
+  const measure = () => {
+    const el = strip.current;
+    if (!el) return;
+    place(el);
+    setMore(el.scrollWidth - el.clientWidth - el.scrollLeft > 1);
+  };
   useEffect(() => {
     const el = strip.current;
     if (!el) return;
