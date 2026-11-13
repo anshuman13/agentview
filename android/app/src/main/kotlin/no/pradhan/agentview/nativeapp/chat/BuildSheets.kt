@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -63,6 +64,7 @@ import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chip
+import no.pradhan.agentview.nativeapp.ui.DarkColors
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
@@ -78,6 +80,8 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.workspace.FileScreen
+import no.pradhan.agentview.nativeapp.workspace.SketchFrame
+import no.pradhan.agentview.nativeapp.workspace.sketchPage
 import no.pradhan.agentview.nativeapp.workspace.PrFile
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
@@ -214,7 +218,8 @@ internal fun LazyListScope.phaseItems(d: BuildDetail, picked: String?, now: Long
     }
     item {
         Group {
-            Column(Modifier.padding(Tokens.listPad)) { Markdown(if (runnable != null) withoutOpenTasks(phase.markdown) else phase.markdown) }
+            if (phase.key == "sketch") SketchPhase(phase.markdown)
+            else Column(Modifier.padding(Tokens.listPad)) { Markdown(if (runnable != null) withoutOpenTasks(phase.markdown) else phase.markdown) }
             if (runnable != null) open.forEach { t ->
                 Hairline()
                 ListRow(t.text, trailing = if (t.doing) ({ Badge("In progress", BadgeTone.Running) }) else ({ Button("Start", { runnable.send(startTaskPrompt(t, runnable.path)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !readOnly) }))
@@ -224,6 +229,21 @@ internal fun LazyListScope.phaseItems(d: BuildDetail, picked: String?, now: Long
         }
     }
 }
+
+// The build's sketch in a phone or desktop frame, in the app's theme; the HTML comes with the build.
+@Composable
+private fun SketchPhase(html: String) {
+    var desktop by remember { mutableStateOf(false) }
+    val dark = av == DarkColors
+    Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+        Chip("Phone", { desktop = false }, on = !desktop)
+        Chip("Desktop", { desktop = true }, on = desktop)
+    }
+    val page = remember(html, dark, desktop) { sketchPage(html, if (dark) "dark" else "light", desktop) }
+    SketchFrame(page, desktop, Modifier.fillMaxWidth().height(SKETCH_HEIGHT))
+}
+
+private val SKETCH_HEIGHT = 480.dp
 
 @Composable
 internal fun ChangesSheet(phase: String, send: (String, (Boolean) -> Unit) -> Unit, onDismiss: () -> Unit) {
@@ -317,7 +337,7 @@ internal fun BuildSheets(hub: Hub, d: BuildDetail, stack: SnapshotStateList<Buil
 private fun SpecSheet(hub: Hub, d: BuildDetail, initial: String?, actions: BuildActions, run: TaskRun?, close: () -> Unit) {
     var phase by remember { mutableStateOf(initial) }
     var asking by remember { mutableStateOf<String?>(null) }
-    val spec = remember(d) { d.copy(phases = d.phases.map { it.copy(markdown = withoutCriteria(it.markdown)) }) }
+    val spec = remember(d) { d.copy(phases = d.phases.map { if (it.key == "sketch") it else it.copy(markdown = withoutCriteria(it.markdown)) }) }
     Sheet(close, "Spec", padded = false) {
         if (spec.phases.isEmpty()) EmptyState("No spec phases yet")
         else SheetList { phaseItems(spec, phase, System.currentTimeMillis(), false, {}, hub.readOnly, run, { phase = it }, { asking = it }, actions.approve) }

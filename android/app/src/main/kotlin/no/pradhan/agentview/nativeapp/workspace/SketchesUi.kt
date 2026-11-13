@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.workspace
 
+import android.view.MotionEvent
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -148,15 +149,17 @@ private fun WebSettings.asSketch() = object : SketchSettings {
 
 // No scripts, no network, no files and no link taps: the sketch is a picture of its own page.
 @Composable
-private fun SketchFrame(page: String, desktop: Boolean) {
+internal fun SketchFrame(page: String, desktop: Boolean, modifier: Modifier = Modifier.fillMaxSize()) {
     AndroidView(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         factory = { ctx ->
             WebView(ctx).apply {
                 lockSketch(settings.asSketch())
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
                 }
+                // Inside a scrolling sheet a drag scrolls the sketch, not the sheet.
+                setOnTouchListener { v, e -> if (e.actionMasked == MotionEvent.ACTION_DOWN) v.parent?.requestDisallowInterceptTouchEvent(true); false }
             }
         },
         update = { web ->

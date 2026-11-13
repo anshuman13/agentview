@@ -5,7 +5,7 @@ export const GOAL_RULES = [
   'When the user asks you to keep working until something is true, to check on something regularly, or to set a goal, start it with mcp__agentview__start_goal instead of telling them to type /goal.',
   'A goal without every checks the condition each time you go idle, up to 20 checks, and ends when you reply GOAL MET. With every (10m to 168h) it is a standing goal that wakes you once per interval.',
   'until ends it at a time of day, cap stops it at a weekly usage percent. Pass off to stop the running goal. The user sees and edits it under Runs.',
-  'To build a feature through spec, review, implementation and test, run the agentview:build skill with the brief when the Skill tool has it. The spec goes to .claude/specs/<slug>.md and the build waits until the user approves it in the build card in the chat.',
+  'To build a feature through spec, review, implementation and test, run the agentview:build skill with the brief when the Skill tool has it. The spec goes to .claude/specs/<slug>.md, a UI spec gets a sketch in .claude/sketches/<slug>.html, and the build waits until the user approves both in the build card in the chat. The user can ask for no sketch or no approval; pass that on to the skill.',
 ].join(' ');
 
 const goalLine = ({ condition, every, until, cap, off }: { condition?: string; every?: string; until?: string; cap?: number; off?: boolean }) =>

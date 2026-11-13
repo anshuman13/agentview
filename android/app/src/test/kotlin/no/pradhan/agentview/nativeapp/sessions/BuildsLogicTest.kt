@@ -37,6 +37,10 @@ class BuildsLogicTest {
         assertEquals("review" to "pink-door", buildStageOf("spec-reviewer", "Review it", "Read .claude/specs/pink-door.md")?.let { it.stage to it.slug })
         assertNull(buildStageOf("general-purpose", "look around", "Read .claude/specs/pink-door.md"))
         assertNull(buildStageOf("pm", "pm:..", ""))
+        assertEquals("sketch" to "x", buildStageOf("general-purpose", "sketch:x#1", "")?.let { it.stage to it.slug })
+        assertEquals("Sketch", stageName("sketch"))
+        assertEquals("Sketch", FLOW_LABEL["sketch"])
+        assertEquals("Sketch", phaseLabel("sketch"))
     }
 
     @Test

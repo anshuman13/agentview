@@ -67,6 +67,7 @@ function SpecMenu({ path, d, reload, sheets }: { path: string; d: BuildDetail | 
 
 const OPEN: Partial<Record<FlowStep['key'], (d: BuildDetail) => OpenSheet>> = {
   spec: (d) => ({ kind: 'spec', initial: d.phases.some((p) => p.key === 'requirements') ? 'requirements' : d.phases[0]?.key }),
+  sketch: () => ({ kind: 'spec', initial: 'sketch' }),
   approval: () => ({ kind: 'spec' }),
   'spec-review': () => ({ kind: 'step', key: 'spec-review' }),
   implement: () => ({ kind: 'step', key: 'implement' }),

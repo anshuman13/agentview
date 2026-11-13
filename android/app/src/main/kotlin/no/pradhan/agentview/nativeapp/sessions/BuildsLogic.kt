@@ -74,17 +74,17 @@ data class BuildDetail(
 
 fun parseBuild(body: String): BuildDetail = protocolJson.decodeFromString(BuildDetail.serializer(), body)
 
-private val STAGE_NAME = mapOf("pm" to "Spec", "review" to "Spec review", "implement" to "Implement", "test" to "Test", "code-review" to "Code review")
+private val STAGE_NAME = mapOf("pm" to "Spec", "review" to "Spec review", "sketch" to "Sketch", "implement" to "Implement", "test" to "Test", "code-review" to "Code review")
 
 fun stageName(stage: String) = STAGE_NAME[stage] ?: stage
 
 private val PIPELINE_LABEL = mapOf("written" to "Spec written", "reviewed" to "Spec reviewed", "implemented" to "Implemented", "tested" to "Tested", "code-reviewed" to "Code reviewed", "merged" to "Merged")
 
-val FLOW_LABEL = mapOf("spec" to "Spec", "spec-review" to "Spec review", "approval" to "Your approval", "implement" to "Implement", "test" to "Test", "code-review" to "Code review", "merge" to "Merge")
+val FLOW_LABEL = mapOf("spec" to "Spec", "spec-review" to "Spec review", "sketch" to "Sketch", "approval" to "Your approval", "implement" to "Implement", "test" to "Test", "code-review" to "Code review", "merge" to "Merge")
 
 private val HAND = mapOf("pm" to "pm", "spec-reviewer" to "review", "implementer" to "implement", "tester" to "test", "code-reviewer" to "code-review")
-private val LABEL = mapOf("pm" to "pm", "review" to "review", "impl" to "implement", "test" to "test", "code-review" to "code-review")
-private val BUILD_LABEL = Regex("^(pm|review|impl|test|code-review):([\\w.-]+)(?:#(\\w+))?$")
+private val LABEL = mapOf("pm" to "pm", "review" to "review", "sketch" to "sketch", "impl" to "implement", "test" to "test", "code-review" to "code-review")
+private val BUILD_LABEL = Regex("^(pm|review|sketch|impl|test|code-review):([\\w.-]+)(?:#(\\w+))?$")
 private val BUILD_SPEC = Regex("\\.claude/specs/([\\w.-]+?)\\.md")
 
 class BuildTarget(val stage: String, val slug: String)

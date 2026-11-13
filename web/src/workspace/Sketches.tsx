@@ -14,7 +14,7 @@ import { sketchDoc, sketchOpenable, sketchTitle, type SketchTheme } from '../../
 import type { SketchFile } from './fileApi';
 import { useSketch, useSketches } from './useSketches';
 
-type Device = 'desktop' | 'phone';
+export type Device = 'desktop' | 'phone';
 
 const FOLD = 5;
 const SIZE: Record<Device, [number, number]> = { desktop: [1280, 800], phone: [390, 844] };
@@ -36,7 +36,8 @@ export function SketchList({ sketches, onOpen }: { sketches: SketchFile[]; onOpe
 const newSketch = () => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: '/sketch ' } }));
 
 // The sketch runs in a frame with no scripts and no access to this origin, scaled down to the pane.
-export function SketchFrame({ name, html, device, theme }: { name: string; html: string; device: Device; theme: SketchTheme }) {
+// `fitWidth` scales to the stage's width only, for a stage that grows with the frame (a sheet that scrolls).
+export function SketchFrame({ name, html, device, theme, fitWidth }: { name: string; html: string; device: Device; theme: SketchTheme; fitWidth?: boolean }) {
   const stage = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
   useEffect(() => {
@@ -47,7 +48,7 @@ export function SketchFrame({ name, html, device, theme }: { name: string; html:
     return () => watch.disconnect();
   }, []);
   const [w, h] = SIZE[device];
-  const scale = box.w ? Math.min(1, box.w / w, device === 'phone' ? box.h / h : 1) : 1;
+  const scale = box.w ? Math.min(1, box.w / w, device === 'phone' && !fitWidth ? box.h / h : 1) : 1;
   return (
     <div className="sk-stage" ref={stage}>
       <div className={`sk-device sk-${device}`} style={{ width: w * scale, height: h * scale }}>

@@ -12,7 +12,7 @@ export const stageBadge = (e: Entry): BadgeSpec => ({ status: e.status === 'stop
 
 export const criterionBadge = (c: Criterion): BadgeSpec | null => c.result === 'pending' ? null : { status: c.result === 'pass' ? 'done' : c.result === 'fail' ? 'failed' : 'skipped' };
 
-export const FLOW_LABEL: Record<FlowStep['key'], string> = { spec: 'Spec', 'spec-review': 'Spec review', approval: 'Your approval', implement: 'Implement', test: 'Test', 'code-review': 'Code review', merge: 'Merge' };
+export const FLOW_LABEL: Record<FlowStep['key'], string> = { spec: 'Spec', 'spec-review': 'Spec review', sketch: 'Sketch', approval: 'Your approval', implement: 'Implement', test: 'Test', 'code-review': 'Code review', merge: 'Merge' };
 
 export const flowBadge = (s: FlowStep): BadgeSpec | null => s.state === 'todo' ? null : s.state === 'waiting' && (s.key === 'approval' || s.result === 'On hold') ? holdBadge : { status: s.state };
 

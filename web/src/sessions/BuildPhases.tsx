@@ -13,6 +13,8 @@ import { ago } from '../ui/util';
 import { decisionTitle, phaseLabel, reviewDecision, withoutCriteria, type BuildPhase, type BuildReview, type ReviewPhase } from '../../../shared/builds';
 import { runAllPrompt, specProgress, specTasks, startTaskPrompt, withoutOpenTasks } from '../../../shared/specTasks';
 import { nextPhase, startPhase } from './buildsLogic';
+import { useThemeName } from '../app/theme';
+import { SketchFrame, type Device } from '../workspace/Sketches';
 import { postBuildReview } from './sessionApi';
 
 function ChangesSheet({ phase, onSend, onClose }: { phase: ReviewPhase | 'code'; onSend: (note: string) => Promise<void>; onClose: () => void }) {
@@ -65,6 +67,20 @@ export function DecisionRow({ slug, phase, review, onSaved, onApproved }: { slug
   );
 }
 
+// The build's sketch in a phone or desktop frame, in the app's theme.
+function SketchPhase({ slug, html }: { slug: string; html: string }) {
+  const [device, setDevice] = useState<Device>('phone');
+  const theme = useThemeName();
+  return (
+    <>
+      <div className="gl-chips bd-doc">
+        {(['phone', 'desktop'] as const).map((d) => <Chip key={d} size="sm" on={device === d} onClick={() => setDevice(d)}>{d === 'phone' ? 'Phone' : 'Desktop'}</Chip>)}
+      </div>
+      <div className="bd-sketch"><SketchFrame name={`${slug}.html`} html={html} device={device} theme={theme} fitWidth /></div>
+    </>
+  );
+}
+
 // The spec as the phase strip shows it, with the user's latest decision on the shown phase under it.
 export function BuildPhases({ slug, phases, reviews, specPath, action, initial, hideCriteria, onSaved }: { slug: string; phases: BuildPhase[]; reviews: BuildReview[]; specPath: string | null; action?: ReactNode; initial?: ReviewPhase; hideCriteria?: boolean; onSaved: () => Promise<void> }) {
   const [picked, setPicked] = useState<ReviewPhase | null>(null);
@@ -78,7 +94,7 @@ export function BuildPhases({ slug, phases, reviews, specPath, action, initial, 
   const tasks = phase.key === 'tasks' ? specTasks(phase.markdown) : [];
   const open = tasks.filter((t) => !t.done);
   const runnable = specPath && chat && open.length > 0 ? specPath : null;
-  const markdown = hideCriteria ? withoutCriteria(phase.markdown) : phase.markdown;
+  const markdown = hideCriteria && phase.key !== 'sketch' ? withoutCriteria(phase.markdown) : phase.markdown;
   return (
     <>
       <Section label="Spec" action={<>{tasks.length > 0 && <span className="badge quiet">{specProgress(tasks)}</span>}{runnable && (
@@ -91,7 +107,7 @@ export function BuildPhases({ slug, phases, reviews, specPath, action, initial, 
         {phases.map((p) => <Chip key={p.key} on={p.key === phase.key} icon={reviewDecision(reviews, p.key)?.decision === 'approve' ? 'check' : undefined} onClick={() => setPicked(p.key)}>{phaseLabel(p.key)}</Chip>)}
       </div>
       <div className="ui-group">
-        <div className="bd-doc"><Markdown text={runnable ? withoutOpenTasks(markdown) : markdown} /></div>
+        {phase.key === 'sketch' ? <SketchPhase slug={slug} html={phase.markdown} /> : <div className="bd-doc"><Markdown text={runnable ? withoutOpenTasks(markdown) : markdown} /></div>}
         {runnable && open.map((t) => <Row key={t.n} plain className="bd-clamp" title={t.text} trailing={t.doing ? <span className="badge running">In progress</span> : <Button size="sm" onClick={() => { track('action:startTask'); sendToChat(startTaskPrompt(t, runnable)); }}>Start</Button>} />)}
         <DecisionRow slug={slug} phase={phase.key} review={review} onSaved={onSaved} onApproved={() => setPicked(nextPhase(phases, phase.key))} />
       </div>

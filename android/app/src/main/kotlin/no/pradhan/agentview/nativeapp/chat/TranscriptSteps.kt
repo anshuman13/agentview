@@ -231,6 +231,7 @@ private fun SpecMenu(hub: Hub, d: BuildDetail?, path: String, stack: MutableList
 private fun flowSheet(f: FlowStep, d: BuildDetail): BuildSheet? = when {
     f.state == "todo" -> null
     f.key == "spec" -> BuildSheet.Spec(d.phases.firstOrNull { it.key == "requirements" }?.key ?: d.phases.firstOrNull()?.key)
+    f.key == "sketch" -> BuildSheet.Spec("sketch")
     f.key == "approval" -> BuildSheet.Spec()
     f.key == "merge" -> null
     else -> BuildSheet.Step(f.key)

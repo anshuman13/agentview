@@ -1,6 +1,6 @@
 import type { AgentStatus } from './protocol.js';
 
-export type BuildStage = 'pm' | 'review' | 'implement' | 'test' | 'code-review';
+export type BuildStage = 'pm' | 'review' | 'sketch' | 'implement' | 'test' | 'code-review';
 export type BuildState = 'running' | 'waiting' | 'failed' | 'done';
 export type BuildFile = { path: string; additions: number; deletions: number };
 export type BuildCommit = { sha: string; subject: string; date: number; branch: string | null; files: BuildFile[] };
@@ -20,11 +20,13 @@ export type BuildSummary = { stage: BuildStage; state: BuildState; conclusion: s
 export type Criterion = { n: number; result: 'pass' | 'fail' | 'unverified' | 'pending'; evidence: string };
 export type SpecCriterion = Criterion & { text: string; ui: boolean };
 export type BuildPipeline = 'written' | 'reviewed' | 'implemented' | 'tested' | 'code-reviewed' | 'merged';
-export type ReviewPhase = 'requirements' | 'design' | 'tasks';
+export type SpecPhase = 'requirements' | 'design' | 'tasks';
+// `sketch` is a phase only while the build has a sketch file; its markdown is the sketch's HTML, approved like the spec phases.
+export type ReviewPhase = SpecPhase | 'sketch';
 export type ReviewTarget = ReviewPhase | 'code' | 'hold';
 export type BuildReview = { phase: ReviewTarget; decision: 'approve' | 'changes' | 'hold' | 'release'; note: string; at: number };
 export type BuildPhase = { key: ReviewPhase; markdown: string };
-export type FlowStep = { key: 'spec' | 'spec-review' | 'approval' | 'implement' | 'test' | 'code-review' | 'merge'; state: BuildState | 'skipped' | 'todo'; by: string; result: string; at: number | null };
+export type FlowStep = { key: 'spec' | 'spec-review' | 'sketch' | 'approval' | 'implement' | 'test' | 'code-review' | 'merge'; state: BuildState | 'skipped' | 'todo'; by: string; result: string; at: number | null };
 export type BuildDetail = {
   slug: string;
   title: string;
@@ -43,8 +45,8 @@ export type BuildDetail = {
 };
 
 const HAND: Record<string, BuildStage> = { pm: 'pm', 'spec-reviewer': 'review', implementer: 'implement', tester: 'test', 'code-reviewer': 'code-review' };
-const LABEL: Record<string, BuildStage> = { pm: 'pm', review: 'review', impl: 'implement', test: 'test', 'code-review': 'code-review' };
-const STAGE_NAME: Record<BuildStage, string> = { pm: 'Spec', review: 'Spec review', implement: 'Implement', test: 'Test', 'code-review': 'Code review' };
+const LABEL: Record<string, BuildStage> = { pm: 'pm', review: 'review', sketch: 'sketch', impl: 'implement', test: 'test', 'code-review': 'code-review' };
+const STAGE_NAME: Record<BuildStage, string> = { pm: 'Spec', review: 'Spec review', sketch: 'Sketch', implement: 'Implement', test: 'Test', 'code-review': 'Code review' };
 
 export const stageName = (stage: BuildStage) => STAGE_NAME[stage];
 
@@ -60,7 +62,9 @@ export const decisionTitle = (r: BuildReview | undefined) => (!r ? 'Not reviewed
 export const reviewLine = (r: BuildReview) =>
   r.phase === 'hold' ? (r.decision === 'hold' ? 'Hold: do not start or continue this spec' : 'Hold released') : `${phaseLabel(r.phase)}: ${decisionTitle(r)}${r.note && `: ${r.note}`}`;
 
-export const REVIEW_PHASES: ReviewPhase[] = ['requirements', 'design', 'tasks'];
+export const REVIEW_PHASES: SpecPhase[] = ['requirements', 'design', 'tasks'];
+
+export const isReviewPhase = (v: unknown): v is ReviewPhase => v === 'sketch' || REVIEW_PHASES.includes(v as SpecPhase);
 
 export const reviewDecision = (reviews: BuildReview[], phase: ReviewTarget) => reviews.filter((r) => r.phase === phase).at(-1);
 
@@ -68,17 +72,22 @@ export const isHeld = (reviews: BuildReview[]) => reviewDecision(reviews, 'hold'
 
 const phaseDecision = (reviews: BuildReview[], p: BuildPhase) => reviewDecision(reviews, p.key)?.decision;
 
-// Latest changes requests newer than the latest pm start, so the pm has not seen them yet.
-const unhandledChanges = (pm: BuildEntry | undefined, reviews: BuildReview[], phases: BuildPhase[]) =>
-  phases.map((p) => reviewDecision(reviews, p.key)).filter((r): r is BuildReview => r?.decision === 'changes' && (!pm || r.at > pm.startedAt));
+const latestRun = (entries: BuildEntry[], stage: BuildStage) => inOrder(entries).filter((e) => e.stage === stage).at(-1);
+
+// Latest changes requests newer than the latest start of the agent that answers them: the designer for the sketch, the pm for the spec.
+const unhandledChanges = (entries: BuildEntry[], reviews: BuildReview[], phases: BuildPhase[]) =>
+  phases.map((p) => reviewDecision(reviews, p.key)).filter((r): r is BuildReview => {
+    const run = r && latestRun(entries, r.phase === 'sketch' ? 'sketch' : 'pm');
+    return r?.decision === 'changes' && (!run || r.at > run.startedAt);
+  });
 
 export type ApprovalGate = { decision: 'approve' | 'changes' | 'wait'; note: string };
 
 // What a build waits for before implementing: the user's approval of every phase, or changes for the pm.
 export function approvalGate(entries: BuildEntry[], reviews: BuildReview[], phases: BuildPhase[]): ApprovalGate {
-  const pm = inOrder(entries).filter((e) => e.stage === 'pm').at(-1);
-  if (isHeld(reviews) || pm?.status === 'running') return { decision: 'wait', note: '' };
-  const changes = unhandledChanges(pm, reviews, phases);
+  const running = (stage: BuildStage) => latestRun(entries, stage)?.status === 'running';
+  if (isHeld(reviews) || running('pm') || running('sketch')) return { decision: 'wait', note: '' };
+  const changes = unhandledChanges(entries, reviews, phases);
   if (changes.length) return { decision: 'changes', note: changes.map((r) => `${phaseLabel(r.phase)}: ${r.note}`).join('\n') };
   return { decision: phases.every((p) => phaseDecision(reviews, p) === 'approve') ? 'approve' : 'wait', note: '' };
 }
@@ -87,7 +96,7 @@ export const slugOk = (slug: string | undefined): slug is string => Boolean(slug
 
 // The stage and slug a build agent works on: a /build label like `impl:<slug>#2`, else a hand run named by its spec path. `round` is the label's numeric #N.
 export function buildStageOf(subagentType: string, description: string, prompt: string): { stage: BuildStage; slug: string; round: number | null } | null {
-  const label = /^(pm|review|impl|test|code-review):([\w.-]+)(?:#(\w+))?$/.exec(description.trim());
+  const label = /^(pm|review|sketch|impl|test|code-review):([\w.-]+)(?:#(\w+))?$/.exec(description.trim());
   if (label && slugOk(label[2])) return { stage: LABEL[label[1]], slug: label[2], round: label[3] && /^\d+$/.test(label[3]) ? Number(label[3]) : null };
   const stage = HAND[subagentType?.replace(/^agentview:/, '')];
   const slug = /\.claude\/specs\/([\w.-]+?)\.md/.exec(prompt)?.[1];
@@ -246,13 +255,23 @@ export function flowOf(entries: BuildEntry[], reviews: BuildReview[], phases: Bu
     return pm?.status === 'running' ? make('running', 'Revising') : make('todo', 'Revised, not re-reviewed');
   })();
 
-  const decided = reviews.filter((r) => REVIEW_PHASES.includes(r.phase as ReviewPhase)).at(-1)?.at ?? null;
+  const S = latest('sketch');
+  const sketch = ((): FlowStep | null => {
+    if (!S) return phases.some((p) => p.key === 'sketch') ? step('sketch', '', 'done', 'Written') : null;
+    const make = run('sketch', 'designer', S);
+    const rounds = all.filter((e) => e.stage === 'sketch').length;
+    if (S.status === 'running') return make('running', rounds > 1 ? 'Updating' : 'Running');
+    if (S.status === 'failed' || S.status === 'stopped') return all.some((e) => e.stage === 'implement') ? make('skipped', 'Failed · built without it') : make('failed', 'Failed');
+    return make('done', rounds > 1 ? `${rounds} rounds` : 'Written');
+  })();
+
+  const decided = reviews.filter((r) => isReviewPhase(r.phase)).at(-1)?.at ?? null;
   const approved = phases.filter((p) => phaseDecision(reviews, p) === 'approve').length;
-  const reviewed = all.some((e) => e.stage === 'review' && e.status === 'done') && !all.some((e) => e.stage === 'implement') && pm?.status !== 'running';
+  const reviewed = all.some((e) => e.stage === 'review' && e.status === 'done') && !all.some((e) => e.stage === 'implement') && pm?.status !== 'running' && S?.status !== 'running';
   const approval =
     !phases.length ? step('approval', 'You', 'todo', '0 of 0 phases approved', decided)
     : approved === phases.length ? step('approval', 'You', 'done', 'Approved', decided)
-    : unhandledChanges(pm, reviews, phases).length ? step('approval', 'You', 'waiting', 'Changes requested', decided)
+    : unhandledChanges(all, reviews, phases).length ? step('approval', 'You', 'waiting', 'Changes requested', decided)
     : reviewed ? step('approval', 'You', 'waiting', 'Waiting for you', decided)
     : all.some((e) => e.stage === 'implement') ? step('approval', 'You', 'skipped', 'Built without approval', decided)
     : step('approval', 'You', 'todo', `${approved} of ${phases.length} phases approved`, decided);
@@ -295,7 +314,7 @@ export function flowOf(entries: BuildEntry[], reviews: BuildReview[], phases: Bu
   const commit = lastCommit(entries);
   const merge = merged ? step('merge', '', 'done', `Merged as ${mergedSha(merged, commit)}`, commit?.date ?? null) : test.state === 'done' ? step('merge', '', 'waiting', 'Not merged yet') : none('merge', '');
 
-  const flow = [spec, specReview, approval, implement, test, codeReview, merge];
+  const flow = [spec, specReview, ...(sketch ? [sketch] : []), approval, implement, test, codeReview, merge];
   if (isHeld(reviews)) {
     const i = flow.findIndex((f) => ['todo', 'waiting', 'failed'].includes(f.state));
     if (i >= 0) flow[i] = { ...flow[i], state: 'waiting', result: 'On hold' };

@@ -64,6 +64,16 @@ describe('approvalGate and the approval step', () => {
     expect(gate([pm(20)], r).decision).toBe('wait');
     expect(gate([], r).decision).toBe('changes');
   });
+  it('sends sketch changes to the designer until a newer sketch run starts, and waits while it runs', () => {
+    const withSketch = [...phases, { key: 'sketch', markdown: '<p>' }] as BuildPhase[];
+    const r = [...approveAll, review('sketch', 'changes', 10, 'button up')];
+    expect(gate([pm(1)], approveAll, withSketch).decision).toBe('wait');
+    expect(gate([pm(1)], r, withSketch)).toEqual({ decision: 'changes', note: 'Sketch: button up' });
+    expect(gate([pm(1), { stage: 'sketch', status: 'running', startedAt: 11 }], r, withSketch).decision).toBe('wait');
+    expect(gate([pm(1), { stage: 'sketch', status: 'done', startedAt: 11 }], r, withSketch).decision).toBe('wait');
+    expect(gate([pm(20)], r, withSketch).decision).toBe('changes');
+    expect(gate([], [...approveAll, review('sketch', 'approve', 12)], withSketch).decision).toBe('approve');
+  });
   it('waits while the pm runs', () => expect(gate([pm(5, 'running')], [review('design', 'changes', 10, 'x')]).decision).toBe('wait'));
   it('waits while held and approves after the release', () => {
     expect(gate([], [...approveAll, review('hold', 'hold', 9)]).decision).toBe('wait');

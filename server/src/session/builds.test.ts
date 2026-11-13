@@ -156,6 +156,18 @@ describe('spec review', () => {
     expect(((await buildOne(repo, 'kiro-one')) as { phases: { key: string }[] }).phases.map((p) => p.key)).toEqual(['requirements', 'tasks']);
   });
 
+  it('adds the sketch file as a last phase holding its HTML, and takes a sketch decision', async () => {
+    writeFileSync(path.join(specs, 'drawn.md'), body);
+    mkdirSync(path.join(repo, '.claude', 'sketches'), { recursive: true });
+    writeFileSync(path.join(repo, '.claude', 'sketches', 'drawn.html'), '<p>mock</p>');
+    const one = (await buildOne(repo, 'drawn')) as { phases: { key: string; markdown: string }[]; flow: { key: string }[] };
+    expect(one.phases.map((p) => p.key)).toEqual(['requirements', 'design', 'tasks', 'sketch']);
+    expect(one.phases[3].markdown).toBe('<p>mock</p>');
+    expect(one.flow.map((f) => f.key)).toContain('sketch');
+    expect(await reviewBuild(repo, { slug: 'drawn', phase: 'sketch', decision: 'changes', note: 'bigger' })).toEqual({ ok: true });
+    expect(((await buildOne(repo, 'pink-door')) as { phases: { key: string }[] }).phases.map((p) => p.key)).not.toContain('sketch');
+  });
+
   it('records a decision in the JSON and one line under a single Review notes section of an ignored spec', async () => {
     expect(await reviewBuild(repo, { slug: 'pink-door', phase: 'requirements', decision: 'approve', note: '' })).toEqual({ ok: true });
     expect(await reviewBuild(repo, { slug: 'pink-door', phase: 'design', decision: 'changes', note: 'split\nit' })).toEqual({ ok: true });

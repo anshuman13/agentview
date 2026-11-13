@@ -1,7 +1,7 @@
 import { appendFile, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { REVIEW_PHASES, buildStageOf, buildSummary, criteriaOf, findingsOf, flowOf, inOrder, isHeld, lastCommit, pipelineOf, reviewDecision, reviewLine, sectionsOf, slugOk, specCriteria, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase, type SpecCriterion } from '../../../shared/builds.js';
+import { REVIEW_PHASES, buildStageOf, isReviewPhase, buildSummary, criteriaOf, findingsOf, flowOf, inOrder, isHeld, lastCommit, pipelineOf, reviewDecision, reviewLine, sectionsOf, slugOk, specCriteria, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase, type SpecCriterion, type SpecPhase } from '../../../shared/builds.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { jsonFile, readJson } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
@@ -91,7 +91,7 @@ const reviewStore = (repo: string, slug: string) => {
 
 const titleOf = (spec: string | null, slug: string) => /^# (.+)$/m.exec(spec ?? '')?.[1].trim() || slug;
 
-const PHASE_OF = new Map<string, ReviewPhase>([
+const PHASE_OF = new Map<string, SpecPhase>([
   ['problem', 'requirements'], ['behaviour', 'requirements'], ['requirements', 'requirements'], ['non-goals', 'requirements'],
   ['design', 'design'], ['touches', 'design'], ['open questions', 'design'],
   ['tasks', 'tasks'], ['acceptance criteria', 'tasks'],
@@ -99,8 +99,8 @@ const PHASE_OF = new Map<string, ReviewPhase>([
 const NOTES = 'review notes';
 
 export function splitPhases(markdown: string): BuildPhase[] {
-  const lines: Record<ReviewPhase, string[]> = { requirements: [], design: [], tasks: [] };
-  let phase: ReviewPhase | null = 'requirements';
+  const lines: Record<SpecPhase, string[]> = { requirements: [], design: [], tasks: [] };
+  let phase: SpecPhase | null = 'requirements';
   for (const s of sectionsOf(markdown)) {
     if (s.heading !== null) phase = s.heading === NOTES ? null : PHASE_OF.get(s.heading) ?? phase;
     if (phase) lines[phase].push(...s.lines);
@@ -110,13 +110,26 @@ export function splitPhases(markdown: string): BuildPhase[] {
 
 const withoutNotes = (markdown: string) => sectionsOf(markdown).filter((s) => s.heading !== NOTES).flatMap((s) => s.lines).join('\n').trim();
 
+const MAX_SKETCH = 1_000_000;
+
+// The build's sketch, written by the designer from the spec, is one more phase to approve; its HTML is the phase text.
+async function readSketch(repo: string, slug: string) {
+  const file = path.join(repo, '.claude', 'sketches', `${slug}.html`);
+  const st = await stat(file).catch(() => null);
+  return st?.isFile() && st.size <= MAX_SKETCH ? readFile(file, 'utf8').catch(() => null) : null;
+}
+
 type Spec = { title: string; phases: BuildPhase[]; mtime: number; file: string; kiro: boolean };
 
 // A spec file in .claude/specs, else a Kiro folder in .kiro/specs with one file per phase.
 async function loadSpec(repo: string, slug: string): Promise<Spec | null> {
   const file = path.join(repo, '.claude', 'specs', `${slug}.md`);
   const text = await readFile(file, 'utf8').catch(() => null);
-  if (text !== null) return { title: titleOf(text, slug), phases: splitPhases(text), mtime: Math.round((await stat(file)).mtimeMs), file, kiro: false };
+  if (text !== null) {
+    const sketch = await readSketch(repo, slug);
+    const phases = [...splitPhases(text), ...(sketch ? [{ key: 'sketch' as const, markdown: sketch }] : [])];
+    return { title: titleOf(text, slug), phases, mtime: Math.round((await stat(file)).mtimeMs), file, kiro: false };
+  }
   const parts = await Promise.all(REVIEW_PHASES.map(async (key) => {
     const f = path.join(repo, '.kiro', 'specs', slug, `${key}.md`);
     const [body, st] = await Promise.all([readFile(f, 'utf8').catch(() => null), stat(f).catch(() => null)]);
@@ -201,7 +214,7 @@ async function appendNote(file: string, r: BuildReview) {
   await appendFile(file, `${lead}- ${when} ${reviewLine(r)}\n`);
 }
 
-const isPhase = (v: unknown): v is ReviewPhase | 'code' => v === 'code' || REVIEW_PHASES.includes(v as ReviewPhase);
+const isPhase = (v: unknown): v is ReviewPhase | 'code' => v === 'code' || isReviewPhase(v);
 
 // The user's decision on one phase of a spec or its code, or a hold or release: the JSON record the UI reads, and for a git-ignored spec file also the line agents read.
 export async function reviewBuild(cwd: string, body: { slug?: unknown; phase?: unknown; decision?: unknown; note?: unknown }) {

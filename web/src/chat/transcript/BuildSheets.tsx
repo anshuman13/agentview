@@ -14,7 +14,7 @@ import { CodeReview, Implementation, ReportBody } from '../../sessions/BuildPart
 import { FLOW_LABEL, byStart, criterionBadge, stageBadge, stageMeta, stageTitle, testCounts } from '../../sessions/buildsLogic';
 import type { BuildDetail, BuildStage, FlowStep, ReviewPhase, SpecCriterion } from '../../../../shared/builds';
 
-type StepKey = Exclude<FlowStep['key'], 'spec' | 'approval' | 'merge'>;
+type StepKey = Exclude<FlowStep['key'], 'spec' | 'sketch' | 'approval' | 'merge'>;
 export type OpenSheet = { kind: 'spec'; initial?: ReviewPhase } | { kind: 'step'; key: StepKey } | { kind: 'criterion'; n: number };
 
 const STAGE: Record<StepKey, BuildStage> = { 'spec-review': 'review', implement: 'implement', test: 'test', 'code-review': 'code-review' };
