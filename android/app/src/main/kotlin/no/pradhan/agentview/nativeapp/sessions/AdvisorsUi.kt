@@ -95,14 +95,12 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     // Reloads after an advisor's turn, which may have changed its memory.
     val turns = st.live.filter { advisorOf(it.cwd) != null && !it.running }.joinToString { "${it.id}:${it.lastActive}" }
     val (load, reload) = rememberLoad { protocolJson.decodeFromString<List<AdvisorInfo>>(hub.read("/api/advisors")) }
-    var loadedTurns by remember { mutableStateOf(turns) }
-    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload() } }
     var memory by rememberSaveable { mutableStateOf<String?>(null) }
     var root by rememberSaveable { mutableStateOf<String?>(null) }
     val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<BacklogItem>>(hub.read("/api/advisors/backlog?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
-    LaunchedEffect(turns) { reloadBacklog() }
     val (audits, reloadAudit) = rememberLoad(root) { root?.let { listOfNotNull(protocolJson.decodeFromString<AuditInfo?>(hub.read("/api/advisors/audit?root=${java.net.URLEncoder.encode(it, "UTF-8")}"))) } }
-    LaunchedEffect(turns) { reloadAudit() }
+    var loadedTurns by remember { mutableStateOf(turns) }
+    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadAudit() } }
     var auditOpen by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     fun go(open: suspend () -> Boolean) = scope.launch { if (open()) onOpen() }
