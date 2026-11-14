@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { firstRound, goalCapReached, goalMet, goalNotMet, goalPlan, goalStoppedAt, interval, nextRound, roundText, runLine, skipText } from './goalText';
+import { firstRound, goalCapReached, goalMet, goalNotMet, goalPlan, goalStoppedAt, interval, mergeQuiet, nextRound, roundGroupText, roundText, runLine, skipText } from './goalText';
 import { clock } from './util';
 
 const at = new Date(2026, 10, 9, 9, 0).getTime();
@@ -23,6 +23,10 @@ describe('goalText', () => {
     expect(roundText({ n: 4, at: t, outcome: 'progress', line: '' })).toBe('Round 4 · 02:10 · progress');
     expect(roundText({ n: 4, at: t, outcome: 'quiet', line: 'x' })).toBe('Round 4 · 02:10 · nothing to do');
     expect(roundText({ n: 4, at: t, outcome: 'failed', line: 'boom' })).toBe('Round 4 · 02:10 · failed: boom');
+    const q = (n: number, report?: string) => ({ n, at: t, outcome: 'quiet' as const, line: '', costUsd: 0, report });
+    expect(roundGroupText(mergeQuiet([q(4), q(5), q(9)])[0])).toBe('Rounds 4-9 · 02:10 · nothing to do');
+    expect(roundGroupText(mergeQuiet([q(4)])[0])).toBe('Round 4 · 02:10 · nothing to do');
+    expect(roundGroupText(mergeQuiet([q(4, 'turn')])[0])).toBe('Weekly report');
     expect(firstRound(t)).toBe('First round 02:10');
     expect(nextRound(t)).toBe('Next round 02:10');
     expect(nextRound(null)).toBe('Next round');

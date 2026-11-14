@@ -36,6 +36,13 @@ class RunsTest {
         assertEquals("1 h 5 min", agentAge(0, 65 * 60_000))
     }
 
+    @Test fun mergedQuietRoundsReadAsARange() {
+        val q = { n: Int, report: String? -> Round(n, 14 * 3_600_000L, "quiet", "", 0.0, report) }
+        assertEquals("Rounds 4-9 · 14:00 · nothing to do", roundGroupText(mergeQuiet(listOf(q(4, null), q(5, null), q(9, null))).single()))
+        assertEquals("Round 4 · 14:00 · nothing to do", roundGroupText(mergeQuiet(listOf(q(4, null))).single()))
+        assertEquals("Weekly report", roundGroupText(mergeQuiet(listOf(q(4, "t1"))).single()))
+    }
+
     @Test fun aRunNeedsYouWhenItAsksOrItsLastRoundIsBlockedAQuestionOrFailed() {
         assertTrue(runNeedsYou(run("a", needsYou = true)))
         assertTrue(runNeedsYou(run("a", rounds = listOf(round("progress"), round("failed")))))

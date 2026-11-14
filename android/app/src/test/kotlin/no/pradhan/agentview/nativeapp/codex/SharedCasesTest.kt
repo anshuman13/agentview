@@ -53,6 +53,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.lastRoundText
+import no.pradhan.agentview.nativeapp.codex.autopilot.mergeQuiet
 import no.pradhan.agentview.nativeapp.codex.autopilot.roundText
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
@@ -240,6 +241,15 @@ class SharedCasesTest {
             val round = c.getValue("round").jsonObject.decode<Round>()
             val expected = if (c["full"]?.jsonPrimitive?.boolean == true) roundText(round) else c.str("expected")
             assertEquals(c.str("name"), expected, lastRoundText(run, round))
+        }
+    }
+
+    @Test fun mergeQuiet() {
+        for (c in cases("merge-quiet")) {
+            val rounds = c.getValue("rounds").jsonArray.map { it.decode<Round>() }
+            val expected = c.getValue("expected").jsonArray.map { g -> g.jsonArray.map { it.jsonPrimitive.double } }
+            val actual = mergeQuiet(rounds).map { listOf(it.first.n.toDouble(), it.last.n.toDouble(), it.count.toDouble(), it.costUsd) }
+            assertEquals(c.str("name"), expected, actual)
         }
     }
 

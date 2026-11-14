@@ -70,6 +70,22 @@ private fun roundSummary(r: Round) = "Round ${r.n} · ${clock(r.at)} · " + roun
 // A round as every list shows it (web shared/goalText.ts roundText).
 fun roundText(r: Round) = if (r.report != null) "Weekly report" else roundSummary(r)
 
+// Rounds in time order, each run of consecutive quiet rounds (not a weekly report) merged (web shared/goalText.ts mergeQuiet).
+data class RoundGroup(val first: Round, val last: Round, val count: Int, val costUsd: Double)
+
+fun mergeQuiet(rounds: List<Round>): List<RoundGroup> {
+    val groups = mutableListOf<RoundGroup>()
+    for (r in rounds) {
+        val g = groups.lastOrNull()
+        val quiet = r.outcome == "quiet" && r.report == null
+        if (g != null && quiet && g.last.outcome == "quiet" && g.last.report == null) groups[groups.lastIndex] = g.copy(last = r, count = g.count + 1, costUsd = g.costUsd + r.costUsd)
+        else groups.add(RoundGroup(r, r, 1, r.costUsd))
+    }
+    return groups
+}
+
+fun roundGroupText(g: RoundGroup) = if (g.count > 1) "Rounds ${g.first.n}-${g.last.n} · ${clock(g.last.at)} · nothing to do" else roundText(g.last)
+
 // The run row's last round (web shared/goalText.ts lastRoundText): the outcome alone when the run line already says this round.
 fun lastRoundText(run: ChatRun, r: Round) = when {
     r.report != null -> "Weekly report"

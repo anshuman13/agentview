@@ -7,7 +7,7 @@ import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
 import { advisorLoopLine, advisorLoopOf } from '../../shared/advisors';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
-import { lastRoundText, roundText } from '../../shared/goalText';
+import { lastRoundText, mergeQuiet, roundText } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
@@ -225,6 +225,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; run: Partial<ChatRun>; round: Round; expected?: string; full?: boolean }>('last-round-text')) {
     it(`lastRoundText: ${c.name}`, () => expect(lastRoundText(run(c.run), c.round)).toBe(c.full ? roundText(c.round) : c.expected!));
+  }
+
+  for (const c of cases<{ name: string; rounds: Round[]; expected: [number, number, number, number][] }>('merge-quiet')) {
+    it(`mergeQuiet: ${c.name}`, () => expect(mergeQuiet(c.rounds).map((g) => [g.first.n, g.last.n, g.count, g.costUsd])).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; phase: string | null; expected: string }>('run-line')) {

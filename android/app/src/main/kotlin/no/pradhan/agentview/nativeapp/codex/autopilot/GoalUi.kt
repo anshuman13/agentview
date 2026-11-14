@@ -318,11 +318,11 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         SectionHeader("Rounds", run.rounds.size.toString())
         if (run.rounds.isEmpty()) EmptyState("No rounds yet", "The first round runs when the agent goes idle", icon = "history")
         else Group {
-            run.rounds.asReversed().forEachIndexed { i, r ->
+            mergeQuiet(run.rounds).asReversed().forEachIndexed { i, g ->
                 if (i > 0) Hairline(lead = true)
                 ListRow(
-                    roundText(r), money(r.costUsd, billing(run.provider)),
-                    leading = { StatusDot(outcomeDot(r.outcome)) }, onClick = r.report?.let { report -> { open(report) } },
+                    roundGroupText(g), money(g.costUsd, billing(run.provider)),
+                    leading = { StatusDot(outcomeDot(g.last.outcome)) }, onClick = g.last.report?.let { report -> { open(report) } },
                 )
             }
         }

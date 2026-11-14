@@ -115,19 +115,19 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, needsYou: B
                 Text(run.what, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(money(run.costUsd, billing(run.provider)), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
             }
-            run.rounds.lastOrNull { it.report != null }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(r, showTime = false, run.provider) } }
-            if (rounds && run.kind == "loop") run.rounds.takeLast(10).reversed().forEach { RoundLine(it, showTime = true, run.provider) }
+            run.rounds.lastOrNull { it.report != null }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(RoundGroup(r, r, 1, r.costUsd), showTime = false, run.provider) } }
+            if (rounds && run.kind == "loop") mergeQuiet(run.rounds).takeLast(10).asReversed().forEach { RoundLine(it, showTime = true, run.provider) }
           }
         }
     }
 }
 
 @Composable
-private fun RoundLine(r: Round, showTime: Boolean, provider: String?) {
+private fun RoundLine(g: RoundGroup, showTime: Boolean, provider: String?) {
     Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-        StatusDot(outcomeDot(r.outcome))
-        Text(roundText(r), Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (showTime) Text(money(r.costUsd, billing(provider)), style = Type.footnote, color = av.fgMuted)
+        StatusDot(outcomeDot(g.last.outcome))
+        Text(roundGroupText(g), Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (showTime) Text(money(g.costUsd, billing(provider)), style = Type.footnote, color = av.fgMuted)
     }
 }
 

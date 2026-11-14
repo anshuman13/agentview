@@ -14,7 +14,7 @@ import { billing } from '../../../shared/providers';
 import type { RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
-import { roundText } from '../../../shared/goalText';
+import { mergeQuiet, roundGroupText } from '../../../shared/goalText';
 import { OUTCOME_DOT, stoppedText } from '../chat/composer/composerLogic';
 import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, stopAtMs, usageLine } from './goalLogic';
 import { usePlanProgress } from './usePlanProgress';
@@ -73,14 +73,14 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
       <Section label="Rounds" count={sectionCount(run.rounds.length)} />
       {run.rounds.length ? (
         <div className="ui-group">
-          {run.rounds.slice().reverse().map((r) => (
+          {mergeQuiet(run.rounds).reverse().map((g) => (
             <Row
-              key={r.at}
-              plain={!r.report}
-              leading={<span className={`dot ${OUTCOME_DOT[r.outcome]}`} />}
-              title={r.report ? 'Weekly report' : roundText(r)}
-              meta={money(r.costUsd, billing(run.provider))}
-              onClick={r.report ? () => open(r.report) : undefined}
+              key={g.first.at}
+              plain={!g.last.report}
+              leading={<span className={`dot ${OUTCOME_DOT[g.last.outcome]}`} />}
+              title={roundGroupText(g)}
+              meta={money(g.costUsd, billing(run.provider))}
+              onClick={g.last.report ? () => open(g.last.report) : undefined}
             />
           ))}
         </div>

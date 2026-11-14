@@ -14,7 +14,7 @@ import { openAgent } from '../../sessions/agents';
 import { usePlanProgress } from '../../sessions/usePlanProgress';
 import { planOf } from '../../../../shared/goalForm';
 import { billing } from '../../../../shared/providers';
-import { roundText } from '../../../../shared/goalText';
+import { mergeQuiet, roundGroupText } from '../../../../shared/goalText';
 import type { RunOp } from '../../../../shared/protocol';
 import { useCardOpen } from './useCardOpen';
 import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine, runNeedsYou, showTurn, stoppedText } from '../composer/composerLogic';
@@ -90,11 +90,11 @@ export function LoopCard() {
       {report && <button className="lc-line lc-last" onClick={() => showTurn(report.report!)}><span className="lc-time">{clock(report.at)}</span><span className="lc-what">Weekly report</span></button>}
       {open && run.kind === 'loop' && (
         <ul className="lc-rounds">
-          {run.rounds.slice(-10).reverse().map((r) => (
-            <li key={r.at} className="lc-line">
-              <span className={`dot ${OUTCOME_DOT[r.outcome]}`} />
-              <span className="lc-what">{roundText(r)}</span>
-              <span className="lc-cost">{money(r.costUsd, billing(run.provider))}</span>
+          {mergeQuiet(run.rounds).slice(-10).reverse().map((g) => (
+            <li key={g.first.at} className="lc-line">
+              <span className={`dot ${OUTCOME_DOT[g.last.outcome]}`} />
+              <span className="lc-what">{roundGroupText(g)}</span>
+              <span className="lc-cost">{money(g.costUsd, billing(run.provider))}</span>
             </li>
           ))}
         </ul>

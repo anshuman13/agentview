@@ -1,0 +1,28 @@
+[
+  { "name": "no rounds", "rounds": [], "expected": [] },
+  { "name": "one quiet round stays a group of one", "rounds": [{ "n": 1, "at": 1, "outcome": "quiet", "line": "", "costUsd": 0.25 }], "expected": [[1, 1, 1, 0.25]] },
+  { "name": "four quiet rounds in a row merge with the cost summed", "rounds": [
+    { "n": 1, "at": 1, "outcome": "quiet", "line": "", "costUsd": 0.25 },
+    { "n": 2, "at": 2, "outcome": "quiet", "line": "", "costUsd": 0.25 },
+    { "n": 3, "at": 3, "outcome": "quiet", "line": "", "costUsd": 0.25 },
+    { "n": 4, "at": 4, "outcome": "quiet", "line": "", "costUsd": 0.25 }
+  ], "expected": [[1, 4, 4, 1]] },
+  { "name": "quiet, progress, quiet, quiet is three groups", "rounds": [
+    { "n": 1, "at": 1, "outcome": "quiet", "line": "", "costUsd": 0.25 },
+    { "n": 2, "at": 2, "outcome": "progress", "line": "merged X", "costUsd": 0.5 },
+    { "n": 3, "at": 3, "outcome": "quiet", "line": "", "costUsd": 0.25 },
+    { "n": 4, "at": 4, "outcome": "quiet", "line": "", "costUsd": 0.25 }
+  ], "expected": [[1, 1, 1, 0.25], [2, 2, 1, 0.5], [3, 4, 2, 0.5]] },
+  { "name": "a quiet round with a report stays alone and splits its neighbours", "rounds": [
+    { "n": 1, "at": 1, "outcome": "quiet", "line": "", "costUsd": 0.25 },
+    { "n": 2, "at": 2, "outcome": "quiet", "line": "", "costUsd": 0.25 },
+    { "n": 3, "at": 3, "outcome": "quiet", "line": "", "costUsd": 0.5, "report": "t1" },
+    { "n": 4, "at": 4, "outcome": "quiet", "line": "", "costUsd": 0.25 },
+    { "n": 5, "at": 5, "outcome": "quiet", "line": "", "costUsd": 0.25 }
+  ], "expected": [[1, 2, 2, 0.5], [3, 3, 1, 0.5], [4, 5, 2, 0.5]] },
+  { "name": "a failed round between quiet rounds splits them", "rounds": [
+    { "n": 1, "at": 1, "outcome": "quiet", "line": "", "costUsd": 0.25 },
+    { "n": 2, "at": 2, "outcome": "failed", "line": "boom", "costUsd": 0.25 },
+    { "n": 3, "at": 3, "outcome": "quiet", "line": "", "costUsd": 0.25 }
+  ], "expected": [[1, 1, 1, 0.25], [2, 2, 1, 0.25], [3, 3, 1, 0.25]] }
+]
