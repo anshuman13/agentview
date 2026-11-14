@@ -32,7 +32,7 @@ export function useWorkbench() {
   const closePage = () => { setPage(null); setEditor((e) => (isPage(e) ? 'file' : e)); };
   const [sidebar, setSidebar] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
-  const [view, setView] = useState<View>('explorer');
+  const [view, setView] = useState<View>('chats');
   const [phone, setPhone] = useState(false);
   const [macs, setMacs] = useState(false);
   const [terminal, setTerminal] = useState(false);
