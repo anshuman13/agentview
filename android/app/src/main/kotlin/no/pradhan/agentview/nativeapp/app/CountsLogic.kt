@@ -23,6 +23,7 @@ private val MCP_BAD = setOf("failed", "needs-auth")
 
 private fun shownMcp(mcp: List<McpServer>, hidden: Map<String, String>) = mcp.filter { hidden[mcpHideKey(it.name)] != "hidden" }
 
+// attention mirrors shared/counts.ts for the shared fixture; the app passes 0, as only web reads the attention message.
 fun appCounts(chats: List<CountChat>, viewing: String, attention: Int, mcp: List<McpServer>, hidden: Map<String, String>, needsYouRows: Int, replyRows: Int): AppCounts {
     val servers = shownMcp(mcp, hidden)
     return AppCounts(
