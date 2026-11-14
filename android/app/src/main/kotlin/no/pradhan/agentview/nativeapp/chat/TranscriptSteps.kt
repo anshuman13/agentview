@@ -47,7 +47,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import kotlin.math.roundToInt
@@ -268,18 +267,16 @@ private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
     val now = System.currentTimeMillis()
     val step = if (d.summary.state == "done") null else currentStep(d.flow)
     val scroll = rememberScrollState()
-    val density = LocalDensity.current
     val spans = remember(d.slug) { mutableStateMapOf<Int, IntRange>() }
-    var placed by remember(d.slug) { mutableStateOf(false) }
     val at = if (step != null) d.flow.indexOf(step) else d.flow.indexOfFirst { it.state != "done" }
+    var placed by remember(d.slug, at) { mutableStateOf(false) }
     val cur = spans[at]
-    LaunchedEffect(d.slug, scroll.maxValue, cur) {
+    LaunchedEffect(d.slug, at, scroll.maxValue, cur) {
         if (placed || scroll.maxValue == 0 || cur == null) return@LaunchedEffect
         placed = true
-        val pad = with(density) { Tokens.listPad.roundToPx() }
         val prev = spans[at - 1]
         val left = if (prev != null) (prev.first + prev.last) / 2 else cur.first
-        scroll.scrollTo((minOf(left, cur.last - scroll.viewportSize) + pad).coerceAtLeast(0))
+        scroll.scrollTo(minOf(left, cur.last - scroll.viewportSize).coerceAtLeast(0))
     }
     Box(Modifier.fillMaxWidth()) {
     Row(Modifier.fillMaxWidth().horizontalScroll(scroll).padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
@@ -375,7 +372,8 @@ internal fun FileCard(it: Item.File, cwd: String) {
             }
         }
         if (open && it.error == null) Column(Modifier.padding(start = Tokens.sp7, end = Tokens.sp5, bottom = Tokens.sp5), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-            for (u in it.uses) for ((a, b) in editPairs(u)) DiffView(lineDiff(a, b))
+            val diffs = remember(it.uses) { it.uses.flatMap { u -> editPairs(u).map { (a, b) -> lineDiff(a, b) } } }
+            for (d in diffs) DiffView(d)
         }
     }
 }
