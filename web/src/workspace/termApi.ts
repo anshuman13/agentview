@@ -1,5 +1,9 @@
-export const listTerms = (url: string) => fetch(url);
+import { apiUrl } from '../app/api';
 
-export const createTerm = (url: string) => fetch(url, { method: 'POST' });
+const url = (chat: string, q = '') => apiUrl(`/api/terms?chat=${encodeURIComponent(chat)}${q}`);
 
-export const closeTerm = (url: string) => fetch(url, { method: 'DELETE' });
+export const listTerms = (chat: string) => fetch(url(chat));
+
+export const createTerm = (chat: string) => fetch(url(chat), { method: 'POST' });
+
+export const closeTerm = (chat: string, id: string) => fetch(url(chat, `&id=${encodeURIComponent(id)}`), { method: 'DELETE' });

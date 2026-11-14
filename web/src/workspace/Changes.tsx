@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { GitFile, GitStatus } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
-import { api, setUi, useStore } from '../app/store';
-import { fetchJson } from '../app/api';
+import { setUi, useStore } from '../app/store';
+import { postGit } from './fileApi';
 import { Icon } from '../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
@@ -119,7 +119,7 @@ export function Changes() {
   const run: Run = async (action, body) => {
     setFailed('');
     try {
-      await fetchJson(api(`/api/git/${action}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      await postGit(action, body);
       return true;
     } catch (err) {
       setFailed(errText(err));

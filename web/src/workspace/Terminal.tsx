@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui/Icon';
-import { apiUrl } from '../app/api';
 import { closeTerm, createTerm, listTerms } from './termApi';
 import { notice } from '../app/store';
 
@@ -69,24 +68,22 @@ function useTermTabs(chat: string, open: boolean, onToggle: () => void) {
       retries.current.forEach(clearTimeout);
     };
   }, []);
-  const url = (q = '') => apiUrl(`/api/terms?chat=${encodeURIComponent(chat)}${q}`);
-
   const load = async () => {
-    const list: Tab[] = await listTerms(url()).then((r) => r.json());
+    const list: Tab[] = await listTerms(chat).then((r) => r.json());
     setTabs(list);
     setActive((a) => (list.some((t) => t.id === a) ? a : (list[list.length - 1]?.id ?? '')));
     return list;
   };
 
   const add = async () => {
-    const t: Tab = await createTerm(url()).then((r) => r.json());
+    const t: Tab = await createTerm(chat).then((r) => r.json());
     setTabs((l) => [...(l ?? []), t]);
     setActive(t.id);
     setFocus((f) => f + 1);
   };
 
   const close = async (id: string) => {
-    await closeTerm(url(`&id=${id}`));
+    await closeTerm(chat, id);
     if ((await load()).length === 0) onToggle();
   };
 

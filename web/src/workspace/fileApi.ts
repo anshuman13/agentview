@@ -12,6 +12,9 @@ export const listDir = (path: string) => fetch(api(`/api/dir?path=${encodeURICom
 
 export const fetchGitStatus = () => fetch(api('/api/git/status'));
 
+export const postGit = (action: string, body: unknown) =>
+  fetchJson(api(`/api/git/${action}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
 export const isDocPath = (path: string) => /\.(md|markdown|mdx)$/i.test(path);
 
 export type SketchFile = { name: string; path: string; mtime: number };
