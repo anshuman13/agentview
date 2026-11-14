@@ -1,5 +1,9 @@
 package no.pradhan.agentview.nativeapp.sessions
 
+import no.pradhan.agentview.nativeapp.chat.HOLD_BADGE
+import no.pradhan.agentview.nativeapp.chat.SpecHomeItem
+import no.pradhan.agentview.nativeapp.chat.specHomeOrder
+import no.pradhan.agentview.nativeapp.chat.specRowParts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

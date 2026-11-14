@@ -1,5 +1,7 @@
 package no.pradhan.agentview.nativeapp.workspace
 
+import no.pradhan.agentview.nativeapp.ui.DiffLine
+import no.pradhan.agentview.nativeapp.ui.lineDiff
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonArray

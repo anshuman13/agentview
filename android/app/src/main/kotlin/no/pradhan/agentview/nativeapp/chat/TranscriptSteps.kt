@@ -63,18 +63,7 @@ import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.agentSummary
 import no.pradhan.agentview.nativeapp.ops.tokensText
-import no.pradhan.agentview.nativeapp.sessions.buildTotals
-import no.pradhan.agentview.nativeapp.sessions.currentStep
-import no.pradhan.agentview.nativeapp.sessions.BuildDetail
-import no.pradhan.agentview.nativeapp.sessions.canBuild
-import no.pradhan.agentview.nativeapp.sessions.canSketch
-import no.pradhan.agentview.nativeapp.sessions.FLOW_LABEL
-import no.pradhan.agentview.nativeapp.sessions.FlowStep
-import no.pradhan.agentview.nativeapp.sessions.HOLD_BADGE
-import no.pradhan.agentview.nativeapp.sessions.flowBadge
-import no.pradhan.agentview.nativeapp.sessions.pipelineLabel
-import no.pradhan.agentview.nativeapp.sessions.stateBadge
-import no.pradhan.agentview.nativeapp.sessions.stateDot
+
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -97,7 +86,7 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.well
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.buildSpecPrompt
-import no.pradhan.agentview.nativeapp.workspace.lineDiff
+import no.pradhan.agentview.nativeapp.ui.lineDiff
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.sketchTitle

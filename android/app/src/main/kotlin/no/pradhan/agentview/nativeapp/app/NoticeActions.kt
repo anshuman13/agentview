@@ -9,7 +9,7 @@ import no.pradhan.agentview.nativeapp.net.answerCmd
 import no.pradhan.agentview.nativeapp.net.interruptCmd
 import no.pradhan.agentview.nativeapp.net.permissionCmd
 import no.pradhan.agentview.nativeapp.net.promptCmd
-import no.pradhan.agentview.nativeapp.workspace.lineDiff
+import no.pradhan.agentview.nativeapp.ui.lineDiff
 
 object NoticeOp {
     const val ALLOW = "no.pradhan.agentview.native.ALLOW"

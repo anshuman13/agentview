@@ -8,8 +8,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.parseRunDiff
 import no.pradhan.agentview.nativeapp.sessions.AdvisorInfo
 import no.pradhan.agentview.nativeapp.sessions.AuditInfo
 import no.pradhan.agentview.nativeapp.sessions.BacklogItem
-import no.pradhan.agentview.nativeapp.sessions.SpecHomeItem
-import no.pradhan.agentview.nativeapp.sessions.parseBuild
+import no.pradhan.agentview.nativeapp.chat.SpecHomeItem
+import no.pradhan.agentview.nativeapp.chat.parseBuild
 import no.pradhan.agentview.nativeapp.workspace.DevPort
 import no.pradhan.agentview.nativeapp.workspace.DevScript
 import no.pradhan.agentview.nativeapp.workspace.OpenedPort

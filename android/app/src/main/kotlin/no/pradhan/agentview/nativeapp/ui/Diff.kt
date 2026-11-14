@@ -1,4 +1,4 @@
-package no.pradhan.agentview.nativeapp.workspace
+package no.pradhan.agentview.nativeapp.ui
 
 
 // A line of web/src/chat/Pending.tsx lineDiff: ' ' kept, '-' removed, '+' added.

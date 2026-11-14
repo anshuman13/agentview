@@ -87,7 +87,6 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.well
-import no.pradhan.agentview.nativeapp.workspace.buildPrompt
 import no.pradhan.agentview.nativeapp.ui.plural
 
 private class Choice(val value: String, val label: String, val detail: String = "")

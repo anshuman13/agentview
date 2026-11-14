@@ -56,10 +56,10 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.well
 import no.pradhan.agentview.nativeapp.workspace.CommentSheet
 import no.pradhan.agentview.nativeapp.workspace.DiffCodeLine
-import no.pradhan.agentview.nativeapp.workspace.DiffLine
+import no.pradhan.agentview.nativeapp.ui.DiffLine
 import no.pradhan.agentview.nativeapp.workspace.Lang
-import no.pradhan.agentview.nativeapp.workspace.MAX_DIFF_LINES
-import no.pradhan.agentview.nativeapp.workspace.lineDiff
+import no.pradhan.agentview.nativeapp.ui.MAX_DIFF_LINES
+import no.pradhan.agentview.nativeapp.ui.lineDiff
 
 @Composable
 fun PendingList(pending: List<Pending>, mode: String, hub: Hub) {

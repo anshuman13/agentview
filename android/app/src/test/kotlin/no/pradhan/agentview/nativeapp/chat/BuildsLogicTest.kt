@@ -1,4 +1,4 @@
-package no.pradhan.agentview.nativeapp.sessions
+package no.pradhan.agentview.nativeapp.chat
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

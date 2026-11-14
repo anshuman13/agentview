@@ -7,7 +7,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
-import no.pradhan.agentview.nativeapp.sessions.buildStageOf
+
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.specSlug
 import no.pradhan.agentview.nativeapp.ui.plural

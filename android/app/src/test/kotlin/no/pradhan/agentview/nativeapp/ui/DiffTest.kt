@@ -1,4 +1,4 @@
-package no.pradhan.agentview.nativeapp.workspace
+package no.pradhan.agentview.nativeapp.ui
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

@@ -1,5 +1,7 @@
-package no.pradhan.agentview.nativeapp.sessions
+package no.pradhan.agentview.nativeapp.chat
 
+import no.pradhan.agentview.nativeapp.sessions.items
+import no.pradhan.agentview.nativeapp.sessions.state
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.codex.autopilot.everyText
 import no.pradhan.agentview.nativeapp.net.protocolJson
@@ -224,3 +226,5 @@ fun withoutCriteria(markdown: String): String {
     }
     return kept.joinToString("\n").trim()
 }
+
+fun buildPrompt(brief: String) = "Run the agentview:build skill on the brief below (call the Skill tool with skill \"agentview:build\"). Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\n$brief\n</brief>"

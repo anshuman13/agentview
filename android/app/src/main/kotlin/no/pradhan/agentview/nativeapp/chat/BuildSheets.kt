@@ -35,25 +35,7 @@ import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.workspace.DeviceChips
 import no.pradhan.agentview.nativeapp.workspace.SketchPreview
 import no.pradhan.agentview.nativeapp.workspace.DiffFiles
-import no.pradhan.agentview.nativeapp.sessions.BuildCommit
-import no.pradhan.agentview.nativeapp.sessions.BuildDetail
-import no.pradhan.agentview.nativeapp.sessions.BuildEntry
-import no.pradhan.agentview.nativeapp.sessions.BuildReview
-import no.pradhan.agentview.nativeapp.sessions.CommitDiff
-import no.pradhan.agentview.nativeapp.sessions.FLOW_LABEL
-import no.pradhan.agentview.nativeapp.sessions.SpecCriterion
-import no.pradhan.agentview.nativeapp.sessions.byStart
-import no.pradhan.agentview.nativeapp.sessions.criterionBadge
-import no.pradhan.agentview.nativeapp.sessions.decisionTitle
-import no.pradhan.agentview.nativeapp.sessions.nextPhase
-import no.pradhan.agentview.nativeapp.sessions.phaseApproved
-import no.pradhan.agentview.nativeapp.sessions.phaseLabel
-import no.pradhan.agentview.nativeapp.sessions.reviewDecision
-import no.pradhan.agentview.nativeapp.sessions.stageBadge
-import no.pradhan.agentview.nativeapp.sessions.stageMeta
-import no.pradhan.agentview.nativeapp.sessions.stageTitle
-import no.pradhan.agentview.nativeapp.sessions.startPhase
-import no.pradhan.agentview.nativeapp.sessions.withoutCriteria
+
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
