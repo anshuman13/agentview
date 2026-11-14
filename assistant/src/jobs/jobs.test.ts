@@ -145,7 +145,7 @@ describe('runDue', () => {
       globalThis.fetch = (async (url: string, init: RequestInit) => (calls.push({ url, body: JSON.parse(String(init.body)) }), await new Promise((r) => setTimeout(r, 5)), answer())) as never;
       const pushes: string[] = [];
       await runDue(db, now, never, async (t: string) => (pushes.push(t), true), reply);
-      return { calls, pushes, run: db.prepare('SELECT status, output FROM runs').get() };
+      return { calls, pushes, run: db.prepare('SELECT status, output FROM runs WHERE deleted = 0').get() };
     };
     test('posts the job to the server and records the branch it started', async () => {
       const { calls, pushes, run } = await go(() => Response.json({ chatId: 'c1', branch: 'jobs/fix-tests-1105' }));
@@ -157,9 +157,9 @@ describe('runDue', () => {
       const { run } = await go(() => new Response('ok'));
       expect(run).toEqual({ status: 'ok', output: 'Started a chat in app' });
     });
-    test('an open last run is skipped without a push', async () => {
+    test('an open last run is skipped without a push or a run row', async () => {
       const { pushes, run } = await go(() => Response.json({ error: 'The last run is still open' }, { status: 409 }));
-      expect(run).toEqual({ status: 'ok', output: 'Skipped: the last run is still open' });
+      expect(run).toBeNull();
       expect(pushes).toEqual([]);
     });
     test('a server that is down or answers an error is a failed run with a push', async () => {

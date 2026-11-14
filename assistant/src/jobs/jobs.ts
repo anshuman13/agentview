@@ -101,7 +101,7 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
   return { result, added, notified, cost };
 }
 
-// A job with a repo starts a worktree chat on the AgentView server of this Mac, which does the work; returns the run's output.
+// A job with a repo starts a worktree chat on the AgentView server of this Mac, which does the work; returns the run's output, or null when its last run is still open.
 async function startCoding(job: Job, repo: string) {
   const res = await fetch(`${process.env.AGENTVIEW_URL ?? 'http://127.0.0.1:7777'}/api/jobs/start`, {
     method: 'POST',
@@ -109,7 +109,7 @@ async function startCoding(job: Job, repo: string) {
     body: JSON.stringify({ jobId: job.id, title: job.name ?? 'Job', repo, prompt: job.prompt }),
     signal: AbortSignal.timeout(2 * MIN),
   }).catch((err) => Promise.reject(new Error(`Could not start: ${errText(err)}`)));
-  if (res.status === 409) return 'Skipped: the last run is still open';
+  if (res.status === 409) return null;
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`Could not start: ${body?.error ?? res.status}`);
   return `Started ${body?.branch ?? 'a chat'} in ${path.basename(repo)}`;
@@ -159,9 +159,13 @@ async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof
   let output = '';
   let notified = false;
   let cost: number | null = null;
+  let skipped = false;
   try {
-    if (job.repo) output = await startCoding(job, job.repo);
-    else {
+    if (job.repo) {
+      const started = await startCoding(job, job.repo);
+      skipped = started == null;
+      output = started ?? 'Skipped: the last run is still open';
+    } else {
       // Two jobs on AgentView's one Chrome would fight over its tabs, so browser jobs take turns.
       const go = () => run(db, job, notify);
       const { result, added, ...r } = await (jobAllows(job.tools).browser ? serial('job-browser', go) : go());
@@ -174,7 +178,10 @@ async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof
     output = errText(err);
   }
   const done = Date.now();
-  const changes: Change[] = [{ table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output, cost } }];
+  // A skipped tick leaves no row, so it cannot push the run it waited on out of the kept history.
+  const changes: Change[] = [skipped
+    ? { table: 'runs', id, profile: job.profile, deleted: true, updated_at: done, fields: {} }
+    : { table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output, cost } }];
   // An edit made during the run (Off, a new schedule, Run now) set next_run_at itself, so it is kept. Its field time
   // comes from the client's clock, so only whether it changed is compared.
   const cur = db.prepare('SELECT schedule, enabled, field_times FROM jobs WHERE id = ? AND profile = ?').get(job.id, job.profile) as { schedule: string | null; enabled: number | null; field_times: string } | null;
