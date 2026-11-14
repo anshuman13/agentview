@@ -61,7 +61,15 @@ function setViewers(counts: Record<string, number>, lastId: string) {
   const last = live.get(lastId)?.chat;
   if (last) { hub.lastViewed = last; remember(last); }
   // A resumed chat starts its CLI once someone opens it, so the first prompt skips the cold start.
-  for (const { chat } of live.values()) if (viewers(chat)) chat.start();
+  for (const { chat } of live.values()) {
+    if (!viewers(chat)) continue;
+    // One chat that cannot start, such as an OpenRouter chat with no key, does not stop the others.
+    try {
+      chat.start();
+    } catch (err) {
+      chat.system(`Could not start: ${errText(err)}`, true);
+    }
+  }
   broadcastLive();
 }
 
