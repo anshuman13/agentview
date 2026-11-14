@@ -41,12 +41,15 @@ export function createRoutes(d: RouteDeps) {
       };
       const free = find(open, openPrefixes, method, url.pathname);
       if (free) return await run(free, ctx);
+      const api = url.pathname.startsWith('/api/');
+      const web = () => d.serveWeb(req, url).then((r) => r ?? json({ error: 'web client not built, run bun run dev or bun run build' }, 404));
+      // The web app loads while the agent host starts.
+      if (!api) return await web();
       const chat = d.chats().get(url.searchParams.get('chat') ?? '') ?? d.chats().get(d.lastViewed());
       if (!chat) return await json({ error: 'The agent host is starting' }, 503);
       const mine = find(chatRoutes, chatPrefixes, method, url.pathname);
       if (mine) return await run(mine, { ...ctx, chat });
-      if (url.pathname.startsWith('/api/')) return await json({ error: 'Not found' }, 404);
-      return (await d.serveWeb(req, url)) ?? (await json({ error: 'web client not built, run npm run dev or npm run build' }, 404));
+      return await json({ error: 'Not found' }, 404);
     } catch (err) {
       return json({ error: err instanceof Error ? err.message : String(err) }, 500);
     }

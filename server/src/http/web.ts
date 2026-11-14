@@ -21,18 +21,19 @@ const MIME: Record<string, string> = {
 };
 
 // Compressed copies of web/dist files, made once per file version.
-const packed = new Map<string, { mtime: number; br: Buffer; gzip: Buffer }>();
+const packed = new Map<string, { mtime: number; packing: Promise<{ br: Buffer; gzip: Buffer }> }>();
 const brotli = promisify(brotliCompress);
 export const gz = promisify(gzip);
 const COMPRESS = new Set(['.html', '.js', '.css', '.json', '.svg', '.webmanifest', '.ttf']);
 
 async function compressed(file: string, body: Buffer, mtime: number) {
   const hit = packed.get(file);
-  if (hit?.mtime === mtime) return hit;
-  const [br, gzipped] = await Promise.all([brotli(body, { params: { [zlib.BROTLI_PARAM_QUALITY]: 11 } }), gz(body, { level: 9 })]);
-  const entry = { mtime, br, gzip: gzipped };
-  packed.set(file, entry);
-  return entry;
+  if (hit?.mtime === mtime) return hit.packing;
+  // Requests that come while it compresses share the one compression.
+  const packing = Promise.all([brotli(body, { params: { [zlib.BROTLI_PARAM_QUALITY]: 11 } }), gz(body, { level: 9 })]).then(([br, gzip]) => ({ br, gzip }));
+  packed.set(file, { mtime, packing });
+  packing.catch(() => packed.get(file)?.packing === packing && packed.delete(file));
+  return packing;
 }
 
 const bytes = (b: Buffer) => new Uint8Array(b.buffer as ArrayBuffer, b.byteOffset, b.length);

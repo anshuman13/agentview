@@ -76,14 +76,16 @@ describe('routes', () => {
     expect([r.code, r.json]).toEqual([400, { error: 'Not a project folder' }]);
   });
 
-  it('answers 404 for an unknown /api path, falls to the web fallback otherwise, and 503 with no chat', async () => {
+  it('answers 404 for an unknown /api path, falls to the web fallback otherwise, and 503 for /api with no chat', async () => {
     const api = await call('GET', '/api/builds');
     expect([api.code, api.json, api.serveWeb.mock.calls.length]).toEqual([404, { error: 'Not found' }, 0]);
     const r = await call('GET', '/nope');
     expect(r.serveWeb).toHaveBeenCalled();
-    expect([r.code, r.json.error]).toEqual([404, 'web client not built, run npm run dev or npm run build']);
-    const none = await call('GET', '/nope', undefined, { chats: () => new Map() });
+    expect([r.code, r.json.error]).toEqual([404, 'web client not built, run bun run dev or bun run build']);
+    const none = await call('GET', '/api/git/status', undefined, { chats: () => new Map() });
     expect([none.code, none.json, none.serveWeb.mock.calls.length]).toEqual([503, { error: 'The agent host is starting' }, 0]);
+    const page = await call('GET', '/', undefined, { chats: () => new Map() });
+    expect(page.serveWeb).toHaveBeenCalled();
   });
 
   it('takes a command with no chat open, so a new chat can start', async () => {
