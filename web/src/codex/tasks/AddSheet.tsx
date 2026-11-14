@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useAssistant } from '../data';
+import { useAssistantStore } from '../data';
 import { parseWhen, stripWhen } from '../data/tasks/engine';
 import { captureTask } from './captureTask';
 import { cadenceLine, parseRepeat, withRule, type Cadence } from '../data/tasks/recur';
@@ -122,7 +122,7 @@ export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value
 
 // TickTick's quick add: a bottom sheet with title, description, date and list, and a send button.
 export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: number; onClose: () => void }) {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [pick, setPick] = useState<Pick | null>(null);

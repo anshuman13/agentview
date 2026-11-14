@@ -1,4 +1,4 @@
-import { useAssistant } from './data';
+import { useAssistantStore } from './data';
 import type { AssistantStore } from './data/store';
 import { plural } from '../ui/util';
 import { atTime, errorText, nextNine } from './data/tasks/engine';
@@ -79,7 +79,7 @@ export function bulkApply(store: BulkStore, rows: ItemRow[], kind: BulkKind, now
 }
 
 export function useActions() {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const change = (r: ItemRow, patch: Patch, text: string) => {
     const before = Object.fromEntries(Object.keys(patch).map((k) => [k, r[k as keyof ItemRow]])) as Patch;
     void store.update(r, patch);
