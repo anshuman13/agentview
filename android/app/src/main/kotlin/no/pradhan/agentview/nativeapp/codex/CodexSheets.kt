@@ -91,8 +91,8 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, onRaise: (String, String) -> Unit, onDismiss: () -> Unit) {
-    var title by remember(row.id) { mutableStateOf(row.title ?: "") }
-    var text by remember(row.id) { mutableStateOf(row.text ?: "") }
+    var title by remember(row.key) { mutableStateOf(row.title ?: "") }
+    var text by remember(row.key) { mutableStateOf(row.text ?: "") }
     var pickDue by remember { mutableStateOf(false) }
     var tag by remember { mutableStateOf("") }
     val latest by androidx.compose.runtime.rememberUpdatedState(row)
