@@ -15,7 +15,7 @@ import type { ChatRun } from '../../../shared/protocol';
 import { buildItemPrompt, buildSpecPrompt, sketchSpecPrompt } from '../../../shared/specTasks';
 import { span } from '../../../shared/util';
 import { buildsLine } from '../../../shared/goalText';
-import { OUTCOME_DOT } from '../chat/composer/composerLogic';
+import { OUTCOME_DOT } from './runLogic';
 import { holdBadge } from './buildsLogic';
 import { openRun } from './goalLogic';
 import { askAdvisor, go } from './advisorChat';

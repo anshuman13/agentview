@@ -2,7 +2,7 @@ import { setUi, useStore } from '../store';
 import { Icon } from '../../ui/Icon';
 import { CacheItem, McpItem, RunsItem, UsageItem } from './StatusItems';
 import { canNotify, toggleNotify, useNotify } from '../runtime/notify';
-import { chatState } from '../../chat/composer/composerLogic';
+import { chatState } from '../../sessions/runLogic';
 import { THEME_NAMES, type Theme } from '../theme';
 
 const ICON = { running: 'loading', needs: 'bell', failed: 'error', warn: 'debug-pause', idle: 'check' } as const;

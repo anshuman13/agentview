@@ -4,7 +4,7 @@ import { clock } from '../../../../shared/util';
 import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { TriesBoard } from '../../sessions/TriesBoard';
-import { openGoal, runControl } from '../../sessions/goalLogic';
+import { openGoal, runControl, showTurn } from '../../sessions/goalLogic';
 import { ReviewCard } from '../../sessions/ReviewCard';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
@@ -19,7 +19,7 @@ import type { RunOp } from '../../../../shared/protocol';
 import { useCardOpen } from './useCardOpen';
 import { useChatRun } from '../../sessions/useChatRun';
 import { RoundRow } from '../../sessions/RoundRow';
-import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine, showTurn } from '../composer/composerLogic';
+import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine } from '../../sessions/runLogic';
 
 export function LoopCard() {
   const chat = useStore((s) => s.session.id);

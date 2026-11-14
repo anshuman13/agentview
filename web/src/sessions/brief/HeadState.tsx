@@ -3,7 +3,7 @@ import { Menu } from '../../ui/Menu';
 import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
-import { chatState, loopLabel } from '../../chat/composer/composerLogic';
+import { chatState, loopLabel } from '../runLogic';
 import type { LiveChat } from '../../../../shared/protocol';
 import type { ToolUse } from '../../chat/transcript/steps';
 import { time } from './time';

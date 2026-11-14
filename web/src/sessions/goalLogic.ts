@@ -5,7 +5,7 @@ import type { ChatRun, RunOp } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
 import { buildsLine, goalEnd } from '../../../shared/goalText';
 import { ADVISOR_LOOP_EVERY } from '../../../shared/advisors';
-import { showTurn, stoppedText } from '../chat/composer/composerLogic';
+import { stoppedText } from './runLogic';
 import { showSnack } from '../codex/view';
 
 const HOUR = 3_600_000;
@@ -54,6 +54,13 @@ export function usageLine(run: ChatRun) {
   const builds = buildsLine(run);
   const usage = parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : builds ? '' : 'No cap';
   return [usage, builds].filter(Boolean).join(' · ');
+}
+
+// The prompt of a round is in the transcript; it may take a moment to show after the chat opens.
+export function showTurn(id: string, tries = 20) {
+  const el = document.getElementById(`turn-${id}`);
+  if (el) el.scrollIntoView({ block: 'center' });
+  else if (tries) setTimeout(() => showTurn(id, tries - 1), 100);
 }
 
 export function openChat(ids: { chatId?: string | null; sessionId?: string | null }, report?: string) {

@@ -3,7 +3,7 @@ import { money } from '../ui/util';
 import { billing } from '../../../shared/providers';
 import type { Provider } from '../../../shared/protocol';
 import { roundGroupText, type mergeQuiet } from '../../../shared/goalText';
-import { OUTCOME_DOT } from '../chat/composer/composerLogic';
+import { OUTCOME_DOT } from './runLogic';
 
 type Group = ReturnType<typeof mergeQuiet>[number];
 

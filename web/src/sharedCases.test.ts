@@ -24,7 +24,8 @@ import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from
 import { mergeTail } from './app/runtime/pageEvents';
 import { countChat } from './app/store/counts';
 import { can } from './chat/capabilitiesLogic';
-import { chatState, handoffText, runLine, stoppedText } from './chat/composer/composerLogic';
+import { handoffText } from './chat/composer/composerLogic';
+import { chatState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { needsYou } from './codex/summary/needsYou';

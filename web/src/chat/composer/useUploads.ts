@@ -1,7 +1,8 @@
 import { useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { notice } from '../../app/store';
 import { errText } from '../../../../shared/util';
-import { append, uploadPaste } from './composerLogic';
+import { append } from './composerLogic';
+import { uploadPaste } from '../chatApi';
 
 export function useUploads(setText: Dispatch<SetStateAction<string>>, ta: RefObject<HTMLTextAreaElement | null>) {
   const [uploading, setUploading] = useState(0);

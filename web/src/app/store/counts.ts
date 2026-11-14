@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { appCounts, type CountChat } from '../../../../shared/counts';
 import type { LiveChat } from '../../../../shared/protocol';
-import { chatState as headerState } from '../../chat/composer/composerLogic';
+import { chatState as headerState } from '../../sessions/runLogic';
 import { useMcpHidden } from '../../ops/mcpShown';
 import { chatState as sessionState } from '../../sessions/folders';
 import { createStore } from '../../ui/createStore';
