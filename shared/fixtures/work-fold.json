@@ -1,0 +1,122 @@
+[
+  {
+    "name": "steps and earlier text fold above the last reply",
+    "events": [
+      {
+        "id": "u1",
+        "kind": "user",
+        "text": "go",
+        "at": 1000
+      },
+      {
+        "id": "a1",
+        "kind": "assistant",
+        "text": "looking",
+        "streaming": false,
+        "at": 2000
+      },
+      {
+        "id": "t1",
+        "kind": "tool_use",
+        "name": "Bash",
+        "input": {
+          "command": "ls"
+        },
+        "summary": "ls",
+        "at": 3000
+      },
+      {
+        "id": "r1",
+        "kind": "tool_result",
+        "toolUseId": "t1",
+        "text": "ok",
+        "isError": false,
+        "at": 4000
+      },
+      {
+        "id": "a2",
+        "kind": "assistant",
+        "text": "done",
+        "streaming": false,
+        "at": 5000
+      },
+      {
+        "id": "d1",
+        "kind": "result",
+        "text": "",
+        "costUsd": 0.4,
+        "isError": false,
+        "at": 6000
+      }
+    ],
+    "rows": [
+      "u1",
+      "work:u1",
+      "a2"
+    ],
+    "titles": [
+      {
+        "text": "1 tool",
+        "failed": "",
+        "detail": "5s"
+      }
+    ],
+    "billing": "usd"
+  },
+  {
+    "name": "a failed tool is counted apart and a turn with nothing hidden has no fold",
+    "events": [
+      {
+        "id": "u1",
+        "kind": "user",
+        "text": "hi",
+        "at": 1000
+      },
+      {
+        "id": "a1",
+        "kind": "assistant",
+        "text": "hello",
+        "streaming": false,
+        "at": 2000
+      },
+      {
+        "id": "u2",
+        "kind": "user",
+        "text": "go",
+        "at": 3000
+      },
+      {
+        "id": "t1",
+        "kind": "tool_use",
+        "name": "Bash",
+        "input": {
+          "command": "make"
+        },
+        "summary": "make",
+        "at": 4000
+      },
+      {
+        "id": "r1",
+        "kind": "tool_result",
+        "toolUseId": "t1",
+        "text": "boom",
+        "isError": true,
+        "at": 5000
+      }
+    ],
+    "rows": [
+      "u1",
+      "a1",
+      "u2",
+      "work:u2"
+    ],
+    "titles": [
+      {
+        "text": "1 tool",
+        "failed": "1 failed",
+        "detail": ""
+      }
+    ],
+    "billing": "plan"
+  }
+]

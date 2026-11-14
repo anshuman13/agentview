@@ -22,6 +22,8 @@ import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, spe
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail } from './app/runtime/pageEvents';
+import { buildTranscript } from './chat/transcript/steps';
+import { foldTurns, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/store/counts';
 import { can } from './chat/capabilitiesLogic';
 import { handoffText } from './chat/composer/composerLogic';
@@ -65,6 +67,15 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; tool: string; input: Record<string, unknown>; expected: { add: number; del: number } | null }>('edit-count')) {
     it(`editCount: ${c.name}`, () => expect(editCount(c.tool, c.input)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; events: ChatEvent[]; billing: Billing; rows: string[]; titles: { text: string; failed: string; detail: string }[] }>('work-fold')) {
+    it(`foldTurns: ${c.name}`, () => {
+      const rows = foldTurns(buildTranscript(c.events), c.events);
+      expect(rows.map((r) => (r.kind === 'fold' ? `work:${r.id}` : r.it.id))).toEqual(c.rows);
+      // The phone always shows the narrow title.
+      expect(rows.flatMap((r) => (r.kind === 'fold' ? [workTitle(r.work, false, c.billing, true)] : []))).toEqual(c.titles);
+    });
   }
 
   for (const c of cases<{ name: string; rows: ExploreRow[]; runs: { start: number; end: number }[]; labels: string[] }>('explore-runs')) {

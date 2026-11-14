@@ -35,6 +35,11 @@ import no.pradhan.agentview.nativeapp.chat.checklistProgress
 import no.pradhan.agentview.nativeapp.chat.editCount
 import no.pradhan.agentview.nativeapp.chat.exploreLabelOf
 import no.pradhan.agentview.nativeapp.chat.exploreRunsOf
+import no.pradhan.agentview.nativeapp.chat.FoldRow
+import no.pradhan.agentview.nativeapp.chat.buildTranscript
+import no.pradhan.agentview.nativeapp.chat.foldTurns
+import no.pradhan.agentview.nativeapp.chat.WorkTitle
+import no.pradhan.agentview.nativeapp.chat.workTitle
 import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.latestChecklist
 import no.pradhan.agentview.nativeapp.chat.reviewLabel
@@ -166,6 +171,16 @@ class SharedCasesTest {
             val runs = exploreRunsOf(rows.map { r -> r["name"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content to r.getValue("ok").jsonPrimitive.boolean })
             assertEquals(c.str("name"), c.getValue("runs").jsonArray.map { it.jsonObject.let { r -> r.getValue("start").jsonPrimitive.int until r.getValue("end").jsonPrimitive.int } }, runs)
             assertEquals(c.str("name"), c.getValue("labels").jsonArray.map { it.jsonPrimitive.content }, runs.map { r -> exploreLabelOf(rows.slice(r).map { it.str("name") }) })
+        }
+    }
+
+    @Test fun workFold() {
+        for (c in cases("work-fold")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            val rows = foldTurns(buildTranscript(events), events)
+            assertEquals(c.str("name"), c.getValue("rows").jsonArray.map { it.jsonPrimitive.content }, rows.map { it.key })
+            val titles = rows.filterIsInstance<FoldRow.Fold>().map { workTitle(it.work, false, c.str("billing")) }
+            assertEquals(c.str("name"), c.getValue("titles").jsonArray.map { it.jsonObject.let { t -> WorkTitle(t.str("text"), t.str("failed"), t.str("detail")) } }, titles)
         }
     }
 
