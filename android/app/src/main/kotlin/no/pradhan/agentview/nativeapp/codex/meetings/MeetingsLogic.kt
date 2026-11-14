@@ -251,3 +251,8 @@ fun newNotes(profile: String, now: Long, id: String = java.util.UUID.randomUUID(
     val blank = Row("meetings", id, profile, updatedAt = now, f = SYNCED_FIELDS.getValue("meetings").associateWith { kotlinx.serialization.json.JsonNull })
     return edited(blank, mapOf("title" to "Notes", "starts_at" to now, "notes" to ""), now)
 }
+
+private val SAFE_LINK = Regex("^(https?:|mailto:)", RegexOption.IGNORE_CASE)
+
+// A link that is safe to open: web or mail, never javascript: or a file.
+fun safeHref(url: String?) = url?.takeIf { SAFE_LINK.containsMatchIn(it) }

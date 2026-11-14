@@ -52,8 +52,6 @@ import no.pradhan.agentview.nativeapp.ui.av
 
 private const val PAGE_SIZE = 30
 
-fun safeHref(url: String?) = url?.takeIf { Regex("^(https?:|mailto:)", RegexOption.IGNORE_CASE).containsMatchIn(it) }
-
 @Composable
 private fun MeetingListRow(m: Row, now: Long, showProfile: Boolean, noDay: Boolean = false, onClick: () -> Unit) {
     val live = isLive(m, now)
