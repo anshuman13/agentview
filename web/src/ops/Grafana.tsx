@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { GrafanaDashboards, GrafanaLogs, GrafanaPanel, GrafanaPanels, GrafanaPatterns, ObserveInfo } from '../../../shared/observe';
-import { askChat, useSlot } from '../ui/util';
+import { useSlot } from '../ui/util';
+import { askChat } from '../chat/chatActions';
 import { useCan } from '../chat/useCan';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';

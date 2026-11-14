@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
-import { send } from '../app/store';
 import type { Billing } from '../../../shared/providers';
 import { narrow } from '../app/shell/useNarrow';
 
@@ -28,6 +27,8 @@ export const safeHref = (url: string | null | undefined) => (url && /^(https?:|m
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 export const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
 
+export const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
+
 export const command = (id: string) => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
 
 // Brings the chat on screen: the Chat tab on a phone, the chat column on the desktop when it is hidden.
@@ -43,12 +44,6 @@ export function useSlot(id: string) {
   return el;
 }
 
-// A pane sends a prompt and shows the chat, so the reply is seen.
-export function askChat(text: string) {
-  showChat();
-  send({ type: 'prompt', text });
-}
-
 // Relative time: now, 5m, 3h, 2d, 4w; a suffix such as ' ago' where a sentence needs one.
 export function ago(t: number | string, suffix = '') {
   const at = typeof t === 'number' ? t : Date.parse(t);
@@ -58,8 +53,6 @@ export function ago(t: number | string, suffix = '') {
   const text = m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : m < 10080 ? `${Math.round(m / 1440)}d` : `${Math.round(m / 10080)}w`;
   return text + suffix;
 }
-
-export { wsUrl } from '../app/api';
 
 export const stored = <T,>(key: string, fallback: T): T => {
   try { return JSON.parse(localStorage.getItem(key) ?? '') ?? fallback; } catch { return fallback; }

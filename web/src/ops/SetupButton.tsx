@@ -1,6 +1,6 @@
 import { useStore } from '../app/store';
 import { Button } from '../ui/Button';
-import { askChat } from '../ui/util';
+import { askChat } from '../chat/chatActions';
 import { providerLabel } from '../../../shared/providers';
 import { setupPrompt, type SetupKind } from '../../../shared/setupPrompt';
 

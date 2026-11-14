@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
+import { cx } from './util';
 
-const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
 
 export function Panel({ title, action, padding = 'md', className, children }: {
   title?: ReactNode;

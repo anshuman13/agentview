@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { wsUrl } from '../ui/util';
+import { wsUrl } from '../app/api';
 
 export type Tab = { id: string; title: string; url: string };
 export type ChromeState = { state: 'off' | 'connecting' | 'on'; reason: string; retry?: boolean; own?: boolean };

@@ -1,5 +1,5 @@
 import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../app/store';
-import { copyText } from '../ui/util';
+import { copyText, showChat } from '../ui/util';
 import { chatMarkdown, handoffText, replyNote } from './composer/composerLogic';
 import { assistantStore } from '../codex/data';
 
@@ -52,4 +52,10 @@ export function copyChatMarkdown() {
 
 export function copyResumeCommand(command: string) {
   copyText(command).then(() => notice('Copied. Stop this chat before resuming it in a terminal'), () => notice('Could not copy'));
+}
+
+// A pane sends a prompt and shows the chat, so the reply is seen.
+export function askChat(text: string) {
+  showChat();
+  send({ type: 'prompt', text });
 }

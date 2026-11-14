@@ -1,5 +1,6 @@
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { Icon } from './Icon';
+import { cx } from './util';
 
 type Native = Omit<ComponentPropsWithRef<'button'>, 'children'>;
 type Size = 'sm' | 'md';
@@ -9,7 +10,6 @@ type Tone = 'work' | 'personal' | 'accent';
 
 const variants: Record<LegacyVariant, Variant> = { primary: 'filled', secondary: 'gray', quiet: 'plain' };
 
-const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
 
 export function Button({ variant = 'gray', size = 'md', icon, className, type = 'button', children, ...rest }: Native & {
   variant?: Variant | LegacyVariant;

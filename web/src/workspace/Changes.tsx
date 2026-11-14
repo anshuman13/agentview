@@ -8,7 +8,8 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
 import { refresh, useGit } from './gitStatus';
 import { Findings, REVIEW_LOCAL } from '../ops/Findings';
-import { askChat, clickOnKey, usePoll } from '../ui/util';
+import { clickOnKey, usePoll } from '../ui/util';
+import { askChat } from '../chat/chatActions';
 import { providerLabel } from '../../../shared/providers';
 import '../styles/features/changes.css';
 

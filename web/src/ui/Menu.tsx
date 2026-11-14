@@ -1,8 +1,8 @@
 import { Children, useEffect, useRef, useSyncExternalStore, type ComponentPropsWithoutRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
+import { cx } from './util';
 
-const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
 const FOCUSABLE = 'button:not(:disabled), a[href], select:not(:disabled)';
 export const PHONE ='(max-width: 480px)';
 

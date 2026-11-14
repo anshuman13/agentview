@@ -3,7 +3,7 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { touch } from '../app/touch/touch';
-import { wsUrl } from '../ui/util';
+import { wsUrl } from '../app/api';
 import { backoff, closeKind } from './termReconnect';
 
 // ANSI colours come from the theme tokens, so the terminal matches the app.

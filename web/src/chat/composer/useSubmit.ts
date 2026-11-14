@@ -1,6 +1,7 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { api, notice, prompt, queueNext, steer, useStore } from '../../app/store';
-import { save, wsUrl } from '../../ui/util';
+import { save } from '../../ui/util';
+import { wsUrl } from '../../app/api';
 import { buildPrompt } from '../../../../shared/specTasks';
 import { remember, STORED_KEY, terminalId, withUses, type Use } from './composerLogic';
 

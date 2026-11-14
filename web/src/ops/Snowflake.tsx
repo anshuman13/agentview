@@ -3,7 +3,7 @@ import type { ObserveInfo, SnowflakeAuth, SnowflakeInfo, SnowflakeObjects, Snowf
 import { useStore } from '../app/store';
 import { providerLabel } from '../../../shared/providers';
 import { useCan } from '../chat/useCan';
-import { askChat } from '../ui/util';
+import { askChat } from '../chat/chatActions';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { errText } from '../../../shared/util';

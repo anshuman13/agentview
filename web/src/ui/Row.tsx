@@ -2,8 +2,8 @@ import { useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 
 import { IconButton } from './Button';
 import { Menu } from './Menu';
 import { useLongPress } from './longPress';
+import { cx } from './util';
 
-const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
 
 export function Row({ leading, title, meta, state, trailing, menu, lines = 1, href, plain, action, className, onLongPress, ...rest }: Omit<ComponentPropsWithoutRef<'button'>, 'title' | 'children'> & {
   leading?: ReactNode;
