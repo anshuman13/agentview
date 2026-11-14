@@ -16,6 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
+import no.pradhan.agentview.nativeapp.ui.rememberSettled
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -166,7 +167,8 @@ internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Tas
 @Composable
 internal fun SearchPage(st: CodexState, profile: String?, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
-    val hits = remember(st.items, st.meetings, profile, query) { searchAll(st.items, st.meetings, query, profile) }
+    val settled = rememberSettled(query)
+    val hits = remember(st.items, st.meetings, profile, settled) { searchAll(st.items, st.meetings, settled, profile) }
     LazyColumn(Modifier.fillMaxSize()) {
         item { SearchField(query, { query = it }, "Search tasks and meetings") }
         fun section(label: String, list: List<Hit>, open: ((Row) -> Unit)?) {

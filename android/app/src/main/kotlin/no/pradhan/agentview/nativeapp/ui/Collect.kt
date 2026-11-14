@@ -42,6 +42,14 @@ fun rememberNow(active: Boolean): State<Long> {
     return now
 }
 
+// `value` once it has stayed the same for `ms`, so typing does not redo work on every key.
+@Composable
+fun <T> rememberSettled(value: T, ms: Long = 200): T {
+    var settled by remember { mutableStateOf(value) }
+    LaunchedEffect(value) { delay(ms); settled = value }
+    return settled
+}
+
 // The state of one page request: the last data, the error of the last try, and whether one is running.
 data class Loaded<T>(val data: T? = null, val error: String = "", val busy: Boolean = true)
 
