@@ -336,6 +336,18 @@ describe('runs', () => {
     expect(run.rounds.map((r) => r.outcome)).toEqual(['progress', 'progress', 'done']);
     expect(run).toMatchObject({ state: 'done', why: 'the tester approved after 1 round' });
   });
+
+  it('Stop on the loop card interrupts the cycle step and ends the run', async () => {
+    const { s } = fakeSession();
+    Object.assign(s.driver, { q: { interrupt: vi.fn(async () => {}), setModel: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
+    s.setLoop(true, 2);
+    await s.prompt('add the thing');
+    const run = s.runs.list()[0];
+    await waitFor(() => expect(s.state.session.running).toBe(true));
+    s.runControl(run.id, 'stop');
+    await waitFor(() => expect(s.runs.get(run.id)).toMatchObject({ state: 'done', why: 'you stopped it' }));
+    expect(s.state.session).toMatchObject({ running: false, loop: { on: false } });
+  });
 });
 
 // A seeded random walk over the send paths. Run with FUZZ_SEEDS=500 to hammer it.

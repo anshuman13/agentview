@@ -13,15 +13,23 @@ export class BuildCycle {
   private planAnswered = false;
   private prevModel: string | null = null;
   private prevEffort: Effort | null = null;
+  private prevMode: string | null = null;
   private replyApproval: AbortController | null = null;
 
   constructor(private s: AgentSession) {}
 
   set(on: boolean, max?: number) {
-    if (!on) this.s.runs.end(this.run, 'you stopped it');
+    if (!on && this.run) return this.stop();
     const next = withLoop(this.s.state.session.loop, on, max);
     this.s.setSession({ loop: next });
     this.s.system(on ? `Build cycle on: plan, build and test, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Build cycle off');
+  }
+
+  // Stop from the loop card or the toggle: a running step is interrupted, which ends the cycle like Stop does.
+  private stop() {
+    if (this.s.state.session.running) return void this.s.interrupt();
+    this.s.setSession({ loop: { ...this.s.state.session.loop, phase: null } });
+    this.end('Build cycle off', 'you stopped it');
   }
 
   restore(loop: LoopState) {
@@ -35,6 +43,7 @@ export class BuildCycle {
     this.s.pushEvent({ id, kind: 'user', text: task, at: Date.now() });
     this.prevModel = state.session.model;
     this.prevEffort = state.session.effort;
+    this.prevMode = state.session.permissionMode;
     this.planDenied = false;
     this.planAnswered = false;
     this.s.setSession({ loop: { ...state.session.loop, round: 1, phase: 'plan' } });
@@ -107,13 +116,15 @@ export class BuildCycle {
     this.run = undefined;
     this.s.setSession({ loop: { ...this.s.state.session.loop, on: false } });
     if (note) this.s.system(note);
-    const { prevModel: model, prevEffort: effort } = this;
+    const { prevModel: model, prevEffort: effort, prevMode: mode } = this;
     this.prevModel = null;
     this.prevEffort = null;
+    this.prevMode = null;
     const { settings, state } = this.s;
     const back = model && model !== state.session.model ? settings.setModel(model) : Promise.resolve();
     back
       .then(() => (effort && effort !== state.session.effort ? settings.setEffort(effort) : undefined))
+      .then(() => (mode && mode !== state.session.permissionMode ? settings.setPermissionMode(mode) : undefined))
       .catch((err) => this.s.system(`Could not switch back after the build cycle: ${errText(err)}`));
   }
 
