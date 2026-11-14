@@ -59,8 +59,6 @@ import no.pradhan.agentview.nativeapp.sessions.BuildEntry
 import no.pradhan.agentview.nativeapp.sessions.SpecHomeItem
 import no.pradhan.agentview.nativeapp.sessions.specHomeOrder
 import no.pradhan.agentview.nativeapp.sessions.specRowParts
-import no.pradhan.agentview.nativeapp.sessions.NeedsYouItem
-import no.pradhan.agentview.nativeapp.sessions.advisorNeedsYou
 import no.pradhan.agentview.nativeapp.sessions.BacklogItem
 import no.pradhan.agentview.nativeapp.sessions.advisorBoard
 import no.pradhan.agentview.nativeapp.sessions.specItemPrompt
@@ -261,18 +259,6 @@ class SharedCasesTest {
         for (c in cases("audit-count")) {
             val findings = c.getValue("statuses").jsonArray.mapIndexed { i, s -> AuditFinding(i + 1, "", "", "low", "", status = s.jsonPrimitive.content) }
             assertEquals(c.str("name"), c.str("expected"), auditCountLine(findings))
-        }
-    }
-
-    @Test fun advisorNeedsYou() {
-        for (c in cases("needs-you")) {
-            val specs = c.getValue("specs").jsonArray.map {
-                val o = it.jsonObject
-                SpecHomeItem(o.str("slug"), pipeline = o.str("pipeline"), state = o.str("state"), updatedAt = o.getValue("updatedAt").jsonPrimitive.long, hold = o.getValue("hold").jsonPrimitive.boolean, waiting = o.getValue("waiting").jsonPrimitive.boolean, built = o.getValue("built").jsonPrimitive.boolean)
-            }
-            val runs = c.getValue("runs").jsonArray.map { JsonObject(mapOf("id" to toJson("r")) + it.jsonObject).decode<ChatRun>() }
-            val actual = advisorNeedsYou(specs, runs, c.str("root")).map { if (it is NeedsYouItem.Loop) "loop" else "spec:${(it as NeedsYouItem.Spec).spec.slug}" }
-            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, actual)
         }
     }
 

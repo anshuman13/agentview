@@ -167,14 +167,3 @@ export const advisorBoard = (backlog: BacklogItem[], specs: SpecHomeItem[], loop
   const defaultStage = BOARD_STAGES.find((st) => stages[st].some((c) => c.needsYou) || (st === 'building' && loopNeedsYou)) ?? BOARD_STAGES.find((st) => stages[st].length) ?? 'ideas';
   return { stages, defaultStage };
 };
-
-export type NeedsYouItem = { kind: 'spec'; spec: SpecHomeItem } | { kind: 'loop'; run: ChatRun };
-
-// What waits on the user on the Advisors page: the project's Advisor loop when it asks, then the specs awaiting approval or on hold.
-export const advisorNeedsYou = (specs: SpecHomeItem[], runs: ChatRun[], root: string): NeedsYouItem[] => {
-  const loop = advisorLoopOf(runs, root);
-  return [
-    ...(loop && runNeedsYou(loop) ? [{ kind: 'loop' as const, run: loop }] : []),
-    ...specHomeOrder(specs).filter((i) => i.waiting || i.hold).map((spec) => ({ kind: 'spec' as const, spec })),
-  ];
-};

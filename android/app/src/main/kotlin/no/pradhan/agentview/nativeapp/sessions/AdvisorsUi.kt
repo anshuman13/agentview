@@ -1,6 +1,9 @@
 package no.pradhan.agentview.nativeapp.sessions
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -41,6 +44,7 @@ import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.RowLabel
 import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.EmptyState
@@ -107,16 +111,6 @@ internal fun advisorLoopLine(run: ChatRun): String {
 internal fun advisorLoopBuilds(run: ChatRun): String =
     run.maxBuilds?.takeIf { it > 0 }?.let { "Builds ${run.builds ?: 0} of $it" } ?: ""
 
-// What waits on you for a project: web advisorNeedsYou in shared/advisors.ts.
-internal sealed interface NeedsYouItem {
-    data class Spec(val spec: SpecHomeItem) : NeedsYouItem
-    data class Loop(val run: ChatRun) : NeedsYouItem
-}
-
-internal fun advisorNeedsYou(specs: List<SpecHomeItem>, runs: List<ChatRun>, root: String): List<NeedsYouItem> =
-    listOfNotNull(advisorLoopOf(runs, root)?.takeIf { runNeedsYou(it) }?.let { NeedsYouItem.Loop(it) }) +
-        specHomeOrder(specs).filter { it.waiting || it.hold }.map { NeedsYouItem.Spec(it) }
-
 // One card of the Advisors board: web BoardCard in shared/advisors.ts. action is spec-it, approve, open-chat, sketch, build or null.
 internal data class BoardCard(val slug: String, val action: String?, val needsYou: Boolean, val item: BacklogItem?, val spec: SpecHomeItem?)
 
@@ -164,41 +158,74 @@ internal fun advisorBoard(backlog: List<BacklogItem>, specs: List<SpecHomeItem>,
     return AdvisorBoard(stages, defaultStage)
 }
 
-// The Advisor loop row of Backlog and Needs you: its last round, a tap opens its chat.
+private val STAGE_LABEL = mapOf("ideas" to "Ideas", "specced" to "Specced", "building" to "Building", "done" to "Done")
+private val ACTION_LABEL = mapOf("spec-it" to "Spec it", "approve" to "Approve", "open-chat" to "Open chat", "sketch" to "Sketch", "build" to "Build")
+
+// The Advisor loop card, first in Building: its last round and Open chat; with no loop, Start sends its goal to the PM chat, disabled for 10 s.
 @Composable
-private fun AdvisorLoopRow(hub: Hub, loop: ChatRun, go: (suspend () -> Boolean) -> Unit) {
+private fun LoopCard(hub: Hub, project: String, loop: ChatRun?, starting: Boolean, onStart: () -> Unit, go: (suspend () -> Boolean) -> Unit) {
+    if (loop == null) {
+        ListRow(
+            "Advisor loop", "Not running · every ${everyText(ADVISOR_LOOP_EVERY)} · up to $ADVISOR_LOOP_BUILDS builds",
+            state = if (hub.readOnly) null else ({ Button("Start", onStart, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = !starting) }),
+            stateSlot = !hub.readOnly, lines = 1, metaLines = 1,
+        )
+        return
+    }
     val last = loop.rounds.lastOrNull()
     val builds = advisorLoopBuilds(loop)
     ListRow(
         "Advisor loop", advisorLoopLine(loop),
         leading = last?.let { { StatusDot(outcomeDot(it.outcome)) } },
+        state = if (runNeedsYou(loop)) ({ Badge(HOLD_BADGE.first, HOLD_BADGE.second) }) else null,
         trailing = if (builds.isEmpty()) null else ({ RowLabel(builds) }),
+        below = if (hub.readOnly) null else ({ Button("Open chat", { go { hub.openRun(loop, last?.report) } }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) }),
         lines = 1, metaLines = 1,
-        onClick = { go { hub.openRun(loop, last?.report) } },
     )
 }
 
-// A spec row of Specs and Needs you: a tap opens the build chat with its Spec sheet when that chat is live.
+// A backlog line or spec: its action opens the build chat (with its Spec sheet for Approve when that chat is live), More holds the other next steps and the move.
 @Composable
-private fun SpecRow(hub: Hub, i: SpecHomeItem, project: String, live: Boolean, onOpen: () -> Unit, go: (suspend () -> Boolean) -> Unit) {
+private fun BoardCardRow(hub: Hub, card: BoardCard, stage: String, project: String, live: Boolean, openSlugs: List<String>, move: (String, String) -> Unit, onOpen: () -> Unit, scope: CoroutineScope, go: (suspend () -> Boolean) -> Unit) {
+    val spec = card.spec
+    val item = card.item
+    fun newChat(text: String) = hub.newChat(project, text = text, onOpened = onOpen)
+    val sketch = { newChat(sketchSpecPrompt(".claude/specs/${card.slug}.md")) }
+    val build = { newChat(if (spec != null || item!!.spec) buildSpecPrompt(".claude/specs/${card.slug}.md") else buildItemPrompt(item!!.title, item.why, item.slug)) }
+    fun openChat(sheet: Boolean) {
+        if (live) { hub.open(spec!!.chat!!); if (sheet) hub.showSpec(card.slug); onOpen() } else go { hub.openSaved(spec!!.session!!) }
+    }
+    val run = when (card.action) {
+        "spec-it" -> ({ scope.askAdvisor(hub, "pm", specItemPrompt(project, item!!), onOpen) })
+        "approve" -> ({ openChat(true) })
+        "open-chat" -> ({ openChat(false) })
+        "sketch" -> sketch
+        else -> build
+    }
+    val at = if (item != null && item.status != "done") openSlugs.indexOf(card.slug) else -1
+    val showBuild = if (stage == "ideas") item != null && (item.status == "proposed" || item.status == "specced") else stage == "specced" && card.action != "build"
+    val showSketch = stage == "specced" && spec != null && !spec.sketched && card.action != "sketch"
     val badge = when {
-        i.waiting || i.hold || i.state == "waiting" -> HOLD_BADGE
-        i.state == "running" -> "Running" to BadgeTone.Running
-        i.state == "failed" -> "Failed" to BadgeTone.Failed
+        spec == null -> null
+        spec.waiting || spec.hold || spec.state == "waiting" -> HOLD_BADGE
+        spec.state == "running" -> "Running" to BadgeTone.Running
+        spec.state == "failed" -> "Failed" to BadgeTone.Failed
         else -> null
     }
-    val parts = specRowParts(i) { since(it) }
+    val parts = spec?.let { specRowParts(it) { t -> since(t) } }
     ListRow(
-        i.title, parts.meta,
+        spec?.title?.ifEmpty { null } ?: item!!.title, parts?.meta ?: item!!.why,
         lines = 1, metaLines = 1,
         state = badge?.let { (text, tone) -> { Badge(text, tone) } },
-        trailing = if (parts.age.isEmpty()) null else ({ RowLabel(parts.age) }),
-        onClick = if (!live && i.session == null) null else ({
-            if (live) { hub.open(i.chat!!); hub.showSpec(i.slug); onOpen() } else go { hub.openSaved(i.session!!) }
-        }),
-        menu = if (i.built || hub.readOnly) null else ({ dismiss ->
-            if (!i.sketched) MenuItem("Sketch", "paintcan", { dismiss(); hub.newChat(project, text = sketchSpecPrompt(".claude/specs/${i.slug}.md"), onOpened = onOpen) })
-            MenuItem("Build", "play", { dismiss(); hub.newChat(project, text = buildSpecPrompt(".claude/specs/${i.slug}.md"), onOpened = onOpen) })
+        trailing = if (parts == null || parts.age.isEmpty()) null else ({ RowLabel(parts.age) }),
+        below = if (card.action == null || hub.readOnly) null else ({ Button(ACTION_LABEL.getValue(card.action), run, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) }),
+        menu = if (hub.readOnly || !(showBuild || showSketch || at >= 0)) null else ({ dismiss ->
+            if (showSketch) MenuItem("Sketch", "paintcan", { dismiss(); sketch() })
+            if (showBuild) MenuItem("Build", "play", { dismiss(); build() })
+            if (at >= 0) {
+                MenuItem("Move up", "arrow-up", { dismiss(); move(card.slug, "up") }, enabled = at > 0)
+                MenuItem("Move down", "arrow-down", { dismiss(); move(card.slug, "down") }, enabled = at < openSlugs.size - 1)
+            }
         }),
     )
 }
@@ -234,12 +261,12 @@ private val FACT = Regex("""^\s*[-*] """)
 
 fun memoryFacts(memory: String) = memory.lines().count { FACT.containsMatchIn(it) }
 
-// Advisors (web/src/sessions/Advisors.tsx): PM, Architect and Designer, each with its current conversation, earlier ones and its memory.
+// Advisors (web/src/sessions/Advisors.tsx): one project's board from idea to merged build as chips with one stage, the Ask buttons, and a sheet with each advisor's conversations and memory.
 @Composable
 fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     val st by hub.store.state.collectAsState()
     val ws by hub.workspace.collectAsState()
-    // Reloads after an advisor's turn, which may have changed its memory.
+    // Reloads after an advisor's turn, which may have changed its memory, the backlog, a spec or the audit.
     val turns = st.live.filter { advisorOf(it.cwd) != null && !it.running }.joinToString { "${it.id}:${it.lastActive}" }
     val (load, reload) = rememberLoad { protocolJson.decodeFromString<List<AdvisorInfo>>(hub.read("/api/advisors")) }
     var memory by rememberSaveable { mutableStateOf<String?>(null) }
@@ -254,163 +281,109 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     var loadedTurns by remember { mutableStateOf(turns) }
     LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadSpecs(); reloadAudit() } }
     var auditOpen by rememberSaveable { mutableStateOf(false) }
+    var sheetOpen by rememberSaveable { mutableStateOf(false) }
     var starting by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(starting) { if (starting) { delay(10_000); starting = false } }
+    var chip by remember(root) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     fun go(open: suspend () -> Boolean) = scope.launch { if (open()) onOpen() }
-    val info = load.data
+    val items = moved ?: backlog.data
+    val specList = specs.data
+    val loop = root?.let { advisorLoopOf(st.runs, it) }
+    val board = if (items != null && specList != null) advisorBoard(items, specList, loop != null && runNeedsYou(loop)) else null
+    LaunchedEffect(board != null) { if (board != null && chip == null) chip = board.defaultStage }
     Column(Modifier.fillMaxSize()) {
         PageHeader("Advisors", onBack, actions = { IconBtn("refresh", "Refresh", reload) })
         PageBody {
-            when {
-                info == null && load.error.isNotEmpty() -> EmptyState("Could not load the advisors", load.error, icon = "organization")
-                info == null -> Loading("Loading advisors")
-                else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    val needsRoot = root
-                    val waiting = if (needsRoot == null) emptyList() else advisorNeedsYou(specs.data.orEmpty(), st.runs, needsRoot)
-                    if (needsRoot != null && waiting.isNotEmpty()) {
-                        SectionHeader("Needs you", waiting.size.toString())
-                        Group {
-                            waiting.forEachIndexed { n, w ->
-                                if (n > 0) Hairline()
-                                when (w) {
-                                    is NeedsYouItem.Loop -> AdvisorLoopRow(hub, w.run, ::go)
-                                    is NeedsYouItem.Spec -> SpecRow(hub, w.spec, needsRoot, st.live.any { it.id == w.spec.chat }, onOpen, ::go)
-                                }
-                            }
-                        }
-                    }
-                    for (a in ADVISORS) {
-                        val c = st.live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
-                        val state = c?.let { chatState(it, null, ws.seen) }
-                        val got = info.firstOrNull { it.id == a.id }
-                        val earlier = got?.chats.orEmpty().filter { it.sessionId != c?.sessionId }
-                        val facts = memoryFacts(got?.memory.orEmpty())
-                        SectionHeader(a.name, a.model, action = { Button("New conversation", { go { hub.openAdvisor(a.id, true) } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "add") })
-                        Group {
-                            ListRow(
-                                boldIf(state == ChatState.Done || state == ChatState.Needs, c?.title?.ifBlank { null } ?: "Talk to ${a.name}"),
-                                when {
-                                    c == null -> a.hint
-                                    c.pending > 0 -> "Needs you"
-                                    c.running -> "Working"
-                                    else -> "Open · ${since(c.lastActive)}"
-                                },
-                                lines = 1, metaLines = 1, selected = c != null && c.id == st.shownId,
-                                leading = if (state != null) ({ StateDot(state) }) else null,
-                                onClick = { go { hub.openAdvisor(a.id, false) } },
-                            )
-                            for (s in earlier) {
-                                Hairline()
-                                ListRow(s.title.ifBlank { "Untitled" }, since(s.lastModified), lines = 1, onClick = { go { hub.openSaved(s.sessionId) } })
-                            }
-                            Hairline()
-                            ListRow("Memory", if (facts == 0) "Nothing yet" else "$facts ${if (facts == 1) "fact" else "facts"}", lines = 1, onClick = if (facts > 0) ({ memory = if (memory == a.id) null else a.id }) else null)
-                        }
-                        if (memory == a.id && got != null) Markdown(got.memory.replaceFirst(Regex("^# .*\n"), ""), Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4))
-                        if (a.id == "designer") {
-                            SectionHeader("Usability audit", action = {
-                                MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); advisorPick = r.cwd; picked = r.cwd }, checked = r.cwd == root) }
-                            })
-                            val project = root
-                            val list = audits.data
-                            val audit = list?.firstOrNull()
-                            val running = c?.running == true
-                            val runAudit = { scope.askAdvisor(hub, "designer", auditPrompt(project!!), onOpen) }
-                            when {
-                                project == null -> Group { ListRow("Project", "Pick one in the menu to audit it", lines = 1) }
-                                list == null && audits.error.isNotEmpty() -> Group { ListRow("Audit", "Could not load the audit", lines = 1) }
-                                list == null -> Loading("Loading audit")
-                                else -> Group {
-                                    ListRow(
-                                        "Audit", audit?.let { "${it.date} · ${auditCountLine(it.findings)}" } ?: "Not run yet",
-                                        lines = 1, metaLines = 1,
-                                        state = {
-                                            if (running) Badge("Running", BadgeTone.Running)
-                                            else Button("Specs from audit", { scope.askAdvisor(hub, "pm", specsFromAuditPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = audit != null && !hub.readOnly)
-                                        },
-                                        stateSlot = true,
-                                        menu = { dismiss ->
-                                            MenuItem("Open latest audit", "list-flat", { dismiss(); auditOpen = true }, enabled = audit != null)
-                                            MenuItem("Run audit", "play", { dismiss(); runAudit() }, enabled = !running && !hub.readOnly)
-                                        },
-                                    )
-                                }
-                            }
-                            if (auditOpen && audit != null) Sheet({ auditOpen = false }, "Audit, ${audit.date}", padded = false) {
-                                for (f in audit.findings) ListRow(f.screen, "${if (f.status == "fixed") "Fixed · " else ""}${f.severity.replaceFirstChar { it.uppercase() }} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 2)
-                            }
-                        }
-                        if (a.id == "pm") {
-                            val items = moved ?: backlog.data
-                            val todo = items?.filter { it.status != "done" }
-                            val done = items?.filter { it.status == "done" }
-                            SectionHeader("Backlog", todo?.size?.takeIf { it > 0 }?.toString(), action = {
-                                MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); advisorPick = r.cwd; picked = r.cwd }, checked = r.cwd == root) }
-                            })
-                            val project = root
-                            val loop = project?.let { advisorLoopOf(st.runs, it) }
-                            if (project != null) Group {
-                                if (loop != null) AdvisorLoopRow(hub, loop, ::go)
-                                else ListRow(
-                                    "Advisor loop", "Not running · every ${everyText(ADVISOR_LOOP_EVERY)} · up to $ADVISOR_LOOP_BUILDS builds",
-                                    state = {
-                                        Button("Start", { starting = true; scope.askAdvisor(hub, "pm", advisorLoopCommand(project, System.currentTimeMillis()), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = !hub.readOnly && !starting)
-                                    },
-                                    stateSlot = true, lines = 1, metaLines = 1,
-                                )
-                            }
-                            when {
-                                project == null -> Group { ListRow("Project", "Pick one in the menu to see its backlog", lines = 1) }
-                                items == null -> Loading("Loading backlog")
-                                items.isEmpty() -> EmptyState("No backlog yet", "The PM ranks what to build next", "list-ordered", action = if (hub.readOnly) null else ({
-                                    Button("Ask PM to rank", { scope.askAdvisor(hub, "pm", rankPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
-                                }))
-                                todo!!.isEmpty() -> EmptyState("No open items", icon = "list-ordered")
-                                else -> Group {
-                                    todo.forEachIndexed { n, i ->
-                                        if (n > 0) Hairline()
-                                        ListRow(
-                                            i.title, "${i.status.replaceFirstChar { it.uppercase() }} · ${i.why}",
-                                            leading = { Text(i.rank.toString(), style = Type.callout, color = av.fgMuted) },
-                                            lines = 1, metaLines = 1,
-                                            menu = if (hub.readOnly) null else ({ dismiss ->
-                                                if (i.status == "proposed" || i.status == "specced") MenuItem("Build", "play", {
-                                                    dismiss()
-                                                    hub.newChat(project, text = if (i.spec) buildSpecPrompt(".claude/specs/${i.slug}.md") else buildItemPrompt(i.title, i.why, i.slug), onOpened = onOpen)
-                                                })
-                                                val move = { dir: String -> dismiss(); scope.launch { runCatching { hub.api.moveBacklog(project, i.slug, dir) }.onSuccess { moved = it }.onFailure { hub.notice.value = "Could not move the item" } }; Unit }
-                                                MenuItem("Move up", "arrow-up", { move("up") }, enabled = n > 0)
-                                                MenuItem("Move down", "arrow-down", { move("down") }, enabled = n < todo.size - 1)
-                                            }),
-                                        )
-                                    }
-                                }
-                            }
-                            if (project != null && !done.isNullOrEmpty()) {
-                                var doneOpen by rememberSaveable(root) { mutableStateOf(false) }
-                                SectionHeader("Done", done.size.toString(), open = doneOpen, onToggle = { doneOpen = !doneOpen })
-                                if (doneOpen) Group {
-                                    done.forEachIndexed { n, i ->
-                                        if (n > 0) Hairline()
-                                        ListRow(i.title, "Done · ${i.why}", leading = { Text(i.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 1)
-                                    }
-                                }
-                            }
-                            val list = specs.data
-                            if (project != null && list != null) {
-                                SectionHeader("Specs", list.size.takeIf { it > 0 }?.toString())
-                                if (list.isEmpty()) EmptyState("No specs yet", icon = "file") else Group {
-                                    specHomeOrder(list).forEachIndexed { n, i ->
-                                        if (n > 0) Hairline()
-                                        SpecRow(hub, i, project, st.live.any { it.id == i.chat }, onOpen, ::go)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.padding(bottom = Tokens.sp16))
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                SectionHeader(root?.let { folderName(it) } ?: "Project", action = {
+                    MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); advisorPick = r.cwd; picked = r.cwd }, checked = r.cwd == root) }
+                })
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+                    for (a in ADVISORS) Button("Ask ${a.name}", { go { hub.openAdvisor(a.id, false) } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    Button("Conversations and memory", { sheetOpen = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "comment-discussion")
                 }
+                val project = root
+                when {
+                    project == null -> Group { ListRow("Pick a project to see its work", lines = 1) }
+                    backlog.error.isNotEmpty() || specs.error.isNotEmpty() -> EmptyState("Could not load the board", icon = "list-ordered")
+                    board == null || items == null || specList == null -> Loading("Loading board")
+                    else -> {
+                        val stage = chip ?: board.defaultStage
+                        val openSlugs = items.filter { it.status != "done" }.sortedBy { it.rank }.map { it.slug }
+                        val move = { slug: String, dir: String -> scope.launch { runCatching { hub.api.moveBacklog(project, slug, dir) }.onSuccess { moved = it }.onFailure { hub.notice.value = "Could not move the item" } }; Unit }
+                        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                            for (s in BOARD_STAGES) Chip(listOfNotNull(STAGE_LABEL.getValue(s), board.stages.getValue(s).size.takeIf { it > 0 }).joinToString(" "), { chip = s }, on = s == stage)
+                        }
+                        val cards = board.stages.getValue(stage)
+                        val audit = audits.data?.firstOrNull()
+                        val running = st.live.any { advisorOf(it.cwd)?.id == "designer" && it.running }
+                        val nothing = items.isEmpty() && specList.isEmpty()
+                        if (stage == "building" || stage == "ideas" || cards.isNotEmpty()) Group {
+                            if (stage == "building") LoopCard(hub, project, loop, starting, { starting = true; scope.askAdvisor(hub, "pm", advisorLoopCommand(project, System.currentTimeMillis()), onOpen) }, ::go)
+                            if (stage == "ideas") ListRow(
+                                "Audit", when {
+                                    audits.data == null && audits.error.isNotEmpty() -> "Could not load the audit"
+                                    audits.data == null -> "Loading the audit"
+                                    else -> audit?.let { "${it.date} · ${auditCountLine(it.findings)}" } ?: "Not run yet"
+                                },
+                                lines = 1, metaLines = 1,
+                                state = if (hub.readOnly && !running) null else ({
+                                    if (running) Badge("Running", BadgeTone.Running)
+                                    else Button("Specs from audit", { scope.askAdvisor(hub, "pm", specsFromAuditPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = audit != null)
+                                }),
+                                menu = if (hub.readOnly) null else ({ dismiss ->
+                                    MenuItem("Open latest audit", "list-flat", { dismiss(); auditOpen = true }, enabled = audit != null)
+                                    MenuItem("Run audit", "play", { dismiss(); scope.askAdvisor(hub, "designer", auditPrompt(project), onOpen) }, enabled = !running)
+                                }),
+                            )
+                            for (c in cards) BoardCardRow(hub, c, stage, project, st.live.any { it.id == c.spec?.chat }, openSlugs, move, onOpen, scope, ::go)
+                        }
+                        if (stage == "ideas" && nothing) EmptyState("No backlog yet", "The PM ranks what to build next", "list-ordered", action = if (hub.readOnly) null else ({
+                            Button("Ask PM to rank", { scope.askAdvisor(hub, "pm", rankPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
+                        })) else if (cards.isEmpty()) Text("Nothing here", Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), style = Type.meta, color = av.fgMuted)
+                        if (auditOpen && audit != null) Sheet({ auditOpen = false }, "Audit, ${audit.date}", padded = false) {
+                            for (f in audit.findings) ListRow(f.screen, "${if (f.status == "fixed") "Fixed · " else ""}${f.severity.replaceFirstChar { it.uppercase() }} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 2)
+                        }
+                    }
+                }
+                Spacer(Modifier.padding(bottom = Tokens.sp16))
+            }
+        }
+    }
+    if (sheetOpen) Sheet({ sheetOpen = false }, "Conversations and memory", padded = false) {
+        val info = load.data
+        when {
+            info == null && load.error.isNotEmpty() -> EmptyState("Could not load the advisors", load.error, icon = "organization")
+            info == null -> Loading("Loading advisors")
+            else -> for (a in ADVISORS) {
+                val c = st.live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
+                val state = c?.let { chatState(it, null, ws.seen) }
+                val got = info.firstOrNull { it.id == a.id }
+                val earlier = got?.chats.orEmpty().filter { it.sessionId != c?.sessionId }
+                val facts = memoryFacts(got?.memory.orEmpty())
+                SectionHeader(a.name, a.model, action = { Button("New conversation", { go { hub.openAdvisor(a.id, true) } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "add") })
+                Group {
+                    ListRow(
+                        boldIf(state == ChatState.Done || state == ChatState.Needs, c?.title?.ifBlank { null } ?: "Talk to ${a.name}"),
+                        when {
+                            c == null -> a.hint
+                            c.pending > 0 -> "Needs you"
+                            c.running -> "Working"
+                            else -> "Open · ${since(c.lastActive)}"
+                        },
+                        lines = 1, metaLines = 1, selected = c != null && c.id == st.shownId,
+                        leading = if (state != null) ({ StateDot(state) }) else null,
+                        onClick = { go { hub.openAdvisor(a.id, false) } },
+                    )
+                    for (s in earlier) {
+                        Hairline()
+                        ListRow(s.title.ifBlank { "Untitled" }, since(s.lastModified), lines = 1, onClick = { go { hub.openSaved(s.sessionId) } })
+                    }
+                    Hairline()
+                    ListRow("Memory", if (facts == 0) "Nothing yet" else "$facts ${if (facts == 1) "fact" else "facts"}", lines = 1, onClick = if (facts > 0) ({ memory = if (memory == a.id) null else a.id }) else null)
+                }
+                if (memory == a.id && got != null) Markdown(got.memory.replaceFirst(Regex("^# .*\n"), ""), Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4))
             }
         }
     }

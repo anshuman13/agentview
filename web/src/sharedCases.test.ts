@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
-import { advisorBoard, advisorLoopBuilds, advisorLoopLine, advisorLoopOf, advisorNeedsYou, auditCountLine, defaultAdvisorRoot, specItemPrompt, type BacklogItem } from '../../shared/advisors';
+import { advisorBoard, advisorLoopBuilds, advisorLoopLine, advisorLoopOf, auditCountLine, defaultAdvisorRoot, specItemPrompt, type BacklogItem } from '../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
@@ -255,13 +255,6 @@ describe('cases shared with the Android app', () => {
   for (const c of cases<{ name: string; statuses: string[]; expected: string }>('audit-count')) {
     it(`auditCountLine: ${c.name}`, () => {
       expect(auditCountLine(c.statuses.map((status) => ({ status })))).toBe(c.expected);
-    });
-  }
-
-  for (const c of cases<{ name: string; root: string; specs: Partial<SpecHomeItem>[]; runs: Partial<ChatRun>[]; expected: string[] }>('needs-you')) {
-    it(`advisorNeedsYou: ${c.name}`, () => {
-      const got = advisorNeedsYou(c.specs as SpecHomeItem[], c.runs.map(run), c.root);
-      expect(got.map((i) => (i.kind === 'loop' ? 'loop' : `spec:${i.spec.slug}`))).toEqual(c.expected);
     });
   }
 
