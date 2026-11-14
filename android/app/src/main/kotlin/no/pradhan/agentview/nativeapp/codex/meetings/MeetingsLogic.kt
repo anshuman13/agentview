@@ -28,6 +28,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.factTime
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.sessions.queryWords
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // The Meetings list and page, person page and wiki lookups of web/src/codex (data/meetings.ts, data/wiki.ts).
 
@@ -179,7 +180,7 @@ fun pageMeta(m: Row): String {
     val time = if (start != null) "${weekdayShort(start)} ${clock(start)}${m.endsAt?.let { "-${clock(it)}" } ?: ""}" else ""
     val rec = m.long("recorded_ms")?.takeIf { it > 0 }?.let { "Recorded ${Math.round(it / 60000.0)} min" }
     if (isEvent(m)) return time
-    return listOfNotNull(time.ifEmpty { null }, m.str("room")?.takeIf { it.isNotEmpty() }, if (n > 0) (if (n == 1) "1 person" else "$n people") else null, rec).joinToString(" · ")
+    return listOfNotNull(time.ifEmpty { null }, m.str("room")?.takeIf { it.isNotEmpty() }, if (n > 0) plural(n, "person", "people") else null, rec).joinToString(" · ")
 }
 
 fun stateLine(m: Row, now: Long): String? = when (meetingState(m, now)) {

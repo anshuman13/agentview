@@ -73,6 +73,7 @@ import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.ui.Loaded
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // What the Advisors page shows of each, from /api/advisors.
 @Serializable
@@ -417,7 +418,7 @@ Sheet(onDismiss, "Conversations and memory", padded = false) {
                     ListRow(s.title.ifBlank { "Untitled" }, since(s.lastModified), lines = 1, onClick = { go { hub.openSaved(s.sessionId) } })
                 }
                 Hairline()
-                ListRow("Memory", if (facts == 0) "Nothing yet" else "$facts ${if (facts == 1) "fact" else "facts"}", lines = 1, onClick = if (facts > 0) ({ memory = if (memory == a.id) null else a.id }) else null)
+                ListRow("Memory", if (facts == 0) "Nothing yet" else plural(facts, "fact"), lines = 1, onClick = if (facts > 0) ({ memory = if (memory == a.id) null else a.id }) else null)
             }
             if (memory == a.id && got != null) Markdown(got.memory.replaceFirst(Regex("^# .*\n"), ""), Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4))
         }

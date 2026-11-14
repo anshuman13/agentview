@@ -82,7 +82,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, needsYou: B
     val meta = listOfNotNull(
         state.at?.let { clock(it) },
         state.next?.let { "Next: $it" },
-        state.stepsLeft.takeIf { it > 0 }?.let { "$it ${if (it == 1) "step" else "steps"} left" },
+        state.stepsLeft.takeIf { it > 0 }?.let { "${plural(it, "step")} left" },
         buildsLine(run).ifEmpty { null },
     ).joinToString(" · ")
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {

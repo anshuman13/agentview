@@ -62,6 +62,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.DateDialog
 import no.pradhan.agentview.nativeapp.ui.TimeDialog
+import no.pradhan.agentview.nativeapp.ui.plural
 
 private val PRIORITIES = listOf(0 to "None", 1 to "Low", 2 to "Medium", 3 to "High")
 
@@ -255,7 +256,7 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActi
 @Composable
 private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onStale: () -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit) {
     when (n) {
-        is Need.StaleAsks -> ListRow("${n.count} ${if (n.count == 1) "ask" else "asks"} older than $STALE_DAYS days", "oldest ${agoShort(n.oldest, now)}", onClick = onStale)
+        is Need.StaleAsks -> ListRow("${plural(n.count, "ask")} older than $STALE_DAYS days", "oldest ${agoShort(n.oldest, now)}", onClick = onStale)
         is Need.Wiki -> ListRow("${n.count} wiki ${if (n.count == 1) "claim waits" else "claims wait"} for you", onClick = onReview)
         is Need.Overdue -> ListRow(n.row.title ?: "", n.row.at?.let { "Overdue · due ${whenText(it, now)}" }, leading = { CheckCircle(false, "Done") { actions.done(n.row) } },
             trailing = { MoreButton { close -> MenuItem("Snooze to next 09:00", "clock", { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })

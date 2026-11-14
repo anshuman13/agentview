@@ -47,6 +47,7 @@ import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.plural
 
 @Composable
 fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps, onMeeting: (Row) -> Unit, onWikiPage: (String, String) -> Unit, onTask: (Row) -> Unit) {
@@ -68,7 +69,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             Text(shown, Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)
-            Text(listOfNotNull(email, "${mine.size} ${if (mine.size == 1) "meeting" else "meetings"}").joinToString(" · "), Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted)
+            Text(listOfNotNull(email, plural(mine.size, "meeting")).joinToString(" · "), Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted)
         }
         if (tasks.isNotEmpty()) {
             item { SectionHeader("Open tasks", tasks.size.toString()) }

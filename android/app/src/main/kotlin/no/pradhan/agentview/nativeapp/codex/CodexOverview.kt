@@ -12,6 +12,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.proposals
 import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.queryWords
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // The pieces of the Codex Overview (web/src/codex Overview.tsx, split.ts, NeedsYou.tsx, data/meetings.ts, data/goals.ts).
 
@@ -62,7 +63,7 @@ fun meetingMeta(m: Row, now: Long, noDay: Boolean = false): String {
     val n = peopleOf(m).size
     val day = if (!noDay && m.startsAt!! >= dayEnd(now)) "${DateTimeFormatter.ofPattern("EEE, d MMM", Locale.ENGLISH).format(Instant.ofEpochMilli(m.startsAt!!).atZone(codexZone))}, " else ""
     val time = "$day${clock(m.startsAt!!)}${m.endsAt?.let { " - ${clock(it)}" } ?: ""}"
-    return listOfNotNull(time, m.str("room")?.takeIf { it.isNotEmpty() }, if (n > 0) "$n ${if (n == 1) "person" else "people"}" else null).joinToString(" · ")
+    return listOfNotNull(time, m.str("room")?.takeIf { it.isNotEmpty() }, if (n > 0) plural(n, "person", "people") else null).joinToString(" · ")
 }
 
 // Meetings with a start time, in the profile, not focus blocks, in the pieces the Overview shows.

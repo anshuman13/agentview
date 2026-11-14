@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.codex.wiki
 
 import no.pradhan.agentview.nativeapp.codex.CodexStore
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // web/src/codex/data/wiki.ts approveChanges and wiki/ReviewMode.tsx: deciding proposed claims one at a time.
 class Change(val row: Row, val patch: Map<String, Any?>, val undo: Map<String, Any?>)
@@ -47,7 +48,7 @@ class ReviewOps(private val store: CodexStore, private val snack: (String, (() -
         if (any) snack(text) { changes.reversed().forEach { store.update(it.row, it.undo) } }
     }
 
-    private fun noun(n: Int) = "$n ${if (n == 1) "claim" else "claims"}"
+    private fun noun(n: Int) = plural(n, "claim")
     fun approve(list: List<Row>) { val s = store.state.value; run(approveAllChanges(list, s.pages, s.facts), "Approved ${noun(list.size)}") }
     fun reject(list: List<Row>) { val s = store.state.value; run(rejectChanges(list, s.pages, s.facts), "Rejected ${noun(list.size)}") }
 }

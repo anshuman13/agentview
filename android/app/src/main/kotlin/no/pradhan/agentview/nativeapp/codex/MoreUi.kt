@@ -65,6 +65,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.codex.wiki.ReviewOps
 import no.pradhan.agentview.nativeapp.codex.wiki.extendOrder
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // What the meetings and wiki pages share: Raise and points, pinned text, open questions, Prep groups, the Series page and Review mode.
 class CodexOps(val points: PointActions, val goals: GoalActions, val review: ReviewOps, val replies: ReplyOps)
@@ -180,7 +181,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
                     if (next != null) Button("Open next", { onMeeting(next) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
                     if (calendar != null) MoreButton { close -> MenuItem("Open calendar", "calendar", { close(); uri.openUri(calendar) }) }
                 }
-                val meta = listOfNotNull(cadence, if (people.isNotEmpty()) (if (people.size == 1) "1 person" else "${people.size} people") else null).joinToString(" · ")
+                val meta = listOfNotNull(cadence, if (people.isNotEmpty()) plural(people.size, "person", "people") else null).joinToString(" · ")
                 if (meta.isNotEmpty()) Text(meta, style = Type.subheadline, color = av.fgMuted)
             }
         }
@@ -199,7 +200,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
                     if (i > 0) Hairline()
                     val decisions = jsonList(m.str("decisions")).size
                     val left = open.count { it.first.key == m.key }
-                    val meta = listOfNotNull(if (decisions > 0) "$decisions ${if (decisions == 1) "decision" else "decisions"}" else null, if (left > 0) "$left open" else null).joinToString(", ")
+                    val meta = listOfNotNull(if (decisions > 0) plural(decisions, "decision") else null, if (left > 0) "$left open" else null).joinToString(", ")
                     ListRow("${weekdayDate(m.startsAt!!)}, ${clock(m.startsAt!!)}", meta.ifEmpty { null }, muted = meetingState(m, now) == MState.Missing, onClick = { onMeeting(m) })
                 }
             }

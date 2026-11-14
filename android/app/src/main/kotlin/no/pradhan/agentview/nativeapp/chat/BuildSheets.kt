@@ -83,6 +83,7 @@ import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
 import no.pradhan.agentview.nativeapp.workspace.startTaskPrompt
 import no.pradhan.agentview.nativeapp.workspace.withoutOpenTasks
+import no.pradhan.agentview.nativeapp.ui.plural
 
 private const val BUILDS_POLL_MS = 15_000L
 
@@ -119,7 +120,7 @@ internal fun LazyListScope.implementationItems(c: BuildCommit, diff: CommitDiff,
     item { SectionHeader("Implementation") }
     item {
         Group {
-            ListRow(c.branch ?: c.subject, "${c.sha.take(7)} · ${files.size} ${if (files.size == 1) "file" else "files"} +${files.sumOf { it.additions }} -${files.sumOf { it.deletions }}")
+            ListRow(c.branch ?: c.subject, "${c.sha.take(7)} · ${plural(files.size, "file")} +${files.sumOf { it.additions }} -${files.sumOf { it.deletions }}")
             if (files.isNotEmpty()) Hairline()
             DiffFiles(files, diff.diff, openFile, openDiff)
         }

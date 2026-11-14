@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.chat
 import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // The chat header line (web runLogic headerState), checked by shared/fixtures/chat-state.json.
 data class StatusLine(val text: String, val tone: ChatTone)
@@ -13,7 +14,7 @@ fun statusLine(live: LiveChat, session: SessionInfo?): StatusLine = when {
     live.failed -> StatusLine("Failed", ChatTone.Failed)
     live.stalled -> StatusLine("No activity for 15 min", ChatTone.Failed)
     (session?.running ?: live.running) -> StatusLine(runningText(live), ChatTone.Running)
-    live.agentList.isNotEmpty() -> StatusLine("Running · ${live.agentList.size} ${if (live.agentList.size == 1) "agent" else "agents"}", ChatTone.Running)
+    live.agentList.isNotEmpty() -> StatusLine("Running · ${plural(live.agentList.size, "agent")}", ChatTone.Running)
     live.run?.state == "paused" -> StatusLine(live.run.why?.takeIf { it.isNotEmpty() }?.let { "Paused · $it" } ?: "Paused", ChatTone.Warn)
     live.run != null -> StatusLine(nextRoundText(live.run.nextAt), ChatTone.Idle)
     else -> StatusLine("Idle", ChatTone.Idle)

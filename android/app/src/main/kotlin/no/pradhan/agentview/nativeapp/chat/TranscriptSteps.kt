@@ -101,6 +101,7 @@ import no.pradhan.agentview.nativeapp.workspace.lineDiff
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.sketchTitle
+import no.pradhan.agentview.nativeapp.ui.plural
 
 private val pretty = Json { prettyPrint = true }
 
@@ -296,7 +297,7 @@ private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
     }
     val total = buildTotals(d.entries, now)
     if (total.runs > 0) {
-        val line = listOf("${total.runs} agent run${if (total.runs == 1) "" else "s"}", duration(total.ms), if (total.tokens > 0) (if (total.partial) "~" else "") + tokensText(total.tokens) else "").filter(String::isNotEmpty).joinToString(" · ")
+        val line = listOf(plural(total.runs, "agent run"), duration(total.ms), if (total.tokens > 0) (if (total.partial) "~" else "") + tokensText(total.tokens) else "").filter(String::isNotEmpty).joinToString(" · ")
         Text(line, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2))
     }
     if (step != null) {
@@ -384,7 +385,7 @@ fun editPairs(use: ChatEvent) = editPairs(use.name, use.input) ?: emptyList()
 internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpenAgent: (String) -> Unit) {
     val result = it.result
     val dur = if (result != null && !it.running) duration(result.at - it.use.at) else ""
-    val steps = if (it.steps.isNotEmpty()) "${it.steps.size} ${if (it.steps.size == 1) "step" else "steps"}" else ""
+    val steps = if (it.steps.isNotEmpty()) plural(it.steps.size, "step") else ""
     val canStop by hub.store.state.select { it.session?.capabilities?.stopTask ?: true }
     val shown = it.steps.takeLast(3)
     val running = it.running

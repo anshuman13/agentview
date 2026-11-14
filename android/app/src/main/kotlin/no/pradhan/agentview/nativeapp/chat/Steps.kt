@@ -10,6 +10,7 @@ import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.sessions.buildStageOf
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.specSlug
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // Port of web/src/chat/steps.ts: the transcript items built from the flat event list.
 @Immutable
@@ -323,8 +324,8 @@ fun exploreLabelOf(names: List<String>): String {
     val reads = names.count { it == "Read" }
     val searches = names.size - reads
     return listOfNotNull(
-        if (reads > 0) "$reads ${if (reads == 1) "file" else "files"}" else null,
-        if (searches > 0) "$searches ${if (searches == 1) "search" else "searches"}" else null,
+        if (reads > 0) plural(reads, "file") else null,
+        if (searches > 0) plural(searches, "search", "searches") else null,
     ).joinToString(", ")
 }
 

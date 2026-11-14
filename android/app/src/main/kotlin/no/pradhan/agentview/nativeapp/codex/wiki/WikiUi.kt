@@ -67,6 +67,7 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
 import kotlin.math.abs
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // A coloured tile for a page, the colour fixed by its id and the icon by its section.
 @Composable
@@ -120,7 +121,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
                     s.pages.forEachIndexed { i, p ->
                         if (i > 0) Hairline()
                         val n = stats[p.id]?.claims ?: 0
-                        ListRow(p.title ?: "Untitled", "$n ${if (n == 1) "claim" else "claims"}" + if (profile == null) " · ${profileLabel(p.profile)}" else "", leading = { PageTile(p) }, lines = 1, onClick = { onOpen(p) },
+                        ListRow(p.title ?: "Untitled", plural(n, "claim") + if (profile == null) " · ${profileLabel(p.profile)}" else "", leading = { PageTile(p) }, lines = 1, onClick = { onOpen(p) },
                             state = { if (pageNeedsReview(p, facts)) Badge("Needs you", BadgeTone.Waiting) }, stateSlot = true,
                             menu = { dismiss ->
                                 MenuItem("Open", "file", { dismiss(); onOpen(p) })
@@ -210,7 +211,7 @@ fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
                 Text(page.title ?: "Untitled", style = Type.title)
                 val n = stat?.claims ?: 0
                 val meta = listOfNotNull(
-                    "$n ${if (n == 1) "claim" else "claims"}",
+                    plural(n, "claim"),
                     stat?.updated?.takeIf { it > 0 }?.let { "Updated ${shortDate(maxOf(page.updatedAt, it), now)}" },
                 )
                 Text(meta.joinToString(" · "), style = Type.subheadline, color = av.fgMuted, maxLines = 1)

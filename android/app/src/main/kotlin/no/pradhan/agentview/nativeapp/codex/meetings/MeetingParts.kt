@@ -38,6 +38,7 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.plural
 
 @Composable
 internal fun NotesField(hub: Hub, m: Row) {
@@ -92,7 +93,7 @@ internal fun TalkTimeBar(speakers: List<Speaker>, actions: Int, decisions: Int) 
     val parts = if (rest > 0) top.map { it.name to it.share } + ("Others" to rest) else top.map { it.name to it.share }
     val c = av
     val color = { i: Int -> if (i >= TALK_TOP) c.borderStrong else c.cMeeting.copy(alpha = TALK_ALPHA[i]) }
-    SectionHeader("Talk time", "$actions ${if (actions == 1) "action" else "actions"} · $decisions ${if (decisions == 1) "decision" else "decisions"}")
+    SectionHeader("Talk time", "${plural(actions, "action")} · ${plural(decisions, "decision")}")
     LRow(Modifier.padding(horizontal = Tokens.sp8).fillMaxWidth().height(Tokens.sp5).clip(RoundedCornerShape(Tokens.radiusPill))) {
         parts.forEachIndexed { i, p -> Box(Modifier.weight(p.second.toFloat().coerceAtLeast(0.001f)).fillMaxHeight().background(color(i))) }
     }

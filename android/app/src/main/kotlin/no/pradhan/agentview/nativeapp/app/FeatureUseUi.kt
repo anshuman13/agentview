@@ -33,6 +33,7 @@ import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.SnackHost
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.plural
 
 private const val SHOWN = 5
 
@@ -82,7 +83,7 @@ fun FeatureUseSheet(hub: Hub, onDismiss: () -> Unit) {
             val rows = remember(d, span) { featureRows(d, today, span) }
             val usedMeta = { u: UsedFeature ->
                 val n = if (span == 7) u.n7 else u.n30
-                "${kindLabel(u.feature)} · $n ${if (n == 1) "time" else "times"} · ${lastUsed(u.last, today)}"
+                "${kindLabel(u.feature)} · ${plural(n, "time")} · ${lastUsed(u.last, today)}"
             }
             val menu: (Feature) -> (@Composable ColumnScope.(() -> Unit) -> Unit)? = { f ->
                 val isHidden = f.id in hidden

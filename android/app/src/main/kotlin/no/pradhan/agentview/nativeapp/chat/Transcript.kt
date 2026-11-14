@@ -81,6 +81,7 @@ import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.isRepoSpec
 import no.pradhan.agentview.nativeapp.workspace.sketchName
 import no.pradhan.agentview.nativeapp.workspace.specSlug
+import no.pradhan.agentview.nativeapp.ui.plural
 
 internal fun gapAbove(older: Item?, it: Item): Dp? {
     if (older == null) return null
@@ -303,7 +304,7 @@ private fun NewLine() {
 
 @Composable
 private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
-    val label = if (replies > 0) "Jump to latest · $replies new ${if (replies == 1) "reply" else "replies"}" else "Jump to latest"
+    val label = if (replies > 0) "Jump to latest · ${plural(replies, "new reply", "new replies")}" else "Jump to latest"
     Box(modifier) {
         Surface(Modifier.size(Tokens.touch).semantics { contentDescription = label }.clickable(onClick = onClick), shape = RoundedCornerShape(Tokens.radiusPill), color = av.raised, contentColor = av.fg, border = BorderStroke(Tokens.hairline, av.borderCard), shadowElevation = Tokens.elev2) {
             Box(contentAlignment = Alignment.Center) { AvIcon("arrow-down", null, Tokens.icon) }

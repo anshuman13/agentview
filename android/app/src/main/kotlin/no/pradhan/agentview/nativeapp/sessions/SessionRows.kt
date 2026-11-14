@@ -64,6 +64,7 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.PrChip
 import no.pradhan.agentview.nativeapp.workspace.prChip
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.plural
 
 
 @Composable
@@ -197,7 +198,7 @@ fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) {
     val meta = when {
         chats == 0 -> "No chats"
         g.open.isNotEmpty() -> metaLine("${g.open.size} open", since(g.last))
-        else -> metaLine("$chats ${if (chats == 1) "chat" else "chats"}", since(g.last))
+        else -> metaLine(plural(chats, "chat"), since(g.last))
     }
     ListRow(g.name, meta, leading = { RepoMark(g.name) }, onClick = onClick, trailing = {
         when {

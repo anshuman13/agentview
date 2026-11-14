@@ -77,6 +77,7 @@ import no.pradhan.agentview.nativeapp.workspace.branchPr
 import no.pradhan.agentview.nativeapp.workspace.checkDot
 import no.pradhan.agentview.nativeapp.workspace.prStripMeta
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.plural
 
 fun costLabel(cost: Double, billing: String = "usd") = unbilledText(billing) ?: if (cost > 0) "$" + String.format(java.util.Locale.US, "%.2f", cost) else ""
 
@@ -231,7 +232,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, view: Ch
         val hooks = session?.hooks.orEmpty()
         val open = { panel: () -> Unit -> { panels.tools = false; panel() } }
         Group {
-            ListRow("Images", "${view.images.size} ${if (view.images.size == 1) "image" else "images"}", muted = view.images.isEmpty(), onClick = if (view.images.isEmpty()) null else open { panels.images = true }, trailing = { Chevron() })
+            ListRow("Images", plural(view.images.size, "image"), muted = view.images.isEmpty(), onClick = if (view.images.isEmpty()) null else open { panels.images = true }, trailing = { Chevron() })
             Hairline()
             ListRow("Dev servers", "Dev servers on this Mac", onClick = open { panels.servers = true }, trailing = { Chevron() })
             Hairline()
