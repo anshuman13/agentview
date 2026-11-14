@@ -164,7 +164,7 @@ internal fun SketchFrame(page: String, desktop: Boolean, modifier: Modifier = Mo
             }
         },
         update = { web ->
-            val key = "$desktop\n$page"
+            val key = desktop to page
             if (web.tag != key) {
                 web.tag = key
                 web.settings.useWideViewPort = desktop
