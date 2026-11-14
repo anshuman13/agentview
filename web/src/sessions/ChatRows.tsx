@@ -112,7 +112,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
       <Row
         data-chat-row
         onKeyDown={rowKey}
-        title={`${opening ? 'Opening… ' : ''}${title}`}
+        title={<span title={title}>{opening ? 'Opening… ' : ''}{title}</span>}
         meta={meta}
         aria-current={selected || undefined}
         leading={<StateDot state={shown} />}
