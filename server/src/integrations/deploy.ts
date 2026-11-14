@@ -60,12 +60,15 @@ export async function hasDeployApp(cwd: string) {
   return !!root && (await findApps(root)).length > 0;
 }
 
+// A folder with nothing to deploy, which the background poll skips quietly.
+class NoApp extends Error {}
+
 async function context(cwd: string, want: string | null) {
   const root = await run('git', ['rev-parse', '--show-toplevel'], cwd).catch(() => {
-    throw new Error('This chat is not in a git repo');
+    throw new NoApp('This chat is not in a git repo');
   });
   const apps = await findApps(root);
-  if (!apps.length) throw new Error(`${path.basename(root)} has no deploy app (no .deploy/app.yaml)`);
+  if (!apps.length) throw new NoApp(`${path.basename(root)} has no deploy app (no .deploy/app.yaml)`);
   const score = (a: App) => (inside(cwd, a.dir) ? a.dir.length : 0);
   apps.sort((a, b) => score(b) - score(a));
   const app = apps.find((a) => a.project === want) ?? apps[0];
@@ -139,8 +142,10 @@ export async function detectDeployUrl() {
 // Status for the background inbox: null when the repo has no deploy app, so the poll skips it quietly.
 export async function deployWatch(cwd: string) {
   if (!deployUrl()) return null;
-  const apps = await findApps(await run('git', ['rev-parse', '--show-toplevel'], cwd).catch(() => cwd)).catch(() => []);
-  return apps.length ? deployStatus(cwd, null) : null;
+  return deployStatus(cwd, null).catch((err) => {
+    if (err instanceof NoApp) return null;
+    throw err;
+  });
 }
 
 const jobs = new Map<string, DeployJob>();
