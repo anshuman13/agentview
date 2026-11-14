@@ -85,9 +85,9 @@ export function closeChat(chat: AgentSession) {
   broadcastLive();
 }
 
-export async function closeByUser(chat: AgentSession) {
+export async function closeByUser(chat: AgentSession, fallbackCwd = chat.cwd) {
   const others = [...live.values()].map((l) => l.chat).filter((c) => c !== chat);
-  const next = others.sort((a, b) => lastActive(b) - lastActive(a))[0] ?? (await createChat(chat.cwd));
+  const next = others.sort((a, b) => lastActive(b) - lastActive(a))[0] ?? (await createChat(fallbackCwd));
   if (hub.lastViewed === chat) hub.lastViewed = next;
   closeChat(chat);
   return next.id;
@@ -170,15 +170,25 @@ export async function reviewJob(chat: AgentSession, id: string, failed: boolean)
     const { cwd, env } = await runWorktree(run);
     if (await hasWork(cwd, env)) return runs.update(id, { state: 'paused', why: READY, review: 'pending' });
     if (failed) return runs.end(id, 'Failed');
-    // The run ends first, since closing the chat would end it as closed.
-    runs.end(id, 'No changes');
-    await closeByUser(chat);
-    await removeChat(run.sessionId, false, true);
-    await removeRunWorktree(run);
+    await dropJobRun(id, 'No changes');
   } catch (err) {
     console.error(`could not review job run ${id}: ${errText(err)}`);
     runs.end(id, errText(err).split('\n')[0]);
   }
+}
+
+// Ends a job run and removes its chat and worktree. The run ends first, since closing the chat would end it as closed. The worktree goes last, once no chat has it open, and a replacement chat opens in the main checkout.
+export async function dropJobRun(id: string, why: string) {
+  const run = runs.get(id);
+  if (run?.kind !== 'job') throw new Error('The run is not open');
+  if (run.state !== 'done') {
+    runs.update(id, { review: undefined });
+    runs.end(id, why);
+  }
+  const chat = live.get(run.chatId)?.chat ?? (run.sessionId ? bySession(run.sessionId) : undefined);
+  if (chat) await closeByUser(chat, run.repo);
+  if (run.sessionId) await removeChat(run.sessionId, false, true);
+  await removeRunWorktree(run);
 }
 
 export function endRun(id: string, why: string, pr?: string) {

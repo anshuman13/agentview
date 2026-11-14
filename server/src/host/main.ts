@@ -9,7 +9,7 @@ import { errText } from '../../../shared/util.js';
 import { applyInitialModel } from './initialModel.js';
 import { command } from './commands.js';
 import { connection } from './connection.js';
-import { closeByUser, createChat, endRun, jobChat, newChat, openAdvisor, openSaved, prompt, reviseRun } from './chats.js';
+import { closeByUser, createChat, dropJobRun, endRun, jobChat, newChat, openAdvisor, openSaved, prompt, reviseRun } from './chats.js';
 import { liveList, broadcastLive, runs } from './listing.js';
 import { sweepIdle, restart } from './lifecycle.js';
 import { LAST, remember, saveAndExit } from './persist.js';
@@ -103,6 +103,8 @@ async function handle(req: HostRequest): Promise<unknown> {
       return jobChat(req);
     case 'run_end':
       return endRun(req.id, req.why, req.pr);
+    case 'run_drop':
+      return dropJobRun(req.id, req.why);
     case 'run_revise':
       return reviseRun(req.id, req.text);
     case 'close':

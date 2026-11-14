@@ -62,10 +62,12 @@ describe('reviewJob', () => {
 
   it('closes the chat, removes the worktree and ends an empty run as No changes', async () => {
     const { fx, chat, id, run } = await jobRun();
+    for (const id of [...live.keys()]) if (id !== chat.id) live.delete(id);
     await reviewJob(chat, id, false);
     expect(run).toMatchObject({ state: 'done', why: 'No changes' });
     expect(removeChat).toHaveBeenCalledWith('s1', false, true);
     expect(live.has(chat.id)).toBe(false);
+    expect([...live.values()].map((l) => l.chat.cwd)).toEqual([fx.repo]);
     expect(existsSync(fx.dir)).toBe(false);
     rmSync(fx.root, { recursive: true, force: true });
   });

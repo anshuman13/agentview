@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import type { ChatRun } from '../../../shared/protocol.js';
 import type { RouteDeps } from './routeTypes.js';
 
-const mocks = { calls: [] as string[][], envs: [] as Array<Record<string, string> | undefined>, gh: vi.fn(), remote: { head: '' }, removeChat: vi.fn() };
+const mocks = { calls: [] as string[][], envs: [] as Array<Record<string, string> | undefined>, gh: vi.fn(), remote: { head: '' } };
 const realExec = await import('../exec.js').then((m) => ({ ...m }));
 
 // git runs for real in temp repos, except push and ls-remote; gh never runs.
@@ -20,7 +20,6 @@ vi.mock('../exec.js', () => ({
     return realExec.exec(cmd, args, opts);
   },
 }));
-vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat }));
 
 const { jobRepo, sh } = await import('../workspace/testRepo.js');
 const { runRoutes } = await import('./runRoutes.js');
@@ -34,7 +33,6 @@ let run: ChatRun;
 let req: ReturnType<typeof vi.fn>;
 let routes: ReturnType<typeof runRoutes>;
 let working = false;
-let worktreeGoneAtEnd: boolean | undefined;
 
 beforeEach(() => {
   mocks.calls.length = 0;
@@ -44,9 +42,7 @@ beforeEach(() => {
   fixture = jobRepo();
   run = fixture.run;
   working = false;
-  worktreeGoneAtEnd = undefined;
   req = vi.fn(async (r: { op: string; why?: string; pr?: string }) => {
-    worktreeGoneAtEnd = !existsSync(fixture.dir);
     if (r.op === 'run_end') Object.assign(run, { state: 'done', review: undefined, why: r.why, pr: r.pr });
   });
   routes = runRoutes({ runs: () => [run], chats: () => new Map([['c1', { running: working }]]), host: { req }, bySession: () => undefined, closeByUser: vi.fn() } as unknown as RouteDeps);
@@ -162,13 +158,11 @@ describe('revise and discard', () => {
     expect(req).toHaveBeenCalledWith({ op: 'run_revise', id: 'r1', text: 'use a map' });
   });
 
-  it('removes the worktree and branch, archives the chat, and a repeat gets 409', async () => {
+  it('hands the run to the host to drop, and a repeat once the worktree is gone gets 409', async () => {
     expect(await call('POST /api/runs/discard')).toEqual({ status: 200, body: { ok: true } });
-    expect(req).toHaveBeenCalledWith({ op: 'run_end', id: 'r1', why: 'Discarded' });
-    expect(worktreeGoneAtEnd).toBe(false);
-    expect(mocks.removeChat).toHaveBeenCalledWith('s1', false, true);
-    expect(existsSync(fixture.dir)).toBe(false);
-    expect(sh(fixture.repo, 'branch', '--list', fixture.branch)).toBe('');
+    expect(req).toHaveBeenCalledWith({ op: 'run_drop', id: 'r1', why: 'Discarded' });
+    Object.assign(run, { state: 'done', why: 'Discarded' });
+    rmSync(fixture.dir, { recursive: true, force: true });
     expect((await call('POST /api/runs/discard')).status).toBe(409);
   });
 });

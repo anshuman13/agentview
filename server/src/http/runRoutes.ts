@@ -1,10 +1,8 @@
 import { existsSync } from 'node:fs';
 import { errText } from '../../../shared/util.js';
 import type { ChatRun } from '../../../shared/protocol.js';
-import { removeChat } from '../agent/claude/pins.js';
 import { reviewDiff } from '../workspace/git.js';
 import { ReviewError, approveRun, runWorktree } from '../workspace/review.js';
-import { removeRunWorktree } from '../workspace/worktrees.js';
 import { entry, type Ctx, type Entry, type RouteDeps } from './routeTypes.js';
 
 const failed = (status: number, error: string) => ({ status, body: { error } });
@@ -53,11 +51,7 @@ export function runRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       if (run.state === 'done' && !(run.why === 'Discarded' && left)) return failed(409, 'The run is over');
       if (chatWorking(run)) return failed(409, 'The chat is working');
       if (left) await runWorktree(run);
-      if (run.state !== 'done') await d.host.req({ op: 'run_end', id: run.id, why: 'Discarded' });
-      await removeRunWorktree(run);
-      const open = d.bySession(run.sessionId);
-      if (open) await d.closeByUser(open);
-      if (run.sessionId) await removeChat(run.sessionId, false, true);
+      await d.host.req({ op: 'run_drop', id: run.id, why: 'Discarded' });
       return { ok: true };
     }, false),
   };
