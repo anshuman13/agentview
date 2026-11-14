@@ -32,6 +32,8 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.build
 import no.pradhan.agentview.nativeapp.net.postBuildReview
 import no.pradhan.agentview.nativeapp.net.track
+import no.pradhan.agentview.nativeapp.workspace.DeviceChips
+import no.pradhan.agentview.nativeapp.workspace.SketchPreview
 import no.pradhan.agentview.nativeapp.workspace.DiffFiles
 import no.pradhan.agentview.nativeapp.sessions.BuildCommit
 import no.pradhan.agentview.nativeapp.sessions.BuildDetail
@@ -75,10 +77,8 @@ import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.workspace.FileScreen
 import no.pradhan.agentview.nativeapp.workspace.PrFile
-import no.pradhan.agentview.nativeapp.workspace.SketchFrame
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
-import no.pradhan.agentview.nativeapp.workspace.sketchPage
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
 import no.pradhan.agentview.nativeapp.workspace.startTaskPrompt
@@ -201,11 +201,9 @@ private fun SketchPhase(html: String) {
     var desktop by remember { mutableStateOf(false) }
     val dark = av == DarkColors
     Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-        Chip("Phone", { desktop = false }, on = !desktop)
-        Chip("Desktop", { desktop = true }, on = desktop)
+        DeviceChips(desktop) { desktop = it }
     }
-    val page = remember(html, dark, desktop) { sketchPage(html, if (dark) "dark" else "light", desktop) }
-    SketchFrame(page, desktop, Modifier.fillMaxWidth().height(SKETCH_HEIGHT))
+    SketchPreview(html, dark, desktop, Modifier.fillMaxWidth().height(SKETCH_HEIGHT))
 }
 
 private val SKETCH_HEIGHT = 480.dp

@@ -120,8 +120,7 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
             MoreButton { close -> MenuItem("Copy path", "copy", { close(); clip.setText(AnnotatedString("$cwd/${file.path}")) }) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-            Chip("Phone", { desktop = false }, on = !desktop)
-            Chip("Desktop", { desktop = true }, on = desktop)
+            DeviceChips(desktop) { desktop = it }
             Spacer(Modifier.weight(1f))
             Chip("Light", { dark = false }, on = !isDark)
             Chip("Dark", { dark = true }, on = isDark)
@@ -131,11 +130,23 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
             when {
                 f == null && load.error.isEmpty() -> Loading("Loading sketch")
                 f == null || f.binary || f.error != null -> SketchProblem("It may have moved. Go back to the list")
-                f.content.length > MAX_SKETCH -> SketchProblem("Too large to show")
-                else -> SketchFrame(remember(f.content, isDark, desktop) { sketchPage(f.content, if (isDark) "dark" else "light", desktop) }, desktop)
+                else -> SketchPreview(f.content, isDark, desktop)
             }
         }
     }
+}
+
+@Composable
+internal fun DeviceChips(desktop: Boolean, onDesktop: (Boolean) -> Unit) {
+    Chip("Phone", { onDesktop(false) }, on = !desktop)
+    Chip("Desktop", { onDesktop(true) }, on = desktop)
+}
+
+// The sketch as a page in the chosen theme and width, or a problem when it is too large to load.
+@Composable
+internal fun SketchPreview(html: String, dark: Boolean, desktop: Boolean, modifier: Modifier = Modifier.fillMaxSize()) {
+    if (html.length > MAX_SKETCH) Box(modifier) { SketchProblem("Too large to show") }
+    else SketchFrame(remember(html, dark, desktop) { sketchPage(html, if (dark) "dark" else "light", desktop) }, desktop, modifier)
 }
 
 @Composable
