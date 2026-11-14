@@ -92,7 +92,7 @@ export function useUsage() {
   const warn = ahead || Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
   const label = `${accounts.length > 1 ? `${ACCOUNT_LABEL[account]} ` : ''}${[week && `w${week.pct}`, fiveHour && `h${fiveHour.pct}`].filter(Boolean).join(' ')}`;
   const onClick = () => send(ahead && other && !running ? { type: 'set_account', account: other } : { type: 'usage' });
-  return { title, warn, label, onClick };
+  return { title, warn, label, onClick, week: week?.pct ?? null, fiveHour: fiveHour?.pct ?? null, account: accounts.length > 1 ? ACCOUNT_LABEL[account] : null };
 }
 
 export function UsageItem() {

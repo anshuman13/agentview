@@ -1,0 +1,16 @@
+{
+  "review": [
+    { "name": "running with changes", "running": true, "hasChanges": true, "expected": "Review changes · Agent is working" },
+    { "name": "running without changes", "running": true, "hasChanges": false, "expected": "Review changes · Agent is working" },
+    { "name": "idle with no changes", "running": false, "hasChanges": false, "expected": "Review changes · No changes" },
+    { "name": "idle with changes", "running": false, "hasChanges": true, "expected": "Review changes" }
+  ],
+  "usage": [
+    { "name": "both windows", "account": null, "week": 73, "fiveHour": 36, "expected": "Usage · Week 73% · 5-hour 36%" },
+    { "name": "week only", "account": null, "week": 73, "fiveHour": null, "expected": "Usage · Week 73%" },
+    { "name": "five-hour only", "account": null, "week": null, "fiveHour": 36, "expected": "Usage · 5-hour 36%" },
+    { "name": "no windows", "account": null, "week": null, "fiveHour": null, "expected": null },
+    { "name": "two accounts", "account": "Personal", "week": 73, "fiveHour": 36, "expected": "Usage · Personal · Week 73% · 5-hour 36%" },
+    { "name": "fractional pct", "account": null, "week": 72.6, "fiveHour": 35.4, "expected": "Usage · Week 73% · 5-hour 35%" }
+  ]
+}

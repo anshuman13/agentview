@@ -3,6 +3,7 @@ process.env.TZ = 'UTC';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
+import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
@@ -227,6 +228,10 @@ describe('cases shared with the Android app', () => {
       expect(appCounts({ chats, viewing: c.viewing, attention: c.attention ?? 0, mcp: c.mcp ?? [], hidden: c.hidden ?? {}, needsYouRows: c.needsYouRows ?? 0, replyRows: c.replyRows ?? 0 })).toEqual(c.expected);
     });
   }
+
+  const menu = JSON.parse(readFileSync(new URL('../../shared/fixtures/chat-menu.json', import.meta.url), 'utf8'));
+  for (const c of menu.review) it(`reviewLabel: ${c.name}`, () => expect(reviewLabel(c.running, c.hasChanges)).toBe(c.expected));
+  for (const c of menu.usage) it(`usageMenuLabel: ${c.name}`, () => expect(usageMenuLabel(c.account, c.week, c.fiveHour)).toBe(c.expected));
 
   for (const c of cases<{ name: string; runs: Partial<ChatRun>[]; expected: { needs: string[]; running: string[]; finished: string[] } }>('run-bands')) {
     it(`runBands: ${c.name}`, () => {

@@ -228,7 +228,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: Chat
     val sessionId = live.sessionId ?: session?.sessionId
     val showWork by hub.showWork.collectAsState()
     MoreButton { close ->
-        MenuItem("Review changes", "source-control", { close(); onReview() }, enabled = canReview)
+        MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
         MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
         MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)

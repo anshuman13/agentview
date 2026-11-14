@@ -20,6 +20,14 @@ val ACCOUNT_NOTE = mapOf("alt2" to "Only picked by hand")
 // The plan usage of the chat's account, as "Week 45% · 5-hour 12%".
 fun usageText(u: PlanUsage?) = listOfNotNull(u?.week?.let { "Week ${it.pct.toInt()}%" }, u?.fiveHour?.let { "5-hour ${it.pct.toInt()}%" }).joinToString(" · ")
 
+fun reviewLabel(running: Boolean, hasChanges: Boolean) =
+    if (running) "Review changes · Agent is working" else if (hasChanges) "Review changes" else "Review changes · No changes"
+
+fun usageMenuLabel(account: String?, week: Double?, fiveHour: Double?): String? {
+    if (week == null && fiveHour == null) return null
+    return "Usage · " + listOfNotNull(account, week?.let { "Week ${Math.round(it)}%" }, fiveHour?.let { "5-hour ${Math.round(it)}%" }).joinToString(" · ")
+}
+
 fun usageHigh(u: PlanUsage?) = maxOf(u?.week?.pct ?: 0.0, u?.fiveHour?.pct ?: 0.0) >= 80
 
 val EFFORT_LABEL = mapOf("low" to "Low", "medium" to "Medium", "high" to "High", "xhigh" to "Extra high", "max" to "Max")
