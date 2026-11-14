@@ -20,6 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -64,7 +69,7 @@ fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Bo
         },
     ) {
         // The sheet is its own window: no text in it may register with a SelectionContainer behind it (that crashes on a long press), so the body gets its own.
-        DisableSelection { Column(Modifier.navigationBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp8)) {
+        DisableSelection { Column(Modifier.navigationBarsPadding().nestedScroll(remember { DragOnlyToSheet() }).verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp8)) {
             Row(Modifier.fillMaxWidth().height(Tokens.rowOne).padding(start = Tokens.listPad, end = if (action != null) Tokens.sp2 else Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                     Text(title, Modifier.weight(1f, fill = false), style = Type.title, color = c.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -74,6 +79,21 @@ fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Bo
             }
             SelectionContainer { Column(Modifier.padding(horizontal = if (padded) Tokens.sp8 else 0.dp), content = content) }
         } }
+    }
+}
+
+// The content's leftover fling stops here: a fling that runs the content out of room would otherwise fling the sheet shut.
+// A drag past the top still moves the sheet, and its release velocity passes so the sheet settles open or closed.
+private class DragOnlyToSheet : NestedScrollConnection {
+    private var dragged = false
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+        if (source == NestedScrollSource.UserInput && available.y != 0f) dragged = true
+        return Offset.Zero
+    }
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+        val pass = dragged
+        dragged = false
+        return if (pass) Velocity.Zero else available
     }
 }
 
