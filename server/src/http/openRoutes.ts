@@ -17,7 +17,7 @@ import { hideableIds } from '../../../shared/featureUse.js';
 import { clearFeatureUse, featureUseDays, recordRoute } from '../featureUse.js';
 import { expandHome, homeRelative, loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
-import { createFolder, createWorktree, listRepos, listWorktrees, removeRunWorktree, removeWorktree } from '../workspace/worktrees.js';
+import { createFolder, createWorktree, isWorkspaceRepo, listRepos, listWorktrees, removeRunWorktree, removeWorktree } from '../workspace/worktrees.js';
 import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { readBody, savePaste } from './body.js';
 import { entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
@@ -112,7 +112,7 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'POST /api/jobs/start': entry(async ({ body }) => {
       const [jobId, title, repo, prompt] = ['jobId', 'title', 'repo', 'prompt'].map((k) => String(body[k] ?? ''));
       if (!jobId || !prompt.trim()) return { status: 400, body: { error: 'jobId and prompt are required' } };
-      if (!(await listRepos()).some((r) => r.cwd === repo)) return { status: 400, body: { error: 'Not a workspace repo' } };
+      if (!isWorkspaceRepo(repo)) return { status: 400, body: { error: 'Not a workspace repo' } };
       if (d.runs().some((r) => r.kind === 'job' && r.jobId === jobId && r.state !== 'done')) return { status: 409, body: { error: 'The last run is still open' } };
       const branch = `jobs/${branchSlug(title)}`;
       if (starting.has(jobId)) return { status: 409, body: { error: 'The job is starting' } };

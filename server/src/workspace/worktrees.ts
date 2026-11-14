@@ -54,6 +54,9 @@ export function listRepos(): Promise<Repo[]> {
   return value;
 }
 
+// A git checkout directly in one of the roots, as the repo list shows it, checked without scanning the roots.
+export const isWorkspaceRepo = (dir: string) => ROOTS.includes(path.dirname(dir)) && !path.basename(dir).startsWith('.') && existsSync(path.join(dir, '.git'));
+
 async function scanRepos(): Promise<Repo[]> {
   const paseo = (await paseoProjects().catch(() => [])).map((p) => p.path);
   const dirs = await Promise.all(ROOTS.map(async (root) => (await readdir(root, { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory() && !d.name.startsWith('.')).map((d) => path.join(root, d.name))));

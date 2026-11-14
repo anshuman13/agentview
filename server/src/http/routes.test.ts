@@ -9,6 +9,7 @@ const mocks = {
   scheduleFocus: vi.fn(),
   cancelFocus: vi.fn(),
   listRepos: vi.fn(),
+  isWorkspaceRepo: vi.fn(),
   createWorktree: vi.fn(),
   listSessions: vi.fn(),
   removeChat: vi.fn(),
@@ -17,7 +18,7 @@ const mocks = {
 };
 
 vi.mock('../integrations/focus.js', () => ({ scheduleFocus: mocks.scheduleFocus, cancelFocus: mocks.cancelFocus }));
-vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, listWorktrees: vi.fn(), createWorktree: mocks.createWorktree, createFolder: vi.fn(), removeWorktree: vi.fn(), removeRunWorktree: vi.fn() }));
+vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, isWorkspaceRepo: mocks.isWorkspaceRepo, listWorktrees: vi.fn(), createWorktree: mocks.createWorktree, createFolder: vi.fn(), removeWorktree: vi.fn(), removeRunWorktree: vi.fn() }));
 vi.mock('../agent/claude/sessions.js', () => ({ listSessions: mocks.listSessions, savedSession: (x: unknown) => x, renameRoute: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRoute: vi.fn() }));
 vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: vi.fn() }));
@@ -112,13 +113,13 @@ describe('routes', () => {
       });
 
       it('answers 400 for a repo that is not a workspace repo', async () => {
-        mocks.listRepos.mockResolvedValue([{ cwd: '/tmp/other' }]);
+        mocks.isWorkspaceRepo.mockReturnValue(false);
         const r = await start();
         expect([r.code, r.json]).toEqual([400, { error: 'Not a workspace repo' }]);
       });
 
       it('answers 409 while the job has an open run', async () => {
-        mocks.listRepos.mockResolvedValue([{ cwd: '/tmp/none' }]);
+        mocks.isWorkspaceRepo.mockReturnValue(true);
         const r = await start({ runs: () => [{ kind: 'job', jobId: 'j1', state: 'running' }] } as unknown as Partial<RouteDeps>);
         expect([r.code, r.json]).toEqual([409, { error: 'The last run is still open' }]);
       });
@@ -128,7 +129,7 @@ describe('routes', () => {
         const repo = path.join(root, 'repo');
         execFileSync('git', ['init', '-q', '-b', 'main', repo]);
         execFileSync('git', ['-C', repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init']);
-        mocks.listRepos.mockResolvedValue([{ cwd: repo }]);
+        mocks.isWorkspaceRepo.mockReturnValue(true);
         const req = vi.fn(async () => 'chat9');
         const r = await start({ host: { req }, runs: () => [] } as unknown as Partial<RouteDeps>, repo);
         expect(r.json.chatId).toBe('chat9');

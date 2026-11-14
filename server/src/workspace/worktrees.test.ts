@@ -1,3 +1,4 @@
+import { mkdirSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'bun:test';
@@ -19,6 +20,17 @@ beforeAll(async () => {
   process.env.AGENTVIEW_ROOTS = '~/work:/srv/code';
   mod = await import('./worktrees.js');
   files = await import('./files.js');
+});
+
+describe('isWorkspaceRepo', () => {
+  it('accepts a git checkout directly in a root and nothing deeper, hidden or without .git', () => {
+    for (const name of ['shop/.git', 'notes', '.tries/shop-x/.git', 'shop/sub/.git']) mkdirSync(path.join(home, 'work', name), { recursive: true });
+    expect(mod.isWorkspaceRepo(path.join(home, 'work/shop'))).toBe(true);
+    expect(mod.isWorkspaceRepo(path.join(home, 'work/notes'))).toBe(false);
+    expect(mod.isWorkspaceRepo(path.join(home, 'work/.tries/shop-x'))).toBe(false);
+    expect(mod.isWorkspaceRepo(path.join(home, 'work/shop/sub'))).toBe(false);
+    rmSync(path.join(home, 'work'), { recursive: true, force: true });
+  });
 });
 
 describe('allowedFolder', () => {
