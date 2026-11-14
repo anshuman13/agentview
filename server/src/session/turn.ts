@@ -164,8 +164,10 @@ export class Turn {
   private followUp() {
     const plan = this.takePlanChange();
     if (plan) return plan;
-    if (this.s.compaction.due(this.s.state.session.context ?? 0, this.s.state.session.contextWindow)) return COMPACT;
-    return this.s.waiting.dequeue() ? null : this.s.hooks.afterTurn();
+    // After a failed turn or a usage limit the hooks wait for the next good turn, which still sees the edits.
+    const failed = Boolean(this.lastError || this.s.usage.reset);
+    if (!failed && this.s.compaction.due(this.s.state.session.context ?? 0, this.s.state.session.contextWindow)) return COMPACT;
+    return this.s.waiting.dequeue() || failed ? null : this.s.hooks.afterTurn();
   }
 
   // The agent process is gone; its queued input went with it, but the events stay.
