@@ -17,7 +17,7 @@ import { billing } from '../../../../shared/providers';
 import { roundText } from '../../../../shared/goalText';
 import type { RunOp } from '../../../../shared/protocol';
 import { useCardOpen } from './useCardOpen';
-import { OUTCOME_DOT, agentAge, loopNow, runLine, runNeedsYou, showTurn, stoppedText } from '../composer/composerLogic';
+import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine, runNeedsYou, showTurn, stoppedText } from '../composer/composerLogic';
 
 export function LoopCard() {
   const chat = useStore((s) => s.session.id);
@@ -53,9 +53,10 @@ export function LoopCard() {
   return (
     <>
     <TranscriptBox
+      key={run.id}
       id={`loop:${run.id}`}
       className="lc"
-      defaultOpen={!phone}
+      defaultOpen={!phone && loopOpenByDefault(run, working, waiting)}
       open={phone?.open}
       onToggle={phone?.toggle}
       title={runLine(run, phase)}

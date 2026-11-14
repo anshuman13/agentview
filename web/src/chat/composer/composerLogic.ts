@@ -182,6 +182,8 @@ export const runNeedsYou = (run: ChatRun) => {
   return run.needsYou || (!!last && NEEDS_YOU.includes(last));
 };
 
+export const loopOpenByDefault = (run: ChatRun, working: boolean, waiting: boolean) => working || waiting || runNeedsYou(run);
+
 export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? ENDED[loop.phase] ?? `Build cycle${loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 export const fileCache = new Map<string, string[]>();
 

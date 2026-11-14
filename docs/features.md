@@ -490,7 +490,7 @@ transcript, the chat row and push bodies. A round without the line counts as pro
 stopped it (a goal reads "Goal met in <repo>", "Goal stopped in <repo>" or "Goal not met in <repo>"). A usage limit or a pending approval marks the run paused until the next round or the answer. A build
 cycle is one run with a round per step.
 
-The loop card sits above the composer while the chat has an active run, as a box that opens by default and collapses to its header (the state line with Pause and More): a state line ("Loop · round 4 · next 14:20",
+The loop card sits above the composer while the chat has an active run, as a box that opens by default while the loop is working or needs you, otherwise starts collapsed, and collapses to its header (the state line with Pause and More): a state line ("Loop · round 4 · next 14:20",
 "Paused · usage limit until 18:00", "Goal · round 3 of 20", "Build cycle · round 2/3 · Test"), then a Now row with what is
 happening: the agent's latest status (with "Next: ..." and the steps left) or the last round ("Round 4 · 02:10 · progress: merged X", "nothing to do" for a quiet round, "First round 02:00" before the first), whichever is newer, with a
 running dot while a turn or an agent runs. One running agent gets a row (slug or description, type and minutes) that

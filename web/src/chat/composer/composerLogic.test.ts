@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, runNeedsYou, loopNow, agentAge } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, runNeedsYou, loopOpenByDefault, loopNow, agentAge } from './composerLogic';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
@@ -257,6 +257,14 @@ describe('runNeedsYou', () => {
     expect(runNeedsYou(run(false, 'blocked'))).toBe(true);
     expect(runNeedsYou(run(false, 'failed', 'done'))).toBe(false);
     expect(runNeedsYou(run(false))).toBe(false);
+  });
+  it('opens the loop card by default only when working, waiting or needing you', () => {
+    expect(loopOpenByDefault(run(true), false, false)).toBe(true);
+    expect(loopOpenByDefault(run(false), false, true)).toBe(true);
+    expect(loopOpenByDefault(run(false), true, false)).toBe(true);
+    expect(loopOpenByDefault(run(false, 'progress'), false, false)).toBe(false);
+    expect(loopOpenByDefault({ ...run(false), state: 'paused' } as ChatRun, false, false)).toBe(false);
+    expect(loopOpenByDefault({ ...run(false), state: 'done' } as ChatRun, false, false)).toBe(false);
   });
 });
 
