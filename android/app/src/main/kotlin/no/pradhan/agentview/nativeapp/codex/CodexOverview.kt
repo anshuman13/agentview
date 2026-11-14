@@ -131,8 +131,7 @@ fun mergeDismissed(a: String?, b: String?): String? {
 
 fun withDismissal(v: String?, key: String, on: Boolean, at: Long) = mergeDismissed(v, "${if (on) "+" else "-"}$key\t$at")
 
-fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList(), briefs: List<Row> = emptyList()): List<Need> {
-    val s = split(items, profile, now)
+fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList(), briefs: List<Row> = emptyList(), s: Split = split(items, profile, now)): List<Need> {
     val mt = meetingsOf(meetings, profile, now)
     val ended = mt.today.filter { it.endsAt != null && it.endsAt!! <= now && now - it.endsAt!! < JUST_ENDED_MS }
     val dms = chats.filter { !it.deleted && it.str("kind") == "dm" && it.long("waiting") == 1L && matchesProfile(profile, it) }.sortedByDescending { it.long("last_at") ?: 0L }
@@ -170,8 +169,10 @@ fun needsList(st: CodexState, profile: String?, now: Long) = needsYou(st.items, 
 
 class NeedsView(val list: List<Need>, val queue: List<Row>) { val total get() = list.size + queue.size }
 
-fun needsView(st: CodexState, profile: String?, now: Long) =
-    NeedsView(needsList(st, profile, now), replyQueue(split(st.items, profile, now).review, profile, now))
+fun needsView(st: CodexState, profile: String?, now: Long): NeedsView {
+    val s = split(st.items, profile, now)
+    return NeedsView(needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs, s), replyQueue(s.review, profile, now))
+}
 
 fun doneCount(done: Int, open: Int) = if (done > 0) "$done of ${done + open} done" else null
 
