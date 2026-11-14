@@ -108,6 +108,11 @@ fun <T> LazyListScope.lazyGroup(rows: List<T>, key: (T) -> Any, lead: Boolean = 
 @Composable
 fun Hairline(lead: Boolean = false) = HorizontalDivider(Modifier.padding(start = Tokens.listPad + if (lead) Tokens.leadWidth + Tokens.sp8 else 0.dp), color = av.border, thickness = Tokens.hairline)
 
+// A row of a pick-one list: a check marks the current choice.
+@Composable
+fun ChoiceRow(title: CharSequence, meta: CharSequence? = null, checked: Boolean, onClick: (() -> Unit)?) =
+    ListRow(title, meta, onClick = onClick, trailing = if (checked) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+
 // List row (web Row): leading slot, a title of one or two lines, a meta line, a fixed-width state slot, trailing content and a More menu.
 // The slot is drawn when stateSlot is true, so rows without a state keep the columns aligned; fitState sizes it to the state instead of the column. A long press opens the menu unless onLongClick is set.
 @OptIn(ExperimentalFoundationApi::class)

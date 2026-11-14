@@ -14,13 +14,12 @@ import no.pradhan.agentview.nativeapp.net.lastModel
 import no.pradhan.agentview.nativeapp.net.modelsOf
 import no.pradhan.agentview.nativeapp.net.ProviderOption
 import no.pradhan.agentview.nativeapp.net.newChat
-import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
-import no.pradhan.agentview.nativeapp.ui.ListRow
+import no.pradhan.agentview.nativeapp.ui.ChoiceRow
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.Tokens
@@ -49,7 +48,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
         Group {
             START_MODES.forEachIndexed { i, m ->
                 if (i > 0) Hairline()
-                ListRow(m.label, onClick = { startMode = m }, trailing = if (m == startMode) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+                ChoiceRow(m.label, onClick = { startMode = m }, checked = m == startMode)
             }
         }
         if (providers.size > 1) {
@@ -57,7 +56,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
             Group {
                 providers.forEachIndexed { i, p ->
                     if (i > 0) Hairline()
-                    ListRow(p.label, if (p.enabled) null else p.note, onClick = if (p.enabled) { { picked = p } } else null, trailing = if (p.id == provider?.id) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+                    ChoiceRow(p.label, if (p.enabled) null else p.note, onClick = if (p.enabled) { { picked = p } } else null, checked = p.id == provider?.id)
                 }
             }
         }
@@ -66,7 +65,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
             Group {
                 repos.forEachIndexed { i, r ->
                     if (i > 0) Hairline()
-                    ListRow(r.name, onClick = { repo = r.key }, trailing = if (r.key == repo) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+                    ChoiceRow(r.name, onClick = { repo = r.key }, checked = r.key == repo)
                 }
             }
         }
@@ -75,7 +74,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
             Group {
                 models.forEachIndexed { i, m ->
                     if (i > 0) Hairline()
-                    ListRow(m.displayName.ifBlank { m.value }, m.description, onClick = { model = m.value }, trailing = if (m.value == model) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+                    ChoiceRow(m.displayName.ifBlank { m.value }, m.description, onClick = { model = m.value }, checked = m.value == model)
                 }
             }
         }

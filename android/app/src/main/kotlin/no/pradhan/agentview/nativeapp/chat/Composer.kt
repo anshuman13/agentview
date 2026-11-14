@@ -78,6 +78,7 @@ import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.IconBtn
+import no.pradhan.agentview.nativeapp.ui.ChoiceRow
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
@@ -283,12 +284,12 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
         Group {
             modes.list.forEachIndexed { i, m ->
                 if (i > 0) Hairline()
-                ListRow(m.label, m.detail, onClick = {
+                ChoiceRow(m.label, m.detail, checked = m.value == modes.checked, onClick = {
                     val (mode, reviewOn) = modeSteps(session?.permissionMode ?: "default", review, m.value)
                     mode?.let { hub.setMode(it) }
                     reviewOn?.let { hub.setReview(it) }
                     onSheet(null)
-                }, trailing = if (m.value == modes.checked) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+                })
             }
         }
         if (models.isNotEmpty()) {
@@ -298,7 +299,7 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
             Group {
                 (if (all) models else newest).forEachIndexed { i, m ->
                     if (i > 0) Hairline()
-                    ListRow(m.displayName.ifBlank { m.value }, m.description, onClick = { hub.setModel(m.value); onSheet(null) }, trailing = if (m.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = c.accentText) } } else null)
+                    ChoiceRow(m.displayName.ifBlank { m.value }, m.description, onClick = { hub.setModel(m.value); onSheet(null) }, checked = m.value == current)
                 }
                 if (!all && newest.size < models.size) {
                     Hairline()
@@ -340,11 +341,7 @@ private fun PickerSheet(title: String, items: List<Choice>, current: String?, on
         Group {
             items.forEachIndexed { i, c ->
                 if (i > 0) Hairline()
-                ListRow(
-                    c.label, c.detail,
-                    onClick = { onPick(c.value); onDismiss() },
-                    trailing = if (c.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null,
-                )
+                ChoiceRow(c.label, c.detail, checked = c.value == current, onClick = { onPick(c.value); onDismiss() })
             }
         }
     }
