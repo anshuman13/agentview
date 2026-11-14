@@ -17,7 +17,7 @@ import { hideableIds } from '../../../shared/featureUse.js';
 import { clearFeatureUse, featureUseDays, recordRoute } from '../featureUse.js';
 import { loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
-import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
+import { createFolder, createWorktree, listRepos, listWorktrees, removeRunWorktree, removeWorktree } from '../workspace/worktrees.js';
 import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { readBody, savePaste } from './body.js';
 import { entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
@@ -98,7 +98,10 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
 
 
 export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
-  const liveCwds = () => [...d.chats().values()].map((c) => c.cwd);
+  // Open chats and open job runs, whose worktree a review still needs, are in use.
+  // Jobs whose worktree is being made, so a second start in that time is refused.
+  const starting = new Set<string>();
+  const liveCwds = () => [...[...d.chats().values()].map((c) => c.cwd), ...d.runs().flatMap((r) => (r.kind === 'job' && r.state !== 'done' && r.worktree ? [r.worktree] : []))];
 
   return {
     'DELETE /api/worktrees': entry(async ({ url }) => {
@@ -112,8 +115,19 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       if (!(await listRepos()).some((r) => r.cwd === repo)) return { status: 400, body: { error: 'Not a workspace repo' } };
       if (d.runs().some((r) => r.kind === 'job' && r.jobId === jobId && r.state !== 'done')) return { status: 409, body: { error: 'The last run is still open' } };
       const branch = `jobs/${branchSlug(title)}`;
-      const { dir, paseo } = await makeWorktree(repo, branch);
-      return { chatId: await d.host.req<string>({ op: 'job', cwd: dir, title, prompt, jobId, branch, repo, paseo }), branch };
+      if (starting.has(jobId)) return { status: 409, body: { error: 'The job is starting' } };
+      starting.add(jobId);
+      try {
+        const { dir, paseo } = await makeWorktree(repo, branch);
+        const chatId = await d.host.req<string>({ op: 'job', cwd: dir, title, prompt, jobId, branch, repo, paseo }).catch(async (err) => {
+          // No chat took the worktree, so it goes.
+          await removeRunWorktree({ repo, worktree: dir, branch, paseo }).catch(() => {});
+          throw err;
+        });
+        return { chatId, branch };
+      } finally {
+        starting.delete(jobId);
+      }
     }, true),
     'POST /api/paste': entry(async ({ req, url }) => ({ path: await savePaste(req, url.searchParams.get('name') ?? '') })),
     'POST /api/folders': entry(async ({ body }) => ({ cwd: await createFolder(String(body.root ?? ''), String(body.name ?? '').trim()) }), true),
