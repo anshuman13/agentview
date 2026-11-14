@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'bun:test';
 import os from 'node:os';
-import { advisorsMac, applyHubChanges, expandHome, homeRelative, assistantRoute, learnEvents, type HubRow } from './assistant.js';
+import { advisorsMac, applyHubChanges, assistantRoute, learnEvents, type HubRow } from './assistant.js';
+import { expandHome, homeRelative } from '../settings.js';
 import { stubGlobal, unstubAllGlobals } from '../../../testing.js';
 
 const change = (id: string, deleted = false) => ({ table: 'items', id, profile: 'work' as const, deleted, updated_at: 1, fields: { title: id } });

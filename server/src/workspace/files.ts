@@ -3,13 +3,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { ADVISOR_DIR } from '../../../shared/advisors.js';
 import { inside } from '../../../shared/util.js';
-import { workspaceRoots } from '../settings.js';
+import { expandHome, workspaceRoots } from '../settings.js';
 import { git } from './git.js';
 
 const HIDDEN = new Set(['node_modules', '.git', 'dist']);
 
 const home = os.homedir();
-export const ROOTS = process.env.AGENTVIEW_ROOTS ? process.env.AGENTVIEW_ROOTS.split(':').filter(Boolean).map((r) => path.resolve(r.replace(/^~/, home))) : workspaceRoots();
+export const ROOTS = process.env.AGENTVIEW_ROOTS ? process.env.AGENTVIEW_ROOTS.split(':').filter(Boolean).map((r) => path.resolve(expandHome(r))) : workspaceRoots();
 const PASEO_TREES = path.join(home, '.paseo/worktrees');
 // Codex questions about work items run here, outside the personal root, so they get the work account and profile.
 export const CODEX_WORK = path.join(home, '.agentview/codex-work');

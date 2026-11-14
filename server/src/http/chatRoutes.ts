@@ -11,8 +11,8 @@ import { attention, dismissAttention, refreshAttention } from '../integrations/a
 import { buildOne, reviewBuild } from '../session/builds.js';
 import { dismissFinding, getFindings } from '../session/findings.js';
 import { deployRoute } from '../integrations/deploy.js';
-import { deployUrl } from '../settings.js';
-import { advisorsMac, askAdvisorsMac, homeRelative } from '../integrations/assistant.js';
+import { deployUrl, homeRelative } from '../settings.js';
+import { advisorsMac, askAdvisorsMac } from '../integrations/assistant.js';
 import { isSketchPath, sketchName } from '../../../shared/sketches.js';
 import { gitRoute } from '../workspace/git.js';
 import { observe } from '../integrations/observe.js';

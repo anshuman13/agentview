@@ -20,11 +20,14 @@ export const UNATTENDED_DOMAINS = ['registry.npmjs.org', 'pypi.org', 'files.pyth
 
 export const EMPTY_SETTINGS: Settings = { unattended: { allowWrite: [], allowedDomains: UNATTENDED_DOMAINS }, owner: '', hubUrl: '', deployUrl: '', accountLabels: {}, roots: ['~/workspace'], personalRoot: '', defaultProvider: 'claude', featureUse: false, hiddenFeatures: [] };
 
-const expandHome = (dir: string) => path.resolve(dir.replace(/^~/, os.homedir()));
+// Paths go to the hub Mac relative to the home folder, so they resolve under its own home.
+export const homeRelative = (p: string) => (p === os.homedir() || p.startsWith(`${os.homedir()}/`) ? `~${p.slice(os.homedir().length)}` : p);
+export const expandHome = (p: string) => p.replace(/^~(?=\/|$)/, os.homedir());
+const resolveHome = (dir: string) => path.resolve(expandHome(dir));
 
-export const personalRoot = (s = loadSettings()) => (s.personalRoot ? expandHome(s.personalRoot) : '');
+export const personalRoot = (s = loadSettings()) => (s.personalRoot ? resolveHome(s.personalRoot) : '');
 
-export const workspaceRoots = (s = loadSettings()) => [...new Set([...s.roots.map(expandHome), personalRoot(s)].filter(Boolean))];
+export const workspaceRoots = (s = loadSettings()) => [...new Set([...s.roots.map(resolveHome), personalRoot(s)].filter(Boolean))];
 
 const strings = (v: unknown, fallback: string[], name: string, log: (line: string) => void) => {
   if (v === undefined) return fallback;
@@ -41,7 +44,7 @@ export function unattendedLimits(raw: unknown, log: (line: string) => void = con
   const domains = strings(o.allowedDomains, UNATTENDED_DOMAINS, 'allowedDomains', log);
   const dropped = domains.filter(reachesThisMac);
   if (dropped.length) log(`settings: unattended.allowedDomains dropped ${dropped.join(', ')}`);
-  return { allowWrite: strings(o.allowWrite, [], 'allowWrite', log).map(expandHome), allowedDomains: domains.filter((d) => !reachesThisMac(d)) };
+  return { allowWrite: strings(o.allowWrite, [], 'allowWrite', log).map(resolveHome), allowedDomains: domains.filter((d) => !reachesThisMac(d)) };
 }
 
 export const loadSettings = (): Settings => ({ ...EMPTY_SETTINGS, ...readJsonSync<Partial<Settings>>(SETTINGS_FILE, {}) });

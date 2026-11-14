@@ -12,9 +12,6 @@ export const advisorsMac = (hub = HUB): string | null => (/^https?:\/\/(localhos
 export const ADVISORS_ELSEWHERE = 'Advisors run on the Mac with the hub. Switch to that Mac to use them.';
 export const STARTED_ON_HUB = 'Started on the Mac with the hub. Switch to that Mac to follow the chat.';
 
-// Paths go to the hub Mac relative to the home folder, so they resolve under its own home.
-export const homeRelative = (p: string) => (p === os.homedir() || p.startsWith(`${os.homedir()}/`) ? `~${p.slice(os.homedir().length)}` : p);
-export const expandHome = (p: string) => p.replace(/^~(?=\/|$)/, os.homedir());
 
 export async function askAdvisorsMac(pathAndQuery: string, init: { method?: string; body?: unknown } = {}) {
   try {

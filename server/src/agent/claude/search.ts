@@ -5,6 +5,7 @@ import { configDir, loggedInAccounts, profileOf } from './accounts.js';
 import { listBin } from './bin.js';
 import { CLAUDE_DIR } from './history.js';
 import { listSessions } from './sessions.js';
+import { homeRelative } from '../../settings.js';
 
 export type MessageHit = { sessionId: string; role: 'user' | 'assistant'; text: string; at: string };
 
@@ -105,8 +106,6 @@ const defaultDeps: ChatSearchDeps = {
   read: readFile,
 };
 
-const tilde = (cwd: string) => (cwd === os.homedir() || cwd.startsWith(os.homedir() + path.sep) ? '~' + cwd.slice(os.homedir().length) : cwd);
-
 async function refreshIndex(dirs: string[], read: typeof readFile) {
   const roots = new Set<string>();
   for (const dir of dirs) roots.add(await realpath(path.join(dir, 'projects')).catch(() => ''));
@@ -159,6 +158,6 @@ export async function searchChats(query: string, cwd: string, self: string | nul
   if (!ranked.length) return 'No past chats match.';
   return ranked.slice(0, 8).map(({ chat, best, bestWords }) => {
     const title = titles.get(chat.sessionId) || chat.first.slice(0, 80) || 'Untitled';
-    return `- ${title} | ${tilde(chat.cwd)} | ${best.at.slice(0, 10)} | ${chat.sessionId}\n  ${snippetAround(best.text, best.low.indexOf(bestWords[0]))}`;
+    return `- ${title} | ${homeRelative(chat.cwd)} | ${best.at.slice(0, 10)} | ${chat.sessionId}\n  ${snippetAround(best.text, best.low.indexOf(bestWords[0]))}`;
   }).join('\n');
 }

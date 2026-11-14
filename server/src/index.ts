@@ -5,7 +5,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { attachTerminal, closeTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, ownProfile } from './chrome/chrome.js';
-import { ADVISORS_ELSEWHERE, STARTED_ON_HUB, advisorsMac, askAdvisorsMac, expandHome, homeRelative } from './integrations/assistant.js';
+import { ADVISORS_ELSEWHERE, STARTED_ON_HUB, advisorsMac, askAdvisorsMac } from './integrations/assistant.js';
 import { ntfyTopic, post } from './integrations/notify.js';
 import { CODEX_WORK } from './workspace/files.js';
 import { createAutoMerge } from './integrations/automerge.js';
@@ -21,7 +21,7 @@ import { OPEN, Peer, type SocketData } from './http/peer.js';
 import { allowedPeer, allowedRequest, appOrigin, requester } from './http/access.js';
 import { Host } from './host/client.js';
 import { migrateSettings } from './migrateSettings.js';
-import { applyAccountLabels } from './settings.js';
+import { applyAccountLabels, expandHome, homeRelative } from './settings.js';
 import { createPresence, isPhone } from './presence.js';
 import type { Hello } from './host/protocol.js';
 
