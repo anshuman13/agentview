@@ -26,8 +26,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.codex.autopilot.openChatOf
 import no.pradhan.agentview.nativeapp.net.Hub
@@ -236,19 +234,19 @@ internal class BuildActions(val approve: (String, (Boolean) -> Unit) -> Unit, va
 @Composable
 internal fun buildActions(hub: Hub, slug: String, reload: () -> Unit): BuildActions {
     val scope = rememberCoroutineScope()
-    val postReview: (String, (Boolean) -> Unit) -> Unit = { body, done ->
+    val postReview: (String, String?, String?, (Boolean) -> Unit) -> Unit = { decision, phase, note, done ->
         if (!hub.writes.allowed()) done(false)
         else scope.launch {
-            val ok = runCatching { hub.postBuildReview(body) }.isSuccess
+            val ok = runCatching { hub.postBuildReview(slug, decision, phase, note) }.isSuccess
             if (ok) reload()
             done(ok)
         }
     }
     val saveReview: (String, String, String, (Boolean) -> Unit) -> Unit = { key, decision, note, done ->
-        postReview(buildJsonObject { put("slug", slug); put("phase", key); put("decision", decision); put("note", note) }.toString(), done)
+        postReview(decision, key, note, done)
     }
     val approve: (String, (Boolean) -> Unit) -> Unit = { key, done -> hub.track("action:approveSpec"); saveReview(key, "approve", "") { ok -> if (!ok) hub.notice.value = "Could not save the review. Try again."; done(ok) } }
-    val setHold: (String) -> Unit = { decision -> postReview(buildJsonObject { put("slug", slug); put("decision", decision) }.toString()) { ok -> if (!ok) hub.notice.value = "Could not save the hold. Try again." } }
+    val setHold: (String) -> Unit = { decision -> postReview(decision, null, null) { ok -> if (!ok) hub.notice.value = "Could not save the hold. Try again." } }
     return BuildActions(approve, saveReview, setHold)
 }
 

@@ -42,7 +42,7 @@ suspend fun Hub.advisors(): List<AdvisorInfo> = protocolJson.decodeFromString(re
 suspend fun Hub.backlog(root: String): List<BacklogItem> = protocolJson.decodeFromString(read("/api/advisors/backlog?root=${enc(root)}"))
 suspend fun Hub.specs(root: String): List<SpecHomeItem> = protocolJson.decodeFromString(read("/api/advisors/specs?root=${enc(root)}"))
 suspend fun Hub.audit(root: String): AuditInfo? = protocolJson.decodeFromString(read("/api/advisors/audit?root=${enc(root)}"))
-suspend fun Hub.postBuildReview(body: String) { api.post("/api/builds/review", body, pageChat) }
+suspend fun Hub.postBuildReview(slug: String, decision: String, phase: String? = null, note: String? = null) { api.postReview(pageChat, slug, decision, phase, note) }
 
 // The build, or null when the server has no such spec any more.
 suspend fun Hub.build(slug: String) = try { parseBuild(read("/api/builds/one?slug=${enc(slug)}")) } catch (e: ApiError) { if (e.code == 404) null else throw e }

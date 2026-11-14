@@ -129,9 +129,13 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
     override suspend fun pending(chat: String): List<Pending> =
         (protocolJson.parseToJsonElement(get("/api/state?limit=0", chat)).jsonObject["pending"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { parsePending(it) } ?: emptyList()
 
-    override suspend fun review(chat: String, slug: String): Boolean {
-        val body = buildJsonObject { put("slug", slug); put("phase", "all"); put("decision", "approve") }.toString()
-        return protocolJson.parseToJsonElement(post("/api/builds/review", body, chat)).jsonObject["already"]?.jsonPrimitive?.booleanOrNull == true
+    override suspend fun review(chat: String, slug: String): Boolean =
+        protocolJson.parseToJsonElement(postReview(chat, slug, "approve", "all")).jsonObject["already"]?.jsonPrimitive?.booleanOrNull == true
+
+    // A build review: a phase decision with its note, or a hold on the whole build when phase is null.
+    suspend fun postReview(chat: String, slug: String, decision: String, phase: String? = null, note: String? = null): String {
+        val body = buildJsonObject { put("slug", slug); phase?.let { put("phase", it) }; put("decision", decision); note?.let { put("note", it) } }.toString()
+        return post("/api/builds/review", body, chat)
     }
 
     override suspend fun send(chat: String, body: String) { post("/api/cmd?cid=${enc(java.util.UUID.randomUUID().toString())}&client=phone", body, chat) }

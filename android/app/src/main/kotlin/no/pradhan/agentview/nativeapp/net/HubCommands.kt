@@ -2,9 +2,7 @@ package no.pradhan.agentview.nativeapp.net
 
 import androidx.lifecycle.viewModelScope
 import java.util.UUID
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.lastModelKey
@@ -17,9 +15,7 @@ import no.pradhan.agentview.nativeapp.workspace.TermTab
 import no.pradhan.agentview.nativeapp.workspace.parseTerms
 import no.pradhan.agentview.nativeapp.workspace.termInput
 import no.pradhan.agentview.nativeapp.workspace.wsOrigin
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
@@ -154,13 +150,13 @@ fun Hub.setLoop(on: Boolean, max: Int? = null) = post(setLoopCmd(on, max), store
 
 fun Hub.review(id: String, action: String, file: String? = null, hunk: Int? = null) = post(reviewCmd(id, action, file, hunk), store.wanted)
 
-internal suspend fun Hub.send(body: String, chat: String): String? = withContext(Dispatchers.IO) {
-    val url = "${origin.value}/api/cmd?cid=$cid&client=phone&chat=${enc(chat)}"
-    try {
-        client.newCall(Request.Builder().url(url).post(body.toRequestBody("application/json".toMediaType())).build()).execute().use { if (it.isSuccessful) null else "Server said ${it.code}" }
-    } catch (e: Exception) {
-        "Not connected, that did not reach the server"
-    }
+internal suspend fun Hub.send(body: String, chat: String): String? = try {
+    api.post("/api/cmd?cid=$cid&client=phone", body, chat)
+    null
+} catch (e: ApiError) {
+    e.message
+} catch (e: Exception) {
+    "Not connected, that did not reach the server"
 }
 
 internal fun Hub.post(body: String, chat: String, viewing: Boolean = false, done: ((Boolean) -> Unit)? = null) {
