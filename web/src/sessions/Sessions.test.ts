@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
 import { buildFolders, type Folder, chatFinder, chatState, chatsByStatus, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
 import { RepoRow } from './RepoRow';
-import { AgentsBlock } from './AgentRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 import { WORKSPACE } from '../../../shared/workspace';
 
@@ -275,23 +274,6 @@ describe('RepoRow', () => {
     const html = render(folder('main'));
     expect(html).toContain('shop');
     expect(html).not.toContain('branch-chip');
-  });
-});
-
-describe('AgentsBlock', () => {
-  const agents = [{ id: 'a', description: 'Scan repo', type: 'Explore', startedAt: 1 }, { id: 'b', description: 'Run checks', type: 'tester', group: 'build', startedAt: 2 }];
-  const html = (open: boolean) => renderToStaticMarkup(createElement(AgentsBlock, { agents, open, onToggle: () => {}, onOpen: () => {} }));
-
-  it('shows the count and no rows while collapsed', () => {
-    expect(html(false)).toContain('>2</span>');
-    expect(html(false)).not.toContain('Scan repo');
-  });
-
-  it('lists each agent with its meta when open', () => {
-    const out = html(true);
-    expect(out).toContain('Scan repo');
-    expect(out).toContain('Run checks');
-    expect(out).toContain('Running · build');
   });
 });
 

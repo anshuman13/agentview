@@ -7,7 +7,12 @@ import { Composer } from '../../chat/Chat';
 import { Transcript } from '../../chat/transcript/Transcript';
 import { createTurnsBuilder, type Turn } from '../../chat/transcript/turns';
 import { AgentsPane, Loading } from '../../app/lazy';
-import { readFlag, saveFlag, useTick } from '../../ui/util';
+import { LoopCard } from '../../chat/cards/LoopCard';
+import { Sheet } from '../../ui/Sheet';
+import { agentsOf } from '../agents';
+import { useChatRun } from '../useChatRun';
+import { useNarrow } from '../../app/shell/useNarrow';
+import { plural, readFlag, saveFlag, useTick } from '../../ui/util';
 import { askChat } from '../../chat/chatActions';
 import { useMacName } from '../../app/shell/macName';
 import { useUsage } from '../../app/shell/StatusItems';
@@ -16,7 +21,6 @@ import { renameChat } from '../folders';
 import { useLongPress } from '../../ui/longPress';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
 import { HeadState } from './HeadState';
-import { narrow } from '../../app/shell/useNarrow';
 import { useGit } from '../../workspace/gitStatus';
 
 function lastReplyOf(turns: Turn[]) {
@@ -61,12 +65,22 @@ export function Brief() {
   const doneSteps = useMemo(() => (turns.at(-1)?.notes ?? []).filter((n) => n.kind === 'done' && n.id.endsWith(':done')), [turns]);
   const limit = useMemo(() => usageLimitOf(turns), [turns]);
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
+  const phone = useNarrow();
+  const run = useChatRun(sessionId);
+  const agentCount = Math.max(agentsOf(events).length, live?.agentList?.length ?? 0);
+  // The agents and the run's controls live beside the chat on desktop and in a sheet the status line opens on the phone.
+  const side = agentCount > 0 || Boolean(run);
+  const rail = side && (
+    <>
+      <LoopCard />
+      {agentCount > 0 && <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense>}
+    </>
+  );
 
   useTick(30000);
 
   useEffect(() => {
     const open = (e: Event) => {
-      if (narrow()) return;
       const id = (e as CustomEvent<unknown>).detail;
       setAgentSel(typeof id === 'string' ? id : null);
       setShowAgents(true);
@@ -80,6 +94,7 @@ export function Brief() {
   const press = useLongPress(startRename);
 
   return (
+    <div className="brief-row">
     <div className="brief">
       <div className="brief-status">
         <div className="timeline-head">
@@ -92,15 +107,21 @@ export function Brief() {
             {cwd && <small>{cwd.split('/').pop()}</small>}
           </span>
           <span className="spacer" />
-          <HeadState state={state} status={status} loop={loop} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
-          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} showAgents={showAgents} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
+          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
-        {showAgents ? <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense> : <Transcript showWork={showWork} />}
+        <div className="tl-line">
+          <HeadState state={state} status={status} loop={loop} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
+          {phone && side && <button className="link tl-agents" onClick={() => { setShowAgents(true); setAgentSel(null); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'} ›</button>}
+        </div>
+        <Transcript showWork={showWork} />
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}
       <div className="brief-input">
         <Composer />
       </div>
+    </div>
+    {!phone && side && <aside className="brief-rail">{rail}</aside>}
+    {phone && side && showAgents && <Sheet label="Agents" className="brief-sheet" onClose={() => { setShowAgents(false); setAgentSel(null); }}>{rail}</Sheet>}
     </div>
   );
 }

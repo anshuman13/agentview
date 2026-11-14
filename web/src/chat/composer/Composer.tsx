@@ -3,8 +3,6 @@ import { useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { touch } from '../../app/touch/touch';
 import { useNarrow } from '../../app/shell/useNarrow';
-import { LoopCard } from '../cards/LoopCard';
-import { TodoCard } from '../cards/TodoCard';
 import { useDictation, Voice } from './Voice';
 import { AddMenu } from './AddMenu';
 import { PopItems } from './ComposerPop';
@@ -76,8 +74,6 @@ export const Composer = memo(function Composer() {
   return (
     <div className="cp" data-mode={mode}>
       {shared !== null && <SharedConfirm shared={shared} setShared={setShared} setText={setText} />}
-      <TodoCard />
-      <LoopCard />
       <div
         ref={ac.card}
         className={`cp-card${ac.shell ? ' shell' : ''}${narrow ? ' pill' : ''}${narrow && multi ? ' multi' : ''}`}

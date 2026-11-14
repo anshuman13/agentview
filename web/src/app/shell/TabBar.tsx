@@ -3,7 +3,6 @@ import { setUi, useStore } from '../store';
 import { shownFeature } from '../../../../shared/featureUse';
 import { appSettings } from '../appSettings';
 import { track } from '../featureUse';
-import { AgentsBadge } from '../../sessions/AgentsBadge';
 import { ChangesBadge } from '../../workspace/gitStatus';
 import { GitHubBadge } from '../../ops/pulls';
 import { Icon } from '../../ui/Icon';
@@ -53,11 +52,6 @@ export function TabBar({ tab, more, inChats, inMore, goTab, goSide, toggleMore }
         <Icon name="comment-discussion" />
         <span>Sessions</span>
         {chats > 0 && <span className="dot waiting" role="img" aria-label={`${chats} unread`} />}
-      </button>
-      <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => { track('tab:agents'); goTab('agents'); }}>
-        <Icon name="hubot" />
-        <span>Agents</span>
-        <AgentsBadge />
       </button>
       <button className={more || inMore ? 'active' : ''} onClick={() => { if (!more) track('sheet:more'); toggleMore(); }}>
         <Icon name="ellipsis" />

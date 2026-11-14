@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { getState, markUnread, notice, send, subscribe, useStore } from '../app/store';
+import { markUnread, notice, send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
@@ -8,8 +8,6 @@ import { type ChatRun, type LiveChat, type SavedSession } from '../../../shared/
 import { providerMark } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
-import { AgentsBlock } from './AgentRow';
-import { openAgent } from './agents';
 import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
 import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, removeRequest, restoreChat, since, type ChatState } from './folders';
 import { Swipe } from '../codex/gestures/Swipe';
@@ -190,39 +188,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   return (
     <>
       <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
-      {c.agentList && <LiveAgents c={c} />}
     </>
   );
 }
 
-const agentsOpen = new Set<string>();
-let stopWaiting: (() => void) | null = null;
-
-// Opens an agent of another chat once the switch to that chat lands, after Brief resets its selection.
-function openAgentIn(chat: string, id: string) {
-  stopWaiting?.();
-  const stop = subscribe(() => {
-    if (getState().session.id !== chat) return;
-    stop();
-    stopWaiting = null;
-    setTimeout(() => openAgent(id), 0);
-  });
-  stopWaiting = stop;
-  setTimeout(() => { if (stopWaiting === stop) { stop(); stopWaiting = null; } }, 10_000);
-  send({ type: 'view', id: chat });
-}
-
-function LiveAgents({ c }: { c: LiveChat }) {
-  const [open, setOpen] = useState(() => agentsOpen.has(c.id));
-  const viewing = useStore((s) => s.session.id);
-  const toggle = () => {
-    if (open) agentsOpen.delete(c.id);
-    else agentsOpen.add(c.id);
-    setOpen(!open);
-  };
-  const pick = (id: string) => {
-    if (c.id === viewing) return openAgent(id);
-    openAgentIn(c.id, id);
-  };
-  return <AgentsBlock agents={c.agentList!} open={open} onToggle={toggle} onOpen={pick} />;
-}

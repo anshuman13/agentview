@@ -1,10 +1,7 @@
 import type { ReactNode } from 'react';
 import { Icon } from '../ui/Icon';
 import { Row } from '../ui/Row';
-import { Section } from '../ui/Section';
-import { useTick } from '../ui/util';
-import { elapsed } from './agents';
-import type { AgentStatus, LiveAgent } from '../../../shared/protocol';
+import type { AgentStatus } from '../../../shared/protocol';
 
 export const STATUS_ICON: Record<AgentStatus, string> = { running: 'loading', done: 'check', failed: 'error', stopped: 'debug-stop' };
 
@@ -22,14 +19,3 @@ export function AgentRow({ status, description, meta, trailing, current, onClick
   );
 }
 
-export function AgentsBlock({ agents, open, onToggle, onOpen }: { agents: LiveAgent[]; open: boolean; onToggle: () => void; onOpen: (id: string) => void }) {
-  const now = useTick(1000, open);
-  return (
-    <div className="chat-agents">
-      <Section label="Agents" count={agents.length} open={open} onToggle={onToggle} />
-      {open && agents.map((a) => (
-        <AgentRow key={a.id} status="running" description={a.description} meta={a.group ? `Running · ${a.group}` : 'Running'} trailing={elapsed(now - a.startedAt)} onClick={() => onOpen(a.id)} />
-      ))}
-    </div>
-  );
-}

@@ -184,7 +184,7 @@ function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { eve
   const rewinds = useMemo(() => rewindReplies(items), [items]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => specCards(items), [items]);
-  const list = useMemo<FoldRow[]>(() => (showWork ? items.map((it) => ({ kind: 'item', it })) : foldTurns(items, events, cards)), [showWork, items, events, cards]);
+  const list = useMemo<FoldRow[]>(() => (showWork ? items.map((it) => ({ kind: 'item', it })) : foldTurns(items, events, cards).filter((r) => r.kind === 'item')), [showWork, items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const bumps = useMemo(() => specBumps(items), [items]);

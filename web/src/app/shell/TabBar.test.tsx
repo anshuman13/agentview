@@ -14,7 +14,7 @@ const render = () => renderToStaticMarkup(<TabBar tab="chat" more={false} inChat
 describe('TabBar', () => {
   it('lists every tab and marks only the selected one active', () => {
     const html = render();
-    for (const name of ['Codex', 'Chat', 'Sessions', 'Agents', 'More']) expect(html).toContain(`<span>${name}</span>`);
+    for (const name of ['Codex', 'Chat', 'Sessions', 'More']) expect(html).toContain(`<span>${name}</span>`);
     expect(html.match(/class="active"/g)).toHaveLength(1);
     expect(html).toMatch(/class="active"><i[^>]*><\/i><span>Chat/);
   });

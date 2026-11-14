@@ -15,11 +15,6 @@
     "reason": "Android tracks it as a template in app/Shell.kt"
   },
   {
-    "id": "tab:agents",
-    "side": "web",
-    "reason": "Android has no Agents tab (Tab enum in app/Tabs.kt has Codex, Chat, Sessions)"
-  },
-  {
     "id": "more:files",
     "side": "web",
     "reason": "Android tracks it as a template in app/Shell.kt"

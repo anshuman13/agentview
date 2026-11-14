@@ -6,11 +6,22 @@
 .brief-input { flex: none; display: flex; flex-direction: column; gap: var(--sp-3); }
 .brief-status { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: auto; }
 .brief-cards { flex: none; max-height: 50%; overflow: auto; }
+.brief-row { flex: 1 1 auto; min-height: 0; display: flex; }
+.brief-row > .brief { min-width: 0; }
+.brief-rail {
+  flex: none; width: 300px; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: var(--sp-4);
+  margin: var(--sp-6) var(--sp-6) var(--sp-6) 0; padding: var(--sp-4) var(--sp-6); border: 1px solid var(--border); border-radius: var(--radius); background: var(--raised);
+}
+.brief-rail .ag.stack, .brief-sheet .ag.stack { flex: none; }
+.tl-line { flex: none; display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding-bottom: var(--sp-3); margin-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
+.tl-line > .tl-more:has(> .tl-state) { flex: 0 1 auto; max-width: 100%; }
+.tl-line .tl-state { max-width: 100%; padding: 0; }
+.tl-agents { flex: none; margin-left: auto; font-size: var(--fs-xs); }
 
 .timeline-head {
   position: sticky; top: 0; z-index: var(--z-raised); background: var(--brief-bg); flex: none;
-  display: flex; align-items: center; gap: var(--sp-3); min-height: var(--size-lg); padding-bottom: var(--sp-4); margin-bottom: var(--sp-2);
-  border-bottom: 1px solid var(--border); font-size: var(--fs-xs); color: var(--fg-muted);
+  display: flex; align-items: center; gap: var(--sp-3); min-height: var(--size-lg); padding-bottom: var(--sp-2);
+  font-size: var(--fs-xs); color: var(--fg-muted);
 }
 .timeline-head .title { font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg); }
 .timeline-head > .spacer { display: none; }
@@ -66,7 +77,9 @@
 @media (hover: hover) { .step.add .link:hover { color: var(--link); } }
 
 @media (max-width: 900px) {
-  .brief { display: contents; --brief-bg: var(--bg); }
+  .brief-row, .brief { display: contents; --brief-bg: var(--bg); }
+  .tl-line { padding: 0 0 var(--sp-3); }
+  .tl-agents { min-height: var(--touch-sm); }
   .brief-status { order: 0; flex: 1 1 0; padding: var(--sp-3) var(--sp-6) var(--sp-4); background: var(--bg); border-bottom: 1px solid var(--border); }
   .brief-cards { order: 1; padding: var(--sp-4) var(--sp-6); }
   .brief-input { order: 2; padding: var(--sp-3) var(--sp-6) var(--sp-2); }
