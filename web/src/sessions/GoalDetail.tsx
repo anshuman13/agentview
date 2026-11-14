@@ -72,6 +72,11 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
         {(billing(run.provider) !== 'none' || run.maxBuilds) && <EditRow title="Usage" value={usageLine(run)} options={ended || billing(run.provider) === 'none' ? undefined : CAPS.map((c) => ({ label: c.pct ? `${c.pct}% cap` : 'No cap', edit: { capPct: c.pct } }))} onEdit={edit} />}
         <EditRow title="Build limit" value={run.maxBuilds ? String(run.maxBuilds) : 'None'} options={ended ? undefined : BUILDS.map((b) => ({ label: b.label, edit: { maxBuilds: b.n } }))} onEdit={edit} />
       </div>
+      <div className="gl-actions">
+        {!ended && <Button onClick={() => control(paused ? 'resume' : 'pause')}>{paused ? 'Resume' : 'Pause'}</Button>}
+        {!ended && <Button variant="danger" onClick={stop}>Stop</Button>}
+        <Button variant="plain" onClick={() => open()}>Open chat</Button>
+      </div>
       <Section label="Rounds" count={sectionCount(run.rounds.length)} />
       {run.rounds.length ? (
         <div className="ui-group">
@@ -87,11 +92,6 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
           ))}
         </div>
       ) : <EmptyState size="sm" icon="history" title="No rounds yet" hint="The first round runs when the agent goes idle" />}
-      <div className="gl-actions">
-        {!ended && <Button onClick={() => control(paused ? 'resume' : 'pause')}>{paused ? 'Resume' : 'Pause'}</Button>}
-        {!ended && <Button variant="danger" onClick={stop}>Stop</Button>}
-        <Button variant="plain" onClick={() => open()}>Open chat</Button>
-      </div>
     </Sheet>
   );
 }

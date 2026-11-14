@@ -317,6 +317,13 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         Group { facts.forEachIndexed { i, row -> if (i > 0) Hairline(); row() } }
         SectionHeader("Settings")
         Group { settings.forEachIndexed { i, row -> if (i > 0) Hairline(); row() } }
+        Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            if (!ended) {
+                Button(if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
+                Button("Stop", { hub.runControl(run, "stop") }, variant = ButtonVariant.Danger, enabled = !hub.readOnly)
+            }
+            Button("Open chat", { open(run.rounds.lastOrNull()?.report) }, variant = ButtonVariant.Plain)
+        }
         SectionHeader("Rounds", run.rounds.size.toString())
         if (run.rounds.isEmpty()) EmptyState("No rounds yet", "The first round runs when the agent goes idle", icon = "history")
         else Group {
@@ -327,13 +334,6 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
                     leading = { StatusDot(outcomeDot(g.last.outcome)) }, onClick = g.last.report?.let { report -> { open(report) } },
                 )
             }
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            if (!ended) {
-                Button(if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
-                Button("Stop", { hub.runControl(run, "stop") }, variant = ButtonVariant.Danger, enabled = !hub.readOnly)
-            }
-            Button("Open chat", { open(run.rounds.lastOrNull()?.report) }, variant = ButtonVariant.Plain)
         }
     }
 }
