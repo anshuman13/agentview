@@ -9,7 +9,10 @@ private const val KEY = "boxes"
 private const val KEEP = 300
 private val serializer = MapSerializer(String.serializer(), Int.serializer())
 
-private fun boxes(kv: KeyValue) = LinkedHashMap(runCatching { protocolJson.decodeFromString(serializer, kv.get(KEY) ?: "{}") }.getOrDefault(emptyMap()))
+// Decoded once per store.
+private var cache: Pair<KeyValue, LinkedHashMap<String, Int>>? = null
+private fun boxes(kv: KeyValue) = cache?.takeIf { it.first === kv }?.second
+    ?: LinkedHashMap(runCatching { protocolJson.decodeFromString(serializer, kv.get(KEY) ?: "{}") }.getOrDefault(emptyMap())).also { cache = kv to it }
 
 // Web chat/transcript/boxOpen.ts: which transcript boxes are open, per box id, the 300 saved last.
 fun readBox(kv: KeyValue, id: String, fallback: Boolean): Boolean = boxes(kv)[id]?.let { it == 1 } ?: fallback

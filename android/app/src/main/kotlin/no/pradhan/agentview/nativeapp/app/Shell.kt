@@ -194,14 +194,12 @@ private fun rememberOfflineBanner(connected: Boolean): OfflineState {
 
 @Composable
 private fun rememberDests(hub: Hub, nav: NavHostController, route: String?, more: Boolean, onMore: (Boolean) -> Unit): List<Dest> {
-    val live by hub.store.state.select { it.live }
-    val shownId by hub.store.state.select { it.shownId }
+    val shownPending by hub.store.state.select { s -> s.live.firstOrNull { it.id == s.shownId }?.pending ?: 0 }
     val counts by hub.counts.collectAsState()
-    val shownChat = live.firstOrNull { it.id == shownId }
     val inAgent = isAgent(route)
     return Tab.entries.map { t ->
         val badge = when (t) {
-            Tab.Chat -> shownChat?.pending ?: 0
+            Tab.Chat -> shownPending
             Tab.Sessions -> counts.chats
             else -> 0
         }

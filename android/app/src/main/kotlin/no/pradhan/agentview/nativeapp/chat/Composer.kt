@@ -175,9 +175,11 @@ private fun rememberSuggestions(s: ComposerState, trigger: Trigger?, session: Se
     LaunchedEffect(s.chatId, trigger?.file) {
         if (trigger?.file == true && s.files == null) s.files = runCatching { protocolJson.decodeFromString<List<String>>(s.hub.api.get("/api/files", s.chatId)) }.getOrDefault(emptyList())
     }
+    val files = s.files
+    val ranked = remember(files, trigger?.query, trigger?.file) { if (trigger?.file == true) rankFiles(files.orEmpty(), trigger.query) else emptyList() }
     return when {
         trigger == null || key == s.dismissed -> emptyList()
-        trigger.file -> rankFiles(s.files.orEmpty(), trigger.query).map { f -> Suggestion(f.substringAfterLast('/'), f.substringBeforeLast('/', ""), "@$f") }
+        trigger.file -> ranked.map { f -> Suggestion(f.substringAfterLast('/'), f.substringBeforeLast('/', ""), "@$f") }
         else -> rankCommands(session?.commands ?: emptyList(), trigger.query).map { Suggestion("/${it.name}", it.description, "/${it.name}") }
     }
 }
