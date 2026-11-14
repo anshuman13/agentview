@@ -31,6 +31,7 @@ class WorkFoldTest {
         assertEquals("1 agent", workTitle(work, true, "plan").detail)
         assertEquals("2 failed", workTitle(work.copy(failed = 2), false, "usd").failed)
         assertEquals("Work", workTitle(work.copy(tools = 0, files = 0), false, "usd").text)
+        assertEquals(WorkTitle("Session started with claude", "", ""), workTitle(work.copy(tools = 0, files = 0, note = "Session started with claude"), false, "usd"))
         assertEquals("", workTitle(work.copy(tools = 0, files = 0, failed = 2), false, "usd").text)
     }
 

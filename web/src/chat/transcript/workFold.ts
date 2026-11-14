@@ -2,9 +2,13 @@ import { costRise } from '../../../../shared/cost';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { isSketchPath } from '../../../../shared/sketches';
 import { plural } from '../../ui/util';
-import { denied, duration, specCards, type Item } from './steps';
+import { denied, duration, firstLine, specCards, type Item } from './steps';
 
-export type Work = { tools: number; files: number; agents: number; failed: number; ms: number; cost: number };
+export type Work = { tools: number; files: number; agents: number; failed: number; ms: number; cost: number; note?: string };
+
+// What a fold without tool work holds: the one note's first line, else their count.
+const noteOf = (it: Item) => (it.kind === 'auto' ? it.label : 'text' in it ? firstLine(it.text) : '');
+const notes = (items: Item[]) => (items.length === 1 ? noteOf(items[0]) : '') || plural(items.length, 'note');
 
 export type FoldRow =
   | { kind: 'item'; it: Item }
@@ -42,6 +46,7 @@ function workOf(items: Item[], span: Span): Work {
     }
   }
   work.files = paths.size;
+  if (work.tools === 0) work.note = notes(items);
   return work;
 }
 
@@ -81,8 +86,10 @@ export function foldTurns(items: Item[], events: ChatEvent[]): FoldRow[] {
   return out;
 }
 
-// The fold's title: its failed count apart so it can be drawn first in the error colour, and on a narrow screen the agents, duration and cost apart as a first line inside the fold. The duration waits for the turn to end.
+// The fold's title, or what it holds when no tool ran: its failed count apart so it can be drawn first in the error colour, and on a narrow screen the agents, duration and cost apart as a first line inside the fold. The duration waits for the turn to end.
 export function workTitle(work: Work, live: boolean, billing: string, narrow = false) {
+  const failed = work.failed > 0 ? `${work.failed} failed` : '';
+  if (work.tools === 0 && work.note) return { text: work.note, failed, detail: '' };
   const counts = [
     work.tools > 0 && plural(work.tools, 'tool'),
     work.files > 0 && plural(work.files, 'file'),
@@ -93,7 +100,6 @@ export function workTitle(work: Work, live: boolean, billing: string, narrow = f
     billing === 'usd' && work.cost > 0 && `$${work.cost.toFixed(2)}`,
   ];
   const join = (parts: (string | false)[]) => parts.filter(Boolean).join(' \u00b7 ');
-  const failed = work.failed > 0 ? `${work.failed} failed` : '';
   const text = join(narrow ? counts : [...counts, ...rest]);
   return { text: text || (failed ? '' : 'Work'), failed, detail: narrow ? join(rest) : '' };
 }

@@ -106,11 +106,14 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
     if (ids.has(id)) continue;
     const at = top.findIndex((e) => e.at > list[0].at);
     top.splice(at < 0 ? top.length : at, 0, orphanAgent(id, list[0].at));
+    const back = list.find((e) => e.kind === 'tool_use' && e.name === HANDBACK);
+    if (back && !results.has(id)) results.set(id, { id: `${id}:back`, kind: 'tool_result', toolUseId: id, text: '', isError: false, at: back.at });
   }
   return itemsFrom(top, results, children, resumed, progress);
 }
 
-// Steps of a sub-agent whose Agent call is on an earlier page get a stand-in for that call.
+// Steps of a sub-agent whose Agent call is on an earlier page get a stand-in for that call; its hand-back call ends it.
+const HANDBACK = 'SubagentHandback';
 function orphanAgent(id: string, at: number): ToolUse {
   return { kind: 'tool_use', id, at, name: 'Agent', input: { description: 'Sub-agent started earlier' }, summary: '' };
 }

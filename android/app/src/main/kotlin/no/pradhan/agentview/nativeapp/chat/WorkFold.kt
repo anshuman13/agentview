@@ -6,7 +6,17 @@ import no.pradhan.agentview.nativeapp.ops.plural
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 
 // Web chat/transcript/workFold.ts: each turn's work folded into one row above its last reply.
-data class Work(val tools: Int, val files: Int, val agents: Int, val failed: Int, val ms: Long, val cost: Double)
+data class Work(val tools: Int, val files: Int, val agents: Int, val failed: Int, val ms: Long, val cost: Double, val note: String = "")
+
+// What a fold without tool work holds: the one note's first line, else their count.
+private fun noteOf(it: Item) = when (it) {
+    is Item.System -> firstLine(it.text)
+    is Item.Assistant -> firstLine(it.text)
+    is Item.User -> firstLine(it.text)
+    else -> ""
+}
+
+private fun notes(items: List<Item>) = (if (items.size == 1) noteOf(items[0]) else "").ifEmpty { plural(items.size, "note") }
 
 sealed interface FoldRow {
     val key: String
@@ -60,7 +70,7 @@ private fun workOf(items: List<Item>, span: Span): Work {
         }
         else -> {}
     }
-    return Work(tools, paths.size, agents, failed, if (span.end > span.at) span.end - span.at else 0L, span.cost)
+    return Work(tools, paths.size, agents, failed, if (span.end > span.at) span.end - span.at else 0L, span.cost, if (tools == 0) notes(items) else "")
 }
 
 // Splits the rows into turns, one per prompt, and moves the work of each into one fold placed above its last reply, or at its end while there is no reply.
@@ -98,6 +108,8 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
 }
 
 fun workTitle(work: Work, live: Boolean, billing: String): WorkTitle {
+    val failed = if (work.failed > 0) "${work.failed} failed" else ""
+    if (work.tools == 0 && work.note.isNotEmpty()) return WorkTitle(work.note, failed, "")
     val text = listOfNotNull(
         plural(work.tools, "tool").takeIf { work.tools > 0 },
         plural(work.files, "file").takeIf { work.files > 0 },
@@ -107,6 +119,5 @@ fun workTitle(work: Work, live: Boolean, billing: String): WorkTitle {
         duration(work.ms).takeIf { !live && it.isNotEmpty() },
         ("$" + String.format(Locale.US, "%.2f", work.cost)).takeIf { billing == "usd" && work.cost > 0 },
     ).joinToString(" \u00B7 ")
-    val failed = if (work.failed > 0) "${work.failed} failed" else ""
     return WorkTitle(text.ifEmpty { if (failed.isEmpty()) "Work" else "" }, failed, detail)
 }

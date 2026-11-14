@@ -156,11 +156,15 @@ fun buildTranscript(events: List<ChatEvent>): List<Item> {
         if (id in ids) continue
         val at = top.indexOfFirst { it.at > list[0].at }
         top.add(if (at < 0) top.size else at, orphanAgent(id, list[0].at))
+        val back = list.find { it.kind == "tool_use" && it.name == HANDBACK }
+        if (back != null && id !in results) results[id] = ChatEvent(id = "$id:back", kind = "tool_result", toolUseId = id, text = "", isError = false, at = back.at)
     }
     return itemsFrom(top, results, children, resumed, progress)
 }
 
 // Steps of a sub-agent whose Agent call is on an earlier page get a stand-in for that call.
+private const val HANDBACK = "SubagentHandback"
+
 private fun orphanAgent(id: String, at: Long) =
     ChatEvent(id = id, kind = "tool_use", at = at, name = "Agent", input = JsonObject(mapOf("description" to JsonPrimitive("Sub-agent started earlier"))))
 
