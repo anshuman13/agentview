@@ -10,7 +10,7 @@ varies by provider follows the Providers section of the same file.
 - `server/src`: Bun/TS server on :7777. HTTP routes in `http/routes.ts`, chat host in `host/`, sessions in `session/`, agent tools in `agent/`.
 - `web/src`: React web app (Vite). `app/` shell and store, `chat/`, `sessions/`, `codex/` (tasks, meetings, wiki), `workspace/` (files, git), `ops/`, `ui/` shared components, `styles/tokens.css` design tokens.
 - `assistant/src`: Codex hub on :7790 (tasks, meetings, calendar import, jobs). Folders: `core` (db, sync, claude), `slack`, `calendar`, `meetings`, `wiki`, `jobs`, `routes`; `server.ts` is the entry. Tests use `bun test`.
-- `shared/`: code used by all three. `protocol.ts` is the wire protocol, `tables.ts` the hub columns (a new column there must also go in `SYNCED_FIELDS` in the Android `CodexRows.kt`).
+- `shared/`: code used by all three. `protocol.ts` is the wire protocol, `tables.ts` the hub columns (a new column there must also go in `fixtures/tables.json` and in `SYNCED_FIELDS` in the Android `CodexRows.kt`; tests on both sides check them).
 - `android/`: native Kotlin/Compose app. Code is in `android/app/src/main/kotlin/no/pradhan/agentview/nativeapp/`, in feature subpackages (`app`, `chat`, `sessions`, `codex` with `meetings`, `wiki`, `jobs`, `autopilot`, `workspace`, `ops`, `net`, `ui`; folder path matches the package). Only `MainActivity` and the manifest receivers stay in the root. Tests mirror the packages under `android/app/src/test/kotlin/...`. `ui/Tokens.kt` and `ui/Codicons.kt` are generated.
 - `app/`: the Tauri desktop window app (macOS only). The phone app is `android/`.
 

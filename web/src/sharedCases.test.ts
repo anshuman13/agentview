@@ -7,6 +7,7 @@ import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
 import { advisorBoard, advisorLoopLine, advisorLoopOf, auditCountLine, defaultAdvisorRoot, specItemPrompt, type BacklogItem } from '../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
+import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
 import { buildsLine, finishedLine, mergeQuiet } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
@@ -379,6 +380,8 @@ describe('cases shared with the Android app', () => {
     palette: { id: string; expected: string | null }[];
     rows: { name: string; today: string; window: 7 | 30; days: UseDays; never: string[]; used: [string, number, number, string][] }[];
   };
+  it('hub tables match the fixture the phone checks its synced columns against', () =>
+    expect(TABLES).toEqual(JSON.parse(readFileSync(new URL('../../shared/fixtures/tables.json', import.meta.url), 'utf8'))));
   it('feature catalogue ids', () => expect(FEATURES.map((f) => f.id)).toEqual(featureUse.ids));
   it('hideable ids', () => expect(FEATURES.filter((f) => f.hideable).map((f) => f.id)).toEqual(featureUse.hideable));
   for (const c of featureUse.shown) it(`shownFeature: ${c.id} with ${c.hidden.join(',') || 'nothing'} hidden`, () => expect(shownFeature(c.id, c.hidden)).toBe(c.expected));

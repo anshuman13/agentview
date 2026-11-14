@@ -607,6 +607,11 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun syncedFieldsMatchHubTables() {
+        val tables = Json.parseToJsonElement(File("../../shared/fixtures/tables.json").readText()).jsonObject
+        for ((table, fields) in SYNCED_FIELDS) assertEquals(table, tables.getValue(table).jsonArray.map { it.jsonPrimitive.content }, fields)
+    }
+
     @Test fun featureUse() {
         val fixture = Json.parseToJsonElement(File("../../shared/fixtures/feature-use.json").readText()).jsonObject
         assertEquals(fixture.getValue("ids").jsonArray.map { it.jsonPrimitive.content }, FEATURES.map { it.id })
