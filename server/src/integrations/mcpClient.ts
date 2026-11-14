@@ -1,4 +1,4 @@
-import { eachChunk } from '../exec.js';
+import { eachChunk, eachLine } from '../exec.js';
 
 export type McpServerDef = { type?: string; command?: string; args?: string[]; env?: Record<string, string>; url?: string; headers?: Record<string, string> };
 export type McpTool = { name: string; description?: string; inputSchema?: unknown; annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean } };
@@ -35,7 +35,6 @@ interface Transport {
 class Stdio implements Transport {
   private proc: Bun.Subprocess<'pipe', 'pipe', 'pipe'> | null = null;
   private pending = new Map<number, Pending>();
-  private buf = '';
   private stderr = '';
   private nextId = 1;
   dead = false;
@@ -48,7 +47,10 @@ class Stdio implements Transport {
     try {
       const proc = Bun.spawn([def.command, ...(def.args ?? [])], { cwd, env: { ...process.env, ...def.env }, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe', detached: true });
       this.proc = proc;
-      void eachChunk(proc.stdout, (c) => this.onData(c)).catch(() => undefined);
+      void eachLine(proc.stdout, (l) => this.onLine(l), MAX_BUF, () => {
+        console.warn(`[mcp] ${this.key} sent over ${MAX_BUF} bytes without a newline, stopping it`);
+        this.stop();
+      }).catch(() => undefined);
       const stderr = eachChunk(proc.stderr, (c) => (this.stderr = (this.stderr + c).slice(-4000))).catch(() => undefined);
       // The exit error carries the last stderr lines, so it waits a moment for the reader; a child may keep stderr open.
       void proc.exited.then(async (code) => {
@@ -81,30 +83,20 @@ class Stdio implements Transport {
     this.pending.clear();
   }
 
-  private onData(chunk: string) {
-    this.buf += chunk;
-    const lines = this.buf.split('\n');
-    this.buf = lines.pop() ?? '';
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      let msg: any;
-      try {
-        msg = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      const p = typeof msg.id === 'number' ? this.pending.get(msg.id) : undefined;
-      if (!p) continue;
-      this.pending.delete(msg.id);
-      clearTimeout(p.timer);
-      if (msg.error) p.reject(new Error(msg.error.message ?? JSON.stringify(msg.error)));
-      else p.resolve(msg.result);
+  private onLine(line: string) {
+    if (!line.trim()) return;
+    let msg: any;
+    try {
+      msg = JSON.parse(line);
+    } catch {
+      return;
     }
-    if (this.buf.length > MAX_BUF) {
-      this.buf = '';
-      console.warn(`[mcp] ${this.key} sent over ${MAX_BUF} bytes without a newline, stopping it`);
-      this.stop();
-    }
+    const p = typeof msg.id === 'number' ? this.pending.get(msg.id) : undefined;
+    if (!p) return;
+    this.pending.delete(msg.id);
+    clearTimeout(p.timer);
+    if (msg.error) p.reject(new Error(msg.error.message ?? JSON.stringify(msg.error)));
+    else p.resolve(msg.result);
   }
 
   private notify(method: string) {

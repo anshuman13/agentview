@@ -29,16 +29,31 @@ export function execSync(cmd: string, args: string[], opts: Pick<ExecOptions, 't
 }
 
 // Calls on with each line a long-running process prints; the last line counts even without a newline.
-export async function eachLine(stream: ReadableStream<Uint8Array>, on: (line: string) => void) {
+// Each chunk is searched once, so a long line costs no more than its length. A line past max is dropped and tooLong called.
+export async function eachLine(stream: ReadableStream<Uint8Array>, on: (line: string) => void, max = Infinity, tooLong?: () => void) {
   const text = new TextDecoder();
-  let buf = '';
+  let parts: string[] = [];
+  let size = 0;
   for await (const chunk of stream) {
-    buf += text.decode(chunk, { stream: true });
-    const lines = buf.split('\n');
-    buf = lines.pop()!;
-    lines.forEach(on);
+    const s = text.decode(chunk, { stream: true });
+    let start = 0;
+    for (let i; (i = s.indexOf('\n', start)) >= 0; start = i + 1) {
+      parts.push(s.slice(start, i));
+      on(parts.join(''));
+      parts = [];
+      size = 0;
+    }
+    if (start < s.length) {
+      parts.push(s.slice(start));
+      size += s.length - start;
+    }
+    if (size > max) {
+      parts = [];
+      size = 0;
+      tooLong?.();
+    }
   }
-  if (buf) on(buf);
+  if (parts.length) on(parts.join(''));
 }
 
 // Calls on with each piece of text a long-running process prints.

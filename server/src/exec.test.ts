@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { exec, execSync } from './exec.js';
+import { eachLine, exec, execSync } from './exec.js';
 
 describe('exec', () => {
   it('resolves with the output of a command that succeeds', async () => {
@@ -20,5 +20,18 @@ describe('exec', () => {
   it('runs blocking, and throws on failure', () => {
     expect(execSync('echo', ['hi'])).toBe('hi\n');
     expect(() => execSync('false', [])).toThrow();
+  });
+
+  it('splits lines across chunks and drops one past the cap', async () => {
+    const split = async (max: number, ...chunks: string[]) => {
+      const bytes = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({ start: (c) => (chunks.forEach((s) => c.enqueue(bytes.encode(s))), c.close()) });
+      const got: string[] = [];
+      let long = 0;
+      await eachLine(stream, (l) => got.push(l), max, () => long++);
+      return { got, long };
+    };
+    expect(await split(Infinity, 'a\nb', 'c\n', 'd')).toEqual({ got: ['a', 'bc', 'd'], long: 0 });
+    expect(await split(3, 'ab', 'cd', 'e\nx\n')).toEqual({ got: ['e', 'x'], long: 1 });
   });
 });
