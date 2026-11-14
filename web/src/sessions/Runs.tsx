@@ -12,8 +12,9 @@ import { Section, sectionCount } from '../ui/Section';
 import { command, money } from '../ui/util';
 import { billing } from '../../../shared/providers';
 import type { ChatRun } from '../../../shared/protocol';
-import { lastRoundText } from '../../../shared/goalText';
+import { finishedLine, lastRoundText } from '../../../shared/goalText';
 import { OUTCOME_DOT, runLine } from '../chat/composer/composerLogic';
+import { since } from './folders';
 import { openGoal, openRun } from './goalLogic';
 import { ReviewCard } from './ReviewCard';
 import { runBands, type RunItem } from './runBands';
@@ -29,7 +30,7 @@ export function RunRow({ item, onBoard }: { item: RunItem; onBoard: (id: string)
   const last = run.rounds.at(-1);
   const meta = run.pr ? 'PR opened' : (
     <>
-      {runLine(run)}
+      {(run.state === 'done' && finishedLine(run, since)) || runLine(run)}
       {last && <> · <span className={`dot ${OUTCOME_DOT[last.outcome]}`} /> {lastRoundText(run, last)}</>}
     </>
   );

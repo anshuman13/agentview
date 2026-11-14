@@ -36,6 +36,9 @@ fun runLine(run: ChatRun, phase: String? = null): String = when {
 
 private fun roundLine(word: String, run: ChatRun) = "$word · round ${run.round}" + (if (run.max > 0) " of ${run.max}" else "") + (run.nextAt?.let { " · next ${clock(it)}" } ?: "")
 
+fun finishedLine(why: String, endedAt: Long?, ago: (Long) -> String): String? =
+    if (why.isEmpty()) null else why.replaceFirstChar(Char::uppercase) + (endedAt?.let { " · ${ago(it)}" } ?: "")
+
 fun firstRoundText(at: Long?) = "First round" + (at?.let { " ${clock(it)}" } ?: "")
 
 fun nextRoundText(at: Long?) = "Next round" + (at?.let { " ${clock(it)}" } ?: "")

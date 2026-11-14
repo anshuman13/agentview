@@ -1,0 +1,9 @@
+[
+  { "name": "stopped by hand", "why": "you stopped it", "endedAt": 3, "expected": "You stopped it \u00b7 3h ago" },
+  { "name": "goal met keeps its text", "why": "Goal met after 4 rounds", "endedAt": 2, "expected": "Goal met after 4 rounds \u00b7 2h ago" },
+  { "name": "loop reached its end time", "why": "finished at 18:00", "endedAt": 3, "expected": "Finished at 18:00 \u00b7 3h ago" },
+  { "name": "chat closed", "why": "chat closed", "endedAt": 1, "expected": "Chat closed \u00b7 1h ago" },
+  { "name": "usage cap", "why": "Usage cap 70% reached", "endedAt": 5, "expected": "Usage cap 70% reached \u00b7 5h ago" },
+  { "name": "no end time has no time part", "why": "you stopped it", "endedAt": null, "expected": "You stopped it" },
+  { "name": "no reason is null", "why": "", "endedAt": 4, "expected": null }
+]

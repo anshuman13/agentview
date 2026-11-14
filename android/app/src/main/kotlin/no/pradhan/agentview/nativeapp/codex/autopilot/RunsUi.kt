@@ -42,6 +42,7 @@ import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.triesKeep
 import no.pradhan.agentview.nativeapp.ops.plural
+import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -164,7 +165,7 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
         is RunEntry.Chat -> {
             val last = e.run.rounds.lastOrNull()
             ListRow(
-                e.run.title.ifBlank { "Untitled" }, if (e.run.pr != null) "PR opened" else runLine(e.run), onClick = { when (e.run.kind) { "tries" -> board = e.run.id; "goal" -> hub.goalSheet.value = GoalSheet.Detail(e.run.id); else -> openChat(e.run) } },
+                e.run.title.ifBlank { "Untitled" }, if (e.run.pr != null) "PR opened" else (if (e.run.state == "done") finishedLine(e.run.why, e.run.endedAt, ::since) else null) ?: runLine(e.run), onClick = { when (e.run.kind) { "tries" -> board = e.run.id; "goal" -> hub.goalSheet.value = GoalSheet.Detail(e.run.id); else -> openChat(e.run) } },
                 below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(lastRoundText(e.run, it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
                 trailing = {
                     RowLabel(money(e.run.costUsd, billing(e.run.provider)))

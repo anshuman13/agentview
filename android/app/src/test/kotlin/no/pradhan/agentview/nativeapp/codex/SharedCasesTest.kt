@@ -49,6 +49,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.removePreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.parseEvery
 import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
+import no.pradhan.agentview.nativeapp.codex.autopilot.finishedLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
@@ -220,6 +221,13 @@ class SharedCasesTest {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
             val expected = c.nullable("expected")?.jsonArray?.map { ChecklistItem(it.jsonObject.str("content"), it.jsonObject.str("activeForm"), it.jsonObject.str("status")) }
             assertEquals(c.str("name"), expected, latestChecklist(events))
+        }
+    }
+
+    @Test fun finishedLine() {
+        for (c in cases("finished-line")) {
+            val endedAt = c.nullable("endedAt")?.jsonPrimitive?.long
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, finishedLine(c.str("why"), endedAt) { "${it}h ago" })
         }
     }
 

@@ -8,7 +8,7 @@ import { advisorLoopLine, advisorLoopOf, advisorNeedsYou, defaultAdvisorRoot } f
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
-import { lastRoundText, mergeQuiet, roundText } from '../../shared/goalText';
+import { finishedLine, lastRoundText, mergeQuiet, roundText } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
@@ -226,6 +226,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; pipeline: SpecHomeItem['pipeline']; conclusion: string; updatedAt: number; meta: string; when: string }>('spec-row-parts')) {
     it(`specRowParts: ${c.name}`, () => expect(specRowParts(c, (t) => `${t}h ago`)).toEqual({ meta: c.meta, when: c.when }));
+  }
+
+  for (const c of cases<{ name: string; why: string; endedAt: number | null; expected: string | null }>('finished-line')) {
+    it(`finishedLine: ${c.name}`, () => expect(finishedLine(c, (t) => `${t}h ago`)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; run: Partial<ChatRun>; round: Round; expected?: string; full?: boolean }>('last-round-text')) {

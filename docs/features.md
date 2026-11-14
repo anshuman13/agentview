@@ -507,7 +507,7 @@ The Runs view (activity bar, `?view=runs`) lists every run in three bands. Needs
 is blocked or a question, or that are paused for your approval, until a later round or a message from you in that chat
 (the server decides this, so web and phone agree), plus hub jobs whose last run failed. Running holds the other active and paused runs plus jobs that are running or
 queued. Finished (collapsed) holds the latest 30 ended runs. A row is the title, the state line, the last outcome with
-its dot and the cost; a chat run opens its chat (a coding job's run reads "Job · <branch>") and a job opens its job page. Sessions and Open chats rows of a chat with
+its dot and the cost (a finished run starts with why it ended and when, such as "You stopped it · 2 h ago", and reads like an active one when it has no reason); a chat run opens its chat (a coding job's run reads "Job · <branch>") and a job opens its job page. Sessions and Open chats rows of a chat with
 an active run show the loop icon with the next time, "Paused" or "Needs you" in warn. The status bar shows "N running"
 and "· M need you" in warn while a chat runs or waits on you (the Overview Running counts), and a click opens Runs. When you open a chat, the recap adds "While you
 were away: 6 rounds, 5 quiet, 1 blocked: <line>" from the rounds that ended after the last event you saw.

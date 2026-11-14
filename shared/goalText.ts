@@ -14,6 +14,10 @@ export function goalPlan({ every, endAt, capPct, maxBuilds }: { every: number; e
 export const runLine = (word: string, { round, max, nextAt }: { round: number; max: number; nextAt: number | null }) =>
   `${word} · round ${round}${max ? ` of ${max}` : ''}${nextAt ? ` · next ${clock(nextAt)}` : ''}`;
 
+// The meta of a finished run: why it ended, capitalised, and when. Null when the run has no reason.
+export const finishedLine = ({ why, endedAt }: { why: string; endedAt: number | null }, ago: (t: number) => string) =>
+  why ? `${why[0].toUpperCase()}${why.slice(1)}${endedAt ? ` · ${ago(endedAt)}` : ''}` : null;
+
 const roundOutcome = ({ outcome, line }: Pick<Round, 'outcome' | 'line'>) => (outcome === 'quiet' ? 'nothing to do' : line ? `${outcome}: ${line}` : outcome);
 
 export const roundText = ({ n, at, outcome, line }: Pick<Round, 'n' | 'at' | 'outcome' | 'line'>) =>
