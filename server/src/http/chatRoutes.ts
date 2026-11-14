@@ -20,7 +20,7 @@ import { devScript } from '../workspace/devScript.js';
 import type { ClientMessage } from '../../../shared/protocol.js';
 import { readBody, failed } from '../json.js';
 import { isPhone } from '../presence.js';
-import { entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
+import { currentChat, entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 
 const MAX_FILE_BODY = 5_000_000;
 
@@ -42,7 +42,7 @@ function hubSketch(cwd: string, rel: string) {
 
 // The stream and commands work with no chat open: a new chat is opened through them.
 export function streamRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
-  const current = (url: URL) => d.chats().get(url.searchParams.get('chat') ?? '') ?? d.chats().get(d.lastViewed());
+  const current = (url: URL) => currentChat(d, url);
   return {
     'ANY /api/events': entry(({ req, url }) => {
       const asked = (url.searchParams.has('session') && d.bySession(url.searchParams.get('session'))) || (d.chats().has(url.searchParams.get('chat') ?? '') ? url.searchParams.get('chat')! : undefined);

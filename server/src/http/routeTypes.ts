@@ -1,9 +1,8 @@
 import type os from 'node:os';
 import type { ChatRun, ClientMessage, LiveChat } from '../../../shared/protocol.js';
 import type { Host } from '../host/client.js';
+import type { Client } from './clients.js';
 import type { Sources } from '../integrations/attention.js';
-
-export type CommandClient = { send: (m: any) => void; sendRaw: (data: string, id?: number) => void; view: string; phone?: boolean };
 
 export type RouteDeps = {
   host: Pick<Host, 'notify' | 'req'>;
@@ -13,8 +12,8 @@ export type RouteDeps = {
   bySession: (sessionId: string | null) => string | undefined;
   closeByUser: (id: string) => Promise<void>;
   restart: (now: boolean, full: boolean) => void;
-  streams: { get: (cid: string) => CommandClient | undefined };
-  handleCommand: (client: CommandClient, msg: ClientMessage, target?: string) => void;
+  streams: { get: (cid: string) => Client | undefined };
+  handleCommand: (client: Client, msg: ClientMessage, target?: string) => void;
   openEvents: (req: Request, url: URL, chat: string, found?: boolean) => Response;
   attentionSources: (extra?: string[]) => Sources;
   serveWeb: (req: Request, url: URL) => Promise<Response | null>;
@@ -32,3 +31,6 @@ export type Reply = { status: number; body: unknown } | { status: number; text: 
 export type Entry<C> = { run: (c: C) => unknown; body?: boolean | string };
 export type Prefix<C> = Entry<C> & { prefix: string };
 export const entry = <C>(run: Entry<C>['run'], body?: Entry<C>['body']): Entry<C> => ({ run, body });
+
+// The chat a request names with ?chat, or the one last viewed.
+export const currentChat = (d: Pick<RouteDeps, 'chats' | 'lastViewed'>, url: URL) => d.chats().get(url.searchParams.get('chat') ?? '') ?? d.chats().get(d.lastViewed());
