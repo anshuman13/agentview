@@ -6,7 +6,7 @@ import { denied, fastFrom, tailStart, firstLine, str, type ToolResult, type Tool
 
 type FileFact = { path: string; add: number; del: number };
 type CommandFact = { id: string; label: string; done?: boolean; error?: string; denied?: boolean };
-type NoteFact = { id: string; text: string; kind: 'done' | 'important' | 'fable' };
+type NoteFact = { id: string; text: string; kind: 'done' | 'important' | 'fable'; reset?: number };
 
 // A failed command stops counting once a later command in the same turn succeeds.
 export function openFailures(commands: CommandFact[]) {
@@ -111,7 +111,7 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
       if (text) turn.reply = { id: e.id, text, streaming: e.streaming, at: e.at };
     }
     if (e.kind === 'plan') next = e.next;
-    if (e.kind === 'system' && isNoteText(e.text)) turn.notes.push({ id: e.id, text: e.text, kind: /fail|limit|logged out/i.test(e.text) ? 'important' : 'done' });
+    if (e.kind === 'system' && isNoteText(e.text)) turn.notes.push({ id: e.id, text: e.text, kind: /fail|limit|logged out/i.test(e.text) ? 'important' : 'done', ...(e.reset && { reset: e.reset }) });
     if (e.kind === 'tool_result' && fableCalls.has(e.toolUseId) && !e.isError) turn.notes.push({ id: e.id, text: handBack(e.text), kind: 'fable' });
     if (e.kind !== 'tool_use') continue;
     if (e.name.endsWith('__set_status')) {

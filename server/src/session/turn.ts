@@ -150,7 +150,7 @@ export class Turn {
   private repeatWhenIdle() {
     const { usage, repeater, state } = this.s;
     if (usage.reset && state.session.repeat) repeater.defer(usage.reset, skipText('usage limit reached'), true);
-    else if (usage.reset) this.s.system(`Usage limit reached, resets at ${clock(usage.reset)}`);
+    else if (usage.reset) this.s.system(`Usage limit reached, resets at ${clock(usage.reset)}`, false, usage.reset);
     else if (this.lastError) repeater.defer();
     else if (repeater.due || state.session.repeat?.every === 0) repeater.fire();
   }

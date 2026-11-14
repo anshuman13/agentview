@@ -154,8 +154,8 @@ export class AgentSession implements AgentHost {
     return this.prompts.sendNow(id);
   }
 
-  system(text: string, error?: boolean) {
-    this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now(), ...(error && { error }) });
+  system(text: string, error?: boolean, reset?: number) {
+    this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now(), ...(error && { error }), ...(reset && { reset }) });
   }
 
   setStatus(text: string, { done, next }: { done?: string; next?: string[] } = {}) {

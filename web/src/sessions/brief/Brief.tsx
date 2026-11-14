@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../app/store';
-import { chatTitle as chatTitleOf } from '../../../../shared/util';
+import { chatTitle as chatTitleOf, clock } from '../../../../shared/util';
 import { REVIEW_LOCAL } from '../../ops/Findings';
 import { Pending } from '../../chat/cards/Pending';
 import { Composer } from '../../chat/Chat';
@@ -25,8 +25,8 @@ function lastReplyOf(turns: Turn[]) {
 // After a usage limit the last prompt can be sent again when the limit resets.
 function usageLimitOf(turns: Turn[]) {
   const t = turns[turns.length - 1];
-  const m = t && !t.phase ? /^Usage limit reached, resets at (\d\d:\d\d)/.exec(t.notes.at(-1)?.text ?? '') : null;
-  return m ? { at: m[1], prompt: t.prompt } : null;
+  const reset = t && !t.phase ? t.notes.at(-1)?.reset : undefined;
+  return reset ? { at: clock(reset), prompt: t.prompt } : null;
 }
 
 export function Brief() {
