@@ -26,11 +26,11 @@ export function useResize() {
     save('agentview.sideW', sideW);
   }, [chatW, termH, sideW]);
 
-  const startResize = (e: PointerEvent) => drag(e, (ev) => setChatW(Math.round(Math.min(Math.max(window.innerWidth - ev.clientX, 360), window.innerWidth - 420))), 'resizing');
+  const startResize = (e: PointerEvent) => drag(e, (ev) => setChatW(Math.round(Math.min(Math.max(window.innerWidth - ev.clientX, 360), window.innerWidth - sideW - 120))), 'resizing');
   const startTermResize = (e: PointerEvent) => drag(e, (ev) => setTermH(Math.round(Math.min(Math.max(window.innerHeight - 22 - ev.clientY, 100), window.innerHeight - 200))), 'resizing-v');
   const startSideResize = (e: PointerEvent) => {
     const left = (e.currentTarget.previousElementSibling as HTMLElement).getBoundingClientRect().left;
-    drag(e, (ev) => setSideW(Math.round(Math.min(Math.max(ev.clientX - left, 200), 640))), 'resizing');
+    drag(e, (ev) => setSideW(Math.round(Math.min(Math.max(ev.clientX - left, 200), 640, window.innerWidth - chatW - 120))), 'resizing');
   };
   return { chatW, termH, sideW, startResize, startTermResize, startSideResize };
 }
