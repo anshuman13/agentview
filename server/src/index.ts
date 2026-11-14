@@ -156,7 +156,7 @@ async function handle(req: Request, server: Bun.Server<SocketData>): Promise<Res
   // Hub syncs, git pushes and worktree creation may run past the 255 s idle limit; their own timeouts end them.
   if (req.method === 'POST') server.timeout(req, 0);
   if (url.pathname === '/ws') {
-    const data: SocketData = { url: req.url, origin: headers.origin, agent: headers['user-agent'] };
+    const data: SocketData = { url: req.url, origin: headers.origin };
     return server.upgrade(req, { data }) ? undefined : new Response('Expected a WebSocket upgrade', { status: 400 });
   }
   const app = appOrigin(headers, ip);
@@ -208,31 +208,11 @@ function openSocket(ws: Peer, data: SocketData) {
   const term = params.get('term');
   if (term !== null) return attachTerminal(ws, term);
   if (params.has('chrome')) return openChrome(ws, data.origin);
-  const chat = (live.chats.has(params.get('chat') ?? '') ? params.get('chat')! : undefined) ?? (params.has('session') ? bySession(params.get('session')) : undefined) ?? live.lastViewed;
-  const sendRaw = (text: string) => ws.readyState === OPEN && ws.send(text);
-  const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat, phone: isPhone(params.get('client'), data.agent) };
-  clients.add(client);
-  touchDesktop(client);
-  view(client, chat);
-  greet(client, chat, params.get('session'));
-
-  ws.on('message', (raw) => {
-    let msg: ClientMessage;
-    try {
-      msg = JSON.parse(String(raw));
-    } catch {
-      return;
-    }
-    handleCommand(client, msg);
-  });
-  ws.on('close', () => {
-    clients.delete(client);
-    gate.leave(client.view);
-    reportViewers();
-  });
+  // Chats stream over /api/events; a socket is only for a terminal or Chrome.
+  ws.close(4400, 'Expected term or chrome');
 }
 
-// Server-Sent Events: the same ServerMessage stream as /ws, resumable from Last-Event-ID through the ring buffer.
+// Server-Sent Events: the ServerMessage stream of a chat, resumable from Last-Event-ID through the ring buffer.
 // The browser's own reconnect sends Last-Event-ID; the last param in its URL is from the first connect and stale by then.
 // found: the stream asked for a chat that exists, so a resume may replay deltas; otherwise it gets a full init.
 function openEvents(req: Request, url: URL, chat: string, found = true) {

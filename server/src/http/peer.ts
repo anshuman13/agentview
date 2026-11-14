@@ -3,7 +3,7 @@ import type { ServerWebSocket } from 'bun';
 export const OPEN = 1;
 
 // What the upgrade carried over from the HTTP request.
-export type SocketData = { url: string; origin?: string; agent?: string; peer?: Peer };
+export type SocketData = { url: string; origin?: string; peer?: Peer };
 
 // A browser's WebSocket to this server, with the event style terminal and Chrome code is written against.
 export class Peer {

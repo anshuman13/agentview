@@ -181,19 +181,8 @@ describe('event stream', () => {
 });
 
 describe('websocket', () => {
-  it('greets, relays broadcasts and forwards commands', async () => {
-    const { ws, got, opened } = openWs('chat=c1');
-    await opened;
-    await waitFor(() => expect(got.map((g) => JSON.parse(g).type)).toEqual(expect.arrayContaining(['live', 'runs', 'attention', 'init'])));
-    toServer!({ chat: 'c1', m: { type: 'status', text: 'x'.repeat(5000) } });
-    await waitFor(() => expect(got.some((g) => JSON.parse(g).text?.length === 5000)).toBe(true));
-    ws.send(JSON.stringify({ type: 'interrupt' }));
-    await waitFor(() => expect(asked.some((r) => r.op === 'cmd' && (r.msg as { type: string }).type === 'interrupt')).toBe(true));
-    ws.close();
-  });
-
   it('refuses an upgrade from a cross-site page', async () => {
-    const { opened } = openWs('chat=c1', { origin: 'http://evil.example' });
+    const { opened } = openWs('chrome', { origin: 'http://evil.example' });
     expect(await opened.then(() => 'open', () => 'refused')).toBe('refused');
   });
 
@@ -209,6 +198,10 @@ describe('websocket', () => {
 
   it('closes an unknown terminal with 4404', async () => {
     expect(await openWs('term=nope').closed).toBe(4404);
+  });
+
+  it('closes a socket that asks for neither a terminal nor Chrome', async () => {
+    expect(await openWs('chat=c1').closed).toBe(4400);
   });
 });
 
