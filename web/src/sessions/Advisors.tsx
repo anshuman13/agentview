@@ -18,7 +18,7 @@ function ProjectPicker({ root, folders, onPick }: { root: string | null; folders
   const pick = useRef<HTMLButtonElement>(null);
   return (
     <>
-      <Button ref={pick} size="sm" variant="quiet" onClick={() => setPicking(!picking)}>{root?.split('/').pop() ?? 'Project'}</Button>
+      <Button ref={pick} size="sm" variant="quiet" icon="repo" onClick={() => setPicking(!picking)}>{root?.split('/').pop() ?? 'Project'}</Button>
       {picking && <Menu trigger={pick} onClose={() => setPicking(false)}>{folders.filter((f) => f.repo).map((f) => <MenuItem key={f.cwd} onClick={() => { setPicking(false); onPick(f.cwd); }}>{f.name}</MenuItem>)}</Menu>}
     </>
   );
