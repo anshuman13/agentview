@@ -79,7 +79,8 @@ export async function workflowAgents(cwd: string, sessionId: string, cache = new
   const ids = (await readdir(root).catch(() => [] as string[])).filter((d) => d.startsWith('wf_'));
   const seen = new Set<string>();
   let changed = false;
-  const load = async (file: string, read: (f: WorkflowFile) => Promise<void>) => {
+  const fresh = new Set<string>();
+  const load = async (runId: string, file: string, read: (f: WorkflowFile) => Promise<void>) => {
     seen.add(file);
     const sig = await fileSig(file);
     const prev = cache.get(file);
@@ -92,23 +93,24 @@ export async function workflowAgents(cwd: string, sessionId: string, cache = new
     }
     cache.set(file, next);
     changed = true;
+    fresh.add(runId);
     return next;
   };
   const runs = await Promise.all(ids.map(async (runId) => {
     const dir = path.join(root, runId);
-    const journal = await load(path.join(dir, 'journal.jsonl'), async (f) => void (f.agents = parseJournal(await readFile(path.join(dir, 'journal.jsonl'), 'utf8'))));
+    const journal = await load(runId, path.join(dir, 'journal.jsonl'), async (f) => void (f.agents = parseJournal(await readFile(path.join(dir, 'journal.jsonl'), 'utf8'))));
     // The run's record appears beside the session once it ends; an agent a stopped run never closed in its journal ended with it.
     const record = path.join(projectDir(cwd), sessionId, 'workflows', `${runId}.json`);
-    const run = await load(record, async (f) => void (f.ended = JSON.parse(await readFile(record, 'utf8'))?.status !== 'running'));
+    const run = await load(runId, record, async (f) => void (f.ended = JSON.parse(await readFile(record, 'utf8'))?.status !== 'running'));
     const agents = await Promise.all((journal?.agents ?? []).map(async (a) => {
       const file = path.join(dir, `agent-${a.agentId}.jsonl`);
-      const t = await load(file, async (f) => void (f.msgs = await readTranscriptFile(file, sessionId)));
+      const t = await load(runId, file, async (f) => void (f.msgs = await readTranscriptFile(file, sessionId)));
       return { ...a, status: a.status === 'running' && run?.ended ? ('stopped' as const) : a.status, msgs: t?.msgs ?? [] };
     }));
     return { runId, agents };
   }));
   for (const f of cache.keys()) if (!seen.has(f)) (cache.delete(f), (changed = true));
-  return { runs: runs.filter((r) => r.agents.length), changed };
+  return { runs: runs.filter((r) => r.agents.length), changed, fresh };
 }
 
 export const workflowSize = (runs: WorkflowRun[]) => runs.reduce((n, r) => n + r.agents.reduce((m, a) => m + a.msgs.length + (a.status === 'running' ? 1 : 2), 0), 0);

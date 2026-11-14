@@ -31,6 +31,8 @@ export class TranscriptWatch {
   private subFiles = new Map<string, SubFile>();
   private workflowFiles = new Map<string, WorkflowFile>();
   private liveWorkflowFiles = new Map<string, WorkflowFile>();
+  private runCalls = new Map<string, string>();
+  private unplaced = new Set<string>();
 
   constructor(private owner: WatchOwner) {}
 
@@ -57,6 +59,8 @@ export class TranscriptWatch {
       this.subFiles = new Map();
       this.workflowFiles = new Map();
       this.liveWorkflowFiles = new Map();
+      this.runCalls = new Map();
+      this.unplaced = new Set();
       clearTimeout(this.workflowTimer);
       this.dirty = true;
       return;
@@ -68,11 +72,14 @@ export class TranscriptWatch {
     try {
       this.transcript = watch(projectDir(this.cwd), { recursive: true }, (_, file) => {
         if (file && !file.startsWith(sessionId)) return;
+        // Workflow agents write often; syncWorkflows owns their files and the next transcript sync picks them up.
+        if (file?.includes('/subagents/workflows/')) {
+          clearTimeout(this.workflowTimer);
+          this.workflowTimer = setTimeout(() => void this.syncWorkflows(), 300);
+          return;
+        }
         clearTimeout(this.transcriptTimer);
         this.transcriptTimer = setTimeout(() => void this.syncTranscript(false), 300);
-        if (!file?.includes('/subagents/workflows/')) return;
-        clearTimeout(this.workflowTimer);
-        this.workflowTimer = setTimeout(() => void this.syncWorkflows(), 300);
       }).on('error', () => {
         // A watcher error would otherwise end live updates, workflow agents and build records with them, until a restart.
         this.watchHistory(false);
@@ -105,15 +112,22 @@ export class TranscriptWatch {
     if (!sessionId || this.owner.isClosed()) return;
     const wf = await workflowAgents(this.cwd, sessionId, this.liveWorkflowFiles).catch(() => null);
     if (!wf?.runs.length || this.owner.isClosed() || this.state.session.sessionId !== sessionId) return;
-    const calls = new Map<string, string>();
-    for (const e of this.state.events) {
-      if (e.kind !== 'tool_result') continue;
-      const runId = e.text.match(RUN_ID)?.[1];
-      if (runId) calls.set(runId, e.toolUseId);
+    // Only runs with a file that changed since the last pass are rebuilt, and runs still waiting for their Workflow call.
+    const runs = wf.runs.filter((r) => wf.fresh.has(r.runId) || this.unplaced.has(r.runId));
+    if (runs.some((r) => !this.runCalls.has(r.runId))) {
+      for (const e of this.state.events) {
+        if (e.kind !== 'tool_result') continue;
+        const runId = e.text.match(RUN_ID)?.[1];
+        if (runId) this.runCalls.set(runId, e.toolUseId);
+      }
     }
-    for (const run of wf.runs) {
-      const call = this.owner.host.eventById(calls.get(run.runId) ?? '');
-      if (call?.kind !== 'tool_use' || call.name !== 'Workflow') continue;
+    for (const run of runs) {
+      const call = this.owner.host.eventById(this.runCalls.get(run.runId) ?? '');
+      if (call?.kind !== 'tool_use' || call.name !== 'Workflow') {
+        this.unplaced.add(run.runId);
+        continue;
+      }
+      this.unplaced.delete(run.runId);
       // One run that fails to push must not stop the runs after it.
       try {
         this.pushWorkflowRun(run, workflowName(call.input), call.at);
