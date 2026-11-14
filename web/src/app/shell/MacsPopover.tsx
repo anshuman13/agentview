@@ -16,7 +16,7 @@ export async function reachable(url: string) {
   }
 }
 
-export async function switchMac(m: Mac) {
+async function switchMac(m: Mac) {
   const url = macUrl(m, bundled ? macPort() : location.port);
   if (!m.self && !(await reachable(url))) return false;
   if (bundled) {

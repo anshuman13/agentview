@@ -9,8 +9,7 @@ export const createFolder = (root: string, name: string) => fetch(apiUrl('/api/f
 
 export const searchMessages = (q: string) => fetch(api(`/api/sessions/search?q=${encodeURIComponent(q)}`)).then((r) => r.json());
 
-// A Mac without the hub answers 409 with the address of the Mac whose advisors to use.
-export const fetchAdvisors = (): Promise<AdvisorInfo[] | { mac: string } | null> => fetch(api('/api/advisors')).then((r) => (r.ok || r.status === 409 ? r.json() : null)).catch(() => null);
+export const fetchAdvisors = (): Promise<AdvisorInfo[] | null> => fetch(api('/api/advisors')).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
 export const fetchBacklog = (root: string): Promise<BacklogItem[] | null> => fetch(api(`/api/advisors/backlog?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
