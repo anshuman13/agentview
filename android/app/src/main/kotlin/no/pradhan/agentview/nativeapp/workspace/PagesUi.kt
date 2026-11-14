@@ -1,5 +1,10 @@
 package no.pradhan.agentview.nativeapp.workspace
 
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import no.pradhan.agentview.nativeapp.ui.groupSlice
 import no.pradhan.agentview.nativeapp.ui.DiffLine
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -145,14 +150,55 @@ private const val PATCH_LINES = 400
 // The changed files as rows; a tap shows that file's patch under its row.
 @Composable
 fun DiffFiles(files: List<PrFile>, diff: String, openFile: String?, onOpenFile: (String?) -> Unit) {
-    // A diff can be megabytes; it is split off the main thread, and patches show once it is.
-    val diffs by produceState<Map<String, String>?>(null, diff) { value = withContext(Dispatchers.Default) { splitDiff(diff) } }
+    val diffs = rememberDiffs(diff)
     files.forEachIndexed { i, f ->
         if (i > 0) Hairline(lead = true)
-        val name = f.path.substringAfterLast('/')
         val shown = openFile == f.path
-        ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { onOpenFile(if (shown) null else f.path) })
+        DiffFileRow(f, shown, onOpenFile)
         if (shown) diffs?.let { PatchView(it[f.path] ?: "No diff", f.path) }
+    }
+}
+
+// A diff can be megabytes; it is split by file off the main thread, and is null until then.
+@Composable
+fun rememberDiffs(diff: String?): Map<String, String>? =
+    produceState<Map<String, String>?>(null, diff) { value = diff?.let { withContext(Dispatchers.Default) { splitDiff(it) } } }.value
+
+@Composable
+private fun DiffFileRow(f: PrFile, shown: Boolean, onOpenFile: (String?) -> Unit) {
+    val name = f.path.substringAfterLast('/')
+    ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { onOpenFile(if (shown) null else f.path) })
+}
+
+// The rows of a lazy DiffFiles: each file, with the open file's patch lines under it.
+sealed interface PatchRow {
+    class File(val file: PrFile) : PatchRow
+    class Line(val line: DiffLine) : PatchRow
+    class More(val n: Int) : PatchRow
+}
+
+fun patchRows(files: List<PrFile>, diffs: Map<String, String>?, openFile: String?): List<PatchRow> = buildList {
+    for (f in files) {
+        add(PatchRow.File(f))
+        if (f.path != openFile || diffs == null) continue
+        val lines = patchLines(diffs[f.path] ?: "No diff")
+        lines.take(PATCH_LINES).forEach { add(PatchRow.Line(it)) }
+        if (lines.size > PATCH_LINES) add(PatchRow.More(lines.size - PATCH_LINES))
+    }
+}
+
+// DiffFiles as lazy items of one card, so a long patch composes only the lines on screen.
+fun LazyListScope.lazyDiffFiles(rows: List<PatchRow>, openFile: String?, scroll: ScrollState, onOpenFile: (String?) -> Unit) {
+    val lang = langOf(openFile.orEmpty())
+    itemsIndexed(rows, contentType = { _, r -> r::class.simpleName }) { i, r ->
+        Column(Modifier.groupSlice(i == 0, i == rows.lastIndex)) {
+            when (r) {
+                is PatchRow.File -> { if (i > 0) Hairline(lead = true); DiffFileRow(r.file, r.file.path == openFile, onOpenFile) }
+                is PatchRow.Line -> DiffCodeLine(r.line, lang, wrap = false, scroll = scroll)
+                is PatchRow.More -> Hint("${r.n} more lines")
+            }
+            if (r !is PatchRow.File && rows.getOrNull(i + 1) is PatchRow.File) Spacer(Modifier.height(Tokens.sp4))
+        }
     }
 }
 

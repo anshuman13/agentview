@@ -93,12 +93,18 @@ fun Group(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> 
     Column(modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp8).fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard), content = content)
 }
 
+// One lazy item's part of a Group card: the top corners on the first, the bottom corners and gap on the last.
+@Composable
+fun Modifier.groupSlice(first: Boolean, last: Boolean): Modifier {
+    val top = if (first) Tokens.shapeLg else 0.dp
+    val bottom = if (last) Tokens.shapeLg else 0.dp
+    return padding(start = Tokens.listPad, end = Tokens.listPad, bottom = if (last) Tokens.sp8 else 0.dp).fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(av.groupCard)
+}
+
 // Group for long lists: one lazy item per row, the card corners drawn on the first and last.
 fun <T> LazyListScope.lazyGroup(rows: List<T>, key: (T) -> Any, lead: Boolean = false, row: @Composable (T) -> Unit) {
     itemsIndexed(rows, key = { _, r -> key(r) }) { i, r ->
-        val top = if (i == 0) Tokens.shapeLg else 0.dp
-        val bottom = if (i == rows.lastIndex) Tokens.shapeLg else 0.dp
-        Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = if (i == rows.lastIndex) Tokens.sp8 else 0.dp).fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(av.groupCard)) {
+        Column(Modifier.groupSlice(i == 0, i == rows.lastIndex)) {
             if (i > 0) Hairline(lead)
             row(r)
         }

@@ -1,5 +1,11 @@
 package no.pradhan.agentview.nativeapp.ops
 
+import no.pradhan.agentview.nativeapp.workspace.rememberDiffs
+import no.pradhan.agentview.nativeapp.workspace.patchRows
+import no.pradhan.agentview.nativeapp.workspace.PatchRow
+import no.pradhan.agentview.nativeapp.workspace.lazyDiffFiles
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.rememberScrollState
 import no.pradhan.agentview.nativeapp.workspace.Findings
 import no.pradhan.agentview.nativeapp.workspace.reviewPrPrompt
 import androidx.activity.compose.BackHandler
@@ -210,6 +216,9 @@ private fun PullBody(c: PullCtx, load: Loaded<PullRequestDetail>) {
     val d = load.data
     val now = System.currentTimeMillis()
     var openFile by rememberSaveable(pr.number) { mutableStateOf<String?>(null) }
+    val diffs = rememberDiffs(d?.diff)
+    val patch = remember(d?.files, diffs, openFile) { patchRows(d?.files.orEmpty(), diffs, openFile) }
+    val patchScroll = rememberScrollState()
     LazyColumn(Modifier.fillMaxSize()) {
         item { PullSummary(pr, now) }
         if (c.ui.busy.isNotEmpty()) item { Hint("Running ${c.ui.busy.replace('_', ' ')}...") }
@@ -222,7 +231,7 @@ private fun PullBody(c: PullCtx, load: Loaded<PullRequestDetail>) {
             pullChecks(d)
             pullReviews(d, now)
             pullCommits(d)
-            pullFiles(d, openFile) { openFile = it }
+            pullFiles(d, patch, openFile, patchScroll) { openFile = it }
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp8)) }
     }
@@ -283,9 +292,9 @@ private fun LazyListScope.pullCommits(d: PullRequestDetail) {
     }
 }
 
-private fun LazyListScope.pullFiles(d: PullRequestDetail, openFile: String?, onOpenFile: (String?) -> Unit) {
+private fun LazyListScope.pullFiles(d: PullRequestDetail, rows: List<PatchRow>, openFile: String?, scroll: ScrollState, onOpenFile: (String?) -> Unit) {
     if (d.files.isEmpty()) return
     item { SectionHeader("Files changed", d.files.size.toString()) }
-    item { Group { DiffFiles(d.files, d.diff, openFile, onOpenFile) } }
+    lazyDiffFiles(rows, openFile, scroll, onOpenFile)
 }
 
