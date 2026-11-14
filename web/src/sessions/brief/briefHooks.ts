@@ -1,36 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import { getState } from '../../app/store';
-import { catchUp, markSeen, readSeen, recap, recapText } from '../../chat/transcript/recap';
-import type { ChatEvent } from '../../../../shared/protocol';
-
-// On opening a chat, sum what happened after the last event this browser saw; then keep the seen id current while the chat is on screen.
-export function useRecap(sessionId: string, events: ChatEvent[], waiting: boolean, root: RefObject<HTMLDivElement | null>) {
-  const recapFor = useRef('');
-  const [since, setSince] = useState<{ chat: string; lines: string[] } | null>(null);
-  const eventsRef = useRef(events);
-  eventsRef.current = events;
-  const lastId = events.at(-1)?.id;
-  const mark = () => { if (document.visibilityState === 'visible' && root.current?.getClientRects().length) markSeen(sessionId, eventsRef.current); };
-  useEffect(() => {
-    if (!sessionId || !lastId) return;
-    if (recapFor.current !== sessionId) {
-      recapFor.current = sessionId;
-      const seen = readSeen(sessionId);
-      const r = recap(eventsRef.current, seen, waiting);
-      const rounds = getState().runs.filter((x) => x.chatId === sessionId).flatMap((x) => x.rounds);
-      const lines = [r && recapText(r), catchUp(eventsRef.current, seen, rounds)].filter((l): l is string => !!l);
-      setSince(lines.length ? { chat: sessionId, lines } : null);
-    }
-    mark();
-  }, [sessionId, lastId]);
-  useEffect(() => {
-    if (!sessionId) return;
-    document.addEventListener('visibilitychange', mark);
-    return () => document.removeEventListener('visibilitychange', mark);
-  }, [sessionId]);
-  const dismiss = () => { markSeen(sessionId, events); setSince(null); };
-  return { since, dismiss };
-}
+import { useEffect, useRef, type RefObject } from 'react';
 
 // Keeps the status pane scrolled to the end while it is at the bottom.
 export function useBriefScroll(root: RefObject<HTMLDivElement | null>, deps: { turns: number; next: number; running: boolean; waiting: boolean }, resetKey: unknown[]) {

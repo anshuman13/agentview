@@ -41,15 +41,7 @@
 
 .tl-now .mark { position: relative; flex: none; width: var(--size-xs); height: var(--size-xs); display: flex; align-items: center; justify-content: center; color: var(--fg-muted); }
 
-
 .tl-send-now { font-size: var(--fs-xs); white-space: nowrap; }
-.tl-recap {
-  display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-4); text-align: left;
-  border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg); font-size: var(--fs-sm); color: var(--fg);
-}
-@media (hover: hover) { .tl-recap:hover { background: var(--hover); } }
-.tl-recap-lines { display: flex; flex-direction: column; min-width: 0; }
-.tl-recap .codicon { color: var(--fg-muted); }
 .tl-now {
   position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; column-gap: var(--sp-4); align-items: start;
   padding: var(--sp-2) 0; font-size: var(--fs-sm); line-height: var(--line-sm); color: var(--fg);

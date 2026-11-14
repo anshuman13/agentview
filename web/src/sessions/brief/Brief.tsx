@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../app/store';
 import { chatTitle as chatTitleOf } from '../../../../shared/util';
 import { REVIEW_LOCAL } from '../../ops/Findings';
-import { Icon } from '../../ui/Icon';
 import { Pending } from '../../chat/cards/Pending';
 import { Composer } from '../../chat/Chat';
 import { Transcript } from '../../chat/transcript/Transcript';
@@ -17,7 +16,7 @@ import { renameChat } from '../folders';
 import { useLongPress } from '../../ui/longPress';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
 import { HeadState } from './HeadState';
-import { useBriefScroll, useRecap } from './briefHooks';
+import { useBriefScroll } from './briefHooks';
 
 function lastReplyOf(turns: Turn[]) {
   for (let i = turns.length - 1; i >= 0; i--) if (turns[i].reply) return turns[i].reply;
@@ -75,7 +74,6 @@ export function Brief() {
     return () => window.removeEventListener('open-agent', open);
   }, []);
   useEffect(() => { setShowAgents(false); setAgentSel(null); setRenaming(false); }, [sessionId]);
-  const { since, dismiss } = useRecap(sessionId, events, waiting, root);
   const title = chatTitle || chatTitleOf(turns[0]?.prompt ?? '') || 'New chat';
   const startRename = savedId ? () => setRenaming(true) : undefined;
   const press = useLongPress(startRename);
@@ -97,9 +95,6 @@ export function Brief() {
           <HeadState state={state} status={status} loop={loop} repeat={repeat} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
           <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
-        {since?.chat === sessionId && (
-          <button className="tl-recap" title="Tap to dismiss" onClick={dismiss}><Icon name="history" small /><span className="tl-recap-lines">{since.lines.map((l) => <span key={l}>{l}</span>)}</span></button>
-        )}
         {showAgents ? <AgentsPane stack selected={agentSel} onSelect={setAgentSel} /> : <Transcript showWork={showWork} />}
         {!showAgents && <div ref={end} />}
       </div>

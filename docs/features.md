@@ -202,8 +202,6 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   A chat row in Sessions adds "3/7" to its meta line while the list has items left
 - A hook that blocks a tool or fails shows in the chat in the error colour, for example "Hook blocked Bash: reason" or
   "PostToolUse hook failed: reason". Hooks that run fine show nothing
-- Opening a chat with activity since this browser last showed it puts a "Since you last looked" line above the
-  cards: turns, files changed, failed commands and whether a permission is waiting. Tap it to dismiss
 - `/tries 3 <prompt>` (2 to 4) starts the prompt in that many new chats, each in its own worktree on a `tries/` branch
   off the default branch, so the best attempt can be kept. Paseo makes the worktrees; without Paseo they are plain git
   worktrees in a hidden `.tries` folder next to the repo. These show under Workspace and a clean one can be removed at once
@@ -504,8 +502,7 @@ run that waits for review shows its review card above the composer of its chat i
 (last round, branch, size and age) with Needs you, the first 3 changed files with Show all, and Commit, push and open a
 PR with Approve (behind a confirm) and a More menu with Revise… and Discard. Sessions and Open chats rows of a chat with
 an active run show the loop icon with the next time, "Paused" or "Needs you" in warn. The status bar shows "N running"
-and "· M need you" in warn while a chat runs or waits on you (the Overview Running counts), and a click opens Sessions. When you open a chat, the recap adds "While you
-were away: 6 rounds, 5 quiet, 1 blocked: <line>" from the rounds that ended after the last event you saw.
+and "· M need you" in warn while a chat runs or waits on you (the Overview Running counts), and a click opens Sessions.
 
 ## Agents
 
