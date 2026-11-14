@@ -6,6 +6,7 @@ import { isSpecPath, runAllPrompt, specProgress, specTasks, startTaskPrompt, typ
 import { api, sendToChat, setUi } from '../app/store';
 import { appSettings } from '../app/appSettings';
 import { track } from '../app/featureUse';
+import { startGoal } from '../sessions/goalLogic';
 import { Button } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
@@ -260,7 +261,7 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
           {runMenu && (
             <Menu trigger={runBox} onClose={() => setRunMenu(false)}>
               {runItems.all && <MenuItem onClick={() => { setRunMenu(false); track('action:runAll'); sendToChat(runAllPrompt(path)); }}>Run all in this chat</MenuItem>}
-              {runItems.goal && <MenuItem onClick={() => { setRunMenu(false); track('action:runAsGoal'); setUi({ goalSheet: { mode: 'start', plan: path } }); }}>Run as goal…</MenuItem>}
+              {runItems.goal && <MenuItem onClick={() => { setRunMenu(false); startGoal({ plan: path }); }}>Run as goal…</MenuItem>}
             </Menu>
           )}
         </span>

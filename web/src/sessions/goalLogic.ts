@@ -1,4 +1,5 @@
 import { getState, send, setUi } from '../app/store';
+import { track } from '../app/featureUse';
 import type { BadgeSpec } from '../ui/Badge';
 import type { ChatRun, RunOp } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
@@ -74,5 +75,11 @@ export function runControl(run: ChatRun, op: RunOp, running = false) {
 }
 
 export const openGoal = (run?: string) => setUi({ goalSheet: run ? { mode: 'detail', run } : { mode: 'start' } });
+
+// The start sheet, for a plan file or for this chat (Android GoalStartSheet callers track the same).
+export function startGoal(opts: { plan?: string; here?: boolean } = {}) {
+  if (opts.plan) track('action:runAsGoal');
+  setUi({ goalSheet: { mode: 'start', ...opts } });
+}
 
 export const openRun = (run: ChatRun, report = run.rounds.at(-1)?.report) => openChat(run, report);

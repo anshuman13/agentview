@@ -1,7 +1,7 @@
 import { notice, send, setUi, useStore } from '../app/store';
 import { remindChoices, runLine } from './composer/composerLogic';
 import { useChatRun } from '../sessions/useChatRun';
-import { openGoal } from '../sessions/goalLogic';
+import { openGoal, startGoal } from '../sessions/goalLogic';
 import { QuickPick } from '../ui/QuickPick';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
@@ -30,7 +30,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     if (v === 'fork') return act(forkChat);
     if (v === 'markdown') return act(copyChatMarkdown);
     // Loops, cycles, tries and jobs have their controls on the loop card only.
-    if (v === 'goal') return act(() => (!run ? setUi({ goalSheet: { mode: 'start', here: true } }) : run.kind === 'goal' && openGoal(run.id)));
+    if (v === 'goal') return act(() => (!run ? startGoal({ here: true }) : run.kind === 'goal' && openGoal(run.id)));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
   const narrow = useNarrow();

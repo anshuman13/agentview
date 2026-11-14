@@ -1,7 +1,7 @@
 import { appSettings } from '../appSettings';
 import { track } from '../featureUse';
 import { getState, notice, send, setUi } from '../store';
-import { openGoal } from '../../sessions/goalLogic';
+import { openGoal, startGoal } from '../../sessions/goalLogic';
 import { toggleNotify } from '../runtime/notify';
 import { openMeeting, openTask, setView, type List } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
@@ -65,7 +65,7 @@ export function perform(id: string) {
   else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });
   else if (id === 'review') send({ type: 'set_review', on: !getState().session.review });
   else if (id === 'goal') openGoal();
-  else if (id === 'goalFile') setUi({ goalSheet: { mode: 'start', plan: getState().ui.openFile ?? undefined } });
+  else if (id === 'goalFile') startGoal({ plan: getState().ui.openFile ?? undefined });
   else if (id === 'spec') {
     send({ type: 'set_permission_mode', mode: 'plan' });
     window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: specPrompt('') } }));
