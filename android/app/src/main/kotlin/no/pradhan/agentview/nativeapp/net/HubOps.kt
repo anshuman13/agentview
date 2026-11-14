@@ -1,5 +1,8 @@
 package no.pradhan.agentview.nativeapp.net
 
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import no.pradhan.agentview.nativeapp.ops.DeployJob
 import no.pradhan.agentview.nativeapp.ops.DeployStatus
 import no.pradhan.agentview.nativeapp.ops.Finding
@@ -41,7 +44,25 @@ suspend fun Hub.reviewFindings(target: String): ReviewFindings? = parseFindings(
 fun Hub.dismissFinding(target: String, f: Finding, done: (ReviewFindings?) -> Unit) =
     write("/api/findings/dismiss", dismissBody(target, f), "Could not dismiss the finding", ::parseFindings, done)
 
-suspend fun Hub.pulls(fresh: Boolean): List<PullRequest> = parsePulls(read("/api/gh/prs" + if (fresh) "?fresh=1" else ""))
+// One PR list per folder, shared by the chat's PR strip and the Sessions rows (web usePullRequests); fresh replaces it.
+class PullCache {
+    var cwd: String? = null
+    var at = 0L
+    var list: Deferred<Result<List<PullRequest>>>? = null
+}
+
+private const val PULLS_TTL = 30_000L
+
+suspend fun Hub.pulls(fresh: Boolean): List<PullRequest> {
+    val cwd = store.state.value.let { s -> s.session?.cwd ?: s.live.firstOrNull { it.id == s.shownId }?.cwd }
+    val c = pullCache
+    val now = System.currentTimeMillis()
+    val hit = c.list?.takeIf { !fresh && c.cwd == cwd && (it.isActive || now - c.at < PULLS_TTL) }
+    val list = hit ?: viewModelScope.async { runCatching { parsePulls(read("/api/gh/prs" + if (fresh) "?fresh=1" else "")) } }.also {
+        c.cwd = cwd; c.at = now; c.list = it
+    }
+    return list.await().onFailure { if (c.list === list) c.list = null }.getOrThrow()
+}
 
 suspend fun Hub.pullDetail(number: Int): PullRequestDetail = parsePullDetail(read("/api/gh/pr/$number"))
 

@@ -183,6 +183,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val goalSheet = MutableStateFlow<GoalSheet?>(null)
 
+    internal val pullCache = PullCache()
+
     init { viewModelScope.launch { goalSheet.filterNotNull().collect { track("sheet:goal") } } }
 
     private val foregroundNow = MutableStateFlow(false)
