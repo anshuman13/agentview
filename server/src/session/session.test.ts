@@ -475,9 +475,8 @@ describe('plan changes', () => {
   it('sends a plan change as a prompt when the agent cannot take it mid-turn', async () => {
     const { s } = fakeSession();
     s.sendPrompt('task');
-    s.changePlan(['a']);
     vi.spyOn(s.driver, 'inject').mockResolvedValue(false);
-    s.pushEvent({ id: 't1', kind: 'tool_use', name: 'Bash', input: {}, at: 0 });
+    s.changePlan(['a']);
     await Promise.resolve();
     expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: expect.stringContaining('1. a') });
   });

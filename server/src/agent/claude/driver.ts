@@ -331,7 +331,7 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   clearInjected() {
-    this.toolHooks.clearInjected();
+    return this.toolHooks.clearInjected();
   }
 
   review(target: 'local' | number, id?: string) {

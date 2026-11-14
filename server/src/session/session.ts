@@ -140,7 +140,6 @@ export class AgentSession implements AgentHost {
       this.reported.add(ev.id);
       this.reportFindings(ev.input);
     }
-    if (ev.kind === 'tool_use' && !ev.parent) this.injectPlanChange();
     if (ev.kind !== 'tool_result' || ev.parent) return;
     const pr = PR_URL.exec(ev.text)?.[1];
     const use = pr ? this.log.get(ev.toolUseId) : undefined;
@@ -290,12 +289,6 @@ export class AgentSession implements AgentHost {
     const added = await this.driver.allow(ev.rule);
     this.log.allow(ev.rule);
     if (added) void this.prompt(`I allowed ${ev.rule} for this chat. Retry it.`);
-  }
-
-  // A plan change made mid-turn reaches the agent at its next step; when the agent cannot take it, it goes as a prompt.
-  private injectPlanChange() {
-    const plan = this.turn.takePlanChange();
-    if (plan) void this.driver.inject(plan).then((taken) => taken || this.sendPrompt(plan));
   }
 
   private reportFindings(input: unknown) {

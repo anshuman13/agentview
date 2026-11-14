@@ -23,7 +23,6 @@ export class Turn {
   // The id of the prompt of the weekly report round of a standing goal, while that round runs.
   reportTurn: string | undefined;
   private lastCost = 0;
-  private planChange: string | null = null;
   // A message sent mid-turn missed the turn's last step, so the CLI starts a turn for it.
   private expectTurn = false;
 
@@ -46,14 +45,9 @@ export class Turn {
   changePlan(next: string[]) {
     this.s.pushEvent({ id: randomUUID(), kind: 'plan', next, at: Date.now() });
     const text = planChangeText(next);
-    if (this.s.state.session.running) this.planChange = text;
+    // Mid-turn it reaches the agent at its next step or before the turn would end; an agent that cannot take it gets a prompt.
+    if (this.s.state.session.running) void this.s.driver.inject(text).then((taken) => taken || this.s.sendPrompt(text));
     else this.s.sendPrompt(text);
-  }
-
-  takePlanChange() {
-    const text = this.planChange;
-    this.planChange = null;
-    return text;
   }
 
   started(why?: string) {
@@ -162,7 +156,8 @@ export class Turn {
   }
 
   private followUp() {
-    const plan = this.takePlanChange();
+    // A plan change that came after the agent's last step goes as the next prompt.
+    const plan = this.s.driver.clearInjected();
     if (plan) return plan;
     // After a failed turn or a usage limit the hooks wait for the next good turn, which still sees the edits.
     const failed = Boolean(this.lastError || this.s.usage.reset);
@@ -178,7 +173,6 @@ export class Turn {
     this.expectTurn = false;
     this.count = 0;
     s.setSession({ running: false, stopping: false, compacting: false });
-    this.planChange = null;
     s.driver.clearInjected();
     s.approvals.denyAll(`${providerLabel(s.driver.provider)} exited before this was answered.`);
     const repeat = s.state.session.repeat;

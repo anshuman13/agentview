@@ -53,7 +53,8 @@ export class ToolHooks {
   }
 
   clearInjected() {
-    this.injected = [];
+    const notes = this.injected.splice(0);
+    return notes.length ? notes.join('\n\n') : null;
   }
 
   async onStop(input: HookInput): Promise<HookJSONOutput> {
