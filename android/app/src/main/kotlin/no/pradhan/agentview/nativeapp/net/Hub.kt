@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.net
 
+import no.pradhan.agentview.nativeapp.codex.NeedsView
 import android.app.Application
 import android.net.ConnectivityManager
 import android.net.Network
@@ -156,6 +157,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     // Every badge number (app/CountsLogic.kt), from the chats, the MCP servers and the Codex row totals.
     val counts = MutableStateFlow(AppCounts())
+    // The Needs you list of the Codex filter, worked out once off the main thread for the badge and the screens.
+    val needed = MutableStateFlow(NeedsView(emptyList(), emptyList()))
 
     val loadingEarlier = MutableStateFlow(false)
 
@@ -275,7 +278,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     init {
         viewModelScope.launch(Dispatchers.Default) {
             val minute = foregroundNow.flatMapLatest { up -> if (up) flow { while (true) { emit(Unit); delay(60_000) } } else emptyFlow() }.onStart { emit(Unit) }
-            val rows = combine(codex.state, minute, codexFilter) { s, _, filter -> needsView(s, filter.takeIf { it != "all" }, System.currentTimeMillis()).let { it.list.size to it.queue.size } }.distinctUntilChanged()
+            val rows = combine(codex.state, minute, codexFilter) { s, _, filter -> needsView(s, filter.takeIf { it != "all" }, System.currentTimeMillis()).also { needed.value = it }.let { it.list.size to it.queue.size } }.distinctUntilChanged()
             val needs = rows.map { it.first }.distinctUntilChanged()
             launch {
                 val chats = store.state.map { Triple(it.live, it.shownId, it.session?.mcp.orEmpty()) }.distinctUntilChanged()

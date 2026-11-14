@@ -234,7 +234,7 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
         scope.launch { snack.currentSnackbarData?.dismiss(); snack.showSnackbar("Task · $added", duration = SnackbarDuration.Short) }
     }
     if (nav.needsOpen) {
-        val view = remember(st.items, st.meetings, st.chats, st.facts, st.briefs, profile, now / 60_000) { needsView(st, profile, now) }
+        val view by hub.needed.collectAsState()
         NeedsSheet(view.list, view.queue, now, actions, ops.replies, hub, { nav.needsOpen = false; nav.editKey = it.key }, { nav.needsOpen = false; nav.push("review") }, { nav.needsOpen = false; nav.push("person:$it") }) { nav.needsOpen = false }
     }
 }
