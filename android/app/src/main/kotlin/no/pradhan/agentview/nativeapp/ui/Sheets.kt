@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -62,7 +63,8 @@ fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Bo
             }
         },
     ) {
-        Column(Modifier.navigationBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp8)) {
+        // The sheet is its own window: no text in it may register with a SelectionContainer behind it (that crashes on a long press), so the body gets its own.
+        DisableSelection { Column(Modifier.navigationBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp8)) {
             Row(Modifier.fillMaxWidth().height(Tokens.rowOne).padding(start = Tokens.listPad, end = if (action != null) Tokens.sp2 else Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                     Text(title, Modifier.weight(1f, fill = false), style = Type.title, color = c.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -70,9 +72,8 @@ fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Bo
                 }
                 action?.invoke()
             }
-            // The sheet is its own window: text in it selects within it, never through a SelectionContainer behind it.
             SelectionContainer { Column(Modifier.padding(horizontal = if (padded) Tokens.sp8 else 0.dp), content = content) }
-        }
+        } }
     }
 }
 
@@ -86,8 +87,7 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable ColumnSc
         containerColor = av.raised,
         tonalElevation = 0.dp,
         shadowElevation = Tokens.elev3,
-        content = content,
-    )
+    ) { DisableSelection { content() } }
 }
 
 @Composable
@@ -142,10 +142,10 @@ fun ConfirmDialog(title: String, detail: String, action: String, onConfirm: () -
         onDismissRequest = onDismiss,
         containerColor = av.raised,
         shape = RoundedCornerShape(Tokens.shapeLg),
-        title = { Text(title, style = Type.headline, color = av.fg) },
-        text = { Text(detail, style = Type.body, color = av.fgMuted) },
-        confirmButton = { Button(action, { onConfirm(); onDismiss() }, variant = if (danger) ButtonVariant.Danger else ButtonVariant.Filled) },
-        dismissButton = { Button("Cancel", onDismiss, variant = ButtonVariant.Plain) },
+        title = { DisableSelection { Text(title, style = Type.headline, color = av.fg) } },
+        text = { DisableSelection { Text(detail, style = Type.body, color = av.fgMuted) } },
+        confirmButton = { DisableSelection { Button(action, { onConfirm(); onDismiss() }, variant = if (danger) ButtonVariant.Danger else ButtonVariant.Filled) } },
+        dismissButton = { DisableSelection { Button("Cancel", onDismiss, variant = ButtonVariant.Plain) } },
     )
 }
 
@@ -156,14 +156,14 @@ fun TextDialog(title: String, initial: String, action: String, onSave: (String) 
         onDismissRequest = onDismiss,
         containerColor = av.raised,
         shape = RoundedCornerShape(Tokens.shapeLg),
-        title = { Text(title, style = Type.headline, color = av.fg) },
+        title = { DisableSelection { Text(title, style = Type.headline, color = av.fg) } },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            DisableSelection { Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 if (!detail.isNullOrEmpty()) Text(detail, style = Type.body, color = av.fgMuted)
                 TextField(text, { if (it.length <= maxLength) text = it }, singleLine = true)
-            }
+            } }
         },
-        confirmButton = { Button(action, { onSave(text); onDismiss() }, variant = ButtonVariant.Filled) },
-        dismissButton = { Button("Cancel", onDismiss, variant = ButtonVariant.Plain) },
+        confirmButton = { DisableSelection { Button(action, { onSave(text); onDismiss() }, variant = ButtonVariant.Filled) } },
+        dismissButton = { DisableSelection { Button("Cancel", onDismiss, variant = ButtonVariant.Plain) } },
     )
 }
