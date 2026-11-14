@@ -49,8 +49,12 @@ class Stdio implements Transport {
       const proc = Bun.spawn([def.command, ...(def.args ?? [])], { cwd, env: { ...process.env, ...def.env }, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe', detached: true });
       this.proc = proc;
       void eachChunk(proc.stdout, (c) => this.onData(c)).catch(() => undefined);
-      void eachChunk(proc.stderr, (c) => (this.stderr = (this.stderr + c).slice(-4000))).catch(() => undefined);
-      void proc.exited.then((code) => this.die(`${key} exited (${proc.signalCode ?? code})`));
+      const stderr = eachChunk(proc.stderr, (c) => (this.stderr = (this.stderr + c).slice(-4000))).catch(() => undefined);
+      // The exit error carries the last stderr lines, so it waits a moment for the reader; a child may keep stderr open.
+      void proc.exited.then(async (code) => {
+        await Promise.race([stderr, Bun.sleep(1000)]);
+        this.die(`${key} exited (${proc.signalCode ?? code})`);
+      });
     } catch (err) {
       throw new Error(`${key} failed to start: ${(err as Error).message}`);
     }
