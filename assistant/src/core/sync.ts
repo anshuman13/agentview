@@ -227,36 +227,20 @@ export function pullChanges(
   if (since > head) since = 0;
   // Most polls find nothing new, so they skip the table queries.
   if (since === head) return { version: since, changes: [], hasMore: false };
+  // Versions are unique across tables, so the page ends at the limit-th version after since and each table reads only its part.
+  const tables = Object.keys(TABLES);
+  const versions = tables.map((t) => `SELECT version FROM ${t} WHERE version > ?`).join(' UNION ALL ');
+  const last = stmt(db, `SELECT version FROM (${versions}) ORDER BY version LIMIT 1 OFFSET ?`).get(...tables.map(() => since), limit) as { version: number } | null;
+  const cutoff = last ? last.version - 1 : head;
   const allRows: Array<{ table: string; row: any }> = [];
-
-  for (const table of Object.keys(TABLES)) {
-    const dataColumns = TABLES[table];
-    let sql = `SELECT id, profile, version, updated_at, deleted, field_times, `;
-    sql += dataColumns.join(', ');
-    sql += ` FROM ${table} WHERE version > ? ORDER BY version, id LIMIT ?`;
-
-    const selectStmt = stmt(db, sql);
-    const rows = selectStmt.all(since, limit + 1) as any[];
-
-    for (const row of rows) {
-      allRows.push({ table, row });
-    }
+  for (const table of tables) {
+    const sql = `SELECT id, profile, version, updated_at, deleted, field_times, ${TABLES[table].join(', ')} FROM ${table} WHERE version > ? AND version <= ?`;
+    for (const row of stmt(db, sql).all(since, cutoff) as any[]) allRows.push({ table, row });
   }
-
-  allRows.sort((a, b) => {
-    const versionDiff = a.row.version - b.row.version;
-    if (versionDiff !== 0) return versionDiff;
-    return a.row.id.localeCompare(b.row.id);
-  });
-
-  const hasMore = allRows.length > limit;
-  const changes: PulledChange[] = [];
-  let maxVersion = since;
-
-  for (const { table, row } of allRows.slice(0, limit)) {
-    changes.push(pulledChange(table, row));
-    maxVersion = row.version;
-  }
+  allRows.sort((a, b) => a.row.version - b.row.version);
+  const changes = allRows.map(({ table, row }) => pulledChange(table, row));
+  const maxVersion = changes.at(-1)?.version ?? since;
+  const hasMore = Boolean(last);
 
   return { version: maxVersion, changes, hasMore };
 }
