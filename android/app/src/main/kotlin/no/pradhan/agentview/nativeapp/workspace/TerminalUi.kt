@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.workspace
 
 import android.os.Handler
 import android.os.Looper
+import android.view.Choreographer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -85,8 +86,11 @@ private fun TermView(hub: Hub, id: String, onGone: () -> Unit) {
     val follow = remember(id) { booleanArrayOf(true) }
     val socket = remember(id, origin) {
         val main = Handler(Looper.getMainLooper())
+        // Output batches are written as they come, and the lines are rebuilt at most once a frame.
+        var queued = false
+        val redraw = Choreographer.FrameCallback { queued = false; version++ }
         LiveSocket(hub.client, "${wsOrigin(origin)}/ws?term=${enc(id)}",
-            onText = { t -> main.post { follow[0] = !list.canScrollForward; screen.write(t); version++ } },
+            onText = { t -> main.post { follow[0] = !list.canScrollForward; screen.write(t); if (!queued) { queued = true; Choreographer.getInstance().postFrameCallback(redraw) } } },
             onOpen = { screen.reset(); version++ },
             onGone = onGone,
         )
