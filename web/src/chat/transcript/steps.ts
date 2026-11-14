@@ -3,6 +3,7 @@ import { isSpecPath, specSlug } from '../../../../shared/specTasks';
 import { exploreLabelOf, exploreRunsOf } from '../../../../shared/explore';
 import { buildStageOf } from '../../../../shared/builds';
 import type { ChatEvent } from '../../../../shared/protocol';
+import { firstLine } from '../../ui/util';
 
 export type ToolUse = Extract<ChatEvent, { kind: 'tool_use' }>;
 export type ToolResult = Extract<ChatEvent, { kind: 'tool_result' }>;
@@ -23,7 +24,7 @@ type Label = { verb: string; object: string; mono?: boolean; cmd?: string };
 
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 
-export const firstLine = (text: string) => text.trim().split('\n')[0] ?? '';
+export { firstLine };
 export const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
 const DENIED = /^(The user doesn't want to proceed|User denied this action|aborted\b|Session closed|The user sent a new message instead|\w+ exited before this was answered)/;

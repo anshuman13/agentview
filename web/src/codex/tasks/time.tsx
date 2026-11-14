@@ -3,6 +3,7 @@ import { DateSheet } from './AddSheet';
 import { Icon } from '../../ui/Icon';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { dayLabel, pad, ymd } from '../data/dates';
+import { clock } from '../../../../shared/util';
 
 // Times are picked as a part of the day, not a minute.
 export const MORNING = 9;
@@ -23,7 +24,7 @@ export function slots(now = new Date()): { label: string; at: number }[] {
   ];
 }
 
-export const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+export { clock };
 
 export function when(at: number, now = Date.now(), withTime = false) {
   const d = new Date(at);

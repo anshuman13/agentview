@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { send, useStore } from '../app/store';
-import { clock } from '../codex/tasks/time';
+import { clock } from '../../../shared/util';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';

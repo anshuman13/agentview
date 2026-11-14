@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useStore } from '../../app/store';
-import { clock } from '../../codex/tasks/time';
+import { clock } from '../../../../shared/util';
 import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { TriesBoard } from '../../sessions/TriesBoard';
