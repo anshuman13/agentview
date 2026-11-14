@@ -9,7 +9,7 @@ import { ADVISORS_ELSEWHERE, STARTED_ON_HUB, advisorsMac, askAdvisorsMac } from 
 import { ntfyTopic, post } from './integrations/notify.js';
 import { CODEX_WORK } from './workspace/files.js';
 import { createAutoMerge } from './integrations/automerge.js';
-import { forgetPrs, gh, useAutoMerge } from './integrations/github.js';
+import { forgetPrs, gh, onPrsChanged, useAutoMerge } from './integrations/github.js';
 import { onAttention, startAttention } from './integrations/attention.js';
 import { thisMac } from './http/macs.js';
 import type { AttentionItem, ClientMessage } from '../../shared/protocol.js';
@@ -121,6 +121,7 @@ function attentionSources(extra: string[] = []) {
 }
 const fixChat = (item: AttentionItem) => host.req<string>({ op: 'ask', cwd: item.cwd, prompt: item.prompt, fresh: true });
 startAttention(attentionSources, fixChat);
+onPrsChanged((cwd) => host.notify({ op: 'prs_changed', cwd }));
 const autoMerge = createAutoMerge({ gh, post, file: path.join(os.homedir(), '.agentview/automerge.json'), changed: forgetPrs });
 useAutoMerge(autoMerge);
 autoMerge.start();

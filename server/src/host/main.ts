@@ -19,6 +19,7 @@ import { PORT, PROJECT, bySession, get, hub, live, viewers } from './state.js';
 import type { Hello, HostRequest } from './protocol.js';
 import { readJson } from '../json.js';
 import { applyAccountLabels } from '../settings.js';
+import { forgetPrs } from '../integrations/github.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -119,6 +120,9 @@ async function handle(req: HostRequest): Promise<unknown> {
       return get(req.id).mcp.login(req.name);
     case 'desktop':
       hub.desktopAt = req.at;
+      return;
+    case 'prs_changed':
+      forgetPrs(req.cwd);
       return;
     case 'viewers':
       return setViewers(req.counts, req.last);

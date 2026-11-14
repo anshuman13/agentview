@@ -65,10 +65,16 @@ const list = async (cwd: string, ...extra: string[]) => JSON.parse(await gh(cwd,
 
 // Bumped when a PR changes here, so a list fetched before it is not stored.
 const generation = new Map<string, number>();
+// The agent host keeps its own lists for PR check chips; the server tells it of each change through this.
+let tellHost: (cwd: string) => void = () => {};
+export const onPrsChanged = (fn: (cwd: string) => void) => void (tellHost = fn);
+
 const changedHere = (cwd: string) => {
   generation.set(repoKey(cwd), (generation.get(repoKey(cwd)) ?? 0) + 1);
   lists.delete(repoKey(cwd));
   refreshing.delete(repoKey(cwd));
+  polled.delete(repoKey(cwd));
+  tellHost(cwd);
 };
 
 async function fetchList(cwd: string): Promise<PullRequest[]> {

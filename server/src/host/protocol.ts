@@ -21,6 +21,7 @@ export type HostRequest =
   | { op: 'mcp_login'; id: string; name: string }
   | { op: 'viewers'; counts: Record<string, number>; last: string }
   | { op: 'desktop'; at: number }
+  | { op: 'prs_changed'; cwd: string }
   | { op: 'restart'; now: boolean; force: boolean };
 
 export type Hello = { last: string; restarting: boolean; chats: LiveChat[]; runs: ChatRun[] };
