@@ -69,6 +69,8 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.buildItemPrompt
 import no.pradhan.agentview.nativeapp.workspace.buildSpecPrompt
+import no.pradhan.agentview.nativeapp.net.LiveChat
+import no.pradhan.agentview.nativeapp.workspace.Loaded
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 
@@ -280,7 +282,6 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     // Reloads after an advisor's turn, which may have changed its memory, the backlog, a spec or the audit.
     val turns = live.filter { advisorOf(it.cwd) != null && !it.running }.joinToString { "${it.id}:${it.lastActive}" }
     val (load, reload) = rememberLoad { hub.advisors() }
-    var memory by rememberSaveable { mutableStateOf<String?>(null) }
     var picked by remember { mutableStateOf(advisorPick) }
     val shownChat = live.firstOrNull { it.id == shownId }
     val openCwd = sessionCwd ?: shownChat?.cwd
@@ -340,70 +341,86 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                 if (elsewhere != null) hub.notice.value = "The loop runs for ${elsewhere.substringAfterLast('/')}; stop it there first"
                                 else { starting = true; scope.askAdvisor(hub, "pm", advisorLoopCommand(project, System.currentTimeMillis()), onOpen) }
                             }, ::go)
-                            if (stage == "ideas") ListRow(
-                                "Audit", when {
-                                    audits.data == null && audits.error.isNotEmpty() -> "Could not load the audit"
-                                    audits.data == null -> "Loading the audit"
-                                    else -> audit?.let { "${it.date} · ${auditCountLine(it.findings)}" } ?: "Not run yet"
-                                },
-                                lines = 1, metaLines = 1,
-                                state = if (hub.readOnly && !running) null else ({
-                                    if (running) Badge("Running", BadgeTone.Running)
-                                    else Button("Specs from audit", { scope.askAdvisor(hub, "pm", specsFromAuditPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = audit != null)
-                                }),
-                                menu = if (hub.readOnly) null else ({ dismiss ->
-                                    MenuItem("Open latest audit", "list-flat", { dismiss(); auditOpen = true }, enabled = audit != null)
-                                    MenuItem("Run audit", "play", { dismiss(); scope.askAdvisor(hub, "designer", auditPrompt(project), onOpen) }, enabled = !running)
-                                }),
-                            )
+                            if (stage == "ideas") AuditRow(hub, project, audits, running, onOpen, scope) { auditOpen = true }
                             for (c in cards) BoardCardRow(hub, c, stage, project, live.any { it.id == c.spec?.chat }, openSlugs, move, onOpen, scope, ::go)
                         }
                         if (stage == "ideas" && nothing) EmptyState("No backlog yet", "The PM ranks what to build next", "list-ordered", action = if (hub.readOnly) null else ({
                             Button("Ask PM to rank", { scope.askAdvisor(hub, "pm", rankPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
                         })) else if (cards.isEmpty()) Text("Nothing here", Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), style = Type.meta, color = av.fgMuted)
-                        if (auditOpen && audit != null) Sheet({ auditOpen = false }, "Audit, ${audit.date}", padded = false) {
-                            for (f in audit.findings) ListRow(f.screen, "${if (f.status == "fixed") "Fixed · " else ""}${f.severity.replaceFirstChar { it.uppercase() }} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 2)
-                        }
+                        if (auditOpen && audit != null) AuditSheet(audit) { auditOpen = false }
                     }
                 }
                 Spacer(Modifier.padding(bottom = Tokens.sp16))
             }
         }
     }
-    if (sheetOpen) Sheet({ sheetOpen = false }, "Conversations and memory", padded = false) {
-        val info = load.data
-        when {
-            info == null && load.error.isNotEmpty() -> EmptyState("Could not load the advisors", load.error, icon = "organization")
-            info == null -> Loading("Loading advisors")
-            else -> for (a in ADVISORS) {
-                val c = live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
-                val state = c?.let { chatState(it, null, ws.seen) }
-                val got = info.firstOrNull { it.id == a.id }
-                val earlier = got?.chats.orEmpty().filter { it.sessionId != c?.sessionId }
-                val facts = memoryFacts(got?.memory.orEmpty())
-                SectionHeader(a.name, a.model, action = { Button("New conversation", { go { hub.openAdvisor(a.id, true) } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "add") })
-                Group {
-                    ListRow(
-                        boldIf(state == ChatState.Done || state == ChatState.Needs, c?.title?.ifBlank { null } ?: "Talk to ${a.name}"),
-                        when {
-                            c == null -> a.hint
-                            c.pending > 0 -> "Needs you"
-                            c.running -> "Working"
-                            else -> "Open · ${since(c.lastActive)}"
-                        },
-                        lines = 1, metaLines = 1, selected = c != null && c.id == shownId,
-                        leading = if (state != null) ({ StateDot(state) }) else null,
-                        onClick = { go { hub.openAdvisor(a.id, false) } },
-                    )
-                    for (s in earlier) {
-                        Hairline()
-                        ListRow(s.title.ifBlank { "Untitled" }, since(s.lastModified), lines = 1, onClick = { go { hub.openSaved(s.sessionId) } })
-                    }
+    if (sheetOpen) AdvisorConversationsSheet(hub, load, live, ws.seen, shownId, ::go) { sheetOpen = false }
+}
+
+@Composable
+private fun AuditRow(hub: Hub, project: String, audits: Loaded<List<AuditInfo>?>, running: Boolean, onOpen: () -> Unit, scope: CoroutineScope, onShow: () -> Unit) {
+    val audit = audits.data?.firstOrNull()
+    ListRow(
+        "Audit", when {
+            audits.data == null && audits.error.isNotEmpty() -> "Could not load the audit"
+            audits.data == null -> "Loading the audit"
+            else -> audit?.let { "${it.date} · ${auditCountLine(it.findings)}" } ?: "Not run yet"
+        },
+        lines = 1, metaLines = 1,
+        state = if (hub.readOnly && !running) null else ({
+            if (running) Badge("Running", BadgeTone.Running)
+            else Button("Specs from audit", { scope.askAdvisor(hub, "pm", specsFromAuditPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = audit != null)
+        }),
+        menu = if (hub.readOnly) null else ({ dismiss ->
+            MenuItem("Open latest audit", "list-flat", { dismiss(); onShow() }, enabled = audit != null)
+            MenuItem("Run audit", "play", { dismiss(); scope.askAdvisor(hub, "designer", auditPrompt(project), onOpen) }, enabled = !running)
+        }),
+    )
+}
+
+@Composable
+private fun AuditSheet(audit: AuditInfo, onDismiss: () -> Unit) = Sheet(onDismiss, "Audit, ${audit.date}", padded = false) {
+    for (f in audit.findings) ListRow(f.screen, "${if (f.status == "fixed") "Fixed · " else ""}${f.severity.replaceFirstChar { it.uppercase() }} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 2)
+}
+
+// Each advisor's open chat, its earlier conversations and its memory.
+@Composable
+private fun AdvisorConversationsSheet(hub: Hub, load: Loaded<List<AdvisorInfo>>, live: List<LiveChat>, seen: Map<String, Long>, shownId: String?, go: (suspend () -> Boolean) -> Unit, onDismiss: () -> Unit) {
+    var memory by rememberSaveable { mutableStateOf<String?>(null) }
+Sheet(onDismiss, "Conversations and memory", padded = false) {
+    val info = load.data
+    when {
+        info == null && load.error.isNotEmpty() -> EmptyState("Could not load the advisors", load.error, icon = "organization")
+        info == null -> Loading("Loading advisors")
+        else -> for (a in ADVISORS) {
+            val c = live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
+            val state = c?.let { chatState(it, null, seen) }
+            val got = info.firstOrNull { it.id == a.id }
+            val earlier = got?.chats.orEmpty().filter { it.sessionId != c?.sessionId }
+            val facts = memoryFacts(got?.memory.orEmpty())
+            SectionHeader(a.name, a.model, action = { Button("New conversation", { go { hub.openAdvisor(a.id, true) } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "add") })
+            Group {
+                ListRow(
+                    boldIf(state == ChatState.Done || state == ChatState.Needs, c?.title?.ifBlank { null } ?: "Talk to ${a.name}"),
+                    when {
+                        c == null -> a.hint
+                        c.pending > 0 -> "Needs you"
+                        c.running -> "Working"
+                        else -> "Open · ${since(c.lastActive)}"
+                    },
+                    lines = 1, metaLines = 1, selected = c != null && c.id == shownId,
+                    leading = if (state != null) ({ StateDot(state) }) else null,
+                    onClick = { go { hub.openAdvisor(a.id, false) } },
+                )
+                for (s in earlier) {
                     Hairline()
-                    ListRow("Memory", if (facts == 0) "Nothing yet" else "$facts ${if (facts == 1) "fact" else "facts"}", lines = 1, onClick = if (facts > 0) ({ memory = if (memory == a.id) null else a.id }) else null)
+                    ListRow(s.title.ifBlank { "Untitled" }, since(s.lastModified), lines = 1, onClick = { go { hub.openSaved(s.sessionId) } })
                 }
-                if (memory == a.id && got != null) Markdown(got.memory.replaceFirst(Regex("^# .*\n"), ""), Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4))
+                Hairline()
+                ListRow("Memory", if (facts == 0) "Nothing yet" else "$facts ${if (facts == 1) "fact" else "facts"}", lines = 1, onClick = if (facts > 0) ({ memory = if (memory == a.id) null else a.id }) else null)
             }
+            if (memory == a.id && got != null) Markdown(got.memory.replaceFirst(Regex("^# .*\n"), ""), Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4))
         }
     }
+}
 }
