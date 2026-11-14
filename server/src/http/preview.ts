@@ -6,7 +6,8 @@ import { failed } from '../json.js';
 export type DevPort = { port: number; name: string; local: boolean };
 
 const DEV = /^(node|bun|deno|python[\d.]*|ruby|php|uvicorn|gunicorn|rails|hugo|caddy|nginx)$/i;
-const OWN = new Set([7777, 7779, 7790, 7791]);
+// AgentView's server, its Chrome relay and the hub.
+const OWN = new Set([Number(process.env.PORT ?? 7777), Number(process.env.AGENTVIEW_RELAY_PORT ?? 7779), 7790, 7791]);
 
 // Parses `lsof -F cn` into the dev servers listening on this Mac. local marks a port bound to loopback only.
 export function parsePorts(out: string): DevPort[] {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { advanceTimersByTimeAsync } from '../../../testing.js';
 
-const notify = { pushNtfy: vi.fn(async (..._a: string[]) => true), ntfyTopic: vi.fn(async () => 'topic') };
+const notify = { APP: 'http://localhost:7777', pushNtfy: vi.fn(async (..._a: string[]) => true), ntfyTopic: vi.fn(async () => 'topic') };
 vi.mock('./notify.js', () => notify);
 const { cancelFocus, scheduleFocus } = await import('./focus.js');
 

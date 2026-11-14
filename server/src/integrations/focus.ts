@@ -1,4 +1,4 @@
-import { ntfyTopic, pushNtfy } from './notify.js';
+import { APP, ntfyTopic, pushNtfy } from './notify.js';
 
 const MAX_MS = 25 * 60_000;
 const SKEW_MS = 30_000;
@@ -19,7 +19,7 @@ export function scheduleFocus(title: unknown, end: unknown): { ok: true } | { er
   pending = setTimeout(async () => {
     pending = null;
     if ((await ntfyTopic()) === 'off') return;
-    await pushNtfy(`Focus done: ${name || 'Untitled'}`, '', 'Open Codex to log the time', 'http://localhost:7777/?view=assistant');
+    await pushNtfy(`Focus done: ${name || 'Untitled'}`, '', 'Open Codex to log the time', `${APP}/?view=assistant`);
   }, wait);
   pending.unref();
   return { ok: true };
