@@ -120,8 +120,16 @@ fun agentMeta(a: Agent, now: Long): String = listOfNotNull(
     if (a.info?.background == true) "background" else null,
 ).joinToString(" · ")
 
-fun agentGroups(agents: List<Agent>): List<Pair<String?, List<Agent>>> =
-    agents.reversed().groupBy { it.group }.toList().sortedBy { it.first != null }
+// A workflow's agents group by their phase, the stages of the run, in the order the stages started.
+fun agentGroups(agents: List<Agent>): List<Pair<String?, List<Agent>>> {
+    val runs = agents.mapNotNull { it.group }.toSet().size
+    fun stage(a: Agent): String? = a.group?.let { g ->
+        val phase = a.type.takeIf { it != "general-purpose" }.orEmpty()
+        if (phase.isEmpty()) g else if (runs > 1) "$g · $phase" else phase
+    }
+    val list = agents.reversed()
+    return agents.map(::stage).distinct().map { s -> s to list.filter { stage(it) == s } }.sortedBy { it.first != null }
+}
 
 fun agentTrailing(a: Agent, now: Long): String {
     val took = elapsed((a.endedAt ?: now) - a.startedAt)

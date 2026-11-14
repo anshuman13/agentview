@@ -23,7 +23,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
+import no.pradhan.agentview.nativeapp.codex.autopilot.loopNow
+import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
 import no.pradhan.agentview.nativeapp.codex.clock
@@ -41,6 +43,12 @@ import no.pradhan.agentview.nativeapp.app.remindChat
 import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.app.setShowWork
 import no.pradhan.agentview.nativeapp.app.submit
+import no.pradhan.agentview.nativeapp.app.runControl
+import no.pradhan.agentview.nativeapp.app.stopTask
+import no.pradhan.agentview.nativeapp.net.ChatRun
+import no.pradhan.agentview.nativeapp.ui.IconBtn
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import no.pradhan.agentview.nativeapp.net.unbilledText
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
@@ -148,7 +156,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) }
         Composer(hub, live.id, session, running, pending.isNotEmpty(), run)
     }
-    ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent) { run?.let { if (it.kind != "job" || it.review != "pending") LoopCard(hub, it, live, session?.loop?.phase, pending.isNotEmpty(), { id -> panels.agents = false; onOpenAgent(id) }) {} } }
+    ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent, run)
 }
 
 @Composable
@@ -175,8 +183,11 @@ private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Do
 @Composable
 private fun ChatStatus(live: LiveChat, session: SessionInfo?, viewCost: Double, agents: Int?, onAgents: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp2, bottom = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) { ChatSubtitle(live, session, viewCost) }
-        if (agents != null) Button(if (agents > 0) "${plural(agents, "agent")} \u203A" else "Run \u203A", onAgents, variant = ButtonVariant.Plain)
+        Column(Modifier.weight(1f, fill = false)) { ChatSubtitle(live, session, viewCost) }
+        if (agents != null) Row(Modifier.heightIn(min = Tokens.touchSm).clickable(onClick = onAgents).padding(start = Tokens.sp4, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (agents > 0) plural(agents, "agent") else "Run", style = Type.footnote, color = av.fgMuted, maxLines = 1)
+            AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgMuted)
+        }
     }
 }
 
@@ -222,12 +233,16 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
 }
 
 @Composable
-private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, images: List<String>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit, runCard: @Composable () -> Unit) {
+private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, images: List<String>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit, run: ChatRun?) {
     val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
     val now = rememberNow(panels.agents && agents.any { it.status == "running" })
-    if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false) {
-        runCard()
+    if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false, action = { AgentsActions(hub, run, agents) }) {
+        run?.let { r ->
+            val line = listOfNotNull(runLine(r, session?.loop?.phase), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
+            val goal = r.kind == "goal"
+            Text(line, Modifier.fillMaxWidth().then(if (goal) Modifier.clickable { hub.shell.goalSheet.value = GoalSheet.Detail(r.id) } else Modifier).padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
+        }
         AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
     }
     if (panels.tools) Sheet(onDismiss = { panels.tools = false }, title = "Tools", padded = false, full = false) {
@@ -271,4 +286,14 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
 @Composable
 fun RenameDialog(current: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
     TextDialog("Rename chat", current, "Save", { t -> renameTitle(t, current)?.let(onSave) }, onDismiss, maxLength = 120)
+}
+
+// The run's controls in the Agents sheet: pause or resume, and stop the run or every running agent.
+@Composable
+private fun AgentsActions(hub: Hub, run: ChatRun?, agents: List<Agent>) {
+    val running = agents.filter { it.status == "running" && it.group == null }
+    val paused = run?.state == "paused"
+    if (run != null && run.kind !in setOf("cycle", "tries", "job")) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
+    if (run != null) IconBtn("debug-stop", "Stop the run", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
+    else if (running.isNotEmpty()) IconBtn("debug-stop", "Stop all agents", { running.forEach { hub.stopTask(it.id) } }, enabled = !hub.readOnly)
 }

@@ -57,7 +57,7 @@ fun AgentScreen(hub: Hub, id: String, onBack: () -> Unit, onOpenAgent: (String) 
 @Composable
 fun AgentList(agents: List<Agent>, now: () -> Long, onOpen: (String) -> Unit) {
     for ((name, rows) in agentGroups(agents)) {
-        SectionHeader(name ?: "Agents", rows.size.toString())
+        if (name != null) SectionHeader(name, rows.size.toString())
         Group {
             rows.forEachIndexed { i, a ->
                 if (i > 0) Hairline(lead = true)
