@@ -327,7 +327,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
     return Number(data?.added ?? 0);
   };
 
-  replyHistory = async (): Promise<ReplyHistory> => ({ replies: [] });
+  replyHistory = (who: string) => hub<ReplyHistory>(`${hubUrl()}/history?who=${encodeURIComponent(who)}`, undefined, SYNC_TIMEOUT);
 
   sendReply = async (id: string, edited: boolean, text?: string) => {
     const r = await hub<SentReply>(`${hubUrl()}/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { text }, REPLY_TIMEOUT);
