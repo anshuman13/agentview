@@ -11,8 +11,8 @@ import { ago } from '../../ui/util';
 import { Capped } from '../../codex/Fold';
 import { BuildPhases } from '../../sessions/BuildPhases';
 import { CodeReview, Implementation, ReportBody } from '../../sessions/BuildParts';
-import { FLOW_LABEL, byStart, criterionBadge, stageBadge, stageMeta, stageTitle, testCounts } from '../../sessions/buildsLogic';
-import type { BuildDetail, BuildStage, FlowStep, ReviewPhase, SpecCriterion } from '../../../../shared/builds';
+import { FLOW_LABEL, criterionBadge, stageBadge, stageMeta, stageTitle, testCounts } from '../../sessions/buildsLogic';
+import { inOrder, type BuildDetail, type BuildStage, type FlowStep, type ReviewPhase, type SpecCriterion } from '../../../../shared/builds';
 
 type StepKey = Exclude<FlowStep['key'], 'spec' | 'sketch' | 'approval' | 'merge'>;
 export type OpenSheet = { kind: 'spec'; initial?: ReviewPhase } | { kind: 'step'; key: StepKey } | { kind: 'criterion'; n: number };
@@ -51,13 +51,13 @@ export function Criteria({ criteria, limit, onOpen }: { criteria: SpecCriterion[
 function SpecSheet({ d, initial, reload }: { d: BuildDetail; initial?: ReviewPhase; reload: () => Promise<void> }) {
   const cwd = useStore((s) => s.session.cwd);
   if (!d.phases.length) return <><Section label="Spec" /><EmptyState size="sm" title="No spec phases yet" /></>;
-  return <BuildPhases slug={d.slug} phases={d.phases} reviews={d.reviews} specPath={d.specFile && `${cwd}/${d.specFile}`} initial={initial} hideCriteria onSaved={reload} />;
+  return <BuildPhases slug={d.slug} phases={d.phases} reviews={d.reviews} specPath={d.specFile && `${cwd}/${d.specFile}`} initial={initial} onSaved={reload} />;
 }
 
 function StepSheet({ d, step, reload, sheets }: { d: BuildDetail; step: StepKey; reload: () => Promise<void>; sheets: BuildSheetState }) {
   const chat = useStore((s) => s.session.id);
   const [picked, setPicked] = useState<string | null>(null);
-  const runs = byStart(d.entries).filter((e) => e.stage === STAGE[step]).reverse();
+  const runs = inOrder(d.entries).filter((e) => e.stage === STAGE[step]).reverse();
   const run = runs.find((e) => e.id === picked) ?? runs[0];
   return (
     <>

@@ -5,14 +5,14 @@ import { Files, splitDiff } from '../ui/DiffFiles';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
-import type { BuildDetail, BuildStage } from '../../../shared/builds';
+import { latestRun, type BuildDetail, type BuildStage } from '../../../shared/builds';
 import { DecisionRow } from './BuildPhases';
-import { byStart, commitTotals } from './buildsLogic';
+import { commitTotals } from './buildsLogic';
 import { openChat } from './goalLogic';
 
 export type Report = { title: string; text: string; chat?: { id: string; session: string | null } };
 
-export const latest = (d: BuildDetail, stage: BuildStage) => byStart(d.entries).filter((e) => e.stage === stage).at(-1);
+export const latest = (d: BuildDetail, stage: BuildStage) => latestRun(d.entries, stage);
 const buildCommit = (d: BuildDetail) => d.commit && latest(d, 'implement')?.commit;
 
 // The build's commit: branch or subject, size, and the changed files with their diffs.

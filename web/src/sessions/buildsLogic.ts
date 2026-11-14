@@ -21,8 +21,6 @@ export const currentStep = (flow: FlowStep[]) => flow.find((f) => f.state === 'r
 
 export const stageTitle = (e: Entry) => stageName(e.stage) + (e.round > 1 ? ` · round ${e.round}` : '');
 
-export const byStart = (entries: Entry[]) => entries.map((e, i) => [e, i] as const).sort((a, b) => a[0].startedAt - b[0].startedAt || a[1] - b[1]).map(([e]) => e);
-
 export function stageMeta(e: Entry) {
   const ms = e.endedAt ? e.endedAt - e.startedAt : 0;
   const took = e.endedAt && (ms < 60_000 ? `${Math.round(ms / 1000)}s` : span(ms));

@@ -1,9 +1,10 @@
 import { createPortal } from 'react-dom';
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { notice, sendToChat, useStore } from '../app/store';
 import { track } from '../app/featureUse';
 import { Markdown } from '../chat/Chat';
 import { AskRow } from '../ui/AskRow';
+import { Badge } from '../ui/Badge';
 import { Button, Chip, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Row } from '../ui/Row';
@@ -82,7 +83,8 @@ function SketchPhase({ slug, html }: { slug: string; html: string }) {
 }
 
 // The spec as the phase strip shows it, with the user's latest decision on the shown phase under it.
-export function BuildPhases({ slug, phases, reviews, specPath, action, initial, hideCriteria, onSaved }: { slug: string; phases: BuildPhase[]; reviews: BuildReview[]; specPath: string | null; action?: ReactNode; initial?: ReviewPhase; hideCriteria?: boolean; onSaved: () => Promise<void> }) {
+// The criteria show on the card itself, so the phase text leaves them out.
+export function BuildPhases({ slug, phases, reviews, specPath, initial, onSaved }: { slug: string; phases: BuildPhase[]; reviews: BuildReview[]; specPath: string | null; initial?: ReviewPhase; onSaved: () => Promise<void> }) {
   const [picked, setPicked] = useState<ReviewPhase | null>(null);
   const [runMenu, setRunMenu] = useState(false);
   const runBox = useRef<HTMLButtonElement>(null);
@@ -94,21 +96,21 @@ export function BuildPhases({ slug, phases, reviews, specPath, action, initial, 
   const tasks = phase.key === 'tasks' ? specTasks(phase.markdown) : [];
   const open = tasks.filter((t) => !t.done);
   const runnable = specPath && chat && open.length > 0 ? specPath : null;
-  const markdown = hideCriteria && phase.key !== 'sketch' ? withoutCriteria(phase.markdown) : phase.markdown;
+  const markdown = phase.key !== 'sketch' ? withoutCriteria(phase.markdown) : phase.markdown;
   return (
     <>
-      <Section label="Spec" action={<>{tasks.length > 0 && <span className="badge quiet">{specProgress(tasks)}</span>}{runnable && (
+      <Section label="Spec" action={<>{tasks.length > 0 && <span className="muted small">{specProgress(tasks)}</span>}{runnable && (
         <span className="ov-more">
           <IconButton ref={runBox} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={runMenu} onClick={() => setRunMenu(!runMenu)} />
           {runMenu && <Menu trigger={runBox} onClose={() => setRunMenu(false)}><MenuItem onClick={() => { setRunMenu(false); track('action:runAll'); sendToChat(runAllPrompt(runnable)); }}>Run all</MenuItem></Menu>}
         </span>
-      )}{action}</>} />
+      )}</>} />
       <div className="gl-chips bd-phases">
         {phases.map((p) => <Chip key={p.key} on={p.key === phase.key} icon={reviewDecision(reviews, p.key)?.decision === 'approve' ? 'check' : undefined} onClick={() => setPicked(p.key)}>{phaseLabel(p.key)}</Chip>)}
       </div>
       <div className="ui-group">
         {phase.key === 'sketch' ? <SketchPhase slug={slug} html={phase.markdown} /> : <div className="bd-doc"><Markdown text={runnable ? withoutOpenTasks(markdown) : markdown} /></div>}
-        {runnable && open.map((t) => <Row key={t.n} plain className="bd-clamp" title={t.text} trailing={t.doing ? <span className="badge running">In progress</span> : <Button size="sm" onClick={() => { track('action:startTask'); sendToChat(startTaskPrompt(t, runnable)); }}>Start</Button>} />)}
+        {runnable && open.map((t) => <Row key={t.n} plain className="bd-clamp" title={t.text} trailing={t.doing ? <Badge status="running" /> : <Button size="sm" onClick={() => { track('action:startTask'); sendToChat(startTaskPrompt(t, runnable)); }}>Start</Button>} />)}
         <DecisionRow slug={slug} phase={phase.key} review={review} onSaved={onSaved} onApproved={() => setPicked(nextPhase(phases, phase.key))} />
       </div>
     </>

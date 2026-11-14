@@ -208,12 +208,6 @@ fun startPhase(phases: List<BuildPhase>, reviews: List<BuildReview>) = (phases.f
 
 fun nextPhase(phases: List<BuildPhase>, key: String) = phases.getOrNull(phases.indexOfFirst { it.key == key } + 1)?.key ?: key
 
-class StageRow(val at: Long, val entry: BuildEntry? = null, val review: BuildReview? = null)
-
-// The agent stages and the user's decisions in time order.
-fun stageRows(entries: List<BuildEntry>, reviews: List<BuildReview>) =
-    (byStart(entries).map { StageRow(it.startedAt, entry = it) } + reviews.filter { it.phase != "hold" }.map { StageRow(it.at, review = it) }).sortedBy { it.at }
-
 private val FENCE = Regex("^\\s*(`{3,}|~{3,})")
 private val SECTION = Regex("^## +(.+?)\\s*$")
 

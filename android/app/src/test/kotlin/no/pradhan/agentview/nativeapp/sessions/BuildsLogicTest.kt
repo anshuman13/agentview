@@ -44,12 +44,7 @@ class BuildsLogicTest {
     }
 
     @Test
-    fun stagesInterleaveYourDecisionsWithTheAgentsInTimeOrder() {
-        val entries = listOf(BuildEntry("e1", "pm", startedAt = 10), BuildEntry("e2", "review", startedAt = 30))
-        val rows = stageRows(entries, listOf(BuildReview("requirements", "approve", "", 20)))
-        assertEquals(listOf("e1", "you", "e2"), rows.map { it.entry?.id ?: "you" })
-        val held = stageRows(entries, listOf(BuildReview("hold", "hold", "", 20), BuildReview("code", "approve", "", 25)))
-        assertEquals(listOf("e1", "you", "e2"), held.map { it.entry?.id ?: "you" })
+    fun decisionTitles() {
         assertEquals("Not reviewed", decisionTitle(null))
         assertEquals("Changes requested", decisionTitle(BuildReview("design", "changes", "x", 1)))
     }

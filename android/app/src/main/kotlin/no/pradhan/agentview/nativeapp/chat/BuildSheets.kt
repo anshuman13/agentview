@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,7 +44,6 @@ import no.pradhan.agentview.nativeapp.sessions.BuildReview
 import no.pradhan.agentview.nativeapp.sessions.CommitDiff
 import no.pradhan.agentview.nativeapp.sessions.FLOW_LABEL
 import no.pradhan.agentview.nativeapp.sessions.SpecCriterion
-import no.pradhan.agentview.nativeapp.sessions.StageRow
 import no.pradhan.agentview.nativeapp.sessions.byStart
 import no.pradhan.agentview.nativeapp.sessions.criterionBadge
 import no.pradhan.agentview.nativeapp.sessions.decisionTitle
@@ -56,7 +56,6 @@ import no.pradhan.agentview.nativeapp.sessions.stageBadge
 import no.pradhan.agentview.nativeapp.sessions.stageMeta
 import no.pradhan.agentview.nativeapp.sessions.stageTitle
 import no.pradhan.agentview.nativeapp.sessions.startPhase
-import no.pradhan.agentview.nativeapp.sessions.stateBadge
 import no.pradhan.agentview.nativeapp.sessions.withoutCriteria
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -68,7 +67,6 @@ import no.pradhan.agentview.nativeapp.ui.DarkColors
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
-import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.MenuItem
@@ -92,10 +90,10 @@ import no.pradhan.agentview.nativeapp.workspace.withoutOpenTasks
 
 private const val BUILDS_POLL_MS = 15_000L
 
-// Reloads every 15 s while `running`.
+// Reloads every 15 s while `running` and the app is in the foreground.
 @Composable
 internal fun PollWhile(running: Boolean, reload: () -> Unit) {
-    LaunchedEffect(running) { while (running) { delay(BUILDS_POLL_MS); reload() } }
+    WhileStarted(running) { while (running) { delay(BUILDS_POLL_MS); reload() } }
 }
 
 @Composable
@@ -107,21 +105,14 @@ internal class Report(val title: String, val text: String, val chat: String? = n
 
 internal class TaskRun(val path: String, val send: (String) -> Unit)
 
-internal fun LazyListScope.stageItems(rows: List<StageRow>, now: Long, showReport: (Report) -> Unit) {
-    item { SectionHeader("Stages", rows.size.toString()) }
+internal fun LazyListScope.stageItems(entries: List<BuildEntry>, now: Long, showReport: (Report) -> Unit) {
+    item { SectionHeader("Stages", entries.size.toString()) }
     item {
         Group {
-            rows.forEachIndexed { i, r ->
+            entries.forEachIndexed { i, e ->
                 if (i > 0) Hairline()
-                val e = r.entry
-                val y = r.review
-                if (e != null) {
-                    val (label, tone) = stageBadge(e)
-                    ListRow(stageTitle(e), stageMeta(e).ifEmpty { agoShort(e.startedAt, now, " ago") }, trailing = { Badge(label, tone) }, onClick = { showReport(Report(stageTitle(e), e.report, e.chat.ifEmpty { null }, e.session.orEmpty())) })
-                } else if (y != null) {
-                    val (label, tone) = stateBadge(if (y.decision == "approve") "done" else "waiting")
-                    ListRow("You · ${phaseLabel(y.phase)}", y.note.ifEmpty { agoShort(y.at, now, " ago") }, metaLines = 2, trailing = { Badge(label, tone) }, onClick = { showReport(Report("You · ${phaseLabel(y.phase)}", y.note.ifEmpty { decisionTitle(y) })) })
-                }
+                val (label, tone) = stageBadge(e)
+                ListRow(stageTitle(e), stageMeta(e).ifEmpty { agoShort(e.startedAt, now, " ago") }, trailing = { Badge(label, tone) }, onClick = { showReport(Report(stageTitle(e), e.report, e.chat.ifEmpty { null }, e.session.orEmpty())) })
             }
         }
     }
@@ -176,7 +167,7 @@ internal fun DecisionRow(decision: BuildReview?, now: Long, readOnly: Boolean, a
 }
 
 // The phase strip, the shown phase rendered expanded and the user's latest decision on it. Approve moves the strip to the next phase.
-internal fun LazyListScope.phaseItems(d: BuildDetail, picked: String?, now: Long, canOpen: Boolean, openFile: () -> Unit, readOnly: Boolean, run: TaskRun?, pick: (String) -> Unit, askChanges: (String) -> Unit, approve: (String, (Boolean) -> Unit) -> Unit) {
+internal fun LazyListScope.phaseItems(d: BuildDetail, picked: String?, now: Long, readOnly: Boolean, run: TaskRun?, pick: (String) -> Unit, askChanges: (String) -> Unit, approve: (String, (Boolean) -> Unit) -> Unit) {
     if (d.phases.isEmpty()) return
     val phase = d.phases.firstOrNull { it.key == (picked ?: startPhase(d.phases, d.reviews)) } ?: d.phases.first()
     val decision = reviewDecision(d.reviews, phase.key)
@@ -187,7 +178,6 @@ internal fun LazyListScope.phaseItems(d: BuildDetail, picked: String?, now: Long
         SectionHeader("Spec", action = {
             if (tasks.isNotEmpty()) Badge(specProgress(tasks), BadgeTone.Quiet)
             if (runnable != null && !readOnly) MoreButton { dismiss -> MenuItem("Run all", "debug-start", { dismiss(); runnable.send(runAllPrompt(runnable.path)) }) }
-            if (canOpen) IconBtn("go-to-file", "Open spec file", openFile)
         })
     }
     item {
@@ -319,7 +309,7 @@ private fun SpecSheet(hub: Hub, d: BuildDetail, initial: String?, actions: Build
     val spec = remember(d) { d.copy(phases = d.phases.map { if (it.key == "sketch") it else it.copy(markdown = withoutCriteria(it.markdown)) }) }
     Sheet(close, "Spec", padded = false) {
         if (spec.phases.isEmpty()) EmptyState("No spec phases yet")
-        else SheetList { phaseItems(spec, phase, System.currentTimeMillis(), false, {}, hub.readOnly, run, { phase = it }, { asking = it }, actions.approve) }
+        else SheetList { phaseItems(spec, phase, System.currentTimeMillis(), hub.readOnly, run, { phase = it }, { asking = it }, actions.approve) }
     }
     asking?.let { key -> ChangesSheet(key, { note, done -> actions.saveReview(key, "changes", note, done) }) { asking = null } }
 }
@@ -339,7 +329,7 @@ private fun StepSheet(hub: Hub, d: BuildDetail, step: String, actions: BuildActi
     val now = System.currentTimeMillis()
     Sheet(close, FLOW_LABEL.getValue(step), padded = false) {
         SheetList {
-            if (runs.isEmpty()) item { EmptyState("No runs yet") } else stageItems(runs.map { StageRow(it.startedAt, entry = it) }, now) { report = it }
+            if (runs.isEmpty()) item { EmptyState("No runs yet") } else stageItems(runs, now) { report = it }
             when (step) {
                 "implement" -> if (commit != null) implementationItems(commit.first, commit.second, openFile) { openFile = it }
                 "code-review" -> if (review != null || commit != null) codeReviewItems(d, review, commit != null, now, hub.readOnly, { actions.approve("code") { } }, { asking = true })
