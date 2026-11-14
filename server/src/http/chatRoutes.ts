@@ -52,7 +52,7 @@ export function streamRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       const msg = body as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
       const client = d.streams.get(url.searchParams.get('cid') ?? '');
-      if (!client && !d.chats().has(url.searchParams.get('chat') ?? '') && msg.type !== 'new_session') return { status: 409, body: { error: 'No stream for this command' } };
+      if (!client && !d.chats().has(url.searchParams.get('chat') ?? '') && msg.type !== 'new_session' && msg.type !== 'open_advisor') return { status: 409, body: { error: 'No stream for this command' } };
       d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: current(url)?.id ?? '', phone: isPhone(url.searchParams.get('client'), req.headers.get('user-agent') ?? undefined) }, msg, url.searchParams.get('chat') || undefined);
       return { ok: true };
     }, true),

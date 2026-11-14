@@ -85,8 +85,12 @@ async function handle(req: HostRequest): Promise<unknown> {
       return (await openSaved(req.sessionId)).id;
     case 'new':
       return newInFolder(req);
-    case 'advisor':
-      return (await openAdvisor(req.id, req.fresh)).id;
+    case 'advisor': {
+      const chat = await openAdvisor(req.id, req.fresh);
+      // A prompt for a running advisor waits behind its turn.
+      if (req.text) void chat.prompt(req.text);
+      return chat.id;
+    }
     case 'job':
       return jobChat(req);
     case 'run_end':

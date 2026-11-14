@@ -296,8 +296,10 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
       host.req<string>({ op: 'open', sessionId: msg.sessionId }).then((c) => view(client, c), fail);
       break;
     case 'open_advisor':
-      if (advisorsMac()) fail(new Error(ADVISORS_ELSEWHERE));
-      else host.req<string>({ op: 'advisor', id: msg.id, fresh: Boolean(msg.fresh) }).then((c) => view(client, c), fail);
+      // Advisors live on the hub Mac: a prompt goes there, opening one is only possible there.
+      if (advisorsMac() && msg.text) void askAdvisorsMac('/api/cmd', { method: 'POST', body: msg }).then((r) => fail(new Error(r.status === 200 ? STARTED_ON_HUB : String((r.body as { error?: string }).error))));
+      else if (advisorsMac()) fail(new Error(ADVISORS_ELSEWHERE));
+      else host.req<string>({ op: 'advisor', id: msg.id, fresh: Boolean(msg.fresh), ...(typeof msg.text === 'string' && msg.text && { text: msg.text }) }).then((c) => view(client, c), fail);
       break;
     case 'new_session':
       if (msg.hub && advisorsMac() && msg.cwd) {

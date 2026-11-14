@@ -391,6 +391,12 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         return switchTo(openAdvisorCmd(id, fresh)) != null
     }
 
+    // The server sends the prompt to the advisor's chat, behind a running turn, on the hub Mac when advisors run there.
+    suspend fun askAdvisor(id: String, text: String): Boolean {
+        if (readOnly) { notice.value = READ_ONLY_SENT; return false }
+        return switchTo(openAdvisorCmd(id, false, text)) != null
+    }
+
     // Sends a command that makes the server show another chat and waits for that chat's init.
     internal suspend fun switchTo(body: String): String? {
         if (withTimeoutOrNull(10_000) { liveLoaded.first { it } } == null) return null

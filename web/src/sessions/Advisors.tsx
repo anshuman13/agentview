@@ -38,7 +38,6 @@ function useRootFetch<T>(fetcher: (root: string) => Promise<T>, root: string | n
 
 // The Advisors page: one project's board from idea to merged build, the Ask buttons for each advisor, and the sheet with their conversations and memory.
 export function Advisors({ shown }: { shown: boolean }) {
-  const live = useStore((s) => s.live);
   const openCwd = useStore((s) => s.session.cwd);
   const [sheet, setSheet] = useState(false);
   const { folders } = useWorkspace('advisors');
@@ -49,10 +48,14 @@ export function Advisors({ shown }: { shown: boolean }) {
   };
   const root = picked ?? defaultAdvisorRoot(repoRootOf(openCwd) ?? null, folders.filter((f) => f.repo));
   // Reloads when the page shows and after an advisor's turn, which may have changed the backlog, a spec or the audit.
-  const turns = live.filter((c) => advisorOf(c.cwd) && !c.running).map((c) => `${c.id}:${c.lastActive}`).join();
-  const backlog = useRootFetch(fetchBacklog, root, shown, turns).data;
-  const specs = useRootFetch(fetchSpecs, root, shown, turns).data;
-  const { data: audit, failed: auditFailed } = useRootFetch(fetchAudit, root, shown, turns);
+  // The PM writes the backlog and specs, the Designer the audit; a string per advisor so other live-list changes do not re-render the page.
+  const turnsOf = (id?: string) => (s: { live: { id: string; cwd: string; running: boolean; lastActive: number }[] }) => s.live.filter((c) => (id ? advisorOf(c.cwd)?.id === id : advisorOf(c.cwd)) && !c.running).map((c) => `${c.id}:${c.lastActive}`).join();
+  const turns = useStore(turnsOf());
+  const pmTurns = useStore(turnsOf('pm'));
+  const designerTurns = useStore(turnsOf('designer'));
+  const backlog = useRootFetch(fetchBacklog, root, shown, pmTurns).data;
+  const specs = useRootFetch(fetchSpecs, root, shown, pmTurns).data;
+  const { data: audit, failed: auditFailed } = useRootFetch(fetchAudit, root, shown, designerTurns);
   return (
     <div className="wk"><div className="wk-scroll"><div className="mt-page adv-page">
       <div className="adv-head">

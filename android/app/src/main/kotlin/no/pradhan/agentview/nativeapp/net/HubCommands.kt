@@ -28,13 +28,13 @@ fun Hub.lastModel(group: String) = prefs.getString(lastModelKey(group), null)
 fun Hub.setLastModel(group: String, model: String) { prefs.edit().putString(lastModelKey(group), model).apply() }
 
 // A model is sent only when the provider's own list has it, so a Codex id never reaches a Claude chat or the reverse.
-fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, provider: String? = null, text: String? = null, onOpened: () -> Unit = {}) {
+fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, provider: String? = null, text: String? = null, hub: Boolean = false, onOpened: () -> Unit = {}) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
     val group = modelGroup(provider ?: defaultProvider.value)
     if (model != null) setLastModel(group, model)
     val sent = (model ?: lastModel(group).takeIf { fork == null })?.takeIf { m -> modelsOf(group).value.any { it.value == m } }
     viewModelScope.launch {
-        val id = switchTo(newSessionCmd(cwd = cwd, model = sent, fork = fork, provider = provider, text = text))
+        val id = switchTo(newSessionCmd(cwd = cwd, model = sent, fork = fork, provider = provider, text = text, hub = hub))
         if (id == null) notice.value = "The chat did not open" else {
             onOpened()
             if (mode != null) post(setModeCmd(mode), id)

@@ -391,7 +391,7 @@ export type ClientMessage =
   | { type: 'run_hook'; name: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
-  | { type: 'open_advisor'; id: AdvisorId; fresh?: boolean }
+  | { type: 'open_advisor'; id: AdvisorId; fresh?: boolean; text?: string }
   | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string; hub?: boolean }
   | { type: 'mcp_status' }
   | { type: 'usage' }
