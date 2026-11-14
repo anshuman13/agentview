@@ -124,7 +124,7 @@
 .tr-new::after { content: ''; flex: 1; border-top: 1px solid var(--danger); }
 .tr-day { display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-muted); font-size: var(--fs-xs); font-weight: var(--type-headline-weight); }
 .tr-day::before, .tr-day::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
-.tr-more { font-size: var(--fs-xs); line-height: var(--size-row); color: var(--fg-faint); cursor: pointer; }
+.tr-more, button.link.tr-more { font-size: var(--fs-xs); line-height: var(--size-row); color: var(--fg-faint); cursor: pointer; }
 @media (hover: hover) { .tr-more:hover { color: var(--fg); } }
 
 @media (max-width: 900px) {

@@ -303,7 +303,7 @@ function UserText({ id, text }: { id: string; text: string }) {
   return (
     <>
       <div ref={ref} className={`tr-user-text${open ? '' : ' folded'}`}>{text}</div>
-      {long && <button className="tr-more" onClick={toggle}>{open ? 'Show less' : 'Show more'}</button>}
+      {long && <button className="link tr-more" onClick={toggle}>{open ? 'Show less' : 'Show more'}</button>}
     </>
   );
 }
