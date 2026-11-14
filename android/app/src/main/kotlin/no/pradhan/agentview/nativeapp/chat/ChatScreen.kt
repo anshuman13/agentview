@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -45,11 +44,8 @@ import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.net.unbilledText
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
-import no.pradhan.agentview.nativeapp.ops.agentBadge
 import no.pradhan.agentview.nativeapp.sessions.renameTitle
 import no.pradhan.agentview.nativeapp.ui.AvIcon
-import no.pradhan.agentview.nativeapp.ui.Badge
-import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
@@ -57,7 +53,6 @@ import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
-import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MenuSeparator
@@ -135,7 +130,9 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
 
     Column(Modifier.fillMaxSize()) {
-        ChatHeader(hub, live, session, view.agents, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd) { review = 0 }
+        ChatHeader(hub, live, session, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd) { review = 0 }
+        ChatStatus(live, session, view.cost, if (view.agents.isNotEmpty() || run != null) maxOf(view.agents.size, live.agentList.size) else null) { panels.agents = true }
+        Hairline()
         prLoad.data?.let { pr ->
             ListRow(pr.title, prStripMeta(pr), leading = { StatusDot(checkDot(pr.checks)) }, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, lines = 1, onClick = { prOpen = pr.number })
             Hairline()
@@ -148,11 +145,10 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }
-        visibleChecklist(view.checklist, running)?.let { ChecklistCard(it, live.id, pending.isNotEmpty()) }
-        run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) else LoopCard(hub, it, live, session?.loop?.phase, pending.isNotEmpty(), onOpenAgent) { panels.agents = true } }
+        run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) }
         Composer(hub, live.id, session, running, pending.isNotEmpty(), run)
     }
-    ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent)
+    ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent) { run?.let { if (it.kind != "job" || it.review != "pending") LoopCard(hub, it, live, session?.loop?.phase, pending.isNotEmpty(), { id -> panels.agents = false; onOpenAgent(id) }) {} } }
 }
 
 @Composable
@@ -166,16 +162,21 @@ private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
 
 // Takes the fields it shows, not the ChatView, so a streamed token batch does not redraw the header.
 @Composable
-private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, cost: Double, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
+private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Double, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
     PageHeader(
         live.title.ifBlank { "Untitled" },
-        subtitle = { ChatSubtitle(live, session, cost) },
+        subtitle = { Text(cwd.substringAfterLast('/'), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
     ) {
-        if (agents.isNotEmpty()) {
-            val (count, anyRunning) = agentBadge(agents)
-            BadgedBox(badge = { Badge("$count", if (anyRunning) BadgeTone.Running else BadgeTone.Quiet) }) { IconBtn("hubot", "Agents", { panels.agents = true }) }
-        }
         ChatMenu(hub, live, session, hasReply, panels, canReview, running, cwd, onReview)
+    }
+}
+
+// One line under the title: what the chat is doing, and on the right the agents and run controls it opens.
+@Composable
+private fun ChatStatus(live: LiveChat, session: SessionInfo?, viewCost: Double, agents: Int?, onAgents: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp2, bottom = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) { ChatSubtitle(live, session, viewCost) }
+        if (agents != null) Button(if (agents > 0) "${plural(agents, "agent")} \u203A" else "Run \u203A", onAgents, variant = ButtonVariant.Plain)
     }
 }
 
@@ -221,11 +222,12 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
 }
 
 @Composable
-private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, images: List<String>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit) {
+private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, images: List<String>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit, runCard: @Composable () -> Unit) {
     val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
     val now = rememberNow(panels.agents && agents.any { it.status == "running" })
     if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false) {
+        runCard()
         AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
     }
     if (panels.tools) Sheet(onDismiss = { panels.tools = false }, title = "Tools", padded = false, full = false) {

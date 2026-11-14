@@ -165,7 +165,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val canRewind by hub.store.state.select { it.session?.capabilities?.rewind ?: true }
     val showWork by hub.showWork.collectAsState()
     val bill by hub.store.state.select { billing(it.session?.provider) }
-    val list = remember(view.items, view.folds, showWork) { if (showWork) view.rows.map { FoldRow.Row(it) } else view.foldRows }
+    val list = remember(view.items, view.folds, showWork) { if (showWork) view.rows.map { FoldRow.Row(it) } else view.foldRows.filter { it is FoldRow.Row } }
     val folded = remember(view.runs) { view.runs.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, view.ats, seen.first, seen.second) }
