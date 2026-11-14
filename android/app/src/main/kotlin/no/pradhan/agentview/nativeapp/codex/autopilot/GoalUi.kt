@@ -140,7 +140,7 @@ private fun <T> MenuChip(label: String, items: List<T>, name: (T) -> String, che
 private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit) {
     val cwd by hub.store.state.select { it.session?.cwd.orEmpty() }
     val chatProvider by hub.store.state.select { it.session?.provider }
-    val active by hub.store.state.select { st -> st.runs.any { it.chatId == st.shownId && it.state != "done" } }
+    val active by hub.store.state.select { st -> activeRun(st.runs, st.shownId) != null }
     val ws by hub.workspace.collectAsState()
     val allProviders by hub.providers.collectAsState()
     val defaultProvider by hub.defaultProvider.collectAsState()

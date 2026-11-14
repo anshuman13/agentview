@@ -128,4 +128,7 @@ fun usageLine(run: ChatRun): String {
 }
 
 // shared/goalText.ts buildsLine: a run's build limit as its rows show it; empty without one.
+// The run a chat is on now: its last open run (web activeRun in shared/goalText.ts).
+fun activeRun(runs: List<ChatRun>, chatId: String?) = runs.lastOrNull { it.chatId == chatId && it.state != "done" }
+
 fun buildsLine(run: ChatRun): String = run.maxBuilds?.takeIf { it > 0 }?.let { "Builds ${run.builds ?: 0} of $it" } ?: ""

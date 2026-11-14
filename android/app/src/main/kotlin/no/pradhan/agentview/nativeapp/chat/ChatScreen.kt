@@ -25,6 +25,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
+import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
 import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
 import no.pradhan.agentview.nativeapp.codex.clock
@@ -113,7 +114,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     val shownId by store.select { it.shownId }
     val session by store.select { it.session }
     val pending by store.select { it.pending }
-    val runs by store.select { it.runs }
+    val run by store.select { st -> activeRun(st.runs, st.shownId) }
     val earlier by store.select { it.earlier }
     val settled by store.select { it.settled }
     val hasEvents by store.select { it.events.isNotEmpty() }
@@ -153,14 +154,13 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         }
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
-            Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, Modifier.fillMaxSize(), queued.filter { it.chat == live.id })
+            Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } })
         }
         PendingList(pending, session?.permissionMode ?: "default", hub)
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }
         visibleChecklist(view.checklist, running)?.let { ChecklistCard(it, live.id, pending.isNotEmpty()) }
-        val run = runs.lastOrNull { it.chatId == live.id && it.state != "done" }
         run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) else LoopCard(hub, it, live, session?.loop?.phase, pending.isNotEmpty(), onOpenAgent) { panels.agents = true } }
         Composer(hub, live.id, session, running, pending.isNotEmpty(), run)
     }
@@ -169,11 +169,11 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
 
 @Composable
 private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
-    val liveChats by hub.store.state.select { it.live }
+    val shown by hub.store.state.select { st -> st.live.firstOrNull { it.id == st.shownId } }
     val shownId by hub.store.state.select { it.shownId }
     val connected by hub.connected.collectAsState()
     val cached = shownId.isNotEmpty() && hasEvents
-    return liveChats.firstOrNull { it.id == shownId } ?: if (cached && !connected) LiveChat(shownId, remember(shownId) { hub.savedTitle(shownId) }) else null
+    return shown ?: if (cached && !connected) LiveChat(shownId, remember(shownId) { hub.savedTitle(shownId) }) else null
 }
 
 @Composable
