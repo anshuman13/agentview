@@ -1,5 +1,7 @@
-package no.pradhan.agentview.nativeapp.workspace
+package no.pradhan.agentview.nativeapp.ops
 
+import no.pradhan.agentview.nativeapp.workspace.parseBranchDiff
+import no.pradhan.agentview.nativeapp.workspace.splitDiff
 import no.pradhan.agentview.nativeapp.ui.DotState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

@@ -61,8 +61,8 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
-import no.pradhan.agentview.nativeapp.workspace.PrChip
-import no.pradhan.agentview.nativeapp.workspace.prChip
+import no.pradhan.agentview.nativeapp.ops.PrChip
+import no.pradhan.agentview.nativeapp.ops.prChip
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.plural
 

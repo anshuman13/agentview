@@ -54,25 +54,18 @@ import no.pradhan.agentview.nativeapp.workspace.DiffFiles
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint
 import no.pradhan.agentview.nativeapp.workspace.Hint
 import no.pradhan.agentview.nativeapp.ui.Loaded
-import no.pradhan.agentview.nativeapp.workspace.MERGE_METHODS
+
 import no.pradhan.agentview.nativeapp.workspace.PageBody
-import no.pradhan.agentview.nativeapp.workspace.PullRequest
-import no.pradhan.agentview.nativeapp.workspace.PullRequestDetail
+
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.ui.agoShort
-import no.pradhan.agentview.nativeapp.workspace.autoMergeBody
-import no.pradhan.agentview.nativeapp.workspace.autoMergeOn
-import no.pradhan.agentview.nativeapp.workspace.autoMergeMeta
-import no.pradhan.agentview.nativeapp.workspace.checkDot
-import no.pradhan.agentview.nativeapp.workspace.fixPrPrompt
-import no.pradhan.agentview.nativeapp.workspace.ghProblem
+
 import no.pradhan.agentview.nativeapp.ui.isoMillis
-import no.pradhan.agentview.nativeapp.workspace.mergeBody
+
 import no.pradhan.agentview.nativeapp.workspace.openLink
-import no.pradhan.agentview.nativeapp.workspace.prGroups
+
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
-import no.pradhan.agentview.nativeapp.workspace.reviewBody
-import no.pradhan.agentview.nativeapp.workspace.reviewLabel
+
 import no.pradhan.agentview.nativeapp.ui.select
 
 // Pull Requests (web/src/ops/GitHub.tsx): the repo's open PRs in three groups, and a PR page with review actions.

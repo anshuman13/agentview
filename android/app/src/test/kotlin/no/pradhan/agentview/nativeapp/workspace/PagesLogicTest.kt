@@ -1,5 +1,14 @@
 package no.pradhan.agentview.nativeapp.workspace
 
+import no.pradhan.agentview.nativeapp.ops.autoMergeBody
+import no.pradhan.agentview.nativeapp.ops.autoMergeMeta
+import no.pradhan.agentview.nativeapp.ops.autoMergeOn
+import no.pradhan.agentview.nativeapp.ops.checkDot
+import no.pradhan.agentview.nativeapp.ops.ghProblem
+import no.pradhan.agentview.nativeapp.ops.parsePulls
+import no.pradhan.agentview.nativeapp.ops.prGroups
+import no.pradhan.agentview.nativeapp.ops.reviewBody
+import no.pradhan.agentview.nativeapp.ops.reviewLabel
 import no.pradhan.agentview.nativeapp.ui.DiffLine
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle

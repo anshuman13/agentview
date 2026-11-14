@@ -73,9 +73,9 @@ import no.pradhan.agentview.nativeapp.ui.rememberNow
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.ChangesPager
 import no.pradhan.agentview.nativeapp.workspace.DevServersSheet
-import no.pradhan.agentview.nativeapp.workspace.branchPr
-import no.pradhan.agentview.nativeapp.workspace.checkDot
-import no.pradhan.agentview.nativeapp.workspace.prStripMeta
+import no.pradhan.agentview.nativeapp.ops.branchPr
+import no.pradhan.agentview.nativeapp.ops.checkDot
+import no.pradhan.agentview.nativeapp.ops.prStripMeta
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.plural
 

@@ -24,10 +24,10 @@ import no.pradhan.agentview.nativeapp.ops.parseFindings
 import no.pradhan.agentview.nativeapp.ops.parseMcp
 import no.pradhan.agentview.nativeapp.ops.parseObserve
 import no.pradhan.agentview.nativeapp.ops.rollbackBody
-import no.pradhan.agentview.nativeapp.workspace.PullRequest
-import no.pradhan.agentview.nativeapp.workspace.PullRequestDetail
-import no.pradhan.agentview.nativeapp.workspace.parsePullDetail
-import no.pradhan.agentview.nativeapp.workspace.parsePulls
+import no.pradhan.agentview.nativeapp.ops.PullRequest
+import no.pradhan.agentview.nativeapp.ops.PullRequestDetail
+import no.pradhan.agentview.nativeapp.ops.parsePullDetail
+import no.pradhan.agentview.nativeapp.ops.parsePulls
 
 suspend fun Hub.deployJob(id: String): DeployJob = parseDeployJob(read("/api/deploy/job/$id"))
 
