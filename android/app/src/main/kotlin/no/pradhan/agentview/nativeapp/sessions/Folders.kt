@@ -33,7 +33,9 @@ fun inside(cwd: String, dir: String) = cwd == dir || cwd.startsWith("$dir/")
 fun folderKey(cwd: String, repos: List<Repo>, trees: List<Worktree>): String {
     val tree = trees.firstOrNull { inside(cwd, it.cwd) }
     if (tree != null) return tree.repo.ifEmpty { tree.cwd }
-    return repos.map { it.cwd }.sortedByDescending { it.length }.firstOrNull { inside(cwd, it) } ?: cwd
+    var best: String? = null
+    for (r in repos) if (inside(cwd, r.cwd) && r.cwd.length > (best?.length ?: -1)) best = r.cwd
+    return best ?: cwd
 }
 
 // The folder whose chats are personal, from /api/settings; empty means every folder is work.

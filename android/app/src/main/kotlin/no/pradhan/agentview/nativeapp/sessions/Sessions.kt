@@ -73,7 +73,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     LaunchedEffect(Unit) { hub.refreshWorkspace() }
     val hits = rememberMessageHits(hub, filters.filter)
     val rows = rememberChatRows(hub, dialogs, onOpen)
-    val unfiltered = remember(live, ws) { groupByRepo(live, ws) }
+    // Every folder unfiltered, only for a repo page or the New chat sheet: the list groups its own.
+    val unfiltered = if (filters.repoKey != null || newChat != null) remember(live, ws) { groupByRepo(live, ws) } else emptyList()
     val repo = filters.repoKey?.let { k -> unfiltered.firstOrNull { it.key == k } }
 
     if (repo != null) RepoSessions(repo, rows, filters) { newChat = it }
