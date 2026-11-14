@@ -25,6 +25,8 @@ import no.pradhan.agentview.nativeapp.codex.jobs.jobMeta
 import no.pradhan.agentview.nativeapp.codex.jobs.jobState
 import no.pradhan.agentview.nativeapp.codex.jobs.jobsOf
 import no.pradhan.agentview.nativeapp.codex.jobs.runMeta
+import no.pradhan.agentview.nativeapp.codex.jobs.of
+import no.pradhan.agentview.nativeapp.codex.jobs.runsByJob
 import no.pradhan.agentview.nativeapp.codex.jobs.runsOf
 import no.pradhan.agentview.nativeapp.codex.parseRow
 import no.pradhan.agentview.nativeapp.codex.rowToChange
@@ -231,6 +233,7 @@ class MeetingsWikiTest {
         val queued = row("jobs", "j3", WORK, "enabled" to 1, "next_run_at" to NOW - 1)
         assertEquals(JobState.Queued, jobState(queued, emptyList(), NOW))
         assertEquals(listOf("new", "old"), runsOf(listOf(run("old", "ok", 1), run("new", "ok", 2)), job).map { it.id })
+        assertEquals(listOf("new", "old"), runsByJob(listOf(run("old", "ok", 1), run("new", "ok", 2))).of(job).map { it.id })
         assertEquals("1 min 5 s · $0.50", runMeta(run("r", "ok", NOW)))
         assertEquals("Every hour", jobMeta(job, emptyList(), NOW))
     }

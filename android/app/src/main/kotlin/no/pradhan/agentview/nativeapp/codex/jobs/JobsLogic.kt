@@ -38,20 +38,27 @@ fun describeSchedule(s: String?): String {
 
 fun runsOf(runs: List<Row>, j: Row) = runs.filter { !it.deleted && it.profile == j.profile && it.str("job_id") == j.id }.sortedByDescending { it.long("started_at") ?: 0L }
 
-fun isQueued(j: Row, runs: List<Row>, now: Long): Boolean {
+// Each job's runs, newest first, keyed by profile and job id: one pass for the whole list.
+fun runsByJob(runs: List<Row>): Map<Pair<String, String?>, List<Row>> =
+    runs.filter { !it.deleted }.sortedByDescending { it.long("started_at") ?: 0L }.groupBy { it.profile to it.str("job_id") }
+
+fun Map<Pair<String, String?>, List<Row>>.of(j: Row) = this[j.profile to j.id].orEmpty()
+
+// `own` is the job's runs, newest first (runsOf or runsByJob).
+fun isQueued(j: Row, own: List<Row>, now: Long): Boolean {
     val next = j.long("next_run_at") ?: return false
-    return next <= now && runsOf(runs, j).none { it.str("status") == "running" }
+    return next <= now && own.none { it.str("status") == "running" }
 }
 
 fun isEnabled(j: Row) = j.long("enabled") == 1L
 
 enum class JobState(val label: String) { Running("Running"), Queued("Queued"), Failed("Failed"), Off("Off") }
 
-fun jobState(j: Row, runs: List<Row>, now: Long): JobState? {
-    val latest = runsOf(runs, j).firstOrNull()?.str("status")
+fun jobState(j: Row, own: List<Row>, now: Long): JobState? {
+    val latest = own.firstOrNull()?.str("status")
     return when {
         latest == "running" -> JobState.Running
-        isQueued(j, runs, now) -> JobState.Queued
+        isQueued(j, own, now) -> JobState.Queued
         latest == "error" -> JobState.Failed
         !isEnabled(j) -> JobState.Off
         else -> null
@@ -65,9 +72,9 @@ fun nextText(t: Long, now: Long): String {
 }
 
 // The row's second line: the schedule, then when the job runs next.
-fun jobMeta(j: Row, runs: List<Row>, now: Long): String {
+fun jobMeta(j: Row, own: List<Row>, now: Long): String {
     val next = j.long("next_run_at")
-    val extra = if (next != null && isEnabled(j) && !isQueued(j, runs, now)) "Next ${nextText(next, now)}" else null
+    val extra = if (next != null && isEnabled(j) && !isQueued(j, own, now)) "Next ${nextText(next, now)}" else null
     return listOfNotNull(describeSchedule(j.str("schedule")), extra).joinToString(" · ")
 }
 

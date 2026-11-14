@@ -62,6 +62,7 @@ fun toggleJob(hub: Hub, j: Row, on: Boolean) = hub.codex.update(j, mapOf("enable
 fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopilot: () -> Unit, onOpen: (Row) -> Unit) {
     val haptic = LocalHapticFeedback.current
     val jobs = remember(st.jobs, profile) { jobsOf(st.jobs, profile) }
+    val byJob = remember(st.runs) { runsByJob(st.runs) }
     val waiting = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).review, profile, now).size }
     LazyColumn(Modifier.fillMaxWidth()) {
         item { AutopilotRow(hub, waiting, onAutopilot) }
@@ -70,9 +71,10 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopi
             Group {
                 jobs.forEachIndexed { i, j ->
                     if (i > 0) Hairline()
-                    val state = jobState(j, st.runs, now)
+                    val own = byJob.of(j)
+                    val state = jobState(j, own, now)
                     val menu = remember(j.key) { mutableStateOf(false) }
-                    ListRow(j.str("name")?.ifEmpty { null } ?: "Untitled job", listOfNotNull(jobMeta(j, st.runs, now), if (profile == null) profileLabel(j.profile) else null).joinToString(" · "), onClick = { onOpen(j) },
+                    ListRow(j.str("name")?.ifEmpty { null } ?: "Untitled job", listOfNotNull(jobMeta(j, own, now), if (profile == null) profileLabel(j.profile) else null).joinToString(" · "), onClick = { onOpen(j) },
                         onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu.value = true },
                         trailing = {
                             if (state != null) StateBadge(state)
@@ -101,7 +103,7 @@ fun repoName(repo: String?): String? = repo?.trimEnd('/')?.substringAfterLast('/
 @Composable
 fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
     val runs = remember(st.runs, job.key) { runsOf(st.runs, job) }
-    val state = jobState(job, st.runs, now)
+    val state = jobState(job, runs, now)
     var runsOpen by rememberSaveable(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
     var servers by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -114,7 +116,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
                 if (state != null) StateBadge(state)
             }
         }
-        item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Enabled", jobMeta(job, st.runs, now), trailing = { Toggle(isEnabled(job)) { toggleJob(hub, job, it) } }) } }
+        item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Enabled", jobMeta(job, runs, now), trailing = { Toggle(isEnabled(job)) { toggleJob(hub, job, it) } }) } }
         item { SectionHeader("Prompt") }
         item { Group { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp5), style = Type.body, color = av.fg) } }
         item {
