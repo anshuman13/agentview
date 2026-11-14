@@ -30,6 +30,7 @@ import no.pradhan.agentview.nativeapp.chat.MessageHit
 import no.pradhan.agentview.nativeapp.chat.NewChatSheet
 import no.pradhan.agentview.nativeapp.chat.RepoChoice
 import no.pradhan.agentview.nativeapp.chat.boldMatches
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.chat.messageMeta
 import no.pradhan.agentview.nativeapp.chat.messageQuery
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
@@ -168,7 +169,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            PageHeader("Sessions") { IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) }); IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
+            PageHeader("Sessions") { IconBtn("target", "New goal", { hub.goalSheet.value = GoalSheet.Start() }); IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) }); IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
             SearchField(filter, { filters.filter = it }, "Search repos and sessions")
             ChipRow {
                 listOf(WORK, PERSONAL).forEach { k ->
