@@ -16,27 +16,16 @@ const grafanaBase = (def: McpServerDef, cfg: ObserveConfig['grafana']) => (cfg?.
 const RANGE = { startRfc3339: 'now-1h', endRfc3339: 'now' };
 const ERRORS = '|~ "(?i)(error|exception|traceback|fatal|panic)"';
 
-const lokiCache = new Map<string, string>();
-const promCache = new Map<string, string>();
+const uids = new Map<string, string>();
 
-async function lokiUid(def: McpServerDef, cfg: ObserveConfig['grafana']) {
-  if (cfg?.lokiUid) return cfg.lokiUid;
-  const key = grafanaBase(def, cfg);
-  if (lokiCache.has(key)) return lokiCache.get(key)!;
-  const r = data(await callTool(keyOf('grafana', def), def, 'list_datasources', { type: 'loki' })) as { datasources?: { uid: string }[] } | null;
+async function datasourceUid(type: 'loki' | 'prometheus', def: McpServerDef, cfg: ObserveConfig['grafana']) {
+  if (type === 'loki' && cfg?.lokiUid) return cfg.lokiUid;
+  const key = `${type}:${grafanaBase(def, cfg)}`;
+  if (uids.has(key)) return uids.get(key)!;
+  const r = data(await callTool(keyOf('grafana', def), def, 'list_datasources', { type })) as { datasources?: { uid: string }[] } | null;
   const uid = r?.datasources?.[0]?.uid;
-  if (!uid) throw new Error('Grafana has no Loki datasource; set grafana.lokiUid in the settings');
-  lokiCache.set(key, uid);
-  return uid;
-}
-
-async function promUid(def: McpServerDef, cfg: ObserveConfig['grafana']) {
-  const key = grafanaBase(def, cfg);
-  if (promCache.has(key)) return promCache.get(key)!;
-  const r = data(await callTool(keyOf('grafana', def), def, 'list_datasources', { type: 'prometheus' })) as { datasources?: { uid: string }[] } | null;
-  const uid = r?.datasources?.[0]?.uid;
-  if (!uid) throw new Error('Grafana has no Prometheus datasource');
-  promCache.set(key, uid);
+  if (!uid) throw new Error(type === 'loki' ? 'Grafana has no Loki datasource; set grafana.lokiUid in the settings' : 'Grafana has no Prometheus datasource');
+  uids.set(key, uid);
   return uid;
 }
 
@@ -76,7 +65,7 @@ const PANEL_FROM = 'now-6h';
 export async function panels(cfg: ObserveConfig['grafana'], def: McpServerDef): Promise<GrafanaPanels> {
   const configured = (cfg?.panels ?? []).filter((p) => p && typeof p.title === 'string' && typeof p.query === 'string' && p.query.trim());
   if (!configured.length) return { panels: [] };
-  const uid = await promUid(def, cfg);
+  const uid = await datasourceUid('prometheus', def, cfg);
   const key = keyOf('grafana', def);
   const one = async (p: { title: string; query: string; unit?: string }): Promise<GrafanaPanel> => {
     const out: GrafanaPanel = { title: p.title, unit: p.unit, points: [], last: null };
@@ -97,7 +86,7 @@ export async function panels(cfg: ObserveConfig['grafana'], def: McpServerDef): 
 
 export async function logs(cfg: ObserveConfig['grafana'], def: McpServerDef): Promise<GrafanaLogs> {
   const logql = `${selectorOf(cfg)} ${ERRORS}`;
-  const uid = await lokiUid(def, cfg);
+  const uid = await datasourceUid('loki', def, cfg);
   const r = data(await callTool(keyOf('grafana', def), def, 'query_loki_logs', { datasourceUid: uid, logql, limit: 50, direction: 'backward', ...RANGE })) as any;
   const lines = (r?.data ?? []).map((e: any) => ({ ts: nsToIso(e.timestamp), line: String(e.line ?? ''), level: e.structuredMetadata?.detected_level ?? e.labels?.level ?? e.labels?.severity }));
   const link = await exploreLink(def, uid, logql);
@@ -120,7 +109,7 @@ const normalize = (line: string) => line.replace(/\b[0-9a-f]{8,}\b/gi, '<id>').r
 
 export async function patterns(cfg: ObserveConfig['grafana'], def: McpServerDef): Promise<GrafanaPatterns> {
   const selector = selectorOf(cfg);
-  const uid = await lokiUid(def, cfg);
+  const uid = await datasourceUid('loki', def, cfg);
   const tools = new Set((await listTools(keyOf('grafana', def), def)).map((t) => t.name));
   const link = await exploreLink(def, uid, `${selector} ${ERRORS}`);
   const notes: string[] = [];
@@ -156,6 +145,5 @@ export async function patterns(cfg: ObserveConfig['grafana'], def: McpServerDef)
 }
 
 export function clearGrafanaCaches() {
-  lokiCache.clear();
-  promCache.clear();
+  uids.clear();
 }
