@@ -39,11 +39,9 @@ import no.pradhan.agentview.nativeapp.codex.TaskActions
 import no.pradhan.agentview.nativeapp.codex.Today
 import no.pradhan.agentview.nativeapp.codex.actionsOf
 import no.pradhan.agentview.nativeapp.codex.dayLabel
-import no.pradhan.agentview.nativeapp.codex.isEvent
-import no.pradhan.agentview.nativeapp.codex.isSolo
-import no.pradhan.agentview.nativeapp.codex.othersOf
+
 import no.pradhan.agentview.nativeapp.codex.parseWhen
-import no.pradhan.agentview.nativeapp.codex.peopleOf
+
 import no.pradhan.agentview.nativeapp.codex.pinsOf
 import no.pradhan.agentview.nativeapp.codex.pointsFor
 import no.pradhan.agentview.nativeapp.codex.recentPeople

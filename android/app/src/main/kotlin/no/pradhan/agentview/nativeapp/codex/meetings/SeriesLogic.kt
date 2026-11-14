@@ -5,7 +5,7 @@ import kotlinx.serialization.builtins.serializer
 import no.pradhan.agentview.nativeapp.codex.DAY_MS
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.liveRows
-import no.pradhan.agentview.nativeapp.codex.peopleOf
+
 import no.pradhan.agentview.nativeapp.net.protocolJson
 
 // web/src/codex/data/meetings.ts: a recurring series, and the questions the meetings left open.

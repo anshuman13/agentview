@@ -16,7 +16,6 @@ import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.codex.edited
-import no.pradhan.agentview.nativeapp.codex.isSolo
 import no.pradhan.agentview.nativeapp.codex.item
 import no.pradhan.agentview.nativeapp.codex.jobs.JobState
 import no.pradhan.agentview.nativeapp.codex.jobs.describeSchedule

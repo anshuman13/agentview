@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import no.pradhan.agentview.nativeapp.codex.meetings.isEvent
 import java.io.File
 import java.time.Instant
 import java.time.LocalDateTime

@@ -17,14 +17,13 @@ import no.pradhan.agentview.nativeapp.codex.dayEnd
 import no.pradhan.agentview.nativeapp.codex.dayPlus
 import no.pradhan.agentview.nativeapp.codex.dayStart
 import no.pradhan.agentview.nativeapp.codex.edited
-import no.pradhan.agentview.nativeapp.codex.isEvent
-import no.pradhan.agentview.nativeapp.codex.isSolo
 import no.pradhan.agentview.nativeapp.codex.liveRows
-import no.pradhan.agentview.nativeapp.codex.othersOf
-import no.pradhan.agentview.nativeapp.codex.peopleOf
+import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
 import no.pradhan.agentview.nativeapp.codex.whenText
 import no.pradhan.agentview.nativeapp.codex.wiki.factTime
+import no.pradhan.agentview.nativeapp.codex.wiki.proposals
+import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.sessions.queryWords
@@ -257,3 +256,53 @@ private val SAFE_LINK = Regex("^(https?:|mailto:)", RegexOption.IGNORE_CASE)
 
 // A link that is safe to open: web or mail, never javascript: or a file.
 fun safeHref(url: String?) = url?.takeIf { SAFE_LINK.containsMatchIn(it) }
+
+fun isBlock(m: Row) = m.id.startsWith("block:")
+fun isSolo(m: Row) = m.id.startsWith("cal:") && m.str("people") == "[]"
+
+private val CALL_HOSTS = listOf("meet.google.com", "zoom.us", "teams.microsoft.com", "teams.live.com", "whereby.com")
+
+fun isEvent(m: Row) = isSolo(m) && linksOf(m).none { l -> runCatching { java.net.URI(l.url).host?.lowercase() }.getOrNull().orEmpty().let { h -> CALL_HOSTS.any { h == it || h.endsWith(".$it") } } }
+
+fun peopleOf(m: Row): List<String> {
+    val s = m.str("people") ?: return emptyList()
+    val list = if (s.startsWith("[")) runCatching { (protocolJson.parseToJsonElement(s) as JsonArray).mapNotNull { (it as? JsonPrimitive)?.contentOrNull } }.getOrDefault(emptyList()) else s.split(",")
+    return list.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+}
+
+class Others(val who: String, val what: String)
+
+fun othersOf(m: Row): List<Others> = runCatching {
+    (protocolJson.parseToJsonElement(m.str("others") ?: "[]") as JsonArray).mapNotNull {
+        val o = it as? JsonObject ?: return@mapNotNull null
+        val who = (o["who"] as? JsonPrimitive)?.contentOrNull; val what = (o["what"] as? JsonPrimitive)?.contentOrNull
+        if (who != null && what != null) Others(who, what) else null
+    }
+}.getOrDefault(emptyList())
+
+private fun span(ms: Long): String {
+    val min = (ms + 59_999) / 60_000
+    return if (min < 60) "$min min" else "${min / 60}h${if (min % 60 != 0L) " ${min % 60}m" else ""}"
+}
+
+fun countdown(m: Row, now: Long): String? {
+    val start = m.startsAt!!
+    if (start > now) return if (start - now < 60_000) "Starts now" else "Starts in ${span(start - now)}"
+    val end = m.endsAt
+    return if (end == null || end <= now) null else "Ends in ${span(end - now)}"
+}
+
+fun isLive(m: Row, now: Long) = m.startsAt!! <= now && (m.endsAt ?: m.startsAt!!) > now
+
+// Whole minutes left when the meeting starts within the next 10 minutes, else null.
+fun joinMinutes(m: Row, now: Long): Long? {
+    val left = m.startsAt!! - now
+    return if (left in 1..600_000) (left + 59_999) / 60_000 else null
+}
+
+fun meetingMeta(m: Row, now: Long, noDay: Boolean = false): String {
+    val n = peopleOf(m).size
+    val day = if (!noDay && m.startsAt!! >= dayEnd(now)) "${DateTimeFormatter.ofPattern("EEE, d MMM", Locale.ENGLISH).format(Instant.ofEpochMilli(m.startsAt!!).atZone(codexZone))}, " else ""
+    val time = "$day${clock(m.startsAt!!)}${m.endsAt?.let { " - ${clock(it)}" } ?: ""}"
+    return listOfNotNull(time, m.str("room")?.takeIf { it.isNotEmpty() }, if (n > 0) plural(n, "person", "people") else null).joinToString(" · ")
+}

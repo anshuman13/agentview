@@ -4,9 +4,9 @@ import androidx.compose.runtime.Composable
 import no.pradhan.agentview.nativeapp.codex.CodexOps
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
-import no.pradhan.agentview.nativeapp.codex.ReviewModePage
+import no.pradhan.agentview.nativeapp.codex.wiki.ReviewModePage
 import no.pradhan.agentview.nativeapp.codex.Row
-import no.pradhan.agentview.nativeapp.codex.SeriesPage
+import no.pradhan.agentview.nativeapp.codex.meetings.SeriesPage
 import no.pradhan.agentview.nativeapp.codex.TaskActions
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.autopilot.AutopilotPage

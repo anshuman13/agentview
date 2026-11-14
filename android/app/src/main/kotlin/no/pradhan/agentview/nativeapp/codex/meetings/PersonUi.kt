@@ -28,7 +28,7 @@ import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.dueText
 import no.pradhan.agentview.nativeapp.codex.firstName
-import no.pradhan.agentview.nativeapp.codex.peopleOf
+
 import no.pradhan.agentview.nativeapp.codex.pinsOf
 import no.pradhan.agentview.nativeapp.codex.pointsOf
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
