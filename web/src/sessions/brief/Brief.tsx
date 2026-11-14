@@ -16,7 +16,7 @@ import { RenameInput } from '../RenameInput';
 import { renameChat } from '../folders';
 import { useLongPress } from '../../ui/longPress';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
-import { HeadState, TimelineFoot } from './TimelineFoot';
+import { HeadState } from './HeadState';
 import { useBriefScroll, useRecap } from './briefHooks';
 
 function lastReplyOf(turns: Turn[]) {
@@ -94,13 +94,12 @@ export function Brief() {
             {cwd && <small>{cwd.split('/').pop()}</small>}
           </span>
           <span className="spacer" />
-          <HeadState state={state} status={status} loop={loop} repeat={repeat} lastReply={lastReply} />
+          <HeadState state={state} status={status} loop={loop} repeat={repeat} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
           <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         {since?.chat === sessionId && (
           <button className="tl-recap" title="Tap to dismiss" onClick={dismiss}><Icon name="history" small /><span className="tl-recap-lines">{since.lines.map((l) => <span key={l}>{l}</span>)}</span></button>
         )}
-        {!showAgents && <TimelineFoot state={state} status={status} loop={loop} repeat={repeat} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} running={running} />}
         {showAgents ? <AgentsPane stack selected={agentSel} onSelect={setAgentSel} /> : <Transcript showWork={showWork} />}
         {!showAgents && <div ref={end} />}
       </div>

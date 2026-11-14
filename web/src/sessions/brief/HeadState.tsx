@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { Menu } from '../../ui/Menu';
 import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { loopLabel } from '../../chat/composer/composerLogic';
 import type { ToolUse } from '../../chat/transcript/steps';
 import { clock } from '../../../../shared/util';
-import { readFlag, saveFlag } from '../../ui/util';
 import { time } from './time';
 
 type Loop = { phase: string | null; round: number; max: number };
@@ -19,7 +19,6 @@ type Props = {
   limit: { at: string; prompt: string } | null;
   done: { id: string; text: string }[];
   next: string[];
-  running: boolean;
 };
 
 function Step({ text, editing = false, onSave, onDrop }: { text: string; editing?: boolean; onSave: (v: string) => void; onDrop: () => void }) {
@@ -79,47 +78,37 @@ function nowText({ state, status, loop, repeat }: Pick<Props, 'state' | 'status'
 
 const markIcon = (state: Props['state']) => <Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} />;
 
-// The chat's state at the right of its header, with the time of the last reply while idle.
-export function HeadState(p: Pick<Props, 'state' | 'status' | 'loop' | 'repeat' | 'lastReply'>) {
-  const { state, lastReply } = p;
-  const text = nowText(p);
-  return (
-    <span className={`tl-state ${state}`} title={text}>
-      {markIcon(state)}
-      <span className="text">{text}</span>
-      {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
-    </span>
-  );
-}
-
-// The chat's current step at the top of the chat; a tap lists the steps done this turn, checked, and the next ones.
-export function TimelineFoot(p: Props) {
-  const { state, repeat, lastTool, limit, done, next, running } = p;
+// The chat's state at the right of its header, with the time of the last reply while idle; a click opens what it is doing: the tool running, the steps done this turn (checked) and the next steps.
+export function HeadState(p: Props) {
+  const { state, lastReply, repeat, lastTool, limit, done, next } = p;
+  const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', false));
-  const toggleSteps = () => { setStepsOpen(!stepsOpen); saveFlag('agentview.steps', !stepsOpen); };
-  const hasSteps = next.length > 0 || done.length > 0 || adding || running;
+  const btn = useRef<HTMLButtonElement>(null);
+  const text = nowText(p);
   const retry = state === 'idle' && !repeat && limit;
-  if (state === 'idle' && !retry && !next.length) return null;
   const count = done.length + next.length;
   return (
-    <div className="tl-foot">
-      <div className={`tl-now ${state}`} onClick={hasSteps ? toggleSteps : undefined}>
-        <span className="mark">{markIcon(state)}</span>
-        <span className="text">
-          {nowText(p)}
-          {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
-        </span>
-        <span className="side">
-          {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={(e) => { e.stopPropagation(); send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` }); }}>Continue at {limit.at}</button>}
-          {hasSteps && (
-            <button className="steps-toggle" aria-expanded={stepsOpen} title={stepsOpen ? 'Hide the steps' : 'Show the steps'}>
-              {count ? `${done.length}/${count} steps` : 'Steps'}<Icon name={stepsOpen ? 'chevron-up' : 'chevron-down'} small />
-            </button>
-          )}
-        </span>
-      </div>
-      {hasSteps && stepsOpen && <StepList done={done} next={next} adding={adding} setAdding={setAdding} />}
-    </div>
+    <span className="tl-more">
+      <button ref={btn} className={`tl-state ${state}`} title={text} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {markIcon(state)}
+        <span className="text">{text}</span>
+        {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
+        {count > 0 && <span className="count">{done.length}/{count}</span>}
+        <Icon name={open ? 'chevron-up' : 'chevron-down'} small />
+      </button>
+      {open && (
+        <Menu trigger={btn} onClose={() => { setOpen(false); setAdding(false); }} className="tl-pop">
+          <div className={`tl-now ${state}`}>
+            <span className="mark">{markIcon(state)}</span>
+            <span className="text">
+              {text}
+              {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
+            </span>
+          </div>
+          {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` }); }}>Continue at {limit.at}</button>}
+          <StepList done={done} next={next} adding={adding} setAdding={setAdding} />
+        </Menu>
+      )}
+    </span>
   );
 }
