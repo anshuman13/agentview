@@ -108,28 +108,16 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, needsYou: B
                 ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, compact = true, onClick = { onOpenAgent(a.id) })
             }
             if (agents.size > 1) ListRow(plural(agents.size, "agent"), agents.joinToString(", ") { it.slug ?: it.description }, compact = true, leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, onClick = onOpenAgents)
-            if (goal) progress?.let { Text("Plan $it", Modifier.clickable(onClick = detail), style = Type.subheadline, color = av.fgMuted, maxLines = 1) }
-            else Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Text(run.what, Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(money(run.costUsd, billing(run.provider)), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
-            }
-            run.rounds.lastOrNull { it.report != null }?.let { r -> Box(Modifier.clickable { hub.showTurn.value = r.report }) { RoundLine(RoundGroup(r, r, 1, r.costUsd), showTime = false, run.provider) } }
-            if (rounds && run.kind == "loop") mergeQuiet(run.rounds).takeLast(10).asReversed().forEach { RoundLine(it, showTime = true, run.provider) }
+            if (goal) progress?.let { ListRow("Plan $it", compact = true, stateSlot = false, onClick = detail) }
+            else ListRow(run.what, money(run.costUsd, billing(run.provider)), compact = true, stateSlot = false, onClick = detail)
+            run.rounds.lastOrNull { it.report != null }?.let { r -> RoundRow(RoundGroup(r, r, 1, r.costUsd), run.provider, compact = true) { hub.showTurn.value = it } }
+            if (rounds && run.kind == "loop") mergeQuiet(run.rounds).takeLast(10).asReversed().forEach { g -> RoundRow(g, run.provider, compact = true) { hub.showTurn.value = it } }
           }
         }
     }
     if (board) {
         val chats by hub.store.state.select { it.live }
         TriesSheet(hub, run, chats, { board = false }, { t -> scope.launch { if (hub.openSaved(t.sessionId)) board = false } })
-    }
-}
-
-@Composable
-private fun RoundLine(g: RoundGroup, showTime: Boolean, provider: String?) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-        StatusDot(outcomeDot(g.last.outcome))
-        Text(roundGroupText(g), Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (showTime) Text(money(g.costUsd, billing(provider)), style = Type.footnote, color = av.fgMuted)
     }
 }
 

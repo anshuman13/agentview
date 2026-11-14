@@ -310,11 +310,17 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         else Group {
             mergeQuiet(run.rounds).asReversed().forEachIndexed { i, g ->
                 if (i > 0) Hairline(lead = true)
-                ListRow(
-                    roundGroupText(g), money(g.costUsd, billing(run.provider)),
-                    leading = { StatusDot(outcomeDot(g.last.outcome)) }, onClick = g.last.report?.let { report -> { open(report) } },
-                )
+                RoundRow(g, run.provider, open = open)
             }
         }
     }
+}
+
+// One round, or a run of quiet rounds, of a loop or goal (web RoundRow); a round with a report opens it.
+@Composable
+fun RoundRow(g: RoundGroup, provider: String?, compact: Boolean = false, open: (String) -> Unit) {
+    ListRow(
+        roundGroupText(g), money(g.costUsd, billing(provider)), compact = compact,
+        leading = { StatusDot(outcomeDot(g.last.outcome)) }, onClick = g.last.report?.let { report -> { open(report) } },
+    )
 }
