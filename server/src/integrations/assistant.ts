@@ -112,13 +112,19 @@ export function applyHubChanges(into: Map<string, Map<string, HubRow>>, changes:
   }
 }
 
+type Page = { version: number; hasMore: boolean; changes: Parameters<typeof applyHubChanges>[1] };
+
+function applyPage(r: Page) {
+  applyHubChanges(rows, r.changes);
+  since = Math.max(since, r.version);
+}
+
 async function pull() {
   for (;;) {
     const resp = await fetch(`${HUB}/changes?since=${since}`, { signal: AbortSignal.timeout(15_000) });
     if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}`);
-    const r = (await resp.json()) as { version: number; hasMore: boolean; changes: { table: string; id: string; profile: HubRow['profile']; deleted: boolean; updated_at: number; fields: Record<string, unknown> }[] };
-    applyHubChanges(rows, r.changes);
-    since = Math.max(since, r.version);
+    const r = (await resp.json()) as Page;
+    applyPage(r);
     if (!r.hasMore) break;
   }
 }
@@ -135,6 +141,8 @@ export async function hubGet<T>(path: string): Promise<T> {
 export async function hubPush(changes: HubChange[]) {
   const resp = await fetch(`${HUB}/sync`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ since, changes }), signal: AbortSignal.timeout(15_000) });
   if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}: ${await resp.text()}`);
+  // The reply holds the hub's changes since the mirror's version, so the mirror keeps them.
+  applyPage((await resp.json()) as Page);
 }
 
 const LEARN_EVENTS = 60;
