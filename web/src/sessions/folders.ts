@@ -193,9 +193,10 @@ export function renameTitle(event: RenameEvent, text: string, current: string) {
 
 export async function renameChat(sessionId: string, title: string) {
   const r = await fetch(apiUrl(`/api/sessions/rename?id=${encodeURIComponent(sessionId)}`), { method: 'POST', body: JSON.stringify({ title }) }).catch(() => null);
-  if (!r?.ok) notice('Could not rename the chat. The old title is kept.');
-  else invalidateWorkspace();
-  return Boolean(r?.ok);
+  if (!r?.ok) return void notice('Could not rename the chat. The old title is kept.');
+  invalidateWorkspace();
+  cached.chats = cached.chats.map((x) => (x.sessionId === sessionId ? { ...x, title } : x));
+  listeners.forEach((on) => on('chats', cached.chats));
 }
 
 export function findHere(folders: Folder[], cwd: string) {

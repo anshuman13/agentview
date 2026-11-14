@@ -28,9 +28,7 @@ type Actions = {
 };
 
 export const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Actions => ({
-  rename: async (id, title) => {
-    if (await renameChat(id, title)) setChats((l) => l.map((x) => (x.sessionId === id ? { ...x, title } : x)));
-  },
+  rename: (id, title) => void renameChat(id, title),
   archive: (s) => ask(archiveChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), notice)),
   archiveNow: (s, pinned, pin) => removeRequest(s.sessionId, '&archive', () => {
     setChats((l) => l.filter((x) => x.sessionId !== s.sessionId));
