@@ -7,7 +7,6 @@ import { Composer } from '../../chat/Chat';
 import { Transcript } from '../../chat/transcript/Transcript';
 import { createTurnsBuilder, type Turn } from '../../chat/transcript/turns';
 import { AgentsPane, Loading } from '../../app/lazy';
-import { agentCounts, agentsOf } from '../agents';
 import { askChat, readFlag, saveFlag, useTick } from '../../ui/util';
 import { useMacName } from '../../app/shell/macName';
 import { useUsage } from '../../app/shell/StatusItems';
@@ -50,8 +49,6 @@ export function Brief() {
   const { turns, next, lastTool, advisor, fable } = useMemo(() => build(events), [build, events]);
   const [showWork, setShowWork] = useState(() => readFlag('agentview.showWork', false));
   const toggleWork = () => { setShowWork(!showWork); saveFlag('agentview.showWork', !showWork); };
-  const agents = useMemo(() => agentsOf(events), [events]);
-  const { running: agentsRunning, done: agentsDone } = agentCounts(agents);
   const waitingElsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
   const usage = useUsage();
   // The review reads the working tree, which can hold edits older than the loaded events.
@@ -95,7 +92,7 @@ export function Brief() {
           </span>
           <span className="spacer" />
           <HeadState state={state} status={status} loop={loop} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
-          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
+          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} showAgents={showAgents} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         {showAgents ? <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense> : <Transcript showWork={showWork} />}
       </div>
