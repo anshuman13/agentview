@@ -76,7 +76,7 @@ export function Brief() {
     <div className="brief" ref={root}>
       <div className="brief-status">
         <div className="timeline-head">
-          <span className="tl-name" title={`${title}\n${cwd ?? ''}`}><b>{title}</b>{cwd && <small>{cwd.split('/').pop()}</small>}</span>
+          <span className="tl-name" title={cwd ? `${title}\n${cwd}` : title}><b>{title}</b>{cwd && <small>{cwd.split('/').pop()}</small>}</span>
           <span className="spacer" />
           <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} />
         </div>

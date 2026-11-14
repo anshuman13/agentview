@@ -40,7 +40,7 @@ export function ChatDetailsMenu({ showWork, toggleWork, hasAgents, showAgents, a
             </MenuItem>
           )}
           {waitingElsewhere > 0 && <MenuItem icon="inbox" onClick={choose(() => command('view:chats'))}>{waitingElsewhere} waiting</MenuItem>}
-          {usage && usageLabel && <MenuItem icon="pulse" onClick={choose(usage.onClick)}>{usageLabel}</MenuItem>}
+          {usageLabel && <MenuItem icon="pulse" onClick={choose(usage.onClick)}>{usageLabel}</MenuItem>}
           {(macName || extras) && <MenuSeparator />}
           {macName && <MenuItem icon="vm" disabled>{macName}</MenuItem>}
           {extras && <MenuItem disabled>{extras}</MenuItem>}

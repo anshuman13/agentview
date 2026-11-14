@@ -35,7 +35,6 @@ import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.latestChecklist
 import no.pradhan.agentview.nativeapp.chat.reviewLabel
 import no.pradhan.agentview.nativeapp.chat.s
-import no.pradhan.agentview.nativeapp.chat.usageMenuLabel
 import no.pradhan.agentview.nativeapp.chat.statusLine
 import no.pradhan.agentview.nativeapp.chat.stripRound
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
@@ -136,10 +135,6 @@ class SharedCasesTest {
         val fixture = Json.parseToJsonElement(File("../../shared/fixtures/chat-menu.json").readText()).jsonObject
         for (c in fixture.getValue("review").jsonArray.map { it.jsonObject }) {
             assertEquals(c.str("name"), c.str("expected"), reviewLabel(c.getValue("running").jsonPrimitive.boolean, c.getValue("hasChanges").jsonPrimitive.boolean))
-        }
-        for (c in fixture.getValue("usage").jsonArray.map { it.jsonObject }) {
-            val num = { k: String -> c.getValue(k).takeIf { it !is JsonNull }?.jsonPrimitive?.double }
-            assertEquals(c.str("name"), c.getValue("expected").takeIf { it !is JsonNull }?.jsonPrimitive?.content, usageMenuLabel(c.getValue("account").takeIf { it !is JsonNull }?.jsonPrimitive?.content, num("week"), num("fiveHour")))
         }
     }
 

@@ -85,7 +85,7 @@ fun agentAge(startedAt: Long, now: Long): String {
     return if (min < 60) "$min min" else "${min / 60} h ${min % 60} min"
 }
 
-fun stoppedText(run: ChatRun, working: Boolean) = "${KIND[run.kind] ?: "Loop"} stopped" + if (working && run.round > 0 && (run.kind == "goal" || run.kind == "loop")) " · round ${run.round} was running" else ""
+fun stoppedText(run: ChatRun, running: Boolean) = "${KIND[run.kind] ?: "Loop"} stopped" + if (running && run.round > 0 && (run.kind == "goal" || run.kind == "loop")) " · round ${run.round} was running" else ""
 
 // Web composerLogic.ts runNeedsYou: the run asks, or its last round is blocked, a question or failed.
 private val NEEDS_YOU = setOf("blocked", "question", "failed")

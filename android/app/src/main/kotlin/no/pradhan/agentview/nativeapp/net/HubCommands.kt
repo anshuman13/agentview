@@ -96,7 +96,8 @@ fun Hub.interrupt() = post(interruptCmd(), store.wanted)
 
 fun Hub.runControl(run: ChatRun, op: String) {
     post(runCmd(run.id, op), store.wanted)
-    if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run, store.state.value.live.firstOrNull { it.id == run.chatId }?.running == true), if (run.kind == "cycle" || run.kind == "tries") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
+    val running = store.state.value.live.firstOrNull { it.id == run.chatId }?.running == true
+    if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run, running), if (run.kind == "cycle" || run.kind == "tries") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
 }
 
 fun Hub.runEdit(run: ChatRun, edit: Map<String, Long?>) = post(runEditCmd(run.id, edit), store.wanted)
