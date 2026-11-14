@@ -140,12 +140,3 @@ fun shellCommand(text: String): String? = text.trim().takeIf { it.startsWith("!"
 fun handoffText(sessionId: String) =
     "Summarise @chat:$sessionId so we can continue its work in this chat: the goal, decisions made, what is done, what is still open, and the files and commands that matter. At most 15 lines. Then wait for my next message."
 
-// web composerLogic.ts quoteReply: a Markdown quote of a reply, up to 300 characters, cut at a word.
-fun quoteReply(text: String, max: Int = 300): String {
-    val t = text.trim()
-    val cut = if (t.length <= max) t else t.take(max).let { head -> head.substring(0, head.lastIndexOf(' ').let { if (it < 0) head.length - 1 else it }).trimEnd() + "…" }
-    return cut.lines().joinToString("\n") { "> $it".trimEnd() } + "\n\n"
-}
-
-// web composerLogic.ts replyNote: the chat title on the first line, then the reply.
-fun replyNote(text: String, title: String) = "${title.ifEmpty { "Saved reply" }}\n${text.trim()}"

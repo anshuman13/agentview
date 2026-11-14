@@ -9,7 +9,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.SharedItem
 import no.pradhan.agentview.nativeapp.app.shareTask
-import no.pradhan.agentview.nativeapp.chat.replyNote
 import no.pradhan.agentview.nativeapp.chat.voiceAnswer
 import no.pradhan.agentview.nativeapp.chat.voicePrompt
 import no.pradhan.agentview.nativeapp.codex.DailyChat
@@ -128,7 +127,3 @@ fun Hub.remindChat(title: String, sessionId: String, cwd: String, at: Long) {
     if (codex.capture("Check ${title.ifBlank { "chat" }}", "open", segmentOf(cwd), at, extra) != null) notice.value = "Reminder set"
 }
 
-fun Hub.saveReply(chat: String, text: String, cwd: String) {
-    val title = store.state.value.live.firstOrNull { it.id == chat }?.title.orEmpty()
-    notice.value = if (codex.capture(replyNote(text, title), "note", segmentOf(cwd)) != null) "Saved to Notes" else "Could not save the note. Try again."
-}
