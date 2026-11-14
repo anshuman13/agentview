@@ -4,18 +4,13 @@ import path from 'node:path';
 import { safeResolve } from './files.js';
 import type { GitFile, GitStatus } from '../../../shared/protocol.js';
 import { exec } from '../exec.js';
+import { execText } from '../execText.js';
 import { NotFound } from '../json.js';
 
 
 export async function git(cwd: string, args: string[], ok = [0], env?: Record<string, string>) {
-  try {
-    // Long enough for a signing prompt or a slow hook, short enough that a request never hangs for good.
-    return (await exec('git', args, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 300_000, ...(env && { env: { ...process.env, ...env } }) })).stdout;
-  } catch (err) {
-    const e = err as { code?: number; stdout?: string; stderr?: string; message: string };
-    if (ok.includes(e.code ?? -1)) return e.stdout ?? '';
-    throw new Error(e.stderr?.trim() || e.message);
-  }
+  // Long enough for a signing prompt or a slow hook, short enough that a request never hangs for good.
+  return execText('git', args, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 300_000, ok, ...(env && { env: { ...process.env, ...env } }) });
 }
 
 // For a folder an agent wrote in: no hooks and no fsmonitor command from its config.

@@ -6,7 +6,7 @@ import type { DeployEnv, DeployJob, DeployRecord, DeployStatus } from '../../../
 import { inside } from '../../../shared/util.js';
 import { deployUrl } from '../settings.js';
 import { ROOTS } from '../workspace/files.js';
-import { exec } from '../exec.js';
+import { execText } from '../execText.js';
 
 const FINAL = ['success', 'failure', 'error', 'inactive'];
 
@@ -21,16 +21,8 @@ type Node = {
 };
 type Status = { id: number; state: string; description: string | null; log_url: string | null; created_at: string };
 
-async function run(cmd: string, args: string[], cwd: string, input = '') {
-  try {
-    return (await exec(cmd, args, { cwd, timeout: 20_000, maxBuffer: 16 * 1024 * 1024, input })).stdout.trim();
-  } catch (err) {
-    const e = err as { code?: string | number; killed?: boolean; stderr?: string; message: string };
-    if (e.code === 'ENOENT') throw new Error(`${cmd} is not installed`);
-    if (e.killed) throw new Error(`${cmd} ${args[0]} timed out after 20s`);
-    throw new Error(e.stderr?.trim() || e.message);
-  }
-}
+const run = async (cmd: string, args: string[], cwd: string, input = '') =>
+  (await execText(cmd, args, { cwd, timeout: 20_000, maxBuffer: 16 * 1024 * 1024, input })).trim();
 
 export function parseApp(text: string) {
   const project = text.match(/^project:\s*["']?([\w.-]+)/m)?.[1];

@@ -7,7 +7,7 @@ import { CLAUDE, EMPTY_SNOWFLAKE, FILE, configFor, guess, load, repoName, save, 
 import { clearGrafanaCaches, dashboards, grafanaDef, logs, panels, patterns } from './observeGrafana.js';
 import { hasDeployApp } from './deploy.js';
 import { snowflakeDef, snowflakeObjects, snowflakeQuery, snowflakeTest } from './observeSnowflake.js';
-import { exec as run } from '../exec.js';
+import { execText } from '../execText.js';
 
 
 const snowflakeInfo = (s: Settings): SnowflakeInfo => {
@@ -66,9 +66,7 @@ async function addToClaude(server: string, cwd: string, prov: Provider) {
   const def = await snowflakeDef(s);
   if (servers[server]) throw new Error(`${server} is already in your Claude MCP config`);
   // The CLI writes ~/.claude.json the same way running Claude sessions do, so neither overwrites the other.
-  await run('claude', ['mcp', 'add-json', '--scope', 'user', server, JSON.stringify(def)], { timeout: 30_000 }).catch((err: { stderr?: string; message: string }) => {
-    throw new Error(err.stderr?.trim() || err.message);
-  });
+  await execText('claude', ['mcp', 'add-json', '--scope', 'user', server, JSON.stringify(def)], { timeout: 30_000 });
   return { server, file: CLAUDE, info: await info(await repoName(cwd), cwd, prov) };
 }
 

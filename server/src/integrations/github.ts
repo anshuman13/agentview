@@ -3,7 +3,7 @@ import type { AutoMerge } from './automerge.js';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { exec as run } from '../exec.js';
+import { execText } from '../execText.js';
 import { MAX_BRANCH_DIFF } from '../workspace/git.js';
 
 const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,headRefOid,additions,deletions';
@@ -34,11 +34,10 @@ const ENV = { ...process.env, GH_NO_UPDATE_NOTIFIER: '1', GH_PROMPT_DISABLED: '1
 
 export async function gh(cwd: string, ...args: string[]) {
   try {
-    return (await run('gh', args, { cwd, maxBuffer: 64 * 1024 * 1024, env: ENV, timeout: 60_000 })).stdout;
+    return await execText('gh', args, { cwd, maxBuffer: 64 * 1024 * 1024, env: ENV, timeout: 60_000 });
   } catch (err) {
-    const e = err as NodeJS.ErrnoException & { stderr?: string };
-    if (e.code === 'ENOENT') throw new Error('The GitHub CLI is not installed. Install it with: brew install gh');
-    const text = e.stderr?.trim() || e.message;
+    const text = (err as Error).message;
+    if (text === 'gh is not installed') throw new Error('The GitHub CLI is not installed. Install it with: brew install gh');
     if (/gh auth login|not logged in/i.test(text)) throw new Error('The GitHub CLI is not logged in. Run: gh auth login');
     if (/no git remotes|not a git repository|none of the git remotes/i.test(text)) throw new Error('This folder has no GitHub remote');
     throw new Error(text);
