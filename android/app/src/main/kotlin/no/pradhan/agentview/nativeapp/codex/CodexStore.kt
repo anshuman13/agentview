@@ -220,13 +220,13 @@ class CodexStore(
         return true
     }
 
-    fun move(row: Row, to: String): Boolean {
+    fun move(row: Row, to: String, goal: String? = null): Boolean {
         if (!writable()) return false
         val t = now()
         val items = tables.getValue("items")
         val cur = current(row)
         val there = items["$to:${row.id}"]
-        val copy = moved(cur, there, to, t)
+        val copy = moved(cur, there, to, t, goal)
         items[copy.key] = copy
         items[cur.key] = edited(cur, mapOf("deleted" to true), t)
         publish()

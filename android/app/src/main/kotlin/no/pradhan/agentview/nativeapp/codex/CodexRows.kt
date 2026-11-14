@@ -185,8 +185,8 @@ fun rowToCache(row: Row): JsonObject = buildJsonObject {
 }
 
 // The item under the other profile keeps its id; every column is timed now so it replaces a row moved away earlier.
-fun moved(row: Row, there: Row?, profile: String, now: Long): Row {
+fun moved(row: Row, there: Row?, profile: String, now: Long, goal: String? = null): Row {
     val base = there ?: row.copy(profile = profile, version = 0, times = emptyMap(), deleted = false)
-    val values = ITEM_FIELDS.associateWith { row.f[it] } + ("goal" to null) + ("deleted" to false)
+    val values = ITEM_FIELDS.associateWith { row.f[it] } + ("goal" to goal) + ("deleted" to false)
     return edited(base, values, now)
 }

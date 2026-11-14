@@ -81,7 +81,7 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
         if (!store.move(r, to)) return
         snack("Moved to ${if (to == WORK) "Work" else "Personal"}") {
             val there = store.state.value.items.firstOrNull { it.profile == to && it.id == r.id } ?: r.copy(profile = to)
-            store.move(there, r.profile)
+            store.move(there, r.profile, r.str("goal"))
         }
     }
 }
