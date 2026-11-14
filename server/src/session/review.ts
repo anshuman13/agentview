@@ -58,6 +58,8 @@ export function undoHunk(before: string, now: string, hunks: ReviewHunk[], k: nu
   return at === undefined ? null : revertBlock(before, now, at);
 }
 
+const MAX_LINES = 400;
+
 // What is decided on a file: each hunk, or the file itself when it has none.
 const marks = (f: ReviewFile): Array<{ state?: ReviewState }> => (f.hunks.length ? f.hunks : [f]);
 
@@ -106,7 +108,9 @@ export class Review {
         texts.set(rel, now.text);
       } else if (b.text !== now.text) {
         const hunks = hunksOf(b.text, now.text);
-        files.push(hunks.length ? { path: rel, hunks } : { path: rel, hunks, binary: true });
+        // A change too large to show line by line is kept or reviewed in Changes.
+        if (hunks.reduce((n, h) => n + h.del.length + h.add.length, 0) > MAX_LINES) files.push({ path: rel, hunks: [], binary: true, large: true });
+        else files.push(hunks.length ? { path: rel, hunks } : { path: rel, hunks, binary: true });
         texts.set(rel, b.text);
       }
     }

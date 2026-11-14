@@ -318,7 +318,7 @@ private fun ReviewFileRow(f: ReviewFile, id: String, hub: Hub) {
     val undecided = if (f.hunks.isEmpty()) f.state == null else f.hunks.any { it.state == null }
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         Text(f.path, style = Mono, color = av.fg)
-        if (f.created || f.binary) Text(if (f.created) "New file" else "Binary file", style = Type.footnote, color = av.fgMuted)
+        if (f.created || f.binary) Text(if (f.created) "New file" else if (f.large) "Too large to show, see Changes" else "Binary file", style = Type.footnote, color = av.fgMuted)
         if (undecided) ReviewActions("Keep file", if (f.binary) null else "Undo file", null, { hub.review(id, "keep", f.path) }, { hub.review(id, "undo", f.path) })
         else f.state?.let { Text(REVIEW_STATE[it] ?: it, style = Type.footnote, color = av.fgMuted) }
         f.hunks.forEachIndexed { k, h -> ReviewHunkRow(h, id, f.path, k, hub) }

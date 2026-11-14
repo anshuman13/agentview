@@ -67,7 +67,7 @@ data class ChatEvent(
 // A file of a review event: hunks are the runs of changed lines; a created or binary file has none and is decided whole. state is kept or undone once decided.
 @Immutable
 @Serializable
-data class ReviewFile(val path: String, val hunks: List<ReviewHunk> = emptyList(), val created: Boolean = false, val binary: Boolean = false, val state: String? = null)
+data class ReviewFile(val path: String, val hunks: List<ReviewHunk> = emptyList(), val created: Boolean = false, val binary: Boolean = false, val large: Boolean = false, val state: String? = null)
 
 @Immutable
 @Serializable

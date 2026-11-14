@@ -50,8 +50,8 @@ export type AgentEvent = {
 export type ReviewState = 'kept' | 'undone';
 // A run of changed lines of a file against its text before the turn, from line `line` of the new text.
 export type ReviewHunk = { line: number; del: string[]; add: string[]; state?: ReviewState };
-// A created or binary file has no hunks and is decided as a whole; binary files can only be kept.
-export type ReviewFile = { path: string; hunks: ReviewHunk[]; created?: boolean; binary?: boolean; state?: ReviewState };
+// A created, binary or large file has no hunks and is decided as a whole; binary and large files can only be kept.
+export type ReviewFile = { path: string; hunks: ReviewHunk[]; created?: boolean; binary?: boolean; large?: boolean; state?: ReviewState };
 
 export type ChatEvent =
   | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; phase?: LoopPhase; auto?: 'loop' | 'goal'; round?: number }

@@ -72,3 +72,17 @@ describe('Review undo of a created file', () => {
     expect(await run(true)).toEqual({ gone: false, said: [STALE] });
   });
 });
+
+describe('Review of a large change', () => {
+  it('sends a file with over 400 changed lines without hunks, to keep only', () => {
+    const cwd = mkdtempSync(path.join(os.tmpdir(), 'review-'));
+    const events: any[] = [];
+    const s: any = { cwd, state: { session: { review: true } }, pushEvent: (e: any) => events.push(e) };
+    const review = new Review(s);
+    writeFileSync(path.join(cwd, 'big.txt'), 'a\n');
+    review.capture(path.join(cwd, 'big.txt'));
+    writeFileSync(path.join(cwd, 'big.txt'), Array.from({ length: 500 }, (_, i) => `line ${i}`).join('\n'));
+    review.finish();
+    expect(events[0].files).toEqual([{ path: 'big.txt', hunks: [], binary: true, large: true }]);
+  });
+});

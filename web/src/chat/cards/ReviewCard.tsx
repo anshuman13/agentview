@@ -31,7 +31,7 @@ function Hunk({ id, file, k, h }: { id: string; file: string; k: number; h: Revi
 }
 
 function FileReview({ id, f }: { id: string; f: ReviewFile }) {
-  const label = f.created ? 'New file' : f.binary ? 'Binary file' : undefined;
+  const label = f.created ? 'New file' : f.large ? 'Too large to show, see Changes' : f.binary ? 'Binary file' : undefined;
   const undecided = f.hunks.length ? f.hunks.some((h) => !h.state) : !f.state;
   return (
     <div className="rv-file">
