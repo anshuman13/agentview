@@ -52,10 +52,9 @@ function workOf(items: Item[], span: Span): Work {
 
 // Splits the rows into turns, one per prompt, and moves the work of each into one fold placed above its last reply, or at its end while there is no reply.
 // Android WorkFold.kt foldTurns says the same.
-export function foldTurns(items: Item[], events: ChatEvent[]): FoldRow[] {
+export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(items)): FoldRow[] {
   const prompts = new Set(events.filter((e) => e.kind === 'user').map((e) => e.id));
   const span = spans(events);
-  const cards = specCards(items);
   const groups: Item[][] = [];
   for (const it of items) {
     if (prompts.has(it.id) || groups.length === 0) groups.push([]);
