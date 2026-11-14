@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { buildTurns, chatCost, createTurnsBuilder } from './turns';
+import { buildTurns, createTurnsBuilder } from './turns';
+import { chatCost } from '../../../../shared/cost';
 import type { ChatEvent } from '../../../../shared/protocol';
 
 let n = 0;

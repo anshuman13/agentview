@@ -1,7 +1,5 @@
 import { editCount, stripRound } from '../../../../shared/edits';
 import { BIG_BRO, type ChatEvent } from '../../../../shared/protocol';
-import { chatCost } from '../../../../shared/cost';
-export { chatCost };
 import { denied, fastFrom, tailStart, firstLine, str, type ToolResult, type ToolUse } from './steps';
 
 type FileFact = { path: string; add: number; del: number };
