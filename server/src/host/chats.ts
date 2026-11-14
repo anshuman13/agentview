@@ -45,7 +45,7 @@ function onChatMessage(chat: AgentSession, m: ServerMessage) {
 
 async function defaultChoice(): Promise<Provider> {
   const { defaultProvider } = loadSettings();
-  if (!isProvider(defaultProvider)) return 'claude';
+  if (!isProvider(defaultProvider) || defaultProvider === 'claude') return 'claude';
   return (await providerOptions()).some((o) => o.id === defaultProvider && o.enabled) ? defaultProvider : 'claude';
 }
 
