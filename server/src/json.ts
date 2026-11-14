@@ -59,6 +59,9 @@ export function readJsonSync<T>(file: string, fallback: T): T {
   }
 }
 
+// A route's error reply.
+export const failed = (status: number, error: string) => ({ status, body: { error } });
+
 export class BadRequest extends Error {
   status = 400;
 }

@@ -1,6 +1,7 @@
 import net from 'node:net';
 import { allowedPeer, canon, netbirdIp } from './access.js';
 import { exec, type ExecError } from '../exec.js';
+import { failed } from '../json.js';
 
 export type DevPort = { port: number; name: string; local: boolean };
 
@@ -61,12 +62,12 @@ function forward(ip: string, port: number) {
 // The URL the requesting device opens for a dev server on this Mac.
 export async function openPort(port: number, host = 'localhost') {
   const p = (await listPorts()).find((x) => x.port === port);
-  if (!p) return { status: 404, body: { error: 'nothing listens on that port' } };
+  if (!p) return failed(404, 'nothing listens on that port');
   const hostname = new URL(`http://${host}`).hostname;
   const ip = netbirdIp();
   const loop = ['localhost', '127.0.0.1', '[::1]'].includes(hostname);
   if (p.local && !loop) {
-    if (!ip) return { status: 503, body: { error: 'NetBird is down' } };
+    if (!ip) return failed(503, 'NetBird is down');
     forward(ip, port);
     return { url: `http://${ip.includes(':') ? `[${canon(ip)}]` : ip}:${port}/` };
   }

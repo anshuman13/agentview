@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { errText } from '../../../shared/util.js';
 import { loadSettings } from '../settings.js';
+import { failed } from '../json.js';
 
 export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir(), '.agentview/assistant/assistant.db')) ? 'http://localhost:7790' : loadSettings().hubUrl || 'http://localhost:7790');
 
@@ -18,7 +19,7 @@ export async function askAdvisorsMac(pathAndQuery: string, init: { method?: stri
     const r = await fetch(`${advisorsMac()}${pathAndQuery}`, { method: init.method ?? 'GET', headers: { 'content-type': 'application/json' }, body: init.body === undefined ? undefined : JSON.stringify(init.body), signal: AbortSignal.timeout(15_000) });
     return { status: r.status, body: await r.json().catch(() => ({ error: `The hub Mac answered HTTP ${r.status}` })) };
   } catch {
-    return { status: 502, body: { error: 'The hub Mac is not reachable' } };
+    return failed(502, 'The hub Mac is not reachable');
   }
 }
 

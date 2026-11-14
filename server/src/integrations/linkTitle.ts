@@ -2,6 +2,7 @@ import dns from 'node:dns/promises';
 import http from 'node:http';
 import https from 'node:https';
 import net from 'node:net';
+import { failed } from '../json.js';
 
 const TIMEOUT_MS = 4000;
 const MAX_BYTES = 256 * 1024;
@@ -122,8 +123,8 @@ export async function linkTitleRoute(url: URL, deps: Deps = defaults): Promise<{
   try {
     target = new URL(url.searchParams.get('url') ?? '');
   } catch {
-    return { status: 400, body: { error: 'A url is required' } };
+    return failed(400, 'A url is required');
   }
-  if (!/^https?:$/.test(target.protocol)) return { status: 400, body: { error: 'Only http and https links' } };
+  if (!/^https?:$/.test(target.protocol)) return failed(400, 'Only http and https links');
   return { status: 200, body: { title: await linkTitle(target, deps) } };
 }

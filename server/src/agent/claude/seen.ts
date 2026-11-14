@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { jsonFile } from '../../json.js';
+import { jsonFile, failed } from '../../json.js';
 
 const store = jsonFile<Record<string, number>>(path.join(os.homedir(), '.agentview', 'seen.json'), {});
 
@@ -21,8 +21,8 @@ export const unseen = async (id: string) => {
 
 export const seenRoute = async (method: string, id: string | null, unread = false): Promise<{ status: number; body: unknown }> => {
   if (method === 'GET') return { status: 200, body: await listSeen() };
-  if (method !== 'POST') return { status: 405, body: { error: 'method not allowed' } };
-  if (!id) return { status: 400, body: { error: 'id is required' } };
+  if (method !== 'POST') return failed(405, 'method not allowed');
+  if (!id) return failed(400, 'id is required');
   await markSeen(id, unread);
   return { status: 200, body: { ok: true } };
 };

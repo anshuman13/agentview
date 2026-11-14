@@ -21,6 +21,7 @@ import type { ClientMessage } from '../../../shared/protocol.js';
 import { readBody } from './body.js';
 import { isPhone } from '../presence.js';
 import { entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
+import { failed } from '../json.js';
 
 const MAX_FILE_BODY = 5_000_000;
 
@@ -52,7 +53,7 @@ export function streamRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       const msg = body as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
       const client = d.streams.get(url.searchParams.get('cid') ?? '');
-      if (!client && !d.chats().has(url.searchParams.get('chat') ?? '') && msg.type !== 'new_session' && msg.type !== 'open_advisor') return { status: 409, body: { error: 'No stream for this command' } };
+      if (!client && !d.chats().has(url.searchParams.get('chat') ?? '') && msg.type !== 'new_session' && msg.type !== 'open_advisor') return failed(409, 'No stream for this command');
       d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: current(url)?.id ?? '', phone: isPhone(url.searchParams.get('client'), req.headers.get('user-agent') ?? undefined) }, msg, url.searchParams.get('chat') || undefined);
       return { ok: true };
     }, true),
@@ -66,7 +67,7 @@ export function chatSessionRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> 
       try {
         return await d.host.req({ op: 'events_before', id: chat.id, before: url.searchParams.get('before') ?? '', ...(!Number.isNaN(limit) && { limit }) });
       } catch (err) {
-        return { status: 404, body: { error: err instanceof Error ? err.message : String(err) } };
+        return failed(404, err instanceof Error ? err.message : String(err));
       }
     }),
     'ANY /api/state': entry(({ url, chat }) => {
@@ -92,7 +93,7 @@ export function chatFileRoutes(): Record<string, Entry<ChatCtx>> {
     'POST /api/terms': entry(async ({ url, chat }) => {
       if (!url.searchParams.has('dev')) return createTerminal(chat.id, chat.cwd);
       const dev = await devScript(chat.cwd);
-      return dev ? createTerminal(chat.id, chat.cwd, { name: dev.script, command: dev.command }) : { status: 404, body: { error: 'No dev script in package.json' } };
+      return dev ? createTerminal(chat.id, chat.cwd, { name: dev.script, command: dev.command }) : failed(404, 'No dev script in package.json');
     }),
     'ANY /api/builds/one': entry(({ url, chat }) => buildOne(chat.cwd, url.searchParams.get('slug') ?? '')),
     'POST /api/builds/review': entry(({ body, chat }) => reviewBuild(chat.cwd, body ?? {}), true),
@@ -120,7 +121,7 @@ export function chatMcpRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> {
     'ANY /api/mcp/config': entry(({ chat }) => mcpConfig(chat.cwd)),
     'POST /api/mcp/add': entry(async ({ url, chat }) => {
       const name = url.searchParams.get('name') ?? '';
-      if (!(await configDef(chat.cwd, name))) return { status: 404, body: { error: `${name} is not in your MCP config` } };
+      if (!(await configDef(chat.cwd, name))) return failed(404, `${name} is not in your MCP config`);
       return d.host.req({ op: 'mcp_add', id: chat.id, name });
     }),
     'POST /api/mcp/login': entry(async ({ url, chat }) => {
@@ -132,8 +133,8 @@ export function chatMcpRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> {
     'POST /api/mcp/call': entry(async ({ body, chat }) => {
       const name = String(body.server ?? '');
       const def = await configDef(chat.cwd, name);
-      if (!def) return { status: 404, body: { error: `${name} is not in your MCP config` } };
-      if (!(await inSettings(chat.cwd, name))) return { status: 403, body: { error: `${name} is not approved in Claude Code, so AgentView does not start it` } };
+      if (!def) return failed(404, `${name} is not in your MCP config`);
+      if (!(await inSettings(chat.cwd, name))) return failed(403, `${name} is not approved in Claude Code, so AgentView does not start it`);
       const r = await mcpCall(chat.cwd, name, def as McpServerDef, String(body.tool ?? ''), body.args ?? {});
       return { status: 'error' in r ? 400 : 200, body: r };
     }, true),
@@ -145,6 +146,6 @@ export const chatPrefixes: Prefix<ChatCtx>[] = [
     { prefix: '/api/git/', run: ({ url, chat, body }) => gitRoute(chat.cwd, url.pathname.slice(9), url.searchParams, body), body: 'POST' },
     { prefix: '/api/observe', run: ({ req, method, url, chat }) => observe(method, url, chat.cwd, chat.provider ?? 'claude', () => readBody(req)) },
     { prefix: '/api/gh/', run: ({ req, method, url, chat }) => github(chat.cwd, method, url, () => readBody(req)) },
-    { prefix: '/api/deploy/', run: ({ req, method, url, chat }) => (deployUrl() ? deployRoute(chat.cwd, method, url, () => readBody(req)) : { status: 404, body: { error: 'Deploy is not set up' } }) },
+    { prefix: '/api/deploy/', run: ({ req, method, url, chat }) => (deployUrl() ? deployRoute(chat.cwd, method, url, () => readBody(req)) : failed(404, 'Deploy is not set up')) },
 ];
 

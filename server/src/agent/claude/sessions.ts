@@ -6,6 +6,7 @@ import type { SavedSession } from '../../../../shared/protocol.js';
 import { chatTitle } from '../../../../shared/util.js';
 import { codexThread, noteThread } from '../codex/threads.js';
 import { CLAUDE_DIR } from './history.js';
+import { failed } from '../../json.js';
 
 export { getSessionInfo };
 
@@ -47,14 +48,14 @@ export function savedSession(x: SDKSessionInfo): SavedSession {
 
 export const renameRoute = async (id: string | null, title: unknown): Promise<{ status: number; body: unknown }> => {
   const text = typeof title === 'string' ? title.trim() : '';
-  if (!id || !text) return { status: 400, body: { error: 'id and title are required' } };
+  if (!id || !text) return failed(400, 'id and title are required');
   const codex = await codexThread(id);
   if (codex) {
     await noteThread(id, { ...codex, summary: text });
     return { status: 200, body: { ok: true } };
   }
   const info = await getSessionInfo(id);
-  if (!info) return { status: 404, body: { error: 'Session not found' } };
+  if (!info) return failed(404, 'Session not found');
   await renameSession(id, text, { dir: info.cwd });
   return { status: 200, body: { ok: true } };
 };

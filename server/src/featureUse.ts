@@ -1,7 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { FEATURE_IDS, dayKey, type UseDays } from '../../shared/featureUse.js';
-import { jsonFile } from './json.js';
+import { jsonFile, failed } from './json.js';
 import { loadSettings } from './settings.js';
 
 export const FEATURE_USE_FILE = process.env.AGENTVIEW_FEATURE_USE ?? path.join(os.homedir(), '.agentview/feature-use.json');
@@ -37,6 +37,6 @@ export const clearFeatureUse = () => store.clear();
 
 export async function recordRoute(id: unknown) {
   if (!loadSettings().featureUse) return { recorded: false };
-  if (typeof id !== 'string' || !FEATURE_IDS.has(id)) return { status: 400, body: { error: 'Unknown feature' } };
+  if (typeof id !== 'string' || !FEATURE_IDS.has(id)) return failed(400, 'Unknown feature');
   return { recorded: await recordFeature(id) };
 }

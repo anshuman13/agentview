@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { REVIEW_PHASES, approvalGate, buildStageOf, isReviewPhase, buildSummary, criteriaOf, findingsOf, flowOf, inOrder, isHeld, lastCommit, pipelineOf, reviewDecision, reviewLine, sectionsOf, slugOk, specCriteria, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type SpecHomeItem, type ReviewPhase, type SpecCriterion, type SpecPhase } from '../../../shared/builds.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
-import { jsonFile, readJson } from '../json.js';
+import { jsonFile, readJson, failed } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
 import { mainCheckout } from '../workspace/git.js';
 import type { AgentSession } from './session.js';
@@ -203,7 +203,7 @@ function commitDiff(repo: string, sha: string) {
 export async function buildOne(cwd: string, slug: string) {
   const repo = await mainCheckout(cwd).catch(() => null);
   const [entries, reviews, spec] = repo && slugValid(slug) ? await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]) : [[], [], null];
-  if (!repo || (!entries.length && !spec)) return { status: 404, body: { error: 'No such build' } };
+  if (!repo || (!entries.length && !spec)) return failed(404, 'No such build');
   const commit = lastCommit(entries);
   const done = await (await mergedIn(repo))(commit);
   const [numstat, diff] = commit ? await commitDiff(repo, commit.sha) : ['', ''];
@@ -307,11 +307,11 @@ export async function reviewBuild(cwd: string, body: { slug?: unknown; phase?: u
     : phase === undefined && (decision === 'hold' || decision === 'release') ? { phase: 'hold', decision, note: '', at }
     : isPhase(phase) && (decision === 'approve' || (decision === 'changes' && note)) ? { phase, decision, note, at }
     : null;
-  if (typeof slug !== 'string' || !slugValid(slug) || !review) return { status: 400, body: { error: 'Bad review' } };
+  if (typeof slug !== 'string' || !slugValid(slug) || !review) return failed(400, 'Bad review');
   const repo = await mainCheckout(cwd).catch(() => null);
   const spec = repo && (await loadSpec(repo, slug));
-  if (!repo || !spec) return { status: 404, body: { error: 'No such spec' } };
-  if (review.phase === 'code' && !(await readEntries(repo, slug)).some((e) => e.stage === 'implement')) return { status: 400, body: { error: 'No implementation to review' } };
+  if (!repo || !spec) return failed(404, 'No such spec');
+  if (review.phase === 'code' && !(await readEntries(repo, slug)).some((e) => e.stage === 'implement')) return failed(400, 'No implementation to review');
   let held = false;
   let added = 0;
   await reviewStore(repo, slug).update(async (cur) => {
@@ -322,6 +322,6 @@ export async function reviewBuild(cwd: string, body: { slug?: unknown; phase?: u
     if (await ignored(repo, spec.file)) for (const r of adds) await appendNote(spec.file, r);
     return [...cur, ...adds];
   });
-  if (held) return { status: 400, body: { error: 'Held' } };
+  if (held) return failed(400, 'Held');
   return { ok: true, ...(all && !added && { already: true }) };
 }

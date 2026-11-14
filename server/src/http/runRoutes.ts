@@ -4,8 +4,7 @@ import type { ChatRun } from '../../../shared/protocol.js';
 import { reviewDiff } from '../workspace/git.js';
 import { ReviewError, approveRun, runWorktree } from '../workspace/review.js';
 import { entry, type Ctx, type Entry, type RouteDeps } from './routeTypes.js';
-
-const failed = (status: number, error: string) => ({ status, body: { error } });
+import { failed } from '../json.js';
 
 // Review of a finished coding job: the diff, and the routes that push its branch, send it back or throw it away. Only approve pushes.
 export function runRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {

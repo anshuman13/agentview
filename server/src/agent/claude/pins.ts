@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { jsonFile } from '../../json.js';
+import { jsonFile, failed } from '../../json.js';
 import { removeSession } from './bin.js';
 import { unseen } from './seen.js';
 
@@ -25,8 +25,8 @@ export const removeChat = async (id: string, purge: boolean, archive = false) =>
 
 export const pinsRoute = async (method: string, id: string | null): Promise<{ status: number; body: unknown }> => {
   if (method === 'GET') return { status: 200, body: await listPins() };
-  if (method !== 'POST' && method !== 'DELETE') return { status: 405, body: { error: 'method not allowed' } };
-  if (!id) return { status: 400, body: { error: 'id is required' } };
+  if (method !== 'POST' && method !== 'DELETE') return failed(405, 'method not allowed');
+  if (!id) return failed(400, 'id is required');
   await (method === 'POST' ? pin(id) : unpin(id));
   return { status: 200, body: { ok: true } };
 };

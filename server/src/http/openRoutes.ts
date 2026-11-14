@@ -25,6 +25,7 @@ import { advisorsInfo, moveBacklogFile, readAudit, readBacklog } from '../sessio
 import { buildList } from '../session/builds.js';
 import { allowedFolder, listSketches, readFileWithOriginal } from '../workspace/files.js';
 import { exec } from '../exec.js';
+import { failed } from '../json.js';
 
 // Advisors keep one copy of their files, on the hub Mac. Elsewhere that Mac answers their routes, with the project root
 // sent relative to the home folder so it resolves there.
@@ -36,7 +37,7 @@ const onHub = (fn: (c: Ctx) => unknown) => async (c: Ctx) => {
   return askAdvisorsMac(`${c.url.pathname}?${q}`, { method: c.method, body: c.method === 'POST' ? c.body : undefined });
 };
 
-const NOT_PROJECT = { status: 400, body: { error: 'Not a project folder' } };
+const NOT_PROJECT = failed(400, 'Not a project folder');
 // An advisor route on a project folder, answered by the hub Mac.
 const inRoot = (fn: (root: string, c: Ctx) => unknown) => onHub((c) => {
   const root = rootParam(c.url);
@@ -62,14 +63,14 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'GET /api/advisors/backlog': entry(inRoot((root) => readBacklog(root))),
     'GET /api/advisors/specs': entry(inRoot((root) => buildList(root))),
     'POST /api/advisors/backlog/move': entry(inRoot(async (root, { body }) => {
-      if (body.dir !== 'up' && body.dir !== 'down') return { status: 400, body: { error: 'dir must be up or down' } };
-      return (await moveBacklogFile(root, String(body.slug), body.dir)) ? readBacklog(root) : { status: 404, body: { error: 'Not in the backlog' } };
+      if (body.dir !== 'up' && body.dir !== 'down') return failed(400, 'dir must be up or down');
+      return (await moveBacklogFile(root, String(body.slug), body.dir)) ? readBacklog(root) : failed(404, 'Not in the backlog');
     }), true),
     'GET /api/advisors/audit': entry(inRoot((root) => readAudit(root))),
     'GET /api/advisors/sketches': entry(inRoot((root) => listSketches(root))),
     'GET /api/advisors/sketch': entry(inRoot((root, { url }) => {
       const name = url.searchParams.get('name') ?? '';
-      return /^[^/]+\.html$/.test(name) ? readFileWithOriginal(root, `.claude/sketches/${name}`) : { status: 400, body: { error: 'Not a sketch' } };
+      return /^[^/]+\.html$/.test(name) ? readFileWithOriginal(root, `.claude/sketches/${name}`) : failed(400, 'Not a sketch');
     })),
     'ANY /api/sessions/pins': entry(({ method, url }) => pinsRoute(method, url.searchParams.get('id'))),
     'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'), url.searchParams.get('unread') === '1')),
@@ -111,11 +112,11 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'POST /api/worktrees': entry(async ({ body }) => ({ cwd: await createWorktree(String(body.repo ?? ''), String(body.branch ?? '').trim()) }), true),
     'POST /api/jobs/start': entry(async ({ req, body }) => {
       const [jobId, title, repo, prompt] = ['jobId', 'title', 'repo', 'prompt'].map((k) => String(body[k] ?? ''));
-      if (!jobId || !prompt.trim()) return { status: 400, body: { error: 'jobId and prompt are required' } };
-      if (!isWorkspaceRepo(repo)) return { status: 400, body: { error: 'Not a workspace repo' } };
-      if (d.runs().some((r) => r.kind === 'job' && r.jobId === jobId && r.state !== 'done')) return { status: 409, body: { error: 'The last run is still open' } };
+      if (!jobId || !prompt.trim()) return failed(400, 'jobId and prompt are required');
+      if (!isWorkspaceRepo(repo)) return failed(400, 'Not a workspace repo');
+      if (d.runs().some((r) => r.kind === 'job' && r.jobId === jobId && r.state !== 'done')) return failed(409, 'The last run is still open');
       const branch = `jobs/${branchSlug(title)}`;
-      if (starting.has(jobId)) return { status: 409, body: { error: 'The job is starting' } };
+      if (starting.has(jobId)) return failed(409, 'The job is starting');
       starting.add(jobId);
       try {
         const { dir, paseo } = await makeWorktree(repo, branch);
@@ -123,7 +124,7 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
         const drop = () => removeRunWorktree({ repo, worktree: dir, branch, paseo }).catch(() => {});
         if (req.signal.aborted) {
           await drop();
-          return { status: 499, body: { error: 'The caller gave up' } };
+          return failed(499, 'The caller gave up');
         }
         const chatId = await d.host.req<string>({ op: 'job', cwd: dir, title, prompt, jobId, branch, repo, paseo }).catch(async (err) => {
           await drop();
@@ -138,7 +139,7 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'POST /api/folders': entry(async ({ body }) => ({ cwd: await createFolder(String(body.root ?? ''), String(body.name ?? '').trim()) }), true),
     'POST /api/open': entry(({ body }) => {
       const target = String(body.url ?? '');
-      if (!/^https?:\/\//.test(target)) return { status: 400, body: { error: 'Only http(s) links open' } };
+      if (!/^https?:\/\//.test(target)) return failed(400, 'Only http(s) links open');
       if (body.browser === 'firefox' && process.platform === 'darwin') exec('open', ['-a', 'Firefox', target]).catch((err) => console.error('open in firefox:', err.message));
       else openInChrome(target);
       return { ok: true };
@@ -157,16 +158,16 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'ANY /api/mcp/connectors': entry(({ url }) => connectorStatus(url.searchParams.has('refresh'))),
     'POST /api/mcp/groups': entry(async ({ body }) => {
       const service = String(body.service ?? '').trim();
-      if (!service) return { status: 400, body: { error: 'service is required' } };
+      if (!service) return failed(400, 'service is required');
       return setMcpGroup(service, String(body.group ?? ''));
     }, true),
     'ANY /api/mcp/groups': entry(() => mcpGroups()),
     'POST /api/settings': entry(async ({ body }) => {
       const { defaultProvider, featureUse, hiddenFeatures } = body;
-      if (defaultProvider === undefined && featureUse === undefined && hiddenFeatures === undefined) return { status: 400, body: { error: 'defaultProvider, featureUse or hiddenFeatures is required' } };
-      if (defaultProvider !== undefined && !isProvider(defaultProvider)) return { status: 400, body: { error: 'defaultProvider is not a provider' } };
-      if (featureUse !== undefined && typeof featureUse !== 'boolean') return { status: 400, body: { error: 'featureUse is not a boolean' } };
-      if (hiddenFeatures !== undefined && !(Array.isArray(hiddenFeatures) && hiddenFeatures.every((id) => typeof id === 'string'))) return { status: 400, body: { error: 'hiddenFeatures is not a list of strings' } };
+      if (defaultProvider === undefined && featureUse === undefined && hiddenFeatures === undefined) return failed(400, 'defaultProvider, featureUse or hiddenFeatures is required');
+      if (defaultProvider !== undefined && !isProvider(defaultProvider)) return failed(400, 'defaultProvider is not a provider');
+      if (featureUse !== undefined && typeof featureUse !== 'boolean') return failed(400, 'featureUse is not a boolean');
+      if (hiddenFeatures !== undefined && !(Array.isArray(hiddenFeatures) && hiddenFeatures.every((id) => typeof id === 'string'))) return failed(400, 'hiddenFeatures is not a list of strings');
       await saveSettings({ ...loadSettings(), ...(defaultProvider !== undefined && { defaultProvider }), ...(featureUse !== undefined && { featureUse }), ...(hiddenFeatures !== undefined && { hiddenFeatures: hideableIds(hiddenFeatures) }) });
       if (featureUse === false) await clearFeatureUse();
       return { ...publicSettings(), providers: await providerOptions() };
