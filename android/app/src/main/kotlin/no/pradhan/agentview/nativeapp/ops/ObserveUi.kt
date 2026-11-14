@@ -61,13 +61,14 @@ import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.openLink
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.select
 
 // Observe (web/src/ops/Observe.tsx): Grafana dashboards, metric panels, error logs and patterns of a repo, and its settings.
 @Composable
 fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
-    val st by hub.store.state.collectAsState()
+    val shownId by hub.store.state.select { it.shownId }
     val ws by hub.workspace.collectAsState()
-    val chat = st.shownId
+    val chat = shownId
     var picked by rememberSaveable(chat) { mutableStateOf("") }
     var picking by remember { mutableStateOf(false) }
     var tick by remember { mutableIntStateOf(0) }

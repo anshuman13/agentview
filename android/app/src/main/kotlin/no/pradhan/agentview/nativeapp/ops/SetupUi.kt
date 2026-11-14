@@ -9,10 +9,11 @@ import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.workspace.pageRepo
+import no.pradhan.agentview.nativeapp.ui.select
 
 // The one action of a setup empty state (web ops/SetupButton.tsx): asks the chat on screen to do the setup.
 @Composable
 fun SetupButton(hub: Hub, kind: String, repo: String = pageRepo(hub), mcpCommand: String = "") {
-    val st by hub.store.state.collectAsState()
-    Button("Set up with ${providerLabel(st.session?.provider)}", { hub.askChat(setupPrompt(kind, repo, mcpCommand)) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, enabled = !hub.readOnly)
+    val provider by hub.store.state.select { it.session?.provider }
+    Button("Set up with ${providerLabel(provider)}", { hub.askChat(setupPrompt(kind, repo, mcpCommand)) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, enabled = !hub.readOnly)
 }

@@ -52,12 +52,13 @@ import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
+import no.pradhan.agentview.nativeapp.ui.select
 
 // Files (web/src/workspace/Explorer.tsx and CodePane.tsx): the repo tree of the chat's folder and a file view.
 @Composable
 fun FilesScreen(hub: Hub, onBack: () -> Unit) {
-    val st by hub.store.state.collectAsState()
-    val chat = st.shownId
+    val shownId by hub.store.state.select { it.shownId }
+    val chat = shownId
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     val dirs = remember(chat) { mutableStateMapOf<String, List<DirEntry>>() }
     var expanded by rememberSaveable(chat) { mutableStateOf(listOf<String>()) }

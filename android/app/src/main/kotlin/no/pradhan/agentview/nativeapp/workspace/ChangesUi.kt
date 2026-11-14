@@ -55,6 +55,7 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.select
 
 private class GitOps(private val hub: Hub, private val reload: () -> Unit, val onDiscard: (List<GitFile>) -> Unit, val onReview: (GitFile) -> Unit) {
     fun run(action: String, body: String, done: () -> Unit = {}) = hub.write("/api/git/$action", body, "Could not $action") { if (it) done(); reload() }
@@ -63,8 +64,9 @@ private class GitOps(private val hub: Hub, private val reload: () -> Unit, val o
 // Source Control (web/src/workspace/Changes.tsx): branch, commit box, staged and unstaged files, a file opens as its diff.
 @Composable
 fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
-    val st by hub.store.state.collectAsState()
-    val chat = st.shownId
+    val shownId by hub.store.state.select { it.shownId }
+    val provider by hub.store.state.select { it.session?.provider }
+    val chat = shownId
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var pager by rememberSaveable(chat) { mutableStateOf<List<String>?>(null) }
     var reviewed by rememberSaveable(chat) { mutableStateOf(listOf<String>()) }
@@ -88,7 +90,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     WhileStarted(chat) { while (true) { delay(5000); reload() } }
     val files = load.data?.files ?: emptyList()
     val review = files.map { it.path }.distinct()
-    val label = providerLabel(st.session?.provider)
+    val label = providerLabel(provider)
     val ops = GitOps(hub, reload, { ask = it }) { f -> pager = listOf(review.indexOf(f.path).toString()) + review }
 
     Column(Modifier.fillMaxSize()) {

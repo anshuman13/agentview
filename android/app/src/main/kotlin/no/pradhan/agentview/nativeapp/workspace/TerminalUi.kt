@@ -50,12 +50,13 @@ import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.select
 
 // Terminal (web/src/workspace/Terminal.tsx): the chat's shells as a read view of their output, with a line input and the phone keys.
 @Composable
 fun TerminalScreen(hub: Hub, onBack: () -> Unit) {
-    val st by hub.store.state.collectAsState()
-    val chat = st.shownId
+    val shownId by hub.store.state.select { it.shownId }
+    val chat = shownId
     val (load, reload) = rememberLoad(chat) { parseTerms(hub.read("/api/terms")) }
     val tabs = load.data ?: emptyList()
     var active by rememberSaveable(chat) { mutableStateOf("") }

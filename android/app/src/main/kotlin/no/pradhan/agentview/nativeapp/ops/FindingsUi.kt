@@ -18,12 +18,12 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.StatusDot
+import no.pradhan.agentview.nativeapp.ui.select
 
 // Findings (web/src/ops/Findings.tsx): what /code-review reported, most severe first; a row opens the file.
 @Composable
 fun Findings(hub: Hub, target: String, onOpen: ((Finding) -> Unit)? = null) {
-    val st by hub.store.state.collectAsState()
-    val cwd = st.session?.cwd
+    val cwd by hub.store.state.select { it.session?.cwd }
     val all by hub.findings.collectAsState()
     LaunchedEffect(target, cwd) { runCatching { hub.reviewFindings(target) }.onSuccess { hub.setFindings(target, it) } }
     val review = all[target] ?: return

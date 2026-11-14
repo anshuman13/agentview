@@ -81,12 +81,13 @@ import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.reviewBody
 import no.pradhan.agentview.nativeapp.workspace.reviewLabel
 import no.pradhan.agentview.nativeapp.workspace.splitDiff
+import no.pradhan.agentview.nativeapp.ui.select
 
 // Pull Requests (web/src/ops/GitHub.tsx): the repo's open PRs in three groups, and a PR page with review actions.
 @Composable
 fun PullsScreen(hub: Hub, onBack: () -> Unit, initial: Int? = null) {
-    val st by hub.store.state.collectAsState()
-    val chat = st.shownId
+    val shownId by hub.store.state.select { it.shownId }
+    val chat = shownId
     var fresh by remember { mutableStateOf(false) }
     val (load, reload) = rememberLoad(chat) {
         val was = fresh
@@ -180,7 +181,7 @@ private fun PullMenu(c: PullCtx, d: PullRequestDetail?, onBack: () -> Unit) {
     val pr = c.pr
     val hub = c.hub
     val link = openLink()
-    val label = providerLabel(hub.store.state.collectAsState().value.session?.provider)
+    val label = providerLabel(hub.store.state.select { it.session?.provider }.value)
     MoreButton { close ->
         MenuItem("Ask $label to review", "sparkle", { close(); hub.askChat(reviewPrPrompt(pr.number)) })
         val fix = d?.let { fixPrPrompt(pr.number, it) }

@@ -56,6 +56,7 @@ import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.isoMillis
 import no.pradhan.agentview.nativeapp.workspace.openLink
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.select
 
 private data class DeployAsk(val title: String, val detail: String, val action: String, val run: (String) -> Unit, val input: String? = null)
 
@@ -86,8 +87,8 @@ private fun PollDeployJob(hub: Hub, job: MutableState<DeployJob?>, reload: () ->
 // Deploy (web/src/ops/Deploy.tsx): the deploy app's environments, what runs where, deploy and roll back with a confirm.
 @Composable
 fun DeployScreen(hub: Hub, onBack: () -> Unit) {
-    val st by hub.store.state.collectAsState()
-    val chat = st.shownId
+    val shownId by hub.store.state.select { it.shownId }
+    val chat = shownId
     var app by rememberSaveable(chat) { mutableStateOf("") }
     val (load, reload) = rememberLoad(chat, app) { hub.deployStatus(app) }
     WhileStarted(chat, app) { while (true) { delay(60_000); reload() } }
