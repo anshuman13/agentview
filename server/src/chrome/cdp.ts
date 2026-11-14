@@ -3,6 +3,7 @@ import type { Peer } from '../http/peer.js';
 import { chromeRunning, endpoint, failure, launchProfile, openMac, ownProfile } from './launch.js';
 import { viewers } from './frames.js';
 import { errText } from '../../../shared/util.js';
+import { RpcCalls } from '../rpcCalls.js';
 
 type State = 'off' | 'connecting' | 'on';
 export type Msg = { id?: number; method?: string; params?: any; result?: any; error?: { message: string }; sessionId?: string };
@@ -16,8 +17,7 @@ export const events = {
 let cdp: WebSocket | null = null;
 let state: State = 'off';
 let reason = '';
-let nextId = 1;
-const calls = new Map<number, { resolve: (r: any) => void; reject: (e: Error) => void }>();
+const calls = new RpcCalls();
 let retryTimer: NodeJS.Timeout | null = null;
 let retryDelay = 2000;
 let fastUntil = 0;
@@ -72,30 +72,16 @@ function setState(s: State, why = '') {
 }
 
 export function call(method: string, params: object = {}, sessionId?: string, ms = 15000): Promise<any> {
-  return new Promise((resolve, reject) => {
-    if (!cdp || cdp.readyState !== WebSocket.OPEN) return reject(new Error('Chrome is not connected'));
-    const id = nextId++;
-    const timer = setTimeout(() => {
-      calls.delete(id);
-      reject(new Error(`${method} timed out`));
-    }, ms);
-    calls.set(id, {
-      resolve: (r) => { clearTimeout(timer); resolve(r); },
-      reject: (e) => { clearTimeout(timer); reject(e); },
-    });
-    cdp.send(JSON.stringify({ id, method, params, sessionId }));
-  });
+  if (!cdp || cdp.readyState !== WebSocket.OPEN) return Promise.reject(new Error('Chrome is not connected'));
+  const { id, answer } = calls.start(ms, () => new Error(`${method} timed out`));
+  cdp.send(JSON.stringify({ id, method, params, sessionId }));
+  return answer;
 }
 
-function answer(m: Msg) {
-  const c = calls.get(m.id!);
-  calls.delete(m.id!);
-  if (m.error) c?.reject(new Error(m.error.message));
-  else c?.resolve(m.result);
-}
+const settle = (m: Msg) => calls.settle(m.id, m.error && new Error(m.error.message), m.result);
 
 function onMessage(m: Msg) {
-  if (m.id) answer(m);
+  if (m.id) settle(m);
   else events.message(m);
 }
 
@@ -148,8 +134,7 @@ export async function connect() {
     clearTimeout(handshake);
     const was = cdp === ws;
     cdp = null;
-    calls.forEach((c) => c.reject(new Error('Chrome disconnected')));
-    calls.clear();
+    calls.failAll(new Error('Chrome disconnected'));
     events.closed();
     setState('off', was ? 'closed' : ((await failed) ?? 'closed'));
   });

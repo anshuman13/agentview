@@ -1,4 +1,5 @@
 import { eachChunk, eachLine } from '../exec.js';
+import { RpcCalls } from '../rpcCalls.js';
 
 export type McpServerDef = { type?: string; command?: string; args?: string[]; env?: Record<string, string>; url?: string; headers?: Record<string, string> };
 export type McpTool = { name: string; description?: string; inputSchema?: unknown; annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean } };
@@ -22,7 +23,6 @@ const INIT = { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 
 
 const MAX_BUF = 8 * 1024 * 1024;
 
-type Pending = { resolve: (v: any) => void; reject: (e: Error) => void; timer: NodeJS.Timeout };
 
 interface Transport {
   ready: Promise<void>;
@@ -34,9 +34,8 @@ interface Transport {
 
 class Stdio implements Transport {
   private proc: Bun.Subprocess<'pipe', 'pipe', 'pipe'> | null = null;
-  private pending = new Map<number, Pending>();
+  private calls = new RpcCalls();
   private stderr = '';
-  private nextId = 1;
   dead = false;
   info?: McpInfo;
   ready: Promise<void>;
@@ -76,11 +75,7 @@ class Stdio implements Transport {
     if (this.dead) return;
     this.dead = true;
     const err = new Error(this.stderr.trim() ? `${reason}: ${this.stderr.trim().split('\n').slice(-5).join('\n')}` : reason);
-    for (const p of this.pending.values()) {
-      clearTimeout(p.timer);
-      p.reject(err);
-    }
-    this.pending.clear();
+    this.calls.failAll(err);
   }
 
   private onLine(line: string) {
@@ -91,12 +86,7 @@ class Stdio implements Transport {
     } catch {
       return;
     }
-    const p = typeof msg.id === 'number' ? this.pending.get(msg.id) : undefined;
-    if (!p) return;
-    this.pending.delete(msg.id);
-    clearTimeout(p.timer);
-    if (msg.error) p.reject(new Error(msg.error.message ?? JSON.stringify(msg.error)));
-    else p.resolve(msg.result);
+    this.calls.settle(msg.id, msg.error && new Error(msg.error.message ?? JSON.stringify(msg.error)), msg.result);
   }
 
   private notify(method: string) {
@@ -105,22 +95,14 @@ class Stdio implements Transport {
 
   request(method: string, params: unknown, timeout: number): Promise<any> {
     if (this.dead) return Promise.reject(new Error(`${this.key} is not running`));
-    const id = this.nextId++;
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`${this.key} ${method} timed out after ${timeout}ms${this.stderr.trim() ? `: ${this.stderr.trim().split('\n').at(-1)}` : ''}`));
-      }, timeout);
-      this.pending.set(id, { resolve, reject, timer });
-      try {
-        this.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }));
-      } catch (err) {
-        clearTimeout(timer);
-        this.pending.delete(id);
-        reject(err);
-        this.die(`${this.key} stdin failed: ${(err as Error).message}`);
-      }
-    });
+    const { id, answer } = this.calls.start(timeout, () => new Error(`${this.key} ${method} timed out after ${timeout}ms${this.stderr.trim() ? `: ${this.stderr.trim().split('\n').at(-1)}` : ''}`));
+    try {
+      this.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }));
+    } catch (err) {
+      this.calls.fail(id, err as Error);
+      this.die(`${this.key} stdin failed: ${(err as Error).message}`);
+    }
+    return answer;
   }
 
   private write(line: string) {

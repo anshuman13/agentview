@@ -1,8 +1,7 @@
 import { eachLine } from '../../exec.js';
 import { errText } from '../../../../shared/util.js';
 import { codexBin } from './binary.js';
-
-type Pending = { resolve: (v: any) => void; reject: (e: Error) => void };
+import { RpcCalls } from '../../rpcCalls.js';
 
 export type RpcHandlers = {
   notification(method: string, params: any): void;
@@ -14,8 +13,7 @@ export type RpcHandlers = {
 // JSON-RPC over the stdio of one `codex app-server` process, one message per line.
 export class CodexRpc {
   private proc: Bun.Subprocess<'pipe', 'pipe', 'ignore'> | null = null;
-  private next = 1;
-  private pending = new Map<number, Pending>();
+  private calls = new RpcCalls();
   private closed = false;
 
   constructor(cwd: string, private handlers: RpcHandlers) {
@@ -53,11 +51,9 @@ export class CodexRpc {
 
   request<T = any>(method: string, params?: unknown): Promise<T> {
     if (this.closed) return Promise.reject(new Error('The codex process ended'));
-    const id = this.next++;
-    return new Promise<T>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.send({ id, method, ...(params !== undefined && { params }) });
-    });
+    const { id, answer } = this.calls.start<T>();
+    this.send({ id, method, ...(params !== undefined && { params }) });
+    return answer;
   }
 
   close() {
@@ -75,8 +71,7 @@ export class CodexRpc {
   private end(err: Error, report = true) {
     if (this.closed) return;
     this.closed = true;
-    for (const p of this.pending.values()) p.reject(err);
-    this.pending.clear();
+    this.calls.failAll(err);
     if (report) this.handlers.exit();
   }
 
@@ -94,11 +89,6 @@ export class CodexRpc {
         (err) => this.send({ id, error: { code: -32601, message: errText(err) } }),
       );
     } else if (msg.method) this.handlers.notification(msg.method, msg.params);
-    else if (msg.id !== undefined) {
-      const p = this.pending.get(msg.id);
-      this.pending.delete(msg.id);
-      if (msg.error) p?.reject(new Error(msg.error.message ?? 'codex request failed'));
-      else p?.resolve(msg.result);
-    }
+    else if (msg.id !== undefined) this.calls.settle(msg.id, msg.error && new Error(msg.error.message ?? 'codex request failed'), msg.result);
   }
 }
