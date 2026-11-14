@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp.codex
 
-import no.pradhan.agentview.nativeapp.codex.meetings.liveRows
 import no.pradhan.agentview.nativeapp.codex.meetings.sameName
 
 // web/src/codex/data/points.ts and meetings.ts pinsOf: points to raise with one person, and pinned text of a meeting.

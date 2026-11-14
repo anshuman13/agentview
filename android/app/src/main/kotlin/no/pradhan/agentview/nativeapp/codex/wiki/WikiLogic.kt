@@ -8,8 +8,7 @@ import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.DAY_MS
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.dayLabel
-import no.pradhan.agentview.nativeapp.codex.meetings.factTime
-import no.pradhan.agentview.nativeapp.codex.meetings.liveRows
+import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.sessions.queryWords
@@ -69,6 +68,8 @@ fun contestOf(f: Row): Contest? = runCatching {
     val o = protocolJson.parseToJsonElement(f.str("contested") ?: return null) as JsonObject
     Contest((o["by"] as? JsonPrimitive)?.contentOrNull ?: "", (o["at"] as? JsonPrimitive)?.content?.toDouble()?.toLong() ?: 0L, (o["note"] as? JsonPrimitive)?.contentOrNull ?: "")
 }.getOrNull()
+
+fun factTime(f: Row) = maxOf(f.long("at") ?: 0L, contestOf(f)?.at ?: 0L, f.updatedAt)
 
 fun isOld(f: Row, now: Long): Boolean {
     val at = f.long("at")

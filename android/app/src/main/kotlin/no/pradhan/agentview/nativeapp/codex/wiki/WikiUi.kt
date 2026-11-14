@@ -40,7 +40,7 @@ import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.TaskActions
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
-import no.pradhan.agentview.nativeapp.codex.meetings.liveRows
+import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.net.protocolJson

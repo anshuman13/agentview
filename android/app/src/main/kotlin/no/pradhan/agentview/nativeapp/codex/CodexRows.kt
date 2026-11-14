@@ -98,6 +98,9 @@ fun parseRow(c: JsonObject): Row? {
 }
 
 // web/src/codex/data/sync.ts mergeIncoming: each column keeps the newer write; a tie takes the hub's value.
+// Rows not deleted whose state is live or unset (facts and meetings share the state column).
+fun liveRows(rows: List<Row>) = rows.filter { !it.deleted && (it.str("state") ?: "live") == "live" }
+
 fun mergeIncoming(local: Row?, inc: Row): Row {
     val fields = SYNCED_FIELDS.getValue(inc.table)
     val times = (local?.times ?: emptyMap()).toMutableMap()

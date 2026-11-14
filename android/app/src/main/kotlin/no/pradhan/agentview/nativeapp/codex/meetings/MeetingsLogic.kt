@@ -19,10 +19,12 @@ import no.pradhan.agentview.nativeapp.codex.dayStart
 import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.isEvent
 import no.pradhan.agentview.nativeapp.codex.isSolo
+import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.codex.othersOf
 import no.pradhan.agentview.nativeapp.codex.peopleOf
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
 import no.pradhan.agentview.nativeapp.codex.whenText
+import no.pradhan.agentview.nativeapp.codex.wiki.factTime
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.sessions.queryWords
@@ -46,8 +48,6 @@ fun linksOf(m: Row): List<MeetingLink> = runCatching {
         if (title != null && url != null) MeetingLink(title, url) else null
     }
 }.getOrDefault(emptyList())
-
-fun liveRows(rows: List<Row>) = rows.filter { !it.deleted && (it.str("state") ?: "live") == "live" }
 
 private fun weekdayShort(t: Long): String = DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH).format(Instant.ofEpochMilli(t).atZone(codexZone))
 
@@ -228,8 +228,6 @@ fun priorWith(meeting: Row, meetings: List<Row>, items: List<Row>): List<Prior> 
 
 class Brief(val tasks: List<Pair<String, List<Row>>>, val claims: List<Row>)
 
-fun contestAt(f: Row): Long = f.str("contested")?.let { s -> runCatching { (protocolJson.parseToJsonElement(s) as kotlinx.serialization.json.JsonObject)["at"]?.let { (it as JsonPrimitive).content.toDouble().toLong() } }.getOrNull() } ?: 0L
-fun factTime(f: Row) = maxOf(f.long("at") ?: 0L, contestAt(f), f.updatedAt)
 
 // Open tasks that mention each attendee and up to three current claims that name an attendee or match the title.
 fun briefFor(meeting: Row, items: List<Row>, facts: List<Row>): Brief {

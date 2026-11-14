@@ -205,7 +205,7 @@ class MeetingsWikiTest {
         val f = fact("f1", "x", v = arrayOf("sources" to "[{\"kind\":\"slack\",\"label\":\"#team\",\"url\":\"https://s\"}]", "contested" to "{\"by\":\"you\",\"at\":123,\"note\":\"stale\"}"))
         assertEquals(listOf("#team"), sourcesOf(f).map { it.label })
         assertEquals("stale", contestOf(f)!!.note)
-        assertEquals(123L, contestAt(f))
+        assertEquals(123L, contestOf(f)!!.at)
         assertNull(contestOf(fact("f2", "y")))
         assertEquals(listOf("f1"), searchWiki(emptyList(), listOf(f), "team").claims.map { it.id })
         assertTrue(pageNeedsReview(row("pages", "p1", WORK, "state" to "proposed"), emptyList()))
