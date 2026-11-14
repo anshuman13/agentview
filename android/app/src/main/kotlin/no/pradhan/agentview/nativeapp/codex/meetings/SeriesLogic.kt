@@ -57,6 +57,8 @@ fun questionKey(q: Question) = "${q.profile}:${q.text.lowercase()}"
 private val BULLET = Regex("^([-*\u2022]|\\d+[.)])\\s+")
 private val LEAD = Regex("^([-*\u2022]|\\d+[.)]|#+)\\s+")
 private val SENTENCE = Regex("(?<=[.!?])\\s+(?=[A-Z])")
+private val STARS = Regex("\\*+")
+private val URL = Regex("\\S+://\\S+")
 private val QUESTIONS_HEAD = Regex("^(open )?questions:?$", RegexOption.IGNORE_CASE)
 
 // Sentences ending in "?" and bullets under a "Questions" heading, from summaries and notes. Identical text keeps the newest meeting.
@@ -71,7 +73,7 @@ fun openQuestions(meetings: List<Row>, now: Long): List<Question> {
                 val line = raw.trim()
                 if (line.isEmpty()) continue
                 val bullet = BULLET.containsMatchIn(line)
-                val plain = line.replace(LEAD, "").replace(Regex("\\*+"), "").replace(Regex("\\S+://\\S+"), "").trim()
+                val plain = line.replace(LEAD, "").replace(STARS, "").replace(URL, "").trim()
                 if (!bullet) under = QUESTIONS_HEAD.matches(plain)
                 val texts = if (under && bullet) listOf(plain) else plain.split(SENTENCE).filter { it.endsWith("?") }
                 for (t in texts.map { it.trim() }.filter { it.length > 1 }) {
@@ -98,7 +100,7 @@ fun withResolved(resolved: List<String>, q: Question, meetings: List<Row>, now: 
 fun visibleQuestions(questions: List<Question>, resolved: List<String>) = questions.filter { questionKey(it) !in resolved }
 
 // The lines of a summary that can be pinned, list markers and emphasis removed.
-fun summaryLines(summary: String?): List<String> = (summary ?: "").lines().map { it.trim().replace(LEAD, "").replace(Regex("\\*+"), "").trim() }.filter { it.isNotEmpty() }
+fun summaryLines(summary: String?): List<String> = (summary ?: "").lines().map { it.trim().replace(LEAD, "").replace(STARS, "").trim() }.filter { it.isNotEmpty() }
 
 // Earlier meetings of the same recurring series: equal series title and at least half of the smaller guest list in common. Newest first.
 fun seriesOf(meetings: List<Row>, m: Row): List<Row> {
