@@ -42,6 +42,11 @@ data class CodexState(
 
 // The hub's items, meetings and chats (web/src/codex/data/remote.ts RemoteStore without the on-device cache): pulled over
 // /api/assistant/changes, edited here with per-column times and pushed over /api/assistant/sync.
+private const val DONE_KEEP_MS = 60 * 86_400_000L
+private val DONE_STATES = setOf("done", "raised")
+// The synced columns, so a cache written with other columns is pulled again in full.
+private val COLUMNS = SYNCED_FIELDS.entries.joinToString(";") { (t, f) -> "$t:${f.joinToString(",")}" }
+
 class CodexStore(
     private val scope: CoroutineScope,
     private val pull: suspend (since: Long, full: Boolean) -> String,
@@ -58,11 +63,15 @@ class CodexStore(
     private var since = 0L
     private var timer: Job? = null
 
-    fun reset() {
-        tables.values.forEach { it.clear() }
-        since = 0
-        cache?.delete()
-        state.value = CodexState()
+    // Another server of the same hub: the next pull is full, and unsent edits stay to be pushed.
+    fun reset() = scope.launch {
+        lock.withLock {
+            tables.values.forEach { t -> t.values.removeAll { !it.dirty } }
+            since = 0
+            cache?.delete()
+            state.value = CodexState()
+            publish()
+        }
     }
 
     // Shows the rows of the last sync at once; the next pull then fetches only what changed since.
@@ -74,7 +83,8 @@ class CodexStore(
             val (version, changes) = parse(body)
             if (since != 0L || state.value.loaded) return
             apply(changes)
-            since = version
+            // A cache from a build with other columns lacks the new ones, so the next pull is full.
+            if (protocolJson.parseToJsonElement(body).jsonObject["columns"]?.jsonPrimitive?.contentOrNull == COLUMNS) since = version
             publish(loaded = true)
         } catch (e: Exception) {
             cache?.delete()
@@ -88,6 +98,7 @@ class CodexStore(
         if (rows.any { it.dirty }) return
         val body = buildJsonObject {
             put("version", since)
+            put("columns", COLUMNS)
             put("changes", JsonArray(rows.map(::rowToCache)))
         }
         withContext(Dispatchers.IO) {
@@ -112,6 +123,15 @@ class CodexStore(
             if (inc == null) continue
             val map = tables.getValue(inc.table)
             map[inc.key] = mergeIncoming(map[inc.key], inc)
+        }
+        prune()
+    }
+
+    // Synced tombstones and items done over 60 days ago are not kept (web RemoteStore.prune).
+    private fun prune() {
+        val cutoff = now() - DONE_KEEP_MS
+        for ((table, map) in tables) map.values.removeAll { r ->
+            !r.dirty && ((r.deleted && r.version > 0) || (table == "items" && r.str("status") in DONE_STATES && r.updatedAt <= cutoff))
         }
     }
 
