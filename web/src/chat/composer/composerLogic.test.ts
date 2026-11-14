@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, quoteReply, runLine, runNeedsYou, loopOpenByDefault, loopNow, agentAge } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, runLine, runNeedsYou, loopOpenByDefault, loopNow, agentAge } from './composerLogic';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
@@ -224,13 +224,6 @@ describe('draftLine', () => {
   it('takes the first non-empty line, trimmed', () => {
     expect(draftLine('\n  fix the login \nand more')).toBe('fix the login');
     expect(draftLine('  \n ')).toBe('');
-  });
-});
-
-describe('quoteReply', () => {
-  it('quotes each line and cuts long replies at a word', () => {
-    expect(quoteReply('Done.\n\nTests pass')).toBe('> Done.\n>\n> Tests pass\n\n');
-    expect(quoteReply('one two three', 9)).toBe('> one two…\n\n');
   });
 });
 

@@ -11,7 +11,6 @@ import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { readBox, saveBox } from './boxOpen';
 import { WorkBox } from './WorkBox';
-import { ReplyActions } from './ReplyActions';
 import { RewindLink } from './Rewind';
 import { foldTurns, type FoldRow } from './workFold';
 import { Badge } from '../../ui/Badge';
@@ -309,7 +308,7 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: 
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && <div className="tr-acts"><ReplyActions text={it.text} cwd={cwd} />{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
+      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && rewind && <div className="tr-acts"><RewindLink rewind={rewind} /></div>}</div>;
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':

@@ -236,13 +236,6 @@ export function replyNote(text: string, title: string, cwd: string) {
   return { text: `${title || 'Saved reply'}\n${text.trim()}`, profile: profileOfPath(cwd) };
 }
 
-// A Markdown quote of a reply to answer it in the next prompt, like Slack's reply with quote: up to 300 characters, cut at a word.
-export function quoteReply(text: string, max = 300) {
-  const t = text.trim();
-  const cut = t.length <= max ? t : `${t.slice(0, max).slice(0, t.slice(0, max).lastIndexOf(' ')).trimEnd()}…`;
-  return `${cut.split('\n').map((l) => `> ${l}`.trimEnd()).join('\n')}\n\n`;
-}
-
 // Slack's "Remind me about this", the same choices as the phone's chat menu.
 export function remindChoices(now: number) {
   const tomorrow = new Date(now);

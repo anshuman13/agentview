@@ -221,9 +221,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   continues from a short brief instead of the full context
 - In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
   is saved with that one block of changed lines put back to the last commit
-- On the web every finished reply shows a Save as note link on hover (always shown on touch screens), which saves the
-  chat title and the reply as a Codex note in the chat's profile (like Slack's saved messages). The phone has no reply
-  buttons; a hairline divider separates each prompt from the turn before it
+- Replies have no action buttons on the web or the phone; on the phone a hairline divider separates each prompt from the turn before it
 - On the phone, the composer's settings chip opens Chat settings with the models listed directly (one tap picks), then
   Goal and Build cycle rows, the permission modes (Supervised follows Auto), Account and Effort. The model you pick
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
@@ -256,9 +254,6 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   /api/sessions/search, newest first, at most 3 per chat); a Messages section lists the matching text with the chat,
   You or Claude and the age, and a tap opens that chat, like Slack's message search. The web sidebar Sessions search
   shows the same Messages list under the repos
-- On the web every finished reply has a Reply link next to Save as note, which puts the start of that reply (up to 300
-  characters) in the composer as a Markdown quote, like Slack's reply with quote, plus Copy, which copies the whole reply
-  as Markdown like Slack's Copy text
 - Hovering a sent prompt in the web transcript shows Use again, which puts that prompt in the composer to edit and send
   again (like editing a Slack message); queued and stopping prompts do not have it.
 - Scrolled up in a web chat that is running or has new rows, a Jump to latest button shows, with the count of finished
@@ -286,7 +281,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
 - "Continue in terminal" in the Tools pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone Tools sheet has the same Continue in terminal, copying to the clipboard
-- A prompt that changed files has a Rewind files link: on the web beside Reply, Copy and Save as note on the turn's last reply, on the
+- A prompt that changed files has a Rewind files link: on the web under the turn's last reply, on the
   phone under the prompt, while Claude is idle. It puts the files back to how they were before that prompt (later turns' edits go
   too); the conversation itself stays
 
