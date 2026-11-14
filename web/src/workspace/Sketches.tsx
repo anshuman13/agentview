@@ -49,10 +49,12 @@ export function SketchFrame({ name, html, device, theme, fitWidth }: { name: str
   }, []);
   const [w, h] = SIZE[device];
   const scale = box.w ? Math.min(1, box.w / w, device === 'phone' && !fitWidth ? box.h / h : 1) : 1;
+  // A desktop frame fills the pane's height, so a long sketch scrolls inside it instead of ending halfway down the pane.
+  const tall = device === 'desktop' && !fitWidth && box.h ? Math.max(h, Math.floor(box.h / scale)) : h;
   return (
     <div className="sk-stage" ref={stage}>
-      <div className={`sk-device sk-${device}`} style={{ width: w * scale, height: h * scale }}>
-        <iframe sandbox="" srcDoc={sketchDoc(html, theme)} title={name} style={{ width: w, height: h, transform: `scale(${scale})` }} />
+      <div className={`sk-device sk-${device}`} style={{ width: w * scale, height: tall * scale }}>
+        <iframe sandbox="" srcDoc={sketchDoc(html, theme)} title={name} style={{ width: w, height: tall, transform: `scale(${scale})` }} />
       </div>
     </div>
   );
