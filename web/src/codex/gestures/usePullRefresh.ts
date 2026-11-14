@@ -1,12 +1,12 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { haptic } from '../../ui/haptic';
 import { isDragging } from './drag';
+import { narrow as phone } from '../../app/shell/useNarrow';
 
 export const TRIGGER = 64;
 export const MAX = 120;
 export const SLOP = 10;
 export const HOLD = TRIGGER * 0.6;
-const phone = () => matchMedia('(max-width: 900px)').matches;
 
 export function classify(dx: number, dy: number, scrollTop: number): 'wait' | 'cancel' | 'pull' {
   if (scrollTop > 0) return 'cancel';

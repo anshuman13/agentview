@@ -13,6 +13,7 @@ import { agentCounts, agentsOf, elapsed, openAgent, reportText, tokens, type Age
 import { plural, useTick } from '../ui/util';
 import { useCan } from '../chat/useCan';
 import type { AgentStatus } from '../../../shared/protocol';
+import { narrow } from '../app/shell/useNarrow';
 
 const useAgents = () => useStore((s) => agentsOf(s.events));
 
@@ -54,7 +55,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
 
   return (
     <div className={`ag ${stack ? 'stack' : ''} ${selected && current?.id === selected ? 'picked' : ''}`}>
-      {selected && current?.id === selected && (stack || matchMedia('(max-width: 900px)').matches) && <Back close={() => onSelect(null)} />}
+      {selected && current?.id === selected && (stack || narrow()) && <Back close={() => onSelect(null)} />}
       <div className="ag-side">
         {groups.map(([name, rows]) => (
           <Fragment key={name ?? ''}>

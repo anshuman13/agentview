@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import { send } from '../app/store';
 import type { Billing } from '../../../shared/providers';
+import { narrow } from '../app/shell/useNarrow';
 
 // Enter or Space on a focusable element that is not a button clicks it.
 export const clickOnKey = (e: KeyboardEvent<HTMLElement>) => {
@@ -31,7 +32,7 @@ export const command = (id: string) => window.dispatchEvent(new CustomEvent('age
 
 // Brings the chat on screen: the Chat tab on a phone, the chat column on the desktop when it is hidden.
 export function showChat() {
-  if (window.innerWidth <= 900) command('tab:chat');
+  if (narrow()) command('tab:chat');
   else if (document.querySelector('.workbench')?.getAttribute('data-chat') === 'false') command('toggleChat');
 }
 

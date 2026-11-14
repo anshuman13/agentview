@@ -8,7 +8,7 @@ const draft = { text: '' };
 const react = createRequire(import.meta.url)('react') as typeof import('react');
 const { useSyncExternalStore } = react;
 vi.mock('react', () => ({ ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) }));
-vi.mock('../../app/shell/useNarrow', () => ({ useNarrow: () => true }));
+vi.mock('../../app/shell/useNarrow', () => ({ useNarrow: () => true, narrow: () => true }));
 const promptHistory = await import('./usePromptHistory');
 vi.mock('./usePromptHistory', () => ({ ...promptHistory, useDraft: () => [draft.text, () => {}] }));
 

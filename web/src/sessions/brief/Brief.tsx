@@ -17,6 +17,7 @@ import { useLongPress } from '../../ui/longPress';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
 import { HeadState } from './HeadState';
 import { useBriefScroll } from './briefHooks';
+import { narrow } from '../../app/shell/useNarrow';
 
 function lastReplyOf(turns: Turn[]) {
   for (let i = turns.length - 1; i >= 0; i--) if (turns[i].reply) return turns[i].reply;
@@ -65,7 +66,7 @@ export function Brief() {
 
   useEffect(() => {
     const open = (e: Event) => {
-      if (window.innerWidth <= 900) return;
+      if (narrow()) return;
       const id = (e as CustomEvent<unknown>).detail;
       setAgentSel(typeof id === 'string' ? id : null);
       setShowAgents(true);

@@ -13,8 +13,8 @@ import { useDeepLink } from './useDeepLink';
 import { useWorkbenchKeys } from './useWorkbenchKeys';
 import { useWorkbenchCommands } from './useWorkbenchCommands';
 import { activeOf, showingOf, type Editor } from './workbenchLogic';
+import { narrow } from './useNarrow';
 
-export const narrow = () => window.innerWidth <= 900;
 
 // The workbench's navigation: the phone tab, the desktop editor, the sidebar view and the panes that open and close.
 export function useWorkbench() {

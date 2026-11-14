@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useSwipeGesture } from './swipeGesture';
+import { narrow } from '../shell/useNarrow';
 
 // Places where a sideways drag belongs to the content: row swipes, text, code, sheets, and anything that scrolls sideways.
 const OWN = '.as-swipe-row, input, textarea, pre, code, .xterm, .chrome-frame, .monaco-editor, .tabs, .as-sheet, .more-sheet, .as-drawer, .palette, [role="dialog"], [data-no-swipe]';
@@ -39,7 +40,7 @@ export function useTabSwipe(index: number, count: number, go: (i: number) => voi
       return x > EDGE && x < innerWidth - EDGE && !target.closest(OWN) && !scrollsSideways(target) && !getSelection()?.toString();
     },
     (from, t) => {
-      if (innerWidth > 900) return;
+      if (!narrow()) return;
       const dx = t.clientX - from.x;
       const dy = t.clientY - from.y;
       if (Date.now() - from.t >= 400 || Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy)) return;

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { touch } from './touch';
+import { narrow } from '../shell/useNarrow';
 
 export const KEYBOARD_MIN = 100;
 
@@ -16,7 +17,7 @@ export const useKeyboardInset = () => {
     const root = document.documentElement;
     let last = 0;
     const sync = () => {
-      const inset = window.innerWidth > 900 ? 0 : keyboardInset(window.innerHeight, vv.height, vv.offsetTop);
+      const inset = !narrow() ? 0 : keyboardInset(window.innerHeight, vv.height, vv.offsetTop);
       if (inset === last) return;
       last = inset;
       if (inset) root.style.setProperty('--kb-inset', `${inset}px`);

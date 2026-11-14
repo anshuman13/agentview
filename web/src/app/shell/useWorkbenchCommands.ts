@@ -2,8 +2,8 @@ import { useEffect, type Dispatch, type SetStateAction } from 'react';
 import { openAgent } from '../../sessions/agents';
 import { isPage, pageOn, type Page } from '../pages';
 import type { Tab, View } from './TabBar';
+import { narrow } from './useNarrow';
 
-const narrow = () => window.innerWidth <= 900;
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 

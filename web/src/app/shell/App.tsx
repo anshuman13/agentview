@@ -24,7 +24,8 @@ import { Back } from '../touch/back';
 import { BadgeMount } from './BadgeMount';
 import { tauriInvoke } from '../runtime/tauri';
 import { EmbeddedApp, TerminalPanel } from './AppParts';
-import { narrow, useWorkbench } from './useWorkbench';
+import { useWorkbench } from './useWorkbench';
+import { narrow } from './useNarrow';
 
 export function App() {
   const repoPicker = useStore((s) => s.ui.repoPicker);

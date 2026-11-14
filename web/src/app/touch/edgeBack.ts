@@ -1,6 +1,7 @@
 import { isDragging } from '../../codex/gestures/drag';
 import { haptic } from '../../ui/haptic';
 import { useSwipeGesture } from './swipeGesture';
+import { narrow } from '../shell/useNarrow';
 
 const EDGE_START = 20;
 const MIN_DX = 70;
@@ -24,7 +25,7 @@ export function useEdgeBack() {
   useSwipeGesture(
     (e) => edgeBackEnabled(navigator.userAgent, '__TAURI__' in window) && e.touches[0].clientX <= EDGE_START && !(e.target as Element).closest('.as-swipe-row') && !isDragging() && !getSelection()?.toString(),
     (from, t) => {
-      if (innerWidth > 900) return;
+      if (!narrow()) return;
       if (!edgeBackEnd(from, { x: t.clientX, y: t.clientY }, Date.now() - from.t, history.state?.av ?? 0)) return;
       haptic('tap');
       history.back();
