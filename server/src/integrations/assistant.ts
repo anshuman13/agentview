@@ -7,6 +7,10 @@ import { loadSettings } from '../settings.js';
 
 export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir(), '.agentview/assistant/assistant.db')) ? 'http://localhost:7790' : loadSettings().hubUrl || 'http://localhost:7790');
 
+// Advisors keep their memory and audits on the Mac that runs the hub. Elsewhere this is that Mac's AgentView, else null.
+export const advisorsMac = (hub = HUB): string | null => (/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(hub) ? null : hub.replace(/:\d+\/?$/, ':7777'));
+export const ADVISORS_ELSEWHERE = 'Advisors run on the Mac with the hub. Switch to that Mac to use them.';
+
 type Param = { name: string; mode: 'always'; fallback: string } | { name: string; mode: 'flag' | 'positive' };
 type Route = { timeout: number; body?: boolean; params?: Param[] | 'all' };
 

@@ -10,7 +10,7 @@ import { pinsRoute, removeChat } from '../agent/claude/pins.js';
 import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
-import { assistantRoute } from '../integrations/assistant.js';
+import { ADVISORS_ELSEWHERE, advisorsMac, assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
 import { hideableIds } from '../../../shared/featureUse.js';
@@ -25,6 +25,12 @@ import { advisorsInfo, moveBacklogFile, readAudit, readBacklog } from '../sessio
 import { buildList } from '../session/builds.js';
 import { allowedFolder } from '../workspace/files.js';
 import { exec } from '../exec.js';
+
+// On a Mac without the hub the advisor routes answer 409 with the hub Mac's address, so there is one copy of their files.
+const hubOnly = <A extends unknown[], R>(fn: (...a: A) => R) => (...a: A) => {
+  const mac = advisorsMac();
+  return mac ? { status: 409, body: { error: ADVISORS_ELSEWHERE, mac } } : fn(...a);
+};
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
@@ -41,25 +47,25 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       if (r.status === 200) d.host.notify({ op: 'rename', sessionId: id!, title: body.title.trim() });
       return r;
     }, true),
-    'GET /api/advisors': entry(() => advisorsInfo()),
-    'GET /api/advisors/backlog': entry(({ url }) => {
+    'GET /api/advisors': entry(hubOnly(() => advisorsInfo())),
+    'GET /api/advisors/backlog': entry(hubOnly(({ url }) => {
       const root = url.searchParams.get('root') ?? '';
       return allowedFolder(root) ? readBacklog(root) : { status: 400, body: { error: 'Not a project folder' } };
-    }),
-    'GET /api/advisors/specs': entry(({ url }) => {
+    })),
+    'GET /api/advisors/specs': entry(hubOnly(({ url }) => {
       const root = url.searchParams.get('root') ?? '';
       return allowedFolder(root) ? buildList(root) : { status: 400, body: { error: 'Not a project folder' } };
-    }),
-    'POST /api/advisors/backlog/move': entry(async ({ url, body }) => {
+    })),
+    'POST /api/advisors/backlog/move': entry(hubOnly(async ({ url, body }) => {
       const root = url.searchParams.get('root') ?? '';
       if (!allowedFolder(root)) return { status: 400, body: { error: 'Not a project folder' } };
       if (body.dir !== 'up' && body.dir !== 'down') return { status: 400, body: { error: 'dir must be up or down' } };
       return (await moveBacklogFile(root, String(body.slug), body.dir)) ? readBacklog(root) : { status: 404, body: { error: 'Not in the backlog' } };
-    }, true),
-    'GET /api/advisors/audit': entry(({ url }) => {
+    }), true),
+    'GET /api/advisors/audit': entry(hubOnly(({ url }) => {
       const root = url.searchParams.get('root') ?? '';
       return allowedFolder(root) ? readAudit(root) : { status: 400, body: { error: 'Not a project folder' } };
-    }),
+    })),
     'ANY /api/sessions/pins': entry(({ method, url }) => pinsRoute(method, url.searchParams.get('id'))),
     'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'), url.searchParams.get('unread') === '1')),
     'DELETE /api/sessions/bin': entry(async () => {

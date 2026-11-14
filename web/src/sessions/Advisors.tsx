@@ -21,6 +21,7 @@ import { buildItemPrompt, buildSpecPrompt, sketchSpecPrompt } from '../../../sha
 import { askAdvisor, go } from './advisorChat';
 import { StateDot } from './ChatRows';
 import { chatState, repoRootOf, since, useWorkspace, type Folder } from './folders';
+import { switchMac } from '../app/shell/MacsPopover';
 import { fetchAdvisors, fetchAudit, fetchBacklog, fetchSpecs, moveBacklogItem } from './sessionApi';
 
 const open = (a: Advisor, fresh = false) => go({ type: 'open_advisor', id: a.id, ...(fresh && { fresh }) });
@@ -226,7 +227,7 @@ export function Advisors({ shown }: { shown: boolean }) {
   const seen = useStore((s) => s.seen);
   const viewing = useStore((s) => s.session.id);
   const openCwd = useStore((s) => s.session.cwd);
-  const [info, setInfo] = useState<AdvisorInfo[] | null | undefined>(undefined);
+  const [info, setInfo] = useState<AdvisorInfo[] | { mac: string } | null | undefined>(undefined);
   const [memory, setMemory] = useState<string | null>(null);
   const { folders } = useWorkspace('advisors');
   const [picked, setPicked] = useState(chosenRoot);
@@ -247,6 +248,7 @@ export function Advisors({ shown }: { shown: boolean }) {
   }, [shown, turns]);
   if (info === undefined) return <Skeleton rows={6} />;
   if (!info) return <EmptyState size="sm" title="Could not load the advisors" />;
+  if (!Array.isArray(info)) return <EmptyState icon="organization" title="Advisors are on the hub Mac" hint="Their memory and audits are kept there" action={<Button size="sm" variant="tinted" onClick={() => void switchMac({ name: '', url: info.mac, running: 0 })}>Switch to it</Button>} />;
   return (
     <div className="wk"><div className="wk-scroll"><div className="mt-page">
       <NeedsYou specs={specs} root={root} />

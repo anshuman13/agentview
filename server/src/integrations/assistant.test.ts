@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'bun:test';
-import { applyHubChanges, assistantRoute, learnEvents, type HubRow } from './assistant.js';
+import { advisorsMac, applyHubChanges, assistantRoute, learnEvents, type HubRow } from './assistant.js';
 import { stubGlobal, unstubAllGlobals } from '../../../testing.js';
 
 const change = (id: string, deleted = false) => ({ table: 'items', id, profile: 'work' as const, deleted, updated_at: 1, fields: { title: id } });
@@ -42,5 +42,13 @@ describe('learnEvents', () => {
     expect(out).toHaveLength(60);
     expect(out.every((e) => e.kind === 'user' && e.text.length === 2000)).toBe(true);
     expect(out.at(-1)?.id).toBe('e98');
+  });
+});
+
+describe('advisorsMac', () => {
+  it('is null for a local hub and the AgentView address of a remote one', () => {
+    expect(advisorsMac('http://localhost:7790')).toBeNull();
+    expect(advisorsMac('http://127.0.0.1:7790/')).toBeNull();
+    expect(advisorsMac('http://hub.example.com:7790')).toBe('http://hub.example.com:7777');
   });
 });

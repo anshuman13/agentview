@@ -5,6 +5,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { attachTerminal, closeTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, ownProfile } from './chrome/chrome.js';
+import { ADVISORS_ELSEWHERE, advisorsMac } from './integrations/assistant.js';
 import { ntfyTopic, post } from './integrations/notify.js';
 import { CODEX_WORK } from './workspace/files.js';
 import { createAutoMerge } from './integrations/automerge.js';
@@ -295,7 +296,8 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
       host.req<string>({ op: 'open', sessionId: msg.sessionId }).then((c) => view(client, c), fail);
       break;
     case 'open_advisor':
-      host.req<string>({ op: 'advisor', id: msg.id, fresh: Boolean(msg.fresh) }).then((c) => view(client, c), fail);
+      if (advisorsMac()) fail(new Error(ADVISORS_ELSEWHERE));
+      else host.req<string>({ op: 'advisor', id: msg.id, fresh: Boolean(msg.fresh) }).then((c) => view(client, c), fail);
       break;
     case 'new_session':
       if (msg.profile === 'work') mkdirSync(CODEX_WORK, { recursive: true });
