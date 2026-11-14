@@ -1,4 +1,5 @@
-import { lstat } from 'node:fs/promises';
+import { copyFile, lstat, mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { safeResolve } from './files.js';
 import type { GitFile, GitStatus } from '../../../shared/protocol.js';
@@ -147,6 +148,21 @@ export async function hasWork(cwd: string, env?: Record<string, string>) {
 }
 
 // Commits and uncommitted changes against the merge base, with untracked files read through --no-index so nothing is staged.
+// Untracked files join one diff as intent-to-add entries in a copy of the index, so the worktree's own index is left as it was.
+async function withLoose<T>(cwd: string, loose: string[], env: Record<string, string> | undefined, fn: (env?: Record<string, string>) => Promise<T>) {
+  if (!loose.length) return fn(env);
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'review-'));
+  try {
+    const e = { ...env, GIT_INDEX_FILE: path.join(dir, 'index'), GIT_LITERAL_PATHSPECS: '1' };
+    const index = path.resolve(cwd, (await safeGit(cwd, ['rev-parse', '--git-path', 'index'], undefined, env)).trim());
+    await copyFile(index, e.GIT_INDEX_FILE).catch(() => {});
+    await safeGit(cwd, ['add', '-N', '--', ...loose], undefined, e);
+    return await fn(e);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 export async function reviewDiff(cwd: string, env?: Record<string, string>) {
   const base = await defaultBase(cwd, env);
   const since = (await mergeBase(cwd, base, env)) || 'HEAD';
@@ -157,13 +173,8 @@ export async function reviewDiff(cwd: string, env?: Record<string, string>) {
     const st = await lstat(path.join(cwd, p)).catch(() => null);
     if (st && (st.isFile() || st.isSymbolicLink())) loose.push(p);
   }
-  const files = parseNumstat(await safeGit(cwd, ['diff', '--numstat', ...PLAIN_DIFF, since], undefined, env));
-  let diff = await safeGit(cwd, ['diff', ...PLAIN_DIFF, since], undefined, env);
-  for (const p of loose.slice(0, MAX_LOOSE)) {
-    const added = ['diff', '--no-index', ...PLAIN_DIFF];
-    files.push(...parseNumstat(await safeGit(cwd, [...added, '--numstat', '--', '/dev/null', p], [1], env)));
-    diff += await safeGit(cwd, [...added, '--', '/dev/null', p], [1], env);
-  }
+  const [files, diff] = await withLoose(cwd, loose.slice(0, MAX_LOOSE), env, (e) =>
+    Promise.all([safeGit(cwd, ['diff', '--numstat', ...PLAIN_DIFF, since], undefined, e).then(parseNumstat), safeGit(cwd, ['diff', ...PLAIN_DIFF, since], undefined, e)]));
   return {
     base: base.replace(/^origin\//, ''),
     files: files.map((f) => ({ path: f.path, additions: f.add, deletions: f.del })),
