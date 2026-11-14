@@ -23,6 +23,7 @@ import { parseGoal, RepeatController, ROUND_INSTRUCTION } from './repeat.js';
 import { SKETCH_COMMAND, sketchPrompt } from '../../../shared/sketches.js';
 import { SPEC_REVIEW_COMMAND, specReviewPrompt } from '../../../shared/specTasks.js';
 import { RunLinks } from './runLinks.js';
+import { SESSION_COMMANDS, withSessionCommands } from './commands.js';
 import { Runs } from './runs.js';
 import { SessionSettings } from './settings.js';
 import { Stopper } from './stopper.js';
@@ -75,7 +76,7 @@ export class AgentSession implements AgentHost {
   private sent: Pick<SessionInfo, 'commands' | 'mcp'> | null = null;
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
-      session: { id: this.id, sessionId, model: null, effort: 'medium', cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null, account: 'main', accounts: [] },
+      session: { id: this.id, sessionId, model: null, effort: 'medium', cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: SESSION_COMMANDS, cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null, account: 'main', accounts: [] },
       status: 'Idle',
       events: [],
       pending: [],
@@ -177,7 +178,7 @@ export class AgentSession implements AgentHost {
 
   setSession(patch: Partial<SessionInfo>) {
     const wasRunning = this.state.session.running;
-    this.state.session = { ...this.state.session, ...patch };
+    this.state.session = { ...this.state.session, ...patch, ...(patch.commands && { commands: withSessionCommands(patch.commands) }) };
     if ('sessionId' in patch || 'account' in patch || 'provider' in patch) this.setResumeCommand();
     if (patch.sessionId) this.runs.bind(this.id, patch.sessionId);
     if (wasRunning && patch.running === false) this.driver.settled();
