@@ -205,8 +205,10 @@ export class RepeatController {
   unpause() {
     const r = this.host.repeat();
     if (!r?.paused) return;
-    this.host.setSession({ repeat: { ...r, paused: false, ...(r.maxBuilds && { builds: [] }) } });
-    this.patchRun({ state: 'running', why: '', ...(r.maxBuilds && { builds: 0 }) });
+    // Resuming after the build limit starts a fresh count; a pause by the user keeps it.
+    const fresh = Boolean(r.maxBuilds) && (r.builds?.length ?? 0) >= r.maxBuilds!;
+    this.host.setSession({ repeat: { ...r, paused: false, ...(fresh && { builds: [] }) } });
+    this.patchRun({ state: 'running', why: '', ...(fresh && { builds: 0 }) });
     this.host.system(`${r.goal ? 'Goal' : 'Loop'} resumed`);
     if (!r.nextAt || r.nextAt <= Date.now()) this.fire();
     else this.arm();
@@ -329,7 +331,7 @@ export class RepeatController {
     if (edit.capPct === null) delete next.capPct;
     else if (typeof edit.capPct === 'number' && edit.capPct >= 1 && edit.capPct <= 100) next.capPct = edit.capPct;
     if (edit.maxBuilds === null) delete next.maxBuilds;
-    else if (Number.isInteger(edit.maxBuilds) && edit.maxBuilds! >= 1 && edit.maxBuilds! <= 50) next.maxBuilds = edit.maxBuilds;
+    else if (Number.isInteger(edit.maxBuilds) && edit.maxBuilds! >= 1 && edit.maxBuilds! <= MAX_BUILDS) next.maxBuilds = edit.maxBuilds;
     this.host.setSession({ repeat: next });
     this.patchRun({ every: next.every || undefined, nextAt: next.nextAt, endAt: next.endAt, capPct: next.capPct, maxBuilds: next.maxBuilds });
     this.arm();
