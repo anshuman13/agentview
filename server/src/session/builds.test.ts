@@ -352,7 +352,7 @@ describe('spec criteria and flow', () => {
 
 describe('build list', () => {
   const specs = path.join(repo, '.claude', 'specs');
-  const list = async () => (await buildList(repo)) as { slug: string; built: boolean; waiting: boolean; pipeline: string }[];
+  const list = async () => (await buildList(repo)) as { slug: string; built: boolean; waiting: boolean; pipeline: string; sketched: boolean }[];
 
   it('lists specs with their build state, skipping bad names', async () => {
     mkdirSync(specs, { recursive: true });
@@ -375,6 +375,20 @@ describe('build list', () => {
     expect((await list()).find((i) => i.slug === 'red-lamp')).toBeUndefined();
     writeFileSync(path.join(specs, 'red-lamp.md'), '# Lamp\n');
     expect((await list()).find((i) => i.slug === 'red-lamp')).toMatchObject({ built: true, pipeline: 'merged' });
+  });
+
+  it('marks a spec sketched by its sketch file or a sketch run', async () => {
+    mkdirSync(specs, { recursive: true });
+    writeFileSync(path.join(specs, 'sk-none.md'), '# None\n');
+    writeFileSync(path.join(specs, 'sk-file.md'), '# File\n');
+    writeFileSync(path.join(specs, 'sk-run.md'), '# Run\n');
+    mkdirSync(path.join(repo, '.claude', 'sketches'), { recursive: true });
+    writeFileSync(path.join(repo, '.claude', 'sketches', 'sk-file.html'), '<p>mock</p>');
+    const s = claudeSession(repo);
+    s.pushEvent(agent('sk1', 'sketch:sk-run', 'done'));
+    await waitFor(() => expect(stored('sk-run')).toHaveLength(1));
+    const by = Object.fromEntries((await list()).map((i) => [i.slug, i.sketched]));
+    expect(by).toMatchObject({ 'sk-none': false, 'sk-file': true, 'sk-run': true, 'red-lamp': false });
   });
 
   it('returns the 20 newest specs, newest first', async () => {

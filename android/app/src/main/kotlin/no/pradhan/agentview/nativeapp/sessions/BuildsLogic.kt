@@ -118,6 +118,7 @@ data class SpecHomeItem(
     val chat: String? = null,
     val session: String? = null,
     val built: Boolean = false,
+    val sketched: Boolean = false,
 )
 
 private fun specHomeGroup(i: SpecHomeItem) = when {

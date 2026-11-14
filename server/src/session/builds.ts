@@ -117,11 +117,17 @@ const withoutNotes = (markdown: string) => sectionsOf(markdown).filter((s) => s.
 const MAX_SKETCH = 1_000_000;
 
 // The build's sketch, written by the designer from the spec, is one more phase to approve; its HTML is the phase text.
+const sketchFile = (repo: string, slug: string) => path.join(repo, '.claude', 'sketches', `${slug}.html`);
+
 async function readSketch(repo: string, slug: string) {
-  const file = path.join(repo, '.claude', 'sketches', `${slug}.html`);
+  const file = sketchFile(repo, slug);
   const st = await stat(file).catch(() => null);
   return st?.isFile() && st.size <= MAX_SKETCH ? readFile(file, 'utf8').catch(() => null) : null;
 }
+
+// A sketch exists once its file is written or a sketch agent has run: the two cases where canSketch is false.
+const sketched = async (repo: string, slug: string, entries: BuildEntry[]) =>
+  entries.some((e) => e.stage === 'sketch') || (await stat(sketchFile(repo, slug)).catch(() => null))?.isFile() === true;
 
 type Spec = { title: string; phases: BuildPhase[]; mtime: number; file: string; kiro: boolean };
 
@@ -218,7 +224,7 @@ export async function buildList(cwd: string): Promise<SpecHomeItem[]> {
   const merged = await mergedIn(repo);
   return Promise.all(newest.map(async ({ slug }) => {
     const [entries, reviews, spec] = await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]);
-    const done = await merged(lastCommit(entries));
+    const [done, hasSketch] = await Promise.all([merged(lastCommit(entries)), sketched(repo, slug, entries)]);
     const newestEntry = inOrder(entries).at(-1);
     const summary = entries.length ? buildSummary(entries, done) : DRAFT;
     return {
@@ -233,6 +239,7 @@ export async function buildList(cwd: string): Promise<SpecHomeItem[]> {
       chat: newestEntry?.chat ?? null,
       session: newestEntry?.session ?? null,
       built: entries.some((e) => e.stage === 'implement'),
+      sketched: hasSketch,
     };
   }));
 }

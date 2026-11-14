@@ -62,6 +62,7 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.buildItemPrompt
 import no.pradhan.agentview.nativeapp.workspace.buildSpecPrompt
+import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 
 // What the Advisors page shows of each, from /api/advisors.
@@ -149,6 +150,7 @@ private fun SpecRow(hub: Hub, i: SpecHomeItem, project: String, live: Boolean, o
             if (live) { hub.open(i.chat!!); hub.showSpec(i.slug); onOpen() } else go { hub.openSaved(i.session!!) }
         }),
         menu = if (i.built || hub.readOnly) null else ({ dismiss ->
+            if (!i.sketched) MenuItem("Sketch", "paintcan", { dismiss(); hub.newChat(project, text = sketchSpecPrompt(".claude/specs/${i.slug}.md"), onOpened = onOpen) })
             MenuItem("Build", "play", { dismiss(); hub.newChat(project, text = buildSpecPrompt(".claude/specs/${i.slug}.md"), onOpened = onOpen) })
         }),
     )

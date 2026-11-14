@@ -17,7 +17,7 @@ import { span } from '../../../shared/util';
 import { OUTCOME_DOT } from '../chat/composer/composerLogic';
 import { holdBadge } from './buildsLogic';
 import { openRun } from './goalLogic';
-import { buildItemPrompt, buildSpecPrompt } from '../../../shared/specTasks';
+import { buildItemPrompt, buildSpecPrompt, sketchSpecPrompt } from '../../../shared/specTasks';
 import { askAdvisor, go } from './advisorChat';
 import { StateDot } from './ChatRows';
 import { chatState, repoRootOf, since, useWorkspace, type Folder } from './folders';
@@ -27,6 +27,7 @@ const open = (a: Advisor, fresh = false) => go({ type: 'open_advisor', id: a.id,
 
 // The Build action of a backlog row: a new chat in the project that builds from the spec, or has the pm agent write it first.
 const buildSpec = (root: string, slug: string) => go({ type: 'new_session', cwd: root, text: buildSpecPrompt(`.claude/specs/${slug}.md`) });
+const sketchSpec = (root: string, slug: string) => go({ type: 'new_session', cwd: root, text: sketchSpecPrompt(`.claude/specs/${slug}.md`) });
 const buildItem = (root: string, i: BacklogItem) => (i.spec ? buildSpec(root, i.slug) : go({ type: 'new_session', cwd: root, text: buildItemPrompt(i.title, i.why, i.slug) }));
 
 let chosenRoot: string | null = null;
@@ -149,7 +150,12 @@ function SpecRow({ spec: i, root }: { spec: SpecHomeItem; root: string }) {
       trailing={when ? <span className="rn-cost">{when}</span> : undefined}
       plain={!tappable}
       onClick={tappable ? openBuild : undefined}
-      menu={i.built ? undefined : <MenuItem icon="play" onClick={() => buildSpec(root, i.slug)}>Build</MenuItem>}
+      menu={i.built ? undefined : (
+        <>
+          {!i.sketched && <MenuItem icon="paintcan" onClick={() => sketchSpec(root, i.slug)}>Sketch</MenuItem>}
+          <MenuItem icon="play" onClick={() => buildSpec(root, i.slug)}>Build</MenuItem>
+        </>
+      )}
     />
   );
 }

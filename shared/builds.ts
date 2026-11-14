@@ -59,7 +59,7 @@ const PIPELINE_LABEL: Record<BuildPipeline, string> = { written: 'Spec written',
 
 export const pipelineLabel = (pipeline: BuildPipeline) => PIPELINE_LABEL[pipeline];
 
-export type SpecHomeItem = { slug: string; title: string; pipeline: BuildPipeline; state: BuildState; conclusion: string; updatedAt: number; hold: boolean; waiting: boolean; chat: string | null; session: string | null; built: boolean };
+export type SpecHomeItem = { slug: string; title: string; pipeline: BuildPipeline; state: BuildState; conclusion: string; updatedAt: number; hold: boolean; waiting: boolean; chat: string | null; session: string | null; built: boolean; sketched: boolean };
 
 const specHomeGroup = (i: SpecHomeItem) =>
   i.waiting || i.hold ? 0 : ['running', 'failed', 'waiting'].includes(i.state) ? 1 : i.pipeline === 'merged' ? 4 : i.built ? 2 : 3;
