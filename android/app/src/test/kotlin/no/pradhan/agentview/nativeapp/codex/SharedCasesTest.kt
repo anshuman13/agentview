@@ -38,7 +38,10 @@ import no.pradhan.agentview.nativeapp.chat.stripRound
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunEntry
 import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
+import no.pradhan.agentview.nativeapp.codex.autopilot.addPreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
+import no.pradhan.agentview.nativeapp.codex.autopilot.parsePresets
+import no.pradhan.agentview.nativeapp.codex.autopilot.removePreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.parseEvery
 import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
@@ -305,6 +308,19 @@ class SharedCasesTest {
             c["condition"]?.let { assertEquals(c.str("name"), it.jsonPrimitive.content, planCondition(c.str("path"), c.str("md"))) }
             if ("plan" in c) assertEquals(c.str("name"), c.nullable("plan")?.jsonPrimitive?.content, planOf(c.str("what")))
             if ("every" in c) assertEquals(c.str("name"), c.nullable("ms")?.jsonPrimitive?.long, parseEvery(c.str("every")))
+        }
+    }
+
+    @Test fun goalPresets() {
+        for (c in cases("goal-presets")) {
+            val name = c.str("name")
+            val list = c["list"]?.let { parsePresets(it.toString()) }.orEmpty()
+            val expected = parsePresets(c.getValue("expected").toString())
+            when (c.str("op")) {
+                "parse" -> assertEquals(name, expected, parsePresets(c["rawText"]?.jsonPrimitive?.content ?: c.getValue("raw").toString()))
+                "add" -> assertEquals(name, expected, addPreset(list, parsePresets("[${c.getValue("preset")}]").first()))
+                else -> assertEquals(name, expected, removePreset(list, c.str("target")))
+            }
         }
     }
 

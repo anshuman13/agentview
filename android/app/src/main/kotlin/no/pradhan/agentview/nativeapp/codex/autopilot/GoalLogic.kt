@@ -3,6 +3,13 @@ package no.pradhan.agentview.nativeapp.codex.autopilot
 import java.time.Instant
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.codexZone
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 
@@ -31,6 +38,43 @@ fun parseEvery(text: String): Long? {
 
 // The plan path of a goal that runs every task of a plan file, else null.
 fun planOf(what: String): String? = Regex("^(?:/goal\\s+)?(?:every task in (\\S+) is ticked|every step of the plan in (\\S+) is done)").find(what.trim())?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }
+
+// shared/goalPresets.ts: a saved goal form, kept on this device.
+data class GoalPreset(val name: String, val what: String, val every: Long, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val builds: Int?)
+
+private const val MAX_PRESETS = 6
+private const val MAX_NAME = 24
+
+private fun JsonObject.text(k: String) = (get(k) as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+private fun JsonObject.number(k: String) = (get(k) as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull }
+
+private fun JsonObject.optional(k: String) = get(k)?.let { it is JsonNull || number(k) != null } == true
+
+private fun JsonObject.toPreset(): GoalPreset? {
+    val name = text("name")?.takeIf { it.isNotBlank() } ?: return null
+    val what = text("what") ?: return null
+    val every = number("every")?.longOrNull ?: return null
+    val stopAt = text("stopAt")
+    if ((stopAt == null && get("stopAt") !is JsonNull) || !optional("stopIn") || !optional("capPct") || !optional("builds")) return null
+    return GoalPreset(name, what, every, number("stopIn")?.longOrNull, stopAt, number("capPct")?.intOrNull, number("builds")?.intOrNull)
+}
+
+fun parsePresets(raw: String?): List<GoalPreset> {
+    val list = runCatching { Json.parseToJsonElement(raw ?: "") }.getOrNull() as? JsonArray ?: return emptyList()
+    return list.mapNotNull { (it as? JsonObject)?.toPreset() }
+}
+
+fun encodePresets(list: List<GoalPreset>): String = JsonArray(list.map { p ->
+    JsonObject(mapOf("name" to JsonPrimitive(p.name), "what" to JsonPrimitive(p.what), "every" to JsonPrimitive(p.every), "stopIn" to JsonPrimitive(p.stopIn), "stopAt" to JsonPrimitive(p.stopAt), "capPct" to JsonPrimitive(p.capPct), "builds" to JsonPrimitive(p.builds)))
+}).toString()
+
+fun addPreset(list: List<GoalPreset>, p: GoalPreset): List<GoalPreset> {
+    val name = p.name.trim().take(MAX_NAME)
+    return (listOf(p.copy(name = name)) + list.filter { !it.name.equals(name, true) }).take(MAX_PRESETS)
+}
+
+fun removePreset(list: List<GoalPreset>, name: String) = list.filter { !it.name.equals(name, true) }
 
 private const val HOUR = 3_600_000L
 

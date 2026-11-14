@@ -10,6 +10,7 @@ import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '
 import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
+import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
 import { goalCommand, parseEvery, planOf, type GoalForm } from '../../shared/goalForm';
 import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
@@ -125,6 +126,15 @@ describe('cases shared with the Android app', () => {
       else if (c.form) expect(goalCommand(c.form, c.now!)).toBe(c.command);
       else if (c.condition) expect(planCondition(c.path!, c.md!)).toBe(c.condition);
       else expect(planOf(c.what!)).toBe(c.plan);
+    });
+  }
+
+  type PresetCase = { name: string; op: string; raw?: unknown; rawText?: string; list?: GoalPreset[]; preset?: GoalPreset; target?: string; expected: GoalPreset[] };
+  for (const c of cases<PresetCase>('goal-presets')) {
+    it(`goalPresets: ${c.name}`, () => {
+      if (c.op === 'parse') expect(parsePresets(c.rawText ?? JSON.stringify(c.raw))).toEqual(c.expected);
+      else if (c.op === 'add') expect(addPreset(c.list!, c.preset!)).toEqual(c.expected);
+      else expect(removePreset(c.list!, c.target!)).toEqual(c.expected);
     });
   }
 

@@ -10,10 +10,13 @@ import { Sheet } from '../ui/Sheet';
 import { billing, providerLabel } from '../../../shared/providers';
 import type { Provider } from '../../../shared/protocol';
 import { goalCommand, parseEvery } from '../../../shared/goalForm';
+import { addPreset, removePreset, type GoalPreset } from '../../../shared/goalPresets';
+import { span } from '../../../shared/util';
 import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, advisorOf } from '../../../shared/advisors';
 import { planCondition } from '../../../shared/specTasks';
 import { BUILDS, CAPS, EVERY, STOPS } from './goalLogic';
 import { useWorkspace } from './folders';
+import { loadPresets, savePresets } from './goalPresets';
 import { askAdvisor } from './advisorChat';
 import { useChatRun } from './runBands';
 import { usePlanProgress } from './usePlanProgress';
@@ -41,6 +44,9 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const [provider, setProvider] = useState<Provider>(defaultProvider);
   const [menu, setMenu] = useState(false);
   const [sent, setSent] = useState(false);
+  const [presets, setPresets] = useState(loadPresets);
+  const [preset, setPreset] = useState<string | null>(null);
+  const [naming, setNaming] = useState<string | null>(null);
   const pick = useRef<HTMLSpanElement>(null);
   const opened = useRef(chat);
   const beforeLoop = useRef({ every, custom, stopIn, stopAt, capPct, builds, inHere });
@@ -81,13 +87,36 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
       setWhat(''); setCustom(b.custom); setEvery(b.every); setStopIn(b.stopIn); setStopAt(b.stopAt); setCapPct(b.capPct); setBuilds(b.builds); setInHere(b.inHere);
     }
   };
+  const applyPreset = (p: GoalPreset) => {
+    if (advisor) { setAdvisor(false); setInHere(beforeLoop.current.inHere); }
+    if (!plan) setWhat(p.what);
+    setEvery(p.every); setCustom(EVERY.some((e) => e.ms === p.every) ? '' : span(p.every));
+    setStopIn(p.stopIn ?? undefined); setStopAt(p.stopAt ?? undefined); setCapPct(p.capPct); setBuilds(p.builds);
+    setPreset(p.name);
+  };
+  const commitPresets = (next: GoalPreset[]) => { setPresets(next); savePresets(next); };
+  const savePreset = () => {
+    const next = addPreset(presets, { name: naming ?? '', what: plan ? '' : what, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct, builds });
+    commitPresets(next);
+    setPreset(next[0].name);
+    setNaming(null);
+  };
+  const deletePreset = () => { commitPresets(removePreset(presets, preset!)); setPreset(null); };
   const chips = (items: { label: string }[], on: (i: number) => boolean, set: (i: number) => void) =>
     <div className="gl-chips">{items.map((c, i) => <Chip key={c.label} on={on(i)} onClick={() => set(i)}>{c.label}</Chip>)}</div>;
   return (
     <Sheet label="New goal" onClose={onClose} className="gl-sheet">
       <Section label="What" />
       <div className="ui-group">
-        {!plan && <div className="ui-fields"><div className="gl-chips"><Chip on={advisor} onClick={pickLoop}>Advisor loop</Chip></div></div>}
+        {(!plan || presets.length > 0) && (
+          <div className="ui-fields">
+            <div className="gl-chips">
+              {!plan && <Chip on={advisor} onClick={pickLoop}>Advisor loop</Chip>}
+              {presets.map((p) => <Chip key={p.name} on={preset === p.name} onClick={() => applyPreset(p)}>{p.name}</Chip>)}
+              {preset && <Button variant="danger" onClick={deletePreset}>Delete preset</Button>}
+            </div>
+          </div>
+        )}
         {plan ? <Row plain title={plan} meta={error ? 'Could not read the plan. Check the file still exists.' : markdown === null ? undefined : progress ?? 'No tasks'} /> : (
           <div className="ui-fields"><textarea rows={3} aria-label="What is the goal?" placeholder="What is the goal?" value={condition} disabled={loop} onChange={(e) => setWhat(e.target.value)} /></div>
         )}
@@ -146,6 +175,14 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
         </div>
       </div>
       <div className="gl-actions"><Button variant="filled" size="lg" disabled={sent || !ready || !condition.trim()} onClick={start}>Start</Button></div>
+      <div className="gl-actions">
+        {naming === null
+          ? <Button variant="tinted" disabled={loop} onClick={() => setNaming((plan ? plan.split('/').pop()! : what.trim()).slice(0, 24))}>Save as preset</Button>
+          : <>
+            <input aria-label="Preset name" maxLength={24} value={naming} onChange={(e) => setNaming(e.target.value)} />
+            <Button variant="tinted" disabled={loop || !naming.trim()} onClick={savePreset}>Save</Button>
+          </>}
+      </div>
     </Sheet>
   );
 }

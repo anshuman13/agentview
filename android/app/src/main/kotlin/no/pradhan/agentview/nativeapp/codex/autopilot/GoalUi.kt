@@ -163,6 +163,9 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     var providerId by remember { mutableStateOf(defaultProvider) }
     var pickTime by remember { mutableStateOf(false) }
     var sent by remember { mutableStateOf(false) }
+    val presets by hub.goalPresets.collectAsState()
+    var preset by remember { mutableStateOf<String?>(null) }
+    var naming by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(sent) { if (sent) { delay(10_000); sent = false } }
     val loop = advisor && sheet.plan == null
     val here = canHere && inHere && !loop
@@ -187,18 +190,33 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
             hub.newChat(cwd = root.ifEmpty { null }, provider = providerId, text = text, onOpened = onClose)
         }
     }
+    val applyPreset = { p: GoalPreset ->
+        if (advisor) { advisor = false; beforeLoop?.let { inHere = it.inHere } }
+        if (sheet.plan == null) what = p.what
+        every = p.every; custom = if (EVERY.any { it.ms == p.every }) "" else everyText(p.every)
+        stopIn = p.stopIn; stopAt = p.stopAt; capPct = p.capPct; builds = p.builds
+        preset = p.name
+    }
+    val savePreset = {
+        val next = addPreset(presets, GoalPreset(naming.orEmpty(), if (sheet.plan == null) what else "", every, stopIn, stopAt, capPct, builds))
+        hub.saveGoalPresets(next)
+        preset = next.first().name
+        naming = null
+    }
     val presetStop = STOPS.any { it.stopIn == stopIn && it.stopAt == stopAt }
     Sheet(onClose, "New goal", padded = false) {
         SectionHeader("What")
         Group {
-            if (sheet.plan == null) Chips {
-                Chip("Advisor loop", {
+            if (sheet.plan == null || presets.isNotEmpty()) Chips {
+                if (sheet.plan == null) Chip("Advisor loop", {
                     advisor = !advisor
                     if (advisor) {
                         beforeLoop = BeforeLoop(every, custom, stopIn, stopAt, capPct, builds, inHere)
                         custom = ""; every = ADVISOR_LOOP_EVERY; stopIn = null; stopAt = null; capPct = ADVISOR_LOOP_CAP; builds = ADVISOR_LOOP_BUILDS; inHere = false
                     } else beforeLoop?.let { what = ""; custom = it.custom; every = it.every; stopIn = it.stopIn; stopAt = it.stopAt; capPct = it.capPct; builds = it.builds; inHere = it.inHere }
                 }, on = advisor)
+                presets.forEach { p -> Chip(p.name, { applyPreset(p) }, on = preset == p.name) }
+                preset?.let { name -> Button("Delete preset", { hub.saveGoalPresets(removePreset(presets, name)); preset = null }, variant = ButtonVariant.Danger) }
             }
             if (sheet.plan != null) ListRow(sheet.plan, if (read.error) "Could not read the plan. Check the file still exists." else read.markdown?.let { read.progress ?: "No tasks" }, lines = 1)
             else Box(Modifier.padding(Tokens.sp6)) { TextField(if (loop) condition else what, { what = it }, enabled = !loop, placeholder = "What is the goal?", minLines = 3) }
@@ -244,6 +262,14 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
         }
         Box(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad)) {
             Button("Start", start, Modifier.fillMaxWidth(), variant = ButtonVariant.Filled, size = ButtonSize.Lg, enabled = !hub.readOnly && !sent && ready && condition.isNotBlank())
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+            val draft = naming
+            if (draft == null) Button("Save as preset", { naming = (sheet.plan?.substringAfterLast('/') ?: what.trim()).take(24) }, variant = ButtonVariant.Tinted, enabled = !loop)
+            else {
+                Box(Modifier.weight(1f)) { TextField(draft, { naming = it.take(24) }, placeholder = "Preset name", singleLine = true) }
+                Button("Save", savePreset, variant = ButtonVariant.Tinted, enabled = !loop && draft.isNotBlank())
+            }
         }
     }
     if (pickTime) StopTimeDialog({ stopIn = null; stopAt = it }, { pickTime = false })

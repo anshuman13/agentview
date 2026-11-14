@@ -56,7 +56,10 @@ import no.pradhan.agentview.nativeapp.chat.parseModels
 import no.pradhan.agentview.nativeapp.codex.CodexStore
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.meetings.parseResolved
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalPreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
+import no.pradhan.agentview.nativeapp.codex.autopilot.encodePresets
+import no.pradhan.agentview.nativeapp.codex.autopilot.parsePresets
 import no.pradhan.agentview.nativeapp.codex.needsView
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.ReviewFindings
@@ -192,6 +195,13 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         set(v) { foregroundNow.value = v }
 
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
+
+    val goalPresets = MutableStateFlow(parsePresets(prefs.getString("goalPresets", null)))
+
+    fun saveGoalPresets(list: List<GoalPreset>) {
+        goalPresets.value = list
+        prefs.edit().putString("goalPresets", encodePresets(list)).apply()
+    }
 
     val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
 
