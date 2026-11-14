@@ -1096,6 +1096,14 @@ describe('job runs', () => {
     expect(runs.get(id)).toMatchObject({ state: 'running', needsYou: false });
   });
 
+  it('ends on Stop from the loop card and ignores Pause', () => {
+    const { s, runs, id } = jobSession();
+    s.runControl(id, 'pause');
+    expect(runs.get(id)?.state).toBe('running');
+    s.runControl(id, 'stop');
+    expect(runs.get(id)).toMatchObject({ state: 'done', why: 'you stopped it' });
+  });
+
   it('adds a round and hands the run to the host when the turn ends', () => {
     const { s, runs, id, result } = jobSession();
     s.onJobTurn = vi.fn();

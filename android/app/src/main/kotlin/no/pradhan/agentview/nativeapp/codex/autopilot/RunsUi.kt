@@ -63,13 +63,13 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, needsYou: B
     var rounds by rememberSaveable(run.id) { mutableStateOf(false) }
     var board by rememberSaveable(run.id) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val cycle = run.kind == "cycle" || run.kind == "tries"
+    val cycle = run.kind == "cycle" || run.kind == "tries" || run.kind == "job"
     val goal = run.kind == "goal"
     val paused = run.state == "paused"
     val agents = live.agentList
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(agents.isNotEmpty()) { while (agents.isNotEmpty()) { delay(30_000); now = System.currentTimeMillis() } }
-    val (cardOpen, toggleCard) = rememberCardOpen("${run.chatId}:loop", needsYou || runNeedsYou(run))
+    val (cardOpen, toggleCard) = rememberCardOpen("${run.chatId}:loop", needsYou || run.needsYou)
     val progress = if (goal) planProgress(hub, planOf(run.what), run.chatId) else null
     val state = loopNow(run, live.now)
     val working = live.running || agents.isNotEmpty()

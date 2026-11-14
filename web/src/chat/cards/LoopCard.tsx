@@ -18,7 +18,7 @@ import { billing } from '../../../../shared/providers';
 import { buildsLine, mergeQuiet, roundGroupText } from '../../../../shared/goalText';
 import type { RunOp } from '../../../../shared/protocol';
 import { useCardOpen } from './useCardOpen';
-import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine, runNeedsYou, showTurn, stoppedText } from '../composer/composerLogic';
+import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine, showTurn, stoppedText } from '../composer/composerLogic';
 
 export function LoopCard() {
   const chat = useStore((s) => s.session.id);
@@ -34,11 +34,12 @@ export function LoopCard() {
   const [menu, setMenu] = useState(false);
   const [board, setBoard] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
-  const phone = useCardOpen(`${chat}:loop`, waiting || (run ? runNeedsYou(run) : false));
+  const phone = useCardOpen(`${chat}:loop`, waiting || Boolean(run?.needsYou));
   if (!run) return null;
   if (run.kind === 'job' && run.review === 'pending') return <ReviewCard run={run} />;
   const control = (op: RunOp) => send({ type: 'run', run: run.id, op });
-  const cycle = run.kind === 'cycle' || run.kind === 'tries';
+  // Cycles, tries and jobs have no pause or rounds of their own to run now: Stop is their only control.
+  const cycle = run.kind === 'cycle' || run.kind === 'tries' || run.kind === 'job';
   const goal = run.kind === 'goal';
   const paused = run.state === 'paused';
   const report = run.rounds.filter((r) => r.report).at(-1);

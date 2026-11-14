@@ -85,6 +85,11 @@ export class RunLinks {
     const { runs, cycle, repeater, state } = this.s;
     if (runs.get(run)?.kind === 'tries') return op === 'stop' ? runs.end(run, 'you stopped it') : undefined;
     if (cycle.run === run) return op === 'stop' ? cycle.set(false) : undefined;
+    if (runs.jobFor(this.s.id)?.id === run) {
+      if (op !== 'stop') return;
+      runs.end(run, 'you stopped it');
+      return void this.s.interrupt();
+    }
     if (op === 'restore') return repeater.restore(run);
     if (state.session.repeat?.runId !== run) return;
     if (op === 'pause') repeater.pause();
