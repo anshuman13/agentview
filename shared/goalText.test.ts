@@ -11,7 +11,8 @@ describe('goalText', () => {
     expect(goalPlan({ every: 7_200_000 })).toBe('Goal every 2 h');
     expect(goalPlan({ every: 0 })).toBe('Goal when idle · up to 20 rounds');
     expect(goalPlan({ every: 0, capPct: 70 })).toBe('Goal when idle · up to 20 rounds · cap 70%');
-    expect(goalPlan({ every: 1_800_000, endAt: at }, true)).toBe('Goal every 30 min until 09:00 · no cap');
+    expect(goalPlan({ every: 1_800_000, endAt: at }, true)).toBe('Goal every 30 min until 09:00 · no cap · no build limit');
+    expect(goalPlan({ every: 1_800_000, capPct: 70, maxBuilds: 5 }, true)).toBe('Goal every 30 min · cap 70% · builds 5');
     expect(interval(5_400_000)).toBe('90 min');
   });
 

@@ -73,7 +73,7 @@ export class Runs {
     return run.id;
   }
 
-  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'builds' | 'usage' | 'review' | 'pr'>>) {
+  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'maxBuilds' | 'builds' | 'usage' | 'review' | 'pr'>>) {
     const run = this.get(id);
     if (!run || run.state === 'done') return;
     Object.assign(run, patch);

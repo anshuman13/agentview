@@ -194,6 +194,28 @@ describe('standing goal', () => {
     vi.useRealTimers();
   });
 
+  it('edits the build limit: range checked, null clears, a lower limit pauses the next round', () => {
+    const { c, state, repeat } = setup('x');
+    c.set({ ...repeat(), maxBuilds: 5, builds: [] });
+    c.edit({ maxBuilds: 8 });
+    expect(repeat().maxBuilds).toBe(8);
+    expect(state.notes.at(-1)).toContain('builds 8');
+    for (const n of [0, 51, 2.5, '3' as unknown as number]) c.edit({ maxBuilds: n });
+    expect(repeat().maxBuilds).toBe(8);
+    c.noteBuild('a');
+    c.noteBuild('b');
+    c.edit({ maxBuilds: 2 });
+    vi.advanceTimersByTime(HOUR);
+    expect(repeat().paused).toBe(true);
+    expect(state.why).toBe('build limit 2 reached');
+    c.edit({ maxBuilds: null });
+    expect(repeat().maxBuilds).toBeUndefined();
+    expect(repeat().paused).toBe(true);
+    expect(state.notes.at(-1)).toContain('no build limit');
+    c.stop();
+    vi.useRealTimers();
+  });
+
   it('skips a heartbeat while Claude is busy or waiting, records no round and re-arms', () => {
     const { c, state, repeat } = setup('x');
     c.set(repeat());
@@ -301,7 +323,7 @@ describe('goal limits and edits', () => {
     c.edit({ every: 2 * HOUR, capPct: null });
     expect(repeat()).toMatchObject({ every: 2 * HOUR, nextAt: Date.now() + 2 * HOUR });
     expect(repeat()!.capPct).toBeUndefined();
-    expect(state.notes.at(-1)).toBe('Goal every 2 h · no cap');
+    expect(state.notes.at(-1)).toBe('Goal every 2 h · no cap · no build limit');
     expect(state.patches.at(-1)).toMatchObject({ every: 2 * HOUR, nextAt: Date.now() + 2 * HOUR, capPct: undefined });
     c.edit({ every: 60_000, endAt: 5 });
     expect(repeat()).toMatchObject({ every: 2 * HOUR, endAt: 5 });

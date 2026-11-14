@@ -147,8 +147,8 @@ export type LoopState = { on: boolean; max: number; round: number; phase: LoopPh
 
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
 export type RunOp = 'pause' | 'resume' | 'now' | 'stop' | 'restore';
-// endAt is epoch ms, capPct a percent; null clears them.
-export type RunEdit = { every?: number; endAt?: number | null; capPct?: number | null };
+// endAt is epoch ms, capPct a percent, maxBuilds a count; null clears them.
+export type RunEdit = { every?: number; endAt?: number | null; capPct?: number | null; maxBuilds?: number | null };
 export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number; report?: string };
 
 // One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.

@@ -304,6 +304,7 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         add { EditRow("How often", run.every?.let { "Every ${everyText(it)}" } ?: "Until done", if (run.every != null && editable) EVERY.filter { it.ms > 0 }.map { it.label to mapOf("every" to it.ms) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Stop at", run.endAt?.let { clock(it) } ?: "None", if (editable) STOPS.map { it.label to mapOf("endAt" to stopAtMs(it, now)) } else null) { hub.runEdit(run, it) } }
         if (billing(run.provider) != "none" || run.maxBuilds != null) add { EditRow("Usage", usageLine(run), if (editable && billing(run.provider) != "none") CAPS.map { (it.pct?.let { p -> "$p% cap" } ?: "No cap") to mapOf("capPct" to it.pct?.toLong()) } else null) { hub.runEdit(run, it) } }
+        add { EditRow("Build limit", run.maxBuilds?.toString() ?: "None", if (editable) BUILDS.map { it.label to mapOf("maxBuilds" to it.n?.toLong()) } else null) { hub.runEdit(run, it) } }
         if (!ended) add { ListRow("Next round", trailing = { RowLabel(next) }) }
         add { ListRow("Cost", trailing = { RowLabel(money(run.costUsd, billing(run.provider))) }) }
     }

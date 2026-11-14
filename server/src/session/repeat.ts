@@ -133,7 +133,7 @@ interface RepeatHost {
   resumeRun(r: Repeat): string;
   endRun(id: string, why: string): void;
   reopenRun(id: string): void;
-  patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'usage' | 'builds'>>): void;
+  patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'maxBuilds' | 'usage' | 'builds'>>): void;
   push(title: string, body: string): void;
   usage(): PlanUsage | null;
   asking(): boolean;
@@ -328,8 +328,10 @@ export class RepeatController {
     else if (typeof edit.endAt === 'number') next.endAt = edit.endAt;
     if (edit.capPct === null) delete next.capPct;
     else if (typeof edit.capPct === 'number' && edit.capPct >= 1 && edit.capPct <= 100) next.capPct = edit.capPct;
+    if (edit.maxBuilds === null) delete next.maxBuilds;
+    else if (Number.isInteger(edit.maxBuilds) && edit.maxBuilds! >= 1 && edit.maxBuilds! <= 50) next.maxBuilds = edit.maxBuilds;
     this.host.setSession({ repeat: next });
-    this.patchRun({ every: next.every || undefined, nextAt: next.nextAt, endAt: next.endAt, capPct: next.capPct });
+    this.patchRun({ every: next.every || undefined, nextAt: next.nextAt, endAt: next.endAt, capPct: next.capPct, maxBuilds: next.maxBuilds });
     this.arm();
     this.host.system(goalPlan(next, true));
   }
