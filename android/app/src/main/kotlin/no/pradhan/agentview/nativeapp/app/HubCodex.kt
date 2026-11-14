@@ -1,14 +1,13 @@
-package no.pradhan.agentview.nativeapp.net
+package no.pradhan.agentview.nativeapp.app
 
+import no.pradhan.agentview.nativeapp.net.newSessionCmd
+import no.pradhan.agentview.nativeapp.net.openSessionCmd
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import no.pradhan.agentview.nativeapp.app.DeepLink
-import no.pradhan.agentview.nativeapp.app.SharedItem
-import no.pradhan.agentview.nativeapp.app.shareTask
 import no.pradhan.agentview.nativeapp.chat.voiceAnswer
 import no.pradhan.agentview.nativeapp.chat.voicePrompt
 import no.pradhan.agentview.nativeapp.codex.DailyChat

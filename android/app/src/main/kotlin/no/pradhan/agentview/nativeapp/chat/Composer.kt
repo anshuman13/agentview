@@ -53,23 +53,23 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.ChatRun
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.SessionInfo
-import no.pradhan.agentview.nativeapp.net.chatFiles
-import no.pradhan.agentview.nativeapp.net.interrupt
+import no.pradhan.agentview.nativeapp.app.chatFiles
+import no.pradhan.agentview.nativeapp.app.interrupt
 import no.pradhan.agentview.nativeapp.net.menuModes
 import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.newestModels
 import no.pradhan.agentview.nativeapp.net.providerLabel
-import no.pradhan.agentview.nativeapp.net.refreshUsage
-import no.pradhan.agentview.nativeapp.net.runInTerminal
-import no.pradhan.agentview.nativeapp.net.setAccount
-import no.pradhan.agentview.nativeapp.net.setEffort
-import no.pradhan.agentview.nativeapp.net.setLoop
-import no.pradhan.agentview.nativeapp.net.setMode
-import no.pradhan.agentview.nativeapp.net.setModel
-import no.pradhan.agentview.nativeapp.net.setReview
-import no.pradhan.agentview.nativeapp.net.submit
+import no.pradhan.agentview.nativeapp.app.refreshUsage
+import no.pradhan.agentview.nativeapp.app.runInTerminal
+import no.pradhan.agentview.nativeapp.app.setAccount
+import no.pradhan.agentview.nativeapp.app.setEffort
+import no.pradhan.agentview.nativeapp.app.setLoop
+import no.pradhan.agentview.nativeapp.app.setMode
+import no.pradhan.agentview.nativeapp.app.setModel
+import no.pradhan.agentview.nativeapp.app.setReview
+import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -145,8 +145,8 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     val imeVisible = WindowInsets.isImeVisible
     LaunchedEffect(imeVisible) { bar = barState(bar, if (imeVisible) BarEvent.KeyboardUp else BarEvent.KeyboardDown) }
     LaunchedEffect(s.text.text.isEmpty()) { bar = barState(bar, if (s.text.text.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled) }
-    LaunchedEffect(bar) { hub.composing.value = barHidden(bar) }
-    DisposableEffect(chatId) { onDispose { hub.composing.value = false } }
+    LaunchedEffect(bar) { hub.shell.composing.value = barHidden(bar) }
+    DisposableEffect(chatId) { onDispose { hub.shell.composing.value = false } }
     val c = av
     val shape = RoundedCornerShape(if (multiline) Tokens.radius else Tokens.radiusPill)
     Column(Modifier.fillMaxWidth().background(c.bg).padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp4, bottom = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
@@ -321,7 +321,7 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
         Group {
             // Loops, cycles, tries and jobs have their controls on the loop card only.
             val opens = run == null || run.kind == "goal"
-            ListRow("Goal", run?.let { runLine(it, session?.loop?.phase) } ?: "Off", onClick = if (opens) ({ hub.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }) else null, trailing = { if (opens) Chevron() })
+            ListRow("Goal", run?.let { runLine(it, session?.loop?.phase) } ?: "Off", onClick = if (opens) ({ hub.shell.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }) else null, trailing = { if (opens) Chevron() })
             Hairline()
             ListRow("Build cycle", loop?.let { "Up to ${plural(it.max, "round")}" } ?: "Off", onClick = { onSheet(Picker.Loop) }, trailing = { Chevron() })
         }

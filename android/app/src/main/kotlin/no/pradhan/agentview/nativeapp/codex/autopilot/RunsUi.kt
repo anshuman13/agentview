@@ -26,13 +26,13 @@ import no.pradhan.agentview.nativeapp.chat.rememberCardOpen
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.net.ChatRun
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.billing
-import no.pradhan.agentview.nativeapp.net.runControl
-import no.pradhan.agentview.nativeapp.net.triesKeep
+import no.pradhan.agentview.nativeapp.app.runControl
+import no.pradhan.agentview.nativeapp.app.triesKeep
 import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -55,7 +55,7 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
-import no.pradhan.agentview.nativeapp.net.triesSend
+import no.pradhan.agentview.nativeapp.app.triesSend
 import no.pradhan.agentview.nativeapp.ui.TextField
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
@@ -78,7 +78,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, needsYou: B
     val progress = if (goal) planProgress(hub, planOf(run.what), run.chatId) else null
     val state = loopNow(run, live.now)
     val working = live.running || agents.isNotEmpty()
-    val detail = { hub.goalSheet.value = GoalSheet.Detail(run.id) }
+    val detail = { hub.shell.goalSheet.value = GoalSheet.Detail(run.id) }
     val meta = listOfNotNull(
         state.at?.let { clock(it) },
         state.next?.let { "Next: $it" },

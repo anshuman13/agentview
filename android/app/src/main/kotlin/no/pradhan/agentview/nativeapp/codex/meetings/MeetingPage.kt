@@ -47,7 +47,7 @@ import no.pradhan.agentview.nativeapp.codex.pointsFor
 import no.pradhan.agentview.nativeapp.codex.recentPeople
 import no.pradhan.agentview.nativeapp.codex.stripWhen
 import no.pradhan.agentview.nativeapp.codex.theirActions
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize

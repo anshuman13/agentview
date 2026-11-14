@@ -35,10 +35,10 @@ import java.time.Instant
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import no.pradhan.agentview.nativeapp.codex.wiki.agoText
 import no.pradhan.agentview.nativeapp.net.Ask
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.codexProfile
-import no.pradhan.agentview.nativeapp.net.hideNeed
-import no.pradhan.agentview.nativeapp.net.restoreNeed
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.codexProfile
+import no.pradhan.agentview.nativeapp.app.hideNeed
+import no.pradhan.agentview.nativeapp.app.restoreNeed
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize

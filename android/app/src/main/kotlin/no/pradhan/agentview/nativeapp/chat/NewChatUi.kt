@@ -9,11 +9,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import no.pradhan.agentview.nativeapp.codex.meetings.displayName
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.lastModel
-import no.pradhan.agentview.nativeapp.net.modelsOf
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.lastModel
+import no.pradhan.agentview.nativeapp.app.modelsOf
 import no.pradhan.agentview.nativeapp.net.ProviderOption
-import no.pradhan.agentview.nativeapp.net.newChat
+import no.pradhan.agentview.nativeapp.app.newChat
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant

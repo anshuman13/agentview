@@ -17,11 +17,11 @@ import androidx.compose.ui.platform.LocalUriHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.devScript
-import no.pradhan.agentview.nativeapp.net.newTerminal
-import no.pradhan.agentview.nativeapp.net.openPort
-import no.pradhan.agentview.nativeapp.net.ports
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.devScript
+import no.pradhan.agentview.nativeapp.app.newTerminal
+import no.pradhan.agentview.nativeapp.app.openPort
+import no.pradhan.agentview.nativeapp.app.ports
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant

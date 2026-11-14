@@ -43,9 +43,9 @@ import no.pradhan.agentview.nativeapp.app.pushRoute
 import no.pradhan.agentview.nativeapp.app.routeTitle
 import no.pradhan.agentview.nativeapp.app.routesOf
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.track
-import no.pradhan.agentview.nativeapp.net.setCodexFilter
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.track
+import no.pradhan.agentview.nativeapp.app.setCodexFilter
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.Chip
@@ -132,8 +132,8 @@ fun CodexScreen(hub: Hub) {
     val filterKey by hub.codexFilter.collectAsState()
     val profile = filterKey.takeIf { it != "all" }
     val nav = rememberCodexNav()
-    val addRequest by hub.addTask.collectAsState()
-    LaunchedEffect(addRequest) { if (addRequest) { nav.adding = true; hub.addTask.value = false } }
+    val addRequest by hub.shell.addTask.collectAsState()
+    LaunchedEffect(addRequest) { if (addRequest) { nav.adding = true; hub.shell.addTask.value = false } }
     var refreshing by remember { mutableStateOf(false) }
     val now = rememberCodexNow(hub, st)
     val snack = remember { SnackbarHostState() }

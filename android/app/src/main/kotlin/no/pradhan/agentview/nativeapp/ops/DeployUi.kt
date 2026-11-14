@@ -24,11 +24,11 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.delay
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.deployJob
-import no.pradhan.agentview.nativeapp.net.deployStatus
-import no.pradhan.agentview.nativeapp.net.rollbackDeploy
-import no.pradhan.agentview.nativeapp.net.runDeploy
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.deployJob
+import no.pradhan.agentview.nativeapp.app.deployStatus
+import no.pradhan.agentview.nativeapp.app.rollbackDeploy
+import no.pradhan.agentview.nativeapp.app.runDeploy
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button

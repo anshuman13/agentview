@@ -1,6 +1,8 @@
-package no.pradhan.agentview.nativeapp.net
+package no.pradhan.agentview.nativeapp.app
 
-import no.pradhan.agentview.nativeapp.app.parseMacs
+import no.pradhan.agentview.nativeapp.net.ApiError
+import no.pradhan.agentview.nativeapp.net.enc
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.chat.MemoryFile
 import no.pradhan.agentview.nativeapp.chat.MessageHit
 import no.pradhan.agentview.nativeapp.chat.Todos

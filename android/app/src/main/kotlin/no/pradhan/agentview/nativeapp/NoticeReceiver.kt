@@ -20,7 +20,7 @@ import no.pradhan.agentview.nativeapp.app.NoticeKind
 import no.pradhan.agentview.nativeapp.app.Notifier
 import no.pradhan.agentview.nativeapp.app.runNoticeAction
 import no.pradhan.agentview.nativeapp.net.Api
-import no.pradhan.agentview.nativeapp.net.DEFAULT_ORIGIN
+import no.pradhan.agentview.nativeapp.app.DEFAULT_ORIGIN
 import no.pradhan.agentview.nativeapp.net.sharedHttp
 
 // Allow, Deny and Reply on a notification; they send the same commands as the buttons in the chat.

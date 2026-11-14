@@ -31,10 +31,10 @@ import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.shownFeature
 import no.pradhan.agentview.nativeapp.chat.ChatImage
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.readDir
-import no.pradhan.agentview.nativeapp.net.readFile
-import no.pradhan.agentview.nativeapp.net.track
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.readDir
+import no.pradhan.agentview.nativeapp.app.readFile
+import no.pradhan.agentview.nativeapp.app.track
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -141,7 +141,7 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
         WorkspaceHeader(hub, path.substringAfterLast('/'), onBack, sub = parentOf(path).ifEmpty { pageFolder(hub) }) {
             MoreButton { close ->
                 if (isDoc) MenuItem("Rendered document", "open-preview", { close(); preview = !showDoc }, checked = showDoc)
-                if (isDoc) MenuItem("Run as goal\u2026", "target", { close(); hub.track("action:runAsGoal"); hub.goalSheet.value = GoalSheet.Start(plan = path) })
+                if (isDoc) MenuItem("Run as goal\u2026", "target", { close(); hub.track("action:runAsGoal"); hub.shell.goalSheet.value = GoalSheet.Start(plan = path) })
                 if (canDiff) MenuItem("Change against the last commit", "diff", { close(); preview = false; mode = if (diff) "file" else "diff" }, checked = diff)
                 if (diff) MenuItem("Changes only", "fold", { close(); changes = !changes }, checked = changes)
                 if (!showDoc) MenuItem("Word wrap", "word-wrap", { close(); wrap = !wrap }, checked = wrap)
@@ -182,7 +182,7 @@ private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
                 Button("Run", { menu = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 Menu(menu, { menu = false }) {
                     if (all) MenuItem("Run all in this chat", "debug-start", { menu = false; hub.track("action:runAll"); hub.askChat(runAllPrompt(path)) }, enabled = !hub.readOnly)
-                    if (goal) MenuItem("Run as goal\u2026", "target", { menu = false; hub.track("action:runAsGoal"); hub.goalSheet.value = GoalSheet.Start(plan = path) })
+                    if (goal) MenuItem("Run as goal\u2026", "target", { menu = false; hub.track("action:runAsGoal"); hub.shell.goalSheet.value = GoalSheet.Start(plan = path) })
                 }
             }
         }

@@ -28,10 +28,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.codex.autopilot.openChatOf
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.build
-import no.pradhan.agentview.nativeapp.net.postBuildReview
-import no.pradhan.agentview.nativeapp.net.track
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.build
+import no.pradhan.agentview.nativeapp.app.postBuildReview
+import no.pradhan.agentview.nativeapp.app.track
 import no.pradhan.agentview.nativeapp.workspace.DeviceChips
 import no.pradhan.agentview.nativeapp.workspace.SketchPreview
 import no.pradhan.agentview.nativeapp.workspace.DiffFiles

@@ -1,8 +1,7 @@
-package no.pradhan.agentview.nativeapp.net
+package no.pradhan.agentview.nativeapp.app
 
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.app.shouldTrack
 import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.personalRoot

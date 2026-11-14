@@ -3,10 +3,7 @@ package no.pradhan.agentview.nativeapp.app
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import no.pradhan.agentview.nativeapp.codex.profileLabel
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.codexProfile
-import no.pradhan.agentview.nativeapp.net.shareToChat
-import no.pradhan.agentview.nativeapp.net.shareToTask
+
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline

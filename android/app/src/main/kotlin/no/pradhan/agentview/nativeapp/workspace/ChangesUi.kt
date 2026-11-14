@@ -27,13 +27,13 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.branchDiff
-import no.pradhan.agentview.nativeapp.net.git
-import no.pradhan.agentview.nativeapp.net.gitStatus
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.branchDiff
+import no.pradhan.agentview.nativeapp.app.git
+import no.pradhan.agentview.nativeapp.app.gitStatus
 import no.pradhan.agentview.nativeapp.net.providerLabel
-import no.pradhan.agentview.nativeapp.net.readFile
-import no.pradhan.agentview.nativeapp.net.saveFile
+import no.pradhan.agentview.nativeapp.app.readFile
+import no.pradhan.agentview.nativeapp.app.saveFile
 
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant

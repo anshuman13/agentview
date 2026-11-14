@@ -32,9 +32,9 @@ import no.pradhan.agentview.nativeapp.codex.firstName
 import no.pradhan.agentview.nativeapp.codex.pinsOf
 import no.pradhan.agentview.nativeapp.codex.pointsOf
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Pending
-import no.pradhan.agentview.nativeapp.net.resolveQuestion
+import no.pradhan.agentview.nativeapp.app.resolveQuestion
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize

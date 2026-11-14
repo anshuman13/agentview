@@ -1,5 +1,26 @@
-package no.pradhan.agentview.nativeapp.net
+package no.pradhan.agentview.nativeapp.app
 
+import no.pradhan.agentview.nativeapp.net.Api
+import no.pradhan.agentview.nativeapp.net.ChatTitles
+import no.pradhan.agentview.nativeapp.net.Drafts
+import no.pradhan.agentview.nativeapp.net.EventStream
+import no.pradhan.agentview.nativeapp.net.ModelInfo
+import no.pradhan.agentview.nativeapp.net.Outbox
+import no.pradhan.agentview.nativeapp.net.PrefsKeyValue
+import no.pradhan.agentview.nativeapp.net.ProviderOption
+import no.pradhan.agentview.nativeapp.net.READ_ONLY_OPEN
+import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
+import no.pradhan.agentview.nativeapp.net.ServerMessage
+import no.pradhan.agentview.nativeapp.net.TranscriptDisk
+import no.pradhan.agentview.nativeapp.net.Writes
+import no.pradhan.agentview.nativeapp.net.enc
+import no.pradhan.agentview.nativeapp.net.openAdvisorCmd
+import no.pradhan.agentview.nativeapp.net.openSessionCmd
+import no.pradhan.agentview.nativeapp.net.parseMessage
+import no.pradhan.agentview.nativeapp.net.promptCmd
+import no.pradhan.agentview.nativeapp.net.sharedHttp
+import no.pradhan.agentview.nativeapp.net.steerCmd
+import no.pradhan.agentview.nativeapp.net.viewCmd
 import no.pradhan.agentview.nativeapp.codex.NeedsView
 import android.app.Application
 import android.net.ConnectivityManager
@@ -34,25 +55,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import no.pradhan.agentview.nativeapp.WaitingStore
 import no.pradhan.agentview.nativeapp.WaitingWidget
-import no.pradhan.agentview.nativeapp.app.AppState
-import no.pradhan.agentview.nativeapp.app.DeepLink
-import no.pradhan.agentview.nativeapp.app.Notice
-import no.pradhan.agentview.nativeapp.app.NoticeKind
-import no.pradhan.agentview.nativeapp.app.Notifier
-import no.pradhan.agentview.nativeapp.app.SharedItem
-import no.pradhan.agentview.nativeapp.app.RunningNote
-import no.pradhan.agentview.nativeapp.app.keptAsks
-import no.pradhan.agentview.nativeapp.app.knownAsk
-import no.pradhan.agentview.nativeapp.app.repostRunning
-import no.pradhan.agentview.nativeapp.app.waitingBadge
-import no.pradhan.agentview.nativeapp.app.AppCounts
-import no.pradhan.agentview.nativeapp.app.WaitingSnapshot
-import no.pradhan.agentview.nativeapp.app.appCounts
-import no.pradhan.agentview.nativeapp.app.countChat
-import no.pradhan.agentview.nativeapp.app.noticeAsk
-import no.pradhan.agentview.nativeapp.app.notices
-import no.pradhan.agentview.nativeapp.app.runningNotes
-import no.pradhan.agentview.nativeapp.app.waitingSnapshot
 import no.pradhan.agentview.nativeapp.chat.ChatStore
 import no.pradhan.agentview.nativeapp.chat.RecentChats
 import no.pradhan.agentview.nativeapp.chat.TranscriptFeed
@@ -179,19 +181,14 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val shared = MutableStateFlow<SharedItem?>(null)
 
-    val addTask = MutableStateFlow(false)
-
     val undoable = MutableSharedFlow<Undoable>(extraBufferCapacity = 1)
 
-    val navHidden = MutableStateFlow(false)
-    val composing = MutableStateFlow(false)
     val showTurn = MutableStateFlow<String?>(null)
-
-    val goalSheet = MutableStateFlow<GoalSheet?>(null)
+    val shell = ShellState()
 
     internal val pullCache = PullCache()
 
-    init { viewModelScope.launch { goalSheet.filterNotNull().collect { track("sheet:goal") } } }
+    init { viewModelScope.launch { shell.goalSheet.filterNotNull().collect { track("sheet:goal") } } }
 
     private val foregroundNow = MutableStateFlow(false)
 

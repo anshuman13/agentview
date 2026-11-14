@@ -1,5 +1,8 @@
-package no.pradhan.agentview.nativeapp.net
+package no.pradhan.agentview.nativeapp.app
 
+import no.pradhan.agentview.nativeapp.net.ApiError
+import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
+import no.pradhan.agentview.nativeapp.net.enc
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -7,9 +10,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import no.pradhan.agentview.nativeapp.app.DeepLink
-import no.pradhan.agentview.nativeapp.app.SharedItem
-import no.pradhan.agentview.nativeapp.app.shareChatText
 import no.pradhan.agentview.nativeapp.chat.Transcript
 import no.pradhan.agentview.nativeapp.codex.Row
 

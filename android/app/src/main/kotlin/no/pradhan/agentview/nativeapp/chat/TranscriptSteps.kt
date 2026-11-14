@@ -56,9 +56,9 @@ import kotlinx.serialization.json.Json
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.ChatEvent
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.image
-import no.pradhan.agentview.nativeapp.net.stopTask
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.image
+import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.workspace.Findings
 import no.pradhan.agentview.nativeapp.ops.agentSummary

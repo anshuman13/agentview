@@ -26,9 +26,9 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.AutopilotRow
 import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.codex.replyQueue
 import no.pradhan.agentview.nativeapp.codex.split
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
-import no.pradhan.agentview.nativeapp.net.mcpProbe
+import no.pradhan.agentview.nativeapp.app.mcpProbe
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button

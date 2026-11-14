@@ -36,13 +36,13 @@ import no.pradhan.agentview.nativeapp.codex.PERSONAL
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.profileLabel
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
-import no.pradhan.agentview.nativeapp.net.markRead
-import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.net.refreshWorkspace
-import no.pradhan.agentview.nativeapp.net.searchMessages
-import no.pradhan.agentview.nativeapp.net.setChatSegment
+import no.pradhan.agentview.nativeapp.app.markRead
+import no.pradhan.agentview.nativeapp.app.read
+import no.pradhan.agentview.nativeapp.app.refreshWorkspace
+import no.pradhan.agentview.nativeapp.app.searchMessages
+import no.pradhan.agentview.nativeapp.app.setChatSegment
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
@@ -169,7 +169,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            PageHeader("Sessions") { IconBtn("target", "New goal", { hub.goalSheet.value = GoalSheet.Start() }); IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) }); IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
+            PageHeader("Sessions") { IconBtn("target", "New goal", { hub.shell.goalSheet.value = GoalSheet.Start() }); IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) }); IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
             SearchField(filter, { filters.filter = it }, "Search repos and sessions")
             ChipRow {
                 listOf(WORK, PERSONAL).forEach { k ->

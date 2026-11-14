@@ -33,10 +33,10 @@ import no.pradhan.agentview.nativeapp.chat.ChatTone
 import no.pradhan.agentview.nativeapp.chat.Dictation
 import no.pradhan.agentview.nativeapp.chat.VoiceButton
 import no.pradhan.agentview.nativeapp.chat.appendWord
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
-import no.pradhan.agentview.nativeapp.net.askCodex
-import no.pradhan.agentview.nativeapp.net.codexProfile
+import no.pradhan.agentview.nativeapp.app.askCodex
+import no.pradhan.agentview.nativeapp.app.codexProfile
 import no.pradhan.agentview.nativeapp.sessions.folderName
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone

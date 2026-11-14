@@ -56,13 +56,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.billing
-import no.pradhan.agentview.nativeapp.net.loadEarlier
+import no.pradhan.agentview.nativeapp.app.loadEarlier
 import no.pradhan.agentview.nativeapp.net.providerLabel
-import no.pradhan.agentview.nativeapp.net.rewind
-import no.pradhan.agentview.nativeapp.net.sendNow
+import no.pradhan.agentview.nativeapp.app.rewind
+import no.pradhan.agentview.nativeapp.app.sendNow
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -112,13 +112,13 @@ private fun HideNavOnScroll(hub: Hub, listState: LazyListState, atBottom: Boolea
         snapshotFlow { Triple(listState.isScrollInProgress, listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) }.collect { (moving, index, offset) ->
             val pos = index to offset
             if (moving && last.first != Int.MAX_VALUE) {
-                if (index > last.first || (index == last.first && offset > last.second)) hub.navHidden.value = true
-                else if (pos != last) hub.navHidden.value = false
+                if (index > last.first || (index == last.first && offset > last.second)) hub.shell.navHidden.value = true
+                else if (pos != last) hub.shell.navHidden.value = false
             }
             last = pos
         }
     }
-    LaunchedEffect(atBottom) { if (atBottom) hub.navHidden.value = false }
+    LaunchedEffect(atBottom) { if (atBottom) hub.shell.navHidden.value = false }
 }
 
 // Keeps the newest row in view while the user is at the bottom, and jumps to a turn or a just-sent message.
@@ -209,7 +209,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
         pill?.let { DayPill(it, Modifier.align(Alignment.TopCenter).padding(top = Tokens.sp4)) }
         if (!atBottom) JumpButton(replies, Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp4, bottom = Tokens.sp4)) {
             stick.value = true
-            hub.navHidden.value = false
+            hub.shell.navHidden.value = false
             scope.launch { listState.animateScrollToItem(0) }
         }
     }

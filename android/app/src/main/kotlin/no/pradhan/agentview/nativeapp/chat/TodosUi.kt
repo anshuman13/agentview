@@ -2,8 +2,8 @@ package no.pradhan.agentview.nativeapp.chat
 
 import androidx.compose.runtime.Composable
 import kotlinx.serialization.Serializable
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.gitTodos
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.gitTodos
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.ListRow

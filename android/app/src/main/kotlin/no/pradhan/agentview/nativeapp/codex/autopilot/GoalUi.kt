@@ -26,15 +26,15 @@ import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.net.ChatRun
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.billing
-import no.pradhan.agentview.nativeapp.net.newChat
+import no.pradhan.agentview.nativeapp.app.newChat
 import no.pradhan.agentview.nativeapp.net.providerLabel
-import no.pradhan.agentview.nativeapp.net.readFile
-import no.pradhan.agentview.nativeapp.net.runControl
-import no.pradhan.agentview.nativeapp.net.runEdit
-import no.pradhan.agentview.nativeapp.net.submit
-import no.pradhan.agentview.nativeapp.net.track
+import no.pradhan.agentview.nativeapp.app.readFile
+import no.pradhan.agentview.nativeapp.app.runControl
+import no.pradhan.agentview.nativeapp.app.runEdit
+import no.pradhan.agentview.nativeapp.app.submit
+import no.pradhan.agentview.nativeapp.app.track
 import no.pradhan.agentview.nativeapp.sessions.folderName
 import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -66,9 +66,9 @@ import no.pradhan.agentview.nativeapp.ui.TimeDialog
 // The goal sheets (web/src/sessions/GoalSheets.tsx), mounted once in the app shell.
 @Composable
 fun GoalSheets(hub: Hub) {
-    val sheet by hub.goalSheet.collectAsState()
+    val sheet by hub.shell.goalSheet.collectAsState()
     val runs by hub.store.state.select { it.runs }
-    val close = { hub.goalSheet.value = null }
+    val close = { hub.shell.goalSheet.value = null }
     when (val s = sheet) {
         is GoalSheet.Start -> GoalStartSheet(hub, s, close)
         is GoalSheet.Detail -> runs.firstOrNull { it.id == s.run }?.let { GoalDetailSheet(hub, it, close) }

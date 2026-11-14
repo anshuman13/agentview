@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.net
 
+
 // shared/providers.ts: what each provider fixes, its name, how its use is billed and its permission modes.
 // The cases in shared/fixtures/providers.json run against both.
 class ModeOption(val value: String, val label: String, val detail: String)

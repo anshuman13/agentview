@@ -34,11 +34,11 @@ import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.firstLine
 import no.pradhan.agentview.nativeapp.codex.firstLine
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.providerLabel
-import no.pradhan.agentview.nativeapp.net.actOnPull
-import no.pradhan.agentview.nativeapp.net.pullDetail
-import no.pradhan.agentview.nativeapp.net.pulls
+import no.pradhan.agentview.nativeapp.app.actOnPull
+import no.pradhan.agentview.nativeapp.app.pullDetail
+import no.pradhan.agentview.nativeapp.app.pulls
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant

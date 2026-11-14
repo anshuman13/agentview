@@ -43,7 +43,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.summaryLines
 import no.pradhan.agentview.nativeapp.codex.meetings.visibleQuestions
 import no.pradhan.agentview.nativeapp.codex.meetings.withResolved
 import no.pradhan.agentview.nativeapp.net.ApiError
-import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.Writes
 import no.pradhan.agentview.nativeapp.codex.wiki.ReviewOps

@@ -72,12 +72,11 @@ import no.pradhan.agentview.nativeapp.chat.ChatScreen
 import no.pradhan.agentview.nativeapp.chat.VoiceHost
 import no.pradhan.agentview.nativeapp.codex.CodexScreen
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheets
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.track
+
 import no.pradhan.agentview.nativeapp.net.OFFLINE_DELAY_MS
 import no.pradhan.agentview.nativeapp.net.OfflineEvent
 import no.pradhan.agentview.nativeapp.net.OfflineState
-import no.pradhan.agentview.nativeapp.net.newChat
+
 import no.pradhan.agentview.nativeapp.net.offlineBanner
 import no.pradhan.agentview.nativeapp.ops.AgentScreen
 import no.pradhan.agentview.nativeapp.ops.DeployScreen
@@ -174,7 +173,7 @@ private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostStat
         if (l.page == "sketches") l.slug?.let { hub.sketchSlug.value = it }
         else if (l.chat != null && l.slug != null) hub.showSpec(l.slug)
         if (l.action == Shortcut.NEW_CHAT) hub.newChat()
-        if (l.action == Shortcut.ADD_TASK) hub.addTask.value = true
+        if (l.action == Shortcut.ADD_TASK) hub.shell.addTask.value = true
         routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.openMore(r) else nav.goTab(r) }
         hub.link.value = null
     }
@@ -287,10 +286,10 @@ fun App(hub: Hub) {
     val route = nav.currentBackStackEntryAsState().value?.destination?.route
     val width = LocalConfiguration.current.screenWidthDp
     val rail = width >= RAIL_MIN_DP
-    val navHidden by hub.navHidden.collectAsState()
-    val composing by hub.composing.collectAsState()
+    val navHidden by hub.shell.navHidden.collectAsState()
+    val composing by hub.shell.composing.collectAsState()
     val shownId by hub.store.state.select { it.shownId }
-    LaunchedEffect(route, shownId) { hub.navHidden.value = false }
+    LaunchedEffect(route, shownId) { hub.shell.navHidden.value = false }
     val dests = rememberDests(hub, nav, route, more) { more = it }
 
     Box(Modifier.fillMaxSize()) {

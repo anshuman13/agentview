@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.net
 
+import no.pradhan.agentview.nativeapp.app.NoticeRemote
 import java.net.URLEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,7 +16,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import no.pradhan.agentview.nativeapp.app.NoticeRemote
 import no.pradhan.agentview.nativeapp.chat.ROW_WINDOW
 import no.pradhan.agentview.nativeapp.codex.AssistantRemote
 import no.pradhan.agentview.nativeapp.sessions.BacklogItem

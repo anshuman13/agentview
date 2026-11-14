@@ -13,10 +13,10 @@ import androidx.compose.ui.Modifier
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.net.ChatRun
-import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.runDiff
-import no.pradhan.agentview.nativeapp.net.runReview
-import no.pradhan.agentview.nativeapp.net.track
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.runDiff
+import no.pradhan.agentview.nativeapp.app.runReview
+import no.pradhan.agentview.nativeapp.app.track
 import no.pradhan.agentview.nativeapp.workspace.DiffFiles
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone

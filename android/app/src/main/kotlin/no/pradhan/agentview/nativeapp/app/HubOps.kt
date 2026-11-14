@@ -1,5 +1,7 @@
-package no.pradhan.agentview.nativeapp.net
+package no.pradhan.agentview.nativeapp.app
 
+import no.pradhan.agentview.nativeapp.net.enc
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
