@@ -99,3 +99,30 @@ describe('deliver', () => {
     expect(d.turnId).toBe(null);
   });
 });
+
+describe('start', () => {
+  it('takes over the process that read the history instead of starting another', async () => {
+    const calls: string[] = [];
+    const host: any = { cwd: '/tmp', state: { session: { id: 'c1', running: false, permissionMode: 'default' } }, setSession: () => undefined, system: () => undefined };
+    const d: any = new CodexDriver(host);
+    d.threadId = 't1';
+    const spare: any = {
+      adopt: () => spare,
+      initialize: async () => void calls.push('initialize'),
+      request: async (method: string) => {
+        calls.push(method);
+        if (method === 'account/read') return { account: {}, requiresOpenaiAuth: false };
+        if (method === 'thread/resume') return { thread: { id: 't1' }, model: 'gpt-5' };
+        return {};
+      },
+      close: () => undefined,
+    };
+    d.spare = spare;
+    d.start();
+    await d.ready.catch(() => undefined);
+    expect(d.rpc).toBe(spare);
+    expect(calls).not.toContain('initialize');
+    expect(calls.slice(0, 2)).toEqual(['account/read', 'thread/resume']);
+    d.close();
+  });
+});

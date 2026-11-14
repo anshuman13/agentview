@@ -10,12 +10,14 @@ import { historyEvents } from './events.js';
 import { codexInstructionFiles } from './instructions.js';
 import { threadParams } from './options.js';
 import type { ApprovalMethod, CodexModel, ElicitationParams, McpServerStatus, PermissionProfile, RateLimits, Thread, UserInput, UserInputQuestion } from './protocol.js';
-import { CodexRpc } from './rpc.js';
+import { CodexRpc, type RpcHandlers } from './rpc.js';
 import { CodexStream } from './stream.js';
 import { noteThread } from './threads.js';
 import { planUsage } from './usage.js';
 
 const USAGE_EVERY = 10 * 60_000;
+// How long the process that read the history waits for the chat to start.
+const SPARE_MS = 5_000;
 const MCP_STATUS: Record<string, string> = { connected: 'connected', authenticationRequired: 'needs-auth', failed: 'failed', disabled: 'disabled' };
 
 // Slash commands Codex has no equivalent for; the session owns these five.
@@ -40,6 +42,7 @@ export class CodexDriver implements AgentDriver {
   readonly instructionFiles: string[];
 
   private rpc: CodexRpc | null = null;
+  private spare: CodexRpc | null = null;
   private ready: Promise<void> | null = null;
   private queue: Promise<void> = Promise.resolve();
   private stream: CodexStream;
@@ -76,13 +79,16 @@ export class CodexDriver implements AgentDriver {
 
   start() {
     if (this.rpc || this.closed) return;
-    const rpc = new CodexRpc(this.host.cwd, {
+    const handlers: RpcHandlers = {
       notification: (method, params) => this.onNotification(method, params),
       request: (method, params) => this.onRequest(method, params),
       exit: () => this.lost(),
-    });
+    };
+    const spare = this.spare?.adopt(handlers);
+    this.spare = null;
+    const rpc = spare ?? new CodexRpc(this.host.cwd, handlers);
     this.rpc = rpc;
-    this.ready = this.open(rpc).catch((err) => {
+    this.ready = this.open(rpc, !spare).catch((err) => {
       if (this.rpc === rpc) this.detach();
       rpc.close();
       this.host.system(`Codex: ${errText(err)}`, true);
@@ -91,8 +97,8 @@ export class CodexDriver implements AgentDriver {
     this.ready.catch(() => undefined);
   }
 
-  private async open(rpc: CodexRpc) {
-    await rpc.initialize();
+  private async open(rpc: CodexRpc, init: boolean) {
+    if (init) await rpc.initialize();
     const { account, requiresOpenaiAuth } = await rpc.request<{ account: unknown; requiresOpenaiAuth: boolean }>('account/read', { refreshToken: false });
     if (!account && requiresOpenaiAuth) throw new Error(NOT_SIGNED_IN);
     const { approvalPolicy, sandbox } = policyFor(this.mode);
@@ -362,18 +368,29 @@ export class CodexDriver implements AgentDriver {
   }
 
   // The thread is read through a short-lived process, so a reopened chat starts none until its first prompt.
+  // A chat viewed right after takes that process over in start() instead of starting a second one.
   async loadHistory(): Promise<History | null> {
     if (!this.threadId) return null;
     const rpc = await CodexRpc.openQuiet(this.host.cwd).catch(() => null);
     if (!rpc) return null;
     try {
       const { thread } = await rpc.request<{ thread: Thread }>('thread/read', { threadId: this.threadId, includeTurns: true });
+      this.keepSpare(rpc);
       return { events: historyEvents(thread.turns, thread.updatedAt * 1000), context: null, cache: null };
     } catch {
-      return null;
-    } finally {
       rpc.close();
+      return null;
     }
+  }
+
+  private keepSpare(rpc: CodexRpc) {
+    this.spare?.close();
+    this.spare = rpc;
+    setTimeout(() => {
+      if (this.spare !== rpc) return;
+      this.spare = null;
+      rpc.close();
+    }, SPARE_MS);
   }
 
   watchHistory() {}
@@ -392,6 +409,8 @@ export class CodexDriver implements AgentDriver {
 
   close() {
     this.closed = true;
+    this.spare?.close();
+    this.spare = null;
     const rpc = this.rpc;
     this.detach();
     rpc?.close();

@@ -44,6 +44,13 @@ export class CodexRpc {
     return CodexRpc.open(cwd, { notification: () => undefined, request: () => Promise.reject(new Error('unsupported')), exit: () => undefined });
   }
 
+  // Hands an initialized process to a chat, which then gets its notifications and requests; null once it has ended.
+  adopt(handlers: RpcHandlers) {
+    if (this.closed) return null;
+    this.handlers = handlers;
+    return this;
+  }
+
   async initialize() {
     await this.request('initialize', { clientInfo: { name: 'agentview', title: 'AgentView', version: '1' }, capabilities: null });
     this.send({ method: 'initialized' });
