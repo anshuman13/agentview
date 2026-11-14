@@ -108,10 +108,17 @@ fun stopAtMs(stop: StopChoice, now: Long): Long? {
 
 private val PLANNED_ENDS = listOf("goal met", "stopped at", "usage cap", "ran for 28 days", "end time", "weekly usage cap")
 
+// How an ended run ended, from its why (shared goalEnd, fixture goal-end.json).
+fun goalEnd(why: String) = when {
+    PLANNED_ENDS.any { why.startsWith(it, ignoreCase = true) } -> "done"
+    why == "you stopped it" -> "skipped"
+    else -> "failed"
+}
+
 fun goalBadge(run: ChatRun): Pair<String, BadgeTone> = when {
-    run.state == "done" -> when {
-        PLANNED_ENDS.any { run.why.startsWith(it, ignoreCase = true) } -> "Done" to BadgeTone.Done
-        run.why == "you stopped it" -> "Skipped" to BadgeTone.Quiet
+    run.state == "done" -> when (goalEnd(run.why)) {
+        "done" -> "Done" to BadgeTone.Done
+        "skipped" -> "Skipped" to BadgeTone.Quiet
         else -> "Failed" to BadgeTone.Failed
     }
     run.needsYou -> "Needs you" to BadgeTone.Waiting

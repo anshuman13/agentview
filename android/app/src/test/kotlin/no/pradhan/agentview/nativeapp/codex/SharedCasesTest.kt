@@ -41,6 +41,7 @@ import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.statusLine
 import no.pradhan.agentview.nativeapp.chat.stripRound
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
+import no.pradhan.agentview.nativeapp.codex.autopilot.goalEnd
 import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
 import no.pradhan.agentview.nativeapp.codex.autopilot.addPreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
@@ -230,6 +231,10 @@ class SharedCasesTest {
             val endedAt = c.nullable("endedAt")?.jsonPrimitive?.long
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, finishedLine(c.str("why"), endedAt) { "${it}h ago" })
         }
+    }
+
+    @Test fun goalEnd() {
+        for (c in cases("goal-end")) assertEquals(c.str("name"), c.str("expected"), goalEnd(c.str("why")))
     }
 
     @Test fun runLine() {

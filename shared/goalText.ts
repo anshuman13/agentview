@@ -59,5 +59,15 @@ export const goalNotMet = (n: number) => `Not met after ${rounds(n)}`;
 
 export const GOAL_RAN_OUT = 'Ran for 28 days, start it again to continue';
 
+export const STOPPED_BY_YOU = 'you stopped it';
+
+// How an ended run ended, from its why: met, stopped at its end time, capped or run out are planned ends (Android goalEnd).
+// 'end time' and 'weekly usage cap' are older wordings still in saved runs.
+const PLANNED_ENDS = ['goal met', 'stopped at', 'usage cap', 'ran for 28 days', 'end time', 'weekly usage cap'];
+export function goalEnd(why: string): 'done' | 'skipped' | 'failed' {
+  if (PLANNED_ENDS.some((w) => why.toLowerCase().startsWith(w))) return 'done';
+  return why === STOPPED_BY_YOU ? 'skipped' : 'failed';
+}
+
 // A run's build limit as its rows show it; empty without one.
 export const buildsLine = (run: Pick<ChatRun, 'builds' | 'maxBuilds'>): string => (run.maxBuilds ? `Builds ${run.builds ?? 0} of ${run.maxBuilds}` : '');

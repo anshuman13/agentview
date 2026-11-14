@@ -1,6 +1,6 @@
 import { MAX_GOAL_ROUNDS, type ChatRun, type PlanUsage, type Repeat, type RunEdit, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, nextClock, span } from '../../../shared/util.js';
-import { GOAL_RAN_OUT, goalCapReached, goalNotMet, goalPlan, goalStoppedAt, nextRound, skipText } from '../../../shared/goalText.js';
+import { GOAL_RAN_OUT, STOPPED_BY_YOU, goalCapReached, goalNotMet, goalPlan, goalStoppedAt, nextRound, skipText } from '../../../shared/goalText.js';
 import { MAX_EVERY, MIN_EVERY } from '../../../shared/goalForm.js';
 import type { Cron } from '../agent/types.js';
 
@@ -156,12 +156,12 @@ export class RepeatController {
     echo();
     const word = goal ? 'Goal' : 'Loop';
     if (parsed === 'usage') this.host.system(goal ? GOAL_USAGE : USAGE);
-    else if (parsed === 'off') this.set(null, this.host.repeat() ? `${word} off` : `No ${word.toLowerCase()} is running`, 'you stopped it');
+    else if (parsed === 'off') this.set(null, this.host.repeat() ? `${word} off` : `No ${word.toLowerCase()} is running`, STOPPED_BY_YOU);
     else this.set(parsed);
     return true;
   }
 
-  set(r: Repeat | null, note?: string, why = note ?? 'you stopped it') {
+  set(r: Repeat | null, note?: string, why = note ?? STOPPED_BY_YOU) {
     clearTimeout(this.timer);
     this.due = false;
     const old = this.host.repeat();
@@ -235,7 +235,7 @@ export class RepeatController {
     const r = this.host.repeat();
     if (!r) return;
     this.stopped = { r, at: Date.now() };
-    this.set(null, `${r.goal ? 'Goal' : 'Loop'} stopped`, 'you stopped it');
+    this.set(null, `${r.goal ? 'Goal' : 'Loop'} stopped`, STOPPED_BY_YOU);
   }
 
   restore(runId: string) {

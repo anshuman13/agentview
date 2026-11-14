@@ -1,0 +1,11 @@
+[
+  { "name": "goal met", "why": "Goal met after 4 rounds", "expected": "done" },
+  { "name": "stopped at its end time", "why": "Stopped at 18:00 · 3 rounds", "expected": "done" },
+  { "name": "usage cap", "why": "Usage cap 70% reached", "expected": "done" },
+  { "name": "ran out", "why": "Ran for 28 days, start it again to continue", "expected": "done" },
+  { "name": "older end time wording", "why": "end time 18:00", "expected": "done" },
+  { "name": "older cap wording", "why": "weekly usage cap 70% reached", "expected": "done" },
+  { "name": "stopped by hand", "why": "you stopped it", "expected": "skipped" },
+  { "name": "not met", "why": "Not met after 20 rounds", "expected": "failed" },
+  { "name": "chat closed", "why": "chat closed", "expected": "failed" }
+]

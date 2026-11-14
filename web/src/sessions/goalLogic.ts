@@ -3,7 +3,7 @@ import { track } from '../app/featureUse';
 import type { BadgeSpec } from '../ui/Badge';
 import type { ChatRun, RunOp } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
-import { buildsLine } from '../../../shared/goalText';
+import { buildsLine, goalEnd } from '../../../shared/goalText';
 import { ADVISOR_LOOP_EVERY } from '../../../shared/advisors';
 import { showTurn, stoppedText } from '../chat/composer/composerLogic';
 import { showSnack } from '../codex/view';
@@ -38,12 +38,10 @@ export function stopAtMs({ stopIn, stopAt }: Stop, now: number) {
   return nextClock(h, m, now);
 }
 
-const PLANNED_ENDS = ['goal met', 'stopped at', 'usage cap', 'ran for 28 days', 'end time', 'weekly usage cap'];
-
 export function goalBadge(run: ChatRun): BadgeSpec {
   if (run.state === 'done') {
-    if (PLANNED_ENDS.some((w) => run.why.toLowerCase().startsWith(w))) return { status: 'done' };
-    return { status: run.why === 'you stopped it' ? 'skipped' : 'failed', reason: run.why };
+    const end = goalEnd(run.why);
+    return end === 'done' ? { status: 'done' } : { status: end, reason: run.why };
   }
   if (run.needsYou) return { status: 'waiting', label: 'Needs you' };
   if (run.state === 'paused') return { status: 'waiting', reason: run.why };

@@ -5,6 +5,7 @@ import { APP, post } from '../integrations/notify.js';
 import { ROUND_INSTRUCTION } from './repeat.js';
 import { WAITING, openTries, roundResult } from './runs.js';
 import type { AgentSession } from './session.js';
+import { STOPPED_BY_YOU } from '../../../shared/goalText.js';
 
 export class RunLinks {
   // The tries run whose comparison turn is running here.
@@ -83,11 +84,11 @@ export class RunLinks {
 
   control(run: string, op: RunOp) {
     const { runs, cycle, repeater, state } = this.s;
-    if (runs.get(run)?.kind === 'tries') return op === 'stop' ? runs.end(run, 'you stopped it') : undefined;
+    if (runs.get(run)?.kind === 'tries') return op === 'stop' ? runs.end(run, STOPPED_BY_YOU) : undefined;
     if (cycle.run === run) return op === 'stop' ? cycle.set(false) : undefined;
     if (runs.jobFor(this.s.id)?.id === run) {
       if (op !== 'stop') return;
-      runs.end(run, 'you stopped it');
+      runs.end(run, STOPPED_BY_YOU);
       return void this.s.interrupt();
     }
     if (op === 'restore') return repeater.restore(run);

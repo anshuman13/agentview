@@ -5,6 +5,7 @@ import { errText } from '../../../shared/util.js';
 import type { AskOptions, Decision } from '../agent/types.js';
 import { looping, loopOff, needsApproval, phaseRound, planStep, withLoop, type LoopStep } from './loop.js';
 import type { AgentSession } from './session.js';
+import { STOPPED_BY_YOU } from '../../../shared/goalText.js';
 
 export class BuildCycle {
   run: string | undefined;
@@ -29,7 +30,7 @@ export class BuildCycle {
   private stop() {
     if (this.s.state.session.running) return void this.s.interrupt();
     this.s.setSession({ loop: { ...this.s.state.session.loop, phase: null } });
-    this.end('Build cycle off', 'you stopped it');
+    this.end('Build cycle off', STOPPED_BY_YOU);
   }
 
   restore(loop: LoopState) {
@@ -141,7 +142,7 @@ export class BuildCycle {
     const loop = this.s.state.session.loop;
     if (!looping(loop)) return;
     this.s.setSession({ loop: { ...loop, phase: null } });
-    this.end('Build cycle stopped', 'you stopped it');
+    this.end('Build cycle stopped', STOPPED_BY_YOU);
   }
 
   // No result comes for the step that was running, so the loop cannot advance.

@@ -9,10 +9,11 @@ import { sendWhenChanged } from './changed.js';
 import { LearnQueue } from './learnQueue.js';
 import { summary } from './summary.js';
 import { broadcast, hub, live, viewers } from './state.js';
+import { STOPPED_BY_YOU } from '../../../shared/goalText.js';
 
 export const runs = new Runs(path.join(os.homedir(), '.agentview', 'runs.json'), () => broadcastLive(), (run) => {
   const chat = live.get(run.chatId)?.chat;
-  if (run.why === 'you stopped it' || (chat && viewers(chat))) return;
+  if (run.why === STOPPED_BY_YOU || (chat && viewers(chat))) return;
   notifyRunEnded(run, chat ? path.basename(chat.cwd) : '', !desktopActive(hub.desktopAt));
 }, (run) => live.get(run.chatId)?.chat.links.compareTries(run));
 
