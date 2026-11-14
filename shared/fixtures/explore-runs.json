@@ -1,0 +1,10 @@
+[
+  {"name": "three reads", "rows": [{"name": "Read", "ok": true}, {"name": "Read", "ok": true}, {"name": "Read", "ok": true}], "runs": [{"start": 0, "end": 3}], "labels": ["3 files"]},
+  {"name": "two reads then a reply", "rows": [{"name": "Read", "ok": true}, {"name": "Read", "ok": true}, {"name": null, "ok": true}], "runs": [], "labels": []},
+  {"name": "read grep read grep", "rows": [{"name": "Read", "ok": true}, {"name": "Grep", "ok": true}, {"name": "Read", "ok": true}, {"name": "Grep", "ok": true}], "runs": [{"start": 0, "end": 4}], "labels": ["2 files, 2 searches"]},
+  {"name": "bash splits 2 and 3", "rows": [{"name": "Read", "ok": true}, {"name": "Read", "ok": true}, {"name": "Bash", "ok": true}, {"name": "Read", "ok": true}, {"name": "Grep", "ok": true}, {"name": "Read", "ok": true}], "runs": [{"start": 3, "end": 6}], "labels": ["2 files, 1 search"]},
+  {"name": "failed read ends a run", "rows": [{"name": "Read", "ok": true}, {"name": "Read", "ok": true}, {"name": "Read", "ok": false}, {"name": "Read", "ok": true}, {"name": "Read", "ok": true}], "runs": [], "labels": []},
+  {"name": "unfinished step ends a run", "rows": [{"name": "Read", "ok": true}, {"name": "Read", "ok": true}, {"name": "Read", "ok": true}, {"name": "Grep", "ok": false}, {"name": "Read", "ok": true}], "runs": [{"start": 0, "end": 3}], "labels": ["3 files"]},
+  {"name": "LS between reads and a glob", "rows": [{"name": "Read", "ok": true}, {"name": "LS", "ok": true}, {"name": "Read", "ok": true}, {"name": "Glob", "ok": true}], "runs": [{"start": 0, "end": 4}], "labels": ["2 files, 2 searches"]},
+  {"name": "one read only", "rows": [{"name": "Read", "ok": true}], "runs": [], "labels": []}
+]

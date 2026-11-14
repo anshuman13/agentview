@@ -296,26 +296,31 @@ fun chatMarkdown(title: String, events: List<ChatEvent>): String = buildString {
     }
 }.trimEnd() + "\n"
 
-private val EXPLORE = setOf("Read", "Grep", "Glob")
+private val EXPLORE = setOf("Read", "Grep", "Glob", "LS")
 
-// Runs of at least min finished Read, Grep and Glob steps in a row, keyed by the first step's id, so the
-// transcript folds each into one Explored row like Slack's compact message groups.
-fun exploreRuns(items: List<Item>, min: Int = 3): Map<String, List<Item.Step>> {
-    val runs = mutableMapOf<String, List<Item.Step>>()
-    var run = mutableListOf<Item.Step>()
-    fun close() { if (run.size >= min) runs[run.first().id] = run; run = mutableListOf() }
-    for (it in items) {
-        if (it is Item.Step && it.use.name in EXPLORE && it.result != null && !it.result.isError) run += it else close()
-    }
-    close()
+fun exploreRunsOf(rows: List<Pair<String?, Boolean>>, min: Int = 3): List<IntRange> {
+    val runs = mutableListOf<IntRange>()
+    var start = -1
+    fun close(end: Int) { if (start >= 0 && end - start >= min) runs += start until end; start = -1 }
+    rows.forEachIndexed { i, (name, ok) -> if (name in EXPLORE && ok) { if (start < 0) start = i } else close(i) }
+    close(rows.size)
     return runs
 }
 
-fun exploreLabel(steps: List<Item.Step>): String {
-    val reads = steps.count { it.use.name == "Read" }
-    val searches = steps.size - reads
+fun exploreLabelOf(names: List<String>): String {
+    val reads = names.count { it == "Read" }
+    val searches = names.size - reads
     return listOfNotNull(
         if (reads > 0) "$reads ${if (reads == 1) "file" else "files"}" else null,
         if (searches > 0) "$searches ${if (searches == 1) "search" else "searches"}" else null,
     ).joinToString(", ")
 }
+
+// Runs of at least min finished Read, Grep, Glob and LS steps in a row, keyed by the first step's id, so the
+// transcript folds each into one Explored row like Slack's compact message groups.
+fun exploreRuns(items: List<Item>, min: Int = 3): Map<String, List<Item.Step>> {
+    val rows = items.map { (it as? Item.Step)?.use?.name to (it is Item.Step && it.result != null && !it.result.isError) }
+    return exploreRunsOf(rows, min).associate { items[it.first].id to items.slice(it).filterIsInstance<Item.Step>() }
+}
+
+fun exploreLabel(steps: List<Item.Step>) = exploreLabelOf(steps.map { it.use.name })

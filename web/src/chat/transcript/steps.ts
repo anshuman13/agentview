@@ -1,5 +1,6 @@
 import { editCount, stripRound, type EditCount } from '../../../../shared/edits';
 import { isSpecPath, specSlug } from '../../../../shared/specTasks';
+import { exploreLabelOf, exploreRunsOf } from '../../../../shared/explore';
 import { buildStageOf } from '../../../../shared/builds';
 import type { ChatEvent } from '../../../../shared/protocol';
 
@@ -181,11 +182,8 @@ export function createTranscriptBuilder() {
   };
 }
 
-const EXPLORE = new Set(['Read', 'Grep', 'Glob']);
 export type StepItem = Extract<Item, { kind: 'step' }>;
 
-// Runs of at least min finished Read, Grep and Glob steps in a row, keyed by the first step's id, so the
-// transcript folds each into one Explored row like Slack's compact message groups (the phone does the same).
 // Slack-style New line: the first reply or step that arrived after the chat was last seen and before it was opened; android Steps.kt newMarker says the same.
 // Slack-style day dividers: the label above each prompt that starts a new day. A chat that stays within today gets none.
 export function dayDividers(items: Item[], now: number) {
@@ -257,20 +255,13 @@ export function newMarker(items: Item[], ats: Map<string, number>, seen: number,
   return items.find((it) => it.kind !== 'user' && (ats.get(it.id) ?? 0) > seen && (ats.get(it.id) ?? 0) <= openedAt)?.id ?? null;
 }
 
+// Runs of at least min finished Read, Grep, Glob and LS steps in a row, keyed by the first step's id, so the
+// transcript folds each into one Explored row like Slack's compact message groups (the phone does the same).
 export function exploreRuns(items: Item[], min = 3) {
-  const runs = new Map<string, StepItem[]>();
-  let run: StepItem[] = [];
-  const close = () => { if (run.length >= min) runs.set(run[0].id, run); run = []; };
-  for (const it of items) {
-    if (it.kind === 'step' && EXPLORE.has(it.use.name) && it.result && !it.result.isError) run.push(it);
-    else close();
-  }
-  close();
-  return runs;
+  const rows = items.map((it) => ({ name: it.kind === 'step' ? it.use.name : null, ok: it.kind === 'step' && !!it.result && !it.result.isError }));
+  return new Map(exploreRunsOf(rows, min).map(({ start, end }) => [items[start].id, items.slice(start, end) as StepItem[]]));
 }
 
 export function exploreLabel(steps: StepItem[]) {
-  const reads = steps.filter((s) => s.use.name === 'Read').length;
-  const searches = steps.length - reads;
-  return [reads && `${reads} ${reads === 1 ? 'file' : 'files'}`, searches && `${searches} ${searches === 1 ? 'search' : 'searches'}`].filter(Boolean).join(', ');
+  return exploreLabelOf(steps.map((s) => s.use.name));
 }

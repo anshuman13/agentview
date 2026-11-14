@@ -31,6 +31,8 @@ import no.pradhan.agentview.nativeapp.chat.ChecklistItem
 import no.pradhan.agentview.nativeapp.chat.checklistCurrent
 import no.pradhan.agentview.nativeapp.chat.checklistProgress
 import no.pradhan.agentview.nativeapp.chat.editCount
+import no.pradhan.agentview.nativeapp.chat.exploreLabelOf
+import no.pradhan.agentview.nativeapp.chat.exploreRunsOf
 import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.latestChecklist
 import no.pradhan.agentview.nativeapp.chat.reviewLabel
@@ -107,7 +109,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
-// The cases in shared/fixtures also run in shared/cases.test.ts, so a case added there is checked against both implementations.
+// The cases in shared/fixtures also run in web/src/sharedCases.test.ts, so a case added there is checked against both implementations.
 class SharedCasesTest {
     @Before fun zone() { codexZone = ZoneId.of("UTC") }
 
@@ -142,6 +144,15 @@ class SharedCasesTest {
         for (c in cases("edit-count")) {
             val expected = c["expected"]?.takeIf { it !is JsonNull }?.jsonObject?.let { it.getValue("add").jsonPrimitive.long.toInt() to it.getValue("del").jsonPrimitive.long.toInt() }
             assertEquals(c.str("name"), expected, editCount(c.str("tool"), c.getValue("input").jsonObject))
+        }
+    }
+
+    @Test fun exploreRuns() {
+        for (c in cases("explore-runs")) {
+            val rows = c.getValue("rows").jsonArray.map { it.jsonObject }
+            val runs = exploreRunsOf(rows.map { r -> r["name"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content to r.getValue("ok").jsonPrimitive.boolean })
+            assertEquals(c.str("name"), c.getValue("runs").jsonArray.map { it.jsonObject.let { r -> r.getValue("start").jsonPrimitive.int until r.getValue("end").jsonPrimitive.int } }, runs)
+            assertEquals(c.str("name"), c.getValue("labels").jsonArray.map { it.jsonPrimitive.content }, runs.map { r -> exploreLabelOf(rows.slice(r).map { it.str("name") }) })
         }
     }
 

@@ -6,6 +6,7 @@ import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottom
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
+import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
 import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
@@ -59,6 +60,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; tool: string; input: Record<string, unknown>; expected: { add: number; del: number } | null }>('edit-count')) {
     it(`editCount: ${c.name}`, () => expect(editCount(c.tool, c.input)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; rows: ExploreRow[]; runs: { start: number; end: number }[]; labels: string[] }>('explore-runs')) {
+    it(`explore: ${c.name}`, () => {
+      const runs = exploreRunsOf(c.rows);
+      expect(runs).toEqual(c.runs);
+      expect(runs.map((r) => exploreLabelOf(c.rows.slice(r.start, r.end).map((x) => x.name!)))).toEqual(c.labels);
+    });
   }
 
   for (const c of cases<{ name: string; held: string[]; heldEarlier: number; tail: string[]; earlier: number; expected: string[]; expectedEarlier: number }>('merge-tail')) {
