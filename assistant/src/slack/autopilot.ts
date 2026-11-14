@@ -193,7 +193,7 @@ export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: str
     }
     url = r ? webUrl(r) : null;
   } catch (err) {
-    db.prepare("UPDATE replies SET status = 'error', text = ?, why = ?, tries = COALESCE(tries, 0) + 1 WHERE profile = ? AND id = ?").run(text, String(err), PROFILE, ask.id);
+    db.prepare("UPDATE replies SET status = 'error', mode = ?, text = ?, why = ?, tries = COALESCE(tries, 0) + 1 WHERE profile = ? AND id = ?").run(modeOf(c, now), text, String(err), PROFILE, ask.id);
     throw err;
   }
   const status = dry ? 'dry' : 'sent';
@@ -216,15 +216,15 @@ type Outcome = { answered: string[]; held: string[]; skipped: string[]; followup
 export const MAX_TRIES = 3;
 type Failed = { id: string; who: string; chat: string; tier: Tier; text: string; tries: number; url: string | null; title: string | null; why: string | null };
 
-// Posts that failed on an earlier scan, with their ask, while they still have tries left or need the one push.
-export const failedReplies = (db: Database) => db.prepare(
-  "SELECT r.id, r.who, r.chat, r.tier, r.text, COALESCE(r.tries, 0) AS tries, r.why, i.source_url AS url, i.title FROM replies r LEFT JOIN items i ON i.profile = r.profile AND i.id = r.id AND i.deleted = 0 WHERE r.profile = ? AND r.status = 'error' AND r.text IS NOT NULL AND COALESCE(r.tries, 0) <= ?",
-).all(PROFILE, MAX_TRIES) as Failed[];
+// Posts that failed on an earlier scan in this mode, with their ask, while they still have tries left or need the one push.
+export const failedReplies = (db: Database, mode: Mode) => db.prepare(
+  "SELECT r.id, r.who, r.chat, r.tier, r.text, COALESCE(r.tries, 0) AS tries, r.why, i.source_url AS url, i.title FROM replies r LEFT JOIN items i ON i.profile = r.profile AND i.id = r.id AND i.deleted = 0 WHERE r.profile = ? AND r.mode = ? AND r.status = 'error' AND r.text IS NOT NULL AND COALESCE(r.tries, 0) <= ?",
+).all(PROFILE, mode, MAX_TRIES) as Failed[];
 
 // Retries each failed post, up to MAX_TRIES in all; after the last failure it pushes me once and stops trying.
 async function retryFailed(db: Database, c: AutopilotConfig, now: number, post = postReply, push = pushNtfy) {
   const out = { answered: [] as string[], held: [] as string[] };
-  for (const f of failedReplies(db)) {
+  for (const f of failedReplies(db, modeOf(c, now))) {
     const title = f.title ?? f.id;
     if (f.tries >= MAX_TRIES) {
       if (await push('Reply failed 3 times', f.chat, `${f.who}: ${title}. ${f.why ?? ''}`.trim(), f.url ?? '')) db.prepare("UPDATE replies SET tries = ? WHERE profile = ? AND id = ?").run(MAX_TRIES + 1, PROFILE, f.id);
@@ -248,7 +248,7 @@ export async function afterScan(db: Database, c: AutopilotConfig, watched: strin
   const mode = modeOf(c, now);
   if (mode === 'off') return out;
   recordAsks(db, asks, mode, now);
-  // In assist mode the only failed posts are Sends I pressed, so they retry for real even in a dry run.
+  // In assist mode the failed posts are Sends I pressed, so they retry for real even in a dry run.
   if (mode !== 'away' || !c.away) {
     if (mode === 'assist') out.answered.push(...(await retryFailed(db, { ...c, dry_run: false }, now, post, push)).answered);
     return out;

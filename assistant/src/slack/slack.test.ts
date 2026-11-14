@@ -245,6 +245,6 @@ describe('askPush', () => {
     db.prepare("INSERT INTO replies (profile, id, status, text, tries, at) VALUES ('work', 'a1', 'error', 'Yes.', 1, 0)").run();
     skipAsk(db, 'a1', '', 5);
     expect(db.prepare('SELECT status FROM replies WHERE id = ?').get('a1')).toEqual({ status: 'skipped' });
-    expect(failedReplies(db)).toEqual([]);
+    expect(failedReplies(db, 'assist')).toEqual([]);
   });
 });

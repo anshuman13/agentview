@@ -206,6 +206,17 @@ describe('afterScan', () => {
     expect(r.answered).toEqual(['Answer u1']);
     expect(db2.prepare("SELECT status FROM replies WHERE id = ?").get(askId(url('u1')))).toEqual({ status: 'sent' });
   });
+
+  test('does not post an away reply that failed once the away window has ended', async () => {
+    const now = at(22, 10);
+    const asks = [ask('u1')];
+    const db = withAsks(asks, now);
+    await afterScan(db, away, ['ai-help'], asks, now, async () => { throw new Error('Slack down'); });
+    posts.length = 0;
+    const r = await afterScan(db, away, ['ai-help'], [], new Date(2027, 0, 10, 10).getTime(), post);
+    expect(r.answered).toEqual([]);
+    expect(posts).toEqual([]);
+  });
 });
 
 describe('replyNow', () => {
