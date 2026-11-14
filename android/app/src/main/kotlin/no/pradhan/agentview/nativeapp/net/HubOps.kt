@@ -5,7 +5,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import no.pradhan.agentview.nativeapp.ops.DeployJob
 import no.pradhan.agentview.nativeapp.ops.DeployStatus
-import no.pradhan.agentview.nativeapp.ops.Finding
+import no.pradhan.agentview.nativeapp.workspace.Finding
 import no.pradhan.agentview.nativeapp.ops.GrafanaDashboards
 import no.pradhan.agentview.nativeapp.ops.GrafanaLogs
 import no.pradhan.agentview.nativeapp.ops.GrafanaPanels
@@ -13,14 +13,14 @@ import no.pradhan.agentview.nativeapp.ops.GrafanaPatterns
 import no.pradhan.agentview.nativeapp.ops.McpConnector
 import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.ObserveInfo
-import no.pradhan.agentview.nativeapp.ops.ReviewFindings
+import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
 import no.pradhan.agentview.nativeapp.ops.deployBody
-import no.pradhan.agentview.nativeapp.ops.dismissBody
+import no.pradhan.agentview.nativeapp.workspace.dismissBody
 import no.pradhan.agentview.nativeapp.ops.mcpGroupBody
 import no.pradhan.agentview.nativeapp.ops.parseConnectors
 import no.pradhan.agentview.nativeapp.ops.parseDeploy
 import no.pradhan.agentview.nativeapp.ops.parseDeployJob
-import no.pradhan.agentview.nativeapp.ops.parseFindings
+import no.pradhan.agentview.nativeapp.workspace.parseFindings
 import no.pradhan.agentview.nativeapp.ops.parseMcp
 import no.pradhan.agentview.nativeapp.ops.parseObserve
 import no.pradhan.agentview.nativeapp.ops.rollbackBody

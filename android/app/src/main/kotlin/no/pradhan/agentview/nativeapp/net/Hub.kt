@@ -67,8 +67,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.autopilot.encodePresets
 import no.pradhan.agentview.nativeapp.codex.autopilot.parsePresets
 import no.pradhan.agentview.nativeapp.codex.needsView
-import no.pradhan.agentview.nativeapp.ops.Findings
-import no.pradhan.agentview.nativeapp.ops.ReviewFindings
+import no.pradhan.agentview.nativeapp.workspace.Findings
+import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.advisorOf
 import no.pradhan.agentview.nativeapp.sessions.state

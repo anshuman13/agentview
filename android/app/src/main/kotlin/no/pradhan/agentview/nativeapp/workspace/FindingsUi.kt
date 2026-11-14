@@ -1,4 +1,4 @@
-package no.pradhan.agentview.nativeapp.ops
+package no.pradhan.agentview.nativeapp.workspace
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect

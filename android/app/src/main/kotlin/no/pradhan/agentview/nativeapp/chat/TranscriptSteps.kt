@@ -60,7 +60,7 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.image
 import no.pradhan.agentview.nativeapp.net.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
-import no.pradhan.agentview.nativeapp.ops.Findings
+import no.pradhan.agentview.nativeapp.workspace.Findings
 import no.pradhan.agentview.nativeapp.ops.agentSummary
 import no.pradhan.agentview.nativeapp.ops.tokensText
 

@@ -14,9 +14,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
-import no.pradhan.agentview.nativeapp.ops.Findings
+import no.pradhan.agentview.nativeapp.workspace.Findings
 import no.pradhan.agentview.nativeapp.ops.McpServer
-import no.pradhan.agentview.nativeapp.ops.ReviewFindings
+import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
 
 val protocolJson = Json { ignoreUnknownKeys = true; isLenient = true }
 

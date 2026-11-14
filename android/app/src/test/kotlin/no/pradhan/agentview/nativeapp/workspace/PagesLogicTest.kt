@@ -23,7 +23,6 @@ import no.pradhan.agentview.nativeapp.net.ServerMessage
 import no.pradhan.agentview.nativeapp.net.Writes
 import no.pradhan.agentview.nativeapp.net.parseMessage
 import no.pradhan.agentview.nativeapp.ops.DeployJob
-import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.McpRow
 import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.agentGroups
@@ -33,12 +32,9 @@ import no.pradhan.agentview.nativeapp.ops.agentTrailing
 import no.pradhan.agentview.nativeapp.ops.buildAgents
 import no.pradhan.agentview.nativeapp.ops.deployBody
 import no.pradhan.agentview.nativeapp.ops.deployWarning
-import no.pradhan.agentview.nativeapp.ops.dismissBody
 import no.pradhan.agentview.nativeapp.ops.elapsed
 import no.pradhan.agentview.nativeapp.ops.envBadge
 import no.pradhan.agentview.nativeapp.ops.envMeta
-import no.pradhan.agentview.nativeapp.ops.findingFixPrompt
-import no.pradhan.agentview.nativeapp.ops.findingKey
 import no.pradhan.agentview.nativeapp.ops.mcpCalls
 import no.pradhan.agentview.nativeapp.ops.mcpGroupBody
 import no.pradhan.agentview.nativeapp.ops.mcpKey
@@ -56,11 +52,9 @@ import no.pradhan.agentview.nativeapp.ops.panelNum
 import no.pradhan.agentview.nativeapp.ops.parseConnectors
 import no.pradhan.agentview.nativeapp.ops.parseDeploy
 import no.pradhan.agentview.nativeapp.ops.parseDeployJob
-import no.pradhan.agentview.nativeapp.ops.parseFindings
 import no.pradhan.agentview.nativeapp.ops.parseMcp
 import no.pradhan.agentview.nativeapp.ops.parseObserve
 import no.pradhan.agentview.nativeapp.ops.reportText
-import no.pradhan.agentview.nativeapp.ops.reviewPrPrompt
 import no.pradhan.agentview.nativeapp.ops.sparkline
 import no.pradhan.agentview.nativeapp.ops.tokensText
 import no.pradhan.agentview.nativeapp.ui.BadgeTone

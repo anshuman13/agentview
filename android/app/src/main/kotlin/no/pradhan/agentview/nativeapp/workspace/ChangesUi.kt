@@ -34,9 +34,7 @@ import no.pradhan.agentview.nativeapp.net.gitStatus
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.readFile
 import no.pradhan.agentview.nativeapp.net.saveFile
-import no.pradhan.agentview.nativeapp.ops.DRAFT_PROMPT
-import no.pradhan.agentview.nativeapp.ops.Findings
-import no.pradhan.agentview.nativeapp.ops.REVIEW_LOCAL
+
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog

@@ -1,4 +1,4 @@
-package no.pradhan.agentview.nativeapp.ops
+package no.pradhan.agentview.nativeapp.workspace
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject

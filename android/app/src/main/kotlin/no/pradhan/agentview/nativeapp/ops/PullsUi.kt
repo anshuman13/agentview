@@ -1,5 +1,7 @@
 package no.pradhan.agentview.nativeapp.ops
 
+import no.pradhan.agentview.nativeapp.workspace.Findings
+import no.pradhan.agentview.nativeapp.workspace.reviewPrPrompt
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
