@@ -104,6 +104,32 @@ fun buildStageOf(subagentType: String, description: String, prompt: String): Bui
 
 fun pipelineLabel(pipeline: String) = PIPELINE_LABEL[pipeline] ?: pipeline
 
+// One spec of the project, from /api/advisors/specs; mirrors SpecHomeItem in shared/builds.ts.
+@Serializable
+data class SpecHomeItem(
+    val slug: String,
+    val title: String = "",
+    val pipeline: String = "written",
+    val state: String = "done",
+    val conclusion: String = "",
+    val updatedAt: Long = 0,
+    val hold: Boolean = false,
+    val waiting: Boolean = false,
+    val chat: String? = null,
+    val session: String? = null,
+    val built: Boolean = false,
+)
+
+private fun specHomeGroup(i: SpecHomeItem) = when {
+    i.waiting || i.hold -> 0
+    i.state in listOf("running", "failed", "waiting") -> 1
+    i.pipeline == "merged" -> 4
+    i.built -> 2
+    else -> 3
+}
+
+fun specHomeOrder(items: List<SpecHomeItem>) = items.sortedWith(compareBy<SpecHomeItem> { specHomeGroup(it) }.thenByDescending { it.updatedAt })
+
 fun stateDot(state: String) = when (state) { "done" -> DotState.Ok; "failed" -> DotState.Bad; "waiting" -> DotState.Warn; else -> DotState.Faint }
 
 val HOLD_BADGE = "Needs you" to BadgeTone.Waiting

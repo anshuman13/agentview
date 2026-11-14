@@ -1,6 +1,7 @@
 import { api } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
 import type { AdvisorInfo, Audit, BacklogItem } from '../../../shared/advisors';
+import type { SpecHomeItem } from '../../../shared/builds';
 import type { BuildDetail, ReviewPhase } from '../../../shared/builds';
 
 export const deleteRequest = (url: string) => fetch(apiUrl(url), { method: 'DELETE' }).catch(() => null);
@@ -12,6 +13,8 @@ export const searchMessages = (q: string) => fetch(api(`/api/sessions/search?q=$
 export const fetchAdvisors = (): Promise<AdvisorInfo[] | null> => fetch(api('/api/advisors')).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
 export const fetchBacklog = (root: string): Promise<BacklogItem[] | null> => fetch(api(`/api/advisors/backlog?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+export const fetchSpecs = (root: string): Promise<SpecHomeItem[] | null> => fetch(api(`/api/advisors/specs?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
 export const moveBacklogItem = (root: string, slug: string, dir: 'up' | 'down'): Promise<BacklogItem[] | null> =>
   fetch(api(`/api/advisors/backlog/move?root=${encodeURIComponent(root)}`), { method: 'POST', body: JSON.stringify({ slug, dir }) }).then((r) => (r.ok ? r.json() : null)).catch(() => null);

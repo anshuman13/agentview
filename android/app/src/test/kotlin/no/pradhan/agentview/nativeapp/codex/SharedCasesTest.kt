@@ -48,6 +48,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
 import no.pradhan.agentview.nativeapp.sessions.BuildEntry
+import no.pradhan.agentview.nativeapp.sessions.SpecHomeItem
+import no.pradhan.agentview.nativeapp.sessions.specHomeOrder
 import no.pradhan.agentview.nativeapp.sessions.buildTotals
 import no.pradhan.agentview.nativeapp.sessions.withoutCriteria
 import no.pradhan.agentview.nativeapp.net.ChatEvent
@@ -284,6 +286,16 @@ class SharedCasesTest {
 
     @Test fun specOpenTasks() {
         for (c in cases("spec-open-tasks")) assertEquals(c.str("name"), c.str("expected"), withoutOpenTasks(c.str("md")))
+    }
+
+    @Test fun specHome() {
+        for (c in cases("spec-home")) {
+            val items = c.getValue("items").jsonArray.map {
+                val o = it.jsonObject
+                SpecHomeItem(o.str("slug"), pipeline = o.str("pipeline"), state = o.str("state"), updatedAt = o.getValue("updatedAt").jsonPrimitive.long, hold = o.getValue("hold").jsonPrimitive.boolean, waiting = o.getValue("waiting").jsonPrimitive.boolean, built = o.getValue("built").jsonPrimitive.boolean)
+            }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, specHomeOrder(items).map { it.slug })
+        }
     }
 
     @Test fun specSlug() {

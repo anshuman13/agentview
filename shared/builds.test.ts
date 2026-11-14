@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import { approvalGate, canBuild, canSketch, buildStageOf, gateSlugOf, buildSummary, buildTotals, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, verdictOf, withoutCriteria, type BuildDetail, type BuildEntry, type BuildPhase, type BuildReview } from './builds.js';
+import { approvalGate, canBuild, canSketch, buildStageOf, gateSlugOf, buildSummary, buildTotals, criteriaOf, findingsOf, flowOf, pipelineOf, specCriteria, specHomeOrder, verdictOf, withoutCriteria, type BuildDetail, type BuildEntry, type BuildPhase, type BuildReview, type SpecHomeItem } from './builds.js';
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'builds.json'), 'utf8'));
 
 const specCases = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'spec-criteria.json'), 'utf8')) as Named<{ markdown: string; criteria: unknown; without: string }>[];
+
+const specHomeCases = JSON.parse(readFileSync(path.join(__dirname, 'fixtures', 'spec-home.json'), 'utf8')) as Named<{ items: SpecHomeItem[]; expected: string[] }>[];
 
 type Named<T> = { name: string } & T;
 
@@ -56,6 +58,10 @@ describe('spec criteria fixture', () => {
       expect(withoutCriteria(c.markdown)).toBe(c.without);
     });
   }
+});
+
+describe('spec home fixture', () => {
+  for (const c of specHomeCases) it(`specHomeOrder: ${c.name}`, () => expect(specHomeOrder(c.items).map((i) => i.slug)).toEqual(c.expected));
 });
 
 describe('approvalGate and the approval step', () => {

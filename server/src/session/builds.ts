@@ -1,7 +1,7 @@
-import { appendFile, readFile, stat } from 'node:fs/promises';
+import { appendFile, readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { REVIEW_PHASES, buildStageOf, isReviewPhase, buildSummary, criteriaOf, findingsOf, flowOf, inOrder, isHeld, lastCommit, pipelineOf, reviewDecision, reviewLine, sectionsOf, slugOk, specCriteria, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type ReviewPhase, type SpecCriterion, type SpecPhase } from '../../../shared/builds.js';
+import { REVIEW_PHASES, buildStageOf, isReviewPhase, buildSummary, criteriaOf, findingsOf, flowOf, inOrder, isHeld, lastCommit, pipelineOf, reviewDecision, reviewLine, sectionsOf, slugOk, specCriteria, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type SpecHomeItem, type ReviewPhase, type SpecCriterion, type SpecPhase } from '../../../shared/builds.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { jsonFile, readJson } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
@@ -203,6 +203,38 @@ export async function buildOne(cwd: string, slug: string) {
     entries: entries.map((e) => ({ ...e, verdict: verdictOf(e.report), criteria: criteriaOf(e.report), findings: findingsOf(e.report) })),
     commit: commit ? { files: parseNumstat(numstat), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff } : null,
   };
+}
+
+const MAX_LISTED = 20;
+
+// The newest specs of the project's main checkout with where each build stands, without the commit diff.
+export async function buildList(cwd: string): Promise<SpecHomeItem[]> {
+  const repo = await mainCheckout(cwd).catch(() => null);
+  if (!repo) return [];
+  const dir = path.join(repo, '.claude', 'specs');
+  const names = (await readdir(dir).catch(() => [])).filter((n) => n.endsWith('.md') && slugValid(n.slice(0, -3)));
+  const stats = await Promise.all(names.map(async (n) => ({ slug: n.slice(0, -3), mtime: (await stat(path.join(dir, n)).catch(() => null))?.mtimeMs ?? 0 })));
+  const newest = stats.sort((a, b) => b.mtime - a.mtime).slice(0, MAX_LISTED);
+  const merged = await mergedIn(repo);
+  return Promise.all(newest.map(async ({ slug }) => {
+    const [entries, reviews, spec] = await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]);
+    const done = await merged(lastCommit(entries));
+    const newestEntry = inOrder(entries).at(-1);
+    const summary = entries.length ? buildSummary(entries, done) : DRAFT;
+    return {
+      slug,
+      title: spec?.title ?? slug,
+      pipeline: pipelineOf(entries, done, reviews),
+      state: summary.state,
+      conclusion: summary.conclusion,
+      updatedAt: Math.max(spec?.mtime ?? 0, ...entries.map((e) => e.endedAt ?? e.startedAt)),
+      hold: isHeld(reviews),
+      waiting: flowOf(entries, reviews, spec?.phases ?? [], done).some((f) => f.key === 'approval' && f.state === 'waiting'),
+      chat: newestEntry?.chat ?? null,
+      session: newestEntry?.session ?? null,
+      built: entries.some((e) => e.stage === 'implement'),
+    };
+  }));
 }
 
 const unapproved = (spec: Spec, reviews: BuildReview[]) => spec.phases.filter((p) => reviewDecision(reviews, p.key)?.decision !== 'approve');

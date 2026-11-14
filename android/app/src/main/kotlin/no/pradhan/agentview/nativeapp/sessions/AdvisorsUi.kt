@@ -24,6 +24,7 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.newChat
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.showSpec
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -96,10 +97,11 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     var memory by rememberSaveable { mutableStateOf<String?>(null) }
     var root by rememberSaveable { mutableStateOf<String?>(null) }
     val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<BacklogItem>>(hub.read("/api/advisors/backlog?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
+    val (specs, reloadSpecs) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<SpecHomeItem>>(hub.read("/api/advisors/specs?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
     var moved by remember(root, backlog.data) { mutableStateOf<List<BacklogItem>?>(null) }
     val (audits, reloadAudit) = rememberLoad(root) { root?.let { listOfNotNull(protocolJson.decodeFromString<AuditInfo?>(hub.read("/api/advisors/audit?root=${java.net.URLEncoder.encode(it, "UTF-8")}"))) } }
     var loadedTurns by remember { mutableStateOf(turns) }
-    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadAudit() } }
+    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadSpecs(); reloadAudit() } }
     var auditOpen by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     fun go(open: suspend () -> Boolean) = scope.launch { if (open()) onOpen() }
@@ -199,6 +201,34 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                                 val move = { dir: String -> dismiss(); scope.launch { runCatching { hub.api.moveBacklog(project, i.slug, dir) }.onSuccess { moved = it }.onFailure { hub.notice.value = "Could not move the item" } }; Unit }
                                                 MenuItem("Move up", "arrow-up", { move("up") }, enabled = n > 0)
                                                 MenuItem("Move down", "arrow-down", { move("down") }, enabled = n < items.size - 1)
+                                            }),
+                                        )
+                                    }
+                                }
+                            }
+                            val list = specs.data
+                            if (project != null && list != null) {
+                                SectionHeader("Specs", list.size.takeIf { it > 0 }?.toString())
+                                if (list.isEmpty()) EmptyState("No specs yet", icon = "file") else Group {
+                                    specHomeOrder(list).forEachIndexed { n, i ->
+                                        if (n > 0) Hairline()
+                                        val live = st.live.any { it.id == i.chat }
+                                        val tappable = live || i.session != null
+                                        val badge = when {
+                                            i.waiting || i.hold || i.state == "waiting" -> "Needs you" to BadgeTone.Waiting
+                                            i.state == "running" -> "Running" to BadgeTone.Running
+                                            i.state == "failed" -> "Failed" to BadgeTone.Failed
+                                            else -> null
+                                        }
+                                        ListRow(
+                                            i.title, "${pipelineLabel(i.pipeline)} · ${i.conclusion}",
+                                            lines = 1, metaLines = 1,
+                                            state = badge?.let { (text, tone) -> { Badge(text, tone) } },
+                                            onClick = if (!tappable) null else ({
+                                                if (live) { hub.open(i.chat!!); scope.showSpec(hub, i.slug); onOpen() } else go { hub.openSaved(i.session!!) }
+                                            }),
+                                            menu = if (i.built || hub.readOnly) null else ({ dismiss ->
+                                                MenuItem("Build", "play", { dismiss(); hub.newChat(project, text = buildSpecPrompt(".claude/specs/${i.slug}.md"), onOpened = onOpen) })
                                             }),
                                         )
                                     }

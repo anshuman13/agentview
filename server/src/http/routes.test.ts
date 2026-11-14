@@ -78,6 +78,11 @@ describe('routes', () => {
     rmSync(base, { recursive: true, force: true });
   });
 
+  it('refuses the spec list for a folder outside the project folders', async () => {
+    const r = await call('GET', `/api/advisors/specs?root=${encodeURIComponent(os.tmpdir())}`);
+    expect([r.code, r.json]).toEqual([400, { error: 'Not a project folder' }]);
+  });
+
   it('answers 404 for an unknown /api path, falls to the web fallback otherwise, and 503 with no chat', async () => {
     const api = await call('GET', '/api/builds');
     expect([api.code, api.json, api.serveWeb.mock.calls.length]).toEqual([404, { error: 'Not found' }, 0]);

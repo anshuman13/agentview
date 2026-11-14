@@ -59,6 +59,14 @@ const PIPELINE_LABEL: Record<BuildPipeline, string> = { written: 'Spec written',
 
 export const pipelineLabel = (pipeline: BuildPipeline) => PIPELINE_LABEL[pipeline];
 
+export type SpecHomeItem = { slug: string; title: string; pipeline: BuildPipeline; state: BuildState; conclusion: string; updatedAt: number; hold: boolean; waiting: boolean; chat: string | null; session: string | null; built: boolean };
+
+const specHomeGroup = (i: SpecHomeItem) =>
+  i.waiting || i.hold ? 0 : ['running', 'failed', 'waiting'].includes(i.state) ? 1 : i.pipeline === 'merged' ? 4 : i.built ? 2 : 3;
+
+// The spec home list: what needs you first, then what runs, what is built but not merged, what is not built, what is merged; newest first within each.
+export const specHomeOrder = (items: SpecHomeItem[]) => [...items].sort((a, b) => specHomeGroup(a) - specHomeGroup(b) || b.updatedAt - a.updatedAt);
+
 export const phaseLabel = (key: ReviewTarget) => key[0].toUpperCase() + key.slice(1);
 
 export const decisionTitle = (r: BuildReview | undefined) => (!r ? 'Not reviewed' : r.decision === 'approve' ? 'Approved' : 'Changes requested');

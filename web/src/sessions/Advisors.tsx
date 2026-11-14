@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { openSpecSheet } from '../app/deepLinks';
 import { notice, useStore } from '../app/store';
 import { Markdown } from '../chat/Chat';
 import { Badge } from '../ui/Badge';
@@ -10,16 +11,18 @@ import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
 import { ADVISORS, advisorOf, auditPrompt, canBuildItem, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
+import { pipelineLabel, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
 import { buildItemPrompt, buildSpecPrompt } from '../../../shared/specTasks';
 import { askAdvisor, go } from './advisorChat';
 import { StateDot } from './ChatRows';
 import { chatState, since, useWorkspace, type Folder } from './folders';
-import { fetchAdvisors, fetchAudit, fetchBacklog, moveBacklogItem } from './sessionApi';
+import { fetchAdvisors, fetchAudit, fetchBacklog, fetchSpecs, moveBacklogItem } from './sessionApi';
 
 const open = (a: Advisor, fresh = false) => go({ type: 'open_advisor', id: a.id, ...(fresh && { fresh }) });
 
 // The Build action of a backlog row: a new chat in the project that builds from the spec, or has the pm agent write it first.
-const buildItem = (root: string, i: BacklogItem) => go({ type: 'new_session', cwd: root, text: i.spec ? buildSpecPrompt(`.claude/specs/${i.slug}.md`) : buildItemPrompt(i.title, i.why, i.slug) });
+const buildSpec = (root: string, slug: string) => go({ type: 'new_session', cwd: root, text: buildSpecPrompt(`.claude/specs/${slug}.md`) });
+const buildItem = (root: string, i: BacklogItem) => (i.spec ? buildSpec(root, i.slug) : go({ type: 'new_session', cwd: root, text: buildItemPrompt(i.title, i.why, i.slug) }));
 
 let chosenRoot: string | null = null;
 
@@ -77,6 +80,45 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
               </>}
             />
           ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+const specBadge = (i: SpecHomeItem) =>
+  i.waiting || i.hold || i.state === 'waiting' ? <Badge status="waiting" label="Needs you" /> : i.state === 'running' || i.state === 'failed' ? <Badge status={i.state} /> : undefined;
+
+// The newest specs of one project, what needs you first; a row opens the chat that ran the build, with its Spec sheet when that chat is live.
+function Specs({ shown, turns, root }: { shown: boolean; turns: string; root: string | null }) {
+  const specs = useRootFetch(fetchSpecs, root, shown, turns).data;
+  const live = useStore((s) => s.live);
+  if (!root || !specs) return null;
+  const openBuild = (i: SpecHomeItem) => {
+    if (i.chat && live.some((c) => c.id === i.chat)) {
+      go({ type: 'view', id: i.chat });
+      openSpecSheet(i.chat, i.slug);
+    } else go({ type: 'open_session', sessionId: i.session! });
+  };
+  return (
+    <>
+      <Section label="Specs" count={specs.length || undefined} />
+      {!specs.length ? <EmptyState size="sm" icon="file" title="No specs yet" /> : (
+        <div className="ui-group">
+          {specHomeOrder(specs).map((i) => {
+            const tappable = i.session || live.some((c) => c.id === i.chat);
+            return (
+              <Row
+                key={i.slug}
+                title={i.title}
+                meta={`${pipelineLabel(i.pipeline)} · ${i.conclusion}`}
+                state={specBadge(i)}
+                plain={!tappable}
+                onClick={tappable ? () => openBuild(i) : undefined}
+                menu={i.built ? undefined : <MenuItem icon="play" onClick={() => buildSpec(root, i.slug)}>Build</MenuItem>}
+              />
+            );
+          })}
         </div>
       )}
     </>
@@ -166,7 +208,7 @@ export function Advisors({ shown }: { shown: boolean }) {
               <Row title="Memory" meta={facts ? `${facts} ${facts === 1 ? 'fact' : 'facts'}` : 'Nothing yet'} plain={!facts} onClick={facts ? () => setMemory(memory === a.id ? null : a.id) : undefined} aria-expanded={facts ? memory === a.id : undefined} />
             </div>
             {memory === a.id && got && <div className="advisor-memory"><Markdown text={got.memory.replace(/^# .*\n/, '')} /></div>}
-            {a.id === 'pm' && <Backlog key={root} shown={shown} turns={turns} root={root} picker={picker} />}
+            {a.id === 'pm' && <><Backlog key={root} shown={shown} turns={turns} root={root} picker={picker} /><Specs key={`specs-${root}`} shown={shown} turns={turns} root={root} /></>}
             {a.id === 'designer' && <AuditRow key={root} shown={shown} turns={turns} root={root} running={!!c?.running} picker={picker} />}
           </Fragment>
         );

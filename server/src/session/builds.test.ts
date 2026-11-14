@@ -1,12 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'bun:test';
 import type { BuildEntry } from '../../../shared/builds.js';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 import { claudeSession } from '../agent/claude/driver.js';
-import { buildOne, reviewBuild, splitPhases } from './builds.js';
+import { buildList, buildOne, reviewBuild, splitPhases } from './builds.js';
 import { stubGlobal, unstubAllGlobals, waitFor } from '../../../testing.js';
 import { announceApproval } from '../host/approval.js';
 import { firstSeen } from './approvalSeen.js';
@@ -347,5 +347,42 @@ describe('spec criteria and flow', () => {
     expect(one.criteria.map((c) => c.result)).toEqual(['pending', 'pending', 'pending']);
     expect(one).toMatchObject({ entries: [], hold: false });
     expect(one.flow).toHaveLength(7);
+  });
+});
+
+describe('build list', () => {
+  const specs = path.join(repo, '.claude', 'specs');
+  const list = async () => (await buildList(repo)) as { slug: string; built: boolean; waiting: boolean; pipeline: string }[];
+
+  it('lists specs with their build state, skipping bad names', async () => {
+    mkdirSync(specs, { recursive: true });
+    writeFileSync(path.join(specs, 'plain-one.md'), '# Plain\n');
+    writeFileSync(path.join(specs, 'notes.txt'), 'x');
+    writeFileSync(path.join(specs, 'a..b.md'), '# Bad\n');
+    const items = await list();
+    expect(items.map((i) => i.slug)).not.toContain('a..b');
+    expect(items.map((i) => i.slug)).not.toContain('notes');
+    expect(items.find((i) => i.slug === 'plain-one')).toMatchObject({ built: false, waiting: false });
+  });
+
+  it('marks a spec waiting once its spec review is done without approval, and a merged build merged', async () => {
+    writeFileSync(path.join(specs, 'wait-one.md'), '# Wait\n\n## Behaviour\n1. x\n');
+    const s = claudeSession(repo);
+    s.pushEvent(agent('r1', 'review:wait-one', 'done'));
+    s.pushEvent(result('r1', 'Verdict: approve'));
+    await waitFor(() => expect(stored('wait-one')).toHaveLength(1));
+    expect((await list()).find((i) => i.slug === 'wait-one')).toMatchObject({ waiting: true, built: false });
+    expect((await list()).find((i) => i.slug === 'red-lamp')).toBeUndefined();
+    writeFileSync(path.join(specs, 'red-lamp.md'), '# Lamp\n');
+    expect((await list()).find((i) => i.slug === 'red-lamp')).toMatchObject({ built: true, pipeline: 'merged' });
+  });
+
+  it('returns the 20 newest specs, newest first', async () => {
+    for (let i = 0; i < 25; i++) {
+      const file = path.join(specs, `many-${String(i).padStart(2, '0')}.md`);
+      writeFileSync(file, `# Many ${i}\n`);
+      utimesSync(file, new Date(2030, 0, 1, 0, i), new Date(2030, 0, 1, 0, i));
+    }
+    expect((await list()).map((i) => i.slug)).toEqual(Array.from({ length: 20 }, (_, i) => `many-${String(24 - i).padStart(2, '0')}`));
   });
 });

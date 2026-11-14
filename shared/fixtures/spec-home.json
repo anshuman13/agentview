@@ -1,0 +1,24 @@
+[
+  {
+    "name": "groups in order, newest first inside a group",
+    "items": [
+      { "slug": "merged", "pipeline": "merged", "state": "done", "updatedAt": 90, "hold": false, "waiting": false, "built": true },
+      { "slug": "unbuilt-old", "pipeline": "written", "state": "done", "updatedAt": 10, "hold": false, "waiting": false, "built": false },
+      { "slug": "unmerged", "pipeline": "tested", "state": "done", "updatedAt": 50, "hold": false, "waiting": false, "built": true },
+      { "slug": "unbuilt-new", "pipeline": "written", "state": "done", "updatedAt": 20, "hold": false, "waiting": false, "built": false },
+      { "slug": "failed", "pipeline": "implemented", "state": "failed", "updatedAt": 5, "hold": false, "waiting": false, "built": true },
+      { "slug": "running", "pipeline": "reviewed", "state": "running", "updatedAt": 40, "hold": false, "waiting": false, "built": false },
+      { "slug": "held", "pipeline": "written", "state": "done", "updatedAt": 1, "hold": true, "waiting": false, "built": false },
+      { "slug": "waiting", "pipeline": "reviewed", "state": "done", "updatedAt": 2, "hold": false, "waiting": true, "built": false }
+    ],
+    "expected": ["waiting", "held", "running", "failed", "unmerged", "unbuilt-new", "unbuilt-old", "merged"]
+  },
+  {
+    "name": "a merged build that waits still comes first",
+    "items": [
+      { "slug": "a", "pipeline": "merged", "state": "done", "updatedAt": 9, "hold": false, "waiting": false, "built": true },
+      { "slug": "b", "pipeline": "merged", "state": "waiting", "updatedAt": 1, "hold": false, "waiting": false, "built": true }
+    ],
+    "expected": ["b", "a"]
+  }
+]

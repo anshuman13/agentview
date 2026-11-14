@@ -23,6 +23,7 @@ import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { readBody, savePaste } from './body.js';
 import { HANDLED, entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 import { advisorsInfo, moveBacklogFile, readAudit, readBacklog } from '../session/advisors.js';
+import { buildList } from '../session/builds.js';
 import { allowedFolder } from '../workspace/files.js';
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
@@ -44,6 +45,10 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'GET /api/advisors/backlog': entry(({ url }) => {
       const root = url.searchParams.get('root') ?? '';
       return allowedFolder(root) ? readBacklog(root) : { status: 400, body: { error: 'Not a project folder' } };
+    }),
+    'GET /api/advisors/specs': entry(({ url }) => {
+      const root = url.searchParams.get('root') ?? '';
+      return allowedFolder(root) ? buildList(root) : { status: 400, body: { error: 'Not a project folder' } };
     }),
     'POST /api/advisors/backlog/move': entry(async ({ url, body }) => {
       const root = url.searchParams.get('root') ?? '';
