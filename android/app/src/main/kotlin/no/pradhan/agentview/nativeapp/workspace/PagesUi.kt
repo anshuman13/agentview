@@ -38,6 +38,7 @@ import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.select
 
 // The state of one page request: the last data, the error of the last try, and whether one is running.
 data class Loaded<T>(val data: T? = null, val error: String = "", val busy: Boolean = true)
@@ -62,10 +63,13 @@ fun <T> rememberLoad(vararg keys: Any?, fetch: suspend () -> T): Pair<Loaded<T>,
 
 // The folder the workspace pages act on, from the chat on screen.
 @Composable
-fun pageFolder(hub: Hub): String {
-    val st by hub.store.state.collectAsState()
-    val cwd = st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd
-    return cwd?.substringAfterLast('/') ?: "Last viewed chat"
+fun pageFolder(hub: Hub): String = pageRepo(hub).ifEmpty { "Last viewed chat" }
+
+// The repo name of the chat the page belongs to, empty when there is none.
+@Composable
+fun pageRepo(hub: Hub): String {
+    val cwd by hub.store.state.select { st -> st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd }
+    return cwd?.substringAfterLast('/').orEmpty()
 }
 
 @Composable
