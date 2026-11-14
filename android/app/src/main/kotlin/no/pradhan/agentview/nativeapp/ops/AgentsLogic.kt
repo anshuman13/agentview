@@ -10,6 +10,7 @@ import no.pradhan.agentview.nativeapp.chat.stepLabel
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ui.DotState
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // Port of web/src/sessions/agents.ts: the sub-agents of a chat, newest first in the list.
 @Immutable

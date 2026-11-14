@@ -12,7 +12,7 @@ import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.sessions.queryWords
-import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.ui.agoShort
 
 // The wiki index and page of web/src/codex/data/wiki.ts and wiki/WikiIndex.tsx.
 

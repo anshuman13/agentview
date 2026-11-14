@@ -41,7 +41,7 @@ import no.pradhan.agentview.nativeapp.net.review
 import no.pradhan.agentview.nativeapp.net.ReviewFile
 import no.pradhan.agentview.nativeapp.net.ReviewHunk
 import no.pradhan.agentview.nativeapp.net.submit
-import no.pradhan.agentview.nativeapp.ops.plural
+import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant

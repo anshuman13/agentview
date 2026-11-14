@@ -77,7 +77,7 @@ import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.workspace.FileScreen
 import no.pradhan.agentview.nativeapp.workspace.PrFile
-import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks

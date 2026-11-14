@@ -5,8 +5,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.serialization.Serializable
-import no.pradhan.agentview.nativeapp.workspace.agoShort
-import no.pradhan.agentview.nativeapp.workspace.isoMillis
+import no.pradhan.agentview.nativeapp.ui.agoShort
+import no.pradhan.agentview.nativeapp.ui.isoMillis
 
 @Serializable
 data class MessageHit(val sessionId: String, val role: String, val text: String, val at: String = "", val title: String = "", val cwd: String = "")

@@ -59,14 +59,14 @@ import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.PullRequest
 import no.pradhan.agentview.nativeapp.workspace.PullRequestDetail
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
-import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.autoMergeBody
 import no.pradhan.agentview.nativeapp.workspace.autoMergeOn
 import no.pradhan.agentview.nativeapp.workspace.autoMergeMeta
 import no.pradhan.agentview.nativeapp.workspace.checkDot
 import no.pradhan.agentview.nativeapp.workspace.fixPrPrompt
 import no.pradhan.agentview.nativeapp.workspace.ghProblem
-import no.pradhan.agentview.nativeapp.workspace.isoMillis
+import no.pradhan.agentview.nativeapp.ui.isoMillis
 import no.pradhan.agentview.nativeapp.workspace.mergeBody
 import no.pradhan.agentview.nativeapp.workspace.openLink
 import no.pradhan.agentview.nativeapp.workspace.prGroups

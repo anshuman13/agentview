@@ -3,7 +3,7 @@ package no.pradhan.agentview.nativeapp.codex.meetings
 import no.pradhan.agentview.nativeapp.chat.CMD_PREVIEW
 import no.pradhan.agentview.nativeapp.chat.cmdPreview
 import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
-import no.pradhan.agentview.nativeapp.codex.jobs.repoName
+import no.pradhan.agentview.nativeapp.codex.jobs.repoLabel
 import no.pradhan.agentview.nativeapp.codex.jobs.toolLabels
 import no.pradhan.agentview.nativeapp.codex.wiki.agoText
 import org.junit.Assert.assertEquals
@@ -52,9 +52,9 @@ class LeftoversTest {
     }
 
     @Test fun jobRepoRow() {
-        assertEquals("app", repoName("/Users/me/workspace/app"))
-        assertEquals(null, repoName(null))
-        assertEquals(null, repoName(""))
+        assertEquals("app", repoLabel("/Users/me/workspace/app"))
+        assertEquals(null, repoLabel(null))
+        assertEquals(null, repoLabel(""))
         assertTrue(SYNCED_FIELDS.getValue("jobs").contains("repo"))
     }
 }

@@ -95,7 +95,7 @@ import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.well
-import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.buildSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.lineDiff
 import no.pradhan.agentview.nativeapp.ui.rememberLoad

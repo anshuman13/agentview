@@ -14,8 +14,9 @@ import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
-import no.pradhan.agentview.nativeapp.workspace.agoShort
-import no.pradhan.agentview.nativeapp.workspace.isoMillis
+import no.pradhan.agentview.nativeapp.ui.agoShort
+import no.pradhan.agentview.nativeapp.ui.isoMillis
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // shared/observe.ts, the parts web/src/ops/Observe.tsx shows.
 @Serializable
@@ -206,8 +207,6 @@ fun mcpCalls(events: List<ChatEvent>): Map<String, Pair<Int, Int>> {
         .groupBy { it.name.split("__")[1] }
         .mapValues { (_, uses) -> uses.size to uses.count { it.id in failed } }
 }
-
-fun plural(n: Int, word: String) = "$n $word${if (n == 1) "" else "s"}"
 
 fun mcpMeta(r: McpRow, calls: Pair<Int, Int>?): String = listOfNotNull(
     r.server.tools?.let { if (it.isEmpty()) "No tools" else plural(it.size, "tool") },

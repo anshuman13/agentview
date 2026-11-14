@@ -1,7 +1,7 @@
 package no.pradhan.agentview.nativeapp.chat
 
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.workspace.isoMillis
+import no.pradhan.agentview.nativeapp.ui.isoMillis
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

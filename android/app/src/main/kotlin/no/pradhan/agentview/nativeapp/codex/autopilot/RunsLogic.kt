@@ -11,11 +11,11 @@ import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.ops.plural
+import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.workspace.PrFile
-import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.ui.agoShort
 
 // Loops, goals and build cycles (web/src/chat/composerLogic.ts runLine).
 

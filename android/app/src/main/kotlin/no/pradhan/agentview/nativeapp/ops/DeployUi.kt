@@ -52,8 +52,8 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
-import no.pradhan.agentview.nativeapp.workspace.agoShort
-import no.pradhan.agentview.nativeapp.workspace.isoMillis
+import no.pradhan.agentview.nativeapp.ui.agoShort
+import no.pradhan.agentview.nativeapp.ui.isoMillis
 import no.pradhan.agentview.nativeapp.workspace.openLink
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.select

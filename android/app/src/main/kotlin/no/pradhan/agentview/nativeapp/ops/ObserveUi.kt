@@ -62,6 +62,7 @@ import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.openLink
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.select
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // Observe (web/src/ops/Observe.tsx): Grafana dashboards, metric panels, error logs and patterns of a repo, and its settings.
 @Composable

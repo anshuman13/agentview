@@ -2,7 +2,7 @@ package no.pradhan.agentview.nativeapp.chat
 
 import java.util.Locale
 import no.pradhan.agentview.nativeapp.net.ChatEvent
-import no.pradhan.agentview.nativeapp.ops.plural
+import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 
 // Web chat/transcript/workFold.ts: each turn's work folded into one row above its last reply.

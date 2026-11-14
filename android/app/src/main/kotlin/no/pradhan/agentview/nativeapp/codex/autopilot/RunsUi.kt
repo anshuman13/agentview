@@ -33,7 +33,7 @@ import no.pradhan.agentview.nativeapp.net.RunTry
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.triesKeep
-import no.pradhan.agentview.nativeapp.ops.plural
+import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone

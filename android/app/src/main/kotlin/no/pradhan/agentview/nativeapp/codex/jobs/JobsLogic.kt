@@ -92,3 +92,6 @@ fun runMeta(r: Row): String {
 }
 
 fun jobsOf(jobs: List<Row>, profile: String?) = jobs.filter { !it.deleted && matchesProfile(profile, it) }.sortedBy { (it.str("name") ?: "").lowercase() }
+
+// The folder name of a job's repo, or null for a job that only reads.
+fun repoLabel(repo: String?): String? = repo?.trimEnd('/')?.substringAfterLast('/')?.ifEmpty { null }
