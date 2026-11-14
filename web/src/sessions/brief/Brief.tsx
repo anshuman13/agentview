@@ -7,7 +7,8 @@ import { Composer } from '../../chat/Chat';
 import { Transcript } from '../../chat/transcript/Transcript';
 import { createTurnsBuilder, type Turn } from '../../chat/transcript/turns';
 import { AgentsPane, Loading } from '../../app/lazy';
-import { LoopCard } from '../../chat/cards/LoopCard';
+import { RailHead } from './RailHead';
+import { Icon } from '../../ui/Icon';
 import { Sheet } from '../../ui/Sheet';
 import { agentsOf } from '../agents';
 import { useChatRun } from '../useChatRun';
@@ -72,7 +73,7 @@ export function Brief() {
   const side = agentCount > 0 || Boolean(run);
   const rail = side && (
     <>
-      <LoopCard />
+      <RailHead />
       {agentCount > 0 && <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense>}
     </>
   );
@@ -111,7 +112,7 @@ export function Brief() {
         </div>
         <div className="tl-line">
           <HeadState state={state} status={status} loop={loop} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
-          {phone && side && <button className="link tl-agents" onClick={() => { setShowAgents(true); setAgentSel(null); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'} ›</button>}
+          {phone && side && <button className="tl-agents" onClick={() => { setShowAgents(true); setAgentSel(null); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}
         </div>
         <Transcript showWork={showWork} />
       </div>

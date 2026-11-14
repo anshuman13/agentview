@@ -28,7 +28,14 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
   const cwd = useStore((s) => s.session.cwd);
   const now = useTick(1000, unseen.length > 0 || agents.some((a) => a.status === 'running'));
   const list = [...agents].reverse();
-  const groups = [...new Set(list.map((a) => a.group))].map((g) => [g, list.filter((a) => a.group === g)] as const).sort(([a], [b]) => Number(a !== undefined) - Number(b !== undefined));
+  // A workflow's agents group by their phase, the stages of the run, in the order the stages started.
+  const runs = new Set(agents.map((a) => a.group).filter(Boolean)).size;
+  const stageOf = (a: Agent) => {
+    if (!a.group) return undefined;
+    const phase = a.type !== 'general-purpose' ? a.type : '';
+    return phase ? (runs > 1 ? `${a.group} · ${phase}` : phase) : a.group;
+  };
+  const groups = [...new Set(agents.map(stageOf))].map((g) => [g, list.filter((a) => stageOf(a) === g)] as const).sort(([a], [b]) => Number(a !== undefined) - Number(b !== undefined));
   const current = agents.find((a) => a.id === selected) ?? list[0];
 
   if (!agents.length && !unseen.length) {
@@ -47,7 +54,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
         description={a.description}
         meta={sub}
         trailing={a.group && a.info?.usage ? `${took(a, now)} · ${tokens(a.info.usage.tokens)}` : took(a, now)}
-        current={a.id === current?.id}
+        current={stack ? a.id === selected : a.id === current?.id}
         onClick={() => onSelect(a.id)}
       />
     );
@@ -59,7 +66,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
       <div className="ag-side">
         {groups.map(([name, rows]) => (
           <Fragment key={name ?? ''}>
-            <Section label={name ?? 'Agents'} count={rows.length} />
+            {(name || !stack) && <Section label={name ?? 'Agents'} count={rows.length} />}
             <div className="as-group">{rows.map((a) => agentRow(a))}</div>
           </Fragment>
         ))}
