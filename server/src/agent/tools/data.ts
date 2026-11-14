@@ -64,7 +64,9 @@ export const dataWriteTool = defineTool({
     id: z.string().optional().describe('Existing row id; omit to create a row'),
     fields: z.record(z.string(), z.union([z.string(), z.number(), z.null()])),
   },
-  async handler({ table, id, fields }, { cwd }) {
+  async handler({ table, id, fields }, { cwd, unattended }) {
+    // A job runs with the tools it lists, so a sandboxed chat must not make or change one.
+    if (table === 'jobs' && unattended) return 'An unattended chat cannot create or change jobs.';
     const bad = Object.keys(fields).filter((f) => !WRITABLE[table].includes(f));
     if (bad.length) return `Unknown fields for ${table}: ${bad.join(', ')}. Columns: ${WRITABLE[table].join(', ')}.`;
     const row = id ? (await own(cwd, table)).find((r) => r.id === id) : undefined;

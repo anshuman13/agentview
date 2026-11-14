@@ -19,11 +19,11 @@ const OWN_CHROME = "This Mac also runs AgentView's own Chrome, driven with the m
 const ownChrome = (unattended?: Unattended): Record<string, McpServerConfig> =>
   !unattended && ownProfile() ? { browser: { type: 'stdio', command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {};
 
-function agentviewServer(o: { cwd: string; chat: () => string | null; host: ToolCtx['host']; openrouter?: OpenRouterSettings | null }) {
+function agentviewServer(o: { cwd: string; chat: () => string | null; host: ToolCtx['host']; openrouter?: OpenRouterSettings | null; unattended?: Unattended }) {
   return createSdkMcpServer({
     name: 'agentview',
     alwaysLoad: true,
-    tools: TOOLS.map((t) => tool(t.name, t.description, t.schema, async (args) => ({ content: [{ type: 'text' as const, text: await t.handler(args, { cwd: o.cwd, chatId: o.chat(), provider: o.openrouter ? 'openrouter' : 'claude', host: o.host }) }] }))),
+    tools: TOOLS.map((t) => tool(t.name, t.description, t.schema, async (args) => ({ content: [{ type: 'text' as const, text: await t.handler(args, { cwd: o.cwd, chatId: o.chat(), provider: o.openrouter ? 'openrouter' : 'claude', host: o.host, unattended: Boolean(o.unattended) }) }] }))),
   });
 }
 

@@ -28,4 +28,7 @@ describe('data_write', () => {
     expect(await dataWriteTool.handler({ table: 'jobs', id: 'a', fields: { prompt: 'x' } }, { cwd } as never)).toBe('A job with a repo is changed on the job page only.');
     expect(await dataWriteTool.handler({ table: 'jobs', id: 'b', fields: { prompt: 'x' } }, { cwd } as never)).toMatch(/Updated jobs/);
   });
+  test('refuses job writes from an unattended chat', async () => {
+    expect(await dataWriteTool.handler({ table: 'jobs', fields: { prompt: 'x', tools: 'browser' } }, { cwd: '/tmp', unattended: true } as never)).toBe('An unattended chat cannot create or change jobs.');
+  });
 });
