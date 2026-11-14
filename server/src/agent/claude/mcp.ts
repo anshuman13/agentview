@@ -7,6 +7,7 @@ import { configDir, loggedInAccounts } from './accounts.js';
 import { callTool, probe, stop, text, type McpServerDef } from '../../integrations/mcpClient.js';
 import { readJson, writeJson } from '../../json.js';
 import { exec, type ExecError } from '../../exec.js';
+import { cached } from '../../cached.js';
 
 type Config = McpServerDef | undefined;
 type Status = {
@@ -193,8 +194,6 @@ export function setMcpGroup(service: string, group: string): Promise<McpGroups> 
 // claude.ai connector status per Claude account, from `claude mcp list`, so the page knows every account without a chat on each.
 type Connector = { name: string; status: string };
 type Connectors = Record<string, Connector[]>;
-let connectorCache: { at: number; value: Connectors } | null = null;
-let connectorLoad: Promise<Connectors> | null = null;
 
 async function listConnectors(account: Account): Promise<Connector[]> {
   const env = { ...process.env };
@@ -213,19 +212,10 @@ async function listConnectors(account: Account): Promise<Connector[]> {
   });
 }
 
-// One listing runs at a time and is shared by every caller. A failed listing is not kept, so the next load tries again.
-function loadConnectors() {
-  if (connectorLoad) return connectorLoad;
+// One listing runs at a time and is shared by every caller. An expired one is returned at once and refreshed in the background.
+const connectors = cached(async (): Promise<Connectors> => {
   const accounts = loggedInAccounts();
-  const load = (connectorLoad = Promise.all(accounts.map(listConnectors)).then((lists) => Object.fromEntries(accounts.map((a, i) => [a, lists[i]]))));
-  const done = () => { connectorLoad = null; };
-  load.then((value) => { connectorCache = { at: Date.now(), value }; done(); }, done);
-  return load;
-}
-
-// An expired listing is returned at once and refreshed in the background; the first call and refresh wait.
-export async function connectorStatus(refresh = false) {
-  if (!connectorCache || refresh) return loadConnectors();
-  if (Date.now() - connectorCache.at > 5 * 60_000) loadConnectors().catch(() => undefined);
-  return connectorCache.value;
-}
+  const lists = await Promise.all(accounts.map(listConnectors));
+  return Object.fromEntries(accounts.map((a, i) => [a, lists[i]]));
+}, 5 * 60_000, true);
+export const connectorStatus = (refresh = false) => connectors(refresh);

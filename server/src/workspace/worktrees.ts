@@ -8,6 +8,7 @@ import { ROOTS } from './files.js';
 import { defaultBase, git as gitIn, mainCheckout, safeGit } from './git.js';
 import { mergedPrNumber } from '../integrations/github.js';
 import { exec as run } from '../exec.js';
+import { cached } from '../cached.js';
 
 const paseoMissing = (err: unknown) => (err as { code?: string }).code === 'ENOENT' || /Executable not found|paseo is not installed/.test((err as Error)?.message ?? '');
 const notInstalled = (err: unknown): never => { throw paseoMissing(err) ? new Error('paseo is not installed') : err; };
@@ -43,17 +44,9 @@ const detectKind = async (cwd: string) => {
   return inner === 'docs' || inner === 'other' ? kind : inner;
 };
 
-const REPOS_TTL = 10_000;
-let reposMemo: { at: number; value: Promise<Repo[]> } | null = null;
-
-// One listing is shared by calls within 10 s, and by calls that arrive while it runs. A failed one is not kept.
-export function listRepos(): Promise<Repo[]> {
-  if (reposMemo && Date.now() - reposMemo.at < REPOS_TTL) return reposMemo.value;
-  const value = scanRepos();
-  const memo = (reposMemo = { at: Date.now(), value });
-  value.catch(() => reposMemo === memo && (reposMemo = null));
-  return value;
-}
+// One listing is shared by calls within 10 s, and by calls that arrive while it runs.
+const repos = cached(() => scanRepos(), 10_000);
+export const listRepos = () => repos();
 
 // A git checkout directly in one of the roots, as the repo list shows it, checked without scanning the roots.
 export const isWorkspaceRepo = (dir: string) => ROOTS.includes(path.dirname(dir)) && !path.basename(dir).startsWith('.') && existsSync(path.join(dir, '.git'));
@@ -82,7 +75,7 @@ export async function createFolder(root: string, name: string) {
   const dir = path.join(base, name);
   await mkdir(dir).catch((err) => { throw new Error(err.code === 'EEXIST' ? `${name} already exists` : err.message); });
   await git(dir, 'init', '-b', 'main');
-  reposMemo = null;
+  repos.clear();
   return dir;
 }
 

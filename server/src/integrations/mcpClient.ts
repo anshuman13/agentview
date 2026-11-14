@@ -23,7 +23,6 @@ const INIT = { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 
 
 const MAX_BUF = 8 * 1024 * 1024;
 
-
 interface Transport {
   ready: Promise<void>;
   dead: boolean;
