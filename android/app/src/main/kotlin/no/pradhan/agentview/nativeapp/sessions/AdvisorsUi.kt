@@ -70,6 +70,13 @@ data class BacklogItem(val rank: Int, val slug: String, val title: String, val w
 
 internal fun advisorLoopGoal(root: String) = "Advisor loop for $root, never met on its own. Each round, as PM: reread $root/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to $root/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build (/agentview:build <slug>, the build card's Build action) and mark the item building; one build in flight per project; mark it done when merged, and if its spec has a Fixes: line ask the Designer advisor to recheck those findings, and say in the ROUND line if you cannot reach it. A claimed finding the Designer leaves open goes back to proposed, keeping its slug: next round move that line from done back to proposed and note the finding in the why. If the backlog is empty, ask the Designer for an audit when the newest $root/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing."
 
+// The project the page shows before one is picked: web defaultAdvisorRoot in shared/advisors.ts.
+internal fun defaultAdvisorRoot(openRoot: String?, repos: List<Pair<String, Long>>): String? =
+    if (openRoot != null && repos.any { it.first == openRoot }) openRoot else repos.fold(null as Pair<String, Long>?) { best, r -> if (best == null || r.second > best.second) r else best }?.first
+
+// The project picked from the menus, kept across visits like chosenRoot on web.
+private var advisorPick: String? = null
+
 internal fun advisorLoopOf(runs: List<ChatRun>, root: String): ChatRun? {
     val head = "Advisor loop for ${root.trimEnd('/')},"
     return runs.filter { it.kind == "goal" && it.state != "done" && it.what.startsWith(head) }.maxByOrNull { it.startedAt }
@@ -164,7 +171,10 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     val turns = st.live.filter { advisorOf(it.cwd) != null && !it.running }.joinToString { "${it.id}:${it.lastActive}" }
     val (load, reload) = rememberLoad { protocolJson.decodeFromString<List<AdvisorInfo>>(hub.read("/api/advisors")) }
     var memory by rememberSaveable { mutableStateOf<String?>(null) }
-    var root by rememberSaveable { mutableStateOf<String?>(null) }
+    var picked by remember { mutableStateOf(advisorPick) }
+    val shownChat = st.live.firstOrNull { it.id == st.shownId }
+    val openCwd = st.session?.cwd ?: shownChat?.cwd
+    val root = picked ?: defaultAdvisorRoot(openCwd?.let { folderKey(it, ws.repos, ws.trees) }, ws.repos.map { it.cwd to it.lastCommit.toLong() })
     val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<BacklogItem>>(hub.read("/api/advisors/backlog?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
     val (specs, reloadSpecs) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<SpecHomeItem>>(hub.read("/api/advisors/specs?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
     var moved by remember(root, backlog.data) { mutableStateOf<List<BacklogItem>?>(null) }
@@ -226,7 +236,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                         if (memory == a.id && got != null) Markdown(got.memory.replaceFirst(Regex("^# .*\n"), ""), Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4))
                         if (a.id == "designer") {
                             SectionHeader("Usability audit", action = {
-                                MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); root = r.cwd }, checked = r.cwd == root) }
+                                MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); advisorPick = r.cwd; picked = r.cwd }, checked = r.cwd == root) }
                             })
                             val project = root
                             val list = audits.data
@@ -260,7 +270,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                         if (a.id == "pm") {
                             val items = moved ?: backlog.data
                             SectionHeader("Backlog", items?.size?.takeIf { it > 0 }?.toString(), action = {
-                                MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); root = r.cwd }, checked = r.cwd == root) }
+                                MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); advisorPick = r.cwd; picked = r.cwd }, checked = r.cwd == root) }
                             })
                             val project = root
                             val loop = project?.let { advisorLoopOf(st.runs, it) }

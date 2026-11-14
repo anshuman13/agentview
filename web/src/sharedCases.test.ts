@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
-import { advisorLoopLine, advisorLoopOf, advisorNeedsYou } from '../../shared/advisors';
+import { advisorLoopLine, advisorLoopOf, advisorNeedsYou, defaultAdvisorRoot } from '../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
@@ -238,6 +238,12 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; phase: string | null; expected: string }>('run-line')) {
     it(`runLine: ${c.name}`, () => expect(runLine(run({ ...c.run, tries: c.run.tries?.map((t) => ({ n: 0, chatId: '', sessionId: '', branch: '', ...t })) }), c.phase)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; open: string | null; repos: { cwd: string; last: number }[]; expected: string | null }>('advisor-root')) {
+    it(`defaultAdvisorRoot: ${c.name}`, () => {
+      expect(defaultAdvisorRoot(c.open, c.repos)).toBe(c.expected);
+    });
   }
 
   for (const c of cases<{ name: string; root: string; runs: Partial<ChatRun>[]; expected: { id: string; line: string } | null }>('advisor-loop')) {

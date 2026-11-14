@@ -63,6 +63,7 @@ import no.pradhan.agentview.nativeapp.sessions.specHomeOrder
 import no.pradhan.agentview.nativeapp.sessions.specRowParts
 import no.pradhan.agentview.nativeapp.sessions.NeedsYouItem
 import no.pradhan.agentview.nativeapp.sessions.advisorNeedsYou
+import no.pradhan.agentview.nativeapp.sessions.defaultAdvisorRoot
 import no.pradhan.agentview.nativeapp.sessions.buildTotals
 import no.pradhan.agentview.nativeapp.sessions.withoutCriteria
 import no.pradhan.agentview.nativeapp.net.ChatEvent
@@ -235,6 +236,14 @@ class SharedCasesTest {
             val found = advisorLoopOf(runs, c.str("root"))
             val expected = c.nullable("expected")?.jsonObject
             assertEquals(c.str("name"), expected?.let { it.str("id") to it.str("line") }, found?.let { it.id to advisorLoopLine(it) })
+        }
+    }
+
+    @Test fun advisorRoot() {
+        for (c in cases("advisor-root")) {
+            val repos = c.getValue("repos").jsonArray.map { it.jsonObject.str("cwd") to it.jsonObject.getValue("last").jsonPrimitive.long }
+            val open = c.nullable("open")?.jsonPrimitive?.content
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, defaultAdvisorRoot(open, repos))
         }
     }
 

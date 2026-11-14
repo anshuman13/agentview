@@ -10,7 +10,7 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditPrompt, canBuildItem, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
+import { ADVISORS, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditPrompt, canBuildItem, defaultAdvisorRoot, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import { pipelineLabel, specRowParts, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
 import { OUTCOME_DOT } from '../chat/composer/composerLogic';
@@ -19,7 +19,7 @@ import { openRun } from './goalLogic';
 import { buildItemPrompt, buildSpecPrompt } from '../../../shared/specTasks';
 import { askAdvisor, go } from './advisorChat';
 import { StateDot } from './ChatRows';
-import { chatState, since, useWorkspace, type Folder } from './folders';
+import { chatState, repoRootOf, since, useWorkspace, type Folder } from './folders';
 import { fetchAdvisors, fetchAudit, fetchBacklog, fetchSpecs, moveBacklogItem } from './sessionApi';
 
 const open = (a: Advisor, fresh = false) => go({ type: 'open_advisor', id: a.id, ...(fresh && { fresh }) });
@@ -191,14 +191,16 @@ export function Advisors({ shown }: { shown: boolean }) {
   const live = useStore((s) => s.live);
   const seen = useStore((s) => s.seen);
   const viewing = useStore((s) => s.session.id);
+  const openCwd = useStore((s) => s.session.cwd);
   const [info, setInfo] = useState<AdvisorInfo[] | null | undefined>(undefined);
   const [memory, setMemory] = useState<string | null>(null);
   const { folders } = useWorkspace('advisors');
-  const [root, setRoot] = useState(chosenRoot);
+  const [picked, setPicked] = useState(chosenRoot);
   const pickRoot = (cwd: string) => {
     chosenRoot = cwd;
-    setRoot(cwd);
+    setPicked(cwd);
   };
+  const root = picked ?? defaultAdvisorRoot(repoRootOf(openCwd) ?? null, folders.filter((f) => f.repo));
   const picker = <ProjectPicker root={root} folders={folders} onPick={pickRoot} />;
   // Reloads when the page shows and after an advisor's turn, which may have changed its memory.
   const turns = live.filter((c) => advisorOf(c.cwd) && !c.running).map((c) => `${c.id}:${c.lastActive}`).join();

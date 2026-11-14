@@ -1,0 +1,8 @@
+[
+  {"name": "open repo wins over a newer one", "open": "/w/app", "repos": [{"cwd": "/w/new", "last": 300}, {"cwd": "/w/app", "last": 100}], "expected": "/w/app"},
+  {"name": "open path not in the list", "open": "/w/gone", "repos": [{"cwd": "/w/old", "last": 100}, {"cwd": "/w/new", "last": 300}], "expected": "/w/new"},
+  {"name": "no open chat", "open": null, "repos": [{"cwd": "/w/old", "last": 100}, {"cwd": "/w/new", "last": 300}], "expected": "/w/new"},
+  {"name": "equal last takes the first", "open": null, "repos": [{"cwd": "/w/a", "last": 200}, {"cwd": "/w/b", "last": 200}], "expected": "/w/a"},
+  {"name": "empty list", "open": "/w/app", "repos": [], "expected": null},
+  {"name": "open null with one repo", "open": null, "repos": [{"cwd": "/w/only", "last": 5}], "expected": "/w/only"}
+]

@@ -23,6 +23,10 @@ export const advisorOf = (cwd: string): Advisor | undefined => ADVISORS.find((a)
 // The facts in a memory file: its list lines.
 export const memoryFacts = (memory: string) => memory.split('\n').filter((l) => /^\s*[-*] /.test(l)).length;
 
+// The project the Advisors page shows before one is picked: the open chat's repo, else the repo with the latest activity.
+export const defaultAdvisorRoot = (openRoot: string | null, repos: { cwd: string; last: number }[]): string | null =>
+  openRoot && repos.some((r) => r.cwd === openRoot) ? openRoot : repos.reduce<{ cwd: string; last: number } | null>((best, r) => (!best || r.last > best.last ? r : best), null)?.cwd ?? null;
+
 // A project's .claude/backlog.md: one line per item, `<rank>. <slug> | <title> | <why> | <status>`, the PM's ranking of what to build next.
 export type BacklogStatus = 'proposed' | 'specced' | 'building' | 'done';
 export type BacklogItem = { rank: number; slug: string; title: string; why: string; status: BacklogStatus; spec: boolean };
