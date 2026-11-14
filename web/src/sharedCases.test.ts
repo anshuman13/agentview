@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
 import { advisorLoopLine, advisorLoopOf, advisorNeedsYou } from '../../shared/advisors';
-import type { SpecHomeItem } from '../../shared/builds';
+import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
 import { lastRoundText, mergeQuiet, roundText } from '../../shared/goalText';
@@ -222,6 +222,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; run: Partial<ChatRun>; working: boolean; expected: string }>('stopped-text')) {
     it(`stoppedText: ${c.name}`, () => expect(stoppedText(run(c.run), c.working)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; pipeline: SpecHomeItem['pipeline']; conclusion: string; updatedAt: number; meta: string; when: string }>('spec-row-parts')) {
+    it(`specRowParts: ${c.name}`, () => expect(specRowParts(c, (t) => `${t}h ago`)).toEqual({ meta: c.meta, when: c.when }));
   }
 
   for (const c of cases<{ name: string; run: Partial<ChatRun>; round: Round; expected?: string; full?: boolean }>('last-round-text')) {

@@ -11,7 +11,7 @@ import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
 import { ADVISORS, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditPrompt, canBuildItem, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
-import { pipelineLabel, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
+import { pipelineLabel, specRowParts, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
 import { OUTCOME_DOT } from '../chat/composer/composerLogic';
 import { holdBadge } from './buildsLogic';
@@ -112,11 +112,13 @@ function SpecRow({ spec: i, root }: { spec: SpecHomeItem; root: string }) {
       openSpecSheet(i.chat!, i.slug);
     } else go({ type: 'open_session', sessionId: i.session! });
   };
+  const { meta, when } = specRowParts(i, since);
   return (
     <Row
       title={i.title}
-      meta={`${pipelineLabel(i.pipeline)} · ${i.conclusion}`}
+      meta={meta}
       state={specBadge(i)}
+      trailing={when ? <span className="rn-cost">{when}</span> : undefined}
       plain={!tappable}
       onClick={tappable ? openBuild : undefined}
       menu={i.built ? undefined : <MenuItem icon="play" onClick={() => buildSpec(root, i.slug)}>Build</MenuItem>}

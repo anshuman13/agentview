@@ -60,6 +60,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
 import no.pradhan.agentview.nativeapp.sessions.BuildEntry
 import no.pradhan.agentview.nativeapp.sessions.SpecHomeItem
 import no.pradhan.agentview.nativeapp.sessions.specHomeOrder
+import no.pradhan.agentview.nativeapp.sessions.specRowParts
 import no.pradhan.agentview.nativeapp.sessions.NeedsYouItem
 import no.pradhan.agentview.nativeapp.sessions.advisorNeedsYou
 import no.pradhan.agentview.nativeapp.sessions.buildTotals
@@ -369,6 +370,14 @@ class SharedCasesTest {
                 SpecHomeItem(o.str("slug"), pipeline = o.str("pipeline"), state = o.str("state"), updatedAt = o.getValue("updatedAt").jsonPrimitive.long, hold = o.getValue("hold").jsonPrimitive.boolean, waiting = o.getValue("waiting").jsonPrimitive.boolean, built = o.getValue("built").jsonPrimitive.boolean)
             }
             assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, specHomeOrder(items).map { it.slug })
+        }
+    }
+
+    @Test fun specRowParts() {
+        for (c in cases("spec-row-parts")) {
+            val i = SpecHomeItem("s", pipeline = c.str("pipeline"), conclusion = c.str("conclusion"), updatedAt = c.getValue("updatedAt").jsonPrimitive.long)
+            val parts = specRowParts(i) { "${it}h ago" }
+            assertEquals(c.str("name"), c.str("meta") to c.str("when"), parts.meta to parts.age)
         }
     }
 

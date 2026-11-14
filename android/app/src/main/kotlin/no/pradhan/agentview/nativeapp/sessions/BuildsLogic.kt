@@ -128,6 +128,14 @@ private fun specHomeGroup(i: SpecHomeItem) = when {
     else -> 3
 }
 
+// A Specs row's meta and age (web shared/builds.ts specRowParts).
+data class SpecRowParts(val meta: String, val age: String)
+
+fun specRowParts(i: SpecHomeItem, ago: (Long) -> String): SpecRowParts {
+    val label = if (i.pipeline == "merged" && i.conclusion.startsWith("Merged")) "" else pipelineLabel(i.pipeline)
+    return SpecRowParts(listOf(label, i.conclusion).filter { it.isNotEmpty() }.joinToString(" · "), if (i.updatedAt > 0) ago(i.updatedAt) else "")
+}
+
 fun specHomeOrder(items: List<SpecHomeItem>) = items.sortedWith(compareBy<SpecHomeItem> { specHomeGroup(it) }.thenByDescending { it.updatedAt })
 
 fun stateDot(state: String) = when (state) { "done" -> DotState.Ok; "failed" -> DotState.Bad; "waiting" -> DotState.Warn; else -> DotState.Faint }

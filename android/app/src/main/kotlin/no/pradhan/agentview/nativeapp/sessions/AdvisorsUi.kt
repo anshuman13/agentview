@@ -32,6 +32,7 @@ import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
+import no.pradhan.agentview.nativeapp.ui.RowLabel
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -116,10 +117,12 @@ private fun SpecRow(hub: Hub, i: SpecHomeItem, project: String, live: Boolean, o
         i.state == "failed" -> "Failed" to BadgeTone.Failed
         else -> null
     }
+    val parts = specRowParts(i) { since(it) }
     ListRow(
-        i.title, "${pipelineLabel(i.pipeline)} · ${i.conclusion}",
+        i.title, parts.meta,
         lines = 1, metaLines = 1,
         state = badge?.let { (text, tone) -> { Badge(text, tone) } },
+        trailing = if (parts.age.isEmpty()) null else ({ RowLabel(parts.age) }),
         onClick = if (!live && i.session == null) null else ({
             if (live) { hub.open(i.chat!!); hub.showSpec(i.slug); onOpen() } else go { hub.openSaved(i.session!!) }
         }),

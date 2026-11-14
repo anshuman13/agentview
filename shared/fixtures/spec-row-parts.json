@@ -1,0 +1,7 @@
+[
+  { "name": "tested and passed", "pipeline": "tested", "conclusion": "Passed · not merged yet", "updatedAt": 2, "meta": "Tested · Passed · not merged yet", "when": "2h ago" },
+  { "name": "merged says Merged once", "pipeline": "merged", "conclusion": "Merged as 3f2a1b9", "updatedAt": 5, "meta": "Merged as 3f2a1b9", "when": "5h ago" },
+  { "name": "merged with another conclusion keeps the label", "pipeline": "merged", "conclusion": "Tests failed", "updatedAt": 1, "meta": "Merged · Tests failed", "when": "1h ago" },
+  { "name": "empty conclusion is the label alone", "pipeline": "written", "conclusion": "", "updatedAt": 3, "meta": "Spec written", "when": "3h ago" },
+  { "name": "no age when nothing is dated", "pipeline": "written", "conclusion": "", "updatedAt": 0, "meta": "Spec written", "when": "" }
+]
