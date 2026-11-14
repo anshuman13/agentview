@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../app/store';
 import { chatTitle as chatTitleOf } from '../../../../shared/util';
 import { REVIEW_LOCAL } from '../../ops/Findings';
@@ -6,7 +6,7 @@ import { Pending } from '../../chat/cards/Pending';
 import { Composer } from '../../chat/Chat';
 import { Transcript } from '../../chat/transcript/Transcript';
 import { createTurnsBuilder, type Turn } from '../../chat/transcript/turns';
-import { AgentsPane } from '../AgentsPane';
+import { AgentsPane, Loading } from '../../app/lazy';
 import { agentCounts, agentsOf } from '../agents';
 import { askChat, readFlag, saveFlag, useTick } from '../../ui/util';
 import { useMacName } from '../../app/shell/macName';
@@ -95,7 +95,7 @@ export function Brief() {
           <HeadState state={state} status={status} loop={loop} repeat={repeat} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
           <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
-        {showAgents ? <AgentsPane stack selected={agentSel} onSelect={setAgentSel} /> : <Transcript showWork={showWork} />}
+        {showAgents ? <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense> : <Transcript showWork={showWork} />}
         {!showAgents && <div ref={end} />}
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}
