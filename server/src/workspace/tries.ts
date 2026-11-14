@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { createWorktree } from './worktrees.js';
+import { createWorktree, removeRunWorktree } from './worktrees.js';
 import { exec as run } from '../exec.js';
 
 
@@ -53,8 +53,15 @@ export async function makeWorktree(repo: string, branch: string) {
 export async function startTries(cwd: string, n: number, prompt: string, ask: (cwd: string, prompt: string) => Promise<string>) {
   const repo = await mainCheckout(cwd);
   const branches = triesBranches(prompt, n);
-  const cwds = [];
-  for (const b of branches) cwds.push((await makeWorktree(repo, b)).dir);
+  const made: Array<{ dir: string; paseo: boolean; branch: string }> = [];
+  try {
+    for (const branch of branches) made.push({ ...(await makeWorktree(repo, branch)), branch });
+  } catch (err) {
+    // The tries already made would be left with no chat; they go with the failed start.
+    await Promise.all(made.map((m) => removeRunWorktree({ repo, worktree: m.dir, branch: m.branch, paseo: m.paseo }).catch(() => {})));
+    throw err;
+  }
+  const cwds = made.map((m) => m.dir);
   const ids = await Promise.all(cwds.map((c) => ask(c, prompt)));
   return ids.map((id, i) => ({ id, branch: branches[i] }));
 }
