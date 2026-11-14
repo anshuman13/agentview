@@ -131,7 +131,6 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
     var changes by rememberSaveable { mutableStateOf(true) }
     val canDiff = file != null && file.original.isNotEmpty() && file.original != file.content
     val isDoc = isMarkdown(path)
-    val hidden by hub.hiddenFeatures.collectAsState()
     val showDoc = preview && isDoc
     val diff = canDiff && mode == "diff" && !showDoc
 
