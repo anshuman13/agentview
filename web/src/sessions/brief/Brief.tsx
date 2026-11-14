@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../app/store';
+import { chatTitle as chatTitleOf } from '../../../../shared/util';
 import { REVIEW_LOCAL } from '../../ops/Findings';
 import { Icon } from '../../ui/Icon';
 import { Pending } from '../../chat/cards/Pending';
@@ -74,7 +75,7 @@ export function Brief() {
   }, []);
   useEffect(() => { setShowAgents(false); setAgentSel(null); setRenaming(false); }, [sessionId]);
   const { since, dismiss } = useRecap(sessionId, events, waiting, root);
-  const title = chatTitle || turns[0]?.prompt || 'New chat';
+  const title = chatTitle || chatTitleOf(turns[0]?.prompt ?? '') || 'New chat';
   const startRename = savedId ? () => setRenaming(true) : undefined;
   const press = useLongPress(startRename);
   const end = useBriefScroll(root, { turns: turns.length, next: next.length, running, waiting }, [sessionId, showAgents]);

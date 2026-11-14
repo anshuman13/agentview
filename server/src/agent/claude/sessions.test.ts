@@ -18,4 +18,11 @@ describe('savedSession', () => {
     expect(savedSession(info(prompt, { summary: prompt })).title).toBe('also check the importer');
     expect(savedSession(info(prompt, { summary: '@Mine', customTitle: '@Mine' })).title).toBe('@Mine');
   });
+  it('cuts a summary to its first line and 80 characters unless the user named the chat', () => {
+    expect(savedSession(info('x', { summary: 'y'.repeat(100) })).title).toHaveLength(80);
+    expect(savedSession(info('x', { summary: 'first line\nsecond line' })).title).toBe('first line');
+    expect(savedSession(info('x', { summary: 'Short' })).title).toBe('Short');
+    const long = 'z'.repeat(100);
+    expect(savedSession(info('x', { summary: long, customTitle: long })).title).toBe(long);
+  });
 });
