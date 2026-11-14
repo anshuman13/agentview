@@ -51,12 +51,12 @@ describe('hooks', () => {
     expect(s.state.session.hooks).toEqual(['docs']);
     s.hooks.saved('README.md');
     expect(send).not.toHaveBeenCalled();
-    s.hooks.saved('src/a.ts', 1000);
+    s.hooks.saved('src/a.ts', false, 1000);
     expect(send.mock.calls[0][0]).toBe('Hook: lint\n\nLint it\n\nChanged file: src/a.ts');
     result('r1');
-    s.hooks.saved('src/b.ts', 20_000);
+    s.hooks.saved('src/b.ts', false, 20_000);
     expect(send).toHaveBeenCalledTimes(1);
-    s.hooks.saved('src/b.ts', 31_000);
+    s.hooks.saved('src/b.ts', false, 31_000);
     expect(send).toHaveBeenCalledTimes(2);
   });
 
@@ -75,6 +75,12 @@ describe('hooks', () => {
     result('r3');
     expect(send).toHaveBeenCalledTimes(1);
     expect(s.state.session.running).toBe(false);
+  });
+
+  it('ignores a save while another chat in the folder runs', async () => {
+    const { s, send } = await loaded();
+    s.hooks.saved('src/a.ts', true);
+    expect(send).not.toHaveBeenCalled();
   });
 
   it('holds off while a question is pending', async () => {

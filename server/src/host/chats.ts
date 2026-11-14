@@ -69,10 +69,12 @@ export async function createChat(cwd: string, resume?: string, title = '', fork 
   await chat.hooks.load();
   chat.onMessage((m) => onChatMessage(chat, m));
   if (!resume || fork) chat.start();
-  live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });
+  live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel, othersRunning(chat))) });
   broadcastLive();
   return chat;
 }
+
+const othersRunning = (chat: AgentSession) => [...live.values()].some((l) => l.chat !== chat && l.chat.cwd === chat.cwd && l.chat.state.session.running);
 
 export function closeChat(chat: AgentSession) {
   learning.forget(chat.id);

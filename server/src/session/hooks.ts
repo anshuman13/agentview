@@ -50,9 +50,9 @@ export class Hooks {
     if (this.s.state.session.running) this.edited = true;
   }
 
-  // A change while Claude runs is most likely its own, so only changes between turns count.
-  saved(rel: string, now = Date.now()) {
-    if (this.s.state.session.running || this.waiting()) return;
+  // A change while Claude runs is most likely its own, and one while another chat in the folder runs is that chat's, so only changes between turns count.
+  saved(rel: string, othersRunning = false, now = Date.now()) {
+    if (othersRunning || this.s.state.session.running || this.waiting()) return;
     const due = this.list.filter((h) => h.on === 'save' && (!h.glob || globMatch(h.glob, rel)) && now - (this.fired.get(h.name) ?? -Infinity) >= DEBOUNCE_MS);
     for (const h of due) {
       this.fired.set(h.name, now);

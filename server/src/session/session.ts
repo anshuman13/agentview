@@ -198,9 +198,9 @@ export class AgentSession implements AgentHost {
     this.review.capture(file);
   }
 
-  fileChangedExternally(rel: string) {
+  fileChangedExternally(rel: string, othersRunning = false) {
     this.noteFile(rel, 'watcher');
-    this.hooks.saved(rel);
+    this.hooks.saved(rel, othersRunning);
   }
 
   watchHistory(on: boolean) {
