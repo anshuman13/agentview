@@ -46,11 +46,11 @@ import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.Writes
-import no.pradhan.agentview.nativeapp.workspace.ReviewOps
-import no.pradhan.agentview.nativeapp.workspace.approveAllChanges
-import no.pradhan.agentview.nativeapp.workspace.extendOrder
-import no.pradhan.agentview.nativeapp.workspace.rejectChanges
-import no.pradhan.agentview.nativeapp.workspace.reviewQueue
+import no.pradhan.agentview.nativeapp.codex.wiki.ReviewOps
+import no.pradhan.agentview.nativeapp.codex.wiki.approveAllChanges
+import no.pradhan.agentview.nativeapp.codex.wiki.extendOrder
+import no.pradhan.agentview.nativeapp.codex.wiki.rejectChanges
+import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

@@ -63,7 +63,7 @@ import no.pradhan.agentview.nativeapp.ui.SnackHost
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.workspace.ReviewOps
+import no.pradhan.agentview.nativeapp.codex.wiki.ReviewOps
 
 private const val SYNC_EVERY_MS = 30_000L
 

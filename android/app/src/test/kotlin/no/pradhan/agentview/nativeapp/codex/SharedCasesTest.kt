@@ -90,7 +90,7 @@ import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
-import no.pradhan.agentview.nativeapp.workspace.reviewQueue
+import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 import no.pradhan.agentview.nativeapp.chat.appendRule
 import no.pradhan.agentview.nativeapp.chat.can
 import no.pradhan.agentview.nativeapp.net.Capabilities

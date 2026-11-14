@@ -62,9 +62,9 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.workspace.ReviewOps
-import no.pradhan.agentview.nativeapp.workspace.extendOrder
-import no.pradhan.agentview.nativeapp.workspace.reviewQueue
+import no.pradhan.agentview.nativeapp.codex.wiki.ReviewOps
+import no.pradhan.agentview.nativeapp.codex.wiki.extendOrder
+import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 
 // What the meetings and wiki pages share: Raise and points, pinned text, open questions, Prep groups, the Series page and Review mode.
 class CodexOps(val points: PointActions, val goals: GoalActions, val review: ReviewOps, val replies: ReplyOps)
