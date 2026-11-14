@@ -24,6 +24,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.firstRoundText
 import no.pradhan.agentview.nativeapp.codex.autopilot.openRun
 import no.pradhan.agentview.nativeapp.codex.autopilot.outcomeDot
 import no.pradhan.agentview.nativeapp.codex.autopilot.roundText
+import no.pradhan.agentview.nativeapp.codex.autopilot.runNeedsYou
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.newChat
@@ -77,10 +78,55 @@ internal fun advisorLoopLine(run: ChatRun): String {
     val last = run.rounds.lastOrNull()
     return when {
         run.state == "paused" -> if (run.why.isEmpty()) "Paused" else "Paused · ${run.why}"
+        last?.report != null -> "Weekly report"
         last != null -> roundText(last)
         run.nextAt != null -> firstRoundText(run.nextAt)
         else -> "Waiting for its first round"
     }
+}
+
+// What waits on you for a project: web advisorNeedsYou in shared/advisors.ts.
+internal sealed interface NeedsYouItem {
+    data class Spec(val spec: SpecHomeItem) : NeedsYouItem
+    data class Loop(val run: ChatRun) : NeedsYouItem
+}
+
+internal fun advisorNeedsYou(specs: List<SpecHomeItem>, runs: List<ChatRun>, root: String): List<NeedsYouItem> =
+    listOfNotNull(advisorLoopOf(runs, root)?.takeIf { runNeedsYou(it) }?.let { NeedsYouItem.Loop(it) }) +
+        specHomeOrder(specs).filter { it.waiting || it.hold }.map { NeedsYouItem.Spec(it) }
+
+// The Advisor loop row of Backlog and Needs you: its last round, a tap opens its chat.
+@Composable
+private fun AdvisorLoopRow(hub: Hub, loop: ChatRun, go: (suspend () -> Boolean) -> Unit) {
+    val last = loop.rounds.lastOrNull()
+    ListRow(
+        "Advisor loop", advisorLoopLine(loop),
+        leading = last?.let { { StatusDot(outcomeDot(it.outcome)) } },
+        lines = 1, metaLines = 1,
+        onClick = { go { hub.openRun(loop, last?.report) } },
+    )
+}
+
+// A spec row of Specs and Needs you: a tap opens the build chat with its Spec sheet when that chat is live.
+@Composable
+private fun SpecRow(hub: Hub, i: SpecHomeItem, project: String, live: Boolean, onOpen: () -> Unit, go: (suspend () -> Boolean) -> Unit) {
+    val badge = when {
+        i.waiting || i.hold || i.state == "waiting" -> HOLD_BADGE
+        i.state == "running" -> "Running" to BadgeTone.Running
+        i.state == "failed" -> "Failed" to BadgeTone.Failed
+        else -> null
+    }
+    ListRow(
+        i.title, "${pipelineLabel(i.pipeline)} · ${i.conclusion}",
+        lines = 1, metaLines = 1,
+        state = badge?.let { (text, tone) -> { Badge(text, tone) } },
+        onClick = if (!live && i.session == null) null else ({
+            if (live) { hub.open(i.chat!!); hub.showSpec(i.slug); onOpen() } else go { hub.openSaved(i.session!!) }
+        }),
+        menu = if (i.built || hub.readOnly) null else ({ dismiss ->
+            MenuItem("Build", "play", { dismiss(); hub.newChat(project, text = buildSpecPrompt(".claude/specs/${i.slug}.md"), onOpened = onOpen) })
+        }),
+    )
 }
 
 private fun rankPrompt(root: String) = "Read $root/.claude/backlog.md and the project's code and recent changes, then rank what to build next. Rewrite the backlog file (at most 10 lines) and reply with the top three."
@@ -133,6 +179,20 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                 info == null && load.error.isNotEmpty() -> EmptyState("Could not load the advisors", load.error, icon = "organization")
                 info == null -> Loading("Loading advisors")
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    val needsRoot = root
+                    val waiting = if (needsRoot == null) emptyList() else advisorNeedsYou(specs.data.orEmpty(), st.runs, needsRoot)
+                    if (needsRoot != null && waiting.isNotEmpty()) {
+                        SectionHeader("Needs you", waiting.size.toString())
+                        Group {
+                            waiting.forEachIndexed { n, w ->
+                                if (n > 0) Hairline()
+                                when (w) {
+                                    is NeedsYouItem.Loop -> AdvisorLoopRow(hub, w.run, ::go)
+                                    is NeedsYouItem.Spec -> SpecRow(hub, w.spec, needsRoot, st.live.any { it.id == w.spec.chat }, onOpen, ::go)
+                                }
+                            }
+                        }
+                    }
                     for (a in ADVISORS) {
                         val c = st.live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
                         val state = c?.let { chatState(it, null, ws.seen) }
@@ -201,15 +261,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                             })
                             val project = root
                             val loop = project?.let { advisorLoopOf(st.runs, it) }
-                            if (loop != null) Group {
-                                val last = loop.rounds.lastOrNull()
-                                ListRow(
-                                    "Advisor loop", advisorLoopLine(loop),
-                                    leading = last?.let { { StatusDot(outcomeDot(it.outcome)) } },
-                                    lines = 1, metaLines = 1,
-                                    onClick = { go { hub.openRun(loop, last?.report) } },
-                                )
-                            }
+                            if (loop != null) Group { AdvisorLoopRow(hub, loop, ::go) }
                             when {
                                 project == null -> Group { ListRow("Project", "Pick one in the menu to see its backlog", lines = 1) }
                                 items == null -> Loading("Loading backlog")
@@ -242,25 +294,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                 if (list.isEmpty()) EmptyState("No specs yet", icon = "file") else Group {
                                     specHomeOrder(list).forEachIndexed { n, i ->
                                         if (n > 0) Hairline()
-                                        val live = st.live.any { it.id == i.chat }
-                                        val tappable = live || i.session != null
-                                        val badge = when {
-                                            i.waiting || i.hold || i.state == "waiting" -> HOLD_BADGE
-                                            i.state == "running" -> "Running" to BadgeTone.Running
-                                            i.state == "failed" -> "Failed" to BadgeTone.Failed
-                                            else -> null
-                                        }
-                                        ListRow(
-                                            i.title, "${pipelineLabel(i.pipeline)} · ${i.conclusion}",
-                                            lines = 1, metaLines = 1,
-                                            state = badge?.let { (text, tone) -> { Badge(text, tone) } },
-                                            onClick = if (!tappable) null else ({
-                                                if (live) { hub.open(i.chat!!); hub.showSpec(i.slug); onOpen() } else go { hub.openSaved(i.session!!) }
-                                            }),
-                                            menu = if (i.built || hub.readOnly) null else ({ dismiss ->
-                                                MenuItem("Build", "play", { dismiss(); hub.newChat(project, text = buildSpecPrompt(".claude/specs/${i.slug}.md"), onOpened = onOpen) })
-                                            }),
-                                        )
+                                        SpecRow(hub, i, project, st.live.any { it.id == i.chat }, onOpen, ::go)
                                     }
                                 }
                             }

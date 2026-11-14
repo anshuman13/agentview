@@ -10,8 +10,9 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, advisorLoopLine, advisorLoopOf, advisorOf, auditPrompt, canBuildItem, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
+import { ADVISORS, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditPrompt, canBuildItem, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import { pipelineLabel, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
+import type { ChatRun } from '../../../shared/protocol';
 import { OUTCOME_DOT } from '../chat/composer/composerLogic';
 import { holdBadge } from './buildsLogic';
 import { openRun } from './goalLogic';
@@ -43,14 +44,20 @@ function ProjectPicker({ root, folders, onPick }: { root: string | null; folders
 
 // Loads one project's data when the page shows and after an advisor's turn; failed is set when the request rejects.
 function useRootFetch<T>(fetcher: (root: string) => Promise<T>, root: string | null, shown: boolean, turns: string) {
-  const [state, setState] = useState<{ data?: T; failed?: boolean }>({});
+  const [state, setState] = useState<{ root?: string | null; data?: T; failed?: boolean }>({});
   useEffect(() => {
     if (!shown || !root) return;
     let stale = false;
-    fetcher(root).then((data) => !stale && setState({ data }), () => !stale && setState({ failed: true }));
+    fetcher(root).then((data) => !stale && setState({ root, data }), () => !stale && setState({ root, failed: true }));
     return () => { stale = true; };
   }, [fetcher, shown, root, turns]);
-  return state;
+  return state.root === root ? state : {};
+}
+
+// The Advisor loop row of Backlog and Needs you: its last round, a tap opens its chat.
+function LoopRow({ loop }: { loop: ChatRun }) {
+  const last = loop.rounds.at(-1);
+  return <Row title="Advisor loop" meta={advisorLoopLine(loop)} leading={last && <span className={`dot ${OUTCOME_DOT[last.outcome]}`} />} onClick={() => openRun(loop)} />;
 }
 
 // The PM's ranked backlog for one project; reloads after a PM turn, which may have rewritten it.
@@ -61,16 +68,11 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
   const items = moved ?? fetched;
   const runs = useStore((s) => s.runs);
   const loop = root ? advisorLoopOf(runs, root) : undefined;
-  const last = loop?.rounds.at(-1);
   const move = (slug: string, dir: 'up' | 'down') => moveBacklogItem(root!, slug, dir).then((list) => (list ? setMoved(list) : notice('Could not move the item')));
   return (
     <>
       <Section label="Backlog" count={items?.length || undefined} action={picker} />
-      {loop && (
-        <div className="ui-group">
-          <Row title="Advisor loop" meta={advisorLoopLine(loop)} leading={last && <span className={`dot ${OUTCOME_DOT[last.outcome]}`} />} onClick={() => openRun(loop)} />
-        </div>
-      )}
+      {loop && <div className="ui-group"><LoopRow loop={loop} /></div>}
       {!root ? (
         <div className="ui-group"><Row title="Project" meta="Pick one to see its backlog" plain /></div>
       ) : !items ? <Skeleton rows={2} /> : !items.length ? (
@@ -100,39 +102,50 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
 const specBadge = (i: SpecHomeItem) =>
   i.waiting || i.hold || i.state === 'waiting' ? <Badge status={holdBadge.status} label={holdBadge.label} /> : i.state === 'running' || i.state === 'failed' ? <Badge status={i.state} /> : undefined;
 
-// The newest specs of one project, what needs you first; a row opens the chat that ran the build, with its Spec sheet when that chat is live.
-function Specs({ shown, turns, root }: { shown: boolean; turns: string; root: string | null }) {
-  const specs = useRootFetch(fetchSpecs, root, shown, turns).data;
-  const live = useStore((s) => s.live);
-  if (!root || !specs) return null;
-  const openBuild = (i: SpecHomeItem, isLive: boolean) => {
+// A spec row of Specs and Needs you: a tap opens the build chat, with its Spec sheet when that chat is live.
+function SpecRow({ spec: i, root }: { spec: SpecHomeItem; root: string }) {
+  const isLive = useStore((s) => s.live.some((c) => c.id === i.chat));
+  const tappable = isLive || !!i.session;
+  const openBuild = () => {
     if (isLive) {
       go({ type: 'view', id: i.chat! });
       openSpecSheet(i.chat!, i.slug);
     } else go({ type: 'open_session', sessionId: i.session! });
   };
   return (
+    <Row
+      title={i.title}
+      meta={`${pipelineLabel(i.pipeline)} · ${i.conclusion}`}
+      state={specBadge(i)}
+      plain={!tappable}
+      onClick={tappable ? openBuild : undefined}
+      menu={i.built ? undefined : <MenuItem icon="play" onClick={() => buildSpec(root, i.slug)}>Build</MenuItem>}
+    />
+  );
+}
+
+// The newest specs of one project, what needs you first.
+function Specs({ specs, root }: { specs: SpecHomeItem[] | null | undefined; root: string | null }) {
+  if (!root || !specs) return null;
+  return (
     <>
       <Section label="Specs" count={specs.length || undefined} />
       {!specs.length ? <EmptyState size="sm" icon="file" title="No specs yet" /> : (
-        <div className="ui-group">
-          {specHomeOrder(specs).map((i) => {
-            const isLive = live.some((c) => c.id === i.chat);
-            const tappable = isLive || !!i.session;
-            return (
-              <Row
-                key={i.slug}
-                title={i.title}
-                meta={`${pipelineLabel(i.pipeline)} · ${i.conclusion}`}
-                state={specBadge(i)}
-                plain={!tappable}
-                onClick={tappable ? () => openBuild(i, isLive) : undefined}
-                menu={i.built ? undefined : <MenuItem icon="play" onClick={() => buildSpec(root, i.slug)}>Build</MenuItem>}
-              />
-            );
-          })}
-        </div>
+        <div className="ui-group">{specHomeOrder(specs).map((i) => <SpecRow key={i.slug} spec={i} root={root} />)}</div>
       )}
+    </>
+  );
+}
+
+// What waits on you in the chosen project: its Advisor loop when it asks, then the specs awaiting approval.
+function NeedsYou({ specs, root }: { specs: SpecHomeItem[] | null | undefined; root: string | null }) {
+  const runs = useStore((s) => s.runs);
+  const items = root && specs ? advisorNeedsYou(specs, runs, root) : [];
+  if (!root || !items.length) return null;
+  return (
+    <>
+      <Section label="Needs you" count={items.length} />
+      <div className="ui-group">{items.map((i) => (i.kind === 'loop' ? <LoopRow key="loop" loop={i.run} /> : <SpecRow key={i.spec.slug} spec={i.spec} root={root} />))}</div>
     </>
   );
 }
@@ -187,6 +200,7 @@ export function Advisors({ shown }: { shown: boolean }) {
   const picker = <ProjectPicker root={root} folders={folders} onPick={pickRoot} />;
   // Reloads when the page shows and after an advisor's turn, which may have changed its memory.
   const turns = live.filter((c) => advisorOf(c.cwd) && !c.running).map((c) => `${c.id}:${c.lastActive}`).join();
+  const specs = useRootFetch(fetchSpecs, root, shown, turns).data;
   useEffect(() => {
     if (!shown) return;
     let stale = false;
@@ -197,6 +211,7 @@ export function Advisors({ shown }: { shown: boolean }) {
   if (!info) return <EmptyState size="sm" title="Could not load the advisors" />;
   return (
     <div className="wk"><div className="wk-scroll"><div className="mt-page">
+      <NeedsYou specs={specs} root={root} />
       {ADVISORS.map((a) => {
         const c = live.find((x) => advisorOf(x.cwd)?.id === a.id);
         const state = c && chatState({ live: c }, seen);
@@ -220,7 +235,7 @@ export function Advisors({ shown }: { shown: boolean }) {
               <Row title="Memory" meta={facts ? `${facts} ${facts === 1 ? 'fact' : 'facts'}` : 'Nothing yet'} plain={!facts} onClick={facts ? () => setMemory(memory === a.id ? null : a.id) : undefined} aria-expanded={facts ? memory === a.id : undefined} />
             </div>
             {memory === a.id && got && <div className="advisor-memory"><Markdown text={got.memory.replace(/^# .*\n/, '')} /></div>}
-            {a.id === 'pm' && <><Backlog key={root} shown={shown} turns={turns} root={root} picker={picker} /><Specs key={`specs-${root}`} shown={shown} turns={turns} root={root} /></>}
+            {a.id === 'pm' && <><Backlog key={root} shown={shown} turns={turns} root={root} picker={picker} /><Specs specs={specs} root={root} /></>}
             {a.id === 'designer' && <AuditRow key={root} shown={shown} turns={turns} root={root} running={!!c?.running} picker={picker} />}
           </Fragment>
         );

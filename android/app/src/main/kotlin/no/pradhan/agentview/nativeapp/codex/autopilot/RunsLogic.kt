@@ -112,7 +112,7 @@ fun agentAge(startedAt: Long, now: Long): String {
 
 fun stoppedText(run: ChatRun, running: Boolean) = "${KIND[run.kind] ?: "Loop"} stopped" + if (running && run.round > 0 && (run.kind == "goal" || run.kind == "loop")) " · round ${run.round} was running" else ""
 
-// Web composerLogic.ts runNeedsYou: the run asks, or its last round is blocked, a question or failed.
+// Web runNeedsYou in shared/advisors.ts: the run asks, or its last round is blocked, a question or failed.
 private val NEEDS_YOU = setOf("blocked", "question", "failed")
 
 fun runNeedsYou(run: ChatRun) = run.needsYou || run.rounds.lastOrNull()?.outcome in NEEDS_YOU

@@ -1,4 +1,5 @@
-import type { ChatRun } from './protocol.js';
+import type { ChatRun, RoundOutcome } from './protocol.js';
+import { specHomeOrder, type SpecHomeItem } from './builds.js';
 import { firstRound, roundText } from './goalText.js';
 
 // Long-lived chats the user talks to about any project. Each lives in ~/.agentview/advisors/<id>, whose CLAUDE.md
@@ -91,4 +92,21 @@ export const advisorLoopLine = (run: ChatRun): string => {
   if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
   if (!last) return run.nextAt ? firstRound(run.nextAt) : 'Waiting for its first round';
   return last.report ? 'Weekly report' : roundText(last);
+};
+
+const NEEDS_YOU: RoundOutcome[] = ['blocked', 'question', 'failed'];
+export const runNeedsYou = (run: ChatRun) => {
+  const last = run.rounds.at(-1)?.outcome;
+  return run.needsYou || (!!last && NEEDS_YOU.includes(last));
+};
+
+export type NeedsYouItem = { kind: 'spec'; spec: SpecHomeItem } | { kind: 'loop'; run: ChatRun };
+
+// What waits on the user on the Advisors page: the project's Advisor loop when it asks, then the specs awaiting approval or on hold.
+export const advisorNeedsYou = (specs: SpecHomeItem[], runs: ChatRun[], root: string): NeedsYouItem[] => {
+  const loop = advisorLoopOf(runs, root);
+  return [
+    ...(loop && runNeedsYou(loop) ? [{ kind: 'loop' as const, run: loop }] : []),
+    ...specHomeOrder(specs).filter((i) => i.waiting || i.hold).map((spec) => ({ kind: 'spec' as const, spec })),
+  ];
 };

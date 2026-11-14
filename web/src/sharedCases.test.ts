@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
-import { advisorLoopLine, advisorLoopOf } from '../../shared/advisors';
+import { advisorLoopLine, advisorLoopOf, advisorNeedsYou } from '../../shared/advisors';
+import type { SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
 import { lastRoundText, mergeQuiet, roundText } from '../../shared/goalText';
@@ -239,6 +240,13 @@ describe('cases shared with the Android app', () => {
     it(`advisorLoop: ${c.name}`, () => {
       const found = advisorLoopOf(c.runs.map(run), c.root);
       expect(found ? { id: found.id, line: advisorLoopLine(found) } : null).toEqual(c.expected);
+    });
+  }
+
+  for (const c of cases<{ name: string; root: string; specs: Partial<SpecHomeItem>[]; runs: Partial<ChatRun>[]; expected: string[] }>('needs-you')) {
+    it(`advisorNeedsYou: ${c.name}`, () => {
+      const got = advisorNeedsYou(c.specs as SpecHomeItem[], c.runs.map(run), c.root);
+      expect(got.map((i) => (i.kind === 'loop' ? 'loop' : `spec:${i.spec.slug}`))).toEqual(c.expected);
     });
   }
 

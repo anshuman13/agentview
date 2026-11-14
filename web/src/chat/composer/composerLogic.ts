@@ -6,6 +6,7 @@ import { apiUrl, fetchJson } from '../../app/api';
 import { createTerm, listTerms } from '../../workspace/termApi';
 import { isBlock } from '../../../../shared/util';
 import { firstRound, nextRound, roundText, runLine as roundLine } from '../../../../shared/goalText';
+import { runNeedsYou } from '../../../../shared/advisors';
 import { timedMeetings } from '../../../../shared/plan';
 import { profileOfPath } from '../../../../shared/workspace';
 import { live, type Meeting } from '../../codex/data/wiki/wiki';
@@ -176,11 +177,7 @@ export const stoppedText = (run: ChatRun, running: boolean) => `${KIND[run.kind]
 
 export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', question: 'warn', failed: 'bad', done: 'ok', quiet: '', progress: '' };
 
-const NEEDS_YOU: RoundOutcome[] = ['blocked', 'question', 'failed'];
-export const runNeedsYou = (run: ChatRun) => {
-  const last = run.rounds.at(-1)?.outcome;
-  return run.needsYou || (!!last && NEEDS_YOU.includes(last));
-};
+export { runNeedsYou };
 
 export const loopOpenByDefault = (run: ChatRun, working: boolean, waiting: boolean) => working || waiting || runNeedsYou(run);
 
