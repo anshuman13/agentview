@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlin.math.abs
 import kotlinx.serialization.builtins.ListSerializer
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.Hub
@@ -171,8 +172,21 @@ internal fun SketchFrame(page: String, desktop: Boolean, modifier: Modifier = Mo
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
                 }
-                // Inside a scrolling sheet a drag scrolls the sketch, not the sheet.
-                setOnTouchListener { v, e -> if (e.actionMasked == MotionEvent.ACTION_DOWN) v.parent?.requestDisallowInterceptTouchEvent(true); false }
+                // Inside a scrolling sheet a drag scrolls the sketch where the page has room that way, else the sheet.
+                var downX = 0f
+                var downY = 0f
+                setOnTouchListener { v, e ->
+                    when (e.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> { downX = e.x; downY = e.y }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = e.x - downX
+                            val dy = e.y - downY
+                            val room = if (abs(dy) >= abs(dx)) v.canScrollVertically(if (dy < 0) 1 else -1) else v.canScrollHorizontally(if (dx < 0) 1 else -1)
+                            if (room) v.parent?.requestDisallowInterceptTouchEvent(true)
+                        }
+                    }
+                    false
+                }
             }
         },
         update = { web ->
