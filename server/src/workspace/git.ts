@@ -3,6 +3,7 @@ import path from 'node:path';
 import { safeResolve } from './files.js';
 import type { GitFile, GitStatus } from '../../../shared/protocol.js';
 import { exec } from '../exec.js';
+import { NotFound } from '../json.js';
 
 
 export async function git(cwd: string, args: string[], ok = [0], env?: Record<string, string>) {
@@ -208,6 +209,6 @@ export async function gitRoute(cwd: string, route: string, query: URLSearchParam
   else if (route === 'unstage') await git(cwd, ['reset', '-q', '--', ...paths]);
   else if (route === 'revert') await revert(cwd, paths);
   else if (route === 'discard') await discard(cwd, paths);
-  else throw new Error(`Unknown git action: ${route}`);
+  else throw new NotFound(`Unknown git action: ${route}`);
   return { ok: true };
 }

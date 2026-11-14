@@ -96,11 +96,11 @@ describe('routes', () => {
     expect(handleCommand).toHaveBeenCalledWith(client, { type: 'new_session' }, 'gone');
   });
 
-  it('turns a thrown error or malformed JSON into a 500', async () => {
+  it('turns a thrown error into a 500 and a body that is not a JSON object into a 400', async () => {
     mocks.listRepos.mockRejectedValueOnce(new Error('boom'));
     const thrown = await call('GET', '/api/repos');
     expect([thrown.code, thrown.json]).toEqual([500, { error: 'boom' }]);
-    for (const body of ['{bad', '']) expect((await call('POST', '/api/focus', body)).code).toBe(500);
+    for (const body of ['{bad', 'null', '[1]']) expect((await call('POST', '/api/focus', body)).code).toBe(400);
   });
 
   describe('POST /api/jobs/start', () => {

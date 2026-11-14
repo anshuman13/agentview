@@ -63,6 +63,10 @@ export class BadRequest extends Error {
   status = 400;
 }
 
+export class NotFound extends Error {
+  status = 404;
+}
+
 export function parseObject(raw: string): Record<string, any> {
   if (!raw.trim()) return {};
   let v: unknown;

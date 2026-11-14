@@ -1,5 +1,6 @@
 import { gz } from './web.js';
-import { readBody } from './body.js';
+import { BadRequest, parseObject, readBody } from './body.js';
+import { NotFound } from '../json.js';
 import { chatFileRoutes, chatMcpRoutes, chatPrefixes, chatSessionRoutes, streamRoutes } from './chatRoutes.js';
 import { openPrefixes, sessionRoutes, systemRoutes, workspaceRoutes } from './openRoutes.js';
 import { runRoutes } from './runRoutes.js';
@@ -33,7 +34,7 @@ export function createRoutes(d: RouteDeps) {
     try {
       const ctx: Ctx = { req, ip, url, method, body: null };
       const run = async <C extends Ctx>(e: Entry<C>, c: C) => {
-        if (e.body === true || e.body === method) c.body = JSON.parse(await readBody(req));
+        if (e.body === true || e.body === method) c.body = parseObject(await readBody(req));
         const out = await e.run(c);
         if (out instanceof Response) return out;
         if (!isReply(out)) return json(out);
@@ -51,7 +52,8 @@ export function createRoutes(d: RouteDeps) {
       if (mine) return await run(mine, { ...ctx, chat });
       return await json({ error: 'Not found' }, 404);
     } catch (err) {
-      return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+      const status = err instanceof BadRequest || err instanceof NotFound ? err.status : 500;
+      return json({ error: err instanceof Error ? err.message : String(err) }, status);
     }
   }
 

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { parseObject } from '../json.js';
+import { NotFound, parseObject } from '../json.js';
 import type { DeployEnv, DeployJob, DeployRecord, DeployStatus } from '../../../shared/protocol.js';
 import { inside } from '../../../shared/util.js';
 import { deployUrl } from '../settings.js';
@@ -220,12 +220,12 @@ export async function deployRoute(cwd: string, method: string, url: URL, body: (
   if (route === 'status') return deployStatus(cwd, url.searchParams.get('app'));
   if (route.startsWith('job/')) {
     const job = jobs.get(route.slice(4));
-    if (!job) throw new Error('Deploy job not found');
+    if (!job) throw new NotFound('Deploy job not found');
     return job;
   }
-  if (method !== 'POST') throw new Error(`Unknown deploy route: ${route}`);
+  if (method !== 'POST') throw new NotFound(`Unknown deploy route: ${route}`);
   const data = parseObject(await body());
   if (route === 'run') return runDeploy(cwd, data);
   if (route === 'rollback') return rollback(cwd, data);
-  throw new Error(`Unknown deploy route: ${route}`);
+  throw new NotFound(`Unknown deploy route: ${route}`);
 }

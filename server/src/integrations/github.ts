@@ -1,4 +1,4 @@
-import { parseObject } from '../json.js';
+import { NotFound, parseObject } from '../json.js';
 import type { AutoMerge, Method } from './automerge.js';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
 import { readFileSync } from 'node:fs';
@@ -188,12 +188,12 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
     const armed = await auto?.state(cwd);
     return armed?.size ? prs.map((p) => (armed.has(p.number) ? { ...p, autoMerge: armed.get(p.number) } : p)) : prs;
   }
-  if (what !== 'pr' || !/^\d+$/.test(n ?? '')) throw new Error(`Unknown GitHub route ${pathname}`);
+  if (what !== 'pr' || !/^\d+$/.test(n ?? '')) throw new NotFound(`Unknown GitHub route ${pathname}`);
   if (method === 'GET' && !action) {
     const pr = lists.get(repoKey(cwd))?.prs.find((p) => p.number === Number(n));
     return pr ? detail(cwd, pr) : prDetail(cwd, n);
   }
-  if (method !== 'POST') throw new Error(`Unknown GitHub route ${pathname}`);
+  if (method !== 'POST') throw new NotFound(`Unknown GitHub route ${pathname}`);
   const body = parseObject(await readBody());
   if (action === 'review') {
     const flag = REVIEW[body.event];
@@ -209,7 +209,7 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
     return auto.turn(cwd, Number(n), body.on === true, body.method as Method);
   }
   if (action === 'checkout') return act(cwd, n, 'checkout');
-  throw new Error(`Unknown GitHub route ${pathname}`);
+  throw new NotFound(`Unknown GitHub route ${pathname}`);
 }
 
 // The URL of the PR of a branch, or undefined when it has none.

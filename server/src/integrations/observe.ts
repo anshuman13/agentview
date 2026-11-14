@@ -1,4 +1,4 @@
-import { parseObject } from '../json.js';
+import { NotFound, parseObject } from '../json.js';
 import type { ObserveConfig, ObserveInfo, SnowflakeConfig, SnowflakeInfo } from '../../../shared/observe.js';
 import { provider } from '../agent/registry.js';
 import type { Provider } from '../../../shared/protocol.js';
@@ -84,7 +84,7 @@ export async function observe(method: string, url: URL, cwd: string, prov: Provi
     if (p === '/api/observe/snowflake/test') return snowflakeTest();
     if (p === '/api/observe/snowflake/query') return snowflakeQuery(String(b.sql ?? ''));
     if (p === '/api/observe/mcp/add') return addToClaude(String(b.server ?? ''), cwd, prov);
-    throw new Error('Not found');
+    throw new NotFound('Not found');
   }
   const q = (k: string) => url.searchParams.get(k)?.trim() ?? '';
   if (p === '/api/observe/snowflake/objects') return snowflakeObjects(q('kind'), q('database'), q('schema'));
@@ -99,5 +99,5 @@ export async function observe(method: string, url: URL, cwd: string, prov: Provi
     if (p === '/api/observe/grafana/logs') return logs(cfg, def);
     if (p === '/api/observe/grafana/patterns') return patterns(cfg, def);
   }
-  throw new Error('Not found');
+  throw new NotFound('Not found');
 }
