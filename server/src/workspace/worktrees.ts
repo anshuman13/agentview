@@ -5,13 +5,14 @@ import { listSessions } from '../agent/claude/sessions.js';
 import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shared/protocol.js';
 import { inside } from '../../../shared/util.js';
 import { ROOTS } from './files.js';
-import { defaultBase, mainCheckout, safeGit } from './git.js';
+import { defaultBase, git as gitIn, mainCheckout, safeGit } from './git.js';
+import { mergedPrNumber } from '../integrations/github.js';
 import { exec as run } from '../exec.js';
 
 const paseoMissing = (err: unknown) => (err as { code?: string }).code === 'ENOENT' || /Executable not found|paseo is not installed/.test((err as Error)?.message ?? '');
 const notInstalled = (err: unknown): never => { throw paseoMissing(err) ? new Error('paseo is not installed') : err; };
 const paseo = (args: string[], timeout: number) => run('paseo', args, { timeout });
-const git = async (cwd: string, ...args: string[]) => (await run('git', ['-C', cwd, ...args])).stdout.trim();
+const git = async (cwd: string, ...args: string[]) => (await gitIn(cwd, args)).trim();
 
 export const parseBranch = (head: string) => head.replace(/^## (No commits yet on )?/, '').split('...')[0];
 
@@ -99,8 +100,9 @@ async function mergedPr(cwd: string) {
   const k = `${cwd}\0${branch}`;
   const hit = merged.get(k);
   if (hit && (hit.n !== undefined || Date.now() - hit.at < NOT_MERGED_MS)) return hit.n;
-  const { stdout } = await run('gh', ['pr', 'list', '--head', branch, '--state', 'merged', '--json', 'number', '--limit', '1'], { cwd, timeout: 15_000 }).catch(() => ({ stdout: '[]' }));
-  const n = (JSON.parse(stdout || '[]') as Array<{ number: number }>)[0]?.number;
+  // A failed lookup is asked again next time, not remembered as not merged.
+  const n = await mergedPrNumber(cwd, branch).catch(() => null);
+  if (n === null) return undefined;
   merged.set(k, { n, at: Date.now() });
   if (merged.size > 500) merged.delete(merged.keys().next().value!);
   return n;
@@ -188,8 +190,7 @@ export async function createWorktree(repo: string, branch: string, base?: string
   const cwd: string | undefined = out.cwd ?? out.workspace?.cwd;
   if (cwd) return cwd;
   const id = out.workspaceId ?? out.workspace?.workspaceId;
-  const spaces = JSON.parse((await paseo(['workspace', 'ls', '--json'], 30_000)).stdout) as Array<{ workspaceId: string; cwd: string }>;
-  const made = spaces.find((w) => w.workspaceId === id);
+  const made = (await paseoSpaces()).find((w) => w.id === id);
   if (!made) throw new Error('Paseo created the worktree but did not report its folder');
   return made.cwd;
 }

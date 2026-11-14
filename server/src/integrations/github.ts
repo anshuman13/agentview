@@ -215,6 +215,11 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
   throw new NotFound(`Unknown GitHub route ${pathname}`);
 }
 
+// The number of the merged PR of a branch, or undefined when it has none.
+export async function mergedPrNumber(cwd: string, branch: string) {
+  return (JSON.parse(await gh(cwd, 'pr', 'list', '--head', branch, '--state', 'merged', '--json', 'number', '--limit', '1')) as Array<{ number: number }>)[0]?.number;
+}
+
 // The URL of the PR of a branch, or undefined when it has none.
 export async function prForBranch(cwd: string, branch: string): Promise<string | undefined> {
   try {

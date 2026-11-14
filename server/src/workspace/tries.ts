@@ -1,7 +1,6 @@
 import path from 'node:path';
 import { createWorktree, removeRunWorktree, worktreeBase } from './worktrees.js';
-import { defaultBase, mainCheckout } from './git.js';
-import { exec as run } from '../exec.js';
+import { defaultBase, git, mainCheckout } from './git.js';
 
 
 export const TRIES_USAGE = 'Usage: /tries <2-4> <prompt>, starts the prompt in that many new worktrees';
@@ -33,7 +32,7 @@ export async function makeWorktree(repo: string, branch: string, base?: string) 
     if (!/not installed|not a Paseo project/.test(String(err))) throw err;
     const dir = path.join(path.dirname(repo), '.tries', `${path.basename(repo)}-${branch.split('/').pop()}`);
     const base = await defaultBase(repo, undefined, 'HEAD');
-    await run('git', ['-C', repo, 'worktree', 'add', '-b', branch, dir, base]);
+    await git(repo, ['worktree', 'add', '-b', branch, dir, base]);
     return { dir, paseo: false };
   }
 }
