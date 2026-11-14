@@ -239,8 +239,9 @@ internal suspend fun loadBuild(hub: Hub, slug: String): BuildDetail? =
 private fun sheetHeight() = LocalConfiguration.current.screenHeightDp.dp * 0.8f
 
 @Composable
-private fun SheetList(content: LazyListScope.() -> Unit) {
-    LazyColumn(Modifier.heightIn(max = sheetHeight()), content = content)
+private fun SheetList(fixed: Boolean = false, content: LazyListScope.() -> Unit) {
+    // A fixed height keeps the sheet still when its tabs switch between contents of different heights.
+    LazyColumn(if (fixed) Modifier.height(sheetHeight()) else Modifier.heightIn(max = sheetHeight()), content = content)
 }
 
 // The spec's acceptance criteria folded to `limit` rows, each opening its sheet.
@@ -287,7 +288,7 @@ private fun SpecSheet(hub: Hub, d: BuildDetail, initial: String?, actions: Build
     val spec = remember(d) { d.copy(phases = d.phases.map { if (it.key == "sketch") it else it.copy(markdown = withoutCriteria(it.markdown)) }) }
     Sheet(close, "Spec", padded = false) {
         if (spec.phases.isEmpty()) EmptyState("No spec phases yet")
-        else SheetList { phaseItems(spec, phase, System.currentTimeMillis(), hub.readOnly, run, { phase = it }, { asking = it }, actions.approve) }
+        else SheetList(fixed = true) { phaseItems(spec, phase, System.currentTimeMillis(), hub.readOnly, run, { phase = it }, { asking = it }, actions.approve) }
     }
     asking?.let { key -> ChangesSheet(key, { note, done -> actions.saveReview(key, "changes", note, done) }) { asking = null } }
 }
