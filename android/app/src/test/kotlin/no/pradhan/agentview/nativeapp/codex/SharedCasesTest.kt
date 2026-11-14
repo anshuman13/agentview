@@ -61,6 +61,9 @@ import no.pradhan.agentview.nativeapp.sessions.specHomeOrder
 import no.pradhan.agentview.nativeapp.sessions.specRowParts
 import no.pradhan.agentview.nativeapp.sessions.NeedsYouItem
 import no.pradhan.agentview.nativeapp.sessions.advisorNeedsYou
+import no.pradhan.agentview.nativeapp.sessions.BacklogItem
+import no.pradhan.agentview.nativeapp.sessions.advisorBoard
+import no.pradhan.agentview.nativeapp.sessions.specItemPrompt
 import no.pradhan.agentview.nativeapp.sessions.AuditFinding
 import no.pradhan.agentview.nativeapp.sessions.auditCountLine
 import no.pradhan.agentview.nativeapp.sessions.defaultAdvisorRoot
@@ -271,6 +274,24 @@ class SharedCasesTest {
             val actual = advisorNeedsYou(specs, runs, c.str("root")).map { if (it is NeedsYouItem.Loop) "loop" else "spec:${(it as NeedsYouItem.Spec).spec.slug}" }
             assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, actual)
         }
+    }
+
+    @Test fun advisorBoard() {
+        for (c in cases("advisor-board")) {
+            val backlog = c.getValue("backlog").jsonArray.map { it.decode<BacklogItem>() }
+            val specs = c.getValue("specs").jsonArray.map { it.decode<SpecHomeItem>() }
+            val board = advisorBoard(backlog, specs, c.getValue("loopNeedsYou").jsonPrimitive.boolean)
+            val expected = c.getValue("expected").jsonObject
+            for (stage in listOf("ideas", "specced", "building", "done")) {
+                val want = expected.getValue(stage).jsonArray.map { val o = it.jsonObject; Triple(o.str("slug"), o.nullable("action")?.jsonPrimitive?.content, o.getValue("needsYou").jsonPrimitive.boolean) }
+                assertEquals("${c.str("name")}: $stage", want, board.stages.getValue(stage).map { Triple(it.slug, it.action, it.needsYou) })
+            }
+            assertEquals(c.str("name"), expected.str("defaultStage"), board.defaultStage)
+        }
+    }
+
+    @Test fun specItemPrompt() {
+        for (c in cases("spec-item-prompt")) assertEquals(c.str("name"), c.str("expected"), specItemPrompt(c.str("root"), c.getValue("item").decode<BacklogItem>()))
     }
 
     @Test fun mergeQuiet() {

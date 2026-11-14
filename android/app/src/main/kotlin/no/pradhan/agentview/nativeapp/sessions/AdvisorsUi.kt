@@ -117,6 +117,53 @@ internal fun advisorNeedsYou(specs: List<SpecHomeItem>, runs: List<ChatRun>, roo
     listOfNotNull(advisorLoopOf(runs, root)?.takeIf { runNeedsYou(it) }?.let { NeedsYouItem.Loop(it) }) +
         specHomeOrder(specs).filter { it.waiting || it.hold }.map { NeedsYouItem.Spec(it) }
 
+// One card of the Advisors board: web BoardCard in shared/advisors.ts. action is spec-it, approve, open-chat, sketch, build or null.
+internal data class BoardCard(val slug: String, val action: String?, val needsYou: Boolean, val item: BacklogItem?, val spec: SpecHomeItem?)
+
+internal data class AdvisorBoard(val stages: Map<String, List<BoardCard>>, val defaultStage: String)
+
+internal val BOARD_STAGES = listOf("ideas", "specced", "building", "done")
+
+private fun specNeedsYou(s: SpecHomeItem) = s.waiting || s.hold || s.state == "waiting"
+
+private fun stageOf(item: BacklogItem?, spec: SpecHomeItem?): String? = when {
+    spec?.pipeline == "merged" || item?.status == "done" -> "done"
+    spec?.built == true || item?.status == "building" -> "building"
+    spec != null || item?.status == "specced" -> "specced"
+    item?.status == "proposed" -> "ideas"
+    else -> null
+}
+
+private fun actionOf(stage: String, spec: SpecHomeItem?): String? {
+    if (stage == "ideas") return "spec-it"
+    if (stage == "done") return null
+    fun chat(a: String) = if (spec?.chat != null || spec?.session != null) a else null
+    return when {
+        stage == "building" -> if (spec != null) chat("open-chat") else null
+        spec == null -> "build"
+        spec.waiting -> chat("approve")
+        spec.hold || spec.state in listOf("running", "failed", "waiting") -> chat("open-chat")
+        spec.sketched -> "build"
+        else -> "sketch"
+    }
+}
+
+// What the board shows for a project: web advisorBoard in shared/advisors.ts.
+internal fun advisorBoard(backlog: List<BacklogItem>, specs: List<SpecHomeItem>, loopNeedsYou: Boolean): AdvisorBoard {
+    val stages = BOARD_STAGES.associateWith { mutableListOf<BoardCard>() }
+    val specOf = specs.associateBy { it.slug }
+    val itemOf = backlog.associateBy { it.slug }
+    fun card(stage: String, slug: String, item: BacklogItem?, spec: SpecHomeItem?) = BoardCard(slug, actionOf(stage, spec), spec != null && specNeedsYou(spec), item, spec)
+    val lines = backlog.sortedBy { it.rank }.mapNotNull { item -> stageOf(item, specOf[item.slug])?.let { Triple(it, item, specOf[item.slug]) } }
+    for (stage in listOf("ideas", "specced")) for ((st, item, spec) in lines) if (st == stage) stages.getValue(stage) += card(stage, item.slug, item, spec)
+    val ordered = specHomeOrder(specs).map { Triple(it, itemOf[it.slug], stageOf(itemOf[it.slug], it)!!) }
+    for ((spec, item, stage) in ordered) if (item == null && stage == "specced") stages.getValue(stage) += card(stage, spec.slug, null, spec)
+    for ((spec, item, stage) in ordered) if (stage == "building" || stage == "done") stages.getValue(stage) += card(stage, spec.slug, item, spec)
+    for ((stage, item, spec) in lines) if (spec == null && (stage == "building" || stage == "done")) stages.getValue(stage) += card(stage, item.slug, item, null)
+    val defaultStage = BOARD_STAGES.firstOrNull { st -> stages.getValue(st).any { it.needsYou } || (st == "building" && loopNeedsYou) } ?: BOARD_STAGES.firstOrNull { stages.getValue(it).isNotEmpty() } ?: "ideas"
+    return AdvisorBoard(stages, defaultStage)
+}
+
 // The Advisor loop row of Backlog and Needs you: its last round, a tap opens its chat.
 @Composable
 private fun AdvisorLoopRow(hub: Hub, loop: ChatRun, go: (suspend () -> Boolean) -> Unit) {
@@ -157,6 +204,8 @@ private fun SpecRow(hub: Hub, i: SpecHomeItem, project: String, live: Boolean, o
 }
 
 private fun rankPrompt(root: String) = "Read $root/.claude/backlog.md and the project's code and recent changes, then rank what to build next. Rewrite the backlog file (at most 10 lines) and reply with the top three."
+
+internal fun specItemPrompt(root: String, item: BacklogItem) = "Write the spec for the backlog item \"${item.title}\" (${item.why}) to $root/.claude/specs/${item.slug}.md and mark its line specced in $root/.claude/backlog.md."
 
 // The newest .claude/audits/<date>.md, from /api/advisors/audit; mirrors Audit in shared/advisors.ts.
 @Serializable

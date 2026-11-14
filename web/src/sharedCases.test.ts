@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
-import { advisorLoopBuilds, advisorLoopLine, advisorLoopOf, advisorNeedsYou, auditCountLine, defaultAdvisorRoot } from '../../shared/advisors';
+import { advisorBoard, advisorLoopBuilds, advisorLoopLine, advisorLoopOf, advisorNeedsYou, auditCountLine, defaultAdvisorRoot, specItemPrompt, type BacklogItem } from '../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
@@ -263,6 +263,19 @@ describe('cases shared with the Android app', () => {
       const got = advisorNeedsYou(c.specs as SpecHomeItem[], c.runs.map(run), c.root);
       expect(got.map((i) => (i.kind === 'loop' ? 'loop' : `spec:${i.spec.slug}`))).toEqual(c.expected);
     });
+  }
+
+  type BoardCase = { name: string; backlog: BacklogItem[]; specs: SpecHomeItem[]; loopNeedsYou: boolean; expected: { defaultStage: string } & Record<string, unknown> };
+  for (const c of cases<BoardCase>('advisor-board')) {
+    it(`advisorBoard: ${c.name}`, () => {
+      const { stages, defaultStage } = advisorBoard(c.backlog, c.specs, c.loopNeedsYou);
+      const slim = Object.fromEntries(Object.entries(stages).map(([k, v]) => [k, v.map(({ slug, action, needsYou }) => ({ slug, action, needsYou }))]));
+      expect({ ...slim, defaultStage }).toEqual(c.expected);
+    });
+  }
+
+  for (const c of cases<{ name: string; root: string; item: BacklogItem; expected: string }>('spec-item-prompt')) {
+    it(`specItemPrompt: ${c.name}`, () => expect(specItemPrompt(c.root, c.item)).toBe(c.expected));
   }
 
   type StateCase = { name: string; chat: Partial<LiveChat> & { agents?: number; run?: { state: ChatRun['state']; why?: string; nextAtLocal?: string } }; expected: unknown };

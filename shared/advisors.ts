@@ -45,6 +45,8 @@ export const canBuildItem = (i: Pick<BacklogItem, 'status'>) => i.status === 'pr
 
 export const rankPrompt = (root: string) => `Read ${root}/.claude/backlog.md and the project's code and recent changes, then rank what to build next. Rewrite the backlog file (at most 10 lines) and reply with the top three.`;
 
+export const specItemPrompt = (root: string, item: Pick<BacklogItem, 'slug' | 'title' | 'why'>) => `Write the spec for the backlog item "${item.title}" (${item.why}) to ${root}/.claude/specs/${item.slug}.md and mark its line specced in ${root}/.claude/backlog.md.`;
+
 // Swaps a backlog line with its neighbour (an open line with the nearest open line that way, done lines between stay put) and renumbers the backlog lines 1 to n; null when the slug is not in the file.
 export const moveBacklog = (md: string, slug: string, dir: 'up' | 'down'): string | null => {
   const lines = md.split('\n');
@@ -118,6 +120,52 @@ const NEEDS_YOU: RoundOutcome[] = ['blocked', 'question', 'failed'];
 export const runNeedsYou = (run: ChatRun) => {
   const last = run.rounds.at(-1)?.outcome;
   return run.needsYou || (!!last && NEEDS_YOU.includes(last));
+};
+
+export type BoardStage = 'ideas' | 'specced' | 'building' | 'done';
+export const BOARD_STAGES: BoardStage[] = ['ideas', 'specced', 'building', 'done'];
+export type BoardAction = 'spec-it' | 'approve' | 'open-chat' | 'sketch' | 'build';
+export type BoardCard = { slug: string; action: BoardAction | null; needsYou: boolean; item?: BacklogItem; spec?: SpecHomeItem };
+
+const specNeedsYou = (s: SpecHomeItem) => s.waiting || s.hold || s.state === 'waiting';
+
+const stageOf = (item?: BacklogItem, spec?: SpecHomeItem): BoardStage | null =>
+  spec?.pipeline === 'merged' || item?.status === 'done' ? 'done'
+    : spec?.built || item?.status === 'building' ? 'building'
+      : spec || item?.status === 'specced' ? 'specced'
+        : item?.status === 'proposed' ? 'ideas' : null;
+
+const actionOf = (stage: BoardStage, spec?: SpecHomeItem): BoardAction | null => {
+  if (stage === 'ideas') return 'spec-it';
+  if (stage === 'done') return null;
+  const chat = (a: 'approve' | 'open-chat') => (spec?.chat || spec?.session ? a : null);
+  if (stage === 'building') return spec ? chat('open-chat') : null;
+  if (!spec) return 'build';
+  if (spec.waiting) return chat('approve');
+  if (spec.hold || ['running', 'failed', 'waiting'].includes(spec.state)) return chat('open-chat');
+  return spec.sketched ? 'build' : 'sketch';
+};
+
+// The Advisors board: a project's backlog lines joined to the specs with the same slug, placed in the stage of the path from idea to merged build, with the one action each card offers.
+export const advisorBoard = (backlog: BacklogItem[], specs: SpecHomeItem[], loopNeedsYou: boolean) => {
+  const stages: Record<BoardStage, BoardCard[]> = { ideas: [], specced: [], building: [], done: [] };
+  const specOf = new Map(specs.map((s) => [s.slug, s]));
+  const card = (stage: BoardStage, slug: string, item?: BacklogItem, spec?: SpecHomeItem): BoardCard => ({ slug, action: actionOf(stage, spec), needsYou: !!spec && specNeedsYou(spec), item, spec });
+  const lines = [...backlog].sort((a, b) => a.rank - b.rank).flatMap((item) => {
+    const spec = specOf.get(item.slug);
+    const stage = stageOf(item, spec);
+    return stage ? [{ stage, item, spec }] : [];
+  });
+  const itemOf = new Map(backlog.map((i) => [i.slug, i]));
+  for (const stage of ['ideas', 'specced'] as const) {
+    for (const l of lines) if (l.stage === stage) stages[stage].push(card(stage, l.item.slug, l.item, l.spec));
+  }
+  const ordered = specHomeOrder(specs).map((s) => ({ spec: s, item: itemOf.get(s.slug), stage: stageOf(itemOf.get(s.slug), s)! }));
+  for (const o of ordered) if (!o.item && o.stage === 'specced') stages.specced.push(card(o.stage, o.spec.slug, undefined, o.spec));
+  for (const o of ordered) if (o.stage === 'building' || o.stage === 'done') stages[o.stage].push(card(o.stage, o.spec.slug, o.item, o.spec));
+  for (const l of lines) if (!l.spec && (l.stage === 'building' || l.stage === 'done')) stages[l.stage].push(card(l.stage, l.item.slug, l.item));
+  const defaultStage = BOARD_STAGES.find((st) => stages[st].some((c) => c.needsYou) || (st === 'building' && loopNeedsYou)) ?? BOARD_STAGES.find((st) => stages[st].length) ?? 'ideas';
+  return { stages, defaultStage };
 };
 
 export type NeedsYouItem = { kind: 'spec'; spec: SpecHomeItem } | { kind: 'loop'; run: ChatRun };

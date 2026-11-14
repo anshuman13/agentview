@@ -1,0 +1,4 @@
+[
+  {"name": "plain item", "root": "/w/app", "item": {"rank": 1, "status": "proposed", "slug": "dark-mode", "title": "Dark mode", "why": "Users ask for it"}, "expected": "Write the spec for the backlog item \"Dark mode\" (Users ask for it) to /w/app/.claude/specs/dark-mode.md and mark its line specced in /w/app/.claude/backlog.md."},
+  {"name": "empty why and quotes", "root": "/w/other", "item": {"rank": 1, "status": "proposed", "slug": "x-1", "title": "Fix \"x\"", "why": ""}, "expected": "Write the spec for the backlog item \"Fix \"x\"\" () to /w/other/.claude/specs/x-1.md and mark its line specced in /w/other/.claude/backlog.md."}
+]
