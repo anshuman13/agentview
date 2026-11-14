@@ -41,7 +41,16 @@ function rollup(checks: Check[] = []): CheckState {
 
 const list = async (cwd: string, ...extra: string[]) => JSON.parse(await gh(cwd, 'pr', 'list', '--json', LIST, '--limit', '30', ...extra));
 
+// Bumped when a PR changes here, so a list fetched before it is not stored.
+const generation = new Map<string, number>();
+const changedHere = (cwd: string) => {
+  generation.set(cwd, (generation.get(cwd) ?? 0) + 1);
+  lists.delete(cwd);
+  refreshing.delete(cwd);
+};
+
 async function fetchList(cwd: string): Promise<PullRequest[]> {
+  const gen = generation.get(cwd);
   const [all, mine, requested] = await Promise.all([list(cwd), list(cwd, '--author', '@me'), list(cwd, '--search', 'user-review-requested:@me')]);
   const byNumber = new Map<number, PullRequest>();
   for (const p of [...all, ...mine, ...requested]) {
@@ -63,17 +72,17 @@ async function fetchList(cwd: string): Promise<PullRequest[]> {
     });
   }
   const prs = [...byNumber.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  if (gen !== generation.get(cwd)) return prs;
   lists.set(cwd, { at: Date.now(), prs });
   for (const p of prs) if (details.get(key(cwd, p.number))?.updatedAt !== p.updatedAt) details.delete(key(cwd, p.number));
-  for (const p of prs.filter((p) => p.reviewRequested).slice(0, PREFETCH)) detail(cwd, p).catch(() => {});
   return prs;
 }
 
 function refresh(cwd: string) {
   let p = refreshing.get(cwd);
   if (!p) {
-    p = fetchList(cwd).finally(() => refreshing.delete(cwd));
-    refreshing.set(cwd, p);
+    const mine: Promise<PullRequest[]> = fetchList(cwd).finally(() => refreshing.get(cwd) === mine && refreshing.delete(cwd));
+    refreshing.set(cwd, (p = mine));
   }
   return p;
 }
@@ -88,7 +97,7 @@ export function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
 
 let auto: AutoMerge | undefined;
 export const useAutoMerge = (a: AutoMerge) => void (auto = a);
-export const forgetPrs = (cwd: string) => void lists.delete(cwd);
+export const forgetPrs = changedHere;
 
 const polled = new Map<string, number>();
 
@@ -144,7 +153,7 @@ const MERGE: Record<string, string> = { squash: '--squash', merge: '--merge', re
 
 async function act(cwd: string, n: string, verb: string, ...flags: string[]) {
   await gh(cwd, 'pr', verb, n, ...flags);
-  lists.delete(cwd);
+  changedHere(cwd);
   details.delete(key(cwd, n));
   return { ok: true };
 }
@@ -154,6 +163,8 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
   const [, , , what, n, action] = pathname.split('/');
   if (what === 'prs' && method === 'GET') {
     const prs = await listPrs(cwd, url.searchParams.has('fresh'));
+    // Only the PR view reads details, so only its list loads them ahead.
+    for (const p of prs.filter((p) => p.reviewRequested).slice(0, PREFETCH)) detail(cwd, p).catch(() => {});
     const armed = await auto?.state(cwd);
     return armed?.size ? prs.map((p) => (armed.has(p.number) ? { ...p, autoMerge: armed.get(p.number) } : p)) : prs;
   }

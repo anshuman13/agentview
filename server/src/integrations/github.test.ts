@@ -47,6 +47,8 @@ describe('listPrs', () => {
     const cwd = `/repo-${Math.random()}`;
     await Promise.all([listPrs(cwd, true), listPrs(cwd, true)]);
     expect(listCalls()).toBe(3);
+    expect(viewCalls()).toBe(0);
+    await github(cwd, 'GET', new URL('http://x/api/gh/prs'), async () => '');
     await tick();
     const prefetched = viewCalls();
     expect(prefetched).toBe(1);
@@ -54,7 +56,7 @@ describe('listPrs', () => {
     await github(cwd, 'GET', url, async () => '');
     expect(viewCalls()).toBe(prefetched);
     listed = listed.map((p) => (p.number === listed[0].number ? { ...p, updatedAt: '2026-10-23T11:00:00Z' } : p));
-    await listPrs(cwd, true);
+    await github(cwd, 'GET', new URL('http://x/api/gh/prs?fresh'), async () => '');
     await tick();
     expect(viewCalls()).toBe(prefetched + 1);
   });
