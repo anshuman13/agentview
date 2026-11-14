@@ -392,7 +392,7 @@ export type ClientMessage =
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
   | { type: 'open_advisor'; id: AdvisorId; fresh?: boolean }
-  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string }
+  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string; hub?: boolean }
   | { type: 'mcp_status' }
   | { type: 'usage' }
   | { type: 'mcp_reconnect'; name: string }

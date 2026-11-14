@@ -26,9 +26,9 @@ import { fetchAdvisors, fetchAudit, fetchBacklog, fetchSpecs, moveBacklogItem } 
 const open = (a: Advisor, fresh = false) => go({ type: 'open_advisor', id: a.id, ...(fresh && { fresh }) });
 
 // The Build action of a backlog row: a new chat in the project that builds from the spec, or has the pm agent write it first.
-const buildSpec = (root: string, slug: string) => go({ type: 'new_session', cwd: root, text: buildSpecPrompt(`.claude/specs/${slug}.md`) });
-const sketchSpec = (root: string, slug: string) => go({ type: 'new_session', cwd: root, text: sketchSpecPrompt(`.claude/specs/${slug}.md`) });
-const buildItem = (root: string, i: BacklogItem) => (i.spec ? buildSpec(root, i.slug) : go({ type: 'new_session', cwd: root, text: buildItemPrompt(i.title, i.why, i.slug) }));
+const buildSpec = (root: string, slug: string) => go({ type: 'new_session', cwd: root, hub: true, text: buildSpecPrompt(`.claude/specs/${slug}.md`) });
+const sketchSpec = (root: string, slug: string) => go({ type: 'new_session', cwd: root, hub: true, text: sketchSpecPrompt(`.claude/specs/${slug}.md`) });
+const buildItem = (root: string, i: BacklogItem) => (i.spec ? buildSpec(root, i.slug) : go({ type: 'new_session', cwd: root, hub: true, text: buildItemPrompt(i.title, i.why, i.slug) }));
 
 let chosenRoot: string | null = null;
 

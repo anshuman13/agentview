@@ -10,6 +10,20 @@ export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir
 // Advisors keep their memory and audits on the Mac that runs the hub. Elsewhere this is that Mac's AgentView, else null.
 export const advisorsMac = (hub = HUB): string | null => (/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(hub) ? null : hub.replace(/:\d+\/?$/, ':7777'));
 export const ADVISORS_ELSEWHERE = 'Advisors run on the Mac with the hub. Switch to that Mac to use them.';
+export const STARTED_ON_HUB = 'Started on the Mac with the hub. Switch to that Mac to follow the chat.';
+
+// Paths go to the hub Mac relative to the home folder, so they resolve under its own home.
+export const homeRelative = (p: string) => (p === os.homedir() || p.startsWith(`${os.homedir()}/`) ? `~${p.slice(os.homedir().length)}` : p);
+export const expandHome = (p: string) => p.replace(/^~(?=\/|$)/, os.homedir());
+
+export async function askAdvisorsMac(pathAndQuery: string, init: { method?: string; body?: unknown } = {}) {
+  try {
+    const r = await fetch(`${advisorsMac()}${pathAndQuery}`, { method: init.method ?? 'GET', headers: { 'content-type': 'application/json' }, body: init.body === undefined ? undefined : JSON.stringify(init.body), signal: AbortSignal.timeout(15_000) });
+    return { status: r.status, body: await r.json().catch(() => ({ error: `The hub Mac answered HTTP ${r.status}` })) };
+  } catch {
+    return { status: 502, body: { error: 'The hub Mac is not reachable' } };
+  }
+}
 
 type Param = { name: string; mode: 'always'; fallback: string } | { name: string; mode: 'flag' | 'positive' };
 type Route = { timeout: number; body?: boolean; params?: Param[] | 'all' };

@@ -1,4 +1,3 @@
-import os from 'node:os';
 import { readFile } from 'node:fs/promises';
 import { openInChrome } from '../chrome/chrome.js';
 import { listSessions, renameRoute, savedSession } from '../agent/claude/sessions.js';
@@ -11,7 +10,7 @@ import { pinsRoute, removeChat } from '../agent/claude/pins.js';
 import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
-import { advisorsMac, assistantRoute } from '../integrations/assistant.js';
+import { advisorsMac, askAdvisorsMac, assistantRoute, expandHome, homeRelative } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
 import { hideableIds } from '../../../shared/featureUse.js';
@@ -24,24 +23,17 @@ import { readBody, savePaste } from './body.js';
 import { entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 import { advisorsInfo, moveBacklogFile, readAudit, readBacklog } from '../session/advisors.js';
 import { buildList } from '../session/builds.js';
-import { allowedFolder } from '../workspace/files.js';
+import { allowedFolder, listSketches, readFileWithOriginal } from '../workspace/files.js';
 import { exec } from '../exec.js';
 
 // Advisors keep one copy of their files, on the hub Mac. Elsewhere that Mac answers their routes, with the project root
 // sent relative to the home folder so it resolves there.
-const rootParam = (url: URL) => (url.searchParams.get('root') ?? '').replace(/^~(?=\/|$)/, os.homedir());
-const homeRelative = (root: string) => (root === os.homedir() || root.startsWith(`${os.homedir()}/`) ? `~${root.slice(os.homedir().length)}` : root);
+const rootParam = (url: URL) => expandHome(url.searchParams.get('root') ?? '');
 const onHub = (fn: (c: Ctx) => unknown) => async (c: Ctx) => {
-  const mac = advisorsMac();
-  if (!mac) return fn(c);
+  if (!advisorsMac()) return fn(c);
   const q = new URLSearchParams(c.url.search);
   if (q.has('root')) q.set('root', homeRelative(q.get('root')!));
-  try {
-    const r = await fetch(`${mac}${c.url.pathname}?${q}`, { method: c.method, headers: { 'content-type': 'application/json' }, body: c.method === 'POST' ? JSON.stringify(c.body) : undefined, signal: AbortSignal.timeout(15_000) });
-    return { status: r.status, body: await r.json().catch(() => ({ error: `The hub Mac answered HTTP ${r.status}` })) };
-  } catch {
-    return { status: 502, body: { error: 'The hub Mac is not reachable' } };
-  }
+  return askAdvisorsMac(`${c.url.pathname}?${q}`, { method: c.method, body: c.method === 'POST' ? c.body : undefined });
 };
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
@@ -77,6 +69,16 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'GET /api/advisors/audit': entry(onHub(({ url }) => {
       const root = rootParam(url);
       return allowedFolder(root) ? readAudit(root) : { status: 400, body: { error: 'Not a project folder' } };
+    })),
+    'GET /api/advisors/sketches': entry(onHub(({ url }) => {
+      const root = rootParam(url);
+      return allowedFolder(root) ? listSketches(root) : { status: 400, body: { error: 'Not a project folder' } };
+    })),
+    'GET /api/advisors/sketch': entry(onHub(({ url }) => {
+      const root = rootParam(url);
+      const name = url.searchParams.get('name') ?? '';
+      if (!allowedFolder(root) || !/^[^/]+\.html$/.test(name)) return { status: 400, body: { error: 'Not a sketch' } };
+      return readFileWithOriginal(root, `.claude/sketches/${name}`);
     })),
     'ANY /api/sessions/pins': entry(({ method, url }) => pinsRoute(method, url.searchParams.get('id'))),
     'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'), url.searchParams.get('unread') === '1')),

@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { closeTerminal, createTerminal, listTerminals } from '../workspace/terminal.js';
 import { openInChrome } from '../chrome/chrome.js';
 import { configDef, inSettings, mcpCall, mcpConfig } from '../agent/claude/mcp.js';
@@ -10,6 +12,8 @@ import { buildOne, reviewBuild } from '../session/builds.js';
 import { dismissFinding, getFindings } from '../session/findings.js';
 import { deployRoute } from '../integrations/deploy.js';
 import { deployUrl } from '../settings.js';
+import { advisorsMac, askAdvisorsMac, homeRelative } from '../integrations/assistant.js';
+import { isSketchPath, sketchName } from '../../../shared/sketches.js';
 import { gitRoute } from '../workspace/git.js';
 import { observe } from '../integrations/observe.js';
 import { devScript } from '../workspace/devScript.js';
@@ -19,6 +23,22 @@ import { isPhone } from '../presence.js';
 import { entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 
 const MAX_FILE_BODY = 5_000_000;
+
+// The Designer writes its sketches on the hub Mac. Elsewhere the list adds that Mac's sketches of the same project (a local file of
+// the same name wins), and a sketch missing here is read from there.
+async function sketchesWithHub(cwd: string) {
+  const local = await listSketches(cwd);
+  if (!advisorsMac()) return local;
+  const r = await askAdvisorsMac(`/api/advisors/sketches?root=${encodeURIComponent(homeRelative(cwd))}`);
+  const hub = r.status === 200 && Array.isArray(r.body) ? (r.body as typeof local) : [];
+  const names = new Set(local.map((s) => s.name));
+  return [...local, ...hub.filter((s) => !names.has(s.name))].sort((a, b) => b.mtime - a.mtime);
+}
+
+function hubSketch(cwd: string, rel: string) {
+  if (!advisorsMac() || !isSketchPath(rel) || existsSync(path.join(cwd, rel))) return null;
+  return askAdvisorsMac(`/api/advisors/sketch?root=${encodeURIComponent(homeRelative(cwd))}&name=${encodeURIComponent(sketchName(rel))}`);
+}
 
 // The stream and commands work with no chat open: a new chat is opened through them.
 export function streamRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
@@ -32,7 +52,7 @@ export function streamRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       const msg = body as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
       const client = d.streams.get(url.searchParams.get('cid') ?? '');
-      if (!client && !d.chats().has(url.searchParams.get('chat') ?? '')) return { status: 409, body: { error: 'No stream for this command' } };
+      if (!client && !d.chats().has(url.searchParams.get('chat') ?? '') && msg.type !== 'new_session') return { status: 409, body: { error: 'No stream for this command' } };
       d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: current(url)?.id ?? '', phone: isPhone(url.searchParams.get('client'), req.headers.get('user-agent') ?? undefined) }, msg, url.searchParams.get('chat') || undefined);
       return { ok: true };
     }, true),
@@ -79,11 +99,14 @@ export function chatFileRoutes(): Record<string, Entry<ChatCtx>> {
     'ANY /api/devscript': entry(({ chat }) => devScript(chat.cwd)),
     'DELETE /api/terms': entry(({ url }) => closeTerminal(url.searchParams.get('id') ?? '')),
     'ANY /api/terms': entry(({ chat }) => listTerminals(chat.id)),
-    'ANY /api/sketches': entry(({ chat }) => listSketches(chat.cwd)),
+    'ANY /api/sketches': entry(({ chat }) => sketchesWithHub(chat.cwd)),
     'ANY /api/files': entry(({ chat }) => listFiles(chat.cwd)),
     'ANY /api/dir': entry(({ url, chat }) => listDir(chat.cwd, url.searchParams.get('path') ?? '')),
     'PUT /api/file': entry(async ({ req, url, chat }) => writeFileText(chat.cwd, url.searchParams.get('path') ?? '', await readBody(req, MAX_FILE_BODY))),
-    'ANY /api/file': entry(({ url, chat }) => readFileWithOriginal(chat.cwd, url.searchParams.get('path') ?? '')),
+    'ANY /api/file': entry(({ url, chat }) => {
+      const p = url.searchParams.get('path') ?? '';
+      return hubSketch(chat.cwd, p) ?? readFileWithOriginal(chat.cwd, p);
+    }),
     'ANY /api/image': entry(async ({ url, chat }) => {
       const img = await readImage(chat.cwd, url.searchParams.get('path') ?? '');
       return new Response(img.body, { headers: { 'content-type': img.type, 'cache-control': 'no-cache', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'", 'x-content-type-options': 'nosniff' } });
