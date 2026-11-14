@@ -205,7 +205,7 @@ export class RepeatController {
   unpause() {
     const r = this.host.repeat();
     if (!r?.paused) return;
-    this.host.setSession({ repeat: { ...r, paused: false, ...(r.builds && { builds: [] }) } });
+    this.host.setSession({ repeat: { ...r, paused: false, ...(r.maxBuilds && { builds: [] }) } });
     this.patchRun({ state: 'running', why: '', ...(r.maxBuilds && { builds: 0 }) });
     this.host.system(`${r.goal ? 'Goal' : 'Loop'} resumed`);
     if (!r.nextAt || r.nextAt <= Date.now()) this.fire();
@@ -262,7 +262,7 @@ export class RepeatController {
     if (!r || this.held || r.paused) return;
     const end = this.finish(r);
     if (end) return this.set(null, end.note, end.why);
-    if (r.maxBuilds && (r.builds?.length ?? 0) >= r.maxBuilds) return this.pauseAtLimit(r, r.maxBuilds);
+    if (r.maxBuilds && (r.builds?.length ?? 0) >= r.maxBuilds) return this.pauseAtLimit(r);
     const usage = this.host.usage();
     const gate = usageGate(r, usage);
     if (gate && 'note' in gate) return this.set(null, gate.note);
@@ -287,7 +287,8 @@ export class RepeatController {
     this.host.sendPrompt(report ? reportPrompt(r.goal!) : r.prompt, r.goal ? 'goal' : 'loop', round, report);
   }
 
-  private pauseAtLimit(r: Repeat, max: number) {
+  private pauseAtLimit(r: Repeat) {
+    const max = r.maxBuilds!;
     clearTimeout(this.timer);
     this.due = false;
     this.host.setSession({ repeat: { ...r, paused: true } });

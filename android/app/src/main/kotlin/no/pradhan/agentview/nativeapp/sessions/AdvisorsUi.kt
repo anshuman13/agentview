@@ -95,11 +95,11 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     val (load, reload) = rememberLoad { protocolJson.decodeFromString<List<AdvisorInfo>>(hub.read("/api/advisors")) }
     var memory by rememberSaveable { mutableStateOf<String?>(null) }
     var root by rememberSaveable { mutableStateOf<String?>(null) }
-    var moved by remember(root) { mutableStateOf<List<BacklogItem>?>(null) }
     val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<BacklogItem>>(hub.read("/api/advisors/backlog?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
+    var moved by remember(root, backlog.data) { mutableStateOf<List<BacklogItem>?>(null) }
     val (audits, reloadAudit) = rememberLoad(root) { root?.let { listOfNotNull(protocolJson.decodeFromString<AuditInfo?>(hub.read("/api/advisors/audit?root=${java.net.URLEncoder.encode(it, "UTF-8")}"))) } }
     var loadedTurns by remember { mutableStateOf(turns) }
-    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; moved = null; reload(); reloadBacklog(); reloadAudit() } }
+    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadAudit() } }
     var auditOpen by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     fun go(open: suspend () -> Boolean) = scope.launch { if (open()) onOpen() }

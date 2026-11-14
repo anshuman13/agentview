@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ADVISORS, moveBacklog, parseAudit, parseBacklog, type Advisor, type AdvisorId, type AdvisorInfo, type Audit, type BacklogItem } from '../../../shared/advisors.js';
@@ -102,15 +103,22 @@ export async function readBacklog(root: string): Promise<BacklogItem[]> {
   return items.map((i) => ({ ...i, spec: existsSync(path.join(root, '.claude/specs', `${i.slug}.md`)) }));
 }
 
-// Moves one backlog line up or down in the project's file, through a temp file so a failed write keeps the old one; false when the slug is not in it.
-export async function moveBacklogFile(root: string, slug: string, dir: 'up' | 'down'): Promise<boolean> {
-  const file = path.join(root, '.claude/backlog.md');
-  const next = moveBacklog(await readFile(file, 'utf8').catch(() => ''), slug, dir);
-  if (next === null) return false;
-  const tmp = `${file}.${process.pid}.tmp`;
-  await writeFile(tmp, next);
-  await rename(tmp, file);
-  return true;
+const moves = new Map<string, Promise<unknown>>();
+
+// Moves one backlog line up or down; false when the slug is not in it. Moves on one root run one at a time.
+export function moveBacklogFile(root: string, slug: string, dir: 'up' | 'down'): Promise<boolean> {
+  const run = async () => {
+    const file = path.join(root, '.claude/backlog.md');
+    const next = moveBacklog(await readFile(file, 'utf8').catch(() => ''), slug, dir);
+    if (next === null) return false;
+    const tmp = `${file}.${randomUUID()}.tmp`;
+    await writeFile(tmp, next);
+    await rename(tmp, file);
+    return true;
+  };
+  const p = (moves.get(root) ?? Promise.resolve()).then(run);
+  moves.set(root, p.catch(() => {}));
+  return p;
 }
 
 // A project's newest audit with its parsed findings, null when none was written.

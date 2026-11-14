@@ -66,7 +66,6 @@ export class AgentSession implements AgentHost {
   readonly stopper = new Stopper(this);
   readonly hooks = new Hooks(this);
   readonly review = new Review(this);
-  private countedBuilds = new Set<string>();
   readonly repeater = new RepeatController(this.links.repeatHost());
   private listeners = new Set<(m: ServerMessage) => void>();
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
@@ -119,10 +118,9 @@ export class AgentSession implements AgentHost {
 
   // The first live running event of an implementer counts its slug toward the loop's build limit; a replayed or restored one is older than a minute.
   private countBuild(ev: ChatEvent) {
-    if (ev.kind !== 'agent' || ev.status !== 'running' || Date.now() - ev.startedAt > 60_000 || this.countedBuilds.has(ev.toolUseId)) return;
+    if (ev.kind !== 'agent' || ev.status !== 'running' || Date.now() - ev.startedAt > 60_000) return;
     const target = buildStageOf(ev.subagentType, ev.description, ev.prompt);
     if (target?.stage !== 'implement') return;
-    this.countedBuilds.add(ev.toolUseId);
     this.repeater.noteBuild(target.slug);
   }
 

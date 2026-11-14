@@ -63,7 +63,7 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
         <EmptyState size="sm" icon="list-ordered" title="No backlog yet" hint="The PM ranks what to build next" action={<Button size="sm" variant="tinted" onClick={() => askAdvisor('pm', rankPrompt(root))}>Ask PM to rank</Button>} />
       ) : (
         <div className="ui-group">
-          {items.map((i) => (
+          {items.map((i, n) => (
             <Row
               key={i.rank}
               leading={i.rank}
@@ -72,8 +72,8 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
               plain
               menu={<>
                 {canBuildItem(i) && <MenuItem icon="play" onClick={() => buildItem(root, i)}>Build</MenuItem>}
-                <MenuItem icon="arrow-up" disabled={i.rank === 1} onClick={() => move(i.slug, 'up')}>Move up</MenuItem>
-                <MenuItem icon="arrow-down" disabled={i.rank === items.length} onClick={() => move(i.slug, 'down')}>Move down</MenuItem>
+                <MenuItem icon="arrow-up" disabled={n === 0} onClick={() => move(i.slug, 'up')}>Move up</MenuItem>
+                <MenuItem icon="arrow-down" disabled={n === items.length - 1} onClick={() => move(i.slug, 'down')}>Move down</MenuItem>
               </>}
             />
           ))}
