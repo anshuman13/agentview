@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { tauriInvoke } from '../../codex/data/local';
+import { tauriInvoke } from '../runtime/tauri';
 import { badgeArg, createBadgeSender } from '../runtime/launcherBadge';
 import { useCounts } from '../store/counts';
 

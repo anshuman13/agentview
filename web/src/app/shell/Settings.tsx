@@ -5,7 +5,7 @@ import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import { Icon } from '../../ui/Icon';
-import { tauriInvoke } from '../../codex/data/local';
+import { tauriInvoke } from '../runtime/tauri';
 import { appSettings } from '../appSettings';
 import { saveFeatureUse } from '../featureUseApi';
 import { notice } from '../store';

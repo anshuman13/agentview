@@ -8,20 +8,8 @@ import { apiUrl } from '../../app/api';
 import { hub, LONG_TIMEOUT, QUICK_TIMEOUT, REPLY_TIMEOUT, SYNC_TIMEOUT } from './hubFetch';
 import { showSnack, snackParked } from '../view';
 
-type Invoke = <T = unknown>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
-
-declare global {
-  interface Window {
-    __TAURI__?: { core?: { invoke?: Invoke } };
-    __TAURI_INTERNALS__?: { invoke?: Invoke };
-    AgentViewShell?: { unlock(): void };
-  }
-  interface WindowEventMap {
-    'assistant-key': CustomEvent<{ key?: string; error?: string } | null>;
-  }
-}
-
-export const tauriInvoke = () => window.__TAURI__?.core?.invoke ?? window.__TAURI_INTERNALS__?.invoke;
+export { tauriInvoke } from '../../app/runtime/tauri';
+import { tauriInvoke, type Invoke } from '../../app/runtime/tauri';
 
 // The hub through the chosen Mac's AgentView, which forwards to wherever that Mac's hub runs.
 export const hubUrl = () => apiUrl('/api/assistant');

@@ -1,4 +1,4 @@
-import { tauriInvoke } from '../codex/data/local';
+import { tauriInvoke } from '../app/runtime/tauri';
 
 const PATTERNS = { tap: 8, success: 15 };
 const PLUGIN = {

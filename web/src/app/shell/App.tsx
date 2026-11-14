@@ -22,7 +22,7 @@ import { MoreSheet, TabBar } from './TabBar';
 import { touch } from '../touch/touch';
 import { Back } from '../touch/back';
 import { BadgeMount } from './BadgeMount';
-import { tauriInvoke } from '../../codex/data/local';
+import { tauriInvoke } from '../runtime/tauri';
 import { EmbeddedApp, TerminalPanel } from './AppParts';
 import { narrow, useWorkbench } from './useWorkbench';
 
