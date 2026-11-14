@@ -259,7 +259,7 @@ fun snippet(words: List<String>, vararg texts: String?): String {
 fun searchAll(items: List<Row>, meetings: List<Row>, query: String, profile: String?): Hits {
     val words = queryWords(query)
     if (words.isEmpty()) return Hits(emptyList(), emptyList())
-    fun hits(vararg texts: String?) = words.all { w -> texts.joinToString(" ").lowercase().contains(w) }
+    fun hits(vararg texts: String?) = texts.joinToString(" ") { it.orEmpty() }.lowercase().let { hay -> words.all { hay.contains(it) } }
     val tasks = items.filter { !it.deleted && matchesProfile(profile, it) && it.status !in listOf("dismissed", "point", "raised", GOAL) && hits(it.title, it.text, it.people, it.source) }
         .sortedByDescending { it.updatedAt }.map { Hit(it, it.title ?: it.text ?: "Untitled", snippet(words, it.text, it.people, it.source)) }
     val found = meetings.filter { !it.deleted && matchesProfile(profile, it) && hits(it.title, it.str("people"), it.str("notes"), it.str("summary"), it.str("decisions")) }
