@@ -262,7 +262,7 @@ describe('standing goal', () => {
   it('ends after 28 days with its own reason', () => {
     const { c, state, repeat } = setup('x');
     c.set(repeat());
-    expect(state.notes[0]).toBe('Goal every 1 h');
+    expect(state.notes[0]).toBe('Goal every 1h');
     vi.advanceTimersByTime(28 * DAY);
     expect(state.ended).toBe('Ran for 28 days, start it again to continue');
     expect(repeat()).toBeNull();
@@ -323,7 +323,7 @@ describe('goal limits and edits', () => {
     c.edit({ every: 2 * HOUR, capPct: null });
     expect(repeat()).toMatchObject({ every: 2 * HOUR, nextAt: Date.now() + 2 * HOUR });
     expect(repeat()!.capPct).toBeUndefined();
-    expect(state.notes.at(-1)).toBe('Goal every 2 h · no cap · no build limit');
+    expect(state.notes.at(-1)).toBe('Goal every 2h · no cap · no build limit');
     expect(state.patches.at(-1)).toMatchObject({ every: 2 * HOUR, nextAt: Date.now() + 2 * HOUR, capPct: undefined });
     c.edit({ every: 60_000, endAt: 5 });
     expect(repeat()).toMatchObject({ every: 2 * HOUR, endAt: 5 });

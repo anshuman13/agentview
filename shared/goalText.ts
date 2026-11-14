@@ -1,13 +1,14 @@
 import { MAX_GOAL_ROUNDS, type ChatRun, type Round } from './protocol.js';
-import { clock } from './util.js';
+import { clock, span } from './util.js';
+
+// The run a chat is on now: its last open run, as on the server (Runs.activeFor).
+export const activeRun = (runs: ChatRun[], chatId: string) => runs.filter((r) => r.chatId === chatId && r.state !== 'done').at(-1);
 
 export const rounds = (n: number) => `${n} ${n === 1 ? 'round' : 'rounds'}`;
 
-export const interval = (ms: number) => (ms % 3_600_000 === 0 ? `${ms / 3_600_000} h` : `${Math.round(ms / 60_000)} min`);
-
 // The system note of a goal that starts or changes: how often, until when, the usage cap and the build limit. An edit also says "no cap" and "no build limit".
 export function goalPlan({ every, endAt, capPct, maxBuilds }: { every: number; endAt?: number; capPct?: number; maxBuilds?: number }, edit = false) {
-  const head = `${every ? `Goal every ${interval(every)}` : 'Goal when idle'}${endAt ? ` until ${clock(endAt)}` : ''}`;
+  const head = `${every ? `Goal every ${span(every)}` : 'Goal when idle'}${endAt ? ` until ${clock(endAt)}` : ''}`;
   return [head, !every && `up to ${rounds(MAX_GOAL_ROUNDS)}`, capPct ? `cap ${capPct}%` : edit && 'no cap', maxBuilds ? `builds ${maxBuilds}` : edit && 'no build limit'].filter(Boolean).join(' · ');
 }
 

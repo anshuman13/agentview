@@ -79,13 +79,10 @@ class RunsTest {
         assertEquals("job/x · 2m ago", reviewMeta(r, null, 180_000))
     }
 
-    @Test fun badgeAndSessionsCount() {
-        fun live(id: String, pending: Int = 0, run: LiveRun? = null) = LiveChat(id, pending = pending, run = run)
+    @Test fun runBadges() {
         assertEquals(RunBadge.Next, runBadge(LiveRun("r", state = "running", nextAt = 1)))
         assertEquals(RunBadge.Paused, runBadge(LiveRun("r", state = "paused", why = "you paused it")))
         assertEquals(RunBadge.Needs, runBadge(LiveRun("r", state = "paused", why = "waiting for your approval", needsYou = true)))
         assertEquals(RunBadge.Needs, runBadge(LiveRun("r", state = "running", outcome = "question", needsYou = true)))
-        val chats = listOf(live("a", 2), live("b", run = LiveRun("r", outcome = "blocked", needsYou = true)), live("c", run = LiveRun("r2")), live("shown", 5))
-        assertEquals(3, sessionsBadge(chats, "shown"))
     }
 }

@@ -39,7 +39,8 @@ fun firstRoundText(at: Long?) = "First round" + (at?.let { " ${clock(it)}" } ?: 
 
 fun nextRoundText(at: Long?) = "Next round" + (at?.let { " ${clock(it)}" } ?: "")
 
-fun everyText(ms: Long) = if (ms % 3_600_000L == 0L) "${ms / 3_600_000L}h" else "${ms / 60_000L}m"
+// Web span in shared/util.ts.
+fun everyText(ms: Long) = if (ms % 3_600_000L == 0L) "${ms / 3_600_000L}h" else "${Math.round(ms / 60_000.0)}m"
 
 // One column of the tries board (web/src/sessions/TriesBoard.tsx tryColumn): the try's state, last report, diff size and cost.
 data class TryColumn(val n: Int, val branch: String, val state: String, val line: String, val edits: Edits?, val cost: Double, val archived: Boolean)
@@ -120,10 +121,6 @@ fun runBadge(run: LiveRun): RunBadge? = when {
     run.state == "paused" -> RunBadge.Paused
     else -> RunBadge.Next
 }
-
-// The Sessions tab count: waiting requests, and a chat whose run needs you.
-fun sessionsBadge(live: List<LiveChat>, shownId: String) =
-    live.filter { it.id != shownId }.sumOf { if (it.pending > 0) it.pending else if (it.run?.needsYou == true) 1 else 0 }
 
 // The diff of a job run for review (web sessionApi RunDiff), from /api/runs/diff.
 @Serializable

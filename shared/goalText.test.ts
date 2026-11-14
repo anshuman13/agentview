@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { firstRound, goalCapReached, goalMet, goalNotMet, goalPlan, goalStoppedAt, interval, mergeQuiet, nextRound, roundGroupText, roundText, runLine, skipText } from './goalText';
+import { firstRound, goalCapReached, goalMet, goalNotMet, goalPlan, goalStoppedAt, mergeQuiet, nextRound, roundGroupText, roundText, runLine, skipText } from './goalText';
 import { clock } from './util';
 
 const at = new Date(2026, 10, 9, 9, 0).getTime();
@@ -7,13 +7,12 @@ const t = new Date(2026, 10, 9, 2, 10).getTime();
 
 describe('goalText', () => {
   it('words the start and edit note with the parts that are set', () => {
-    expect(goalPlan({ every: 600_000, endAt: at, capPct: 100 })).toBe('Goal every 10 min until 09:00 · cap 100%');
-    expect(goalPlan({ every: 7_200_000 })).toBe('Goal every 2 h');
+    expect(goalPlan({ every: 600_000, endAt: at, capPct: 100 })).toBe('Goal every 10m until 09:00 · cap 100%');
+    expect(goalPlan({ every: 7_200_000 })).toBe('Goal every 2h');
     expect(goalPlan({ every: 0 })).toBe('Goal when idle · up to 20 rounds');
     expect(goalPlan({ every: 0, capPct: 70 })).toBe('Goal when idle · up to 20 rounds · cap 70%');
-    expect(goalPlan({ every: 1_800_000, endAt: at }, true)).toBe('Goal every 30 min until 09:00 · no cap · no build limit');
-    expect(goalPlan({ every: 1_800_000, capPct: 70, maxBuilds: 5 }, true)).toBe('Goal every 30 min · cap 70% · builds 5');
-    expect(interval(5_400_000)).toBe('90 min');
+    expect(goalPlan({ every: 1_800_000, endAt: at }, true)).toBe('Goal every 30m until 09:00 · no cap · no build limit');
+    expect(goalPlan({ every: 1_800_000, capPct: 70, maxBuilds: 5 }, true)).toBe('Goal every 30m · cap 70% · builds 5');
   });
 
   it('words the run line, a round and the waits', () => {
