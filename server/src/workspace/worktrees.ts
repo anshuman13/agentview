@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { listSessions } from '../agent/claude/sessions.js';
@@ -154,7 +155,9 @@ export async function removeWorktree(id: string, openCwds: string[]) {
 export async function removeRunWorktree(run: { repo?: string; worktree?: string; branch?: string; paseo?: boolean }) {
   const { repo, worktree, branch } = run;
   if (!repo || !worktree || !branch) throw new Error('The run has no worktree');
-  if (run.paseo) {
+  // A folder already gone (let go, or removed by hand) only leaves git's record and the branch.
+  if (!existsSync(worktree)) await safeGit(repo, ['worktree', 'prune']).catch(() => {});
+  else if (run.paseo) {
     const id = (await paseoSpaces()).find((w) => w.cwd === worktree)?.id;
     if (id) await paseo(['workspace', 'archive', id], 60_000).catch(notInstalled);
   } else await safeGit(repo, ['worktree', 'remove', '--force', worktree]);

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { errText } from '../../../shared/util.js';
 import type { ChatRun } from '../../../shared/protocol.js';
 import { removeChat } from '../agent/claude/pins.js';
@@ -47,10 +48,12 @@ export function runRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return { ok: true };
     }, true, true),
     'POST /api/runs/discard': onRun(async (run) => {
-      if (run.state === 'done') return failed(409, 'The run is over');
+      const left = Boolean(run.worktree && existsSync(run.worktree));
+      // A discarded run whose worktree removal failed can be discarded again to retry it.
+      if (run.state === 'done' && !(run.why === 'Discarded' && left)) return failed(409, 'The run is over');
       if (chatWorking(run)) return failed(409, 'The chat is working');
-      await runWorktree(run);
-      await d.host.req({ op: 'run_end', id: run.id, why: 'Discarded' });
+      if (left) await runWorktree(run);
+      if (run.state !== 'done') await d.host.req({ op: 'run_end', id: run.id, why: 'Discarded' });
       await removeRunWorktree(run);
       const open = d.bySession(run.sessionId);
       if (open) await d.closeByUser(open);
