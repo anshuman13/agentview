@@ -39,7 +39,7 @@ type Entry = {
 
 const PROVIDERS: Record<Provider, Entry> = {
   claude: {
-    driver: (cwd, resume, fork, unattended) => claudeDriver(cwd, resume, fork, false, undefined, unattended),
+    driver: (cwd, resume, fork, unattended) => claudeDriver(cwd, { resume, fork, unattended }),
     verifyLimits: () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
     transcriptPath: claudeTranscript,
     memory: (cwd) => chatMemory(cwd),
@@ -50,7 +50,7 @@ const PROVIDERS: Record<Provider, Entry> = {
     modelSet: 'claude',
   },
   openrouter: {
-    driver: (cwd, resume, fork, unattended) => claudeDriver(cwd, resume, fork, true, undefined, unattended),
+    driver: (cwd, resume, fork, unattended) => claudeDriver(cwd, { resume, fork, openrouter: true, unattended }),
     verifyLimits: () => Promise.resolve(),
     transcriptPath: claudeTranscript,
     memory: (cwd) => chatMemory(cwd),

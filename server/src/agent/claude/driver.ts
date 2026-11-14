@@ -27,7 +27,9 @@ const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: '
 
 const USAGE_EVERY = 10 * 60_000;
 
-export const claudeDriver = (cwd: string, resume?: string, fork = false, openrouter = false, account = reopenAccount(resume, cwd), unattended = false): DriverFactory => (host) => new ClaudeDriver(host, resume, fork, account, openrouter, unattended);
+export type ClaudeOptions = { resume?: string; fork?: boolean; openrouter?: boolean; account?: Account; unattended?: boolean };
+
+export const claudeDriver = (cwd: string, o: ClaudeOptions = {}): DriverFactory => (host) => new ClaudeDriver(host, { ...o, account: o.account ?? reopenAccount(o.resume, cwd) });
 
 
 // Runs a chat on the Claude Agent SDK: one CLI process at a time, resumed from its transcript when it exits.
@@ -54,7 +56,18 @@ export class ClaudeDriver implements AgentDriver {
   private systemMessages: SystemMessages;
   private restore: { model: string | null; permissionMode: string | null } | null = null;
 
-  constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main', private openrouter = false, private unattended = false) {
+  private resume?: string;
+  private fork: boolean;
+  account: Account;
+  private openrouter: boolean;
+  private unattended: boolean;
+
+  constructor(private host: AgentHost, o: ClaudeOptions = {}) {
+    this.resume = o.resume;
+    this.fork = o.fork ?? false;
+    this.account = o.account ?? 'main';
+    this.openrouter = o.openrouter ?? false;
+    this.unattended = o.unattended ?? false;
     this.live = new StreamText(host);
     this.toolHooks = new ToolHooks(host);
     this.tasks = new TaskTracker(host);
