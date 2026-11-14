@@ -5,7 +5,7 @@ import { REVIEW_PHASES, approvalGate, buildStageOf, isReviewPhase, buildSummary,
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { jsonFile, readJson } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
-import { mainCheckout } from '../workspace/tries.js';
+import { mainCheckout } from '../workspace/git.js';
 import type { AgentSession } from './session.js';
 
 const MAX_REPORT = 20_000;

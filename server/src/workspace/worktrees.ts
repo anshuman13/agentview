@@ -5,7 +5,7 @@ import { listSessions } from '../agent/claude/sessions.js';
 import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shared/protocol.js';
 import { inside } from '../../../shared/util.js';
 import { ROOTS } from './files.js';
-import { safeGit } from './git.js';
+import { defaultBase, mainCheckout, safeGit } from './git.js';
 import { exec as run } from '../exec.js';
 
 const paseoMissing = (err: unknown) => (err as { code?: string }).code === 'ENOENT' || /Executable not found|paseo is not installed/.test((err as Error)?.message ?? '');
@@ -118,7 +118,7 @@ async function paseoSpaces(): Promise<Space[]> {
 async function triesSpaces(): Promise<Space[]> {
   const dirs = await Promise.all(ROOTS.map(async (root) => (await readdir(path.join(root, '.tries'), { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory()).map((d) => path.join(root, '.tries', d.name))));
   const spaces = await Promise.all(dirs.flat().map(async (cwd) => {
-    const repo = (await git(cwd, 'worktree', 'list', '--porcelain').catch(() => '')).split('\n')[0].replace(/^worktree /, '');
+    const repo = await mainCheckout(cwd).catch(() => '');
     const name = await git(cwd, 'rev-parse', '--abbrev-ref', 'HEAD').catch(() => '');
     return repo && repo !== cwd ? { id: `git:${cwd}`, project: path.basename(repo), repo, name: name || path.basename(cwd), cwd } : null;
   }));
@@ -173,7 +173,7 @@ export async function createWorktree(repo: string, branch: string) {
   if (!(await paseoProjects()).some((p) => p.path === repo)) throw new Error('This repo is not a Paseo project');
   if (branch.startsWith('-') || !/^[\w./-]+$/.test(branch)) throw new Error('Invalid branch name');
   await git(repo, 'check-ref-format', '--branch', branch).catch(() => { throw new Error(`Invalid branch name: ${branch}`); });
-  const base = (await git(repo, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD').catch(() => 'origin/main')).replace(/^origin\//, '');
+  const base = (await defaultBase(repo)).replace(/^origin\//, '');
   const { stdout } = await paseo(['workspace', 'create', '--isolation', 'worktree', '--path', repo, '--mode', 'branch-off', '--new-branch', branch, '--base', base, '--json'], 300_000).catch(notInstalled);
   const out = JSON.parse(stdout);
   const cwd: string | undefined = out.cwd ?? out.workspace?.cwd;
