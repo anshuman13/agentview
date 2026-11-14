@@ -84,8 +84,10 @@ export function Menu({ trigger, onClose, className, children }: {
     if (next >= 0) items[next].focus();
   };
   const move = (e: KeyboardEvent) => {
-    if (e.key.length === 1 && e.key !== ' ' && !e.nativeEvent.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey && (e.target as HTMLElement).tagName !== 'SELECT') return type(e);
-    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key) || (e.target as HTMLElement).tagName === 'SELECT') return;
+    // Fields inside a menu keep their own keys.
+    if (['SELECT', 'INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+    if (e.key.length === 1 && e.key !== ' ' && !e.nativeEvent.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey) return type(e);
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
     const items = [...(box.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
     if (!items.length) return;
     e.preventDefault();
