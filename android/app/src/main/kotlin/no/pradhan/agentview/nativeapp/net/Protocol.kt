@@ -87,7 +87,7 @@ data class FeatureUseReply(val days: Map<String, Map<String, Int>> = emptyMap())
 
 // shared/protocol.ts ProviderOption: what a new chat can run on; a disabled one says what is missing.
 @Serializable
-data class ProviderOption(val id: String, val label: String, val enabled: Boolean = true, val note: String? = null)
+data class ProviderOption(val id: String, val label: String, val modelSet: String = id, val enabled: Boolean = true, val note: String? = null)
 
 @Serializable
 data class AgentUsage(val tokens: Long = 0, val toolUses: Int = 0, val durationMs: Long = 0)

@@ -33,6 +33,8 @@ type Entry = {
   servers(cwd: string): Promise<Record<string, McpServerDef>>;
   // Where those servers are configured, as the pages name it.
   serversFile: string;
+  // Providers with the same model ids share one set, so a client keeps one model list and last model per set.
+  modelSet: string;
 };
 
 const PROVIDERS: Record<Provider, Entry> = {
@@ -45,6 +47,7 @@ const PROVIDERS: Record<Provider, Entry> = {
     mcpProbe,
     servers: allowedServers,
     serversFile: '~/.claude.json',
+    modelSet: 'claude',
   },
   openrouter: {
     driver: (cwd, resume, fork, unattended) => claudeDriver(cwd, resume, fork, true, undefined, unattended),
@@ -55,6 +58,7 @@ const PROVIDERS: Record<Provider, Entry> = {
     mcpProbe,
     servers: allowedServers,
     serversFile: '~/.claude.json',
+    modelSet: 'claude',
   },
   codex: {
     driver: (_cwd, resume, fork) => codexDriver(resume, fork),
@@ -65,6 +69,7 @@ const PROVIDERS: Record<Provider, Entry> = {
     mcpProbe: codexMcpProbe,
     servers: readCodexServers,
     serversFile: '~/.codex/config.toml',
+    modelSet: 'codex',
   },
 };
 
@@ -76,7 +81,7 @@ export async function providerOptions(): Promise<ProviderOption[]> {
     openrouter: loadOpenRouter() ? { on: true } : { on: false, note: 'Set a key and models in Settings' },
     codex: codex ? { on: true } : { on: false, note: NOT_SIGNED_IN },
   };
-  return (Object.keys(PROVIDERS) as Provider[]).map((id) => ({ id, label: providerLabel(id), enabled: enabled[id].on, ...(enabled[id].note && { note: enabled[id].note }) }));
+  return (Object.keys(PROVIDERS) as Provider[]).map((id) => ({ id, label: providerLabel(id), modelSet: PROVIDERS[id].modelSet, enabled: enabled[id].on, ...(enabled[id].note && { note: enabled[id].note }) }));
 }
 
 export const provider = (id: Provider) => PROVIDERS[id];

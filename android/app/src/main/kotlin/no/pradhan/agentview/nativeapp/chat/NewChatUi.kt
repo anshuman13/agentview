@@ -35,7 +35,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
     val default by hub.defaultProvider.collectAsState()
     var picked by remember { mutableStateOf<ProviderOption?>(null) }
     val provider = picked ?: providers.firstOrNull { it.id == default && it.enabled } ?: providers.firstOrNull { it.enabled }
-    val group = modelGroup(provider?.id ?: default)
+    val group = modelGroup(provider?.id ?: default, providers)
     val models by hub.modelsOf(group).collectAsState()
     var repo by remember { mutableStateOf(repoKey ?: initial) }
     var model by remember(models, group) { mutableStateOf(startModel(models, hub.lastModel(group))) }

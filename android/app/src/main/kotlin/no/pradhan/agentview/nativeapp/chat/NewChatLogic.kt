@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.chat
 
 import kotlinx.serialization.builtins.ListSerializer
 import no.pradhan.agentview.nativeapp.net.ModelInfo
+import no.pradhan.agentview.nativeapp.net.ProviderOption
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.workspace.specPrompt
@@ -12,12 +13,13 @@ fun parseModels(s: String?): List<ModelInfo> = s?.let { runCatching { protocolJs
 
 fun encodeModels(models: List<ModelInfo>): String = protocolJson.encodeToString(modelList, models)
 
-// Claude and OpenRouter share the Claude model aliases; Codex has its own list, so each keeps its own models and last model.
-fun modelGroup(provider: String?) = if (provider == "codex") "codex" else "claude"
+// The server's model set of a provider (Claude and OpenRouter share one), so each set keeps its own models and last model.
+fun modelGroup(provider: String?, options: List<ProviderOption>) = options.firstOrNull { it.id == provider }?.modelSet ?: provider ?: "claude"
 
-fun modelsKey(group: String) = if (group == "codex") "models:codex" else "models"
+// The claude set keeps the keys from before there were sets.
+fun modelsKey(group: String) = if (group == "claude") "models" else "models:$group"
 
-fun lastModelKey(group: String) = if (group == "codex") "lastModel:codex" else "lastModel"
+fun lastModelKey(group: String) = if (group == "claude") "lastModel" else "lastModel:$group"
 
 // The model the sheet starts on: the last one used when the server still offers it, else the first on the list.
 fun startModel(models: List<ModelInfo>, last: String?): String? =

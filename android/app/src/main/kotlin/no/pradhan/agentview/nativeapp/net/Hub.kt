@@ -114,9 +114,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val notifier = Notifier(app)
 
-    val models = MutableStateFlow(parseModels(prefs.getString("models", null)))
-
-    val codexModels = MutableStateFlow(parseModels(prefs.getString("models:codex", null)))
+    val modelLists = mutableMapOf<String, MutableStateFlow<List<ModelInfo>>>()
 
     val voiceRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
@@ -339,7 +337,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         if (m is ServerMessage.FileChanged) fileChanged.tryEmit(m.path)
         store.handle(m)
         store.state.value.session?.let { s ->
-            val group = modelGroup(s.provider)
+            val group = modelGroup(s.provider, providers.value)
             val list = modelsOf(group)
             s.models.takeIf { it.isNotEmpty() && it != list.value }?.let { list.value = it; prefs.edit().putString(modelsKey(group), encodeModels(it)).apply() }
         }

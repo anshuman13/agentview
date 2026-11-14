@@ -8,6 +8,9 @@ import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.lastModelKey
+import no.pradhan.agentview.nativeapp.chat.modelsKey
+import no.pradhan.agentview.nativeapp.chat.parseModels
+import kotlinx.coroutines.flow.MutableStateFlow
 import no.pradhan.agentview.nativeapp.chat.modelGroup
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.workspace.TermTab
@@ -21,7 +24,7 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 
-fun Hub.modelsOf(group: String) = if (group == "codex") codexModels else models
+fun Hub.modelsOf(group: String) = modelLists.getOrPut(group) { MutableStateFlow(parseModels(prefs.getString(modelsKey(group), null))) }
 
 fun Hub.lastModel(group: String) = prefs.getString(lastModelKey(group), null)
 
@@ -30,7 +33,7 @@ fun Hub.setLastModel(group: String, model: String) { prefs.edit().putString(last
 // A model is sent only when the provider's own list has it, so a Codex id never reaches a Claude chat or the reverse.
 fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, provider: String? = null, text: String? = null, hub: Boolean = false, onOpened: () -> Unit = {}) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
-    val group = modelGroup(provider ?: defaultProvider.value)
+    val group = modelGroup(provider ?: defaultProvider.value, providers.value)
     if (model != null) setLastModel(group, model)
     val sent = (model ?: lastModel(group).takeIf { fork == null })?.takeIf { m -> modelsOf(group).value.any { it.value == m } }
     viewModelScope.launch {
@@ -135,7 +138,7 @@ fun Hub.rewind(id: String) = post(rewindCmd(id), store.wanted)
 
 fun Hub.stopTask(toolUseId: String) = post(stopTaskCmd(toolUseId), store.wanted)
 
-fun Hub.setModel(model: String) { setLastModel(modelGroup(store.state.value.session?.provider), model); post(setModelCmd(model), store.wanted) }
+fun Hub.setModel(model: String) { setLastModel(modelGroup(store.state.value.session?.provider, providers.value), model); post(setModelCmd(model), store.wanted) }
 
 fun Hub.setEffort(effort: String) = post(setEffortCmd(effort), store.wanted)
 

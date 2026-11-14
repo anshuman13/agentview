@@ -85,7 +85,8 @@ export type PublicSettings = { deploy: boolean; accountLabels: Record<Account, s
 // What runs a chat: the Claude login, Claude Code on OpenRouter models, or the Codex CLI on a ChatGPT plan.
 export type Provider = 'claude' | 'openrouter' | 'codex';
 // A provider a new chat can pick; a disabled one says what is missing.
-export type ProviderOption = { id: Provider; label: string; enabled: boolean; note?: string };
+// modelSet: providers with the same model ids share it (Claude and OpenRouter), so clients keep model lists per set without knowing names.
+export type ProviderOption = { id: Provider; label: string; modelSet: string; enabled: boolean; note?: string };
 
 // Share of the Claude plan's 5-hour and weekly limits used, from the CLI's usage API.
 export type UsageWindow = { pct: number; resetsAt: number | null };
