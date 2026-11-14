@@ -7,6 +7,7 @@ import java.time.ZoneId
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.booleanOrNull
@@ -429,6 +430,12 @@ class SharedCasesTest {
 
     @Test fun appendRule() {
         for (c in cases("append-rule")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, appendRule(c.str("text"), c.str("rule")))
+    }
+
+    @Test fun dismissed() {
+        val d = Json.parseToJsonElement(File("../../shared/fixtures/dismissed.json").readText()).jsonObject
+        for (c in d.getValue("keys").jsonArray.map { it.jsonObject }) assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, dismissedKeys(c.prim("value")?.contentOrNull))
+        for (c in d.getValue("merge").jsonArray.map { it.jsonObject }) assertEquals(c.str("name"), c.prim("expected")?.contentOrNull, mergeDismissed(c.prim("a")?.contentOrNull, c.prim("b")?.contentOrNull))
     }
 
     @Test fun eventRule() {

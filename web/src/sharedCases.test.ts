@@ -36,6 +36,7 @@ import type { Profile } from './codex/data/sync';
 import type { Meeting } from './codex/data/wiki/wiki';
 import type { ItemRow } from './codex/data/sync';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
+import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -153,6 +154,10 @@ describe('cases shared with the Android app', () => {
   for (const c of cases<{ name: string; text: string; rule: string; expected: string | null }>('append-rule')) {
     it(`appendRule: ${c.name}`, () => expect(appendRule(c.text, c.rule)).toBe(c.expected));
   }
+
+  const dismissed = cases<never>('dismissed') as unknown as { keys: { name: string; value: string | null; expected: string[] }[]; merge: { name: string; a: string | null; b: string | null; expected: string | null }[] };
+  for (const c of dismissed.keys) it(`dismissedKeys: ${c.name}`, () => expect(dismissedKeys(c.value)).toEqual(c.expected));
+  for (const c of dismissed.merge) it(`mergeDismissed: ${c.name}`, () => expect(mergeDismissed(c.a, c.b)).toBe(c.expected));
 
   for (const c of cases<{ name: string; id: string; people: string; links: string | null; expected: boolean }>('event-rule')) {
     it(`isEvent: ${c.name}`, () => expect(isEvent({ id: c.id, people: c.people, links: c.links } as Meeting)).toBe(c.expected));

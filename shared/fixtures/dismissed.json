@@ -1,0 +1,14 @@
+{
+  "keys": [
+    { "name": "empty", "value": null, "expected": [] },
+    { "name": "old plain lines", "value": "a\nb", "expected": ["a", "b"] },
+    { "name": "an undo after a dismissal", "value": "+a\t1\n-a\t2", "expected": [] },
+    { "name": "a dismissal after an undo", "value": "+a\t1\n-a\t2\n+a\t3", "expected": ["a"] },
+    { "name": "a key with a leading dash", "value": "+-x\t1", "expected": ["-x"] }
+  ],
+  "merge": [
+    { "name": "two devices both keep their dismissal", "a": "+a\t1", "b": "+b\t2", "expected": "+a\t1\n+b\t2" },
+    { "name": "same lines once", "a": "+a\t1", "b": "+a\t1\n-a\t3", "expected": "+a\t1\n-a\t3" },
+    { "name": "both empty", "a": null, "b": "", "expected": null }
+  ]
+}

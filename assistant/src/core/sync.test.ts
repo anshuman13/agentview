@@ -15,6 +15,14 @@ const item = (id = 'item1') => pullChanges(db, 0).changes.find((c) => c.id === i
 
 describe('sync', () => {
 
+  it('keeps the dismissals of two devices on a brief, whichever syncs last', () => {
+    const brief = (o: Record<string, unknown>) => ch({ table: 'briefs', id: 'slack:1', ...o });
+    applyChanges(db, [brief({ fields: { kind: 'slack', dismissed: null } })]);
+    applyChanges(db, [brief({ updated_at: 3000, fields: { dismissed: '+b\t3000' }, field_times: { dismissed: 3000 } })]);
+    applyChanges(db, [brief({ updated_at: 2000, fields: { dismissed: '+a\t2000' }, field_times: { dismissed: 2000 } })]);
+    expect(pullChanges(db, 0).changes.find((c) => c.id === 'slack:1')?.fields.dismissed).toBe('+a\t2000\n+b\t3000');
+  });
+
   it('merges per field by timestamp: newer wins, older loses, tie keeps stored, other fields survive', () => {
     applyChanges(db, [ch({ fields: { title: 'Old', text: 'Text 1' }, field_times: { title: 1000, text: 1000 } })]);
     applyChanges(db, [ch({ updated_at: 2000, fields: { title: 'New' }, field_times: { title: 2000 } })]);

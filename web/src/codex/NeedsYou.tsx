@@ -23,6 +23,7 @@ import { haptic } from '../ui/haptic';
 import { copyText, openMeeting, openTask, setView, showSnack, useView } from './view';
 import { when } from './tasks/time';
 import type { useSplit } from './tasks/split';
+import { dismissedKeys, withDismissal } from '../../../shared/dismissed';
 
 const waitKey = (c: Chat) => `${c.profile}:${c.id}:${c.last_at ?? ''}`;
 const urlKey = (u: string | null | undefined) => (safeHref(u) ? [`url:${safeHref(u)}`] : []);
@@ -46,7 +47,7 @@ const JUST_ENDED_MS = 2 * 3600_000;
 const taskKey = (r: ItemRow) => `task:${r.profile}:${r.id}`;
 const bulletKey = (x: Bullet) => x.url ?? x.title;
 // Dismissed bullets are stored on the brief row, so every device hides them.
-const dismissedOf = (b: Brief) => (b.dismissed ?? '').split('\n').filter(Boolean);
+const dismissedOf = (b: Brief) => dismissedKeys(b.dismissed);
 
 // Overdue and at-risk tasks, asks and promises to confirm, DMs waiting on me and the Slack brief's "Needs you" bullets, once each.
 export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
@@ -90,8 +91,8 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   const hideChat = (c: Chat) => void store.editRow('chats', c, { waiting: 0 });
   const unhideChat = (c: Chat) => void store.editRow('chats', c, { waiting: 1 });
   const current = (b: Brief) => store.snapshot().briefs.find((r) => r.profile === b.profile && r.id === b.id) ?? b;
-  const hideBullet = (b: Brief, x: Bullet) => void store.editRow('briefs', b, { dismissed: [...dismissedOf(current(b)), bulletKey(x)].join('\n') });
-  const unhideBullet = (b: Brief, x: Bullet) => void store.editRow('briefs', b, { dismissed: dismissedOf(current(b)).filter((k) => k !== bulletKey(x)).join('\n') || null });
+  const hideBullet = (b: Brief, x: Bullet) => void store.editRow('briefs', b, { dismissed: withDismissal(current(b).dismissed, bulletKey(x), true, Date.now()) });
+  const unhideBullet = (b: Brief, x: Bullet) => void store.editRow('briefs', b, { dismissed: withDismissal(current(b).dismissed, bulletKey(x), false, Date.now()) });
   const dismissChat = (c: Chat) => { hideChat(c); showSnack('Dismissed', () => unhideChat(c)); };
   const dismissBullet = (b: Brief, x: Bullet) => { hideBullet(b, x); showSnack('Dismissed', () => unhideBullet(b, x)); };
   const capture = (key: string, title: string, profile: Chat['profile'], type: 'task' | 'note', fill: (r: ItemRow) => Promise<unknown> | undefined, done: (r: ItemRow) => void) => {

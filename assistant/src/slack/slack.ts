@@ -20,6 +20,7 @@ import { noteCost, runScan, startScan } from '../core/scan.js';
 import { COMMAND_STEP, Command, queueCommands } from './commands.js';
 import { applyChanges } from '../core/sync.js';
 import { DAY, MIN, inWeekHours, localDate, workSlotDue } from '../core/time.js';
+import { dismissedKeys } from '../../../shared/dismissed.js';
 
 const EVERY = 15 * MIN;
 const SLACK = 'mcp__claude_ai_Slack__';
@@ -229,7 +230,7 @@ export async function summarizeSlack(db: Database, now = Date.now()) {
   const text = await run(prompt, 'sonnet', [suggest], 30);
   // Bullets dismissed on the last summary stay dismissed when the model repeats them; the last 50 are kept.
   const prev = db.prepare("SELECT dismissed FROM briefs WHERE profile = ? AND kind = 'slack' AND deleted = 0 ORDER BY to_at DESC LIMIT 1").get(PROFILE) as { dismissed: string | null } | undefined;
-  const dismissed = (prev?.dismissed ?? '').split('\n').filter(Boolean).slice(-50).join('\n') || null;
+  const dismissed = dismissedKeys(prev?.dismissed).slice(-50).map((k) => `+${k}\t${now}`).join('\n') || null;
   applyChanges(db, [{ table: 'briefs', id: `slack:${now}`, profile: PROFILE, updated_at: now, fields: { kind: 'slack', text, from_at: from, to_at: now, dismissed } }]);
   return { text, added };
 }

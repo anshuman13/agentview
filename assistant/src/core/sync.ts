@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { TABLES, currentVersion, isProfile, nextVersion, stmt, type Profile } from './db.js';
+import { mergeDismissed } from '../../../shared/dismissed.js';
 
 export class SyncError extends Error {}
 
@@ -146,11 +147,23 @@ function updateRow(db: Database, change: Change, merge: Merge, version: number, 
   stmt(db, `UPDATE ${change.table} SET ${setClauses.join(', ')} WHERE id = ? AND profile = ?`).run(...vals);
 }
 
+// A brief's dismissed lines merge as a set, so a device's dismissal is never replaced by another's older list.
+function withMergedDismissed(db: Database, change: Change, row: StoredRow | null): Change {
+  if (change.table !== 'briefs' || !row || !('dismissed' in change.fields)) return change;
+  const stored = (stmt(db, 'SELECT dismissed FROM briefs WHERE id = ? AND profile = ?').get(change.id, change.profile) as { dismissed: string | null }).dismissed;
+  const merged = mergeDismissed(stored, change.fields.dismissed as string | null);
+  const { dismissed: _, ...rest } = change.fields;
+  if (merged === stored) return { ...change, fields: rest };
+  const storedAt = (row.field_times ? JSON.parse(row.field_times) : {}).dismissed ?? 0;
+  const at = Math.max(change.field_times?.dismissed ?? change.updated_at, storedAt + 1);
+  return { ...change, fields: { ...rest, dismissed: merged }, field_times: { ...change.field_times, dismissed: at } };
+}
+
 // Returns the new row version, or null when every field of the change is older than what is stored.
 function applyChange(db: Database, change: Change): number | null {
   const row = stmt(db, `SELECT version, updated_at, field_times, deleted FROM ${change.table} WHERE id = ? AND profile = ?`)
     .get(change.id, change.profile) as StoredRow | null;
-  const merge = mergeChange(change, row);
+  const merge = mergeChange(withMergedDismissed(db, change, row), row);
   if (!merge.hasChanges) return null;
 
   const version = nextVersion(db);

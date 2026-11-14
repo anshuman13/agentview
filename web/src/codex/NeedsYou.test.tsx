@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import type { ItemRow } from './data/sync';
 import * as data from './data';
 import * as view from './view';
+import { dismissedKeys } from '../../../shared/dismissed';
 
 const mocks = { store: {} as Record<string, ReturnType<typeof vi.fn>>, snack: vi.fn() };
 
@@ -94,8 +95,9 @@ describe('NeedsYou triage', () => {
     expect(mocks.store.editRow).toHaveBeenLastCalledWith('chats', dm, { waiting: 1 });
     const brief = { profile: 'work', id: 'b', dismissed: 'https://x/1' };
     n.dismissBullet(brief as never, { title: 'Reply to Bo', why: '', url: 'https://x/2' });
-    expect(mocks.store.editRow).toHaveBeenLastCalledWith('briefs', brief, { dismissed: 'https://x/1\nhttps://x/2' });
+    const dismissed = () => dismissedKeys(mocks.store.editRow.mock.calls.at(-1)![2].dismissed);
+    expect(dismissed()).toEqual(['https://x/1', 'https://x/2']);
     mocks.snack.mock.calls[1][1]();
-    expect(mocks.store.editRow).toHaveBeenLastCalledWith('briefs', brief, { dismissed: 'https://x/1' });
+    expect(dismissed()).toEqual(['https://x/1']);
   });
 });

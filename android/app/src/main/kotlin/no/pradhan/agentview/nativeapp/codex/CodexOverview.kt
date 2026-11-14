@@ -104,7 +104,32 @@ sealed class Need(val keys: List<String>, val marks: List<String> = emptyList())
 // Each item once, in rank order: overdue tasks, asks to confirm, DMs waiting on me, then actions of meetings that just ended.
 // Three or more overdue tasks collapse into one entry.
 // Dismissed bullets are stored on the brief row, so every device hides them.
-fun dismissedOf(brief: Row) = brief.str("dismissed").orEmpty().split("\n").filter { it.isNotEmpty() }
+fun dismissedOf(brief: Row) = dismissedKeys(brief.str("dismissed"))
+
+// shared/dismissed.ts: one line per dismissal ("+key\tat") or undo ("-key\tat"), merged as a set; the latest line per key decides.
+private const val DISMISSED_KEEP = 100
+
+private class DismissLine(val key: String, val on: Boolean, val at: Long, val raw: String)
+
+private fun dismissLines(v: String?) = v.orEmpty().split("\n").filter { it.isNotEmpty() }.map { raw ->
+    val tab = raw.lastIndexOf('\t')
+    if ((raw[0] != '+' && raw[0] != '-') || tab < 0) DismissLine(raw, true, 0, raw)
+    else DismissLine(raw.substring(1, tab), raw[0] == '+', raw.substring(tab + 1).toLongOrNull() ?: 0, raw)
+}
+
+fun dismissedKeys(v: String?): List<String> {
+    val latest = LinkedHashMap<String, DismissLine>()
+    for (l in dismissLines(v)) if ((latest[l.key]?.at ?: -1) <= l.at) latest[l.key] = l
+    return latest.values.filter { it.on }.map { it.key }
+}
+
+fun mergeDismissed(a: String?, b: String?): String? {
+    val all = LinkedHashMap<String, DismissLine>()
+    for (l in dismissLines(a) + dismissLines(b)) all[l.raw] = l
+    return all.values.sortedBy { it.at }.takeLast(DISMISSED_KEEP).joinToString("\n") { it.raw }.ifEmpty { null }
+}
+
+fun withDismissal(v: String?, key: String, on: Boolean, at: Long) = mergeDismissed(v, "${if (on) "+" else "-"}$key\t$at")
 
 fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList(), briefs: List<Row> = emptyList()): List<Need> {
     val s = split(items, profile, now)
