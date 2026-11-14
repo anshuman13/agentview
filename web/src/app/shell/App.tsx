@@ -30,7 +30,7 @@ export function App() {
   const repoPicker = useStore((s) => s.ui.repoPicker);
   const cwd = useStore((s) => s.session.cwd);
   const macName = useMacName();
-  const { chatW, termH, startResize, startTermResize } = useResize();
+  const { chatW, termH, sideW, startResize, startTermResize, startSideResize } = useResize();
   const beside = useSideChat();
   const {
     openFile, chatId, tab, setTab, editor, setEditor, seenAssistant, agentSel, setAgentSel, page, more, setMore, browse, setBrowse, sidebar, setSidebar,
@@ -45,7 +45,7 @@ export function App() {
   if (embedded) return <EmbeddedApp />;
 
   return (
-    <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} data-codex={active === 'assistant'} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
+    <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} data-codex={active === 'assistant'} style={{ '--chat-w': `${chatW}px`, '--sidebar-w': `${sideW}px` } as React.CSSProperties}>
       {tauriInvoke() && <BadgeMount />}
       {fromRepos && tab === 'chat' && narrow() && <Back close={() => { slideFrom(-1); setTab('repos'); }} />}
       <SwitchedBanner />
@@ -55,6 +55,7 @@ export function App() {
         <ActivityBar showing={showing} sidebar={sidebar} view={view} browserShown={editor === 'browser'} showView={showView} openPage={openPage} switchEditor={() => setEditor((v) => (v === 'file' ? 'browser' : 'file'))} />
 
         <SidebarPane view={view} tab={tab} chatsView={chatsView} setView={setView} project={project} back={goHome} />
+        <div className="sash side-sash desktop-only" onPointerDown={startSideResize} />
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
           {tab === 'code' && !isPage(editor) && (

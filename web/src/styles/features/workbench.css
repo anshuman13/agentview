@@ -19,7 +19,7 @@
 .activitybar .divider { width: var(--sp-12); height: 1px; margin: var(--sp-2) auto; background: var(--border-strong); flex: none; }
 
 .sidebar { width: var(--sidebar-w); flex: none; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
-.workbench[data-sidebar='false'] .sidebar { display: none; }
+.workbench[data-sidebar='false'] :is(.sidebar, .side-sash) { display: none; }
 .sidebar-title {
   height: var(--size-bar); flex: none; display: flex; align-items: center; padding: 0 var(--sp-10);
   font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-muted);
