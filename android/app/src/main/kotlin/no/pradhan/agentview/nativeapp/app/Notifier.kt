@@ -16,12 +16,12 @@ import androidx.core.content.ContextCompat
 import no.pradhan.agentview.nativeapp.MainActivity
 import no.pradhan.agentview.nativeapp.NoticeReceiver
 import no.pradhan.agentview.nativeapp.R
-import no.pradhan.agentview.nativeapp.codex.meetings.Question
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 
 private const val WAITING_CHANNEL = "needs"
 private const val WAITING_ID = 1
 private const val RUNNING_CHANNEL = "running"
+const val RUNNING_TIMEOUT_MS = 30 * 60_000L
 const val EXTRA_CHAT = "chat"
 const val EXTRA_NOTICE_ID = "noticeId"
 const val EXTRA_SLUG = "slug"
@@ -94,8 +94,6 @@ class Notifier(private val app: Application) {
         }
     }
 
-    fun clear(chat: String) = NoticeKind.entries.forEach { manager.cancel((it.channel + chat).hashCode()) }
-
     fun clearChats() = manager.activeNotifications.filter { it.id != WAITING_ID && !(it.notification.channelId == RUNNING_CHANNEL && it.isOngoing) }.forEach { manager.cancel(it.id) }
 
     private fun runningId(chat: String) = (RUNNING_CHANNEL + chat).hashCode()
@@ -112,10 +110,11 @@ class Notifier(private val app: Application) {
             val builder = NotificationCompat.Builder(app, RUNNING_CHANNEL)
                 .setSmallIcon(R.drawable.ic_notify)
                 .setContentTitle(n.title)
-                .setContentText(if (n.pending) "Needs you" else n.text)
+                .setContentText(if (n.pending > 0) "Needs you" else n.text)
                 .setWhen(n.since)
                 .setUsesChronometer(true)
                 .setOngoing(true)
+                .setTimeoutAfter(RUNNING_TIMEOUT_MS)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
                 .setCategory(NotificationCompat.CATEGORY_PROGRESS)
@@ -127,7 +126,7 @@ class Notifier(private val app: Application) {
                         builder.addAction(action(NoticeOp.ALLOW, n.chatId, reply, RUNNING_CHANNEL, "Allow", n.permissionId))
                         builder.addAction(action(NoticeOp.DENY, n.chatId, reply, RUNNING_CHANNEL, "Deny", n.permissionId))
                     }
-                    !n.pending -> builder.addAction(action(NoticeOp.STOP, n.chatId, reply, RUNNING_CHANNEL, "Stop"))
+                    n.pending == 0 -> builder.addAction(action(NoticeOp.STOP, n.chatId, reply, RUNNING_CHANNEL, "Stop"))
                 }
             }
             manager.notify(id, builder.build())

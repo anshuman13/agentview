@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -39,6 +40,7 @@ import no.pradhan.agentview.nativeapp.app.NoticeKind
 import no.pradhan.agentview.nativeapp.app.Notifier
 import no.pradhan.agentview.nativeapp.app.SharedItem
 import no.pradhan.agentview.nativeapp.app.RunningNote
+import no.pradhan.agentview.nativeapp.app.RUNNING_TIMEOUT_MS
 import no.pradhan.agentview.nativeapp.app.AppCounts
 import no.pradhan.agentview.nativeapp.app.WaitingSnapshot
 import no.pradhan.agentview.nativeapp.app.appCounts
@@ -276,7 +278,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
                 if (!loaded) return@collect
                 WaitingStore.write(app, snap)
                 WaitingWidget().updateAll(app)
-                if (badge >= 0) notifier.waiting(snap, badge) else notifier.waiting(WaitingSnapshot(), 0)
+                if (badge >= 0) notifier.waiting(snap, snap.total + badge) else notifier.waiting(WaitingSnapshot(), 0)
             }
         }
     }
@@ -284,21 +286,32 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     init {
         viewModelScope.launch(Dispatchers.Default) {
             var since = emptyMap<String, Long>()
-            var shown = emptyList<RunningNote>()
-            combine(store.state.map { it.live }.distinctUntilChanged(), liveLoaded, notifyOn, granted) { live, loaded, on, ok -> if (loaded && on && ok) live else null }.collectLatest { live ->
+            // Null until the first pass, which also clears notes a killed process left behind.
+            var shown: List<RunningNote>? = null
+            var postedAt = 0L
+            // The open permission id per chat, fetched again only when its request count changes.
+            var asks = emptyMap<String, Pair<Int, String>>()
+            // A link down for a minute clears the notes, so they do not claim a chat runs when nothing is known.
+            val linkUp = _connected.transformLatest { up -> if (!up) delay(60_000); emit(up) }.distinctUntilChanged()
+            combine(store.state.map { it.live }.distinctUntilChanged(), liveLoaded, notifyOn, granted, linkUp) { live, loaded, on, ok, up -> if (loaded && on && ok && up) live else null }.collectLatest { live ->
                 val notes = if (live == null) emptyList() else runningNotes(live, since, System.currentTimeMillis())
                 since = notes.associate { it.chatId to it.since }
-                if (notes == shown) return@collectLatest
-                notifier.running(notes.map { if (it.pending) it.withPermission() else it })
+                val now = System.currentTimeMillis()
+                // Notes time out so a dead process cannot leave them up; re-posting re-arms the timeout.
+                if (notes == shown && now - postedAt < RUNNING_TIMEOUT_MS / 3) return@collectLatest
+                asks = asks.filterKeys { id -> notes.any { it.chatId == id && it.pending > 0 } }
+                notifier.running(notes.map { n ->
+                    if (n.pending == 0) return@map n
+                    val id = asks[n.chatId]?.takeIf { it.first == n.pending }?.second ?: n.permissionId().also { asks = asks + (n.chatId to (n.pending to it)) }
+                    n.copy(permissionId = id)
+                })
                 shown = notes
+                postedAt = now
             }
         }
     }
 
-    private suspend fun RunningNote.withPermission(): RunningNote {
-        val ask = withContext(Dispatchers.IO) { noticeAsk(api, Notice(NoticeKind.Approval, chatId, title, text)) }
-        return copy(permissionId = ask.permissionId)
-    }
+    private suspend fun RunningNote.permissionId() = withContext(Dispatchers.IO) { noticeAsk(api, Notice(NoticeKind.Approval, chatId, title, text)) }.permissionId
 
     fun refreshGranted() { granted.value = notifier.granted() }
 
@@ -369,7 +382,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     fun open(id: String) {
         specSlug.value = null
         saved[CHAT_KEY] = id
-        notifier.clear(id)
         showChat(store, id)
         markSeen(store.state.value.live.firstOrNull { it.id == id }?.sessionId)
         if (_connected.value) post(viewCmd(id), id, viewing = true)
@@ -406,7 +418,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         val s = withTimeoutOrNull(15_000) { store.state.first { s -> store.wanted != from && s.settled && s.shownId == store.wanted } }
         if (s == null) { store.cancelSwitch(); return null }
         saved[CHAT_KEY] = s.shownId
-        notifier.clear(s.shownId)
         markSeen(s.session?.sessionId)
         return s.shownId
     }

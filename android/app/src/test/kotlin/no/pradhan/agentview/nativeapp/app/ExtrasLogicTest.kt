@@ -11,7 +11,7 @@ class ExtrasLogicTest {
     @Test fun runningNotesKeepRunningChatsAndTheirStart() {
         val live = listOf(chat("a", running = true), chat("b"), chat("c", running = true, pending = 1).copy(status = "Idle"))
         val notes = runningNotes(live, mapOf("a" to 5L), 100L)
-        assertEquals(listOf(RunningNote("a", "Fix tests", "Working", 5L, false), RunningNote("c", "Fix tests", "Working", 100L, true)), notes)
+        assertEquals(listOf(RunningNote("a", "Fix tests", "Working", 5L, 0), RunningNote("c", "Fix tests", "Working", 100L, 1)), notes)
     }
 
     @Test fun skipsTheChatOnScreen() {
