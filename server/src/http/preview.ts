@@ -38,11 +38,20 @@ function forward(ip: string, port: number) {
   if (forwards.has(port)) return;
   const server = net.createServer((sock) => {
     if (!allowedPeer(sock.remoteAddress)) return sock.destroy();
-    const up = net.connect(port, '127.0.0.1');
-    sock.pipe(up).pipe(sock);
-    const close = () => (sock.destroy(), up.destroy());
-    sock.on('error', close);
-    up.on('error', close);
+    // A dev server may listen on IPv4 or IPv6 loopback only: try one, then the other.
+    const dial = (host: string, next?: string) => {
+      const up = net.connect(port, host);
+      const close = () => (sock.destroy(), up.destroy());
+      const failed = () => (next ? dial(next) : close());
+      up.once('error', failed);
+      up.once('connect', () => {
+        up.off('error', failed);
+        sock.pipe(up).pipe(sock);
+        sock.on('error', close);
+        up.on('error', close);
+      });
+    };
+    dial('127.0.0.1', '::1');
   });
   server.on('error', () => forwards.delete(port));
   server.listen(port, ip);
