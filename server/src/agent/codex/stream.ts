@@ -1,30 +1,29 @@
 import path from 'node:path';
-import type { ChatEvent } from '../../../../shared/protocol.js';
 import type { AgentHost } from '../types.js';
 import { finishedEvents, startedEvents } from './events.js';
 import { limitUntil } from './usage.js';
+import { LiveText } from '../liveText.js';
 import type { FileUpdateChange, ThreadItem, TokenUsage, Turn } from './protocol.js';
 
-const FLUSH_MS = 80;
-
 type Sink = Pick<AgentHost, 'cwd' | 'state' | 'limit' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'compacted' | 'noteFile' | 'captureEdit'>;
-type Live = { ev: Extract<ChatEvent, { kind: 'assistant' }>; sent: number; timer?: ReturnType<typeof setTimeout> };
 
 // Turns the app-server's notifications into chat events: assistant text streams in, commands, file changes and MCP calls become tool steps.
 export class CodexStream {
-  private live = new Map<string, Live>();
+  private text: LiveText;
   private lastText = '';
   private context = 0;
   private compactedTurn: string | null = null;
   // The files each file change item announced, for its approval card.
   readonly files = new Map<string, FileUpdateChange[]>();
 
-  constructor(private host: Sink) {}
+  constructor(private host: Sink) {
+    this.text = new LiveText(host);
+  }
 
   handle(method: string, params: any) {
     switch (method) {
       case 'item/started': return this.started(params.item);
-      case 'item/agentMessage/delta': return this.delta(params.itemId, params.delta);
+      case 'item/agentMessage/delta': return this.text.delta(params.itemId, params.delta);
       case 'item/completed': return this.completed(params.item, params.turnId);
       case 'turn/completed': return this.turnDone(params.turn);
       case 'thread/tokenUsage/updated': return this.usage(params.tokenUsage);
@@ -40,7 +39,7 @@ export class CodexStream {
 
   // The process is gone; text still streaming ends as it is.
   end() {
-    for (const id of [...this.live.keys()]) this.finish(id);
+    this.text.end();
     this.files.clear();
   }
 
@@ -76,38 +75,10 @@ export class CodexStream {
     return path.resolve(this.host.cwd, file);
   }
 
-  private delta(id: string, text: string) {
-    const live = this.live.get(id);
-    if (!live) {
-      const ev = { id, kind: 'assistant' as const, text, streaming: true, at: Date.now() };
-      this.live.set(id, { ev, sent: text.length });
-      return this.host.pushEvent(ev);
-    }
-    live.ev.text += text;
-    live.timer ??= setTimeout(() => {
-      live.timer = undefined;
-      const offset = live.sent;
-      live.sent = live.ev.text.length;
-      this.host.emit({ type: 'append', id, offset, text: live.ev.text.slice(offset) });
-    }, FLUSH_MS);
-  }
-
   // The finished text replaces what streamed, in case a delta was missed.
   private message(id: string, text: string) {
     this.lastText = text;
-    const live = this.live.get(id);
-    if (!live) return this.host.pushEvent({ id, kind: 'assistant', text, streaming: false, at: Date.now() });
-    live.ev.text = text;
-    this.finish(id);
-  }
-
-  private finish(id: string) {
-    const live = this.live.get(id);
-    if (!live) return;
-    clearTimeout(live.timer);
-    this.live.delete(id);
-    live.ev.streaming = false;
-    this.host.emit({ type: 'event', event: live.ev });
+    if (!this.text.finish(id, text)) this.host.pushEvent({ id, kind: 'assistant', text, streaming: false, at: Date.now() });
   }
 
   private turnDone(turn: Turn) {

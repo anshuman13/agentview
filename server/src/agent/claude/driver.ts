@@ -19,7 +19,7 @@ import { unattendedRules } from './unattended.js';
 import { loadSettings, unattendedLimits } from '../../settings.js';
 import { ToolHooks } from './toolHooks.js';
 import { continuedTurn } from './subagents.js';
-import { LiveText } from './stream.js';
+import { StreamText } from './stream.js';
 import { historyFrom, workflowEvents } from './transcript.js';
 import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
 
@@ -40,7 +40,7 @@ export class ClaudeDriver implements AgentDriver {
   private input = new InputQueue(() => this.closed);
   private usageTimer: ReturnType<typeof setInterval> | undefined;
 
-  private live: LiveText;
+  private live: StreamText;
 
   private resumedAuto = false;
   private allowed: string[] = [];
@@ -55,7 +55,7 @@ export class ClaudeDriver implements AgentDriver {
   private restore: { model: string | null; permissionMode: string | null } | null = null;
 
   constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main', private openrouter = false, private unattended = false) {
-    this.live = new LiveText(host);
+    this.live = new StreamText(host);
     this.toolHooks = new ToolHooks(host);
     this.tasks = new TaskTracker(host);
     this.messages = new Messages(host, this.tasks, this.rewinds, () => this.account);
