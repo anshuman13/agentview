@@ -138,7 +138,7 @@ describe('createTurnsBuilder', () => {
 
 describe('usage limit note', () => {
   it('keeps the reset time from the system event', () => {
-    const turns = buildTurns([user('go'), { id: 'x1', kind: 'system', text: 'Usage limit reached, resets at 14:00', at: at(), reset: 5_000 }]);
+    const { turns } = buildTurns([user('go'), { id: 'x1', kind: 'system', text: 'Usage limit reached, resets at 14:00', at: at(), reset: 5_000 }]);
     expect(turns.at(-1)?.notes.at(-1)).toMatchObject({ kind: 'important', reset: 5_000 });
   });
 });
