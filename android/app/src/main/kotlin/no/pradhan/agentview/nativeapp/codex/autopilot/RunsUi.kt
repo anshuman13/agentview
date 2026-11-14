@@ -42,6 +42,7 @@ import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.triesKeep
 import no.pradhan.agentview.nativeapp.ops.plural
+import no.pradhan.agentview.nativeapp.sessions.advisorLoopBuilds
 import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -88,6 +89,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, needsYou: B
         state.at?.let { clock(it) },
         state.next?.let { "Next: $it" },
         state.stepsLeft.takeIf { it > 0 }?.let { "$it ${if (it == 1) "step" else "steps"} left" },
+        advisorLoopBuilds(run).ifEmpty { null },
     ).joinToString(" · ")
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
         TranscriptBox(

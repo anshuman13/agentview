@@ -12,6 +12,7 @@ import { TranscriptBox } from '../transcript/Box';
 import { money, plural, useTick } from '../../ui/util';
 import { openAgent } from '../../sessions/agents';
 import { usePlanProgress } from '../../sessions/usePlanProgress';
+import { advisorLoopBuilds } from '../../../../shared/advisors';
 import { planOf } from '../../../../shared/goalForm';
 import { billing } from '../../../../shared/providers';
 import { mergeQuiet, roundGroupText } from '../../../../shared/goalText';
@@ -47,7 +48,7 @@ export function LoopCard() {
     showSnack(stoppedText(run, Boolean(live?.running)), cycle ? undefined : () => control('restore'));
   };
   const details = goal ? () => openGoal(run.id) : undefined;
-  const meta = [state.at && clock(state.at), state.next && `Next: ${state.next}`, state.stepsLeft && `${state.stepsLeft} ${state.stepsLeft === 1 ? 'step' : 'steps'} left`].filter(Boolean).join(' · ');
+  const meta = [state.at && clock(state.at), state.next && `Next: ${state.next}`, state.stepsLeft && `${state.stepsLeft} ${state.stepsLeft === 1 ? 'step' : 'steps'} left`, advisorLoopBuilds(run)].filter(Boolean).join(' · ');
   const nowClick = details ? { onClick: details } : run.kind === 'loop' && state.source === 'round' ? { onClick: () => setOpen(!open), 'aria-expanded': open } : { plain: true };
   const dot = working ? 'running' : OUTCOME_DOT[run.rounds.at(-1)?.outcome ?? 'quiet'];
   return (
