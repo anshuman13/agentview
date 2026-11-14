@@ -32,7 +32,7 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.build
 import no.pradhan.agentview.nativeapp.net.postBuildReview
 import no.pradhan.agentview.nativeapp.net.track
-import no.pradhan.agentview.nativeapp.ops.DiffFiles
+import no.pradhan.agentview.nativeapp.workspace.DiffFiles
 import no.pradhan.agentview.nativeapp.sessions.BuildCommit
 import no.pradhan.agentview.nativeapp.sessions.BuildDetail
 import no.pradhan.agentview.nativeapp.sessions.BuildEntry

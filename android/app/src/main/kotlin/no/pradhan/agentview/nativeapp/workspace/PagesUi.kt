@@ -36,6 +36,13 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
+import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.ListRow
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.produceState
 
 // The folder the workspace pages act on, from the chat on screen.
 @Composable
@@ -130,4 +137,31 @@ fun CodeLine(number: String, text: AnnotatedString, mark: Char = ' ', wrap: Bool
 fun DiffCodeLine(l: DiffLine, lang: Lang, wrap: Boolean, scroll: ScrollState, gutter: Dp = Tokens.sp24, onLongClick: (() -> Unit)? = null, number: String? = null) {
     val text = if (l.mark == '@') AnnotatedString(l.text) else highlighted(l.text, remember(l, lang) { highlightLine(l.text, lang).first })
     CodeLine(number ?: if (l.mark == '@') "" else l.mark.toString(), text, l.mark, wrap, scroll, gutter, onLongClick)
+}
+
+private const val PATCH_LINES = 400
+
+// The changed files as rows; a tap shows that file's patch under its row.
+@Composable
+fun DiffFiles(files: List<PrFile>, diff: String, openFile: String?, onOpenFile: (String?) -> Unit) {
+    // A diff can be megabytes; it is split off the main thread, and patches show once it is.
+    val diffs by produceState<Map<String, String>?>(null, diff) { value = withContext(Dispatchers.Default) { splitDiff(diff) } }
+    files.forEachIndexed { i, f ->
+        if (i > 0) Hairline(lead = true)
+        val name = f.path.substringAfterLast('/')
+        val shown = openFile == f.path
+        ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { onOpenFile(if (shown) null else f.path) })
+        if (shown) diffs?.let { PatchView(it[f.path] ?: "No diff", f.path) }
+    }
+}
+
+@Composable
+fun PatchView(patch: String, path: String) {
+    val lines = remember(patch) { patchLines(patch) }
+    val lang = langOf(path)
+    val scroll = rememberScrollState()
+    Column(Modifier.padding(bottom = Tokens.sp4)) {
+        lines.take(PATCH_LINES).forEach { l -> DiffCodeLine(l, lang, wrap = false, scroll = scroll) }
+        if (lines.size > PATCH_LINES) Hint("${lines.size - PATCH_LINES} more lines")
+    }
 }

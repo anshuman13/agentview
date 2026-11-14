@@ -10,16 +10,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
@@ -52,15 +50,12 @@ import no.pradhan.agentview.nativeapp.ui.Tag
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.workspace.Counts
-import no.pradhan.agentview.nativeapp.workspace.DiffCodeLine
+import no.pradhan.agentview.nativeapp.workspace.DiffFiles
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint
-import no.pradhan.agentview.nativeapp.workspace.FileTag
 import no.pradhan.agentview.nativeapp.workspace.Hint
 import no.pradhan.agentview.nativeapp.ui.Loaded
 import no.pradhan.agentview.nativeapp.workspace.MERGE_METHODS
 import no.pradhan.agentview.nativeapp.workspace.PageBody
-import no.pradhan.agentview.nativeapp.workspace.PrFile
 import no.pradhan.agentview.nativeapp.workspace.PullRequest
 import no.pradhan.agentview.nativeapp.workspace.PullRequestDetail
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
@@ -72,19 +67,13 @@ import no.pradhan.agentview.nativeapp.workspace.checkDot
 import no.pradhan.agentview.nativeapp.workspace.fixPrPrompt
 import no.pradhan.agentview.nativeapp.workspace.ghProblem
 import no.pradhan.agentview.nativeapp.workspace.isoMillis
-import no.pradhan.agentview.nativeapp.workspace.langOf
 import no.pradhan.agentview.nativeapp.workspace.mergeBody
 import no.pradhan.agentview.nativeapp.workspace.openLink
-import no.pradhan.agentview.nativeapp.workspace.parentOf
-import no.pradhan.agentview.nativeapp.workspace.patchLines
 import no.pradhan.agentview.nativeapp.workspace.prGroups
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.reviewBody
 import no.pradhan.agentview.nativeapp.workspace.reviewLabel
-import no.pradhan.agentview.nativeapp.workspace.splitDiff
 import no.pradhan.agentview.nativeapp.ui.select
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 // Pull Requests (web/src/ops/GitHub.tsx): the repo's open PRs in three groups, and a PR page with review actions.
 @Composable
@@ -148,7 +137,6 @@ private fun PrRow(pr: PullRequest, now: Long, onClick: () -> Unit) {
     )
 }
 
-private const val PR_DIFF_LINES = 400
 
 private class PullUi {
     var busy by mutableStateOf("")
@@ -306,27 +294,3 @@ private fun LazyListScope.pullFiles(d: PullRequestDetail, openFile: String?, onO
     item { Group { DiffFiles(d.files, d.diff, openFile, onOpenFile) } }
 }
 
-// The changed files as rows; a tap shows that file's patch under its row.
-@Composable
-fun DiffFiles(files: List<PrFile>, diff: String, openFile: String?, onOpenFile: (String?) -> Unit) {
-    // A diff can be megabytes; it is split off the main thread, and patches show once it is.
-    val diffs by produceState<Map<String, String>?>(null, diff) { value = withContext(Dispatchers.Default) { splitDiff(diff) } }
-    files.forEachIndexed { i, f ->
-        if (i > 0) Hairline(lead = true)
-        val name = f.path.substringAfterLast('/')
-        val shown = openFile == f.path
-        ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { onOpenFile(if (shown) null else f.path) })
-        if (shown) diffs?.let { PatchView(it[f.path] ?: "No diff", f.path) }
-    }
-}
-
-@Composable
-fun PatchView(patch: String, path: String) {
-    val lines = remember(patch) { patchLines(patch) }
-    val lang = langOf(path)
-    val scroll = rememberScrollState()
-    Column(Modifier.padding(bottom = Tokens.sp4)) {
-        lines.take(PR_DIFF_LINES).forEach { l -> DiffCodeLine(l, lang, wrap = false, scroll = scroll) }
-        if (lines.size > PR_DIFF_LINES) Hint("${lines.size - PR_DIFF_LINES} more lines")
-    }
-}

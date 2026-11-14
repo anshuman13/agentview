@@ -17,7 +17,7 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.runDiff
 import no.pradhan.agentview.nativeapp.net.runReview
 import no.pradhan.agentview.nativeapp.net.track
-import no.pradhan.agentview.nativeapp.ops.DiffFiles
+import no.pradhan.agentview.nativeapp.workspace.DiffFiles
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
