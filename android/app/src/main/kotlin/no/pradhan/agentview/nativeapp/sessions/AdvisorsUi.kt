@@ -20,6 +20,11 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import no.pradhan.agentview.nativeapp.codex.autopilot.firstRoundText
+import no.pradhan.agentview.nativeapp.codex.autopilot.openRun
+import no.pradhan.agentview.nativeapp.codex.autopilot.outcomeDot
+import no.pradhan.agentview.nativeapp.codex.autopilot.roundText
+import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.newChat
 import no.pradhan.agentview.nativeapp.net.protocolJson
@@ -41,6 +46,7 @@ import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
+import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.Tokens
@@ -61,6 +67,21 @@ data class AdvisorInfo(val id: String, val memory: String = "", val chats: List<
 data class BacklogItem(val rank: Int, val slug: String, val title: String, val why: String = "", val status: String, val spec: Boolean = false)
 
 internal fun advisorLoopGoal(root: String) = "Advisor loop for $root, never met on its own. Each round, as PM: reread $root/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to $root/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build (/agentview:build <slug>, the build card's Build action) and mark the item building; one build in flight per project; mark it done when merged, and if its spec has a Fixes: line ask the Designer advisor to recheck those findings, and say in the ROUND line if you cannot reach it. A claimed finding the Designer leaves open goes back to proposed, keeping its slug: next round move that line from done back to proposed and note the finding in the why. If the backlog is empty, ask the Designer for an audit when the newest $root/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing."
+
+internal fun advisorLoopOf(runs: List<ChatRun>, root: String): ChatRun? {
+    val head = "Advisor loop for ${root.trimEnd('/')},"
+    return runs.filter { it.kind == "goal" && it.state != "done" && it.what.startsWith(head) }.maxByOrNull { it.startedAt }
+}
+
+internal fun advisorLoopLine(run: ChatRun): String {
+    val last = run.rounds.lastOrNull()
+    return when {
+        run.state == "paused" -> if (run.why.isEmpty()) "Paused" else "Paused · ${run.why}"
+        last != null -> roundText(last)
+        run.nextAt != null -> firstRoundText(run.nextAt)
+        else -> "Waiting for its first round"
+    }
+}
 
 private fun rankPrompt(root: String) = "Read $root/.claude/backlog.md and the project's code and recent changes, then rank what to build next. Rewrite the backlog file (at most 10 lines) and reply with the top three."
 
@@ -179,6 +200,16 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                 MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); root = r.cwd }, checked = r.cwd == root) }
                             })
                             val project = root
+                            val loop = project?.let { advisorLoopOf(st.runs, it) }
+                            if (loop != null) Group {
+                                val last = loop.rounds.lastOrNull()
+                                ListRow(
+                                    "Advisor loop", advisorLoopLine(loop),
+                                    leading = last?.let { { StatusDot(outcomeDot(it.outcome)) } },
+                                    lines = 1, metaLines = 1,
+                                    onClick = { go { hub.openRun(loop, last?.report) } },
+                                )
+                            }
                             when {
                                 project == null -> Group { ListRow("Project", "Pick one in the menu to see its backlog", lines = 1) }
                                 items == null -> Loading("Loading backlog")

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
+import { advisorLoopLine, advisorLoopOf } from '../../shared/advisors';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
@@ -223,6 +224,13 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; phase: string | null; expected: string }>('run-line')) {
     it(`runLine: ${c.name}`, () => expect(runLine(run({ ...c.run, tries: c.run.tries?.map((t) => ({ n: 0, chatId: '', sessionId: '', branch: '', ...t })) }), c.phase)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; root: string; runs: Partial<ChatRun>[]; expected: { id: string; line: string } | null }>('advisor-loop')) {
+    it(`advisorLoop: ${c.name}`, () => {
+      const found = advisorLoopOf(c.runs.map(run), c.root);
+      expect(found ? { id: found.id, line: advisorLoopLine(found) } : null).toEqual(c.expected);
+    });
   }
 
   type StateCase = { name: string; chat: Partial<LiveChat> & { agents?: number; run?: { state: ChatRun['state']; why?: string; nextAtLocal?: string } }; expected: unknown };

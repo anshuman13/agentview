@@ -50,6 +50,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.parseEvery
 import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
+import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
+import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
 import no.pradhan.agentview.nativeapp.sessions.BuildEntry
@@ -218,6 +220,15 @@ class SharedCasesTest {
         for (c in cases("run-line")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
             assertEquals(c.str("name"), c.str("expected"), runLine(run, c.nullable("phase")?.jsonPrimitive?.content))
+        }
+    }
+
+    @Test fun advisorLoop() {
+        for (c in cases("advisor-loop")) {
+            val runs = c.getValue("runs").jsonArray.map { JsonObject(mapOf("id" to toJson("r")) + it.jsonObject).decode<ChatRun>() }
+            val found = advisorLoopOf(runs, c.str("root"))
+            val expected = c.nullable("expected")?.jsonObject
+            assertEquals(c.str("name"), expected?.let { it.str("id") to it.str("line") }, found?.let { it.id to advisorLoopLine(it) })
         }
     }
 

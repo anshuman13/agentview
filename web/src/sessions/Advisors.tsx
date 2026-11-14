@@ -10,9 +10,11 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, advisorOf, auditPrompt, canBuildItem, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
+import { ADVISORS, advisorLoopLine, advisorLoopOf, advisorOf, auditPrompt, canBuildItem, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import { pipelineLabel, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
+import { OUTCOME_DOT } from '../chat/composer/composerLogic';
 import { holdBadge } from './buildsLogic';
+import { openRun } from './goalLogic';
 import { buildItemPrompt, buildSpecPrompt } from '../../../shared/specTasks';
 import { askAdvisor, go } from './advisorChat';
 import { StateDot } from './ChatRows';
@@ -57,10 +59,18 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
   const [moved, setMoved] = useState<BacklogItem[] | null>(null);
   useEffect(() => setMoved(null), [fetched]);
   const items = moved ?? fetched;
+  const runs = useStore((s) => s.runs);
+  const loop = root ? advisorLoopOf(runs, root) : undefined;
+  const last = loop?.rounds.at(-1);
   const move = (slug: string, dir: 'up' | 'down') => moveBacklogItem(root!, slug, dir).then((list) => (list ? setMoved(list) : notice('Could not move the item')));
   return (
     <>
       <Section label="Backlog" count={items?.length || undefined} action={picker} />
+      {loop && (
+        <div className="ui-group">
+          <Row title="Advisor loop" meta={advisorLoopLine(loop)} leading={last && <span className={`dot ${OUTCOME_DOT[last.outcome]}`} />} onClick={() => openRun(loop)} />
+        </div>
+      )}
       {!root ? (
         <div className="ui-group"><Row title="Project" meta="Pick one to see its backlog" plain /></div>
       ) : !items ? <Skeleton rows={2} /> : !items.length ? (
