@@ -48,7 +48,7 @@ export async function recordScan(db: Database, name: string, fn: () => Promise<C
 export const runScan = (db: Database, name: string, fn: () => Promise<Counts>) => once(key(name), () => recordScan(db, name, fn));
 
 export function scanHealth(db: Database, missing: string[] = []): ScanHealth[] {
-  const rows = db.prepare("SELECT value FROM meta WHERE key LIKE 'scan:%' ORDER BY key").all() as { value: string }[];
+  const rows = db.prepare("SELECT value FROM meta WHERE key LIKE 'scan:%' AND key NOT LIKE '%:cost' ORDER BY key").all() as { value: string }[];
   const health = rows.map((r) => JSON.parse(r.value) as ScanHealth).filter((h) => h.scan !== 'calendar' && !missing.includes(h.scan));
   return [...health, ...missing.map((scan) => ({ scan, missing: true }))];
 }

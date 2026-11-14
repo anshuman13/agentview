@@ -82,7 +82,8 @@ export async function learnFromChat(db: Database, c: Chat, now = Date.now(), run
   const events = c.events.filter((e) => (e.kind === 'user' || e.kind === 'assistant') && e.at > cursor);
   if (!events.some((e) => e.kind === 'user')) return { proposed: 0 };
   if (isLimited(ACCOUNT_OF[c.profile])) return { skipped: 'limit' };
-  const memory = known(db, c.profile).filter((f) => !f.page_id && f.state !== 'retired').map((f) => f.text);
+  // Live claims only: saveLearned already skips a claim whose text exists in any state.
+  const memory = known(db, c.profile).filter((f) => !f.page_id && (f.state === null || f.state === 'live')).map((f) => f.text);
   const claims = await run(c, events, memory);
   const proposed = saveLearned(db, c, claims, now);
   setMeta(db, key, String(Math.max(...events.map((e) => e.at))));

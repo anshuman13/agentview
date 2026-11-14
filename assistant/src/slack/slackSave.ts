@@ -28,7 +28,7 @@ export const Chat = z.object({
   url: z.string().optional().describe('Permalink to the newest message'),
   summary: z.string().describe('The updated running summary: what is going on, who waits on me, what was decided. At most 3 short sentences.'),
   new_messages: z.number().describe('How many new messages you read in this chat since the last pass'),
-  waiting: z.boolean().optional().describe('DMs only: true when the other person sent the last message and I have not replied'),
+  waiting: z.boolean().optional().describe('DMs only: true when the other person sent the last message, it asks something of me and I have not replied; thanks, a greeting or an FYI is not waiting'),
 });
 export const Ask = z.object({
   url: z.string().describe('Permalink of the message'),
