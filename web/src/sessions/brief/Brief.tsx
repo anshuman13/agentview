@@ -58,6 +58,7 @@ export function Brief() {
   const root = useRef<HTMLDivElement>(null);
   const extras = [advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const lastReply = lastReplyOf(turns);
+  const doneSteps = useMemo(() => (turns.at(-1)?.notes ?? []).filter((n) => n.kind === 'done' && n.id.endsWith(':done')), [turns]);
   const limit = useMemo(() => usageLimitOf(turns), [turns]);
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
 
@@ -99,8 +100,9 @@ export function Brief() {
         {since?.chat === sessionId && (
           <button className="tl-recap" title="Tap to dismiss" onClick={dismiss}><Icon name="history" small /><span className="tl-recap-lines">{since.lines.map((l) => <span key={l}>{l}</span>)}</span></button>
         )}
+        {!showAgents && <TimelineFoot state={state} status={status} loop={loop} repeat={repeat} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} running={running} />}
         {showAgents ? <AgentsPane stack selected={agentSel} onSelect={setAgentSel} /> : <Transcript showWork={showWork} />}
-        {!showAgents && <TimelineFoot state={state} status={status} loop={loop} repeat={repeat} lastReply={lastReply} lastTool={lastTool} limit={limit} next={next} running={running} end={end} />}
+        {!showAgents && <div ref={end} />}
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}
       <div className="brief-input">

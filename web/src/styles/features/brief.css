@@ -43,7 +43,7 @@
 .tl-recap-lines { display: flex; flex-direction: column; min-width: 0; }
 .tl-recap .codicon { color: var(--fg-muted); }
 .tl-foot {
-  position: sticky; bottom: 0; z-index: var(--z-raised); flex: none; margin-top: var(--sp-4); padding: var(--sp-2) var(--sp-4) var(--sp-3);
+  position: sticky; top: 0; z-index: var(--z-raised); flex: none; margin-bottom: var(--sp-4); padding: var(--sp-2) var(--sp-4);
   border: 1px solid var(--border-card); border-radius: var(--radius); background: var(--sunken); box-shadow: 0 0 0 4px var(--brief-bg);
 }
 .tl-now {
@@ -51,6 +51,7 @@
   padding: var(--sp-2) 0; font-size: var(--fs-sm); line-height: var(--line-sm); color: var(--fg);
 }
 .tl-now .text { min-width: 0; }
+.tl-foot .tl-now { cursor: pointer; }
 .tl-now:is(.running, .stopping) .mark { color: var(--accent-text); }
 .tl-now.waiting :is(.mark, .text) { color: var(--warn); }
 .tl-now.idle .text { color: var(--fg-muted); }
@@ -67,7 +68,9 @@
 @media (hover: hover) { .step .text:hover { color: var(--fg); } }
 .step .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 .step input { flex: 1; min-width: 0; height: var(--size-row); font-size: var(--fs-sm); }
-.step.add::before { display: none; }
+.step:is(.add, .done)::before { display: none; }
+.step.done { cursor: default; }
+.step.done .codicon { flex: none; width: 10px; color: var(--ok); }
 .step.add .link { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--fg-muted); }
 @media (hover: hover) { .step.add .link:hover { color: var(--link); } }
 

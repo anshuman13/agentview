@@ -1,12 +1,10 @@
-import { useState, type RefObject } from 'react';
+import { useState } from 'react';
 import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
-import { touch } from '../../app/touch/touch';
 import { loopLabel } from '../../chat/composer/composerLogic';
 import type { ToolUse } from '../../chat/transcript/steps';
 import { clock } from '../../../../shared/util';
 import { readFlag, saveFlag } from '../../ui/util';
-import { useNarrow } from '../../app/shell/useNarrow';
 import { time } from './time';
 
 type Loop = { phase: string | null; round: number; max: number };
@@ -19,9 +17,9 @@ type Props = {
   lastReply: { at: number } | undefined;
   lastTool: ToolUse | undefined;
   limit: { at: string; prompt: string } | null;
+  done: { id: string; text: string }[];
   next: string[];
   running: boolean;
-  end: RefObject<HTMLDivElement | null>;
 };
 
 function Step({ text, editing = false, onSave, onDrop }: { text: string; editing?: boolean; onSave: (v: string) => void; onDrop: () => void }) {
@@ -55,9 +53,10 @@ function Step({ text, editing = false, onSave, onDrop }: { text: string; editing
 
 const setNext = (list: string[]) => send({ type: 'plan', next: list });
 
-function StepList({ next, adding, setAdding }: { next: string[]; adding: boolean; setAdding: (v: boolean) => void }) {
+function StepList({ done, next, adding, setAdding }: { done: Props['done']; next: string[]; adding: boolean; setAdding: (v: boolean) => void }) {
   return (
     <ul className="steps">
+      {done.map((d) => <li key={d.id} className="step done"><Icon name="check" small /><span className="text">{d.text}</span></li>)}
       {next.map((t, i) => (
         <Step key={`${i}:${t}`} text={t} onSave={(v) => setNext(next.map((x, j) => (j === i ? v : x)).filter(Boolean))} onDrop={() => setNext(next.filter((_, j) => j !== i))} />
       ))}
@@ -93,34 +92,34 @@ export function HeadState(p: Pick<Props, 'state' | 'status' | 'loop' | 'repeat' 
   );
 }
 
+// The chat's current step at the top of the chat; a tap lists the steps done this turn, checked, and the next ones.
 export function TimelineFoot(p: Props) {
-  const { state, repeat, lastTool, limit, next, running, end } = p;
+  const { state, repeat, lastTool, limit, done, next, running } = p;
   const [adding, setAdding] = useState(false);
-  const narrow = useNarrow();
-  const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', !touch() && !narrow));
+  const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', false));
   const toggleSteps = () => { setStepsOpen(!stepsOpen); saveFlag('agentview.steps', !stepsOpen); };
-  const hasSteps = next.length > 0 || adding || running;
+  const hasSteps = next.length > 0 || done.length > 0 || adding || running;
   const retry = state === 'idle' && !repeat && limit;
-  if (state === 'idle' && !retry && !hasSteps) return <div ref={end} />;
+  if (state === 'idle' && !retry && !next.length) return null;
+  const count = done.length + next.length;
   return (
     <div className="tl-foot">
-      <div className={`tl-now ${state}`}>
+      <div className={`tl-now ${state}`} onClick={hasSteps ? toggleSteps : undefined}>
         <span className="mark">{markIcon(state)}</span>
         <span className="text">
           {nowText(p)}
           {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
         </span>
         <span className="side">
-          {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` })}>Continue at {limit.at}</button>}
+          {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={(e) => { e.stopPropagation(); send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` }); }}>Continue at {limit.at}</button>}
           {hasSteps && (
-            <button className="steps-toggle" aria-expanded={stepsOpen} title={stepsOpen ? 'Hide the next steps' : 'Show the next steps'} onClick={toggleSteps}>
-              {next.length ? `${next.length} step${next.length === 1 ? '' : 's'}` : 'Steps'}<Icon name={stepsOpen ? 'chevron-up' : 'chevron-down'} small />
+            <button className="steps-toggle" aria-expanded={stepsOpen} title={stepsOpen ? 'Hide the steps' : 'Show the steps'}>
+              {count ? `${done.length}/${count} steps` : 'Steps'}<Icon name={stepsOpen ? 'chevron-up' : 'chevron-down'} small />
             </button>
           )}
         </span>
       </div>
-      {hasSteps && stepsOpen && <StepList next={next} adding={adding} setAdding={setAdding} />}
-      <div ref={end} />
+      {hasSteps && stepsOpen && <StepList done={done} next={next} adding={adding} setAdding={setAdding} />}
     </div>
   );
 }

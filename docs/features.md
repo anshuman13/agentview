@@ -175,11 +175,11 @@ Each Jobs list row is one line of title and one line of meta: the schedule in wo
 ## Timeline and steering
 
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
-and notes. The chat shows each turn as its prompt and Claude's final reply, with the turn's work folded into one row
+and notes. A card at the top of the chat shows the current step and stays in view while you scroll; a tap lists the steps done this turn (checked) and the next steps (unchecked, editable), collapsed by default and kept per device; while idle it shows only when next steps remain. The chat shows each turn as its prompt and Claude's final reply, with the turn's work folded into one row
 above the reply: "12 tools · 3 files · 1 agent · 2m · $0.40", plus "N failed" in the error colour when a tool failed; a fold with no tool work is titled by what it holds ("Session started with claude-fable-5-1", else "3 notes"), with no duration or cost. The row
 is a faint small line at the right edge, boxed only while open, closed by default and kept open per device (id `work:<turn>`); opened, it lists the turn's steps, Explored groups, files,
 agents and earlier text in order. A running turn shows a spinner and counts that grow, and no duration. Blocked and Review
-cards, error system rows, spec and sketch cards stay visible, and pending requests, the loop card and the to-do card stay above
+cards, error system rows, spec and sketch cards stay visible, and pending requests and the loop card stay above
 the composer. A turn with nothing to hide has no row. The More menu's Show work switch (per device, off by default) turns
 the folds off and shows every row. The web and the phone share the rule (`workFold.ts`, `WorkFold.kt`).
 A chat row in the Sessions view shows the chat's
