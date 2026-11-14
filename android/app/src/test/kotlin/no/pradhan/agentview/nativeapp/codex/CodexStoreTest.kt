@@ -138,6 +138,6 @@ class CodexStoreTest {
         s.sync()
         assertEquals(listOf(5L to false), fake.pulled)
         assertEquals(listOf("two"), s.state.value.items.map { it.title })
-        file.delete()
+        file.parentFile.listFiles { f -> f.name.startsWith(file.name) }?.forEach { it.delete() }
     }
 }

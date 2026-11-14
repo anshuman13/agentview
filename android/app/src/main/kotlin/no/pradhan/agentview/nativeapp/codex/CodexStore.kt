@@ -62,13 +62,15 @@ class CodexStore(
     private val lock = Mutex()
     private var since = 0L
     private var timer: Job? = null
+    // The rows of each table as last written to the cache, so a save rewrites only the tables that changed.
+    private val saved = HashMap<String, List<Row>>()
 
     // Another server of the same hub: the next pull is full, and unsent edits stay to be pushed.
     fun reset() = scope.launch {
         lock.withLock {
             tables.values.forEach { t -> t.values.removeAll { !it.dirty } }
             since = 0
-            cache?.delete()
+            clearCache()
             state.value = CodexState()
             publish()
         }
@@ -77,39 +79,51 @@ class CodexStore(
     // Shows the rows of the last sync at once; the next pull then fetches only what changed since.
     suspend fun restore() = lock.withLock { load() }
 
+    // The cache is a small file with the version and columns, and one file of rows per table next to it.
+    private fun tableFile(file: File, table: String) = File("${file.path}.$table")
+
+    private fun clearCache() {
+        val file = cache ?: return
+        file.delete()
+        tables.keys.forEach { tableFile(file, it).delete() }
+        saved.clear()
+    }
+
     private suspend fun load() {
-        val body = withContext(Dispatchers.IO) { cache?.takeIf { it.exists() }?.readText() } ?: return
+        val file = cache ?: return
+        val head = withContext(Dispatchers.IO) { file.takeIf { it.exists() }?.readText() } ?: return
         try {
-            val (version, changes) = parse(body)
+            val bodies = withContext(Dispatchers.IO) { tables.keys.associateWith { tableFile(file, it).readText() } }
+            val (meta, rows) = withContext(parsing) {
+                protocolJson.parseToJsonElement(head).jsonObject to bodies.mapValues { (_, b) -> protocolJson.parseToJsonElement(b).jsonArray.map { parseRow(it.jsonObject) } }
+            }
+            val version = meta["version"]?.jsonPrimitive?.content?.toLongOrNull() ?: error("Unexpected cache")
             if (since != 0L || state.value.loaded) return
-            apply(changes)
+            apply(rows.values.flatten())
+            saved.putAll(tables.mapValues { it.value.values.toList() })
             // A cache from a build with other columns lacks the new ones, so the next pull is full.
-            if (protocolJson.parseToJsonElement(body).jsonObject["columns"]?.jsonPrimitive?.contentOrNull == COLUMNS) since = version
+            if (meta["columns"]?.jsonPrimitive?.contentOrNull == COLUMNS) since = version
             publish(loaded = true)
         } catch (e: Exception) {
-            cache?.delete()
+            clearCache()
         }
     }
 
     // Rows with an unsent edit are not stored, so the copy never holds an edit as synced.
     private suspend fun save() {
         val file = cache ?: return
-        val rows = tables.values.flatMap { it.values }
-        if (rows.any { it.dirty }) return
-        val version = since
-        // The rows are an immutable copy, so the JSON is built off the main thread.
-        val body = withContext(parsing) {
-            buildJsonObject {
-                put("version", version)
-                put("columns", COLUMNS)
-                put("changes", JsonArray(rows.map(::rowToCache)))
-            }.toString()
-        }
+        val rows = tables.mapValues { it.value.values.toList() }
+        if (rows.values.any { l -> l.any { it.dirty } }) return
+        // Rows are immutable, so a table whose rows are the same objects as last time is unchanged.
+        val changed = rows.filter { (t, l) -> saved[t]?.let { s -> s.size == l.size && s.indices.all { s[it] === l[it] } } != true }
+        val head = buildJsonObject { put("version", since); put("columns", COLUMNS) }.toString()
+        val bodies = withContext(parsing) { changed.mapValues { (_, l) -> JsonArray(l.map(::rowToCache)).toString() } }
         withContext(Dispatchers.IO) {
             runCatching {
-                val tmp = File(file.path + ".tmp")
-                tmp.writeText(body)
-                tmp.renameTo(file)
+                fun write(to: File, body: String) = File(to.path + ".tmp").let { it.writeText(body); it.renameTo(to) }
+                for ((t, body) in bodies) write(tableFile(file, t), body)
+                write(file, head)
+                saved.putAll(changed)
             }
         }
     }
