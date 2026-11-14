@@ -6,7 +6,8 @@ export class Mcp {
 
   async refresh() {
     const list = await this.s.driver.mcpStatus();
-    if (list) this.s.setSession({ mcp: list });
+    // AgentView's own server is not one the user manages.
+    if (list) this.s.setSession({ mcp: list.filter((m) => m.name !== 'agentview') });
   }
 
   async reconnect(name: string) {

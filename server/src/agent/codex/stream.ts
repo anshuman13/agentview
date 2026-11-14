@@ -41,6 +41,7 @@ export class CodexStream {
   // The process is gone; text still streaming ends as it is.
   end() {
     for (const id of [...this.live.keys()]) this.finish(id);
+    this.files.clear();
   }
 
   private started(item: ThreadItem) {
@@ -55,6 +56,7 @@ export class CodexStream {
     if (item.type === 'agentMessage') return this.message(item.id, item.text);
     if (item.type === 'contextCompaction') return this.compacted(turnId);
     for (const ev of finishedEvents(item, Date.now())) this.host.pushEvent(ev);
+    if (item.type === 'fileChange') this.files.delete(item.id);
     if (item.type === 'fileChange' && item.status === 'completed') for (const c of item.changes) this.host.noteFile(path.relative(this.host.cwd, this.abs(c.path)), 'tool');
   }
 
