@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { HookJSONOutput } from '../agent/claude/sdkTypes.js';
 import type { UnattendedLimits } from '../settings.js';
+import { inside } from '../../../shared/util.js';
 
 // What a scheduled coding chat may touch: its worktree, the temp folder and the settings' extra folders and domains.
 export type Unattended = { worktree: string; allowWrite: string[]; domains: string[]; denyRead: string[] };
@@ -37,12 +38,11 @@ function real(file: string): string {
   }
 }
 
-const inside = (dir: string, file: string) => file === dir || file.startsWith(dir + path.sep);
 
 export function editDenied(file: string, u: Unattended): string | null {
   const target = real(path.resolve(u.worktree, file));
-  const allowed = [u.worktree, os.tmpdir(), ...u.allowWrite].some((d) => inside(real(d), target));
-  return allowed && !inside(real(gitDir(u)), target) ? null : 'This unattended run may only edit files in its worktree';
+  const allowed = [u.worktree, os.tmpdir(), ...u.allowWrite].some((d) => inside(target, real(d)));
+  return allowed && !inside(target, real(gitDir(u))) ? null : 'This unattended run may only edit files in its worktree';
 }
 
 export function toolDenied(tool: string, input: Record<string, unknown>, u: Unattended): string | null {

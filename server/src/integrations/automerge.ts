@@ -1,9 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { jsonFile } from '../json.js';
-import { checkState, repoKey, type Check } from './github.js';
-
-export type Method = 'squash' | 'merge' | 'rebase';
+import { checkState, repoKey, type Check, type Method } from './github.js';
 type Entry = { cwd: string; number: number; method: Method; since: number; error?: string };
 type View = { state: string; title?: string; isDraft?: boolean; mergeable?: string; reviewDecision?: string; statusCheckRollup?: Check[]; headRefOid?: string };
 type Step = { kind: 'delete' } | { kind: 'wait'; note: string } | { kind: 'merge'; sha: string };

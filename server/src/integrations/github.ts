@@ -1,5 +1,5 @@
 import { NotFound, parseObject } from '../json.js';
-import type { AutoMerge, Method } from './automerge.js';
+import type { AutoMerge } from './automerge.js';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -169,7 +169,9 @@ async function prDetail(cwd: string, n: string): Promise<PullRequestDetail> {
 }
 
 const REVIEW: Record<string, string> = { approve: '--approve', comment: '--comment', request_changes: '--request-changes' };
-const MERGE: Record<string, string> = { squash: '--squash', merge: '--merge', rebase: '--rebase' };
+const MERGE = { squash: '--squash', merge: '--merge', rebase: '--rebase' };
+export type Method = keyof typeof MERGE;
+const isMethod = (m: unknown): m is Method => typeof m === 'string' && Object.hasOwn(MERGE, m);
 
 async function act(cwd: string, n: string, verb: string, ...flags: string[]) {
   await gh(cwd, 'pr', verb, n, ...flags);
@@ -202,11 +204,11 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
     if (!text && body.event !== 'approve') throw new Error('Write a comment first');
     return act(cwd, n, 'review', flag, ...(text ? ['--body', text] : []));
   }
-  if (action === 'merge') return act(cwd, n, 'merge', MERGE[body.method] ?? '--squash');
+  if (action === 'merge') return act(cwd, n, 'merge', isMethod(body.method) ? MERGE[body.method] : '--squash');
   if (action === 'automerge') {
     if (!auto) throw new Error('Auto-merge is not running');
-    if (typeof body.method !== 'string' || !Object.hasOwn(MERGE, body.method)) throw new Error('Method must be squash, merge or rebase');
-    return auto.turn(cwd, Number(n), body.on === true, body.method as Method);
+    if (!isMethod(body.method)) throw new Error('Method must be squash, merge or rebase');
+    return auto.turn(cwd, Number(n), body.on === true, body.method);
   }
   if (action === 'checkout') return act(cwd, n, 'checkout');
   throw new NotFound(`Unknown GitHub route ${pathname}`);
