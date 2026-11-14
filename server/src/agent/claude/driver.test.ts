@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { AgentSession } from '../../session/session.js';
 import type { CanUseTool, HookCallback } from '@anthropic-ai/claude-agent-sdk';
-import { claudeSession } from './driver.js';
+import { claudeSession } from './testSession.js';
 import { agentOptions } from './options.js';
 import { unattendedRules, type Unattended } from './unattended.js';
 import { workflowAgents } from './history.js';

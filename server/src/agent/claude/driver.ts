@@ -1,7 +1,6 @@
 import { query, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { ACCOUNT_LABEL, type Account, type Capabilities, type Effort, type LoopRole, type Provider } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, DriverFactory, History } from '../types.js';
-import { AgentSession } from '../../session/session.js';
 import { InputQueue } from './inputQueue.js';
 import { TranscriptWatch } from './transcriptWatch.js';
 import type { SystemMessage } from './sdkTypes.js';
@@ -30,7 +29,6 @@ const USAGE_EVERY = 10 * 60_000;
 
 export const claudeDriver = (cwd: string, resume?: string, fork = false, openrouter = false, account = reopenAccount(resume, cwd), unattended = false): DriverFactory => (host) => new ClaudeDriver(host, resume, fork, account, openrouter, unattended);
 
-export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume, cwd)) => new AgentSession(cwd, claudeDriver(cwd, resume, fork, false, account), resume ?? null);
 
 // Runs a chat on the Claude Agent SDK: one CLI process at a time, resumed from its transcript when it exits.
 // The CLI knows an OpenRouter slot by its bare name; AgentView keeps the prefix to tell the provider.

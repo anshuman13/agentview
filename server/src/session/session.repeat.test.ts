@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 import type { AgentSession } from './session.js';
 import { parseGoal } from './repeat.js';
-import { claudeSession } from '../agent/claude/driver.js';
+import { claudeSession } from '../agent/claude/testSession.js';
 import { BIG_BRO, type ChatEvent } from '../../../shared/protocol.js';
 import { advanceTimersByTimeAsync, setSystemTime, waitFor } from '../../../testing.js';
 

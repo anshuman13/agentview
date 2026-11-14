@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'bun:test';
 import type { BuildEntry } from '../../../shared/builds.js';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
-import { claudeSession } from '../agent/claude/driver.js';
+import { claudeSession } from '../agent/claude/testSession.js';
 import { buildList, buildOne, gateOf, reviewBuild, splitPhases } from './builds.js';
 import { stubGlobal, unstubAllGlobals, waitFor } from '../../../testing.js';
 import { announceApproval } from '../host/approval.js';

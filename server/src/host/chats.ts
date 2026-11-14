@@ -70,6 +70,7 @@ export async function createChat(cwd: string, resume?: string, title = '', fork 
   const chat = new AgentSession(cwd, p.driver(cwd, resume, fork, unattended), resume ?? null);
   chat.runs = runs;
   chat.transcriptPath = transcriptPath;
+  chat.resumeLine = (id, dir, sessionId, account) => provider(id).resume(dir, sessionId, account);
   chat.title = title;
   chat.onIdle = () => learning.later(chat);
   const job = runs.jobOfSession(resume);

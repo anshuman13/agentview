@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import type { ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, ServerState, SessionInfo, LoopState, LiveNow } from '../../../shared/protocol.js';
+import type { Account, Provider, ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, ServerState, SessionInfo, LoopState, LiveNow } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from './resume.js';
 import { Approvals } from './approvals.js';
@@ -22,7 +22,6 @@ import { PR_URL, createsPr } from './pr.js';
 import { parseGoal, RepeatController, ROUND_INSTRUCTION } from './repeat.js';
 import { SKETCH_COMMAND, sketchPrompt } from '../../../shared/sketches.js';
 import { SPEC_REVIEW_COMMAND, specReviewPrompt } from '../../../shared/specTasks.js';
-import { provider } from '../agent/registry.js';
 import { RunLinks } from './runLinks.js';
 import { Runs } from './runs.js';
 import { SessionSettings } from './settings.js';
@@ -48,8 +47,9 @@ export class AgentSession implements AgentHost {
   failed = false;
   // The host replaces this with the one it saves; a chat without a host keeps its runs in memory.
   runs = new Runs();
-  // The host sets the provider registry's lookup, which a session must not import.
+  // The host sets the provider registry's lookups, which a session must not import.
   transcriptPath: (id: string) => string | null = () => null;
+  resumeLine: (provider: Provider, cwd: string, sessionId: string, account: Account) => string | null = () => null;
   // ends: the run ends with this round, so its own end push is the only one.
   roundNote: { outcome: RoundOutcome; line: string; goal: boolean; ends: boolean } | null = null;
   readonly approvals: Approvals;
@@ -172,7 +172,7 @@ export class AgentSession implements AgentHost {
 
   private setResumeCommand() {
     const { sessionId, account } = this.state.session;
-    this.state.session.resumeCommand = sessionId ? provider(this.driver.provider).resume(this.cwd, sessionId, account) : null;
+    this.state.session.resumeCommand = sessionId ? this.resumeLine(this.driver.provider, this.cwd, sessionId, account) : null;
   }
 
   setSession(patch: Partial<SessionInfo>) {
