@@ -49,13 +49,15 @@ import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.openLink
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.select
 
 // MCP Servers (web/src/ops/McpStatus.tsx): the probed servers with the chat's live state, by Work and Personal, and a detail page.
 @Composable
 fun McpScreen(hub: Hub, onBack: () -> Unit) {
-    val st by hub.store.state.collectAsState()
-    val chat = st.shownId
-    val connectors = (st.session?.capabilities ?: Capabilities()).can("connectors")
+    val chat by hub.store.state.select { it.shownId }
+    val session by hub.store.state.select { it.session }
+    val events by hub.store.state.select { it.events }
+    val connectors = (session?.capabilities ?: Capabilities()).can("connectors")
     var refresh by remember { mutableStateOf(false) }
     var accounts by remember { mutableStateOf<Map<String, List<McpConnector>>>(emptyMap()) }
     val (probe, reprobe) = rememberLoad(chat) {
@@ -78,10 +80,10 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     LaunchedEffect(Unit) { hub.refreshMcpGroups() }
     var sel by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var showHidden by rememberSaveable { mutableStateOf(false) }
-    val live = st.session?.mcp ?: emptyList()
-    val account = st.session?.account
+    val live = session?.mcp ?: emptyList()
+    val account = session?.account
     val rows = remember(probe.data, live, account, accounts, connectors) { mergeMcp(probe.data ?: emptyList(), live).let { if (connectors) mcpWithAccounts(it, account, accounts) else it } }
-    val calls = remember(st.events) { mcpCalls(st.events) }
+    val calls = remember(events) { mcpCalls(events) }
     val sections = remember(rows, groups) { mcpSections(rows, groups) }
 
     fun setGroup(service: String, group: String) {
