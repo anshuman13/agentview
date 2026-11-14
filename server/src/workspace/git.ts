@@ -126,18 +126,21 @@ export function mainCheckout(cwd: string) {
 }
 
 
+const mergeBase = async (cwd: string, base: string, env?: Record<string, string>) => (await safeGit(cwd, ['merge-base', base, 'HEAD'], undefined, env).catch(() => '')).trim();
+const PLAIN_DIFF = ['--no-ext-diff', '--no-textconv'];
+
+// The files and patch from `since` to the working tree, or to the commits in `to`. A patch over MAX_BRANCH_DIFF is left out.
+async function diffSince(cwd: string, since: string, to: string[] = [], env?: Record<string, string>) {
+  const [numstat, diff] = await Promise.all([safeGit(cwd, ['diff', '--numstat', ...PLAIN_DIFF, since, ...to], undefined, env), safeGit(cwd, ['diff', ...PLAIN_DIFF, since, ...to], undefined, env)]);
+  return { files: parseNumstat(numstat).map((f) => ({ path: f.path, additions: f.add, deletions: f.del })), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff };
+}
+
 // What this branch committed since it left the default branch, for review before a PR.
 async function branchDiff(cwd: string) {
   const base = await defaultBase(cwd);
-  const since = (await git(cwd, ['merge-base', base, 'HEAD']).catch(() => '')).trim();
-  const name = base.replace(/^origin\//, '');
-  if (!since) return { base: name, files: [], diff: '' };
-  const [numstat, diff] = await Promise.all([git(cwd, ['diff', '--numstat', since, 'HEAD']), git(cwd, ['diff', since, 'HEAD'])]);
-  return { base: name, files: parseNumstat(numstat), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff };
+  const since = await mergeBase(cwd, base);
+  return { base: base.replace(/^origin\//, ''), ...(since ? await diffSince(cwd, since, ['HEAD']) : { files: [], diff: '' }) };
 }
-
-const mergeBase = async (cwd: string, base: string, env?: Record<string, string>) => (await safeGit(cwd, ['merge-base', base, 'HEAD'], undefined, env).catch(() => '')).trim();
-const PLAIN_DIFF = ['--no-ext-diff', '--no-textconv'];
 const MAX_LOOSE = 200;
 
 // Whether a run's branch holds anything to review: files not committed, or commits past the default branch. Without a merge base it counts as work.
@@ -173,13 +176,7 @@ export async function reviewDiff(cwd: string, env?: Record<string, string>) {
     const st = await lstat(path.join(cwd, p)).catch(() => null);
     if (st && (st.isFile() || st.isSymbolicLink())) loose.push(p);
   }
-  const [files, diff] = await withLoose(cwd, loose.slice(0, MAX_LOOSE), env, (e) =>
-    Promise.all([safeGit(cwd, ['diff', '--numstat', ...PLAIN_DIFF, since], undefined, e).then(parseNumstat), safeGit(cwd, ['diff', ...PLAIN_DIFF, since], undefined, e)]));
-  return {
-    base: base.replace(/^origin\//, ''),
-    files: files.map((f) => ({ path: f.path, additions: f.add, deletions: f.del })),
-    diff: diff.length > MAX_BRANCH_DIFF ? '' : diff,
-  };
+  return { base: base.replace(/^origin\//, ''), ...(await withLoose(cwd, loose.slice(0, MAX_LOOSE), env, (e) => diffSince(cwd, since, [], e))) };
 }
 
 export type Todo = { path: string; line: number; text: string; ai?: '!' | '?' };

@@ -4,6 +4,7 @@ import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { exec as run } from '../exec.js';
+import { MAX_BRANCH_DIFF } from '../workspace/git.js';
 
 const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,headRefOid,additions,deletions';
 const lists = new Map<string, { at: number; prs: PullRequest[] }>();
@@ -164,7 +165,7 @@ async function prDetail(cwd: string, n: string): Promise<PullRequestDetail> {
     reviews,
     files: d.files.map((f: { path: string; additions: number; deletions: number }) => ({ path: f.path, additions: f.additions, deletions: f.deletions })),
     commits: d.commits.map((c: { oid: string; messageHeadline: string; authors: Author[] }) => ({ oid: c.oid, message: c.messageHeadline, author: c.authors[0]?.login || c.authors[0]?.name || '' })),
-    diff: diff.length > 2_000_000 ? diff.slice(0, 2_000_000) : diff,
+    diff: diff.length > MAX_BRANCH_DIFF ? diff.slice(0, MAX_BRANCH_DIFF) : diff,
   };
 }
 

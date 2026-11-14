@@ -30,9 +30,9 @@ class BranchPrTest {
 
     @Test fun readsTheBranchDiff() {
         val diff = "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1,2 @@\n x\n+y\n"
-        val b = parseBranchDiff("""{"base":"main","files":[{"path":"README.md","add":1,"del":0}],"diff":${kotlinx.serialization.json.JsonPrimitive(diff)}}""")
+        val b = parseBranchDiff("""{"base":"main","files":[{"path":"README.md","additions":1,"deletions":0}],"diff":${kotlinx.serialization.json.JsonPrimitive(diff)}}""")
         assertEquals("main", b.base)
-        assertEquals(1, b.files.single().add)
+        assertEquals(1, b.files.single().additions)
         assertEquals(true, splitDiff(b.diff)["README.md"]?.contains("+y"))
     }
 

@@ -175,7 +175,7 @@ private fun LazyListScope.committedSection(b: BranchDiff, shownPatch: MutableSta
                 if (i > 0) Hairline(lead = true)
                 val name = f.path.substringAfterLast('/')
                 val shown = shownPatch.value == f.path
-                ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.add, f.del) }, onClick = { shownPatch.value = if (shown) null else f.path })
+                ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { shownPatch.value = if (shown) null else f.path })
                 if (shown) PatchView(patches[f.path] ?: if (b.diff.isEmpty()) "Diff too large to show" else "No diff", f.path)
             }
         }
