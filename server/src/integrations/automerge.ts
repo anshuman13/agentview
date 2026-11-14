@@ -1,6 +1,7 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { jsonFile } from '../json.js';
-import { checkState, type Check } from './github.js';
+import { checkState, repoKey, type Check } from './github.js';
 
 export type Method = 'squash' | 'merge' | 'rebase';
 type Entry = { cwd: string; number: number; method: Method; since: number; error?: string };
@@ -27,11 +28,12 @@ export function autoMergeStep(view: View): Step {
   return { kind: 'merge', sha: view.headRefOid };
 }
 
-const same = (e: Entry, cwd: string, number: number) => e.cwd === cwd && e.number === number;
+// Worktrees of one repo share their entries, so a PR armed from a worktree shows and turns off from any of them.
+const same = (e: Entry, cwd: string, number: number) => repoKey(e.cwd) === repoKey(cwd) && e.number === number;
 const keyOf = (e: Entry) => `${e.cwd}#${e.number}`;
 
-export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; changed: (cwd: string) => void }) {
-  const { gh, post, file, changed } = deps;
+export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; changed: (cwd: string) => void; exists?: (cwd: string) => boolean }) {
+  const { gh, post, file, changed, exists = existsSync } = deps;
   const store = jsonFile<Entry[]>(file, []);
   const notes = new Map<string, string>();
   const merging = new Set<string>();
@@ -62,6 +64,8 @@ export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; change
     if (merging.has(k)) return;
     merging.add(k);
     try {
+      // An entry armed from a worktree that is gone would spawn gh in a missing folder every minute.
+      if (!exists(e.cwd)) return void (await drop(e));
       let view: View;
       try {
         view = JSON.parse(await gh(e.cwd, 'pr', 'view', String(e.number), '--json', VIEW));
@@ -70,6 +74,7 @@ export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; change
       }
       const step = autoMergeStep(view);
       if (step.kind === 'delete') return void (await drop(e));
+      if (e.error) return;
       if (step.kind === 'wait') return void notes.set(k, step.note);
       if (!(await store.read()).some((x) => same(x, e.cwd, e.number) && !x.error)) return;
       const repo = path.basename(e.cwd);
@@ -90,12 +95,13 @@ export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; change
   }
 
   async function poll() {
-    await Promise.all((await store.read()).filter((e) => !e.error).map(check));
+    // Errored entries are polled too, so one whose PR closed or merged elsewhere is dropped.
+    await Promise.all((await store.read()).map(check));
   }
 
   async function state(cwd: string) {
     const out = new Map<number, { note: string; error?: string }>();
-    for (const e of await store.read()) if (e.cwd === cwd) out.set(e.number, { note: notes.get(keyOf(e)) ?? FIRST_NOTE, ...(e.error ? { error: e.error } : {}) });
+    for (const e of await store.read()) if (repoKey(e.cwd) === repoKey(cwd)) out.set(e.number, { note: notes.get(keyOf(e)) ?? FIRST_NOTE, ...(e.error ? { error: e.error } : {}) });
     return out;
   }
 

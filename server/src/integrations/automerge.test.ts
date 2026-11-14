@@ -39,6 +39,7 @@ function setup(handler: (args: string[]) => Promise<string> | string) {
     post: (...p) => void posts.push(p),
     file: path.join(mkdtempSync(path.join(os.tmpdir(), 'automerge-')), 'automerge.json'),
     changed: () => {},
+    exists: (cwd) => cwd !== '/gone',
   });
   return { am, calls, posts, merges: () => calls.filter((a) => a[1] === 'merge') };
 }
@@ -144,5 +145,20 @@ describe('createAutoMerge', () => {
     expect(t.merges().length).toBe(1);
     expect(t.posts.length).toBe(1);
     expect((await t.am.state('/r')).size).toBe(0);
+  });
+});
+
+describe('createAutoMerge cleanup', () => {
+  it('drops an entry whose folder is gone, and an errored entry once its PR is merged', async () => {
+    let state = 'OPEN';
+    const t = setup((args) => (args[1] === 'merge' ? Promise.reject(new Error('nope')) : JSON.stringify(view({ state, statusCheckRollup: [{ state: 'SUCCESS' }] }))));
+    await t.am.turn('/gone', 1, true, 'squash');
+    await t.am.turn('/r', 2, true, 'squash');
+    await t.am.poll();
+    expect([...(await t.am.state('/gone')).keys()]).toEqual([]);
+    expect((await t.am.state('/r')).get(2)?.error).toBe('nope');
+    state = 'MERGED';
+    await t.am.poll();
+    expect([...(await t.am.state('/r')).keys()]).toEqual([]);
   });
 });
