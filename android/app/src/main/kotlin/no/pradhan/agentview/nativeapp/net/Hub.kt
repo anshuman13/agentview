@@ -111,7 +111,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         restore = { id -> disk.load(id)?.let { RecentChats.Entry(it.events, it.earlier) } },
     ).also { s -> saved.get<String>(CHAT_KEY)?.takeIf { it.isNotEmpty() }?.let { showChat(s, it) } }
 
-    val transcript = TranscriptFeed(store.state.map { it.shownId to it.events }.distinctUntilChanged { a, b -> a.first == b.first && a.second === b.second }, viewModelScope)
 
     val notifier = Notifier(app)
 
@@ -193,6 +192,13 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     var foreground: Boolean
         get() = foregroundNow.value
         set(v) { foregroundNow.value = v }
+
+    // In the background the stream still carries the open chat's tokens; the transcript is rebuilt only while the app shows.
+    val transcript = TranscriptFeed(
+        foregroundNow.flatMapLatest { up -> if (up) store.state.map { it.shownId to it.events } else emptyFlow() }
+            .distinctUntilChanged { a, b -> a.first == b.first && a.second === b.second },
+        viewModelScope,
+    )
 
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
 
