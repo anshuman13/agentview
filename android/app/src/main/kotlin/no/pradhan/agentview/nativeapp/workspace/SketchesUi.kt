@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.workspace
 
+import no.pradhan.agentview.nativeapp.ui.select
 import android.view.MotionEvent
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -59,7 +60,7 @@ private fun parseSketches(body: String): List<SketchFile> = protocolJson.decodeF
 // Sketches (web/src/workspace/Sketches.tsx): the mockups the agent wrote with /sketch, and a frame that shows one.
 @Composable
 fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
-    val chat = hub.store.state.collectAsState().value.shownId
+    val chat by hub.store.state.select { it.shownId }
     val (load, reload) = rememberLoad(chat) { parseSketches(hub.read("/api/sketches")) }
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var want by remember { mutableStateOf<String?>(null) }
@@ -106,8 +107,7 @@ private fun newSketch(hub: Hub) {
 @Composable
 private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    val st by hub.store.state.collectAsState()
-    val cwd = st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd.orEmpty()
+    val cwd by hub.store.state.select { st -> st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd.orEmpty() }
     val clip = LocalClipboardManager.current
     val (load) = rememberLoad(file.path, hub.pageChat) { parseFile(hub.read("/api/file?path=${enc(file.path)}")) }
     var desktop by rememberSaveable { mutableStateOf(false) }
@@ -131,7 +131,7 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
                 f == null && load.error.isEmpty() -> Loading("Loading sketch")
                 f == null || f.binary || f.error != null -> SketchProblem("It may have moved. Go back to the list")
                 f.content.length > MAX_SKETCH -> SketchProblem("Too large to show")
-                else -> SketchFrame(sketchPage(f.content, if (isDark) "dark" else "light", desktop), desktop)
+                else -> SketchFrame(remember(f.content, isDark, desktop) { sketchPage(f.content, if (isDark) "dark" else "light", desktop) }, desktop)
             }
         }
     }

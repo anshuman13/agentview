@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { notice, send, sendToChat, setUi, useStore } from '../../app/store';
 import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
@@ -23,7 +23,8 @@ import { readBox } from './boxOpen';
 import { BuildSheets, Criteria, useBuildSheets, type BuildSheetState, type OpenSheet } from './BuildSheets';
 
 // The live card of a spec in a chat: where the build stands and which criteria pass, read-only.
-export function SpecCard({ slug, path, bump }: { slug: string; path?: string; bump: number }) {
+// Memoized: the transcript re-renders on every event, and the card's props only change with its build.
+export const SpecCard = memo(function SpecCard({ slug, path, bump }: { slug: string; path?: string; bump: number }) {
   const chat = useStore((s) => s.session.id);
   const id = `build:${chat}:${slug}`;
   const [open, setOpen] = useState(() => readBox(id, true));
@@ -47,7 +48,7 @@ export function SpecCard({ slug, path, bump }: { slug: string; path?: string; bu
     {d && <BuildSheets d={d} sheets={sheets} reload={reload} />}
     </>
   );
-}
+});
 
 function SpecMenu({ path, d, reload, sheets }: { path: string; d: BuildDetail | null; reload: () => Promise<void>; sheets: BuildSheetState }) {
   const can = useCan('subagents');
@@ -118,7 +119,7 @@ function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
     watch.observe(el);
     return () => watch.disconnect();
   }, []);
-  useEffect(measure);
+  useEffect(measure, [d]);
   const total = buildTotals(d.entries, Date.now());
   const totalLine = total.runs === 0 ? '' : [`${total.runs} agent run${total.runs === 1 ? '' : 's'}`, duration(total.ms), total.tokens > 0 && `${total.partial ? '~' : ''}${tokens(total.tokens)}`].filter(Boolean).join(' · ');
   return (

@@ -9,29 +9,34 @@ export const createFolder = (root: string, name: string) => fetch(apiUrl('/api/f
 
 export const searchMessages = (q: string) => fetch(api(`/api/sessions/search?q=${encodeURIComponent(q)}`)).then((r) => r.json());
 
-export const fetchAdvisors = (): Promise<AdvisorInfo[] | null> => fetch(api('/api/advisors')).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-
-export const fetchBacklog = (root: string): Promise<BacklogItem[] | null> => fetch(api(`/api/advisors/backlog?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-
-export const fetchSpecs = (root: string): Promise<SpecHomeItem[] | null> => fetch(api(`/api/advisors/specs?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-
-export const moveBacklogItem = (root: string, slug: string, dir: 'up' | 'down'): Promise<BacklogItem[] | null> =>
-  fetch(api(`/api/advisors/backlog/move?root=${encodeURIComponent(root)}`), { method: 'POST', body: JSON.stringify({ slug, dir }) }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-
-// Resolves null when there is no audit and rejects when the request fails.
-export const fetchAudit = (root: string): Promise<Audit | null> => fetch(api(`/api/advisors/audit?root=${encodeURIComponent(root)}`)).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Request failed (${r.status})`))));
-
-export const attentionPost = (path: string, id: string) => fetch(api(path), { method: 'POST', body: JSON.stringify({ id }) }).then((r) => r.json());
-
-
-// Resolves null when the build does not exist (404).
-export async function fetchBuild(slug: string): Promise<BuildDetail | null> {
-  const r = await fetch(api(`/api/builds/one?slug=${encodeURIComponent(slug)}`));
+// Null when the request fails.
+const orNull = <T>(url: string, init?: RequestInit) => fetchJson<T>(url, init).catch(() => null);
+// Null when the thing does not exist (404); other failures reject.
+async function or404<T>(url: string): Promise<T | null> {
+  const r = await fetch(url);
   if (r.status === 404) return null;
   const body = await r.json().catch(() => null);
   if (!r.ok || body?.error) throw new Error(body?.error ?? `Request failed (${r.status})`);
   return body;
 }
+const rootUrl = (path: string, root: string) => api(`${path}?root=${encodeURIComponent(root)}`);
+
+export const fetchAdvisors = () => orNull<AdvisorInfo[]>(api('/api/advisors'));
+
+export const fetchBacklog = (root: string) => orNull<BacklogItem[]>(rootUrl('/api/advisors/backlog', root));
+
+export const fetchSpecs = (root: string) => orNull<SpecHomeItem[]>(rootUrl('/api/advisors/specs', root));
+
+export const moveBacklogItem = (root: string, slug: string, dir: 'up' | 'down') => orNull<BacklogItem[]>(rootUrl('/api/advisors/backlog/move', root), { method: 'POST', body: JSON.stringify({ slug, dir }) });
+
+// Resolves null when there is no audit and rejects when the request fails.
+export const fetchAudit = (root: string) => fetchJson<Audit | null>(rootUrl('/api/advisors/audit', root));
+
+export const attentionPost = (path: string, id: string) => fetch(api(path), { method: 'POST', body: JSON.stringify({ id }) }).then((r) => r.json());
+
+
+// Resolves null when the build does not exist (404).
+export const fetchBuild = (slug: string) => or404<BuildDetail>(api(`/api/builds/one?slug=${encodeURIComponent(slug)}`));
 
 const postReview = (body: object) => fetchJson<{ ok: true }>(api('/api/builds/review'), { method: 'POST', body: JSON.stringify(body) });
 

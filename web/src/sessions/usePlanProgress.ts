@@ -8,7 +8,8 @@ type PlanRead = { markdown: string | null; progress: string | null; error: boole
 // A plan file's text and "N of M done" (null without tasks), read again when a file changes.
 export function usePlanProgress(path: string | null, chat?: string): PlanRead {
   const [read, setRead] = useState<PlanRead>({ markdown: null, progress: null, error: false });
-  const changed = useStore((s) => s.recentFiles);
+  // Only a change to the plan itself reloads it.
+  const changed = useStore((s) => (path && s.recentFiles[0] && path.endsWith(s.recentFiles[0]) ? s.recentFiles : null));
   useEffect(() => {
     if (!path) return;
     let live = true;

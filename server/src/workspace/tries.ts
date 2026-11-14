@@ -25,9 +25,16 @@ export function triesBranches(prompt: string, n: number, now = new Date()) {
 }
 
 // The main checkout of the repo the chat is in, also when the chat runs inside one of its worktrees.
-export async function mainCheckout(cwd: string) {
-  const { stdout } = await run('git', ['-C', cwd, 'worktree', 'list', '--porcelain']);
-  return stdout.split('\n')[0].replace(/^worktree /, '');
+// Cached for a minute: build records, cards and the board ask for it on every event and poll.
+const checkouts = new Map<string, { at: number; repo: Promise<string> }>();
+export function mainCheckout(cwd: string) {
+  const hit = checkouts.get(cwd);
+  if (hit && Date.now() - hit.at < 60_000) return hit.repo;
+  const repo = run('git', ['-C', cwd, 'worktree', 'list', '--porcelain']).then(({ stdout }) => stdout.split('\n')[0].replace(/^worktree /, ''));
+  repo.catch(() => checkouts.delete(cwd));
+  checkouts.set(cwd, { at: Date.now(), repo });
+  if (checkouts.size > 200) checkouts.delete(checkouts.keys().next().value!);
+  return repo;
 }
 
 // A new worktree on a new branch, made by Paseo. Without Paseo it is a plain git worktree in a hidden .tries folder next to the repo, which the repo list skips.

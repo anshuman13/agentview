@@ -36,6 +36,13 @@ const onHub = (fn: (c: Ctx) => unknown) => async (c: Ctx) => {
   return askAdvisorsMac(`${c.url.pathname}?${q}`, { method: c.method, body: c.method === 'POST' ? c.body : undefined });
 };
 
+const NOT_PROJECT = { status: 400, body: { error: 'Not a project folder' } };
+// An advisor route on a project folder, answered by the hub Mac.
+const inRoot = (fn: (root: string, c: Ctx) => unknown) => onHub((c) => {
+  const root = rootParam(c.url);
+  return allowedFolder(root) ? fn(root, c) : NOT_PROJECT;
+});
+
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
     'ANY /api/runs': entry(() => d.runs()),
@@ -52,33 +59,17 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return r;
     }, true),
     'GET /api/advisors': entry(onHub(() => advisorsInfo())),
-    'GET /api/advisors/backlog': entry(onHub(({ url }) => {
-      const root = rootParam(url);
-      return allowedFolder(root) ? readBacklog(root) : { status: 400, body: { error: 'Not a project folder' } };
-    })),
-    'GET /api/advisors/specs': entry(onHub(({ url }) => {
-      const root = rootParam(url);
-      return allowedFolder(root) ? buildList(root) : { status: 400, body: { error: 'Not a project folder' } };
-    })),
-    'POST /api/advisors/backlog/move': entry(onHub(async ({ url, body }) => {
-      const root = rootParam(url);
-      if (!allowedFolder(root)) return { status: 400, body: { error: 'Not a project folder' } };
+    'GET /api/advisors/backlog': entry(inRoot((root) => readBacklog(root))),
+    'GET /api/advisors/specs': entry(inRoot((root) => buildList(root))),
+    'POST /api/advisors/backlog/move': entry(inRoot(async (root, { body }) => {
       if (body.dir !== 'up' && body.dir !== 'down') return { status: 400, body: { error: 'dir must be up or down' } };
       return (await moveBacklogFile(root, String(body.slug), body.dir)) ? readBacklog(root) : { status: 404, body: { error: 'Not in the backlog' } };
     }), true),
-    'GET /api/advisors/audit': entry(onHub(({ url }) => {
-      const root = rootParam(url);
-      return allowedFolder(root) ? readAudit(root) : { status: 400, body: { error: 'Not a project folder' } };
-    })),
-    'GET /api/advisors/sketches': entry(onHub(({ url }) => {
-      const root = rootParam(url);
-      return allowedFolder(root) ? listSketches(root) : { status: 400, body: { error: 'Not a project folder' } };
-    })),
-    'GET /api/advisors/sketch': entry(onHub(({ url }) => {
-      const root = rootParam(url);
+    'GET /api/advisors/audit': entry(inRoot((root) => readAudit(root))),
+    'GET /api/advisors/sketches': entry(inRoot((root) => listSketches(root))),
+    'GET /api/advisors/sketch': entry(inRoot((root, { url }) => {
       const name = url.searchParams.get('name') ?? '';
-      if (!allowedFolder(root) || !/^[^/]+\.html$/.test(name)) return { status: 400, body: { error: 'Not a sketch' } };
-      return readFileWithOriginal(root, `.claude/sketches/${name}`);
+      return /^[^/]+\.html$/.test(name) ? readFileWithOriginal(root, `.claude/sketches/${name}`) : { status: 400, body: { error: 'Not a sketch' } };
     })),
     'ANY /api/sessions/pins': entry(({ method, url }) => pinsRoute(method, url.searchParams.get('id'))),
     'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'), url.searchParams.get('unread') === '1')),
