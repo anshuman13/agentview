@@ -110,7 +110,8 @@ export class RunLinks {
     }
     if (this.compareRun) {
       runs.addRound(this.compareRun, { n: 0, ...result });
-      runs.end(this.compareRun, 'all tries reported');
+      // The run stays open with its board until a try is kept or it is stopped.
+      runs.update(this.compareRun, { state: 'paused', why: 'Pick a try to keep' });
       this.compareRun = undefined;
     }
     if (repeat?.runId && roundNote) runs.addRound(repeat.runId, { n: repeat.round, outcome: roundNote.outcome, line: roundNote.line, costUsd: turn.cost, ...(report && { report }) });
