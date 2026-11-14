@@ -6,7 +6,7 @@ import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import type { Provider } from '../../../../shared/protocol';
 import { MODEL_SLOTS, type ModelSlot, type OpenRouterModels, type OpenRouterView } from '../../../../shared/openrouter';
-import { appSettings } from '../appSettings';
+import { appSettings, loadAppSettings } from '../appSettings';
 import { notice } from '../store';
 import { fetchOpenRouter, saveDefaultProvider, saveOpenRouter } from './modelsApi';
 import { useNarrow } from './useNarrow';
@@ -43,7 +43,7 @@ export function ModelsSettings() {
   const save = () => {
     setBusy(true);
     saveOpenRouter({ key, default: main, models })
-      .then((v) => { load(v); setOpen(false); notice('Model settings saved'); }, (err) => notice(err instanceof Error ? err.message : 'Could not save'))
+      .then((v) => { load(v); setOpen(false); notice('Model settings saved'); void loadAppSettings(); }, (err) => notice(err instanceof Error ? err.message : 'Could not save'))
       .finally(() => setBusy(false));
   };
   const pick = (id: Provider) =>
