@@ -9,6 +9,7 @@ import { AdvisorBoard } from './AdvisorBoard';
 import { AdvisorsSheet } from './AdvisorsSheet';
 import { repoRootOf, useWorkspace, type Folder } from './folders';
 import { fetchAudit, fetchBacklog, fetchSpecs } from './sessionApi';
+import '../styles/features/advisors.css';
 
 let chosenRoot: string | null = null;
 
