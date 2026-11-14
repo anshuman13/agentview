@@ -1,8 +1,7 @@
 import type { ChatEvent } from '../../../../shared/protocol.js';
-import { toolUseEvent } from '../claude/transcript.js';
+import { clipResult, toolUseEvent } from '../claude/transcript.js';
 import type { FileUpdateChange, ThreadItem, Turn } from './protocol.js';
 
-const MAX_RESULT = 4000;
 const DENIED = 'User denied this action in the AgentView UI.';
 
 // A unified diff as the text it removes and the text it adds, so a file change reads like an Edit. A diff without hunks is the whole file.
@@ -46,7 +45,7 @@ const result = (toolUseId: string, status: string, text: string, at: number, fai
   id: `${toolUseId}:result`,
   kind: 'tool_result',
   toolUseId,
-  text: status === 'declined' ? DENIED : text.slice(0, MAX_RESULT),
+  text: status === 'declined' ? DENIED : clipResult(text),
   isError: failed,
   at,
 });

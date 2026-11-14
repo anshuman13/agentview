@@ -78,7 +78,7 @@ function toolResultBlock(st: HistoryState, b: any, at: number, id: string) {
   const runId = st.workflowCalls.has(b.tool_use_id) ? text.match(RUN_ID)?.[1] : undefined;
   if (runId) st.runCalls.set(runId, b.tool_use_id);
   if (text.startsWith(ASYNC_LAUNCH)) return noteLaunch(st.agents, b.tool_use_id, text);
-  if (!st.agentUses.has(b.tool_use_id)) return st.events.push({ id, kind: 'tool_result', toolUseId: b.tool_use_id, text: text.slice(0, 4000), isError: Boolean(b.is_error), at });
+  if (!st.agentUses.has(b.tool_use_id)) return st.events.push({ id, kind: 'tool_result', toolUseId: b.tool_use_id, text: clipResult(text), isError: Boolean(b.is_error), at });
   const usage = usageFrom(text);
   if (usage) st.usages.set(b.tool_use_id, usage);
   st.events.push({ id, kind: 'tool_result', toolUseId: b.tool_use_id, text: agentReport(text, st.subagents[b.tool_use_id]), isError: Boolean(b.is_error), at });
@@ -141,6 +141,17 @@ export function historyFrom(msgs: SessionMessage[], subagents: Subagents = {}, w
 }
 
 const CLIP = 4096;
+
+// Tool results kept in events, as the transcript reader and both live drivers store them.
+export const clipResult = (text: string) => text.slice(0, 4000);
+
+// The tools that write files, and the file one writes (a notebook edit names notebook_path).
+export const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'];
+export const editedPath = (input: unknown) => {
+  const { file_path, notebook_path } = (input ?? {}) as { file_path?: unknown; notebook_path?: unknown };
+  const file = file_path ?? notebook_path;
+  return typeof file === 'string' ? file : undefined;
+};
 
 // Long strings in tool inputs (whole files in Write and Edit) are cut for the UI; the marker keeps editCount exact.
 export function clipInput(v: unknown): unknown {
@@ -241,7 +252,7 @@ function subagentEvents(msgs: SessionMessage[], parent: string, subagents: Recor
         events.push(toolUseEvent(b.id, b.name, b.input, at, parent));
       } else if (m.type === 'user' && b.type === 'tool_result') {
         const text = toolResultText(b);
-        events.push({ id: `${base}:${i}`, kind: 'tool_result', toolUseId: b.tool_use_id, text: agentUses.has(b.tool_use_id) ? agentReport(text, subagents[b.tool_use_id]) : text.slice(0, 4000), isError: Boolean(b.is_error), at, parent });
+        events.push({ id: `${base}:${i}`, kind: 'tool_result', toolUseId: b.tool_use_id, text: agentUses.has(b.tool_use_id) ? agentReport(text, subagents[b.tool_use_id]) : clipResult(text), isError: Boolean(b.is_error), at, parent });
       }
     }
   }

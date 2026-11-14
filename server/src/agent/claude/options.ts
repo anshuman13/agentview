@@ -1,3 +1,4 @@
+import { EDIT_TOOLS } from './transcript.js';
 import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpServerConfig, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,7 +78,7 @@ export function agentOptions(o: {
       },
     },
     hooks: {
-      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }, { matcher: 'Edit|Write|MultiEdit|NotebookEdit', hooks: [o.beforeEdit] }, ...(o.unattended ? [{ matcher: 'WebFetch|ListMcpResourcesTool|ReadMcpResourceTool|mcp__.*', hooks: [o.beforeTool] }] : [])],
+      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }, { matcher: EDIT_TOOLS.join('|'), hooks: [o.beforeEdit] }, ...(o.unattended ? [{ matcher: 'WebFetch|ListMcpResourcesTool|ReadMcpResourceTool|mcp__.*', hooks: [o.beforeTool] }] : [])],
       PostToolUse: [{ hooks: [o.afterTool] }],
       Stop: [{ hooks: [o.onStop] }],
     },

@@ -7,9 +7,8 @@ import { limitReset } from './limitText.js';
 import type { Rewinds } from './rewinds.js';
 import type { TaskTracker } from './taskTracker.js';
 import { agentResult, isAgent, patchAgent } from './subagents.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, clipResult, EDIT_TOOLS, editedPath } from './transcript.js';
 
-const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 
 // Turns the CLI's assistant and user messages into chat events.
 export class Messages {
@@ -60,8 +59,8 @@ export class Messages {
   private toolUse(block: { id: string; name: string; input: unknown }, parent?: string) {
     this.host.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now(), parent, this.tasks.agents));
     if (AGENT_TOOLS.has(block.name)) this.host.pushEvent(agentEvent(block.id, block.input, Date.now(), parent));
-    const file = (block.input as { file_path?: unknown })?.file_path;
-    if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
+    const file = editedPath(block.input);
+    if (EDIT_TOOLS.includes(block.name) && file) this.edits.set(block.id, file);
   }
 
   private toolResult(block: ToolResultBlock, parent: string | undefined, output: unknown) {
@@ -76,7 +75,7 @@ export class Messages {
       noteLaunch(this.tasks.agents, block.tool_use_id, text);
       return;
     }
-    const report = agent ? liveReport(text, output) : text.slice(0, 4000);
+    const report = agent ? liveReport(text, output) : clipResult(text);
     host.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: report, isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
   }
 }

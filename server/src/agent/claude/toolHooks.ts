@@ -1,3 +1,4 @@
+import { editedPath } from './transcript.js';
 import type { HookInput, HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentHost } from '../types.js';
 import { STATUS_REMINDER } from './options.js';
@@ -22,11 +23,10 @@ export class ToolHooks {
 
   beforeEdit(input: HookInput, unattended?: Unattended): HookJSONOutput {
     if (input.hook_event_name !== 'PreToolUse') return {};
-    const { file_path, notebook_path } = (input.tool_input ?? {}) as { file_path?: unknown; notebook_path?: unknown };
-    const file = file_path ?? notebook_path;
-    const denied = typeof file === 'string' && unattended && editDenied(file, unattended);
+    const file = editedPath(input.tool_input);
+    const denied = file && unattended && editDenied(file, unattended);
     if (denied) return denyTool(denied);
-    if (typeof file === 'string') this.host.captureEdit(file);
+    if (file) this.host.captureEdit(file);
     return {};
   }
 
