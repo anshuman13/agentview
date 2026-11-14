@@ -96,15 +96,19 @@ class CodexStore(
         val file = cache ?: return
         val rows = tables.values.flatMap { it.values }
         if (rows.any { it.dirty }) return
-        val body = buildJsonObject {
-            put("version", since)
-            put("columns", COLUMNS)
-            put("changes", JsonArray(rows.map(::rowToCache)))
+        val version = since
+        // The rows are an immutable copy, so the JSON is built off the main thread.
+        val body = withContext(parsing) {
+            buildJsonObject {
+                put("version", version)
+                put("columns", COLUMNS)
+                put("changes", JsonArray(rows.map(::rowToCache)))
+            }.toString()
         }
         withContext(Dispatchers.IO) {
             runCatching {
                 val tmp = File(file.path + ".tmp")
-                tmp.writeText(body.toString())
+                tmp.writeText(body)
                 tmp.renameTo(file)
             }
         }
