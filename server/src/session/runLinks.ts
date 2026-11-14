@@ -25,7 +25,7 @@ export class RunLinks {
       endRun: (id: string, why: string) => s.runs.end(id, why),
       reopenRun: (id: string) => s.runs.reopen(id),
       patchRun: (id: string, patch: Parameters<AgentSession['runs']['update']>[1]) => s.runs.update(id, patch),
-      push: (title: string, body: string) => post(title, s.runs.get(s.state.session.repeat?.runId)?.title ?? '', body, `${APP}/?view=runs`),
+      push: (title: string, body: string) => post(title, s.runs.get(s.state.session.repeat?.runId)?.title ?? '', body, `${APP}/?chat=${s.id}`),
       usage: () => s.state.session.usage ?? null,
       asking: () => s.state.pending.length > 0,
       sendPrompt: (text: string, auto: 'loop' | 'goal', round: number, report?: boolean) => {

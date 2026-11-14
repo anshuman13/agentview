@@ -176,9 +176,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val addTask = MutableStateFlow(false)
 
-    // A job the Runs screen asks the Codex tab to open, by row key.
-    val openJob = MutableStateFlow<String?>(null)
-
     val undoable = MutableSharedFlow<Undoable>(extraBufferCapacity = 1)
 
     val navHidden = MutableStateFlow(false)

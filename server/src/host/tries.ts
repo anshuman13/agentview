@@ -25,7 +25,7 @@ export function runTries(chat: AgentSession, text: string, tries: Exclude<Return
         provider: chat.state.session.provider,
         tries: started.map(({ id, branch }, i) => ({ n: i + 1, chatId: id, sessionId: live.get(id)?.chat.state.session.sessionId ?? '', branch })),
       });
-      chat.system(`Started ${started.length} chats, one per tries/ branch; compare them on the tries board in Runs`);
+      chat.system(`Started ${started.length} chats, one per tries/ branch; compare them with Open board on the loop card`);
     },
     (err) => chat.system(`Tries failed: ${errText(err)}`),
   );

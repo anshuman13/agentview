@@ -8,7 +8,7 @@ import { advisorLoopBuilds, advisorLoopLine, advisorLoopOf, advisorNeedsYou, aud
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
-import { finishedLine, lastRoundText, mergeQuiet, roundText } from '../../shared/goalText';
+import { finishedLine, mergeQuiet } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
@@ -24,7 +24,6 @@ import { mergeTail } from './app/runtime/pageEvents';
 import { countChat } from './app/store/counts';
 import { can } from './chat/capabilitiesLogic';
 import { chatState, handoffText, runLine, stoppedText } from './chat/composer/composerLogic';
-import { runBands } from './sessions/runBands';
 import { tryColumn } from './sessions/TriesBoard';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { needsYou } from './codex/summary/needsYou';
@@ -232,10 +231,6 @@ describe('cases shared with the Android app', () => {
     it(`finishedLine: ${c.name}`, () => expect(finishedLine(c, (t) => `${t}h ago`)).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; run: Partial<ChatRun>; round: Round; expected?: string; full?: boolean }>('last-round-text')) {
-    it(`lastRoundText: ${c.name}`, () => expect(lastRoundText(run(c.run), c.round)).toBe(c.full ? roundText(c.round) : c.expected!));
-  }
-
   for (const c of cases<{ name: string; rounds: Round[]; expected: [number, number, number, number][] }>('merge-quiet')) {
     it(`mergeQuiet: ${c.name}`, () => expect(mergeQuiet(c.rounds).map((g) => [g.first.n, g.last.n, g.count, g.costUsd])).toEqual(c.expected));
   }
@@ -290,13 +285,6 @@ describe('cases shared with the Android app', () => {
   const menu = JSON.parse(readFileSync(new URL('../../shared/fixtures/chat-menu.json', import.meta.url), 'utf8'));
   for (const c of menu.review) it(`reviewLabel: ${c.name}`, () => expect(reviewLabel(c.running, c.hasChanges)).toBe(c.expected));
   for (const c of menu.usage) it(`usageMenuLabel: ${c.name}`, () => expect(usageMenuLabel(c.account, c.week, c.fiveHour)).toBe(c.expected));
-
-  for (const c of cases<{ name: string; runs: Partial<ChatRun>[]; expected: { needs: string[]; running: string[]; finished: string[] } }>('run-bands')) {
-    it(`runBands: ${c.name}`, () => {
-      const b = runBands(c.runs.map(run), []);
-      expect({ needs: b.needs.map((i) => (i.kind === 'run' ? i.run.id : '')), running: b.running.map((i) => (i.kind === 'run' ? i.run.id : '')), finished: b.finished.map((r) => r.id) }).toEqual(c.expected);
-    });
-  }
 
   type TryCase = { name: string; run: { rounds: Partial<ChatRun['rounds'][number]>[] }; try: Partial<Try>; live: Partial<LiveChat>[]; expected: { n: number; branch: string; state: string; line: string; edits: { add: number; del: number } | null; cost: number; archived: boolean } };
   for (const c of cases<TryCase>('try-column')) {

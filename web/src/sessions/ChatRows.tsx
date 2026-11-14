@@ -17,7 +17,7 @@ import { showSnack } from '../codex/view';
 import { isMuted, setMuted } from '../app/runtime/mute';
 import { draftLine, readDraft } from '../chat/composer/composerLogic';
 import { clock } from '../codex/tasks/time';
-import { useChatRun } from './runBands';
+import { useChatRun } from './useChatRun';
 
 type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
 type Pin = (on: boolean) => Promise<boolean>;

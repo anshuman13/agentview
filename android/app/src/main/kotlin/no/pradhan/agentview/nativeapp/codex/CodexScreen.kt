@@ -150,8 +150,6 @@ fun CodexScreen(hub: Hub) {
     val ops = remember(hub) { CodexOps(PointActions(hub.codex, say), GoalActions(hub.codex, say), ReviewOps(hub.codex, say), ReplyOps(hub.api, hub.writes, hub.codex, say)) }
     val editing = nav.editKey?.let { k -> st.items.firstOrNull { it.key == k && !it.deleted } }
     LaunchedEffect(editing, nav.editKey) { if (nav.editKey != null && editing == null && st.loaded) nav.editKey = null }
-    val jobRequest by hub.openJob.collectAsState()
-    LaunchedEffect(jobRequest) { jobRequest?.let { nav.page = "jobs"; nav.routeText = "job:$it"; hub.openJob.value = null } }
     LaunchedEffect(nav.page) { if (nav.page != "meetings") nav.decisions = false }
     BackHandler(enabled = nav.sub || nav.searching || nav.page != "overview") { nav.back() }
     val refresh = { scope.launch { refreshing = true; hub.codex.sync(); refreshing = false }; Unit }

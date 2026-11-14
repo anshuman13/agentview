@@ -208,7 +208,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   off the default branch, so the best attempt can be kept. Paseo makes the worktrees; without Paseo they are plain git
   worktrees in a hidden `.tries` folder next to the repo. These show under Workspace and a clean one can be removed at once
   Each try's prompt ends with the ROUND instruction, and the parent chat gets a `tries` run: every try's report is a round
-  ("Try 2: ..."). Opening the run (Runs, or the Open board button on the parent's loop card) shows the tries board: a
+  ("Try 2: ..."). The Open board button on the parent's loop card shows the tries board: a
   column per try (stacked on the phone) with its branch, state, last report, diff size and cost, Open (reopens an idle-closed
   chat) and Keep try N, which asks "Archive the other N chats? Their worktrees stay on disk." The web board also has a
   Send to all field that messages every try still in the run, reopening closed ones. When every try has reported, the
@@ -412,7 +412,7 @@ Four ways to have a change built, lightest first:
 - **[Build cycle](#build-cycle)** (chat settings, Up to N rounds): plan, build and test rounds in the chat, with Sonnet testing what Opus built. No spec file.
 - **Build** (model menu, last item, or asking Claude to build a feature): the `/agentview:build` skill of the [build kit](#build-kit). The pm agent writes the spec, the spec reviewer checks it (with a cold reader and a scope check in the first round), a designer sketches the screens of a UI spec, you approve the spec and the sketch, an implementer builds it on a branch in a worktree, a tester checks each acceptance criterion and a code reviewer reads the diff. Claude then cherry-picks what passed onto the main branch.
 
-A build shows as its [Build card](#build-card) in the chat that started it: a strip of steps (Spec, Spec review, Sketch, Your approval, Implement, Test, Code review, Merge), the step that needs you or is running, and the acceptance criteria counts. Tap a step to open its sheet; Your approval is where you approve or request changes, phase by phase. A goal can also run a spec: Run as goal on the Tasks header starts `/goal every task in <path> is ticked`, shown in Runs like any goal.
+A build shows as its [Build card](#build-card) in the chat that started it: a strip of steps (Spec, Spec review, Sketch, Your approval, Implement, Test, Code review, Merge), the step that needs you or is running, and the acceptance criteria counts. Tap a step to open its sheet; Your approval is where you approve or request changes, phase by phase. A goal can also run a spec: Run as goal on the Tasks header starts `/goal every task in <path> is ticked`, shown on its loop card like any goal.
 
 The sketch and the approval are optional. By default a spec with a (UI) acceptance criterion gets a sketch: the designer agent writes `.claude/sketches/<slug>.html`, phone layout first, and the Sketch step appears in the strip. Without one the strip has no Sketch step. In the Spec sheet the sketch is one more phase chip, Sketch, shown in a Phone or Desktop frame above Approve; a changes note on it goes back to the designer, a note on the spec goes to the pm and then to the designer so the sketch follows. The implementer and tester get the sketch's path and match its layout, the spec winning where they differ. Ask for "no sketch" or "a sketch" to override the default, and "without approval" to build without waiting for you (the sketch is still written).
 
@@ -458,7 +458,7 @@ keep the loop; `/loop off` ends it. The loop card above the composer shows the r
 
 The Goal row in the chat settings menu (web and phone) shows Off, or the run line while a goal or loop runs in the chat. A tap opens the goal sheet with Where set to this chat, or the run's detail when one is active.
 
-The goal sheet ("Chat: New goal" in the palette, the add button of the Runs header, "Run as goal…" in the Tasks Run menu of a spec, the target button in the file bar of an open Markdown file and the palette's "File: Run as goal…", and "Run as goal…" in the Android file menu of a Markdown file) builds the `/goal` line from the goal, How often (Until done, 30m, 1h, 2h, or a custom 10m to 168h typed as "45m" or "3h"), Stop at (None, in 1 or 4 hours, 07:00 or a time), Usage cap (50, 70, 90 or Off, hidden for OpenRouter) and Where (a new chat in a folder with a provider, or this chat when none has an active run). A plan goal shows the plan path with its "N of M done" ("No tasks" when the file has none), always starts a new chat in the chat's folder, and runs as "every step is done" when the plan has no unticked tasks. Tapping a goal row in Runs, or the Now row of its loop card, opens the goal detail: a Goal group with one status badge, the condition, plan progress, next round (an Ended row with how and when it ended once it is done, `finishedLine`) and cost; a Settings group with How often, Stop at, Usage ("Week 42% of 70% cap · 5-hour 30%") and Build limit (None, 3, 5, 10), editable from a menu (`run_edit`); then Pause or Resume, Stop and Open chat, then the rounds, newest first, with each run of "nothing to do" rounds merged into one "Rounds 1-6" row (a weekly report opens its turn). The cap reads the usage of the chat's active Claude account only. The Advisor loop chip at the top of the sheet sets every 4h, cap 70, no stop and a goal text for the chosen folder, and Start sends it to the PM advisor chat (`open_advisor`, not a new chat) instead of `new_session`: each round the PM keeps two specs ahead of the build, asks for a sketch on UI specs, ends with `ROUND: question` when a spec needs approval, starts one build per project after it and asks the Designer for an audit when the backlog is empty and the newest is over 7 days old (`ROUND: nothing` otherwise).
+The goal sheet ("Chat: New goal" in the palette, the New goal (target) button in the Android Sessions header, "Run as goal…" in the Tasks Run menu of a spec, the target button in the file bar of an open Markdown file and the palette's "File: Run as goal…", and "Run as goal…" in the Android file menu of a Markdown file) builds the `/goal` line from the goal, How often (Until done, 30m, 1h, 2h, or a custom 10m to 168h typed as "45m" or "3h"), Stop at (None, in 1 or 4 hours, 07:00 or a time), Usage cap (50, 70, 90 or Off, hidden for OpenRouter) and Where (a new chat in a folder with a provider, or this chat when none has an active run). A plan goal shows the plan path with its "N of M done" ("No tasks" when the file has none), always starts a new chat in the chat's folder, and runs as "every step is done" when the plan has no unticked tasks. Tapping the Now row of a goal's loop card opens the goal detail: a Goal group with one status badge, the condition, plan progress, next round (an Ended row with how and when it ended once it is done, `finishedLine`) and cost; a Settings group with How often, Stop at, Usage ("Week 42% of 70% cap · 5-hour 30%") and Build limit (None, 3, 5, 10), editable from a menu (`run_edit`); then Pause or Resume, Stop and Open chat, then the rounds, newest first, with each run of "nothing to do" rounds merged into one "Rounds 1-6" row (a weekly report opens its turn). The cap reads the usage of the chat's active Claude account only. The Advisor loop chip at the top of the sheet sets every 4h, cap 70, no stop and a goal text for the chosen folder, and Start sends it to the PM advisor chat (`open_advisor`, not a new chat) instead of `new_session`: each round the PM keeps two specs ahead of the build, asks for a sketch on UI specs, ends with `ROUND: question` when a spec needs approval, starts one build per project after it and asks the Designer for an audit when the backlog is empty and the newest is over 7 days old (`ROUND: nothing` otherwise).
 
 `/goal <condition>` asks Claude to check the condition whenever it goes idle and to keep working until it is met.
 Claude replies GOAL MET to end it; the goal also stops by itself after 20 rounds ("Not met after 20 rounds"). `/goal off` ends it early, and
@@ -469,9 +469,9 @@ heartbeat: each interval Claude reads where things stand, does what moves the go
 question anything irreversible or outward-facing (push, deploy, delete, send a message) instead of doing it. A heartbeat
 is skipped, with no turn and no round, while Claude is busy, a permission or question is pending or the run is paused.
 There is no round cap: the goal ends on GOAL MET, on Stop, or after 28 days ("Ran for 28 days, start it again to
-continue"). The card and the Runs row read "Goal · round 12 · next 14:20" (the interval is in the goal detail). Every 7 days one
+continue"). The card reads "Goal · round 12 · next 14:20" (the interval is in the goal detail). Every 7 days one
 heartbeat writes a short weekly report (what moved, what is blocked, what is next, at most 8 lines), recorded as a
-progress round; the card and the Runs row show "Weekly report", which jumps to that turn in the chat. "Chat: New
+progress round; the card shows "Weekly report", which jumps to that turn in the chat. "Chat: New
 goal" in the palette opens the goal sheet.
 
 Both forms take `until HH:MM` (the next such clock time ends the goal: "Stopped at 18:00 · 41 rounds") and
@@ -502,13 +502,14 @@ a restart. Stop shows "Loop stopped" or "Goal stopped" with Undo, which starts t
 cycle only has Stop ("Build cycle stopped", no Undo). The controls take a run id, so they work from any screen. A round
 that ends its run (goal met, last round, end time) sends only the run-end push. The chat header (Android) and the web status bar read "Running · 2 agents" while agents run with no turn, "Next round 14:20" between rounds and "Idle" only with no run and no agent.
 
-The Runs view (activity bar, `?view=runs`) lists every run in three bands. Needs you holds active runs whose last round
-is blocked or a question, or that are paused for your approval, until a later round or a message from you in that chat
-(the server decides this, so web and phone agree), plus hub jobs whose last run failed. Running holds the other active and paused runs plus jobs that are running or
-queued. Finished (collapsed) holds the latest 30 ended runs. A row is the title, the state line, the last outcome with
-its dot and the cost (a finished run starts with why it ended and when, such as "You stopped it · 2 h ago", and reads like an active one when it has no reason); a chat run opens its chat (a coding job's run reads "Job · <branch>") and a job opens its job page. Sessions and Open chats rows of a chat with
+A run needs you while its last round is blocked or a question, or it is paused for your approval, until a later round
+or a message from you in that chat (the server decides this, so web and phone agree). There is no separate list of runs:
+a run shows on its chat's loop card and in the goal detail, and a hub job's failed runs on its job page. A coding job's
+run that waits for review shows its review card above the composer of its chat instead of the loop card: the summary row
+(last round, branch, size and age) with Needs you, the first 3 changed files with Show all, and Commit, push and open a
+PR with Approve (behind a confirm) and a More menu with Revise… and Discard. Sessions and Open chats rows of a chat with
 an active run show the loop icon with the next time, "Paused" or "Needs you" in warn. The status bar shows "N running"
-and "· M need you" in warn while a chat runs or waits on you (the Overview Running counts), and a click opens Runs. When you open a chat, the recap adds "While you
+and "· M need you" in warn while a chat runs or waits on you (the Overview Running counts), and a click opens Sessions. When you open a chat, the recap adds "While you
 were away: 6 rounds, 5 quiet, 1 blocked: <line>" from the rounds that ended after the last event you saw.
 
 ## Agents

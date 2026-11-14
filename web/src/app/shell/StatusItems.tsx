@@ -60,7 +60,7 @@ export function RunsItem() {
   const { running, waiting } = useCounts();
   if (!running && !waiting) return null;
   return (
-    <button className="item clickable" title="Loops and goals" onClick={() => command('view:runs')}>
+    <button className="item clickable" title="Loops and goals" onClick={() => command('view:chats')}>
       <Icon name="sync" small /> {running} running{waiting > 0 && <span className="warn"> · {waiting} need you</span>}
     </button>
   );

@@ -14,7 +14,7 @@ private fun make(kind: String, hideable: (String) -> Boolean, vararg rows: Pair<
 private val PALETTE = make(
     "palette",
     { true },
-    "view:explorer" to "Show Explorer", "view:changes" to "Show Source Control", "view:github" to "Show Pull Requests", "view:chats" to "Show Sessions", "view:sessions" to "Show Workspace", "view:runs" to "Show Runs",
+    "view:explorer" to "Show Explorer", "view:changes" to "Show Source Control", "view:github" to "Show Pull Requests", "view:chats" to "Show Sessions", "view:sessions" to "Show Workspace",
     "tab:chat" to "Tab: Chat", "tab:code" to "Tab: Files", "tab:term" to "Tab: Terminal", "tab:browser" to "Tab: Browser", "tab:agents" to "Tab: Agents",
     "codex:today" to "Codex: Overview", "codex:tasks" to "Codex: Tasks", "codex:meetings" to "Codex: Meetings", "codex:jobs" to "Codex: Jobs", "codex:wiki" to "Codex: Wiki", "codex:summary" to "Codex: Slack summary", "codex:goals" to "Codex: All goals", "codex:search" to "Codex: Search", "codex:newtask" to "Codex: New task",
     "terminal" to "Toggle Terminal", "switchEditor" to "Switch File and Browser", "toggleSidebar" to "Toggle Left Sidebar", "toggleChat" to "Toggle Chat", "file" to "Go to File", "repo" to "Open Repository",

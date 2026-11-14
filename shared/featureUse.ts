@@ -6,7 +6,7 @@ export type UsedFeature = Feature & { n7: number; n30: number; last: string };
 const make = (kind: FeatureKind, rows: [string, string][], hideable: (id: string) => boolean = () => false): Feature[] => rows.map(([id, label]) => ({ id: `${kind}:${id}`, label, kind, hideable: hideable(id) }));
 
 const PALETTE = make('palette', [
-  ['view:explorer', 'Show Explorer'], ['view:changes', 'Show Source Control'], ['view:github', 'Show Pull Requests'], ['view:chats', 'Show Sessions'], ['view:sessions', 'Show Workspace'], ['view:runs', 'Show Runs'],
+  ['view:explorer', 'Show Explorer'], ['view:changes', 'Show Source Control'], ['view:github', 'Show Pull Requests'], ['view:chats', 'Show Sessions'], ['view:sessions', 'Show Workspace'],
   ['tab:chat', 'Tab: Chat'], ['tab:code', 'Tab: Files'], ['tab:term', 'Tab: Terminal'], ['tab:browser', 'Tab: Browser'], ['tab:agents', 'Tab: Agents'],
   ['codex:today', 'Codex: Overview'], ['codex:tasks', 'Codex: Tasks'], ['codex:meetings', 'Codex: Meetings'], ['codex:jobs', 'Codex: Jobs'], ['codex:wiki', 'Codex: Wiki'], ['codex:summary', 'Codex: Slack summary'], ['codex:goals', 'Codex: All goals'], ['codex:search', 'Codex: Search'], ['codex:newtask', 'Codex: New task'],
   ['terminal', 'Toggle Terminal'], ['switchEditor', 'Switch File and Browser'], ['toggleSidebar', 'Toggle Left Sidebar'], ['toggleChat', 'Toggle Chat'], ['file', 'Go to File'], ['repo', 'Open Repository'],

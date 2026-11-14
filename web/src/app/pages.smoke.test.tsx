@@ -1,9 +1,8 @@
 import { describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { stubGlobal } from '../../../testing';
-import type { ChatRun } from '../../../shared/protocol';
 
-const store = { runs: [] as unknown[], session: { id: 'c1', cwd: '/w' }, recentFiles: [] as string[], ui: { sketch: null } };
+const store = { runs: [] as unknown[], live: [] as unknown[], pending: [] as unknown[], session: { id: 'c1', cwd: '/w', loop: { phase: null } }, recentFiles: [] as string[], ui: { sketch: null } };
 vi.mock('../codex/data', () => ({ useAssistantStore: vi.fn(), assistantStore: vi.fn(), useAssistant: vi.fn(), useAssistantData: () => ({ jobs: [], runs: [] }) }));
 
 const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };
@@ -16,20 +15,15 @@ stubGlobal('location', { search: '', hash: '' });
 const realStore = await import('./store');
 vi.mock('./store', () => ({ ...realStore, useStore: (select: (s: unknown) => unknown) => select(store) }));
 
-const { Runs } = await import('../sessions/Runs');
+const { LoopCard } = await import('../chat/cards/LoopCard');
 const { PrivacyGroup } = await import('./shell/Settings');
 const { SketchFrame, SketchList, Sketches } = await import('../workspace/Sketches');
 
-const pending = { id: 'r1', kind: 'job', sessionId: 's', chatId: 'c', title: 'Fix the parser', what: '', startedAt: 1, endedAt: null, state: 'paused', why: '', round: 1, max: 1, nextAt: null, costUsd: 0, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [] } as ChatRun;
-
 describe('page smoke', () => {
-  it('Runs shows To review with a card for a pending run on an empty store', () => {
-    store.runs = [pending];
-    const html = renderToStaticMarkup(<Runs />);
-    expect(html).toContain('To review');
-    expect(html).toContain('1</span>');
+  it('the loop card of a job run waiting for review is its review card', () => {
+    store.runs = [{ id: 'r1', kind: 'job', sessionId: 's', chatId: 'c1', title: 'Fix the parser', what: '', startedAt: 1, endedAt: null, state: 'paused', why: '', round: 1, max: 1, nextAt: null, costUsd: 0, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [] }];
+    const html = renderToStaticMarkup(<LoopCard />);
     expect(html).toContain('Commit, push and open a PR');
-    expect(html).not.toContain('ui-empty');
   });
 
   it('Sketches renders on an empty store', () => {

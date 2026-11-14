@@ -28,11 +28,11 @@ is an assistant, and every send is logged and reversible by me.
   job can call `ask_context` to read my wiki claims, decisions and open tasks
 - A job with a repo (picked on the job page, on the web only; the phone shows it read-only) codes instead: the hub posts it to
   `POST /api/jobs/start` on the server of its own Mac, which makes a `jobs/<slug>-<stamp>` worktree of that repo and opens
-  an unattended claude chat in it (no push, no `gh`, changes left uncommitted). The run is listed in Runs as
+  an unattended claude chat in it (no push, no `gh`, changes left uncommitted). The run shows on its chat's loop card as
   "Job · <branch>"; a permission prompt pauses it as Needs you, a restart keeps it, and a job whose last run is still
   open is skipped. When its turn ends the server checks the worktree: a run with nothing changed ends "No changes" and its
   chat and worktree go (a failed one ends "Failed" and keeps its chat); a run with changes waits as "Ready for review"
-  (Needs you). `GET /api/runs/diff?run=` shows the diff, `POST /api/runs/approve?run=` commits, pushes the branch and
+  (Needs you), with a review card above its chat's composer. `GET /api/runs/diff?run=` shows the diff, `POST /api/runs/approve?run=` commits, pushes the branch and
   opens a PR (the only route that pushes), `/api/runs/revise?run=` sends a note back to the chat and
   `/api/runs/discard?run=` deletes the chat, worktree and branch. Before running git there the server checks that the
   worktree still points at its repo and branch (else 409 "The worktree was changed"), with hooks and fsmonitor off. The chat runs in Claude Code's sandbox (see the

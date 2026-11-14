@@ -18,7 +18,7 @@ import { BUILDS, CAPS, EVERY, STOPS } from './goalLogic';
 import { useWorkspace } from './folders';
 import { loadPresets, savePresets } from './goalPresets';
 import { askAdvisor } from './advisorChat';
-import { useChatRun } from './runBands';
+import { useChatRun } from './useChatRun';
 import { usePlanProgress } from './usePlanProgress';
 
 export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boolean; onClose: () => void }) {

@@ -1,10 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
 import kotlinx.serialization.Serializable
-import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.clock
-import no.pradhan.agentview.nativeapp.codex.jobs.JobState
-import no.pradhan.agentview.nativeapp.codex.jobs.jobState
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
 import no.pradhan.agentview.nativeapp.net.LiveChat
@@ -20,9 +17,8 @@ import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.workspace.PrFile
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 
-// Loops, goals and build cycles (web/src/chat/composerLogic.ts runLine and the Runs page bands).
+// Loops, goals and build cycles (web/src/chat/composerLogic.ts runLine).
 
-const val RUNS_FINISHED = 30
 private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "cycle" to "Build cycle", "tries" to "Tries", "job" to "Job")
 
 fun runLine(run: ChatRun, phase: String? = null): String = when {
@@ -89,13 +85,6 @@ fun mergeQuiet(rounds: List<Round>): List<RoundGroup> {
 
 fun roundGroupText(g: RoundGroup) = if (g.count > 1) "Rounds ${g.first.n}-${g.last.n} · ${clock(g.last.at)} · nothing to do" else roundText(g.last)
 
-// The run row's last round (web shared/goalText.ts lastRoundText): the outcome alone when the run line already says this round.
-fun lastRoundText(run: ChatRun, r: Round) = when {
-    r.report != null -> "Weekly report"
-    (run.kind == "goal" || run.kind == "loop") && run.state != "paused" && r.n == run.round -> roundOutcome(r)
-    else -> roundSummary(r)
-}
-
 // The loop card's first row (web composerLogic loopNow): the agent's status or the last round, whichever is newer.
 data class LoopNow(val title: String, val at: Long?, val source: String, val next: String? = null, val stepsLeft: Int = 0)
 
@@ -140,26 +129,6 @@ fun runBadge(run: LiveRun): RunBadge? = when {
 // The Sessions tab count: waiting requests, and a chat whose run needs you.
 fun sessionsBadge(live: List<LiveChat>, shownId: String) =
     live.filter { it.id != shownId }.sumOf { if (it.pending > 0) it.pending else if (it.run?.needsYou == true) 1 else 0 }
-
-sealed interface RunEntry {
-    data class Chat(val run: ChatRun) : RunEntry
-    data class Job(val row: Row, val state: JobState) : RunEntry
-}
-
-data class RunBands(val review: List<ChatRun>, val needs: List<RunEntry>, val running: List<RunEntry>, val finished: List<ChatRun>)
-
-fun runBands(runs: List<ChatRun>, jobs: List<Row>, jobRuns: List<Row>, now: Long): RunBands {
-    val open = runs.filter { it.state != "done" }.sortedByDescending { it.startedAt }
-    val review = open.filter { it.kind == "job" && it.review == "pending" }
-    val active = open - review.toSet()
-    val states = jobs.filter { !it.deleted }.mapNotNull { j -> jobState(j, jobRuns, now)?.let { RunEntry.Job(j, it) } }
-    return RunBands(
-        review = review,
-        needs = active.filter { it.needsYou }.map { RunEntry.Chat(it) } + states.filter { it.state == JobState.Failed },
-        running = active.filterNot { it.needsYou }.map { RunEntry.Chat(it) } + states.filter { it.state == JobState.Running || it.state == JobState.Queued },
-        finished = runs.filter { it.state == "done" }.sortedByDescending { it.endedAt ?: it.startedAt }.take(RUNS_FINISHED),
-    )
-}
 
 // The diff of a job run for review (web sessionApi RunDiff), from /api/runs/diff.
 @Serializable

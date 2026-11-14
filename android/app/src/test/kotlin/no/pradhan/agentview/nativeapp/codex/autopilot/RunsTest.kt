@@ -1,9 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
 import java.time.ZoneId
-import kotlinx.serialization.json.JsonPrimitive
-import no.pradhan.agentview.nativeapp.codex.Row
-import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
@@ -24,8 +21,6 @@ class RunsTest {
     private fun round(outcome: String) = Round(1, 0, outcome, "x", 0.1)
     private fun run(id: String, state: String = "running", kind: String = "loop", rounds: List<Round> = emptyList(), why: String = "", endedAt: Long? = null, needsYou: Boolean = false, every: Long? = null) =
         ChatRun(id, kind, round = 4, max = 20, nextAt = 14 * 3_600_000L + 20 * 60_000L, state = state, why = why, rounds = rounds, endedAt = endedAt, needsYou = needsYou, every = every)
-
-    private fun name(e: RunEntry) = when (e) { is RunEntry.Chat -> e.run.id; is RunEntry.Job -> "job:${e.row.id}" }
 
     @Test fun loopNowTakesTheNewerOfStatusAndRound() {
         val r = run("a", rounds = listOf(Round(1, 400, "progress", "round", 0.0))).copy(startedAt = 100)
@@ -79,28 +74,7 @@ class RunsTest {
         assertEquals("Failed", goalBadge(run("a", "done", why = "Not met after 20 rounds", kind = "goal")).first)
     }
 
-    @Test fun bandsSplitNeedsRunningAndFinished() {
-        fun job(id: String, enabled: Long = 1) = Row("jobs", id, WORK, f = mapOf("name" to JsonPrimitive(id), "enabled" to JsonPrimitive(enabled)))
-        fun jobRun(job: String, status: String) = Row("runs", "r$job", WORK, f = mapOf("job_id" to JsonPrimitive(job), "status" to JsonPrimitive(status), "started_at" to JsonPrimitive(1)))
-        val runs = listOf(
-            run("blocked", rounds = listOf(round("progress"), round("blocked")), needsYou = true),
-            run("cleared", rounds = listOf(round("blocked"), round("done"))),
-            run("approval", "paused", why = "waiting for your approval", needsYou = true),
-            run("paused", "paused", why = "you paused it"),
-            run("old", "done", rounds = listOf(round("blocked")), endedAt = 5),
-        )
-        val b = runBands(runs, listOf(job("bad"), job("busy"), job("quiet"), job("off", 0)), listOf(jobRun("bad", "error"), jobRun("busy", "running")), 10)
-        assertEquals(setOf("blocked", "approval", "job:bad"), b.needs.map(::name).toSet())
-        assertEquals(setOf("cleared", "paused", "job:busy"), b.running.map(::name).toSet())
-        assertEquals(listOf("old"), b.finished.map { it.id })
-    }
-
-    @Test fun pendingJobRunsGoToReviewAndOldPayloadsParse() {
-        val pending = ChatRun("p", "job", branch = "job/x", needsYou = true, review = "pending", startedAt = 2)
-        val other = ChatRun("o", "job", needsYou = true, startedAt = 1)
-        val b = runBands(listOf(other, pending, run("loop", needsYou = true)), emptyList(), emptyList(), 10)
-        assertEquals(listOf("p"), b.review.map { it.id })
-        assertEquals(setOf("o", "loop"), b.needs.map(::name).toSet())
+    @Test fun oldJobPayloadsParse() {
         val old = protocolJson.decodeFromString(ChatRun.serializer(), """{"id":"a","kind":"job"}""")
         assertEquals(null, old.review)
         assertEquals(null, old.pr)

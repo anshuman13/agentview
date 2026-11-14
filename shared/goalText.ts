@@ -42,10 +42,6 @@ export function mergeQuiet(rounds: Round[]): RoundGroup[] {
 export const roundGroupText = (g: RoundGroup) =>
   g.count > 1 ? `Rounds ${g.first.n}-${g.last.n} · ${clock(g.last.at)} · nothing to do` : g.last.report ? 'Weekly report' : roundText(g.last);
 
-// The run row's last round: a weekly report by name; the outcome alone when the row's run line already says this round; else the full round text.
-export const lastRoundText = (run: { kind: string; state: string; round: number }, r: Pick<Round, 'n' | 'at' | 'outcome' | 'line' | 'report'>) =>
-  r.report ? 'Weekly report' : (run.kind === 'goal' || run.kind === 'loop') && run.state !== 'paused' && r.n === run.round ? roundOutcome(r) : roundText(r);
-
 export const firstRound = (at: number | null) => `First round${at ? ` ${clock(at)}` : ''}`;
 
 export const nextRound = (at: number | null) => `Next round${at ? ` ${clock(at)}` : ''}`;

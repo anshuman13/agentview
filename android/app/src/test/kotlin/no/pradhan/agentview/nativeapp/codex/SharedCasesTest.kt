@@ -40,7 +40,6 @@ import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.statusLine
 import no.pradhan.agentview.nativeapp.chat.stripRound
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
-import no.pradhan.agentview.nativeapp.codex.autopilot.RunEntry
 import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
 import no.pradhan.agentview.nativeapp.codex.autopilot.addPreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
@@ -48,15 +47,12 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.parsePresets
 import no.pradhan.agentview.nativeapp.codex.autopilot.removePreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.parseEvery
 import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
-import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
 import no.pradhan.agentview.nativeapp.codex.autopilot.finishedLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopBuilds
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
-import no.pradhan.agentview.nativeapp.codex.autopilot.lastRoundText
 import no.pradhan.agentview.nativeapp.codex.autopilot.mergeQuiet
-import no.pradhan.agentview.nativeapp.codex.autopilot.roundText
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
 import no.pradhan.agentview.nativeapp.sessions.BuildEntry
@@ -277,15 +273,6 @@ class SharedCasesTest {
         }
     }
 
-    @Test fun lastRoundText() {
-        for (c in cases("last-round-text")) {
-            val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
-            val round = c.getValue("round").jsonObject.decode<Round>()
-            val expected = if (c["full"]?.jsonPrimitive?.boolean == true) roundText(round) else c.str("expected")
-            assertEquals(c.str("name"), expected, lastRoundText(run, round))
-        }
-    }
-
     @Test fun mergeQuiet() {
         for (c in cases("merge-quiet")) {
             val rounds = c.getValue("rounds").jsonArray.map { it.decode<Round>() }
@@ -335,19 +322,6 @@ class SharedCasesTest {
             val m = e.getValue("mcp").jsonObject
             val want = listOf("needsYou", "chats", "waiting", "running", "agents").map { e.getValue(it).jsonPrimitive.int } + listOf("connected", "total", "needsYou").map { m.getValue(it).jsonPrimitive.int }
             assertEquals(c.str("name"), want, listOf(got.needsYou, got.chats, got.waiting, got.running, got.agents, got.mcp.connected, got.mcp.total, got.mcp.needsYou))
-        }
-    }
-
-    @Test fun runBands() {
-        for (c in cases("run-bands")) {
-            val runs = c.getValue("runs").jsonArray.map { it.decode<ChatRun>() }
-            val b = runBands(runs, emptyList(), emptyList(), 0)
-            val name = { e: RunEntry -> (e as RunEntry.Chat).run.id }
-            val e = c.getValue("expected").jsonObject
-            fun ids(k: String) = e.getValue(k).jsonArray.map { it.jsonPrimitive.content }
-            assertEquals(c.str("name"), ids("needs"), b.needs.map(name))
-            assertEquals(c.str("name"), ids("running"), b.running.map(name))
-            assertEquals(c.str("name"), ids("finished"), b.finished.map { it.id })
         }
     }
 

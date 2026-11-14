@@ -12,7 +12,6 @@ stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem:
 stubGlobal('location', { search: '', hash: '' });
 
 const { ReviewCard, ReviewFiles } = await import('./ReviewCard');
-const { RunRow } = await import('./Runs');
 const { postRunApprove, postRunDiscard, postRunRevise } = await import('./sessionApi');
 
 const run = { id: 'r1', kind: 'job', sessionId: 's', chatId: 'c', title: 'Fix the parser', what: '', startedAt: Date.now(), endedAt: null, state: 'paused', why: 'Ready for review', round: 1, max: 1, nextAt: null, costUsd: 0, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [{ n: 1, at: Date.now(), outcome: 'done', line: 'Patched the parser', costUsd: 0 }] } as ChatRun;
@@ -39,13 +38,6 @@ describe('review card', () => {
     const open = renderToStaticMarkup(<ReviewFiles diff={diff} all onAll={() => {}} />);
     expect(open).toContain('f5.ts');
     expect(open).not.toContain('Show all');
-  });
-
-  it('shows PR opened and one open button on a finished run with a PR', () => {
-    const html = renderToStaticMarkup(<RunRow item={{ kind: 'run', run: { ...run, state: 'done', review: undefined, pr: 'https://example.com/pr/1' } }} onBoard={() => {}} />);
-    expect(html).toContain('PR opened');
-    expect(html.match(/aria-label="open"/g)).toHaveLength(1);
-    expect(html).toContain('href="https://example.com/pr/1"');
   });
 });
 

@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { AssistantNav, Changes, Explorer, GitHub, OpenChats, Runs, Sessions } from '../lazy';
+import { AssistantNav, Changes, Explorer, GitHub, OpenChats, Sessions } from '../lazy';
 import { Guard } from './Guard';
 import { VIEWS } from './ActivityBar';
 import { PhoneHeader } from './PhoneHeader';
@@ -9,7 +9,6 @@ const PHONE_TITLE: Partial<Record<View, string>> = { changes: 'Source Control', 
 
 function SidebarBody({ view }: { view: View }) {
   if (view === 'assistant') return <Guard><Suspense fallback={null}><AssistantNav /></Suspense></Guard>;
-  if (view === 'runs') return <Guard><Suspense fallback={null}><Runs /></Suspense></Guard>;
   const Body = view === 'explorer' ? Explorer : view === 'changes' ? Changes : view === 'github' ? GitHub : view === 'chats' ? OpenChats : Sessions;
   return <Suspense fallback={null}><Body /></Suspense>;
 }

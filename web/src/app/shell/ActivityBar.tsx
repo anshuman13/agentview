@@ -12,7 +12,6 @@ export const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'github', icon: 'github', title: 'GitHub Pull Requests' },
   { id: 'chats', icon: 'comment-discussion', title: 'Sessions' },
   { id: 'sessions', icon: 'repo', title: 'Workspace' },
-  { id: 'runs', icon: 'sync', title: 'Runs' },
 ];
 
 type Props = { showing: string; sidebar: boolean; view: View; browserShown: boolean; showView: (v: View) => void; openPage: (p: Page) => void; switchEditor: () => void };

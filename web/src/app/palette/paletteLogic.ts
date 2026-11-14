@@ -31,7 +31,6 @@ const VIEWS = [
   ['github', 'GitHub Pull Requests'],
   ['chats', 'Sessions'],
   ['sessions', 'Workspace'],
-  ['runs', 'Runs'],
 ];
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];
 export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, efforts: readonly Effort[] = EFFORT_LEVELS, providers: ProviderOption[] = [], modes: ModeOption[] = providerModes(), doc = false, hidden: string[] = []): Command[] {

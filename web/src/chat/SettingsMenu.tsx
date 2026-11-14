@@ -1,6 +1,6 @@
 import { notice, send, setUi, useStore } from '../app/store';
 import { remindChoices, runLine } from './composer/composerLogic';
-import { useChatRun } from '../sessions/runBands';
+import { useChatRun } from '../sessions/useChatRun';
 import { openGoal } from '../sessions/goalLogic';
 import { QuickPick } from '../ui/QuickPick';
 import { Section } from '../ui/Section';

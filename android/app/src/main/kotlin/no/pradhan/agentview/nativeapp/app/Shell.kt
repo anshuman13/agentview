@@ -72,7 +72,6 @@ import no.pradhan.agentview.nativeapp.chat.ChatScreen
 import no.pradhan.agentview.nativeapp.chat.VoiceHost
 import no.pradhan.agentview.nativeapp.codex.CodexScreen
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheets
-import no.pradhan.agentview.nativeapp.codex.autopilot.RunsScreen
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.net.OFFLINE_DELAY_MS
@@ -358,7 +357,6 @@ private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onTab: (String) 
     "observe" -> ObserveScreen(hub, onBack)
     "deploy" -> DeployScreen(hub, onBack)
     "mcp" -> McpScreen(hub, onBack)
-    "runs" -> RunsScreen(hub, onBack, { onTab(Tab.Chat.route) }, { onTab(Tab.Codex.route) })
     "sketches" -> SketchesScreen(hub, onBack)
     "advisors" -> AdvisorsScreen(hub, onBack) { onTab(Tab.Chat.route) }
     else -> SettingsScreen(hub, onBack, onOrigin)

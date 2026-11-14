@@ -25,7 +25,6 @@ export const GoalSheets = lazy(() => import('../sessions/GoalSheets').then((m) =
 export const Shortcuts = lazy(() => import('./shell/Shortcuts').then((m) => ({ default: m.Shortcuts })));
 export const OpenChats = prefetch(() => import('../sessions/OpenChats').then((m) => m.OpenChats));
 export const RepoPicker = lazy(() => import('../sessions/RepoPicker').then((m) => ({ default: m.RepoPicker })));
-export const Runs = prefetch(() => import('../sessions/Runs').then((m) => m.Runs));
 export const Sessions = prefetch(() => import('../sessions/Sessions').then((m) => m.Sessions));
 export const AssistantNav = prefetch(() => import('../codex/nav').then((m) => m.AssistantNav));
 export const AssistantCounts = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantCounts })));
