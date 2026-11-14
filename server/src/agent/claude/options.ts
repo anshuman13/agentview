@@ -73,7 +73,7 @@ export function agentOptions(o: {
         description:
           'Fable, the most capable model. Only for a really hard problem you could not resolve yourself: a bug that survived several attempts, a risky design decision, or subtle correctness reasoning. The user approves every call, so put the full question and context in the prompt. If the call is declined, continue without it.',
         prompt: 'You are Fable, consulted as a senior engineer on one hard problem. Investigate what you need, then answer with a clear recommendation and the reasoning behind it. Be concise.',
-        model: 'claude-fable-5-1',
+        model: 'claude-fable-5-2',
         tools: ['Read', 'Bash', 'WebSearch', 'WebFetch'],
       },
     },
