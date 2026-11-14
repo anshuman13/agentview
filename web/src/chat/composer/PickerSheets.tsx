@@ -35,7 +35,7 @@ export function PickerSheets({ pick, setPick, sentHistory, setUses, apply, focus
       <QuickPick
         anchor={pick.at}
         title={`Tool from ${pick.server}`}
-        items={[{ value: '', label: 'Any tool', detail: 'Claude picks' }, ...(servers.find((m) => m.name === pick.server)?.tools ?? []).map((t) => ({ value: t.name, label: t.name, detail: t.description }))]}
+        items={[{ value: '', label: 'Any tool', detail: 'The agent picks' }, ...(servers.find((m) => m.name === pick.server)?.tools ?? []).map((t) => ({ value: t.name, label: t.name, detail: t.description }))]}
         onPick={(v) => { setUses((u) => addUse(u, v ? { server: pick.server!, tool: v } : { server: pick.server! })); setPick(null); focus(); }}
         onClose={() => setPick(null)}
       />
