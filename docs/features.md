@@ -494,8 +494,8 @@ The loop card sits above the composer while the chat has an active run, as a box
 "Paused · usage limit until 18:00", "Goal · round 3 of 20", "Build cycle · round 2/3 · Test"), then a Now row with what is
 happening: the agent's latest status (with "Next: ..." and the steps left) or the last round ("Round 4 · 02:10 · progress: merged X", "nothing to do" for a quiet round, "First round 02:00" before the first), whichever is newer, with a
 running dot while a turn or an agent runs. One running agent gets a row (slug or description, type and minutes) that
-opens it; two or more share one "N agents" row listing their names, which opens the agents list. Last comes the what
-text on one line (a goal with a plan file shows "Plan N of M done") and the total cost. A turn the run did not start, such as a background agent finishing, adds a round when its
+opens it; two or more share one "N agents" row listing their names, which opens the agents list. On a goal, last comes
+"Plan N of M done" when it has a plan file and nothing else (its condition and cost are in the goal detail); a loop, cycle, tries or job card shows its what text on one line and the total cost. A turn the run did not start, such as a background agent finishing, adds a round when its
 reply ends with a ROUND line, with the current round number. Tapping the Now row of a goal card opens its detail; on a loop the Now row
 lists the last 10 rounds. A loop or goal has Pause (or Resume) and a More menu with Run now and Stop; Run now does nothing
 while Claude is busy. A pause is saved and survives

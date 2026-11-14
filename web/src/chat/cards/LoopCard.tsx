@@ -85,7 +85,8 @@ export function LoopCard() {
       <Row lines={2} leading={<span className={`dot ${dot}`} />} title={state.title} meta={meta || undefined} {...nowClick} />
       {agents.length === 1 && <Row leading={<Icon name="hubot" />} title={agents[0].slug ?? agents[0].description} meta={`${agents[0].type} · ${agentAge(agents[0].startedAt, now)}`} state="" onClick={() => openAgent(agents[0].id)} />}
       {agents.length > 1 && <Row leading={<Icon name="hubot" />} title={plural(agents.length, 'agent')} meta={agents.map((a) => a.slug ?? a.description).join(', ')} state="" onClick={() => openAgent()} />}
-      <div className="lc-line" onClick={details}><span className="lc-what">{progress ? `Plan ${progress}` : run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></div>
+      {goal ? progress && <div className="lc-line" onClick={details}><span className="lc-what">Plan {progress}</span></div>
+        : <div className="lc-line" onClick={details}><span className="lc-what">{run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></div>}
       {report && <button className="lc-line lc-last" onClick={() => showTurn(report.report!)}><span className="lc-time">{clock(report.at)}</span><span className="lc-what">Weekly report</span></button>}
       {open && run.kind === 'loop' && (
         <ul className="lc-rounds">
