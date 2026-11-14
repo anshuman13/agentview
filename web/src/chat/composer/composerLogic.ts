@@ -6,7 +6,6 @@ import { apiUrl, fetchJson } from '../../app/api';
 import { createTerm, listTerms } from '../../workspace/termApi';
 import { isBlock } from '../../../../shared/util';
 import { firstRound, nextRound, roundText, runLine as roundLine } from '../../../../shared/goalText';
-import { runNeedsYou } from '../../../../shared/advisors';
 import { timedMeetings } from '../../../../shared/plan';
 import { profileOfPath } from '../../../../shared/workspace';
 import { live, type Meeting } from '../../codex/data/wiki/wiki';
@@ -177,9 +176,8 @@ export const stoppedText = (run: ChatRun, running: boolean) => `${KIND[run.kind]
 
 export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', question: 'warn', failed: 'bad', done: 'ok', quiet: '', progress: '' };
 
-export { runNeedsYou };
 
-export const loopOpenByDefault = (run: ChatRun, working: boolean, waiting: boolean) => working || waiting || runNeedsYou(run);
+export const loopOpenByDefault = (run: ChatRun, working: boolean, waiting: boolean) => working || waiting || run.needsYou;
 
 export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? ENDED[loop.phase] ?? `Build cycle${loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 export const fileCache = new Map<string, string[]>();

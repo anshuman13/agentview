@@ -36,7 +36,6 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
 import no.pradhan.agentview.nativeapp.codex.autopilot.openRun
 import no.pradhan.agentview.nativeapp.codex.autopilot.outcomeDot
 import no.pradhan.agentview.nativeapp.codex.autopilot.roundText
-import no.pradhan.agentview.nativeapp.codex.autopilot.runNeedsYou
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.newChat
@@ -183,7 +182,7 @@ private fun LoopCard(hub: Hub, project: String, loop: ChatRun?, starting: Boolea
     ListRow(
         "Advisor loop", advisorLoopLine(loop),
         leading = last?.let { { StatusDot(outcomeDot(it.outcome)) } },
-        state = if (runNeedsYou(loop)) ({ Badge(HOLD_BADGE.first, HOLD_BADGE.second) }) else null,
+        state = if (loop.needsYou) ({ Badge(HOLD_BADGE.first, HOLD_BADGE.second) }) else null,
         trailing = if (builds.isEmpty()) null else ({ RowLabel(builds) }),
         below = if (hub.readOnly) null else ({ Button("Open chat", { go { hub.openRun(loop, last?.report) } }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) }),
         lines = 1, metaLines = 1,
@@ -304,7 +303,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     val items = moved ?: backlog.data
     val specList = specs.data
     val loop = root?.let { advisorLoopOf(runs, it) }
-    val board = if (items != null && specList != null) advisorBoard(items, specList, loop != null && runNeedsYou(loop)) else null
+    val board = if (items != null && specList != null) advisorBoard(items, specList, loop?.needsYou == true) else null
     LaunchedEffect(board != null) { if (board != null && chip == null) chip = board.defaultStage }
     Column(Modifier.fillMaxSize()) {
         PageHeader("Advisors", onBack, actions = { IconBtn("refresh", "Refresh", reload) })

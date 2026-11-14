@@ -9,7 +9,7 @@ import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_EVERY, BOARD_STAGES, advisorBoard, advisorLoopCommand, advisorLoopElsewhere, advisorLoopLine, advisorLoopOf, advisorOf, auditCountLine, auditPrompt, canBuildItem, rankPrompt, runNeedsYou, specItemPrompt, specsFromAuditPrompt, type Audit, type BacklogItem, type BoardAction, type BoardCard, type BoardStage } from '../../../shared/advisors';
+import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_EVERY, BOARD_STAGES, advisorBoard, advisorLoopCommand, advisorLoopElsewhere, advisorLoopLine, advisorLoopOf, advisorOf, auditCountLine, auditPrompt, canBuildItem, rankPrompt, specItemPrompt, specsFromAuditPrompt, type Audit, type BacklogItem, type BoardAction, type BoardCard, type BoardStage } from '../../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
 import { buildItemPrompt, buildSpecPrompt, sketchSpecPrompt } from '../../../shared/specTasks';
@@ -89,7 +89,7 @@ function LoopCard({ root, loop }: { root: string; loop: ChatRun | undefined }) {
       title="Advisor loop"
       meta={advisorLoopLine(loop)}
       leading={last && <span className={`dot ${OUTCOME_DOT[last.outcome]}`} />}
-      state={runNeedsYou(loop) ? <Badge status={holdBadge.status} label={holdBadge.label} /> : undefined}
+      state={loop.needsYou ? <Badge status={holdBadge.status} label={holdBadge.label} /> : undefined}
       trailing={builds ? <span className="rn-cost">{builds}</span> : undefined}
       plain
       action={<Button size="sm" variant="tinted" onClick={() => openRun(loop)}>Open chat</Button>}
@@ -120,7 +120,7 @@ export function AdvisorBoard({ root, backlog, specs, audit, auditFailed }: { roo
   const [moved, setMoved] = useState<BacklogItem[] | null>(null);
   useEffect(() => setMoved(null), [backlog]);
   const items = moved ?? backlog;
-  const board = items && specs ? advisorBoard(items, specs, !!loop && runNeedsYou(loop)) : null;
+  const board = items && specs ? advisorBoard(items, specs, !!loop?.needsYou) : null;
   const [chip, setChip] = useState<BoardStage>();
   const loaded = !!board;
   useEffect(() => { if (board) setChip(board.defaultStage); }, [loaded]);

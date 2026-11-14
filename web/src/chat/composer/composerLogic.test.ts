@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, runLine, runNeedsYou, loopOpenByDefault, loopNow, agentAge } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine, runLine, loopOpenByDefault, loopNow, agentAge } from './composerLogic';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, ChatRun, SavedSession } from '../../../../shared/protocol';
 
@@ -242,15 +242,8 @@ describe('runLine', () => {
   });
 });
 
-describe('runNeedsYou', () => {
-  const run = (needsYou: boolean, ...outcomes: string[]) => ({ needsYou, rounds: outcomes.map((outcome) => ({ outcome })) }) as unknown as ChatRun;
-  it('is true for a run that asks or whose last round is blocked, a question or failed', () => {
-    expect(runNeedsYou(run(true))).toBe(true);
-    expect(runNeedsYou(run(false, 'progress', 'failed'))).toBe(true);
-    expect(runNeedsYou(run(false, 'blocked'))).toBe(true);
-    expect(runNeedsYou(run(false, 'failed', 'done'))).toBe(false);
-    expect(runNeedsYou(run(false))).toBe(false);
-  });
+describe('loopOpenByDefault', () => {
+  const run = (needsYou: boolean) => ({ needsYou, rounds: [] }) as unknown as ChatRun;
   it('opens the loop card by default only when working, waiting or needing you', () => {
     expect(loopOpenByDefault(run(true), false, false)).toBe(true);
     expect(loopOpenByDefault(run(false), false, true)).toBe(true);

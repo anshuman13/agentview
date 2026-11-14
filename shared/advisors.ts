@@ -1,4 +1,4 @@
-import type { ChatRun, RoundOutcome } from './protocol.js';
+import type { ChatRun } from './protocol.js';
 import { specHomeOrder, type SpecHomeItem } from './builds.js';
 import { goalCommand } from './goalForm.js';
 import { firstRound, roundText } from './goalText.js';
@@ -118,12 +118,6 @@ export const auditCountLine = (findings: { status: string }[]): string => {
   if (!findings.length) return 'No findings';
   const open = findings.filter((f) => f.status !== 'fixed').length;
   return open === findings.length ? `${open} open` : `${open} open of ${findings.length}`;
-};
-
-const NEEDS_YOU: RoundOutcome[] = ['blocked', 'question', 'failed'];
-export const runNeedsYou = (run: ChatRun) => {
-  const last = run.rounds.at(-1)?.outcome;
-  return run.needsYou || (!!last && NEEDS_YOU.includes(last));
 };
 
 export type BoardStage = 'ideas' | 'specced' | 'building' | 'done';

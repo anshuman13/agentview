@@ -38,14 +38,6 @@ class RunsTest {
         assertEquals("Weekly report", roundGroupText(mergeQuiet(listOf(q(4, "t1"))).single()))
     }
 
-    @Test fun aRunNeedsYouWhenItAsksOrItsLastRoundIsBlockedAQuestionOrFailed() {
-        assertTrue(runNeedsYou(run("a", needsYou = true)))
-        assertTrue(runNeedsYou(run("a", rounds = listOf(round("progress"), round("failed")))))
-        assertTrue(runNeedsYou(run("a", rounds = listOf(round("blocked")))))
-        assertTrue(!runNeedsYou(run("a", rounds = listOf(round("failed"), round("done")))))
-        assertTrue(!runNeedsYou(run("a")))
-    }
-
     @Test fun triesColumnsFollowTheChatAndItsLastReport() {
         val tries = listOf(RunTry(1, "c1", "s1", "tries/a-1"), RunTry(2, "c2", "s2", "tries/a-2"), RunTry(3, "c3", "s3", "tries/a-3", dropped = true))
         val r = run("t", kind = "tries", rounds = listOf(Round(1, 0, "done", "Try 1: patched it", 0.5), Round(2, 0, "question", "Try 2: which one?", 0.2))).copy(tries = tries)
