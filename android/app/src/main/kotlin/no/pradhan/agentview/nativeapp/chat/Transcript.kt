@@ -215,7 +215,12 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
 }
 
 private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<FoldRow>, showWork: Boolean, bill: String, newKey: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, onOpenAgent: (String) -> Unit) {
+    // Fields that keep their identity while a reply streams, so the rows do not capture the view, which does not.
     val days = view.days
+    val runs = view.runs
+    val specCards = view.specCards
+    val specBumps = view.specBumps
+    val rewinds = view.rewinds
     val firstId = view.items.firstOrNull()?.id
     itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
         Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
@@ -224,16 +229,16 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
             it?.let { row -> days[row.id]?.let { DayDivider(it) } }
             if (r.key == newKey) NewLine()
             when {
-                r is FoldRow.Fold -> WorkFoldRow(hub, view, r, folded, chatId, cwd, running, bill, onOpenAgent)
+                r is FoldRow.Fold -> WorkFoldRow(hub, runs, r, folded, chatId, cwd, running, bill, onOpenAgent)
                 it == null || it.id in folded -> {}
                 else -> {
-                    val run = view.runs[it.id]
-                    val bump = if (it.id in view.specCards) view.specBumps[itemSlug(it)] ?: 0 else null
+                    val run = runs[it.id]
+                    val bump = if (it.id in specCards) specBumps[itemSlug(it)] ?: 0 else null
                     val build = (it as? Item.Agent)?.let { a -> agentBuild(a.use) }
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                         !showWork && build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in view.rewinds, bump = bump)
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump)
                     }
                 }
             }
@@ -243,15 +248,18 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
 
 // One turn's work, closed until opened: its steps, files, agents and earlier text in transcript order.
 @Composable
-private fun WorkFoldRow(hub: Hub, view: ChatView, fold: FoldRow.Fold, folded: Set<String>, chatId: String, cwd: String, running: Boolean, bill: String, onOpenAgent: (String) -> Unit) {
+private fun WorkFoldRow(hub: Hub, runs: Map<String, List<Item.Step>>, fold: FoldRow.Fold, folded: Set<String>, chatId: String, cwd: String, running: Boolean, bill: String, onOpenAgent: (String) -> Unit) {
     val live = running && fold.last
-    val title = workTitle(fold.work, live, bill)
-    val text = buildAnnotatedString {
-        if (title.failed.isNotEmpty()) {
-            withStyle(SpanStyle(color = av.err)) { append(title.failed) }
-            if (title.text.isNotEmpty()) append(" \u00B7 ")
+    val title = remember(fold.work, live, bill) { workTitle(fold.work, live, bill) }
+    val err = av.err
+    val text = remember(title, err) {
+        buildAnnotatedString {
+            if (title.failed.isNotEmpty()) {
+                withStyle(SpanStyle(color = err)) { append(title.failed) }
+                if (title.text.isNotEmpty()) append(" \u00B7 ")
+            }
+            append(title.text)
         }
-        append(title.text)
     }
     TranscriptBox(hub, "work:${fold.id}", text, state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null, plain = true) {
         Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) {
@@ -259,7 +267,7 @@ private fun WorkFoldRow(hub: Hub, view: ChatView, fold: FoldRow.Fold, folded: Se
             val rows = fold.hidden.filter { it.id !in folded }
             rows.forEachIndexed { i, it ->
                 Box(Modifier.gap(gapAbove(rows.getOrNull(i - 1), it)?.coerceAtMost(Tokens.sp2))) {
-                    val run = view.runs[it.id]
+                    val run = runs[it.id]
                     if (run != null) ExploredRow(hub, it.id, run, cwd, !running) else ItemRow(hub, it, chatId, cwd, !running, onOpenAgent)
                 }
             }
