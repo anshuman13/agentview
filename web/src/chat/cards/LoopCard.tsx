@@ -1,11 +1,10 @@
 import { useRef, useState } from 'react';
-import { send, useStore } from '../../app/store';
-import { showSnack } from '../../codex/view';
+import { useStore } from '../../app/store';
 import { clock } from '../../codex/tasks/time';
 import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { TriesBoard } from '../../sessions/TriesBoard';
-import { openGoal } from '../../sessions/goalLogic';
+import { openGoal, runControl } from '../../sessions/goalLogic';
 import { ReviewCard } from '../../sessions/ReviewCard';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
@@ -18,11 +17,12 @@ import { billing } from '../../../../shared/providers';
 import { buildsLine, mergeQuiet, roundGroupText } from '../../../../shared/goalText';
 import type { RunOp } from '../../../../shared/protocol';
 import { useCardOpen } from './useCardOpen';
-import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine, showTurn, stoppedText } from '../composer/composerLogic';
+import { useChatRun } from '../../sessions/useChatRun';
+import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine, showTurn } from '../composer/composerLogic';
 
 export function LoopCard() {
   const chat = useStore((s) => s.session.id);
-  const run = useStore((s) => s.runs.filter((r) => r.chatId === chat && r.state !== 'done').at(-1));
+  const run = useChatRun(chat);
   const live = useStore((s) => s.live.find((c) => c.id === chat));
   const phase = useStore((s) => s.session.loop.phase);
   const plan = run?.kind === 'goal' ? planOf(run.what) : null;
@@ -37,7 +37,7 @@ export function LoopCard() {
   const phone = useCardOpen(`${chat}:loop`, waiting || Boolean(run?.needsYou));
   if (!run) return null;
   if (run.kind === 'job' && run.review === 'pending') return <ReviewCard run={run} />;
-  const control = (op: RunOp) => send({ type: 'run', run: run.id, op });
+  const control = (op: RunOp) => runControl(run, op, Boolean(live?.running));
   // Cycles, tries and jobs have no pause or rounds of their own to run now: Stop is their only control.
   const cycle = run.kind === 'cycle' || run.kind === 'tries' || run.kind === 'job';
   const goal = run.kind === 'goal';
@@ -45,10 +45,7 @@ export function LoopCard() {
   const report = run.rounds.filter((r) => r.report).at(-1);
   const state = loopNow(run, live?.now);
   const working = Boolean(live?.running) || agents.length > 0;
-  const stop = () => {
-    control('stop');
-    showSnack(stoppedText(run, Boolean(live?.running)), cycle ? undefined : () => control('restore'));
-  };
+  const stop = () => control('stop');
   const details = goal ? () => openGoal(run.id) : undefined;
   const meta = [state.at && clock(state.at), state.next && `Next: ${state.next}`, state.stepsLeft && `${state.stepsLeft} ${state.stepsLeft === 1 ? 'step' : 'steps'} left`, buildsLine(run)].filter(Boolean).join(' · ');
   const nowClick = details ? { onClick: details } : run.kind === 'loop' && state.source === 'round' ? { onClick: () => setOpen(!open), 'aria-expanded': open } : { plain: true };

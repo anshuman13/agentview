@@ -1,10 +1,11 @@
 import { getState, send, setUi } from '../app/store';
 import type { BadgeSpec } from '../ui/Badge';
-import type { ChatRun } from '../../../shared/protocol';
+import type { ChatRun, RunOp } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
 import { buildsLine } from '../../../shared/goalText';
 import { ADVISOR_LOOP_EVERY } from '../../../shared/advisors';
-import { showTurn } from '../chat/composer/composerLogic';
+import { showTurn, stoppedText } from '../chat/composer/composerLogic';
+import { showSnack } from '../codex/view';
 
 const HOUR = 3_600_000;
 
@@ -62,6 +63,14 @@ export function openChat(ids: { chatId?: string | null; sessionId?: string | nul
   if (chat) send({ type: 'view', id: chat.id });
   else if (ids.sessionId) send({ type: 'open_session', sessionId: ids.sessionId });
   if (report) showTurn(report);
+}
+
+// Pause, resume, run now or stop a run (Android Hub.runControl). Stop offers Undo for goals and loops, which keep their state to restore.
+export function runControl(run: ChatRun, op: RunOp, running = false) {
+  send({ type: 'run', run: run.id, op });
+  if (op !== 'stop') return;
+  const restorable = run.kind === 'goal' || run.kind === 'loop';
+  showSnack(stoppedText(run, running), restorable ? () => send({ type: 'run', run: run.id, op: 'restore' }) : undefined);
 }
 
 export const openGoal = (run?: string) => setUi({ goalSheet: run ? { mode: 'detail', run } : { mode: 'start' } });

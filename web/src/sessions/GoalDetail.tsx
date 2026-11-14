@@ -1,7 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { send, useStore } from '../app/store';
 import { clock } from '../codex/tasks/time';
-import { showSnack } from '../codex/view';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
@@ -15,8 +14,8 @@ import type { RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
 import { finishedLine, mergeQuiet, roundGroupText } from '../../../shared/goalText';
-import { OUTCOME_DOT, stoppedText } from '../chat/composer/composerLogic';
-import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, stopAtMs, usageLine } from './goalLogic';
+import { OUTCOME_DOT } from '../chat/composer/composerLogic';
+import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, runControl, stopAtMs, usageLine } from './goalLogic';
 import { since } from './folders';
 import { usePlanProgress } from './usePlanProgress';
 
@@ -44,12 +43,9 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
   if (!run) return null;
   const ended = run.state === 'done';
   const paused = run.state === 'paused';
-  const control = (op: RunOp) => send({ type: 'run', run: run.id, op });
+  const control = (op: RunOp) => runControl(run, op, Boolean(running));
   const edit = (e: RunEdit) => send({ type: 'run_edit', run: run.id, ...e });
-  const stop = () => {
-    control('stop');
-    showSnack(stoppedText(run, Boolean(running)), () => control('restore'));
-  };
+  const stop = () => control('stop');
   const open = (report?: string) => {
     openRun(run, report);
     onClose();
