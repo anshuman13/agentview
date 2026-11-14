@@ -15,10 +15,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,7 +29,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import kotlin.coroutines.cancellation.CancellationException
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.PageHeader
@@ -39,27 +36,6 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
-
-// The state of one page request: the last data, the error of the last try, and whether one is running.
-data class Loaded<T>(val data: T? = null, val error: String = "", val busy: Boolean = true)
-
-// Runs `fetch` when a key changes or on refresh, keeping the previous data while it runs.
-@Composable
-fun <T> rememberLoad(vararg keys: Any?, fetch: suspend () -> T): Pair<Loaded<T>, () -> Unit> {
-    var tick by remember { mutableIntStateOf(0) }
-    var state by remember(*keys) { mutableStateOf(Loaded<T>()) }
-    LaunchedEffect(*keys, tick) {
-        state = state.copy(error = "", busy = true)
-        state = try {
-            Loaded(fetch(), "", false)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Loaded(state.data, e.message?.ifEmpty { null } ?: "Request failed", false)
-        }
-    }
-    return state to { tick++ }
-}
 
 // The folder the workspace pages act on, from the chat on screen.
 @Composable

@@ -9,7 +9,7 @@ import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 @Serializable
 data class Todo(val path: String, val line: Int, val text: String = "", val ai: String? = null)

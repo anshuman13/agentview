@@ -55,7 +55,7 @@ import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.isoMillis
 import no.pradhan.agentview.nativeapp.workspace.openLink
-import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.select
 
 private data class DeployAsk(val title: String, val detail: String, val action: String, val run: (String) -> Unit, val input: String? = null)

@@ -76,7 +76,7 @@ import no.pradhan.agentview.nativeapp.workspace.DevServersSheet
 import no.pradhan.agentview.nativeapp.workspace.branchPr
 import no.pradhan.agentview.nativeapp.workspace.checkDot
 import no.pradhan.agentview.nativeapp.workspace.prStripMeta
-import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 fun costLabel(cost: Double, billing: String = "usd") = unbilledText(billing) ?: if (cost > 0) "$" + String.format(java.util.Locale.US, "%.2f", cost) else ""
 

@@ -70,8 +70,8 @@ import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.buildItemPrompt
 import no.pradhan.agentview.nativeapp.workspace.buildSpecPrompt
 import no.pradhan.agentview.nativeapp.net.LiveChat
-import no.pradhan.agentview.nativeapp.workspace.Loaded
-import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.Loaded
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 
 // What the Advisors page shows of each, from /api/advisors.

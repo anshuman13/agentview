@@ -98,7 +98,7 @@ import no.pradhan.agentview.nativeapp.ui.well
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.buildSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.lineDiff
-import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.sketchTitle
 

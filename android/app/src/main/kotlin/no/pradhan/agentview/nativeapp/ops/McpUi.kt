@@ -48,7 +48,7 @@ import no.pradhan.agentview.nativeapp.workspace.Hint
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.openLink
-import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.select
 
 // MCP Servers (web/src/ops/McpStatus.tsx): the probed servers with the chat's live state, by Work and Personal, and a detail page.

@@ -53,6 +53,7 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
 import no.pradhan.agentview.nativeapp.ui.select
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 // Files (web/src/workspace/Explorer.tsx and CodePane.tsx): the repo tree of the chat's folder and a file view.
 @Composable

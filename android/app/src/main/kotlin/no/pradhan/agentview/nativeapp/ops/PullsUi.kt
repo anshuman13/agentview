@@ -57,7 +57,7 @@ import no.pradhan.agentview.nativeapp.workspace.DiffCodeLine
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint
 import no.pradhan.agentview.nativeapp.workspace.FileTag
 import no.pradhan.agentview.nativeapp.workspace.Hint
-import no.pradhan.agentview.nativeapp.workspace.Loaded
+import no.pradhan.agentview.nativeapp.ui.Loaded
 import no.pradhan.agentview.nativeapp.workspace.MERGE_METHODS
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.PrFile
@@ -78,7 +78,7 @@ import no.pradhan.agentview.nativeapp.workspace.openLink
 import no.pradhan.agentview.nativeapp.workspace.parentOf
 import no.pradhan.agentview.nativeapp.workspace.patchLines
 import no.pradhan.agentview.nativeapp.workspace.prGroups
-import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.workspace.reviewBody
 import no.pradhan.agentview.nativeapp.workspace.reviewLabel
 import no.pradhan.agentview.nativeapp.workspace.splitDiff

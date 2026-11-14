@@ -53,6 +53,7 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 // Terminal (web/src/workspace/Terminal.tsx): the chat's shells as a read view of their output, with a line input and the phone keys.
 @Composable
