@@ -9,9 +9,11 @@ import { MAX_BRANCH_DIFF } from '../workspace/git.js';
 const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,headRefOid,additions,deletions';
 const lists = new Map<string, { at: number; prs: PullRequest[] }>();
 const refreshing = new Map<string, Promise<PullRequest[]>>();
-const details = new Map<string, { updatedAt: string; detail: Promise<PullRequestDetail> }>();
+const details = new Map<string, { updatedAt: string; detail: Promise<PullRequestDetail>; size?: number }>();
 const PREFETCH = 5;
 const KEEP = 20;
+// Diff text the cached details may hold together, so a few huge PRs do not stay in memory.
+const KEEP_CHARS = 8_000_000;
 const keys = new Map<string, string>();
 
 // Worktrees of one repo share a key, so their chats share one PR list and detail cache.
@@ -132,14 +134,28 @@ export function prChecks(cwd: string, number: number, changed: () => void): Chec
 
 const key = (cwd: string, n: number | string) => `${repoKey(cwd)}#${n}`;
 
+// Drops the oldest details past KEEP entries or KEEP_CHARS of diff; the newest one always stays.
+function trimDetails() {
+  let chars = [...details.values()].reduce((n, e) => n + (e.size ?? 0), 0);
+  while (details.size > 1 && (details.size > KEEP || chars > KEEP_CHARS)) {
+    const oldest = details.keys().next().value!;
+    chars -= details.get(oldest)!.size ?? 0;
+    details.delete(oldest);
+  }
+}
+
 function detail(cwd: string, pr: { number: number; updatedAt: string }) {
   const k = key(cwd, pr.number);
   const hit = details.get(k);
   if (hit && hit.updatedAt === pr.updatedAt) return hit.detail;
   const d = prDetail(cwd, String(pr.number));
-  details.set(k, { updatedAt: pr.updatedAt, detail: d });
-  d.catch(() => details.delete(k));
-  while (details.size > KEEP) details.delete(details.keys().next().value!);
+  const entry: { updatedAt: string; detail: Promise<PullRequestDetail>; size?: number } = { updatedAt: pr.updatedAt, detail: d };
+  details.set(k, entry);
+  d.then((r) => {
+    entry.size = r.diff.length;
+    trimDetails();
+  }, () => details.get(k) === entry && details.delete(k));
+  trimDetails();
   return d;
 }
 

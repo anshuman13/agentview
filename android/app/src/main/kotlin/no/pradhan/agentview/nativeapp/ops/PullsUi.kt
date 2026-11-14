@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -82,6 +83,8 @@ import no.pradhan.agentview.nativeapp.workspace.reviewBody
 import no.pradhan.agentview.nativeapp.workspace.reviewLabel
 import no.pradhan.agentview.nativeapp.workspace.splitDiff
 import no.pradhan.agentview.nativeapp.ui.select
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // Pull Requests (web/src/ops/GitHub.tsx): the repo's open PRs in three groups, and a PR page with review actions.
 @Composable
@@ -306,13 +309,14 @@ private fun LazyListScope.pullFiles(d: PullRequestDetail, openFile: String?, onO
 // The changed files as rows; a tap shows that file's patch under its row.
 @Composable
 fun DiffFiles(files: List<PrFile>, diff: String, openFile: String?, onOpenFile: (String?) -> Unit) {
-    val diffs = remember(diff) { splitDiff(diff) }
+    // A diff can be megabytes; it is split off the main thread, and patches show once it is.
+    val diffs by produceState<Map<String, String>?>(null, diff) { value = withContext(Dispatchers.Default) { splitDiff(diff) } }
     files.forEachIndexed { i, f ->
         if (i > 0) Hairline(lead = true)
         val name = f.path.substringAfterLast('/')
         val shown = openFile == f.path
         ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { onOpenFile(if (shown) null else f.path) })
-        if (shown) PatchView(diffs[f.path] ?: "No diff", f.path)
+        if (shown) diffs?.let { PatchView(it[f.path] ?: "No diff", f.path) }
     }
 }
 
