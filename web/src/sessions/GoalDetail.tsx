@@ -14,9 +14,10 @@ import { billing } from '../../../shared/providers';
 import type { RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
-import { mergeQuiet, roundGroupText } from '../../../shared/goalText';
+import { finishedLine, mergeQuiet, roundGroupText } from '../../../shared/goalText';
 import { OUTCOME_DOT, stoppedText } from '../chat/composer/composerLogic';
 import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, stopAtMs, usageLine } from './goalLogic';
+import { since } from './folders';
 import { usePlanProgress } from './usePlanProgress';
 
 function EditRow({ title, value, options, onEdit }: { title: string; value: ReactNode; options?: { label: string; edit: RunEdit }[]; onEdit: (e: RunEdit) => void }) {
@@ -54,13 +55,14 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
     onClose();
   };
   const next = paused ? `Paused · ${run.why}` : run.nextAt ? clock(run.nextAt) : 'When the agent goes idle';
+  const endedLine = ended ? finishedLine(run, since) : null;
   return (
     <Sheet label={run.title} onClose={onClose} className="gl-sheet">
       <Section label="Goal" action={<Badge {...goalBadge(run)} />} />
       <div className="ui-group">
         <Row plain lines={2} title={run.what} meta="Condition" />
         {plan && <Row plain title="Plan" trailing={progress ?? ''} />}
-        {!ended && <Row plain title="Next round" trailing={next} />}
+        {endedLine ? <Row plain title="Ended" trailing={endedLine} /> : !ended && <Row plain title="Next round" trailing={next} />}
         <Row plain title="Cost" trailing={money(run.costUsd, billing(run.provider))} />
       </div>
       <Section label="Settings" />

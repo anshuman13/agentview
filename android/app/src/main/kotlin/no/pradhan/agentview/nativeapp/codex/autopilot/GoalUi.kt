@@ -55,6 +55,7 @@ import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.RowLabel
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
@@ -302,6 +303,7 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         add { ListRow(run.what, "Condition", lines = 2) }
         if (plan != null) add { ListRow("Plan", trailing = { RowLabel(progress.orEmpty()) }) }
         if (!ended) add { ListRow("Next round", trailing = { RowLabel(next) }) }
+        else finishedLine(run.why, run.endedAt, ::since)?.let { line -> add { ListRow("Ended", trailing = { RowLabel(line) }) } }
         add { ListRow("Cost", trailing = { RowLabel(money(run.costUsd, billing(run.provider))) }) }
     }
     val settings = buildList<@Composable () -> Unit> {
