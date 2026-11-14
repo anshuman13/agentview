@@ -33,6 +33,9 @@ export const claudeDriver = (cwd: string, resume?: string, fork = false, openrou
 export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume, cwd)) => new AgentSession(cwd, claudeDriver(cwd, resume, fork, false, account), resume ?? null);
 
 // Runs a chat on the Claude Agent SDK: one CLI process at a time, resumed from its transcript when it exits.
+// The CLI knows an OpenRouter slot by its bare name; AgentView keeps the prefix to tell the provider.
+const cliModel = (model: string) => (model.startsWith(OPENROUTER_PREFIX) ? model.slice(OPENROUTER_PREFIX.length) : model);
+
 export class ClaudeDriver implements AgentDriver {
   private q: Query | null = null;
   private closed = false;
@@ -215,7 +218,7 @@ export class ClaudeDriver implements AgentDriver {
     if (this.restore) {
       const { model, permissionMode } = this.restore;
       this.restore = null;
-      if (model) void this.q.setModel(model).catch(() => {});
+      if (model) void this.q.setModel(cliModel(model)).catch(() => {});
       if (permissionMode) void this.q.setPermissionMode(permissionMode as PermissionMode).catch(() => {});
     }
     if (this.allowed.length) void this.q.applyFlagSettings({ permissions: { allow: this.allowed } }).catch(() => {});
@@ -271,7 +274,7 @@ export class ClaudeDriver implements AgentDriver {
     const openrouter = model.startsWith(OPENROUTER_PREFIX);
     if (openrouter !== this.openrouter) this.switchProvider(openrouter);
     this.start();
-    await this.q?.setModel(openrouter ? model.slice(OPENROUTER_PREFIX.length) : model);
+    await this.q?.setModel(cliModel(model));
     return { model };
   }
 
