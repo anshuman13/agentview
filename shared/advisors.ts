@@ -105,6 +105,9 @@ export const advisorLoopLine = (run: ChatRun): string => {
   return last.report ? 'Weekly report' : roundText(last);
 };
 
+export const advisorLoopBuilds = (run: Pick<ChatRun, 'builds' | 'maxBuilds'>): string =>
+  run.maxBuilds ? `Builds ${run.builds ?? 0} of ${run.maxBuilds}` : '';
+
 export const auditCountLine = (findings: { status: string }[]): string => {
   if (!findings.length) return 'No findings';
   const open = findings.filter((f) => f.status !== 'fixed').length;

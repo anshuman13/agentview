@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
-import { advisorLoopLine, advisorLoopOf, advisorNeedsYou, auditCountLine, defaultAdvisorRoot } from '../../shared/advisors';
+import { advisorLoopBuilds, advisorLoopLine, advisorLoopOf, advisorNeedsYou, auditCountLine, defaultAdvisorRoot } from '../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
@@ -250,10 +250,10 @@ describe('cases shared with the Android app', () => {
     });
   }
 
-  for (const c of cases<{ name: string; root: string; runs: Partial<ChatRun>[]; expected: { id: string; line: string } | null }>('advisor-loop')) {
+  for (const c of cases<{ name: string; root: string; runs: Partial<ChatRun>[]; expected: { id: string; line: string; builds?: string } | null }>('advisor-loop')) {
     it(`advisorLoop: ${c.name}`, () => {
       const found = advisorLoopOf(c.runs.map(run), c.root);
-      expect(found ? { id: found.id, line: advisorLoopLine(found) } : null).toEqual(c.expected);
+      expect(found ? { id: found.id, line: advisorLoopLine(found), builds: advisorLoopBuilds(found) } : null).toEqual(c.expected && { builds: '', ...c.expected });
     });
   }
 

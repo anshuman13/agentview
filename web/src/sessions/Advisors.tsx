@@ -10,7 +10,7 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_EVERY, advisorLoopCommand, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditCountLine, auditPrompt, canBuildItem, defaultAdvisorRoot, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
+import { ADVISORS, ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_EVERY, advisorLoopBuilds, advisorLoopCommand, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditCountLine, auditPrompt, canBuildItem, defaultAdvisorRoot, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import { pipelineLabel, specRowParts, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
 import { span } from '../../../shared/util';
@@ -58,7 +58,8 @@ function useRootFetch<T>(fetcher: (root: string) => Promise<T>, root: string | n
 // The Advisor loop row of Backlog and Needs you: its last round, a tap opens its chat.
 function LoopRow({ loop }: { loop: ChatRun }) {
   const last = loop.rounds.at(-1);
-  return <Row title="Advisor loop" meta={advisorLoopLine(loop)} leading={last && <span className={`dot ${OUTCOME_DOT[last.outcome]}`} />} onClick={() => openRun(loop)} />;
+  const builds = advisorLoopBuilds(loop);
+  return <Row title="Advisor loop" meta={advisorLoopLine(loop)} leading={last && <span className={`dot ${OUTCOME_DOT[last.outcome]}`} />} trailing={builds ? <span className="rn-cost">{builds}</span> : undefined} onClick={() => openRun(loop)} />;
 }
 
 // The Advisor loop row of Backlog when none runs: Start sends its goal to the PM chat, disabled for 10 s so a second tap cannot replace it.

@@ -103,6 +103,9 @@ internal fun advisorLoopLine(run: ChatRun): String {
     }
 }
 
+internal fun advisorLoopBuilds(run: ChatRun): String =
+    run.maxBuilds?.takeIf { it > 0 }?.let { "Builds ${run.builds ?: 0} of $it" } ?: ""
+
 // What waits on you for a project: web advisorNeedsYou in shared/advisors.ts.
 internal sealed interface NeedsYouItem {
     data class Spec(val spec: SpecHomeItem) : NeedsYouItem
@@ -117,9 +120,11 @@ internal fun advisorNeedsYou(specs: List<SpecHomeItem>, runs: List<ChatRun>, roo
 @Composable
 private fun AdvisorLoopRow(hub: Hub, loop: ChatRun, go: (suspend () -> Boolean) -> Unit) {
     val last = loop.rounds.lastOrNull()
+    val builds = advisorLoopBuilds(loop)
     ListRow(
         "Advisor loop", advisorLoopLine(loop),
         leading = last?.let { { StatusDot(outcomeDot(it.outcome)) } },
+        trailing = if (builds.isEmpty()) null else ({ RowLabel(builds) }),
         lines = 1, metaLines = 1,
         onClick = { go { hub.openRun(loop, last?.report) } },
     )
