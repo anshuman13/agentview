@@ -132,13 +132,15 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     val panels = remember { ChatPanels() }
     val running = session?.running ?: live.running
     val cwd = session?.cwd ?: live.cwd
-    val changed = remember(view.changed, cwd) { view.changed.map { relPath(it, cwd) }.filter { !it.startsWith("/") }.distinct() }
+    val edits = remember(view.changed, cwd) { view.changed.map { relPath(it, cwd) }.filter { !it.startsWith("/") } }
+    val changed = remember(edits) { edits.distinct() }
     var review by rememberSaveable(live.id) { mutableStateOf<Int?>(null) }
     var reviewed by rememberSaveable(live.id) { mutableStateOf(listOf<String>()) }
+    // "path\tedits": a reverted file stays hidden until the agent edits it again.
     var reverted by rememberSaveable(live.id) { mutableStateOf(listOf<String>()) }
-    val left = changed - reverted.toSet()
+    val left = remember(changed, reverted) { changed.filter { p -> "$p\t${edits.count { it == p }}" !in reverted } }
     review?.let { start ->
-        ChangesPager(hub, left, start, reviewed.toSet(), { reviewed = reviewed + it }, { reverted = reverted + it }, onBack = { review = null })
+        ChangesPager(hub, left, start, reviewed.toSet(), { reviewed = reviewed + it }, { p -> reverted = reverted + "$p\t${edits.count { it == p }}" }, onBack = { review = null })
         return
     }
     val (prLoad) = rememberLoad(live.id, cwd) { branchPr(hub.pulls(false), hub.gitStatus().branch) }
