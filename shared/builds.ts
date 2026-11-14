@@ -89,16 +89,22 @@ export const reviewDecision = (reviews: BuildReview[], phase: ReviewTarget) => r
 
 export const isHeld = (reviews: BuildReview[]) => reviewDecision(reviews, 'hold')?.decision === 'hold';
 
-const phaseDecision = (reviews: BuildReview[], p: BuildPhase) => reviewDecision(reviews, p.key)?.decision;
+export const latestRun = <E extends BuildEntry>(entries: E[], stage: BuildStage) => inOrder(entries).filter((e) => e.stage === stage).at(-1);
 
-const latestRun = (entries: BuildEntry[], stage: BuildStage) => inOrder(entries).filter((e) => e.stage === stage).at(-1);
+// A decision counts for the version it was made on: one older than the latest start of the agent that rewrites the phase (the designer for the sketch, the pm for the spec) is stale.
+const current = (entries: BuildEntry[], r: BuildReview | undefined) => {
+  const run = r && latestRun(entries, r.phase === 'sketch' ? 'sketch' : 'pm');
+  return Boolean(r) && (!run || r!.at > run.startedAt);
+};
 
-// Latest changes requests newer than the latest start of the agent that answers them: the designer for the sketch, the pm for the spec.
+const phaseDecision = (entries: BuildEntry[], reviews: BuildReview[], p: BuildPhase) => {
+  const r = reviewDecision(reviews, p.key);
+  return current(entries, r) ? r!.decision : undefined;
+};
+
+// Latest changes requests the agent that answers them has not started on yet.
 const unhandledChanges = (entries: BuildEntry[], reviews: BuildReview[], phases: BuildPhase[]) =>
-  phases.map((p) => reviewDecision(reviews, p.key)).filter((r): r is BuildReview => {
-    const run = r && latestRun(entries, r.phase === 'sketch' ? 'sketch' : 'pm');
-    return r?.decision === 'changes' && (!run || r.at > run.startedAt);
-  });
+  phases.map((p) => reviewDecision(reviews, p.key)).filter((r): r is BuildReview => r?.decision === 'changes' && current(entries, r));
 
 export type ApprovalGate = { decision: 'approve' | 'changes' | 'wait'; note: string };
 
@@ -108,7 +114,7 @@ export function approvalGate(entries: BuildEntry[], reviews: BuildReview[], phas
   if (isHeld(reviews) || running('pm') || running('sketch')) return { decision: 'wait', note: '' };
   const changes = unhandledChanges(entries, reviews, phases);
   if (changes.length) return { decision: 'changes', note: changes.map((r) => `${phaseLabel(r.phase)}: ${r.note}`).join('\n') };
-  return { decision: phases.every((p) => phaseDecision(reviews, p) === 'approve') ? 'approve' : 'wait', note: '' };
+  return { decision: phases.every((p) => phaseDecision(entries, reviews, p) === 'approve') ? 'approve' : 'wait', note: '' };
 }
 
 export const slugOk = (slug: string | undefined): slug is string => Boolean(slug) && !slug!.includes('..');
@@ -198,7 +204,7 @@ export function findingsOf(report: string): string[] {
   });
 }
 
-export const inOrder = (entries: BuildEntry[]) => entries.map((e, i) => [e, i] as const).sort((a, b) => a[0].startedAt - b[0].startedAt || a[1] - b[1]).map(([e]) => e);
+export const inOrder = <E extends BuildEntry>(entries: E[]): E[] => entries.map((e, i) => [e, i] as const).sort((a, b) => a[0].startedAt - b[0].startedAt || a[1] - b[1]).map(([e]) => e);
 
 export function buildTotals(entries: BuildEntry[], now: number) {
   let ms = 0;
@@ -307,7 +313,7 @@ export function flowOf(entries: BuildEntry[], reviews: BuildReview[], phases: Bu
   })();
 
   const decided = reviews.filter((r) => isReviewPhase(r.phase)).at(-1)?.at ?? null;
-  const approved = phases.filter((p) => phaseDecision(reviews, p) === 'approve').length;
+  const approved = phases.filter((p) => phaseDecision(all, reviews, p) === 'approve').length;
   const reviewed = all.some((e) => e.stage === 'review' && e.status === 'done') && !all.some((e) => e.stage === 'implement') && pm?.status !== 'running' && S?.status !== 'running';
   const approval =
     !phases.length ? step('approval', 'You', 'todo', '0 of 0 phases approved', decided)

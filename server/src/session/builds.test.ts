@@ -6,7 +6,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { BuildEntry } from '../../../shared/builds.js';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 import { claudeSession } from '../agent/claude/driver.js';
-import { buildList, buildOne, reviewBuild, splitPhases } from './builds.js';
+import { buildList, buildOne, gateOf, reviewBuild, splitPhases } from './builds.js';
 import { stubGlobal, unstubAllGlobals, waitFor } from '../../../testing.js';
 import { announceApproval } from '../host/approval.js';
 import { firstSeen } from './approvalSeen.js';
@@ -198,6 +198,11 @@ describe('spec review', () => {
     expect(one.pipeline).toBe('reviewed');
   });
 
+  it('reads the approval gate without the commit, and sends the changes request to the pm', async () => {
+    expect(await gateOf(repo, 'pink-door')).toEqual({ decision: 'changes', note: 'Design: split it' });
+    expect(await gateOf(repo, 'no-such-spec')).toBeNull();
+  });
+
   it('writes one Review notes heading for two reviews at once', async () => {
     writeFileSync(path.join(specs, 'racing.md'), body);
     await Promise.all([reviewBuild(repo, { slug: 'racing', phase: 'design', decision: 'approve' }), reviewBuild(repo, { slug: 'racing', phase: 'tasks', decision: 'approve' })]);
@@ -277,9 +282,8 @@ describe('approval', () => {
     expect(tell).toHaveBeenCalledTimes(1);
   });
 
-  it('never repeats a chat and slug from the stored set, and pushes the same slug for another chat', async () => {
-    expect(await firstSeen('a1:warm-lamp')).toBe(false);
-    expect(await firstSeen('a9:warm-lamp')).toBe(true);
+  it('never repeats a chat and spec version from the stored set, and pushes the same slug for another chat', async () => {
+    expect(await firstSeen('a9:warm-lamp:v')).toBe(true);
     await start('a1', gate('g5', 'warm-lamp'));
     await start('a3', gate('g6', 'warm-lamp'));
     await waitFor(() => expect(sent).toHaveBeenCalledTimes(1));

@@ -1,7 +1,7 @@
 import { appendFile, readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { REVIEW_PHASES, buildStageOf, isReviewPhase, buildSummary, criteriaOf, findingsOf, flowOf, inOrder, isHeld, lastCommit, pipelineOf, reviewDecision, reviewLine, sectionsOf, slugOk, specCriteria, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type SpecHomeItem, type ReviewPhase, type SpecCriterion, type SpecPhase } from '../../../shared/builds.js';
+import { REVIEW_PHASES, approvalGate, buildStageOf, isReviewPhase, buildSummary, criteriaOf, findingsOf, flowOf, inOrder, isHeld, lastCommit, pipelineOf, reviewDecision, reviewLine, sectionsOf, slugOk, specCriteria, verdictOf, type BuildCommit, type BuildEntry, type BuildPhase, type BuildReview, type BuildStage, type BuildSummary, type SpecHomeItem, type ReviewPhase, type SpecCriterion, type SpecPhase } from '../../../shared/builds.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { jsonFile, readJson } from '../json.js';
 import { MAX_BRANCH_DIFF, defaultBase, git, parseNumstat } from '../workspace/git.js';
@@ -62,7 +62,9 @@ export function recordBuild(session: AgentSession, ev: ChatEvent, agentOf = (id:
   const tokens = agent.status === 'running' ? undefined : agent.usage?.tokens;
   const seen = `${agent.status}:${report?.length ?? ''}:${tokens ?? ''}`;
   if (lastStatus.get(key) === seen) return;
+  lastStatus.delete(key);
   lastStatus.set(key, seen);
+  if (lastStatus.size > 2000) lastStatus.delete(lastStatus.keys().next().value!);
   const snap: Snap = { ...target, id: agent.toolUseId, tokens, status: agent.status, startedAt: agent.startedAt, endedAt: agent.endedAt, report, chat: session.id, session: session.state.session.sessionId, cwd: session.cwd };
   queue = queue.then(() => write(snap)).catch(() => {});
 }
@@ -132,12 +134,13 @@ const sketched = async (repo: string, slug: string, entries: BuildEntry[]) =>
 type Spec = { title: string; phases: BuildPhase[]; mtime: number; file: string; kiro: boolean };
 
 // A spec file in .claude/specs, else a Kiro folder in .kiro/specs with one file per phase.
-async function loadSpec(repo: string, slug: string): Promise<Spec | null> {
+// Lists and the gate only need to know a sketch exists, so `body` false skips reading its HTML.
+async function loadSpec(repo: string, slug: string, body = true): Promise<Spec | null> {
   const file = path.join(repo, '.claude', 'specs', `${slug}.md`);
   const text = await readFile(file, 'utf8').catch(() => null);
   if (text !== null) {
-    const sketch = await readSketch(repo, slug);
-    const phases = [...splitPhases(text), ...(sketch ? [{ key: 'sketch' as const, markdown: sketch }] : [])];
+    const sketch = body ? await readSketch(repo, slug) : (await stat(sketchFile(repo, slug)).catch(() => null))?.isFile() ? '' : null;
+    const phases = [...splitPhases(text), ...(sketch !== null ? [{ key: 'sketch' as const, markdown: sketch }] : [])];
     return { title: titleOf(text, slug), phases, mtime: Math.round((await stat(file)).mtimeMs), file, kiro: false };
   }
   const parts = await Promise.all(REVIEW_PHASES.map(async (key) => {
@@ -186,13 +189,24 @@ function criteriaFor(spec: Spec | null, entries: BuildEntry[]): SpecCriterion[] 
   return [...listed, ...extra.map((c) => ({ ...c, text: `Criterion ${c.n}`, ui: false }))];
 }
 
+// A commit never changes, so its numstat and diff are read once; the card polls the same build every few seconds.
+const diffs = new Map<string, Promise<[string, string]>>();
+function commitDiff(repo: string, sha: string) {
+  const key = `${repo}\0${sha}`;
+  if (!diffs.has(key)) {
+    diffs.set(key, Promise.all([git(repo, ['show', '--numstat', '--format=', sha]), git(repo, ['show', '--format=', sha])]).catch(() => { diffs.delete(key); return ['', ''] as [string, string]; }));
+    if (diffs.size > 30) diffs.delete(diffs.keys().next().value!);
+  }
+  return diffs.get(key)!;
+}
+
 export async function buildOne(cwd: string, slug: string) {
   const repo = await mainCheckout(cwd).catch(() => null);
   const [entries, reviews, spec] = repo && slugValid(slug) ? await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]) : [[], [], null];
   if (!repo || (!entries.length && !spec)) return { status: 404, body: { error: 'No such build' } };
   const commit = lastCommit(entries);
   const done = await (await mergedIn(repo))(commit);
-  const [numstat, diff] = commit ? await Promise.all([git(repo, ['show', '--numstat', '--format=', commit.sha]), git(repo, ['show', '--format=', commit.sha])]).catch(() => ['', '']) : ['', ''];
+  const [numstat, diff] = commit ? await commitDiff(repo, commit.sha) : ['', ''];
   return {
     slug,
     title: spec?.title ?? slug,
@@ -223,7 +237,7 @@ export async function buildList(cwd: string): Promise<SpecHomeItem[]> {
   const newest = stats.sort((a, b) => b.mtime - a.mtime).slice(0, MAX_LISTED);
   const merged = await mergedIn(repo);
   return Promise.all(newest.map(async ({ slug }) => {
-    const [entries, reviews, spec] = await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug)]);
+    const [entries, reviews, spec] = await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug, false)]);
     const [done, hasSketch] = await Promise.all([merged(lastCommit(entries)), sketched(repo, slug, entries)]);
     const newestEntry = inOrder(entries).at(-1);
     const summary = entries.length ? buildSummary(entries, done) : DRAFT;
@@ -244,6 +258,14 @@ export async function buildList(cwd: string): Promise<SpecHomeItem[]> {
   }));
 }
 
+// What the approval gate waits on, without the commit and merge work of buildOne; null when there is no spec.
+export async function gateOf(cwd: string, slug: string) {
+  const repo = await mainCheckout(cwd).catch(() => null);
+  if (!repo || !slugValid(slug)) return null;
+  const [entries, reviews, spec] = await Promise.all([readEntries(repo, slug), readReviews(repo, slug), loadSpec(repo, slug, false)]);
+  return spec && !spec.kiro ? approvalGate(entries, reviews, spec.phases) : null;
+}
+
 const unapproved = (spec: Spec, reviews: BuildReview[]) => spec.phases.filter((p) => reviewDecision(reviews, p.key)?.decision !== 'approve');
 
 // The title and first sentence of the Problem section of a spec that still has phases to approve, else null.
@@ -253,7 +275,9 @@ export async function approvalOf(cwd: string, slug: string) {
   const [spec, reviews] = await Promise.all([loadSpec(repo, slug), readReviews(repo, slug)]);
   if (!spec || isHeld(reviews) || !unapproved(spec, reviews).length) return null;
   const problem = sectionsOf(spec.phases.find((p) => p.key === 'requirements')?.markdown ?? '').find((s) => s.heading === 'problem')?.lines.slice(1).join('\n').trim();
-  return { title: spec.title, body: problem?.split(/(?<=[.!?])\s|\n/)[0].slice(0, 200) || `Spec ${slug} is ready` };
+  // A rewritten spec is a new version to approve, so it pushes again.
+  const version = Bun.hash(spec.phases.map((p) => p.markdown).join('\n')).toString(36);
+  return { title: spec.title, body: problem?.split(/(?<=[.!?])\s|\n/)[0].slice(0, 200) || `Spec ${slug} is ready`, version };
 }
 
 const ignored = (repo: string, file: string) => git(repo, ['check-ignore', '-q', '--', file]).then(() => true, () => false);

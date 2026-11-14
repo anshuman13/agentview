@@ -15,6 +15,6 @@ export async function announceApproval(chat: { id: string; cwd: string }, ev: Ag
   if (started.size > 200) started.delete(started.values().next().value!);
   const live = away();
   const spec = live && (await approvalOf(chat.cwd, slug));
-  if (!live || !spec || !(await firstSeen(`${chat.id}:${slug}`))) return;
+  if (!live || !spec || !(await firstSeen(`${chat.id}:${slug}:${spec.version}`))) return;
   if (notifyApproval(live, slug, spec.title, spec.body)) send({ type: 'approval', chat: chat.id, slug, title: spec.title });
 }

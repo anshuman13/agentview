@@ -94,6 +94,10 @@ describe('approvalGate and the approval step', () => {
     expect(gate([pm(20)], r, withSketch).decision).toBe('changes');
     expect(gate([], [...approveAll, review('sketch', 'approve', 12)], withSketch).decision).toBe('approve');
   });
+  it('waits when the pm rewrote the spec after the approval', () => {
+    expect(gate([pm(0)], approveAll).decision).toBe('approve');
+    expect(gate([pm(10)], approveAll).decision).toBe('wait');
+  });
   it('waits while the pm runs', () => expect(gate([pm(5, 'running')], [review('design', 'changes', 10, 'x')]).decision).toBe('wait'));
   it('waits while held and approves after the release', () => {
     expect(gate([], [...approveAll, review('hold', 'hold', 9)]).decision).toBe('wait');

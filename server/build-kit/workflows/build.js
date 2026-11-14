@@ -57,6 +57,7 @@ async function spec(f) {
   let text = await agent(
     `Feature brief: ${f.brief}\n\nWrite the spec to ${path} and return its full contents.`,
     { label: `pm:${f.slug}`, phase: 'Spec', agentType: 'agentview:pm' })
+  if (!text) return { ...f, specFailed: true }
   let review = null
   let pmRound = 1
   for (let round = 1; round <= specRounds; round++) {
@@ -70,9 +71,11 @@ async function spec(f) {
     review = got.length ? { verdict: got.some(r => r.verdict === 'revise') ? 'revise' : 'approve', issues: got.flatMap(r => r.issues) } : null
     if (!review || review.verdict === 'approve') break
     log(`${f.slug}: spec round ${round} revise (${review.issues.length} issues)`)
-    text = await agent(
+    const revised = await agent(
       `Feature brief: ${f.brief}\n\nYour spec at ${path} was reviewed. Fix every issue below, rewrite the file and return its full contents.\n\nIssues:\n- ${review.issues.join('\n- ')}`,
       { label: `pm:${f.slug}#${round + 1}`, phase: 'Spec', agentType: 'agentview:pm' })
+    if (!revised) return { ...f, specFailed: true }
+    text = revised
     pmRound = round + 1
   }
   const issues = review?.issues ?? []
@@ -101,7 +104,8 @@ async function gate(s) {
   let text = s.spec
   let round = s.pmRound
   let sketchRound = 1
-  for (;;) {
+  // Each wait is a short agent of about 9 minutes; a spec nobody decides on in a day stops its build.
+  for (let waits = 0; waits < 160; waits++) {
     const g = await agent(
       `Wait for the user's decision on the spec with slug ${s.slug}. Command: bun ${kit}/workflows/approval-gate.ts ${s.slug}`,
       { label: `gate:${s.slug}`, phase: 'Build', agentType: 'agentview:approval-gate', schema: GATE })
@@ -113,9 +117,9 @@ async function gate(s) {
       const blocks = g.note.split(/\n(?=(?:Requirements|Design|Tasks|Sketch): )/)
       const sketchNote = blocks.filter((b) => b.startsWith('Sketch: ')).join('\n')
       const specNote = blocks.filter((b) => !b.startsWith('Sketch: ')).join('\n')
-      if (specNote) text = await agent(
+      if (specNote) text = (await agent(
         `Feature brief: ${s.brief}\n\nThe user asked for changes to your spec at ${s.path}. Apply them, rewrite the file and return its full contents.\n\nUser note:\n${specNote}`,
-        { label: `pm:${s.slug}#${++round}`, phase: 'Spec', agentType: 'agentview:pm' })
+        { label: `pm:${s.slug}#${++round}`, phase: 'Spec', agentType: 'agentview:pm' })) ?? text
       if (sketchNote || (s.sketch && specNote)) s.sketch = await draw(s, [
         `Update your sketch at .claude/sketches/${s.slug}.html.`,
         sketchNote && `The user's note on the sketch:\n${sketchNote}`,
@@ -124,9 +128,14 @@ async function gate(s) {
       ].filter(Boolean).join('\n\n'), ++sketchRound)
     }
   }
+  return null
 }
 
 async function build(s) {
+  if (s.specFailed) {
+    log(`${s.slug}: the pm agent failed`)
+    return s
+  }
   if (approval) {
     const text = await gate(s)
     if (text === null) {
@@ -169,5 +178,5 @@ async function build(s) {
 const results = await pipeline(features, spec, build)
 return results.filter(Boolean).map(r => ({
   slug: r.slug, path: r.path, notes: r.notes,
-  passed: r.test?.verdict === 'pass', impl: r.impl, report: r.gateFailed ? 'approval gate failed' : r.test?.report, fixes: r.test?.fixes,
+  passed: r.test?.verdict === 'pass', impl: r.impl, report: r.specFailed ? 'spec agent failed' : r.gateFailed ? 'approval gate failed' : r.test?.report, fixes: r.test?.fixes,
 }))
