@@ -30,8 +30,8 @@ export function Row({ leading, title, meta, state, trailing, menu, lines = 1, hr
     <>
       {leading && <span className="ui-row-lead">{leading}</span>}
       <span className="ui-row-body">
-        <span className={cx('ui-row-title', lines === 2 && 'two')}>{title}</span>
-        {meta && <span className="ui-row-meta">{meta}</span>}
+        <span className={cx('ui-row-title', lines === 2 && 'two')} title={typeof title === 'string' ? title : undefined}>{title}</span>
+        {meta && <span className="ui-row-meta" title={typeof meta === 'string' ? meta : undefined}>{meta}</span>}
       </span>
       {state !== undefined && <span className="ui-row-state">{state}</span>}
       {trailing && <span className="ui-row-trail">{trailing}</span>}

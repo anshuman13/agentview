@@ -119,7 +119,8 @@
 .as-nav-label { padding: var(--sp-10) var(--sp-6) var(--sp-3); font-size: var(--fs-md); font-weight: 500; color: var(--fg-faint); }
 .as-seg { display: flex; gap: 2px; margin: 0 var(--sp-4); padding: 2px; border-radius: var(--radius-md); background: var(--sunken); }
 .as-nav .as-seg button { flex: 1; height: var(--size-xl); justify-content: center; padding: 0; border-radius: calc(var(--radius-md) - 2px); color: var(--fg-muted); font-size: var(--fs-sm); }
-.as-nav .as-seg button.on { background: var(--raised); color: var(--fg-strong); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+.as-nav .as-seg button.on { background: var(--raised); color: var(--fg-strong); box-shadow: var(--elev-2); }
+@media (hover: hover) { .as-nav .as-seg button:not(.on):hover { background: color-mix(in srgb, currentColor var(--state-hover), transparent); } }
 .as-nav .as-nav-sync { margin-top: var(--sp-4); color: var(--fg-muted); font-size: var(--fs-sm); }
 .as-dot { flex: none !important; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-faint); }
 .as-nav-sync.ok .as-dot { background: var(--ok); }

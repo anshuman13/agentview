@@ -98,7 +98,7 @@
 .sessions.workspace .row.repo-row.two { height: auto; min-height: var(--size-row); padding-top: var(--sp-1); padding-bottom: 3px; align-items: flex-start; }
 .sessions.workspace .row.repo-row.two > :is(.twistie, .icon, .acts) { margin-top: 3px; }
 .sessions.workspace .row.repo-row .branch-chip {
-  align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: block; align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .sessions.workspace .row:is(.session, .more) { padding-left: 54px; }
 
@@ -135,7 +135,8 @@
 .sessions .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
 @media (hover: hover) and (pointer: fine) {
   .chat-row .ui-row-wrap { padding-right: 0; }
-  .chat-row .ui-row-wrap > .icon-btn { position: absolute; right: var(--list-pad); top: 50%; translate: 0 -50%; opacity: 0; background: var(--surface); }
+  .chat-row .ui-row-wrap > .icon-btn { position: absolute; right: var(--list-pad); top: 50%; translate: 0 -50%; opacity: 0; }
+  .chat-row .ui-row-wrap:hover > .ui-row { --state: var(--state-hover); }
   .chat-row .ui-row-wrap:is(:hover, :focus-within) > .icon-btn, .chat-row .ui-row-wrap > .icon-btn[aria-expanded='true'] { opacity: 1; }
 }
 

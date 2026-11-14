@@ -100,6 +100,8 @@ function Section({ label, files, isSelected, actions, rowActions, onRowClick }: 
   );
 }
 
+const NOT_GIT = /not a git repository/i;
+
 export function Changes() {
   const { status, error } = useGit();
   const openFile = useStore((s) => s.ui.openFile);
@@ -179,7 +181,9 @@ export function Changes() {
           </div>
         </>
       )}
-      {(failed || error) && <div className="scm-error" role="alert">{failed || error}</div>}
+      {(failed || error) && (NOT_GIT.test(failed || error)
+        ? <div className="scm-error muted">This folder is not a git repository.</div>
+        : <div className="scm-error" role="alert">{failed || error}</div>)}
       <div className="scm-tree">
         <Section
           label="Staged Changes"

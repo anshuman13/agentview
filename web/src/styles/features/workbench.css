@@ -20,6 +20,7 @@
 
 .sidebar { width: var(--sidebar-w); flex: none; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
 .workbench[data-sidebar='false'] :is(.sidebar, .side-sash) { display: none; }
+.sidebar :is(.ui-row, .tree .row) { width: auto; margin-inline: var(--sp-2); border-radius: var(--shape-sm); }
 .sidebar-title {
   height: var(--size-bar); flex: none; display: flex; align-items: center; padding: 0 var(--sp-10);
   font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-muted);

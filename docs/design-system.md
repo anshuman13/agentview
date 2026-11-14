@@ -14,7 +14,7 @@ layers, elevation levels, the shape scale, type roles and touch targets.
   `(hover: hover)`, short motion (`--dur`, 120ms; see Motion).
 - Content first: chrome is quiet grey; controls get louder only when they act or are selected.
 - One accent: violet `--accent` marks interaction (focus, selection, links, the one primary action).
-  Agents and running work are teal (`--agent`), so they never read as a control.
+  Agents are teal (`--agent`), so they never read as a control. Running work is violet `--accent-fill` (see Badge).
 - Profile marks: Work blue (`--work`) and Personal magenta (`--personal`) are the only identity
   colours on tasks and lists. Status colours mark state, always next to text or an icon.
 - Dense on desktop, roomy on touch: 28 and 36px controls with a pointer, 44px on coarse pointers.

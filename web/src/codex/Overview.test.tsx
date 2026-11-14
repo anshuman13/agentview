@@ -61,8 +61,8 @@ describe('Overview', () => {
     expect(html).not.toContain('>Prep<');
     expect(html).toContain('aria-label="More"');
     expect(html).toContain('>Today<');
-    expect(html.match(/Review/g)).toHaveLength(1);
-    expect(html.match(/Standup/g)).toHaveLength(1);
+    expect(html.match(/>Review</g)).toHaveLength(1);
+    expect(html.match(/>Standup</g)).toHaveLength(1);
   });
 
   it('shows Join and Starts in N min for a linked meeting in the 10 minute window only', () => {

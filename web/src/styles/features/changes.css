@@ -15,6 +15,7 @@
 .scm-commit-actions .primary { flex: 1; }
 .scm-claude { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .scm-error { padding: 0 var(--sp-6) var(--sp-3); font-size: var(--fs-sm); color: var(--err); white-space: pre-wrap; word-break: break-word; }
+.scm-error.muted { color: var(--fg-muted); }
 .scm-review { padding: 0 var(--sp-5) var(--sp-4); }
 .scm-review .scm-claude { flex: 1; }
 

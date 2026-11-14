@@ -13,6 +13,7 @@
 .ex-tree .ui-row { min-height: var(--size-row); height: var(--size-row); gap: var(--sp-2); padding-top: 0; padding-bottom: 0; padding-right: var(--sp-4); font-size: var(--fs-md); line-height: normal; user-select: none; }
 .ex-tree .ui-row::after { display: none; }
 .ex-tree .ui-row-lead { width: auto; gap: var(--sp-2); }
+@media (hover: hover) { .ex-tree div.ui-row:hover { --state: var(--state-hover); cursor: pointer; } }
 .ex-tree .ui-row[aria-selected='true'] { --state: var(--state-hover); }
 .ex-tree:focus .ui-row[aria-selected='true'] { background: var(--accent-soft); outline: 1px solid var(--accent); outline-offset: -1px; }
 .ex-tree .ui-row.ignored { color: var(--fg-muted); }
