@@ -6,7 +6,7 @@ import { BIG_BRO, type Effort } from '../../../../shared/protocol.js';
 import { TOOLS, TOOL_INSTRUCTIONS } from '../tools/index.js';
 import type { ToolCtx } from '../tools/tool.js';
 import { ownChromeMcp, ownProfile } from '../../chrome/launch.js';
-import { sandboxOf, type Unattended } from '../../session/unattended.js';
+import { sandboxOf, type Unattended } from './unattended.js';
 import { openRouterEnv, type OpenRouterSettings } from './openrouter.js';
 
 const BUILD_KIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../build-kit');

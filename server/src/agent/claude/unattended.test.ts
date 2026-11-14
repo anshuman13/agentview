@@ -2,9 +2,9 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it, vi } from 'bun:test';
-import type { HookInput } from '../agent/claude/sdkTypes.js';
-import { ToolHooks } from '../agent/claude/toolHooks.js';
-import { UNATTENDED_DOMAINS, unattendedLimits } from '../settings.js';
+import type { HookInput } from './sdkTypes.js';
+import { ToolHooks } from './toolHooks.js';
+import { UNATTENDED_DOMAINS, unattendedLimits } from '../../settings.js';
 import { unattendedRules } from './unattended.js';
 
 const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'unattended-')));

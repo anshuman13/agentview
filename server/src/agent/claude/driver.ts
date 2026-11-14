@@ -16,7 +16,7 @@ import { loadOpenRouter, openRouterModels, openRouterValue } from './openrouter.
 import { McpControl } from './mcpControl.js';
 import { loadMeta, loadUsage } from './queryInfo.js';
 import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
-import { unattendedRules } from '../../session/unattended.js';
+import { unattendedRules } from './unattended.js';
 import { loadSettings, unattendedLimits } from '../../settings.js';
 import { ToolHooks } from './toolHooks.js';
 import { continuedTurn } from './subagents.js';

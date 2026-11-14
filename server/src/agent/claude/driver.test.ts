@@ -6,7 +6,7 @@ import type { AgentSession } from '../../session/session.js';
 import type { CanUseTool, HookCallback } from '@anthropic-ai/claude-agent-sdk';
 import { claudeSession } from './driver.js';
 import { agentOptions } from './options.js';
-import { unattendedRules, type Unattended } from '../../session/unattended.js';
+import { unattendedRules, type Unattended } from './unattended.js';
 import { workflowAgents } from './history.js';
 import { JsonlTail } from './tail.js';
 import { contextFrom, historyFrom } from './transcript.js';

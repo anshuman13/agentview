@@ -2,7 +2,7 @@ import { editedPath } from './transcript.js';
 import type { HookInput, HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentHost } from '../types.js';
 import { STATUS_REMINDER } from './options.js';
-import { denyTool, editDenied, toolDenied, type Unattended } from '../../session/unattended.js';
+import { denyTool, editDenied, toolDenied, type Unattended } from './unattended.js';
 import { bigBroRequest, bigBroVerdict } from './approval.js';
 
 const STATUS_EVERY = 8;

@@ -1,9 +1,9 @@
 import { realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { HookJSONOutput } from '../agent/claude/sdkTypes.js';
-import type { UnattendedLimits } from '../settings.js';
-import { inside } from '../../../shared/util.js';
+import type { HookJSONOutput } from './sdkTypes.js';
+import type { UnattendedLimits } from '../../settings.js';
+import { inside } from '../../../../shared/util.js';
 
 // What a scheduled coding chat may touch: its worktree, the temp folder and the settings' extra folders and domains.
 export type Unattended = { worktree: string; allowWrite: string[]; domains: string[]; denyRead: string[] };
