@@ -53,6 +53,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.launch
@@ -364,14 +365,28 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
         "Rewind", { ask = false; hub.rewind(it.id) }, onDismiss = { ask = false },
     )
     UserBubble {
-        for (p in userParts(it.text)) when (p) {
-            is Part.Text -> Text(p.text, style = Type.body, color = av.fg)
+        userParts(it.text).forEachIndexed { i, p -> when (p) {
+            is Part.Text -> FoldText("${it.id}:$i", p.text)
             is Part.Image -> ChatImage(hub, chat, p.path)
-        }
+        } }
         if (it.stopping) Text("Stopping $label to send this", style = Type.footnote, color = av.fgMuted)
         if (it.queued) BubbleFooter("Waiting for $label's next step", "Send now") { hub.sendNow(it.id) }
         if (canRewind) BubbleFooter("", "Rewind files") { ask = true }
     }
+}
+
+private const val FOLD_LINES = 6
+
+@Composable
+private fun FoldText(key: String, text: String) {
+    var open by rememberSaveable(key) { mutableStateOf(false) }
+    var long by remember(key) { mutableStateOf(false) }
+    Text(
+        text, style = Type.body, color = av.fg,
+        maxLines = if (open) Int.MAX_VALUE else FOLD_LINES, overflow = TextOverflow.Ellipsis,
+        onTextLayout = { long = if (open) it.lineCount > FOLD_LINES else it.hasVisualOverflow },
+    )
+    if (long) Button(if (open) "Show less" else "Show more", { open = !open }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
 }
 
 @Composable
