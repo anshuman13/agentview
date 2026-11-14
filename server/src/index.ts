@@ -56,6 +56,7 @@ const BOOT = Date.now();
 // serve.sh leaves this when the web build fails and the previous build is served.
 const BUILD_FAILED = path.join(os.homedir(), '.agentview', 'web-build-failed');
 const STALL_MS = 60_000;
+const MAX_QUEUED = 32 * 1024 * 1024;
 const streams = new Map<string, Client>();
 const ring = new Ring();
 const live: Live = { chats: new Map(), runs: [], lastViewed: '', restarting: false };
@@ -248,7 +249,11 @@ function openEvents(req: Request, url: URL, chat: string, found = true) {
   const write = (data: string) => {
     if (ended) return;
     out.enqueue(bytes.encode(data));
-    if ((out.desiredSize ?? 0) <= 0) stalled ||= Date.now();
+    const room = out.desiredSize ?? 0;
+    if (room <= 0) stalled ||= Date.now();
+    // Closing does not free the bytes already queued, so a stream stuck this far behind ends before it holds more.
+    // A live client reconnects and resumes from the ring buffer.
+    if (room < -MAX_QUEUED && Date.now() - stalled > 10_000) close();
   };
   const end = () => {
     if (ended) return;
