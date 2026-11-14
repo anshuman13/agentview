@@ -28,6 +28,7 @@
 .tr-assistant:hover .tr-acts, .tr-assistant .tr-acts:focus-within { visibility: visible; }
 @media (hover: none) { .tr-assistant .tr-acts { visibility: visible; } }
 .tr-rows > .tr-acts { display: flex; margin-top: var(--sp-2); padding-left: var(--sp-5); font-size: var(--fs-xs); }
+@media (min-width: 901px) { .tr-rows { max-width: 90ch; margin-inline: auto; } }
 .tr-assistant .md { color: var(--fg); line-height: var(--lh-relaxed); }
 .tr-assistant .md :is(p, ul, ol, pre) { margin-bottom: var(--sp-5); }
 .tr-assistant .md > :last-child, .tr-assistant .md > .md-b:last-child > :last-child { margin-bottom: 0; }
