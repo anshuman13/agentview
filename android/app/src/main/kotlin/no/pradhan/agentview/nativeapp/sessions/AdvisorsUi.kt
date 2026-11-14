@@ -147,7 +147,7 @@ internal fun advisorBoard(backlog: List<BacklogItem>, specs: List<SpecHomeItem>,
     val stages = BOARD_STAGES.associateWith { mutableListOf<BoardCard>() }
     val specOf = specs.associateBy { it.slug }
     val itemOf = backlog.associateBy { it.slug }
-    fun card(stage: String, slug: String, item: BacklogItem?, spec: SpecHomeItem?) = BoardCard(slug, actionOf(stage, spec), spec != null && specNeedsYou(spec), item, spec)
+    fun card(stage: String, slug: String, item: BacklogItem?, spec: SpecHomeItem?) = BoardCard(slug, actionOf(stage, spec), stage != "done" && spec != null && specNeedsYou(spec), item, spec)
     val lines = backlog.sortedBy { it.rank }.mapNotNull { item -> stageOf(item, specOf[item.slug])?.let { Triple(it, item, specOf[item.slug]) } }
     for (stage in listOf("ideas", "specced")) for ((st, item, spec) in lines) if (st == stage) stages.getValue(stage) += card(stage, item.slug, item, spec)
     val ordered = specHomeOrder(specs).map { Triple(it, itemOf[it.slug], stageOf(itemOf[it.slug], it)!!) }
@@ -206,7 +206,7 @@ private fun BoardCardRow(hub: Hub, card: BoardCard, stage: String, project: Stri
     val showBuild = if (stage == "ideas") item != null && (item.status == "proposed" || item.status == "specced") else stage == "specced" && card.action != "build"
     val showSketch = stage == "specced" && spec != null && !spec.sketched && card.action != "sketch"
     val badge = when {
-        spec == null -> null
+        spec == null || stage == "done" -> null
         spec.waiting || spec.hold || spec.state == "waiting" -> HOLD_BADGE
         spec.state == "running" -> "Running" to BadgeTone.Running
         spec.state == "failed" -> "Failed" to BadgeTone.Failed

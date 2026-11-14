@@ -52,7 +52,7 @@ function CardRow({ card, stage, root, openSlugs, move }: { card: BoardCard; stag
     <Row
       title={spec?.title || item!.title}
       meta={meta}
-      state={spec && specBadge(spec)}
+      state={spec && stage !== 'done' ? specBadge(spec) : undefined}
       trailing={when ? <span className="rn-cost">{when}</span> : undefined}
       plain
       action={action && <Button size="sm" variant="tinted" onClick={run[action]}>{ACTION_LABEL[action]}</Button>}

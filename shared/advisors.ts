@@ -150,7 +150,7 @@ const actionOf = (stage: BoardStage, spec?: SpecHomeItem): BoardAction | null =>
 export const advisorBoard = (backlog: BacklogItem[], specs: SpecHomeItem[], loopNeedsYou: boolean) => {
   const stages: Record<BoardStage, BoardCard[]> = { ideas: [], specced: [], building: [], done: [] };
   const specOf = new Map(specs.map((s) => [s.slug, s]));
-  const card = (stage: BoardStage, slug: string, item?: BacklogItem, spec?: SpecHomeItem): BoardCard => ({ slug, action: actionOf(stage, spec), needsYou: !!spec && specNeedsYou(spec), item, spec });
+  const card = (stage: BoardStage, slug: string, item?: BacklogItem, spec?: SpecHomeItem): BoardCard => ({ slug, action: actionOf(stage, spec), needsYou: stage !== 'done' && !!spec && specNeedsYou(spec), item, spec });
   const lines = [...backlog].sort((a, b) => a.rank - b.rank).flatMap((item) => {
     const spec = specOf.get(item.slug);
     const stage = stageOf(item, spec);
