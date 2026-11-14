@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { GitFile, GitStatus } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { api, setUi, useStore } from '../app/store';
@@ -67,12 +67,14 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
   );
 }
 
-function FileRow({ file, selected, actions }: { file: GitFile; selected: boolean; actions: ReactNode }) {
+type RowClick = (f: GitFile, e: MouseEvent) => void;
+
+function FileRow({ file, selected, actions, onClick }: { file: GitFile; selected: boolean; actions: ReactNode; onClick: RowClick }) {
   const name = file.path.split('/').pop()!;
   const dir = file.path.slice(0, -name.length - 1);
   const letter = letterOf(file);
   return (
-    <div className={`scm-row s-${letter}${selected ? ' selected' : ''}`} title={file.path} onClick={() => setUi({ openFile: file.path, follow: false })}>
+    <div className={`scm-row s-${letter}${selected ? ' selected' : ''}`} title={file.path} onMouseDown={(e) => (e.shiftKey || e.metaKey || e.ctrlKey) && e.preventDefault()} onClick={(e) => onClick(file, e)}>
       <FileIcon name={name} />
       <span className="scm-name" role="button" tabIndex={0} aria-label={`${file.path}, ${STATUS[letter] ?? letter}`} onKeyDown={clickOnKey}>{name}</span>
       {dir && <span className="scm-dir">{dir}</span>}
@@ -82,7 +84,7 @@ function FileRow({ file, selected, actions }: { file: GitFile; selected: boolean
   );
 }
 
-function Section({ label, files, selected, actions, rowActions }: { label: string; files: GitFile[]; selected: string | null; actions: ReactNode; rowActions: (f: GitFile) => ReactNode }) {
+function Section({ label, files, isSelected, actions, rowActions, onRowClick }: { label: string; files: GitFile[]; isSelected: (f: GitFile) => boolean; actions: ReactNode; rowActions: (f: GitFile) => ReactNode; onRowClick: RowClick }) {
   const [open, setOpen] = useState(true);
   if (!files.length) return null;
   return (
@@ -93,7 +95,7 @@ function Section({ label, files, selected, actions, rowActions }: { label: strin
         <span className="scm-acts">{actions}</span>
         <span className="badge quiet">{files.length}</span>
       </div>
-      {open && files.map((f) => <FileRow key={f.path} file={f} selected={selected === f.path} actions={rowActions(f)} />)}
+      {open && files.map((f) => <FileRow key={f.path} file={f} selected={isSelected(f)} actions={rowActions(f)} onClick={onRowClick} />)}
     </>
   );
 }
@@ -106,6 +108,8 @@ export function Changes() {
   const [failed, setFailed] = useState('');
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const root = useRef<HTMLDivElement>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const anchor = useRef<string | null>(null);
 
   useEffect(() => void refresh(), [id]);
   usePoll(root, 5000, refresh, [id]);
@@ -119,6 +123,7 @@ export function Changes() {
       setFailed(errText(err));
       return false;
     } finally {
+      setPicked(new Set());
       void refresh();
     }
   };
@@ -127,6 +132,28 @@ export function Changes() {
   const staged = files.filter((f) => f.staged);
   const changes = files.filter((f) => !f.staged);
   const open = (f: GitFile) => setUi({ openFile: f.path, follow: false });
+  const keyOf = (f: GitFile) => `${f.staged ? 's' : 'w'}:${f.path}`;
+  const isSelected = (f: GitFile) => (picked.size ? picked.has(keyOf(f)) : f.path === openFile);
+  const targets = (f: GitFile, list: GitFile[]) => (picked.has(keyOf(f)) ? list.filter((g) => picked.has(keyOf(g))) : [f]);
+
+  const clickRow = (list: GitFile[]) => (f: GitFile, e: MouseEvent) => {
+    const key = keyOf(f);
+    if (e.shiftKey && anchor.current && list.some((g) => keyOf(g) === anchor.current)) {
+      const a = list.findIndex((g) => keyOf(g) === anchor.current);
+      const b = list.indexOf(f);
+      setPicked(new Set(list.slice(Math.min(a, b), Math.max(a, b) + 1).map(keyOf)));
+      return;
+    }
+    anchor.current = key;
+    if (e.metaKey || e.ctrlKey) {
+      const next = new Set(picked.size ? picked : list.filter((g) => g.path === openFile).map(keyOf));
+      if (next.has(key)) next.delete(key); else next.add(key);
+      setPicked(next);
+      return;
+    }
+    setPicked(new Set());
+    open(f);
+  };
 
   const discard = (list: GitFile[]) => {
     const removes = list.some((f) => f.status === '?');
@@ -140,7 +167,7 @@ export function Changes() {
   };
 
   return (
-    <div className="scm" ref={root}>
+    <div className="scm" ref={root} onKeyDown={(e) => e.key === 'Escape' && picked.size > 0 && setPicked(new Set())}>
       <BranchBar status={status} onRefresh={() => void refresh()} />
       {files.length > 0 && (
         <>
@@ -157,19 +184,21 @@ export function Changes() {
         <Section
           label="Staged Changes"
           files={staged}
-          selected={openFile}
+          isSelected={isSelected}
+          onRowClick={clickRow(staged)}
           actions={<Action icon="remove" title="Unstage All Changes" onClick={() => run('unstage', paths(staged))} />}
           rowActions={(f) => (
             <>
               <Action icon="go-to-file" title="Open File" onClick={() => open(f)} />
-              <Action icon="remove" title="Unstage Changes" onClick={() => run('unstage', paths([f]))} />
+              <Action icon="remove" title="Unstage Changes" onClick={() => run('unstage', paths(targets(f, staged)))} />
             </>
           )}
         />
         <Section
           label="Changes"
           files={changes}
-          selected={openFile}
+          isSelected={isSelected}
+          onRowClick={clickRow(changes)}
           actions={
             <>
               <Action icon="discard" title="Discard All Changes" onClick={() => discard(changes)} />
@@ -179,8 +208,8 @@ export function Changes() {
           rowActions={(f) => (
             <>
               <Action icon="go-to-file" title="Open File" onClick={() => open(f)} />
-              <Action icon="discard" title="Discard Changes" onClick={() => discard([f])} />
-              <Action icon="add" title="Stage Changes" onClick={() => run('stage', paths([f]))} />
+              <Action icon="discard" title="Discard Changes" onClick={() => discard(targets(f, changes))} />
+              <Action icon="add" title="Stage Changes" onClick={() => run('stage', paths(targets(f, changes)))} />
             </>
           )}
         />

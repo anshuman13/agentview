@@ -298,6 +298,10 @@ the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentvi
 with Claude" in the Changes view and "Review changes" in the chat menu (web and phone; off while Claude runs or when no file changed)
 run `/code-review` on the working tree; those findings show at the bottom of the Changes view.
 
+In the web Changes view ⌘-click (Ctrl-click) toggles a file into a selection and Shift-click picks a range within
+one section. Discard, Stage and Unstage on a selected row then act on every selected file in that section; Esc
+and any git action clear the selection. The phone has no multi-select.
+
 The spec review reports under the target `spec:<slug>`, shown as a Findings section in the opened Spec card (web and phone): the row opens the spec on that line on web and the file on the phone, and Fix makes the agent edit the spec. A repeat review replaces the list and keeps dismissed findings hidden.
 
 A pull request Claude opened with `gh pr create` stays linked to its chat: the pull request row shows "Open chat"
