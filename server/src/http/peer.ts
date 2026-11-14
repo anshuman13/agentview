@@ -24,6 +24,8 @@ export class Peer {
   // done runs once the data has left for the socket, or the socket closed.
   send(data: string | Buffer, done?: () => void) {
     const sent = this.ws.send(data, data.length >= 1024);
+    // Dropped past the backpressure limit: closing makes the client reconnect and load a fresh snapshot.
+    if (sent === 0) return this.ws.close(1013, 'Too far behind');
     if (!done) return;
     if (sent === -1) this.flushing.push(done);
     else queueMicrotask(done);

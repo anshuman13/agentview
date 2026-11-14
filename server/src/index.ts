@@ -152,6 +152,8 @@ async function handle(req: Request, server: Bun.Server<SocketData>): Promise<Res
   const headers = Object.fromEntries(req.headers);
   if (!allowedRequest(headers, ip)) return writers(req).json({ error: 'Forbidden' }, 403);
   const url = new URL(req.url);
+  // Hub syncs, git pushes and worktree creation may run past the 255 s idle limit; their own timeouts end them.
+  if (req.method === 'POST') server.timeout(req, 0);
   if (url.pathname === '/ws') {
     const data: SocketData = { url: req.url, origin: headers.origin, agent: headers['user-agent'] };
     return server.upgrade(req, { data }) ? undefined : new Response('Expected a WebSocket upgrade', { status: 400 });
