@@ -1,5 +1,7 @@
 [
   { "name": "solo with no links", "id": "cal:a", "people": "[]", "links": null, "expected": true },
   { "name": "solo with a Meet link", "id": "cal:b", "people": "[]", "links": "[{\"title\":\"Join\",\"url\":\"https://meet.google.com/abc-defg-hij\"}]", "expected": false },
+  { "name": "solo with an uppercase Meet host", "id": "cal:d", "people": "[]", "links": "[{\"title\":\"Join\",\"url\":\"https://MEET.google.com/abc\"}]", "expected": false },
+  { "name": "a call host only in the query", "id": "cal:e", "people": "[]", "links": "[{\"title\":\"Doc\",\"url\":\"https://x.com?u=a.meet.google.com\"}]", "expected": true },
   { "name": "a row with people", "id": "cal:c", "people": "[\"Sam\"]", "links": null, "expected": false }
 ]

@@ -20,7 +20,7 @@ fun isSolo(m: Row) = m.id.startsWith("cal:") && m.str("people") == "[]"
 
 private val CALL_HOSTS = listOf("meet.google.com", "zoom.us", "teams.microsoft.com", "teams.live.com", "whereby.com")
 
-fun isEvent(m: Row) = isSolo(m) && linksOf(m).none { l -> l.domain.substringBefore(':').let { h -> CALL_HOSTS.any { h == it || h.endsWith(".$it") } } }
+fun isEvent(m: Row) = isSolo(m) && linksOf(m).none { l -> runCatching { java.net.URI(l.url).host?.lowercase() }.getOrNull().orEmpty().let { h -> CALL_HOSTS.any { h == it || h.endsWith(".$it") } } }
 
 fun peopleOf(m: Row): List<String> {
     val s = m.str("people") ?: return emptyList()
