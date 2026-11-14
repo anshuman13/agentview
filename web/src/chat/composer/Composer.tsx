@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { memo, useId, useRef, useState } from 'react';
 import { useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { touch } from '../../app/touch/touch';
@@ -33,7 +33,7 @@ function placeholderFor(label: string, running: boolean, waiting: boolean, compa
   return hasUses ? `What should ${label} do with it?` : 'Ask anything · / commands · @ files · @chat: chats';
 }
 
-export function Composer() {
+export const Composer = memo(function Composer() {
   const chat = useStore((s) => s.session.id);
   const running = useStore((s) => s.session.running);
   const label = useStore((s) => providerLabel(s.session.provider));
@@ -126,4 +126,4 @@ export function Composer() {
       <PickerSheets pick={pick} setPick={setPick} sentHistory={h.sentHistory} setUses={setUses} apply={apply} focus={() => ta.current?.focus()} />
     </div>
   );
-}
+});

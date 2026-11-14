@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../app/store';
 import { chatTitle as chatTitleOf } from '../../../../shared/util';
 import { REVIEW_LOCAL } from '../../ops/Findings';
@@ -16,7 +16,6 @@ import { renameChat } from '../folders';
 import { useLongPress } from '../../ui/longPress';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
 import { HeadState } from './HeadState';
-import { useBriefScroll } from './briefHooks';
 import { narrow } from '../../app/shell/useNarrow';
 
 function lastReplyOf(turns: Turn[]) {
@@ -55,7 +54,6 @@ export function Brief() {
   const usage = useUsage();
   const [agentSel, setAgentSel] = useState<string | null>(null);
   const [showAgents, setShowAgents] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
   const extras = [advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const lastReply = lastReplyOf(turns);
   const doneSteps = useMemo(() => (turns.at(-1)?.notes ?? []).filter((n) => n.kind === 'done' && n.id.endsWith(':done')), [turns]);
@@ -78,10 +76,9 @@ export function Brief() {
   const title = chatTitle || chatTitleOf(turns[0]?.prompt ?? '') || 'New chat';
   const startRename = savedId ? () => setRenaming(true) : undefined;
   const press = useLongPress(startRename);
-  const end = useBriefScroll(root, { turns: turns.length, next: next.length, running, waiting }, [sessionId, showAgents]);
 
   return (
-    <div className="brief" ref={root}>
+    <div className="brief">
       <div className="brief-status">
         <div className="timeline-head">
           <span className="tl-name" title={cwd ? `${title}\n${cwd}` : title}>
@@ -97,7 +94,6 @@ export function Brief() {
           <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         {showAgents ? <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense> : <Transcript showWork={showWork} />}
-        {!showAgents && <div ref={end} />}
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}
       <div className="brief-input">
