@@ -227,7 +227,10 @@ export async function summarizeSlack(db: Database, now = Date.now()) {
     ...openAsks(db, from).map((a) => `- ${a.source_url} ${a.people}: ${a.title}`),
   ].join('\n');
   const text = await run(prompt, 'sonnet', [suggest], 30);
-  applyChanges(db, [{ table: 'briefs', id: `slack:${now}`, profile: PROFILE, updated_at: now, fields: { kind: 'slack', text, from_at: from, to_at: now } }]);
+  // Bullets dismissed on the last summary stay dismissed when the model repeats them; the last 50 are kept.
+  const prev = db.prepare("SELECT dismissed FROM briefs WHERE profile = ? AND kind = 'slack' AND deleted = 0 ORDER BY to_at DESC LIMIT 1").get(PROFILE) as { dismissed: string | null } | undefined;
+  const dismissed = (prev?.dismissed ?? '').split('\n').filter(Boolean).slice(-50).join('\n') || null;
+  applyChanges(db, [{ table: 'briefs', id: `slack:${now}`, profile: PROFILE, updated_at: now, fields: { kind: 'slack', text, from_at: from, to_at: now, dismissed } }]);
   return { text, added };
 }
 
