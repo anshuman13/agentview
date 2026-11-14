@@ -11,6 +11,9 @@ import { agentCounts, agentsOf } from '../agents';
 import { askChat, readFlag, saveFlag, useTick } from '../../ui/util';
 import { useMacName } from '../../app/shell/macName';
 import { useUsage } from '../../app/shell/StatusItems';
+import { RenameInput } from '../RenameInput';
+import { renameChat } from '../folders';
+import { useLongPress } from '../../ui/longPress';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
 import { TimelineFoot } from './TimelineFoot';
 import { useBriefScroll, useRecap } from './briefHooks';
@@ -37,6 +40,8 @@ export function Brief() {
   const cwd = useStore((s) => s.session.cwd);
   const sessionId = useStore((s) => s.session.id);
   const chatTitle = useStore((s) => s.live.find((c) => c.id === s.session.id)?.title);
+  const savedId = useStore((s) => s.live.find((c) => c.id === s.session.id)?.sessionId);
+  const [renaming, setRenaming] = useState(false);
   const pending = useStore((s) => s.pending);
   const waiting = pending.length > 0;
   const [build] = useState(createTurnsBuilder);
@@ -67,18 +72,27 @@ export function Brief() {
     window.addEventListener('open-agent', open);
     return () => window.removeEventListener('open-agent', open);
   }, []);
-  useEffect(() => { setShowAgents(false); setAgentSel(null); }, [sessionId]);
+  useEffect(() => { setShowAgents(false); setAgentSel(null); setRenaming(false); }, [sessionId]);
   const { since, dismiss } = useRecap(sessionId, events, waiting, root);
   const title = chatTitle || turns[0]?.prompt || 'New chat';
+  const startRename = savedId ? () => setRenaming(true) : undefined;
+  const press = useLongPress(startRename);
   const end = useBriefScroll(root, { turns: turns.length, next: next.length, running, waiting }, [sessionId, showAgents]);
 
   return (
     <div className="brief" ref={root}>
       <div className="brief-status">
         <div className="timeline-head">
-          <span className="tl-name" title={cwd ? `${title}\n${cwd}` : title}><b>{title}</b>{cwd && <small>{cwd.split('/').pop()}</small>}</span>
+          <span className="tl-name" title={cwd ? `${title}\n${cwd}` : title}>
+            {renaming ? (
+              <RenameInput value={title} onSave={(t) => { setRenaming(false); void renameChat(savedId!, t); }} onCancel={() => setRenaming(false)} />
+            ) : (
+              <b className={startRename ? 'editable' : undefined} onDoubleClick={startRename} onPointerDown={press?.down} onPointerMove={press?.move} onPointerUp={press?.up} onPointerCancel={press?.cancel} onContextMenu={press ? (e) => press.menu(e.nativeEvent) : undefined}>{title}</b>
+            )}
+            {cwd && <small>{cwd.split('/').pop()}</small>}
+          </span>
           <span className="spacer" />
-          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} />
+          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         {since?.chat === sessionId && (
           <button className="tl-recap" title="Tap to dismiss" onClick={dismiss}><Icon name="history" small /><span className="tl-recap-lines">{since.lines.map((l) => <span key={l}>{l}</span>)}</span></button>

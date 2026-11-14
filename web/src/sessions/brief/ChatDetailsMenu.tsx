@@ -19,9 +19,10 @@ type Props = {
   running: boolean;
   hasChanges: boolean;
   review: () => void;
+  rename?: () => void;
 };
 
-export function ChatDetailsMenu({ showWork, toggleWork, hasAgents, showAgents, agentsRunning, agentsDone, waitingElsewhere, usage, macName, extras, openAgents, running, hasChanges, review }: Props) {
+export function ChatDetailsMenu({ showWork, toggleWork, hasAgents, showAgents, agentsRunning, agentsDone, waitingElsewhere, usage, macName, extras, openAgents, running, hasChanges, review, rename }: Props) {
   const [more, setMore] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const reviewOff = running || !hasChanges;
@@ -32,6 +33,7 @@ export function ChatDetailsMenu({ showWork, toggleWork, hasAgents, showAgents, a
       <IconButton ref={moreBtn} size="sm" icon="kebab-horizontal" label="Chat details" aria-haspopup="menu" aria-expanded={more} onClick={() => setMore(!more)} />
       {more && (
         <Menu trigger={moreBtn} onClose={() => setMore(false)}>
+          <MenuItem icon="edit" disabled={!rename} onClick={rename && choose(rename)}>Rename</MenuItem>
           <MenuItem icon={showWork ? 'check' : undefined} role="menuitemcheckbox" aria-checked={showWork} onClick={choose(toggleWork)}>Show work</MenuItem>
           <MenuItem icon="source-control" disabled={reviewOff} title={reviewOff ? undefined : 'The agent reviews the working tree, findings show in the Changes view'} onClick={choose(review)}>{reviewLabel(running, hasChanges)}</MenuItem>
           {(hasAgents || showAgents) && (

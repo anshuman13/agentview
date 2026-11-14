@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { getState, markUnread, notice, send, subscribe, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { MenuItem, MenuSeparator } from '../ui/Menu';
@@ -7,10 +7,11 @@ import { type ConfirmRequest } from '../ui/Confirm';
 import { type ChatRun, type LiveChat, type SavedSession } from '../../../shared/protocol';
 import { providerMark } from '../../../shared/providers';
 import { copyText, save } from '../ui/util';
+import { RenameInput } from './RenameInput';
 import { AgentsBlock } from './AgentRow';
 import { openAgent } from './agents';
 import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
-import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, renameTitle, removeRequest, restoreChat, since, type ChatState, type RenameEvent } from './folders';
+import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, removeRequest, restoreChat, since, type ChatState } from './folders';
 import { Swipe } from '../codex/gestures/Swipe';
 import { showSnack } from '../codex/view';
 import { isMuted, setMuted } from '../app/runtime/mute';
@@ -40,37 +41,6 @@ export const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void
     });
   }, notice)(),
 });
-
-function RenameInput({ value, onSave, onCancel }: { value: string; onSave: (title: string) => void; onCancel: () => void }) {
-  const [text, setText] = useState(value);
-  const done = useRef(false);
-  const finish = (event: RenameEvent) => {
-    if (done.current) return;
-    done.current = true;
-    const title = renameTitle(event, text, value);
-    if (title) onSave(title);
-    else onCancel();
-  };
-  return (
-    <input
-      className="chat-rename"
-      autoFocus
-      maxLength={120}
-      aria-label="Chat title"
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-      onFocus={(e) => e.currentTarget.select()}
-      onBlur={() => finish('blur')}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') finish('Enter');
-        if (e.key === 'Escape') {
-          e.stopPropagation();
-          finish('Escape');
-        }
-      }}
-    />
-  );
-}
 
 type ChatRowProps = {
   sessionId?: string;
