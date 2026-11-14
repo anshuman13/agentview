@@ -3,7 +3,7 @@ import { shownFeature } from '../../../shared/featureUse';
 import { Advisors, Deploy, Loading, McpPage, Observe, Settings, Sketches } from './lazy';
 import { appSettings } from './appSettings';
 import { PhoneHeader } from './shell/PhoneHeader';
-import { useCounts } from './store/counts';
+import { useCounts } from './shell/counts';
 
 export type Page = 'advisors' | 'observe' | 'deploy' | 'mcp' | 'sketches' | 'settings';
 

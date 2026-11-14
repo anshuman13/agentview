@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { appCounts, type CountChat } from '../../../../shared/counts';
 import type { LiveChat } from '../../../../shared/protocol';
-import { chatState as headerState } from '../../sessions/runLogic';
+import { headerState } from '../../sessions/runLogic';
 import { useMcpHidden } from '../../ops/mcpShown';
 import { chatState as sessionState } from '../../sessions/folders';
 import { createStore } from '../../ui/createStore';
-import { useStore } from './core';
+import { useStore } from '../store';
 
 // The Codex chunk fills this from its Needs you and Reply queue rows; the counts only add them.
 export const rowCounts = createStore({ needsYouRows: 0, replyRows: 0 });

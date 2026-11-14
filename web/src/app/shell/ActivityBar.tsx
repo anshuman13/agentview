@@ -1,7 +1,7 @@
 import { Icon } from '../../ui/Icon';
 import { ChangesBadge } from '../../workspace/gitStatus';
 import { GitHubBadge } from '../../ops/pulls';
-import { useCounts } from '../store/counts';
+import { useCounts } from './counts';
 import { usePages, type Page } from '../pages';
 import type { View } from './TabBar';
 

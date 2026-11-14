@@ -24,10 +24,10 @@ import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from
 import { mergeTail } from './app/runtime/pageEvents';
 import { buildTranscript } from './chat/transcript/steps';
 import { foldTurns, workTitle } from './chat/transcript/workFold';
-import { countChat } from './app/store/counts';
+import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { handoffText } from './chat/composer/composerLogic';
-import { chatState, runLine, stoppedText } from './sessions/runLogic';
+import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { needsYou } from './codex/summary/needsYou';
@@ -298,7 +298,7 @@ describe('cases shared with the Android app', () => {
     it(`chatState: ${c.name}`, () => {
       const { agents = 0, run, ...chat } = c.chat;
       const agentList = Array.from({ length: agents }, (_, i) => ({ id: `a${i}`, description: '', type: '', startedAt: 0 }));
-      expect(chatState({ pending: 0, running: false, status: '', ...chat, agentList, run: run && { state: run.state, why: run.why, nextAt: run.nextAtLocal ? new Date(run.nextAtLocal).getTime() : null } })).toEqual(c.expected);
+      expect(headerState({ pending: 0, running: false, status: '', ...chat, agentList, run: run && { state: run.state, why: run.why, nextAt: run.nextAtLocal ? new Date(run.nextAtLocal).getTime() : null } })).toEqual(c.expected);
     });
   }
 

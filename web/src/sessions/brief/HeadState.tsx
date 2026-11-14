@@ -3,7 +3,7 @@ import { Menu } from '../../ui/Menu';
 import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
-import { chatState, loopLabel } from '../runLogic';
+import { headerState, loopLabel } from '../runLogic';
 import type { LiveChat } from '../../../../shared/protocol';
 import type { ToolUse } from '../../chat/transcript/steps';
 import { time } from './time';
@@ -71,11 +71,11 @@ function StepList({ done, next, adding, setAdding }: { done: Props['done']; next
   );
 }
 
-// The status bar's chatState, plus the build cycle phase and Stopping, which only the open chat knows.
+// The status bar's headerState, plus the build cycle phase and Stopping, which only the open chat knows.
 function nowText({ state, status, loop, chat, pending }: Pick<Props, 'state' | 'status' | 'loop' | 'chat' | 'pending'>) {
   if (state === 'stopping') return 'Stopping…';
   if (state === 'running' && loop.phase && ['plan', 'build', 'test'].includes(loop.phase)) return `${loopLabel(loop)} · ${status}`;
-  return chatState({ pending, failed: chat?.failed, stalled: chat?.stalled, running: state === 'running', status, agentList: chat?.agentList, run: chat?.run }).text;
+  return headerState({ pending, failed: chat?.failed, stalled: chat?.stalled, running: state === 'running', status, agentList: chat?.agentList, run: chat?.run }).text;
 }
 
 const markIcon = (state: Props['state']) => <Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} />;

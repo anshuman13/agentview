@@ -5,7 +5,7 @@ import { billing, providerLabel } from '../../../../shared/providers';
 import { Icon } from '../../ui/Icon';
 import { command, spendLines, weekPace } from '../../ui/util';
 import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from '../runtime/offlineBanner';
-import { mcpDot, useCounts } from '../store/counts';
+import { mcpDot, useCounts } from './counts';
 import { Badge } from '../../ui/Badge';
 
 export function Restarting() {

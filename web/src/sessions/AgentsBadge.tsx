@@ -1,4 +1,4 @@
-import { useCounts } from '../app/store/counts';
+import { useCounts } from '../app/shell/counts';
 
 export function AgentsBadge() {
   const { agents } = useCounts();

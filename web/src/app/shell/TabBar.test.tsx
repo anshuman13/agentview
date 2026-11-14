@@ -7,7 +7,7 @@ const { useSyncExternalStore } = react;
 vi.mock('react', () => ({ ...react, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) }));
 
 const { TabBar } = await import('./TabBar');
-const { rowCounts } = await import('../store/counts');
+const { rowCounts } = await import('./counts');
 
 const render = () => renderToStaticMarkup(<TabBar tab="chat" more={false} inChats={false} inMore={false} goTab={() => {}} goSide={() => {}} toggleMore={() => {}} />);
 

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { send, useStore } from '../../app/store';
-import { countChat, useCounts } from '../../app/store/counts';
+import { countChat, useCounts } from '../../app/shell/counts';
 import { chatBucket } from '../../../../shared/counts';
 import { chatLine } from '../../sessions/folders';
 import { Badge } from '../../ui/Badge';

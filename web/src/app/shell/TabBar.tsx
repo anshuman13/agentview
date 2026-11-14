@@ -12,7 +12,7 @@ import { AssistantCounts } from '../lazy';
 import { usePages, type Page } from '../pages';
 import { canNotify, toggleNotify, useNotify } from '../runtime/notify';
 import { THEME_NAMES, type Theme } from '../theme';
-import { mcpDot, useCounts } from '../store/counts';
+import { mcpDot, useCounts } from './counts';
 
 export type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 export type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { tauriInvoke } from '../runtime/tauri';
 import { badgeArg, createBadgeSender } from '../runtime/launcherBadge';
-import { useCounts } from '../store/counts';
+import { useCounts } from './counts';
 
 function useLauncherBadge() {
   const count = badgeArg(useCounts().needsYou);

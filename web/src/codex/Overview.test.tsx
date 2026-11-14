@@ -27,7 +27,7 @@ vi.mock('./NeedsYou', () => ({ useNeedsYou: () => ({ rows: mocks.needs }) }));
 
 const { Overview } = await import('./Overview');
 const { doneCount } = await import('./overview/TodayList');
-const { rowCounts } = await import('../app/store/counts');
+const { rowCounts } = await import('../app/shell/counts');
 
 const now = Date.now();
 const at = (min: number) => now + min * 60000;

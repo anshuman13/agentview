@@ -8,7 +8,7 @@ import { Row } from '../ui/Row';
 import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/Panel';
 import { replyQueue } from './overview/ReplyQueue';
-import { useCounts } from '../app/store/counts';
+import { useCounts } from '../app/shell/counts';
 import { track } from '../app/featureUse';
 import { useNeedsYou } from './NeedsYou';
 import { AddSheet } from './tasks/AddSheet';

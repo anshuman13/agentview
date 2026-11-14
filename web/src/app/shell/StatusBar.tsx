@@ -2,7 +2,7 @@ import { setUi, useStore } from '../store';
 import { Icon } from '../../ui/Icon';
 import { CacheItem, McpItem, RunsItem, UsageItem } from './StatusItems';
 import { canNotify, toggleNotify, useNotify } from '../runtime/notify';
-import { chatState } from '../../sessions/runLogic';
+import { headerState } from '../../sessions/runLogic';
 import { THEME_NAMES, type Theme } from '../theme';
 
 const ICON = { running: 'loading', needs: 'bell', failed: 'error', warn: 'debug-pause', idle: 'check' } as const;
@@ -15,7 +15,7 @@ export function StatusBar({ project, theme, toggleTheme, macName, onPhone, onMac
   const cwd = useStore((s) => s.session.cwd);
   const status = useStore((s) => s.status);
   const live = useStore((s) => s.live.find((c) => c.id === s.session.id));
-  const state = chatState({ pending: live?.pending ?? 0, failed: live?.failed, stalled: live?.stalled, running, status, agentList: live?.agentList, run: live?.run });
+  const state = headerState({ pending: live?.pending ?? 0, failed: live?.failed, stalled: live?.stalled, running, status, agentList: live?.agentList, run: live?.run });
   const notifying = useNotify();
   return (
     <footer className="statusbar desktop-only">

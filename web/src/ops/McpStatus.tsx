@@ -9,7 +9,7 @@ import { useCan } from '../chat/useCan';
 import { ago, useSlot, useTick } from '../ui/util';
 import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
-import { useCounts } from '../app/store/counts';
+import { useCounts } from '../app/shell/counts';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
 import { Detail } from './McpDetail';
 import { SetupButton } from './SetupButton';

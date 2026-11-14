@@ -6,7 +6,7 @@ import { Icon } from '../ui/Icon';
 import { ago } from '../ui/util';
 import { FILTER_LABEL, setView, useView, type Filter, type List } from './view';
 import { sharedSplit, useMinute, useSplit } from './tasks/split';
-import { rowCounts } from '../app/store/counts';
+import { rowCounts } from '../app/shell/counts';
 import { useNeedsYou } from './NeedsYou';
 import { replyQueue } from './overview/ReplyQueue';
 import { clock } from './tasks/time';

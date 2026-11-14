@@ -14,10 +14,10 @@ export function runLine(run: ChatRun, phase: string | null = null) {
   return roundLine(KIND.loop, run);
 }
 
-export type ChatState = { text: string; tone: 'running' | 'needs' | 'failed' | 'warn' | 'idle' };
+export type HeaderState = { text: string; tone: 'running' | 'needs' | 'failed' | 'warn' | 'idle' };
 
 // The state of a chat for the header: what needs the user first, then the running turn, running agents, the run between rounds.
-export function chatState(chat: Pick<LiveChat, 'pending' | 'failed' | 'stalled' | 'running' | 'status' | 'agentList'> & { run?: Pick<NonNullable<LiveChat['run']>, 'state' | 'why' | 'nextAt'> }): ChatState {
+export function headerState(chat: Pick<LiveChat, 'pending' | 'failed' | 'stalled' | 'running' | 'status' | 'agentList'> & { run?: Pick<NonNullable<LiveChat['run']>, 'state' | 'why' | 'nextAt'> }): HeaderState {
   const agents = chat.agentList?.length ?? 0;
   const { run } = chat;
   if (chat.pending > 0) return { text: 'Needs you', tone: 'needs' };
