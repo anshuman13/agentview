@@ -69,13 +69,14 @@ export function Brief() {
   }, []);
   useEffect(() => { setShowAgents(false); setAgentSel(null); }, [sessionId]);
   const { since, dismiss } = useRecap(sessionId, events, waiting, root);
+  const title = chatTitle || turns[0]?.prompt || 'New chat';
   const end = useBriefScroll(root, { turns: turns.length, next: next.length, running, waiting }, [sessionId, showAgents]);
 
   return (
     <div className="brief" ref={root}>
       <div className="brief-status">
         <div className="timeline-head">
-          <span className="mobile-only tl-name"><b>{chatTitle || turns[0]?.prompt || 'New chat'}</b>{cwd && <small>{cwd.split('/').pop()}</small>}</span>
+          <span className="tl-name" title={`${title}\n${cwd ?? ''}`}><b>{title}</b>{cwd && <small>{cwd.split('/').pop()}</small>}</span>
           <span className="spacer" />
           <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} />
         </div>
