@@ -41,6 +41,8 @@ async function handle(req: Request, server: Bun.Server<undefined>): Promise<Resp
   const device = allowedPeer(addr) ? peerName(addr) : undefined;
   const headers = Object.fromEntries(req.headers);
   if (!device || !ownHost(headers.host) || !fromAllowedPage(headers)) return Response.json({ error: 'Forbidden' }, { status: 403 });
+  // Scans and syncs may run up to 300 s, past the 255 s idle limit; their own timeouts end them.
+  if (req.method === 'POST') server.timeout(req, 0);
   const origin = headers.origin ?? '';
   const res = new Reply(APP_ORIGINS.has(origin) ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET, POST', Vary: 'Origin' } : {});
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: res.headers });
