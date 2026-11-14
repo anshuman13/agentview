@@ -50,7 +50,22 @@ describe('moveBacklog', () => {
 
   it('swaps a middle row and renumbers, leaving other lines in place', () => {
     expect(moveBacklog(md, 'b', 'up')).toBe('# Backlog\n\n1. b | B | x | y, z | specced\n2. a | A | why | proposed\n\nnote\n3. c | C | w | done\n');
-    expect(moveBacklog(md, 'b', 'down')).toBe('# Backlog\n\n1. a | A | why | proposed\n2. c | C | w | done\n\nnote\n3. b | B | x | y, z | specced\n');
+  });
+
+  it('moves an open row past done rows to the nearest open row', () => {
+    const m = '1. a | A | w | proposed\n2. d | D | w | done\n3. b | B | w | proposed\n';
+    expect(moveBacklog(m, 'a', 'down')).toBe('1. b | B | w | proposed\n2. d | D | w | done\n3. a | A | w | proposed\n');
+    expect(moveBacklog(m, 'b', 'up')).toBe('1. b | B | w | proposed\n2. d | D | w | done\n3. a | A | w | proposed\n');
+  });
+
+  it('leaves the text unchanged when no open row lies that way', () => {
+    expect(moveBacklog(md, 'b', 'down')).toBe(md);
+    const m = '1. d | D | w | done\n2. a | A | w | proposed\n';
+    expect(moveBacklog(m, 'a', 'up')).toBe(m);
+  });
+
+  it('moves a done row to its direct neighbour', () => {
+    expect(moveBacklog(md, 'c', 'up')).toBe('# Backlog\n\n1. a | A | why | proposed\n2. c | C | w | done\n\nnote\n3. b | B | x | y, z | specced\n');
   });
 
   it('keeps the first row up and the last row down, and returns null for an unknown slug', () => {

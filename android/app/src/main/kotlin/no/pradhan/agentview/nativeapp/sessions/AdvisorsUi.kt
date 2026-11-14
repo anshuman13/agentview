@@ -269,7 +269,9 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                         }
                         if (a.id == "pm") {
                             val items = moved ?: backlog.data
-                            SectionHeader("Backlog", items?.size?.takeIf { it > 0 }?.toString(), action = {
+                            val todo = items?.filter { it.status != "done" }
+                            val done = items?.filter { it.status == "done" }
+                            SectionHeader("Backlog", todo?.size?.takeIf { it > 0 }?.toString(), action = {
                                 MoreButton("Project") { dismiss -> for (r in ws.repos) MenuItem(folderName(r.cwd), "repo", { dismiss(); advisorPick = r.cwd; picked = r.cwd }, checked = r.cwd == root) }
                             })
                             val project = root
@@ -281,8 +283,9 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                 items.isEmpty() -> EmptyState("No backlog yet", "The PM ranks what to build next", "list-ordered", action = if (hub.readOnly) null else ({
                                     Button("Ask PM to rank", { scope.askAdvisor(hub, "pm", rankPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
                                 }))
+                                todo!!.isEmpty() -> EmptyState("No open items", icon = "list-ordered")
                                 else -> Group {
-                                    items.forEachIndexed { n, i ->
+                                    todo.forEachIndexed { n, i ->
                                         if (n > 0) Hairline()
                                         ListRow(
                                             i.title, "${i.status.replaceFirstChar { it.uppercase() }} · ${i.why}",
@@ -295,9 +298,19 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                                 })
                                                 val move = { dir: String -> dismiss(); scope.launch { runCatching { hub.api.moveBacklog(project, i.slug, dir) }.onSuccess { moved = it }.onFailure { hub.notice.value = "Could not move the item" } }; Unit }
                                                 MenuItem("Move up", "arrow-up", { move("up") }, enabled = n > 0)
-                                                MenuItem("Move down", "arrow-down", { move("down") }, enabled = n < items.size - 1)
+                                                MenuItem("Move down", "arrow-down", { move("down") }, enabled = n < todo.size - 1)
                                             }),
                                         )
+                                    }
+                                }
+                            }
+                            if (project != null && !done.isNullOrEmpty()) {
+                                var doneOpen by rememberSaveable(root) { mutableStateOf(false) }
+                                SectionHeader("Done", done.size.toString(), open = doneOpen, onToggle = { doneOpen = !doneOpen })
+                                if (doneOpen) Group {
+                                    done.forEachIndexed { n, i ->
+                                        if (n > 0) Hairline()
+                                        ListRow(i.title, "Done · ${i.why}", leading = { Text(i.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 1)
                                     }
                                 }
                             }

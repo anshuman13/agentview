@@ -68,18 +68,23 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
   const items = moved ?? fetched;
   const runs = useStore((s) => s.runs);
   const loop = root ? advisorLoopOf(runs, root) : undefined;
+  const [doneOpen, setDoneOpen] = useState(false);
+  const todo = items?.filter((i) => i.status !== 'done');
+  const done = items?.filter((i) => i.status === 'done');
   const move = (slug: string, dir: 'up' | 'down') => moveBacklogItem(root!, slug, dir).then((list) => (list ? setMoved(list) : notice('Could not move the item')));
   return (
     <>
-      <Section label="Backlog" count={items?.length || undefined} action={picker} />
+      <Section label="Backlog" count={todo?.length || undefined} action={picker} />
       {loop && <div className="ui-group"><LoopRow loop={loop} /></div>}
       {!root ? (
         <div className="ui-group"><Row title="Project" meta="Pick one to see its backlog" plain /></div>
       ) : !items ? <Skeleton rows={2} /> : !items.length ? (
         <EmptyState size="sm" icon="list-ordered" title="No backlog yet" hint="The PM ranks what to build next" action={<Button size="sm" variant="tinted" onClick={() => askAdvisor('pm', rankPrompt(root))}>Ask PM to rank</Button>} />
+      ) : !todo!.length ? (
+        <EmptyState size="sm" icon="list-ordered" title="No open items" />
       ) : (
         <div className="ui-group">
-          {items.map((i, n) => (
+          {todo!.map((i, n) => (
             <Row
               key={i.rank}
               leading={i.rank}
@@ -89,11 +94,21 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
               menu={<>
                 {canBuildItem(i) && <MenuItem icon="play" onClick={() => buildItem(root, i)}>Build</MenuItem>}
                 <MenuItem icon="arrow-up" disabled={n === 0} onClick={() => move(i.slug, 'up')}>Move up</MenuItem>
-                <MenuItem icon="arrow-down" disabled={n === items.length - 1} onClick={() => move(i.slug, 'down')}>Move down</MenuItem>
+                <MenuItem icon="arrow-down" disabled={n === todo!.length - 1} onClick={() => move(i.slug, 'down')}>Move down</MenuItem>
               </>}
             />
           ))}
         </div>
+      )}
+      {root && !!done?.length && (
+        <>
+          <Section label="Done" count={done.length} open={doneOpen} onToggle={() => setDoneOpen(!doneOpen)} />
+          {doneOpen && (
+            <div className="ui-group">
+              {done.map((i) => <Row key={i.rank} leading={i.rank} title={i.title} meta={`Done · ${i.why}`} plain />)}
+            </div>
+          )}
+        </>
       )}
     </>
   );

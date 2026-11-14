@@ -44,13 +44,16 @@ export const canBuildItem = (i: Pick<BacklogItem, 'status'>) => i.status === 'pr
 
 export const rankPrompt = (root: string) => `Read ${root}/.claude/backlog.md and the project's code and recent changes, then rank what to build next. Rewrite the backlog file (at most 10 lines) and reply with the top three.`;
 
-// Swaps a backlog line with its neighbour and renumbers the backlog lines 1 to n; null when the slug is not in the file.
+// Swaps a backlog line with its neighbour (an open line with the nearest open line that way, done lines between stay put) and renumbers the backlog lines 1 to n; null when the slug is not in the file.
 export const moveBacklog = (md: string, slug: string, dir: 'up' | 'down'): string | null => {
   const lines = md.split('\n');
   const at = lines.flatMap((l, n) => (BACKLOG_LINE.test(l.trim()) ? [n] : []));
   const from = at.findIndex((n) => BACKLOG_LINE.exec(lines[n].trim())?.[2] === slug);
   if (from < 0) return null;
-  const to = from + (dir === 'up' ? -1 : 1);
+  const step = dir === 'up' ? -1 : 1;
+  const done = (k: number) => BACKLOG_LINE.exec(lines[at[k]].trim())?.[5] === 'done';
+  let to = from + step;
+  if (!done(from)) while (to >= 0 && to < at.length && done(to)) to += step;
   if (to < 0 || to >= at.length) return md;
   [lines[at[from]], lines[at[to]]] = [lines[at[to]], lines[at[from]]];
   at.forEach((n, i) => { lines[n] = lines[n].replace(/^(\s*)\d+/, `$1${i + 1}`); });
