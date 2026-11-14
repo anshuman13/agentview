@@ -30,9 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import java.time.Instant
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.EXTRA_ROOTS
 import no.pradhan.agentview.nativeapp.app.ExtraContent
 import no.pradhan.agentview.nativeapp.app.ExtraMenu
@@ -111,7 +113,7 @@ private fun rememberCodexNav() = CodexNav(
 private fun rememberCodexNow(hub: Hub, st: CodexState): Long {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(st.items, st.meetings, now / 60_000) {
-        if (!hub.readOnly) endedPoints(st.items, st.meetings, now).forEach { hub.codex.update(it, mapOf("status" to RAISED)) }
+        if (!hub.readOnly) withContext(Dispatchers.Default) { endedPoints(st.items, st.meetings, now) }.forEach { hub.codex.update(it, mapOf("status" to RAISED)) }
     }
     val origin by hub.origin.collectAsState()
     WhileStarted(origin) {

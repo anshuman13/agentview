@@ -10,18 +10,25 @@ private fun isPoint(r: Row) = !r.deleted && r.status == POINT && !r.people.isNul
 fun firstName(name: String) = name.trim().split(Regex("\\s+")).firstOrNull()?.ifEmpty { null } ?: name
 
 // The first meeting with the point's person that starts after the point was raised.
-fun pointMeeting(point: Row, meetings: List<Row>): Row? {
+fun pointMeeting(point: Row, meetings: List<Row>): Row? = firstMeeting(point, liveRows(meetings))
+
+private fun firstMeeting(point: Row, live: List<Row>): Row? {
     val since = point.madeAt
-    return liveRows(meetings).filter { m -> m.profile == point.profile && m.startsAt != null && m.startsAt!! >= since && peopleOf(m).any { sameName(it, point.people!!) } }.minByOrNull { it.startsAt!! }
+    return live.filter { m -> m.profile == point.profile && m.startsAt != null && m.startsAt!! >= since && peopleOf(m).any { sameName(it, point.people!!) } }.minByOrNull { it.startsAt!! }
 }
 
 fun pointsOf(items: List<Row>, person: String) = items.filter { isPoint(it) && sameName(it.people!!, person) }.sortedBy { it.madeAt }
-fun pointsFor(m: Row, items: List<Row>, meetings: List<Row>) = items.filter { isPoint(it) && pointMeeting(it, meetings)?.key == m.key }.sortedBy { it.madeAt }
+fun pointsFor(m: Row, items: List<Row>, meetings: List<Row>): List<Row> {
+    val live = liveRows(meetings)
+    return items.filter { isPoint(it) && firstMeeting(it, live)?.key == m.key }.sortedBy { it.madeAt }
+}
 
 // Open points whose meeting has ended.
-fun endedPoints(items: List<Row>, meetings: List<Row>, now: Long) = items.filter { r ->
-    val m = if (isPoint(r)) pointMeeting(r, meetings) else null
-    m != null && (m.endsAt ?: m.startsAt!!) <= now
+fun endedPoints(items: List<Row>, meetings: List<Row>, now: Long): List<Row> {
+    val points = items.filter(::isPoint)
+    if (points.isEmpty()) return emptyList()
+    val live = liveRows(meetings)
+    return points.filter { r -> firstMeeting(r, live)?.let { m -> (m.endsAt ?: m.startsAt!!) <= now } == true }
 }
 
 // Attendees of the given meeting first, then of the latest meetings of the profile that have started.
