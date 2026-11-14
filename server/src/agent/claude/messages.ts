@@ -7,7 +7,8 @@ import { limitReset } from './limitText.js';
 import type { Rewinds } from './rewinds.js';
 import type { TaskTracker } from './taskTracker.js';
 import { agentResult, isAgent, patchAgent } from './subagents.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, clipResult, EDIT_TOOLS, editedPath } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, noteLaunch, notificationResults, toolResultText } from './transcript.js';
+import { toolUseEvent, clipResult, EDIT_TOOLS, editedPath } from '../steps.js';
 
 
 // Turns the CLI's assistant and user messages into chat events.

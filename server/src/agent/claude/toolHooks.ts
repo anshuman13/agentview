@@ -1,4 +1,4 @@
-import { editedPath } from './transcript.js';
+import { editedPath } from '../steps.js';
 import type { HookInput, HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentHost } from '../types.js';
 import { STATUS_REMINDER } from './options.js';

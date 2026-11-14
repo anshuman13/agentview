@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { SessionMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { WorkflowRun } from './history.js';
-import { BIG_BRO, type AgentEvent, type AgentUsage, type CacheInfo, type ChatEvent } from '../../../../shared/protocol.js';
+import { clipInput, clipResult, toolUseEvent, type AgentIds } from '../steps.js';
+
+export type { AgentIds };
+import { type AgentEvent, type AgentUsage, type CacheInfo, type ChatEvent } from '../../../../shared/protocol.js';
 
 const COMPACT_SUMMARY = 'This session is being continued from a previous conversation';
 export const RUN_ID = /Run ID: (wf_[\w-]+)/;
@@ -10,7 +13,6 @@ export const AGENT_TOOLS = new Set(['Agent', 'Task']);
 const TRAILER = /\s*agentId: \w+[^\n]*\n<usage>[\s\S]*<\/usage>\s*$/;
 const HANDBACK = /^Another Claude session sent a message:\n<agent-message from="(\w+)">\n\[Subagent hand-back\][^\n]*\n([\s\S]*?)\n<\/agent-message>/;
 
-export type AgentIds = Map<string, string>;
 
 export function noteLaunch(agents: AgentIds, toolUseId: string, text: string) {
   const id = text.match(/agentId: (\w+)/)?.[1];
@@ -138,32 +140,6 @@ export function historyFrom(msgs: SessionMessage[], subagents: Subagents = {}, w
   for (const [parent, sub] of Object.entries(subagents)) st.events.push(...subagentEvents(sub, parent, subagents));
   const all = withWorkflowRuns(st, withAgents(st.events, subagents, st.usages, st.agents), workflows);
   return { events: all, context: st.context, cache: st.cache, agents: st.agents };
-}
-
-const CLIP = 4096;
-
-// Tool results kept in events, as the transcript reader and both live drivers store them.
-export const clipResult = (text: string) => text.slice(0, 4000);
-
-// The tools that write files, and the file one writes (a notebook edit names notebook_path).
-export const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'];
-export const editedPath = (input: unknown) => {
-  const { file_path, notebook_path } = (input ?? {}) as { file_path?: unknown; notebook_path?: unknown };
-  const file = file_path ?? notebook_path;
-  return typeof file === 'string' ? file : undefined;
-};
-
-// Long strings in tool inputs (whole files in Write and Edit) are cut for the UI; the marker keeps editCount exact.
-export function clipInput(v: unknown): unknown {
-  if (typeof v === 'string') {
-    if (v.length <= CLIP) return v;
-    const head = v.slice(0, CLIP);
-    const more = v.replace(/\n$/, '').split('\n').length - head.split('\n').length;
-    return more > 0 ? `${head}\n… ${more} more lines` : `${head} …`;
-  }
-  if (Array.isArray(v)) return v.map(clipInput);
-  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, clipInput(x)]));
-  return v;
 }
 
 export function agentEvent(id: string, rawInput: unknown, at: number, parent?: string): AgentEvent {
@@ -304,12 +280,6 @@ export function advisorEvent(id: string, at: number): ChatEvent {
   return { id, kind: 'tool_use', name: 'Advisor', input: {}, summary: 'Consulted the advisor', at };
 }
 
-export function toolUseEvent(id: string, name: string, rawInput: unknown, at: number, parent?: string, agents?: AgentIds): ChatEvent {
-  const input = clipInput(rawInput ?? {}) as Record<string, unknown>;
-  const agent = name === 'SendMessage' && typeof input.to === 'string' ? agents?.get(input.to) : undefined;
-  return { id, kind: 'tool_use', name, input, summary: summarizeTool(name, input), at, ...(parent && { parent }), ...(agent && { agent }) };
-}
-
 export function contextFrom(usage: any): number | null {
   if (!usage) return null;
   const total = (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0);
@@ -326,28 +296,4 @@ export function cacheFrom(usage: any, at: number, prev: CacheInfo | null): Cache
 export function toolResultText(block: { content?: unknown }): string {
   if (typeof block.content === 'string') return block.content;
   return ((block.content as any[]) ?? []).map((c) => (c.type === 'text' ? c.text : '')).join('\n');
-}
-
-function summarizeTool(name: string, input: Record<string, unknown>): string {
-  const s = (v: unknown) => (typeof v === 'string' ? v : '');
-  switch (name) {
-    case 'Read':
-    case 'Edit':
-    case 'Write':
-    case 'MultiEdit':
-      return `${name} ${s(input.file_path)}`;
-    case 'Bash':
-      return s(input.description) || `$ ${s(input.command).slice(0, 120)}`;
-    case 'Grep':
-      return `grep ${s(input.pattern)}`;
-    case 'Glob':
-      return `glob ${s(input.pattern)}`;
-    case 'AskUserQuestion':
-      return 'Asked you a question';
-    case 'Agent':
-    case 'Task':
-      return input.subagent_type === BIG_BRO ? `Asked Fable: ${s(input.description)}` : `Agent: ${s(input.description)}`;
-    default:
-      return name;
-  }
 }

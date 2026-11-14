@@ -1,5 +1,5 @@
 import type { ChatEvent } from '../../../../shared/protocol.js';
-import { clipResult, toolUseEvent } from '../claude/transcript.js';
+import { clipResult, toolUseEvent } from '../steps.js';
 import type { FileUpdateChange, ThreadItem, Turn } from './protocol.js';
 
 const DENIED = 'User denied this action in the AgentView UI.';

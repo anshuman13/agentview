@@ -1,4 +1,4 @@
-import { EDIT_TOOLS } from './transcript.js';
+import { EDIT_TOOLS } from '../steps.js';
 import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpServerConfig, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

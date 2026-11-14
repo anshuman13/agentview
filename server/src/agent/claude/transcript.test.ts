@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { cacheFrom, historyFrom, toolUseEvent, usageFrom } from './transcript.js';
+import { cacheFrom, historyFrom, usageFrom } from './transcript.js';
+import { toolUseEvent } from '../steps.js';
 import { editCount } from '../../../../shared/edits.js';
 
 const msg = (uuid: string, type: string, content: unknown) => ({ type, uuid, session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
