@@ -17,6 +17,7 @@ import { useLongPress } from '../../ui/longPress';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
 import { HeadState } from './HeadState';
 import { narrow } from '../../app/shell/useNarrow';
+import { useGit } from '../../workspace/gitStatus';
 
 function lastReplyOf(turns: Turn[]) {
   for (let i = turns.length - 1; i >= 0; i--) if (turns[i].reply) return turns[i].reply;
@@ -53,6 +54,8 @@ export function Brief() {
   const { running: agentsRunning, done: agentsDone } = agentCounts(agents);
   const waitingElsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
   const usage = useUsage();
+  // The review reads the working tree, which can hold edits older than the loaded events.
+  const uncommitted = (useGit().status?.files.length ?? 0) > 0;
   const [agentSel, setAgentSel] = useState<string | null>(null);
   const [showAgents, setShowAgents] = useState(false);
   const extras = [advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
@@ -92,7 +95,7 @@ export function Brief() {
           </span>
           <span className="spacer" />
           <HeadState state={state} status={status} loop={loop} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
-          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
+          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         {showAgents ? <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense> : <Transcript showWork={showWork} />}
       </div>
