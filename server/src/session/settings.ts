@@ -1,5 +1,5 @@
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LEVELS, type Account, type Effort } from '../../../shared/protocol.js';
-import { providerLabel } from '../../../shared/providers.js';
+import { providerLabel, startModeFor } from '../../../shared/providers.js';
 import type { AgentSession } from './session.js';
 
 export class SessionSettings {
@@ -33,7 +33,9 @@ export class SessionSettings {
     this.s.system(`Switched to the ${ACCOUNT_LABEL[a as Account]} Claude account${note ? `. ${note}` : ''}`);
   }
 
-  async setPermissionMode(mode: string) {
+  // A mode the provider does not offer becomes its Default, whichever client sent it.
+  async setPermissionMode(asked: string) {
+    const mode = startModeFor(asked, this.s.driver.provider)!;
     await this.s.driver.setPermissionMode(mode);
     this.s.setSession({ permissionMode: mode });
     this.s.system(`Permission mode: ${mode}`);

@@ -1,0 +1,7 @@
+[
+  { "name": "plan on claude stays plan", "mode": "plan", "provider": "claude", "expected": "plan" },
+  { "name": "plan on codex starts in default", "mode": "plan", "provider": "codex", "expected": "default" },
+  { "name": "no mode keeps the default", "mode": null, "provider": "codex", "expected": null },
+  { "name": "a codex mode stays on codex", "mode": "default", "provider": "codex", "expected": "default" },
+  { "name": "no provider means claude", "mode": "acceptEdits", "provider": null, "expected": "acceptEdits" }
+]

@@ -30,6 +30,9 @@ export const providerMark = (p?: Provider) => (p && p !== 'claude' ? LABEL[p] : 
 
 export const providerModes = (p?: Provider): ModeOption[] => (p === 'codex' ? CODEX_MODES : PERMISSION_MODES.map((value) => ({ value, ...CLAUDE_MODES[value] })));
 
+// A start mode the provider does not offer (Plan on Codex) starts in Default (Android startModeFor).
+export const startModeFor = (mode: string | null, p?: Provider) => (mode !== null && !providerModes(p).some((m) => m.value === mode) ? 'default' : mode);
+
 const SUPERVISED: ModeOption = { value: 'supervised', label: 'Supervised', detail: 'Auto, and review each turn' };
 
 // The mode list the pick menus show: Supervised (auto with review each turn) follows Auto. Shift+Tab, the palette and new chats use providerModes.

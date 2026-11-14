@@ -20,6 +20,7 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
 import no.pradhan.agentview.nativeapp.app.BarEvent
 import no.pradhan.agentview.nativeapp.chat.mergeTail
+import no.pradhan.agentview.nativeapp.chat.startModeFor
 import no.pradhan.agentview.nativeapp.app.BarState
 import no.pradhan.agentview.nativeapp.app.FEATURES
 import no.pradhan.agentview.nativeapp.app.appCounts
@@ -230,6 +231,13 @@ class SharedCasesTest {
         for (c in cases("finished-line")) {
             val endedAt = c.nullable("endedAt")?.jsonPrimitive?.long
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, finishedLine(c.str("why"), endedAt) { "${it}h ago" })
+        }
+    }
+
+    @Test fun startMode() {
+        for (c in cases("start-mode")) {
+            val mode = c.nullable("mode")?.jsonPrimitive?.content
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, startModeFor(mode, c.nullable("provider")?.jsonPrimitive?.content))
         }
     }
 

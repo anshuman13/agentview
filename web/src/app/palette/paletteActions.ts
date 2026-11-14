@@ -10,6 +10,7 @@ import { askAdvisor } from '../../sessions/advisorChat';
 import { repoRootOf } from '../../sessions/folders';
 import { forkChat } from '../../chat/chatActions';
 import { specPrompt } from '../../../../shared/specTasks';
+import { startModeFor } from '../../../../shared/providers';
 import { advisorOf, auditPrompt, type AdvisorId } from '../../../../shared/advisors';
 import { paletteFeature } from '../../../../shared/featureUse';
 import type { PaletteItem } from './paletteLogic';
@@ -67,7 +68,7 @@ export function perform(id: string) {
   else if (id === 'goal') openGoal();
   else if (id === 'goalFile') startGoal({ plan: getState().ui.openFile ?? undefined });
   else if (id === 'spec') {
-    send({ type: 'set_permission_mode', mode: 'plan' });
+    send({ type: 'set_permission_mode', mode: startModeFor('plan', getState().session.provider)! });
     window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: specPrompt('') } }));
   }
   else if (id === 'stop') send({ type: 'interrupt' });

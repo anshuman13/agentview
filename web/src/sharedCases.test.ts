@@ -13,7 +13,7 @@ import { buildsLine, finishedLine, goalEnd, mergeQuiet } from '../../shared/goal
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
-import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
+import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, startModeFor, type Billing } from '../../shared/providers';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
@@ -340,6 +340,10 @@ describe('cases shared with the Android app', () => {
   }
 
   type Table = { name: string; provider: Provider | null; label: string; billing: Billing; mark: string | null; modes: string[] };
+  for (const c of cases<{ name: string; mode: string | null; provider: Provider | null; expected: string | null }>('start-mode')) {
+    it(`startModeFor: ${c.name}`, () => expect(startModeFor(c.mode, c.provider ?? undefined)).toBe(c.expected));
+  }
+
   for (const c of cases<Table>('providers')) {
     it(`provider table: ${c.name}`, () => {
       const p = c.provider ?? undefined;
