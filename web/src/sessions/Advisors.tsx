@@ -10,9 +10,10 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditPrompt, canBuildItem, defaultAdvisorRoot, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
+import { ADVISORS, ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_EVERY, advisorLoopCommand, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditPrompt, canBuildItem, defaultAdvisorRoot, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import { pipelineLabel, specRowParts, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
+import { span } from '../../../shared/util';
 import { OUTCOME_DOT } from '../chat/composer/composerLogic';
 import { holdBadge } from './buildsLogic';
 import { openRun } from './goalLogic';
@@ -60,6 +61,17 @@ function LoopRow({ loop }: { loop: ChatRun }) {
   return <Row title="Advisor loop" meta={advisorLoopLine(loop)} leading={last && <span className={`dot ${OUTCOME_DOT[last.outcome]}`} />} onClick={() => openRun(loop)} />;
 }
 
+// The Advisor loop row of Backlog when none runs: Start sends its goal to the PM chat, disabled for 10 s so a second tap cannot replace it.
+function StartLoopRow({ root }: { root: string }) {
+  const [sent, setSent] = useState(false);
+  const start = () => {
+    setSent(true);
+    setTimeout(() => setSent(false), 10_000);
+    askAdvisor('pm', advisorLoopCommand(root, Date.now()));
+  };
+  return <Row title="Advisor loop" meta={`Not running · every ${span(ADVISOR_LOOP_EVERY)} · up to ${ADVISOR_LOOP_BUILDS} builds`} plain action={<Button size="sm" variant="tinted" disabled={sent} onClick={start}>Start</Button>} />;
+}
+
 // The PM's ranked backlog for one project; reloads after a PM turn, which may have rewritten it.
 function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string; root: string | null; picker: ReactNode }) {
   const fetched = useRootFetch(fetchBacklog, root, shown, turns).data;
@@ -75,7 +87,7 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
   return (
     <>
       <Section label="Backlog" count={todo?.length || undefined} action={picker} />
-      {loop && <div className="ui-group"><LoopRow loop={loop} /></div>}
+      {root && <div className="ui-group">{loop ? <LoopRow loop={loop} /> : <StartLoopRow root={root} />}</div>}
       {!root ? (
         <div className="ui-group"><Row title="Project" meta="Pick one to see its backlog" plain /></div>
       ) : !items ? <Skeleton rows={2} /> : !items.length ? (

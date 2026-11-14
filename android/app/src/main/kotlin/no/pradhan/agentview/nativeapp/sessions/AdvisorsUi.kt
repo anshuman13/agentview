@@ -18,9 +18,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import no.pradhan.agentview.nativeapp.codex.autopilot.ADVISOR_LOOP_BUILDS
+import no.pradhan.agentview.nativeapp.codex.autopilot.ADVISOR_LOOP_CAP
+import no.pradhan.agentview.nativeapp.codex.autopilot.ADVISOR_LOOP_EVERY
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
+import no.pradhan.agentview.nativeapp.codex.autopilot.everyText
 import no.pradhan.agentview.nativeapp.codex.autopilot.firstRoundText
+import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
 import no.pradhan.agentview.nativeapp.codex.autopilot.openRun
 import no.pradhan.agentview.nativeapp.codex.autopilot.outcomeDot
 import no.pradhan.agentview.nativeapp.codex.autopilot.roundText
@@ -69,6 +76,9 @@ data class AdvisorInfo(val id: String, val memory: String = "", val chats: List<
 data class BacklogItem(val rank: Int, val slug: String, val title: String, val why: String = "", val status: String, val spec: Boolean = false)
 
 internal fun advisorLoopGoal(root: String) = "Advisor loop for $root, never met on its own. Each round, as PM: reread $root/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to $root/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build (/agentview:build <slug>, the build card's Build action) and mark the item building; one build in flight per project; mark it done when merged, and if its spec has a Fixes: line ask the Designer advisor to recheck those findings, and say in the ROUND line if you cannot reach it. A claimed finding the Designer leaves open goes back to proposed, keeping its slug: next round move that line from done back to proposed and note the finding in the why. If the backlog is empty, ask the Designer for an audit when the newest $root/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing."
+
+internal fun advisorLoopCommand(root: String, now: Long) =
+    goalCommand(GoalForm(advisorLoopGoal(root), ADVISOR_LOOP_EVERY, null, null, ADVISOR_LOOP_CAP, ADVISOR_LOOP_BUILDS), now)
 
 // The project the page shows before one is picked: web defaultAdvisorRoot in shared/advisors.ts.
 internal fun defaultAdvisorRoot(openRoot: String?, repos: List<Pair<String, Long>>): String? =
@@ -182,6 +192,8 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     var loadedTurns by remember { mutableStateOf(turns) }
     LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadSpecs(); reloadAudit() } }
     var auditOpen by rememberSaveable { mutableStateOf(false) }
+    var starting by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(starting) { if (starting) { delay(10_000); starting = false } }
     val scope = rememberCoroutineScope()
     fun go(open: suspend () -> Boolean) = scope.launch { if (open()) onOpen() }
     val info = load.data
@@ -276,7 +288,16 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                             })
                             val project = root
                             val loop = project?.let { advisorLoopOf(st.runs, it) }
-                            if (loop != null) Group { AdvisorLoopRow(hub, loop, ::go) }
+                            if (project != null) Group {
+                                if (loop != null) AdvisorLoopRow(hub, loop, ::go)
+                                else ListRow(
+                                    "Advisor loop", "Not running · every ${everyText(ADVISOR_LOOP_EVERY)} · up to $ADVISOR_LOOP_BUILDS builds",
+                                    state = {
+                                        Button("Start", { starting = true; scope.askAdvisor(hub, "pm", advisorLoopCommand(project, System.currentTimeMillis()), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = !hub.readOnly && !starting)
+                                    },
+                                    stateSlot = true, lines = 1, metaLines = 1,
+                                )
+                            }
                             when {
                                 project == null -> Group { ListRow("Project", "Pick one in the menu to see its backlog", lines = 1) }
                                 items == null -> Loading("Loading backlog")
