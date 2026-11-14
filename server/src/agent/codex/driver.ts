@@ -47,6 +47,8 @@ export class CodexDriver implements AgentDriver {
   private turnId: string | null = null;
   private closed = false;
   private titled: boolean;
+  // Bumped by Stop, so a prompt still waiting for the process is dropped.
+  private stops = 0;
   private models: CodexModel[] = [];
   private asks = new Set<AbortController>();
   private usageTimer: ReturnType<typeof setInterval> | undefined;
@@ -54,7 +56,7 @@ export class CodexDriver implements AgentDriver {
   constructor(private host: AgentHost, resume?: string, private fork = false) {
     this.threadId = resume;
     this.instructionFiles = codexInstructionFiles(host.cwd);
-    this.titled = Boolean(resume);
+    this.titled = Boolean(resume) && !fork;
     this.stream = new CodexStream(host);
   }
 
@@ -140,7 +142,7 @@ export class CodexDriver implements AgentDriver {
 
   private onNotification(method: string, params: any) {
     if (method === 'turn/started') this.turnId = params.turn.id;
-    else if (method === 'turn/completed') this.turnId = null;
+    else if (method === 'turn/completed' && params.turn?.id === this.turnId) this.turnId = null;
     else if (method === 'account/rateLimits/updated') return this.host.setSession({ usage: planUsage(params.rateLimits) });
     try {
       this.stream.handle(method, params);
@@ -217,25 +219,29 @@ export class CodexDriver implements AgentDriver {
 
   send(text: string, _id?: string, priority?: 'next') {
     this.start();
-    if (!this.titled) {
-      this.titled = true;
-      if (this.threadId) void noteThread(this.threadId, { cwd: this.host.cwd, summary: text.replace(/\s+/g, ' ').trim().slice(0, 80) });
-    }
-    this.queue = this.queue.then(() => this.deliver(text, priority === 'next'));
+    const title = !this.titled;
+    this.titled = true;
+    const stops = this.stops;
+    this.queue = this.queue.then(() => this.deliver(text, priority === 'next', title, stops));
   }
 
   // A message sent mid-turn joins the running turn; otherwise it starts one.
-  private async deliver(text: string, steer: boolean) {
+  private async deliver(text: string, steer: boolean, title = false, stops = this.stops) {
     const input: UserInput[] = [{ type: 'text', text, text_elements: [] }];
     try {
       await this.ready;
       const rpc = this.rpc;
       if (!rpc) throw new Error('The codex process ended');
+      // A new thread has its id only once the process is ready.
+      if (title && this.threadId) void noteThread(this.threadId, { cwd: this.host.cwd, summary: text.replace(/\s+/g, ' ').trim().slice(0, 80) });
+      if (stops !== this.stops) return this.host.turnResult({ id: randomUUID(), ok: false, text: 'Stopped', costUsd: 0, isError: true });
       // A steer that misses because the turn ended starts a new turn with the text.
       if (steer && (await this.steer(rpc, input))) return;
       const { approvalPolicy, sandboxPolicy } = policyFor(this.mode);
       const { turn } = await rpc.request<{ turn: { id: string } }>('turn/start', { threadId: this.threadId, input, approvalPolicy, sandboxPolicy, ...this.modelParams() });
       this.turnId = turn.id;
+      // Stop came while the turn was starting.
+      if (stops !== this.stops) return void (await rpc.request('turn/interrupt', { threadId: this.threadId, turnId: turn.id }));
       if (steer && !this.host.state.session.running) this.host.turnStarted('Codex started a turn for your message');
     } catch (err) {
       this.host.turnResult({ id: randomUUID(), ok: false, text: errText(err), costUsd: 0, isError: true });
@@ -298,6 +304,7 @@ export class CodexDriver implements AgentDriver {
   }
 
   async interrupt() {
+    this.stops++;
     this.abortAsks();
     const rpc = this.rpc;
     if (rpc && this.turnId) await rpc.request('turn/interrupt', { threadId: this.threadId, turnId: this.turnId });

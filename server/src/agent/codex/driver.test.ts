@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { CodexDriver } from './driver.js';
+import { codexThread } from './threads.js';
+import { waitFor } from '../../../../testing.js';
 
 function setup(running: boolean, steer: () => Promise<unknown>) {
   const calls: Array<{ method: string; params: any }> = [];
@@ -55,5 +57,45 @@ describe('deliver', () => {
     d.rpc.request = async () => Promise.reject(new Error('boom'));
     await d.deliver('hi', false);
     expect(results).toMatchObject([{ ok: false, text: 'boom' }]);
+  });
+  it('drops a prompt that Stop came before, and interrupts one whose turn was starting', async () => {
+    const early = setup(false, () => Promise.resolve());
+    early.d.turnId = null;
+    const stops = early.d.stops;
+    await early.d.interrupt();
+    await early.d.deliver('hi', false, false, stops);
+    expect(early.calls).toEqual([]);
+    expect(early.results).toMatchObject([{ ok: false, text: 'Stopped' }]);
+    const starting = setup(false, () => Promise.resolve());
+    starting.d.turnId = null;
+    const request = starting.d.rpc.request;
+    starting.d.rpc.request = async (method: string, params: any) => {
+      const r = await request(method, params);
+      if (method === 'turn/start') starting.d.stops++;
+      return r;
+    };
+    await starting.d.deliver('hi', false);
+    expect(starting.calls.map((c) => c.method)).toEqual(['turn/start', 'turn/interrupt']);
+  });
+  it('records the title of a new thread once its id is known', async () => {
+    const { d } = setup(false, () => Promise.resolve());
+    d.turnId = null;
+    d.threadId = undefined;
+    let resolve!: () => void;
+    d.ready = new Promise<void>((r) => (resolve = r));
+    d.start = () => undefined;
+    d.send('first prompt');
+    d.threadId = 't9';
+    resolve();
+    await d.queue;
+    await waitFor(async () => expect((await codexThread('t9'))?.summary).toBe('first prompt'));
+  });
+  it('keeps the current turn when an older turn completes', () => {
+    const { d } = setup(true, () => Promise.resolve());
+    d.stream = { handle: () => undefined };
+    d.onNotification('turn/completed', { turn: { id: 'old' } });
+    expect(d.turnId).toBe('turn1');
+    d.onNotification('turn/completed', { turn: { id: 'turn1' } });
+    expect(d.turnId).toBe(null);
   });
 });
