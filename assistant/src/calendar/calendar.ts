@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { ask, scanPaused } from '../core/claude.js';
-import { deleteMeta, getMeta, setMeta, type Profile } from '../core/db.js';
+import { deleteMeta, getMeta, pruneMeta, setMeta, type Profile } from '../core/db.js';
 import { applyChanges, type Change } from '../core/sync.js';
 import { MIN, workSlotDue } from '../core/time.js';
 import { loop, once } from '../core/once.js';
@@ -67,6 +67,8 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
     const applied = applyChanges(db, changes).applied;
     for (const id of back) deleteMeta(db, sweptKey(id));
     for (const id of gone) setMeta(db, sweptKey(id), String(now));
+    // A meeting swept a month ago is long out of the import window, so its key can go.
+    pruneMeta(db, `swept:${profile}:`, now - 30 * 86_400_000);
     return applied;
   })();
 }

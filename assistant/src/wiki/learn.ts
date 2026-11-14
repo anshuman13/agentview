@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { isLimited } from '../../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from '../calendar/calendar.js';
 import { ask } from '../core/claude.js';
-import { getMeta, setMeta, type Profile } from '../core/db.js';
+import { getMeta, pruneMeta, setMeta, type Profile } from '../core/db.js';
 import { applyChanges, type Change } from '../core/sync.js';
 import { norm } from './wikiUpdates.js';
 
@@ -87,5 +87,7 @@ export async function learnFromChat(db: Database, c: Chat, now = Date.now(), run
   const claims = await run(c, events, memory);
   const proposed = saveLearned(db, c, claims, now);
   setMeta(db, key, String(Math.max(...events.map((e) => e.at))));
+  // A cursor only skips events already read, so one for a chat quiet for three months can go.
+  pruneMeta(db, `learn:${c.profile}:`, now - 90 * 86_400_000);
   return { proposed };
 }
