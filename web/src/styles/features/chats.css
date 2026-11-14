@@ -137,6 +137,7 @@
   .chat-row .ui-row-wrap { padding-right: 0; }
   .chat-row .ui-row-wrap > .icon-btn { position: absolute; right: var(--list-pad); top: 50%; translate: 0 -50%; opacity: 0; }
   .chat-row .ui-row-wrap:hover > .ui-row { --state: var(--state-hover); }
+  .chat-row .ui-row-wrap:is(:hover, :focus-within):has(> .icon-btn) > .ui-row, .chat-row .ui-row-wrap:has(> .icon-btn[aria-expanded='true']) > .ui-row { padding-right: calc(var(--list-pad) + var(--size-lg)); }
   .chat-row .ui-row-wrap:is(:hover, :focus-within) > .icon-btn, .chat-row .ui-row-wrap > .icon-btn[aria-expanded='true'] { opacity: 1; }
 }
 
