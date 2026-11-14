@@ -28,8 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
@@ -182,11 +180,7 @@ private fun PermissionBody(p: Pending.Permission) {
             CodeBlock(input.s("command"), modifier = Modifier.heightIn(max = Tokens.scrollMid))
         }
         "Edit", "Write", "MultiEdit" -> {
-            val edits = when (p.toolName) {
-                "Write" -> listOf("" to input.s("content"))
-                "Edit" -> listOf(input.s("old_string") to input.s("new_string"))
-                else -> (input["edits"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.let { e -> e.s("old_string") to e.s("new_string") } } ?: emptyList()
-            }
+            val edits = editPairs(p.toolName, input).orEmpty()
             Text(input.s("file_path"), style = Mono, color = av.fg)
             edits.forEach { (a, b) -> DiffView(lineDiff(a, b)) }
         }

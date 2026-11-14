@@ -1,8 +1,7 @@
 package no.pradhan.agentview.nativeapp.app
 
 import java.util.UUID
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
+import no.pradhan.agentview.nativeapp.chat.editPairs
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.Pending
@@ -41,12 +40,7 @@ private const val PREVIEW_WIDTH = 100
 
 // An Edit, Write or MultiEdit request as a notification: the file with "+N -M" for the title, the first changed lines for the expanded text.
 fun editPreview(p: Pending.Permission): Pair<String, String>? {
-    val edits = when (p.toolName) {
-        "Write" -> listOf("" to p.input.s("content"))
-        "Edit" -> listOf(p.input.s("old_string") to p.input.s("new_string"))
-        "MultiEdit" -> (p.input["edits"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.let { e -> e.s("old_string") to e.s("new_string") } } ?: emptyList()
-        else -> return null
-    }
+    val edits = editPairs(p.toolName, p.input) ?: return null
     val changed = edits.flatMap { (a, b) -> lineDiff(a, b).filter { it.mark != ' ' } }
     val file = p.input.s("file_path").substringAfterLast('/')
     val title = "${p.toolName} $file +${changed.count { it.mark == '+' }} -${changed.count { it.mark == '-' }}"

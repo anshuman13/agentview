@@ -113,6 +113,14 @@ private fun lines(v: String): Int {
     return v.split('\n').size - (if (v.endsWith("\n")) 1 else 0) + (if (m != null) m.groupValues[1].toInt() - 1 else 0)
 }
 
+// The old and new text of each edit of an edit tool call, or null for other tools.
+fun editPairs(name: String, input: JsonObject): List<Pair<String, String>>? = when (name) {
+    "Write" -> listOf("" to input.s("content"))
+    "Edit" -> listOf(input.s("old_string") to input.s("new_string"))
+    "MultiEdit" -> (input["edits"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.let { e -> e.s("old_string") to e.s("new_string") } } ?: emptyList()
+    else -> null
+}
+
 // shared/edits.ts editCount: added and removed lines of an edit tool call, or null for other tools.
 fun editCount(name: String, input: JsonObject): Pair<Int, Int>? = when (name) {
     "Write" -> lines(input.s("content")) to 0

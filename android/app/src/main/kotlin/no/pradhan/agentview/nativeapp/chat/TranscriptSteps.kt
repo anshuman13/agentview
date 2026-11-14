@@ -378,13 +378,7 @@ internal fun FileCard(it: Item.File, cwd: String) {
     }
 }
 
-// The old and new text of each edit of a tool call.
-fun editPairs(use: ChatEvent): List<Pair<String, String>> = when (use.name) {
-    "Write" -> listOf("" to use.input.s("content"))
-    "Edit" -> listOf(use.input.s("old_string") to use.input.s("new_string"))
-    "MultiEdit" -> (use.input["edits"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { (it as? kotlinx.serialization.json.JsonObject)?.let { e -> e.s("old_string") to e.s("new_string") } } ?: emptyList()
-    else -> emptyList()
-}
+fun editPairs(use: ChatEvent) = editPairs(use.name, use.input) ?: emptyList()
 
 @Composable
 internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpenAgent: (String) -> Unit) {
