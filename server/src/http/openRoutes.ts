@@ -109,7 +109,7 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return { ok: true };
     }),
     'POST /api/worktrees': entry(async ({ body }) => ({ cwd: await createWorktree(String(body.repo ?? ''), String(body.branch ?? '').trim()) }), true),
-    'POST /api/jobs/start': entry(async ({ body }) => {
+    'POST /api/jobs/start': entry(async ({ req, body }) => {
       const [jobId, title, repo, prompt] = ['jobId', 'title', 'repo', 'prompt'].map((k) => String(body[k] ?? ''));
       if (!jobId || !prompt.trim()) return { status: 400, body: { error: 'jobId and prompt are required' } };
       if (!isWorkspaceRepo(repo)) return { status: 400, body: { error: 'Not a workspace repo' } };
@@ -119,9 +119,14 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       starting.add(jobId);
       try {
         const { dir, paseo } = await makeWorktree(repo, branch);
+        // No chat took the worktree, so it goes. The hub gives up after 2 minutes and records the run as failed.
+        const drop = () => removeRunWorktree({ repo, worktree: dir, branch, paseo }).catch(() => {});
+        if (req.signal.aborted) {
+          await drop();
+          return { status: 499, body: { error: 'The caller gave up' } };
+        }
         const chatId = await d.host.req<string>({ op: 'job', cwd: dir, title, prompt, jobId, branch, repo, paseo }).catch(async (err) => {
-          // No chat took the worktree, so it goes.
-          await removeRunWorktree({ repo, worktree: dir, branch, paseo }).catch(() => {});
+          await drop();
           throw err;
         });
         return { chatId, branch };
