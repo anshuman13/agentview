@@ -298,19 +298,23 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
     val next = if (paused) "Paused · ${run.why}" else run.nextAt?.let { clock(it) } ?: "When the agent goes idle"
     val (badge, tone) = goalBadge(run)
     val open = { report: String? -> scope.launch { if (hub.openRun(run, report)) { hub.link.value = DeepLink(view = "agents"); onClose() } }; Unit }
-    val rows = buildList<@Composable () -> Unit> {
+    val facts = buildList<@Composable () -> Unit> {
         add { ListRow(run.what, "Condition", lines = 2) }
         if (plan != null) add { ListRow("Plan", trailing = { RowLabel(progress.orEmpty()) }) }
+        if (!ended) add { ListRow("Next round", trailing = { RowLabel(next) }) }
+        add { ListRow("Cost", trailing = { RowLabel(money(run.costUsd, billing(run.provider))) }) }
+    }
+    val settings = buildList<@Composable () -> Unit> {
         add { EditRow("How often", run.every?.let { "Every ${everyText(it)}" } ?: "Until done", if (run.every != null && editable) EVERY.filter { it.ms > 0 }.map { it.label to mapOf("every" to it.ms) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Stop at", run.endAt?.let { clock(it) } ?: "None", if (editable) STOPS.map { it.label to mapOf("endAt" to stopAtMs(it, now)) } else null) { hub.runEdit(run, it) } }
         if (billing(run.provider) != "none" || run.maxBuilds != null) add { EditRow("Usage", usageLine(run), if (editable && billing(run.provider) != "none") CAPS.map { (it.pct?.let { p -> "$p% cap" } ?: "No cap") to mapOf("capPct" to it.pct?.toLong()) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Build limit", run.maxBuilds?.toString() ?: "None", if (editable) BUILDS.map { it.label to mapOf("maxBuilds" to it.n?.toLong()) } else null) { hub.runEdit(run, it) } }
-        if (!ended) add { ListRow("Next round", trailing = { RowLabel(next) }) }
-        add { ListRow("Cost", trailing = { RowLabel(money(run.costUsd, billing(run.provider))) }) }
     }
     Sheet(onClose, run.title.ifBlank { "Goal" }, padded = false) {
         SectionHeader("Goal", action = { Badge(badge, tone) })
-        Group { rows.forEachIndexed { i, row -> if (i > 0) Hairline(); row() } }
+        Group { facts.forEachIndexed { i, row -> if (i > 0) Hairline(); row() } }
+        SectionHeader("Settings")
+        Group { settings.forEachIndexed { i, row -> if (i > 0) Hairline(); row() } }
         SectionHeader("Rounds", run.rounds.size.toString())
         if (run.rounds.isEmpty()) EmptyState("No rounds yet", "The first round runs when the agent goes idle", icon = "history")
         else Group {
