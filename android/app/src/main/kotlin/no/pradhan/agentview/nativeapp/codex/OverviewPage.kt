@@ -59,7 +59,7 @@ fun AskBar(hub: Hub, st: CodexState, profile: String?) {
     val text by hub.codexDraft.collectAsState()
     val uploading by hub.codexUploads.collectAsState()
     var picked by rememberSaveable { mutableStateOf<String?>(null) }
-    val guess = profile ?: picked ?: guessProfile(text, st.meetings, hub.codexProfile)
+    val guess = profile ?: picked ?: remember(text, st.meetings) { guessProfile(text, st.meetings, hub.codexProfile) }
     val send = {
         val q = text.trim()
         if (q.isNotEmpty() && uploading == 0) {
