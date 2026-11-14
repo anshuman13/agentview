@@ -172,11 +172,17 @@ async function paseoProjects() {
   return JSON.parse(stdout) as Array<{ projectId: string; name: string; path: string }>;
 }
 
-export async function createWorktree(repo: string, branch: string) {
+// The branch Paseo branches a new worktree of the repo off, once the repo is checked to be a Paseo project.
+export async function worktreeBase(repo: string) {
   if (!(await paseoProjects()).some((p) => p.path === repo)) throw new Error('This repo is not a Paseo project');
+  return (await defaultBase(repo)).replace(/^origin\//, '');
+}
+
+// /tries makes several worktrees of one repo and passes the base it looked up once.
+export async function createWorktree(repo: string, branch: string, base?: string) {
   if (branch.startsWith('-') || !/^[\w./-]+$/.test(branch)) throw new Error('Invalid branch name');
+  base ??= await worktreeBase(repo);
   await git(repo, 'check-ref-format', '--branch', branch).catch(() => { throw new Error(`Invalid branch name: ${branch}`); });
-  const base = (await defaultBase(repo)).replace(/^origin\//, '');
   const { stdout } = await paseo(['workspace', 'create', '--isolation', 'worktree', '--path', repo, '--mode', 'branch-off', '--new-branch', branch, '--base', base, '--json'], 300_000).catch(notInstalled);
   const out = JSON.parse(stdout);
   const cwd: string | undefined = out.cwd ?? out.workspace?.cwd;

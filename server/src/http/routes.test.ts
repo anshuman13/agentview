@@ -18,7 +18,7 @@ const mocks = {
 };
 
 vi.mock('../integrations/focus.js', () => ({ scheduleFocus: mocks.scheduleFocus, cancelFocus: mocks.cancelFocus }));
-vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, isWorkspaceRepo: mocks.isWorkspaceRepo, listWorktrees: vi.fn(), createWorktree: mocks.createWorktree, createFolder: vi.fn(), removeWorktree: vi.fn(), removeRunWorktree: vi.fn() }));
+vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, isWorkspaceRepo: mocks.isWorkspaceRepo, listWorktrees: vi.fn(), createWorktree: mocks.createWorktree, createFolder: vi.fn(), removeWorktree: vi.fn(), removeRunWorktree: vi.fn(), worktreeBase: async () => { throw new Error('paseo is not installed'); } }));
 vi.mock('../agent/claude/sessions.js', () => ({ listSessions: mocks.listSessions, savedSession: (x: unknown) => x, renameRoute: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRoute: vi.fn() }));
 vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: vi.fn() }));

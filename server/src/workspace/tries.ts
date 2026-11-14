@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { createWorktree, removeRunWorktree } from './worktrees.js';
+import { createWorktree, removeRunWorktree, worktreeBase } from './worktrees.js';
 import { defaultBase, mainCheckout } from './git.js';
 import { exec as run } from '../exec.js';
 
@@ -26,9 +26,9 @@ export function triesBranches(prompt: string, n: number, now = new Date()) {
 }
 
 // A new worktree on a new branch, made by Paseo. Without Paseo it is a plain git worktree in a hidden .tries folder next to the repo, which the repo list skips.
-export async function makeWorktree(repo: string, branch: string) {
+export async function makeWorktree(repo: string, branch: string, base?: string) {
   try {
-    return { dir: await createWorktree(repo, branch), paseo: true };
+    return { dir: await createWorktree(repo, branch, base), paseo: true };
   } catch (err) {
     if (!/not installed|not a Paseo project/.test(String(err))) throw err;
     const dir = path.join(path.dirname(repo), '.tries', `${path.basename(repo)}-${branch.split('/').pop()}`);
@@ -42,8 +42,10 @@ export async function startTries(cwd: string, n: number, prompt: string, ask: (c
   const repo = await mainCheckout(cwd);
   const branches = triesBranches(prompt, n);
   const made: Array<{ dir: string; paseo: boolean; branch: string }> = [];
+  // Without Paseo, createWorktree looks again and throws the error makeWorktree falls back on.
+  const base = await worktreeBase(repo).catch(() => undefined);
   try {
-    for (const branch of branches) made.push({ ...(await makeWorktree(repo, branch)), branch });
+    for (const branch of branches) made.push({ ...(await makeWorktree(repo, branch, base)), branch });
   } catch (err) {
     // The tries already made would be left with no chat; they go with the failed start.
     await Promise.all(made.map((m) => removeRunWorktree({ repo, worktree: m.dir, branch: m.branch, paseo: m.paseo }).catch(() => {})));
