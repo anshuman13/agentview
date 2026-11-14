@@ -120,6 +120,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val prep = rememberPrep(c, state)
     val folds = rememberMeetingFolds(m.key)
     val transcript = rememberTranscript(hub, m, state == MState.Done)
+    val talk = remember(transcript) { transcript?.getOrNull()?.let(::talkTime).orEmpty() }
     LazyColumn(Modifier.fillMaxWidth()) {
         meetingHeader(c, state)
         if (isEvent(m)) {
@@ -135,7 +136,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             item { SectionHeader("My notes") }
             item { NotesField(hub, m) }
             item { SectionHeader("More", open = folds.more.value, onToggle = { folds.more.value = !folds.more.value }) }
-            if (folds.more.value) meetingMore(c, state, all, folds, transcript)
+            if (folds.more.value) meetingMore(c, state, all, folds, transcript, talk)
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
@@ -245,10 +246,10 @@ private fun NewActionField(c: MeetingCtx, newAction: MutableState<String>) {
         }))
 }
 
-private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Row>, folds: MeetingFolds, transcript: Result<String?>?) {
+private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Row>, folds: MeetingFolds, transcript: Result<String?>?, talk: List<Speaker>) {
     val m = c.m
     item { NewActionField(c, folds.newAction) }
-    meetingContext(c, all, folds, transcript?.getOrNull()?.let { talkTime(it) } ?: emptyList())
+    meetingContext(c, all, folds, talk)
     val unassigned = all.filter { it.status == "unassigned" }
     item { Fold("Unassigned", unassigned.size, folds.unassigned.value) { folds.unassigned.value = !folds.unassigned.value } }
     if (folds.unassigned.value) actionGroup(unassigned, m, c.now, c.actions, c.onTask)

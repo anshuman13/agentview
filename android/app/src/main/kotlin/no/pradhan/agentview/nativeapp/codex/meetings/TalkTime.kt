@@ -8,11 +8,13 @@ private val NAME = Regex("""^\p{Lu}[\p{L}'.-]*(?: [\p{L}'.-]+){0,3}$""")
 private val HEADING = Regex("""^\W*(transcript|transkripsjon)\W*$""", RegexOption.IGNORE_CASE)
 private val LABEL = Regex("""^([^:]{1,40}):\s*(.*)$""")
 private val BULLET = Regex("""^(?:#+|[-*•])\s+""")
+private val SPACE = Regex("\\s+")
+private val EMPHASIS = Regex("[*_]")
 
 private class Turn(val name: String, val rest: String)
 
-private fun count(s: String) = s.split(Regex("\\s+")).count { it.isNotEmpty() }
-private fun clean(s: String) = s.replace(BULLET, "").replace(Regex("[*_]"), "").trim()
+private fun count(s: String) = s.split(SPACE).count { it.isNotEmpty() }
+private fun clean(s: String) = s.replace(BULLET, "").replace(EMPHASIS, "").trim()
 
 private fun tally(lines: List<String>, label: (Int) -> Turn?): Map<String, Int> {
     val words = LinkedHashMap<String, Int>()
