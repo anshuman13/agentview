@@ -89,6 +89,7 @@ export function HeadState(p: Props) {
   const count = done.length + next.length;
   return (
     <span className="tl-more">
+      {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` }); }}>Continue at {limit.at}</button>}
       <button ref={btn} className={`tl-state ${state}`} title={text} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         {markIcon(state)}
         <span className="text">{text}</span>
