@@ -6,7 +6,7 @@ import list from './parity.json';
 
 type Entry = { id: string; side: 'web' | 'android'; reason: string };
 
-export function parity(webIds: Set<string>, androidIds: Set<string>, entries: Entry[]): string[] {
+function parity(webIds: Set<string>, androidIds: Set<string>, entries: Entry[]): string[] {
   const out: string[] = [];
   for (const [side, ids] of [['web', webIds], ['android', androidIds]] as const) {
     for (const id of ids) if (!FEATURE_IDS.has(id)) out.push(`${id} on ${side} is not in FEATURES`);
@@ -56,8 +56,8 @@ describe('parity', () => {
     expect(parity(new Set(['sheet:nope']), new Set(['sheet:nope']), [])).toHaveLength(2);
   });
   it('holds for the real sources', () => {
-    const web = scan('web/src', /\btrack\('([^'$]+)'\)/g);
-    const android = scan('android/app/src/main', /\btrack\("([^"$]+)"\)/g);
+    const web = scan('web/src', /\btrack\('([^'$]+)'[,)]/g);
+    const android = scan('android/app/src/main', /\btrack\("([^"$]+)"[,)]/g);
     expect(parity(web, android, list as Entry[])).toEqual([]);
   });
 });

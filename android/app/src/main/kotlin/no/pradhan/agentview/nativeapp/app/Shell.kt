@@ -74,7 +74,6 @@ import no.pradhan.agentview.nativeapp.codex.CodexScreen
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheets
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunsScreen
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.showSpec
 import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.net.OFFLINE_DELAY_MS
 import no.pradhan.agentview.nativeapp.net.OfflineEvent
@@ -174,7 +173,7 @@ private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostStat
         val l = link ?: return@LaunchedEffect
         l.chat?.let { hub.open(it) }
         if (l.page == "sketches") l.slug?.let { hub.sketchSlug.value = it }
-        else if (l.chat != null && l.slug != null) scope.showSpec(hub, l.slug)
+        else if (l.chat != null && l.slug != null) hub.showSpec(l.slug)
         if (l.action == Shortcut.NEW_CHAT) hub.newChat()
         if (l.action == Shortcut.ADD_TASK) hub.addTask.value = true
         routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.openMore(r) else nav.goTab(r) }

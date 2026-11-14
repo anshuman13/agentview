@@ -24,7 +24,6 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.newChat
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.net.showSpec
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -215,7 +214,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                         val live = st.live.any { it.id == i.chat }
                                         val tappable = live || i.session != null
                                         val badge = when {
-                                            i.waiting || i.hold || i.state == "waiting" -> "Needs you" to BadgeTone.Waiting
+                                            i.waiting || i.hold || i.state == "waiting" -> HOLD_BADGE
                                             i.state == "running" -> "Running" to BadgeTone.Running
                                             i.state == "failed" -> "Failed" to BadgeTone.Failed
                                             else -> null
@@ -225,7 +224,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                             lines = 1, metaLines = 1,
                                             state = badge?.let { (text, tone) -> { Badge(text, tone) } },
                                             onClick = if (!tappable) null else ({
-                                                if (live) { hub.open(i.chat!!); scope.showSpec(hub, i.slug); onOpen() } else go { hub.openSaved(i.session!!) }
+                                                if (live) { hub.open(i.chat!!); hub.showSpec(i.slug); onOpen() } else go { hub.openSaved(i.session!!) }
                                             }),
                                             menu = if (i.built || hub.readOnly) null else ({ dismiss ->
                                                 MenuItem("Build", "play", { dismiss(); hub.newChat(project, text = buildSpecPrompt(".claude/specs/${i.slug}.md"), onOpened = onOpen) })

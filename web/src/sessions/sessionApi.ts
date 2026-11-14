@@ -1,8 +1,7 @@
 import { api } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
 import type { AdvisorInfo, Audit, BacklogItem } from '../../../shared/advisors';
-import type { SpecHomeItem } from '../../../shared/builds';
-import type { BuildDetail, ReviewPhase } from '../../../shared/builds';
+import type { BuildDetail, ReviewPhase, SpecHomeItem } from '../../../shared/builds';
 
 export const deleteRequest = (url: string) => fetch(apiUrl(url), { method: 'DELETE' }).catch(() => null);
 

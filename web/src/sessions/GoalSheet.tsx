@@ -10,7 +10,7 @@ import { Sheet } from '../ui/Sheet';
 import { billing, providerLabel } from '../../../shared/providers';
 import type { Provider } from '../../../shared/protocol';
 import { goalCommand, parseEvery } from '../../../shared/goalForm';
-import { addPreset, removePreset, type GoalPreset } from '../../../shared/goalPresets';
+import { MAX_NAME, addPreset, removePreset, type GoalPreset } from '../../../shared/goalPresets';
 import { span } from '../../../shared/util';
 import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, advisorOf } from '../../../shared/advisors';
 import { planCondition } from '../../../shared/specTasks';
@@ -177,10 +177,10 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
       <div className="gl-actions"><Button variant="filled" size="lg" disabled={sent || !ready || !condition.trim()} onClick={start}>Start</Button></div>
       <div className="gl-actions">
         {naming === null
-          ? <Button variant="tinted" disabled={loop} onClick={() => setNaming((plan ? plan.split('/').pop()! : what.trim()).slice(0, 24))}>Save as preset</Button>
+          ? <Button variant="tinted" disabled={loop} onClick={() => setNaming((plan ? plan.split('/').pop()! : what.trim()).slice(0, MAX_NAME))}>Save as preset</Button>
           : <>
-            <input aria-label="Preset name" maxLength={24} value={naming} onChange={(e) => setNaming(e.target.value)} />
-            <Button variant="tinted" disabled={loop || !naming.trim()} onClick={savePreset}>Save</Button>
+            <input aria-label="Preset name" maxLength={MAX_NAME} value={naming} onChange={(e) => setNaming(e.target.value)} />
+            <Button variant="tinted" disabled={loop || badEvery || !naming.trim()} onClick={savePreset}>Save</Button>
           </>}
       </div>
     </Sheet>

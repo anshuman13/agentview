@@ -12,6 +12,7 @@ import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
 import { ADVISORS, advisorOf, auditPrompt, canBuildItem, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import { pipelineLabel, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
+import { holdBadge } from './buildsLogic';
 import { buildItemPrompt, buildSpecPrompt } from '../../../shared/specTasks';
 import { askAdvisor, go } from './advisorChat';
 import { StateDot } from './ChatRows';
@@ -87,17 +88,17 @@ function Backlog({ shown, turns, root, picker }: { shown: boolean; turns: string
 }
 
 const specBadge = (i: SpecHomeItem) =>
-  i.waiting || i.hold || i.state === 'waiting' ? <Badge status="waiting" label="Needs you" /> : i.state === 'running' || i.state === 'failed' ? <Badge status={i.state} /> : undefined;
+  i.waiting || i.hold || i.state === 'waiting' ? <Badge status={holdBadge.status} label={holdBadge.label} /> : i.state === 'running' || i.state === 'failed' ? <Badge status={i.state} /> : undefined;
 
 // The newest specs of one project, what needs you first; a row opens the chat that ran the build, with its Spec sheet when that chat is live.
 function Specs({ shown, turns, root }: { shown: boolean; turns: string; root: string | null }) {
   const specs = useRootFetch(fetchSpecs, root, shown, turns).data;
   const live = useStore((s) => s.live);
   if (!root || !specs) return null;
-  const openBuild = (i: SpecHomeItem) => {
-    if (i.chat && live.some((c) => c.id === i.chat)) {
-      go({ type: 'view', id: i.chat });
-      openSpecSheet(i.chat, i.slug);
+  const openBuild = (i: SpecHomeItem, isLive: boolean) => {
+    if (isLive) {
+      go({ type: 'view', id: i.chat! });
+      openSpecSheet(i.chat!, i.slug);
     } else go({ type: 'open_session', sessionId: i.session! });
   };
   return (
@@ -106,7 +107,8 @@ function Specs({ shown, turns, root }: { shown: boolean; turns: string; root: st
       {!specs.length ? <EmptyState size="sm" icon="file" title="No specs yet" /> : (
         <div className="ui-group">
           {specHomeOrder(specs).map((i) => {
-            const tappable = i.session || live.some((c) => c.id === i.chat);
+            const isLive = live.some((c) => c.id === i.chat);
+            const tappable = isLive || !!i.session;
             return (
               <Row
                 key={i.slug}
@@ -114,7 +116,7 @@ function Specs({ shown, turns, root }: { shown: boolean; turns: string; root: st
                 meta={`${pipelineLabel(i.pipeline)} · ${i.conclusion}`}
                 state={specBadge(i)}
                 plain={!tappable}
-                onClick={tappable ? () => openBuild(i) : undefined}
+                onClick={tappable ? () => openBuild(i, isLive) : undefined}
                 menu={i.built ? undefined : <MenuItem icon="play" onClick={() => buildSpec(root, i.slug)}>Build</MenuItem>}
               />
             );

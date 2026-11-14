@@ -265,10 +265,10 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
             val draft = naming
-            if (draft == null) Button("Save as preset", { naming = (sheet.plan?.substringAfterLast('/') ?: what.trim()).take(24) }, variant = ButtonVariant.Tinted, enabled = !loop)
+            if (draft == null) Button("Save as preset", { naming = (sheet.plan?.substringAfterLast('/') ?: what.trim()).take(MAX_NAME) }, variant = ButtonVariant.Tinted, enabled = !loop)
             else {
-                Box(Modifier.weight(1f)) { TextField(draft, { naming = it.take(24) }, placeholder = "Preset name", singleLine = true) }
-                Button("Save", savePreset, variant = ButtonVariant.Tinted, enabled = !loop && draft.isNotBlank())
+                Box(Modifier.weight(1f)) { TextField(draft, { naming = it.take(MAX_NAME) }, placeholder = "Preset name", singleLine = true) }
+                Button("Save", savePreset, variant = ButtonVariant.Tinted, enabled = !loop && !badEvery && draft.isNotBlank())
             }
         }
     }

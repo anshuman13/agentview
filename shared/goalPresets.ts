@@ -3,7 +3,7 @@ import type { GoalForm } from './goalForm.js';
 export type GoalPreset = GoalForm & { name: string };
 
 const MAX_PRESETS = 6;
-const MAX_NAME = 24;
+export const MAX_NAME = 24;
 
 const nullable = (v: unknown, type: string) => v === null || typeof v === type;
 

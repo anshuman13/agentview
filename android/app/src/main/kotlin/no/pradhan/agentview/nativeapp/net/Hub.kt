@@ -435,12 +435,12 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     // The chat the workspace pages act on: the one on screen, else the server's last viewed chat.
     val pageChat: String get() = store.state.value.shownId
+
+    // Has the open chat's Spec card show its sheet once it loads; given up after 30 s.
+    fun showSpec(slug: String) {
+        specSlug.value = slug
+        viewModelScope.launch { delay(SPEC_LINK_MS); if (specSlug.value == slug) specSlug.value = null }
+    }
 }
 
 private const val SPEC_LINK_MS = 30_000L
-
-// Has the open chat's Spec card show its sheet once it loads; given up after 30 s.
-internal fun CoroutineScope.showSpec(hub: Hub, slug: String) {
-    hub.specSlug.value = slug
-    launch { delay(SPEC_LINK_MS); if (hub.specSlug.value == slug) hub.specSlug.value = null }
-}

@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -43,11 +44,11 @@ fun planOf(what: String): String? = Regex("^(?:/goal\\s+)?(?:every task in (\\S+
 data class GoalPreset(val name: String, val what: String, val every: Long, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val builds: Int?)
 
 private const val MAX_PRESETS = 6
-private const val MAX_NAME = 24
+const val MAX_NAME = 24
 
 private fun JsonObject.text(k: String) = (get(k) as? JsonPrimitive)?.takeIf { it.isString }?.content
 
-private fun JsonObject.number(k: String) = (get(k) as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull }
+private fun JsonObject.number(k: String) = (get(k) as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull && it.doubleOrNull != null }
 
 private fun JsonObject.optional(k: String) = get(k)?.let { it is JsonNull || number(k) != null } == true
 
