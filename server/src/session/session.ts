@@ -183,9 +183,10 @@ export class AgentSession implements AgentHost {
     if (wasRunning && patch.running === false) this.driver.settled();
     const { commands, mcp, ...rest } = this.state.session;
     const last = this.sent;
-    this.sent = { commands, mcp };
-    const changed = (a: unknown, b: unknown) => !last || JSON.stringify(a) !== JSON.stringify(b);
-    this.emit({ type: 'session', session: { ...rest, ...(changed(commands, last?.commands) && { commands }), ...(changed(mcp, last?.mcp) && { mcp }) } });
+    const now = (this.sent = { commands, mcp });
+    // Commands and MCP tool lists are large, so they go only when a patch set them to something new.
+    const changed = (key: 'commands' | 'mcp') => !last || (key in patch && now[key] !== last[key] && JSON.stringify(now[key]) !== JSON.stringify(last[key]));
+    this.emit({ type: 'session', session: { ...rest, ...(changed('commands') && { commands }), ...(changed('mcp') && { mcp }) } });
   }
 
   noteFile(rel: string, source: 'tool' | 'watcher') {

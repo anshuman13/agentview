@@ -11,14 +11,15 @@ type Props = { project?: string; theme: Theme; toggleTheme: () => void; macName:
 
 export function StatusBar({ project, theme, toggleTheme, macName, onPhone, onMacs }: Props) {
   const connected = useStore((s) => s.ui.connected);
-  const session = useStore((s) => s.session);
+  const running = useStore((s) => s.session.running);
+  const cwd = useStore((s) => s.session.cwd);
   const status = useStore((s) => s.status);
   const live = useStore((s) => s.live.find((c) => c.id === s.session.id));
-  const state = chatState({ pending: live?.pending ?? 0, failed: live?.failed, stalled: live?.stalled, running: session.running, status, agentList: live?.agentList, run: live?.run });
+  const state = chatState({ pending: live?.pending ?? 0, failed: live?.failed, stalled: live?.stalled, running, status, agentList: live?.agentList, run: live?.run });
   const notifying = useNotify();
   return (
     <footer className="statusbar desktop-only">
-      <button className="item project clickable" title={`${session.cwd}\nStart a chat in another repo (⌘O)`} onClick={() => setUi({ repoPicker: true })}><Icon name="folder" small /> {project}</button>
+      <button className="item project clickable" title={`${cwd}\nStart a chat in another repo (⌘O)`} onClick={() => setUi({ repoPicker: true })}><Icon name="folder" small /> {project}</button>
       <span className={`item ${state.tone === 'running' ? 'busy' : 'idle'}`}>
         <Icon name={ICON[state.tone]} small spin={state.tone === 'running'} /> {state.text}
       </span>

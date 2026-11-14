@@ -40,7 +40,18 @@ function onChatMessage(chat: AgentSession, m: ServerMessage) {
   if (m.type === 'session' && chat === hub.lastViewed) remember(chat);
   if (m.type === 'session') saveWhenLoopChanged(chat);
   const woke = seenRunning(chat, chat.state.session.running);
-  if (woke || (m.type === 'event' ? m.event.kind === 'user' : m.type !== 'append')) broadcastLive();
+  const listed = m.type === 'event' ? m.event.kind === 'user' : m.type === 'session' ? listedChanged(chat) : m.type !== 'append';
+  if (woke || listed) broadcastLive();
+}
+
+// The session fields the live list shows, so a session message that only moves context or cache does not rebuild the list.
+const listedKeys = new WeakMap<AgentSession, string>();
+function listedChanged(chat: AgentSession) {
+  const { sessionId, running, model, provider, pr, mcp } = chat.state.session;
+  const key = JSON.stringify([sessionId, running, model, provider, pr, mcp.map((m) => m.status)]);
+  if (listedKeys.get(chat) === key) return false;
+  listedKeys.set(chat, key);
+  return true;
 }
 
 async function defaultChoice(): Promise<Provider> {
