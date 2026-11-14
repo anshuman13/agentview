@@ -20,12 +20,17 @@
 .tl-name .chat-rename { flex: 1 1 0; min-width: 0; height: var(--size-sm); }
 @media (max-width: 480px) { .tl-name b.editable { -webkit-user-select: none; user-select: none; } }
 .tl-name small { flex: 0 0 auto; max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-xs); color: var(--fg-muted); }
+.tl-state { flex: 0 1 auto; min-width: 0; max-width: 45%; display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; }
+.tl-state .text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tl-state .when { flex: none; font-variant-numeric: tabular-nums; }
+.tl-state .when::before { content: '· '; }
+.tl-state:is(.running, .stopping) .codicon { color: var(--accent-text); }
+.tl-state.waiting { color: var(--warn); }
 .tl-more { position: relative; flex: none; display: inline-flex; }
 .timeline-head .link { font-size: var(--fs-xs); }
 .timeline-head .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 
 .tl-now .mark { position: relative; flex: none; width: var(--size-xs); height: var(--size-xs); display: flex; align-items: center; justify-content: center; color: var(--fg-muted); }
-.tl-now .when { text-align: right; font-size: var(--fs-xs); color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 @media (hover: hover) { .steps-toggle:hover { background: transparent; color: var(--fg); } }
 

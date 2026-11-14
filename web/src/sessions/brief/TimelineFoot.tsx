@@ -70,32 +70,48 @@ function StepList({ next, adding, setAdding }: { next: string[]; adding: boolean
   );
 }
 
-function nowText({ state, status, loop, repeat, lastReply }: Pick<Props, 'state' | 'status' | 'loop' | 'repeat' | 'lastReply'>) {
+function nowText({ state, status, loop, repeat }: Pick<Props, 'state' | 'status' | 'loop' | 'repeat'>) {
   if (state === 'waiting') return 'Waiting for you';
   if (state === 'stopping') return 'Stopping…';
   if (state === 'running') return loop.phase && ['plan', 'build', 'test'].includes(loop.phase) ? `${loopLabel(loop)} · ${status}` : status;
   if (repeat?.nextAt) return `Idle · next loop round ${clock(repeat.nextAt)}`;
-  return lastReply ? 'Idle · last reply' : 'Idle';
+  return 'Idle';
+}
+
+const markIcon = (state: Props['state']) => <Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} />;
+
+// The chat's state at the right of its header, with the time of the last reply while idle.
+export function HeadState(p: Pick<Props, 'state' | 'status' | 'loop' | 'repeat' | 'lastReply'>) {
+  const { state, lastReply } = p;
+  const text = nowText(p);
+  return (
+    <span className={`tl-state ${state}`} title={text}>
+      {markIcon(state)}
+      <span className="text">{text}</span>
+      {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
+    </span>
+  );
 }
 
 export function TimelineFoot(p: Props) {
-  const { state, repeat, lastReply, lastTool, limit, next, running, end } = p;
+  const { state, repeat, lastTool, limit, next, running, end } = p;
   const [adding, setAdding] = useState(false);
   const narrow = useNarrow();
   const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', !touch() && !narrow));
   const toggleSteps = () => { setStepsOpen(!stepsOpen); saveFlag('agentview.steps', !stepsOpen); };
   const hasSteps = next.length > 0 || adding || running;
+  const retry = state === 'idle' && !repeat && limit;
+  if (state === 'idle' && !retry && !hasSteps) return <div ref={end} />;
   return (
     <div className="tl-foot">
       <div className={`tl-now ${state}`}>
-        <span className="mark"><Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} /></span>
+        <span className="mark">{markIcon(state)}</span>
         <span className="text">
           {nowText(p)}
           {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
         </span>
         <span className="side">
-          {state === 'idle' && !repeat && limit && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` })}>Continue at {limit.at}</button>}
-          {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
+          {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` })}>Continue at {limit.at}</button>}
           {hasSteps && (
             <button className="steps-toggle" aria-expanded={stepsOpen} title={stepsOpen ? 'Hide the next steps' : 'Show the next steps'} onClick={toggleSteps}>
               {next.length ? `${next.length} step${next.length === 1 ? '' : 's'}` : 'Steps'}<Icon name={stepsOpen ? 'chevron-up' : 'chevron-down'} small />

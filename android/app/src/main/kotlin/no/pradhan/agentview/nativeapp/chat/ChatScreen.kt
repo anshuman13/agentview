@@ -27,7 +27,6 @@ import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
 import no.pradhan.agentview.nativeapp.codex.clock
-import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
@@ -152,7 +151,6 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
             Hairline()
         }
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
-        SinceYouLeft(hub, live, runs.lastOrNull { it.chatId == live.id && it.state != "done" })
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
             Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, Modifier.fillMaxSize(), queued.filter { it.chat == live.id })
         }
@@ -175,18 +173,6 @@ private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
     val connected by hub.connected.collectAsState()
     val cached = shownId.isNotEmpty() && hasEvents
     return liveChats.firstOrNull { it.id == shownId } ?: if (cached && !connected) LiveChat(shownId, remember(shownId) { hub.savedTitle(shownId) }) else null
-}
-
-@Composable
-private fun SinceYouLeft(hub: Hub, live: LiveChat, run: ChatRun?) {
-    val left = remember(live.id) { hub.leftAt(live.id) }
-    val since = if (left == 0L || live.lastActive > left) live.recap else null
-    var shown by remember(live.id) { mutableStateOf(true) }
-    var sheet by remember(live.id) { mutableStateOf(false) }
-    if (since == null || !shown) return
-    val fresh = roundsSince(run?.rounds.orEmpty(), left)
-    SinceStrip(since, fresh, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), onOpen = { sheet = true }, onDismiss = { shown = false })
-    if (sheet) SinceSheet(hub, live.id, since, fresh, run) { sheet = false }
 }
 
 @Composable

@@ -285,7 +285,6 @@ export type LiveChat = {
   pr?: number;
   prChecks?: CheckState;
   todos?: { done: number; total: number };
-  recap?: string;
   run?: { id: string; kind: ChatRun['kind']; state: ChatRun['state']; why?: string; nextAt: number | null; round: number; needsYou: boolean; outcome?: RoundOutcome; line?: string };
 };
 

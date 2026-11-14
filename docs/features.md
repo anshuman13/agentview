@@ -177,7 +177,7 @@ Each Jobs list row is one line of title and one line of meta: the schedule in wo
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
 and notes. The chat shows each turn as its prompt and Claude's final reply, with the turn's work folded into one row
 above the reply: "12 tools · 3 files · 1 agent · 2m · $0.40", plus "N failed" in the error colour when a tool failed; a fold with no tool work is titled by what it holds ("Session started with claude-fable-5-1", else "3 notes"), with no duration or cost. The row
-is a faint small line, boxed only while open, closed by default and kept open per device (id `work:<turn>`); opened, it lists the turn's steps, Explored groups, files,
+is a faint small line at the right edge, boxed only while open, closed by default and kept open per device (id `work:<turn>`); opened, it lists the turn's steps, Explored groups, files,
 agents and earlier text in order. A running turn shows a spinner and counts that grow, and no duration. Blocked and Review
 cards, error system rows, spec and sketch cards stay visible, and pending requests, the loop card and the to-do card stay above
 the composer. A turn with nothing to hide has no row. The More menu's Show work switch (per device, off by default) turns
@@ -189,9 +189,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   with your message
 - A message is one request to the Mac and lands or fails visibly; it returns to the box after three failed tries
 - Editing the next steps sends the new plan at Claude's next tool call, without stopping it
+- On the web the chat's state sits at the right of the chat header ("Idle · 2m ago", "Waiting for you", the live status); the bar under the transcript shows only while a turn runs, a step list exists or a usage limit offers Continue at
 - The composer shows "No update for Ns" when nothing has arrived from the server for 30 s. The link reopens by
   itself after 50 s of silence, and a message that cannot be delivered goes back into the box with a notice
-- A subagent shows in the chat as a collapsible box: a chevron, its description, a meta line (type, duration once it ended, step count), one Badge (Running, Done, Failed or Skipped) and a summary under the header, clamped to 2 lines. While it runs the summary is the SDK's one-line progress, refreshed about every 30 s, until the first one the last step; once it ends it is the first line of the report. A running agent has a Stop button in the header. Boxes start collapsed; the body shows the steps and the report on the web, the last 3 steps and a Steps and report row that opens the Agents pane on the phone. A build agent's live card follows its box on the phone, not inside the box. Every transcript box (agents, the loop card, Since you left, spec cards, Explored groups) collapses from its header, and whether it is open is kept per device for the 300 boxes saved last. Summaries are on for Claude chats only (not Codex or OpenRouter), and each costs a small cached fork of the agent every 30 s
+- A subagent shows in the chat as a collapsible box: a chevron, its description, a meta line (type, duration once it ended, step count), one Badge (Running, Done, Failed or Skipped) and a summary under the header, clamped to 2 lines. While it runs the summary is the SDK's one-line progress, refreshed about every 30 s, until the first one the last step; once it ends it is the first line of the report. A running agent has a Stop button in the header. Boxes start collapsed; the body shows the steps and the report on the web, the last 3 steps and a Steps and report row that opens the Agents pane on the phone. A build agent's live card follows its box on the phone, not inside the box. Every transcript box (agents, the loop card, spec cards, Explored groups) collapses from its header, and whether it is open is kept per device for the 300 boxes saved last. Summaries are on for Claude chats only (not Codex or OpenRouter), and each costs a small cached fork of the agent every 30 s
 - Questions, plan approvals and permissions show as buttons in the chat
 - A plan approval card splits the plan into paragraphs; tapping one stages a comment on it. Keep planning with comments
   sends one message that quotes each commented paragraph (first 80 characters, as `> ...`) followed by its comment, and
@@ -201,12 +202,6 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   A chat row in Sessions adds "3/7" to its meta line while the list has items left
 - A hook that blocks a tool or fails shows in the chat in the error colour, for example "Hook blocked Bash: reason" or
   "PostToolUse hook failed: reason". Hooks that run fine show nothing
-- A chat has a recap: the ROUND summary, else the first sentence of the last reply of
-  the newest finished turn, up to 400 characters. A turn only counts when it used a tool or replied with more than 200 characters. It is read
-  from the transcript, so it costs nothing and is not kept for chats that are not open. Opening a chat with replies since
-  you last showed it puts a collapsible "Since you left" box above the transcript on the web and phone (open by default, the time of the newest round in its header, a Recap row clamped to 2 lines); the x dismisses it, and tapping the Recap row opens a
-  Since you left sheet with the full recap, a count Badge per outcome of the run rounds since then, those rounds newest first (blocked and
-  question always, more than 3 other rounds fold behind Show all) and Open goal when a goal runs
 - Opening a chat with activity since this browser last showed it puts a "Since you last looked" line above the
   cards: turns, files changed, failed commands and whether a permission is waiting. Tap it to dismiss
 - `/tries 3 <prompt>` (2 to 4) starts the prompt in that many new chats, each in its own worktree on a `tries/` branch

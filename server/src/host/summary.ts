@@ -1,6 +1,6 @@
 import { MCP_BAD, type ChatEvent, type LiveChat } from '../../../shared/protocol.js';
 import { chatTitle } from '../../../shared/util.js';
-import { recapOf, replyLine } from '../../../shared/edits.js';
+import { replyLine } from '../../../shared/edits.js';
 import { latestTodos, todoCount } from '../../../shared/todos.js';
 import { prChecks } from '../integrations/github.js';
 import type { AgentSession } from '../session/session.js';
@@ -29,7 +29,6 @@ export function summary(chat: AgentSession, { stalled, run, refresh }: SummaryIn
   const s = chat.state;
   const todos = latestTodos(s.events);
   const progress = todos && todoCount(todos);
-  const recap = recapOf(s.events, s.session.running);
   const agentList = runningAgents(chat);
   const firstPrompt = s.events.find((e) => e.kind === 'user');
   const { cost, spend } = costsOf(s.events, new Date().setHours(0, 0, 0, 0));
@@ -56,7 +55,6 @@ export function summary(chat: AgentSession, { stalled, run, refresh }: SummaryIn
     edits: editsOf(chat),
     ...(s.session.pr && { pr: s.session.pr, ...prChecksField(chat.cwd, s.session.pr, refresh) }),
     ...(progress && progress.done < progress.total && { todos: progress }),
-    ...(recap && { recap }),
     ...runField(run),
   };
 }

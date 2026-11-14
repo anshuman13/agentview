@@ -3,7 +3,10 @@ package no.pradhan.agentview.nativeapp.chat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,8 +17,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.PrefsKeyValue
@@ -25,7 +30,7 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 
-// Web chat/transcript/Box.tsx: a collapsible transcript box whose header toggles it; the open state is kept per box id on this device. A plain box is a faint line until opened.
+// Web chat/transcript/Box.tsx: a collapsible transcript box whose header toggles it; the open state is kept per box id on this device. A plain box is a faint line at the right until opened.
 @Composable
 internal fun TranscriptBox(
     hub: Hub,
@@ -47,13 +52,25 @@ internal fun TranscriptBox(
     var saved by remember(id) { mutableStateOf(readBox(kv, id, defaultOpen)) }
     val shown = open ?: saved
     val shape = RoundedCornerShape(Tokens.radius)
-    val boxed = !plain || shown
-    Column(if (boxed) Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape) else Modifier.fillMaxWidth()) {
+    val toggle = { if (onToggle != null) onToggle() else { saved = !saved; saveBox(kv, id, saved) } }
+    if (plain && !shown) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = toggle).padding(horizontal = Tokens.listPad, vertical = Tokens.sp3),
+            horizontalArrangement = Arrangement.spacedBy(Tokens.sp2, Alignment.End), verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgFaint)
+            if (title is AnnotatedString) Text(title, style = Type.footnote, color = av.fgFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            else Text(title.toString(), style = Type.footnote, color = av.fgFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            state?.invoke(this)
+        }
+        return
+    }
+    Column(Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape)) {
         ListRow(
             title, meta.ifEmpty { null },
             leading = { AvIcon(if (shown) "chevron-down" else "chevron-right", null, Tokens.iconSm) },
-            state = state, fitState = fitState, trailing = action, lines = if (fitState) 2 else 1, muted = plain, compact = plain,
-            onClick = { if (onToggle != null) onToggle() else { saved = !saved; saveBox(kv, id, saved) } },
+            state = state, fitState = fitState, trailing = action, lines = if (fitState) 2 else 1,
+            onClick = toggle,
         )
         if (!summary.isNullOrEmpty()) Text(
             summary,

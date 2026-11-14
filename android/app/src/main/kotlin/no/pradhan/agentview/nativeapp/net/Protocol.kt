@@ -113,7 +113,6 @@ data class LiveChat(
     val pr: Int? = null,
     val prChecks: String? = null,
     val todos: LiveTodos? = null,
-    val recap: String? = null,
     val run: LiveRun? = null,
     val agentList: List<LiveAgent> = emptyList(),
     val now: LiveNow? = null,

@@ -2,8 +2,6 @@ import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, 
 import { forgetSeenBefore, getState, loadEarlier, seenBefore, send, setUi, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
-import { SinceSheet } from './SinceSheet';
-import { outcomeCounts, roundsSince } from './recap';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
@@ -25,7 +23,7 @@ import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
 import { isSpecPath, specSlug } from '../../../../shared/specTasks';
 import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
-import { ROW_WINDOW, type ChatEvent, type Round } from '../../../../shared/protocol';
+import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 
 export function Transcript({ showWork }: { showWork: boolean }) {
   const events = useStore((s) => s.events);
@@ -34,7 +32,7 @@ export function Transcript({ showWork }: { showWork: boolean }) {
   const chat = useStore((s) => s.session.id);
   const earlier = useStore((s) => s.earlier ?? 0);
   const provider = useStore((s) => s.session.provider);
-  return <TranscriptView key={chat} chat={chat} events={events} earlier={earlier} cwd={cwd} running={running} showWork={showWork} bill={billing(provider)} />;
+  return <TranscriptView key={chat} events={events} earlier={earlier} cwd={cwd} running={running} showWork={showWork} bill={billing(provider)} />;
 }
 
 function lastUserId(items: Item[]) {
@@ -177,7 +175,7 @@ function useRowWindow(count: number, replies: number, earlier: number, box: RefO
   return { shown, start, from, staging, loading, showEarlier };
 }
 
-function TranscriptView({ chat, events, earlier, cwd, running, showWork, bill }: { chat: string; events: ChatEvent[]; earlier: number; cwd: string; running: boolean; showWork: boolean; bill: string }) {
+function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean; showWork: boolean; bill: string }) {
   const [build] = useState(createTranscriptBuilder);
   const items = useMemo(() => build(events), [build, events]);
   const last = events[events.length - 1];
@@ -195,11 +193,6 @@ function TranscriptView({ chat, events, earlier, cwd, running, showWork, bill }:
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
   const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
   const newRow = useMemo(() => list.find((r) => (r.kind === 'item' ? r.it.id === newId : r.hidden.some((h) => h.id === newId))), [list, newId]);
-  const recap = useStore((s) => s.live.find((c) => c.id === s.session.id)?.recap);
-  const [since, setSince] = useState(true);
-  const [sinceOpen, setSinceOpen] = useState(false);
-  const run = useStore((s) => s.runs.filter((r) => r.chatId === s.session.id && r.state !== 'done').at(-1));
-  const fresh = useMemo(() => roundsSince(run?.rounds ?? [], mark.seen), [run, mark.seen]);
   const folded = useMemo(() => new Set([...runs].flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs]);
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
   const jumpLabel = `Jump to latest${replies > 0 ? ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}` : ''}`;
@@ -218,8 +211,6 @@ function TranscriptView({ chat, events, earlier, cwd, running, showWork, bill }:
 
   return (
     <div className="tr-host">
-    {newId && recap && since && <SinceBox recap={recap} rounds={fresh} onOpen={() => setSinceOpen(true)} onDismiss={() => setSince(false)} />}
-    {sinceOpen && recap && <SinceSheet chat={chat} recap={recap} rounds={fresh} run={run} onClose={() => setSinceOpen(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, the agent's steps and replies show up here.</div>}
@@ -334,20 +325,6 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: 
     case 'review':
       return <ReviewCard ev={it.ev} />;
   }
-}
-
-export function SinceBox({ recap, rounds, onOpen, onDismiss }: { recap: string; rounds: Round[]; onOpen: () => void; onDismiss: () => void }) {
-  const counts = outcomeCounts(rounds).map((c) => `${c.n} ${c.outcome === 'quiet' ? 'nothing' : c.outcome}`).join(', ');
-  return (
-    <div className="tr-since">
-      <button className="tr-since-main" aria-haspopup="dialog" title={recap} onClick={onOpen}>
-        <Icon name="history" small />
-        <b>Since you left</b>
-        <span className="tr-since-text">{rounds.length > 0 ? `${plural(rounds.length, 'round')}: ${counts} \u00b7 ${recap}` : recap}</span>
-      </button>
-      <IconButton icon="close" label="Dismiss" size="sm" onClick={onDismiss} />
-    </div>
-  );
 }
 
 export function Explored({ id, run, cwd }: { id: string; run: StepItem[]; cwd: string }) {
