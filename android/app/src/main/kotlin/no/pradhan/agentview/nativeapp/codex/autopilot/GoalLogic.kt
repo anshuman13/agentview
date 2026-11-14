@@ -126,3 +126,6 @@ fun usageLine(run: ChatRun): String {
     val usage = listOfNotNull(week, five).joinToString(" · ").ifEmpty { run.capPct?.let { "$it% cap" } ?: if (builds == null) "No cap" else "" }
     return listOfNotNull(usage.ifEmpty { null }, builds).joinToString(" · ")
 }
+
+// shared/goalText.ts buildsLine: a run's build limit as its rows show it; empty without one.
+fun buildsLine(run: ChatRun): String = run.maxBuilds?.takeIf { it > 0 }?.let { "Builds ${run.builds ?: 0} of $it" } ?: ""

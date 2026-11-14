@@ -1,4 +1,4 @@
-import { MAX_GOAL_ROUNDS, type Round } from './protocol.js';
+import { MAX_GOAL_ROUNDS, type ChatRun, type Round } from './protocol.js';
 import { clock } from './util.js';
 
 export const rounds = (n: number) => `${n} ${n === 1 ? 'round' : 'rounds'}`;
@@ -57,3 +57,6 @@ export const goalCapReached = (pct: number) => `Usage cap ${pct}% reached`;
 export const goalNotMet = (n: number) => `Not met after ${rounds(n)}`;
 
 export const GOAL_RAN_OUT = 'Ran for 28 days, start it again to continue';
+
+// A run's build limit as its rows show it; empty without one.
+export const buildsLine = (run: Pick<ChatRun, 'builds' | 'maxBuilds'>): string => (run.maxBuilds ? `Builds ${run.builds ?? 0} of ${run.maxBuilds}` : '');

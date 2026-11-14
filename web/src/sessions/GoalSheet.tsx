@@ -12,12 +12,10 @@ import type { Provider } from '../../../shared/protocol';
 import { goalCommand, parseEvery } from '../../../shared/goalForm';
 import { MAX_NAME, addPreset, removePreset, type GoalPreset } from '../../../shared/goalPresets';
 import { span } from '../../../shared/util';
-import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_CAP, ADVISOR_LOOP_EVERY, advisorLoopGoal, advisorOf } from '../../../shared/advisors';
 import { planCondition } from '../../../shared/specTasks';
 import { BUILDS, CAPS, EVERY, STOPS } from './goalLogic';
 import { useWorkspace } from './folders';
 import { loadPresets, savePresets } from './goalPresets';
-import { askAdvisor } from './advisorChat';
 import { useChatRun } from './useChatRun';
 import { usePlanProgress } from './usePlanProgress';
 
@@ -32,7 +30,6 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const { folders } = useWorkspace(null);
   const { markdown, progress, error } = usePlanProgress(plan ?? null);
   const [what, setWhat] = useState('');
-  const [advisor, setAdvisor] = useState(false);
   const [every, setEvery] = useState(0);
   const [custom, setCustom] = useState('');
   const [stopIn, setStopIn] = useState<number | undefined>();
@@ -49,25 +46,19 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const [naming, setNaming] = useState<string | null>(null);
   const pick = useRef<HTMLSpanElement>(null);
   const opened = useRef(chat);
-  const beforeLoop = useRef({ every, custom, stopIn, stopAt, capPct, builds, inHere });
   useEffect(() => { if (chat !== opened.current) onClose(); }, [chat, onClose]);
-  const loop = advisor && !plan;
   const canHere = Boolean(here && !active);
-  const target = loop ? 'claude' : canHere && inHere ? chatProvider : provider;
+  const target = canHere && inHere ? chatProvider : provider;
   const dirs = folders.flatMap((f) => [{ cwd: f.cwd, name: f.name }, ...f.trees.map((w) => ({ cwd: w.cwd, name: w.name.split('/').pop()! }))]);
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
   const badEvery = Boolean(custom.trim()) && parseEvery(custom) === null;
   const ready = !badEvery && (!plan || (markdown !== null && !error));
-  const usable = (d: string) => !(loop && advisorOf(d));
-  const root = dir && usable(dir) ? dir : dirs.find((d) => usable(d.cwd))?.cwd;
-  const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : loop ? (root ? advisorLoopGoal(root) : '') : what;
+  const root = dir || dirs[0]?.cwd;
+  const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : what;
   const start = () => {
     track('action:startGoal');
     const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct, builds }, Date.now());
-    if (loop) {
-      askAdvisor('pm', text);
-      onClose();
-    } else if (canHere && inHere) {
+    if (canHere && inHere) {
       prompt(text, () => notice('Could not send the goal. Try again.'));
       onClose();
     } else {
@@ -77,18 +68,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
       send({ type: 'new_session', cwd: root, provider, text });
     }
   };
-  const pickLoop = () => {
-    setAdvisor(!advisor);
-    if (!advisor) {
-      beforeLoop.current = { every, custom, stopIn, stopAt, capPct, builds, inHere };
-      setCustom(''); setEvery(ADVISOR_LOOP_EVERY); setStopIn(undefined); setStopAt(undefined); setCapPct(ADVISOR_LOOP_CAP); setBuilds(ADVISOR_LOOP_BUILDS); setInHere(false);
-    } else {
-      const b = beforeLoop.current;
-      setWhat(''); setCustom(b.custom); setEvery(b.every); setStopIn(b.stopIn); setStopAt(b.stopAt); setCapPct(b.capPct); setBuilds(b.builds); setInHere(b.inHere);
-    }
-  };
   const applyPreset = (p: GoalPreset) => {
-    if (advisor) { setAdvisor(false); setInHere(beforeLoop.current.inHere); }
     if (!plan) setWhat(p.what);
     setEvery(p.every); setCustom(EVERY.some((e) => e.ms === p.every) ? '' : span(p.every));
     setStopIn(p.stopIn ?? undefined); setStopAt(p.stopAt ?? undefined); setCapPct(p.capPct); setBuilds(p.builds);
@@ -111,14 +91,13 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
         {(!plan || presets.length > 0) && (
           <div className="ui-fields">
             <div className="gl-chips">
-              {!plan && <Chip on={advisor} onClick={pickLoop}>Advisor loop</Chip>}
               {presets.map((p) => <Chip key={p.name} on={preset === p.name} onClick={() => applyPreset(p)}>{p.name}</Chip>)}
               {preset && <Button variant="danger" onClick={deletePreset}>Delete preset</Button>}
             </div>
           </div>
         )}
         {plan ? <Row plain title={plan} meta={error ? 'Could not read the plan. Check the file still exists.' : markdown === null ? undefined : progress ?? 'No tasks'} /> : (
-          <div className="ui-fields"><textarea rows={3} aria-label="What is the goal?" placeholder="What is the goal?" value={condition} disabled={loop} onChange={(e) => setWhat(e.target.value)} /></div>
+          <div className="ui-fields"><textarea rows={3} aria-label="What is the goal?" placeholder="What is the goal?" value={condition} onChange={(e) => setWhat(e.target.value)} /></div>
         )}
       </div>
       <Section label="How often" />
@@ -156,20 +135,20 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
       <Section label="Where" />
       <div className="ui-group">
         <div className="ui-fields">
-          {canHere && !loop && chips([{ label: 'New chat' }, { label: 'This chat' }], (i) => (i === 1) === inHere, (i) => setInHere(i === 1))}
+          {canHere && chips([{ label: 'New chat' }, { label: 'This chat' }], (i) => (i === 1) === inHere, (i) => setInHere(i === 1))}
           {!(canHere && inHere) && (
             <>
               <select aria-label="Folder" disabled={Boolean(plan)} value={dir} onChange={(e) => setDir(e.target.value)}>
                 {dirs.map((d) => <option key={d.cwd} value={d.cwd}>{d.name}</option>)}
               </select>
-              {!loop && <span className="gl-anchor" ref={pick}>
+              <span className="gl-anchor" ref={pick}>
                 <Chip on aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>{providerLabel(provider)}</Chip>
                 {menu && (
                   <Menu trigger={pick} onClose={() => setMenu(false)}>
                     {providers.map((p) => <MenuItem key={p.id} onClick={() => { setProvider(p.id); setMenu(false); }}>{p.label}</MenuItem>)}
                   </Menu>
                 )}
-              </span>}
+              </span>
             </>
           )}
         </div>
@@ -177,10 +156,10 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
       <div className="gl-actions"><Button variant="filled" size="lg" disabled={sent || !ready || !condition.trim()} onClick={start}>Start</Button></div>
       <div className="gl-actions">
         {naming === null
-          ? <Button variant="tinted" disabled={loop} onClick={() => setNaming((plan ? plan.split('/').pop()! : what.trim()).slice(0, MAX_NAME))}>Save as preset</Button>
+          ? <Button variant="tinted" onClick={() => setNaming((plan ? plan.split('/').pop()! : what.trim()).slice(0, MAX_NAME))}>Save as preset</Button>
           : <>
             <input aria-label="Preset name" maxLength={MAX_NAME} value={naming} onChange={(e) => setNaming(e.target.value)} />
-            <Button variant="tinted" disabled={loop || badEvery || !naming.trim()} onClick={savePreset}>Save</Button>
+            <Button variant="tinted" disabled={badEvery || !naming.trim()} onClick={savePreset}>Save</Button>
           </>}
       </div>
     </Sheet>

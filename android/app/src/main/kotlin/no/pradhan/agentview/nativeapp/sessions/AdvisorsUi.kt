@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import no.pradhan.agentview.nativeapp.ui.select
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.codex.autopilot.ADVISOR_LOOP_BUILDS
+import no.pradhan.agentview.nativeapp.codex.autopilot.buildsLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.ADVISOR_LOOP_CAP
 import no.pradhan.agentview.nativeapp.codex.autopilot.ADVISOR_LOOP_EVERY
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
@@ -80,7 +82,7 @@ data class AdvisorInfo(val id: String, val memory: String = "", val chats: List<
 @Serializable
 data class BacklogItem(val rank: Int, val slug: String, val title: String, val why: String = "", val status: String, val spec: Boolean = false)
 
-internal fun advisorLoopGoal(root: String) = "Advisor loop for $root, never met on its own. Each round, as PM: reread $root/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to $root/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build (/agentview:build <slug>, the build card's Build action) and mark the item building; one build in flight per project; mark it done when merged, and if its spec has a Fixes: line ask the Designer advisor to recheck those findings, and say in the ROUND line if you cannot reach it. A claimed finding the Designer leaves open goes back to proposed, keeping its slug: next round move that line from done back to proposed and note the finding in the why. If the backlog is empty, ask the Designer for an audit when the newest $root/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing."
+internal fun advisorLoopGoal(root: String) = "Advisor loop for $root, never met on its own. Each round, as PM: reread $root/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to $root/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build with mcp__agentview__start_build on the spec's path and mark the item building; one build in flight per project; mark it done when merged, and if its spec has a Fixes: line ask the Designer advisor to recheck those findings, and say in the ROUND line if you cannot reach it. A claimed finding the Designer leaves open goes back to proposed, keeping its slug: next round move that line from done back to proposed and note the finding in the why. If the backlog is empty, ask the Designer for an audit when the newest $root/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing."
 
 internal fun advisorLoopCommand(root: String, now: Long) =
     goalCommand(GoalForm(advisorLoopGoal(root), ADVISOR_LOOP_EVERY, null, null, ADVISOR_LOOP_CAP, ADVISOR_LOOP_BUILDS), now)
@@ -97,6 +99,12 @@ internal fun advisorLoopOf(runs: List<ChatRun>, root: String): ChatRun? {
     return runs.filter { it.kind == "goal" && it.state != "done" && it.what.startsWith(head) }.maxByOrNull { it.startedAt }
 }
 
+// The PM chat runs one goal at a time, so the loop of another project blocks a new one: that project's folder.
+internal fun advisorLoopElsewhere(runs: List<ChatRun>, root: String): String? {
+    val head = "Advisor loop for ${root.trimEnd('/')},"
+    return runs.firstOrNull { it.kind == "goal" && it.state != "done" && it.what.startsWith("Advisor loop for ") && !it.what.startsWith(head) }?.what?.drop(17)?.substringBefore(',')
+}
+
 internal fun advisorLoopLine(run: ChatRun): String {
     val last = run.rounds.lastOrNull()
     return when {
@@ -108,8 +116,6 @@ internal fun advisorLoopLine(run: ChatRun): String {
     }
 }
 
-internal fun advisorLoopBuilds(run: ChatRun): String =
-    run.maxBuilds?.takeIf { it > 0 }?.let { "Builds ${run.builds ?: 0} of $it" } ?: ""
 
 // One card of the Advisors board: web BoardCard in shared/advisors.ts. action is spec-it, approve, open-chat, sketch, build or null.
 internal data class BoardCard(val slug: String, val action: String?, val needsYou: Boolean, val item: BacklogItem?, val spec: SpecHomeItem?)
@@ -173,7 +179,7 @@ private fun LoopCard(hub: Hub, project: String, loop: ChatRun?, starting: Boolea
         return
     }
     val last = loop.rounds.lastOrNull()
-    val builds = advisorLoopBuilds(loop)
+    val builds = buildsLine(loop)
     ListRow(
         "Advisor loop", advisorLoopLine(loop),
         leading = last?.let { { StatusDot(outcomeDot(it.outcome)) } },
@@ -189,7 +195,7 @@ private fun LoopCard(hub: Hub, project: String, loop: ChatRun?, starting: Boolea
 private fun BoardCardRow(hub: Hub, card: BoardCard, stage: String, project: String, live: Boolean, openSlugs: List<String>, move: (String, String) -> Unit, onOpen: () -> Unit, scope: CoroutineScope, go: (suspend () -> Boolean) -> Unit) {
     val spec = card.spec
     val item = card.item
-    fun newChat(text: String) = hub.newChat(project, text = text, onOpened = onOpen)
+    fun newChat(text: String) = hub.newChat(project, text = text, hub = true, onOpened = onOpen)
     val sketch = { newChat(sketchSpecPrompt(".claude/specs/${card.slug}.md")) }
     val build = { newChat(if (spec != null || item!!.spec) buildSpecPrompt(".claude/specs/${card.slug}.md") else buildItemPrompt(item!!.title, item.why, item.slug)) }
     fun openChat(sheet: Boolean) {
@@ -253,7 +259,7 @@ private fun specsFromAuditPrompt(root: String) = "Read the newest file in $root/
 
 // Opens an advisor's chat and sends it a prompt, then calls onOpen.
 internal fun CoroutineScope.askAdvisor(hub: Hub, id: String, text: String, onOpen: () -> Unit) {
-    launch { if (hub.openAdvisor(id, false)) { hub.askChat(text); onOpen() } }
+    launch { if (hub.askAdvisor(id, text)) onOpen() }
 }
 
 // The facts in a memory file: its list lines.
@@ -264,16 +270,24 @@ fun memoryFacts(memory: String) = memory.lines().count { FACT.containsMatchIn(it
 // Advisors (web/src/sessions/Advisors.tsx): one project's board from idea to merged build as chips with one stage, the Ask buttons, and a sheet with each advisor's conversations and memory.
 @Composable
 fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
-    val st by hub.store.state.collectAsState()
+    // Fields, not the whole state, so a streamed event in the open chat does not recompose the board.
+    val live by hub.store.state.select { it.live }
+    val runs by hub.store.state.select { it.runs }
+    val shownId by hub.store.state.select { it.shownId }
+    val sessionCwd by hub.store.state.select { it.session?.cwd }
     val ws by hub.workspace.collectAsState()
     // Reloads after an advisor's turn, which may have changed its memory, the backlog, a spec or the audit.
-    val turns = st.live.filter { advisorOf(it.cwd) != null && !it.running }.joinToString { "${it.id}:${it.lastActive}" }
+    val turns = live.filter { advisorOf(it.cwd) != null && !it.running }.joinToString { "${it.id}:${it.lastActive}" }
     val (load, reload) = rememberLoad { protocolJson.decodeFromString<List<AdvisorInfo>>(hub.read("/api/advisors")) }
     var memory by rememberSaveable { mutableStateOf<String?>(null) }
     var picked by remember { mutableStateOf(advisorPick) }
-    val shownChat = st.live.firstOrNull { it.id == st.shownId }
-    val openCwd = st.session?.cwd ?: shownChat?.cwd
-    val root = picked ?: defaultAdvisorRoot(openCwd?.let { folderKey(it, ws.repos, ws.trees) }, ws.repos.map { it.cwd to it.lastCommit.toLong() })
+    val shownChat = live.firstOrNull { it.id == shownId }
+    val openCwd = sessionCwd ?: shownChat?.cwd
+    val root = picked ?: defaultAdvisorRoot(openCwd?.let { folderKey(it, ws.repos, ws.trees) }, remember(ws) {
+        // web folders(): a repo's last commit or its newest saved chat, whichever is later.
+        val chats = ws.saved.groupBy { folderKey(it.cwd, ws.repos, ws.trees) }.mapValues { (_, l) -> l.maxOf { it.lastModified } }
+        ws.repos.map { it.cwd to maxOf(it.lastCommit.toLong(), chats[it.cwd] ?: 0L) }
+    })
     val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<BacklogItem>>(hub.read("/api/advisors/backlog?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
     val (specs, reloadSpecs) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<SpecHomeItem>>(hub.read("/api/advisors/specs?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
     var moved by remember(root, backlog.data) { mutableStateOf<List<BacklogItem>?>(null) }
@@ -289,7 +303,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     fun go(open: suspend () -> Boolean) = scope.launch { if (open()) onOpen() }
     val items = moved ?: backlog.data
     val specList = specs.data
-    val loop = root?.let { advisorLoopOf(st.runs, it) }
+    val loop = root?.let { advisorLoopOf(runs, it) }
     val board = if (items != null && specList != null) advisorBoard(items, specList, loop != null && runNeedsYou(loop)) else null
     LaunchedEffect(board != null) { if (board != null && chip == null) chip = board.defaultStage }
     Column(Modifier.fillMaxSize()) {
@@ -317,10 +331,14 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                         }
                         val cards = board.stages.getValue(stage)
                         val audit = audits.data?.firstOrNull()
-                        val running = st.live.any { advisorOf(it.cwd)?.id == "designer" && it.running }
+                        val running = live.any { advisorOf(it.cwd)?.id == "designer" && it.running }
                         val nothing = items.isEmpty()
                         if (stage == "building" || stage == "ideas" || cards.isNotEmpty()) Group {
-                            if (stage == "building") LoopCard(hub, project, loop, starting, { starting = true; scope.askAdvisor(hub, "pm", advisorLoopCommand(project, System.currentTimeMillis()), onOpen) }, ::go)
+                            if (stage == "building") LoopCard(hub, project, loop, starting, {
+                                val elsewhere = advisorLoopElsewhere(runs, project)
+                                if (elsewhere != null) hub.notice.value = "The loop runs for ${elsewhere.substringAfterLast('/')}; stop it there first"
+                                else { starting = true; scope.askAdvisor(hub, "pm", advisorLoopCommand(project, System.currentTimeMillis()), onOpen) }
+                            }, ::go)
                             if (stage == "ideas") ListRow(
                                 "Audit", when {
                                     audits.data == null && audits.error.isNotEmpty() -> "Could not load the audit"
@@ -337,7 +355,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                     MenuItem("Run audit", "play", { dismiss(); scope.askAdvisor(hub, "designer", auditPrompt(project), onOpen) }, enabled = !running)
                                 }),
                             )
-                            for (c in cards) BoardCardRow(hub, c, stage, project, st.live.any { it.id == c.spec?.chat }, openSlugs, move, onOpen, scope, ::go)
+                            for (c in cards) BoardCardRow(hub, c, stage, project, live.any { it.id == c.spec?.chat }, openSlugs, move, onOpen, scope, ::go)
                         }
                         if (stage == "ideas" && nothing) EmptyState("No backlog yet", "The PM ranks what to build next", "list-ordered", action = if (hub.readOnly) null else ({
                             Button("Ask PM to rank", { scope.askAdvisor(hub, "pm", rankPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
@@ -357,7 +375,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
             info == null && load.error.isNotEmpty() -> EmptyState("Could not load the advisors", load.error, icon = "organization")
             info == null -> Loading("Loading advisors")
             else -> for (a in ADVISORS) {
-                val c = st.live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
+                val c = live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
                 val state = c?.let { chatState(it, null, ws.seen) }
                 val got = info.firstOrNull { it.id == a.id }
                 val earlier = got?.chats.orEmpty().filter { it.sessionId != c?.sessionId }
@@ -372,7 +390,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                             c.running -> "Working"
                             else -> "Open · ${since(c.lastActive)}"
                         },
-                        lines = 1, metaLines = 1, selected = c != null && c.id == st.shownId,
+                        lines = 1, metaLines = 1, selected = c != null && c.id == shownId,
                         leading = if (state != null) ({ StateDot(state) }) else null,
                         onClick = { go { hub.openAdvisor(a.id, false) } },
                     )

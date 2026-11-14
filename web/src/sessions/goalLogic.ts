@@ -2,6 +2,7 @@ import { getState, send, setUi } from '../app/store';
 import type { BadgeSpec } from '../ui/Badge';
 import type { ChatRun } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
+import { buildsLine } from '../../../shared/goalText';
 import { ADVISOR_LOOP_EVERY } from '../../../shared/advisors';
 import { showTurn } from '../chat/composer/composerLogic';
 
@@ -50,7 +51,7 @@ export function goalBadge(run: ChatRun): BadgeSpec {
 export function usageLine(run: ChatRun) {
   const { week, fiveHour } = run.usage ?? {};
   const parts = [week && `Week ${week.pct}%${run.capPct ? ` of ${run.capPct}% cap` : ''}`, fiveHour && `5-hour ${fiveHour.pct}%`].filter(Boolean);
-  const builds = run.maxBuilds ? `Builds ${run.builds ?? 0} of ${run.maxBuilds}` : '';
+  const builds = buildsLine(run);
   const usage = parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : builds ? '' : 'No cap';
   return [usage, builds].filter(Boolean).join(' · ');
 }

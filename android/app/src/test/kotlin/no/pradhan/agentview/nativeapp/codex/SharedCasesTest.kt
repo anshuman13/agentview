@@ -49,7 +49,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.parseEvery
 import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.finishedLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
-import no.pradhan.agentview.nativeapp.sessions.advisorLoopBuilds
+import no.pradhan.agentview.nativeapp.codex.autopilot.buildsLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.mergeQuiet
@@ -243,7 +243,7 @@ class SharedCasesTest {
             val runs = c.getValue("runs").jsonArray.map { JsonObject(mapOf("id" to toJson("r")) + it.jsonObject).decode<ChatRun>() }
             val found = advisorLoopOf(runs, c.str("root"))
             val expected = c.nullable("expected")?.jsonObject
-            assertEquals(c.str("name"), expected?.let { Triple(it.str("id"), it.str("line"), it.prim("builds")?.content ?: "") }, found?.let { Triple(it.id, advisorLoopLine(it), advisorLoopBuilds(it)) })
+            assertEquals(c.str("name"), expected?.let { Triple(it.str("id"), it.str("line"), it.prim("builds")?.content ?: "") }, found?.let { Triple(it.id, advisorLoopLine(it), buildsLine(it)) })
         }
     }
 

@@ -89,7 +89,7 @@ export const ADVISOR_LOOP_EVERY = 4 * HOUR;
 export const ADVISOR_LOOP_CAP = 70;
 export const ADVISOR_LOOP_BUILDS = 5;
 
-export const advisorLoopGoal = (root: string) => `Advisor loop for ${root}, never met on its own. Each round, as PM: reread ${root}/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to ${root}/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build (/agentview:build <slug>, the build card's Build action) and mark the item building; one build in flight per project; mark it done when merged, and if its spec has a Fixes: line ask the Designer advisor to recheck those findings, and say in the ROUND line if you cannot reach it. A claimed finding the Designer leaves open goes back to proposed, keeping its slug: next round move that line from done back to proposed and note the finding in the why. If the backlog is empty, ask the Designer for an audit when the newest ${root}/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing.`;
+export const advisorLoopGoal = (root: string) => `Advisor loop for ${root}, never met on its own. Each round, as PM: reread ${root}/.claude/backlog.md. If fewer than 2 items are specced, write the spec for the top proposed item to ${root}/.claude/specs/<slug>.md and mark it specced; for a UI change ask the Designer advisor for a sketch, and say in the ROUND line if you cannot reach it. If a spec awaits my approval, end with ROUND: question <what needs approval>. Once I approve, start the build with mcp__agentview__start_build on the spec's path and mark the item building; one build in flight per project; mark it done when merged, and if its spec has a Fixes: line ask the Designer advisor to recheck those findings, and say in the ROUND line if you cannot reach it. A claimed finding the Designer leaves open goes back to proposed, keeping its slug: next round move that line from done back to proposed and note the finding in the why. If the backlog is empty, ask the Designer for an audit when the newest ${root}/.claude/audits/*.md is over 7 days old, else end with ROUND: nothing.`;
 
 export const advisorLoopCommand = (root: string, now: number) =>
   goalCommand({ what: advisorLoopGoal(root), every: ADVISOR_LOOP_EVERY, stopIn: null, stopAt: null, capPct: ADVISOR_LOOP_CAP, builds: ADVISOR_LOOP_BUILDS }, now);
@@ -100,6 +100,12 @@ export const advisorLoopOf = (runs: ChatRun[], root: string): ChatRun | undefine
   return runs.filter((r) => r.kind === 'goal' && r.state !== 'done' && r.what.startsWith(head)).sort((a, b) => b.startedAt - a.startedAt)[0];
 };
 
+// The PM chat runs one goal at a time, so the loop of another project blocks a new one: that project's folder.
+export const advisorLoopElsewhere = (runs: ChatRun[], root: string): string | undefined => {
+  const head = `Advisor loop for ${root.replace(/\/+$/, '')},`;
+  return runs.find((r) => r.kind === 'goal' && r.state !== 'done' && r.what.startsWith('Advisor loop for ') && !r.what.startsWith(head))?.what.slice(17).split(',')[0];
+};
+
 export const advisorLoopLine = (run: ChatRun): string => {
   const last = run.rounds.at(-1);
   if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
@@ -107,8 +113,6 @@ export const advisorLoopLine = (run: ChatRun): string => {
   return last.report ? 'Weekly report' : roundText(last);
 };
 
-export const advisorLoopBuilds = (run: Pick<ChatRun, 'builds' | 'maxBuilds'>): string =>
-  run.maxBuilds ? `Builds ${run.builds ?? 0} of ${run.maxBuilds}` : '';
 
 export const auditCountLine = (findings: { status: string }[]): string => {
   if (!findings.length) return 'No findings';

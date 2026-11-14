@@ -89,6 +89,8 @@ export interface AgentHost {
   setStatus(text: string, detail?: { done?: string; next?: string[] }): void;
   // Runs a /goal line from a tool call; false when the line is not a valid goal.
   goal(line: string): boolean;
+  // Starts a chat in another folder with a first prompt, for a tool call; returns the new chat's id.
+  startChat?: (cwd: string, text: string) => Promise<string>;
   setSession(patch: Partial<SessionInfo>): void;
   noteFile(rel: string, source: 'tool' | 'watcher'): void;
   captureEdit(file: string): void;

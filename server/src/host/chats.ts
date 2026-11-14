@@ -64,6 +64,7 @@ export async function createChat(cwd: string, resume?: string, title = '', fork 
   const job = runs.jobOfSession(resume);
   if (job) runs.update(job.id, { chatId: chat.id });
   chat.onJobTurn = (id, failed) => void reviewJob(chat, id, failed);
+  chat.startChat = (dir, text) => prompt(dir, text, undefined, true);
   await chat.loadHistory();
   await chat.hooks.load();
   chat.onMessage((m) => onChatMessage(chat, m));

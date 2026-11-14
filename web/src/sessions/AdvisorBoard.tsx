@@ -9,11 +9,12 @@ import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_EVERY, BOARD_STAGES, advisorBoard, advisorLoopBuilds, advisorLoopCommand, advisorLoopLine, advisorLoopOf, advisorOf, auditCountLine, auditPrompt, canBuildItem, rankPrompt, runNeedsYou, specItemPrompt, specsFromAuditPrompt, type Audit, type BacklogItem, type BoardAction, type BoardCard, type BoardStage } from '../../../shared/advisors';
+import { ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_EVERY, BOARD_STAGES, advisorBoard, advisorLoopCommand, advisorLoopElsewhere, advisorLoopLine, advisorLoopOf, advisorOf, auditCountLine, auditPrompt, canBuildItem, rankPrompt, runNeedsYou, specItemPrompt, specsFromAuditPrompt, type Audit, type BacklogItem, type BoardAction, type BoardCard, type BoardStage } from '../../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
 import { buildItemPrompt, buildSpecPrompt, sketchSpecPrompt } from '../../../shared/specTasks';
 import { span } from '../../../shared/util';
+import { buildsLine } from '../../../shared/goalText';
 import { OUTCOME_DOT } from '../chat/composer/composerLogic';
 import { holdBadge } from './buildsLogic';
 import { openRun } from './goalLogic';
@@ -71,6 +72,8 @@ function CardRow({ card, stage, root, openSlugs, move }: { card: BoardCard; stag
 // The Advisor loop card, first in Building: its last round and Open chat; with no loop, Start sends its goal to the PM chat, disabled for 10 s so a second tap cannot replace it.
 function LoopCard({ root, loop }: { root: string; loop: ChatRun | undefined }) {
   const [sent, setSent] = useState(false);
+  const elsewhere = advisorLoopElsewhere(useStore((s) => s.runs), root);
+  if (!loop && elsewhere) return <Row title="Advisor loop" meta={`Running for ${elsewhere.split('/').pop()} · stop it there to start one here`} plain />;
   if (!loop) {
     const start = () => {
       setSent(true);
@@ -80,7 +83,7 @@ function LoopCard({ root, loop }: { root: string; loop: ChatRun | undefined }) {
     return <Row title="Advisor loop" meta={`Not running · every ${span(ADVISOR_LOOP_EVERY)} · up to ${ADVISOR_LOOP_BUILDS} builds`} plain action={<Button size="sm" variant="tinted" disabled={sent} onClick={start}>Start</Button>} />;
   }
   const last = loop.rounds.at(-1);
-  const builds = advisorLoopBuilds(loop);
+  const builds = buildsLine(loop);
   return (
     <Row
       title="Advisor loop"

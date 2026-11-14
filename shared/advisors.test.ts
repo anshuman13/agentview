@@ -18,7 +18,7 @@ describe('advisorLoopGoal', () => {
 
   it('names the root, the rules and stays short', () => {
     expect(goal.length).toBeLessThan(1200);
-    for (const w of ['/w/app/.claude/backlog.md', '/w/app/.claude/specs/<slug>.md', 'fewer than 2', 'ROUND: question', '/agentview:build', 'building', 'done', '7 days', 'ROUND: nothing', 'back to proposed, keeping its slug']) expect(goal).toContain(w);
+    for (const w of ['/w/app/.claude/backlog.md', '/w/app/.claude/specs/<slug>.md', 'fewer than 2', 'ROUND: question', 'mcp__agentview__start_build', 'building', 'done', '7 days', 'ROUND: nothing', 'back to proposed, keeping its slug']) expect(goal).toContain(w);
   });
 
   it('starts a 4h goal with a 70% cap and 5 builds and no stop', () => {

@@ -4,11 +4,11 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
-import { advisorBoard, advisorLoopBuilds, advisorLoopLine, advisorLoopOf, auditCountLine, defaultAdvisorRoot, specItemPrompt, type BacklogItem } from '../../shared/advisors';
+import { advisorBoard, advisorLoopLine, advisorLoopOf, auditCountLine, defaultAdvisorRoot, specItemPrompt, type BacklogItem } from '../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
-import { finishedLine, mergeQuiet } from '../../shared/goalText';
+import { buildsLine, finishedLine, mergeQuiet } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
@@ -248,7 +248,7 @@ describe('cases shared with the Android app', () => {
   for (const c of cases<{ name: string; root: string; runs: Partial<ChatRun>[]; expected: { id: string; line: string; builds?: string } | null }>('advisor-loop')) {
     it(`advisorLoop: ${c.name}`, () => {
       const found = advisorLoopOf(c.runs.map(run), c.root);
-      expect(found ? { id: found.id, line: advisorLoopLine(found), builds: advisorLoopBuilds(found) } : null).toEqual(c.expected && { builds: '', ...c.expected });
+      expect(found ? { id: found.id, line: advisorLoopLine(found), builds: buildsLine(found) } : null).toEqual(c.expected && { builds: '', ...c.expected });
     });
   }
 

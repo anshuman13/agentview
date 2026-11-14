@@ -42,6 +42,7 @@ export class AgentSession implements AgentHost {
   title = '';
   onIdle: (() => void) | null = null;
   onJobTurn: ((runId: string, failed: boolean) => void) | null = null;
+  startChat?: (cwd: string, text: string) => Promise<string>;
   created = Date.now();
   state: ServerState;
   failed = false;

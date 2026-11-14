@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
+import no.pradhan.agentview.nativeapp.ui.select
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -40,9 +41,6 @@ import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.runEdit
 import no.pradhan.agentview.nativeapp.net.submit
-import no.pradhan.agentview.nativeapp.sessions.advisorLoopGoal
-import no.pradhan.agentview.nativeapp.sessions.advisorOf
-import no.pradhan.agentview.nativeapp.sessions.askAdvisor
 import no.pradhan.agentview.nativeapp.sessions.folderName
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -69,17 +67,16 @@ import no.pradhan.agentview.nativeapp.workspace.planCondition
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
 
-private class BeforeLoop(val every: Long, val custom: String, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val builds: Int?, val inHere: Boolean)
 
 // The goal sheets (web/src/sessions/GoalSheets.tsx), mounted once in the app shell.
 @Composable
 fun GoalSheets(hub: Hub) {
     val sheet by hub.goalSheet.collectAsState()
-    val state by hub.store.state.collectAsState()
+    val runs by hub.store.state.select { it.runs }
     val close = { hub.goalSheet.value = null }
     when (val s = sheet) {
         is GoalSheet.Start -> GoalStartSheet(hub, s, close)
-        is GoalSheet.Detail -> state.runs.firstOrNull { it.id == s.run }?.let { GoalDetailSheet(hub, it, close) }
+        is GoalSheet.Detail -> runs.firstOrNull { it.id == s.run }?.let { GoalDetailSheet(hub, it, close) }
         null -> {}
     }
 }
@@ -92,7 +89,7 @@ internal class PlanRead(val markdown: String? = null, val error: Boolean = false
 @Composable
 internal fun planRead(hub: Hub, path: String?, chat: String): PlanRead {
     var tick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(hub) { hub.fileChanged.collect { tick++ } }
+    LaunchedEffect(hub, path) { hub.fileChanged.collect { if (path != null && path.endsWith(it)) tick++ } }
     val read by produceState(PlanRead(), path, chat, tick) {
         if (path != null) runCatching { parseFile(hub.api.get("/api/file?path=${enc(path)}", chat)).content }
             .onSuccess { value = PlanRead(it) }
@@ -141,17 +138,15 @@ private fun <T> MenuChip(label: String, items: List<T>, name: (T) -> String, che
 // The start sheet (web GoalSheet): what, how often, stop at, usage cap and where, then Start.
 @Composable
 private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit) {
-    val state by hub.store.state.collectAsState()
+    val cwd by hub.store.state.select { it.session?.cwd.orEmpty() }
+    val chatProvider by hub.store.state.select { it.session?.provider }
+    val active by hub.store.state.select { st -> st.runs.any { it.chatId == st.shownId && it.state != "done" } }
     val ws by hub.workspace.collectAsState()
     val allProviders by hub.providers.collectAsState()
     val defaultProvider by hub.defaultProvider.collectAsState()
     val providers = allProviders.filter { it.enabled }
-    val cwd = state.session?.cwd.orEmpty()
-    val active = state.runs.any { it.chatId == state.shownId && it.state != "done" }
     val canHere = sheet.here && !active
     var what by remember { mutableStateOf("") }
-    var advisor by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
     var every by remember { mutableStateOf(EVERY.first().ms) }
     var custom by remember { mutableStateOf("") }
     var stopIn by remember { mutableStateOf<Long?>(null) }
@@ -160,7 +155,6 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     var builds by remember { mutableStateOf<Int?>(null) }
     var inHere by remember { mutableStateOf(false) }
     var dir by remember { mutableStateOf(cwd) }
-    var beforeLoop by remember { mutableStateOf<BeforeLoop?>(null) }
     var providerId by remember { mutableStateOf(defaultProvider) }
     var pickTime by remember { mutableStateOf(false) }
     var sent by remember { mutableStateOf(false) }
@@ -168,22 +162,18 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     var preset by remember { mutableStateOf<String?>(null) }
     var naming by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(sent) { if (sent) { delay(10_000); sent = false } }
-    val loop = advisor && sheet.plan == null
-    val here = canHere && inHere && !loop
-    val target = if (loop) "claude" else if (here) state.session?.provider else providerId
+    val here = canHere && inHere
+    val target = if (here) chatProvider else providerId
     val dirs = (ws.repos.map { it.cwd to it.name } + ws.trees.map { it.cwd to it.name.substringAfterLast('/') }).let { l -> if (cwd.isNotEmpty() && l.none { it.first == cwd }) listOf(cwd to folderName(cwd)) + l else l }
     val read = planRead(hub, sheet.plan, hub.pageChat)
     val badEvery = custom.isNotBlank() && parseEvery(custom) == null
     val ready = !badEvery && (sheet.plan == null || (read.markdown != null && !read.error))
-    val usable = { d: String -> !(loop && advisorOf(d) != null) }
-    val root = if (dir.isNotEmpty() && usable(dir)) dir else dirs.firstOrNull { usable(it.first) }?.first.orEmpty()
-    val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: if (loop) (if (root.isEmpty()) "" else advisorLoopGoal(root)) else what
+    val root = dir.ifEmpty { dirs.firstOrNull()?.first.orEmpty() }
+    val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: what
     val start = {
         hub.track("action:startGoal")
         val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct, builds), System.currentTimeMillis())
-        if (loop) {
-            scope.askAdvisor(hub, "pm", text, onClose)
-        } else if (here) {
+        if (here) {
             hub.submit(text, false) { hub.notice.value = "Could not send the goal. Try again." }
             onClose()
         } else {
@@ -192,7 +182,6 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
         }
     }
     val applyPreset = { p: GoalPreset ->
-        if (advisor) { advisor = false; beforeLoop?.let { inHere = it.inHere } }
         if (sheet.plan == null) what = p.what
         every = p.every; custom = if (EVERY.any { it.ms == p.every }) "" else everyText(p.every)
         stopIn = p.stopIn; stopAt = p.stopAt; capPct = p.capPct; builds = p.builds
@@ -209,18 +198,11 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
         SectionHeader("What")
         Group {
             if (sheet.plan == null || presets.isNotEmpty()) Chips {
-                if (sheet.plan == null) Chip("Advisor loop", {
-                    advisor = !advisor
-                    if (advisor) {
-                        beforeLoop = BeforeLoop(every, custom, stopIn, stopAt, capPct, builds, inHere)
-                        custom = ""; every = ADVISOR_LOOP_EVERY; stopIn = null; stopAt = null; capPct = ADVISOR_LOOP_CAP; builds = ADVISOR_LOOP_BUILDS; inHere = false
-                    } else beforeLoop?.let { what = ""; custom = it.custom; every = it.every; stopIn = it.stopIn; stopAt = it.stopAt; capPct = it.capPct; builds = it.builds; inHere = it.inHere }
-                }, on = advisor)
                 presets.forEach { p -> Chip(p.name, { applyPreset(p) }, on = preset == p.name) }
                 preset?.let { name -> Button("Delete preset", { hub.saveGoalPresets(removePreset(presets, name)); preset = null }, variant = ButtonVariant.Danger) }
             }
             if (sheet.plan != null) ListRow(sheet.plan, if (read.error) "Could not read the plan. Check the file still exists." else read.markdown?.let { read.progress ?: "No tasks" }, lines = 1)
-            else Box(Modifier.padding(Tokens.sp6)) { TextField(if (loop) condition else what, { what = it }, enabled = !loop, placeholder = "What is the goal?", minLines = 3) }
+            else Box(Modifier.padding(Tokens.sp6)) { TextField(what, { what = it }, placeholder = "What is the goal?", minLines = 3) }
         }
         SectionHeader("How often")
         Group {
@@ -251,13 +233,13 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
         SectionHeader("Where")
         Group {
             Chips {
-                if (canHere && !loop) {
+                if (canHere) {
                     Chip("New chat", { inHere = false }, on = !inHere)
                     Chip("This chat", { inHere = true }, on = inHere)
                 }
                 if (!here) {
                     if (sheet.plan == null) MenuChip(folderName(root), dirs, { it.second }, { it.first == root }) { dir = it.first }
-                    if (!loop) MenuChip(providerLabel(providerId), providers, { it.label }, { it.id == providerId }) { providerId = it.id }
+                    MenuChip(providerLabel(providerId), providers, { it.label }, { it.id == providerId }) { providerId = it.id }
                 }
             }
         }
@@ -266,10 +248,10 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
             val draft = naming
-            if (draft == null) Button("Save as preset", { naming = (sheet.plan?.substringAfterLast('/') ?: what.trim()).take(MAX_NAME) }, variant = ButtonVariant.Tinted, enabled = !loop)
+            if (draft == null) Button("Save as preset", { naming = (sheet.plan?.substringAfterLast('/') ?: what.trim()).take(MAX_NAME) }, variant = ButtonVariant.Tinted)
             else {
                 Box(Modifier.weight(1f)) { TextField(draft, { naming = it.take(MAX_NAME) }, placeholder = "Preset name", singleLine = true) }
-                Button("Save", savePreset, variant = ButtonVariant.Tinted, enabled = !loop && !badEvery && draft.isNotBlank())
+                Button("Save", savePreset, variant = ButtonVariant.Tinted, enabled = !badEvery && draft.isNotBlank())
             }
         }
     }
