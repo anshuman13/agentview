@@ -370,6 +370,7 @@ fun runCmd(run: String, op: String) = cmd("run") { put("run", run); put("op", op
 // A null value clears the end time or the cap; a key left out stays as it is.
 fun runEditCmd(run: String, edit: Map<String, Long?>) = cmd("run_edit") { put("run", run); edit.forEach { (k, v) -> put(k, v) } }
 fun triesKeepCmd(run: String, n: Int) = cmd("tries_keep") { put("run", run); put("n", n) }
+fun triesSendCmd(run: String, text: String) = cmd("tries_send") { put("run", run); put("text", text) }
 fun permissionCmd(id: String, allow: Boolean, always: Boolean = false) = cmd("permission") {
     put("id", id); put("allow", allow); if (always) put("always", true)
 }

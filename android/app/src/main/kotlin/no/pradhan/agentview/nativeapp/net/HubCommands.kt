@@ -103,6 +103,7 @@ fun Hub.runControl(run: ChatRun, op: String) {
 fun Hub.runEdit(run: ChatRun, edit: Map<String, Long?>) = post(runEditCmd(run.id, edit), store.wanted)
 
 fun Hub.triesKeep(run: ChatRun, n: Int) = post(triesKeepCmd(run.id, n), store.wanted)
+fun Hub.triesSend(run: ChatRun, text: String) = post(triesSendCmd(run.id, text), store.wanted)
 
 fun Hub.answer(id: String, answers: Map<String, String>) = post(answerCmd(id, answers), store.wanted)
 

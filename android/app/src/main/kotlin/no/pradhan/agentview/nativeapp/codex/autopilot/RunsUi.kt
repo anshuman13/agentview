@@ -55,6 +55,11 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
+import no.pradhan.agentview.nativeapp.net.triesSend
+import no.pradhan.agentview.nativeapp.ui.TextField
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 
 // The loop card above the composer (web/src/chat/cards/LoopCard.tsx): state and Pause in the head, what is happening now, the running agents, then the plan line on a goal or the what line and cost on other kinds.
 
@@ -149,11 +154,14 @@ suspend fun Hub.openChatOf(chatId: String, sessionId: String): Boolean {
     return openSaved(sessionId)
 }
 
-// The tries board as a sheet (web TriesBoard): a card per try with its state, last report, diff size and cost, Open and Keep behind a confirm.
+// The tries board as a sheet (web TriesBoard): a card per try with its state, last report, diff size and cost, Open and Keep behind a confirm,
+// and a message sent to every open try.
 @Composable
 private fun TriesSheet(hub: Hub, run: ChatRun, live: List<LiveChat>, onDismiss: () -> Unit, onOpen: (RunTry) -> Unit) {
     var keep by remember { mutableStateOf<Int?>(null) }
+    var text by rememberSaveable { mutableStateOf("") }
     val open = run.tries.count { !it.dropped }
+    val sendAll = { if (text.isNotBlank()) { hub.triesSend(run, text.trim()); text = "" } }
     keep?.let { n ->
         ConfirmDialog("Keep try $n?", "Archive the other ${open - 1} chats? Their worktrees stay on disk.", "Keep try $n", { hub.triesKeep(run, n) }, onDismiss = { keep = null })
     }
@@ -173,6 +181,11 @@ private fun TriesSheet(hub: Hub, run: ChatRun, live: List<LiveChat>, onDismiss: 
                         Button("Keep try ${t.n}", { keep = t.n }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
                     }
                 }
+            }
+            if (open > 0) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                TextField(text, { text = it }, Modifier.weight(1f), placeholder = "Message to every open try", singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { sendAll() }))
+                Button("Send to all", { sendAll() }, size = ButtonSize.Sm, enabled = text.isNotBlank())
             }
         }
     }

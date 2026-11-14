@@ -1,38 +1,14 @@
 import { useState } from 'react';
 import { send, useStore } from '../app/store';
-import { Badge, type BadgeSpec } from '../ui/Badge';
+import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { Section, sectionCount } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { money } from '../ui/util';
 import { billing } from '../../../shared/providers';
-import type { ChatRun, LiveChat, Try } from '../../../shared/protocol';
-
-type TryColumn = { n: number; branch: string; state: BadgeSpec; line: string; edits?: LiveChat['edits']; cost: number; archived: boolean };
-
-// One column of the board: the try's chat state, its last report, the diff size and cost.
-export function tryColumn(run: ChatRun, t: Try, live: LiveChat[]): TryColumn {
-  const chat = live.find((c) => c.sessionId === t.sessionId);
-  const rounds = run.rounds.filter((r) => r.n === t.n);
-  const last = rounds.at(-1);
-  const state: BadgeSpec = t.dropped
-    ? { status: 'skipped', reason: 'Archived' }
-    : chat?.pending || last?.outcome === 'blocked' || last?.outcome === 'question'
-      ? { status: 'waiting', label: 'Needs you' }
-      : chat?.running || !last
-        ? { status: 'running' }
-        : { status: last.outcome === 'failed' ? 'failed' : 'done' };
-  return {
-    n: t.n,
-    branch: t.branch,
-    state,
-    line: last?.line.replace(/^Try \d+: /, '') ?? chat?.last ?? '',
-    edits: chat?.edits,
-    cost: chat?.cost ?? rounds.reduce((sum, r) => sum + r.costUsd, 0),
-    archived: Boolean(t.dropped),
-  };
-}
+import type { ChatRun, LiveChat } from '../../../shared/protocol';
+import { tryColumn } from './triesLogic';
 
 function TriesColumns({ run, live, onOpen, onKeep }: { run: ChatRun; live: LiveChat[]; onOpen: (n: number) => void; onKeep: (n: number) => void }) {
   const tries = run.tries ?? [];
