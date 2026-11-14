@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Menu } from '../../ui/Menu';
 import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 import { loopLabel } from '../../chat/composer/composerLogic';
 import type { ToolUse } from '../../chat/transcript/steps';
 import { clock } from '../../../../shared/util';
@@ -39,7 +40,7 @@ function Step({ text, editing = false, onSave, onDrop }: { text: string; editing
             if (e.key === 'Escape') { setValue(text); setEdit(false); if (!text) onDrop(); }
           }}
         />
-        <button className="icon-btn" title="Remove step" onPointerDown={(e) => e.preventDefault()} onClick={() => { setEdit(false); onDrop(); }}><Icon name="trash" small /></button>
+        <IconButton icon="trash" label="Remove step" size="sm" onPointerDown={(e) => e.preventDefault()} onClick={() => { setEdit(false); onDrop(); }} />
       </li>
     );
   }

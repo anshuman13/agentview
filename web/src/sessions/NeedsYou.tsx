@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { notice, send, useStore } from '../app/store';
 import { attentionPost } from './sessionApi';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
 import { ATTENTION_LABEL, type AttentionItem } from '../../../shared/protocol';
 import { ago, pressable } from '../ui/util';
 import { PullState, usePullRequests } from '../ops/pulls';
@@ -25,7 +26,7 @@ export function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
       if (r.error) notice(r.error);
       else send({ type: 'view', id: r.id });
     } catch {
-      notice('Could not ask Claude');
+      notice('Could not ask the agent');
     } finally {
       setBusy(null);
     }
@@ -50,8 +51,8 @@ export function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
             </span>
           </span>
           <span className="acts">
-            <button className="icon-btn" title="Ask Claude to handle this" onClick={(e) => { e.stopPropagation(); void ask(it); }}><Icon name="sparkle" small /></button>
-            <button className="icon-btn" title="Dismiss until it changes" onClick={(e) => { e.stopPropagation(); attentionPost('/api/attention/dismiss', it.id).catch(() => notice('Could not dismiss. It stays in Needs you.')); }}><Icon name="close" small /></button>
+            <IconButton icon="sparkle" label="Ask the agent to handle this" size="sm" onClick={(e) => { e.stopPropagation(); void ask(it); }} />
+            <IconButton icon="close" label="Dismiss until it changes" size="sm" onClick={(e) => { e.stopPropagation(); attentionPost('/api/attention/dismiss', it.id).catch(() => notice('Could not dismiss. It stays in Needs you.')); }} />
           </span>
         </div>
       ))}
