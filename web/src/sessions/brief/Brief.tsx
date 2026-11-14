@@ -39,8 +39,9 @@ export function Brief() {
   const repeat = useStore((s) => s.session.repeat);
   const cwd = useStore((s) => s.session.cwd);
   const sessionId = useStore((s) => s.session.id);
-  const chatTitle = useStore((s) => s.live.find((c) => c.id === s.session.id)?.title);
-  const savedId = useStore((s) => s.live.find((c) => c.id === s.session.id)?.sessionId);
+  const live = useStore((s) => s.live.find((c) => c.id === s.session.id));
+  const chatTitle = live?.title;
+  const savedId = live?.sessionId;
   const [renaming, setRenaming] = useState(false);
   const pending = useStore((s) => s.pending);
   const waiting = pending.length > 0;
@@ -90,7 +91,7 @@ export function Brief() {
             {cwd && <small>{cwd.split('/').pop()}</small>}
           </span>
           <span className="spacer" />
-          <HeadState state={state} status={status} loop={loop} repeat={repeat} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
+          <HeadState state={state} status={status} loop={loop} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
           <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} hasAgents={agents.length > 0} showAgents={showAgents} agentsRunning={agentsRunning} agentsDone={agentsDone} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} openAgents={() => { setShowAgents(!showAgents); setAgentSel(null); }} running={running} hasChanges={turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         {showAgents ? <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense> : <Transcript showWork={showWork} />}

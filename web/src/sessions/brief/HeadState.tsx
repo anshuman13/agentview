@@ -3,9 +3,9 @@ import { Menu } from '../../ui/Menu';
 import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
-import { loopLabel } from '../../chat/composer/composerLogic';
+import { chatState, loopLabel } from '../../chat/composer/composerLogic';
+import type { LiveChat } from '../../../../shared/protocol';
 import type { ToolUse } from '../../chat/transcript/steps';
-import { clock } from '../../../../shared/util';
 import { time } from './time';
 
 type Loop = { phase: string | null; round: number; max: number };
@@ -15,6 +15,8 @@ type Props = {
   status: string;
   loop: Loop;
   repeat: { nextAt?: number | null } | null | undefined;
+  chat: LiveChat | undefined;
+  pending: number;
   lastReply: { at: number } | undefined;
   lastTool: ToolUse | undefined;
   limit: { at: string; prompt: string } | null;
@@ -69,12 +71,11 @@ function StepList({ done, next, adding, setAdding }: { done: Props['done']; next
   );
 }
 
-function nowText({ state, status, loop, repeat }: Pick<Props, 'state' | 'status' | 'loop' | 'repeat'>) {
-  if (state === 'waiting') return 'Waiting for you';
+// The status bar's chatState, plus the build cycle phase and Stopping, which only the open chat knows.
+function nowText({ state, status, loop, chat, pending }: Pick<Props, 'state' | 'status' | 'loop' | 'chat' | 'pending'>) {
   if (state === 'stopping') return 'Stopping…';
-  if (state === 'running') return loop.phase && ['plan', 'build', 'test'].includes(loop.phase) ? `${loopLabel(loop)} · ${status}` : status;
-  if (repeat?.nextAt) return `Idle · next loop round ${clock(repeat.nextAt)}`;
-  return 'Idle';
+  if (state === 'running' && loop.phase && ['plan', 'build', 'test'].includes(loop.phase)) return `${loopLabel(loop)} · ${status}`;
+  return chatState({ pending, failed: chat?.failed, stalled: chat?.stalled, running: state === 'running', status, agentList: chat?.agentList, run: chat?.run }).text;
 }
 
 const markIcon = (state: Props['state']) => <Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} />;
