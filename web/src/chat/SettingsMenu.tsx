@@ -29,7 +29,8 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     if (v === 'side') return act(sideChat);
     if (v === 'fork') return act(forkChat);
     if (v === 'markdown') return act(copyChatMarkdown);
-    if (v === 'goal') return act(() => (run ? openGoal(run.id) : setUi({ goalSheet: { mode: 'start', here: true } })));
+    // Loops, cycles, tries and jobs have their controls on the loop card only.
+    if (v === 'goal') return act(() => (!run ? setUi({ goalSheet: { mode: 'start', here: true } }) : run.kind === 'goal' && openGoal(run.id)));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
   const narrow = useNarrow();

@@ -312,7 +312,9 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
         val loop = session?.loop?.takeIf { it.on }
         SectionHeader("Goal")
         Group {
-            ListRow("Goal", run?.let { runLine(it, session?.loop?.phase) } ?: "Off", onClick = { hub.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }, trailing = { Chevron() })
+            // Loops, cycles, tries and jobs have their controls on the loop card only.
+            val opens = run == null || run.kind == "goal"
+            ListRow("Goal", run?.let { runLine(it, session?.loop?.phase) } ?: "Off", onClick = if (opens) ({ hub.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }) else null, trailing = { if (opens) Chevron() })
             Hairline()
             ListRow("Build cycle", loop?.let { "Up to ${it.max} ${if (it.max == 1) "round" else "rounds"}" } ?: "Off", onClick = { onSheet(Picker.Loop) }, trailing = { Chevron() })
         }
