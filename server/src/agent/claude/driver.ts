@@ -241,7 +241,7 @@ export class ClaudeDriver implements AgentDriver {
 
   private async loadUsage() {
     const q = this.q;
-    if (q && !this.openrouter) return loadUsage(q, this.host, () => q === this.q);
+    if (q && !this.openrouter) return loadUsage(q, this.host, () => q === this.q, this.account);
   }
 
   async mcpStatus() {

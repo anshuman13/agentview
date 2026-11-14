@@ -19,9 +19,19 @@ export async function loadMeta(q: Query, host: AgentHost, extraModels: Array<{ v
 }
 
 // The usage only counts while q is still the chat's process.
-export async function loadUsage(q: Query, host: AgentHost, isCurrent: () => boolean) {
+// Plan usage belongs to the account, so the chats on one account share one read a minute.
+const USAGE_TTL = 60_000;
+const reads = new Map<string, { at: number; read: ReturnType<Query['usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET']> }>();
+
+export async function loadUsage(q: Query, host: AgentHost, isCurrent: () => boolean, account: string, now = Date.now()) {
   try {
-    const u = await q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true });
+    let hit = reads.get(account);
+    if (!hit || now - hit.at >= USAGE_TTL) {
+      const fresh = { at: now, read: q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }) };
+      fresh.read.catch(() => reads.get(account) === fresh && reads.delete(account));
+      reads.set(account, (hit = fresh));
+    }
+    const u = await hit.read;
     if (isCurrent()) host.setSession({ usage: sessionUsage(u) });
   } catch (err) {
     process.stderr.write(`loadUsage failed: ${String(err)}\n`);

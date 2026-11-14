@@ -16,6 +16,9 @@ import { noteThread } from './threads.js';
 import { planUsage } from './usage.js';
 
 const USAGE_EVERY = 10 * 60_000;
+// The rate limits are the Codex account's, so the chats share one read a minute.
+const USAGE_TTL = 60_000;
+let lastRead: { at: number; read: Promise<{ rateLimits: RateLimits }> } | null = null;
 // How long the process that read the history waits for the chat to start.
 const SPARE_MS = 5_000;
 const MCP_STATUS: Record<string, string> = { connected: 'connected', authenticationRequired: 'needs-auth', failed: 'failed', disabled: 'disabled' };
@@ -135,7 +138,13 @@ export class CodexDriver implements AgentDriver {
     const rpc = this.rpc;
     if (!rpc) return;
     try {
-      const { rateLimits } = await rpc.request<{ rateLimits: RateLimits }>('account/rateLimits/read');
+      const now = Date.now();
+      if (!lastRead || now - lastRead.at >= USAGE_TTL) {
+        const fresh = { at: now, read: rpc.request<{ rateLimits: RateLimits }>('account/rateLimits/read') };
+        fresh.read.catch(() => lastRead === fresh && (lastRead = null));
+        lastRead = fresh;
+      }
+      const { rateLimits } = await lastRead.read;
       if (rpc === this.rpc) this.host.setSession({ usage: planUsage(rateLimits) });
     } catch (err) {
       process.stderr.write(`codex rateLimits failed: ${errText(err)}\n`);
