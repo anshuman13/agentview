@@ -60,6 +60,16 @@ describe('workflow runs', () => {
     expect((await workflowAgents('/tmp/none', sessionId)).runs).toEqual([]);
   });
 
+  it('stops the open agents of a run that ended, and keeps them running while it runs', async () => {
+    const record = path.join(projectDir(cwd), sessionId, 'workflows', 'wf_x.json');
+    await mkdir(path.dirname(record), { recursive: true });
+    await writeFile(record, JSON.stringify({ status: 'running' }));
+    expect((await workflowAgents(cwd, sessionId)).runs[0].agents.map((a) => a.status)).toEqual(['done', 'running']);
+    await writeFile(record, JSON.stringify({ status: 'killed' }));
+    expect((await workflowAgents(cwd, sessionId)).runs[0].agents.map((a) => a.status)).toEqual(['done', 'stopped']);
+    await rm(record);
+  });
+
   it('links a run to its call by the Run ID and ignores an unmatched run', async () => {
     const { runs } = await workflowAgents(cwd, sessionId);
     const msg = (uuid: string, type: string, content: unknown) => ({ type, uuid, session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;

@@ -34,9 +34,9 @@ export async function subagentMessages(cwd: string, sessionId: string, cache = n
   return { subs, changed };
 }
 
-type JournalAgent = { key: string; agentId: string; label: string; phase: string; status: 'running' | 'done' | 'failed'; result: string };
+type JournalAgent = { key: string; agentId: string; label: string; phase: string; status: 'running' | 'done' | 'failed' | 'stopped'; result: string };
 export type WorkflowRun = { runId: string; agents: (JournalAgent & { msgs: SessionMessage[] })[] };
-export type WorkflowFile = { sig: string; agents?: JournalAgent[]; msgs?: SessionMessage[] };
+export type WorkflowFile = { sig: string; agents?: JournalAgent[]; msgs?: SessionMessage[]; ended?: boolean };
 
 export function parseJournal(text: string): JournalAgent[] {
   const agents = new Map<string, JournalAgent>();
@@ -97,10 +97,13 @@ export async function workflowAgents(cwd: string, sessionId: string, cache = new
   const runs = await Promise.all(ids.map(async (runId) => {
     const dir = path.join(root, runId);
     const journal = await load(path.join(dir, 'journal.jsonl'), async (f) => void (f.agents = parseJournal(await readFile(path.join(dir, 'journal.jsonl'), 'utf8'))));
+    // The run's record appears beside the session once it ends; an agent a stopped run never closed in its journal ended with it.
+    const record = path.join(projectDir(cwd), sessionId, 'workflows', `${runId}.json`);
+    const run = await load(record, async (f) => void (f.ended = JSON.parse(await readFile(record, 'utf8'))?.status !== 'running'));
     const agents = await Promise.all((journal?.agents ?? []).map(async (a) => {
       const file = path.join(dir, `agent-${a.agentId}.jsonl`);
       const t = await load(file, async (f) => void (f.msgs = await readTranscriptFile(file, sessionId)));
-      return { ...a, msgs: t?.msgs ?? [] };
+      return { ...a, status: a.status === 'running' && run?.ended ? ('stopped' as const) : a.status, msgs: t?.msgs ?? [] };
     }));
     return { runId, agents };
   }));

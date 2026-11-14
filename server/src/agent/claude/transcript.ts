@@ -195,7 +195,7 @@ export function workflowEvents(run: WorkflowRun, group: string, callAt: number):
     const model = (a.msgs.find((m) => m.type === 'assistant')?.message as { model?: string })?.model;
     const ev = agentEvent(id, { description: a.label, subagent_type: a.phase, prompt, model }, startedAt);
     Object.assign(ev, { group, status: a.status, endedAt, usage: derivedUsage(a.msgs, startedAt, endedAt) });
-    const result: ChatEvent[] = running ? [] : [{ id: `${id}:result`, kind: 'tool_result', toolUseId: id, text: (a.result || finalText(a.msgs)).slice(0, 20_000), isError: a.status === 'failed', at: endedAt ?? startedAt }];
+    const result: ChatEvent[] = running ? [] : [{ id: `${id}:result`, kind: 'tool_result', toolUseId: id, text: (a.result || finalText(a.msgs)).slice(0, 20_000), isError: a.status === 'failed', at: endedAt ?? startedAt, ...(a.status === 'stopped' && { stopped: true }) }];
     return [toolUseEvent(id, 'Agent', { description: a.label, prompt }, startedAt), ev, ...result, ...subagentEvents(a.msgs, id, {})];
   });
 }
