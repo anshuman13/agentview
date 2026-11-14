@@ -99,7 +99,11 @@ private class ComposerState(val hub: Hub, val chatId: String) {
     var dismissed by mutableStateOf("")
     var files by mutableStateOf<List<String>?>(null)
 
-    fun set(v: TextFieldValue) { text = v; hub.setDraft(chatId, v.text) }
+    fun set(v: TextFieldValue) {
+        val changed = v.text != text.text
+        text = v
+        if (changed) hub.setDraft(chatId, v.text)
+    }
 
     private fun restore(sent: String) {
         val back = restoreUnsent(text.text, sent)
