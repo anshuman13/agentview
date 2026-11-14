@@ -1,6 +1,8 @@
 import { parseObject } from '../json.js';
 import type { AutoMerge, Method } from './automerge.js';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { exec as run } from '../exec.js';
 
 const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,headRefOid,additions,deletions';
@@ -9,6 +11,24 @@ const refreshing = new Map<string, Promise<PullRequest[]>>();
 const details = new Map<string, { updatedAt: string; detail: Promise<PullRequestDetail> }>();
 const PREFETCH = 5;
 const KEEP = 20;
+const keys = new Map<string, string>();
+
+// Worktrees of one repo share a key, so their chats share one PR list and detail cache.
+export function repoKey(cwd: string) {
+  let k = keys.get(cwd);
+  if (k !== undefined) return k;
+  k = cwd;
+  try {
+    const gitdir = readFileSync(path.join(cwd, '.git'), 'utf8').match(/^gitdir: (.+)$/m)?.[1].trim();
+    if (gitdir) {
+      const dir = path.resolve(cwd, gitdir);
+      k = path.dirname(path.resolve(dir, readFileSync(path.join(dir, 'commondir'), 'utf8').trim()));
+    }
+  } catch {}
+  keys.set(cwd, k);
+  return k;
+}
+
 const ENV = { ...process.env, GH_NO_UPDATE_NOTIFIER: '1', GH_PROMPT_DISABLED: '1' };
 
 export async function gh(cwd: string, ...args: string[]) {
@@ -44,13 +64,13 @@ const list = async (cwd: string, ...extra: string[]) => JSON.parse(await gh(cwd,
 // Bumped when a PR changes here, so a list fetched before it is not stored.
 const generation = new Map<string, number>();
 const changedHere = (cwd: string) => {
-  generation.set(cwd, (generation.get(cwd) ?? 0) + 1);
-  lists.delete(cwd);
-  refreshing.delete(cwd);
+  generation.set(repoKey(cwd), (generation.get(repoKey(cwd)) ?? 0) + 1);
+  lists.delete(repoKey(cwd));
+  refreshing.delete(repoKey(cwd));
 };
 
 async function fetchList(cwd: string): Promise<PullRequest[]> {
-  const gen = generation.get(cwd);
+  const gen = generation.get(repoKey(cwd));
   const [all, mine, requested] = await Promise.all([list(cwd), list(cwd, '--author', '@me'), list(cwd, '--search', 'user-review-requested:@me')]);
   const byNumber = new Map<number, PullRequest>();
   for (const p of [...all, ...mine, ...requested]) {
@@ -72,24 +92,24 @@ async function fetchList(cwd: string): Promise<PullRequest[]> {
     });
   }
   const prs = [...byNumber.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  if (gen !== generation.get(cwd)) return prs;
-  lists.set(cwd, { at: Date.now(), prs });
+  if (gen !== generation.get(repoKey(cwd))) return prs;
+  lists.set(repoKey(cwd), { at: Date.now(), prs });
   for (const p of prs) if (details.get(key(cwd, p.number))?.updatedAt !== p.updatedAt) details.delete(key(cwd, p.number));
   return prs;
 }
 
 function refresh(cwd: string) {
-  let p = refreshing.get(cwd);
+  let p = refreshing.get(repoKey(cwd));
   if (!p) {
-    const mine: Promise<PullRequest[]> = fetchList(cwd).finally(() => refreshing.get(cwd) === mine && refreshing.delete(cwd));
-    refreshing.set(cwd, (p = mine));
+    const mine: Promise<PullRequest[]> = fetchList(cwd).finally(() => refreshing.get(repoKey(cwd)) === mine && refreshing.delete(repoKey(cwd)));
+    refreshing.set(repoKey(cwd), (p = mine));
   }
   return p;
 }
 
 // The last list is served at once, however old; a refresh runs behind it when it is over 30 s old.
 export function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
-  const hit = lists.get(cwd);
+  const hit = lists.get(repoKey(cwd));
   if (fresh || !hit) return refresh(cwd);
   if (Date.now() - hit.at > 30_000) refresh(cwd).catch(() => {});
   return Promise.resolve(hit.prs);
@@ -103,14 +123,14 @@ const polled = new Map<string, number>();
 
 // The check state of a PR from the last list of its repo, for rows that cannot wait on gh; the list is refetched at most every 5 min per repo, and changed runs after each fetch.
 export function prChecks(cwd: string, number: number, changed: () => void): CheckState | undefined {
-  if (Date.now() - (polled.get(cwd) ?? 0) > 5 * 60_000) {
-    polled.set(cwd, Date.now());
+  if (Date.now() - (polled.get(repoKey(cwd)) ?? 0) > 5 * 60_000) {
+    polled.set(repoKey(cwd), Date.now());
     refresh(cwd).then(changed, () => {});
   }
-  return lists.get(cwd)?.prs.find((p) => p.number === number)?.checks;
+  return lists.get(repoKey(cwd))?.prs.find((p) => p.number === number)?.checks;
 }
 
-const key = (cwd: string, n: number | string) => `${cwd}#${n}`;
+const key = (cwd: string, n: number | string) => `${repoKey(cwd)}#${n}`;
 
 function detail(cwd: string, pr: { number: number; updatedAt: string }) {
   const k = key(cwd, pr.number);
@@ -170,7 +190,7 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
   }
   if (what !== 'pr' || !/^\d+$/.test(n ?? '')) throw new Error(`Unknown GitHub route ${pathname}`);
   if (method === 'GET' && !action) {
-    const pr = lists.get(cwd)?.prs.find((p) => p.number === Number(n));
+    const pr = lists.get(repoKey(cwd))?.prs.find((p) => p.number === Number(n));
     return pr ? detail(cwd, pr) : prDetail(cwd, n);
   }
   if (method !== 'POST') throw new Error(`Unknown GitHub route ${pathname}`);
@@ -204,6 +224,6 @@ export async function prForBranch(cwd: string, branch: string): Promise<string |
 
 export async function openPr(cwd: string, branch: string, base: string, title: string, body: string) {
   const out = await gh(cwd, 'pr', 'create', '--head', branch, '--base', base, '--title', title, '--body', body);
-  lists.delete(cwd);
+  lists.delete(repoKey(cwd));
   return out.trim().split('\n').pop()!;
 }

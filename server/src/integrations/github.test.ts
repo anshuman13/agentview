@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 const calls: string[][] = [];
@@ -14,7 +17,7 @@ vi.mock('../exec.js', () => ({
   },
 }));
 
-const { github, listPrs } = await import('./github.js');
+const { github, listPrs, repoKey } = await import('./github.js');
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const listCalls = () => calls.filter((a) => a[1] === 'list').length;
 const viewCalls = () => calls.filter((a) => a[1] === 'view').length;
@@ -59,5 +62,17 @@ describe('listPrs', () => {
     await github(cwd, 'GET', new URL('http://x/api/gh/prs?fresh'), async () => '');
     await tick();
     expect(viewCalls()).toBe(prefetched + 1);
+  });
+});
+
+describe('repoKey', () => {
+  it('gives a git worktree the key of its main checkout', () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'repokey-'));
+    mkdirSync(path.join(root, 'main/.git/worktrees/wt'), { recursive: true });
+    writeFileSync(path.join(root, 'main/.git/worktrees/wt/commondir'), '../..\n');
+    mkdirSync(path.join(root, 'wt'));
+    writeFileSync(path.join(root, 'wt/.git'), `gitdir: ${path.join(root, 'main/.git/worktrees/wt')}\n`);
+    expect([repoKey(path.join(root, 'wt')), repoKey(path.join(root, 'main')), repoKey('/nope')]).toEqual([path.join(root, 'main'), path.join(root, 'main'), '/nope']);
+    rmSync(root, { recursive: true, force: true });
   });
 });
