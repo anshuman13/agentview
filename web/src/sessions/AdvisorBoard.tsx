@@ -127,7 +127,7 @@ export function AdvisorBoard({ root, backlog, specs, audit, auditFailed }: { roo
   const stage = chip ?? board.defaultStage;
   const openSlugs = items!.filter((i) => i.status !== 'done').sort((a, b) => a.rank - b.rank).map((i) => i.slug);
   const move = (slug: string, dir: 'up' | 'down') => moveBacklogItem(root, slug, dir).then((list) => (list ? setMoved(list) : notice('Could not move the item')));
-  const nothing = !items!.length && !specs!.length;
+  const nothing = !items!.length;
   return (
     <div className="adv-board">
       <div className="adv-chips">

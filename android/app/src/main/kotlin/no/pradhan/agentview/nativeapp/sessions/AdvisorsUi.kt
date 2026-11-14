@@ -318,7 +318,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                         val cards = board.stages.getValue(stage)
                         val audit = audits.data?.firstOrNull()
                         val running = st.live.any { advisorOf(it.cwd)?.id == "designer" && it.running }
-                        val nothing = items.isEmpty() && specList.isEmpty()
+                        val nothing = items.isEmpty()
                         if (stage == "building" || stage == "ideas" || cards.isNotEmpty()) Group {
                             if (stage == "building") LoopCard(hub, project, loop, starting, { starting = true; scope.askAdvisor(hub, "pm", advisorLoopCommand(project, System.currentTimeMillis()), onOpen) }, ::go)
                             if (stage == "ideas") ListRow(
