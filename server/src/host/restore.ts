@@ -7,8 +7,10 @@ import type { AgentSession } from '../session/session.js';
 
 export type Saved = { sessionId: string; crons: Cron[]; repeat?: Repeat | null; loop?: LoopState; queued?: { id: string; text: string }[]; stopped?: Stopped };
 
-export const runningAgents = (chat: AgentSession): LiveAgent[] =>
-  chat.state.events
+export const runningAgents = (chat: AgentSession) => liveAgents(chat.state.events);
+
+export const liveAgents = (events: ChatEvent[]): LiveAgent[] =>
+  events
     .filter((e): e is Extract<ChatEvent, { kind: 'agent' }> => e.kind === 'agent' && e.status === 'running')
     .map((e) => {
       const slug = buildStageOf(e.subagentType, e.description, e.prompt)?.slug;
