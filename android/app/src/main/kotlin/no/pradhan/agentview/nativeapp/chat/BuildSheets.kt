@@ -266,8 +266,9 @@ internal fun Criteria(criteria: List<SpecCriterion>, limit: Int, showAll: () -> 
 // The open sheets of a build card, the topmost composed last.
 @Composable
 internal fun BuildSheets(hub: Hub, d: BuildDetail, stack: SnapshotStateList<BuildSheet>, actions: BuildActions, run: TaskRun?) {
-    val close: () -> Unit = { stack.removeAt(stack.lastIndex) }
     stack.forEachIndexed { i, s ->
+        // A swipe and the hide animation can both close a sheet, so a close drops only this sheet and those above it.
+        val close: () -> Unit = { while (stack.size > i) stack.removeAt(stack.lastIndex) }
         key(i) {
             when (s) {
                 is BuildSheet.Spec -> SpecSheet(hub, d, s.initial, actions, run, close)
