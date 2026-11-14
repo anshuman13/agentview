@@ -272,6 +272,26 @@ private val FACT = Regex("""^\s*[-*] """)
 fun memoryFacts(memory: String) = memory.lines().count { FACT.containsMatchIn(it) }
 
 // Advisors (web/src/sessions/Advisors.tsx): one project's board from idea to merged build as chips with one stage, the Ask buttons, and a sheet with each advisor's conversations and memory.
+// The advisors, and the project's backlog, specs and audit; all reload after an advisor's turn.
+private data class AdvisorLoads(
+    val advisors: Loaded<List<AdvisorInfo>>,
+    val backlog: Loaded<List<BacklogItem>?>,
+    val specs: Loaded<List<SpecHomeItem>?>,
+    val audits: Loaded<List<AuditInfo>?>,
+    val reload: () -> Unit,
+)
+
+@Composable
+private fun rememberAdvisorLoads(hub: Hub, root: String?, turns: String): AdvisorLoads {
+    val (advisors, reload) = rememberLoad { hub.advisors() }
+    val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { hub.backlog(it) } }
+    val (specs, reloadSpecs) = rememberLoad(root) { root?.let { hub.specs(it) } }
+    val (audits, reloadAudit) = rememberLoad(root) { root?.let { listOfNotNull(hub.audit(it)) } }
+    var loadedTurns by remember { mutableStateOf(turns) }
+    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadSpecs(); reloadAudit() } }
+    return AdvisorLoads(advisors, backlog, specs, audits, reload)
+}
+
 @Composable
 fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     // Fields, not the whole state, so a streamed event in the open chat does not recompose the board.
@@ -282,7 +302,6 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     val ws by hub.workspace.collectAsState()
     // Reloads after an advisor's turn, which may have changed its memory, the backlog, a spec or the audit.
     val turns = live.filter { advisorOf(it.cwd) != null && !it.running }.joinToString { "${it.id}:${it.lastActive}" }
-    val (load, reload) = rememberLoad { hub.advisors() }
     var picked by remember { mutableStateOf(advisorPick) }
     val shownChat = live.firstOrNull { it.id == shownId }
     val openCwd = sessionCwd ?: shownChat?.cwd
@@ -291,12 +310,10 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
         val chats = ws.saved.groupBy { folderKey(it.cwd, ws.repos, ws.trees) }.mapValues { (_, l) -> l.maxOf { it.lastModified } }
         ws.repos.map { it.cwd to maxOf(it.lastCommit.toLong(), chats[it.cwd] ?: 0L) }
     })
-    val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { hub.backlog(it) } }
-    val (specs, reloadSpecs) = rememberLoad(root) { root?.let { hub.specs(it) } }
+    val loads = rememberAdvisorLoads(hub, root, turns)
+    val (load, backlog, specs, audits) = loads
+    val reload = loads.reload
     var moved by remember(root, backlog.data) { mutableStateOf<List<BacklogItem>?>(null) }
-    val (audits, reloadAudit) = rememberLoad(root) { root?.let { listOfNotNull(hub.audit(it)) } }
-    var loadedTurns by remember { mutableStateOf(turns) }
-    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadSpecs(); reloadAudit() } }
     var auditOpen by rememberSaveable { mutableStateOf(false) }
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     var starting by rememberSaveable { mutableStateOf(false) }
