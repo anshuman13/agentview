@@ -11,6 +11,10 @@
 @media (max-width: 900px) {
   .page-hero { display: none; }
 }
+@media (min-width: 901px) {
+  .page-settings :is(.page-hero, .page-body) { width: 100%; max-width: calc(732px + 2 * var(--sp-12)); margin: 0 auto; }
+  .page-settings .page-body { padding: 0 var(--sp-12); }
+}
 .mt-page.sk-page { max-width: none; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding-bottom: var(--sp-4); }
 .sk-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .sk-head { flex-wrap: wrap; flex: none; }
