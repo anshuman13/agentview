@@ -66,12 +66,13 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
+import kotlin.math.abs
 
 // A coloured tile for a page, the colour fixed by its id and the icon by its section.
 @Composable
 private fun PageTile(p: Row) {
     val hues = listOf(av.hueTeal, av.hueViolet, av.hueBlue, av.hueAmber, av.hueMagenta, av.hueSky)
-    val hue = hues[Math.floorMod(p.id.hashCode(), hues.size)]
+    val hue = hues[(abs(p.id.hashCode().toLong()) % hues.size).toInt()]
     val glyph = when (p.str("section")) { "Company" -> "organization"; "Directory" -> "person"; "Domain" -> "symbol-namespace"; else -> "file" }
     Box(Modifier.size(Tokens.leadWidth + Tokens.sp2).clip(RoundedCornerShape(Tokens.shapeMd)).background(hue.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
         AvIcon(glyph, null, tint = hue)
