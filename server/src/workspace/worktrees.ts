@@ -85,11 +85,21 @@ export async function createFolder(root: string, name: string) {
 export const canRemove = (w: { open: boolean; dirty: number; lastActive: number; merged?: number }, now = Date.now()) =>
   !w.open && (now - w.lastActive > STALE_MS || Boolean(w.merged && !w.dirty));
 
+// A merged PR stays merged, so a found one is kept; a branch with none is asked again after 10 minutes.
+const merged = new Map<string, { n: number | undefined; at: number }>();
+const NOT_MERGED_MS = 10 * 60_000;
+
 async function mergedPr(cwd: string) {
   const branch = await git(cwd, 'rev-parse', '--abbrev-ref', 'HEAD').catch(() => 'HEAD');
   if (branch === 'HEAD') return undefined;
+  const k = `${cwd}\0${branch}`;
+  const hit = merged.get(k);
+  if (hit && (hit.n !== undefined || Date.now() - hit.at < NOT_MERGED_MS)) return hit.n;
   const { stdout } = await run('gh', ['pr', 'list', '--head', branch, '--state', 'merged', '--json', 'number', '--limit', '1'], { cwd, timeout: 15_000 }).catch(() => ({ stdout: '[]' }));
-  return (JSON.parse(stdout || '[]') as Array<{ number: number }>)[0]?.number;
+  const n = (JSON.parse(stdout || '[]') as Array<{ number: number }>)[0]?.number;
+  merged.set(k, { n, at: Date.now() });
+  if (merged.size > 500) merged.delete(merged.keys().next().value!);
+  return n;
 }
 
 type Space = { id: string; project: string; repo: string; name: string; cwd: string };
