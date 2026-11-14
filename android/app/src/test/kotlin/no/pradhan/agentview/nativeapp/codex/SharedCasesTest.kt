@@ -52,6 +52,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
+import no.pradhan.agentview.nativeapp.codex.autopilot.lastRoundText
+import no.pradhan.agentview.nativeapp.codex.autopilot.roundText
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
 import no.pradhan.agentview.nativeapp.sessions.BuildEntry
@@ -229,6 +231,15 @@ class SharedCasesTest {
             val found = advisorLoopOf(runs, c.str("root"))
             val expected = c.nullable("expected")?.jsonObject
             assertEquals(c.str("name"), expected?.let { it.str("id") to it.str("line") }, found?.let { it.id to advisorLoopLine(it) })
+        }
+    }
+
+    @Test fun lastRoundText() {
+        for (c in cases("last-round-text")) {
+            val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
+            val round = c.getValue("round").jsonObject.decode<Round>()
+            val expected = if (c["full"]?.jsonPrimitive?.boolean == true) roundText(round) else c.str("expected")
+            assertEquals(c.str("name"), expected, lastRoundText(run, round))
         }
     }
 

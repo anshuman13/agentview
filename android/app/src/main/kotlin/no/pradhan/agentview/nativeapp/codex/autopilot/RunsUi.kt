@@ -165,7 +165,7 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
             val last = e.run.rounds.lastOrNull()
             ListRow(
                 e.run.title.ifBlank { "Untitled" }, if (e.run.pr != null) "PR opened" else runLine(e.run), onClick = { when (e.run.kind) { "tries" -> board = e.run.id; "goal" -> hub.goalSheet.value = GoalSheet.Detail(e.run.id); else -> openChat(e.run) } },
-                below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(roundText(it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+                below = last?.let { { StatusDot(outcomeDot(it.outcome)); Text(lastRoundText(e.run, it), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
                 trailing = {
                     RowLabel(money(e.run.costUsd, billing(e.run.provider)))
                     e.run.pr?.let { url -> IconBtn("link-external", "Open PR", { uri.openUri(url) }) }

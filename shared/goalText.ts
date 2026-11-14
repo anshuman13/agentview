@@ -14,8 +14,14 @@ export function goalPlan({ every, endAt, capPct, maxBuilds }: { every: number; e
 export const runLine = (word: string, { round, max, nextAt }: { round: number; max: number; nextAt: number | null }) =>
   `${word} · round ${round}${max ? ` of ${max}` : ''}${nextAt ? ` · next ${clock(nextAt)}` : ''}`;
 
+const roundOutcome = ({ outcome, line }: Pick<Round, 'outcome' | 'line'>) => (outcome === 'quiet' ? 'nothing to do' : line ? `${outcome}: ${line}` : outcome);
+
 export const roundText = ({ n, at, outcome, line }: Pick<Round, 'n' | 'at' | 'outcome' | 'line'>) =>
-  `Round ${n} · ${clock(at)} · ${outcome === 'quiet' ? 'nothing to do' : line ? `${outcome}: ${line}` : outcome}`;
+  `Round ${n} · ${clock(at)} · ${roundOutcome({ outcome, line })}`;
+
+// The run row's last round: a weekly report by name; the outcome alone when the row's run line already says this round; else the full round text.
+export const lastRoundText = (run: { kind: string; state: string; round: number }, r: Pick<Round, 'n' | 'at' | 'outcome' | 'line' | 'report'>) =>
+  r.report ? 'Weekly report' : (run.kind === 'goal' || run.kind === 'loop') && run.state !== 'paused' && r.n === run.round ? roundOutcome(r) : roundText(r);
 
 export const firstRound = (at: number | null) => `First round${at ? ` ${clock(at)}` : ''}`;
 

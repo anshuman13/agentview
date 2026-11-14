@@ -59,14 +59,23 @@ fun tryColumn(run: ChatRun, t: RunTry, live: List<LiveChat>): TryColumn {
     return TryColumn(t.n, t.branch, state, last?.line?.replace(Regex("^Try \\d+: "), "") ?: chat?.last ?: "", chat?.edits, chat?.cost ?: rounds.sumOf { it.costUsd }, t.dropped)
 }
 
-private fun roundSummary(r: Round) = "Round ${r.n} · ${clock(r.at)} · " + when {
+private fun roundOutcome(r: Round) = when {
     r.outcome == "quiet" -> "nothing to do"
     r.line.isEmpty() -> r.outcome
     else -> "${r.outcome}: ${r.line}"
 }
 
+private fun roundSummary(r: Round) = "Round ${r.n} · ${clock(r.at)} · " + roundOutcome(r)
+
 // A round as every list shows it (web shared/goalText.ts roundText).
 fun roundText(r: Round) = if (r.report != null) "Weekly report" else roundSummary(r)
+
+// The run row's last round (web shared/goalText.ts lastRoundText): the outcome alone when the run line already says this round.
+fun lastRoundText(run: ChatRun, r: Round) = when {
+    r.report != null -> "Weekly report"
+    (run.kind == "goal" || run.kind == "loop") && run.state != "paused" && r.n == run.round -> roundOutcome(r)
+    else -> roundSummary(r)
+}
 
 // The loop card's first row (web composerLogic loopNow): the agent's status or the last round, whichever is newer.
 data class LoopNow(val title: String, val at: Long?, val source: String, val next: String? = null, val stepsLeft: Int = 0)

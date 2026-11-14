@@ -7,9 +7,10 @@ import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
 import { advisorLoopLine, advisorLoopOf } from '../../shared/advisors';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
+import { lastRoundText, roundText } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
-import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Try } from '../../shared/protocol';
+import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
 import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, type Billing } from '../../shared/providers';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
@@ -220,6 +221,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; run: Partial<ChatRun>; working: boolean; expected: string }>('stopped-text')) {
     it(`stoppedText: ${c.name}`, () => expect(stoppedText(run(c.run), c.working)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; run: Partial<ChatRun>; round: Round; expected?: string; full?: boolean }>('last-round-text')) {
+    it(`lastRoundText: ${c.name}`, () => expect(lastRoundText(run(c.run), c.round)).toBe(c.full ? roundText(c.round) : c.expected!));
   }
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; phase: string | null; expected: string }>('run-line')) {
