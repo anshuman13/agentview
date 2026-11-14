@@ -40,7 +40,10 @@ import no.pradhan.agentview.nativeapp.app.NoticeKind
 import no.pradhan.agentview.nativeapp.app.Notifier
 import no.pradhan.agentview.nativeapp.app.SharedItem
 import no.pradhan.agentview.nativeapp.app.RunningNote
-import no.pradhan.agentview.nativeapp.app.RUNNING_TIMEOUT_MS
+import no.pradhan.agentview.nativeapp.app.keptAsks
+import no.pradhan.agentview.nativeapp.app.knownAsk
+import no.pradhan.agentview.nativeapp.app.repostRunning
+import no.pradhan.agentview.nativeapp.app.waitingBadge
 import no.pradhan.agentview.nativeapp.app.AppCounts
 import no.pradhan.agentview.nativeapp.app.WaitingSnapshot
 import no.pradhan.agentview.nativeapp.app.appCounts
@@ -284,7 +287,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
                 if (!loaded) return@collect
                 WaitingStore.write(app, snap)
                 WaitingWidget().updateAll(app)
-                if (badge >= 0) notifier.waiting(snap, snap.total + badge) else notifier.waiting(WaitingSnapshot(), 0)
+                val (shownSnap, count) = waitingBadge(snap, badge)
+                notifier.waiting(shownSnap, count)
             }
         }
     }
@@ -304,11 +308,11 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
                 since = notes.associate { it.chatId to it.since }
                 val now = System.currentTimeMillis()
                 // Notes time out so a dead process cannot leave them up; re-posting re-arms the timeout.
-                if (notes == shown && now - postedAt < RUNNING_TIMEOUT_MS / 3) return@collectLatest
-                asks = asks.filterKeys { id -> notes.any { it.chatId == id && it.pending > 0 } }
+                if (!repostRunning(notes, shown, postedAt, now)) return@collectLatest
+                asks = keptAsks(asks, notes)
                 notifier.running(notes.map { n ->
                     if (n.pending == 0) return@map n
-                    val id = asks[n.chatId]?.takeIf { it.first == n.pending }?.second ?: n.permissionId().also { asks = asks + (n.chatId to (n.pending to it)) }
+                    val id = knownAsk(asks, n) ?: n.permissionId().also { asks = asks + (n.chatId to (n.pending to it)) }
                     n.copy(permissionId = id)
                 })
                 shown = notes

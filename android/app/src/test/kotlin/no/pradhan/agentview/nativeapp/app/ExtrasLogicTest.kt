@@ -14,6 +14,30 @@ class ExtrasLogicTest {
         assertEquals(listOf(RunningNote("a", "Fix tests", "Working", 5L, 0), RunningNote("c", "Fix tests", "Working", 100L, 1)), notes)
     }
 
+    @Test fun waitingBadgeCountsChatsWithNoNeedsRows() {
+        val snap = waitingSnapshot(listOf(chat("a", pending = 1), chat("b", pending = 2)))
+        assertEquals(snap to 2, waitingBadge(snap, 0))
+        assertEquals(snap to 5, waitingBadge(snap, 3))
+        assertEquals(WaitingSnapshot() to 0, waitingBadge(snap, -1))
+    }
+
+    @Test fun runningNotesRepostOnChangeOrBeforeTheTimeout() {
+        val notes = listOf(RunningNote("a", "Fix tests", "Working", 5L, 0))
+        assertEquals(true, repostRunning(notes, null, 0L, 10L))
+        assertEquals(false, repostRunning(notes, notes, 0L, 10L))
+        assertEquals(true, repostRunning(notes, notes, 0L, RUNNING_TIMEOUT_MS / 3))
+        // A disconnect clears the notes, which differ from the ones shown.
+        assertEquals(true, repostRunning(emptyList(), notes, 0L, 10L))
+    }
+
+    @Test fun permissionIdIsFetchedAgainWhenTheRequestCountChanges() {
+        val asks = mapOf("a" to (2 to "p1"), "b" to (1 to "p2"))
+        val a2 = RunningNote("a", "Fix tests", "Working", 5L, 2)
+        assertEquals("p1", knownAsk(asks, a2))
+        assertNull(knownAsk(asks, a2.copy(pending = 1)))
+        assertEquals(setOf("a"), keptAsks(asks, listOf(a2, RunningNote("b", "Fix tests", "Working", 5L, 0))).keys)
+    }
+
     @Test fun skipsTheChatOnScreen() {
         assertEquals(emptyList<Notice>(), notices(listOf(chat("a")), listOf(chat("a", pending = 1)), "a"))
     }

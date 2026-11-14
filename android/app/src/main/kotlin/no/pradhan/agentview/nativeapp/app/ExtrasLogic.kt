@@ -54,6 +54,18 @@ fun runningNotes(live: List<LiveChat>, was: Map<String, Long>, now: Long): List<
     RunningNote(it.id, it.title.ifBlank { "Untitled" }, runningText(it), was[it.id] ?: now, it.pending)
 }
 
+// The waiting notification and its badge: the waiting chats plus the Needs-you rows; badge < 0 means notifications are off.
+fun waitingBadge(snap: WaitingSnapshot, badge: Int): Pair<WaitingSnapshot, Int> = if (badge >= 0) snap to snap.total + badge else WaitingSnapshot() to 0
+
+// Running notes post again when they change, or before the notification timeout clears an unchanged set.
+fun repostRunning(notes: List<RunningNote>, shown: List<RunningNote>?, postedAt: Long, now: Long) = notes != shown || now - postedAt >= RUNNING_TIMEOUT_MS / 3
+
+// The known permission id of a waiting chat, while its request count is the one it was fetched for.
+fun knownAsk(asks: Map<String, Pair<Int, String>>, n: RunningNote): String? = asks[n.chatId]?.takeIf { it.first == n.pending }?.second
+
+// Drops the permission ids of chats no longer waiting.
+fun keptAsks(asks: Map<String, Pair<Int, String>>, notes: List<RunningNote>) = asks.filterKeys { id -> notes.any { it.chatId == id && it.pending > 0 } }
+
 fun WaitingLine.text() = if (repo.isEmpty()) title else "$title · $repo"
 
 const val sessionsLink = "agentview://open?view=sessions"
