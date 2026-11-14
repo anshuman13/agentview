@@ -14,7 +14,9 @@ export async function refresh() {
     const r = await fetchGitStatus();
     const d = await r.json().catch(() => null);
     if (n !== seq) return;
-    git.set(r.ok && d ? { status: d, error: '' } : { status: null, error: d?.error ?? `Request failed (${r.status})` });
+    const next = r.ok && d ? { status: d, error: '' } : { status: null, error: d?.error ?? `Request failed (${r.status})` };
+    // The same status again re-renders nothing.
+    if (JSON.stringify(next) !== JSON.stringify(git.get())) git.set(next);
   } catch {}
 }
 

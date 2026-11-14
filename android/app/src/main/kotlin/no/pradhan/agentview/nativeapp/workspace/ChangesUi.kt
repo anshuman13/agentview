@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.branchDiff
@@ -88,7 +89,9 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
         return
     }
     val (branchLoad, reloadBranch) = rememberLoad(chat) { hub.branchDiff() }
-    WhileStarted(chat) { while (true) { delay(5000); reload() } }
+    // A file the agent or watcher reports changed refreshes after the burst; the slow poll catches git commands run outside.
+    LaunchedEffect(hub, chat) { hub.fileChanged.collectLatest { delay(300); reload() } }
+    WhileStarted(chat) { while (true) { delay(30_000); reload() } }
     val files = load.data?.files ?: emptyList()
     val review = files.map { it.path }.distinct()
     val label = providerLabel(provider)

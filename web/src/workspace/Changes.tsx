@@ -114,7 +114,8 @@ export function Changes() {
   const anchor = useRef<string | null>(null);
 
   useEffect(() => void refresh(), [id]);
-  usePoll(root, 5000, refresh, [id]);
+  // ChangesBadge refreshes after each file change; this catches git commands run outside.
+  usePoll(root, 30_000, refresh, [id]);
 
   const run: Run = async (action, body) => {
     setFailed('');
