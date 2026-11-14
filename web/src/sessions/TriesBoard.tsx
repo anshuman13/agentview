@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { send, useStore } from '../app/store';
 import { Badge } from '../ui/Badge';
+import { Panel } from '../ui/Panel';
 import { Button } from '../ui/Button';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { Section, sectionCount } from '../ui/Section';
@@ -17,7 +18,7 @@ function TriesColumns({ run, live, onOpen, onKeep }: { run: ChatRun; live: LiveC
       {tries.map((t) => {
         const c = tryColumn(run, t, live);
         return (
-          <div key={c.n} className="tb-col">
+          <Panel key={c.n} padding="sm" className="tb-col">
             <div className="tb-head"><span className="tb-branch">{c.branch}</span><Badge {...c.state} /></div>
             <div className="tb-line">{c.line || 'No report yet'}</div>
             <div className="tb-meta">{c.edits ? `+${c.edits.add} -${c.edits.del}` : 'No edits'} · {money(c.cost, billing(run.provider))}</div>
@@ -27,7 +28,7 @@ function TriesColumns({ run, live, onOpen, onKeep }: { run: ChatRun; live: LiveC
                 <Button size="sm" variant="tinted" onClick={() => onKeep(c.n)}>Keep try {c.n}</Button>
               </div>
             )}
-          </div>
+          </Panel>
         );
       })}
     </div>
@@ -64,7 +65,7 @@ export function TriesBoard({ runId, onClose }: { runId: string; onClose: () => v
       <TriesColumns run={run} live={live} onOpen={openTry} onKeep={keep} />
       {open > 0 && (
         <div className="tb-send">
-          <input className="tb-input" value={text} placeholder="Message to every open try" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && sendAll()} />
+          <input value={text} placeholder="Message to every open try" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && sendAll()} />
           <Button variant="filled" size="sm" disabled={!text.trim()} onClick={sendAll}>Send to all</Button>
         </div>
       )}

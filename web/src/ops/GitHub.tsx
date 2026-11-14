@@ -153,21 +153,21 @@ function ActionBar({ pr, busy, act, confirm, method, setMethod }: { pr: PullRequ
     <div className="gh-actionbar">
       <textarea className="gh-text" placeholder="Leave a comment" aria-label="Comment" value={text} rows={2} onChange={(e) => setText(e.target.value)} />
       <div className="gh-actions">
-        <button className="btn sm primary" disabled={busy} onClick={approve}><Icon name="check" small /> Approve</button>
-        <button className="btn sm" disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('request_changes')}><Icon name="request-changes" small /> Request changes</button>
-        <button className="btn sm" disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('comment')}><Icon name="comment" small /> Comment</button>
+        <Button size="sm" variant="filled" icon="check" disabled={busy} onClick={approve}>Approve</Button>
+        <Button size="sm" icon="request-changes" disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('request_changes')}>Request changes</Button>
+        <Button size="sm" icon="comment" disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('comment')}>Comment</Button>
       </div>
       <div className="gh-actions">
         <span className="gh-merge">
-          <button className="btn sm" disabled={busy} onClick={merge}><Icon name="git-merge" small /> Merge</button>
+          <Button size="sm" icon="git-merge" disabled={busy} onClick={merge}>Merge</Button>
           <select value={method} onChange={(e) => setMethod(e.target.value)} title="Merge method">
             <option value="squash">Squash</option>
             <option value="merge">Merge commit</option>
             <option value="rebase">Rebase</option>
           </select>
         </span>
-        <button disabled={busy} title={`Check out ${pr.branch} in this folder`} onClick={() => act('checkout', 'checkout', {})}><Icon name="git-branch" small /> Checkout</button>
-        <button className="btn sm gh-claude" title="Send a review prompt to the chat" onClick={askReview}><Icon name="sparkle" small /> Ask {label} to review</button>
+        <Button size="sm" icon="git-branch" disabled={busy} title={`Check out ${pr.branch} in this folder`} onClick={() => act('checkout', 'checkout', {})}>Checkout</Button>
+        <Button size="sm" icon="sparkle" className="gh-claude" title="Send a review prompt to the chat" onClick={askReview}>Ask {label} to review</Button>
       </div>
     </div>
   );
@@ -218,10 +218,10 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
   return (
     <div className="gh-detail">
       <div className="gh-bar">
-        <button className="icon-btn" title="Back" autoFocus onClick={onBack}><Icon name="arrow-left" small /></button>
+        <IconButton icon="arrow-left" label="Back" small autoFocus onClick={onBack} />
         <span className="gh-num">#{pr.number}</span>
         <span className="spacer" />
-        <a className="icon-btn" href={pr.url} target="_blank" rel="noreferrer" title="Open on GitHub"><Icon name="link-external" small /></a>
+        <IconButton icon="open" label="Open on GitHub" small href={pr.url} />
       </div>
       <div className="gh-scroll">
         <div className="as-group gh-group">
