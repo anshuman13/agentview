@@ -64,6 +64,17 @@ export type Reason = keyof typeof REASON_STATUS;
 // A refused connection means remote debugging is off when Chrome runs, and no Chrome otherwise.
 export const refused = async (): Promise<Reason> => ((await chromeRunning()) ? 'disabled' : 'nochrome');
 
+// The status the relay answers when it cannot reach Chrome, from the error opening it.
+export async function relayStatus(err: unknown) {
+  const m = (err as Error)?.message ?? '';
+  if (Object.hasOwn(REASON_STATUS, m)) return REASON_STATUS[m as Reason];
+  if (/\b404\b/.test(m)) return REASON_STATUS.disabled;
+  if (/ECONNREFUSED|Failed to connect/.test(m)) return REASON_STATUS[await refused()];
+  if (/\b403\b/.test(m)) return REASON_STATUS.denied;
+  if (/timed out/i.test(m)) return REASON_STATUS.timeout;
+  return 502;
+}
+
 // Reads why a WebSocket to Chrome failed from the client's error message, which names the HTTP status it got.
 export async function failure(err: Error) {
   if (/ECONNREFUSED|Failed to connect/.test(err.message)) return refused();

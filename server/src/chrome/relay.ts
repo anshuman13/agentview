@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from 'bun';
-import { endpoint, REASON_STATUS, refused, type Reason } from './launch.js';
+import { endpoint, relayStatus } from './launch.js';
 
 const PORT = Number(process.env.AGENTVIEW_RELAY_PORT ?? 7779);
 const TOKEN = process.env.AGENTVIEW_RELAY_TOKEN ?? '';
@@ -10,16 +10,6 @@ let opening: Promise<WebSocket> | null = null;
 let client: ServerWebSocket | null = null;
 const attaching = new Set<number>();
 const sessions = new Set<string>();
-
-async function statusFor(err: unknown) {
-  const m = (err as Error)?.message ?? '';
-  if (Object.hasOwn(REASON_STATUS, m)) return REASON_STATUS[m as Reason];
-  if (/\b404\b/.test(m)) return REASON_STATUS.disabled;
-  if (/ECONNREFUSED|Failed to connect/.test(m)) return REASON_STATUS[await refused()];
-  if (/\b403\b/.test(m)) return REASON_STATUS.denied;
-  if (/timed out/i.test(m)) return REASON_STATUS.timeout;
-  return 502;
-}
 
 function open(): Promise<WebSocket> {
   if (chrome?.readyState === WebSocket.OPEN) return Promise.resolve(chrome);
@@ -102,7 +92,7 @@ Bun.serve({
     try {
       await open();
     } catch (err) {
-      return new Response(null, { status: await statusFor(err) });
+      return new Response(null, { status: await relayStatus(err) });
     }
     return server.upgrade(req) ? undefined : new Response(null, { status: 400 });
   },
