@@ -7,11 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.Row
@@ -33,7 +28,6 @@ import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
-import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.Chip
@@ -48,6 +42,7 @@ import no.pradhan.agentview.nativeapp.ui.Toggle
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.DateDialog
 
 // The settings of replying on my behalf in Slack (web/src/codex/jobs/Autopilot.tsx and AutopilotPage.tsx).
 private class Autopilot(val ops: AutopilotOps) {
@@ -141,16 +136,10 @@ private fun InfoSheet(s: AutopilotState?, onReplies: () -> Unit, close: () -> Un
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DayDialog(initial: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     val day = runCatching { LocalDate.parse(initial) }.getOrNull() ?: Instant.now().atZone(codexZone).toLocalDate()
-    val picker = rememberDatePickerState(initialSelectedDateMillis = day.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli())
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { Button("Set", { picker.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().toString()) }; onDismiss() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
-        dismissButton = { Button("Clear", { onPick(""); onDismiss() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
-    ) { DatePicker(picker) }
+    DateDialog(day, "Set", "Clear", { d -> d?.let { onPick(it.toString()) }; onDismiss() }, { onPick(""); onDismiss() }, onDismiss)
 }
 
 // Away or Never answers: the fields are one form, saved as a single patch when the sheet closes.

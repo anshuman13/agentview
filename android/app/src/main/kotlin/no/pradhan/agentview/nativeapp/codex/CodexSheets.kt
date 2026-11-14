@@ -11,19 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,7 +32,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.ImeAction
 import java.time.Instant
-import java.time.ZoneOffset
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import no.pradhan.agentview.nativeapp.codex.wiki.agoText
 import no.pradhan.agentview.nativeapp.net.Ask
@@ -67,6 +60,8 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.workspace.agoShort
+import no.pradhan.agentview.nativeapp.ui.DateDialog
+import no.pradhan.agentview.nativeapp.ui.TimeDialog
 
 private val PRIORITIES = listOf(0 to "None", 1 to "Low", 2 to "Medium", 3 to "High")
 
@@ -77,36 +72,19 @@ private fun dueLabel(at: Long?, now: Long): String {
 }
 
 // A day, then a time; Skip keeps the day without a time (09:00 on a later day, no due time today).
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
-    val picker = rememberDatePickerState(initialSelectedDateMillis = (initial ?: now).let { t -> Instant.ofEpochMilli(t).atZone(codexZone).toLocalDate().atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli() })
     var day by remember { mutableStateOf<java.time.LocalDate?>(null) }
     val chosen = day
     if (chosen == null) {
-        androidx.compose.material3.DatePickerDialog(
-            onDismissRequest = onDismiss,
-            confirmButton = { Button("Next", { picker.selectedDateMillis?.let { day = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
-            dismissButton = { Button("No due", { onPick(null); onDismiss() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
-        ) { DatePicker(picker) }
+        DateDialog(Instant.ofEpochMilli(initial ?: now).atZone(codexZone).toLocalDate(), "Next", "No due", { it?.let { d -> day = d } }, { onPick(null); onDismiss() }, onDismiss)
         return
     }
-    val time = rememberTimePickerState(initialHour = initial?.let(::hourOf) ?: MORNING, initialMinute = initial?.let(::minuteOf) ?: 0, is24Hour = true)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = av.raised,
-        shape = RoundedCornerShape(Tokens.shapeLg),
-        title = { Text(dayLabel(atHour(chosen, 12)), style = Type.headline, color = av.fg) },
-        text = { TimePicker(time) },
-        confirmButton = { Button("Set", { onPick(atHour(chosen, time.hour, time.minute)); onDismiss() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
-        dismissButton = {
-            Button("No time", {
-                val t = atHour(chosen, MORNING)
-                onPick(if (dayStart(t) == dayStart(now)) null else t)
-                onDismiss()
-            }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        },
-    )
+    TimeDialog(dayLabel(atHour(chosen, 12)), initial?.let(::hourOf) ?: MORNING, initial?.let(::minuteOf) ?: 0, "Set", "No time", { h, m -> onPick(atHour(chosen, h, m)); onDismiss() }, {
+        val t = atHour(chosen, MORNING)
+        onPick(if (dayStart(t) == dayStart(now)) null else t)
+        onDismiss()
+    }, onDismiss)
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

@@ -7,12 +7,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -65,6 +60,7 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.planCondition
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
+import no.pradhan.agentview.nativeapp.ui.TimeDialog
 
 
 // The goal sheets (web/src/sessions/GoalSheets.tsx), mounted once in the app shell.
@@ -110,20 +106,9 @@ private fun Chips(content: @Composable () -> Unit) = FlowRow(
     content = { content() },
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StopTimeDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    val time = rememberTimePickerState(initialHour = 7, initialMinute = 0, is24Hour = true)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = av.raised,
-        shape = RoundedCornerShape(Tokens.shapeLg),
-        title = { Text("Stop at", style = Type.headline, color = av.fg) },
-        text = { TimePicker(time) },
-        confirmButton = { Button("Set", { onPick("%02d:%02d".format(time.hour, time.minute)); onDismiss() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
-        dismissButton = { Button("Cancel", onDismiss, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
-    )
-}
+private fun StopTimeDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) =
+    TimeDialog("Stop at", 7, 0, "Set", "Cancel", { h, m -> onPick("%02d:%02d".format(h, m)); onDismiss() }, onDismiss, onDismiss)
 
 @Composable
 private fun <T> MenuChip(label: String, items: List<T>, name: (T) -> String, checked: (T) -> Boolean, onPick: (T) -> Unit) {
