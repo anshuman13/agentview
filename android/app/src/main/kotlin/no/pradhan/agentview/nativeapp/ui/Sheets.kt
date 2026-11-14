@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -69,7 +70,8 @@ fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Bo
                 }
                 action?.invoke()
             }
-            Column(Modifier.padding(horizontal = if (padded) Tokens.sp8 else 0.dp), content = content)
+            // The sheet is its own window: text in it selects within it, never through a SelectionContainer behind it.
+            SelectionContainer { Column(Modifier.padding(horizontal = if (padded) Tokens.sp8 else 0.dp), content = content) }
         }
     }
 }
