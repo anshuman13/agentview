@@ -13,11 +13,11 @@ import { billing } from '../../../shared/providers';
 import type { RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
-import { finishedLine, mergeQuiet, roundGroupText } from '../../../shared/goalText';
-import { OUTCOME_DOT } from '../chat/composer/composerLogic';
+import { finishedLine, mergeQuiet } from '../../../shared/goalText';
 import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, runControl, stopAtMs, usageLine } from './goalLogic';
 import { since } from './folders';
 import { usePlanProgress } from './usePlanProgress';
+import { RoundRow } from './RoundRow';
 
 function EditRow({ title, value, options, onEdit }: { title: string; value: ReactNode; options?: { label: string; edit: RunEdit }[]; onEdit: (e: RunEdit) => void }) {
   const [open, setOpen] = useState(false);
@@ -76,16 +76,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
       <Section label="Rounds" count={sectionCount(run.rounds.length)} />
       {run.rounds.length ? (
         <div className="ui-group">
-          {mergeQuiet(run.rounds).reverse().map((g) => (
-            <Row
-              key={g.first.at}
-              plain={!g.last.report}
-              leading={<span className={`dot ${OUTCOME_DOT[g.last.outcome]}`} />}
-              title={roundGroupText(g)}
-              meta={money(g.costUsd, billing(run.provider))}
-              onClick={g.last.report ? () => open(g.last.report) : undefined}
-            />
-          ))}
+          {mergeQuiet(run.rounds).reverse().map((g) => <RoundRow key={g.first.at} group={g} provider={run.provider} open={open} />)}
         </div>
       ) : <EmptyState size="sm" icon="history" title="No rounds yet" hint="The first round runs when the agent goes idle" />}
     </Sheet>

@@ -14,10 +14,11 @@ import { openAgent } from '../../sessions/agents';
 import { usePlanProgress } from '../../sessions/usePlanProgress';
 import { planOf } from '../../../../shared/goalForm';
 import { billing } from '../../../../shared/providers';
-import { buildsLine, mergeQuiet, roundGroupText } from '../../../../shared/goalText';
+import { buildsLine, mergeQuiet } from '../../../../shared/goalText';
 import type { RunOp } from '../../../../shared/protocol';
 import { useCardOpen } from './useCardOpen';
 import { useChatRun } from '../../sessions/useChatRun';
+import { RoundRow } from '../../sessions/RoundRow';
 import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine, showTurn } from '../composer/composerLogic';
 
 export function LoopCard() {
@@ -85,19 +86,13 @@ export function LoopCard() {
       <Row lines={2} leading={<span className={`dot ${dot}`} />} title={state.title} meta={meta || undefined} {...nowClick} />
       {agents.length === 1 && <Row leading={<Icon name="hubot" />} title={agents[0].slug ?? agents[0].description} meta={`${agents[0].type} · ${agentAge(agents[0].startedAt, now)}`} state="" onClick={() => openAgent(agents[0].id)} />}
       {agents.length > 1 && <Row leading={<Icon name="hubot" />} title={plural(agents.length, 'agent')} meta={agents.map((a) => a.slug ?? a.description).join(', ')} state="" onClick={() => openAgent()} />}
-      {goal ? progress && <div className="lc-line" onClick={details}><span className="lc-what">Plan {progress}</span></div>
-        : <div className="lc-line" onClick={details}><span className="lc-what">{run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></div>}
+      {goal ? progress && <button className="lc-line lc-last" onClick={details}><span className="lc-what">Plan {progress}</span></button>
+        : <button className="lc-line lc-last" onClick={details}><span className="lc-what">{run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></button>}
       {report && <button className="lc-line lc-last" onClick={() => showTurn(report.report!)}><span className="lc-time">{clock(report.at)}</span><span className="lc-what">Weekly report</span></button>}
       {open && run.kind === 'loop' && (
-        <ul className="lc-rounds">
-          {mergeQuiet(run.rounds).slice(-10).reverse().map((g) => (
-            <li key={g.first.at} className="lc-line">
-              <span className={`dot ${OUTCOME_DOT[g.last.outcome]}`} />
-              <span className="lc-what">{roundGroupText(g)}</span>
-              <span className="lc-cost">{money(g.costUsd, billing(run.provider))}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="lc-rounds">
+          {mergeQuiet(run.rounds).slice(-10).reverse().map((g) => <RoundRow key={g.first.at} group={g} provider={run.provider} open={showTurn} />)}
+        </div>
       )}
     </div>
     </TranscriptBox>
