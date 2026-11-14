@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from 'bun';
-import { chromeRunning, endpoint } from './launch.js';
+import { endpoint, REASON_STATUS, refused, type Reason } from './launch.js';
 
 const PORT = Number(process.env.AGENTVIEW_RELAY_PORT ?? 7779);
 const TOKEN = process.env.AGENTVIEW_RELAY_TOKEN ?? '';
@@ -13,12 +13,11 @@ const sessions = new Set<string>();
 
 async function statusFor(err: unknown) {
   const m = (err as Error)?.message ?? '';
-  if (m === 'nofda') return 451;
-  if (m === 'nochrome') return 410;
-  if (m === 'disabled' || /\b404\b/.test(m)) return 404;
-  if (/ECONNREFUSED|Failed to connect/.test(m)) return (await chromeRunning()) ? 404 : 410;
-  if (/\b403\b/.test(m)) return 403;
-  if (/timed out/i.test(m)) return 504;
+  if (Object.hasOwn(REASON_STATUS, m)) return REASON_STATUS[m as Reason];
+  if (/\b404\b/.test(m)) return REASON_STATUS.disabled;
+  if (/ECONNREFUSED|Failed to connect/.test(m)) return REASON_STATUS[await refused()];
+  if (/\b403\b/.test(m)) return REASON_STATUS.denied;
+  if (/timed out/i.test(m)) return REASON_STATUS.timeout;
   return 502;
 }
 

@@ -57,14 +57,17 @@ export function launchProfile(...urls: string[]) {
   openMac('chrome profile', args);
 }
 
+// The HTTP status the relay answers for each reason Chrome cannot be reached; failure() reads it back.
+export const REASON_STATUS = { nofda: 451, nochrome: 410, disabled: 404, denied: 403, timeout: 504 } as const;
+export type Reason = keyof typeof REASON_STATUS;
+
+// A refused connection means remote debugging is off when Chrome runs, and no Chrome otherwise.
+export const refused = async (): Promise<Reason> => ((await chromeRunning()) ? 'disabled' : 'nochrome');
+
 // Reads why a WebSocket to Chrome failed from the client's error message, which names the HTTP status it got.
 export async function failure(err: Error) {
-  if (/ECONNREFUSED|Failed to connect/.test(err.message)) return (await chromeRunning()) ? 'disabled' : 'nochrome';
-  if (/\b403\b/.test(err.message)) return 'denied';
-  if (/\b404\b/.test(err.message)) return 'disabled';
-  if (/\b410\b/.test(err.message)) return 'nochrome';
-  if (/\b451\b/.test(err.message)) return 'nofda';
-  if (/\b504\b/.test(err.message)) return 'timeout';
+  if (/ECONNREFUSED|Failed to connect/.test(err.message)) return refused();
+  for (const [reason, status] of Object.entries(REASON_STATUS)) if (new RegExp(`\\b${status}\\b`).test(err.message)) return reason as Reason;
   if (/handshake has timed out/i.test(err.message)) return 'timeout';
   return err.message;
 }
