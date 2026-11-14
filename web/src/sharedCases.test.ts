@@ -19,7 +19,7 @@ import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from
 import { mergeTail } from './app/runtime/pageEvents';
 import { countChat } from './app/store/counts';
 import { can } from './chat/capabilitiesLogic';
-import { chatState, handoffText, runLine } from './chat/composer/composerLogic';
+import { chatState, handoffText, runLine, stoppedText } from './chat/composer/composerLogic';
 import { runBands } from './sessions/runBands';
 import { tryColumn } from './sessions/TriesBoard';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -207,6 +207,10 @@ describe('cases shared with the Android app', () => {
   }
 
   const run = (over: Partial<ChatRun>): ChatRun => ({ id: 'r', kind: 'loop', sessionId: 's', chatId: 'c', title: '', what: '', startedAt: 1, endedAt: null, state: 'running', why: '', round: 0, max: 0, nextAt: null, costUsd: 0, rounds: [], needsYou: false, ...over });
+
+  for (const c of cases<{ name: string; run: Partial<ChatRun>; working: boolean; expected: string }>('stopped-text')) {
+    it(`stoppedText: ${c.name}`, () => expect(stoppedText(run(c.run), c.working)).toBe(c.expected));
+  }
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; phase: string | null; expected: string }>('run-line')) {
     it(`runLine: ${c.name}`, () => expect(runLine(run({ ...c.run, tries: c.run.tries?.map((t) => ({ n: 0, chatId: '', sessionId: '', branch: '', ...t })) }), c.phase)).toBe(c.expected));

@@ -1,0 +1,6 @@
+[
+  { "name": "goal working", "run": { "kind": "goal", "round": 3 }, "working": true, "expected": "Goal stopped · round 3 was running" },
+  { "name": "goal idle", "run": { "kind": "goal", "round": 3 }, "working": false, "expected": "Goal stopped" },
+  { "name": "loop working without a round", "run": { "kind": "loop", "round": 0 }, "working": true, "expected": "Loop stopped" },
+  { "name": "cycle working", "run": { "kind": "cycle", "round": 3 }, "working": true, "expected": "Build cycle stopped" }
+]

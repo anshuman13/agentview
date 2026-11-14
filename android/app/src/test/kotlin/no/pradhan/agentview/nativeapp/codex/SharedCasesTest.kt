@@ -49,6 +49,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.parseEvery
 import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBands
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
+import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
 import no.pradhan.agentview.nativeapp.sessions.BuildEntry
 import no.pradhan.agentview.nativeapp.sessions.SpecHomeItem
@@ -211,6 +212,13 @@ class SharedCasesTest {
         for (c in cases("run-line")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
             assertEquals(c.str("name"), c.str("expected"), runLine(run, c.nullable("phase")?.jsonPrimitive?.content))
+        }
+    }
+
+    @Test fun stoppedText() {
+        for (c in cases("stopped-text")) {
+            val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
+            assertEquals(c.str("name"), c.str("expected"), stoppedText(run, c.getValue("working").jsonPrimitive.boolean))
         }
     }
 

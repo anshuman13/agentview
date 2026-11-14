@@ -3,7 +3,7 @@ import { send, useStore } from '../../app/store';
 import { showSnack } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
 import { IconButton } from '../../ui/Button';
-import { Menu, MenuItem } from '../../ui/Menu';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { TriesBoard } from '../../sessions/TriesBoard';
 import { openGoal } from '../../sessions/goalLogic';
 import { Icon } from '../../ui/Icon';
@@ -44,7 +44,7 @@ export function LoopCard() {
   const working = Boolean(live?.running) || agents.length > 0;
   const stop = () => {
     control('stop');
-    showSnack(stoppedText(run), cycle ? undefined : () => control('restore'));
+    showSnack(stoppedText(run, Boolean(live?.running)), cycle ? undefined : () => control('restore'));
   };
   const details = goal ? () => openGoal(run.id) : undefined;
   const meta = [state.at && clock(state.at), state.next && `Next: ${state.next}`, state.stepsLeft && `${state.stepsLeft} ${state.stepsLeft === 1 ? 'step' : 'steps'} left`].filter(Boolean).join(' · ');
@@ -71,6 +71,7 @@ export function LoopCard() {
                 {menu && (
                   <Menu trigger={more} onClose={() => setMenu(false)}>
                     {!paused && <MenuItem onClick={() => { setMenu(false); control('now'); }}>Run now</MenuItem>}
+                    {!paused && <MenuSeparator />}
                     <MenuItem danger onClick={() => { setMenu(false); stop(); }}>Stop</MenuItem>
                   </Menu>
                 )}

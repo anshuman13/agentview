@@ -63,7 +63,7 @@ class RunsTest {
         assertEquals("Paused · usage limit until 18:00", runLine(run("a", "paused", why = "usage limit until 18:00")))
         assertEquals("Paused", runLine(run("a", "paused")))
         assertEquals("Loop · round 4 · next 14:20", runLine(run("a", "done").copy(max = 0)))
-        assertEquals("Build cycle stopped", stoppedText(run("a", kind = "cycle")))
+        assertEquals("Build cycle stopped", stoppedText(run("a", kind = "cycle"), true))
     }
 
     @Test fun plannedEndsStayDoneForNewAndOldReasons() {

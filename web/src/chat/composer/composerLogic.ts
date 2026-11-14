@@ -172,7 +172,7 @@ export function showTurn(id: string, tries = 20) {
   else if (tries) setTimeout(() => showTurn(id, tries - 1), 100);
 }
 
-export const stoppedText = (run: ChatRun) => `${KIND[run.kind]} stopped`;
+export const stoppedText = (run: ChatRun, working: boolean) => `${KIND[run.kind]} stopped${working && run.round > 0 && (run.kind === 'goal' || run.kind === 'loop') ? ` · round ${run.round} was running` : ''}`;
 
 export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', question: 'warn', failed: 'bad', done: 'ok', quiet: '', progress: '' };
 

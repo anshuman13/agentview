@@ -37,6 +37,7 @@ function EditRow({ title, value, options, onEdit }: { title: string; value: Reac
 
 export function GoalDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const run = useStore((s) => s.runs.find((r) => r.id === id));
+  const running = useStore((s) => s.live.find((c) => c.id === run?.chatId)?.running);
   const plan = run ? planOf(run.what) : null;
   const { progress } = usePlanProgress(plan, run?.chatId);
   if (!run) return null;
@@ -46,7 +47,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
   const edit = (e: RunEdit) => send({ type: 'run_edit', run: run.id, ...e });
   const stop = () => {
     control('stop');
-    showSnack(stoppedText(run), () => control('restore'));
+    showSnack(stoppedText(run, Boolean(running)), () => control('restore'));
   };
   const open = (report?: string) => {
     openRun(run, report);
