@@ -201,6 +201,7 @@ function TranscriptView({ chat, events, earlier, cwd, running, showWork, bill }:
   const fresh = useMemo(() => roundsSince(run?.rounds ?? [], mark.seen), [run, mark.seen]);
   const folded = useMemo(() => new Set([...runs].flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs]);
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
+  const jumpLabel = `Jump to latest${replies > 0 ? ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}` : ''}`;
 
   const rowOf = (it: Item, first: boolean, where: 'flat' | 'shown' | 'hidden') => {
     if (!first && folded.has(it.id)) return null;
@@ -232,7 +233,13 @@ function TranscriptView({ chat, events, earlier, cwd, running, showWork, bill }:
       })}
       </div>
     </div>
-    {!stuck && (behind || running) && <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />Jump to latest{replies > 0 && ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}`}</button>}
+    {!stuck && (behind || running) && <>
+      <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />{jumpLabel}</button>
+      <span className="tr-jump-fab">
+        <IconButton icon="arrow-down" label={jumpLabel} onClick={jump} />
+        {replies > 0 && <span className="badge quiet">{replies > 9 ? '9+' : replies}</span>}
+      </span>
+    </>}
     </div>
   );
 }

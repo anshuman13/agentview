@@ -48,6 +48,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +65,8 @@ import no.pradhan.agentview.nativeapp.net.rewind
 import no.pradhan.agentview.nativeapp.net.sendNow
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.Badge
+import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -288,11 +292,12 @@ private fun NewLine() {
 
 @Composable
 private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier.clickable(onClick = onClick), shape = RoundedCornerShape(Tokens.radiusPill), color = av.raised, contentColor = av.fg, border = BorderStroke(Tokens.hairline, av.borderCard), shadowElevation = Tokens.elev2) {
-        Row(Modifier.heightIn(min = Tokens.touch).padding(horizontal = Tokens.sp6), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-            Text(if (replies > 0) "Jump to latest · $replies new ${if (replies == 1) "reply" else "replies"}" else "Jump to latest", style = Type.subheadline)
-            AvIcon("arrow-down", null, Tokens.icon)
+    val label = if (replies > 0) "Jump to latest · $replies new ${if (replies == 1) "reply" else "replies"}" else "Jump to latest"
+    Box(modifier) {
+        Surface(Modifier.size(Tokens.touch).semantics { contentDescription = label }.clickable(onClick = onClick), shape = RoundedCornerShape(Tokens.radiusPill), color = av.raised, contentColor = av.fg, border = BorderStroke(Tokens.hairline, av.borderCard), shadowElevation = Tokens.elev2) {
+            Box(contentAlignment = Alignment.Center) { AvIcon("arrow-down", null, Tokens.icon) }
         }
+        if (replies > 0) Badge(if (replies > 9) "9+" else "$replies", BadgeTone.Quiet, Modifier.align(Alignment.TopEnd))
     }
 }
 

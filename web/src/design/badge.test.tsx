@@ -35,7 +35,7 @@ const sources = (dir: string): string[] => readdirSync(dir, { withFileTypes: tru
 
 describe('Badge call sites', () => {
   const root = join(__dirname, '..');
-  const digitsOnly = ['ui/Badge.tsx', 'ui/Section.tsx', 'app/shell/ActivityBar.tsx', 'app/shell/EditorTabs.tsx', 'app/shell/TabBar.tsx', 'workspace/gitStatus.tsx', 'workspace/Changes.tsx', 'ops/pulls.tsx', 'codex/nav.tsx', 'codex/Overview.tsx', 'codex/overview/TodayList.tsx', 'sessions/BuildPhases.tsx', 'sessions/Sessions.tsx', 'sessions/OpenChats.tsx', 'sessions/NeedsYou.tsx', 'design/Stories.tsx'];
+  const digitsOnly = ['ui/Badge.tsx', 'ui/Section.tsx', 'app/shell/ActivityBar.tsx', 'app/shell/EditorTabs.tsx', 'app/shell/TabBar.tsx', 'workspace/gitStatus.tsx', 'workspace/Changes.tsx', 'ops/pulls.tsx', 'codex/nav.tsx', 'codex/Overview.tsx', 'codex/overview/TodayList.tsx', 'sessions/BuildPhases.tsx', 'sessions/Sessions.tsx', 'sessions/OpenChats.tsx', 'sessions/NeedsYou.tsx', 'chat/transcript/Transcript.tsx', 'design/Stories.tsx'];
   const files = sources(root).map((f) => relative(root, f)).filter((f) => !digitsOnly.includes(f));
 
   it('has no hand-written badge markup outside the digits-only count sites', () => {

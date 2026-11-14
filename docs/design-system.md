@@ -193,7 +193,7 @@ The visible text is the status word in sentence case, or "N word" with `count` (
 - Seven words (Status language): waiting `--warn`; sent and done `--ok`; failed and late `--err`; skipped `--hover` with `--fg-muted`; new `--accent-fill`.
 - Labels: `label` replaces the word only for "Needs you" on waiting and "Live" on running.
 - Reason: `reason` becomes `aria-label` and `title`, never visible text ("Overdue" and "Missed" render Late with that reason).
-- Digits-only exception: count badges (tab bar, nav, Section count, group counts) stay a raw `.badge` with neutral, quiet, waiting or running tone and hold only digits.
+- Digits-only exception: count badges (tab bar, nav, Section count, group counts, the phone Jump to latest reply count) stay a raw `.badge` with neutral, quiet, waiting or running tone and hold only digits.
 - Progress exception: the Today header shows one quiet `.badge` "N of M done" in its Section `action` once N is at least 1.
 - Running exception: running has no Status language word. It shows "Running" or "Live" in `--accent-fill` with a dot; a spec task marked ` (in progress)` shows "In progress" the same way, in place of its Start button.
 - One Badge per Row, trailing, never beside a second state badge. Counts such as "N to confirm" and filter labels are plain muted text.
