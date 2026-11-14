@@ -27,7 +27,6 @@ import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
-import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
@@ -78,20 +77,6 @@ import no.pradhan.agentview.nativeapp.workspace.branchPr
 import no.pradhan.agentview.nativeapp.workspace.checkDot
 import no.pradhan.agentview.nativeapp.workspace.prStripMeta
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
-
-data class StatusLine(val text: String, val tone: Tone2)
-enum class Tone2 { Running, Needs, Failed, Warn, Idle }
-
-fun statusLine(live: LiveChat, session: SessionInfo?): StatusLine = when {
-    live.pending > 0 -> StatusLine("Needs you", Tone2.Needs)
-    live.failed -> StatusLine("Failed", Tone2.Failed)
-    live.stalled -> StatusLine("No activity for 15 min", Tone2.Failed)
-    (session?.running ?: live.running) -> StatusLine(live.status.takeIf { it != "Idle" }.orEmpty().ifBlank { "Working" }, Tone2.Running)
-    live.agentList.isNotEmpty() -> StatusLine("Running · ${live.agentList.size} ${if (live.agentList.size == 1) "agent" else "agents"}", Tone2.Running)
-    live.run?.state == "paused" -> StatusLine(live.run.why?.takeIf { it.isNotEmpty() }?.let { "Paused · $it" } ?: "Paused", Tone2.Warn)
-    live.run != null -> StatusLine(nextRoundText(live.run.nextAt), Tone2.Idle)
-    else -> StatusLine("Idle", Tone2.Idle)
-}
 
 fun costLabel(cost: Double, billing: String = "usd") = unbilledText(billing) ?: if (cost > 0) "$" + String.format(java.util.Locale.US, "%.2f", cost) else ""
 
@@ -196,7 +181,7 @@ private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, view: Ch
 private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double) {
     val status = statusLine(live, session)
     val cost = live.cost ?: viewCost
-    val toneColor = when (status.tone) { Tone2.Running -> av.agent; Tone2.Needs -> av.warn; Tone2.Failed -> av.err; Tone2.Warn -> av.warn; Tone2.Idle -> av.fgMuted }
+    val toneColor = when (status.tone) { ChatTone.Running -> av.agent; ChatTone.Needs -> av.warn; ChatTone.Failed -> av.err; ChatTone.Warn -> av.warn; ChatTone.Idle -> av.fgMuted }
     val muted = av.fgMuted
     val usage = session?.usage
     val warn = av.warn

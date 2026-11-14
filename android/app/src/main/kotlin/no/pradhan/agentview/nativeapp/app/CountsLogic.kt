@@ -1,6 +1,6 @@
 package no.pradhan.agentview.nativeapp.app
 
-import no.pradhan.agentview.nativeapp.chat.Tone2
+import no.pradhan.agentview.nativeapp.chat.ChatTone
 import no.pradhan.agentview.nativeapp.chat.statusLine
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.ops.McpServer
@@ -9,7 +9,7 @@ import no.pradhan.agentview.nativeapp.sessions.ChatState
 import no.pradhan.agentview.nativeapp.sessions.chatState
 
 // shared/counts.ts: every badge number in the app, from the chats, the MCP servers and the row counts the Codex logic gives.
-data class CountChat(val id: String, val state: ChatState?, val tone: Tone2, val runNeeds: Boolean, val agents: Int)
+data class CountChat(val id: String, val state: ChatState?, val tone: ChatTone, val runNeeds: Boolean, val agents: Int)
 
 data class McpCounts(val connected: Int = 0, val total: Int = 0, val needsYou: Int = 0)
 
@@ -17,7 +17,7 @@ data class AppCounts(val needsYou: Int = 0, val chats: Int = 0, val waiting: Int
 
 fun countChat(c: LiveChat, seen: Map<String, Long>) = CountChat(c.id, chatState(c, null, seen), statusLine(c, null).tone, c.run?.needsYou == true, c.agentList.size)
 
-val CountChat.waits get() = tone == Tone2.Needs || runNeeds
+val CountChat.waits get() = tone == ChatTone.Needs || runNeeds
 
 private val MCP_BAD = setOf("failed", "needs-auth")
 
@@ -30,7 +30,7 @@ fun appCounts(chats: List<CountChat>, viewing: String, attention: Int, mcp: List
         needsYou = needsYouRows + replyRows,
         chats = chats.count { it.id != viewing && (it.state == ChatState.Needs || it.state == ChatState.Done) } + attention,
         waiting = chats.count { it.waits },
-        running = chats.count { !it.waits && it.tone == Tone2.Running },
+        running = chats.count { !it.waits && it.tone == ChatTone.Running },
         agents = chats.firstOrNull { it.id == viewing }?.agents ?: 0,
         mcp = McpCounts(servers.count { it.status == "connected" }, servers.size, servers.count { it.status in MCP_BAD }),
     )

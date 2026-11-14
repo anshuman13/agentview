@@ -25,7 +25,7 @@ import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.countChat
 import no.pradhan.agentview.nativeapp.app.waits
 import no.pradhan.agentview.nativeapp.chat.AttachButton
-import no.pradhan.agentview.nativeapp.chat.Tone2
+import no.pradhan.agentview.nativeapp.chat.ChatTone
 import no.pradhan.agentview.nativeapp.chat.Dictation
 import no.pradhan.agentview.nativeapp.chat.VoiceButton
 import no.pradhan.agentview.nativeapp.chat.appendWord
@@ -150,7 +150,7 @@ private fun UpNextSection(d: OverviewData, now: Long, actions: TaskActions, onOp
 }
 
 // Chats that run or wait on me, waiting ones first.
-fun runningChats(live: List<LiveChat>) = live.filter { c -> countChat(c, emptyMap()).let { it.waits || it.tone == Tone2.Running } }.sortedByDescending { countChat(it, emptyMap()).waits }
+fun runningChats(live: List<LiveChat>) = live.filter { c -> countChat(c, emptyMap()).let { it.waits || it.tone == ChatTone.Running } }.sortedByDescending { countChat(it, emptyMap()).waits }
 
 private fun LazyListScope.runningSection(chats: List<LiveChat>, count: Int, onOpen: (String) -> Unit) {
     item { SectionHeader("Running", count = "$count") }
