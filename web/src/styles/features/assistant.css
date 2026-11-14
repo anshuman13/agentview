@@ -14,7 +14,7 @@
 .tasks-head [role='heading'] { font-size: var(--fs-4xl); font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
 .as-menu { display: none; }
 @keyframes as-pulse { to { opacity: 0.3; } }
-.as-error { flex: none; margin: 0 var(--sp-8) var(--sp-4); padding: var(--sp-4) var(--sp-6); border: 0; border-radius: var(--radius-md); font: inherit; font-size: var(--fs-sm); text-align: left; color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); overflow-wrap: anywhere; }
+.as-error { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0 var(--sp-8) var(--sp-4); padding: var(--sp-4) var(--sp-6); border: 0; border-radius: var(--radius-md); font: inherit; font-size: var(--fs-sm); text-align: left; color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); overflow-wrap: anywhere; }
 
 .as-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--sp-8) var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-8); }
 .as-scroll section { display: flex; flex-direction: column; }
@@ -173,6 +173,7 @@
 .tasks .tasks-head { padding: var(--sp-10) var(--tk-pad) var(--sp-6); }
 .tasks .tasks-head [role='heading'] { font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
+.as-error > span { display: inline-flex; }
 .tasks .as-scroll { padding: var(--sp-4) var(--tk-pad) var(--sp-16); gap: var(--sp-8); }
 .tasks .as-scroll section { gap: var(--sp-2); }
 .tasks .as-toggle { align-items: center; width: 100%; border: 0; font-family: inherit; cursor: pointer; }

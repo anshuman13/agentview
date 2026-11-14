@@ -4,6 +4,7 @@ import { TABLE_FIELDS, mergeIncoming } from './sync';
 import { captureParams, doneCutoff, patchSQL, swapSQL, type SqlValue } from './localRows';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki/wiki';
+import { apiUrl } from '../../app/api';
 import { hub, LONG_TIMEOUT, QUICK_TIMEOUT, REPLY_TIMEOUT, SYNC_TIMEOUT } from './hubFetch';
 import { showSnack, snackParked } from '../view';
 
@@ -22,7 +23,8 @@ declare global {
 
 export const tauriInvoke = () => window.__TAURI__?.core?.invoke ?? window.__TAURI_INTERNALS__?.invoke;
 
-export const HUB = 'http://localhost:7790';
+// The hub through the chosen Mac's AgentView, which forwards to wherever that Mac's hub runs.
+export const hubUrl = () => apiUrl('/api/assistant');
 const SYNC_EVERY = 60000;
 // Edits to the removed sample meetings and pages were saved on the phone; cleared once, then everything is pulled again
 // because the clear also removed hub rows.
@@ -45,7 +47,7 @@ const SCHEMA = `${['items', ...WIKI_TABLES].map(table).join('\n')}
   CREATE TABLE IF NOT EXISTS sync_state (key TEXT PRIMARY KEY, value TEXT);
 `;
 
-const post = (since: number, changes: Change[], full?: boolean) => hub<Reply>(`${HUB}/sync`, { since, changes, full }, SYNC_TIMEOUT);
+const post = (since: number, changes: Change[], full?: boolean) => hub<Reply>(`${hubUrl()}/sync`, { since, changes, full }, SYNC_TIMEOUT);
 
 export class LocalStore extends BaseStore implements AssistantStore {
   readonly kind = 'local';
@@ -299,28 +301,28 @@ export class LocalStore extends BaseStore implements AssistantStore {
     await this.update(row, { deleted: 1 });
   };
 
-  parse = (text: string, profile: Profile) => hub<Parsed>(`${HUB}/parse`, { profile, text }, QUICK_TIMEOUT);
+  parse = (text: string, profile: Profile) => hub<Parsed>(`${hubUrl()}/parse`, { profile, text }, QUICK_TIMEOUT);
 
   fetchTranscript = async (m: { profile: Profile; id: string }, instructions?: string) => {
-    const data = await hub<{ saved?: number }>(`${HUB}/transcripts`, { profile: m.profile, id: m.id, instructions }, LONG_TIMEOUT);
+    const data = await hub<{ saved?: number }>(`${hubUrl()}/transcripts`, { profile: m.profile, id: m.id, instructions }, LONG_TIMEOUT);
     await this.syncNow();
     return Number(data?.saved ?? 0);
   };
 
   syncCalendar = async (fresh = 0) => {
-    const data = await hub<{ changed?: number }>(`${HUB}/calendar${fresh ? `?fresh=${fresh}` : ''}`, undefined, LONG_TIMEOUT, 'POST');
+    const data = await hub<{ changed?: number }>(`${hubUrl()}/calendar${fresh ? `?fresh=${fresh}` : ''}`, undefined, LONG_TIMEOUT, 'POST');
     await (data?.changed ? this.syncNow() : this.syncSoon());
     return Number(data?.changed ?? 0);
   };
 
   blockTime = async (row: ItemRow, start: number, end: number, title: string) => {
     await this.syncNow();
-    await hub(`${HUB}/calendar/block`, { profile: row.profile, id: row.id, start, end, title }, REPLY_TIMEOUT);
+    await hub(`${hubUrl()}/calendar/block`, { profile: row.profile, id: row.id, start, end, title }, REPLY_TIMEOUT);
     await this.syncNow();
   };
 
   summarizeSlack = async () => {
-    const data = await hub<{ added?: number }>(`${HUB}/slack/summary`, undefined, LONG_TIMEOUT, 'POST');
+    const data = await hub<{ added?: number }>(`${hubUrl()}/slack/summary`, undefined, LONG_TIMEOUT, 'POST');
     await this.syncNow();
     return Number(data?.added ?? 0);
   };
@@ -328,27 +330,27 @@ export class LocalStore extends BaseStore implements AssistantStore {
   replyHistory = async (): Promise<ReplyHistory> => ({ replies: [] });
 
   sendReply = async (id: string, edited: boolean, text?: string) => {
-    const r = await hub<SentReply>(`${HUB}/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { text }, REPLY_TIMEOUT);
+    const r = await hub<SentReply>(`${hubUrl()}/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { text }, REPLY_TIMEOUT);
     await this.syncNow();
     return r;
   };
 
   skipAsk = async (id: string) => {
-    await hub(`${HUB}/slack/skip?id=${encodeURIComponent(id)}`, undefined, QUICK_TIMEOUT, 'POST');
+    await hub(`${hubUrl()}/slack/skip?id=${encodeURIComponent(id)}`, undefined, QUICK_TIMEOUT, 'POST');
     await this.syncNow();
   };
 
-  autopilot = (patch?: Partial<AutopilotConfig>) => hub<AutopilotState>(`${HUB}/autopilot`, patch, SYNC_TIMEOUT);
+  autopilot = (patch?: Partial<AutopilotConfig>) => hub<AutopilotState>(`${hubUrl()}/autopilot`, patch, SYNC_TIMEOUT);
 
   scanNow = async (name: 'slack' | 'gmail') => {
-    await hub(`${HUB}/scan?name=${name}`, undefined, LONG_TIMEOUT, 'POST');
+    await hub(`${hubUrl()}/scan?name=${name}`, undefined, LONG_TIMEOUT, 'POST');
     await this.syncNow();
   };
 
   searchTranscripts = async (query: string, profile?: Profile) => {
-    const data = await hub<{ hits?: TranscriptHit[] }>(`${HUB}/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`, undefined, QUICK_TIMEOUT);
+    const data = await hub<{ hits?: TranscriptHit[] }>(`${hubUrl()}/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`, undefined, QUICK_TIMEOUT);
     return data?.hits ?? [];
   };
 
-  transcript = async (m: { profile: Profile; id: string }) => transcriptOf(await fetch(`${HUB}${transcriptPath(m)}`, { signal: AbortSignal.timeout(QUICK_TIMEOUT) }));
+  transcript = async (m: { profile: Profile; id: string }) => transcriptOf(await fetch(`${hubUrl()}${transcriptPath(m)}`, { signal: AbortSignal.timeout(QUICK_TIMEOUT) }));
 }
