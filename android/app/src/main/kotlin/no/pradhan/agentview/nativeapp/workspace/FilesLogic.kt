@@ -112,6 +112,9 @@ private val FENCE = Regex("^\\s*(`{3,}|~{3,})")
 
 fun isSpecPath(path: String) = SPEC_PATH.containsMatchIn(path)
 
+// shared/specTasks.ts isRepoSpec: a spec written into another project (by an advisor) has no build record in this chat's repo.
+fun isRepoSpec(path: String, cwd: String) = isSpecPath(path) && (!path.startsWith("/") || path.startsWith(cwd.trimEnd('/') + "/"))
+
 private val KIRO_FOLDER = Regex("(?:^|/)\\.kiro/specs/([^/]+)/")
 
 fun specSlug(path: String) = KIRO_FOLDER.find(path)?.groupValues?.get(1) ?: path.substringAfterLast('/').replace(Regex("\\.\\w+$"), "")

@@ -20,7 +20,7 @@ import { clickOnKey, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
-import { isSpecPath, specSlug } from '../../../../shared/specTasks';
+import { isRepoSpec, specSlug } from '../../../../shared/specTasks';
 import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 
@@ -315,7 +315,7 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: 
       return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':
       if (isSketchPath(it.path) && !it.error) return <SketchCard path={it.path} meta={fileMeta(it, 'Sketch')} />;
-      if (!isSpecPath(it.path) || it.error) return <FileCard it={it} cwd={cwd} />;
+      if (!isRepoSpec(it.path, cwd) || it.error) return <FileCard it={it} cwd={cwd} />;
       return card ? <SpecCard slug={specSlug(it.path)} path={it.path} bump={bump} /> : <SpecRow slug={specSlug(it.path)} meta={fileMeta(it, 'Spec')} />;
     case 'agent':
       return <AgentRow it={it} cwd={cwd} />;

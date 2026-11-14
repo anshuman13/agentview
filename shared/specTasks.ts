@@ -5,6 +5,8 @@ const DOING = / \(in progress\)$/;
 const SPEC_PATH = /(^|\/)\.(claude|kiro)\/specs\/.+\.(md|markdown|mdx)$/i;
 
 export const isSpecPath = (path: string) => SPEC_PATH.test(path);
+// A spec the chat's repo holds; one written into another project (by an advisor) has no build record here.
+export const isRepoSpec = (path: string, cwd: string) => isSpecPath(path) && (!path.startsWith('/') || path.startsWith(`${cwd.replace(/\/+$/, '')}/`));
 
 // The build slug of a spec file: its name, or for a Kiro spec folder the folder's.
 export const specSlug = (path: string) => /(?:^|\/)\.kiro\/specs\/([^/]+)\//.exec(path)?.[1] ?? path.slice(path.lastIndexOf('/') + 1).replace(/\.\w+$/, '');

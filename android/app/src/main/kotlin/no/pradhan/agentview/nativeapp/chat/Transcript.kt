@@ -79,7 +79,7 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
-import no.pradhan.agentview.nativeapp.workspace.isSpecPath
+import no.pradhan.agentview.nativeapp.workspace.isRepoSpec
 import no.pradhan.agentview.nativeapp.workspace.sketchName
 import no.pradhan.agentview.nativeapp.workspace.specSlug
 
@@ -317,7 +317,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
         is Item.File -> if (it.error != null) FileCard(it, cwd)
-            else if (isSpecPath(it.path)) {
+            else if (isRepoSpec(it.path, cwd)) {
                 val meta = if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}"
                 if (bump != null) SpecCard(hub, chat, specSlug(it.path), it.path, bump) else SpecRow(specSlug(it.path), meta)
             }
