@@ -93,6 +93,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       const map = this.tables[table];
       if (map) for (const row of rows) if (!map.has(rowKey(row))) this.setRow(table, row);
     }
+    for (const [table, map] of Object.entries(this.tables)) this.prune(table, [...map.keys()]);
     this.since = cached.since;
     if (meta?.layout !== 2) {
       // The whole-table records are split into rows and deleted in the same write.
@@ -176,8 +177,9 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   }
 
   // Wiki rows are pushed only once the hub has sent some, so a hub without the tables is never asked to store them.
+  private wikiSeen = false;
   private hubHasWiki() {
-    return WIKI_TABLES.some((t) => [...this.tables[t].values()].some((r) => r.version > 0));
+    return (this.wikiSeen ||= WIKI_TABLES.some((t) => [...this.tables[t].values()].some((r) => r.version > 0)));
   }
 
   protected async syncOnce() {
@@ -187,8 +189,12 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       since: async () => this.since,
       saveSince: async (since) => void (this.since = since),
       dirty: async () => {
-        const tables = this.hubHasWiki() ? Object.keys(this.tables) : ['items'];
-        return tables.flatMap((table) => [...this.tables[table].values()].filter((r) => r.dirty).map((row): Dirty => ({ table, row })));
+        const wiki = this.hubHasWiki();
+        return [...this.dirtyKeys].flatMap((k): Dirty[] => {
+          const table = k.slice(0, k.indexOf(':'));
+          const row = this.tables[table]?.get(k.slice(table.length + 1));
+          return row?.dirty && (wiki || table === 'items') ? [{ table, row }] : [];
+        });
       },
       post: (since, changes: Change[], full) => (changes.length ? hub<Reply>('/api/assistant/sync', { since, changes, full }, SYNC_TIMEOUT) : hub<Reply>(`/api/assistant/changes?since=${since}${full ? '&full=1' : ''}`, undefined, SYNC_TIMEOUT)),
       clean: async ({ table, row }) => {
@@ -202,11 +208,11 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       },
       apply: async (change: PulledChange) => {
         this.applySynced(change);
-        this.prune(change.table);
+        this.prune(change.table, [rowKey(change)]);
       },
       applyAll: async (changes: PulledChange[]) => {
         for (const change of changes) this.applySynced(change);
-        for (const table of new Set(changes.map((c) => c.table))) this.prune(table);
+        for (const c of changes) this.prune(c.table, [rowKey(c)]);
       },
       paused: (paused) => this.setSync({ paused }),
       scans: (scans) => this.setSync({ scans }),
@@ -227,12 +233,12 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   }
 
   // Synced tombstones and old done items are not kept; LocalStore filters the same done rows when it reads.
-  private prune(table: string) {
+  private prune(table: string, keys: Iterable<string>) {
     const map = this.tables[table];
     const cutoff = doneCutoff(Date.now());
-    for (const [key, row] of map) {
-      const r = row as SyncRow & { status?: string | null };
-      if (r.dirty) continue;
+    for (const key of keys) {
+      const r = map.get(key) as (SyncRow & { status?: string | null }) | undefined;
+      if (!r || r.dirty) continue;
       if ((r.deleted && r.version > 0) || (table === 'items' && (r.status === 'done' || r.status === 'raised') && r.updated_at <= cutoff)) {
         map.delete(key);
         this.save(table, key);

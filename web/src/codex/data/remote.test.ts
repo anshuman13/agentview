@@ -262,7 +262,7 @@ describe('RemoteStore save', () => {
     const stored = fakeIndexedDb([]);
     fakeDom();
     const store = await freshStore();
-    const internal = store as unknown as Internal & { loaded: Promise<void>; prune(t: string): void };
+    const internal = store as unknown as Internal & { loaded: Promise<void>; prune(t: string, keys: string[]): void };
     await internal.loaded;
     await store.capture('one', 'task', 'work');
     internal.flush();
@@ -270,7 +270,7 @@ describe('RemoteStore save', () => {
     const [key] = [...internal.tables.items.keys()];
     expect(rowsOf(stored, 'items')).toHaveLength(1);
     internal.tables.items.set(key, { ...internal.tables.items.get(key), deleted: 1, dirty: 0, version: 2 });
-    internal.prune('items');
+    internal.prune('items', [key]);
     internal.flush();
     await internal.saving;
     expect(rowsOf(stored, 'items')).toHaveLength(0);
