@@ -44,11 +44,11 @@ class EventStream(
 ) {
     private val http = sharedHttp.newBuilder().readTimeout(45, TimeUnit.SECONDS).build()
     private var job: Job? = null
-    private var call: Call? = null
+    @Volatile private var call: Call? = null
     private var lastId = ""
     @Volatile var lastSeen = 0L
 
-    fun start() {
+    @Synchronized fun start() {
         stop()
         job = scope.launch(Dispatchers.IO) {
             var attempt = 0
@@ -77,7 +77,7 @@ class EventStream(
         }
     }
 
-    fun stop() {
+    @Synchronized fun stop() {
         job?.cancel()
         call?.cancel()
         job = null

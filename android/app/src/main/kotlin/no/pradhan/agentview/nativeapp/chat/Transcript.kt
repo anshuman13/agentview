@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -171,10 +170,10 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val newId = remember(items, seen) { newMarker(items, view.ats, seen.first, seen.second) }
     val newKey = remember(list, newId) { newId?.let { id -> list.firstOrNull { r -> if (r is FoldRow.Fold) r.hidden.any { it.id == id } else r.key == id }?.key } }
     DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
-    val listState = rememberLazyListState()
+    val listState = rememberSaveable(chatId, saver = LazyListState.Saver) { LazyListState() }
     val loading by hub.loadingEarlier.collectAsState()
     val scope = rememberCoroutineScope()
-    val stick = rememberSaveable { mutableStateOf(true) }
+    val stick = rememberSaveable(chatId) { mutableStateOf(true) }
     val atBottom by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 80 } }
     HideNavOnScroll(hub, listState, atBottom)
     var leftId by remember(chatId) { mutableStateOf<String?>(null) }
