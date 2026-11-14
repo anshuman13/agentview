@@ -1,4 +1,4 @@
-import { BadRequest, parseObject, readBody } from '../../../server/src/http/body.js';
+import { BadRequest, parseObject, readBody } from '../../../server/src/json.js';
 import { errText } from '../../../shared/util.js';
 import type { openDb } from '../core/db.js';
 import { SyncError } from '../core/sync.js';

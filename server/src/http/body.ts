@@ -2,26 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, stat, unlink, writeFile } from 'node:fs/promises';
-import { BadRequest, parseFrame, parseObject } from '../json.js';
-
-export { BadRequest, parseFrame, parseObject };
-
-// A fetch Request, or a Node request stream (the hub still serves with node:http).
-type Body = Request | AsyncIterable<Uint8Array>;
-
-async function readBytes(req: Body, max: number, tooBig: string) {
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for await (const chunk of req instanceof Request ? (req.body ?? []) : req) {
-    if ((size += chunk.length) > max) throw new Error(tooBig);
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
-}
-
-export async function readBody(req: Body, max = 1_000_000) {
-  return (await readBytes(req, max, 'Request body too large')).toString('utf8');
-}
+import { readBytes, type Body } from '../json.js';
 
 const PASTES = path.join(os.homedir(), '.agentview', 'pastes');
 const PASTE_TTL = 7 * 24 * 60 * 60_000;

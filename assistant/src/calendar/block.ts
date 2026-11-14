@@ -3,7 +3,7 @@ import type { Database } from 'bun:sqlite';
 import { createSdkMcpServer, tool, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { blockId } from '../../../shared/util.js';
-import { BadRequest } from '../../../server/src/http/body.js';
+import { BadRequest } from '../../../server/src/json.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from '../core/claude.js';
 import { type Profile } from '../core/db.js';

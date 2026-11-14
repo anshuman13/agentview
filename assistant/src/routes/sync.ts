@@ -1,4 +1,4 @@
-import { BadRequest } from '../../../server/src/http/body.js';
+import { BadRequest } from '../../../server/src/json.js';
 import { pausedScans } from '../core/claude.js';
 import { currentVersion } from '../core/db.js';
 import { scanHealth } from '../core/scan.js';

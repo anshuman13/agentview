@@ -2,7 +2,8 @@ import { mkdtemp, readdir, rm, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { BadRequest, parseObject, savePaste } from './body.js';
+import { savePaste } from './body.js';
+import { BadRequest, parseObject } from '../json.js';
 import { waitFor } from '../../../testing.js';
 
 let dir: string;

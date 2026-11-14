@@ -1,4 +1,4 @@
-import { BadRequest } from '../../../server/src/http/body.js';
+import { BadRequest } from '../../../server/src/json.js';
 import { isProfile, type Profile } from '../core/db.js';
 import { ACCOUNT_OF, lastAttempt, syncCalendar } from '../calendar/calendar.js';
 import { addBlock } from '../calendar/block.js';

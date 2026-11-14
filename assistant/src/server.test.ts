@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { BadRequest } from '../../server/src/http/body.js';
+import { BadRequest } from '../../server/src/json.js';
 import { fromAllowedPage, serve } from './server.js';
 import { readJson } from './routes/http.js';
 

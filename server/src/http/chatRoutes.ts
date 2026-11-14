@@ -18,10 +18,9 @@ import { gitRoute } from '../workspace/git.js';
 import { observe } from '../integrations/observe.js';
 import { devScript } from '../workspace/devScript.js';
 import type { ClientMessage } from '../../../shared/protocol.js';
-import { readBody } from './body.js';
+import { readBody, failed } from '../json.js';
 import { isPhone } from '../presence.js';
 import { entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
-import { failed } from '../json.js';
 
 const MAX_FILE_BODY = 5_000_000;
 

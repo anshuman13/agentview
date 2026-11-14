@@ -91,3 +91,20 @@ export function parseFrame<T extends object>(raw: unknown): T | null {
     return null;
   }
 }
+
+// A fetch Request, or a Node request stream (the hub still serves with node:http).
+export type Body = Request | AsyncIterable<Uint8Array>;
+
+export async function readBytes(req: Body, max: number, tooBig: string) {
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for await (const chunk of req instanceof Request ? (req.body ?? []) : req) {
+    if ((size += chunk.length) > max) throw new Error(tooBig);
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+export async function readBody(req: Body, max = 1_000_000) {
+  return (await readBytes(req, max, 'Request body too large')).toString('utf8');
+}
