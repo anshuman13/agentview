@@ -115,6 +115,8 @@
 .tr-since-main .codicon { color: var(--fg-muted); }
 .tr-since-main b { flex: none; font-weight: var(--type-headline-weight); }
 .tr-since-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); }
+.tr-work-box:not(.tr-open) { border-color: transparent; background: transparent; }
+.tr-work-box > .ui-row { min-height: var(--size-row); padding-top: var(--sp-1); padding-bottom: var(--sp-1); color: var(--fg-faint); font-size: var(--fs-sm); }
 .tr-work { display: flex; flex-direction: column; gap: var(--sp-2); padding: 0 var(--sp-4) var(--sp-4); font-size: var(--fs-sm); }
 .tr-work-bad { color: var(--err); }
 .tr-work-detail { color: var(--meta-fg); }

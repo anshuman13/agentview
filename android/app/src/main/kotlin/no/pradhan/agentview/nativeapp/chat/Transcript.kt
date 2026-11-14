@@ -251,7 +251,7 @@ private fun WorkFoldRow(hub: Hub, view: ChatView, fold: FoldRow.Fold, folded: Se
         }
         append(title.text)
     }
-    TranscriptBox(hub, "work:${fold.id}", text, state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null) {
+    TranscriptBox(hub, "work:${fold.id}", text, state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null, plain = true) {
         Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) {
             if (title.detail.isNotEmpty()) Text(title.detail, Modifier.padding(bottom = Tokens.sp2), style = Type.meta, color = av.metaFg)
             val rows = fold.hidden.filter { it.id !in folded }

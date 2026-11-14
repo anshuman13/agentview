@@ -177,7 +177,7 @@ Each Jobs list row is one line of title and one line of meta: the schedule in wo
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
 and notes. The chat shows each turn as its prompt and Claude's final reply, with the turn's work folded into one row
 above the reply: "12 tools · 3 files · 1 agent · 2m · $0.40", plus "N failed" in the error colour when a tool failed; a fold with no tool work is titled by what it holds ("Session started with claude-fable-5-1", else "3 notes"), with no duration or cost. The row
-is closed by default and kept open per device (id `work:<turn>`); opened, it lists the turn's steps, Explored groups, files,
+is a faint small line, boxed only while open, closed by default and kept open per device (id `work:<turn>`); opened, it lists the turn's steps, Explored groups, files,
 agents and earlier text in order. A running turn shows a spinner and counts that grow, and no duration. Blocked and Review
 cards, error system rows, spec and sketch cards stay visible, and pending requests, the loop card and the to-do card stay above
 the composer. A turn with nothing to hide has no row. The More menu's Show work switch (per device, off by default) turns

@@ -8,7 +8,7 @@ export function WorkBox({ id, work, live, billing, children }: { id: string; wor
   const { text, failed, detail } = workTitle(work, live, billing, useNarrow());
   const title = <>{failed && <><span className="tr-work-bad">{failed}</span>{text && ' · '}</>}{text}</>;
   return (
-    <TranscriptBox id={`work:${id}`} title={title} state={live ? <Icon name="loading" small spin /> : undefined}>
+    <TranscriptBox id={`work:${id}`} className="tr-work-box" title={title} state={live ? <Icon name="loading" small spin /> : undefined}>
       <div className="tr-work">{detail && <div className="tr-work-detail">{detail}</div>}{children}</div>
     </TranscriptBox>
   );

@@ -25,7 +25,7 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 
-// Web chat/transcript/Box.tsx: a collapsible transcript box whose header toggles it; the open state is kept per box id on this device.
+// Web chat/transcript/Box.tsx: a collapsible transcript box whose header toggles it; the open state is kept per box id on this device. A plain box is a faint line until opened.
 @Composable
 internal fun TranscriptBox(
     hub: Hub,
@@ -40,17 +40,19 @@ internal fun TranscriptBox(
     defaultOpen: Boolean = false,
     open: Boolean? = null,
     onToggle: (() -> Unit)? = null,
+    plain: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val kv = remember(hub) { PrefsKeyValue(hub.prefs) }
     var saved by remember(id) { mutableStateOf(readBox(kv, id, defaultOpen)) }
     val shown = open ?: saved
     val shape = RoundedCornerShape(Tokens.radius)
-    Column(Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape)) {
+    val boxed = !plain || shown
+    Column(if (boxed) Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape) else Modifier.fillMaxWidth()) {
         ListRow(
             title, meta.ifEmpty { null },
             leading = { AvIcon(if (shown) "chevron-down" else "chevron-right", null, Tokens.iconSm) },
-            state = state, fitState = fitState, trailing = action, lines = if (fitState) 2 else 1,
+            state = state, fitState = fitState, trailing = action, lines = if (fitState) 2 else 1, muted = plain, compact = plain,
             onClick = { if (onToggle != null) onToggle() else { saved = !saved; saveBox(kv, id, saved) } },
         )
         if (!summary.isNullOrEmpty()) Text(

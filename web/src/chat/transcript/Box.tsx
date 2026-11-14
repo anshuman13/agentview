@@ -26,7 +26,7 @@ export function TranscriptBox({ id, title, meta, state, action, summary, default
     onToggle?.(!open);
   };
   return (
-    <div className={`tr-box tr-act${className ? ` ${className}` : ''}`}>
+    <div className={`tr-box tr-act${open ? ' tr-open' : ''}${className ? ` ${className}` : ''}`}>
       <Row leading={<Icon name={open ? 'chevron-down' : 'chevron-right'} small />} title={title} meta={meta} state={state} action={action} aria-expanded={open} onClick={toggle} />
       {summary && <div className="tr-box-summary">{summary}</div>}
       {open && children}
