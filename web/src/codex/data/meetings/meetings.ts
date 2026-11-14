@@ -217,7 +217,7 @@ export const isSolo = (m: Meeting) => m.id.startsWith('cal:') && m.people === '[
 const CALL_HOSTS = ['meet.google.com', 'zoom.us', 'teams.microsoft.com', 'teams.live.com', 'whereby.com'];
 
 const isCallLink = (url: string) => {
-  const host = new URL(url).hostname;
+  const host = URL.canParse(url) ? new URL(url).hostname : '';
   return CALL_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
 };
 

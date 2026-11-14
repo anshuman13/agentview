@@ -77,7 +77,7 @@ export function calendarPrompt(profile: Profile, from: number, to: number) {
   return [
     `List my Google Calendar events on my primary calendar from ${new Date(from).toISOString()} to ${new Date(to).toISOString()}.`,
     'For each event set organizer to true when I organise it and false when someone else does.',
-    'Put every link from its description and attachments (tickets, docs, pull requests, Slack threads) in links, titled by what each points to, such as "AIE-924 Fix the importer" or "Q4 planning doc". Leave out video call and calendar links.',
+    'Put every link from its description and attachments (tickets, docs, pull requests, Slack threads) in links, titled by what each points to, such as "AIE-924 Fix the importer" or "Q4 planning doc". Add its video call link titled "Call". Leave out calendar links.',
     profile === 'personal'
       ? 'Leave out all-day events and events I declined. Keep timed events with no other attendees; send them with an empty people list.'
       : 'Leave out all-day events, events I declined, and events with no other attendees.',
