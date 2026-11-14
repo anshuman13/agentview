@@ -47,10 +47,12 @@ export class EventLog {
     this.reinit();
   }
 
-  // The events move below the finished turn, in the order given.
+  // The events move below the finished turn, in the order given. The order changes in place: the set of events and their
+  // count stay the same, so the caches keyed on the array (index, costs, edits, live summary) stay valid and are not rebuilt.
   moveToEnd(tail: ChatEvent[]) {
     const moved = new Set(tail);
-    this.state.events = [...this.state.events.filter((e) => !moved.has(e)), ...tail];
+    const next = [...this.state.events.filter((e) => !moved.has(e)), ...tail];
+    next.forEach((e, i) => (this.state.events[i] = e));
     this.reinit();
   }
 
