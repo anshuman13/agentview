@@ -29,6 +29,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.archive
@@ -134,7 +135,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
 
     Column(Modifier.fillMaxSize()) {
-        ChatHeader(hub, live, session, view, panels, left.isNotEmpty(), running, cwd) { review = 0 }
+        ChatHeader(hub, live, session, view.agents, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd) { review = 0 }
         prLoad.data?.let { pr ->
             ListRow(pr.title, prStripMeta(pr), leading = { StatusDot(checkDot(pr.checks)) }, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, lines = 1, onClick = { prOpen = pr.number })
             Hairline()
@@ -151,7 +152,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) else LoopCard(hub, it, live, session?.loop?.phase, pending.isNotEmpty(), onOpenAgent) { panels.agents = true } }
         Composer(hub, live.id, session, running, pending.isNotEmpty(), run)
     }
-    ChatSheets(hub, live, session, view, panels, cwd, onOpenAgent)
+    ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent)
 }
 
 @Composable
@@ -163,18 +164,18 @@ private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
     return shown ?: if (cached && !connected) LiveChat(shownId, remember(shownId) { hub.savedTitle(shownId) }) else null
 }
 
+// Takes the fields it shows, not the ChatView, so a streamed token batch does not redraw the header.
 @Composable
-private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, view: ChatView, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
-    val agents = view.agents
+private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, cost: Double, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
     PageHeader(
         live.title.ifBlank { "Untitled" },
-        subtitle = { ChatSubtitle(live, session, view.cost) },
+        subtitle = { ChatSubtitle(live, session, cost) },
     ) {
         if (agents.isNotEmpty()) {
             val (count, anyRunning) = agentBadge(agents)
             BadgedBox(badge = { Badge("$count", if (anyRunning) BadgeTone.Running else BadgeTone.Quiet) }) { IconBtn("hubot", "Agents", { panels.agents = true }) }
         }
-        ChatMenu(hub, live, session, view, panels, canReview, running, cwd, onReview)
+        ChatMenu(hub, live, session, hasReply, panels, canReview, running, cwd, onReview)
     }
 }
 
@@ -197,7 +198,7 @@ private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double
 }
 
 @Composable
-private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: ChatView, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
+private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val sessionId = live.sessionId ?: session?.sessionId
     val showWork by hub.showWork.collectAsState()
@@ -210,7 +211,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: Chat
             close()
             val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, hub.store.state.value.events))
             context.startActivity(android.content.Intent.createChooser(send, null))
-        }, enabled = view.items.any { it is Item.Assistant })
+        }, enabled = hasReply)
         MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })
         MenuItem("Show work", "list-tree", { close(); hub.setShowWork(!showWork) }, checked = showWork)
         MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) panels.dialog = "close" else hub.closeChat(live.id) })
@@ -220,10 +221,9 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, view: Chat
 }
 
 @Composable
-private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, view: ChatView, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit) {
+private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, images: List<String>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit) {
     val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
-    val agents = view.agents
     val now = rememberNow(panels.agents && agents.any { it.status == "running" })
     if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false) {
         AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
@@ -232,7 +232,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, view: Ch
         val hooks = session?.hooks.orEmpty()
         val open = { panel: () -> Unit -> { panels.tools = false; panel() } }
         Group {
-            ListRow("Images", plural(view.images.size, "image"), muted = view.images.isEmpty(), onClick = if (view.images.isEmpty()) null else open { panels.images = true }, trailing = { Chevron() })
+            ListRow("Images", plural(images.size, "image"), muted = images.isEmpty(), onClick = if (images.isEmpty()) null else open { panels.images = true }, trailing = { Chevron() })
             Hairline()
             ListRow("Dev servers", "Dev servers on this Mac", onClick = open { panels.servers = true }, trailing = { Chevron() })
             Hairline()
@@ -250,7 +250,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, view: Ch
             }
         }
     }
-    if (panels.images) ImagesSheet(hub, live.id, view.images, cwd) { panels.images = false }
+    if (panels.images) ImagesSheet(hub, live.id, images, cwd) { panels.images = false }
     if (panels.servers) DevServersSheet(hub) { panels.servers = false }
     if (panels.todos) TodosSheet(hub, cwd) { panels.todos = false }
     if (panels.memory) MemorySheet(hub, cwd, session?.instructionFiles.orEmpty()) { panels.memory = false }
