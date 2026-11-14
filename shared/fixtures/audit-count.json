@@ -1,0 +1,8 @@
+[
+  {"name": "empty", "statuses": [], "expected": "No findings"},
+  {"name": "12 open", "statuses": ["open", "open", "open", "open", "open", "open", "open", "open", "open", "open", "open", "open"], "expected": "12 open"},
+  {"name": "1 open", "statuses": ["open"], "expected": "1 open"},
+  {"name": "3 open and 9 fixed", "statuses": ["open", "open", "open", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed"], "expected": "3 open of 12"},
+  {"name": "all 12 fixed", "statuses": ["fixed", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed", "fixed"], "expected": "0 open of 12"},
+  {"name": "one fixed only", "statuses": ["fixed"], "expected": "0 open of 1"}
+]

@@ -10,7 +10,7 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
-import { ADVISORS, ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_EVERY, advisorLoopCommand, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditPrompt, canBuildItem, defaultAdvisorRoot, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
+import { ADVISORS, ADVISOR_LOOP_BUILDS, ADVISOR_LOOP_EVERY, advisorLoopCommand, advisorLoopLine, advisorLoopOf, advisorNeedsYou, advisorOf, auditCountLine, auditPrompt, canBuildItem, defaultAdvisorRoot, memoryFacts, rankPrompt, specsFromAuditPrompt, type Advisor, type AdvisorInfo, type BacklogItem } from '../../../shared/advisors';
 import { pipelineLabel, specRowParts, specHomeOrder, type SpecHomeItem } from '../../../shared/builds';
 import type { ChatRun } from '../../../shared/protocol';
 import { span } from '../../../shared/util';
@@ -194,7 +194,7 @@ function AuditRow({ shown, turns, root, running, picker }: { shown: boolean; tur
         <div className="ui-group">
           <Row
             title="Audit"
-            meta={audit ? `${audit.date} · ${audit.findings.length} ${audit.findings.length === 1 ? 'finding' : 'findings'}` : 'Not run yet'}
+            meta={audit ? `${audit.date} · ${auditCountLine(audit.findings)}` : 'Not run yet'}
             action={running ? <Badge status="running" /> : <Button size="sm" variant="tinted" disabled={!audit} onClick={() => askAdvisor('pm', specsFromAuditPrompt(root))}>Specs from audit</Button>}
             menu={<>
               <MenuItem icon="list-flat" disabled={!audit} onClick={() => setOpen(true)}>Open latest audit</MenuItem>

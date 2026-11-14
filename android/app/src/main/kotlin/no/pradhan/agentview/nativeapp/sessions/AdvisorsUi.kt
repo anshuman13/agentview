@@ -155,6 +155,12 @@ private fun rankPrompt(root: String) = "Read $root/.claude/backlog.md and the pr
 @Serializable
 data class AuditFinding(val rank: Int, val screen: String, val problem: String, val severity: String, val fix: String, val status: String = "open", val by: String = "")
 
+internal fun auditCountLine(findings: List<AuditFinding>): String {
+    if (findings.isEmpty()) return "No findings"
+    val open = findings.count { it.status != "fixed" }
+    return if (open == findings.size) "$open open" else "$open open of ${findings.size}"
+}
+
 @Serializable
 data class AuditInfo(val date: String, val path: String, val findings: List<AuditFinding> = emptyList())
 
@@ -261,7 +267,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                                 list == null -> Loading("Loading audit")
                                 else -> Group {
                                     ListRow(
-                                        "Audit", audit?.let { "${it.date} · ${it.findings.size} ${if (it.findings.size == 1) "finding" else "findings"}" } ?: "Not run yet",
+                                        "Audit", audit?.let { "${it.date} · ${auditCountLine(it.findings)}" } ?: "Not run yet",
                                         lines = 1, metaLines = 1,
                                         state = {
                                             if (running) Badge("Running", BadgeTone.Running)

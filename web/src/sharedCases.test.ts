@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
-import { advisorLoopLine, advisorLoopOf, advisorNeedsYou, defaultAdvisorRoot } from '../../shared/advisors';
+import { advisorLoopLine, advisorLoopOf, advisorNeedsYou, auditCountLine, defaultAdvisorRoot } from '../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { editCount, stripRound } from '../../shared/edits';
@@ -254,6 +254,12 @@ describe('cases shared with the Android app', () => {
     it(`advisorLoop: ${c.name}`, () => {
       const found = advisorLoopOf(c.runs.map(run), c.root);
       expect(found ? { id: found.id, line: advisorLoopLine(found) } : null).toEqual(c.expected);
+    });
+  }
+
+  for (const c of cases<{ name: string; statuses: string[]; expected: string }>('audit-count')) {
+    it(`auditCountLine: ${c.name}`, () => {
+      expect(auditCountLine(c.statuses.map((status) => ({ status })))).toBe(c.expected);
     });
   }
 

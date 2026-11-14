@@ -64,6 +64,8 @@ import no.pradhan.agentview.nativeapp.sessions.specHomeOrder
 import no.pradhan.agentview.nativeapp.sessions.specRowParts
 import no.pradhan.agentview.nativeapp.sessions.NeedsYouItem
 import no.pradhan.agentview.nativeapp.sessions.advisorNeedsYou
+import no.pradhan.agentview.nativeapp.sessions.AuditFinding
+import no.pradhan.agentview.nativeapp.sessions.auditCountLine
 import no.pradhan.agentview.nativeapp.sessions.defaultAdvisorRoot
 import no.pradhan.agentview.nativeapp.sessions.buildTotals
 import no.pradhan.agentview.nativeapp.sessions.withoutCriteria
@@ -252,6 +254,13 @@ class SharedCasesTest {
             val repos = c.getValue("repos").jsonArray.map { it.jsonObject.str("cwd") to it.jsonObject.getValue("last").jsonPrimitive.long }
             val open = c.nullable("open")?.jsonPrimitive?.content
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, defaultAdvisorRoot(open, repos))
+        }
+    }
+
+    @Test fun auditCount() {
+        for (c in cases("audit-count")) {
+            val findings = c.getValue("statuses").jsonArray.mapIndexed { i, s -> AuditFinding(i + 1, "", "", "low", "", status = s.jsonPrimitive.content) }
+            assertEquals(c.str("name"), c.str("expected"), auditCountLine(findings))
         }
     }
 

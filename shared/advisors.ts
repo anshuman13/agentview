@@ -105,6 +105,12 @@ export const advisorLoopLine = (run: ChatRun): string => {
   return last.report ? 'Weekly report' : roundText(last);
 };
 
+export const auditCountLine = (findings: { status: string }[]): string => {
+  if (!findings.length) return 'No findings';
+  const open = findings.filter((f) => f.status !== 'fixed').length;
+  return open === findings.length ? `${open} open` : `${open} open of ${findings.length}`;
+};
+
 const NEEDS_YOU: RoundOutcome[] = ['blocked', 'question', 'failed'];
 export const runNeedsYou = (run: ChatRun) => {
   const last = run.rounds.at(-1)?.outcome;
