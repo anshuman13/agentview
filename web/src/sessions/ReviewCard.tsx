@@ -15,7 +15,6 @@ import { Skeleton } from '../ui/Skeleton';
 import { ago } from '../ui/util';
 import type { ChatRun } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
-import { openRun } from './goalLogic';
 import { fetchRunDiff, postRunApprove, postRunDiscard, postRunRevise, type RunDiff } from './sessionApi';
 
 const SHOWN = 3;
@@ -97,7 +96,7 @@ export function ReviewCard({ run }: { run: ChatRun }) {
     <>
       <Section label={run.title} />
       <div className="ui-group">
-        <Row title={last?.line || run.title} meta={meta} state={<Badge status="waiting" label="Needs you" />} onClick={() => openRun(run)} onLongPress={() => setMenu(true)} />
+        <Row title={last?.line || run.title} meta={meta} state={<Badge status="waiting" label="Needs you" />} onLongPress={() => setMenu(true)} />
         {failed ? <Row plain title="Could not load the diff" trailing={<Button size="sm" onClick={() => setTries(tries + 1)}>Retry</Button>} /> : diff ? <ReviewFiles diff={diff} all={all} onAll={() => setAll(true)} /> : <Skeleton rows={3} />}
         <AskRow
           title="Commit, push and open a PR"
@@ -109,7 +108,6 @@ export function ReviewCard({ run }: { run: ChatRun }) {
                 {menu && (
                   <Menu trigger={more} onClose={() => setMenu(false)}>
                     <MenuItem onClick={pick(() => setRevising(true))}>Revise…</MenuItem>
-                    <MenuItem onClick={pick(() => openRun(run))}>Open chat</MenuItem>
                     <MenuItem danger onClick={pick(discard)}>Discard</MenuItem>
                   </Menu>
                 )}

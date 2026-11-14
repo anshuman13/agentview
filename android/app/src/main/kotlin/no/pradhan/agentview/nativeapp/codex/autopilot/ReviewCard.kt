@@ -7,11 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.net.ChatRun
@@ -42,10 +40,10 @@ import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 
 private const val SHOWN_FILES = 3
 
-// A paused job run waiting for review (web ReviewCard): the summary, its changed files, then Approve and a menu with Revise, Open chat and Discard.
+// A paused job run waiting for review, above the composer of its chat (web ReviewCard): the summary, its changed files, then Approve and a menu with Revise and Discard.
 @Composable
-fun ReviewCard(hub: Hub, run: ChatRun, now: Long, onChat: () -> Unit) {
-    val scope = rememberCoroutineScope()
+fun ReviewCard(hub: Hub, run: ChatRun) {
+    val now = System.currentTimeMillis()
     val (load, reload) = rememberLoad(run.id) { parseRunDiff(hub.read("/api/runs/diff?run=${enc(run.id)}")) }
     val diff = load.data
     var all by rememberSaveable(run.id) { mutableStateOf(false) }
@@ -54,12 +52,11 @@ fun ReviewCard(hub: Hub, run: ChatRun, now: Long, onChat: () -> Unit) {
     var revising by remember { mutableStateOf(false) }
     var asking by remember { mutableStateOf<String?>(null) }
     var approving by remember { mutableStateOf(false) }
-    val chat = { scope.launch { if (hub.openRun(run, null)) onChat() }; Unit }
     SectionHeader(run.title.ifBlank { "Untitled" })
     Group {
         ListRow(
             run.rounds.lastOrNull()?.line?.ifEmpty { null } ?: run.title, reviewMeta(run, diff, now),
-            state = { Badge("Needs you", BadgeTone.Waiting) }, onClick = { chat() }, onLongClick = if (hub.readOnly) null else ({ menu.value = true }),
+            state = { Badge("Needs you", BadgeTone.Waiting) }, onLongClick = if (hub.readOnly) null else ({ menu.value = true }),
         )
         Hairline()
         when {
@@ -80,7 +77,6 @@ fun ReviewCard(hub: Hub, run: ChatRun, now: Long, onChat: () -> Unit) {
                     Button(if (approving) "Approving…" else "Approve", { asking = "approve" }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, enabled = !approving)
                     MoreButton(expanded = menu) { dismiss ->
                         MenuItem("Revise…", "comment", { dismiss(); revising = true })
-                        MenuItem("Open chat", "comment-discussion", { dismiss(); chat() })
                         MenuItem("Discard", "trash", { dismiss(); asking = "discard" }, danger = true)
                     }
                 },

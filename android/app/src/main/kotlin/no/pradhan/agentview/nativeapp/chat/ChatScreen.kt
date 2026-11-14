@@ -25,6 +25,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
+import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.net.Hub
@@ -160,7 +161,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         }
         visibleChecklist(view.checklist, running)?.let { ChecklistCard(it, live.id, pending.isNotEmpty()) }
         val run = runs.lastOrNull { it.chatId == live.id && it.state != "done" }
-        run?.let { LoopCard(hub, it, live, session?.loop?.phase, pending.isNotEmpty(), onOpenAgent) { panels.agents = true } }
+        run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) else LoopCard(hub, it, live, session?.loop?.phase, pending.isNotEmpty(), onOpenAgent) { panels.agents = true } }
         Composer(hub, live.id, session, running, pending.isNotEmpty(), run)
     }
     ChatSheets(hub, live, session, view, panels, cwd, onOpenAgent)

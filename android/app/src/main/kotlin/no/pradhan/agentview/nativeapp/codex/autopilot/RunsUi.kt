@@ -190,7 +190,7 @@ fun RunsScreen(hub: Hub, onBack: () -> Unit, onChat: () -> Unit, onJob: () -> Un
         LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = Tokens.sp8)) {
             if (bands.review.isNotEmpty()) {
                 item(key = "review-head") { SectionHeader("To review", bands.review.size.toString(), color = av.warn) }
-                items(bands.review, key = { "review-${it.id}" }) { Column { ReviewCard(hub, it, now, onChat) } }
+                items(bands.review, key = { "review-${it.id}" }) { Column { ReviewCard(hub, it) } }
             }
             if (bands.needs.isNotEmpty()) {
                 item(key = "needs-head") { SectionHeader("Needs you", bands.needs.size.toString(), color = av.warn) }

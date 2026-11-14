@@ -6,6 +6,7 @@ import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { TriesBoard } from '../../sessions/TriesBoard';
 import { openGoal } from '../../sessions/goalLogic';
+import { ReviewCard } from '../../sessions/ReviewCard';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
 import { TranscriptBox } from '../transcript/Box';
@@ -36,6 +37,7 @@ export function LoopCard() {
   const more = useRef<HTMLButtonElement>(null);
   const phone = useCardOpen(`${chat}:loop`, waiting || (run ? runNeedsYou(run) : false));
   if (!run) return null;
+  if (run.kind === 'job' && run.review === 'pending') return <ReviewCard run={run} />;
   const control = (op: RunOp) => send({ type: 'run', run: run.id, op });
   const cycle = run.kind === 'cycle' || run.kind === 'tries';
   const goal = run.kind === 'goal';
