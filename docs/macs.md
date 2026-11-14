@@ -37,9 +37,10 @@ against live data.
 
 ## Macs
 
-The Mac's name in the status bar (on the phone: the chat header and the More sheet) lists the other Macs on NetBird
+The Mac's name in the status bar (on the phone: More > Mac address, above the address field) lists the other Macs on NetBird
 that run AgentView, with a dot for whether an agent is working there. Click one to switch to it; a banner names the
-Mac you landed on. The phone app remembers the Mac you used last and offers the others when it can't reach it.
+Mac you landed on. The phone app remembers the Mac you used last; it gets the list from that Mac, so while it can't reach it only the
+address field is left.
 The desktop window app bundles the web UI and calls the chosen Mac (the server accepts the origins
 `http://tauri.localhost` and `tauri://localhost` only from this Mac and NetBird peers); the web UI shows an offline state
 with Retry and the Mac list when that Mac cannot be reached.
