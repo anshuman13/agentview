@@ -99,6 +99,17 @@ describe('Runs', () => {
     expect(new Runs(file).get(id)).toMatchObject({ state: 'running', why: '', needsYou: false });
   });
 
+  it('shows clients open runs and the last 10 that ended in the past day', () => {
+    const runs = new Runs();
+    const open = runs.start(init);
+    for (let i = 0; i < 12; i++) runs.end(runs.start(init), `ended ${i}`);
+    const shown = runs.shown();
+    expect(shown).toHaveLength(11);
+    expect(shown[0].id).toBe(open);
+    expect(shown.at(-1)?.why).toBe('ended 11');
+    expect(runs.shown(Date.now() + 25 * 3_600_000).map((r) => r.id)).toEqual([open]);
+  });
+
   it('ends a run once and ignores later changes to it', () => {
     const runs = new Runs();
     const id = runs.start(init);

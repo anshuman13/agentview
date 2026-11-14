@@ -9,6 +9,8 @@ export const READY = 'Ready for review';
 const KEEP_ENDED = 100;
 const KEEP_ROUNDS = 50;
 const SAVE_MS = 1000;
+const SHOW_ENDED = 10;
+const SHOW_ENDED_MS = 24 * 3_600_000;
 
 type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' | 'provider'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'maxBuilds' | 'builds' | 'tries' | 'jobId' | 'branch' | 'repo' | 'worktree' | 'paseo'>>;
 
@@ -36,6 +38,8 @@ const mark = (r: ChatRun) => {
 export class Runs {
   private runs: ChatRun[];
   private timer: NodeJS.Timeout | null = null;
+  // Counts changes, so the host sends runs only after one.
+  version = 0;
 
   constructor(private file: string | null = null, private onChange: () => void = () => {}, private onEnd: (run: ChatRun) => void = () => {}, private onReported: (run: ChatRun) => void = () => {}) {
     const saved = file ? readJsonSync<unknown>(file, []) : [];
@@ -49,6 +53,12 @@ export class Runs {
 
   list() {
     return this.runs;
+  }
+
+  // What clients get: open runs and the last runs that ended in the past day.
+  shown(now = Date.now()) {
+    const recent = this.runs.filter((r) => r.state === 'done' && now - (r.endedAt ?? 0) < SHOW_ENDED_MS).slice(-SHOW_ENDED);
+    return this.runs.filter((r) => r.state !== 'done' || recent.includes(r));
   }
 
   get(id: string | undefined) {
@@ -86,10 +96,12 @@ export class Runs {
 
   // A chat that has no Claude session yet gets one with its first turn.
   bind(chatId: string, sessionId: string) {
+    let changed = false;
     for (const r of this.runs) {
-      if (r.chatId === chatId && !r.sessionId) r.sessionId = sessionId;
-      for (const t of r.tries ?? []) if (t.chatId === chatId && !t.sessionId) t.sessionId = sessionId;
+      if (r.chatId === chatId && !r.sessionId) changed = Boolean(r.sessionId = sessionId);
+      for (const t of r.tries ?? []) if (t.chatId === chatId && !t.sessionId) changed = Boolean(t.sessionId = sessionId);
     }
+    if (changed) this.touch();
   }
 
   addRound(id: string | undefined, round: Omit<Round, 'at'>) {
@@ -163,6 +175,7 @@ export class Runs {
     this.runs = this.runs.filter((r) => !drop.has(r));
     for (const r of this.runs) if (r.rounds.length > KEEP_ROUNDS) r.rounds = r.rounds.slice(-KEEP_ROUNDS);
     for (const r of this.runs) mark(r);
+    this.version++;
     this.onChange();
     if (this.file && !this.timer) {
       this.timer = setTimeout(() => this.flush(), SAVE_MS);

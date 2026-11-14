@@ -31,6 +31,7 @@ export const summaryOf = (chat: AgentSession) => summary(chat, { stalled: stalls
 export const liveList = () => [...live.values()].map((l) => summaryOf(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
 
 let liveTimer: NodeJS.Timeout | null = null;
+let runsSent = -1;
 const sendLive = sendWhenChanged((chats: LiveChat[]) => broadcast({ type: 'live', chats }));
 const sendRuns = sendWhenChanged((list: ChatRun[]) => broadcast({ type: 'runs', runs: list }));
 export function broadcastLive() {
@@ -38,6 +39,9 @@ export function broadcastLive() {
     liveTimer = null;
     for (const { chat } of live.values()) chat.watchHistory(viewers(chat) > 0);
     sendLive(liveList());
-    sendRuns(runs.list());
+    if (runs.version !== runsSent) {
+      runsSent = runs.version;
+      sendRuns(runs.shown());
+    }
   }, 100);
 }

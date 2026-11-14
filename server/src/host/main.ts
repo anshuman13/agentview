@@ -69,7 +69,7 @@ async function handle(req: HostRequest): Promise<unknown> {
   switch (req.op) {
     case 'hello':
       await ready;
-      return { last: hub.lastViewed.id, restarting: Boolean(hub.restarting), chats: liveList(), runs: runs.list() } satisfies Hello;
+      return { last: hub.lastViewed.id, restarting: Boolean(hub.restarting), chats: liveList(), runs: runs.shown() } satisfies Hello;
     case 'tool_call': {
       const chat = get(req.id);
       return callTool(req.name, req.args, { cwd: chat.cwd, chatId: chat.state.session.sessionId, provider: chat.driver.provider, host: chat });
