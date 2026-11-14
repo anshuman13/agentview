@@ -74,8 +74,24 @@ async function revert(cwd: string, paths: string[]) {
   const tracked = paths.filter((p) => !loose.has(p) && inHead.has(p));
   const added = paths.filter((p) => !loose.has(p) && !inHead.has(p));
   if (loose.size) await git(cwd, ['clean', '-f', '-q', '--', ...loose]);
+  // A staged rename's new path counts as added; its old path comes back with it.
+  const renamed = added.length ? renamedFrom(await git(cwd, ['diff', '--cached', '-M', '--name-status', '-z', 'HEAD'], [0, 128])) : new Map<string, string>();
+  const olds = added.flatMap((p) => renamed.get(p) ?? []);
   if (added.length) await git(cwd, ['rm', '-f', '-q', '--ignore-unmatch', '--', ...added]);
-  if (tracked.length) await git(cwd, ['checkout', '-q', 'HEAD', '--', ...tracked]);
+  if (tracked.length || olds.length) await git(cwd, ['checkout', '-q', 'HEAD', '--', ...tracked, ...olds]);
+}
+
+// New path to old path of each rename in `git diff --name-status -z` output.
+export function renamedFrom(out: string) {
+  const parts = out.split('\0');
+  const map = new Map<string, string>();
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i].startsWith('R') || parts[i].startsWith('C')) {
+      if (parts[i].startsWith('R')) map.set(parts[i + 2], parts[i + 1]);
+      i += 2;
+    } else if (parts[i]) i++;
+  }
+  return map;
 }
 
 export type BranchFile = { path: string; add: number; del: number };

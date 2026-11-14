@@ -63,6 +63,14 @@ describe('gitRoute', () => {
     expect((await status()).files).toEqual([]);
   });
 
+  it('reverts a staged rename to the old path', async () => {
+    sh('mv', 'gone.txt', 'moved.txt');
+    await route('revert', { paths: ['moved.txt'] });
+    expect(existsSync(path.join(repo, 'moved.txt'))).toBe(false);
+    expect(readFileSync(path.join(repo, 'gone.txt'), 'utf8')).toBe('g\n');
+    expect((await status()).files).toEqual([]);
+  });
+
   it('rejects paths outside the folder and mutations without a body', async () => {
     await expect(route('stage', { paths: ['../x'] })).rejects.toThrow('outside');
     await expect(route('revert', { paths: ['../x'] })).rejects.toThrow('outside');
