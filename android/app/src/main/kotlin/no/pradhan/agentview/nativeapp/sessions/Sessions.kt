@@ -30,19 +30,18 @@ import no.pradhan.agentview.nativeapp.chat.MessageHit
 import no.pradhan.agentview.nativeapp.chat.NewChatSheet
 import no.pradhan.agentview.nativeapp.chat.RepoChoice
 import no.pradhan.agentview.nativeapp.chat.boldMatches
-import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.chat.messageMeta
 import no.pradhan.agentview.nativeapp.chat.messageQuery
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
 import no.pradhan.agentview.nativeapp.codex.WORK
+import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
-import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.markRead
-import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.net.refreshWorkspace
+import no.pradhan.agentview.nativeapp.net.searchMessages
 import no.pradhan.agentview.nativeapp.net.setChatSegment
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -111,7 +110,7 @@ private fun rememberMessageHits(hub: Hub, filter: String): List<MessageHit> {
         val q = messageQuery(filter)
         if (q == null) { hits = emptyList(); return@LaunchedEffect }
         delay(400)
-        hits = runCatching { protocolJson.decodeFromString<List<MessageHit>>(hub.read("/api/sessions/search?q=${enc(q)}")) }.getOrDefault(emptyList())
+        hits = runCatching { hub.searchMessages(q) }.getOrDefault(emptyList())
     }
     return hits
 }

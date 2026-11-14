@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,10 +30,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.codex.autopilot.openChatOf
-import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.enc
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.build
+import no.pradhan.agentview.nativeapp.net.postBuildReview
 import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.ops.DiffFiles
 import no.pradhan.agentview.nativeapp.sessions.BuildCommit
@@ -48,7 +46,6 @@ import no.pradhan.agentview.nativeapp.sessions.byStart
 import no.pradhan.agentview.nativeapp.sessions.criterionBadge
 import no.pradhan.agentview.nativeapp.sessions.decisionTitle
 import no.pradhan.agentview.nativeapp.sessions.nextPhase
-import no.pradhan.agentview.nativeapp.sessions.parseBuild
 import no.pradhan.agentview.nativeapp.sessions.phaseApproved
 import no.pradhan.agentview.nativeapp.sessions.phaseLabel
 import no.pradhan.agentview.nativeapp.sessions.reviewDecision
@@ -76,13 +73,14 @@ import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.workspace.FileScreen
-import no.pradhan.agentview.nativeapp.workspace.SketchFrame
-import no.pradhan.agentview.nativeapp.workspace.sketchPage
 import no.pradhan.agentview.nativeapp.workspace.PrFile
+import no.pradhan.agentview.nativeapp.workspace.SketchFrame
 import no.pradhan.agentview.nativeapp.workspace.agoShort
 import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
+import no.pradhan.agentview.nativeapp.workspace.sketchPage
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
 import no.pradhan.agentview.nativeapp.workspace.startTaskPrompt
@@ -241,7 +239,7 @@ internal fun buildActions(hub: Hub, slug: String, reload: () -> Unit): BuildActi
     val postReview: (String, (Boolean) -> Unit) -> Unit = { body, done ->
         if (!hub.writes.allowed()) done(false)
         else scope.launch {
-            val ok = runCatching { hub.api.post("/api/builds/review", body, hub.pageChat) }.isSuccess
+            val ok = runCatching { hub.postBuildReview(body) }.isSuccess
             if (ok) reload()
             done(ok)
         }
@@ -256,7 +254,7 @@ internal fun buildActions(hub: Hub, slug: String, reload: () -> Unit): BuildActi
 
 // The build, or null when the server has no such spec any more.
 internal suspend fun loadBuild(hub: Hub, slug: String): BuildDetail? =
-    try { parseBuild(hub.read("/api/builds/one?slug=${enc(slug)}")) } catch (e: ApiError) { if (e.code == 404) null else throw e }
+    hub.build(slug)
 
 @Composable
 private fun sheetHeight() = LocalConfiguration.current.screenHeightDp.dp * 0.8f

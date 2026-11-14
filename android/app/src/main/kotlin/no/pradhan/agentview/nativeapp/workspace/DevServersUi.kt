@@ -18,9 +18,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.net.write
+import no.pradhan.agentview.nativeapp.net.devScript
+import no.pradhan.agentview.nativeapp.net.newTerminal
+import no.pradhan.agentview.nativeapp.net.openPort
+import no.pradhan.agentview.nativeapp.net.ports
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -52,11 +53,11 @@ fun DevServersSheet(hub: Hub, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     val uri = LocalUriHandler.current
     suspend fun load() {
-        ports = runCatching { protocolJson.decodeFromString<List<DevPort>>(hub.api.get("/api/ports")) }.getOrElse { error = it.message; emptyList() }
+        ports = runCatching { hub.ports() }.getOrElse { error = it.message; emptyList() }
     }
     LaunchedEffect(Unit) {
         load()
-        script = runCatching { protocolJson.decodeFromString<DevScript?>(hub.read("/api/devscript")) }.getOrNull()
+        script = runCatching { hub.devScript() }.getOrNull()
     }
     Sheet(onDismiss = onDismiss, title = "Dev servers", padded = false, full = false) {
         val list = ports
@@ -66,7 +67,7 @@ fun DevServersSheet(hub: Hub, onDismiss: () -> Unit) {
             else -> list.forEach { p ->
                 ListRow(":${p.port}", devPortMeta(p), trailing = { AvIcon("link-external", tint = av.fgMuted) }, onClick = {
                     scope.launch {
-                        val r = runCatching { protocolJson.decodeFromString<OpenedPort>(hub.api.get("/api/ports/open?port=${p.port}")) }.getOrElse { OpenedPort(error = it.message) }
+                        val r = runCatching { hub.openPort(p.port) }.getOrElse { OpenedPort(error = it.message) }
                         r.url?.let { uri.openUri(it) } ?: run { error = r.error }
                     }
                 })
@@ -77,7 +78,7 @@ fun DevServersSheet(hub: Hub, onDismiss: () -> Unit) {
             Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (started) "Running in the ${d.script} terminal" else d.command, Modifier.weight(1f), style = Type.footnote, color = av.fgMuted)
                 Button("Start", {
-                    hub.write("/api/terms?dev=1", "", "Could not start ${d.command}") { ok ->
+                    hub.newTerminal("Could not start ${d.command}", dev = true) { ok ->
                         if (ok) { started = true; scope.launch { delay(5000); load() } }
                     }
                 }, variant = ButtonVariant.Tinted, icon = "play", enabled = !started && !hub.readOnly)

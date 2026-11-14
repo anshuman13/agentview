@@ -28,8 +28,7 @@ import no.pradhan.agentview.nativeapp.codex.replyQueue
 import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
-import no.pradhan.agentview.nativeapp.net.read
-import no.pradhan.agentview.nativeapp.ops.parseMcp
+import no.pradhan.agentview.nativeapp.net.mcpProbe
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -106,7 +105,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
     var runsOpen by rememberSaveable(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
     var servers by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(tools) { if (tools != null) runCatching { servers = parseMcp(hub.read("/api/mcp/probe")).map { it.name } } }
+    LaunchedEffect(tools) { if (tools != null) runCatching { servers = hub.mcpProbe(false).map { it.name } } }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             Text(job.str("name")?.ifEmpty { null } ?: "Untitled job", Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)

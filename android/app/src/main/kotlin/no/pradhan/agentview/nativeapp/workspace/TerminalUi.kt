@@ -39,7 +39,9 @@ import androidx.compose.ui.text.input.ImeAction
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveSocket
 import no.pradhan.agentview.nativeapp.net.enc
+import no.pradhan.agentview.nativeapp.net.newTerminal
 import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.terminals
 import no.pradhan.agentview.nativeapp.net.write
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -57,7 +59,7 @@ import no.pradhan.agentview.nativeapp.ui.select
 fun TerminalScreen(hub: Hub, onBack: () -> Unit) {
     val shownId by hub.store.state.select { it.shownId }
     val chat = shownId
-    val (load, reload) = rememberLoad(chat) { parseTerms(hub.read("/api/terms")) }
+    val (load, reload) = rememberLoad(chat) { hub.terminals() }
     val tabs = load.data ?: emptyList()
     var active by rememberSaveable(chat) { mutableStateOf("") }
     val id = tabs.firstOrNull { it.id == active }?.id ?: tabs.lastOrNull()?.id
@@ -71,7 +73,7 @@ fun TerminalScreen(hub: Hub, onBack: () -> Unit) {
             load.data == null && load.error.isNotEmpty() -> ErrorHint(load.error)
             load.data == null -> Hint("Loading…")
             id == null -> EmptyState("No terminal open", "A terminal runs a shell in the chat's folder", small = false, action = {
-                Button("New terminal", { hub.write("/api/terms", "", "Terminal unavailable") { if (it) reload() } }, variant = ButtonVariant.Filled)
+                Button("New terminal", { hub.newTerminal("Terminal unavailable") { if (it) reload() } }, variant = ButtonVariant.Filled)
             })
             else -> TermView(hub, id, onGone = reload)
         }

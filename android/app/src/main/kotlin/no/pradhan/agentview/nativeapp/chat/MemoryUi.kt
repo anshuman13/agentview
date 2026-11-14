@@ -18,8 +18,9 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.Undoable
-import no.pradhan.agentview.nativeapp.net.protocolJson
+import no.pradhan.agentview.nativeapp.net.memoryFiles
 import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.readFile
 import no.pradhan.agentview.nativeapp.net.saveFile
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -32,7 +33,6 @@ import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.workspace.parseFile
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 
 @Serializable
@@ -75,7 +75,7 @@ private fun AddRule(hub: Hub, file: String, onSaved: () -> Unit) {
     }
     val add = {
         if (appendRule("", text) != null) scope.launch {
-            runCatching { parseFile(hub.read("/api/file?path=$file")).content }.onSuccess { save(it) }.onFailure { hub.notice.value = RULE_FAILED }
+            runCatching { hub.readFile(file).content }.onSuccess { save(it) }.onFailure { hub.notice.value = RULE_FAILED }
         }
     }
     TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), singleLine = true, placeholder = "Add a rule",
@@ -86,7 +86,7 @@ private fun AddRule(hub: Hub, file: String, onSaved: () -> Unit) {
 @Composable
 fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss: () -> Unit) {
     val file = ruleFile(cwd, instructionFiles)
-    val (files, reload) = rememberLoad(cwd) { protocolJson.decodeFromString<List<MemoryFile>>(hub.read("/api/memory")) }
+    val (files, reload) = rememberLoad(cwd) { hub.memoryFiles() }
     var open by remember { mutableStateOf<MemoryFile?>(null) }
     open?.let { f ->
         var draft by remember(f) { mutableStateOf<String?>(null) }

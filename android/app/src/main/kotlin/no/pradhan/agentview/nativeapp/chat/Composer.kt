@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -51,16 +51,16 @@ import no.pradhan.agentview.nativeapp.app.barHidden
 import no.pradhan.agentview.nativeapp.app.barState
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
-import no.pradhan.agentview.nativeapp.net.newestModels
-import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Capabilities
+import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.SessionInfo
+import no.pradhan.agentview.nativeapp.net.chatFiles
 import no.pradhan.agentview.nativeapp.net.interrupt
-import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.menuModes
 import no.pradhan.agentview.nativeapp.net.modeSteps
+import no.pradhan.agentview.nativeapp.net.newestModels
+import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.net.refreshUsage
 import no.pradhan.agentview.nativeapp.net.runInTerminal
 import no.pradhan.agentview.nativeapp.net.setAccount
@@ -177,7 +177,7 @@ private fun composerPlaceholder(label: String, waiting: Boolean, compacting: Boo
 private fun rememberSuggestions(s: ComposerState, trigger: Trigger?, session: SessionInfo?): List<Suggestion> {
     val key = trigger?.let { "${it.start}:${it.query}" } ?: ""
     LaunchedEffect(s.chatId, trigger?.file) {
-        if (trigger?.file == true && s.files == null) s.files = runCatching { protocolJson.decodeFromString<List<String>>(s.hub.api.get("/api/files", s.chatId)) }.getOrDefault(emptyList())
+        if (trigger?.file == true && s.files == null) s.files = runCatching { s.hub.chatFiles(s.chatId) }.getOrDefault(emptyList())
     }
     val files = s.files
     val ranked = remember(files, trigger?.query, trigger?.file) { if (trigger?.file == true) rankFiles(files.orEmpty(), trigger.query) else emptyList() }

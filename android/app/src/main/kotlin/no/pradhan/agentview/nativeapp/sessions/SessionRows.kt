@@ -43,16 +43,16 @@ import no.pradhan.agentview.nativeapp.net.draftSnippet
 import no.pradhan.agentview.nativeapp.net.markUnread
 import no.pradhan.agentview.nativeapp.net.pin
 import no.pradhan.agentview.nativeapp.net.providerMark
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.pulls
 import no.pradhan.agentview.nativeapp.net.rename
 import no.pradhan.agentview.nativeapp.net.resume
 import no.pradhan.agentview.nativeapp.net.setMuted
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
-import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
+import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MenuSeparator
@@ -62,7 +62,6 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.PrChip
-import no.pradhan.agentview.nativeapp.workspace.parsePulls
 import no.pradhan.agentview.nativeapp.workspace.prChip
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 
@@ -75,7 +74,7 @@ fun rememberChatRows(hub: Hub, dialogs: SessionDialogs, onOpen: () -> Unit): Cha
     val muted by hub.muted.collectAsState()
     val saved = remember(ws.saved) { ws.saved.associateBy { it.sessionId } }
     val shownCwd = live.firstOrNull { it.id == shownId }?.cwd
-    val (prLoad) = rememberLoad(shownId, shownCwd) { if (shownCwd == null || live.none { it.pr != null }) emptyList() else parsePulls(hub.read("/api/gh/prs")) }
+    val (prLoad) = rememberLoad(shownId, shownCwd) { if (shownCwd == null || live.none { it.pr != null }) emptyList() else hub.pulls(false) }
     val prFor = { c: LiveChat -> c.pr?.let { n -> prChip(n, prLoad.data?.takeIf { c.cwd == shownCwd }?.firstOrNull { it.number == n }, c.prChecks) } }
     return ChatRows(hub, onOpen, live, ws, saved, ws.pins.toSet(), muted, shownId, prFor, dialogs, rememberCoroutineScope(), LocalClipboardManager.current, remember { mutableStateOf<String?>(null) })
 }

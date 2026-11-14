@@ -27,11 +27,12 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.enc
+import no.pradhan.agentview.nativeapp.net.branchDiff
+import no.pradhan.agentview.nativeapp.net.git
+import no.pradhan.agentview.nativeapp.net.gitStatus
 import no.pradhan.agentview.nativeapp.net.providerLabel
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.readFile
 import no.pradhan.agentview.nativeapp.net.saveFile
-import no.pradhan.agentview.nativeapp.net.write
 import no.pradhan.agentview.nativeapp.ops.DRAFT_PROMPT
 import no.pradhan.agentview.nativeapp.ops.Findings
 import no.pradhan.agentview.nativeapp.ops.PatchView
@@ -58,7 +59,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 
 private class GitOps(private val hub: Hub, private val reload: () -> Unit, val onDiscard: (List<GitFile>) -> Unit, val onReview: (GitFile) -> Unit) {
-    fun run(action: String, body: String, done: () -> Unit = {}) = hub.write("/api/git/$action", body, "Could not $action") { if (it) done(); reload() }
+    fun run(action: String, body: String, done: () -> Unit = {}) = hub.git(action, body, "Could not $action") { if (it) done(); reload() }
 }
 
 // Source Control (web/src/workspace/Changes.tsx): branch, commit box, staged and unstaged files, a file opens as its diff.
@@ -75,7 +76,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     var ask by androidx.compose.runtime.remember { mutableStateOf<List<GitFile>?>(null) }
     val o = open
     if (o != null) { FileScreen(hub, o, onBack = { open = null }); return }
-    val (load, reload) = rememberLoad(chat) { parseGitStatus(hub.read("/api/git/status")) }
+    val (load, reload) = rememberLoad(chat) { hub.gitStatus() }
     val pg = pager
     if (pg != null) {
         ChangesPager(hub, pg.drop(1), pg[0].toInt(), reviewed.toSet(), { reviewed = reviewed + it }, { p ->
@@ -86,7 +87,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
         }, onBack = { pager = null; reload() })
         return
     }
-    val (branchLoad, reloadBranch) = rememberLoad(chat) { parseBranchDiff(hub.read("/api/git/branch")) }
+    val (branchLoad, reloadBranch) = rememberLoad(chat) { hub.branchDiff() }
     WhileStarted(chat) { while (true) { delay(5000); reload() } }
     val files = load.data?.files ?: emptyList()
     val review = files.map { it.path }.distinct()
@@ -253,7 +254,7 @@ fun ChangesPager(hub: Hub, paths: List<String>, start: Int, reviewed: Set<String
         }
     }
     ask?.let { p ->
-        ConfirmDialog(revertTitle(p), REVERT_DETAIL, "Revert", { hub.write("/api/git/revert", pathsBody(listOf(GitFile(p))), "Could not revert") { if (it) onReverted(p) } }, onDismiss = { ask = null })
+        ConfirmDialog(revertTitle(p), REVERT_DETAIL, "Revert", { hub.git("revert", pathsBody(listOf(GitFile(p))), "Could not revert") { if (it) onReverted(p) } }, onDismiss = { ask = null })
     }
     comment?.let { (p, row, revert) ->
         CommentSheet("Comment on ${p.substringAfterLast('/')}:${row.no}", row.line.text, onSend = { text -> hub.draftPrompt(commentPrompt(p, row, text)) }, onRevert = revert?.takeIf { !hub.readOnly }, onDismiss = { comment = null })
@@ -262,7 +263,7 @@ fun ChangesPager(hub: Hub, paths: List<String>, start: Int, reviewed: Set<String
 
 @Composable
 private fun ReviewPage(hub: Hub, path: String, onCounts: (Pair<Int, Int>) -> Unit, onComment: (DiffRow, (() -> Unit)?) -> Unit) {
-    val (load, reload) = rememberLoad(path, hub.pageChat) { parseFile(hub.read("/api/file?path=${enc(path)}")) }
+    val (load, reload) = rememberLoad(path, hub.pageChat) { hub.readFile(path) }
     val file = load.data
     when {
         file == null && load.error.isNotEmpty() -> ErrorHint(load.error)

@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp.workspace
 
-import no.pradhan.agentview.nativeapp.ui.select
 import android.view.MotionEvent
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -35,9 +34,9 @@ import kotlinx.serialization.builtins.ListSerializer
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
-import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.readFile
+import no.pradhan.agentview.nativeapp.net.sketches
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -52,16 +51,17 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.select
 
 private const val FOLD = 5
 
-private fun parseSketches(body: String): List<SketchFile> = protocolJson.decodeFromString(ListSerializer(SketchFile.serializer()), body)
+internal fun parseSketches(body: String): List<SketchFile> = protocolJson.decodeFromString(ListSerializer(SketchFile.serializer()), body)
 
 // Sketches (web/src/workspace/Sketches.tsx): the mockups the agent wrote with /sketch, and a frame that shows one.
 @Composable
 fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
     val chat by hub.store.state.select { it.shownId }
-    val (load, reload) = rememberLoad(chat) { parseSketches(hub.read("/api/sketches")) }
+    val (load, reload) = rememberLoad(chat) { hub.sketches() }
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var want by remember { mutableStateOf<String?>(null) }
     val slug by hub.sketchSlug.collectAsState()
@@ -109,7 +109,7 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val cwd by hub.store.state.select { st -> st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd.orEmpty() }
     val clip = LocalClipboardManager.current
-    val (load) = rememberLoad(file.path, hub.pageChat) { parseFile(hub.read("/api/file?path=${enc(file.path)}")) }
+    val (load) = rememberLoad(file.path, hub.pageChat) { hub.readFile(file.path) }
     var desktop by rememberSaveable { mutableStateOf(false) }
     var dark by rememberSaveable { mutableStateOf<Boolean?>(null) }
     val dark0 = when (hub.theme.collectAsState().value) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }

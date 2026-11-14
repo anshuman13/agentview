@@ -25,23 +25,24 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopCard
-import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
 import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
+import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
 import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.net.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
-import no.pradhan.agentview.nativeapp.net.billing
-import no.pradhan.agentview.nativeapp.net.unbilledText
 import no.pradhan.agentview.nativeapp.net.archive
+import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.closeChat
 import no.pradhan.agentview.nativeapp.net.forkChat
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.gitStatus
+import no.pradhan.agentview.nativeapp.net.pulls
 import no.pradhan.agentview.nativeapp.net.remindChat
 import no.pradhan.agentview.nativeapp.net.rename
 import no.pradhan.agentview.nativeapp.net.setShowWork
 import no.pradhan.agentview.nativeapp.net.submit
+import no.pradhan.agentview.nativeapp.net.unbilledText
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
 import no.pradhan.agentview.nativeapp.ops.agentBadge
@@ -51,9 +52,9 @@ import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
+import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
-import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.IconBtn
@@ -75,8 +76,6 @@ import no.pradhan.agentview.nativeapp.workspace.ChangesPager
 import no.pradhan.agentview.nativeapp.workspace.DevServersSheet
 import no.pradhan.agentview.nativeapp.workspace.branchPr
 import no.pradhan.agentview.nativeapp.workspace.checkDot
-import no.pradhan.agentview.nativeapp.workspace.parseGitStatus
-import no.pradhan.agentview.nativeapp.workspace.parsePulls
 import no.pradhan.agentview.nativeapp.workspace.prStripMeta
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
 
@@ -142,7 +141,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         ChangesPager(hub, left, start, reviewed.toSet(), { reviewed = reviewed + it }, { reverted = reverted + it }, onBack = { review = null })
         return
     }
-    val (prLoad) = rememberLoad(live.id, cwd) { branchPr(parsePulls(hub.read("/api/gh/prs")), parseGitStatus(hub.read("/api/git/status")).branch) }
+    val (prLoad) = rememberLoad(live.id, cwd) { branchPr(hub.pulls(false), hub.gitStatus().branch) }
     var prOpen by rememberSaveable(live.id) { mutableStateOf<Int?>(null) }
     prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
 

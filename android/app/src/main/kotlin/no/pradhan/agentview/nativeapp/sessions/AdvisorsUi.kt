@@ -13,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import no.pradhan.agentview.nativeapp.ui.select
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,10 +25,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.codex.autopilot.ADVISOR_LOOP_BUILDS
-import no.pradhan.agentview.nativeapp.codex.autopilot.buildsLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.ADVISOR_LOOP_CAP
 import no.pradhan.agentview.nativeapp.codex.autopilot.ADVISOR_LOOP_EVERY
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
+import no.pradhan.agentview.nativeapp.codex.autopilot.buildsLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.everyText
 import no.pradhan.agentview.nativeapp.codex.autopilot.firstRoundText
 import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
@@ -38,16 +37,17 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.outcomeDot
 import no.pradhan.agentview.nativeapp.codex.autopilot.roundText
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.advisors
+import no.pradhan.agentview.nativeapp.net.audit
+import no.pradhan.agentview.nativeapp.net.backlog
 import no.pradhan.agentview.nativeapp.net.newChat
-import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.specs
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
-import no.pradhan.agentview.nativeapp.ui.RowLabel
 import no.pradhan.agentview.nativeapp.ui.Button
-import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
+import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
@@ -58,17 +58,19 @@ import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.PageHeader
+import no.pradhan.agentview.nativeapp.ui.RowLabel
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.StatusDot
+import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 import no.pradhan.agentview.nativeapp.workspace.buildItemPrompt
 import no.pradhan.agentview.nativeapp.workspace.buildSpecPrompt
-import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.rememberLoad
+import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 
 // What the Advisors page shows of each, from /api/advisors.
 @Serializable
@@ -277,7 +279,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
     val ws by hub.workspace.collectAsState()
     // Reloads after an advisor's turn, which may have changed its memory, the backlog, a spec or the audit.
     val turns = live.filter { advisorOf(it.cwd) != null && !it.running }.joinToString { "${it.id}:${it.lastActive}" }
-    val (load, reload) = rememberLoad { protocolJson.decodeFromString<List<AdvisorInfo>>(hub.read("/api/advisors")) }
+    val (load, reload) = rememberLoad { hub.advisors() }
     var memory by rememberSaveable { mutableStateOf<String?>(null) }
     var picked by remember { mutableStateOf(advisorPick) }
     val shownChat = live.firstOrNull { it.id == shownId }
@@ -287,10 +289,10 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
         val chats = ws.saved.groupBy { folderKey(it.cwd, ws.repos, ws.trees) }.mapValues { (_, l) -> l.maxOf { it.lastModified } }
         ws.repos.map { it.cwd to maxOf(it.lastCommit.toLong(), chats[it.cwd] ?: 0L) }
     })
-    val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<BacklogItem>>(hub.read("/api/advisors/backlog?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
-    val (specs, reloadSpecs) = rememberLoad(root) { root?.let { protocolJson.decodeFromString<List<SpecHomeItem>>(hub.read("/api/advisors/specs?root=${java.net.URLEncoder.encode(it, "UTF-8")}")) } }
+    val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { hub.backlog(it) } }
+    val (specs, reloadSpecs) = rememberLoad(root) { root?.let { hub.specs(it) } }
     var moved by remember(root, backlog.data) { mutableStateOf<List<BacklogItem>?>(null) }
-    val (audits, reloadAudit) = rememberLoad(root) { root?.let { listOfNotNull(protocolJson.decodeFromString<AuditInfo?>(hub.read("/api/advisors/audit?root=${java.net.URLEncoder.encode(it, "UTF-8")}"))) } }
+    val (audits, reloadAudit) = rememberLoad(root) { root?.let { listOfNotNull(hub.audit(it)) } }
     var loadedTurns by remember { mutableStateOf(turns) }
     LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadSpecs(); reloadAudit() } }
     var auditOpen by rememberSaveable { mutableStateOf(false) }

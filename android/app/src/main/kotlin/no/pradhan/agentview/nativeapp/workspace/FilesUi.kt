@@ -31,9 +31,9 @@ import no.pradhan.agentview.nativeapp.app.shownFeature
 import no.pradhan.agentview.nativeapp.chat.ChatImage
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.net.Hub
+import no.pradhan.agentview.nativeapp.net.readDir
+import no.pradhan.agentview.nativeapp.net.readFile
 import no.pradhan.agentview.nativeapp.net.track
-import no.pradhan.agentview.nativeapp.net.enc
-import no.pradhan.agentview.nativeapp.net.read
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -72,7 +72,7 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
         for (p in paths.filter { loading[it] != true }) launch {
             loading[p] = true
             try {
-                runCatching { parseDir(hub.read("/api/dir?path=${enc(p)}")) }
+                runCatching { hub.readDir(p) }
                     .onSuccess { dirs[p] = it; error = "" }
                     .onFailure { if (it !is CancellationException && p.isEmpty()) error = it.message ?: "Could not list the files" }
             } finally { loading[p] = false }
@@ -123,7 +123,7 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
 @Composable
 fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = true) {
     BackHandler(onBack = onBack)
-    val (load, reload) = rememberLoad(path, hub.pageChat) { parseFile(hub.read("/api/file?path=${enc(path)}")) }
+    val (load, reload) = rememberLoad(path, hub.pageChat) { hub.readFile(path) }
     val file = load.data
     LaunchedEffect(hub, path) { hub.fileChanged.collect { if (it == path) reload() } }
     var mode by rememberSaveable(path) { mutableStateOf(if (diffFirst) "diff" else "file") }

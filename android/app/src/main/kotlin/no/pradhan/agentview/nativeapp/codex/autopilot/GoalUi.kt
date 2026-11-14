@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
-import no.pradhan.agentview.nativeapp.ui.select
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -8,6 +7,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -23,7 +23,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.delay
@@ -33,15 +32,16 @@ import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.net.billing
-import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.newChat
 import no.pradhan.agentview.nativeapp.net.providerLabel
+import no.pradhan.agentview.nativeapp.net.readFile
 import no.pradhan.agentview.nativeapp.net.runControl
 import no.pradhan.agentview.nativeapp.net.runEdit
 import no.pradhan.agentview.nativeapp.net.submit
+import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.sessions.folderName
+import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -53,7 +53,6 @@ import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
-import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.RowLabel
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
@@ -62,7 +61,7 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.workspace.parseFile
+import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.planCondition
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specTasks
@@ -91,7 +90,7 @@ internal fun planRead(hub: Hub, path: String?, chat: String): PlanRead {
     var tick by remember { mutableIntStateOf(0) }
     LaunchedEffect(hub, path) { hub.fileChanged.collect { if (path != null && path.endsWith(it)) tick++ } }
     val read by produceState(PlanRead(), path, chat, tick) {
-        if (path != null) runCatching { parseFile(hub.api.get("/api/file?path=${enc(path)}", chat)).content }
+        if (path != null) runCatching { hub.readFile(path, chat).content }
             .onSuccess { value = PlanRead(it) }
             .onFailure { value = PlanRead(value.markdown, true) }
     }

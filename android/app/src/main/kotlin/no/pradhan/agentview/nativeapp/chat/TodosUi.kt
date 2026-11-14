@@ -3,8 +3,7 @@ package no.pradhan.agentview.nativeapp.chat
 import androidx.compose.runtime.Composable
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.protocolJson
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.gitTodos
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.ListRow
@@ -29,7 +28,7 @@ fun todoTitle(t: Todo) = t.text.ifEmpty { "TODO" }.let { if (t.ai != null) "AI${
 // Aider-style AI comments, to-do and fix-me comments in the repo as ready-made tasks; a tap puts a prompt for one in the composer.
 @Composable
 fun TodosSheet(hub: Hub, cwd: String, onDismiss: () -> Unit) {
-    val (todos) = rememberLoad(cwd) { protocolJson.decodeFromString<Todos>(hub.read("/api/git/todos")).todos }
+    val (todos) = rememberLoad(cwd) { hub.gitTodos() }
     Sheet(onDismiss = onDismiss, title = "TODOs", padded = false, full = false) {
         val list = todos.data
         when {

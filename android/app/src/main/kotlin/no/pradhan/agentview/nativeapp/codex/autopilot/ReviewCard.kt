@@ -14,10 +14,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Hub
-import no.pradhan.agentview.nativeapp.net.track
-import no.pradhan.agentview.nativeapp.net.enc
-import no.pradhan.agentview.nativeapp.net.read
+import no.pradhan.agentview.nativeapp.net.runDiff
 import no.pradhan.agentview.nativeapp.net.runReview
+import no.pradhan.agentview.nativeapp.net.track
 import no.pradhan.agentview.nativeapp.ops.DiffFiles
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -44,7 +43,7 @@ private const val SHOWN_FILES = 3
 @Composable
 fun ReviewCard(hub: Hub, run: ChatRun) {
     val now = System.currentTimeMillis()
-    val (load, reload) = rememberLoad(run.id) { parseRunDiff(hub.read("/api/runs/diff?run=${enc(run.id)}")) }
+    val (load, reload) = rememberLoad(run.id) { hub.runDiff(run.id) }
     val diff = load.data
     var all by rememberSaveable(run.id) { mutableStateOf(false) }
     var openFile by rememberSaveable(run.id) { mutableStateOf<String?>(null) }
