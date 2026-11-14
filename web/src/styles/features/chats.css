@@ -122,6 +122,7 @@
 
 .chat-row > .ui-row-wrap:last-child::after { display: block; }
 .chat-row .ui-row[aria-current='true'] { --state: var(--state-hover); }
+.chat-row .ui-row-state:empty { display: none; }
 .chat-row.unread .ui-row-title { font-weight: var(--type-headline-weight); color: var(--fg-strong); }
 .chat-row .chat-add { color: var(--diff-add); }
 .chat-row .chat-del { color: var(--diff-del); }
@@ -133,6 +134,7 @@
 .sessions .as-swipe:has(.ui-menu) { overflow: visible; }
 .sessions .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
 @media (hover: hover) and (pointer: fine) {
+  .chat-row .ui-row-wrap { padding-right: 0; }
   .chat-row .ui-row-wrap > .icon-btn { position: absolute; right: var(--list-pad); top: 50%; translate: 0 -50%; opacity: 0; background: var(--surface); }
   .chat-row .ui-row-wrap:is(:hover, :focus-within) > .icon-btn, .chat-row .ui-row-wrap > .icon-btn[aria-expanded='true'] { opacity: 1; }
 }
