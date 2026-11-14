@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'bun:test';
-import { gitRoute, parseStatus, parseNumstat, parseTodos } from './git.js';
+import { gitRoute, gitStatus, parseStatus, parseNumstat, parseTodos } from './git.js';
 
 const repo = mkdtempSync(path.join(os.tmpdir(), 'agentview-git-'));
 const sh = (...args: string[]) => execFileSync('git', args, { cwd: repo });
@@ -109,5 +109,18 @@ describe('parseTodos', () => {
       { path: 'd.css', line: 2, text: 'use a token', ai: '!' },
       { path: 'a.ts', line: 1, text: 'later' },
     ]);
+  });
+});
+
+describe('gitStatus', () => {
+  it('shares one next run among calls made while one runs, and that run sees later edits', async () => {
+    const first = gitStatus(repo);
+    writeFileSync(path.join(repo, 'later.txt'), 'x\n');
+    const [second, third] = [gitStatus(repo), gitStatus(repo)];
+    expect(second).toBe(third);
+    expect(second).not.toBe(first);
+    expect((await second).files.some((f) => f.path === 'later.txt')).toBe(true);
+    await first;
+    rmSync(path.join(repo, 'later.txt'));
   });
 });

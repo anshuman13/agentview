@@ -39,9 +39,33 @@ export function parseStatus(out: string, prefix = ''): GitStatus {
   return status;
 }
 
-export async function gitStatus(cwd: string) {
+async function readStatus(cwd: string) {
   const [out, prefix] = await Promise.all([git(cwd, ['status', '--porcelain=v2', '-b', '-z', '-uall']), git(cwd, ['rev-parse', '--show-prefix'])]);
   return parseStatus(out, prefix.trim());
+}
+
+const running = new Map<string, Promise<GitStatus>>();
+const queued = new Map<string, Promise<GitStatus>>();
+
+// One git status per folder at a time. Calls that arrive while one runs share a single next run, which starts
+// after it, so every caller still sees the tree as it was after its call.
+export function gitStatus(cwd: string): Promise<GitStatus> {
+  const start = () => {
+    const p: Promise<GitStatus> = readStatus(cwd).finally(() => running.get(cwd) === p && running.delete(cwd));
+    running.set(cwd, p);
+    return p;
+  };
+  const now = running.get(cwd);
+  if (!now) return start();
+  let next = queued.get(cwd);
+  if (!next) {
+    next = now.catch(() => undefined).then(() => {
+      queued.delete(cwd);
+      return start();
+    });
+    queued.set(cwd, next);
+  }
+  return next;
 }
 
 function relPaths(cwd: string, paths: unknown) {

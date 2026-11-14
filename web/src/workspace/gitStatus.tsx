@@ -22,6 +22,10 @@ export function ChangesBadge() {
   const n = useGit().status?.files.length ?? 0;
   const id = useStore((s) => s.session.id);
   const recent = useStore((s) => s.recentFiles);
-  useEffect(() => void refresh(), [id, recent]);
+  // An agent edits files in bursts; one status after the burst is enough.
+  useEffect(() => {
+    const t = setTimeout(() => void refresh(), 300);
+    return () => clearTimeout(t);
+  }, [id, recent]);
   return n > 0 ? <span className="badge">{n}</span> : null;
 }
