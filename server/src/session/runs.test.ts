@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'bun:test';
-import { Runs, firstSentence, openTries, roundResult } from './runs.js';
+import { Runs, WAITING, firstSentence, openTries, roundResult } from './runs.js';
 
 const dir = mkdtempSync(path.join(os.tmpdir(), 'runs-'));
 afterEach(() => rmSync(path.join(dir, 'runs.json'), { force: true }));
@@ -88,6 +88,15 @@ describe('Runs', () => {
     expect(active.rounds[0].n).toBe(11);
     expect(active.costUsd).toBe(30);
     expect(runs.list()).toHaveLength(101);
+  });
+
+  it('runs a run again after a restart that dropped the permission it waited on', () => {
+    const file = path.join(dir, 'runs.json');
+    const runs = new Runs(file);
+    const id = runs.start(init);
+    runs.update(id, { state: 'paused', why: WAITING });
+    runs.flush();
+    expect(new Runs(file).get(id)).toMatchObject({ state: 'running', why: '', needsYou: false });
   });
 
   it('ends a run once and ignores later changes to it', () => {

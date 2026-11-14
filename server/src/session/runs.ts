@@ -40,7 +40,11 @@ export class Runs {
   constructor(private file: string | null = null, private onChange: () => void = () => {}, private onEnd: (run: ChatRun) => void = () => {}, private onReported: (run: ChatRun) => void = () => {}) {
     const saved = file ? readJsonSync<unknown>(file, []) : [];
     this.runs = Array.isArray(saved) ? saved.filter((r): r is ChatRun => typeof r?.id === 'string' && Array.isArray(r.rounds)) : [];
-    for (const r of this.runs) mark(r);
+    // A restart drops every open permission card, so no answer can resume a run that waited on one.
+    for (const r of this.runs) {
+      if (r.state === 'paused' && r.why === WAITING) Object.assign(r, { state: 'running', why: '' });
+      mark(r);
+    }
   }
 
   list() {
