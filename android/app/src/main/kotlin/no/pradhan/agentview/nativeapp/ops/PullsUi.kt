@@ -189,12 +189,14 @@ private fun PullMenu(c: PullCtx, d: PullRequestDetail?, onBack: () -> Unit) {
         MenuItem("Open on GitHub", "link-external", { close(); link(pr.url) })
         MenuSeparator()
         val on = pr.autoMergeOn
-        MenuItem("Merge when checks pass", "git-merge", {
-            close()
-            val method = MERGE_METHODS.first().first
-            if (on) c.act("automerge", "automerge", autoMergeBody(false, method))
-            else c.ui.confirm = "Merge #${pr.number} when its checks pass?" to { c.act("automerge", "automerge", autoMergeBody(true, method)) }
-        }, enabled = c.ui.idle && !hub.readOnly, checked = on)
+        // Web picks the method in the pane; here each method has its own item, as for Merge below.
+        if (on) MenuItem("Merge when checks pass", "git-merge", { close(); c.act("automerge", "automerge", autoMergeBody(false, MERGE_METHODS.first().first)) }, enabled = c.ui.idle && !hub.readOnly, checked = true)
+        else MERGE_METHODS.forEach { (m, label) ->
+            MenuItem("Merge when checks pass: $label", "git-merge", {
+                close()
+                c.ui.confirm = "Merge #${pr.number} (${label.lowercase()}) when its checks pass?" to { c.act("automerge", "automerge", autoMergeBody(true, m)) }
+            }, enabled = c.ui.idle && !hub.readOnly)
+        }
         MERGE_METHODS.forEach { (m, label) ->
             MenuItem(if (m == "merge") "Merge with a merge commit" else "Merge: $label", "git-merge", { close(); c.ui.confirm = "Merge #${pr.number} (${label.lowercase()})?" to { c.act("merge", "merge", mergeBody(m)) } }, enabled = c.ui.idle)
         }
