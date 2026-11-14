@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { BIG_BRO, type Effort } from '../../../../shared/protocol.js';
 import { TOOLS, TOOL_INSTRUCTIONS } from '../tools/index.js';
 import type { ToolCtx } from '../tools/tool.js';
-import { ownProfile, PROFILE_PORT } from '../../chrome/launch.js';
+import { ownChromeMcp, ownProfile } from '../../chrome/launch.js';
 import { sandboxOf, type Unattended } from '../../session/unattended.js';
 import { openRouterEnv, type OpenRouterSettings } from './openrouter.js';
 
@@ -18,7 +18,7 @@ const CHROME = "For anything in a web browser, use the Claude in Chrome tools. T
 // A Mac with its own AgentView Chrome lets chats drive it too: the Browser tab shows it and it holds its own logins.
 const OWN_CHROME = "This Mac also runs AgentView's own Chrome, driven with the mcp__browser tools. Use it when the user asks for the AgentView browser, or when a site in Claude in Chrome is signed in to the wrong account.";
 const ownChrome = (unattended?: Unattended): Record<string, McpServerConfig> =>
-  !unattended && ownProfile() ? { browser: { type: 'stdio', command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {};
+  !unattended && ownProfile() ? { browser: ownChromeMcp() } : {};
 
 function agentviewServer(o: { cwd: string; chat: () => string | null; host: ToolCtx['host']; openrouter?: OpenRouterSettings | null; unattended?: Unattended }) {
   return createSdkMcpServer({

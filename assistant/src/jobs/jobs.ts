@@ -16,7 +16,7 @@ import { loop, serial } from '../core/once.js';
 import { applyChanges, type Change } from '../core/sync.js';
 import { DAY, HOUR, MIN } from '../core/time.js';
 import { nextRun } from '../../../shared/schedule.js';
-import { ownProfile, PROFILE_PORT } from '../../../server/src/chrome/launch.js';
+import { ownChromeMcp, ownProfile } from '../../../server/src/chrome/launch.js';
 
 export { nextRun };
 
@@ -87,7 +87,7 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
     tools: ['WebSearch', 'WebFetch'],
     mcpServers: {
       codex: createSdkMcpServer({ name: 'codex', tools: [addTask, push, stop, contextTool(db)] }),
-      ...(browser ? { browser: { type: 'stdio' as const, command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {}),
+      ...(browser ? { browser: ownChromeMcp() } : {}),
     },
     allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task', 'mcp__codex__notify', 'mcp__codex__stop_job', 'mcp__codex__ask_context'],
     canUseTool: async (name, input) => (canRead(name) || allow.allows(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'This job can only read and use the tools it allows.' }),

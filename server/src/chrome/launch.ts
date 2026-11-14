@@ -13,6 +13,9 @@ export const PROFILE_PORT = 9333;
 
 export const ownProfile = () => existsSync(PROFILE);
 
+// The Playwright MCP server that drives this Chrome, for chats and hub jobs.
+export const ownChromeMcp = () => ({ type: 'stdio' as const, command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] });
+
 
 export async function endpoint() {
   if (CDP) return CDP;
