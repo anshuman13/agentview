@@ -16,7 +16,28 @@ private fun noteOf(it: Item) = when (it) {
     else -> ""
 }
 
-private fun notes(items: List<Item>) = (if (items.size == 1) noteOf(items[0]) else "").ifEmpty { plural(items.size, "note") }
+private fun notes(items: List<Item>) = (if (items.size == 1) noteOf(items[0]) else "").ifEmpty { if (items.isEmpty()) "" else plural(items.size, "note") }
+
+data class StatusStep(val id: String, val title: String, val decision: String? = null, val why: String? = null)
+
+// Each prompt's finished steps from its top-level set_status calls; a repeated title keeps its first place and takes the later non-blank fields.
+private fun stepsByTurn(events: List<ChatEvent>): Map<String, List<StatusStep>> {
+    val out = HashMap<String, MutableList<StatusStep>>()
+    var key = ""
+    for (e in events) {
+        if (e.kind == "user") key = e.id
+        if (e.kind != "tool_use" || e.parent != null || !e.name.endsWith("__set_status")) continue
+        val title = e.input.s("done").trim()
+        if (title.isEmpty()) continue
+        val decision = e.input.s("decision").trim().ifEmpty { null }
+        val why = e.input.s("why").trim().ifEmpty { null }
+        val list = out.getOrPut(key) { mutableListOf() }
+        val i = list.indexOfFirst { it.title == title }
+        if (i < 0) list += StatusStep(e.id, title, decision, why)
+        else list[i] = list[i].let { it.copy(decision = decision ?: it.decision, why = why ?: it.why) }
+    }
+    return out
+}
 
 sealed interface FoldRow {
     val key: String
@@ -25,7 +46,7 @@ sealed interface FoldRow {
         override val key get() = it.id
     }
 
-    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean) : FoldRow {
+    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean, val steps: List<StatusStep> = emptyList()) : FoldRow {
         override val key get() = "work:$id"
     }
 }
@@ -77,6 +98,7 @@ private fun workOf(items: List<Item>, span: Span): Work {
 fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
     val prompts = events.filter { it.kind == "user" }.mapTo(HashSet()) { it.id }
     val span = spans(events)
+    val steps = stepsByTurn(events)
     val cards = specCardIds(items)
     val groups = mutableListOf<MutableList<Item>>()
     for (it in items) {
@@ -98,9 +120,10 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
             if (!shown || it is Item.Agent) hidden += it
             if (shown) rows += FoldRow.Row(it)
         }
-        if (hidden.isNotEmpty()) {
+        val done = steps[key].orEmpty()
+        if (hidden.isNotEmpty() || done.isNotEmpty()) {
             val at = if (reply < 0) rows.size else rows.indexOfFirst { it is FoldRow.Row && it.it === group[reply] }
-            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), g == groups.lastIndex))
+            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), g == groups.lastIndex, done))
         }
         out += rows
     }

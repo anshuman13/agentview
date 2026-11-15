@@ -118,5 +118,162 @@
       }
     ],
     "billing": "plan"
+  },
+  {
+    "name": "set_status steps per turn: blank done skipped, repeated title merged, subagent calls ignored",
+    "events": [
+      {
+        "id": "u1",
+        "kind": "user",
+        "text": "build a page",
+        "at": 1000
+      },
+      {
+        "id": "s1",
+        "kind": "tool_use",
+        "name": "mcp__agentview__set_status",
+        "input": {
+          "text": "x",
+          "done": "Build the navbar",
+          "decision": "Flexbox row",
+          "why": "Two items only"
+        },
+        "summary": "",
+        "at": 2000
+      },
+      {
+        "id": "t9",
+        "kind": "tool_use",
+        "name": "Agent",
+        "input": {
+          "description": "look",
+          "subagent_type": "general-purpose",
+          "prompt": "look"
+        },
+        "summary": "look",
+        "at": 1500
+      },
+      {
+        "id": "s2",
+        "kind": "tool_use",
+        "name": "mcp__agentview__set_status",
+        "input": {
+          "text": "x",
+          "done": "  "
+        },
+        "summary": "",
+        "at": 3000
+      },
+      {
+        "id": "s3",
+        "kind": "tool_use",
+        "name": "mcp__agentview__set_status",
+        "input": {
+          "text": "x",
+          "done": "Agent step",
+          "decision": "x"
+        },
+        "summary": "",
+        "at": 4000,
+        "parent": "t9"
+      },
+      {
+        "id": "s4",
+        "kind": "tool_use",
+        "name": "mcp__agentview__set_status",
+        "input": {
+          "text": "x",
+          "done": "Build the card"
+        },
+        "summary": "",
+        "at": 5000
+      },
+      {
+        "id": "s5",
+        "kind": "tool_use",
+        "name": "mcp__agentview__set_status",
+        "input": {
+          "text": "x",
+          "done": "Build the navbar",
+          "why": "Fewer rules"
+        },
+        "summary": "",
+        "at": 6000
+      },
+      {
+        "id": "a1",
+        "kind": "assistant",
+        "text": "Page built.",
+        "streaming": false,
+        "at": 7000
+      },
+      {
+        "id": "u2",
+        "kind": "user",
+        "text": "ship",
+        "at": 8000
+      },
+      {
+        "id": "s6",
+        "kind": "tool_use",
+        "name": "mcp__agentview__set_status",
+        "input": {
+          "text": "x",
+          "done": "Ship it",
+          "decision": "Main branch"
+        },
+        "summary": "",
+        "at": 9000
+      },
+      {
+        "id": "a2",
+        "kind": "assistant",
+        "text": "Shipped.",
+        "streaming": false,
+        "at": 10000
+      }
+    ],
+    "rows": [
+      "u1",
+      "work:u1",
+      "a1",
+      "u2",
+      "work:u2",
+      "a2"
+    ],
+    "titles": [
+      {
+        "text": "1 tool",
+        "failed": "",
+        "detail": "1 agent"
+      },
+      {
+        "text": "Work",
+        "failed": "",
+        "detail": ""
+      }
+    ],
+    "steps": [
+      [
+        {
+          "id": "s1",
+          "title": "Build the navbar",
+          "decision": "Flexbox row",
+          "why": "Fewer rules"
+        },
+        {
+          "id": "s4",
+          "title": "Build the card"
+        }
+      ],
+      [
+        {
+          "id": "s6",
+          "title": "Ship it",
+          "decision": "Main branch"
+        }
+      ]
+    ],
+    "billing": "plan"
   }
 ]

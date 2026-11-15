@@ -19,6 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -81,6 +85,7 @@ import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.isRepoSpec
 import no.pradhan.agentview.nativeapp.workspace.sketchName
 import no.pradhan.agentview.nativeapp.workspace.specSlug
+import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.plural
 
 internal fun gapAbove(older: Item?, it: Item): Dp? {
@@ -165,7 +170,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val canRewind by hub.store.state.select { it.session?.capabilities?.rewind ?: true }
     val showWork by hub.showWork.collectAsState()
     val bill by hub.store.state.select { billing(it.session?.provider) }
-    val list = remember(view.items, view.folds, showWork) { if (showWork) view.rows.map { FoldRow.Row(it) } else view.foldRows.filter { it is FoldRow.Row } }
+    val list = remember(view.items, view.folds, showWork) { if (showWork) view.rows.map { FoldRow.Row(it) } else view.foldRows.filter { it is FoldRow.Row || (it is FoldRow.Fold && it.steps.isNotEmpty()) } }
     val folded = remember(view.runs) { view.runs.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, view.ats, seen.first, seen.second) }
@@ -223,6 +228,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     val specBumps = view.specBumps
     val rewinds = view.rewinds
     val firstId = view.items.firstOrNull()?.id
+    val foldReplies = view.foldReplies
     itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
         Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
             val it = (r as? FoldRow.Row)?.it
@@ -230,7 +236,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
             it?.let { row -> days[row.id]?.let { DayDivider(it) } }
             if (r.key == newKey) NewLine()
             when {
-                r is FoldRow.Fold -> WorkFoldRow(hub, runs, r, folded, chatId, cwd, running, bill, onOpenAgent)
+                r is FoldRow.Fold -> StepsBox(hub, r, running && r.last)
                 it == null || it.id in folded -> {}
                 else -> {
                     val run = runs[it.id]
@@ -239,7 +245,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                         !showWork && build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump)
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump, fold = !showWork && it.id in foldReplies)
                     }
                 }
             }
@@ -247,31 +253,12 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     }
 }
 
-// One turn's work, closed until opened: its steps, files, agents and earlier text in transcript order.
+// The turn's finished steps from set_status, each with its decision and why; open by default.
 @Composable
-private fun WorkFoldRow(hub: Hub, runs: Map<String, List<Item.Step>>, fold: FoldRow.Fold, folded: Set<String>, chatId: String, cwd: String, running: Boolean, bill: String, onOpenAgent: (String) -> Unit) {
-    val live = running && fold.last
-    val title = remember(fold.work, live, bill) { workTitle(fold.work, live, bill) }
-    val err = av.err
-    val text = remember(title, err) {
-        buildAnnotatedString {
-            if (title.failed.isNotEmpty()) {
-                withStyle(SpanStyle(color = err)) { append(title.failed) }
-                if (title.text.isNotEmpty()) append(" \u00B7 ")
-            }
-            append(title.text)
-        }
-    }
-    TranscriptBox(hub, "work:${fold.id}", text, state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null, plain = true) {
-        Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) {
-            if (title.detail.isNotEmpty()) Text(title.detail, Modifier.padding(bottom = Tokens.sp2), style = Type.meta, color = av.metaFg)
-            val rows = fold.hidden.filter { it.id !in folded }
-            rows.forEachIndexed { i, it ->
-                Box(Modifier.gap(gapAbove(rows.getOrNull(i - 1), it)?.coerceAtMost(Tokens.sp2))) {
-                    val run = runs[it.id]
-                    if (run != null) ExploredRow(hub, it.id, run, cwd, !running) else ItemRow(hub, it, chatId, cwd, !running, onOpenAgent)
-                }
-            }
+private fun StepsBox(hub: Hub, fold: FoldRow.Fold, live: Boolean) {
+    TranscriptBox(hub, "steps:${fold.id}", "Steps", plural(fold.steps.size, "step"), state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null, defaultOpen = true) {
+        Column(Modifier.padding(bottom = Tokens.sp3)) {
+            fold.steps.forEach { ListRow(it.title, listOfNotNull(it.decision, it.why).joinToString(" \u00B7 ").ifEmpty { null }, metaLines = 2) }
         }
     }
 }
@@ -314,14 +301,14 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, bump: Int? = null) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, bump: Int? = null, fold: Boolean = false) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat, canRewind)
         is Item.Phase -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             Text(it.text, style = Type.label, color = av.agent, fontWeight = FontWeight.SemiBold)
             HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
         }
-        is Item.Assistant -> Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
+        is Item.Assistant -> if (fold && !it.streaming) FoldBox(it.id) { Markdown(it.text, Modifier.fillMaxWidth(), false) } else Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
         is Item.File -> if (it.error != null) FileCard(it, cwd)
@@ -384,6 +371,20 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
 }
 
 private const val FOLD_LINES = 6
+
+// Content clamped at FOLD_LINES body lines with Show more when it overflows.
+@Composable
+private fun FoldBox(key: String, content: @Composable () -> Unit) {
+    var open by rememberSaveable(key) { mutableStateOf(false) }
+    var long by remember(key) { mutableStateOf(false) }
+    val max = with(LocalDensity.current) { (Type.body.lineHeight * FOLD_LINES).roundToPx() }
+    Box(Modifier.clipToBounds().layout { m, c ->
+        val p = m.measure(c.copy(maxHeight = Constraints.Infinity))
+        (p.height > max).let { if (it != long) long = it }
+        layout(p.width, if (open) p.height else minOf(p.height, max)) { p.place(0, 0) }
+    }) { content() }
+    if (long) Button(if (open) "Show less" else "Show more", { open = !open }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+}
 
 @Composable
 private fun FoldText(key: String, text: String) {

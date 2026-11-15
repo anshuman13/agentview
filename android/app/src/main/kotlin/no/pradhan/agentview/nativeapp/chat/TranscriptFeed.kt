@@ -41,6 +41,9 @@ class ChatView(
     val rows: List<Item> = items.asReversed()
     val foldRows: List<FoldRow> = folds.asReversed()
 
+    // Replies right below a Steps box, folded at six lines.
+    val foldReplies: Set<String> = folds.zipWithNext().mapNotNullTo(HashSet()) { (a, b) -> ((b as? FoldRow.Row)?.it as? Item.Assistant)?.id?.takeIf { a is FoldRow.Fold && a.steps.isNotEmpty() } }
+
     fun withItem(events: List<ChatEvent>, items: List<Item>, item: Item) = ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent, checklist, specCards, specBumps, folds.map { it.with(item) })
 
     companion object {

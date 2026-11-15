@@ -75,6 +75,7 @@ describe('cases shared with the Android app', () => {
       expect(rows.map((r) => (r.kind === 'fold' ? `work:${r.id}` : r.it.id))).toEqual(c.rows);
       // The phone always shows the narrow title.
       expect(rows.flatMap((r) => (r.kind === 'fold' ? [workTitle(r.work, false, c.billing, true)] : []))).toEqual(c.titles);
+      if (c.steps) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.steps] : []))).toEqual(c.steps);
     });
   }
 

@@ -1,7 +1,8 @@
-import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { forgetSeenBefore, getState, loadEarlier, seenBefore, send, setUi, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
+import { Row as UiRow } from '../../ui/Row';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
@@ -10,9 +11,8 @@ import { SketchCard } from './SketchCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { readBox, saveBox } from './boxOpen';
-import { WorkBox } from './WorkBox';
 import { RewindLink } from './Rewind';
-import { foldTurns, type FoldRow } from './workFold';
+import { foldTurns, type FoldRow, type StatusStep } from './workFold';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
@@ -184,7 +184,8 @@ function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { eve
   const rewinds = useMemo(() => rewindReplies(items), [items]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => specCards(items), [items]);
-  const list = useMemo<FoldRow[]>(() => (showWork ? items.map((it) => ({ kind: 'item', it })) : foldTurns(items, events, cards).filter((r) => r.kind === 'item')), [showWork, items, events, cards]);
+  const list = useMemo<FoldRow[]>(() => (showWork ? items.map((it) => ({ kind: 'item', it })) : foldTurns(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0)), [showWork, items, events, cards]);
+  const foldReplies = useMemo(() => new Set(list.flatMap((r, i) => { const n = list[i + 1]; return r.kind === 'fold' && n?.kind === 'item' && n.it.kind === 'assistant' ? [n.it.id] : []; })), [list]);
   const { shown, start, from, staging, loading, showEarlier } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const bumps = useMemo(() => specBumps(items), [items]);
@@ -205,7 +206,7 @@ function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { eve
     const card = cards.has(it.id);
     const agentCard = card && it.kind === 'agent' && slug && where !== 'hidden' ? <SpecCard slug={slug} bump={bump} /> : null;
     if (where === 'shown' && agentCard) return <Fragment key={it.id}>{agentCard}</Fragment>;
-    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
+    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} fold={foldReplies.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
   };
 
   return (
@@ -218,7 +219,7 @@ function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { eve
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
         const day = r.kind === 'item' ? days.get(r.it.id) : undefined;
         const row = r.kind === 'fold'
-          ? <WorkBox key={id} id={r.id} work={r.work} live={running && r.last} billing={bill}>{r.hidden.map((it) => rowOf(it, false, 'hidden'))}</WorkBox>
+          ? <StepsBox key={id} id={r.id} steps={r.steps} live={running && r.last} />
           : rowOf(r.it, i === 0, showWork ? 'flat' : 'shown');
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
@@ -262,7 +263,7 @@ function sameItem(a: Item, b: Item): boolean {
   }
 }
 
-export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.rewind?.id === n.rewind?.id && p.bump === n.bump && sameItem(p.it, n.it));
+export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.rewind?.id === n.rewind?.id && p.bump === n.bump && p.fold === n.fold && sameItem(p.it, n.it));
 
 function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
   const [open, setOpen] = useState(false);
@@ -276,9 +277,10 @@ function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
 
 const FOLD_LINES = 6;
 
-function UserText({ id, text }: { id: string; text: string }) {
+// Text clamped at FOLD_LINES with Show more on overflow; the open state is kept under `id`.
+function Folded({ id, className, children }: { id: string; className: string; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(() => readBox('prompt-' + id, false));
+  const [open, setOpen] = useState(() => readBox(id, false));
   const [long, setLong] = useState(false);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -288,17 +290,27 @@ function UserText({ id, text }: { id: string; text: string }) {
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [text]);
-  const toggle = () => { saveBox('prompt-' + id, !open); setOpen(!open); };
+  }, [children]);
+  const toggle = () => { saveBox(id, !open); setOpen(!open); };
   return (
     <>
-      <div ref={ref} className={`tr-user-text${open ? '' : ' folded'}`}>{text}</div>
+      <div ref={ref} className={`${className}${open ? '' : ' folded'}`}>{children}</div>
       {long && <button className="link tr-more" onClick={toggle}>{open ? 'Show less' : 'Show more'}</button>}
     </>
   );
 }
 
-function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: string; settled?: boolean; card?: boolean; rewind?: Rewind; bump?: number }) {
+const UserText = ({ id, text }: { id: string; text: string }) => <Folded id={'prompt-' + id} className="tr-user-text">{text}</Folded>;
+
+function StepsBox({ id, steps, live }: { id: string; steps: StatusStep[]; live: boolean }) {
+  return (
+    <TranscriptBox id={`steps:${id}`} className="tr-steps" title="Steps" meta={plural(steps.length, 'step')} defaultOpen state={live ? <Icon name="loading" small spin /> : undefined}>
+      <div className="tr-steps-list">{steps.map((s) => <UiRow key={s.id} plain title={s.title} meta={[s.decision, s.why].filter(Boolean).join(' \u00b7 ') || undefined} />)}</div>
+    </TranscriptBox>
+  );
+}
+
+function RowImpl({ it, cwd, settled, card, rewind, bump = 0, fold }: { it: Item; cwd: string; settled?: boolean; card?: boolean; rewind?: Rewind; bump?: number; fold?: boolean }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
@@ -308,7 +320,7 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: 
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && rewind && <div className="tr-acts"><RewindLink rewind={rewind} /></div>}</div>;
+      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}>{fold && !it.streaming ? <Folded id={'reply-' + it.id} className="tr-reply"><Markdown text={it.text} id={it.id} /></Folded> : <Markdown text={it.text} id={it.streaming ? undefined : it.id} />}{!it.streaming && rewind && <div className="tr-acts"><RewindLink rewind={rewind} /></div>}</div>;
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':

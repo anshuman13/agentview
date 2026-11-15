@@ -8,11 +8,35 @@ export type Work = { tools: number; files: number; agents: number; failed: numbe
 
 // What a fold without tool work holds: the one note's first line, else their count.
 const noteOf = (it: Item) => (it.kind === 'auto' ? it.label : 'text' in it ? firstLine(it.text) : '');
-const notes = (items: Item[]) => (items.length === 1 ? noteOf(items[0]) : '') || plural(items.length, 'note');
+const notes = (items: Item[]) => (items.length === 1 ? noteOf(items[0]) : '') || (items.length > 0 ? plural(items.length, 'note') : '');
 
 export type FoldRow =
   | { kind: 'item'; it: Item }
-  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean };
+  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[] };
+
+export type StatusStep = { id: string; title: string; decision?: string; why?: string };
+
+const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+
+// Each prompt's finished steps from its top-level set_status calls; a repeated title keeps its first place and takes the later non-blank fields.
+function stepsByTurn(events: ChatEvent[]) {
+  const out = new Map<string, StatusStep[]>();
+  let key = '';
+  for (const e of events) {
+    if (e.kind === 'user') key = e.id;
+    if (e.kind !== 'tool_use' || e.parent || !e.name.endsWith('__set_status')) continue;
+    const title = text(e.input.done);
+    if (!title) continue;
+    const list = out.get(key) ?? [];
+    out.set(key, list);
+    const decision = text(e.input.decision) || undefined;
+    const why = text(e.input.why) || undefined;
+    const old = list.find((s) => s.title === title);
+    if (!old) list.push({ id: e.id, title, ...(decision && { decision }), ...(why && { why }) });
+    else { if (decision) old.decision = decision; if (why) old.why = why; }
+  }
+  return out;
+}
 
 type Span = { at: number; end: number; cost: number };
 
@@ -55,6 +79,7 @@ function workOf(items: Item[], span: Span): Work {
 export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(items)): FoldRow[] {
   const prompts = new Set(events.filter((e) => e.kind === 'user').map((e) => e.id));
   const span = spans(events);
+  const steps = stepsByTurn(events);
   const groups: Item[][] = [];
   for (const it of items) {
     if (prompts.has(it.id) || groups.length === 0) groups.push([]);
@@ -75,8 +100,9 @@ export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(
       if (!shown || it.kind === 'agent') hidden.push(it);
       if (shown) rows.push({ kind: 'item', it });
     });
-    if (hidden.length > 0) {
-      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1 };
+    const done = steps.get(key) ?? [];
+    if (hidden.length > 0 || done.length > 0) {
+      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: done };
       const at = reply < 0 ? rows.length : rows.findIndex((r) => r.kind === 'item' && r.it === group[reply]);
       rows.splice(at, 0, fold);
     }
