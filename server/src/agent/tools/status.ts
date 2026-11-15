@@ -7,7 +7,7 @@ export const STATUS_RULES = [
   'Report the work as tasks: when you finish one, pass done as one plain sentence saying what you changed, in the words the user would use, such as "Merged Build cycle and Build flow into one Build row" or "Removed Build from the Model picker". Name the change, not the process: never "Read the code", "Run the checks" or "Turn X off here". No code names. Under 100 characters. One call per finished task, not per tool call.',
   'Pass next as the remaining tasks, a few plain words each, in order. Send the full list every time, and an empty list when nothing is left.',
   'Pass important only for a risk, a blocker or something surprising the user must know without reading the chat. One or two sentences. Leave it out otherwise.',
-  'The tasks carry the detail, so your final reply is at most 3 sentences and does not repeat them.',
+  'The tasks carry the detail, so your final reply is one or two short sentences: the outcome and anything the user must decide. Do not repeat the tasks, list files or explain; the user asks when they want more.',
 ].join(' ');
 
 export const statusTool = defineTool({

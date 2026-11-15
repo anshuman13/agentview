@@ -184,7 +184,6 @@ function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { eve
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => specCards(items), [items]);
   const list = useMemo<FoldRow[]>(() => (showWork ? items.map((it) => ({ kind: 'item', it })) : foldTurns(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0)), [showWork, items, events, cards]);
-  const foldReplies = useMemo(() => new Set(list.flatMap((r, i) => { const n = list[i + 1]; return r.kind === 'fold' && n?.kind === 'item' && n.it.kind === 'assistant' ? [n.it.id] : []; })), [list]);
   const { shown, start, from, staging, loading, showEarlier } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const bumps = useMemo(() => specBumps(items), [items]);
@@ -205,7 +204,7 @@ function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { eve
     const card = cards.has(it.id);
     const agentCard = card && it.kind === 'agent' && slug && where !== 'hidden' ? <SpecCard slug={slug} bump={bump} /> : null;
     if (where === 'shown' && agentCard) return <Fragment key={it.id}>{agentCard}</Fragment>;
-    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} fold={foldReplies.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
+    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
   };
 
   return (
@@ -262,7 +261,7 @@ function sameItem(a: Item, b: Item): boolean {
   }
 }
 
-export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.rewind?.id === n.rewind?.id && p.bump === n.bump && p.fold === n.fold && sameItem(p.it, n.it));
+export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.rewind?.id === n.rewind?.id && p.bump === n.bump && sameItem(p.it, n.it));
 
 function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
   const [open, setOpen] = useState(false);
@@ -320,7 +319,7 @@ function StepsBox({ id, steps, now, live }: { id: string; steps: StatusStep[]; n
   );
 }
 
-function RowImpl({ it, cwd, settled, card, rewind, bump = 0, fold }: { it: Item; cwd: string; settled?: boolean; card?: boolean; rewind?: Rewind; bump?: number; fold?: boolean }) {
+function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: string; settled?: boolean; card?: boolean; rewind?: Rewind; bump?: number }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
@@ -330,7 +329,7 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0, fold }: { it: Item;
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}>{fold && !it.streaming ? <Folded id={'reply-' + it.id} className="tr-reply"><Markdown text={it.text} id={it.id} /></Folded> : <Markdown text={it.text} id={it.streaming ? undefined : it.id} />}{!it.streaming && rewind && <div className="tr-acts"><RewindLink rewind={rewind} /></div>}</div>;
+      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && rewind && <div className="tr-acts"><RewindLink rewind={rewind} /></div>}</div>;
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':

@@ -15,7 +15,7 @@ describe('step reporting', () => {
     await statusTool.handler({ text: 't', done: 'x', agent: 'a1' }, ctx(setStatus));
     expect(setStatus).toHaveBeenCalledTimes(1);
     expect(STATUS_RULES).toContain('what you changed');
-    expect(STATUS_RULES).toContain('at most 3 sentences');
+    expect(STATUS_RULES).toContain('one or two short sentences');
   });
 
   it('marks only subagent status calls', () => {

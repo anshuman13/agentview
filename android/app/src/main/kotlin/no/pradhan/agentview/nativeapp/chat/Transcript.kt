@@ -19,10 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -227,7 +223,6 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     val specBumps = view.specBumps
     val rewinds = view.rewinds
     val firstId = view.items.firstOrNull()?.id
-    val foldReplies = view.foldReplies
     itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
         Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
             val it = (r as? FoldRow.Row)?.it
@@ -244,7 +239,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                         !showWork && build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump, fold = !showWork && it.id in foldReplies)
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump)
                     }
                 }
             }
@@ -313,14 +308,14 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, bump: Int? = null, fold: Boolean = false) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, bump: Int? = null) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat, canRewind)
         is Item.Phase -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             Text(it.text, style = Type.label, color = av.agent, fontWeight = FontWeight.SemiBold)
             HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
         }
-        is Item.Assistant -> if (fold && !it.streaming) FoldBox(it.id) { Markdown(it.text, Modifier.fillMaxWidth(), false) } else Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
+        is Item.Assistant -> Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
         is Item.File -> if (it.error != null) FileCard(it, cwd)
@@ -383,20 +378,6 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
 }
 
 private const val FOLD_LINES = 6
-
-// Content clamped at FOLD_LINES body lines with Show more when it overflows.
-@Composable
-private fun FoldBox(key: String, content: @Composable () -> Unit) {
-    var open by rememberSaveable(key) { mutableStateOf(false) }
-    var long by remember(key) { mutableStateOf(false) }
-    val max = with(LocalDensity.current) { (Type.body.lineHeight * FOLD_LINES).roundToPx() }
-    Box(Modifier.clipToBounds().layout { m, c ->
-        val p = m.measure(c.copy(maxHeight = Constraints.Infinity))
-        (p.height > max).let { if (it != long) long = it }
-        layout(p.width, if (open) p.height else minOf(p.height, max)) { p.place(0, 0) }
-    }) { content() }
-    if (long) Button(if (open) "Show less" else "Show more", { open = !open }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-}
 
 @Composable
 private fun FoldText(key: String, text: String) {
