@@ -12,6 +12,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.lastModel
 import no.pradhan.agentview.nativeapp.app.modelsOf
+import no.pradhan.agentview.nativeapp.net.newestModels
 import no.pradhan.agentview.nativeapp.net.ProviderOption
 import no.pradhan.agentview.nativeapp.app.newChat
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -69,10 +70,11 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
                 }
             }
         }
-        if (models.isNotEmpty()) {
+        val shown = remember(models, model) { newestModels(models, model) }
+        if (shown.isNotEmpty()) {
             SectionHeader("Model")
             Group {
-                models.forEachIndexed { i, m ->
+                shown.forEachIndexed { i, m ->
                     if (i > 0) Hairline()
                     ChoiceRow(m.displayName.ifBlank { m.value }, m.description, onClick = { model = m.value }, checked = m.value == model)
                 }
