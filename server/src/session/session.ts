@@ -215,7 +215,11 @@ export class AgentSession implements AgentHost {
 
   async loadHistory() {
     const h = await this.driver.loadHistory();
-    if (h) this.log.append(h);
+    // Nothing of a chat runs before it opens, so an agent its history leaves running ended with the last process.
+    if (h) {
+      this.log.append(h);
+      this.log.orphanRunning();
+    }
     recordHistory(this, h?.unshown);
   }
 
