@@ -143,6 +143,8 @@ export class TranscriptWatch {
     for (const ev of workflowEvents(run, group, callAt)) {
       const have = host.eventById(ev.id);
       if (!have) host.pushEvent(ev, { release: false });
+      // An agent ended here (stopped, orphaned by a restart) stays ended; its journal may never close it.
+      else if (have.kind === 'agent' && have.status !== 'running' && ev.kind === 'agent' && ev.status === 'running') continue;
       else if (JSON.stringify(have) !== JSON.stringify(ev)) {
         Object.assign(have, ev);
         host.emit({ type: 'event', event: have });
