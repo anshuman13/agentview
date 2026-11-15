@@ -107,9 +107,13 @@
 .tr-box.running > .tr-box-summary { min-height: calc(2em * var(--type-meta-line)); }
 .tr-box > .tr-sub { margin: 0 var(--sp-4) var(--sp-4) var(--list-pad); }
 .tr-box > .tr-report { margin: 0 var(--sp-4) var(--sp-4); }
-.tr-tasks { display: flex; flex-direction: column; gap: var(--sp-2); margin: 0; padding: 0 var(--sp-4) var(--sp-4); list-style: none; }
-.tr-tasks > li { display: flex; gap: var(--sp-2); align-items: flex-start; color: var(--fg-muted); }
-.tr-tasks > li > .icon { margin-top: 0.2em; flex: none; color: var(--fg-faint); }
+.tr-steps { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-sm); }
+.tr-steps-head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--size-row); color: var(--fg-faint); font-size: var(--fs-xs); }
+.tr-tools { margin-left: auto; display: inline-flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-2); border: 1px solid var(--border); border-radius: var(--radius-pill); background: none; color: var(--fg-muted); font: inherit; cursor: pointer; }
+@media (hover: hover) { .tr-tools:hover { color: var(--fg); border-color: var(--fg-faint); } }
+.tr-tasks { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.tr-tasks > li { display: flex; gap: var(--sp-2); align-items: flex-start; color: var(--fg-muted); line-height: 1.35; }
+.tr-tasks > li > .icon { margin-top: 0.1em; flex: none; color: var(--fg-faint); }
 .tr-tasks > li.done { color: var(--fg); }
 .tr-tasks > li.done > .icon { color: var(--ok); }
 .tr-tasks > li.now { color: var(--fg-strong); }
@@ -130,3 +134,6 @@
   .tr-assistant .tr-acts { align-items: center; visibility: visible; }
   .tr-detail pre, .tr-report { font-size: var(--fs-sm); max-height: 40vh; max-height: 40dvh; }
 }
+.work-head { display: flex; align-items: baseline; gap: var(--sp-4); padding: var(--sp-4) var(--sp-8); border-bottom: 1px solid var(--border); }
+.work-head b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--type-headline-weight); }
+.work-head span { flex: none; color: var(--fg-muted); font-size: var(--fs-xs); }

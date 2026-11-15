@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -158,14 +159,13 @@ private fun rememberEarlierDue(hub: Hub, chatId: String, replies: Int, loading: 
 }
 
 @Composable
-fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList()) {
+fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList()) {
     val items = view.items
     val rows = view.rows
     val noEvents by hub.store.state.select { it.events.isEmpty() }
     val canRewind by hub.store.state.select { it.session?.capabilities?.rewind ?: true }
-    val showWork by hub.showWork.collectAsState()
     val bill by hub.store.state.select { billing(it.session?.provider) }
-    val list = remember(view.items, view.folds, showWork) { if (showWork) view.rows.map { FoldRow.Row(it) } else view.foldRows.filter { it is FoldRow.Row || (it is FoldRow.Fold && it.steps.isNotEmpty()) } }
+    val list = remember(view.items, view.folds) { view.foldRows.filter { it is FoldRow.Row || (it is FoldRow.Fold && (it.steps.isNotEmpty() || it.work.tools > 0)) } }
     val folded = remember(view.runs) { view.runs.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, view.ats, seen.first, seen.second) }
@@ -194,7 +194,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
             lazyItems(queued.asReversed(), key = { "out-${it.id}" }) { q ->
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
             }
-            transcriptRows(hub, view, list, showWork, bill, newKey, folded, chatId, cwd, running, canRewind, onOpenAgent)
+            transcriptRows(hub, view, list, bill, newKey, folded, chatId, cwd, running, canRewind, onOpenAgent, onOpenWork)
             if (earlier > 0) item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
                     Text(if (loading) "Loading earlier…" else "Show earlier ($earlier hidden)", style = Type.callout, color = av.accentText)
@@ -215,7 +215,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     }
 }
 
-private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<FoldRow>, showWork: Boolean, bill: String, newKey: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, onOpenAgent: (String) -> Unit) {
+private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<FoldRow>, bill: String, newKey: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit) {
     // Fields that keep their identity while a reply streams, so the rows do not capture the view, which does not.
     val days = view.days
     val runs = view.runs
@@ -230,7 +230,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
             it?.let { row -> days[row.id]?.let { DayDivider(it) } }
             if (r.key == newKey) NewLine()
             when {
-                r is FoldRow.Fold -> StepsBox(hub, r, running && r.last)
+                r is FoldRow.Fold -> TaskLines(r, running && r.last, onOpenWork)
                 it == null || it.id in folded -> {}
                 else -> {
                     val run = runs[it.id]
@@ -238,7 +238,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                     val build = (it as? Item.Agent)?.let { a -> agentBuild(a.use) }
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
-                        !showWork && build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
+                        build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
                         else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump)
                     }
                 }
@@ -247,26 +247,34 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     }
 }
 
-// The turn's tasks from set_status, each in full: finished ones checked, the current one with a spinner while the turn runs, the rest open; open by default.
+// The turn's tasks from set_status as small lines, and on the right a button that opens the turn's tool calls on their own screen (web Transcript.tsx Tasks).
 @Composable
-private fun StepsBox(hub: Hub, fold: FoldRow.Fold, live: Boolean) {
+private fun TaskLines(fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) -> Unit) {
     val done = fold.steps.count { it.done }
     val current = if (live) fold.steps.firstOrNull { !it.done } else null
-    val spin = @Composable { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) }
-    val meta = if (done < fold.steps.size) "$done of ${fold.steps.size} done" else plural(fold.steps.size, "task")
-    TranscriptBox(hub, "steps:${fold.id}", "Tasks", meta, state = if (live) { { spin() } } else null, defaultOpen = true) {
-        Column(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-            @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
-                Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.callout, color = color) }
-            fold.steps.forEach { s ->
-                when {
-                    s.done -> Task({ AvIcon("pass-filled", null, Tokens.sp6, tint = av.ok) }, s.title, av.fg)
-                    s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
-                    else -> Task({ AvIcon("circle-large-outline", null, Tokens.sp6, tint = av.fgFaint) }, s.title, av.fgMuted)
-                }
+    val spin = @Composable { CircularProgressIndicator(Modifier.size(Tokens.sp5), strokeWidth = Tokens.stroke, color = av.fgFaint) }
+    Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (fold.steps.isNotEmpty()) Text(if (done < fold.steps.size) "Tasks \u00b7 $done of ${fold.steps.size}" else plural(fold.steps.size, "task"), style = Type.label, color = av.fgFaint)
+            Spacer(Modifier.weight(1f))
+            if (fold.work.tools > 0) Row(
+                Modifier.clip(RoundedCornerShape(Tokens.shapeFull)).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.shapeFull)).clickable { onOpenWork(fold.id) }.padding(horizontal = Tokens.sp4, vertical = Tokens.sp1),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(plural(fold.work.tools, "tool"), style = Type.label, color = av.fgMuted)
+                AvIcon("chevron-right", null, Tokens.sp5, tint = av.fgMuted)
             }
-            if (live && current == null && fold.now.isNotEmpty()) Task(spin, fold.now, av.fgStrong)
         }
+        @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
+            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.footnote, color = color) }
+        fold.steps.forEach { s ->
+            when {
+                s.done -> Task({ AvIcon("check", null, Tokens.sp5, tint = av.ok) }, s.title, av.fg)
+                s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
+                else -> Task({ AvIcon("circle-large-outline", null, Tokens.sp5, tint = av.fgFaint) }, s.title, av.fgMuted)
+            }
+        }
+        if (live && current == null && fold.now.isNotEmpty()) Task(spin, fold.now, av.fgStrong)
     }
 }
 

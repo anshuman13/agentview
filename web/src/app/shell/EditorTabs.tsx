@@ -7,6 +7,9 @@ import { pageOf, type Page } from '../pages';
 type Props = {
   showing: string;
   page: Page | null;
+  work: boolean;
+  showWork: () => void;
+  closeWork: () => void;
   mobileExplorer: boolean;
   sidebar: boolean;
   chatOpen: boolean;
@@ -21,7 +24,7 @@ type Props = {
 
 const reveal = (el: HTMLElement | null) => el?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
 
-export function EditorTabs({ showing, page, mobileExplorer, sidebar, chatOpen, showFile, showPage, showExplorer, closeBrowser, closePage, toggleSidebar, toggleChat }: Props) {
+export function EditorTabs({ showing, page, work, showWork, closeWork, mobileExplorer, sidebar, chatOpen, showFile, showPage, showExplorer, closeBrowser, closePage, toggleSidebar, toggleChat }: Props) {
   const openFile = useStore((s) => s.ui.openFile);
   const pendingCount = useStore((s) => s.pending.length);
   const fileName = openFile ? openFile.split('/').pop() : null;
@@ -42,6 +45,12 @@ export function EditorTabs({ showing, page, mobileExplorer, sidebar, chatOpen, s
         <div className="tab browser active" title="Browser (⌘E to switch)">
           <Icon name="globe" small /> Browser
           <button className="close" title="Close the browser" onClick={closeBrowser}><Icon name="close" small /></button>
+        </div>
+      )}
+      {work && (
+        <div className={`tab ${showing === 'work' ? 'active' : ''}`} {...pressable(showWork)} title="This turn's tool calls">
+          <Icon name="list-tree" small /> Tool calls
+          <button className="close" title="Close" onClick={(e) => { e.stopPropagation(); closeWork(); }}><Icon name="close" small /></button>
         </div>
       )}
       {page && (

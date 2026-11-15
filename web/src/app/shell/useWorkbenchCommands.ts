@@ -2,6 +2,7 @@ import { useEffect, type Dispatch, type SetStateAction } from 'react';
 import { openAgent } from '../../sessions/agents';
 import { isPage, pageOn, type Page } from '../pages';
 import type { Tab, View } from './TabBar';
+import type { Editor } from './workbenchLogic';
 import { narrow } from './useNarrow';
 
 
@@ -14,7 +15,7 @@ type Workbench = {
   setView: Setter<View>;
   setSidebar: Setter<boolean>;
   setTab: Setter<Tab>;
-  setEditor: Setter<'file' | 'browser' | 'agents' | 'assistant' | Page>;
+  setEditor: Setter<Editor>;
   setBrowse: Setter<boolean>;
   setChatOpen: Setter<boolean>;
   setTerminal: Setter<boolean>;

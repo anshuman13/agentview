@@ -76,11 +76,6 @@ fun Hub.setChatSegment(value: String) {
     prefs.edit().putString("chatSegment", value).apply()
 }
 
-fun Hub.setShowWork(on: Boolean) {
-    showWork.value = on
-    prefs.edit().putBoolean("showWork", on).apply()
-}
-
 fun Hub.setCodexFilter(value: String) {
     codexFilter.value = value
     prefs.edit().putString("codexFilter", value).apply()

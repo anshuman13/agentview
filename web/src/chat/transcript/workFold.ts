@@ -129,3 +129,6 @@ export function workTitle(work: Work, live: boolean, billing: string, narrow = f
   const text = join(narrow ? counts : [...counts, ...rest]);
   return { text: text || (failed ? '' : 'Work'), failed, detail: narrow ? join(rest) : '' };
 }
+
+// Opens one turn's tool calls in their own tab; the workbench listens.
+export const openWork = (turn: string) => window.dispatchEvent(new CustomEvent('open-work', { detail: turn }));

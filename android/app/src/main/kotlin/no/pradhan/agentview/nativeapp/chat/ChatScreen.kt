@@ -42,7 +42,6 @@ import no.pradhan.agentview.nativeapp.app.gitStatus
 import no.pradhan.agentview.nativeapp.app.pulls
 import no.pradhan.agentview.nativeapp.app.remindChat
 import no.pradhan.agentview.nativeapp.app.rename
-import no.pradhan.agentview.nativeapp.app.setShowWork
 import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.app.runControl
 import no.pradhan.agentview.nativeapp.app.stopTask
@@ -99,7 +98,7 @@ class ChatPanels {
 }
 
 @Composable
-fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
+fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit) {
     val store = hub.store.state
     val shownId by store.select { it.shownId }
     val session by store.select { it.session }
@@ -150,7 +149,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
             CompositionLocalProvider(LocalBuildSheets provides buildSheets) {
-                Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } })
+                Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } })
             }
         }
         PendingList(pending, session?.permissionMode ?: "default", hub)
@@ -218,7 +217,6 @@ private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double
 private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val sessionId = live.sessionId ?: session?.sessionId
-    val showWork by hub.showWork.collectAsState()
     MoreButton { close ->
         MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
@@ -230,7 +228,6 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
             context.startActivity(android.content.Intent.createChooser(send, null))
         }, enabled = hasReply)
         MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })
-        MenuItem("Show work", "list-tree", { close(); hub.setShowWork(!showWork) }, checked = showWork)
         MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) panels.dialog = "close" else hub.closeChat(live.id) })
         MenuSeparator()
         MenuItem("Archive", "archive", { close(); panels.dialog = "archive" }, danger = true, enabled = sessionId != null)

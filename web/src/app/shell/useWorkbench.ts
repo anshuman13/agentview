@@ -25,6 +25,7 @@ export function useWorkbench() {
   const [editor, setEditor] = useState<Editor>('file');
   const [seenAssistant, setSeenAssistant] = useState(false);
   const [agentSel, setAgentSel] = useState<string | null>(null);
+  const [workTurn, setWorkTurn] = useState<string | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [more, setMore] = useState(false);
   const [browse, setBrowse] = useState(false);
@@ -114,6 +115,17 @@ export function useWorkbench() {
     return () => window.removeEventListener('open-agent', open);
   }, []);
 
+  useEffect(() => {
+    const open = (e: Event) => {
+      setWorkTurn(String((e as CustomEvent<unknown>).detail));
+      setEditor('work');
+      setTab((t) => (narrow() ? 'code' : t));
+    };
+    window.addEventListener('open-work', open);
+    return () => window.removeEventListener('open-work', open);
+  }, []);
+  const closeWork = () => { setWorkTurn(null); setEditor((e) => (e === 'work' ? 'file' : e)); if (narrow()) setTab('chat'); };
+
   useWorkbenchCommands({
     openAssistant, openPage, toggleTheme, setView, setSidebar, setTab, setEditor, setBrowse, setChatOpen, setTerminal, setPhone,
   });
@@ -123,7 +135,7 @@ export function useWorkbench() {
   const showing = showingOf(tab, editor);
   const unreachable = useUnreachable();
   const active = activeOf(showing, unreachable, openFile);
-  const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor);
+  const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor) && editor !== 'work';
   const chatsView = view === 'chats' || view === 'sessions';
   const inChats = tab === 'repos' && chatsView;
   const inMore = tab === 'term' || tab === 'browser' || tab === 'code' || (tab === 'repos' && !chatsView);
@@ -153,7 +165,7 @@ export function useWorkbench() {
   };
 
   return {
-    openFile, chatId, tab, setTab, editor, setEditor, seenAssistant, agentSel, setAgentSel, page, more, setMore, browse, setBrowse, sidebar, setSidebar,
+    openFile, chatId, tab, setTab, editor, setEditor, seenAssistant, agentSel, setAgentSel, workTurn, closeWork, page, more, setMore, browse, setBrowse, sidebar, setSidebar,
     chatOpen, setChatOpen, view, setView, phone, setPhone, macs, setMacs, terminal, setTerminal, theme, toggleTheme,
     showView, openPage, closePage, fromRepos, showing, active, unreachable, mobileExplorer, chatsView, inChats, inMore, goTab, goSide, goHome, closeTool, reopen,
   };

@@ -11,7 +11,7 @@ import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
-import { foldTurns, type FoldRow, type StatusStep } from './workFold';
+import { foldTurns, openWork, type FoldRow, type StatusStep } from './workFold';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
@@ -23,14 +23,14 @@ import { isRepoSpec, specSlug } from '../../../../shared/specTasks';
 import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 
-export function Transcript({ showWork }: { showWork: boolean }) {
+export function Transcript() {
   const events = useStore((s) => s.events);
   const cwd = useStore((s) => s.session.cwd);
   const running = useStore((s) => s.session.running);
   const chat = useStore((s) => s.session.id);
   const earlier = useStore((s) => s.earlier ?? 0);
   const provider = useStore((s) => s.session.provider);
-  return <TranscriptView key={chat} events={events} earlier={earlier} cwd={cwd} running={running} showWork={showWork} bill={billing(provider)} />;
+  return <TranscriptView key={chat} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} />;
 }
 
 function lastUserId(items: Item[]) {
@@ -173,7 +173,7 @@ function useRowWindow(count: number, replies: number, earlier: number, box: RefO
   return { shown, start, from, staging, loading, showEarlier };
 }
 
-function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean; showWork: boolean; bill: string }) {
+function TranscriptView({ events, earlier, cwd, running, bill }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string }) {
   const [build] = useState(createTranscriptBuilder);
   const items = useMemo(() => build(events), [build, events]);
   const last = events[events.length - 1];
@@ -183,7 +183,7 @@ function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { eve
   const rewinds = useMemo(() => rewindReplies(items), [items]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => specCards(items), [items]);
-  const list = useMemo<FoldRow[]>(() => (showWork ? items.map((it) => ({ kind: 'item', it })) : foldTurns(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0)), [showWork, items, events, cards]);
+  const list = useMemo<FoldRow[]>(() => foldTurns(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const bumps = useMemo(() => specBumps(items), [items]);
@@ -217,8 +217,8 @@ function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { eve
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
         const day = r.kind === 'item' ? days.get(r.it.id) : undefined;
         const row = r.kind === 'fold'
-          ? <StepsBox key={id} id={r.id} steps={r.steps} now={r.now} live={running && r.last} />
-          : rowOf(r.it, i === 0, showWork ? 'flat' : 'shown');
+          ? <Tasks key={id} id={r.id} steps={r.steps} now={r.now} tools={r.work.tools} live={running && r.last} />
+          : rowOf(r.it, i === 0, 'shown');
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
       </div>
@@ -300,22 +300,27 @@ function Folded({ id, className, children }: { id: string; className: string; ch
 
 const UserText = ({ id, text }: { id: string; text: string }) => <Folded id={'prompt-' + id} className="tr-user-text">{text}</Folded>;
 
-function StepsBox({ id, steps, now, live }: { id: string; steps: StatusStep[]; now: string; live: boolean }) {
+// A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
+function Tasks({ id, steps, now, tools, live }: { id: string; steps: StatusStep[]; now: string; tools: number; live: boolean }) {
   const done = steps.filter((s) => s.done).length;
   const current = live ? steps.find((s) => !s.done) : undefined;
   const spin = <Icon name="loading" small spin />;
   return (
-    <TranscriptBox id={`steps:${id}`} className="tr-steps" title="Tasks" meta={done < steps.length ? `${done} of ${steps.length} done` : plural(steps.length, 'task')} defaultOpen state={live ? spin : undefined}>
-      <ul className="tr-tasks">
+    <div className="tr-steps">
+      <div className="tr-steps-head">
+        {steps.length > 0 && <span>{done < steps.length ? `Tasks \u00b7 ${done} of ${steps.length}` : plural(steps.length, 'task')}</span>}
+        {tools > 0 && <button className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{plural(tools, 'tool')}<Icon name="chevron-right" small /></button>}
+      </div>
+      {steps.length > 0 && <ul className="tr-tasks">
         {steps.map((s) => (
           <li key={s.id} className={s.done ? 'done' : s === current ? 'now' : undefined}>
-            {s.done ? <Icon name="pass-filled" small /> : s === current ? spin : <Icon name="circle-large-outline" small />}
+            {s.done ? <Icon name="check" small /> : s === current ? spin : <Icon name="circle-large-outline" small />}
             <span>{s === current && now ? now : s.title}</span>
           </li>
         ))}
         {live && !current && now && <li className="now">{spin}<span>{now}</span></li>}
-      </ul>
-    </TranscriptBox>
+      </ul>}
+    </div>
   );
 }
 

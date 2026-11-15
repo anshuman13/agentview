@@ -5,8 +5,6 @@ import { reviewLabel, usageMenuLabel } from '../../../../shared/chatMenu';
 import { command } from '../../ui/util';
 
 type Props = {
-  showWork: boolean;
-  toggleWork: () => void;
   waitingElsewhere: number;
   usage: { account: string | null; week: number | null; fiveHour: number | null; onClick: () => void } | null | undefined;
   macName: string | null | undefined;
@@ -17,7 +15,7 @@ type Props = {
   rename?: () => void;
 };
 
-export function ChatDetailsMenu({ showWork, toggleWork, waitingElsewhere, usage, macName, extras, running, hasChanges, review, rename }: Props) {
+export function ChatDetailsMenu({ waitingElsewhere, usage, macName, extras, running, hasChanges, review, rename }: Props) {
   const [more, setMore] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const reviewOff = running || !hasChanges;
@@ -29,7 +27,6 @@ export function ChatDetailsMenu({ showWork, toggleWork, waitingElsewhere, usage,
       {more && (
         <Menu trigger={moreBtn} onClose={() => setMore(false)}>
           <MenuItem icon="edit" disabled={!rename} onClick={rename && choose(rename)}>Rename</MenuItem>
-          <MenuItem icon={showWork ? 'check' : undefined} role="menuitemcheckbox" aria-checked={showWork} onClick={choose(toggleWork)}>Show work</MenuItem>
           <MenuItem icon="source-control" disabled={reviewOff} title={reviewOff ? undefined : 'The agent reviews the working tree, findings show in the Changes view'} onClick={choose(review)}>{reviewLabel(running, hasChanges)}</MenuItem>
           {waitingElsewhere > 0 && <MenuItem icon="inbox" onClick={choose(() => command('view:chats'))}>{waitingElsewhere} waiting</MenuItem>}
           {usageLabel && <MenuItem icon="pulse" onClick={choose(usage.onClick)}>{usageLabel}</MenuItem>}

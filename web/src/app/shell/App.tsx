@@ -15,7 +15,7 @@ import { Unreachable } from './Unreachable';
 import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
 import { isPage, PageView } from '../pages';
-import { Brief, AgentsPane, FileSwitcher, Palette, GoalSheets, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
+import { Brief, AgentsPane, WorkPane, FileSwitcher, Palette, GoalSheets, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
 import { Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
 import { MoreSheet, TabBar } from './TabBar';
@@ -34,7 +34,7 @@ export function App() {
   const { chatW, termH, sideW, startResize, startTermResize, startSideResize } = useResize();
   const beside = useSideChat();
   const {
-    openFile, chatId, tab, setTab, editor, setEditor, seenAssistant, agentSel, setAgentSel, page, more, setMore, browse, setBrowse, sidebar, setSidebar,
+    openFile, chatId, tab, setTab, editor, setEditor, seenAssistant, agentSel, setAgentSel, workTurn, closeWork, page, more, setMore, browse, setBrowse, sidebar, setSidebar,
     chatOpen, setChatOpen, view, setView, phone, setPhone, macs, setMacs, terminal, setTerminal, theme, toggleTheme,
     showView, openPage, closePage, fromRepos, showing, active, unreachable, mobileExplorer, chatsView, inChats, inMore, goTab, goSide, goHome, closeTool, reopen,
   } = useWorkbench();
@@ -59,7 +59,7 @@ export function App() {
         <div className="sash side-sash desktop-only" onPointerDown={startSideResize} />
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
-          {tab === 'code' && !isPage(editor) && (
+          {tab === 'code' && !isPage(editor) && editor !== 'work' && (
             <PhoneHeader
               title={mobileExplorer ? 'Files' : openFile?.split('/').pop()}
               sub={mobileExplorer ? project : openFile?.split('/').slice(0, -1).join('/') || project}
@@ -71,6 +71,9 @@ export function App() {
           <EditorTabs
             showing={showing}
             page={page}
+            work={workTurn !== null}
+            showWork={() => { setEditor('work'); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); }}
+            closeWork={closeWork}
             mobileExplorer={mobileExplorer}
             sidebar={sidebar}
             chatOpen={chatOpen}
@@ -84,6 +87,7 @@ export function App() {
           />
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><Suspense fallback={<Loading />}><CodePane /></Suspense></div>
           <div className={`editor ${active === 'agents' ? 'shown' : ''}`}>{active === 'agents' && <Suspense fallback={<Loading />}><AgentsPane selected={agentSel} onSelect={setAgentSel} /></Suspense>}</div>
+          <div className={`editor ${active === 'work' ? 'shown' : ''}`}>{workTurn && <Suspense fallback={<Loading />}><WorkPane turn={workTurn} onBack={closeWork} /></Suspense>}</div>
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <Suspense fallback={<Loading />}><BrowserPane onEmpty={() => setEditor('file')} /></Suspense>}</div>
           {page && <PageView key={page} page={page} shown={active === page} project={project ?? 'this repo'} back={tab === 'code' && active === page ? closeTool : undefined} />}
           <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Suspense fallback={null}><FocusBar /></Suspense><Suspense fallback={<Loading />}><Assistant /></Suspense></Guard>}</div>

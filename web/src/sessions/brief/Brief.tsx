@@ -13,7 +13,7 @@ import { Sheet } from '../../ui/Sheet';
 import { agentsOf } from '../agents';
 import { useChatRun } from '../useChatRun';
 import { useNarrow } from '../../app/shell/useNarrow';
-import { plural, readFlag, saveFlag, useTick } from '../../ui/util';
+import { plural, useTick } from '../../ui/util';
 import { askChat } from '../../chat/chatActions';
 import { useMacName } from '../../app/shell/macName';
 import { useUsage } from '../../app/shell/StatusItems';
@@ -53,8 +53,6 @@ export function Brief() {
   const waiting = pending.length > 0;
   const [build] = useState(createTurnsBuilder);
   const { turns, next, lastTool, advisor, fable } = useMemo(() => build(events), [build, events]);
-  const [showWork, setShowWork] = useState(() => readFlag('agentview.showWork', false));
-  const toggleWork = () => { setShowWork(!showWork); saveFlag('agentview.showWork', !showWork); };
   const waitingElsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
   const usage = useUsage();
   // The review reads the working tree, which can hold edits older than the loaded events.
@@ -108,13 +106,13 @@ export function Brief() {
             {cwd && <small>{cwd.split('/').pop()}</small>}
           </span>
           <span className="spacer" />
-          <ChatDetailsMenu showWork={showWork} toggleWork={toggleWork} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
+          <ChatDetailsMenu waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         <div className="tl-line">
           <HeadState state={state} status={status} loop={loop} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
           {phone && side && <button className="tl-agents" onClick={() => { setShowAgents(true); setAgentSel(null); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}
         </div>
-        <Transcript showWork={showWork} />
+        <Transcript />
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}
       <div className="brief-input">

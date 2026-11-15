@@ -79,6 +79,7 @@ import no.pradhan.agentview.nativeapp.net.OfflineState
 
 import no.pradhan.agentview.nativeapp.net.offlineBanner
 import no.pradhan.agentview.nativeapp.ops.AgentScreen
+import no.pradhan.agentview.nativeapp.chat.WorkScreen
 import no.pradhan.agentview.nativeapp.ops.DeployScreen
 import no.pradhan.agentview.nativeapp.ops.McpScreen
 import no.pradhan.agentview.nativeapp.ops.ObserveScreen
@@ -133,7 +134,7 @@ private fun DestLabel(d: Dest) = Text(d.label, style = Type.label)
 
 private fun isMore(route: String?) = route != null && (route.startsWith("more/") || route == ORIGIN_ROUTE)
 
-private fun isAgent(route: String?) = route != null && route.startsWith("agent/")
+private fun isAgent(route: String?) = route != null && (route.startsWith("agent/") || route.startsWith("work/"))
 
 private fun NavHostController.popAgents() {
     while (isAgent(currentDestination?.route)) if (!popBackStack()) break
@@ -240,12 +241,16 @@ private fun SideRail(dests: List<Dest>) {
 @Composable
 private fun AppNavHost(hub: Hub, nav: NavHostController, twoPane: Boolean, modifier: Modifier) {
     val openAgent = { id: String -> nav.navigate("agent/${Uri.encode(id)}") }
+    val openWork = { id: String -> nav.navigate("work/${Uri.encode(id)}") }
     NavHost(nav, startDestination = Tab.Codex.route, modifier = modifier) {
         composable(Tab.Codex.route) { CodexScreen(hub) }
-        composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent) else ChatScreen(hub, onOpenAgent = openAgent) }
-        composable(Tab.Sessions.route) { if (twoPane) TwoPane(hub, openAgent) else SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
+        composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else ChatScreen(hub, openAgent, openWork) }
+        composable(Tab.Sessions.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
         composable("agent/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->
             AgentScreen(hub, e.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() }, onOpenAgent = openAgent)
+        }
+        composable("work/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->
+            WorkScreen(hub, e.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() }, onOpenAgent = openAgent)
         }
         (MORE_TOOLS + MORE_PAGES).forEach { m ->
             composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onTab = nav::goTab, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
@@ -328,11 +333,11 @@ fun App(hub: Hub) {
 
 // The Sessions list beside the open chat on wide windows.
 @Composable
-private fun TwoPane(hub: Hub, onOpenAgent: (String) -> Unit) {
+private fun TwoPane(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit) {
     Row(Modifier.fillMaxSize()) {
         Box(Modifier.weight(2f).fillMaxHeight()) { SessionsScreen(hub, onOpen = {}) }
         Box(Modifier.width(Tokens.hairline).fillMaxHeight().background(av.border))
-        Box(Modifier.weight(3f).fillMaxHeight()) { ChatScreen(hub, onOpenAgent) }
+        Box(Modifier.weight(3f).fillMaxHeight()) { ChatScreen(hub, onOpenAgent, onOpenWork) }
     }
 }
 
