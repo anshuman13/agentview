@@ -54,7 +54,7 @@ export type ReviewHunk = { line: number; del: string[]; add: string[]; state?: R
 export type ReviewFile = { path: string; hunks: ReviewHunk[]; created?: boolean; binary?: boolean; large?: boolean; state?: ReviewState };
 
 export type ChatEvent =
-  | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; phase?: LoopPhase; auto?: 'loop' | 'goal'; round?: number }
+  | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; auto?: 'loop' | 'goal'; round?: number }
   | { id: string; kind: 'assistant'; text: string; streaming: boolean; at: number; parent?: string }
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number; parent?: string; agent?: string }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number; parent?: string; stopped?: boolean }
@@ -114,7 +114,6 @@ export type SessionInfo = {
   compacting: boolean;
   stopping: boolean;
   mcp: McpServer[];
-  loop: LoopState;
   repeat: Repeat | null;
   pr: number | null;
   account: Account;
@@ -142,12 +141,6 @@ export const MAX_GOAL_ROUNDS = 20;
 
 export const BIG_BRO = 'big-bro';
 
-export type LoopPhase = 'plan' | 'build' | 'test' | 'passed' | 'failed';
-
-export type LoopRole = Exclude<LoopPhase, 'passed' | 'failed'>;
-
-export type LoopState = { on: boolean; max: number; round: number; phase: LoopPhase | null };
-
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
 export type RunOp = 'pause' | 'resume' | 'now' | 'stop' | 'restore';
 // endAt is epoch ms, capPct a percent, maxBuilds a count; null clears them.
@@ -157,10 +150,10 @@ export type Round = { n: number; at: number; outcome: RoundOutcome; line: string
 // One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.
 export type Try = { n: number; chatId: string; sessionId: string; branch: string; dropped?: boolean };
 
-// One /loop, /goal, build cycle, /tries or scheduled coding job: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
+// One /loop, /goal, /tries or scheduled coding job: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
 export type ChatRun = {
   id: string;
-  kind: 'loop' | 'goal' | 'cycle' | 'tries' | 'job';
+  kind: 'loop' | 'goal' | 'tries' | 'job';
   sessionId: string;
   chatId: string;
   title: string;
@@ -382,7 +375,6 @@ export type ClientMessage =
   | { type: 'set_review'; on: boolean }
   | { type: 'set_build_flow'; on: boolean }
   | { type: 'review'; id: string; action: 'keep' | 'undo'; file?: string; hunk?: number }
-  | { type: 'set_loop'; on: boolean; max?: number }
   | { type: 'run'; run: string; op: RunOp }
   | ({ type: 'run_edit'; run: string } & RunEdit)
   | { type: 'tries_send'; run: string; text: string }

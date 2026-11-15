@@ -259,8 +259,8 @@ describe('cases shared with the Android app', () => {
     it(`mergeQuiet: ${c.name}`, () => expect(mergeQuiet(c.rounds).map((g) => [g.first.n, g.last.n, g.count, g.costUsd])).toEqual(c.expected));
   }
 
-  for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; phase: string | null; expected: string }>('run-line')) {
-    it(`runLine: ${c.name}`, () => expect(runLine(run({ ...c.run, tries: c.run.tries?.map((t) => ({ n: 0, chatId: '', sessionId: '', branch: '', ...t })) }), c.phase)).toBe(c.expected));
+  for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; expected: string }>('run-line')) {
+    it(`runLine: ${c.name}`, () => expect(runLine(run({ ...c.run, tries: c.run.tries?.map((t) => ({ n: 0, chatId: '', sessionId: '', branch: '', ...t })) }))).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; open: string | null; repos: { cwd: string; last: number }[]; expected: string | null }>('advisor-root')) {

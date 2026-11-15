@@ -27,7 +27,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 - Before exiting, the host writes `~/.agentview/restore.json` (open chats, loops, crons, and any stopped work: the
   tasks that were running and whether a turn was in progress); the next host reopens them from there and asks
   each chat with stopped work to resume it.
-- Loops, goals and build cycles are runs (`session/runs.ts`) in `~/.agentview/runs.json`; a loop's `runId` in
+- Loops, goals, tries and jobs are runs (`session/runs.ts`) in `~/.agentview/runs.json`; a loop's `runId` in
   `restore.json` links the restarted chat back to its run. The host broadcasts them as `runs` messages, the API
   server caches them like the chats and sends them to clients (last 10 rounds each).
 - With no API server for five minutes and nothing running, the host saves and exits.
@@ -37,7 +37,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 | Folder | Contents |
 | --- | --- |
 | `agent/` | `AgentDriver` interface (`types.ts`), the provider registry (`registry.ts`: driver factory and limit check per provider, and the provider each chat last ran on), the Claude driver (`claude/`, also OpenRouter through the SDK's base URL): SDK query, message handling, history, MCP, and the Codex driver (`codex/`): JSON-RPC to `codex app-server`, event mapping, approvals, plan usage. The `agentview` tools (status, wiki, data, chat search, report findings) are one registry in `tools/`, served in process to Claude and over stdio to Codex |
-| `session/` | Provider-neutral chat session: send queue, turns, `/loop` and `/goal` (`repeat.ts`), build cycle (`loop.ts`), approvals, findings, pull request parsing |
+| `session/` | Provider-neutral chat session: send queue, turns, `/loop` and `/goal` (`repeat.ts`), approvals, findings, pull request parsing |
 | `host/` | Agent host process, socket protocol and the API server's client for it |
 | `http/` | Access control, request bodies, SSE ring buffer, static serving, Mac discovery |
 | `workspace/` | Files, git, worktrees, terminals |

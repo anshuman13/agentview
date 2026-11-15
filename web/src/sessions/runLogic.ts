@@ -1,16 +1,13 @@
 import type { ChatRun, LiveChat, LiveNow, RoundOutcome } from '../../../shared/protocol';
 import { firstRound, nextRound, roundText, runLine as roundLine } from '../../../shared/goalText';
 
-const ENDED: Record<string, string> = { passed: 'Build cycle passed', failed: 'Build cycle stopped' };
+const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', tries: 'Tries', job: 'Job' };
 
-const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', cycle: 'Build cycle', tries: 'Tries', job: 'Job' };
-
-export function runLine(run: ChatRun, phase: string | null = null) {
+export function runLine(run: ChatRun) {
   if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
   if (run.kind === 'goal') return roundLine(KIND.goal, run);
   if (run.kind === 'tries') return `Tries · ${run.tries?.filter((t) => !t.dropped).length ?? 0} chats`;
   if (run.kind === 'job') return `Job · ${run.branch}`;
-  if (run.kind === 'cycle') return `Build cycle · round ${run.round}/${run.max}${phase && phase !== 'passed' && phase !== 'failed' ? ` · ${phase[0].toUpperCase()}${phase.slice(1)}` : ''}`;
   return roundLine(KIND.loop, run);
 }
 
@@ -55,4 +52,3 @@ export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', ques
 
 export const loopOpenByDefault = (run: ChatRun, working: boolean, waiting: boolean) => working || waiting || run.needsYou;
 
-export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? ENDED[loop.phase] ?? `Build cycle${loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');

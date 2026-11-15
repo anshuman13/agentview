@@ -64,11 +64,11 @@ import androidx.compose.foundation.text.KeyboardActions
 // The loop card above the composer (web/src/chat/cards/LoopCard.tsx): state and Pause in the head, what is happening now, the running agents, then the plan line on a goal or the what line and cost on other kinds.
 
 @Composable
-fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, needsYou: Boolean, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
+fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
     var rounds by rememberSaveable(run.id) { mutableStateOf(false) }
     var board by rememberSaveable(run.id) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val cycle = run.kind == "cycle" || run.kind == "tries" || run.kind == "job"
+    val stopOnly = run.kind == "tries" || run.kind == "job"
     val goal = run.kind == "goal"
     val paused = run.state == "paused"
     val agents = live.agentList
@@ -87,11 +87,11 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, phase: String?, needsYou: B
     ).joinToString(" · ")
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
         TranscriptBox(
-            hub, "loop:${run.id}", runLine(run, phase), open = cardOpen, onToggle = toggleCard,
+            hub, "loop:${run.id}", runLine(run), open = cardOpen, onToggle = toggleCard,
             action = {
                 if (run.kind == "tries") IconBtn("layout", "Open board", { board = true })
-                if (!cycle) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") })
-                if (cycle) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
+                if (!stopOnly) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") })
+                if (stopOnly) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
                 else MoreButton { close ->
                     if (!paused) { MenuItem("Run now", "debug-start", { close(); hub.runControl(run, "now") }, enabled = !hub.readOnly); MenuSeparator() }
                     MenuItem("Stop", "debug-stop", { close(); hub.runControl(run, "stop") }, danger = true, enabled = !hub.readOnly)

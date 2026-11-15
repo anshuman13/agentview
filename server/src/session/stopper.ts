@@ -32,10 +32,9 @@ export class Stopper {
   }
 
   async interrupt() {
-    const { driver, state, turn, cycle, waiting, repeater } = this.s;
+    const { driver, state, turn, waiting, repeater } = this.s;
     if (!driver.attached || !state.session.running || state.session.stopping) return;
     driver.clearInjected();
-    cycle.interrupted();
     const idle = turn.drop(driver.dropInput());
     waiting.dropQueued();
     waiting.dropPending();

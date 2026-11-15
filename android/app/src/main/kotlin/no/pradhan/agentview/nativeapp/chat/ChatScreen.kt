@@ -241,7 +241,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
     val now = rememberNow(panels.agents && agents.any { it.status == "running" })
     if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false, action = { AgentsActions(hub, run, agents) }) {
         run?.let { r ->
-            val line = listOfNotNull(runLine(r, session?.loop?.phase), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
+            val line = listOfNotNull(runLine(r), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
             val goal = r.kind == "goal"
             Text(line, Modifier.fillMaxWidth().then(if (goal) Modifier.clickable { hub.shell.goalSheet.value = GoalSheet.Detail(r.id) } else Modifier).padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
         }
@@ -295,7 +295,7 @@ fun RenameDialog(current: String, onSave: (String) -> Unit, onDismiss: () -> Uni
 private fun AgentsActions(hub: Hub, run: ChatRun?, agents: List<Agent>) {
     val running = agents.filter { it.status == "running" && it.group == null }
     val paused = run?.state == "paused"
-    if (run != null && run.kind !in setOf("cycle", "tries", "job")) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
+    if (run != null && run.kind !in setOf("tries", "job")) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
     if (run != null) IconBtn("debug-stop", "Stop the run", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
     else if (running.isNotEmpty()) IconBtn("debug-stop", "Stop all agents", { running.forEach { hub.stopTask(it.id) } }, enabled = !hub.readOnly)
 }

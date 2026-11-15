@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { stubGlobal } from '../../../testing';
 
-const store = { runs: [] as unknown[], live: [] as unknown[], pending: [] as unknown[], session: { id: 'c1', cwd: '/w', loop: { phase: null } }, recentFiles: [] as string[], ui: { sketch: null } };
+const store = { runs: [] as unknown[], live: [] as unknown[], pending: [] as unknown[], session: { id: 'c1', cwd: '/w' }, recentFiles: [] as string[], ui: { sketch: null } };
 vi.mock('../codex/data', () => ({ useAssistantStore: vi.fn(), assistantStore: vi.fn(), useAssistant: vi.fn(), useAssistantData: () => ({ jobs: [], runs: [] }) }));
 
 const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };

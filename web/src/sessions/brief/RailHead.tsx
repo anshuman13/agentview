@@ -15,7 +15,6 @@ export function RailHead() {
   const chat = useStore((s) => s.session.id);
   const run = useChatRun(chat);
   const live = useStore((s) => s.live.find((c) => c.id === chat));
-  const phase = useStore((s) => s.session.loop.phase);
   const agents = useStore((s) => agentsOf(s.events));
   const canStop = useCan('stopTask');
   const [board, setBoard] = useState(false);
@@ -23,11 +22,11 @@ export function RailHead() {
   const running = agents.filter((a) => a.status === 'running' && !a.group);
   const control = (op: RunOp) => run && runControl(run, op, Boolean(live?.running));
   const paused = run?.state === 'paused';
-  // Cycles, tries and jobs have no pause of their own: Stop is their only control.
-  const pausable = run && run.kind !== 'cycle' && run.kind !== 'tries' && run.kind !== 'job';
+  // Tries and jobs have no pause of their own: Stop is their only control.
+  const pausable = run && run.kind !== 'tries' && run.kind !== 'job';
   const stop = () => (run ? control('stop') : running.forEach((a) => send({ type: 'stop_task', toolUseId: a.id })));
   const next = run && loopNow(run, live?.now).next;
-  const line = run && [runLine(run, phase), next && `next ${next}`].filter(Boolean).join(' · ');
+  const line = run && [runLine(run), next && `next ${next}`].filter(Boolean).join(' · ');
   return (
     <>
       <div className="rail-h">

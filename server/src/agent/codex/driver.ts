@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Account, Capabilities, Effort, LoopRole, McpServer, Provider } from '../../../../shared/protocol.js';
+import type { Account, Capabilities, Effort, McpServer, Provider } from '../../../../shared/protocol.js';
 import { reviewPrompt } from '../../../../shared/reviewPrompt.js';
 import { errText } from '../../../../shared/util.js';
 import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '../types.js';
@@ -21,8 +21,6 @@ let lastRead: { at: number; read: Promise<{ rateLimits: RateLimits }> } | null =
 // How long the process that read the history waits for the chat to start.
 const SPARE_MS = 5_000;
 const MCP_STATUS: Record<string, string> = { connected: 'connected', authenticationRequired: 'needs-auth', failed: 'failed', disabled: 'disabled' };
-
-const ROLE_EFFORT: Record<LoopRole, Effort> = { plan: 'high', build: 'high', test: 'medium' };
 
 export const codexDriver = (resume?: string, fork = false): DriverFactory => (host) => new CodexDriver(host, resume, fork);
 
@@ -303,11 +301,6 @@ export class CodexDriver implements AgentDriver {
 
   review(target: 'local' | number) {
     this.send(reviewPrompt(target));
-  }
-
-  roleModel(role: LoopRole) {
-    const model = this.models.find((m) => m.isDefault)?.id ?? this.host.state.session.model;
-    return model ? { model, effort: ROLE_EFFORT[role] } : null;
   }
 
   async interrupt() {

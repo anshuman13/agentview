@@ -22,7 +22,6 @@ export type Turn = {
   notes: NoteFact[];
 };
 
-const PHASE_TEXT: Record<string, string> = { plan: 'Plan · Opus', build: 'Build · Opus', test: 'Test · Sonnet' };
 const WOKE_UP = /^\w+ woke up/;
 
 function handBack(text: string) {
@@ -46,7 +45,7 @@ const cloneTurn = (t: Turn): Turn => ({ ...t, notes: [...t.notes] });
 
 export const buildTurns = (events: ChatEvent[]) => turnsFrom(events).out;
 
-const isNoteText = (text: string) => ['Compact', 'Loop ', 'Build cycle', 'Goal', 'Usage limit', 'Logged out'].some((p) => text.startsWith(p));
+const isNoteText = (text: string) => ['Compact', 'Loop ', 'Goal', 'Usage limit', 'Logged out'].some((p) => text.startsWith(p));
 
 function recordStatus(turn: Turn, e: ToolUse, next: string[]) {
   const done = str(e.input.done).trim();
@@ -92,8 +91,7 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
     if (!e) break;
     if (e.kind === 'user') {
       next = [];
-      const prompt = e.phase ? (e.text.startsWith('Test') ? `Test ${e.text.slice(5)} · Sonnet` : PHASE_TEXT[e.phase] ?? e.text) : e.text;
-      turns.push(newTurn(e.id, prompt, Boolean(e.phase)));
+      turns.push(newTurn(e.id, e.text));
       continue;
     }
     if (e.kind === 'system' && WOKE_UP.test(e.text)) {

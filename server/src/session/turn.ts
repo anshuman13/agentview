@@ -6,12 +6,16 @@ import { clock } from '../../../shared/util.js';
 import { goalMet as goalMetText, skipText } from '../../../shared/goalText.js';
 import type { Repeat } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
-import { advance, looping, planChangeText } from './loop.js';
 import { goalMet } from './repeat.js';
 import { roundResult } from './runs.js';
 import type { AgentSession } from './session.js';
 
 const COMPACT = Symbol('compact');
+
+const planChangeText = (next: string[]) =>
+  next.length
+    ? `I changed your plan. The remaining steps are now:\n${next.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nFollow this plan from here and update set_status to match.`
+    : 'I removed the remaining steps of your plan. Finish the current step, then stop and tell me where things stand.';
 
 export class Turn {
   count = 0;
@@ -121,18 +125,9 @@ export class Turn {
       return;
     }
     if (s.waiting.pending.length && s.usage.reset) this.releaseHeld();
-    if (idle && !this.lastError && s.cycle.askReplyApproval(this.lastResult)) return;
-    const before = s.state.session.loop;
-    const loop = idle ? advance(before, this.lastResult, { planDenied: s.cycle.planDenied, failed: this.lastError }) : null;
-    if (loop) {
-      s.setSession({ loop: loop.state });
-      if (looping(before)) s.cycle.round(before, loop.state);
-    }
-    const next = idle && !loop?.step ? this.followUp() : null;
-    s.setSession({ running: this.count > 0 || next !== null || Boolean(loop?.step), compacting: false, stopping: false });
-    if (loop && !loop.step && loop.note) s.cycle.end(loop.note);
-    if (loop?.step) void s.cycle.runStep(loop.step);
-    else if (next === COMPACT) s.compact();
+    const next = idle ? this.followUp() : null;
+    s.setSession({ running: this.count > 0 || next !== null, compacting: false, stopping: false });
+    if (next === COMPACT) s.compact();
     else if (next) s.sendPrompt(next);
     else if (stopped) {
       // Messages typed while the stop was in flight go on in a fresh turn.
@@ -184,7 +179,6 @@ export class Turn {
       s.runs.addRound(job.id, { n: 1, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0 });
       s.runs.end(job.id, 'exited');
     }
-    s.cycle.exited();
     // Queued messages are not lost with the process; the first one starts a fresh CLI.
     if (!s.waiting.dequeue()) s.repeater.defer();
     s.log.orphanRunning();

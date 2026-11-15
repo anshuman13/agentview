@@ -1,17 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import type { Account, Provider, ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, ServerState, SessionInfo, LoopState, LiveNow } from '../../../shared/protocol.js';
+import type { Account, Provider, ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, ServerState, SessionInfo, LiveNow } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from './resume.js';
 import { Approvals } from './approvals.js';
 import { buildStageOf } from '../../../shared/builds.js';
 import { recordBuild, recordHistory } from './builds.js';
-import { BuildCycle } from './cycle.js';
 import { EventLog } from './eventLog.js';
 import { Hooks } from './hooks.js';
 import { blockedRule } from './events.js';
 import { expandChatMentions } from './chatMentions.js';
-import { loopOff } from './loop.js';
 import { Mcp } from './mcp.js';
 import { MessageQueue } from './messageQueue.js';
 import { Compaction } from './compaction.js';
@@ -57,7 +55,6 @@ export class AgentSession implements AgentHost {
   readonly log: EventLog;
   readonly waiting = new MessageQueue(this);
   readonly turn = new Turn(this);
-  readonly cycle = new BuildCycle(this);
   readonly settings = new SessionSettings(this);
   readonly mcp = new Mcp(this);
   readonly usage = new UsageLimit(this);
@@ -76,7 +73,7 @@ export class AgentSession implements AgentHost {
   private sent: Pick<SessionInfo, 'commands' | 'mcp'> | null = null;
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
-      session: { id: this.id, sessionId, model: null, effort: 'medium', cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: SESSION_COMMANDS, cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null, account: 'main', accounts: [] },
+      session: { id: this.id, sessionId, model: null, effort: 'medium', cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: SESSION_COMMANDS, cache: null, context: null, compacting: false, stopping: false, mcp: [], repeat: null, pr: null, account: 'main', accounts: [] },
       status: 'Idle',
       events: [],
       pending: [],
@@ -267,7 +264,8 @@ export class AgentSession implements AgentHost {
   }
 
   canUseTool(toolName: string, input: Record<string, unknown>, opts: AskOptions) {
-    return this.cycle.planDone(toolName, input, opts) ?? this.approvals.ask(toolName, input, opts);
+    if (toolName.endsWith('__set_status')) return Promise.resolve({ behavior: 'allow' as const, updatedInput: input });
+    return this.approvals.ask(toolName, input, opts);
   }
 
   ask(toolName: string, input: Record<string, unknown>, opts: AskOptions) {
@@ -386,14 +384,6 @@ export class AgentSession implements AgentHost {
 
   runEdit(run: string, edit: RunEdit) {
     this.links.edit(run, edit);
-  }
-
-  setLoop(on: boolean, max?: number) {
-    this.cycle.set(on, max);
-  }
-
-  restoreLoop(loop: LoopState) {
-    this.cycle.restore(loop);
   }
 
   steer(text: string, id?: string) {

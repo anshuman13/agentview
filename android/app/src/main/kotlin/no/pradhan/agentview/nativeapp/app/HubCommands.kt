@@ -22,7 +22,6 @@ import no.pradhan.agentview.nativeapp.net.runHookCmd
 import no.pradhan.agentview.nativeapp.net.sendNowCmd
 import no.pradhan.agentview.nativeapp.net.setAccountCmd
 import no.pradhan.agentview.nativeapp.net.setEffortCmd
-import no.pradhan.agentview.nativeapp.net.setLoopCmd
 import no.pradhan.agentview.nativeapp.net.setModeCmd
 import no.pradhan.agentview.nativeapp.net.setModelCmd
 import no.pradhan.agentview.nativeapp.net.setReviewCmd
@@ -127,7 +126,7 @@ fun Hub.interrupt() = post(interruptCmd(), store.wanted)
 fun Hub.runControl(run: ChatRun, op: String) {
     post(runCmd(run.id, op), store.wanted)
     val running = store.state.value.live.firstOrNull { it.id == run.chatId }?.running == true
-    if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run, running), if (run.kind == "cycle" || run.kind == "tries") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
+    if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run, running), if (run.kind == "tries") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
 }
 
 fun Hub.runEdit(run: ChatRun, edit: Map<String, Long?>) = post(runEditCmd(run.id, edit), store.wanted)
@@ -179,7 +178,6 @@ fun Hub.setReview(on: Boolean) = post(setReviewCmd(on), store.wanted)
 
 fun Hub.setBuildFlow(on: Boolean) = post(setBuildFlowCmd(on), store.wanted)
 
-fun Hub.setLoop(on: Boolean, max: Int? = null) = post(setLoopCmd(on, max), store.wanted)
 
 fun Hub.review(id: String, action: String, file: String? = null, hunk: Int? = null) = post(reviewCmd(id, action, file, hunk), store.wanted)
 

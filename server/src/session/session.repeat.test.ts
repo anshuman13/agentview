@@ -320,34 +320,6 @@ describe('runs', () => {
     expect(first.s.runs.get(repeat.runId)?.rounds).toHaveLength(1);
     vi.useRealTimers();
   });
-
-  it('a build cycle is one run with a round per step', async () => {
-    const { s, handle } = fakeSession();
-    Object.assign(s.driver, { q: { interrupt: vi.fn(), setModel: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
-    s.setLoop(true, 2);
-    await s.prompt('add the thing');
-    expect(s.runs.list()[0]).toMatchObject({ kind: 'cycle', what: 'add the thing', max: 2, state: 'running' });
-    reply(handle, 'p1', 'Plan: change two files.');
-    await waitFor(() => expect(s.state.session.loop.phase).toBe('build'));
-    reply(handle, 'b1', 'Built it.');
-    await waitFor(() => expect(s.state.session.loop.phase).toBe('test'));
-    reply(handle, 't1', 'Checked.\nVERDICT: PASS', 0.5);
-    const run = s.runs.list()[0];
-    expect(run.rounds.map((r) => r.outcome)).toEqual(['progress', 'progress', 'done']);
-    expect(run).toMatchObject({ state: 'done', why: 'the tester approved after 1 round' });
-  });
-
-  it('Stop on the loop card interrupts the cycle step and ends the run', async () => {
-    const { s } = fakeSession();
-    Object.assign(s.driver, { q: { interrupt: vi.fn(async () => {}), setModel: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
-    s.setLoop(true, 2);
-    await s.prompt('add the thing');
-    const run = s.runs.list()[0];
-    await waitFor(() => expect(s.state.session.running).toBe(true));
-    s.runControl(run.id, 'stop');
-    await waitFor(() => expect(s.runs.get(run.id)).toMatchObject({ state: 'done', why: 'you stopped it' }));
-    expect(s.state.session).toMatchObject({ running: false, loop: { on: false } });
-  });
 });
 
 // A seeded random walk over the send paths. Run with FUZZ_SEEDS=500 to hammer it.

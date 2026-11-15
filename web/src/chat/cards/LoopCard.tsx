@@ -25,7 +25,6 @@ export function LoopCard() {
   const chat = useStore((s) => s.session.id);
   const run = useChatRun(chat);
   const live = useStore((s) => s.live.find((c) => c.id === chat));
-  const phase = useStore((s) => s.session.loop.phase);
   const plan = run?.kind === 'goal' ? planOf(run.what) : null;
   const { progress } = usePlanProgress(plan, run?.chatId);
   const agents = live?.agentList ?? [];
@@ -39,8 +38,8 @@ export function LoopCard() {
   if (!run) return null;
   if (run.kind === 'job' && run.review === 'pending') return <ReviewCard run={run} />;
   const control = (op: RunOp) => runControl(run, op, Boolean(live?.running));
-  // Cycles, tries and jobs have no pause or rounds of their own to run now: Stop is their only control.
-  const cycle = run.kind === 'cycle' || run.kind === 'tries' || run.kind === 'job';
+  // Tries and jobs have no pause or rounds of their own to run now: Stop is their only control.
+  const stopOnly = run.kind === 'tries' || run.kind === 'job';
   const goal = run.kind === 'goal';
   const paused = run.state === 'paused';
   const report = run.rounds.filter((r) => r.report).at(-1);
@@ -60,12 +59,12 @@ export function LoopCard() {
       defaultOpen={!phone && loopOpenByDefault(run, working, waiting)}
       open={phone?.open}
       onToggle={phone?.toggle}
-      title={runLine(run, phase)}
+      title={runLine(run)}
       action={(
         <>
           {run.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
-          {!cycle && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
-          {cycle
+          {!stopOnly && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
+          {stopOnly
             ? <IconButton icon="debug-stop" label="Stop" size="sm" onClick={stop} />
             : (
               <>

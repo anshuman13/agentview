@@ -329,8 +329,6 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: 
   switch (it.kind) {
     case 'user':
       return <div className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}><UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title={`Waiting for ${label}'s next step`}><Icon name="clock" small /><button className="link tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><button className="link" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</button></span>}</div>;
-    case 'phase':
-      return <div className="tr-phase"><Icon name="sync" small />{it.text}</div>;
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':

@@ -37,8 +37,6 @@
 .tr-system.err { color: var(--err); }
 .tr-auto { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-faint); cursor: pointer; }
 .tr-auto-text { margin-top: var(--sp-2); white-space: pre-wrap; color: var(--fg-muted); }
-.tr-phase { display: flex; align-items: center; gap: var(--sp-4); margin: var(--sp-7) 0 var(--sp-2); color: var(--agent); font-size: var(--fs-sm); font-weight: 600; letter-spacing: var(--tracking); }
-.tr-phase::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 .tr-step {
   display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: var(--sp-4); align-items: center;

@@ -65,7 +65,6 @@ import no.pradhan.agentview.nativeapp.app.refreshUsage
 import no.pradhan.agentview.nativeapp.app.runInTerminal
 import no.pradhan.agentview.nativeapp.app.setAccount
 import no.pradhan.agentview.nativeapp.app.setEffort
-import no.pradhan.agentview.nativeapp.app.setLoop
 import no.pradhan.agentview.nativeapp.app.setMode
 import no.pradhan.agentview.nativeapp.app.setModel
 import no.pradhan.agentview.nativeapp.app.setReview
@@ -88,12 +87,10 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.well
-import no.pradhan.agentview.nativeapp.ui.plural
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
 private val BUILD_CHOICES = listOf(Choice("off", "Off", "Prompts run as usual")) +
-    listOf(1, 2, 3, 5).map { Choice(it.toString(), "Cycle, up to ${plural(it, "round")}", "Opus plans and builds, Sonnet tests and reports, Opus fixes what fails") } +
     Choice("flow", "Spec flow", "Spec, sketch and your approval before building")
 
 private enum class Picker { Add, Settings, Effort, Account, Build }
@@ -247,11 +244,8 @@ private fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: 
         Picker.Settings -> ChatSettingsSheet(hub, session, run, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
         Picker.Build -> {
-            val loop = session?.loop?.takeIf { it.on }
             val flow = session?.buildFlow == true
-            PickerSheet("Build", BUILD_CHOICES, loop?.max?.toString() ?: if (flow) "flow" else "off", { v ->
-                val max = v.toIntOrNull()
-                if (max != null) hub.setLoop(true, max) else if (loop != null) hub.setLoop(false, null)
+            PickerSheet("Build", BUILD_CHOICES, if (flow) "flow" else "off", { v ->
                 if ((v == "flow") != flow) hub.setBuildFlow(v == "flow")
             }) { onSheet(null) }
         }
@@ -327,14 +321,13 @@ private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, on
             effort?.let { ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { onSheet(Picker.Effort) }, trailing = { Chevron() }) }
             if (showAccount) { if (effort != null) Hairline(); ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); onSheet(Picker.Account) }, trailing = { Chevron() }) }
         }
-        val loop = session?.loop?.takeIf { it.on }
         SectionHeader("Goal")
         Group {
-            // Loops, cycles, tries and jobs have their controls on the loop card only.
+            // Loops, tries and jobs have their controls on the loop card only.
             val opens = run == null || run.kind == "goal"
-            ListRow("Goal", run?.let { runLine(it, session?.loop?.phase) } ?: "Off", onClick = if (opens) ({ hub.shell.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }) else null, trailing = { if (opens) Chevron() })
+            ListRow("Goal", run?.let { runLine(it) } ?: "Off", onClick = if (opens) ({ hub.shell.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }) else null, trailing = { if (opens) Chevron() })
             Hairline()
-            ListRow("Build", loop?.let { "Cycle, up to ${plural(it.max, "round")}" } ?: if (session?.buildFlow == true) "Spec flow" else "Off", onClick = { onSheet(Picker.Build) }, trailing = { Chevron() })
+            ListRow("Build", if (session?.buildFlow == true) "Spec flow" else "Off", onClick = { onSheet(Picker.Build) }, trailing = { Chevron() })
         }
     }
 }

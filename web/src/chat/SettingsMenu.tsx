@@ -12,24 +12,23 @@ import { copyChatMarkdown, copyResumeCommand, forkChat, remindChat, sideChat } f
 import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
-import { buildLabel, ChoicePick, SheetRows } from './SettingsPickers';
+import { ChoicePick, SheetRows } from './SettingsPickers';
 
 type Props = { pick: Pick; setPick: (p: Pick | null) => void; close: () => void };
 
 export function SettingsMenu({ pick, setPick, close }: Props) {
-  const { loop, menu, modelName, effortName } = useChatSettings();
+  const { menu, modelName, effortName } = useChatSettings();
   const resumeCommand = useStore((s) => s.session.resumeCommand);
   const canEffort = useCan('effort');
   const sessionId = useStore((s) => s.session.sessionId);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
   const chat = useStore((s) => s.session.id);
-  const phase = useStore((s) => s.session.loop.phase);
   const buildFlow = useStore((s) => Boolean(s.session.buildFlow));
   const run = useChatRun(chat);
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
-    // Loops, cycles, tries and jobs have their controls on the loop card only.
+    // Loops, tries and jobs have their controls on the loop card only.
     if (v === 'goal') return act(() => (!run ? startGoal({ here: true }) : run.kind === 'goal' && openGoal(run.id)));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
@@ -44,8 +43,8 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
       ...(accounts.length > 1 || account !== 'main' ? [picker('account', 'Claude account', ACCOUNT_LABEL[account])] : []),
     ]],
     ['Goal', [
-      action('goal', 'Goal', run ? runLine(run, phase) : 'Off'),
-      picker('build', 'Build', buildLabel(loop, buildFlow)),
+      action('goal', 'Goal', run ? runLine(run) : 'Off'),
+      picker('build', 'Build', buildFlow ? 'Spec flow' : 'Off'),
     ]],
     ['Chat', [
       ...(sessionId ? [picker('fork', 'Fork', 'Side chat or a new chat from a summary'), picker('remind', 'Remind me', 'Add a task to check this chat later')] : []),

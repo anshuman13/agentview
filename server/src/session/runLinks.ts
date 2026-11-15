@@ -65,8 +65,8 @@ export class RunLinks {
   }
 
   waitingOnUser(on: boolean) {
-    const { runs, state, cycle } = this.s;
-    for (const id of [state.session.repeat?.runId, cycle.run, runs.jobFor(this.s.id)?.id]) {
+    const { runs, state } = this.s;
+    for (const id of [state.session.repeat?.runId, runs.jobFor(this.s.id)?.id]) {
       const run = runs.get(id);
       if (on && run?.state === 'running') runs.update(id, { state: 'paused', why: WAITING });
       else if (!on && run?.why === WAITING) runs.update(id, { state: 'running', why: '' });
@@ -74,18 +74,16 @@ export class RunLinks {
   }
 
   endAll() {
-    const { runs, state, cycle, id } = this.s;
+    const { runs, state, id } = this.s;
     runs.end(state.session.repeat?.runId, 'chat closed');
-    runs.end(cycle.run, 'chat closed');
     const job = runs.jobFor(id);
     if (job?.review !== 'pending') runs.end(job?.id, 'chat closed');
     for (const r of runs.list()) if (r.kind === 'tries' && r.chatId === id) runs.end(r.id, 'chat closed');
   }
 
   control(run: string, op: RunOp) {
-    const { runs, cycle, repeater, state } = this.s;
+    const { runs, repeater, state } = this.s;
     if (runs.get(run)?.kind === 'tries') return op === 'stop' ? runs.end(run, STOPPED_BY_YOU) : undefined;
-    if (cycle.run === run) return op === 'stop' ? cycle.set(false) : undefined;
     if (runs.jobFor(this.s.id)?.id === run) {
       if (op !== 'stop') return;
       runs.end(run, STOPPED_BY_YOU);

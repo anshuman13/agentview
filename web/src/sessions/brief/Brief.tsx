@@ -41,7 +41,6 @@ export function Brief() {
   const running = useStore((s) => s.session.running);
   const macName = useMacName();
   const stopping = useStore((s) => s.session.stopping);
-  const loop = useStore((s) => s.session.loop);
   const repeat = useStore((s) => s.session.repeat);
   const cwd = useStore((s) => s.session.cwd);
   const sessionId = useStore((s) => s.session.id);
@@ -109,7 +108,7 @@ export function Brief() {
           <ChatDetailsMenu waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         <div className="tl-line">
-          <HeadState state={state} status={status} loop={loop} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
+          <HeadState state={state} status={status} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
           {phone && side && <button className="tl-agents" onClick={() => { setShowAgents(true); setAgentSel(null); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}
         </div>
         <Transcript />

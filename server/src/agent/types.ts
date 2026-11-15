@@ -1,4 +1,4 @@
-import type { Account, AgentEvent, CacheInfo, Capabilities, ChatEvent, Effort, LoopRole, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
+import type { Account, AgentEvent, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
 
@@ -50,8 +50,6 @@ export interface AgentDriver {
   clearInjected(): string | null;
   // Starts a code review of the working tree or a PR; the findings reach host.reportFindings.
   review(target: 'local' | number, id?: string): void;
-  // The model a build cycle step runs on; null keeps the chat's own.
-  roleModel(role: LoopRole): { model: string; effort?: Effort } | null;
   // cancelQueued also drops messages sent with 'next' that Claude has not read yet.
   interrupt(cancelQueued?: boolean): Promise<void>;
   setModel(model: string): Promise<{ model: string }>;

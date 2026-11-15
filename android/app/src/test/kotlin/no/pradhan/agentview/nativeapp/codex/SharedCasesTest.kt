@@ -270,7 +270,7 @@ class SharedCasesTest {
     @Test fun runLine() {
         for (c in cases("run-line")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
-            assertEquals(c.str("name"), c.str("expected"), runLine(run, c.nullable("phase")?.jsonPrimitive?.content))
+            assertEquals(c.str("name"), c.str("expected"), runLine(run))
         }
     }
 

@@ -21,7 +21,6 @@ export async function restoreChats() {
     const job = runs.jobOfSession(s.sessionId);
     if (job) runs.update(job.id, { chatId: chat.id });
     if (s.crons.length) chat.wakeups.restore(s.crons);
-    if (s.loop) chat.restoreLoop(s.loop);
     if (s.repeat) chat.resumeRepeat(s.repeat);
     if (s.stopped) chat.resumeStopped(s.stopped);
     for (const q of s.queued ?? []) void chat.prompt(q.text, q.id);

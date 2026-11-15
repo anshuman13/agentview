@@ -17,16 +17,15 @@ import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.workspace.PrFile
 import no.pradhan.agentview.nativeapp.ui.agoShort
 
-// Loops, goals and build cycles (web/src/chat/composerLogic.ts runLine).
+// Loops, goals, tries and jobs (web/src/chat/composerLogic.ts runLine).
 
-private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "cycle" to "Build cycle", "tries" to "Tries", "job" to "Job")
+private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "tries" to "Tries", "job" to "Job")
 
-fun runLine(run: ChatRun, phase: String? = null): String = when {
+fun runLine(run: ChatRun): String = when {
     run.state == "paused" -> if (run.why.isNotEmpty()) "Paused · ${run.why}" else "Paused"
     run.kind == "goal" -> roundLine("Goal", run)
     run.kind == "tries" -> "Tries · ${run.tries.count { !it.dropped }} chats"
     run.kind == "job" -> "Job · ${run.branch}"
-    run.kind == "cycle" -> "Build cycle · round ${run.round}/${run.max}" + (phase?.takeIf { it != "passed" && it != "failed" }?.let { " · ${it.replaceFirstChar(Char::uppercase)}" } ?: "")
     else -> roundLine("Loop", run)
 }
 

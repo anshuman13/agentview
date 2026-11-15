@@ -11,15 +11,10 @@ import { modeSteps, newestModels } from '../../../shared/providers';
 import { effortsFor } from './capabilitiesLogic';
 import { useChatSettings, type Pick } from './ChatSettings';
 
-const rounds = (n: number) => `${n} ${n === 1 ? 'round' : 'rounds'}`;
 const BUILD_ITEMS = [
   { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
-  ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Cycle, up to ${rounds(n)}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
   { value: 'flow', label: 'Spec flow', detail: 'Spec, sketch and your approval before building' },
 ];
-
-export const buildValue = (loop: { on: boolean; max: number }, flow: boolean) => (loop.on ? String(loop.max) : flow ? 'flow' : 'off');
-export const buildLabel = (loop: { on: boolean; max: number }, flow: boolean) => (loop.on ? `Cycle, up to ${rounds(loop.max)}` : flow ? 'Spec flow' : 'Off');
 
 const OLDER = '\0older';
 
@@ -101,19 +96,15 @@ export function AccountPick({ pick, close, back }: Props) {
 }
 
 export function BuildPick({ pick, close, back }: Props) {
-  const { loop } = useChatSettings();
   const flow = useStore((s) => Boolean(s.session.buildFlow));
   return (
     <ChoicePick
       back={back}
       anchor={pick.at}
       title="Build"
-      current={buildValue(loop, flow)}
+      current={flow ? 'flow' : 'off'}
       items={BUILD_ITEMS}
       onPick={(v) => {
-        const max = Number(v);
-        if (max) send({ type: 'set_loop', on: true, max });
-        else if (loop.on) send({ type: 'set_loop', on: false });
         if ((v === 'flow') !== flow) send({ type: 'set_build_flow', on: v === 'flow' });
         close();
       }}

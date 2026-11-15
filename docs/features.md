@@ -175,7 +175,7 @@ Each Jobs list row is one line of title and one line of meta: the schedule in wo
 ## Timeline and steering
 
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
-and notes. The chat header shows the current step at the top right (Idle and the time of the last reply when idle) with a done/total count of steps; a click opens a dropdown (a sheet from the top on phones) with the running tool, the steps done this turn (checked) and the next steps (unchecked, editable, Add a step). Each finished task is one `set_status` call with `done`: one plain sentence saying what changed, such as "Merged Build cycle and Build flow into one Build row", never a process step like "Read the code"; `important` is only for risks, blockers and surprises, and the final reply is one or two short sentences. Subagents get the same rule when they start and report through `set_status` too; their calls carry the agent id and never change the chat's status line. The chat shows each turn as its prompt, its task lines and Claude's final reply. The task lines (no box: a small "Tasks · 2 of 5" label while tasks remain else "N tasks", then one small line per task, a spinner while the turn runs) appear with the turn's first top-level `set_status` call and list every task in full: the `done` sentences checked (a repeated one keeps its first place), then the latest call's `next` items not done yet as open circles. While the turn runs the first open item has a spinner and shows the latest status text, or with none left that text gets its own spinner row. Tools, files, agents and earlier text are hidden; a "N tools ›" button on the right of the label opens that turn's tool calls and Claude's text between them, in order, in a Tool calls tab (web, an editor tab) or screen (phone). Blocked and Review
+and notes. The chat header shows the current step at the top right (Idle and the time of the last reply when idle) with a done/total count of steps; a click opens a dropdown (a sheet from the top on phones) with the running tool, the steps done this turn (checked) and the next steps (unchecked, editable, Add a step). Each finished task is one `set_status` call with `done`: one plain sentence saying what changed, such as "Merged Plan first and Spec flow into one Build row", never a process step like "Read the code"; `important` is only for risks, blockers and surprises, and the final reply is one or two short sentences. Subagents get the same rule when they start and report through `set_status` too; their calls carry the agent id and never change the chat's status line. The chat shows each turn as its prompt, its task lines and Claude's final reply. The task lines (no box: a small "Tasks · 2 of 5" label while tasks remain else "N tasks", then one small line per task, a spinner while the turn runs) appear with the turn's first top-level `set_status` call and list every task in full: the `done` sentences checked (a repeated one keeps its first place), then the latest call's `next` items not done yet as open circles. While the turn runs the first open item has a spinner and shows the latest status text, or with none left that text gets its own spinner row. Tools, files, agents and earlier text are hidden; a "N tools ›" button on the right of the label opens that turn's tool calls and Claude's text between them, in order, in a Tool calls tab (web, an editor tab) or screen (phone). Blocked and Review
 cards, error system rows, spec and sketch cards stay visible, and pending requests and the loop card stay above
 the composer. A turn without tasks (older chats) shows only its tools button, prompt and reply. The web and the phone share the rule (`workFold.ts`, `WorkFold.kt`).
 A chat row in the Sessions view shows the chat's
@@ -221,9 +221,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
   (Permission mode, Model, Effort, Claude account, Goal, Build, Fork, Remind me, Copy, Tools…); Fork holds Side chat and
   New chat, Copy holds Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Memory, Hooks and TODOs.
-  The Build row picks Off, Cycle up to 1, 2, 3 or 5 rounds ([Build cycle](#build-cycle)) or Spec flow, which makes Claude
+  The Build row picks Off or Spec flow, which makes Claude
   run every build request through the `/agentview:build` skill (`buildFlow`, a UserPromptSubmit hook says so on each
-  prompt); picking one turns the other off. The phone's chat menu
+  prompt). The phone's chat menu
   has a Tools… sheet with Images, Dev servers, TODOs, Memory, Hooks and Continue in terminal
 - In the web and phone transcripts, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as
   "Explored 4 files, 2 searches"; the header opens the steps, and the group keeps its choice like any transcript box
@@ -397,28 +397,15 @@ in the chat list until its next message.
 
 ## Plan, spec and build
 
-Four ways to have a change built, lightest first:
+Three ways to have a change built, lightest first:
 
 - **Plan first** (permission mode Plan, or Start as Plan first on the phone): Claude writes a plan and waits in plan mode; approving it lets Claude build in the same chat. For a change small enough to read as one plan.
 - **Start with a spec** (palette "Chat: Start with a spec", Start as Spec on the phone): Claude writes `.claude/specs/<slug>.md` with Requirements, Design and `- [ ]` Tasks, then stops. Open the file to see its Tasks header: Start on one task, or Run all in this chat or Run as goal for all of them. For work you steer task by task.
-- **[Build cycle](#build-cycle)** (Build row in chat settings, Cycle up to N rounds): plan, build and test rounds in the chat, with Sonnet testing what Opus built. No spec file.
 - **Build** ("Build the brief" in the composer + menu or Add sheet, Spec flow in the Build row of chat settings, or asking Claude to build a feature): the `/agentview:build` skill of the [build kit](#build-kit). The pm agent writes the spec, the spec reviewer checks it (with a cold reader and a scope check in the first round), a designer sketches the screens of a UI spec, you approve the spec and the sketch, an implementer builds it on a branch in a worktree, a tester checks each acceptance criterion and a code reviewer reads the diff. Claude then cherry-picks what passed onto the main branch.
 
 A build shows as its [Build card](#build-card) in the chat that started it: a strip of steps (Spec, Spec review, Sketch, Your approval, Implement, Test, Code review, Merge), the step that needs you or is running, and the acceptance criteria counts. Tap a step to open its sheet; Your approval is where you approve or request changes, phase by phase. A goal can also run a spec: Run as goal on the Tasks header starts `/goal every task in <path> is ticked`, shown on its loop card like any goal.
 
 The sketch and the approval are optional. By default a spec with a (UI) acceptance criterion gets a sketch: the designer agent writes `.claude/sketches/<slug>.html`, phone layout first, and the Sketch step appears in the strip. Without one the strip has no Sketch step. In the Spec sheet the sketch is one more phase chip, Sketch, shown in a Phone or Desktop frame above Approve; a changes note on it goes back to the designer, a note on the spec goes to the pm and then to the designer so the sketch follows. The implementer and tester get the sketch's path and match its layout, the spec winning where they differ. Ask for "no sketch" or "a sketch" to override the default, and "without approval" to build without waiting for you (the sketch is still written).
-
-## Build cycle
-
-The Build row in the chat settings menu (web and phone; Off, Cycle up to N rounds, or Spec flow) turns a prompt into a plan, build, test cycle. Opus plans in plan mode (on Codex the default model, with high effort for plan and build and medium for test), detailed
-enough that someone who missed the conversation could build from it, and starts building as soon as the plan is
-ready. A plan that deletes data, changes a schema, auth or security, reaches outside the repo, pushes or deploys,
-or guesses at an open question waits for your approval instead (from its APPROVAL line when the agent has no plan tool), and rejecting it stops the cycle. Sonnet then tests the result as a separate model and ends with a verdict, and
-Opus fixes whatever the tester found, up to the number of rounds you pick. Phases show as violet markers in the
-timeline and transcript, the composer footer shows the round, and Stop ends the cycle. Claude
-exiting during a step ends it too. When a cycle ends (passed, failed or stopped) it switches itself off, so the next
-message is a normal turn. A cycle that a server restart interrupted is not resumed: the chat gets a note and the
-setting is Off.
 
 ## Personal and work Claude accounts
 
@@ -473,25 +460,23 @@ over 90% a standing goal skips the round and an until-done goal waits, shown as 
 usage figure (OpenRouter) means no cap. The `run_edit` message changes every, the end time and the cap of the running
 goal; a new chat can start with a first message (`new_session` `text`), which is how a goal starts in a new chat.
 
-Every `/loop`, `/goal`, build cycle and `/tries` is a run, kept in the host in `~/.agentview/runs.json` (active runs and the
+Every `/loop`, `/goal` and `/tries` is a run, kept in the host in `~/.agentview/runs.json` (active runs and the
 latest 100 ended ones, each with its last 50 rounds) and served at `GET /api/runs`. A round is the outcome of one turn,
 its one-line summary and its cost. Loop and goal rounds tell Claude to answer first in plain sentences and finish the reply with
 `ROUND: <done|progress|blocked|question|nothing> <one sentence>`; the line is read by the server and hidden from the
 transcript, the chat row and push bodies. A round without the line counts as progress. A round pushes "Loop in <repo>: <outcome>" ("Goal in <repo>: <outcome>" for a goal; the body is the first sentence of the ROUND line) only for done, blocked, question or failed, and a run that ends pushes its reason unless you
-stopped it (a goal reads "Goal met in <repo>", "Goal stopped in <repo>" or "Goal not met in <repo>"). A usage limit or a pending approval marks the run paused until the next round or the answer. A build
-cycle is one run with a round per step.
+stopped it (a goal reads "Goal met in <repo>", "Goal stopped in <repo>" or "Goal not met in <repo>"). A usage limit or a pending approval marks the run paused until the next round or the answer.
 
 The loop card sits above the composer while the chat has an active run, as a box that opens by default while the loop is working or needs you, otherwise starts collapsed, and collapses to its header (the state line with Pause and More): a state line ("Loop · round 4 · next 14:20",
-"Paused · usage limit until 18:00", "Goal · round 3 of 20", "Build cycle · round 2/3 · Test"), then a Now row with what is
+"Paused · usage limit until 18:00", "Goal · round 3 of 20"), then a Now row with what is
 happening: the agent's latest status (with "Next: ..." and the steps left) or the last round ("Round 4 · 02:10 · progress: merged X", "nothing to do" for a quiet round, "First round 02:00" before the first), whichever is newer, with a
 running dot while a turn or an agent runs. One running agent gets a row (slug or description, type and minutes) that
 opens it; two or more share one "N agents" row listing their names, which opens the agents list. On a goal, last comes
-"Plan N of M done" when it has a plan file and nothing else (its condition and cost are in the goal detail); a loop, cycle, tries or job card shows its what text on one line and the total cost. A turn the run did not start, such as a background agent finishing, adds a round when its
+"Plan N of M done" when it has a plan file and nothing else (its condition and cost are in the goal detail); a loop, tries or job card shows its what text on one line and the total cost. A turn the run did not start, such as a background agent finishing, adds a round when its
 reply ends with a ROUND line, with the current round number. Tapping the Now row of a goal card opens its detail; on a loop the Now row
 lists the last 10 rows (runs of "nothing to do" rounds merged into one). A loop or goal has Pause (or Resume) and a More menu with Run now and Stop; Run now does nothing
 while Claude is busy. A pause is saved and survives
-a restart. Stop shows "Loop stopped" or "Goal stopped" with Undo, which starts the same run again within 60 s. A build
-cycle only has Stop ("Build cycle stopped", no Undo). The controls take a run id, so they work from any screen. A round
+a restart. Stop shows "Loop stopped" or "Goal stopped" with Undo, which starts the same run again within 60 s. Tries and jobs only have Stop, with no Undo. The controls take a run id, so they work from any screen. A round
 that ends its run (goal met, last round, end time) sends only the run-end push. The chat header (Android) and the web status bar read "Running · 2 agents" while agents run with no turn, "Next round 14:20" between rounds and "Idle" only with no run and no agent.
 
 A run needs you while its last round is blocked or a question, or it is paused for your approval, until a later round

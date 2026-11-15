@@ -48,7 +48,7 @@ export function notifyApproval(chat: LiveChat, slug: string, title: string, body
 }
 
 export function notifyRunEnded(run: ChatRun, repo: string, push: boolean) {
-  const kind = run.kind === 'cycle' ? 'Build cycle' : run.kind === 'tries' ? 'Tries' : 'Loop';
+  const kind = run.kind === 'tries' ? 'Tries' : 'Loop';
   const title = run.kind === 'goal' ? (/^Goal met/.test(run.why) ? 'Goal met' : /^Not met/.test(run.why) ? 'Goal not met' : 'Goal stopped') : `${kind} ended`;
   post(`${title}${repo ? ` in ${repo}` : ''}`, run.title, run.why, `${APP}/?chat=${run.chatId}`, push);
 }

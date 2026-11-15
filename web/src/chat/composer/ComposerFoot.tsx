@@ -16,11 +16,11 @@ export function useModeText() {
 }
 
 function ModeChip({ setPick }: { setPick: (p: Pick) => void }) {
-  const { loop, modeInfo } = useChatSettings();
+  const { modeInfo } = useChatSettings();
   const modeText = useModeText();
   return (
-    <Chip className={`cp-mode${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Build cycle on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
-      <Icon name={modeInfo.icon} small /><span>{modeText}</span>{loop.on && <Icon name="sync" small />}<Icon name="chevron-down" small />
+    <Chip className="cp-mode" title={`${modeInfo.detail} (Shift+Tab to switch mode)`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
+      <Icon name={modeInfo.icon} small /><span>{modeText}</span><Icon name="chevron-down" small />
     </Chip>
   );
 }

@@ -10,7 +10,7 @@ const PALETTE = make('palette', [
   ['tab:chat', 'Tab: Chat'], ['tab:code', 'Tab: Files'], ['tab:term', 'Tab: Terminal'], ['tab:browser', 'Tab: Browser'], ['tab:agents', 'Tab: Agents'],
   ['codex:today', 'Codex: Overview'], ['codex:tasks', 'Codex: Tasks'], ['codex:meetings', 'Codex: Meetings'], ['codex:jobs', 'Codex: Jobs'], ['codex:wiki', 'Codex: Wiki'], ['codex:summary', 'Codex: Slack summary'], ['codex:goals', 'Codex: All goals'], ['codex:search', 'Codex: Search'], ['codex:newtask', 'Codex: New task'],
   ['terminal', 'Toggle Terminal'], ['switchEditor', 'Switch File and Browser'], ['toggleSidebar', 'Toggle Left Sidebar'], ['toggleChat', 'Toggle Chat'], ['file', 'Go to File'], ['repo', 'Open Repository'],
-  ['forkChat', 'Fork Chat'], ['compact', 'Compact Context'], ['loop', 'Toggle Build Cycle'], ['review', 'Toggle Review Changes'], ['goal', 'New goal'], ['goalFile', 'Run file as goal'], ['spec', 'Start with a spec'], ['stop', 'Stop the Agent'],
+  ['forkChat', 'Fork Chat'], ['compact', 'Compact Context'], ['review', 'Toggle Review Changes'], ['goal', 'New goal'], ['goalFile', 'Run file as goal'], ['spec', 'Start with a spec'], ['stop', 'Stop the Agent'],
   ['theme', 'Toggle Theme'], ['notify', 'Toggle Notifications'], ['shortcuts', 'Keyboard shortcuts'], ['phone', 'Open on Phone'], ['restart', 'Restart Server When Agents Are Idle'],
   ['model', 'Pick a model'], ['effort', 'Pick an effort'], ['mode', 'Pick a permission mode'], ['newChat', 'New chat'], ['open', 'Open a chat, task, meeting or wiki page'],
 ], () => true);

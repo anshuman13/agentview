@@ -91,7 +91,6 @@ internal fun gapAbove(older: Item?, it: Item): Dp? {
         act(older) && act(it) -> null
         (act(older) && it is Item.File) || (older is Item.File && act(it)) -> Tokens.sp1
         it is Item.User || older is Item.User -> Tokens.sp12
-        it is Item.Phase -> Tokens.sp12
         else -> Tokens.sp4
     }
 }
@@ -319,10 +318,6 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
 internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, bump: Int? = null) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat, canRewind)
-        is Item.Phase -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            Text(it.text, style = Type.label, color = av.agent, fontWeight = FontWeight.SemiBold)
-            HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
-        }
         is Item.Assistant -> Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)

@@ -24,11 +24,10 @@ export class Prompts {
   }
 
   async prompt(text: string, id: string = randomUUID()) {
-    const { state, waiting, cycle } = this.s;
+    const { state, waiting } = this.s;
     if (this.known(id)) return;
     if (this.loopCommand(text, id)) return;
     if (state.session.running) return waiting.queue(text, id);
-    if (state.session.loop.on && !text.trim().startsWith('/')) return cycle.start(text, id);
     this.s.sendPrompt(text, id);
   }
 
@@ -41,8 +40,8 @@ export class Prompts {
   // The composer's Enter while Claude works: Claude reads it at its next step and keeps going.
   async queueNext(text: string, id: string = randomUUID()) {
     if (this.known(id)) return;
-    const { running, compacting, loop } = this.s.state.session;
-    if (!running || compacting || loop.on || text.trim().startsWith('/') || !this.s.driver.attached) return this.prompt(text, id);
+    const { running, compacting } = this.s.state.session;
+    if (!running || compacting || text.trim().startsWith('/') || !this.s.driver.attached) return this.prompt(text, id);
     this.s.waiting.holdMidTurn(text, id);
     this.s.driver.send(expandChatMentions(text, this.s.transcriptPath), id, 'next');
   }

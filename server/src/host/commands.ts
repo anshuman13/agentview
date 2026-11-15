@@ -46,10 +46,6 @@ function runHookCommand(chat: AgentSession, msg: Msg<'run_hook'>) {
   if (typeof msg.name === 'string') chat.hooks.run(msg.name);
 }
 
-function loopCommand(chat: AgentSession, msg: Msg<'set_loop'>) {
-  chat.setLoop(Boolean(msg.on), typeof msg.max === 'number' ? msg.max : undefined);
-}
-
 function setModelCommand(chat: AgentSession, msg: Msg<'set_model'>) {
   chat.setModel(msg.model).catch((err) => chat.system(`Could not set the model: ${errText(err)}`));
 }
@@ -99,8 +95,6 @@ export function command(chat: AgentSession, msg: ClientMessage): Promise<unknown
       return sendToTries(msg.run, String(msg.text));
     case 'tries_keep':
       return keepTry(msg.run, Number(msg.n));
-    case 'set_loop':
-      return loopCommand(chat, msg);
     case 'interrupt':
       return void chat.interrupt();
     case 'rewind':

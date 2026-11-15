@@ -1,11 +1,11 @@
 import { buildStageOf } from '../../../shared/builds.js';
-import type { ChatEvent, LiveAgent, LoopState, Repeat } from '../../../shared/protocol.js';
+import type { ChatEvent, LiveAgent, Repeat } from '../../../shared/protocol.js';
 import type { Cron, RunningTask } from '../agent/types.js';
 import { RUN_ID } from '../agent/claude/transcript.js';
 import type { Stopped } from '../session/resume.js';
 import type { AgentSession } from '../session/session.js';
 
-export type Saved = { sessionId: string; crons: Cron[]; repeat?: Repeat | null; loop?: LoopState; queued?: { id: string; text: string }[]; stopped?: Stopped };
+export type Saved = { sessionId: string; crons: Cron[]; repeat?: Repeat | null; queued?: { id: string; text: string }[]; stopped?: Stopped };
 
 export const runningAgents = (chat: AgentSession) => liveAgents(chat.state.events);
 
