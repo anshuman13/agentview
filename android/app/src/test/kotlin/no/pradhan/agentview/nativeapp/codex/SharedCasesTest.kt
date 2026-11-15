@@ -184,9 +184,10 @@ class SharedCasesTest {
             val titles = rows.filterIsInstance<FoldRow.Fold>().map { workTitle(it.work, false, c.str("billing")) }
             assertEquals(c.str("name"), c.getValue("titles").jsonArray.map { it.jsonObject.let { t -> WorkTitle(t.str("text"), t.str("failed"), t.str("detail")) } }, titles)
             c["steps"]?.let { expected ->
-                val want = expected.jsonArray.map { turn -> turn.jsonArray.map { s -> s.jsonObject.let { StatusStep(it.str("id"), it.str("title")) } } }
+                val want = expected.jsonArray.map { turn -> turn.jsonArray.map { s -> s.jsonObject.let { StatusStep(it.str("id"), it.str("title"), it["done"]?.jsonPrimitive?.boolean == true) } } }
                 assertEquals(c.str("name"), want, rows.filterIsInstance<FoldRow.Fold>().map { it.steps })
             }
+            c["now"]?.let { expected -> assertEquals(c.str("name"), expected.jsonArray.map { it.jsonPrimitive.content }, rows.filterIsInstance<FoldRow.Fold>().map { it.now }) }
         }
     }
 

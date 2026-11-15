@@ -12,27 +12,32 @@ const notes = (items: Item[]) => (items.length === 1 ? noteOf(items[0]) : '') ||
 
 export type FoldRow =
   | { kind: 'item'; it: Item }
-  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[] };
+  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[]; now: string };
 
-export type StatusStep = { id: string; title: string };
+export type StatusStep = { id: string; title: string; done: boolean };
 
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
-// Each prompt's finished tasks from its top-level set_status calls; a repeated title keeps its first place.
+type Tasks = { done: StatusStep[]; next: StatusStep[]; now: string };
+
+// Each prompt's tasks from its top-level set_status calls: the finished ones (a repeated title keeps its first place), then the latest call's next list that is not done yet, and the latest status text.
 function stepsByTurn(events: ChatEvent[]) {
-  const out = new Map<string, StatusStep[]>();
+  const out = new Map<string, Tasks>();
   let key = '';
   for (const e of events) {
     if (e.kind === 'user') key = e.id;
     if (e.kind !== 'tool_use' || e.parent || !e.name.endsWith('__set_status')) continue;
+    const t = out.get(key) ?? { done: [], next: [], now: '' };
+    out.set(key, t);
     const title = text(e.input.done);
-    if (!title) continue;
-    const list = out.get(key) ?? [];
-    out.set(key, list);
-    if (!list.some((s) => s.title === title)) list.push({ id: e.id, title });
+    if (title && !t.done.some((s) => s.title === title)) t.done.push({ id: e.id, title, done: true });
+    if (Array.isArray(e.input.next)) t.next = e.input.next.map(text).filter(Boolean).map((title, i) => ({ id: `${e.id}:${i}`, title, done: false }));
+    t.now = text(e.input.text);
   }
   return out;
 }
+
+const taskList = (t: Tasks | undefined): StatusStep[] => (t ? [...t.done, ...t.next.filter((n) => !t.done.some((d) => d.title === n.title))] : []);
 
 type Span = { at: number; end: number; cost: number };
 
@@ -96,9 +101,9 @@ export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(
       if (!shown || it.kind === 'agent') hidden.push(it);
       if (shown) rows.push({ kind: 'item', it });
     });
-    const done = steps.get(key) ?? [];
-    if (hidden.length > 0 || done.length > 0) {
-      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: done };
+    const tasks = steps.get(key);
+    if (hidden.length > 0 || tasks) {
+      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '' };
       const at = reply < 0 ? rows.length : rows.findIndex((r) => r.kind === 'item' && r.it === group[reply]);
       rows.splice(at, 0, fold);
     }

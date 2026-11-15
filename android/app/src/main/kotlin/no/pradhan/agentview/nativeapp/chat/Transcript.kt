@@ -252,12 +252,25 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     }
 }
 
-// The turn's finished tasks from set_status, each in full; open by default.
+// The turn's tasks from set_status, each in full: finished ones checked, the current one with a spinner while the turn runs, the rest open; open by default.
 @Composable
 private fun StepsBox(hub: Hub, fold: FoldRow.Fold, live: Boolean) {
-    TranscriptBox(hub, "steps:${fold.id}", "Tasks", plural(fold.steps.size, "task"), state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null, defaultOpen = true) {
+    val done = fold.steps.count { it.done }
+    val current = if (live) fold.steps.firstOrNull { !it.done } else null
+    val spin = @Composable { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) }
+    val meta = if (done < fold.steps.size) "$done of ${fold.steps.size} done" else plural(fold.steps.size, "task")
+    TranscriptBox(hub, "steps:${fold.id}", "Tasks", meta, state = if (live) { { spin() } } else null, defaultOpen = true) {
         Column(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-            fold.steps.forEach { Text("\u2022  ${it.title}", style = Type.callout, color = av.fg) }
+            @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
+                Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.callout, color = color) }
+            fold.steps.forEach { s ->
+                when {
+                    s.done -> Task({ AvIcon("pass-filled", null, Tokens.sp6, tint = av.ok) }, s.title, av.fg)
+                    s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
+                    else -> Task({ AvIcon("circle-large-outline", null, Tokens.sp6, tint = av.fgFaint) }, s.title, av.fgMuted)
+                }
+            }
+            if (live && current == null && fold.now.isNotEmpty()) Task(spin, fold.now, av.fgStrong)
         }
     }
 }

@@ -218,7 +218,7 @@ function TranscriptView({ events, earlier, cwd, running, showWork, bill }: { eve
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
         const day = r.kind === 'item' ? days.get(r.it.id) : undefined;
         const row = r.kind === 'fold'
-          ? <StepsBox key={id} id={r.id} steps={r.steps} live={running && r.last} />
+          ? <StepsBox key={id} id={r.id} steps={r.steps} now={r.now} live={running && r.last} />
           : rowOf(r.it, i === 0, showWork ? 'flat' : 'shown');
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
@@ -301,10 +301,21 @@ function Folded({ id, className, children }: { id: string; className: string; ch
 
 const UserText = ({ id, text }: { id: string; text: string }) => <Folded id={'prompt-' + id} className="tr-user-text">{text}</Folded>;
 
-function StepsBox({ id, steps, live }: { id: string; steps: StatusStep[]; live: boolean }) {
+function StepsBox({ id, steps, now, live }: { id: string; steps: StatusStep[]; now: string; live: boolean }) {
+  const done = steps.filter((s) => s.done).length;
+  const current = live ? steps.find((s) => !s.done) : undefined;
+  const spin = <Icon name="loading" small spin />;
   return (
-    <TranscriptBox id={`steps:${id}`} className="tr-steps" title="Tasks" meta={plural(steps.length, 'task')} defaultOpen state={live ? <Icon name="loading" small spin /> : undefined}>
-      <ul className="tr-tasks">{steps.map((s) => <li key={s.id}>{s.title}</li>)}</ul>
+    <TranscriptBox id={`steps:${id}`} className="tr-steps" title="Tasks" meta={done < steps.length ? `${done} of ${steps.length} done` : plural(steps.length, 'task')} defaultOpen state={live ? spin : undefined}>
+      <ul className="tr-tasks">
+        {steps.map((s) => (
+          <li key={s.id} className={s.done ? 'done' : s === current ? 'now' : undefined}>
+            {s.done ? <Icon name="pass-filled" small /> : s === current ? spin : <Icon name="circle-large-outline" small />}
+            <span>{s === current && now ? now : s.title}</span>
+          </li>
+        ))}
+        {live && !current && now && <li className="now">{spin}<span>{now}</span></li>}
+      </ul>
     </TranscriptBox>
   );
 }

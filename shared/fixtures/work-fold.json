@@ -134,7 +134,11 @@
         "name": "mcp__agentview__set_status",
         "input": {
           "text": "x",
-          "done": "Build the navbar"
+          "done": "Build the navbar",
+          "next": [
+            "Build the card",
+            "Ship it"
+          ]
         },
         "summary": "",
         "at": 2000
@@ -180,7 +184,8 @@
         "name": "mcp__agentview__set_status",
         "input": {
           "text": "x",
-          "done": "Build the card"
+          "done": "Build the card",
+          "next": []
         },
         "summary": "",
         "at": 5000
@@ -214,8 +219,11 @@
         "kind": "tool_use",
         "name": "mcp__agentview__set_status",
         "input": {
-          "text": "x",
-          "done": "Ship it"
+          "text": "Writing the docs",
+          "done": "Ship it",
+          "next": [
+            "Write the docs"
+          ]
         },
         "summary": "",
         "at": 9000
@@ -252,20 +260,32 @@
       [
         {
           "id": "s1",
-          "title": "Build the navbar"
+          "title": "Build the navbar",
+          "done": true
         },
         {
           "id": "s4",
-          "title": "Build the card"
+          "title": "Build the card",
+          "done": true
         }
       ],
       [
         {
           "id": "s6",
-          "title": "Ship it"
+          "title": "Ship it",
+          "done": true
+        },
+        {
+          "id": "s6:0",
+          "title": "Write the docs",
+          "done": false
         }
       ]
     ],
-    "billing": "plan"
+    "billing": "plan",
+    "now": [
+      "x",
+      "Writing the docs"
+    ]
   }
 ]
