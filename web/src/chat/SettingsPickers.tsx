@@ -9,15 +9,18 @@ import { useNarrow } from '../app/shell/useNarrow';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL } from '../../../shared/protocol';
 import { modeSteps, newestModels } from '../../../shared/providers';
 import { effortsFor } from './capabilitiesLogic';
-import { useCan } from './useCan';
 import { useChatSettings, type Pick } from './ChatSettings';
 
-const LOOP_ITEMS = [
+const rounds = (n: number) => `${n} ${n === 1 ? 'round' : 'rounds'}`;
+const BUILD_ITEMS = [
   { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
-  ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Up to ${n} ${n === 1 ? 'round' : 'rounds'}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
+  ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Cycle, up to ${rounds(n)}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
+  { value: 'flow', label: 'Spec flow', detail: 'Spec, sketch and your approval before building' },
 ];
 
-const BUILD = { value: '\0build', label: 'Build', detail: 'Spec, review, build and test the brief in the composer' };
+export const buildValue = (loop: { on: boolean; max: number }, flow: boolean) => (loop.on ? String(loop.max) : flow ? 'flow' : 'off');
+export const buildLabel = (loop: { on: boolean; max: number }, flow: boolean) => (loop.on ? `Cycle, up to ${rounds(loop.max)}` : flow ? 'Spec flow' : 'Off');
+
 const OLDER = '\0older';
 
 type Props = { pick: Pick; close: () => void; back: () => void };
@@ -43,7 +46,6 @@ export function ChoicePick({ back, ...props }: ComponentProps<typeof QuickPick> 
 
 export function ModelPick({ pick, close, back }: Props) {
   const { model, models } = useChatSettings();
-  const build = useCan('build');
   const [all, setAll] = useState(false);
   const newest = newestModels(models, model);
   const more = all ? 0 : models.length - newest.length;
@@ -56,12 +58,10 @@ export function ModelPick({ pick, close, back }: Props) {
       items={[
         ...(more ? newest : models).map((m) => ({ value: m.value, label: m.displayName, detail: m.description })),
         ...(more ? [{ value: OLDER, label: 'Older models', detail: `${more} more` }] : []),
-        ...(build ? [BUILD] : []),
       ]}
       onPick={(v) => {
         if (v === OLDER) return setAll(true);
-        if (v === BUILD.value) window.dispatchEvent(new CustomEvent('agentview:build'));
-        else send({ type: 'set_model', model: v });
+        send({ type: 'set_model', model: v });
         close();
       }}
       onClose={close}
@@ -100,16 +100,23 @@ export function AccountPick({ pick, close, back }: Props) {
   );
 }
 
-export function LoopPick({ pick, close, back }: Props) {
+export function BuildPick({ pick, close, back }: Props) {
   const { loop } = useChatSettings();
+  const flow = useStore((s) => Boolean(s.session.buildFlow));
   return (
     <ChoicePick
       back={back}
       anchor={pick.at}
-      title="Build cycle"
-      current={loop.on ? String(loop.max) : 'off'}
-      items={LOOP_ITEMS}
-      onPick={(v) => { send(v === 'off' ? { type: 'set_loop', on: false } : { type: 'set_loop', on: true, max: Number(v) }); close(); }}
+      title="Build"
+      current={buildValue(loop, flow)}
+      items={BUILD_ITEMS}
+      onPick={(v) => {
+        const max = Number(v);
+        if (max) send({ type: 'set_loop', on: true, max });
+        else if (loop.on) send({ type: 'set_loop', on: false });
+        if ((v === 'flow') !== flow) send({ type: 'set_build_flow', on: v === 'flow' });
+        close();
+      }}
       onClose={close}
     />
   );

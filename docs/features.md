@@ -211,17 +211,20 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   ends ("all tries reported"); it also ends when the parent chat closes or on Keep
 - `@chat:` in the web composer lists the other chats by title; picking one inserts `@chat:<session id>`, and the server
   adds that chat's transcript path to the prompt so Claude can read it (the chat shows the prompt as typed)
-- "Fork chat" in the chat settings menu (web and phone, or the palette) starts a new chat in the same folder and model
+- "Fork chat" (New chat in the Fork pick of the web chat settings menu, the phone chat menu, or the palette) starts a new chat in the same folder and model
   whose first prompt asks Claude to read the old chat (through `@chat:`) and summarise it in at most 15 lines, so the work
   continues from a short brief instead of the full context
 - In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
   is saved with that one block of changed lines put back to the last commit
 - Replies have no action buttons on the web or the phone; on the phone a hairline divider separates each prompt from the turn before it
 - On the phone, the composer's settings chip opens Chat settings with the models listed directly (one tap picks), then
-  Goal and Build cycle rows, the permission modes (Supervised follows Auto), Account and Effort. The model you pick
+  Goal and Build rows, the permission modes (Supervised follows Auto), Account and Effort. The model you pick
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
-  (Permission mode, Model, Effort, Claude account, Goal, Build cycle, Side chat, Remind me, Fork chat, Copy as Markdown,
-  Tools…); its Tools… pick holds Saved prompts, Memory, Hooks, TODOs and Continue in terminal, and the phone's chat menu
+  (Permission mode, Model, Effort, Claude account, Goal, Build, Fork, Remind me, Copy, Tools…); Fork holds Side chat and
+  New chat, Copy holds Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Memory, Hooks and TODOs.
+  The Build row picks Off, Cycle up to 1, 2, 3 or 5 rounds ([Build cycle](#build-cycle)) or Spec flow, which makes Claude
+  run every build request through the `/agentview:build` skill (`buildFlow`, a UserPromptSubmit hook says so on each
+  prompt); picking one turns the other off. The phone's chat menu
   has a Tools… sheet with Images, Dev servers, TODOs, Memory, Hooks and Continue in terminal
 - In the web and phone transcripts, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as
   "Explored 4 files, 2 searches"; the header opens the steps, and the group keeps its choice like any transcript box
@@ -270,11 +273,11 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   the chat; the hub pushes it when due (like Slack's remind me about this); the web chat settings menu has the same Remind me
 - Opening a chat with replies or steps since you last saw it shows a red New line above the first of them, like Slack's
   unread divider: on the web from the seen time before this page opened the chat, on the phone from when the phone last showed it
-- "Copy as Markdown" in the web chat settings menu copies the loaded prompts and replies under the chat title
+- "Copy as Markdown" in the Copy pick of the web chat settings menu copies the loaded prompts and replies under the chat title
 - "Share chat" in the phone chat menu sends the loaded prompts and replies as Markdown to the Android share sheet
-- "Side chat" in the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
+- "Side chat" in the Fork pick of the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
-- "Continue in terminal" in the Tools pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
+- "Continue in terminal" in the Copy pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone Tools sheet has the same Continue in terminal, copying to the clipboard
 - A prompt that changed files has a Rewind files link: on the web under the turn's last reply, on the
   phone under the prompt, while Claude is idle. It puts the files back to how they were before that prompt (later turns' edits go
@@ -399,8 +402,8 @@ Four ways to have a change built, lightest first:
 
 - **Plan first** (permission mode Plan, or Start as Plan first on the phone): Claude writes a plan and waits in plan mode; approving it lets Claude build in the same chat. For a change small enough to read as one plan.
 - **Start with a spec** (palette "Chat: Start with a spec", Start as Spec on the phone): Claude writes `.claude/specs/<slug>.md` with Requirements, Design and `- [ ]` Tasks, then stops. Open the file to see its Tasks header: Start on one task, or Run all in this chat or Run as goal for all of them. For work you steer task by task.
-- **[Build cycle](#build-cycle)** (chat settings, Up to N rounds): plan, build and test rounds in the chat, with Sonnet testing what Opus built. No spec file.
-- **Build** (model menu, last item, or asking Claude to build a feature): the `/agentview:build` skill of the [build kit](#build-kit). The pm agent writes the spec, the spec reviewer checks it (with a cold reader and a scope check in the first round), a designer sketches the screens of a UI spec, you approve the spec and the sketch, an implementer builds it on a branch in a worktree, a tester checks each acceptance criterion and a code reviewer reads the diff. Claude then cherry-picks what passed onto the main branch.
+- **[Build cycle](#build-cycle)** (Build row in chat settings, Cycle up to N rounds): plan, build and test rounds in the chat, with Sonnet testing what Opus built. No spec file.
+- **Build** ("Build the brief" in the composer + menu or Add sheet, Spec flow in the Build row of chat settings, or asking Claude to build a feature): the `/agentview:build` skill of the [build kit](#build-kit). The pm agent writes the spec, the spec reviewer checks it (with a cold reader and a scope check in the first round), a designer sketches the screens of a UI spec, you approve the spec and the sketch, an implementer builds it on a branch in a worktree, a tester checks each acceptance criterion and a code reviewer reads the diff. Claude then cherry-picks what passed onto the main branch.
 
 A build shows as its [Build card](#build-card) in the chat that started it: a strip of steps (Spec, Spec review, Sketch, Your approval, Implement, Test, Code review, Merge), the step that needs you or is running, and the acceptance criteria counts. Tap a step to open its sheet; Your approval is where you approve or request changes, phase by phase. A goal can also run a spec: Run as goal on the Tasks header starts `/goal every task in <path> is ticked`, shown on its loop card like any goal.
 
@@ -408,7 +411,7 @@ The sketch and the approval are optional. By default a spec with a (UI) acceptan
 
 ## Build cycle
 
-The Build cycle row in the chat settings menu (web and phone; Off or Up to N rounds) turns a prompt into a plan, build, test cycle. Opus plans in plan mode (on Codex the default model, with high effort for plan and build and medium for test), detailed
+The Build row in the chat settings menu (web and phone; Off, Cycle up to N rounds, or Spec flow) turns a prompt into a plan, build, test cycle. Opus plans in plan mode (on Codex the default model, with high effort for plan and build and medium for test), detailed
 enough that someone who missed the conversation could build from it, and starts building as soon as the plan is
 ready. A plan that deletes data, changes a schema, auth or security, reaches outside the repo, pushes or deploys,
 or guesses at an open question waits for your approval instead (from its APPROVAL line when the agent has no plan tool), and rejecting it stops the cycle. Sonnet then tests the result as a separate model and ends with a verdict, and

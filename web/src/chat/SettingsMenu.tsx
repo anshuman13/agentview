@@ -12,12 +12,13 @@ import { copyChatMarkdown, copyResumeCommand, forkChat, remindChat, sideChat } f
 import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
-import { ChoicePick, SheetRows } from './SettingsPickers';
+import { buildLabel, ChoicePick, SheetRows } from './SettingsPickers';
 
 type Props = { pick: Pick; setPick: (p: Pick | null) => void; close: () => void };
 
 export function SettingsMenu({ pick, setPick, close }: Props) {
   const { loop, menu, modelName, effortName } = useChatSettings();
+  const resumeCommand = useStore((s) => s.session.resumeCommand);
   const canEffort = useCan('effort');
   const sessionId = useStore((s) => s.session.sessionId);
   const account = useStore((s) => s.session.account) ?? 'main';
@@ -28,10 +29,6 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   const run = useChatRun(chat);
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
-    if (v === 'side') return act(sideChat);
-    if (v === 'fork') return act(forkChat);
-    if (v === 'markdown') return act(copyChatMarkdown);
-    if (v === 'buildFlow') return act(() => send({ type: 'set_build_flow', on: !buildFlow }));
     // Loops, cycles, tries and jobs have their controls on the loop card only.
     if (v === 'goal') return act(() => (!run ? startGoal({ here: true }) : run.kind === 'goal' && openGoal(run.id)));
     setPick({ kind: v as Pick['kind'], at: pick.at });
@@ -48,12 +45,11 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     ]],
     ['Goal', [
       action('goal', 'Goal', run ? runLine(run, phase) : 'Off'),
-      picker('loop', 'Build cycle', loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off'),
-      action('buildFlow', 'Build flow', buildFlow ? 'On: spec, sketch and your approval before building' : 'Off: builds directly'),
+      picker('build', 'Build', buildLabel(loop, buildFlow)),
     ]],
     ['Chat', [
-      ...(sessionId ? [action('side', 'Side chat', 'Ask in a fork beside this chat (⌘;)'), picker('remind', 'Remind me', 'Add a task to check this chat later'), action('fork', 'Fork chat', 'Start a new chat from a summary of this one')] : []),
-      action('markdown', 'Copy as Markdown', 'Prompts and replies loaded here'),
+      ...(sessionId ? [picker('fork', 'Fork', 'Side chat or a new chat from a summary'), picker('remind', 'Remind me', 'Add a task to check this chat later')] : []),
+      picker('copy', 'Copy', resumeCommand ? 'As Markdown or the terminal command' : 'As Markdown'),
       picker('tools', 'Tools…', 'Saved prompts, memory, hooks, TODOs'),
     ]],
   ] as const;
@@ -84,7 +80,6 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
 export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedCount: number }) {
   const cwd = useStore((s) => s.session.cwd);
   const instructionFiles = useStore((s) => s.session.instructionFiles);
-  const resumeCommand = useStore((s) => s.session.resumeCommand);
   const hooks = useStore((s) => s.session.hooks) ?? [];
   return (
     <ChoicePick
@@ -96,17 +91,49 @@ export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedC
         { value: 'memory', label: 'Memory', detail: `${ruleFile(cwd, instructionFiles)} and memory files` },
         { value: 'hooks', label: 'Hooks', detail: hooks.length ? `${hooks.length}` : 'None' },
         { value: 'todos', label: 'TODOs', detail: 'TODO, FIXME and AI! comments in the repo' },
-        ...(resumeCommand ? [{ value: 'terminal', label: 'Continue in terminal', detail: 'Copy the command that resumes this chat' }] : []),
       ]}
-      onPick={(v) => {
-        if (v === 'terminal') { copyResumeCommand(resumeCommand!); close(); } else setPick({ kind: v as Pick['kind'], at: pick.at });
-      }}
+      onPick={(v) => setPick({ kind: v as Pick['kind'], at: pick.at })}
       onClose={close}
     />
   );
 }
 
-export function RemindPick({ pick, close, back }: { pick: Pick; close: () => void; back: () => void }) {
+type SubProps = { pick: Pick; close: () => void; back: () => void };
+
+export function ForkPick({ pick, close, back }: SubProps) {
+  return (
+    <ChoicePick
+      back={back}
+      anchor={pick.at}
+      title="Fork"
+      items={[
+        { value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' },
+        { value: 'fork', label: 'New chat', detail: 'Start a new chat from a summary of this one' },
+      ]}
+      onPick={(v) => { (v === 'side' ? sideChat : forkChat)(); close(); }}
+      onClose={close}
+    />
+  );
+}
+
+export function CopyPick({ pick, close, back }: SubProps) {
+  const resumeCommand = useStore((s) => s.session.resumeCommand);
+  return (
+    <ChoicePick
+      back={back}
+      anchor={pick.at}
+      title="Copy"
+      items={[
+        { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
+        ...(resumeCommand ? [{ value: 'terminal', label: 'Continue in terminal', detail: 'Copy the command that resumes this chat' }] : []),
+      ]}
+      onPick={(v) => { if (v === 'terminal') copyResumeCommand(resumeCommand!); else copyChatMarkdown(); close(); }}
+      onClose={close}
+    />
+  );
+}
+
+export function RemindPick({ pick, close, back }: SubProps) {
   return (
     <ChoicePick
       back={back}
@@ -119,7 +146,7 @@ export function RemindPick({ pick, close, back }: { pick: Pick; close: () => voi
   );
 }
 
-export function HooksPick({ pick, close, back }: { pick: Pick; close: () => void; back: () => void }) {
+export function HooksPick({ pick, close, back }: SubProps) {
   const hooks = useStore((s) => s.session.hooks) ?? [];
   return (
     <ChoicePick

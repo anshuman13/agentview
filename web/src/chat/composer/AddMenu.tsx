@@ -13,6 +13,7 @@ export function AddMenu({ uploading, setPick, attach }: AddMenuProps) {
   const trigger = useRef<HTMLButtonElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const canMcp = useCan('mcp');
+  const canBuild = useCan('build');
   const connected = useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
   const modeText = useModeText();
   const pickAt = (kind: Pick['kind']) => () => {
@@ -35,6 +36,7 @@ export function AddMenu({ uploading, setPick, attach }: AddMenuProps) {
         <Menu trigger={trigger} onClose={() => setOpen(false)}>
           <MenuItem icon="file-add" onClick={() => { setOpen(false); picker.current?.click(); }}>Add files</MenuItem>
           {canMcp && connected && <MenuItem icon="plug" onClick={pickAt('mcp')}>Use an MCP server</MenuItem>}
+          {canBuild && <MenuItem icon="tools" onClick={() => { setOpen(false); window.dispatchEvent(new CustomEvent('agentview:build')); }}>Build the brief</MenuItem>}
           <MenuItem icon="settings-gear" onClick={pickAt('menu')}>Model and mode · {modeText}</MenuItem>
         </Menu>
       )}

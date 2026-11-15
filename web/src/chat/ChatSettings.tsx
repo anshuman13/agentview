@@ -3,12 +3,12 @@ import { MemoryPick } from './cards/Memory';
 import { TodosPick } from './cards/Todos';
 import { EFFORT_LABEL } from '../../../shared/protocol';
 import { menuModes, providerModes } from '../../../shared/providers';
-import { HooksPick, RemindPick, SettingsMenu, ToolsPick } from './SettingsMenu';
-import { AccountPick, EffortPick, LoopPick, ModePick, ModelPick } from './SettingsPickers';
+import { CopyPick, ForkPick, HooksPick, RemindPick, SettingsMenu, ToolsPick } from './SettingsMenu';
+import { AccountPick, BuildPick, EffortPick, ModePick, ModelPick } from './SettingsPickers';
 
 const MODE_ICON: Record<string, string> = { default: 'shield', acceptEdits: 'edit', plan: 'eye', readOnly: 'eye', auto: 'zap', dontAsk: 'circle-slash' };
 
-export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'tools' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'todos' | 'hooks'; at: DOMRect; server?: string };
+export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'build' | 'fork' | 'copy' | 'tools' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'todos' | 'hooks'; at: DOMRect; server?: string };
 
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -41,7 +41,9 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
     case 'model': return <ModelPick pick={pick} close={close} back={back} />;
     case 'effort': return <EffortPick pick={pick} close={close} back={back} />;
     case 'account': return <AccountPick pick={pick} close={close} back={back} />;
-    case 'loop': return <LoopPick pick={pick} close={close} back={back} />;
+    case 'build': return <BuildPick pick={pick} close={close} back={back} />;
+    case 'fork': return <ForkPick pick={pick} close={close} back={back} />;
+    case 'copy': return <CopyPick pick={pick} close={close} back={back} />;
     case 'tools': return <ToolsPick pick={pick} setPick={setPick} close={close} savedCount={savedCount} />;
     case 'mode': return <ModePick pick={pick} close={close} back={back} />;
     default: return null;

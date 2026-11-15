@@ -92,9 +92,11 @@ import no.pradhan.agentview.nativeapp.ui.plural
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
-private val LOOP_CHOICES = listOf(Choice("off", "Off", "Prompts run as usual")) + listOf(1, 2, 3, 5).map { Choice(it.toString(), "Up to ${plural(it, "round")}", "Opus plans and builds, Sonnet tests and reports, Opus fixes what fails") }
+private val BUILD_CHOICES = listOf(Choice("off", "Off", "Prompts run as usual")) +
+    listOf(1, 2, 3, 5).map { Choice(it.toString(), "Cycle, up to ${plural(it, "round")}", "Opus plans and builds, Sonnet tests and reports, Opus fixes what fails") } +
+    Choice("flow", "Spec flow", "Spec, sketch and your approval before building")
 
-private enum class Picker { Add, Settings, Effort, Account, Loop }
+private enum class Picker { Add, Settings, Effort, Account, Build }
 
 private class ComposerState(val hub: Hub, val chatId: String) {
     var text by mutableStateOf(hub.draft(chatId).let { TextFieldValue(it, TextRange(it.length)) })
@@ -241,17 +243,25 @@ private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, upload
 @Composable
 private fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, run: ChatRun?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
     when (sheet) {
-        Picker.Add -> AddSheet(session, attach, onSheet)
-        Picker.Settings -> ChatSettingsSheet(hub, s, uploading, session, run, onSheet)
+        Picker.Add -> AddSheet(s, uploading, session, attach, onSheet)
+        Picker.Settings -> ChatSettingsSheet(hub, session, run, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
-        Picker.Loop -> PickerSheet("Build cycle", LOOP_CHOICES, session?.loop?.takeIf { it.on }?.max?.toString() ?: "off", { hub.setLoop(it != "off", it.toIntOrNull()) }) { onSheet(null) }
+        Picker.Build -> {
+            val loop = session?.loop?.takeIf { it.on }
+            val flow = session?.buildFlow == true
+            PickerSheet("Build", BUILD_CHOICES, loop?.max?.toString() ?: if (flow) "flow" else "off", { v ->
+                val max = v.toIntOrNull()
+                if (max != null) hub.setLoop(true, max) else if (loop != null) hub.setLoop(false, null)
+                if ((v == "flow") != flow) hub.setBuildFlow(v == "flow")
+            }) { onSheet(null) }
+        }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
         null -> {}
     }
 }
 
 @Composable
-private fun AddSheet(session: SessionInfo?, attach: Attach, onSheet: (Picker?) -> Unit) {
+private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, attach: Attach, onSheet: (Picker?) -> Unit) {
     val c = av
     val pct = contextPercent(session?.context, session?.contextWindow)
     val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = c.fgMuted) } }
@@ -263,6 +273,10 @@ private fun AddSheet(session: SessionInfo?, attach: Attach, onSheet: (Picker?) -
             ListRow("Take photo", leading = icon("device-camera"), onClick = { onSheet(null); attach.takePhoto() })
             Hairline(lead = true)
             ListRow("Chat settings", settings, leading = icon("settings-gear"), onClick = { onSheet(Picker.Settings) }, trailing = { Chevron() })
+            if (session?.capabilities?.build == true) {
+                Hairline(lead = true)
+                ListRow("Build the brief", "Spec, review, build and test the text in the composer", leading = icon("tools"), onClick = { onSheet(null); s.build(uploading) })
+            }
             if (pct != null && pct >= 50) {
                 Hairline(lead = true)
                 ListRow("$pct% context", leading = icon("pulse"))
@@ -272,7 +286,7 @@ private fun AddSheet(session: SessionInfo?, attach: Attach, onSheet: (Picker?) -
 }
 
 @Composable
-private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, run: ChatRun?, onSheet: (Picker?) -> Unit) {
+private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, onSheet: (Picker?) -> Unit) {
     val c = av
     Sheet({ onSheet(null) }, "Chat settings", padded = false, full = false) {
         val account = session?.account ?: "main"
@@ -306,10 +320,6 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
                     Hairline()
                     ListRow("Older models", "${models.size - newest.size} more", onClick = { all = true }, trailing = { Chevron() })
                 }
-                if (caps.build) {
-                    Hairline()
-                    ListRow("Build", "Spec, review, build and test the brief in the composer", onClick = { onSheet(null); s.build(uploading) })
-                }
             }
         }
         val showAccount = (session?.accounts?.size ?: 0) > 1 || account != "main"
@@ -324,10 +334,7 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
             val opens = run == null || run.kind == "goal"
             ListRow("Goal", run?.let { runLine(it, session?.loop?.phase) } ?: "Off", onClick = if (opens) ({ hub.shell.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }) else null, trailing = { if (opens) Chevron() })
             Hairline()
-            ListRow("Build cycle", loop?.let { "Up to ${plural(it.max, "round")}" } ?: "Off", onClick = { onSheet(Picker.Loop) }, trailing = { Chevron() })
-            Hairline()
-            val flow = session?.buildFlow == true
-            ListRow("Build flow", if (flow) "On: spec, sketch and your approval before building" else "Off: builds directly", onClick = { hub.setBuildFlow(!flow); onSheet(null) })
+            ListRow("Build", loop?.let { "Cycle, up to ${plural(it.max, "round")}" } ?: if (session?.buildFlow == true) "Spec flow" else "Off", onClick = { onSheet(Picker.Build) }, trailing = { Chevron() })
         }
     }
 }
