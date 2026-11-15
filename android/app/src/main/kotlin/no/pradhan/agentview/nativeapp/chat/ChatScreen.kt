@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -120,6 +121,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         return
     }
     val panels = remember { ChatPanels() }
+    val buildSheets = remember(live.id) { OpenBuildSheets() }
     val running = session?.running ?: live.running
     val cwd = session?.cwd ?: live.cwd
     val edits = remember(view.changed, cwd) { view.changed.map { relPath(it, cwd) }.filter { !it.startsWith("/") } }
@@ -147,7 +149,9 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         }
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
-            Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } })
+            CompositionLocalProvider(LocalBuildSheets provides buildSheets) {
+                Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } })
+            }
         }
         PendingList(pending, session?.permissionMode ?: "default", hub)
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
@@ -157,6 +161,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         Composer(hub, live.id, session, running, pending.isNotEmpty(), run)
     }
     ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent, run)
+    BuildSheetsHost(hub, live.id, buildSheets)
 }
 
 @Composable

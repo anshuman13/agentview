@@ -13,6 +13,9 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +60,8 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
+import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.FileScreen
 import no.pradhan.agentview.nativeapp.workspace.PrFile
 import no.pradhan.agentview.nativeapp.ui.agoShort
@@ -264,6 +269,43 @@ internal fun Criteria(criteria: List<SpecCriterion>, limit: Int, showAll: () -> 
     if (limit < criteria.size) Button("Show all ${criteria.size}", showAll, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
 }
 
+// The open sheets of the shown chat's build cards. The chat screen holds them, so a sheet stays open when its card scrolls out of the transcript.
+internal class OpenBuildSheets {
+    var slug by mutableStateOf<String?>(null)
+        private set
+    var seed by mutableStateOf<BuildDetail?>(null)
+        private set
+    var runs by mutableStateOf(true)
+        private set
+    // Counts the saves made from a sheet, so the card that opened it reloads too.
+    var saved by mutableIntStateOf(0)
+    val stack = mutableStateListOf<BuildSheet>()
+
+    fun open(d: BuildDetail, sheet: BuildSheet, runs: Boolean = true) {
+        if (d.slug != slug) stack.clear()
+        slug = d.slug
+        seed = d
+        this.runs = runs
+        stack.add(sheet)
+    }
+}
+
+internal val LocalBuildSheets = staticCompositionLocalOf { OpenBuildSheets() }
+
+// Loads the build of the open sheets and shows them above the chat.
+@Composable
+internal fun BuildSheetsHost(hub: Hub, chat: String, sheets: OpenBuildSheets) {
+    val slug = sheets.slug
+    if (slug == null || sheets.stack.isEmpty()) return
+    val (load, reload) = rememberLoad(chat, slug) { loadBuild(hub, slug) }
+    val d = if (load.data == null && load.busy) sheets.seed?.takeIf { it.slug == slug } else load.data
+    PollWhile(d?.summary?.state == "running", reload)
+    val actions = buildActions(hub, slug) { reload(); sheets.saved++ }
+    val cwd by hub.store.state.select { it.session?.cwd.orEmpty() }
+    val run = d?.specFile?.takeIf { chat.isNotEmpty() && sheets.runs }?.let { "$cwd/$it" }?.let { p -> TaskRun(p) { hub.askChat(it) } }
+    if (d != null) BuildSheets(hub, d, sheets.stack, actions, run)
+}
+
 // The open sheets of a build card, the topmost composed last.
 @Composable
 internal fun BuildSheets(hub: Hub, d: BuildDetail, stack: SnapshotStateList<BuildSheet>, actions: BuildActions, run: TaskRun?) {
@@ -307,7 +349,7 @@ private fun StepSheet(hub: Hub, d: BuildDetail, step: String, actions: BuildActi
     val commit = d.commit?.let { c -> stages.lastOrNull { it.stage == "implement" }?.commit?.let { it to c } }
     val now = System.currentTimeMillis()
     Sheet(close, FLOW_LABEL.getValue(step), padded = false) {
-        SheetList {
+        SheetList(fixed = true) {
             if (runs.isEmpty()) item { EmptyState("No runs yet") } else stageItems(runs, now) { report = it }
             when (step) {
                 "implement" -> if (commit != null) implementationItems(commit.first, commit.second, openFile) { openFile = it }
@@ -324,7 +366,7 @@ private fun StepSheet(hub: Hub, d: BuildDetail, step: String, actions: BuildActi
 private fun CriterionSheet(c: SpecCriterion, close: () -> Unit) {
     val pad = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4)
     Sheet(close, "Criterion ${c.n}", padded = false) {
-        SheetList {
+        SheetList(fixed = true) {
             item { Markdown(c.text, pad) }
             if (c.ui) item { Group { ListRow("UI check") } }
             item { Markdown(c.evidence.ifEmpty { "Not tested yet" }, pad) }

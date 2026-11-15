@@ -31,7 +31,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -197,16 +196,17 @@ internal fun SpecCard(hub: Hub, chat: String, slug: String, path: String, bump: 
     val d = load.data
     PollWhile(d?.summary?.state == "running", reload)
     val gone = d == null && !load.busy && load.error.isEmpty()
-    val stack = remember { mutableStateListOf<BuildSheet>() }
+    val sheets = LocalBuildSheets.current
+    var saved by remember(chat, slug) { mutableIntStateOf(sheets.saved) }
+    LaunchedEffect(sheets.saved) { if (sheets.saved != saved) { saved = sheets.saved; if (sheets.slug == slug) reload() } }
+    val open: (BuildSheet) -> Unit = { s -> d?.let { sheets.open(it, s) } }
     val want by hub.specSlug.collectAsState()
     LaunchedEffect(want, d, gone) {
         if (want != slug || (d == null && !gone)) return@LaunchedEffect
         hub.specSlug.value = null
-        if (d != null) stack.add(BuildSheet.Spec())
+        if (d != null) sheets.open(d, BuildSheet.Spec())
     }
     val actions = buildActions(hub, slug, reload)
-    val cwd by hub.store.state.select { it.session?.cwd.orEmpty() }
-    val run = d?.specFile?.takeIf { chat.isNotEmpty() }?.let { "$cwd/$it" }?.let { p -> TaskRun(p) { hub.askChat(it) } }
     TranscriptBox(
         hub, "build:$chat:$slug", d?.title?.ifEmpty { null } ?: slug,
         if (gone) "Spec removed" else d?.let { listOf(pipelineLabel(it.pipeline), it.summary.conclusion).filter(String::isNotEmpty).joinToString(" · ") }.orEmpty(),
@@ -214,25 +214,24 @@ internal fun SpecCard(hub: Hub, chat: String, slug: String, path: String, bump: 
             if (d?.hold == true) Badge(HOLD_BADGE.first, HOLD_BADGE.second)
             else if (d != null && d.entries.isNotEmpty()) stateBadge(d.summary.state).let { Badge(it.first, it.second) }
         },
-        action = { SpecMenu(hub, d, path, stack, actions) },
+        action = { SpecMenu(hub, d, path, open, actions) },
         defaultOpen = true,
         fitState = true,
     ) {
         when {
             gone -> {}
-            d != null -> SpecBody(hub, d, stack)
+            d != null -> SpecBody(hub, d, open)
             load.error.isNotEmpty() -> LoadFailed("this build", reload)
             else -> Loading("Loading build")
         }
     }
-    if (d != null) BuildSheets(hub, d, stack, actions, run)
 }
 
 @Composable
-private fun SpecMenu(hub: Hub, d: BuildDetail?, path: String, stack: MutableList<BuildSheet>, actions: BuildActions) {
+private fun SpecMenu(hub: Hub, d: BuildDetail?, path: String, open: (BuildSheet) -> Unit, actions: BuildActions) {
     val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
     MoreButton { dismiss ->
-        if (d != null) MenuItem("Open spec", "go-to-file", { dismiss(); stack.add(BuildSheet.Spec()) })
+        if (d != null) MenuItem("Open spec", "go-to-file", { dismiss(); open(BuildSheet.Spec()) })
         if (d != null && !hub.readOnly) MenuItem(if (d.hold) "Release hold" else "Hold", "debug-pause", { dismiss(); actions.setHold(if (d.hold) "release" else "hold") })
         MenuItem(if (subagents) "Review with fresh eyes" else "Needs subagents, not in this chat", "eye", { dismiss(); hub.askChat("/spec-review $path") }, enabled = subagents && !hub.readOnly)
         if (d != null && subagents && !hub.readOnly && canSketch(d)) MenuItem("Sketch", "paintcan", { dismiss(); hub.askChat(sketchSpecPrompt(path)) })
@@ -251,7 +250,7 @@ private fun flowSheet(f: FlowStep, d: BuildDetail): BuildSheet? = when {
 
 // The flow as one strip of steps, then the step that matters now as a row.
 @Composable
-private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
+private fun SpecBody(hub: Hub, d: BuildDetail, open: (BuildSheet) -> Unit) {
     var all by remember(d.slug) { mutableStateOf(false) }
     val failed = d.criteria.any { it.result == "fail" }
     val now = System.currentTimeMillis()
@@ -274,7 +273,7 @@ private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
             val sheet = flowSheet(f, d)
             Row(
                 Modifier.heightIn(min = Tokens.touchSm).onGloballyPositioned { spans[i] = it.positionInParent().x.roundToInt()..(it.positionInParent().x.roundToInt() + it.size.width) }
-                    .then(if (sheet != null) Modifier.clickable { stack.add(sheet) } else Modifier),
+                    .then(if (sheet != null) Modifier.clickable { open(sheet) } else Modifier),
                 horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically,
             ) {
                 StatusDot(if (f.state == "running") DotState.Running else stateDot(f.state))
@@ -297,12 +296,12 @@ private fun SpecBody(hub: Hub, d: BuildDetail, stack: MutableList<BuildSheet>) {
                 FLOW_LABEL[step.key] ?: step.key, listOf(step.by, step.result, step.at?.let { agoShort(it, now) }.orEmpty()).filter(String::isNotEmpty).joinToString(" · "),
                 leading = { StatusDot(if (step.state == "running") DotState.Running else stateDot(step.state)) },
                 state = { if (badge != null) Badge(badge.first, badge.second) }, stateSlot = badge != null, fitState = true,
-                onClick = sheet?.let { { stack.add(it) } },
+                onClick = sheet?.let { { open(it) } },
             )
         }
     }
-    Criteria(d.criteria, if (all || failed) d.criteria.size else 0, { all = true }) { stack.add(BuildSheet.Criterion(it)) }
-    Findings(hub, "spec:${d.slug}") { stack.add(BuildSheet.File(it.file)) }
+    Criteria(d.criteria, if (all || failed) d.criteria.size else 0, { all = true }) { open(BuildSheet.Criterion(it)) }
+    Findings(hub, "spec:${d.slug}") { open(BuildSheet.File(it.file)) }
 }
 
 // A spec write that no longer holds the live card, shown plain.
@@ -318,11 +317,10 @@ internal fun SpecRow(slug: String, meta: String) {
 internal fun SketchCard(hub: Hub, chat: String, name: String, meta: String) {
     val slug = sketchTitle(name)
     var asked by remember { mutableStateOf(false) }
-    val (load, reload) = rememberLoad(chat, slug, asked) { if (asked) loadBuild(hub, slug) else null }
+    val (load) = rememberLoad(chat, slug, asked) { if (asked) loadBuild(hub, slug) else null }
     val spec = load.data?.takeIf { it.specFile != null }
     val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
-    val stack = remember { mutableStateListOf<BuildSheet>() }
-    val actions = buildActions(hub, slug, reload)
+    val sheets = LocalBuildSheets.current
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
         ListRow(
             slug, meta, leading = { AvIcon("paintcan", null, Tokens.icon) }, onClick = { hub.link.value = DeepLink(page = "sketches", slug = name) },
@@ -331,12 +329,11 @@ internal fun SketchCard(hub: Hub, chat: String, name: String, meta: String) {
                 if (spec == null) MenuItem(if (load.busy) "Loading" else "No spec for this sketch", "go-to-file", {}, enabled = false)
                 else {
                     if (subagents && !hub.readOnly && canBuild(spec)) MenuItem("Build", "play", { dismiss(); hub.askChat(buildSpecPrompt(spec.specFile!!)) })
-                    MenuItem("Open spec", "go-to-file", { dismiss(); stack.add(BuildSheet.Spec()) })
+                    MenuItem("Open spec", "go-to-file", { dismiss(); sheets.open(spec, BuildSheet.Spec(), runs = false) })
                 }
             },
         )
     }
-    if (spec != null) BuildSheets(hub, spec, stack, actions, null)
 }
 
 @Composable
