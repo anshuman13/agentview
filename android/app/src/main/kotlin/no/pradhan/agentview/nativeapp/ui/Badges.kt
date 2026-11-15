@@ -84,7 +84,7 @@ fun Badge(text: String, tone: BadgeTone = BadgeTone.Default, modifier: Modifier 
         BadgeTone.Done -> c.okContainer to c.onOkContainer
         BadgeTone.Failed -> c.errContainer to c.onErrContainer
         BadgeTone.New -> c.infoContainer to c.onInfoContainer
-        BadgeTone.Running -> c.agentContainer to c.onAgentContainer
+        BadgeTone.Running -> c.accentFill to c.onAccent
     }
     Box(modifier.defaultMinSize(minWidth = Tokens.size2xs, minHeight = Tokens.size2xs).clip(RoundedCornerShape(Tokens.radiusPill)).background(bg).padding(horizontal = Tokens.sp2), contentAlignment = Alignment.Center) {
         Text(text, style = Type.label.copy(fontWeight = FontWeight.SemiBold, lineHeight = Tokens.lineXs), color = fg, maxLines = 1)

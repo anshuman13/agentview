@@ -119,8 +119,30 @@ function readMessage(st: HistoryState, m: SessionMessage) {
   if (m.type === 'assistant') st.context = contextFrom((m.message as any)?.usage) ?? st.context;
 }
 
-function withWorkflowRuns(st: HistoryState, events: ChatEvent[], workflows: WorkflowRun[]) {
+const TASK_ID = /Task ID: (\S+)/;
+
+// Runs whose background task a TaskStop ended: they never write their run record, so their open agents would show as running for good.
+export function stoppedRuns(events: ChatEvent[]) {
+  const runOf = new Map<string, string>();
+  const out = new Set<string>();
+  for (const e of events) {
+    if (e.kind !== 'tool_result') continue;
+    const run = e.text.match(RUN_ID)?.[1];
+    const task = e.text.match(TASK_ID)?.[1];
+    if (run && task) runOf.set(task, run);
+    const stopped = !e.isError && e.text.match(/Successfully stopped task: (\S+)/)?.[1];
+    if (stopped && runOf.has(stopped)) out.add(runOf.get(stopped)!);
+  }
+  return out;
+}
+
+export const endStopped = (run: WorkflowRun, stopped: Set<string>): WorkflowRun =>
+  stopped.has(run.runId) ? { ...run, agents: run.agents.map((a) => (a.status === 'running' ? { ...a, status: 'stopped' as const } : a)) } : run;
+
+function withWorkflowRuns(st: HistoryState, events: ChatEvent[], runs: WorkflowRun[]) {
   const byCall = new Map<string, WorkflowRun[]>();
+  const stopped = stoppedRuns(events);
+  const workflows = runs.map((r) => endStopped(r, stopped));
   for (const run of workflows) {
     const call = st.runCalls.get(run.runId);
     if (call) byCall.set(call, [...(byCall.get(call) ?? []), run]);

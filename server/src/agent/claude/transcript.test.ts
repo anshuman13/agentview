@@ -71,3 +71,23 @@ describe('cacheFrom', () => {
     expect(cacheFrom({ cache_read_input_tokens: 40 }, 9, null)?.ttlMs).toBe(300_000);
   });
 });
+
+describe('stopped workflow runs', () => {
+  const run = { runId: 'wf_1', agents: [{ key: 'k', agentId: 'a', label: 'gate', phase: 'Build', status: 'running' as const, result: '', msgs: [] }] };
+  const msgs = (stop: string) => [
+    msg('u1', 'user', 'go'),
+    msg('a1', 'assistant', [{ type: 'tool_use', id: 'w1', name: 'Workflow', input: { name: 'build' } }]),
+    msg('u2', 'user', [{ type: 'tool_result', tool_use_id: 'w1', content: 'Workflow launched in background. Task ID: t9\nRun ID: wf_1' }]),
+    msg('a2', 'assistant', [{ type: 'tool_use', id: 's1', name: 'TaskStop', input: { task_id: 't9' } }]),
+    msg('u3', 'user', [{ type: 'tool_result', tool_use_id: 's1', content: stop }]),
+  ];
+  const agent = (stop: string) => historyFrom(msgs(stop), {}, [run]).events.find((e) => e.kind === 'agent');
+
+  it('ends the open agents of a run its TaskStop stopped', () => {
+    expect(agent('{"message":"Successfully stopped task: t9 (build)"}')).toMatchObject({ status: 'stopped' });
+  });
+
+  it('leaves a run running when the stop was for another task', () => {
+    expect(agent('{"message":"Successfully stopped task: t8 (other)"}')).toMatchObject({ status: 'running' });
+  });
+});

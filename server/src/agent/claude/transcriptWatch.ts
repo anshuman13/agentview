@@ -4,7 +4,7 @@ import type { SessionMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentHost, History } from '../types.js';
 import { JsonlTail } from './tail.js';
 import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, workflowAgents, workflowSize, type SubFile, type WorkflowFile, type WorkflowRun } from './history.js';
-import { RUN_ID, workflowEvents, workflowName, type historyFrom } from './transcript.js';
+import { RUN_ID, endStopped, stoppedRuns, workflowEvents, workflowName, type historyFrom } from './transcript.js';
 
 export type WatchOwner = {
   host: AgentHost;
@@ -121,7 +121,8 @@ export class TranscriptWatch {
         if (runId) this.runCalls.set(runId, e.toolUseId);
       }
     }
-    for (const run of runs) {
+    const stopped = stoppedRuns(this.state.events);
+    for (const run of runs.map((r) => endStopped(r, stopped))) {
       const call = this.owner.host.eventById(this.runCalls.get(run.runId) ?? '');
       if (call?.kind !== 'tool_use' || call.name !== 'Workflow') {
         this.unplaced.add(run.runId);
