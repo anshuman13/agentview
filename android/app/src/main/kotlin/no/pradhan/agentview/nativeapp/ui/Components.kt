@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -120,7 +119,7 @@ fun ChoiceRow(title: CharSequence, meta: CharSequence? = null, checked: Boolean,
     ListRow(title, meta, onClick = onClick, trailing = if (checked) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
 
 // List row (web Row): leading slot, a title of one or two lines, a meta line, a fixed-width state slot, trailing content and a More menu.
-// The slot is drawn when stateSlot is true, so rows without a state keep the columns aligned; fitState sizes it to the state instead of the column. A long press opens the menu unless onLongClick is set.
+// The state slot is at least rowStateW wide and grows to fit its state; a row without a state gives the text the full width. fitState drops the minimum. A long press opens the menu unless onLongClick is set.
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ListRow(
@@ -133,7 +132,7 @@ fun ListRow(
     trailing: (@Composable RowScope.() -> Unit)? = null,
     menu: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
     lines: Int = 2,
-    metaLines: Int = 1,
+    metaLines: Int = 2,
     below: (@Composable RowScope.() -> Unit)? = null,
     strike: Boolean = false,
     muted: Boolean = false,
@@ -162,7 +161,7 @@ fun ListRow(
                 CompositionLocalProvider(LocalContentColor provides av.fgMuted) { below() }
             }
         }
-        if (stateSlot) Row(if (fitState) Modifier else Modifier.width(Tokens.rowStateW), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+        if (stateSlot && state != null) Row(if (fitState) Modifier else Modifier.widthIn(min = Tokens.rowStateW), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             CompositionLocalProvider(LocalContentColor provides av.fgMuted) { state?.invoke(this) }
         }
         if (trailing != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {

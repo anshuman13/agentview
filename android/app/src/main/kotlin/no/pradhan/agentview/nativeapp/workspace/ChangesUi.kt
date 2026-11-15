@@ -121,7 +121,7 @@ private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, 
         item {
             Group(Modifier.padding(top = Tokens.sp4)) {
                 val ab = listOfNotNull(status?.behind?.takeIf { it > 0 }?.let { "$it behind" }, status?.ahead?.takeIf { it > 0 }?.let { "$it ahead" }).joinToString(" · ")
-                ListRow(status?.branch?.ifEmpty { null } ?: if (status == null) "Loading…" else "No branch", ab.ifEmpty { null }, lines = 1)
+                ListRow(status?.branch?.ifEmpty { null } ?: if (status == null) "Loading…" else "No branch", ab.ifEmpty { null })
             }
         }
         item {
@@ -177,7 +177,7 @@ private fun LazyListScope.committedSection(b: BranchDiff, shownPatch: MutableSta
                 if (i > 0) Hairline(lead = true)
                 val name = f.path.substringAfterLast('/')
                 val shown = shownPatch.value == f.path
-                ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { shownPatch.value = if (shown) null else f.path })
+                ListRow(name, parentOf(f.path).ifEmpty { null }, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { shownPatch.value = if (shown) null else f.path })
                 if (shown) PatchView(patches[f.path] ?: if (b.diff.isEmpty()) "Diff too large to show" else "No diff", f.path)
             }
         }

@@ -121,8 +121,8 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
                     s.pages.forEachIndexed { i, p ->
                         if (i > 0) Hairline()
                         val n = stats[p.id]?.claims ?: 0
-                        ListRow(p.title ?: "Untitled", plural(n, "claim") + if (profile == null) " · ${profileLabel(p.profile)}" else "", leading = { PageTile(p) }, lines = 1, onClick = { onOpen(p) },
-                            state = { if (pageNeedsReview(p, facts)) Badge("Needs you", BadgeTone.Waiting) }, stateSlot = true,
+                        ListRow(p.title ?: "Untitled", plural(n, "claim") + if (profile == null) " · ${profileLabel(p.profile)}" else "", leading = { PageTile(p) }, onClick = { onOpen(p) },
+                            state = if (pageNeedsReview(p, facts)) ({ Badge("Needs you", BadgeTone.Waiting) }) else null,
                             menu = { dismiss ->
                                 MenuItem("Open", "file", { dismiss(); onOpen(p) })
                                 MenuSeparator()

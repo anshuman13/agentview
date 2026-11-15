@@ -241,12 +241,13 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
     val unread = shown == ChatState.Done || shown == ChatState.Needs
     ListRow(
         boldIf(unread, title),
-        meta, lines = 1, metaLines = 1, selected = selected, onClick = onClick,
+        meta, selected = selected, onClick = onClick,
         onLongClick = if (actions.canPin) actions.onRename else null,
         leading = { StateDot(shown) },
-        state = {
-            if (run != null && badge != null && badge != RunBadge.Needs) RunBadgeView(badge, run)
-            else if (actions.muted) AvIcon("bell-slash", tint = av.fgMuted)
+        state = when {
+            run != null && badge != null && badge != RunBadge.Needs -> ({ RunBadgeView(badge, run) })
+            actions.muted -> ({ AvIcon("bell-slash", tint = av.fgMuted) })
+            else -> null
         },
         menu = { close ->
             if (onResume != null) MenuItem("Resume", "play", { close(); onResume() })

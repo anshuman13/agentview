@@ -56,7 +56,7 @@ private const val PAGE_SIZE = 30
 private fun MeetingListRow(m: Row, now: Long, showProfile: Boolean, noDay: Boolean = false, onClick: () -> Unit) {
     val live = isLive(m, now)
     val meta = listOfNotNull(meetingMeta(m, now, noDay), if (showProfile) profileLabel(m.profile) else null).joinToString(" · ")
-    ListRow(m.title ?: "Meeting", meta, lines = 1, state = { if (live) Badge("Live", BadgeTone.Running) }, stateSlot = true, onClick = onClick)
+    ListRow(m.title ?: "Meeting", meta, state = if (live) ({ Badge("Live", BadgeTone.Running) }) else null, onClick = onClick)
 }
 
 @Composable

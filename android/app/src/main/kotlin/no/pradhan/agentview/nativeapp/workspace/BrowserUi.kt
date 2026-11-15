@@ -87,7 +87,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                                 Group {
                                     tabs.tabs.forEachIndexed { i, t ->
                                         if (i > 0) Hairline()
-                                        ListRow(t.title.ifEmpty { t.url }, t.url, lines = 1, selected = t.id == tabs.current, onClick = { send("tab", mapOf("id" to t.id)) })
+                                        ListRow(t.title.ifEmpty { t.url }, t.url, selected = t.id == tabs.current, onClick = { send("tab", mapOf("id" to t.id)) })
                                     }
                                 }
                             }

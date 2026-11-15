@@ -167,7 +167,7 @@ fun rememberDiffs(diff: String?): Map<String, String>? =
 @Composable
 private fun DiffFileRow(f: PrFile, shown: Boolean, onOpenFile: (String?) -> Unit) {
     val name = f.path.substringAfterLast('/')
-    ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { onOpenFile(if (shown) null else f.path) })
+    ListRow(name, parentOf(f.path).ifEmpty { null }, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { onOpenFile(if (shown) null else f.path) })
 }
 
 // The rows of a lazy DiffFiles: each file, with the open file's patch lines under it.

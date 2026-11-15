@@ -5,7 +5,7 @@ import { useLongPress } from './longPress';
 import { cx } from './util';
 
 
-export function Row({ leading, title, meta, state, trailing, menu, lines = 1, href, plain, action, className, onLongPress, ...rest }: Omit<ComponentPropsWithoutRef<'button'>, 'title' | 'children'> & {
+export function Row({ leading, title, meta, state, trailing, menu, lines = 2, href, plain, action, className, onLongPress, ...rest }: Omit<ComponentPropsWithoutRef<'button'>, 'title' | 'children'> & {
   leading?: ReactNode;
   title: ReactNode;
   meta?: ReactNode;

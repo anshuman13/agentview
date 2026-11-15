@@ -247,7 +247,7 @@ private fun PullSummary(pr: PullRequest, now: Long) {
             withStyle(SpanStyle(color = av.diffDel)) { append("-${pr.deletions}") }
         }
         ListRow(pr.title, meta, lines = 3, leading = { StatusDot(checkDot(pr.checks)) }, trailing = { PrState(pr) })
-        pr.autoMerge?.let { Hairline(lead = true); ListRow("Auto-merge", it.autoMergeMeta(), lines = 1) }
+        pr.autoMerge?.let { Hairline(lead = true); ListRow("Auto-merge", it.autoMergeMeta()) }
     }
 }
 
@@ -259,7 +259,7 @@ private fun LazyListScope.pullChecks(d: PullRequestDetail) {
         Group {
             d.checks.forEachIndexed { i, c ->
                 if (i > 0) Hairline(lead = true)
-                ListRow(c.name, lines = 1, leading = { StatusDot(checkDot(c.state)) }, onClick = if (c.url.isNotEmpty()) ({ link(c.url) }) else null)
+                ListRow(c.name, leading = { StatusDot(checkDot(c.state)) }, onClick = if (c.url.isNotEmpty()) ({ link(c.url) }) else null)
             }
         }
     }

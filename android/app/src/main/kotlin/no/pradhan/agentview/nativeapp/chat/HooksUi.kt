@@ -15,7 +15,7 @@ fun HooksSheet(hub: Hub, hooks: List<String>, onDismiss: () -> Unit) {
     Sheet(onDismiss = onDismiss, title = "Hooks", padded = false, full = false) {
         if (hooks.isEmpty()) EmptyState("No hooks for this repo")
         else hooks.forEach { name ->
-            ListRow(name, lines = 1, trailing = { AvIcon("play", tint = av.fgMuted) }, onClick = { hub.runHook(name); onDismiss() })
+            ListRow(name, trailing = { AvIcon("play", tint = av.fgMuted) }, onClick = { hub.runHook(name); onDismiss() })
         }
     }
 }

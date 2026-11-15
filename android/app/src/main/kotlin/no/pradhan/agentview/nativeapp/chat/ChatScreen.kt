@@ -144,7 +144,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         ChatStatus(live, session, view.cost, if (view.agents.isNotEmpty() || run != null) maxOf(view.agents.size, live.agentList.size) else null) { panels.agents = true }
         Hairline()
         prLoad.data?.let { pr ->
-            ListRow(pr.title, prStripMeta(pr), leading = { StatusDot(checkDot(pr.checks)) }, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, lines = 1, onClick = { prOpen = pr.number })
+            ListRow(pr.title, prStripMeta(pr), leading = { StatusDot(checkDot(pr.checks)) }, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { prOpen = pr.number })
             Hairline()
         }
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
@@ -279,7 +279,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
     if (panels.hooks) HooksSheet(hub, session?.hooks.orEmpty()) { panels.hooks = false }
     if (panels.remind) Sheet(onDismiss = { panels.remind = false }, title = "Remind me", padded = false, full = false) {
         val choices = remember { remindChoices(System.currentTimeMillis()) }
-        Group { choices.forEachIndexed { i, (label, at) -> if (i > 0) Hairline(); ListRow(label, lines = 1, onClick = { hub.remindChat(live.title, sessionId!!, cwd, at); panels.remind = false }) } }
+        Group { choices.forEachIndexed { i, (label, at) -> if (i > 0) Hairline(); ListRow(label, onClick = { hub.remindChat(live.title, sessionId!!, cwd, at); panels.remind = false }) } }
     }
     when (panels.dialog) {
         "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { panels.dialog = null })

@@ -182,7 +182,7 @@ private fun LoopCard(hub: Hub, project: String, loop: ChatRun?, starting: Boolea
         ListRow(
             "Advisor loop", "Not running · every ${everyText(ADVISOR_LOOP_EVERY)} · up to $ADVISOR_LOOP_BUILDS builds",
             state = if (hub.readOnly) null else ({ Button("Start", onStart, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = !starting) }),
-            stateSlot = !hub.readOnly, lines = 1, metaLines = 1,
+            stateSlot = !hub.readOnly,
         )
         return
     }
@@ -194,7 +194,6 @@ private fun LoopCard(hub: Hub, project: String, loop: ChatRun?, starting: Boolea
         state = if (loop.needsYou) ({ Badge(HOLD_BADGE.first, HOLD_BADGE.second) }) else null,
         trailing = if (builds.isEmpty()) null else ({ RowLabel(builds) }),
         below = if (hub.readOnly) null else ({ Button("Open chat", { go { hub.openRun(loop, last?.report) } }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) }),
-        lines = 1, metaLines = 1,
     )
 }
 
@@ -229,7 +228,6 @@ private fun BoardCardRow(hub: Hub, card: BoardCard, stage: String, project: Stri
     val parts = spec?.let { specRowParts(it) { t -> since(t) } }
     ListRow(
         spec?.title?.ifEmpty { null } ?: item!!.title, parts?.meta ?: item!!.why,
-        lines = 1, metaLines = 1,
         state = badge?.let { (text, tone) -> { Badge(text, tone) } },
         trailing = if (parts == null || parts.age.isEmpty()) null else ({ RowLabel(parts.age) }),
         below = if (card.action == null || hub.readOnly) null else ({ Button(ACTION_LABEL.getValue(card.action), run, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) }),
@@ -343,7 +341,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                 }
                 val project = root
                 when {
-                    project == null -> Group { ListRow("Pick a project to see its work", lines = 1) }
+                    project == null -> Group { ListRow("Pick a project to see its work") }
                     backlog.error.isNotEmpty() || specs.error.isNotEmpty() -> EmptyState("Could not load the board", icon = "list-ordered")
                     board == null || items == null || specList == null -> Loading("Loading board")
                     else -> {
@@ -388,7 +386,6 @@ private fun AuditRow(hub: Hub, project: String, audits: Loaded<List<AuditInfo>?>
             audits.data == null -> "Loading the audit"
             else -> audit?.let { "${it.date} · ${auditCountLine(it.findings)}" } ?: "Not run yet"
         },
-        lines = 1, metaLines = 1,
         state = if (hub.readOnly && !running) null else ({
             if (running) Badge("Running", BadgeTone.Running)
             else Button("Specs from audit", { scope.askAdvisor(hub, "pm", specsFromAuditPrompt(project), onOpen) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = audit != null)
@@ -402,7 +399,7 @@ private fun AuditRow(hub: Hub, project: String, audits: Loaded<List<AuditInfo>?>
 
 @Composable
 private fun AuditSheet(audit: AuditInfo, onDismiss: () -> Unit) = Sheet(onDismiss, "Audit, ${audit.date}", padded = false) {
-    for (f in audit.findings) ListRow(f.screen, "${if (f.status == "fixed") "Fixed · " else ""}${f.severity.replaceFirstChar { it.uppercase() }} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, lines = 1, metaLines = 2)
+    for (f in audit.findings) ListRow(f.screen, "${if (f.status == "fixed") "Fixed · " else ""}${f.severity.replaceFirstChar { it.uppercase() }} · ${f.problem}. ${f.fix}", leading = { Text(f.rank.toString(), style = Type.callout, color = av.fgMuted) }, metaLines = 2)
 }
 
 // Each advisor's open chat, its earlier conversations and its memory.
@@ -430,16 +427,16 @@ Sheet(onDismiss, "Conversations and memory", padded = false) {
                         c.running -> "Working"
                         else -> "Open · ${since(c.lastActive)}"
                     },
-                    lines = 1, metaLines = 1, selected = c != null && c.id == shownId,
+                    selected = c != null && c.id == shownId,
                     leading = if (state != null) ({ StateDot(state) }) else null,
                     onClick = { go { hub.openAdvisor(a.id, false) } },
                 )
                 for (s in earlier) {
                     Hairline()
-                    ListRow(s.title.ifBlank { "Untitled" }, since(s.lastModified), lines = 1, onClick = { go { hub.openSaved(s.sessionId) } })
+                    ListRow(s.title.ifBlank { "Untitled" }, since(s.lastModified), onClick = { go { hub.openSaved(s.sessionId) } })
                 }
                 Hairline()
-                ListRow("Memory", if (facts == 0) "Nothing yet" else plural(facts, "fact"), lines = 1, onClick = if (facts > 0) ({ memory = if (memory == a.id) null else a.id }) else null)
+                ListRow("Memory", if (facts == 0) "Nothing yet" else plural(facts, "fact"), onClick = if (facts > 0) ({ memory = if (memory == a.id) null else a.id }) else null)
             }
             if (memory == a.id && got != null) Markdown(got.memory.replaceFirst(Regex("^# .*\n"), ""), Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4))
         }

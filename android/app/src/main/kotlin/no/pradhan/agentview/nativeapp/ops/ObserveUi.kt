@@ -143,7 +143,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         if (boards.isNotEmpty()) Group {
             boards.forEachIndexed { i, d ->
                 if (i > 0) Hairline()
-                ListRow(d.title, d.folder, lines = 1, onClick = if (d.url.isNotEmpty()) ({ link(d.url) }) else null)
+                ListRow(d.title, d.folder, onClick = if (d.url.isNotEmpty()) ({ link(d.url) }) else null)
             }
         } else if (dash.data != null) EmptyState("No dashboards match", "Set grafana.query or grafana.dashboards in the settings")
 
@@ -194,7 +194,7 @@ private fun linkAction(label: String, url: String?, link: (String) -> Unit): (@C
 private fun PanelRow(p: GrafanaPanel, onClick: () -> Unit) {
     val meta = p.last?.let { AnnotatedString(panelNum(it) + (p.unit ?: "")) } ?: buildAnnotatedString { withStyle(SpanStyle(color = av.err)) { append(p.error ?: "No data") } }
     ListRow(
-        p.title, meta, lines = 1,
+        p.title, meta,
         trailing = { if (p.points.size > 1) Sparkline(p.points) },
         onClick = if (p.link != null) onClick else null,
     )

@@ -185,7 +185,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
                 presets.forEach { p -> Chip(p.name, { applyPreset(p) }, on = preset == p.name) }
                 preset?.let { name -> Button("Delete preset", { hub.saveGoalPresets(removePreset(presets, name)); preset = null }, variant = ButtonVariant.Danger) }
             }
-            if (sheet.plan != null) ListRow(sheet.plan, if (read.error) "Could not read the plan. Check the file still exists." else read.markdown?.let { read.progress ?: "No tasks" }, lines = 1)
+            if (sheet.plan != null) ListRow(sheet.plan, if (read.error) "Could not read the plan. Check the file still exists." else read.markdown?.let { read.progress ?: "No tasks" })
             else Box(Modifier.padding(Tokens.sp6)) { TextField(what, { what = it }, placeholder = "What is the goal?", minLines = 3) }
         }
         SectionHeader("How often")

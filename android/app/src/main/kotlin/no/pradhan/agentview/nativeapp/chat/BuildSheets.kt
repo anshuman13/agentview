@@ -263,7 +263,7 @@ internal fun Criteria(criteria: List<SpecCriterion>, limit: Int, showAll: () -> 
         criteria.take(limit).forEachIndexed { i, c ->
             if (i > 0) Hairline()
             val badge = criterionBadge(c)
-            ListRow(c.text, "${if (c.ui) "UI · " else ""}${c.evidence.ifEmpty { "Not tested" }}", state = { if (badge != null) Badge(badge.first, badge.second) }, stateSlot = true, onClick = { open(c.n) })
+            ListRow(c.text, "${if (c.ui) "UI · " else ""}${c.evidence.ifEmpty { "Not tested" }}", state = badge?.let { { Badge(it.first, it.second) } }, onClick = { open(c.n) })
         }
     }
     if (limit < criteria.size) Button("Show all ${criteria.size}", showAll, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)

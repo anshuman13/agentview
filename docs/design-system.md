@@ -172,11 +172,11 @@ outside closes. At max-width 480px the Menu is a bottom sheet portaled to the bo
 
 ### Row
 Height `--row-h` 40px (`--touch` on coarse pointers), padding `--list-pad`. Leading check or
-icon, title in body type one line with ellipsis, meta in label type `--meta-fg`, trailing
+icon, title in body type up to 2 lines, meta in label type `--meta-fg`, trailing
 IconButton sm or Chip shown on hover. Hairline only between groups.
 `<Row leading title meta trailing lines href onClick>` (web/src/ui/Row.tsx, components/rows.css): 48px
 minimum, title clamps to 1 or 2 lines, a hairline under each row starts at the title, state layers
-as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button or plain Row takes an optional `action` (one IconButton sm) beside it. Anatomy, left to right: optional leading (24px), title, one meta line, one state slot, optional menu. Title and meta are one line each with an ellipsis (Android `lines = 1`, `metaLines = 1`). `state` is the slot, at most one Badge or one short Status language word, fixed at `--row-state-w` (80px, Android `rowStateW`), content at its right edge, drawn whenever the prop is passed (`state={null}` keeps the columns aligned on rows with no state; Android `stateSlot`). `menu` (the Menu items) adds the one IconButton sm "kebab-vertical" labelled More through the `action` wrapper, last in the row; a long press opens it unless the caller passes `onLongPress`. `trailing` stays for content outside the anatomy (chevrons, counts). `AskRow` (web/src/ui/AskRow.tsx) is a Row with up to two actions at the end (one primary item and a More menu), used for Show all and the overview ask rows. Status: built; the topic timeline and meeting actions in Meetings, the digest, brief and Prep cards, the wiki page claims and search hits, and the Settings page use it.
+as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button or plain Row takes an optional `action` (one IconButton sm) beside it. Anatomy, left to right: optional leading (24px), title, one meta line, one state slot, optional menu. Title and meta wrap to 2 lines each before an ellipsis (web `lines = 2` by default, Android `lines = 2`, `metaLines = 2`); pass 1 only for a list where a second line would mislead. `state` is the slot, at most one Badge or one short Status language word, at least `--row-state-w` (80px, Android `rowStateW`) and growing to fit it, content at its right edge; a row without a state gives its text the full width. `menu` (the Menu items) adds the one IconButton sm "kebab-vertical" labelled More through the `action` wrapper, last in the row; a long press opens it unless the caller passes `onLongPress`. `trailing` stays for content outside the anatomy (chevrons, counts). `AskRow` (web/src/ui/AskRow.tsx) is a Row with up to two actions at the end (one primary item and a More menu), used for Show all and the overview ask rows. Status: built; the topic timeline and meeting actions in Meetings, the digest, brief and Prep cards, the wiki page claims and search hits, and the Settings page use it.
 
 Testing: Row, Section, Chip and AskRow are tested by rendering to static markup and asserting the root element, classes and each branch (plain, href, action) in `web/src/ui/Row.test.ts`, `longPress.test.ts` (the press timer), `Section.test.ts`, `Button.test.ts` and `AskRow.test.ts`. A new branch or class on one of them needs a case in its test. `web/src/app/pages.smoke.test.tsx` renders Overview, Tasks, Meetings and `/design` on an empty store; a new top-level page or list gets a case there. `web/src/design/a11y.test.tsx` checks the `/design` markup for accessible names and menu roles, and `web/src/design/stories.test.tsx` checks that every primitive in this section has a Block in `/design`.
 
@@ -244,7 +244,7 @@ What the hub produced about a period: the day digest, the morning brief, the awa
 ### Row density
 How much a list row may carry. The eye should find the one thing to do without reading.
 The phone behaviours below are summarised in [Phone](features.md#phone).
-- One line of title, one line of meta. Draft or quoted text in a row is a 2-line clamp in meta type, not a
+- Up to two lines of title, two lines of meta. Draft or quoted text in a row is a 2-line clamp in meta type, not a
   separate box. The full text lives on the item's page.
 - At most two visible actions per row: the primary (Button sm, the one accent if it is the page's primary
   action) and one IconButton sm "more" opening a Menu with the rest (Edit, Skip, History, Open thread).
@@ -278,7 +278,7 @@ The phone behaviours below are summarised in [Phone](features.md#phone).
 - On phones a list restores its scroll position when the user returns from an item page, keyed by route (list and profile filter), once per return. Tasks and Meetings.
 - Tasks as built: a Tasks row is the title, a meta line (due, then at most one of Repeats, checklist count, High or
   Medium; no tags, none on done rows), the check as Done, a Needs you Badge on suggested tasks in the state slot (every row passes the slot, so titles line up) and one More Menu
-  (Open, Snooze, Tomorrow, Move, Delete). Title and meta are one line on the phone too. A touch hold on a web task row starts selection, so it does not open the menu. A day group is a Section header over one Grouped list; the round + is the only add control. The checklist is read and toggled on the task page.
+  (Open, Snooze, Tomorrow, Move, Delete). Title and meta wrap to 2 lines on the phone too. A touch hold on a web task row starts selection, so it does not open the menu. A day group is a Section header over one Grouped list; the round + is the only add control. The checklist is read and toggled on the task page.
 - Meetings as built: a meeting row is the title with the profile dot, a meta line (time with the weekday beyond today,
   room, N people), at most one Badge (Live) in the state slot, which every row passes, and one More Menu on the web (Open calendar, Notes; the phone row has none). No avatars, tile or
   count badges; a transcript hit replaces the meta as a 2-line clamp.

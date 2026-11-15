@@ -104,7 +104,6 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
                     ListRow(
                         r.name,
                         modifier = Modifier.padding(start = Tokens.sp6 * minOf(r.depth, 6)),
-                        lines = 1,
                         muted = r.hidden,
                         leading = {
                             AvIcon(if (!r.dir) "file" else if (isOpen) "folder-opened" else "folder", null, Tokens.iconMd, tint = av.fgMuted)
