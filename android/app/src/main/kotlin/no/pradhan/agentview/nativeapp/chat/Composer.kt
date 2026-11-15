@@ -69,6 +69,7 @@ import no.pradhan.agentview.nativeapp.app.setLoop
 import no.pradhan.agentview.nativeapp.app.setMode
 import no.pradhan.agentview.nativeapp.app.setModel
 import no.pradhan.agentview.nativeapp.app.setReview
+import no.pradhan.agentview.nativeapp.app.setBuildFlow
 import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -324,6 +325,9 @@ private fun ChatSettingsSheet(hub: Hub, s: ComposerState, uploading: Int, sessio
             ListRow("Goal", run?.let { runLine(it, session?.loop?.phase) } ?: "Off", onClick = if (opens) ({ hub.shell.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }) else null, trailing = { if (opens) Chevron() })
             Hairline()
             ListRow("Build cycle", loop?.let { "Up to ${plural(it.max, "round")}" } ?: "Off", onClick = { onSheet(Picker.Loop) }, trailing = { Chevron() })
+            Hairline()
+            val flow = session?.buildFlow == true
+            ListRow("Build flow", if (flow) "On: spec, sketch and your approval before building" else "Off: builds directly", onClick = { hub.setBuildFlow(!flow); onSheet(null) })
         }
     }
 }

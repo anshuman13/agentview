@@ -36,6 +36,9 @@ export function agentOptions(o: {
   canUseTool: CanUseTool;
   beforeAgent: HookCallback;
   beforeEdit: HookCallback;
+  beforeStatus: HookCallback;
+  onSubagentStart: HookCallback;
+  onPrompt: HookCallback;
   beforeTool: HookCallback;
   afterTool: HookCallback;
   onStop: HookCallback;
@@ -78,9 +81,11 @@ export function agentOptions(o: {
       },
     },
     hooks: {
-      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }, { matcher: EDIT_TOOLS.join('|'), hooks: [o.beforeEdit] }, ...(o.unattended ? [{ matcher: 'WebFetch|ListMcpResourcesTool|ReadMcpResourceTool|mcp__.*', hooks: [o.beforeTool] }] : [])],
+      PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }, { matcher: EDIT_TOOLS.join('|'), hooks: [o.beforeEdit] }, { matcher: 'mcp__agentview__set_status', hooks: [o.beforeStatus] }, ...(o.unattended ? [{ matcher: 'WebFetch|ListMcpResourcesTool|ReadMcpResourceTool|mcp__.*', hooks: [o.beforeTool] }] : [])],
       PostToolUse: [{ hooks: [o.afterTool] }],
       Stop: [{ hooks: [o.onStop] }],
+      SubagentStart: [{ hooks: [o.onSubagentStart] }],
+      UserPromptSubmit: [{ hooks: [o.onPrompt] }],
     },
     stderr: (d) => process.stderr.write(d),
   };

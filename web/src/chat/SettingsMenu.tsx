@@ -24,12 +24,14 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   const accounts = useStore((s) => s.session.accounts) ?? [];
   const chat = useStore((s) => s.session.id);
   const phase = useStore((s) => s.session.loop.phase);
+  const buildFlow = useStore((s) => Boolean(s.session.buildFlow));
   const run = useChatRun(chat);
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
     if (v === 'side') return act(sideChat);
     if (v === 'fork') return act(forkChat);
     if (v === 'markdown') return act(copyChatMarkdown);
+    if (v === 'buildFlow') return act(() => send({ type: 'set_build_flow', on: !buildFlow }));
     // Loops, cycles, tries and jobs have their controls on the loop card only.
     if (v === 'goal') return act(() => (!run ? startGoal({ here: true }) : run.kind === 'goal' && openGoal(run.id)));
     setPick({ kind: v as Pick['kind'], at: pick.at });
@@ -47,6 +49,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     ['Goal', [
       action('goal', 'Goal', run ? runLine(run, phase) : 'Off'),
       picker('loop', 'Build cycle', loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off'),
+      action('buildFlow', 'Build flow', buildFlow ? 'On: spec, sketch and your approval before building' : 'Off: builds directly'),
     ]],
     ['Chat', [
       ...(sessionId ? [action('side', 'Side chat', 'Ask in a fork beside this chat (⌘;)'), picker('remind', 'Remind me', 'Add a task to check this chat later'), action('fork', 'Fork chat', 'Start a new chat from a summary of this one')] : []),

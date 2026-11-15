@@ -102,6 +102,8 @@ export type SessionInfo = {
   permissionMode: string | null;
   // Changed files are reviewed after each turn.
   review?: boolean;
+  // Features are built through the spec, sketch and approval flow instead of directly.
+  buildFlow?: boolean;
   apiKeySource: string | null;
   models: Array<{ value: string; displayName: string; description?: string; efforts?: string[] }>;
   commands: Array<{ name: string; description: string }>;
@@ -378,6 +380,7 @@ export type ClientMessage =
   | { type: 'set_account'; account: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_review'; on: boolean }
+  | { type: 'set_build_flow'; on: boolean }
   | { type: 'review'; id: string; action: 'keep' | 'undo'; file?: string; hunk?: number }
   | { type: 'set_loop'; on: boolean; max?: number }
   | { type: 'run'; run: string; op: RunOp }

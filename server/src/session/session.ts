@@ -258,6 +258,10 @@ export class AgentSession implements AgentHost {
     this.settings.setReview(on);
   }
 
+  setBuildFlow(on: boolean) {
+    this.settings.setBuildFlow(on);
+  }
+
   canUseTool(toolName: string, input: Record<string, unknown>, opts: AskOptions) {
     return this.cycle.planDone(toolName, input, opts) ?? this.approvals.ask(toolName, input, opts);
   }

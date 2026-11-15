@@ -4,8 +4,13 @@ import type { AgentHost } from '../types.js';
 import { STATUS_REMINDER } from './options.js';
 import { denyTool, editDenied, toolDenied, type Unattended } from './unattended.js';
 import { bigBroRequest, bigBroVerdict } from './approval.js';
+import { BIG_BRO } from '../../../../shared/protocol.js';
 
 const STATUS_EVERY = 8;
+export const BUILD_FLOW_ON = 'The Build flow option is on in this chat: build a feature by running the agentview:build skill with its brief, not directly.';
+export const SUBAGENT_STEPS = 'After each finished step call mcp__agentview__set_status with done (the step as a short imperative title), decision (the key choice you made) and why (one line). Unless your instructions give a return format, keep your final report to 3 sentences.';
+// Fable answers one question and the approval gate runs one script: neither works in steps.
+const NO_STEPS = new Set([BIG_BRO, 'approval-gate', 'agentview:approval-gate']);
 
 // The callbacks the CLI makes around tool calls and when a turn stops.
 export class ToolHooks {
@@ -19,6 +24,22 @@ export class ToolHooks {
     if (!req) return {};
     const r = await this.host.ask(req.toolName, req.toolInput, { signal, title: req.title });
     return bigBroVerdict(r.behavior);
+  }
+
+  // Marks a subagent's set_status call, so its steps stay out of the chat's status line.
+  beforeStatus(input: HookInput): HookJSONOutput {
+    if (input.hook_event_name !== 'PreToolUse' || !input.agent_id) return {};
+    return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', updatedInput: { ...(input.tool_input as Record<string, unknown>), agent: input.agent_id } } };
+  }
+
+  onPrompt(input: HookInput): HookJSONOutput {
+    if (input.hook_event_name !== 'UserPromptSubmit' || !this.host.state.session.buildFlow) return {};
+    return { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: BUILD_FLOW_ON } };
+  }
+
+  onSubagentStart(input: HookInput): HookJSONOutput {
+    if (input.hook_event_name !== 'SubagentStart' || NO_STEPS.has(input.agent_type)) return {};
+    return { hookSpecificOutput: { hookEventName: 'SubagentStart', additionalContext: SUBAGENT_STEPS } };
   }
 
   beforeEdit(input: HookInput, unattended?: Unattended): HookJSONOutput {

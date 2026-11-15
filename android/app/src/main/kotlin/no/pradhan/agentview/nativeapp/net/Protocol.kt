@@ -220,6 +220,7 @@ data class SessionInfo(
     val loop: LoopInfo? = null,
     val hooks: List<String> = emptyList(),
     val review: Boolean = false,
+    val buildFlow: Boolean = false,
     val provider: String? = null,
     val capabilities: Capabilities = Capabilities(),
     val instructionFiles: List<String> = emptyList(),
@@ -387,6 +388,7 @@ fun usageCmd() = cmd("usage")
 fun setAccountCmd(account: String) = cmd("set_account") { put("account", account) }
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
 fun setReviewCmd(on: Boolean) = cmd("set_review") { put("on", on) }
+fun setBuildFlowCmd(on: Boolean) = cmd("set_build_flow") { put("on", on) }
 fun setLoopCmd(on: Boolean, max: Int? = null) = cmd("set_loop") { put("on", on); if (max != null) put("max", max) }
 fun reviewCmd(id: String, action: String, file: String? = null, hunk: Int? = null) = cmd("review") { put("id", id); put("action", action); if (file != null) put("file", file); if (hunk != null) put("hunk", hunk) }
 fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null, provider: String? = null, text: String? = null, hub: Boolean = false) = cmd("new_session") { if (hub) put("hub", true); if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork); if (provider != null) put("provider", provider); if (text != null) put("text", text) }

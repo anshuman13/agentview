@@ -26,6 +26,7 @@ import no.pradhan.agentview.nativeapp.net.setLoopCmd
 import no.pradhan.agentview.nativeapp.net.setModeCmd
 import no.pradhan.agentview.nativeapp.net.setModelCmd
 import no.pradhan.agentview.nativeapp.net.setReviewCmd
+import no.pradhan.agentview.nativeapp.net.setBuildFlowCmd
 import no.pradhan.agentview.nativeapp.net.steerCmd
 import no.pradhan.agentview.nativeapp.net.stopTaskCmd
 import no.pradhan.agentview.nativeapp.net.triesKeepCmd
@@ -175,6 +176,8 @@ fun Hub.refreshUsage() = post(usageCmd(), store.wanted)
 fun Hub.setMode(mode: String) = post(setModeCmd(mode), store.wanted)
 
 fun Hub.setReview(on: Boolean) = post(setReviewCmd(on), store.wanted)
+
+fun Hub.setBuildFlow(on: Boolean) = post(setBuildFlowCmd(on), store.wanted)
 
 fun Hub.setLoop(on: Boolean, max: Int? = null) = post(setLoopCmd(on, max), store.wanted)
 
