@@ -134,9 +134,7 @@
         "name": "mcp__agentview__set_status",
         "input": {
           "text": "x",
-          "done": "Build the navbar",
-          "decision": "Flexbox row",
-          "why": "Two items only"
+          "done": "Build the navbar"
         },
         "summary": "",
         "at": 2000
@@ -170,8 +168,7 @@
         "name": "mcp__agentview__set_status",
         "input": {
           "text": "x",
-          "done": "Agent step",
-          "decision": "x"
+          "done": "Agent step"
         },
         "summary": "",
         "at": 4000,
@@ -194,8 +191,7 @@
         "name": "mcp__agentview__set_status",
         "input": {
           "text": "x",
-          "done": "Build the navbar",
-          "why": "Fewer rules"
+          "done": "Build the navbar"
         },
         "summary": "",
         "at": 6000
@@ -219,8 +215,7 @@
         "name": "mcp__agentview__set_status",
         "input": {
           "text": "x",
-          "done": "Ship it",
-          "decision": "Main branch"
+          "done": "Ship it"
         },
         "summary": "",
         "at": 9000
@@ -257,9 +252,7 @@
       [
         {
           "id": "s1",
-          "title": "Build the navbar",
-          "decision": "Flexbox row",
-          "why": "Fewer rules"
+          "title": "Build the navbar"
         },
         {
           "id": "s4",
@@ -269,8 +262,7 @@
       [
         {
           "id": "s6",
-          "title": "Ship it",
-          "decision": "Main branch"
+          "title": "Ship it"
         }
       ]
     ],

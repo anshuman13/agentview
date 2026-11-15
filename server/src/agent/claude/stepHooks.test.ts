@@ -8,13 +8,13 @@ const ctx = (setStatus = vi.fn()) => ({ cwd: '/w', chatId: 'c', provider: 'claud
 const context = (o: unknown) => (o as { hookSpecificOutput?: { additionalContext?: string } }).hookSpecificOutput?.additionalContext;
 
 describe('step reporting', () => {
-  it('set_status takes a decision and why, and a subagent call leaves the status line alone', async () => {
+  it('set_status reports a finished task, and a subagent call leaves the status line alone', async () => {
     const setStatus = vi.fn();
-    await statusTool.handler({ text: 't', done: 'Build the navbar', decision: 'Flex row', why: 'Fits the shell' }, ctx(setStatus));
-    expect(setStatus).toHaveBeenCalledWith('t', { done: 'Build the navbar', next: undefined });
+    await statusTool.handler({ text: 't', done: 'Added a navbar' }, ctx(setStatus));
+    expect(setStatus).toHaveBeenCalledWith('t', { done: 'Added a navbar', next: undefined });
     await statusTool.handler({ text: 't', done: 'x', agent: 'a1' }, ctx(setStatus));
     expect(setStatus).toHaveBeenCalledTimes(1);
-    expect(STATUS_RULES).toContain('imperative');
+    expect(STATUS_RULES).toContain('what you changed');
     expect(STATUS_RULES).toContain('at most 3 sentences');
   });
 

@@ -18,9 +18,9 @@ private fun noteOf(it: Item) = when (it) {
 
 private fun notes(items: List<Item>) = (if (items.size == 1) noteOf(items[0]) else "").ifEmpty { if (items.isEmpty()) "" else plural(items.size, "note") }
 
-data class StatusStep(val id: String, val title: String, val decision: String? = null, val why: String? = null)
+data class StatusStep(val id: String, val title: String)
 
-// Each prompt's finished steps from its top-level set_status calls; a repeated title keeps its first place and takes the later non-blank fields.
+// Each prompt's finished tasks from its top-level set_status calls; a repeated title keeps its first place.
 private fun stepsByTurn(events: List<ChatEvent>): Map<String, List<StatusStep>> {
     val out = HashMap<String, MutableList<StatusStep>>()
     var key = ""
@@ -29,12 +29,8 @@ private fun stepsByTurn(events: List<ChatEvent>): Map<String, List<StatusStep>> 
         if (e.kind != "tool_use" || e.parent != null || !e.name.endsWith("__set_status")) continue
         val title = e.input.s("done").trim()
         if (title.isEmpty()) continue
-        val decision = e.input.s("decision").trim().ifEmpty { null }
-        val why = e.input.s("why").trim().ifEmpty { null }
         val list = out.getOrPut(key) { mutableListOf() }
-        val i = list.indexOfFirst { it.title == title }
-        if (i < 0) list += StatusStep(e.id, title, decision, why)
-        else list[i] = list[i].let { it.copy(decision = decision ?: it.decision, why = why ?: it.why) }
+        if (list.none { it.title == title }) list += StatusStep(e.id, title)
     }
     return out
 }

@@ -8,7 +8,7 @@ import { BIG_BRO } from '../../../../shared/protocol.js';
 
 const STATUS_EVERY = 8;
 export const BUILD_FLOW_ON = 'The Build flow option is on in this chat: build a feature by running the agentview:build skill with its brief, not directly.';
-export const SUBAGENT_STEPS = 'After each finished step call mcp__agentview__set_status with done (the step as a short imperative title), decision (the key choice you made) and why (one line). Unless your instructions give a return format, keep your final report to 3 sentences.';
+export const SUBAGENT_STEPS = 'After each finished task call mcp__agentview__set_status with done: one plain sentence saying what you changed or found, not the process. Unless your instructions give a return format, keep your final report to 3 sentences.';
 // Fable answers one question and the approval gate runs one script: neither works in steps.
 const NO_STEPS = new Set([BIG_BRO, 'approval-gate', 'agentview:approval-gate']);
 

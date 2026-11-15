@@ -14,11 +14,11 @@ export type FoldRow =
   | { kind: 'item'; it: Item }
   | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[] };
 
-export type StatusStep = { id: string; title: string; decision?: string; why?: string };
+export type StatusStep = { id: string; title: string };
 
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
-// Each prompt's finished steps from its top-level set_status calls; a repeated title keeps its first place and takes the later non-blank fields.
+// Each prompt's finished tasks from its top-level set_status calls; a repeated title keeps its first place.
 function stepsByTurn(events: ChatEvent[]) {
   const out = new Map<string, StatusStep[]>();
   let key = '';
@@ -29,11 +29,7 @@ function stepsByTurn(events: ChatEvent[]) {
     if (!title) continue;
     const list = out.get(key) ?? [];
     out.set(key, list);
-    const decision = text(e.input.decision) || undefined;
-    const why = text(e.input.why) || undefined;
-    const old = list.find((s) => s.title === title);
-    if (!old) list.push({ id: e.id, title, ...(decision && { decision }), ...(why && { why }) });
-    else { if (decision) old.decision = decision; if (why) old.why = why; }
+    if (!list.some((s) => s.title === title)) list.push({ id: e.id, title });
   }
   return out;
 }

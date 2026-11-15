@@ -85,7 +85,6 @@ import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.isRepoSpec
 import no.pradhan.agentview.nativeapp.workspace.sketchName
 import no.pradhan.agentview.nativeapp.workspace.specSlug
-import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.plural
 
 internal fun gapAbove(older: Item?, it: Item): Dp? {
@@ -253,12 +252,12 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     }
 }
 
-// The turn's finished steps from set_status, each with its decision and why; open by default.
+// The turn's finished tasks from set_status, each in full; open by default.
 @Composable
 private fun StepsBox(hub: Hub, fold: FoldRow.Fold, live: Boolean) {
-    TranscriptBox(hub, "steps:${fold.id}", "Steps", plural(fold.steps.size, "step"), state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null, defaultOpen = true) {
-        Column(Modifier.padding(bottom = Tokens.sp3)) {
-            fold.steps.forEach { ListRow(it.title, listOfNotNull(it.decision, it.why).joinToString(" \u00B7 ").ifEmpty { null }, metaLines = 2) }
+    TranscriptBox(hub, "steps:${fold.id}", "Tasks", plural(fold.steps.size, "task"), state = if (live) { { CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint) } } else null, defaultOpen = true) {
+        Column(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+            fold.steps.forEach { Text("\u2022  ${it.title}", style = Type.callout, color = av.fg) }
         }
     }
 }

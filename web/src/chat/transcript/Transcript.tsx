@@ -2,7 +2,6 @@ import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, 
 import { forgetSeenBefore, getState, loadEarlier, seenBefore, send, setUi, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
-import { Row as UiRow } from '../../ui/Row';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
@@ -304,8 +303,8 @@ const UserText = ({ id, text }: { id: string; text: string }) => <Folded id={'pr
 
 function StepsBox({ id, steps, live }: { id: string; steps: StatusStep[]; live: boolean }) {
   return (
-    <TranscriptBox id={`steps:${id}`} className="tr-steps" title="Steps" meta={plural(steps.length, 'step')} defaultOpen state={live ? <Icon name="loading" small spin /> : undefined}>
-      <div className="tr-steps-list">{steps.map((s) => <UiRow key={s.id} plain title={s.title} meta={[s.decision, s.why].filter(Boolean).join(' \u00b7 ') || undefined} />)}</div>
+    <TranscriptBox id={`steps:${id}`} className="tr-steps" title="Tasks" meta={plural(steps.length, 'task')} defaultOpen state={live ? <Icon name="loading" small spin /> : undefined}>
+      <ul className="tr-tasks">{steps.map((s) => <li key={s.id}>{s.title}</li>)}</ul>
     </TranscriptBox>
   );
 }
