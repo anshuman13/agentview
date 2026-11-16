@@ -35,11 +35,11 @@ describe('reviewed asks', () => {
     delete process.env.AGENTVIEW_NTFY;
   });
 
-  test('drops a queued ask I accepted without pushing it', async () => {
+  test('drops a queued ask I closed without pushing it', async () => {
     const db = openDb(':memory:');
     const { urgent } = saveScan(db, { chats: [], asks: [{ url: 'u1', from: 'Kim', chat: '#ai', title: 'Answer Kim', quote: 'Now?', urgent: true }], answered: [] }, at(27, 18));
     await pushQueued(db, 'k', urgent, false, async () => true);
-    db.prepare("UPDATE items SET status = 'open' WHERE id = ?").run(askId('u1'));
+    db.prepare("UPDATE items SET status = 'done' WHERE id = ?").run(askId('u1'));
     const sent: string[] = [];
     await pushQueued(db, 'k', [] as { id: string }[], true, async (a) => (sent.push(a.id), true));
     expect(sent).toEqual([]);

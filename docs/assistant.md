@@ -60,10 +60,9 @@ usage the same way chats do (see [features.md](features.md#personal-and-work-cla
 ## Slack and Gmail scans
 
 On weekdays from 07 to 19 the hub reads the work account with Haiku and read-only connector tools. Slack is read
-every 15 minutes (DMs, mentions and the watched channels), Gmail every 30 minutes (the inbox, without promotions,
-social, updates and forums). Slack reads page through to the last result, so a long gap misses nothing. Messages and mail that ask me to act become suggested tasks in Tasks under "Is this
-yours?", one per Slack permalink or Gmail thread, with the sender and a link back. A suggestion closes itself when I
-reply before taking it, and an ask someone else already answered in its thread is not suggested. A DM waits on me when the other person's last message asks me something I have not answered (thanks, greetings and FYIs do not); the wait clears after 3 days with no new message there, since a scan only rereads chats with new messages. Needs you shows the Slack summary's bullets only while the summary is at most 3 days old. An ask I already took and then answered in Slack stays open with a "Replied in Slack" note and a Replied cue. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default; ones found earlier, or whose push failed, wait in meta for the next in-hours scan); during a calendar meeting
+every 15 minutes (DMs, mentions, my own messages including thread replies, and the watched channels), Gmail every 30 minutes (the inbox, without promotions,
+social, updates and forums). Slack reads page through to the last result, so a long gap misses nothing. Slack messages that ask me to act become open tasks with their reply draft, one per permalink, with the sender and a link back; they also fill the Reply queue in Needs you. Mail that asks me to act becomes a suggested task in Tasks under "Is this
+yours?", one per Gmail thread. A Slack ask closes as done when the scan sees I replied (in the thread, the DM or anywhere in my own messages); what my reply promises comes back as a You said task. An ask someone else already answered in its thread is not added. A DM waits on me when the other person's last message asks me something I have not answered (thanks, greetings and FYIs do not); the wait clears after 3 days with no new message there, since a scan only rereads chats with new messages. Needs you shows the Slack summary's bullets only while the summary is at most 3 days old. Every new Slack ask is pushed (in away mode only urgent ones, escalations and follow-ups) inside the push hours (08 to 17 by default; ones found earlier, or whose push failed, wait in meta for the next in-hours scan); during a calendar meeting
 with other attendees they are held and sent as one push when it ends.
 Scan slots follow the hub's local clock, so half hours start at :00 and :30 in any time zone.
 While a Claude account is at its usage limit, the Slack and Gmail scans and the calendar import of its profiles skip
@@ -81,7 +80,7 @@ kept in the item's `draft` column. For it the model reads the ask's thread and c
 returns up to 3 current wiki claims, ranked by relevance, and 3 meeting decisions of the last 30 days that share at least two key words
 with the ask. Nothing is sent: the ask row has Copy draft next to the source link. My own promises get no draft.
 
-Both scans also pick up my own promises ("I'll send it tomorrow") from what I wrote, as suggested tasks labelled
+Both scans also pick up my own promises ("I'll send it tomorrow") from what I wrote, as tasks (open from Slack, suggested from Gmail) labelled
 "You said" with the link and a due date when I named one. The Slack scan skips messages that only report something
 already done or give an opinion. Once a day the Gmail scan also looks at mail I sent in the
 last 14 days and keeps the threads where I asked something and nobody replied for 3 workdays, in one `briefs` row of
@@ -100,7 +99,7 @@ Each scan is off until its config file exists in `~/.agentview/assistant`:
 
 ## Autopilot
 
-With the "Reply for me in Slack" switch on at the top of Jobs, every new Slack ask with a draft is pushed with Send reply, which posts
+With the "Reply for me in Slack" switch on at the top of Jobs, the push of a new Slack ask with a draft has Send reply, which posts
 the draft as a thread reply through the Slack connector and closes the ask (`POST /slack/reply?id=`). Inside the away
 window the scan answers itself: the draft step also sets a tier (answer, hold, escalate) and a confidence; a sure answer
 goes out with an auto-reply marker, the rest get one holding note per person per 3 days naming the backup, escalated

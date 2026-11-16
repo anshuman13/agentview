@@ -5,7 +5,10 @@ package no.pradhan.agentview.nativeapp.codex
 class Split(
     val overdue: List<Row>, val today: List<Row>, val later: List<Row>,
     val review: List<Row>, val notes: List<Row>, val doneToday: List<Row>,
-)
+) {
+    // Suggested and open rows: the reply queue reads Slack asks from both.
+    val asks get() = review + overdue + today + later
+}
 
 fun matchesProfile(profile: String?, r: Row) = profile == null || r.profile == profile
 

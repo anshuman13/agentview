@@ -118,7 +118,8 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     `I am Slack user ${c.me}. Read what is new in Slack since unix time ${unix} (${new Date(since).toISOString()}). Do not send or change anything in Slack.`,
     `1. My DMs and group DMs: slack_search_public_and_private with filters "is:dm", after="${unix}", sort "timestamp", include_context false.`,
     `2. Mentions of me: slack_search_public_and_private with keywords ["<@${c.me}>"], after="${unix}", sort "timestamp", include_context false.`,
-    `3. These channels, with slack_read_channel oldest="${unix}" limit 40: ${c.channels.map((n) => `#${n} ${ids[n] ?? '(id unknown, find it with slack_list_user_channels name_prefix)'}`).join(', ')}.`,
+    `3. My own messages, to see what I answered, including thread replies: slack_search_public_and_private with keywords ["from:<@${c.me}>"], after="${unix}", sort "timestamp", include_context false.`,
+    `4. These channels, with slack_read_channel oldest="${unix}" limit 40: ${c.channels.map((n) => `#${n} ${ids[n] ?? '(id unknown, find it with slack_list_user_channels name_prefix)'}`).join(', ')}.`,
     'Make all of these reads in parallel in one turn. When a read returns a next cursor, read the next page with it until there is none, so nothing since that time is missed. Read a thread with slack_read_thread only when a new message there might ask something of me.',
     '',
     `Permalinks look like https://${c.domain}/archives/<channel id>/p<ts without the dot>.`,
@@ -129,7 +130,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     ...voiceLines(db),
     ...correctionLines(db),
     ...extra,
-    'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
+    'In answered, list permalinks of the open asks below that I have replied to (in the thread, in the DM or anywhere my own messages show I answered it) or that someone resolved. When my reply promises more work, list the ask in answered and add the promise in said.',
     `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip messages that report something already done ("added now", "invited") or only give an opinion, promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,
     'In fulfilled, list permalinks of the open promises below that I have since done, for example when I posted what I promised.',
     COMMAND_STEP,
@@ -140,7 +141,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     ...(chats.length ? chats.map((x) => `- ${x.id} ${x.name}: ${x.summary ?? ''}`) : ['(none)']),
     '',
     'Open asks:',
-    ...openAsks(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.source_url} ${a.people}: ${a.title}`),
+    ...openAsks(db, now - 14 * DAY).map((a) => `- [${a.id}] ${a.source_url} ${a.people}: ${a.title}`),
     '',
     'Open promises:',
     ...openPromises(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.source_url ?? ''}: ${a.title}`),
@@ -175,19 +176,18 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
   return { chats, messages, asks: added, said, urgent, newAsks, replies, mode: modeOf(auto, now), auto };
 }
 
-// In assist mode an ask with a draft gets a Send reply action and the draft in the body; otherwise only urgent asks are pushed.
 // The push for one ask. In assist mode a draft gets a one-tap Send reply, unless the ask needs me (a decision or something
-// urgent): then the title says so, the draft shows as a note and Make task takes its place. cite names the claim the draft
+// urgent): then the title says so and the draft shows as a note. cite names the claim the draft
 // rests on. Skip closes the ask from the push. ntfy allows three actions.
 export function askPush(a: NewAsk, mode: Mode, cite = '') {
   const url = webUrl(a.url);
   const draft = mode === 'assist' && a.draft?.trim();
   const mine = needsMe(a.tier);
   const act = (label: string, path: string) => `http, ${label}, ${HUB_URL}/slack/${path}?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-  const main = draft && !mine ? act('Send reply', 'reply') : act('Make task', 'accept');
+  const send = draft && !mine ? `${act('Send reply', 'reply')}; ` : '';
   const faq = a.tier === 'answer' && cite ? `FAQ answer${a.confidence ? `, ${Math.round(a.confidence * 100)}% sure` : ''}. ` : '';
   const body = draft ? `${a.quote}\n\n${mine ? 'Needs you' : 'Reply'}: ${draft}${cite ? `\n${faq}${cite}` : ''}` : a.quote;
-  return { title: `${mine ? 'Needs you, ' : ''}${a.from}: ${a.title}`, body, url: url ?? '', actions: `${url ? `view, Open, ${url}; ` : ''}${main}; ${act('Skip', 'skip')}` };
+  return { title: `${mine ? 'Needs you, ' : ''}${a.from}: ${a.title}`, body, url: url ?? '', actions: `${url ? `view, Open, ${url}; ` : ''}${send}${act('Skip', 'skip')}` };
 }
 
 async function pushUrgent(db: Database, c: SlackConfig, urgent: NewAsk[], mode: Mode = 'off', now = Date.now()) {
@@ -197,7 +197,7 @@ async function pushUrgent(db: Database, c: SlackConfig, urgent: NewAsk[], mode: 
   });
 }
 
-// The Sonnet summary across all chats since the last one, with suggested tasks. Runs when I ask for it.
+// The Sonnet summary across all chats since the last one, with the tasks it adds. Runs when I ask for it.
 export async function summarizeSlack(db: Database, now = Date.now()) {
   const c = slackConfig();
   if (!c) throw new Error('Slack is not set up: add ~/.agentview/assistant/slack.json');
@@ -205,10 +205,10 @@ export async function summarizeSlack(db: Database, now = Date.now()) {
   const from = Math.max(last.t ?? 0, now - 3 * DAY);
   const chats = db.prepare('SELECT name, kind, summary, url FROM chats WHERE profile = ? AND deleted = 0 AND last_at > ? ORDER BY last_at DESC').all(PROFILE, from) as { name: string; kind: string; summary: string; url: string | null }[];
   const added: string[] = [];
-  const suggest = tool('suggest_task', 'Suggest a task for me; it waits for me to accept it.', { title: z.string(), quote: z.string(), url: z.string().describe('Permalink'), from: z.string(), chat: z.string() }, async (a) => {
+  const suggest = tool('suggest_task', 'Add a task for me.', { title: z.string(), quote: z.string(), url: z.string().describe('Permalink'), from: z.string(), chat: z.string() }, async (a) => {
     const id = askId(a.url);
     if (!db.prepare('SELECT 1 FROM items WHERE profile = ? AND id = ?').get(PROFILE, id)) {
-      applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Date.now(), fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people: `${a.from} · ${a.chat}`, at: null, status: 'suggested' } }]);
+      applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Date.now(), fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people: `${a.from} · ${a.chat}`, at: null, status: 'open' } }]);
       added.push(a.title.trim());
     }
     return { content: [{ type: 'text', text: 'added' }] };

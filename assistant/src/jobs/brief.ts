@@ -43,11 +43,11 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const meetings = busy.filter((m) => !isBlock(m.id) && (m.ends_at ?? m.starts_at) >= now);
   const timed = busy.filter((m) => m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < LONG);
   const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), now);
-  const tasks = db.prepare("SELECT id, title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND (at IS NULL OR at = '' OR CAST(at AS INTEGER) < ?) ORDER BY at IS NULL OR at = '', CAST(at AS INTEGER)").all(profile, end) as (Row & { id: string; at: number | null; rolls: number | null })[];
+  const tasks = db.prepare("SELECT id, title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting', 'slack') AND (at IS NULL OR at = '' OR CAST(at AS INTEGER) < ?) ORDER BY at IS NULL OR at = '', CAST(at AS INTEGER)").all(profile, end) as (Row & { id: string; at: number | null; rolls: number | null })[];
   const late = tasks.filter((t) => dated(t) && Number(t.at) < now).length;
   const due = tasks.filter(dated).length;
   const rolled = tasks.filter((t) => (t.rolls ?? 0) > 0).length;
-  const slack = db.prepare("SELECT i.id, i.title, i.people, COALESCE(r.at, i.updated_at) AS since FROM items i LEFT JOIN replies r ON r.profile = i.profile AND r.id = i.id WHERE i.deleted = 0 AND i.profile = ? AND i.source = 'slack' AND i.status = 'suggested' ORDER BY since").all(profile) as (Row & { id: string; people: string | null; since: number })[];
+  const slack = db.prepare("SELECT i.id, i.title, i.people, COALESCE(r.at, i.updated_at) AS since FROM items i LEFT JOIN replies r ON r.profile = i.profile AND r.id = i.id WHERE i.deleted = 0 AND i.profile = ? AND i.source = 'slack' AND i.status IN ('suggested', 'open') ORDER BY since").all(profile) as (Row & { id: string; people: string | null; since: number })[];
   const said = slack.filter((r) => r.id.startsWith('said:')).reverse();
   const asks = slack.filter((r) => !r.id.startsWith('said:'));
   const older = asks.filter((a) => a.since < start);

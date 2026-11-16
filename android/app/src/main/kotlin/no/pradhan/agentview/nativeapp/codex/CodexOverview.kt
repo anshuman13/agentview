@@ -95,7 +95,7 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
     val blocked = timed.filter { isBlock(it) && it.endsAt!! > minute }.map { "${it.profile}:${it.id}" }.toSet()
     val dated = (s.overdue + s.today + s.later).filter { it.at != null && "${it.profile}:block:${it.id}" !in blocked }
     val risk = atRisk(dated.map { it to it.at!! }, timed.map { it.startsAt!! to it.endsAt!! }, minute)
-    val old = staleAsks(replyQueue(s.review, null, now), now)
+    val old = staleAsks(replyQueue(s.asks, null, now), now)
     val claims = proposals(facts.filter { matchesProfile(profile, it) }).size
     val groups = listOf<List<Need>>(
         s.overdue.map { Need.Overdue(it) },
@@ -123,7 +123,7 @@ class NeedsView(val list: List<Need>, val queue: List<Row>) { val total get() = 
 
 fun needsView(st: CodexState, profile: String?, now: Long): NeedsView {
     val s = split(st.items, profile, now)
-    return NeedsView(needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs, s), replyQueue(s.review, profile, now))
+    return NeedsView(needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs, s), replyQueue(s.asks, profile, now))
 }
 
 fun doneCount(done: Int, open: Int) = if (done > 0) "$done of ${done + open} done" else null

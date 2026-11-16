@@ -30,7 +30,7 @@ const { NeedsYou, useNeedsYou } = await import('./NeedsYou');
 
 const ask = { id: 'a', profile: 'work', title: 'Confirm the venue', status: 'suggested' } as unknown as ItemRow;
 const dm = { profile: 'work', id: 'c', name: 'Ada', last_at: 1, summary: 'FYI', url: null };
-const split = { overdue: [], today: [], later: [], review: [], meetingsToday: [] };
+const split = { overdue: [], today: [], later: [], review: [], asks: [], meetingsToday: [] };
 
 const rendered = (s = split) => {
   let n!: ReturnType<typeof useNeedsYou>;
@@ -52,7 +52,7 @@ describe('NeedsYou triage', () => {
   it('leaves a needs-you Slack ask to the reply queue, with or without a draft', () => {
     const slack = (id: string, extra: object) => ({ ...ask, id, source: 'slack', source_url: `https://x.test/${id}`, ...extra });
     const review = [slack('held', { tags: 'needs-you' }), slack('drafted', { draft: 'Yes' }), slack('plain', {}), ask];
-    expect(rendered({ ...split, review }).rows.map((r) => r.kind === 'ask' && r.row.id)).toEqual(['plain', 'a']);
+    expect(rendered({ ...split, review, asks: review }).rows.map((r) => r.kind === 'ask' && r.row.id)).toEqual(['plain', 'a']);
   });
 
   it('puts Nothing asked before Dismiss in the DM, Slack and ask menus, not on task rows', () => {

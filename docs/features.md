@@ -65,8 +65,8 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 ### Tasks
 
 
-A tap opens the task as its own page, with a back button in the header: title and notes are editable for every task, including ones from Slack or a meeting (see the layout below); Back, Esc, ⌘Enter or a phone swipe-back closes it, saves, and returns to the list at the same scroll with focus on its row (Meetings does the same on phones). A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Slack and Gmail promises I made myself show under "You said" next to the
-asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source.
+A tap opens the task as its own page, with a back button in the header: title and notes are editable for every task, including ones from Slack or a meeting (see the layout below); Back, Esc, ⌘Enter or a phone swipe-back closes it, saves, and returns to the list at the same scroll with focus on its row (Meetings does the same on phones). A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Gmail promises I made myself show under "You said" next to the
+asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source. Slack asks and promises skip that step and arrive as open tasks.
 A group of more than one shows Confirm all and Dismiss all, which act on the rows listed in it and offer Undo.
 A focused "Is this yours?" row takes y or Enter for Mine, n or Delete for Not mine, and j/k or arrows to move between rows.
 The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was

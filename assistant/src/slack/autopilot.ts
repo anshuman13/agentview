@@ -77,12 +77,11 @@ export function autopilotState(db: Database, now = Date.now()) {
   return { config, mode: modeOf(config, now), watched, covered: coveredChannels(config, watched), push: slack?.push ?? { from: 8, to: 17 }, texts, scan: scanHealth(db).find((h) => h.scan === 'slack') ?? null, cost: scanCosts(db)[0] ?? null, spend: spendSummary(db, now), replies };
 }
 
-// Which new asks get a push: urgent ones always; in away mode also escalations, which it never answers; in assist mode every
-// ask with a draft in a covered chat, so Send reply is one tap.
+// Which new asks get a push: every one I have to answer; in away mode only urgent ones, escalations, which it never answers,
+// and follow-ups. Send reply is on asks with a draft that do not need my decision (askPush).
 export function toPush(mode: Mode, c: AutopilotConfig, watched: string[], asks: NewAsk[], followups: string[] = []) {
   if (mode === 'away') return asks.filter((a) => a.urgent || a.tier === 'escalate' || escalated(c, a.from, a.from_id) || a.external || followups.includes(a.id));
-  if (mode === 'assist') return asks.filter((a) => a.urgent || ((a.draft?.trim() || needsMe(a.tier)) && !a.answered_by_other && channelAllowed(c, watched, a.chat)));
-  return asks.filter((a) => a.urgent);
+  return asks.filter((a) => a.urgent || !a.answered_by_other);
 }
 
 export function modeOf(c: AutopilotConfig, now = Date.now()): Mode {

@@ -70,7 +70,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack' && (filter === 'all' || b.profile === filter) && minute * 60000 - (b.to_at ?? 0) <= STALE_DAYS * 86400_000).sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
     const bullets = brief?.text ? needsYou(brief.text).filter((x) => !dismissedOf(brief).includes(bulletKey(x))) : [];
     const ended = s.meetingsToday.filter((m) => m.ends_at != null && m.ends_at <= minute * 60000 && minute * 60000 - m.ends_at < JUST_ENDED_MS);
-    const old = staleAsks(replyQueue(s.review, minute * 60000), minute * 60000);
+    const old = staleAsks(replyQueue(s.asks, minute * 60000), minute * 60000);
     const claims = proposals(facts).length;
     const ranked = rankNeeds<Need>([
       s.overdue.map((row) => ({ kind: 'overdue', row, keys: [taskKey(row)] })),

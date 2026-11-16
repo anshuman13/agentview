@@ -31,7 +31,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const now = Date.now();
   const needs = useNeedsYou(s, now);
   const minute = Math.floor(now / 60000);
-  const queue = useMemo(() => replyQueue(s.review, minute * 60000), [s.review, minute]);
+  const queue = useMemo(() => replyQueue(s.asks, minute * 60000), [s.asks, minute]);
   const { needsYou: count } = useCounts();
   const [sheet, setSheet] = useState(false);
   const [adding, setAdding] = useState(false);

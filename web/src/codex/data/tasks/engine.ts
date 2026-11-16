@@ -138,6 +138,8 @@ export function split(items: ItemRow[], profile: 'all' | Profile, now: number) {
     today: open.filter((r) => at(r) == null || (at(r)! >= today && at(r)! <= now)),
     later: open.filter((r) => (at(r) ?? 0) > now),
     review: review.sort(newest),
+    // Suggested and open rows: the reply queue reads Slack asks from both.
+    asks: [...review, ...open],
     notes: notes.sort((a, b) => b.updated_at - a.updated_at),
     doneToday: doneToday.sort(newest),
   };

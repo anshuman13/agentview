@@ -63,7 +63,7 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopi
     val haptic = LocalHapticFeedback.current
     val jobs = remember(st.jobs, profile) { jobsOf(st.jobs, profile) }
     val byJob = remember(st.runs) { runsByJob(st.runs) }
-    val waiting = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).review, profile, now).size }
+    val waiting = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).asks, profile, now).size }
     LazyColumn(Modifier.fillMaxWidth()) {
         item { AutopilotRow(hub, waiting, onAutopilot) }
         if (jobs.isEmpty()) item { EmptyState("No jobs yet", "Runs a prompt on a schedule") }

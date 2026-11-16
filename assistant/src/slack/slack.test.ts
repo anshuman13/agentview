@@ -27,21 +27,21 @@ describe('scan prompt and counts', () => {
 });
 
 describe('saveScan', () => {
-  test('dismisses suggestions older than a week, source by source', () => {
+  test('keeps new asks open as tasks past a week', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [ask('u1')], answered: [] }, at(10, 10));
     saveScan(db, { chats: [], asks: [ask('u2')], answered: [] }, at(15, 10));
     saveScan(db, { chats: [], asks: [], answered: [] }, at(18, 11));
-    expect(item(db, 'u1')!.status).toBe('dismissed');
-    expect(item(db, 'u2')!.status).toBe('suggested');
+    expect(item(db, 'u1')!.status).toBe('open');
+    expect(item(db, 'u2')!.status).toBe('open');
   });
 
-  test('saves chats and new asks for review, and returns only new urgent asks', () => {
+  test('saves chats and new asks as open tasks, and returns only new urgent asks', () => {
     const db = openDb(':memory:');
     const { added, urgent } = saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.' }], asks: [ask('u1', true), ask('u2')], answered: [] }, at(27, 10));
     expect(added).toBe(2);
     expect(urgent.map((a) => a.url)).toEqual(['u1']);
-    expect(item(db, 'u1')).toEqual({ status: 'suggested', source: 'slack', people: 'Kim · #ai' });
+    expect(item(db, 'u1')).toEqual({ status: 'open', source: 'slack', people: 'Kim · #ai' });
     expect(db.prepare("SELECT summary FROM chats WHERE id = 'C1'").get()).toEqual({ summary: 'Talk.' });
     expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ chats: 0, added: 0, urgent: [], said: 0, messages: 0, newAsks: [] });
   });
@@ -62,12 +62,12 @@ describe('saveScan', () => {
     expect(item(db, 'u1')).toBeNull();
   });
 
-  test('a reply in a DM closes that person\'s suggested DM asks, not channel asks', () => {
+  test('a reply in a DM closes that person\'s DM asks, not channel asks', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [{ ...ask('u1'), chat: 'DM', title: 'Review the doc' }, ask('u2')], answered: [] }, at(27, 10));
     saveScan(db, { chats: [{ id: 'D1', name: 'kim', kind: 'dm', summary: 'I answered.', waiting: false }], asks: [], answered: [] }, at(27, 11));
     expect(item(db, 'u1')!.status).toBe('done');
-    expect(item(db, 'u2')!.status).toBe('suggested');
+    expect(item(db, 'u2')!.status).toBe('open');
   });
 
   test('keeps different short asks apart, and an ask apart from my promise on it', () => {
@@ -107,21 +107,12 @@ describe('saveScan', () => {
     expect(db.prepare('SELECT id, waiting FROM chats ORDER BY id').all()).toEqual([{ id: 'D1', waiting: 0 }, { id: 'D2', waiting: 1 }]);
   });
 
-  test('does not suggest an ask someone else already answered', () => {
+  test('does not add an ask someone else already answered', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [{ ...ask('u1'), answered_by_other: true }, ask('u2')], answered: [] }, at(27, 10));
-    expect(db.prepare("SELECT id FROM items WHERE status = 'suggested'").all()).toEqual([{ id: askId('u2') }]);
+    expect(db.prepare("SELECT id FROM items WHERE status = 'open'").all()).toEqual([{ id: askId('u2') }]);
   });
 
-  test('notes a reply once on an accepted ask and keeps it open', () => {
-    const db = openDb(':memory:');
-    saveScan(db, { chats: [], asks: [ask('u1')], answered: [] }, at(27, 10));
-    acceptAsk(db, askId('u1'));
-    for (const h of [11, 12]) saveScan(db, { chats: [], asks: [], answered: ['u1'] }, at(27, h));
-    const row = db.prepare('SELECT status, text FROM items WHERE id = ?').get(askId('u1')) as { status: string; text: string };
-    expect(row.status).toBe('open');
-    expect(row.text).toBe('Can you check?\n\nReplied in Slack');
-  });
 
   test('fulfilled closes the matching promise and leaves another open', () => {
     const db = openDb(':memory:');
@@ -130,16 +121,15 @@ describe('saveScan', () => {
     expect(scanPrompt(db, { me: 'U1', domain: 'x.slack.com', channels: [] } as any, at(27, 9), at(27, 10))).toContain('Open promises:\n- [said:');
     saveScan(db, { chats: [], asks: [], answered: [], fulfilled: ['https://x.test/1'] }, at(27, 11));
     const st = (u: string) => (db.prepare('SELECT status FROM items WHERE id = ?').get(`said:${askId(u)}`) as { status: string }).status;
-    expect([st('https://x.test/1'), st('https://x.test/2')]).toEqual(['done', 'suggested']);
+    expect([st('https://x.test/1'), st('https://x.test/2')]).toEqual(['done', 'open']);
   });
 
-  test('closes answered asks I have not taken, and leaves accepted ones', () => {
+  test('closes every ask I answered in Slack', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [ask('u1'), ask('u2')], answered: [] }, at(27, 10));
-    acceptAsk(db, askId('u2'));
     saveScan(db, { chats: [], asks: [], answered: ['u1', 'u2'] }, at(27, 11));
     expect(item(db, 'u1')!.status).toBe('done');
-    expect(item(db, 'u2')!.status).toBe('open');
+    expect(item(db, 'u2')!.status).toBe('done');
   });
 
   test('adds new Slack details to open tasks once, and skips closed ones', () => {
@@ -206,14 +196,14 @@ describe('askPush', () => {
     const h = askPush({ ...base, tier: 'hold', draft: 'I will look at it today.' }, 'assist');
     expect(h.title).toBe('Needs you, Kim: Answer Kim');
     expect(h.actions).not.toContain('Send reply');
-    expect(h.actions).toContain('Make task');
+    expect(h.actions).not.toContain('Make task');
     expect(h.actions).toContain('Skip');
     expect(h.body).toContain('Needs you: I will look at it today.');
     expect(askPush(base, 'away').actions).not.toContain('Send reply');
     const e = askPush({ ...base, tier: 'hold', draft: '' }, 'assist');
     expect(e.title).toBe('Needs you, Kim: Answer Kim');
     expect(e.body).toBe('Can you check?');
-    expect(e.actions).toContain('Make task');
+    expect(e.actions).not.toContain('Make task');
     expect(e.actions).not.toContain('Send reply');
   });
 

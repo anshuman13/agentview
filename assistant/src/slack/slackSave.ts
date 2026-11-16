@@ -19,7 +19,6 @@ import { applyChanges, type Change } from '../core/sync.js';
 import { DAY, parseWhen } from '../core/time.js';
 
 export const PROFILE = 'work' as const;
-const REPLIED = 'Replied in Slack';
 
 export const Chat = z.object({
   id: z.string().describe('Slack channel or DM id, like C0123 or D0123'),
@@ -106,7 +105,7 @@ function sameAsk(a: string, b: string) {
 // Items of one source from the last week in any state, and older ones still to review, so an ask or promise already seen, done
 // or dismissed is not added again from another message. An ask is only matched with asks, and a promise of mine with promises.
 export function seenItems(db: Database, source: 'slack' | 'gmail', now: number) {
-  const seen = db.prepare("SELECT id, title, people FROM items WHERE profile = ? AND source = ? AND (updated_at > ? OR (deleted = 0 AND status = 'suggested'))").all(PROFILE, source, now - 7 * DAY) as { id: string; title: string | null; people: string | null }[];
+  const seen = db.prepare("SELECT id, title, people FROM items WHERE profile = ? AND source = ? AND (updated_at > ? OR (deleted = 0 AND status IN ('suggested', 'open')))").all(PROFILE, source, now - 7 * DAY) as { id: string; title: string | null; people: string | null }[];
   const key = (p: string | null) => (p ?? '').trim().toLowerCase();
   return {
     known: (id: string, title: string, people: string) => seen.some((x) => x.id.startsWith('said:') === id.startsWith('said:') && key(x.people) === key(people) && sameAsk(x.title ?? '', title)),
@@ -137,7 +136,7 @@ function chatChanges(r: ScanResult, now: number): Change[] {
   return r.chats.filter((c) => c.new_messages !== 0 && c.id.trim()).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now, waiting: c.kind === 'dm' ? (c.waiting ? 1 : 0) : null } }));
 }
 
-// Asks not saved, answered or replied to yet become suggested items; the urgent ones are listed apart.
+// Asks not saved, answered or replied to yet become open tasks with their reply draft; the urgent ones are listed apart.
 function askChanges(db: Database, r: ScanResult, seen: ReturnType<typeof seenItems>, has: Has, changes: Change[], now: number) {
   const urgent: Asked[] = [];
   const newAsks: Asked[] = [];
@@ -149,7 +148,7 @@ function askChanges(db: Database, r: ScanResult, seen: ReturnType<typeof seenIte
     const people = `${a.from} · ${a.chat}`;
     if (answeredIds.has(id) || a.answered_by_other || has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people) || replied(a)) continue;
     seen.add(id, a.title, people);
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null, tags: askTags(db, a) } });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'open', draft: a.draft?.trim() || null, tags: askTags(db, a) } });
     newAsks.push({ ...a, id });
     if (a.urgent) urgent.push({ ...a, id });
   }
@@ -164,27 +163,24 @@ function saidChanges(r: ScanResult, seen: ReturnType<typeof seenItems>, has: Has
     const people = `${p.to} · ${p.chat}`;
     if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, p.title, people)) continue;
     seen.add(id, p.title, people);
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: p.title.trim(), text: p.quote.trim(), source: 'slack', source_url: webUrl(p.url), people, at: parseWhen(p.due), status: 'suggested' } });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: p.title.trim(), text: p.quote.trim(), source: 'slack', source_url: webUrl(p.url), people, at: parseWhen(p.due), status: 'open' } });
     said++;
   }
   return said;
 }
 
-// Closes asks answered in Slack and the suggestions of a DM I replied in; returns the accepted asks I answered, which stay open.
+// Closes asks answered in Slack and the asks of a DM I replied in; what I promised in the reply comes back as a You said task.
 function closeAnswered(db: Database, r: ScanResult, has: Has, changes: Change[], now: number) {
-  const answeredOpen: string[] = [];
   for (const url of r.answered) {
     const id = askId(url);
     const old = statusOf(has, id);
-    if (old && (old.status === 'suggested' || old.status === 'unassigned')) changes.push(done(id, now));
-    else if (old?.status === 'open') answeredOpen.push(id);
+    if (old && ['suggested', 'unassigned', 'open'].includes(old.status)) changes.push(done(id, now));
   }
   const repliedDms = new Set(r.chats.filter((c) => c.kind === 'dm' && c.waiting === false).map((c) => `${c.name.trim()} · DM`.toLowerCase()));
   if (repliedDms.size) {
-    const stored = db.prepare("SELECT id, people FROM items WHERE profile = ? AND source = 'slack' AND status = 'suggested' AND deleted = 0 AND COALESCE(rolls, 0) = 0 AND id NOT LIKE 'said:%'").all(PROFILE) as { id: string; people: string | null }[];
+    const stored = db.prepare("SELECT id, people FROM items WHERE profile = ? AND source = 'slack' AND status IN ('suggested', 'open') AND deleted = 0 AND COALESCE(rolls, 0) = 0 AND id NOT LIKE 'said:%'").all(PROFILE) as { id: string; people: string | null }[];
     for (const o of stored) if (repliedDms.has((o.people ?? '').trim().toLowerCase()) && !changes.some((c) => c.id === o.id)) changes.push(done(o.id, now));
   }
-  return answeredOpen;
 }
 
 function closeFulfilled(r: ScanResult, has: Has, changes: Change[], now: number) {
@@ -195,8 +191,8 @@ function closeFulfilled(r: ScanResult, has: Has, changes: Change[], now: number)
   }
 }
 
-// New details from Slack go at the end of the task's notes, once per message; an ask I accepted and then answered in Slack stays open, with one note.
-function noteChanges(db: Database, r: ScanResult, answeredOpen: string[], now: number): Change[] {
+// New details from Slack go at the end of the task's notes, once per message.
+function noteChanges(db: Database, r: ScanResult, now: number): Change[] {
   const task = db.prepare("SELECT text FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND status IN ('open', 'suggested')");
   const texts = new Map<string, string>();
   for (const d of r.details ?? []) {
@@ -205,12 +201,6 @@ function noteChanges(db: Database, r: ScanResult, answeredOpen: string[], now: n
     const text = texts.get(d.id) ?? row.text ?? '';
     if (text.includes(d.url)) continue;
     texts.set(d.id, `${text ? `${text}\n\n` : ''}${d.from} on Slack: ${d.note.trim()} ${d.url}`);
-  }
-  const slackOpen = db.prepare("SELECT text FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND status = 'open' AND source = 'slack'");
-  for (const id of answeredOpen) {
-    const row = slackOpen.get(PROFILE, id) as { text: string | null } | null;
-    const text = texts.get(id) ?? row?.text ?? '';
-    if (row && !text.split('\n').includes(REPLIED)) texts.set(id, `${text ? `${text}\n\n` : ''}${REPLIED}`);
   }
   return [...texts].map(([id, text]) => ({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { text } }));
 }
@@ -225,9 +215,9 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const seen = seenItems(db, 'slack', now);
   const { urgent, newAsks } = askChanges(db, r, seen, has, changes, now);
   const said = saidChanges(r, seen, has, changes, now);
-  const answeredOpen = closeAnswered(db, r, has, changes, now);
+  closeAnswered(db, r, has, changes, now);
   closeFulfilled(r, has, changes, now);
-  changes.push(...noteChanges(db, r, answeredOpen, now));
+  changes.push(...noteChanges(db, r, now));
   db.transaction(() => {
     applyChanges(db, changes);
     saveDecisions(db, r.decisions ?? [], now);

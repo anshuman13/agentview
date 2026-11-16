@@ -53,13 +53,12 @@ test('DMs and watched channels are allowed, temp channels and others are not', (
   expect(channelAllowed({ channels: ['random'] }, watched, '#random')).toBe(true);
 });
 
-test('urgent asks are always pushed; away mode also pushes escalations, assist mode every covered draft', () => {
+test('every new ask is pushed unless someone else answered it; away mode pushes only urgent asks and escalations', () => {
   const asks = [ask('u1'), ask('u2', { urgent: true, draft: undefined }), ask('u3', { tier: 'escalate' }), ask('u4', { from: 'Mia Berg' }), ask('u5', { chat: '#tmp-x' })];
   const names = (xs: NewAsk[]) => xs.map((a) => a.title);
-  expect(names(toPush('off', away, ['ai-help'], asks))).toEqual(['Answer u2']);
+  expect(names(toPush('off', away, ['ai-help'], asks))).toEqual(['Answer u1', 'Answer u2', 'Answer u3', 'Answer u4', 'Answer u5']);
   expect(names(toPush('away', away, ['ai-help'], asks))).toEqual(['Answer u2', 'Answer u3', 'Answer u4']);
-  expect(names(toPush('assist', away, ['ai-help'], asks))).toEqual(['Answer u1', 'Answer u2', 'Answer u3', 'Answer u4']);
-  expect(names(toPush('assist', away, ['ai-help'], [ask('e1', { tier: 'hold', draft: '' }), ask('e2', { draft: '' })]))).toEqual(['Answer e1']);
+  expect(names(toPush('assist', away, ['ai-help'], [...asks, ask('e1', { answered_by_other: true })]))).toEqual(['Answer u1', 'Answer u2', 'Answer u3', 'Answer u4', 'Answer u5']);
 });
 
 describe('afterScan', () => {
@@ -88,7 +87,7 @@ describe('afterScan', () => {
     const item = (u: string) => db.prepare('SELECT status, text FROM items WHERE id = ?').get(askId(url(u))) as { status: string; text: string };
     expect(item('u1').status).toBe('done');
     expect(item('u1').text).toContain(`Autopilot replied ${url('u1')}/reply: `);
-    expect(item('u2').status).toBe('suggested');
+    expect(item('u2').status).toBe('open');
     expect(db.prepare("SELECT status, url FROM replies WHERE id = ?").get(askId(url('u1')))).toEqual({ status: 'sent', url: url('u1') + '/reply' });
     expect(db.prepare("SELECT status FROM replies WHERE id = ?").get(askId(url('u4')))).toEqual({ status: 'held' });
     expect(holdDue(db, 'ann', now + HOUR)).toBe(false);
@@ -102,7 +101,7 @@ describe('afterScan', () => {
     const r = await afterScan(db, away, ['ai-help'], asks, now, async () => ANSWERED);
     expect(r).toEqual({ answered: [], held: [], skipped: ['Answer u1', 'Answer u2'], followups: [] });
     expect(db.prepare("SELECT status, why FROM replies WHERE id = ?").get(askId(url('u2')))).toEqual({ status: 'skipped', why: 'someone else answered' });
-    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'suggested' });
+    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'open' });
     expect(toPush('assist', {}, ['ai-help'], asks).map((a) => a.title)).toEqual(['Answer u2']);
   });
 
@@ -113,7 +112,7 @@ describe('afterScan', () => {
     const r = await afterScan(db, away, ['ai-help'], asks, now, async () => CHANGED);
     expect(r).toEqual({ answered: [], held: [], skipped: ['Answer u1'], followups: [] });
     expect(db.prepare('SELECT status, why FROM replies WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'held', why: 'thread changed since draft' });
-    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'suggested' });
+    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'open' });
   });
 
   test('a tier answer with no live claim becomes a hold, and a second ask in an answered thread only pushes me', async () => {
@@ -152,7 +151,7 @@ describe('afterScan', () => {
     await afterScan(db, { ...away, dry_run: true }, ['ai-help'], [ask('u1')], now, post);
     expect(posts).toEqual([]);
     expect(db.prepare('SELECT status FROM replies').get()).toEqual({ status: 'dry' });
-    expect(db.prepare('SELECT status, text FROM items').get()).toEqual({ status: 'suggested', text: "How?\n\nAutopilot would reply: (auto-reply from the owner's assistant: away until 5 January, Kim covers meanwhile) Use the guide." });
+    expect(db.prepare('SELECT status, text FROM items').get()).toEqual({ status: 'open', text: "How?\n\nAutopilot would reply: (auto-reply from the owner's assistant: away until 5 January, Kim covers meanwhile) Use the guide." });
   });
 
   test('never replies twice to the same ask, and stops at the hourly cap', async () => {
@@ -308,7 +307,7 @@ test('a Send that failed in assist mode is posted again on the next scan', async
   const assist: AutopilotConfig = { enabled: true };
   await afterScan(db, assist, ['ai-help'], asks, now, post);
   await expect(replyNow(db, assist, asks[0].id, now + 1, async () => { throw new Error('no connector'); })).rejects.toThrow('no connector');
-  expect(db.prepare("SELECT status FROM items WHERE id = ?").get(asks[0].id)).toEqual({ status: 'suggested' });
+  expect(db.prepare("SELECT status FROM items WHERE id = ?").get(asks[0].id)).toEqual({ status: 'open' });
   const before = posts.length;
   const out = await afterScan(db, assist, ['ai-help'], [], now + 2, post);
   expect(out.answered).toEqual(['Answer r1']);

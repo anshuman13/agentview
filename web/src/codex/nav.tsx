@@ -108,7 +108,7 @@ export function AssistantCounts() {
   const s = useSplit();
   const now = useMinute();
   const needsYouRows = useNeedsYou(s, now).rows.length;
-  const replyRows = useMemo(() => replyQueue(s.review, now).length, [s.review, now]);
+  const replyRows = useMemo(() => replyQueue(s.asks, now).length, [s.asks, now]);
   useEffect(() => rowCounts.patch({ needsYouRows, replyRows }), [needsYouRows, replyRows]);
   return null;
 }

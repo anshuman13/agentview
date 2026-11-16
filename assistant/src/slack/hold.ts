@@ -39,7 +39,7 @@ export async function pushOrHold(db: Database, title: string, chat: string, body
 export function heldDue(db: Database, now = Date.now()) {
   const all = heldPushes(db);
   if (!all.length || meetingAt(db, now)) return null;
-  const live = db.prepare("SELECT 1 FROM items WHERE id = ? AND deleted = 0 AND status = 'suggested'");
+  const live = db.prepare("SELECT 1 FROM items WHERE id = ? AND deleted = 0 AND status IN ('suggested', 'open')");
   const list = all.filter((h) => !h.id || live.get(h.id));
   const meeting = all[all.length - 1].meeting;
   return { raw: all.length, count: list.length, list, title: `${list.length} urgent while you were in ${meeting}`, body: list.map((h) => `- ${h.title}${h.chat ? ` (${h.chat})` : ''}`).join('\n') };
@@ -74,7 +74,7 @@ export async function pushQueued<T extends { id: string }>(db: Database, key: st
   for (const a of urgent) if (!queue.some((q) => q.id === a.id)) queue.push(a);
   queue = queue.slice(-MAX_QUEUED);
   if (inHours) {
-    const open = db.prepare("SELECT 1 FROM items WHERE id = ? AND deleted = 0 AND status = 'suggested'");
+    const open = db.prepare("SELECT 1 FROM items WHERE id = ? AND deleted = 0 AND status IN ('suggested', 'open')");
     const left: T[] = [];
     for (const a of queue) if (open.get(a.id) && !(await send(a).catch(() => false))) left.push(a);
     queue = left;
