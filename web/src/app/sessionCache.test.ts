@@ -54,6 +54,34 @@ describe('session update', () => {
   });
 });
 
+describe('server of another version', () => {
+  it('fills session fields its init leaves out', () => {
+    const { mcp: _m, models: _models, ...rest } = getState().session;
+    emit({ type: 'init', state: { ...getState(), session: { ...rest, id: 'c0' } as never, events: [], pending: [] } });
+    expect(getState().session.mcp).toEqual([]);
+    expect(getState().session.models).toEqual([]);
+  });
+
+  it('reloads once on another protocol, then says so in the chat', () => {
+    const reload = vi.fn();
+    const stored = new Map<string, string>();
+    stubGlobal('location', { reload });
+    stubGlobal('sessionStorage', { getItem: (k: string) => stored.get(k) ?? null, setItem: (k: string, v: string) => stored.set(k, v) });
+    stubGlobal('__PROTOCOL__', 'mine');
+    const initFrom = (protocol: string) => emit({ type: 'init', state: { ...getState(), session: { ...getState().session, id: 'c0' }, events: [], pending: [] }, protocol });
+    initFrom('mine');
+    expect(reload).not.toHaveBeenCalled();
+    initFrom('theirs');
+    expect(reload).toHaveBeenCalledTimes(1);
+    initFrom('theirs');
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(getState().events.at(-1)?.text).toContain('another AgentView version');
+    initFrom('mine');
+    expect(getState().events.at(-1)?.text ?? '').not.toContain('another AgentView version');
+    for (const k of ['location', 'sessionStorage', '__PROTOCOL__']) delete (globalThis as Record<string, unknown>)[k];
+  });
+});
+
 describe('session cache', () => {
   it('shows a chat cached rows on switching back, before its init', () => {
     live('a', 'b');

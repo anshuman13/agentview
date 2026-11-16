@@ -8,8 +8,8 @@ const CACHED_CHATS = 8;
 export const cache = new Map<string, { events: ChatEvent[]; earlier: number }>();
 
 // boot is the server's start id. shownId is the chat the rows in `events` belong to; session.id still names the old chat after a cache hit.
-// settled is whether the shown chat's init has arrived.
-export const view = { boot: 0, shownId: '', settled: false };
+// settled is whether the shown chat's init has arrived. skew says how this code and the server's versions differ, or is empty.
+export const view = { boot: 0, shownId: '', settled: false, skew: '' };
 
 export function cacheShown() {
   const { events, earlier } = getState();

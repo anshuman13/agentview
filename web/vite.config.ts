@@ -6,6 +6,7 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { codiconSubset } from './codicons';
 import { allowedPeer, allowedRequest } from '../server/src/http/access.js';
+import { protocolHash } from '../server/src/http/protocolHash.js';
 
 function buildSha() {
   try {
@@ -63,7 +64,7 @@ async function reloadWhenChanged(since) {
 
 export default defineConfig({
   base: './',
-  define: { __APP_SHA__: JSON.stringify(buildSha()) },
+  define: { __APP_SHA__: JSON.stringify(buildSha()), __PROTOCOL__: JSON.stringify(protocolHash()) },
   plugins: [react(), codiconSubset(), reloadOnlyOnChange()],
   build: { rollupOptions: { output: { experimentalMinChunkSize: 0 } } },
   server: {

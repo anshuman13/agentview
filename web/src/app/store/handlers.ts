@@ -2,7 +2,8 @@ import { appendTo, ATTENTION_LABEL, type LiveChat, type ServerMessage } from '..
 import { notify } from '../runtime/notify';
 import { isMuted } from '../runtime/mute';
 import { initPage } from '../runtime/pageEvents';
-import { embedded, getState, notice, set, setFindings, setUi } from './core';
+import { EMPTY_SESSION, embedded, getState, notice, set, setFindings, setUi } from './core';
+import { bundled } from '../api';
 import { markSeen } from './seen';
 import { send } from './send';
 import { cache, cacheShown, view } from './view';
@@ -39,9 +40,34 @@ function equal(a: unknown, b: unknown): boolean {
 // The first attention list after load is not news; later ones notify per new item.
 let attentionSeen = false;
 
+const PROTOCOL_RELOAD = 'agentview.protocolReload';
+const SKEW_PAGE = 'This page is from another AgentView version than this Mac. Reload once the Mac has finished updating.';
+const SKEW_APP = 'This app and this Mac run different AgentView versions. Rebuild the app or update the Mac.';
+
+// A storage that throws counts as already reloaded, so the page never reloads in a loop.
+function reloadedFor() {
+  try {
+    return sessionStorage.getItem(PROTOCOL_RELOAD);
+  } catch {
+    return '';
+  }
+}
+
+const protocolDiffers = (server: string | undefined) => Boolean(server) && !import.meta.env.DEV && typeof __PROTOCOL__ === 'string' && server !== __PROTOCOL__;
+
 function onInit(m: Extract<ServerMessage, { type: 'init' }>) {
   // A new server boot means new code on the dev server too; reload so the client matches it.
   if (m.boot && view.boot && m.boot !== view.boot) return location.reload();
+  // A server built from another protocol.ts can send state this code misreads. A page reloads once to get the server's build;
+  // the desktop app bundles its UI, so there, and when the reload did not help, the chat and the crash screen say so.
+  const differs = protocolDiffers(m.protocol);
+  if (differs && !bundled && !embedded && reloadedFor() === null) {
+    try {
+      sessionStorage.setItem(PROTOCOL_RELOAD, m.protocol!);
+    } catch {}
+    return location.reload();
+  }
+  view.skew = differs ? (bundled ? SKEW_APP : SKEW_PAGE) : '';
   if (m.boot) view.boot = m.boot;
   // A chat opened another way (a saved chat, a new one) still leaves the one before it cached.
   if (view.shownId !== m.state.session.id) cacheShown();
@@ -56,10 +82,11 @@ function onInit(m: Extract<ServerMessage, { type: 'init' }>) {
     });
     const keep = shown && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
     const moved = Boolean(s.session.cwd) && s.session.cwd !== m.state.session.cwd;
-    return { ...m.state, earlier: page.earlier, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: { ...s.ui, restarting: false, ...(moved && { openFile: null, openLine: null }) } };
+    return { ...m.state, session: { ...EMPTY_SESSION, ...m.state.session }, earlier: page.earlier, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: { ...s.ui, restarting: false, ...(moved && { openFile: null, openLine: null }) } };
   });
   view.shownId = m.state.session.id;
   view.settled = true;
+  if (view.skew) notice(view.skew);
 }
 
 function onEvent(m: Extract<ServerMessage, { type: 'event' }>) {

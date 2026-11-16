@@ -9,7 +9,7 @@ export type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string,
 // What the host last told this process about its chats.
 export type Live = { chats: Map<string, LiveChat>; runs: ChatRun[]; lastViewed: string; restarting: boolean };
 
-export function createClients(host: Host, live: Live, ring: Ring, boot: number) {
+export function createClients(host: Host, live: Live, ring: Ring, boot: number, protocol: string) {
   const clients = new Set<Client>();
   const gate = new RingGate(ring, (chat) => [...clients].some((c) => c.view === chat));
 
@@ -48,7 +48,7 @@ export function createClients(host: Host, live: Live, ring: Ring, boot: number) 
       if (client.view !== id) return;
       client.waiting = false;
       if (err) return client.send({ type: 'error', text: err });
-      client.send({ type: 'init', state: state as Extract<ServerMessage, { type: 'init' }>['state'], boot });
+      client.send({ type: 'init', state: state as Extract<ServerMessage, { type: 'init' }>['state'], boot, protocol });
       host.notify({ op: 'cmd', id, msg: { type: 'mcp_status' } });
     });
   }

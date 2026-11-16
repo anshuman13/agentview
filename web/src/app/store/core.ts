@@ -26,8 +26,11 @@ const storedBeside = () => { try { return embedded ? null : localStorage.getItem
 
 export type State = ServerState & { live: LiveChat[]; runs: ChatRun[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; ui: UiState };
 
+// The server's session fills these in; a field a server of another version leaves out keeps its default here.
+export const EMPTY_SESSION: State['session'] = { id: '', sessionId: null, model: null, effort: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], repeat: null, pr: null, account: 'main', accounts: [] };
+
 let state: State = {
-  session: { id: '', sessionId: null, model: null, effort: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], repeat: null, pr: null, account: 'main', accounts: [] },
+  session: EMPTY_SESSION,
   status: 'Connecting',
   events: [],
   pending: [],

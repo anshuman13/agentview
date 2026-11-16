@@ -234,7 +234,7 @@ export type Finding = { file: string; line: number; summary: string; failure?: s
 export type ReviewFindings = { repo: string; target: string; at: number; findings: Finding[] };
 
 export type ServerMessage =
-  | { type: 'init'; state: ServerState; boot?: number }
+  | { type: 'init'; state: ServerState; boot?: number; protocol?: string }
   | { type: 'findings'; review: ReviewFindings }
   | { type: 'event'; event: ChatEvent }
   // Text added to a streaming assistant event that starts at `offset` of its text; the finished event follows in full.

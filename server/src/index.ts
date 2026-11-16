@@ -24,6 +24,7 @@ import { migrateSettings } from './migrateSettings.js';
 import { applyAccountLabels, expandHome, homeRelative } from './settings.js';
 import { createPresence, isPhone } from './presence.js';
 import type { Hello } from './host/protocol.js';
+import { protocolHash } from './http/protocolHash.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -103,7 +104,7 @@ const host = new Host(PORT, PROJECT, {
   },
 });
 
-const { clients, gate, runsMessage, broadcast, reportViewers, view, greet } = createClients(host, live, ring, BOOT);
+const { clients, gate, runsMessage, broadcast, reportViewers, view, greet } = createClients(host, live, ring, BOOT, protocolHash());
 
 // Restarts this server at once; the host and its chats keep running unless its code changed or `full` asks for it.
 function restart(now: boolean, full: boolean) {
