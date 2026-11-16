@@ -32,6 +32,7 @@ import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
@@ -63,6 +64,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
         if (hub.writes.allowed()) socket.send(buildJsonObject { put("t", t); extra.forEach { (k, v) -> put(k, v) } }.toString())
     }
     val tab = tabs.tabs.firstOrNull { it.id == tabs.current }
+    fun closeTab(id: String) = send("close", mapOf("id" to id))
 
     Column(Modifier.fillMaxSize()) {
         PageHeader("Browser", onBack, subtitle = tab?.let { { androidx.compose.material3.Text(it.title.ifEmpty { it.url }, maxLines = 1) } }) {
@@ -87,7 +89,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                                 Group {
                                     tabs.tabs.forEachIndexed { i, t ->
                                         if (i > 0) Hairline()
-                                        ListRow(t.title.ifEmpty { t.url }, t.url, selected = t.id == tabs.current, onClick = { send("tab", mapOf("id" to t.id)) })
+                                        ListRow(t.title.ifEmpty { t.url }, t.url, selected = t.id == tabs.current, onClick = { send("tab", mapOf("id" to t.id)) }, trailing = { IconBtn("close", "Close tab", { closeTab(t.id) }) })
                                     }
                                 }
                             }

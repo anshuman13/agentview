@@ -42,6 +42,7 @@ function BrowserBar({ send, tabs, tab, pinned, phone, setPhone, focusKeyboard, g
         <option value="">Follow Claude</option>
         {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
       </select>
+      {tab && <button className="icon-btn" title="Close this tab in Chrome" onClick={() => send({ t: 'close', id: tab.id })}><Icon name="close" /></button>}
       <button
         className={`icon-btn phone-only${phone ? ' on' : ''}`}
         title={phone ? 'Phone layout is on. Chrome on the Mac shows the page at phone size' : 'Show the page at phone size. Chrome on the Mac shrinks while this is on'}

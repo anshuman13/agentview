@@ -73,6 +73,12 @@ async function input(m: any, ws: Peer) {
       return setup();
     case 'tab':
       return selectTab(m.id);
+    // Closing a tab ends its target; targetDestroyed then drops it from the list and picks another.
+    case 'close': {
+      const id = typeof m.id === 'string' ? m.id : view.watching?.target;
+      if (id) await call('Target.closeTarget', { targetId: id });
+      return;
+    }
     case 'size': {
       const { size, dims } = viewerSize(m);
       return resize(ws, size, dims);
