@@ -72,6 +72,8 @@ export function Brief() {
   // On desktop a turn's tool calls open as a second rail tab beside Agents; the phone opens them as their own screen.
   const [workTurn, setWorkTurn] = useState<string | null>(null);
   const [railTab, setRailTab] = useState<'agents' | 'work'>('agents');
+  // A closed rail stays closed for this chat until an agent or tool calls open it, or the agents button in the status line.
+  const [railClosed, setRailClosed] = useState(false);
   const showWork = !phone && workTurn !== null && (railTab === 'work' || !hasAgents);
   const side = hasAgents || (!phone && workTurn !== null);
   const closeWork = () => { setWorkTurn(null); setRailTab('agents'); };
@@ -86,7 +88,7 @@ export function Brief() {
     <>
       {tabs}
       {showWork ? <Suspense fallback={<Loading />}><WorkPane turn={workTurn!} onBack={closeWork} /></Suspense> : <>
-        <RailHead titled={!tabs} />
+        <RailHead titled={!tabs} onClose={phone || tabs ? undefined : () => setRailClosed(true)} />
         {agentCount > 0 && <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense>}
       </>}
     </>
@@ -99,6 +101,7 @@ export function Brief() {
       const id = (e as CustomEvent<unknown>).detail;
       setAgentSel(typeof id === 'string' ? id : null);
       setShowAgents(true);
+      setRailClosed(false);
     };
     window.addEventListener('open-agent', open);
     return () => window.removeEventListener('open-agent', open);
@@ -108,11 +111,12 @@ export function Brief() {
     const open = (e: Event) => {
       setWorkTurn(String((e as CustomEvent<unknown>).detail));
       setRailTab('work');
+      setRailClosed(false);
     };
     window.addEventListener('open-work', open);
     return () => window.removeEventListener('open-work', open);
   }, [phone]);
-  useEffect(() => { setShowAgents(false); setAgentSel(null); setRenaming(false); setWorkTurn(null); setRailTab('agents'); }, [sessionId]);
+  useEffect(() => { setShowAgents(false); setAgentSel(null); setRenaming(false); setWorkTurn(null); setRailTab('agents'); setRailClosed(false); }, [sessionId]);
   const title = chatTitle || chatTitleOf(turns[0]?.prompt ?? '') || 'New chat';
   const startRename = savedId ? () => setRenaming(true) : undefined;
   const press = useLongPress(startRename);
@@ -135,7 +139,7 @@ export function Brief() {
         </div>
         <div className="tl-line">
           <HeadState state={state} status={status} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
-          {phone && side && <button className="tl-agents" onClick={() => { setShowAgents(true); setAgentSel(null); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}
+          {side && (phone || railClosed) && <button className="tl-agents" onClick={() => { if (phone) { setShowAgents(true); setAgentSel(null); } else setRailClosed(false); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}
         </div>
         <Transcript />
       </div>
@@ -144,7 +148,7 @@ export function Brief() {
         <Composer />
       </div>
     </div>
-    {!phone && side && <aside className={`brief-rail ${showWork ? 'wide' : ''}`}>{rail}</aside>}
+    {!phone && side && !railClosed && <aside className={`brief-rail ${showWork ? 'wide' : ''}`}>{rail}</aside>}
     {phone && side && showAgents && <Sheet label="Agents" className="brief-sheet" onClose={() => { setShowAgents(false); setAgentSel(null); }}>{rail}</Sheet>}
     </div>
   );

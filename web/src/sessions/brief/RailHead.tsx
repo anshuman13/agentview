@@ -11,7 +11,7 @@ import { useCan } from '../../chat/useCan';
 import type { RunOp } from '../../../../shared/protocol';
 
 // The rail's title with the run's controls, and the run's state under it.
-export function RailHead({ titled = true }: { titled?: boolean }) {
+export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose?: () => void }) {
   const chat = useStore((s) => s.session.id);
   const run = useChatRun(chat);
   const live = useStore((s) => s.live.find((c) => c.id === chat));
@@ -34,6 +34,7 @@ export function RailHead({ titled = true }: { titled?: boolean }) {
         {run?.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
         {pausable && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
         {(run || (canStop && running.length > 0)) && <IconButton icon="debug-stop" label={run ? 'Stop the run' : 'Stop all agents'} size="sm" onClick={stop} />}
+        {onClose && <IconButton icon="close" label="Close the agents" size="sm" onClick={onClose} />}
       </div>
       {line && (run.kind === 'goal' ? <button className="rail-s" onClick={() => openGoal(run.id)}>{line}</button> : <div className="rail-s">{line}</div>)}
       {board && <TriesBoard runId={run!.id} onClose={() => setBoard(false)} />}
