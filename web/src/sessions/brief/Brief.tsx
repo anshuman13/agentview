@@ -6,9 +6,10 @@ import { Pending } from '../../chat/cards/Pending';
 import { Composer } from '../../chat/Chat';
 import { Transcript } from '../../chat/transcript/Transcript';
 import { createTurnsBuilder, type Turn } from '../../chat/transcript/turns';
-import { AgentsPane, Loading } from '../../app/lazy';
+import { AgentsPane, Loading, WorkPane } from '../../app/lazy';
 import { RailHead } from './RailHead';
 import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 import { Sheet } from '../../ui/Sheet';
 import { agentsOf } from '../agents';
 import { useChatRun } from '../useChatRun';
@@ -67,11 +68,27 @@ export function Brief() {
   const run = useChatRun(sessionId);
   const agentCount = Math.max(agentsOf(events).length, live?.agentList?.length ?? 0);
   // The agents and the run's controls live beside the chat on desktop and in a sheet the status line opens on the phone.
-  const side = agentCount > 0 || Boolean(run);
+  const hasAgents = agentCount > 0 || Boolean(run);
+  // On desktop a turn's tool calls open as a second rail tab beside Agents; the phone opens them as their own screen.
+  const [workTurn, setWorkTurn] = useState<string | null>(null);
+  const [railTab, setRailTab] = useState<'agents' | 'work'>('agents');
+  const showWork = !phone && workTurn !== null && (railTab === 'work' || !hasAgents);
+  const side = hasAgents || (!phone && workTurn !== null);
+  const closeWork = () => { setWorkTurn(null); setRailTab('agents'); };
+  const tabs = !phone && workTurn !== null && (
+    <div className="rail-h rail-tabs">
+      {hasAgents && <button className={`rail-tab ${showWork ? '' : 'on'}`} onClick={() => setRailTab('agents')}>Agents</button>}
+      <button className={`rail-tab ${showWork ? 'on' : ''}`} onClick={() => setRailTab('work')}>Tool calls</button>
+      <IconButton icon="close" label="Close tool calls" size="sm" onClick={closeWork} />
+    </div>
+  );
   const rail = side && (
     <>
-      <RailHead />
-      {agentCount > 0 && <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense>}
+      {tabs}
+      {showWork ? <Suspense fallback={<Loading />}><WorkPane turn={workTurn!} onBack={closeWork} /></Suspense> : <>
+        <RailHead titled={!tabs} />
+        {agentCount > 0 && <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense>}
+      </>}
     </>
   );
 
@@ -86,7 +103,16 @@ export function Brief() {
     window.addEventListener('open-agent', open);
     return () => window.removeEventListener('open-agent', open);
   }, []);
-  useEffect(() => { setShowAgents(false); setAgentSel(null); setRenaming(false); }, [sessionId]);
+  useEffect(() => {
+    if (phone) return;
+    const open = (e: Event) => {
+      setWorkTurn(String((e as CustomEvent<unknown>).detail));
+      setRailTab('work');
+    };
+    window.addEventListener('open-work', open);
+    return () => window.removeEventListener('open-work', open);
+  }, [phone]);
+  useEffect(() => { setShowAgents(false); setAgentSel(null); setRenaming(false); setWorkTurn(null); setRailTab('agents'); }, [sessionId]);
   const title = chatTitle || chatTitleOf(turns[0]?.prompt ?? '') || 'New chat';
   const startRename = savedId ? () => setRenaming(true) : undefined;
   const press = useLongPress(startRename);
@@ -118,7 +144,7 @@ export function Brief() {
         <Composer />
       </div>
     </div>
-    {!phone && side && <aside className="brief-rail">{rail}</aside>}
+    {!phone && side && <aside className={`brief-rail ${showWork ? 'wide' : ''}`}>{rail}</aside>}
     {phone && side && showAgents && <Sheet label="Agents" className="brief-sheet" onClose={() => { setShowAgents(false); setAgentSel(null); }}>{rail}</Sheet>}
     </div>
   );

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { embedded, markSeen, notice, send, setUi, useStore } from '../app/store';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { embedded, notice, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
-import { Chip, IconButton } from '../ui/Button';
+import { IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
@@ -10,7 +10,7 @@ import { ago, markSegments, pressable, save, stored } from '../ui/util';
 import { queryWords } from '../codex/data/ask/match';
 import { Bin } from './Bin';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
-import { byUrgency, chatFinder, chatsByStatus, chatState, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, repoName, usePins, useWorkspace, type ChatState, type Folder, type HeldOrder, type RepoGroup } from './folders';
+import { byUrgency, chatFinder, chatState, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, repoName, usePins, useWorkspace, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
@@ -85,7 +85,6 @@ export function OpenChats() {
   const { folders, chats, setChats } = useWorkspace(current + cwd);
   const savedById = useMemo(() => new Map(chats.map((s) => [s.sessionId, s])), [chats]);
   const [filter, setFilter] = useState('');
-  const [status, setStatus] = useState<ChatState | null>(null);
   const hits = useMessageSearch(filter);
   const viewing = useStore((s) => s.session.id);
   const [collapsed, setCollapsed] = useState(() => stored<Record<string, boolean>>(KEY, {}));
@@ -143,18 +142,12 @@ export function OpenChats() {
     return () => clearTimeout(t);
   }, [opening]);
 
-  const byStatus = status ? chatsByStatus(live, chats, seen, status) : null;
   return (
     <div className="sessions chats">
       <div className="sessions-bar">
         <FilterInput value={filter} set={setFilter} />
         <IconButton icon="add" label="New session in a repo" onClick={() => setUi({ repoPicker: true })} />
       </div>
-      <div className="sessions-status">
-        {STATUS_CHIPS.map(([v, label]) => <Chip key={v} size="sm" on={status === v} aria-pressed={status === v} onClick={() => setStatus(status === v ? null : v)}>{label}</Chip>)}
-        {byStatus && status === 'done' && byStatus.live.length + byStatus.saved.length > 0 && <button className="link sessions-read" onClick={() => [...byStatus.live.map((c) => c.sessionId), ...byStatus.saved.map((s) => s.sessionId)].forEach(markSeen)}>Mark all read</button>}
-      </div>
-      {byStatus ? <StatusList {...byStatus} row={row} savedRow={savedRow} repo={(cwd) => repoName(folders, cwd)} /> : <>
       <NeedsYou n={waiting.length}>
         {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
       </NeedsYou>
@@ -191,18 +184,9 @@ export function OpenChats() {
         ))}
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>
-      </>}
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>
   );
-}
-
-const STATUS_CHIPS: [ChatState, string][] = [['running', 'Running'], ['done', 'Unread'], ['failed', 'Failed']];
-
-// The chats in one state across all repos, like the status filter in Claude desktop's sidebar.
-function StatusList({ live, saved, row, savedRow, repo }: { live: LiveChat[]; saved: SavedSession[]; row: (c: LiveChat, repo?: string) => ReactNode; savedRow: (s: SavedSession, repo?: string) => ReactNode; repo: (cwd: string) => string }) {
-  if (!live.length && !saved.length) return <EmptyState size="sm" title="No chats in this state" />;
-  return <div className="tree">{live.map((c) => row(c, repo(c.cwd)))}{saved.map((s) => savedRow(s, repo(s.cwd)))}</div>;
 }
 
 function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }) {

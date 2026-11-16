@@ -1,6 +1,5 @@
 .sessions { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 .sessions-bar { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-6) var(--sp-3) var(--sp-4); }
-.sessions-status { display: flex; gap: var(--sp-2); padding: 0 var(--sp-6) var(--sp-3) var(--sp-4); }
 .sessions-bar input { flex: 1; min-width: 0; height: var(--size-md); padding: 0 var(--sp-4); font-size: var(--fs-md); line-height: var(--size-row); }
 .sessions .hint { padding: 0 var(--sp-6) var(--sp-3) var(--sp-4); font-size: var(--fs-xs); color: var(--fg-muted); }
 .sessions .hint.error { color: var(--err); display: flex; gap: var(--sp-2); align-items: center; cursor: pointer; }
@@ -127,7 +126,6 @@
 .chat-row .chat-draft { color: var(--danger); }
 .chat-row .chat-muted { color: var(--meta-fg); }
 .chat-row .chat-pr { color: inherit; display: inline-flex; align-items: center; gap: var(--sp-2); text-decoration: none; }
-.sessions-status .sessions-read { margin-left: auto; font-size: var(--fs-xs); }
 .chat-rename { width: 100%; min-width: 0; }
 .sessions .as-swipe:has(.ui-menu) { overflow: visible; }
 .sessions .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
