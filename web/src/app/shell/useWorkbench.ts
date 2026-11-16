@@ -116,10 +116,12 @@ export function useWorkbench() {
   }, []);
 
   useEffect(() => {
+    // On desktop the chat's rail shows the tool calls beside its agents.
     const open = (e: Event) => {
+      if (!narrow()) return;
       setWorkTurn(String((e as CustomEvent<unknown>).detail));
       setEditor('work');
-      setTab((t) => (narrow() ? 'code' : t));
+      setTab('code');
     };
     window.addEventListener('open-work', open);
     return () => window.removeEventListener('open-work', open);
