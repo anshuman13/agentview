@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { waitFor } from '../../../testing.js';
 import * as registry from '../agent/registry.js';
 import { Runs } from '../session/runs.js';
 
@@ -37,7 +38,7 @@ describe('jobChat', () => {
     const chat = live.get(id)!.chat;
     expect(unattended(chat)).toBe(true);
     expect(chat.title).toBe('Fix the test');
-    expect(chat.state.events.find((e) => e.kind === 'user')).toMatchObject({ text: `Fix it\n\n${UNATTENDED_INSTRUCTION}` });
+    await waitFor(() => expect(chat.state.events.find((e) => e.kind === 'user')).toMatchObject({ text: `Fix it\n\n${UNATTENDED_INSTRUCTION}` }));
   });
 
   it('a chat reopened on a session with an open job run comes back unattended, one without does not', async () => {

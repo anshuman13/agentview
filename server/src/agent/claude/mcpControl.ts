@@ -1,5 +1,5 @@
 import type { McpServerConfig, Query } from '@anthropic-ai/claude-agent-sdk';
-import { inSettings, mcpFrom } from './mcp.js';
+import { connectorStatus, inSettings, mcpFrom } from './mcp.js';
 
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 
@@ -17,6 +17,18 @@ export class McpControl {
 
   async reconnect(name: string) {
     await this.current()?.reconnectMcpServer(name);
+  }
+
+  // A claude.ai connector logged in after the chat started stays needs-auth in the chat until it reconnects.
+  async pickUpConnectors(account: string) {
+    const q = this.current();
+    const list = q && (await q.mcpServerStatus().catch(() => null));
+    const stale = mcpFrom(list ?? []).filter((m) => m.type === 'claudeai' && m.status === 'needs-auth');
+    if (!stale.length) return false;
+    const known = await Promise.race([connectorStatus().catch(() => null), new Promise<null>((r) => setTimeout(r, 3000, null))]);
+    const ready = stale.filter((m) => known?.[account]?.some((c) => c.name === m.name && c.status === 'connected'));
+    for (const m of ready) await q!.reconnectMcpServer(m.name).catch(() => undefined);
+    return ready.length > 0;
   }
 
   async toggle(name: string, enabled: boolean) {

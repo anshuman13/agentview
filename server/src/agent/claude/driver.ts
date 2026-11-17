@@ -265,6 +265,10 @@ export class ClaudeDriver implements AgentDriver {
     return this.mcp.reconnect(name);
   }
 
+  pickUpConnectors() {
+    return this.mcp.pickUpConnectors(this.account);
+  }
+
   async toggleMcp(name: string, enabled: boolean) {
     return this.mcp.toggle(name, enabled);
   }

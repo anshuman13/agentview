@@ -7,6 +7,9 @@ import type { AgentSession } from './session.js';
 export const UNATTENDED_INSTRUCTION = 'No one is watching this chat. Work only in this worktree, leave your changes uncommitted, and do not push or open a pull request. End with one line saying what changed, or "Nothing to do".';
 
 export class Prompts {
+  // Prompts wait for the connector check in turn, so two quick messages keep their order.
+  private gate: Promise<unknown> = Promise.resolve();
+
   constructor(private s: AgentSession) {}
 
   // A client resends a message it got no echo for; the id tells a repeat from a new message.
@@ -28,6 +31,9 @@ export class Prompts {
     if (this.known(id)) return;
     if (this.loopCommand(text, id)) return;
     if (state.session.running) return waiting.queue(text, id);
+    await (this.gate = this.gate.then(() => this.s.mcp.pickUpConnectors()));
+    if (this.known(id)) return;
+    if (this.s.state.session.running) return waiting.queue(text, id);
     this.s.sendPrompt(text, id);
   }
 

@@ -63,6 +63,8 @@ export interface AgentDriver {
   // Background tasks (workflow runs, background agents and shell commands) that die with the CLI process.
   runningTasks?(): RunningTask[];
   reconnectMcp(name: string): Promise<void>;
+  // Reconnects claude.ai connectors logged in since the chat started; true when one was.
+  pickUpConnectors?(): Promise<boolean>;
   toggleMcp(name: string, enabled: boolean): Promise<void>;
   addMcp(name: string, def: unknown): Promise<{ error?: string }>;
   loginMcp(name: string): Promise<{ authUrl?: string; callbackPort?: number }>;

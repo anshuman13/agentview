@@ -15,6 +15,10 @@ export class Mcp {
     await this.refresh();
   }
 
+  async pickUpConnectors() {
+    if (await this.s.driver.pickUpConnectors?.().catch(() => false)) await this.refresh();
+  }
+
   async toggle(name: string, enabled: boolean) {
     await this.s.driver.toggleMcp(name, enabled).catch((err) => this.s.system(`${enabled ? 'Enabling' : 'Disabling'} ${name} failed: ${errText(err)}`));
     await this.refresh();
