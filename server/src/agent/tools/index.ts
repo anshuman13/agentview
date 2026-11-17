@@ -11,7 +11,13 @@ import { WIKI_RULES, wikiPageTool, wikiProposeTool, wikiSearchTool } from './wik
 // The tools every provider's chats get, as mcp__agentview__<name>.
 export const TOOLS: Tool[] = [statusTool, wikiSearchTool, wikiPageTool, wikiProposeTool, chatSearchTool, dataFindTool, dataWriteTool, findingsTool, goalTool, buildTool];
 
-export const TOOL_INSTRUCTIONS = [STATUS_RULES, WIKI_RULES, DATA_RULES, GOAL_RULES].join(' ');
+// The chat runs in AgentView, so advice for the claude terminal does not apply.
+const HOST_RULES = [
+  'This chat runs inside AgentView, not in a terminal: never tell the user to run claude --continue, start a new terminal session or restart Claude Code.',
+  'An MCP server or connector that connects after this chat started is not loaded here. Tell the user to use Reconnect on it in the chat\'s MCP server list, or to restart the chat from AgentView, then carry on with the rest of the work.',
+].join(' ');
+
+export const TOOL_INSTRUCTIONS = [HOST_RULES, STATUS_RULES, WIKI_RULES, DATA_RULES, GOAL_RULES].join(' ');
 
 export async function callTool(name: string, args: unknown, ctx: ToolCtx, tools = TOOLS): Promise<string> {
   const tool = tools.find((t) => t.name === name);
