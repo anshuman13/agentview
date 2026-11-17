@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 const config = await mkdtemp(path.join(os.tmpdir(), 'av-wf-'));
 process.env.CLAUDE_CONFIG_DIR = config;
-const { parseJournal, projectDir, sessionMessages, workflowAgents, workflowSize } = await import('./history.js');
+const { parseJournal, projectDir, sessionMessages, subagentMessages, workflowAgents, workflowSize } = await import('./history.js');
 const { historyFrom, workflowEvents, workflowName } = await import('./transcript.js');
 
 const lines = (...l: unknown[]) => l.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join('\n');
@@ -109,5 +109,26 @@ describe('sessionMessages', () => {
     const msgs = await sessionMessages(sid, '/tmp', entries);
     expect(msgs.map((m) => m.uuid)).toEqual([u(1), u(2), u(4), u(5)]);
     expect(msgs[2]).toMatchObject({ type: 'user', message: { content: '<task-notification><status>completed</status></task-notification>' } });
+  });
+
+});
+
+describe('subagentMessages', () => {
+  it('keeps every parallel tool call and result, not only one parent chain', async () => {
+    const sid = '11111111-2222-4333-8444-000000000002';
+    const cwd = '/tmp/proj-subs';
+    const dir = path.join(projectDir(cwd), sid, 'subagents');
+    const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+    const e = (n: number, parent: number | null, type: string, content: unknown) => ({ type, uuid: u(n), parentUuid: parent && u(parent), sessionId: sid, agentId: 'a1', isSidechain: true, timestamp: new Date(1_800_000_000_000 + n * 1000).toISOString(), message: { id: type === 'assistant' ? 'msg1' : undefined, role: type, content } });
+    const call = (n: number, parent: number, id: string) => e(n, parent, 'assistant', [{ type: 'tool_use', id, name: 'Agent', input: {} }]);
+    const result = (n: number, parent: number, id: string) => e(n, parent, 'user', [{ type: 'tool_result', tool_use_id: id, content: 'ok' }]);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(projectDir(cwd), `${sid}.jsonl`), lines({ type: 'user', uuid: u(99), parentUuid: null, sessionId: sid, timestamp: new Date(1_800_000_000_000).toISOString(), message: { role: 'user', content: 'hi' } }));
+    await writeFile(path.join(dir, 'agent-a1.meta.json'), JSON.stringify({ toolUseId: 'top' }));
+    await writeFile(path.join(dir, 'agent-a1.jsonl'), lines(e(1, null, 'user', 'go'), call(2, 1, 'a'), call(3, 2, 'b'), call(4, 3, 'c'), result(5, 2, 'a'), result(6, 4, 'c'), result(7, 3, 'b')));
+    const { subs } = await subagentMessages(cwd, sid);
+    const ids = (type: string) => subs.top.flatMap((m) => [(m.message as any).content].flat().flatMap((b: any) => (b?.type === type ? [b.id ?? b.tool_use_id] : [])));
+    expect(ids('tool_use').sort()).toEqual(['a', 'b', 'c']);
+    expect(ids('tool_result').sort()).toEqual(['a', 'b', 'c']);
   });
 });

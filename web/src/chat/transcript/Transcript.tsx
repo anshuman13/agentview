@@ -301,7 +301,9 @@ function Folded({ id, className, children }: { id: string; className: string; ch
 const UserText = ({ id, text }: { id: string; text: string }) => <Folded id={'prompt-' + id} className="tr-user-text">{text}</Folded>;
 
 // A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
-function Tasks({ id, steps, now, tools, live }: { id: string; steps: StatusStep[]; now: string; tools: number; live: boolean }) {
+// A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
+function Tasks({ id, steps: all, now, tools, live }: { id: string; steps: StatusStep[]; now: string; tools: number; live: boolean }) {
+  const steps = live ? all : all.filter((s) => s.done);
   const done = steps.filter((s) => s.done).length;
   const current = live ? steps.find((s) => !s.done) : undefined;
   const spin = <Icon name="loading" small spin />;

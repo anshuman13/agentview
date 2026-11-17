@@ -24,7 +24,10 @@ export async function subagentMessages(cwd: string, sessionId: string, cache = n
     const toolUseId = prev?.toolUseId ?? (await readJson<any>(path.join(dir, f), null))?.toolUseId;
     if (!toolUseId) return;
     let ok = true;
-    const msgs = await getSubagentMessages(sessionId, agentId, { dir: cwd }).catch(() => ((ok = false), []));
+    const file = path.join(dir, `agent-${agentId}.jsonl`);
+    const sdk = await getSubagentMessages(sessionId, agentId, { dir: cwd }).catch(() => ((ok = false), []));
+    const raw = ok ? await readFile(file, 'utf8').then(parseLines, () => []) : [];
+    const msgs = withSiblings(sdk, raw.filter((e) => e?.uuid), sessionId);
     cache.set(f, { sig: ok ? sig : '', toolUseId, msgs });
     changed = true;
   }));
@@ -134,6 +137,31 @@ export async function sessionMessages(sessionId: string, cwd: string, entries: a
 
 const asMessage = (e: any, sessionId: string, message: unknown) =>
   ({ type: e.type === 'attachment' ? 'user' : e.type, uuid: e.uuid, session_id: sessionId, message, parent_tool_use_id: null, parent_agent_id: null, timestamp: e.timestamp }) as SessionMessage;
+
+const parseLines = (text: string) => text.split('\n').flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+const blocks = (e: any): any[] => (Array.isArray(e?.message?.content) ? e.message.content : []);
+
+// Parallel tool calls each get their own entry and their results hang off them, so the SDK's subagent reader, which
+// follows one parent chain, drops all but one of them. Each goes back in after its nearest kept ancestor: calls by the API message id they
+// share with a kept entry, results by the call they answer.
+function withSiblings(msgs: SessionMessage[], raw: any[], sessionId: string) {
+  const listed = new Set(msgs.map((m) => m.uuid));
+  const apiIds = new Set(msgs.flatMap((m) => (m.type === 'assistant' && (m.message as any)?.id ? [(m.message as any).id] : [])));
+  const calls = raw.filter((e) => e.type === 'assistant' && !listed.has(e.uuid) && apiIds.has(e.message?.id) && blocks(e).some((b) => b.type === 'tool_use'));
+  const useIds = new Set([...msgs.map((m) => m as any), ...calls].flatMap((e) => blocks(e).flatMap((b) => (b.type === 'tool_use' ? [b.id] : []))));
+  const answered = new Set(msgs.flatMap((m) => blocks(m).flatMap((b) => (b.type === 'tool_result' ? [b.tool_use_id] : []))));
+  const results = raw.filter((e) => e.type === 'user' && !listed.has(e.uuid) && blocks(e).length > 0 && blocks(e).every((b) => b.type === 'tool_result' && useIds.has(b.tool_use_id) && !answered.has(b.tool_use_id)));
+  if (!calls.length && !results.length) return msgs;
+  const extra = new Set([...calls, ...results]);
+  const byId = new Map(raw.map((e) => [e.uuid, e]));
+  const after = new Map<string, SessionMessage[]>();
+  for (const e of raw.filter((x) => extra.has(x))) {
+    let parent = byId.get(e.parentUuid);
+    while (parent && !listed.has(parent.uuid)) parent = byId.get(parent.parentUuid);
+    if (parent) after.set(parent.uuid, [...(after.get(parent.uuid) ?? []), asMessage(e, sessionId, e.message)]);
+  }
+  return msgs.flatMap((m) => [m, ...(after.get(m.uuid) ?? [])]);
+}
 
 // The CLI saves a background agent's task notification as an attachment, which the SDK mostly leaves out; each goes back in after the nearest message it follows.
 function withNotices(msgs: SessionMessage[], raw: any[], sessionId: string) {

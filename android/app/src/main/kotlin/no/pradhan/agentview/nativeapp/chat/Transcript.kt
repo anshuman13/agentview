@@ -249,12 +249,14 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
 // The turn's tasks from set_status as small lines, and on the right a button that opens the turn's tool calls on their own screen (web Transcript.tsx Tasks).
 @Composable
 private fun TaskLines(fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) -> Unit) {
-    val done = fold.steps.count { it.done }
-    val current = if (live) fold.steps.firstOrNull { !it.done } else null
+    // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
+    val steps = if (live) fold.steps else fold.steps.filter { it.done }
+    val done = steps.count { it.done }
+    val current = if (live) steps.firstOrNull { !it.done } else null
     val spin = @Composable { CircularProgressIndicator(Modifier.size(Tokens.sp5), strokeWidth = Tokens.stroke, color = av.fgFaint) }
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (fold.steps.isNotEmpty()) Text(if (done < fold.steps.size) "Tasks \u00b7 $done of ${fold.steps.size}" else plural(fold.steps.size, "task"), style = Type.label, color = av.fgFaint)
+            if (steps.isNotEmpty()) Text(if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task"), style = Type.label, color = av.fgFaint)
             Spacer(Modifier.weight(1f))
             if (fold.work.tools > 0) Row(
                 Modifier.clip(RoundedCornerShape(Tokens.shapeFull)).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.shapeFull)).clickable { onOpenWork(fold.id) }.padding(horizontal = Tokens.sp4, vertical = Tokens.sp1),
@@ -266,7 +268,7 @@ private fun TaskLines(fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) ->
         }
         @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.footnote, color = color) }
-        fold.steps.forEach { s ->
+        steps.forEach { s ->
             when {
                 s.done -> Task({ AvIcon("check", null, Tokens.sp5, tint = av.ok) }, s.title, av.fg)
                 s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
