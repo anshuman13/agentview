@@ -72,8 +72,8 @@ export function Brief() {
   // On desktop a turn's tool calls open as a second rail tab beside Agents; the phone opens them as their own screen.
   const [workTurn, setWorkTurn] = useState<string | null>(null);
   const [railTab, setRailTab] = useState<'agents' | 'work'>('agents');
-  // A closed rail stays closed for this chat until an agent or tool calls open it, or the agents button in the status line.
-  const [railClosed, setRailClosed] = useState(false);
+  // The rail starts closed in every chat and opens only from an agent, tool calls or the agents button in the status line.
+  const [railClosed, setRailClosed] = useState(true);
   const showWork = !phone && workTurn !== null && (railTab === 'work' || !hasAgents);
   const side = hasAgents || (!phone && workTurn !== null);
   const closeWork = () => { setWorkTurn(null); setRailTab('agents'); };
@@ -116,7 +116,7 @@ export function Brief() {
     window.addEventListener('open-work', open);
     return () => window.removeEventListener('open-work', open);
   }, [phone]);
-  useEffect(() => { setShowAgents(false); setAgentSel(null); setRenaming(false); setWorkTurn(null); setRailTab('agents'); setRailClosed(false); }, [sessionId]);
+  useEffect(() => { setShowAgents(false); setAgentSel(null); setRenaming(false); setWorkTurn(null); setRailTab('agents'); setRailClosed(true); }, [sessionId]);
   const title = chatTitle || chatTitleOf(turns[0]?.prompt ?? '') || 'New chat';
   const startRename = savedId ? () => setRenaming(true) : undefined;
   const press = useLongPress(startRename);
