@@ -22,3 +22,23 @@ export function blockAt(original: string, content: string, line: number, removed
   }
   return -1;
 }
+
+// The change block at a line of the original file; -1 for an unchanged line.
+export function blockAtOld(original: string, content: string, line: number): number {
+  let block = -1;
+  let inBlock = false;
+  let then = 0;
+  for (const [mark] of fileDiff(original, content)) {
+    if (mark === ' ') {
+      inBlock = false;
+      then++;
+      continue;
+    }
+    if (!inBlock) {
+      block++;
+      inBlock = true;
+    }
+    if (mark === '-' && ++then === line) return block;
+  }
+  return -1;
+}

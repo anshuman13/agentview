@@ -38,6 +38,15 @@
 .cd-editor .cm-editor .cm-merge-b .cm-changedText { background: color-mix(in srgb, var(--diff-add) 30%, transparent); }
 .cd-editor .cm-editor .cm-merge-b .cm-deletedChunk { padding-left: var(--sp-2); background: color-mix(in srgb, var(--diff-del) 12%, transparent); }
 .cd-editor .cm-editor .cm-merge-b .cm-deletedChunk .cm-deletedText { background: color-mix(in srgb, var(--diff-del) 30%, transparent); }
+.cd-editor .cm-mergeView { height: 100%; }
+.cd-editor .cm-mergeView .cm-editor { height: auto; }
+.cd-editor .cm-mergeViewEditor + .cm-mergeViewEditor { border-left: 1px solid var(--border); }
+.cd-editor .cm-editor.cm-merge-a .cm-changedLine { background: color-mix(in srgb, var(--diff-del) 12%, transparent); }
+.cd-editor .cm-editor.cm-merge-a .cm-changedText { background: color-mix(in srgb, var(--diff-del) 30%, transparent); }
+.cd-editor .cm-editor.cm-merge-b .cm-changedLine { background: color-mix(in srgb, var(--diff-add) 12%, transparent); }
+.cd-editor .cm-editor.cm-merge-b .cm-changedText { background: color-mix(in srgb, var(--diff-add) 30%, transparent); }
+.cd-editor .cm-editor.cm-merge-a .cm-changedLineGutter::before { content: '-'; color: var(--diff-del); }
+.cd-editor .cm-mergeSpacer { background: var(--sunken); }
 .cd-editor .cm-editor .cm-collapsedLines {
   margin: 0; padding: var(--sp-1) 0 var(--sp-1) var(--sp-6); cursor: pointer; font-size: var(--fs-sm);
   color: var(--fg-faint); background: var(--sunken); border-block: 1px solid var(--border);

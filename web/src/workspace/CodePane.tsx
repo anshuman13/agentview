@@ -7,13 +7,14 @@ import { fileRequest, isDocPath } from './fileApi';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
-import { useSlot } from '../ui/util';
+import { readFlag, saveFlag, useSlot } from '../ui/util';
 import { FileIcon } from './FileIcon';
 import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
 import type { FileData } from './Editor';
 import '../styles/features/code.css';
 
 const Editor = lazy(() => import('./Editor').then((m) => ({ default: m.Editor })));
+const SPLIT_KEY = 'diff-split';
 const MarkdownDoc = lazy(() => import('./MarkdownDoc').then((m) => ({ default: m.MarkdownDoc })));
 
 function useFile(path: string | null, bump: unknown, paused = false) {
@@ -117,6 +118,7 @@ export function CodePane() {
   const [wrap, setWrap] = useState(false);
   const [preview, setPreview] = useState(true);
   const [changesOnly, setChangesOnly] = useState(true);
+  const [split, setSplit] = useState(() => readFlag(SPLIT_KEY, false));
   const [edit, setEdit] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState<'' | 'saving' | 'saved' | 'failed'>('');
@@ -184,6 +186,7 @@ export function CodePane() {
           {isDoc && <Toggle on={showDoc} icon="open-preview" title={showDoc ? 'Show the Markdown source' : 'Show the rendered document'} onClick={() => setPreview(!showDoc)} />}
           {isDoc && <Toggle icon="target" title="Run as goal…" onClick={() => startGoal({ plan: openFile ?? undefined })} />}
           {canDiff && <Toggle on={diff} icon="diff" title="Show the change against the last commit" onClick={() => { setPreview(false); setMode(diff ? 'file' : 'diff'); }} />}
+          {diff && <Toggle on={split} icon="split-horizontal" title={split ? 'Show the change inline' : 'Show the change side by side'} onClick={() => { saveFlag(SPLIT_KEY, !split); setSplit(!split); }} />}
           {diff && <Toggle on={changesOnly} icon="fold" title="Changes only" onClick={() => setChangesOnly(!changesOnly)} />}
           {!showDoc && <Toggle on={wrap} icon="word-wrap" title="Word wrap" onClick={() => setWrap(!wrap)} />}
           {canEdit && <Toggle on={edit} icon="edit" title={edit ? 'Stop editing' : 'Edit this file'} onClick={() => { if (edit && dirty && !confirm('Drop the unsaved changes? This cannot be undone.')) return; setEdit(!edit); setDirty(false); setSaving(''); }} />}
@@ -197,7 +200,7 @@ export function CodePane() {
       {file?.binary && <div className="cd-empty">Binary file</div>}
       {file && !file.error && !file.image && !file.binary && (
         <Guard key={`${file.path}:${showDoc}`}>
-          <Suspense fallback={null}>{showDoc ? <MarkdownDoc path={file.path} text={file.content} /> : <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} edit={edit} onDirty={setDirty} onSave={(t) => void saveText(t)} />}</Suspense>
+          <Suspense fallback={null}>{showDoc ? <MarkdownDoc path={file.path} text={file.content} /> : <Editor file={file} diff={diff} split={split} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} edit={edit} onDirty={setDirty} onSave={(t) => void saveText(t)} />}</Suspense>
         </Guard>
       )}
     </div>

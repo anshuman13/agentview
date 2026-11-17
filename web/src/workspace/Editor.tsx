@@ -3,14 +3,14 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { unifiedMergeView } from '@codemirror/merge';
+import { MergeView, unifiedMergeView } from '@codemirror/merge';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { showChat } from '../ui/util';
 import { touch } from '../app/touch/touch';
 import { isDark, useThemeName } from '../app/theme';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { Menu, MenuItem } from '../ui/Menu';
-import { blockAt, revertBlock } from './revertBlock';
+import { blockAt, blockAtOld, revertBlock } from './revertBlock';
 
 async function lang(path: string): Promise<Extension> {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
@@ -25,7 +25,7 @@ async function lang(path: string): Promise<Extension> {
 
 export type FileData = { path: string; content: string; original: string; image?: boolean; binary?: boolean; error?: string };
 
-type EditorProps = { file: FileData; diff: boolean; wrap: boolean; changesOnly: boolean; line?: number | null; viewRef: MutableRefObject<EditorView | null>; edit?: boolean; onDirty?: (dirty: boolean) => void; onSave?: (text: string) => void };
+type EditorProps = { file: FileData; diff: boolean; split?: boolean; wrap: boolean; changesOnly: boolean; line?: number | null; viewRef: MutableRefObject<EditorView | null>; edit?: boolean; onDirty?: (dirty: boolean) => void; onSave?: (text: string) => void };
 
 const PRESS_MS = 500;
 
@@ -36,7 +36,7 @@ function quoteLine(path: string, line: number, text: string) {
   window.dispatchEvent(new CustomEvent('agentview:focus'));
 }
 
-export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = false, onDirty, onSave }: EditorProps) {
+export function Editor({ file, diff, split = false, wrap, changesOnly, line, viewRef, edit = false, onDirty, onSave }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const scroll = useRef<{ path: string; top: number; head: number } | null>(null);
   const save = useRef(onSave);
@@ -44,6 +44,7 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = fa
   const dirty = useRef(onDirty);
   dirty.current = onDirty;
   const press = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const merge = useRef<MergeView | null>(null);
   const dark = isDark(useThemeName());
 
   const [menu, setMenu] = useState<{ x: number; y: number; block: number; quote: () => void } | null>(null);
@@ -51,13 +52,15 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = fa
   const menuBox = useRef<HTMLSpanElement>(null);
 
   const openLine = (x: number, y: number) => {
-    const view = viewRef.current;
+    // In the split view the left side is the last commit: quote and revert by its line.
+    const old = split ? document.elementFromPoint(x, y)?.closest('.cm-merge-a') : null;
+    const view = old ? merge.current?.a : viewRef.current;
     const pos = view?.posAtCoords({ x, y });
     if (!view || pos == null) return;
     const l = view.state.doc.lineAt(pos);
-    const removed = document.elementFromPoint(x, y)?.closest('.cm-deletedLine');
+    const removed = old ? null : document.elementFromPoint(x, y)?.closest('.cm-deletedLine');
     const quote = () => quoteLine(file.path, l.number, removed?.textContent ?? l.text);
-    const block = file.original && !file.binary ? blockAt(file.original, file.content, l.number, Boolean(removed)) : -1;
+    const block = !file.original || file.binary ? -1 : old ? blockAtOld(file.original, file.content, l.number) : blockAt(file.original, file.content, l.number, Boolean(removed));
     if (block < 0) quote();
     else setMenu({ x, y, block, quote });
   };
@@ -92,8 +95,10 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = fa
     const parent = host.current;
     let cancelled = false;
     let view: EditorView | null = null;
+    let scroller: HTMLElement | null = null;
     lang(file.path).then((language) => {
       if (cancelled) return;
+      const collapse = changesOnly ? { margin: 3, minSize: 4 } : undefined;
       const extensions = [
         lineNumbers(),
         EditorView.editable.of(edit),
@@ -103,16 +108,23 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = fa
         syntaxHighlighting(dark ? oneDarkHighlightStyle : defaultHighlightStyle),
         language,
         wrap ? EditorView.lineWrapping : [],
-        diff ? unifiedMergeView({ original: file.original, mergeControls: false, collapseUnchanged: changesOnly ? { margin: 3, minSize: 4 } : undefined }) : [],
+        diff && !split ? unifiedMergeView({ original: file.original, mergeControls: false, collapseUnchanged: collapse }) : [],
         EditorState.phrases.of({ '$ unchanged lines': '⋯ $ unchanged lines' }),
       ];
-      view = new EditorView({ state: EditorState.create({ doc: file.content, extensions }), parent });
+      if (diff && split) {
+        merge.current = new MergeView({ a: { doc: file.original, extensions }, b: { doc: file.content, extensions }, parent, collapseUnchanged: collapse });
+        view = merge.current.b;
+        scroller = merge.current.dom;
+      } else {
+        view = new EditorView({ state: EditorState.create({ doc: file.content, extensions }), parent });
+        scroller = view.scrollDOM;
+      }
       if (line && line <= view.state.doc.lines) {
         // A review finding opens the file on its line.
         const l = view.state.doc.line(line);
         view.dispatch({ selection: { anchor: l.from, head: l.to }, effects: EditorView.scrollIntoView(l.from, { y: 'center' }) });
       } else if (scroll.current?.path === file.path) {
-        view.scrollDOM.scrollTop = scroll.current.top;
+        scroller.scrollTop = scroll.current.top;
         const head = Math.min(scroll.current.head, view.state.doc.length);
         view.dispatch({ selection: { anchor: head } });
       }
@@ -121,11 +133,13 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = fa
     return () => {
       cancelled = true;
       if (!view) return;
-      scroll.current = { path: file.path, top: view.scrollDOM.scrollTop, head: view.state.selection.main.head };
+      scroll.current = { path: file.path, top: scroller?.scrollTop ?? 0, head: view.state.selection.main.head };
       viewRef.current = null;
-      view.destroy();
+      if (merge.current) merge.current.destroy();
+      else view.destroy();
+      merge.current = null;
     };
-  }, [file, diff, wrap, changesOnly, dark, line, edit]);
+  }, [file, diff, split, wrap, changesOnly, dark, line, edit]);
 
   return (
     <>
