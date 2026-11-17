@@ -4,6 +4,7 @@ import { haptic } from '../../ui/haptic';
 import { slideFrom, useTabSwipe } from '../touch/tabSwipe';
 import { deepLink } from '../deepLinks';
 import { loadAppSettings } from '../appSettings';
+import { useApiBase } from '../api';
 import { track } from '../featureUse';
 import { isPage, type Page } from '../pages';
 import { useTheme } from '../theme';
@@ -86,7 +87,8 @@ export function useWorkbench() {
     return () => window.removeEventListener('agentview:chat', show);
   }, []);
 
-  useEffect(() => void loadAppSettings(), []);
+  const base = useApiBase();
+  useEffect(() => void loadAppSettings(), [base]);
   useWorkbenchKeys({
     toggleChat: () => setChatOpen((v) => !v),
     toggleSidebar: () => setSidebar((v) => !v),

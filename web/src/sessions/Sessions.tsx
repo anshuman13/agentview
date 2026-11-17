@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { deleteRequest } from './sessionApi';
 import { send, setUi, useStore } from '../app/store';
+import { appSettings } from '../app/appSettings';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
@@ -25,6 +26,7 @@ export function Sessions() {
   const waitingCount = useStore((s) => s.live.reduce((n, c) => n + (c.pending ? 1 : 0), 0));
   const [filter, setFilter] = useState('');
   const viewing = useStore((s) => s.session.id);
+  const personalRoot = appSettings.use((s) => s.personalRoot);
   const [segment, setSegment] = useState(() => stored('agentview.workspace.segment', 'work'));
   const [shut, setShut] = useState<string[]>(() => stored('agentview.workspace.kinds', []));
   const [toggled, setToggled] = useState<Set<string>>(new Set());
@@ -95,7 +97,7 @@ export function Sessions() {
 
   const liveCwds = useMemo(() => (liveKey ? liveKey.split('\n') : []), [liveKey]);
   const counts = { work: shown.filter((f) => segmentOf(f) === 'work').length, personal: shown.filter((f) => segmentOf(f) === 'personal').length };
-  const groups = useMemo(() => groupByKind(shown.filter((f) => segmentOf(f) === segment), liveCwds), [shown, segment, liveCwds]);
+  const groups = useMemo(() => groupByKind(shown.filter((f) => segmentOf(f) === segment), liveCwds), [shown, segment, liveCwds, personalRoot]);
   const pick = (v: string) => { setSegment(v); save('agentview.workspace.segment', v); };
   const flipKind = (k: string) => { const next = shut.includes(k) ? shut.filter((x) => x !== k) : [...shut, k]; setShut(next); save('agentview.workspace.kinds', next); };
   const isOpen = (d: Folder) => Boolean(d.hit) || (d.cwd === here || liveCwds.some((c) => inside(c, d.cwd))) !== toggled.has(d.cwd);
