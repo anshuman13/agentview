@@ -8,6 +8,26 @@ const touches = new Map<Peer, { x: number; y: number; moved: boolean }>();
 
 export const forgetTouch = (ws: Peer) => touches.delete(ws);
 
+// A drag scrolls the scrollable element under the finger, or the page, from script: a wheel event waits for Chrome to
+// draw, so one that hangs held up every later step of the drag.
+export const scrollScript = (x: number, y: number, dx: number, dy: number) =>
+  `(() => { for (let e = document.elementFromPoint(${x}, ${y}); e; e = e.parentElement) { const s = getComputedStyle(e); if (/auto|scroll/.test(s.overflowY + s.overflowX) && (e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth)) return e.scrollBy(${dx}, ${dy}); } scrollBy(${dx}, ${dy}); })()`;
+
+// Steps that arrive while a scroll runs add up and go as one, so a slow page never builds a queue.
+const drags = new Map<string, { x: number; y: number; dx: number; dy: number; busy: boolean }>();
+export async function dragScroll(s: string, x: number, y: number, dx: number, dy: number) {
+  const d = drags.get(s) ?? { x, y, dx: 0, dy: 0, busy: false };
+  drags.set(s, Object.assign(d, { x, y, dx: d.dx + dx, dy: d.dy + dy }));
+  if (d.busy) return;
+  d.busy = true;
+  while (d.dx || d.dy) {
+    const { dx: sx, dy: sy } = d;
+    d.dx = d.dy = 0;
+    await call('Runtime.evaluate', { expression: scrollScript(Math.round(d.x), Math.round(d.y), Math.round(sx), Math.round(sy)) }, s, 3000).catch(() => {});
+  }
+  drags.delete(s);
+}
+
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 
 export function viewerSize(m: any) {
@@ -74,7 +94,7 @@ async function touch(m: any, ws: Peer, s: string) {
   if (!ends) {
     if (!t.moved && Math.hypot(t.x - x, t.y - y) < 8) return;
     touches.set(ws, { x, y, moved: true });
-    return call('Input.dispatchMouseEvent', { type: 'mouseWheel', x, y, deltaX: t.x - x, deltaY: t.y - y }, s);
+    return dragScroll(s, x, y, t.x - x, t.y - y);
   }
   touches.delete(ws);
   if (m.type === 'touchCancel' || t.moved) return;
