@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
-import { savedSession } from './sessions.js';
+import { lastMessageTime, savedSession } from './sessions.js';
 
 const info = (firstPrompt?: string, extra: Partial<SDKSessionInfo> = {}) => ({ sessionId: 's', summary: 'T', lastModified: 1, firstPrompt, ...extra }) as SDKSessionInfo;
 
@@ -24,5 +24,15 @@ describe('savedSession', () => {
     expect(savedSession(info('x', { summary: 'Short' })).title).toBe('Short');
     const long = 'z'.repeat(100);
     expect(savedSession(info('x', { summary: long, customTitle: long })).title).toBe(long);
+  });
+});
+
+describe('lastMessageTime', () => {
+  it('skips bookkeeping lines written after the last message', () => {
+    const tail = ['{"type":"user","timestamp":"2026-11-17T18:30:00.000Z"}', '{"type":"assistant","timestamp":"2026-11-17T18:35:12.471Z"}', '{"type":"system","timestamp":"2026-11-18T15:10:00.000Z"}', '{"type":"last-prompt"}', '{"type":"cost-state"}', ''].join('\n');
+    expect(lastMessageTime(tail)).toBe(Date.parse('2026-11-17T18:35:12.471Z'));
+  });
+  it('returns null for a cut first line or no messages', () => {
+    expect(lastMessageTime('mp":"x"}\n{"type":"cost-state"}')).toBeNull();
   });
 });

@@ -1,11 +1,11 @@
 import path from 'node:path';
-import { readdir, stat } from 'node:fs/promises';
+import { open, readdir, stat } from 'node:fs/promises';
 import { providerOf } from '../registry.js';
 import { getSessionInfo, listSessions as listAll, renameSession, type ListSessionsOptions, type SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import type { SavedSession } from '../../../../shared/protocol.js';
 import { chatTitle } from '../../../../shared/util.js';
 import { codexThread, noteThread } from '../codex/threads.js';
-import { CLAUDE_DIR } from './history.js';
+import { CLAUDE_DIR, projectDir } from './history.js';
 import { failed } from '../../json.js';
 
 export { getSessionInfo };
@@ -35,10 +35,40 @@ export async function listSessions(opts: ListSessionsOptions = {}) {
   const sig = await signature();
   const hit = cache.get(key);
   if (hit?.sig === sig) return hit.list;
-  const list = listAll(opts);
+  const list = listAll(opts).then((all) => Promise.all(all.map(async (x) => ({ ...x, lastModified: (await lastMessageAt(x)) ?? x.lastModified }))));
   cache.set(key, { sig, list });
   list.catch(() => cache.get(key)?.list === list && cache.delete(key));
   return list;
+}
+
+// The time of the last user or assistant entry. Claude appends bookkeeping lines when a process exits, which move the file's mtime.
+export function lastMessageTime(tail: string) {
+  const lines = tail.split('\n');
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (!lines[i].includes('"timestamp"')) continue;
+    try {
+      const e = JSON.parse(lines[i]);
+      if ((e.type === 'user' || e.type === 'assistant') && e.timestamp) return Date.parse(e.timestamp) || null;
+    } catch {}
+  }
+  return null;
+}
+
+const TAIL = 256 * 1024;
+
+async function lastMessageAt(x: SDKSessionInfo) {
+  if (!x.cwd) return null;
+  const file = await open(path.join(projectDir(x.cwd), `${x.sessionId}.jsonl`)).catch(() => null);
+  if (!file) return null;
+  try {
+    const { size } = await file.stat();
+    const len = Math.min(size, TAIL);
+    const buf = Buffer.alloc(len);
+    await file.read(buf, 0, len, size - len);
+    return lastMessageTime(buf.toString('utf8'));
+  } finally {
+    await file.close();
+  }
 }
 
 export function savedSession(x: SDKSessionInfo): SavedSession {
