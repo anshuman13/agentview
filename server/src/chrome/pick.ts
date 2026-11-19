@@ -54,6 +54,13 @@ export async function selectTab(id: unknown) {
   return pick();
 }
 
+// Chrome never handles input sent to a background tab, so the user's click or key brings the watched tab forward.
+export function showWatched() {
+  if (shown || !view.watching) return;
+  shown = true;
+  return call('Target.activateTarget', { targetId: view.watching.target }).catch(() => {});
+}
+
 setInterval(async () => {
   if (!viewers.size || !connected() || picking !== settled) return;
   if (!view.watching) return tabs.size && pick();
