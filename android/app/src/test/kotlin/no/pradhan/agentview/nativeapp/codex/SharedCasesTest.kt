@@ -587,6 +587,17 @@ class SharedCasesTest {
         for (c in cases("review-queue")) assertEquals(c.str("name"), strings(c, "expected"), reviewQueue(strings(c, "order"), strings(c, "skipped"), strings(c, "open").toSet()))
     }
 
+    @Test fun ignoredToday() {
+        for (c in cases("ignored-today")) {
+            val briefs = c.getValue("briefs").jsonArray.map { it.jsonObject }.map { b ->
+                Row("briefs", b.str("id"), b.str("profile"), deleted = b.getValue("deleted").jsonPrimitive.long == 1L, f = mapOf("kind" to b.getValue("kind"), "rows" to b.getValue("rows")))
+            }
+            val expected = c.getValue("expected").jsonArray.map { it.jsonObject }.map { listOf(it.str("url"), it.str("from"), it.str("gist")) }
+            val profile = c.str("profile").takeIf { it != "all" }
+            assertEquals(c.str("name"), expected, ignoredToday(briefs, profile, c.getValue("now").jsonPrimitive.long).map { listOf(it.url, it.from, it.gist) })
+        }
+    }
+
     @Test fun askRows() {
         for (c in cases("ask-rows")) {
             val r = c.getValue("row").jsonObject

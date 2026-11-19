@@ -17,7 +17,7 @@ export const askTags = (db: Database, a: { tier?: string | null; confidence?: nu
   [needsMe(a.tier) ? NEEDS_ME : '', sureAnswer(db, a) ? FAQ_TAG : '', ADMIN_KINDS.find((k) => k === a.kind) ?? ''].filter(Boolean).join(' ') || null;
 import { getMeta, setMeta } from '../core/db.js';
 import { applyChanges, type Change } from '../core/sync.js';
-import { DAY, parseWhen } from '../core/time.js';
+import { DAY, parseWhen, ymd } from '../core/time.js';
 
 export const PROFILE = 'work' as const;
 
@@ -48,6 +48,12 @@ export const Ask = z.object({
   kind: z.enum(['access', 'limit', 'other']).optional().describe('access: they want an invite, seat, account, plan move, connector or permission that I grant. limit: they want a higher usage or spend limit. other: anything else.'),
   steps: z.array(z.object({ text: z.string(), done: z.boolean() })).optional().describe('Give at most 4 steps toward settling the ask, in order. done true: read-only work you did this pass, with its result in the text (read the thread, found the FAQ claim or link, found the owner, found free slots). done false: what waits for me to do or approve (grant access, decide, review, confirm the answer, ask the owner). Never mark an action in Slack or another system as done. Sending the draft is not a step.'),
 });
+// A DM or mention the scan read and did not add as an ask.
+export const Ignored = z.object({
+  url: z.string().describe('Permalink of the message'),
+  from: z.string().describe('Who wrote it'),
+  gist: z.string().describe('One line, at most 12 words'),
+});
 // A commitment I made myself, like "I'll send it tomorrow".
 export const Said = z.object({
   url: z.string().describe('Permalink of my message'),
@@ -69,7 +75,7 @@ export const Decided = z.object({
   url: z.string().describe('Permalink of the message with the decision'),
   time: z.string().describe('When it was decided, as YYYY-MM-DDTHH:MM local time'),
 });
-export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; fulfilled?: string[]; details?: z.infer<typeof Detail>[]; said?: z.infer<typeof Said>[]; decisions?: z.infer<typeof Decided>[]; channels?: { name: string; id: string }[]; commands?: { text: string; url: string }[] };
+export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; fulfilled?: string[]; details?: z.infer<typeof Detail>[]; said?: z.infer<typeof Said>[]; ignored?: z.infer<typeof Ignored>[]; decisions?: z.infer<typeof Decided>[]; channels?: { name: string; id: string }[]; commands?: { text: string; url: string }[] };
 
 // Permalinks come from the model, so only web links are stored or pushed; no comma or semicolon, which split ntfy actions.
 export const webUrl = (u: string | null | undefined) => (u && /^https?:\/\/[^\s,;]+$/i.test(u) ? u : null);
@@ -218,6 +224,35 @@ function noteChanges(db: Database, r: ScanResult, now: number): Change[] {
   return [...texts].map(([id, text]) => ({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { text } }));
 }
 
+const IGNORED_ID = 'slack-ignored';
+const IGNORED_MAX = 50;
+type IgnoredEntry = z.infer<typeof Ignored> & { at: number };
+
+export function ignoredOf(db: Database): IgnoredEntry[] {
+  const row = db.prepare('SELECT rows FROM briefs WHERE profile = ? AND id = ? AND deleted = 0').get(PROFILE, IGNORED_ID) as { rows: string | null } | null;
+  try {
+    const list = JSON.parse(row?.rows ?? '[]');
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+// Keeps what the scan ignored today, at most 50, in one brief row; an ask saved from the same message is not listed.
+export function saveIgnored(db: Database, old: IgnoredEntry[], found: z.infer<typeof Ignored>[], has: Has, changes: Change[], now: number) {
+  const day = ymd(now);
+  const list = new Map(old.filter((e) => ymd(e.at) === day).map((e) => [e.url, e]));
+  for (const e of found) {
+    const url = webUrl(e.url);
+    const from = e.from.trim();
+    const gist = e.gist.trim();
+    if (url && from && gist && !list.has(url)) list.set(url, { url, from, gist, at: now });
+  }
+  const asked = (url: string) => has.get(PROFILE, askId(url)) || changes.some((c) => c.id === askId(url));
+  const keep = [...list.values()].filter((e) => !asked(e.url)).sort((a, b) => a.at - b.at).slice(-IGNORED_MAX);
+  if (JSON.stringify(keep) !== JSON.stringify(old)) applyChanges(db, [{ table: 'briefs', id: IGNORED_ID, profile: PROFILE, updated_at: now, fields: { kind: 'slack-ignored', text: null, rows: JSON.stringify(keep), from_at: null, to_at: now } }]);
+}
+
 // Saves one scan: chat summaries, asks and my promises as items to review, new details on tasks and channel decisions, and
 // closes asks I have replied to. Returns how many chats had new messages and how many messages were read, how many asks and promises are new and which asks are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
@@ -234,6 +269,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   db.transaction(() => {
     applyChanges(db, changes);
     saveDecisions(db, r.decisions ?? [], now);
+    if (r.ignored) saveIgnored(db, ignoredOf(db), r.ignored, has, changes, now);
   })();
   return { chats: chats.length, added: newAsks.length, urgent, said, messages, newAsks };
 }

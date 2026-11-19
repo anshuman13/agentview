@@ -31,6 +31,8 @@ import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { needsYou } from './codex/summary/needsYou';
+import { ignoredToday } from './codex/data/tasks/review';
+import type { Brief } from './codex/data/wiki/wiki';
 import { reviewQueue } from './codex/wiki/reviewQueue';
 import { revertBlock } from './workspace/revertBlock';
 import { ago, money } from './ui/util';
@@ -338,6 +340,11 @@ describe('cases shared with the Android app', () => {
       const w = parseWhen(c.text, new Date(c.now));
       expect(w && { at: w.at === null ? null : new Date(w.at).toISOString().replace('.000Z', 'Z'), spans: w.spans, stripped: stripWhen(c.text, w) }).toEqual(c.expected);
     });
+  }
+
+  type IgnoredCase = { name: string; profile: string; now: number; briefs: Pick<Brief, 'profile' | 'id' | 'kind' | 'rows' | 'deleted'>[]; expected: { url: string; from: string; gist: string }[] };
+  for (const c of cases<IgnoredCase>('ignored-today')) {
+    it(`ignoredToday: ${c.name}`, () => expect(ignoredToday(c.briefs as Brief[], c.profile, c.now).map(({ url, from, gist }) => ({ url, from, gist }))).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; order: string[]; skipped: string[]; open: string[]; expected: string[] }>('review-queue')) {

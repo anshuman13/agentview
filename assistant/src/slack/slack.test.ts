@@ -3,7 +3,7 @@ import { openDb, setMeta } from '../core/db.js';
 import { askPush, pushHours, scanDue, scanPrompt, sinceOf } from './slack.js';
 import { DAY } from '../core/time.js';
 import { failedReplies } from './autopilot.js';
-import { acceptAsk, Ask, askId, askTags, buildAskText, saveScan, skipAsk, suggestOpenAsks } from './slackSave.js';
+import { acceptAsk, Ask, Ignored, askId, askTags, buildAskText, saveScan, skipAsk, suggestOpenAsks } from './slackSave.js';
 import { applyChanges } from '../core/sync.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
@@ -23,6 +23,43 @@ describe('scan prompt and counts', () => {
     expect(closed).toContain(`[${askId('u1')}] Answer u1topic`);
     expect(open).toContain(`[${askId('u2')}]`);
     expect(open).not.toContain(askId('u1'));
+  });
+});
+
+describe('ignored today', () => {
+  const ig = (n: string, gist = 'Thanks') => ({ url: `https://x.test/${n}`, from: 'Kim', gist });
+  const rows = (db: ReturnType<typeof openDb>) => (JSON.parse((db.prepare("SELECT rows FROM briefs WHERE id = 'slack-ignored'").get() as { rows: string }).rows) as { url: string }[]).map((e) => e.url.slice(-1));
+  const scan = (db: ReturnType<typeof openDb>, ignored: ReturnType<typeof ig>[] | undefined, d: number, h: number, asks: ReturnType<typeof ask>[] = []) => saveScan(db, { chats: [], asks, answered: [], ignored }, at(d, h));
+
+  test('saves, merges and drops the day before', () => {
+    const db = openDb(':memory:');
+    scan(db, [ig('a'), ig('b')], 27, 10);
+    expect(rows(db)).toEqual(['a', 'b']);
+    scan(db, [ig('b', 'Again'), ig('c')], 27, 11);
+    expect(rows(db)).toEqual(['a', 'b', 'c']);
+    scan(db, [ig('d')], 28, 10);
+    expect(rows(db)).toEqual(['d']);
+  });
+
+  test('drops bad entries and ones that became asks', () => {
+    const db = openDb(':memory:');
+    scan(db, [ig('s')], 27, 9, [ask('https://x.test/s')]);
+    skipAsk(db, askId('https://x.test/s'));
+    scan(db, [{ url: 'javascript:1', from: 'Kim', gist: 'x' }, ig('g', '  '), ig('s'), ig('n'), ig('a')], 27, 10, [ask('https://x.test/a')]);
+    expect(rows(db)).toEqual(['n']);
+  });
+
+  test('a scan without ignored leaves the row alone', () => {
+    const db = openDb(':memory:');
+    scan(db, [ig('a')], 27, 10);
+    const before = db.prepare("SELECT updated_at FROM briefs WHERE id = 'slack-ignored'").get();
+    scan(db, undefined, 27, 11);
+    expect(db.prepare("SELECT updated_at FROM briefs WHERE id = 'slack-ignored'").get()).toEqual(before);
+  });
+
+  test('asks the model for ignored and checks the gist', () => {
+    expect(scanPrompt(openDb(':memory:'), { me: 'U1', domain: 'x.slack.com', channels: [] }, at(27, 9), at(28, 10))).toContain('In ignored, list each DM or mention');
+    expect(Ignored.safeParse({ url: 'https://x.test/a', from: 'Kim' }).success).toBe(false);
   });
 });
 

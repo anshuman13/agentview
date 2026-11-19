@@ -1,5 +1,5 @@
 import { blockId, isBlock } from '../../../../../shared/util';
-import { dayEnd, dayStart, pad, weekStart } from '../dates';
+import { dayEnd, dayStart, pad, weekStart, ymd } from '../dates';
 import { atTime, statusTime } from './engine';
 import { goalsOf } from './goals';
 import { packDay, workGaps, type Span } from './plan';
@@ -60,6 +60,21 @@ export function unanswered(briefs: Brief[]): Unanswered[] {
       return [];
     }
   });
+}
+
+// What the Slack scan read today and did not take as asks: one brief row per profile, newest first.
+export type Ignored = { url: string; from: string; gist: string; at: number };
+
+export function ignoredToday(briefs: Brief[], profile: string, now: number): Ignored[] {
+  const day = ymd(now);
+  return briefs.filter((b) => !b.deleted && b.kind === 'slack-ignored' && (profile === 'all' || b.profile === profile)).flatMap((b) => {
+    try {
+      const list = JSON.parse(b.rows ?? '[]');
+      return Array.isArray(list) ? (list as Ignored[]).filter((e) => e.url && e.from && e.gist && ymd(e.at) === day) : [];
+    } catch {
+      return [];
+    }
+  }).sort((a, b) => b.at - a.at);
 }
 
 export type Waiting = { name: string; rows: { key: string; title: string; days: number; row?: ItemRow; url?: string }[] };

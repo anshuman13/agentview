@@ -15,7 +15,7 @@ import { ACCOUNT_OF } from '../calendar/calendar.js';
 import { ask, scanPaused } from '../core/claude.js';
 import { afterScan, autopilotConfig, awayLines, awayStart, escalateLines, scanModel, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
 import { awayDigest, dayDigest } from './digest.js';
-import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, needsMe, saveScan, webUrl, type ScanResult } from './slackSave.js';
+import { Ask, Chat, Decided, Detail, Ignored, PROFILE, Said, askId, needsMe, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { noteCost, runScan, startScan } from '../core/scan.js';
 import { COMMAND_STEP, Command, queueCommands } from './commands.js';
 import { applyChanges } from '../core/sync.js';
@@ -125,6 +125,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     `Permalinks look like https://${c.domain}/archives/<channel id>/p<ts without the dot>.`,
     'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old. For a DM, set waiting only when the other person sent the last message, it asks something of me and I have not replied; thanks, a greeting or an FYI is not waiting.',
     'Add an ask when a message clearly asks me to do, answer or decide something, puts a direct question to me, makes a request to me in a thread I am in, or asks me to review or approve something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
+    'In ignored, list each DM or mention of me you read this pass that you did not add as an ask, with who wrote it and a one-line gist. Leave out my own messages and anything in answered.',
     'The one bot exception is a bot DM about Claude spend or usage: add an ask only when it needs action from me, such as pending seat or limit requests, blocked people, or spend near a limit. Put the numbers in the title, leave draft out, set tier hold and kind access or limit.',
     DRAFT_STEP,
     'A hold or escalate ask gets at least one step that is not done; an answer ask gets no steps.',
@@ -162,7 +163,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
   const auto = autopilotConfig(db);
   const since = sinceOf(db, now, awayStart(auto, now));
   let saved: ScanResult | null = null;
-  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), fulfilled: z.array(z.string()).describe('Permalinks of my open promises that I have since done, e.g. I posted the thing I promised'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), decisions: z.array(Decided).describe('Decisions made in the watched channels'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id'), commands: z.array(Command).optional().describe('Things I asked the bot to do in my DM with myself') }, async (a) => {
+  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), fulfilled: z.array(z.string()).describe('Permalinks of my open promises that I have since done, e.g. I posted the thing I promised'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), ignored: z.array(Ignored).optional().describe('DMs and mentions of me you read and did not add as asks'), decisions: z.array(Decided).describe('Decisions made in the watched channels'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id'), commands: z.array(Command).optional().describe('Things I asked the bot to do in my DM with myself') }, async (a) => {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });

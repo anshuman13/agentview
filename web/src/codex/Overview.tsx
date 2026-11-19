@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSyncGate, useAssistantData } from './data';
 import { atTime } from './data/tasks/engine';
+import { ignoredToday } from './data/tasks/review';
 import type { ItemRow } from './data/sync';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
@@ -32,6 +33,7 @@ export function Overview({ s, dueToday, onPrep, onAsk }: { s: Split; dueToday: I
   const needs = useNeedsYou(s, now);
   const minute = Math.floor(now / 60000);
   const queue = useMemo(() => replyQueue(s.asks, minute * 60000), [s.asks, minute]);
+  const ignored = useMemo(() => ignoredToday(snap.briefs, filter, minute * 60000), [snap.briefs, filter, minute]);
   const { needsYou: count } = useCounts();
   const [sheet, setSheet] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -71,7 +73,7 @@ export function Overview({ s, dueToday, onPrep, onAsk }: { s: Split; dueToday: I
       )}
       <RunningChats />
       <TodayList meetings={others} overdue={late} tasks={task ? todo.filter((r) => r !== task) : todo} now={now} done={s.doneToday.length} open={openCount} />
-      {sheet && <NeedsYouSheet needs={needs} queue={queue} now={now} onClose={closeSheet} onAsk={onAsk} />}
+      {sheet && <NeedsYouSheet needs={needs} queue={queue} ignored={ignored} now={now} onClose={closeSheet} onAsk={onAsk} />}
       {adding && <AddSheet filter={filter} onClose={() => setAdding(false)} />}
     </>
   );

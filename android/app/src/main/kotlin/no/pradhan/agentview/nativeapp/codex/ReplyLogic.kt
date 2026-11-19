@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import no.pradhan.agentview.nativeapp.net.Writes
 import no.pradhan.agentview.nativeapp.net.protocolJson
 
@@ -135,3 +136,13 @@ class ReplyOps(
 }
 
 fun ymd(t: Long): String = DateTimeFormatter.ISO_LOCAL_DATE.format(Instant.ofEpochMilli(t).atZone(codexZone))
+
+// web/src/codex/data/tasks/review.ts: what the Slack scan read today and did not take as asks, newest first.
+@Serializable class Ignored(val url: String = "", val from: String = "", val gist: String = "", val at: Long = 0)
+
+fun ignoredToday(briefs: List<Row>, profile: String?, now: Long): List<Ignored> {
+    val day = ymd(now)
+    return briefs.filter { !it.deleted && it.str("kind") == "slack-ignored" && matchesProfile(profile, it) }.flatMap { b ->
+        try { protocolJson.decodeFromString(ListSerializer(Ignored.serializer()), b.str("rows") ?: "[]") } catch (e: Exception) { emptyList() }
+    }.filter { it.url.isNotEmpty() && it.from.isNotEmpty() && it.gist.isNotEmpty() && ymd(it.at) == day }.sortedByDescending { it.at }
+}

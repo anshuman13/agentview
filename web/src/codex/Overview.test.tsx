@@ -16,7 +16,7 @@ vi.mock('react', () => {
   const { useSyncExternalStore } = real;
   return { ...real, useSyncExternalStore: (subscribe: never, get: () => unknown) => useSyncExternalStore(subscribe, get, get) };
 });
-vi.mock('./data', () => ({ ...data, useAssistantData: () => ({ items: [] }), useAssistantStore: () => ({}), useSyncGate: () => ({ loading: false }) }));
+vi.mock('./data', () => ({ ...data, useAssistantData: () => ({ items: [], briefs: [] }), useAssistantStore: () => ({}), useSyncGate: () => ({ loading: false }) }));
 vi.mock('./useActions', () => ({ ...actions, useActions: () => ({}) }));
 vi.mock('./tasks/AddSheet', () => ({ ...addSheet, AddSheet: () => null }));
 vi.mock('./overview/ReplyQueue', () => ({ ...replies, replyQueue: () => mocks.queue }));

@@ -230,7 +230,7 @@ fun parseCapture(typed: String, pickedAt: Long?, picked: Boolean, now: Long): Ca
 }
 
 @Composable
-fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onDismiss: () -> Unit) {
+fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onDismiss: () -> Unit) {
     var all by remember { mutableStateOf(setOf<String>()) }
     var onlyStale by remember { mutableStateOf(false) }
     val old = staleAsks(queue, now)
@@ -251,6 +251,23 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActi
             }
         }
         ReplySection(if (filtered) old else queue, filtered, { onlyStale = false }, now, actions, replies, onOpen, onAsk)
+        if (!filtered && ignored.isNotEmpty()) IgnoredSection(ignored)
+    }
+}
+
+@Composable
+private fun IgnoredSection(list: List<Ignored>) {
+    val uri = LocalUriHandler.current
+    var open by remember { mutableStateOf(false) }
+    var all by remember { mutableStateOf(false) }
+    SectionHeader("Ignored today", list.size.toString(), open, { open = !open })
+    if (!open) return
+    Group {
+        (if (all) list else list.take(NEEDS_CAP)).forEachIndexed { i, e ->
+            if (i > 0) Hairline()
+            ListRow(e.from, e.gist, lines = 1, metaLines = 1, trailing = { safeHref(e.url)?.let { href -> IconBtn("link-external", "Open", { uri.openUri(href) }) } })
+        }
+        if (!all && list.size > NEEDS_CAP) { Hairline(); ListRow("Show all ${list.size}", onClick = { all = true }) }
     }
 }
 
