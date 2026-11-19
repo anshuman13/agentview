@@ -5,7 +5,26 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import kotlinx.serialization.json.JsonObject
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,21 +59,25 @@ import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
 
-// Browser (web/src/workspace/BrowserPane.tsx): the streamed frames of the Mac's Chrome tab. It only watches; Back, Reload,
-// picking a tab and connecting Chrome are writes and stay off in a read-only run.
+// Browser (web/src/workspace/BrowserPane.tsx): the streamed frames of the Mac's Chrome tab. A tap clicks the page, a drag
+// scrolls it, and a tap in a text field opens the keyboard. Input, Back, Reload, picking a tab and connecting Chrome are
+// writes and stay off in a read-only run.
 @Composable
 fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
     val origin by hub.origin.collectAsState()
     var state by remember { mutableStateOf(ChromeMsg.State("connecting", "", false)) }
     var tabs by remember { mutableStateOf(ChromeMsg.Tabs(emptyList(), null)) }
     var frame by remember { mutableStateOf<ImageBitmap?>(null) }
+    var page by remember { mutableStateOf(IntSize.Zero) }
+    var editable by remember { mutableStateOf(false) }
     val socket = remember(origin) {
         val main = Handler(Looper.getMainLooper())
         LiveSocket(hub.client, "${wsOrigin(origin)}/ws?chrome", onText = { text ->
             when (val m = parseChrome(text)) {
                 is ChromeMsg.State -> main.post { state = m; if (m.state != "on") frame = null }
                 is ChromeMsg.Tabs -> main.post { tabs = m }
-                is ChromeMsg.Frame -> runCatching { Base64.decode(m.data, Base64.DEFAULT).let { BitmapFactory.decodeByteArray(it, 0, it.size) } }.getOrNull()?.asImageBitmap()?.let { main.post { frame = it } }
+                is ChromeMsg.Frame -> runCatching { Base64.decode(m.data, Base64.DEFAULT).let { BitmapFactory.decodeByteArray(it, 0, it.size) } }.getOrNull()?.asImageBitmap()?.let { main.post { frame = it; page = IntSize(m.w, m.h) } }
+                is ChromeMsg.Editable -> main.post { editable = m.on }
                 null -> Unit
             }
         }, onDrop = { state = ChromeMsg.State("off", "server", false); frame = null })
@@ -63,7 +86,15 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
     fun send(t: String, extra: Map<String, String> = emptyMap()) {
         if (hub.writes.allowed()) socket.send(buildJsonObject { put("t", t); extra.forEach { (k, v) -> put(k, v) } }.toString())
     }
+    fun sendJson(o: JsonObject) {
+        if (hub.writes.allowed()) socket.send(o.toString())
+    }
     val tab = tabs.tabs.firstOrNull { it.id == tabs.current }
+    val kbdFocus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    var kbd by remember { mutableStateOf(TextFieldValue(KBD_SEED, TextRange(KBD_SEED.length))) }
+    // The page reports after each tap whether it landed in a text field; the keyboard stays open only then.
+    LaunchedEffect(editable) { if (editable) runCatching { kbdFocus.requestFocus(); keyboard?.show() } else keyboard?.hide() }
     fun closeTab(id: String) = send("close", mapOf("id" to id))
 
     Column(Modifier.fillMaxSize()) {
@@ -80,7 +111,30 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                     "on" -> {
                         val f = frame
                         item {
-                            if (f != null) Image(f, tab?.title, Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+                            if (f != null) Box {
+                                Image(f, tab?.title, Modifier.fillMaxWidth().pointerInput(page) {
+                                    // A tap clicks the page and a drag scrolls it, in the page's own coordinates.
+                                    fun touch(type: String, p: Offset) = sendJson(buildJsonObject {
+                                        put("t", "touch"); put("type", type)
+                                        put("x", p.x / size.width * page.width); put("y", p.y / size.height * page.height)
+                                    })
+                                    awaitEachGesture {
+                                        val down = awaitFirstDown()
+                                        down.consume()
+                                        touch("touchStart", down.position)
+                                        while (true) {
+                                            val c = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                            c.consume()
+                                            if (!c.pressed) { touch("touchEnd", c.position); break }
+                                            touch("touchMove", c.position)
+                                        }
+                                    }
+                                }, contentScale = ContentScale.FillWidth)
+                                BasicTextField(kbd, { v ->
+                                    kbdInput(kbd.text, v.text).forEach { (t, value) -> sendJson(buildJsonObject { put("t", t); put(if (t == "key") "key" else "text", value); if (value == "Enter") put("keyCode", 13) else if (value == "Backspace") put("keyCode", 8) }) }
+                                    kbd = if (v.text.isEmpty() || '\n' in v.text || v.text.length > 200) TextFieldValue(KBD_SEED, TextRange(KBD_SEED.length)) else v
+                                }, Modifier.size(1.dp).alpha(0f).focusRequester(kbdFocus), keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Password))
+                            }
                             else EmptyState(if (tabs.tabs.isNotEmpty()) "Waiting for the tab to draw" else "No tab open in Chrome", "Pick a tab below", small = false)
                         }
                         if (tabs.tabs.isNotEmpty()) {

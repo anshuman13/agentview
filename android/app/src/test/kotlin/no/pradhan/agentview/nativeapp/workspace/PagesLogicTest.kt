@@ -305,9 +305,17 @@ class PagesLogicTest {
     @Test fun chromeMessagesParse() {
         assertEquals(ChromeMsg.State("off", "nochrome", true), parseChrome("""{"t":"state","state":"off","reason":"nochrome","own":true}"""))
         assertEquals(ChromeMsg.Tabs(listOf(ChromeTab("1", "Home", "https://x")), "1"), parseChrome("""{"t":"tabs","tabs":[{"id":"1","title":"Home","url":"https://x"}],"current":"1","pinned":null}"""))
-        assertEquals(ChromeMsg.Frame("AAA"), parseChrome("""{"t":"frame","data":"AAA","w":1,"h":1}"""))
-        assertNull(parseChrome("""{"t":"editable","on":true}"""))
+        assertEquals(ChromeMsg.Frame("AAA", 390, 844), parseChrome("""{"t":"frame","data":"AAA","w":390,"h":844}"""))
+        assertEquals(ChromeMsg.Editable(true), parseChrome("""{"t":"editable","on":true}"""))
         assertNull(parseChrome("not json"))
+    }
+
+    @Test fun phoneKeyboardInputBecomesKeysAndText() {
+        assertEquals(listOf("key" to "Backspace"), kbdInput(KBD_SEED, ""))
+        assertEquals(listOf("text" to "b"), kbdInput(" a", " ab"))
+        assertEquals(listOf("key" to "Backspace", "key" to "Backspace", "text" to "x"), kbdInput(" abc", " ax"))
+        assertEquals(listOf("text" to "a", "key" to "Enter"), kbdInput(KBD_SEED, " a\n"))
+        assertEquals(emptyList<Pair<String, String>>(), kbdInput(" a", " a"))
     }
 
     @Test fun writesAreRefusedInAReadOnlyRun() = runTest {

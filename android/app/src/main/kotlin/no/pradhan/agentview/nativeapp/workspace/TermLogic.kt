@@ -163,7 +163,19 @@ data class ChromeTab(val id: String, val title: String, val url: String)
 sealed interface ChromeMsg {
     data class State(val state: String, val reason: String, val own: Boolean) : ChromeMsg
     data class Tabs(val tabs: List<ChromeTab>, val current: String?) : ChromeMsg
-    data class Frame(val data: String) : ChromeMsg
+    data class Frame(val data: String, val w: Int, val h: Int) : ChromeMsg
+    data class Editable(val on: Boolean) : ChromeMsg
+}
+
+// The hidden field under the Browser frame holds one space, so a Backspace on it still shows up as a change.
+const val KBD_SEED = " "
+
+// What the phone keyboard changed in the hidden field, as messages for the page: Backspace and Enter as keys, the rest as text.
+fun kbdInput(old: String, new: String): List<Pair<String, String>> {
+    val same = old.commonPrefixWith(new).length
+    return List(old.length - same) { "key" to "Backspace" } + new.substring(same).split("\n").flatMapIndexed { i, part ->
+        listOfNotNull(("key" to "Enter").takeIf { i > 0 }, ("text" to part).takeIf { part.isNotEmpty() })
+    }
 }
 
 fun parseChrome(text: String): ChromeMsg? = runCatching {
@@ -175,7 +187,8 @@ fun parseChrome(text: String): ChromeMsg? = runCatching {
             (o["tabs"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { e -> (e as? kotlinx.serialization.json.JsonObject)?.let { ChromeTab(str("id", it) ?: "", str("title", it) ?: "", str("url", it) ?: "") } } ?: emptyList(),
             str("current"),
         )
-        "frame" -> str("data")?.let { ChromeMsg.Frame(it) }
+        "frame" -> str("data")?.let { ChromeMsg.Frame(it, (o["w"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.toInt() ?: 0, (o["h"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.toInt() ?: 0) }
+        "editable" -> ChromeMsg.Editable((o["on"] as? kotlinx.serialization.json.JsonPrimitive)?.content == "true")
         else -> null
     }
 }.getOrNull()
