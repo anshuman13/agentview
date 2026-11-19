@@ -88,6 +88,7 @@ const real = (p: string) => realpath(p).catch(() => path.resolve(p));
 // Files the viewer shows: project-relative paths, or absolute paths anywhere. The path is resolved through
 // symlinks first and refused if the resolved path passes through a credential folder, so a link into one fails too.
 async function viewPath(cwd: string, p: string): Promise<string> {
+  p = expandHome(p);
   if (!path.isAbsolute(p)) safeResolve(cwd, p);
   const abs = await real(path.resolve(cwd, p));
   const joined = `/${abs.split(path.sep).join('/')}/`;
@@ -122,7 +123,7 @@ export async function readFileWithOriginal(cwd: string, rel: string) {
 
 // Saves an edit from the code pane: project files only, never through a credential folder, and never over a binary.
 export async function writeFileText(cwd: string, rel: string, content: string) {
-  if (path.isAbsolute(rel)) throw new Error('path outside project');
+  if (path.isAbsolute(expandHome(rel))) throw new Error('path outside project');
   const abs = await viewPath(cwd, rel);
   if (content.length > MAX_FILE) throw new Error('File too large to save');
   await writeFile(abs, content, 'utf8');

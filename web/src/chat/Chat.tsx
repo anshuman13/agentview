@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import type { Token } from './transcript/md';
 import { copyText } from '../ui/util';
+import { setUi } from '../app/store';
 import { cachedHtml, mdKey, storeHtml } from './transcript/mdCache';
 
 export { Composer } from './composer/Composer';
@@ -19,6 +20,11 @@ function useMd() {
 }
 
 function onCopy(e: MouseEvent<HTMLDivElement>) {
+  const link = (e.target as HTMLElement).closest<HTMLElement>('[data-open]');
+  if (link) {
+    e.preventDefault();
+    return setUi({ openFile: link.dataset.open!, openLine: Number(link.dataset.line) || null, follow: false });
+  }
   const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy]');
   if (!btn) return;
   const code = btn.closest('.md-code')?.querySelector('code')?.textContent ?? '';

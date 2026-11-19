@@ -29,3 +29,17 @@ describe('Markdown blocks', () => {
     expect(html).toContain('<a href="https://x.test/a.png?q=secret"');
   });
 });
+
+describe('file paths in replies', () => {
+  it('links paths in inline code and links to the file viewer', () => {
+    expect(full('See `/Users/me/notes/plan.md`.')).toContain('<a class="md-file" href="#" data-open="/Users/me/notes/plan.md"><code>/Users/me/notes/plan.md</code></a>');
+    expect(full('`web/src/a.ts:12`')).toContain('data-open="web/src/a.ts" data-line="12"');
+    expect(full('`data.csv`')).toContain('data-open="data.csv"');
+    expect(full('[the plan](~/docs/plan.md)')).toContain('<a class="md-file" href="#" data-open="~/docs/plan.md">the plan</a>');
+  });
+
+  it('leaves other code and URLs alone', () => {
+    for (const t of ['`x.ts`', '`npm run build`', '`https://x.test/a.md`', '`a.b`', '`foo/bar`']) expect(full(t)).not.toContain('data-open');
+    expect(full('[site](https://x.test/a.md)')).toContain('href="https://x.test/a.md"');
+  });
+});

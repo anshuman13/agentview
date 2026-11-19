@@ -9,12 +9,14 @@ import { IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { readFlag, saveFlag, useSlot } from '../ui/util';
 import { FileIcon } from './FileIcon';
+import { isTablePath } from './csv';
 import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
 import type { FileData } from './Editor';
 import '../styles/features/code.css';
 
 const Editor = lazy(() => import('./Editor').then((m) => ({ default: m.Editor })));
 const SPLIT_KEY = 'diff-split';
+const CsvTable = lazy(() => import('./CsvTable').then((m) => ({ default: m.CsvTable })));
 const MarkdownDoc = lazy(() => import('./MarkdownDoc').then((m) => ({ default: m.MarkdownDoc })));
 
 function useFile(path: string | null, bump: unknown, paused = false) {
@@ -148,7 +150,8 @@ export function CodePane() {
 
   const canDiff = Boolean(file?.original) && file?.original !== file?.content;
   const isDoc = isDocPath(openFile);
-  const showDoc = preview && isDoc;
+  const isTable = isTablePath(openFile);
+  const showDoc = preview && (isDoc || isTable);
   const diff = canDiff && mode === 'diff' && !showDoc && !edit;
   const canEdit = Boolean(file) && !file?.error && !file?.image && !file?.binary && !showDoc;
 
@@ -174,7 +177,7 @@ export function CodePane() {
   const openInVsCode = () => {
     const view = viewRef.current;
     const line = view ? view.state.doc.lineAt(view.state.selection.main.head).number : 1;
-    window.location.href = `vscode://file/${encodeURI(`${cwd}/${openFile}`)}:${line}`;
+    window.location.href = `vscode://file/${encodeURI(openFile.startsWith('/') ? openFile : `${cwd}/${openFile}`)}:${line}`;
   };
 
   return (
@@ -184,6 +187,7 @@ export function CodePane() {
         <Breadcrumbs path={openFile} />
         <div className="cd-actions">
           {isDoc && <Toggle on={showDoc} icon="open-preview" title={showDoc ? 'Show the Markdown source' : 'Show the rendered document'} onClick={() => setPreview(!showDoc)} />}
+          {isTable && <Toggle on={showDoc} icon="table" title={showDoc ? 'Show the raw text' : 'Show as a table'} onClick={() => setPreview(!showDoc)} />}
           {isDoc && <Toggle icon="target" title="Run as goal…" onClick={() => startGoal({ plan: openFile ?? undefined })} />}
           {canDiff && <Toggle on={diff} icon="diff" title="Show the change against the last commit" onClick={() => { setPreview(false); setMode(diff ? 'file' : 'diff'); }} />}
           {diff && <Toggle on={split} icon="split-horizontal" title={split ? 'Show the change inline' : 'Show the change side by side'} onClick={() => { saveFlag(SPLIT_KEY, !split); setSplit(!split); }} />}
@@ -200,7 +204,7 @@ export function CodePane() {
       {file?.binary && <div className="cd-empty">Binary file</div>}
       {file && !file.error && !file.image && !file.binary && (
         <Guard key={`${file.path}:${showDoc}`}>
-          <Suspense fallback={null}>{showDoc ? <MarkdownDoc path={file.path} text={file.content} /> : <Editor file={file} diff={diff} split={split} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} edit={edit} onDirty={setDirty} onSave={(t) => void saveText(t)} />}</Suspense>
+          <Suspense fallback={null}>{showDoc ? (isTable ? <CsvTable path={file.path} text={file.content} /> : <MarkdownDoc path={file.path} text={file.content} />) : <Editor file={file} diff={diff} split={split} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} edit={edit} onDirty={setDirty} onSave={(t) => void saveText(t)} />}</Suspense>
         </Guard>
       )}
     </div>

@@ -62,3 +62,17 @@
   .cd-editor .cm-editor .cm-scroller { font-size: var(--fs-lg); line-height: var(--line-md); }
   .cd-editor .cm-editor .cm-lineNumbers .cm-gutterElement { min-width: 36px; padding: 0 var(--sp-4) 0 var(--sp-5); }
 }
+
+.csv { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.csv-bar { display: flex; align-items: center; gap: var(--sp-6); padding: var(--sp-4) var(--sp-6); border-bottom: 1px solid var(--border); }
+.csv-bar input { flex: 0 1 260px; min-width: 0; }
+.csv-count { color: var(--fg-muted); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csv-scroll { flex: 1; min-height: 0; overflow: auto; }
+.csv table { border-collapse: separate; border-spacing: 0; font: var(--fs-md)/var(--lh-tight) var(--font-mono); }
+.csv :is(th, td) { padding: var(--sp-3) var(--sp-6); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; max-width: 420px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.csv th { position: sticky; top: 0; z-index: 1; background: var(--surface); color: var(--fg-strong); font-weight: 600; white-space: nowrap; cursor: pointer; user-select: none; }
+.csv :is(th, td).num { text-align: right; font-variant-numeric: tabular-nums; }
+.csv .csv-n { position: sticky; left: 0; background: var(--bg); color: var(--fg-faint); text-align: right; cursor: default; }
+.csv th.csv-n { z-index: 2; }
+.csv tbody tr:hover td:not(.csv-n) { background: color-mix(in srgb, var(--fg) 4%, transparent); }
+.csv-sort { color: var(--accent); }
