@@ -90,7 +90,7 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, onRaise: (String, String) -> Unit, onDismiss: () -> Unit) {
+fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, onRaise: (String, String) -> Unit, onAsk: (Row) -> Unit, onDismiss: () -> Unit) {
     var title by remember(row.key) { mutableStateOf(row.title ?: "") }
     var text by remember(row.key) { mutableStateOf(row.text ?: "") }
     var pickDue by remember { mutableStateOf(false) }
@@ -163,6 +163,7 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
                 if (row.status == "done") Button("Not done", { actions.reopen(row) })
                 else if (row.status == "open") Button("Done", { commit(); actions.done(row); onDismiss() }, variant = ButtonVariant.Filled)
                 Button("Move to ${profileLabel(if (row.profile == WORK) PERSONAL else WORK)}", { actions.move(row, if (row.profile == WORK) PERSONAL else WORK) })
+                Button("Ask Claude", { commit(); onAsk(latest); onDismiss() })
                 Button("Delete", { actions.delete(row); onDismiss() }, variant = ButtonVariant.Danger)
             }
         }
