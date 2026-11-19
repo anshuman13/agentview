@@ -7,6 +7,7 @@ import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
 import { FileIcon } from '../../workspace/FileIcon';
 import { SketchCard } from './SketchCard';
+import { DocCard } from './DocCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { readBox, saveBox } from './boxOpen';
@@ -14,7 +15,7 @@ import { RewindLink } from './Rewind';
 import { foldTurns, openWork, type FoldRow, type StatusStep } from './workFold';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
-import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
+import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { billing, providerLabel } from '../../../../shared/providers';
@@ -182,7 +183,7 @@ function TranscriptView({ events, earlier, cwd, running, bill }: { events: ChatE
   const canRewind = useCan('rewind');
   const rewinds = useMemo(() => rewindReplies(items), [items]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
-  const cards = useMemo(() => specCards(items), [items]);
+  const cards = useMemo(() => new Set([...specCards(items), ...docCards(items)]), [items]);
   const list = useMemo<FoldRow[]>(() => foldTurns(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
@@ -240,7 +241,7 @@ function sameItem(a: Item, b: Item): boolean {
   switch (a.kind) {
     case 'file': {
       const o = b as typeof a;
-      return a.path === o.path && a.error === o.error && a.count.add === o.count.add && a.count.del === o.count.del && a.uses.length === o.uses.length && a.uses.every((u, i) => u === o.uses[i]);
+      return a.path === o.path && a.error === o.error && a.pending === o.pending && a.count.add === o.count.add && a.count.del === o.count.del && a.uses.length === o.uses.length && a.uses.every((u, i) => u === o.uses[i]);
     }
     case 'step': {
       const o = b as typeof a;
@@ -341,6 +342,7 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: 
       return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':
       if (isSketchPath(it.path) && !it.error) return <SketchCard path={it.path} meta={fileMeta(it, 'Sketch')} />;
+      if (card && isDocFile(it.path) && !it.error) return <DocCard it={it} cwd={cwd} />;
       if (!isRepoSpec(it.path, cwd) || it.error) return <FileCard it={it} cwd={cwd} />;
       return card ? <SpecCard slug={specSlug(it.path)} path={it.path} bump={bump} /> : <SpecRow slug={specSlug(it.path)} meta={fileMeta(it, 'Spec')} />;
     case 'agent':

@@ -10,6 +10,7 @@ import { Menu, MenuItem } from '../ui/Menu';
 import { readFlag, saveFlag, useSlot } from '../ui/util';
 import { FileIcon } from './FileIcon';
 import { isTablePath } from './csv';
+import { showSnack } from '../codex/view';
 import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
 import type { FileData } from './Editor';
 import '../styles/features/code.css';
@@ -156,17 +157,20 @@ export function CodePane() {
   const canEdit = Boolean(file) && !file?.error && !file?.image && !file?.binary && !showDoc;
 
   const saveText = async (text: string) => {
-    if (!openFile) return;
+    if (!openFile) return false;
     setSaving('saving');
     try {
       const r = await fileRequest(openFile, { method: 'PUT', body: text });
-      if (!r.ok) throw new Error(await r.text());
+      if (!r.ok) throw new Error(((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? 'Save failed');
       setDirty(false);
       setSaving('saved');
       reload();
       setTimeout(() => setSaving((s) => (s === 'saved' ? '' : s)), 1500);
-    } catch {
+      return true;
+    } catch (e) {
       setSaving('failed');
+      showSnack(`Not saved: ${(e as Error).message}`);
+      return false;
     }
   };
   const saveNow = () => {
@@ -204,7 +208,7 @@ export function CodePane() {
       {file?.binary && <div className="cd-empty">Binary file</div>}
       {file && !file.error && !file.image && !file.binary && (
         <Guard key={`${file.path}:${showDoc}`}>
-          <Suspense fallback={null}>{showDoc ? (isTable ? <CsvTable path={file.path} text={file.content} /> : <MarkdownDoc path={file.path} text={file.content} />) : <Editor file={file} diff={diff} split={split} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} edit={edit} onDirty={setDirty} onSave={(t) => void saveText(t)} />}</Suspense>
+          <Suspense fallback={null}>{showDoc ? (isTable ? <CsvTable path={file.path} text={file.content} /> : <MarkdownDoc path={file.path} text={file.content} onSave={saveText} />) : <Editor file={file} diff={diff} split={split} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} edit={edit} onDirty={setDirty} onSave={(t) => void saveText(t)} />}</Suspense>
         </Guard>
       )}
     </div>

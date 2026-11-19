@@ -14,7 +14,7 @@ export type Item =
   | { kind: 'assistant'; id: string; text: string; streaming: boolean }
   | { kind: 'system'; id: string; text: string; error?: boolean }
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
-  | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string; denied?: boolean }
+  | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string; denied?: boolean; pending?: boolean }
   | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; running: boolean; progress: string | null; steps: Item[] }
   | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> }
   | { kind: 'review'; id: string; ev: Extract<ChatEvent, { kind: 'review' }> };
@@ -140,7 +140,8 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
         if (!error && prev?.kind === 'file' && prev.path === path && !prev.error) {
           prev.uses.push(e);
           prev.count = { add: prev.count.add + count.add, del: prev.count.del + count.del };
-        } else items.push({ kind: 'file', id: e.id, path, count: error ? { add: 0, del: 0 } : count, uses: [e], error, ...(denied(result) && { denied: true }) });
+          prev.pending = !result;
+        } else items.push({ kind: 'file', id: e.id, path, count: error ? { add: 0, del: 0 } : count, uses: [e], error, ...(denied(result) && { denied: true }), ...(!result && { pending: true }) });
       }
     }
   }
@@ -218,6 +219,15 @@ export function specCards(items: Item[]) {
     const slug = itemSpecSlug(it);
     if (slug) latest.set(slug, it.id);
   }
+  return new Set(latest.values());
+}
+
+export const isDocFile = (path: string) => /\.(md|markdown|mdx)$/i.test(path) && !isSpecPath(path);
+
+// The item that holds each Markdown file's doc card: its latest successful write or edit.
+export function docCards(items: Item[]) {
+  const latest = new Map<string, string>();
+  for (const it of items) if (it.kind === 'file' && !it.error && isDocFile(it.path)) latest.set(it.path, it.id);
   return new Set(latest.values());
 }
 

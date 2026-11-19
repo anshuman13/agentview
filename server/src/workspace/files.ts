@@ -121,10 +121,10 @@ export async function readFileWithOriginal(cwd: string, rel: string) {
   return { path: rel, content, original };
 }
 
-// Saves an edit from the code pane: project files only, never through a credential folder, and never over a binary.
+// Saves an edit from the code pane: project files, or Markdown files in a work folder, never through a credential folder.
 export async function writeFileText(cwd: string, rel: string, content: string) {
-  if (path.isAbsolute(expandHome(rel))) throw new Error('path outside project');
   const abs = await viewPath(cwd, rel);
+  if (path.isAbsolute(expandHome(rel)) && !(/\.(md|markdown|mdx)$/i.test(abs) && allowedFolder(path.dirname(abs)))) throw new Error('path outside project');
   if (content.length > MAX_FILE) throw new Error('File too large to save');
   await writeFile(abs, content, 'utf8');
   return { path: rel, size: content.length };

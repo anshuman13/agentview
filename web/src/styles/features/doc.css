@@ -94,3 +94,15 @@
 }
 
 .doc-run { position: relative; }
+
+.doc-scroll { position: relative; }
+.doc-b { position: relative; }
+.doc-b > .doc-edit { position: absolute; top: 0; right: 0; z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--fg-muted); opacity: 0; transition: opacity var(--dur-fast); cursor: pointer; }
+.doc-b:hover > .doc-edit, .doc-b.tap > .doc-edit, .doc-b > .doc-edit:focus-visible { opacity: 1; }
+.doc-b > .doc-edit:hover { color: var(--fg-strong); }
+.doc-b-edit { margin: 0 0 var(--sp-8); }
+.doc-editor { display: flex; flex-direction: column; gap: var(--sp-4); }
+.doc-editor textarea { width: 100%; min-height: 80px; padding: var(--sp-5) var(--sp-6); border: 1px solid var(--accent); border-radius: var(--radius); background: var(--surface); color: var(--fg); font: var(--fs-lg)/var(--lh-loose) var(--font-mono); resize: vertical; }
+.doc-editor-bar { display: flex; justify-content: flex-end; gap: var(--sp-4); }
+.doc-ask { position: absolute; z-index: 5; display: flex; gap: var(--sp-4); align-items: center; padding: var(--sp-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-md, 0 4px 16px rgb(0 0 0 / 0.2)); }
+.doc-ask input { width: 240px; max-width: 60vw; }

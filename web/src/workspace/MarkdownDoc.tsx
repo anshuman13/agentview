@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { Marked } from 'marked';
 import { classHighlighter, highlightCode } from '@lezer/highlight';
 import type { Parser } from '@lezer/common';
@@ -12,13 +13,16 @@ import { Menu, MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
 import { escapeHtml } from '../ui/util';
 import { shownRunItems } from './docLogic';
+import { DocAsk, BlockEditor, useSelectionAsk } from './DocEdit';
+import { replaceBlock } from '../../../shared/docEdit';
+import { showSnack } from '../codex/view';
 import '../styles/features/doc.css';
 
 type Heading = { id: string; text: string; depth: number };
 
 const ALERTS: Record<string, string> = { note: 'info', tip: 'lightbulb', important: 'report', warning: 'warning', caution: 'error' };
 const TAGS = new Set('a abbr b blockquote br button code dd del details div dl dt em figcaption figure h1 h2 h3 h4 h5 h6 hr i img input kbd li mark ol p pre s small span strong sub summary sup table tbody td tfoot th thead tr u ul'.split(' '));
-const ATTRS = new Set('id class href src alt title width height align open colspan rowspan start type checked disabled data-lang data-copy aria-hidden'.split(' '));
+const ATTRS = new Set('id class href src alt title width height align open colspan rowspan start type checked disabled data-lang data-copy data-b aria-hidden'.split(' '));
 
 const external = (u: string) => /^[a-z][a-z0-9+.-]*:/i.test(u) || u.startsWith('//');
 
@@ -39,6 +43,9 @@ function frontmatter(text: string) {
   return { meta, body: text.slice(m[0].length) };
 }
 
+export type Block = { start: number; raw: string };
+
+// Each top-level block renders in its own wrapper with its place in the file, so it can be edited on its own.
 function toHtml(text: string) {
   const seen = new Map<string, number>();
   const md = new Marked({
@@ -58,7 +65,20 @@ function toHtml(text: string) {
     },
   });
   const { meta, body } = frontmatter(text);
-  return meta + (md.parse(body, { async: false }) as string);
+  const offset = text.length - body.length;
+  const tokens = md.lexer(body);
+  const blocks: Block[] = [];
+  let at = 0;
+  let html = meta;
+  for (const t of tokens) {
+    const pos = body.indexOf(t.raw, at);
+    if (pos >= 0) at = pos + t.raw.length;
+    if (t.type === 'space') continue;
+    const inner = md.parser(Object.assign([t], { links: tokens.links }));
+    if (pos < 0 || text.includes('\r')) html += inner;
+    else html += `<div class="doc-b" data-b="${blocks.push({ start: offset + pos, raw: t.raw }) - 1}">${inner}</div>`;
+  }
+  return { html, blocks };
 }
 
 const dec = (s: string) => {
@@ -170,7 +190,7 @@ function highlight(el: HTMLElement, parser: Parser) {
   el.replaceChildren(out);
 }
 
-export function MarkdownDoc({ path, text }: { path: string; text: string }) {
+export function MarkdownDoc({ path, text, onSave }: { path: string; text: string; onSave?: (text: string) => Promise<boolean> }) {
   const scroller = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLElement>(null);
   const [headings, setHeadings] = useState<Heading[]>([]);
@@ -180,6 +200,9 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
   const runBox = useRef<HTMLSpanElement>(null);
   const runItems = shownRunItems(appSettings.use((s) => s.hiddenFeatures));
   const tasks = useMemo(() => (isSpecPath(path) ? specTasks(text) : []), [path, text]);
+  const rendered = useMemo(() => toHtml(text), [text]);
+  const [edit, setEdit] = useState<{ i: number; host: HTMLElement } | null>(null);
+  const ask = useSelectionAsk(body, scroller);
 
   useEffect(() => {
     const el = body.current;
@@ -188,8 +211,17 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
     const top = last.current === path ? box.scrollTop : 0;
     last.current = path;
     const tpl = document.createElement('template');
-    tpl.innerHTML = toHtml(text);
+    tpl.innerHTML = rendered.html;
     clean(tpl.content, path);
+    if (onSave) for (const b of tpl.content.querySelectorAll<HTMLElement>('.doc-b')) {
+      const pen = document.createElement('button');
+      pen.className = 'doc-edit';
+      pen.dataset.edit = b.dataset.b;
+      pen.title = 'Edit this block';
+      pen.innerHTML = '<i class="codicon codicon-edit"></i>';
+      b.prepend(pen);
+    }
+    setEdit(null);
     addStartButtons(tpl.content, tasks);
     el.replaceChildren(tpl.content);
     box.scrollTop = top;
@@ -202,7 +234,7 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
     return () => {
       cancelled = true;
     };
-  }, [path, text, tasks]);
+  }, [path, rendered, tasks, Boolean(onSave)]);
 
   useEffect(() => {
     const box = scroller.current;
@@ -225,6 +257,20 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
 
   const onClick = (e: MouseEvent) => {
     const t = e.target as HTMLElement;
+    const pen = t.closest<HTMLElement>('[data-edit]');
+    if (pen) {
+      const block = pen.parentElement!;
+      const host = document.createElement('div');
+      host.className = 'doc-b-edit';
+      block.after(host);
+      block.hidden = true;
+      edit?.host.previousElementSibling?.removeAttribute('hidden');
+      edit?.host.remove();
+      return setEdit({ i: Number(pen.dataset.edit), host });
+    }
+    const tapped = t.closest<HTMLElement>('.doc-b');
+    for (const b of body.current?.querySelectorAll('.doc-b.tap') ?? []) if (b !== tapped) b.classList.remove('tap');
+    tapped?.classList.add('tap');
     const start = t.closest<HTMLElement>('[data-task]');
     if (start) {
       track('action:startTask');
@@ -253,8 +299,23 @@ export function MarkdownDoc({ path, text }: { path: string; text: string }) {
 
   const outline = headings.filter((h) => h.depth > 1);
 
+  const closeEdit = () => {
+    if (!edit) return;
+    edit.host.previousElementSibling?.removeAttribute('hidden');
+    edit.host.remove();
+    setEdit(null);
+  };
+  const saveBlock = async (value: string) => {
+    const next = edit && replaceBlock(text, rendered.blocks[edit.i], value);
+    if (next == null) return showSnack('The file changed while you edited. Copy your text and try again.');
+    if (next === text) return closeEdit();
+    if (await onSave!(next)) closeEdit();
+  };
+
   return (
     <div className="doc-scroll" ref={scroller}>
+      {edit && rendered.blocks[edit.i] && createPortal(<BlockEditor raw={rendered.blocks[edit.i].raw} onSave={saveBlock} onCancel={closeEdit} />, edit.host)}
+      {ask.at && <DocAsk path={path} at={ask.at} onDone={ask.clear} open={ask.open} />}
       {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} action={tasks.some((t) => !t.done) && (runItems.all || runItems.goal) && (
         <span className="doc-run" ref={runBox}>
           <Button size="sm" variant="plain" aria-haspopup="menu" aria-expanded={runMenu} onClick={() => setRunMenu(!runMenu)}>Run</Button>
