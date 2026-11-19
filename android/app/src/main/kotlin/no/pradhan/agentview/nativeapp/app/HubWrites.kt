@@ -34,6 +34,12 @@ fun Hub.shareToChat(chat: String, item: SharedItem) {
 
 suspend fun Hub.read(path: String): String = api.get(path, pageChat)
 
+// Saves a file of the page chat's folder (or a Markdown file in a work folder); null when saved, else why not.
+suspend fun Hub.saveFile(path: String, text: String): String? {
+    if (readOnly) return READ_ONLY_SENT
+    return runCatching { api.put("/api/file?path=${enc(path)}", text, pageChat); null }.getOrElse { it.message ?: "Not saved" }
+}
+
 fun Hub.write(path: String, body: String, failure: String, done: (Boolean) -> Unit = {}) = write(path, body, failure, {}) { done(it != null) }
 
 // A review action on a job run (/api/runs/<action>); a failure shows "<failure>: <server error>".

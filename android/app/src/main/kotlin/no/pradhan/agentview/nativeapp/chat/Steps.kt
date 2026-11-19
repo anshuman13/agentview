@@ -8,6 +8,7 @@ import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
 
+import no.pradhan.agentview.nativeapp.workspace.isMarkdown
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.specSlug
 import no.pradhan.agentview.nativeapp.ui.plural
@@ -21,7 +22,7 @@ sealed interface Item {
     @Immutable data class Assistant(override val id: String, val text: String, val streaming: Boolean) : Item
     @Immutable data class System(override val id: String, val text: String, val error: Boolean = false) : Item
     @Immutable data class Step(override val id: String, val use: ChatEvent, val result: ChatEvent?) : Item
-    @Immutable data class File(override val id: String, val path: String, val add: Int, val del: Int, val uses: List<ChatEvent>, val error: String?, val denied: Boolean) : Item
+    @Immutable data class File(override val id: String, val path: String, val add: Int, val del: Int, val uses: List<ChatEvent>, val error: String?, val denied: Boolean, val pending: Boolean = false) : Item
     @Immutable data class Agent(override val id: String, val use: ChatEvent, val result: ChatEvent?, val running: Boolean, val progress: String?, val steps: List<Item>) : Item
     @Immutable data class Blocked(override val id: String, val ev: ChatEvent) : Item
     @Immutable data class Review(override val id: String, val ev: ChatEvent) : Item
@@ -200,9 +201,9 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
                     val error = if (result?.isError == true) (if (isDenied(result)) "Denied" else firstLine(result.text)) else null
                     val prev = items.lastOrNull()
                     if (error == null && prev is Item.File && prev.path == path && prev.error == null) {
-                        items[items.lastIndex] = prev.copy(uses = prev.uses + e, add = prev.add + count.first, del = prev.del + count.second)
+                        items[items.lastIndex] = prev.copy(uses = prev.uses + e, add = prev.add + count.first, del = prev.del + count.second, pending = result == null)
                     } else {
-                        items += Item.File(e.id, path, if (error != null) 0 else count.first, if (error != null) 0 else count.second, listOf(e), error, isDenied(result))
+                        items += Item.File(e.id, path, if (error != null) 0 else count.first, if (error != null) 0 else count.second, listOf(e), error, isDenied(result), result == null)
                     }
                 }
             }
@@ -223,6 +224,15 @@ fun itemSlug(it: Item) = when (it) {
 fun specCardIds(items: List<Item>): Set<String> {
     val latest = LinkedHashMap<String, String>()
     for (it in items) itemSlug(it)?.let { slug -> latest[slug] = it.id }
+    return latest.values.toSet()
+}
+
+fun isDocFile(path: String) = isMarkdown(path) && !isSpecPath(path)
+
+// web steps.ts docCards: the item holding each Markdown file's doc card, its latest successful write or edit.
+fun docCardIds(items: List<Item>): Set<String> {
+    val latest = LinkedHashMap<String, String>()
+    for (it in items) if (it is Item.File && it.error == null && isDocFile(it.path)) latest[it.path] = it.id
     return latest.values.toSet()
 }
 

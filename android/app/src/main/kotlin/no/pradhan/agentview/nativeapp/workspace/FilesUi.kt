@@ -135,6 +135,7 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
     val isDoc = isMarkdown(path)
     val showDoc = preview && isDoc
     val diff = canDiff && mode == "diff" && !showDoc
+    val docEdit = remember(path) { DocEditState() }
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, path.substringAfterLast('/'), onBack, sub = parentOf(path).ifEmpty { pageFolder(hub) }) {
@@ -156,10 +157,14 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
                 file.binary -> EmptyState("Binary file")
                 showDoc -> {
                     val tasks = remember(path, file.content) { if (isSpecPath(path)) specTasks(file.content) else emptyList() }
+                    val blocks = remember(file.content) { docBlocks(file.content) }
                     LazyColumn(Modifier.fillMaxSize()) {
                         if (tasks.isNotEmpty()) item { SpecTasks(hub, path, tasks) }
-                        item { Markdown(file.content, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp6)) }
+                        item { Spacer(Modifier.padding(top = Tokens.sp4)) }
+                        docBlockItems(hub, path, file.content, blocks, docEdit, reload)
+                        item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
                     }
+                    DocAskSheet(hub, path, docEdit)
                 }
                 diff -> DiffLinesView(remember(file, changes) { fileDiff(file.original, file.content).let { if (changes) changesOnly(it) else it } }, langOf(path), wrap)
                 else -> CodeView(file.content, langOf(path), wrap)

@@ -58,7 +58,7 @@ fun buildView(chat: String, events: List<ChatEvent>, now: Long, prev: ChatView?)
         chat, events, items, buildAgents(events, items), chatCost(events), chatImages(events),
         items.filterIsInstance<Item.File>().filter { it.error == null }.map { it.path },
         rewindable(items), exploreRuns(items), days, dayOfRows(items, days),
-        events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), specCardIds(items), specBumps(items),
+        events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), specCardIds(items) + docCardIds(items), specBumps(items),
         foldTurns(items, events),
     )
 }

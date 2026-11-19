@@ -328,6 +328,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
                 val meta = if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}"
                 if (bump != null) SpecCard(hub, chat, specSlug(it.path), it.path, bump) else SpecRow(specSlug(it.path), meta)
             }
+            else if (bump != null && isDocFile(it.path)) DocCard(hub, it, cwd)
             else if (isSketchPath(it.path)) SketchCard(hub, chat, sketchName(it.path), if (it.uses.first().name == "Write") "Sketch written" else "Sketch edited \u00B7 +${it.add} -${it.del}")
             else FileCard(it, cwd)
         is Item.Agent -> {

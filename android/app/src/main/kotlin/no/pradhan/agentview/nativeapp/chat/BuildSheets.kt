@@ -241,7 +241,7 @@ internal suspend fun loadBuild(hub: Hub, slug: String): BuildDetail? =
     hub.build(slug)
 
 @Composable
-private fun sheetHeight() = LocalConfiguration.current.screenHeightDp.dp * 0.8f
+internal fun sheetHeight() = LocalConfiguration.current.screenHeightDp.dp * 0.8f
 
 @Composable
 private fun SheetList(fixed: Boolean = false, content: LazyListScope.() -> Unit) {

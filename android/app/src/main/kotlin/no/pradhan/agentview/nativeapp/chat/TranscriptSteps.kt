@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -333,6 +334,22 @@ internal fun SketchCard(hub: Hub, chat: String, name: String, meta: String) {
                 }
             },
         )
+    }
+}
+
+private fun docTitle(path: String) = path.substringAfterLast('/').replace(Regex("\\.(md|markdown|mdx)$", RegexOption.IGNORE_CASE), "").replace(Regex("[-_]+"), " ")
+
+// web DocCard.tsx: a Markdown file the agent wrote, opened rendered in a sheet where a block can be edited or asked about.
+@Composable
+internal fun DocCard(hub: Hub, it: Item.File, cwd: String) {
+    var open by rememberSaveable(it.id) { mutableStateOf(false) }
+    val rel = relPath(it.path, cwd)
+    val meta = if (it.pending) "Updating\u2026" else "${if (it.uses.size == 1 && it.uses.first().name == "Write") "Written" else "Edited \u00B7 +${it.add} -${it.del}"} \u00B7 $rel"
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
+        ListRow(docTitle(rel), meta, leading = { AvIcon("markdown", null, Tokens.icon) }, onClick = { open = true })
+    }
+    if (open) no.pradhan.agentview.nativeapp.ui.Sheet({ open = false }, docTitle(rel), padded = false) {
+        Box(Modifier.height(sheetHeight())) { no.pradhan.agentview.nativeapp.workspace.FileScreen(hub, rel, { open = false }, diffFirst = false) }
     }
 }
 

@@ -104,7 +104,7 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
     val prompts = events.filter { it.kind == "user" }.mapTo(HashSet()) { it.id }
     val span = spans(events)
     val steps = stepsByTurn(events)
-    val cards = specCardIds(items)
+    val cards = specCardIds(items) + docCardIds(items)
     val groups = mutableListOf<MutableList<Item>>()
     for (it in items) {
         if (it.id in prompts || groups.isEmpty()) groups.add(mutableListOf())
