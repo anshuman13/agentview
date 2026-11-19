@@ -15,6 +15,7 @@ const sureAnswer = (db: Database, a: { tier?: string | null; confidence?: number
 const ADMIN_KINDS = ['access', 'limit'] as const;
 export const askTags = (db: Database, a: { tier?: string | null; confidence?: number | null; claims?: string[] | null; kind?: string | null }) =>
   [needsMe(a.tier) ? NEEDS_ME : '', sureAnswer(db, a) ? FAQ_TAG : '', ADMIN_KINDS.find((k) => k === a.kind) ?? ''].filter(Boolean).join(' ') || null;
+import { getMeta, setMeta } from '../core/db.js';
 import { applyChanges, type Change } from '../core/sync.js';
 import { DAY, parseWhen } from '../core/time.js';
 
@@ -136,7 +137,7 @@ function chatChanges(r: ScanResult, now: number): Change[] {
   return r.chats.filter((c) => c.new_messages !== 0 && c.id.trim()).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now, waiting: c.kind === 'dm' ? (c.waiting ? 1 : 0) : null } }));
 }
 
-// Asks not saved, answered or replied to yet become open tasks with their reply draft; the urgent ones are listed apart.
+// Asks not saved, answered or replied to yet become suggestions with their reply draft; the urgent ones are listed apart.
 function askChanges(db: Database, r: ScanResult, seen: ReturnType<typeof seenItems>, has: Has, changes: Change[], now: number) {
   const urgent: Asked[] = [];
   const newAsks: Asked[] = [];
@@ -148,7 +149,7 @@ function askChanges(db: Database, r: ScanResult, seen: ReturnType<typeof seenIte
     const people = `${a.from} · ${a.chat}`;
     if (answeredIds.has(id) || a.answered_by_other || has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people) || replied(a)) continue;
     seen.add(id, a.title, people);
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'open', draft: a.draft?.trim() || null, tags: askTags(db, a) } });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null, tags: askTags(db, a) } });
     newAsks.push({ ...a, id });
     if (a.urgent) urgent.push({ ...a, id });
   }
@@ -246,6 +247,16 @@ export function skipAsk(db: Database, id: string, reason = '', now = Date.now())
   applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done', draft: null } }]);
   db.prepare("UPDATE replies SET status = 'skipped', why = 'skipped', draft_text = ?, skip_reason = ? WHERE profile = ? AND id = ? AND status IN ('held', 'error')").run(row.draft?.trim() || null, reason.trim() || null, PROFILE, id);
   return true;
+}
+
+// One-time: Slack asks saved as open undated tasks before asks became suggestions move to Needs you; hand-made tasks, promises and dated rows stay.
+export function suggestOpenAsks(db: Database, now = Date.now()) {
+  if (getMeta(db, 'asks-suggested')) return;
+  const rows = db.prepare("SELECT id FROM items WHERE profile = ? AND deleted = 0 AND source = 'slack' AND id LIKE 'slack:%' AND at IS NULL AND status = 'open'").all(PROFILE) as { id: string }[];
+  db.transaction(() => {
+    applyChanges(db, rows.map((r): Change => ({ table: 'items', id: r.id, profile: PROFILE, updated_at: now, fields: { status: 'suggested' } })));
+    setMeta(db, 'asks-suggested', String(now));
+  })();
 }
 
 export function acceptAsk(db: Database, id: string, source: 'slack' | 'gmail' = 'slack', now = Date.now()) {

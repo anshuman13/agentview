@@ -49,10 +49,10 @@ beforeEach(() => {
 });
 
 describe('NeedsYou triage', () => {
-  it('leaves a needs-you Slack ask to the reply queue, with or without a draft', () => {
+  it('leaves every Slack ask to the reply queue', () => {
     const slack = (id: string, extra: object) => ({ ...ask, id, source: 'slack', source_url: `https://x.test/${id}`, ...extra });
     const review = [slack('held', { tags: 'needs-you' }), slack('drafted', { draft: 'Yes' }), slack('plain', {}), ask];
-    expect(rendered({ ...split, review, asks: review }).rows.map((r) => r.kind === 'ask' && r.row.id)).toEqual(['plain', 'a']);
+    expect(rendered({ ...split, review, asks: review }).rows.map((r) => r.kind === 'ask' && r.row.id)).toEqual(['a']);
   });
 
   it('puts Nothing asked before Dismiss in the DM, Slack and ask menus, not on task rows', () => {

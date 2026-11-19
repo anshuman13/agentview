@@ -226,19 +226,18 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
 @Composable
 private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: String?, now: Long, actions: TaskActions, ops: CodexOps, editing: Row?, snack: SnackbarHostState) {
     val scope = rememberCoroutineScope()
+    val askAbout = { r: Row -> hub.askCodex(askText("Help me with this item.", r.profile, st.items.filter { !it.deleted && it.profile == r.profile }, r, st.meetings.filter { it.profile == r.profile }), r.profile) }
     editing?.let { row ->
         val from = st.meetings.firstOrNull { it.profile == row.profile && it.id == row.meetingId }
         val people = if (row.status == "open") remember(st.meetings, row.key, now / 60_000) { recentPeople(st.meetings, row.profile, from, now) } else emptyList()
-        EditorSheet(row, st.items, now, actions, people, { p, t -> ops.points.raise(t, p, row.profile) }, { r ->
-            hub.askCodex(askText("Help me with this item.", r.profile, st.items.filter { !it.deleted && it.profile == r.profile }, r, st.meetings.filter { it.profile == r.profile }), r.profile)
-        }) { nav.editKey = null }
+        EditorSheet(row, st.items, now, actions, people, { p, t -> ops.points.raise(t, p, row.profile) }, askAbout) { nav.editKey = null }
     }
     if (nav.adding) AddSheet(hub, profile, now, { nav.adding = false }) { added ->
         scope.launch { snack.currentSnackbarData?.dismiss(); snack.showSnackbar("Task · $added", duration = SnackbarDuration.Short) }
     }
     if (nav.needsOpen) {
         val view by hub.needed.collectAsState()
-        NeedsSheet(view.list, view.queue, now, actions, ops.replies, hub, { nav.needsOpen = false; nav.editKey = it.key }, { nav.needsOpen = false; nav.push("review") }, { nav.needsOpen = false; nav.push("person:$it") }) { nav.needsOpen = false }
+        NeedsSheet(view.list, view.queue, now, actions, ops.replies, hub, { nav.needsOpen = false; nav.editKey = it.key }, askAbout, { nav.needsOpen = false; nav.push("review") }, { nav.needsOpen = false; nav.push("person:$it") }) { nav.needsOpen = false }
     }
 }
 

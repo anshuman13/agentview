@@ -587,6 +587,18 @@ class SharedCasesTest {
         for (c in cases("review-queue")) assertEquals(c.str("name"), strings(c, "expected"), reviewQueue(strings(c, "order"), strings(c, "skipped"), strings(c, "open").toSet()))
     }
 
+    @Test fun askRows() {
+        for (c in cases("ask-rows")) {
+            val r = c.getValue("row").jsonObject
+            val row = Row("items", r.str("id"), "work", deleted = r.getValue("deleted").jsonPrimitive.boolean, f = r.filterKeys { it !in setOf("id", "deleted") })
+            val name = c.str("name")
+            val now = c.getValue("now").jsonPrimitive.long
+            assertEquals(name, c.getValue("queued").jsonPrimitive.boolean, queued(row))
+            assertEquals(name, c.getValue("inQueue").jsonPrimitive.boolean, replyQueue(listOf(row), null, now).size == 1)
+            if (c.containsKey("status")) assertEquals(name, listOf(c.str("status"), c.str("primary"), c.getValue("menu").jsonArray.map { it.jsonPrimitive.content }), listOf(askStatus(row), askPrimary(row), askMenu(row)))
+        }
+    }
+
     @Test fun capabilities() {
         for (c in cases("capabilities")) {
             val caps = c.nullable("capabilities")?.let { protocolJson.decodeFromJsonElement<Capabilities>(it) } ?: Capabilities()

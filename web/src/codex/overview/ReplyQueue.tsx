@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ReplyHistory } from '../data/store';
 import { clearHistory, loadHistory } from '../replyHistory';
 import { useAssistantStore } from '../data';
@@ -26,14 +26,24 @@ const drafted = (r: ItemRow) => !!r.draft?.trim();
 const admin = (r: ItemRow) => tagList(r.tags).some((t) => t === 'access' || t === 'limit');
 const adminList = (rows: ItemRow[]) => rows.filter(admin).map((r) => `- ${r.people || 'Slack'}: ${r.title}${r.source_url ? ` ${r.source_url}` : ''}`).join('\n');
 
-// Slack asks with a reply draft, the ones that need me first, then FAQ answers, then oldest first, so a day's asks clear from one screen.
-// Needs-you asks the drafter left without a draft come last: I decide those in the thread.
+// An ask is a Slack or Gmail row waiting for review; it lives in the reply queue only, so Up next, Today, Tasks and Needs you leave it out.
+export const queued = (r: ItemRow) => (r.source === 'slack' || r.source === 'gmail') && r.status === 'suggested' && !r.deleted && !isSaid(r);
+// Asks with a draft first, the ones that need me first, then FAQ answers, then oldest first, so a day's asks clear from one screen.
 // A snoozed ask is left out until its time passes; a missing snoozed_until counts as not snoozed.
-// A Slack ask with a draft or tagged needs-you belongs to the reply queue, so Needs you leaves it out.
-export const queued = (r: ItemRow) => r.source === 'slack' && (drafted(r) || mine(r));
 export const replyQueue = (review: ItemRow[], now: number) => review
-  .filter((r) => queued(r) && (r.status === 'suggested' || r.status === 'open') && !r.deleted && !isSaid(r) && !((r.snoozed_until ?? 0) > now))
+  .filter((r) => queued(r) && !((r.snoozed_until ?? 0) > now))
   .sort((a, b) => Number(drafted(b)) - Number(drafted(a)) || Number(mine(b)) - Number(mine(a)) || Number(isFaq(b)) - Number(isFaq(a)) || reviewedSince(a) - reviewedSince(b));
+
+// What an ask row shows: the status line, the primary button and the More menu entries ('Snooze' stands for the snooze options).
+export const askStatus = (r: ItemRow) => (mine(r) ? 'Needs you' : drafted(r) ? 'Reply ready' : 'No draft');
+const sendable = (r: ItemRow) => r.source === 'slack' && drafted(r);
+export const askPrimary = (r: ItemRow) => (sendable(r) ? (mine(r) ? 'Approve' : 'Send') : 'Open');
+export const askMenu = (r: ItemRow) => [
+  sendable(r) && 'Edit draft',
+  sendable(r) && r.people && 'History',
+  r.source_url && askPrimary(r) !== 'Open' && 'Open thread',
+  'Done', 'Make task', 'Snooze', 'Ask Claude', 'Skip',
+].filter((x): x is string => !!x);
 
 export const STALE_DAYS = 3;
 // Asks that have waited more than 3 days, in queue order.
@@ -103,11 +113,12 @@ function focusAfter(el: HTMLElement, done: Promise<void>) {
   });
 }
 
-function Ask({ row }: { row: ItemRow }) {
+function Ask({ row, onAsk }: { row: ItemRow; onAsk: (r: ItemRow) => void }) {
   const store = useAssistantStore();
   const act = useActions();
-  const has = drafted(row);
-  const needs = mine(row);
+  const has = sendable(row);
+  const primary = askPrimary(row);
+  const status = askStatus(row);
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(row.draft ?? '');
@@ -149,13 +160,18 @@ function Ask({ row }: { row: ItemRow }) {
       setBusy(false);
     }
   };
-  // Skip closes the ask on the hub with no reply, so it leaves the queue and the corrections run sees the dropped draft.
+  // Skip closes a Slack ask on the hub with no reply, so it leaves the queue and the corrections run sees the dropped draft; a Gmail ask is dismissed.
   const skip = async () => {
     setBusy(true);
     try {
-      await store.skipAsk(row.id);
+      if (row.source === 'gmail') {
+        await store.update(row, { status: 'dismissed' });
+        showSnack('Dismissed', () => void store.update(row, { status: row.status }));
+      } else {
+        await store.skipAsk(row.id);
+        showSnack('Skipped, no reply sent');
+      }
       haptic('tap');
-      showSnack('Skipped, no reply sent');
     } catch (err) {
       showSnack((err as Error).message);
     } finally {
@@ -166,33 +182,41 @@ function Ask({ row }: { row: ItemRow }) {
     const done = askKey(e, { has, busy, send, skip });
     if (done) focusAfter(e.currentTarget, done);
   };
+  const open = () => window.open(row.source_url!, '_blank', 'noreferrer');
+  const entries: Record<string, ReactNode> = {
+    'Edit draft': <MenuItem icon="edit" onClick={choose(() => setEditing(true))}>Edit draft</MenuItem>,
+    History: <MenuItem icon="history" onClick={choose(toggleHistory)}>History</MenuItem>,
+    'Open thread': <MenuItem icon="link" href={row.source_url ?? undefined} onClick={() => setMenu(false)}>Open thread</MenuItem>,
+    Done: <MenuItem icon="check" disabled={busy} onClick={choose(() => act.done(row))}>Done</MenuItem>,
+    'Make task': <MenuItem icon="pass" disabled={busy} onClick={choose(() => act.toTask(row))}>Make task</MenuItem>,
+    'Ask Claude': <MenuItem icon="sparkle" onClick={choose(() => onAsk(row))}>Ask Claude</MenuItem>,
+    Skip: <MenuItem icon="close" disabled={busy} onClick={choose(() => void skip())}>Skip</MenuItem>,
+  };
   return (
     <AskRow data-reply-row={row.profile + row.id} onClick={() => openTask(row)} onKeyDown={key}
       title={row.title}
-      meta={<>{row.people || 'Slack'} · {ago(reviewedSince(row))}{row.snoozed_until != null && ' · Snoozed'}{isFaq(row) && ' · FAQ'}</>}
-      trailing={needs && <Badge status="waiting" label="Needs you" />}
+      meta={<>{row.people || (row.source === 'gmail' ? 'Gmail' : 'Slack')} · {ago(reviewedSince(row))}{row.snoozed_until != null && ' · Snoozed'}{isFaq(row) && ' · FAQ'}</>}
       actions={<>
         {has
-          ? <Button size="sm" icon={busy ? 'loading' : error ? 'refresh' : 'send'} disabled={busy} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : needs ? 'Send note' : 'Send'}</Button>
-          : row.source_url && <Button size="sm" icon="link" onClick={() => window.open(row.source_url!, '_blank', 'noreferrer')}>Open</Button>}
+          ? <Button size="sm" icon={busy ? 'loading' : error ? 'refresh' : primary === 'Approve' ? 'check' : 'send'} disabled={busy} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : primary}</Button>
+          : row.source_url && <Button size="sm" icon="link" onClick={open}>Open</Button>}
         <span className="ov-more">
           <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
           {menu && (
             <Menu trigger={more} onClose={() => setMenu(false)}>
-              {has && <MenuItem icon="edit" onClick={choose(() => setEditing(true))}>Edit</MenuItem>}
-              {has && row.people && <MenuItem icon="history" onClick={choose(toggleHistory)}>History</MenuItem>}
-              {has && row.source_url && <MenuItem icon="link" href={row.source_url} onClick={() => setMenu(false)}>Open thread</MenuItem>}
-              {snoozeOptions(Date.now(), row.profile).map((o) => <MenuItem key={o.label} icon="clock" disabled={busy} onClick={choose(() => act.snoozeAsk(row, o.at))}>{o.label}</MenuItem>)}
-              <MenuItem icon="close" disabled={busy} onClick={choose(() => void skip())}>Skip</MenuItem>
+              {askMenu(row).map((k) => k === 'Snooze'
+                ? snoozeOptions(Date.now(), row.profile).map((o) => <MenuItem key={o.label} icon="clock" disabled={busy} onClick={choose(() => act.snoozeAsk(row, o.at))}>{o.label}</MenuItem>)
+                : <Fragment key={k}>{entries[k]}</Fragment>)}
             </Menu>
           )}
         </span>
       </>}>
       <div className="ov-ask-under">
-        {!has ? <span className="ov-ask-draft">no draft, open the thread</span>
-          : editing
-            ? <textarea className="ov-ask-edit" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
-            : <span className="ov-ask-draft clamp">{row.draft}</span>}
+        {row.text?.trim() && <span className="ov-ask-quote">{row.text}</span>}
+        {status === 'Needs you' ? <Badge status="waiting" label="Needs you" /> : <span className={status === 'Reply ready' ? 'ov-ask-ready' : undefined}>{status}</span>}
+        {has && editing
+          ? <textarea className="ov-ask-edit" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
+          : drafted(row) && <span className="ov-ask-draft clamp">{row.draft}</span>}
         {history && row.people && <HistoryLines data={data} error={historyError} who={row.people} retry={loadLines} />}
         {error && <span className="ov-ask-err">Not sent: {error}</span>}
       </div>
@@ -200,7 +224,7 @@ function Ask({ row }: { row: ItemRow }) {
   );
 }
 
-export function ReplyQueue({ rows, filtered = false, onClear }: { rows: ItemRow[]; filtered?: boolean; onClear?: () => void }) {
+export function ReplyQueue({ rows, filtered = false, onClear, onAsk }: { rows: ItemRow[]; filtered?: boolean; onClear?: () => void; onAsk: (r: ItemRow) => void }) {
   const store = useAssistantStore();
   const [sending, setSending] = useState(false);
   const [dismissing, setDismissing] = useState(false);
@@ -273,7 +297,7 @@ export function ReplyQueue({ rows, filtered = false, onClear }: { rows: ItemRow[
     <section>
       <SectionHead id="reply-queue" title="Replies" count={rows.length} action={filtered ? dismiss : batch} />
       <div className="as-group ov-queue-group">
-        {rows.map((r) => <Ask key={r.profile + r.id} row={r} />)}
+        {rows.map((r) => <Ask key={r.profile + r.id} row={r} onAsk={onAsk} />)}
       </div>
     </section>
   );

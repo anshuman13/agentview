@@ -6,8 +6,7 @@ class Split(
     val overdue: List<Row>, val today: List<Row>, val later: List<Row>,
     val review: List<Row>, val notes: List<Row>, val doneToday: List<Row>,
 ) {
-    // Suggested and open rows: the reply queue reads Slack asks from both.
-    val asks get() = review + overdue + today + later
+    val asks get() = review
 }
 
 fun matchesProfile(profile: String?, r: Row) = profile == null || r.profile == profile
@@ -97,7 +96,7 @@ fun taskMatches(r: Row, q: String): Boolean {
 fun searchTasks(s: Split, days: List<Day>, query: String): List<Row> {
     val q = query.trim().lowercase()
     if (q.isEmpty()) return emptyList()
-    return (s.overdue + days.flatMap { it.rows } + s.review + s.doneToday).filter { taskMatches(it, q) }.distinctBy { it.key }
+    return (s.overdue + days.flatMap { it.rows } + s.review.filter { !queued(it) } + s.doneToday).filter { taskMatches(it, q) }.distinctBy { it.key }
 }
 
 fun isRepeat(text: String?) = text != null && Regex("^\\s*Repeats:").containsMatchIn(text)

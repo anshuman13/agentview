@@ -44,8 +44,9 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
     var olderOpen by rememberSaveable { mutableStateOf(false) }
     val showProfile = profile == null
     val hit = remember(s, days, query) { searchTasks(s, days, query) }
-    val fresh = s.review.filter { now - it.statusTime < DAY_MS }
-    val older = s.review.filter { now - it.statusTime >= DAY_MS }
+    val review = s.review.filter { !queued(it) }
+    val fresh = review.filter { now - it.statusTime < DAY_MS }
+    val older = review.filter { now - it.statusTime >= DAY_MS }
     LazyColumn(Modifier.fillMaxSize()) {
         if (searching) item {
             SearchField(query, setQuery, "Search tasks")
@@ -71,7 +72,7 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
             if (olderOpen) reviewSection(null, older, now, actions, showProfile, onOpen)
         }
         days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, showProfile, onOpen) }
-        if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && s.review.isEmpty()) item { EmptyState("All clear", "Add a task with the button below, like “call the bank tomorrow 9”") }
+        if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && review.isEmpty()) item { EmptyState("All clear", "Add a task with the button below, like “call the bank tomorrow 9”") }
         if (s.doneToday.isNotEmpty()) {
             item { SectionHeader("Done", s.doneToday.size.toString(), open = doneOpen, onToggle = { doneOpen = !doneOpen }, action = if (doneOpen) ({ Button("Clear", { actions.clear(s.doneToday) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) else null) }
             if (doneOpen) item { Group { s.doneToday.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }

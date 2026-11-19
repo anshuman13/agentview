@@ -4,6 +4,7 @@ import '@fontsource-variable/geist-mono';
 import { codexMeetings, useAssistant, useSyncGate } from './data';
 import { ask, askText } from './data/ask/ask';
 import { reviewedSince } from './data/tasks/engine';
+import { queued } from './overview/ReplyQueue';
 import { greeting } from './tasks/days';
 import { dropRow as dropRowTo, moveOverdue } from './tasks/rowMoves';
 import { TasksHead } from './TasksHead';
@@ -125,9 +126,10 @@ export function Assistant() {
   const openRow = (r: ItemRow) => picked ? pickable(r) && toggle(r.profile + r.id) : setView({ open: rowKey(r) });
   const rows = (rs: ItemRow[], key?: string, droppable = true) => <TaskList rows={rs} sectionKey={key} droppable={droppable} drag={drag} picked={picked} onOpen={openRow} start={start} />;
   const section = (d: Day) => <DayGroup key={d.key} d={d} drag={drag} picked={picked} onOpen={openRow} start={start} />;
-  const fresh = s.review.filter((r) => now - reviewedSince(r) < DAY);
-  const older = s.review.filter((r) => now - reviewedSince(r) >= DAY);
-  const empty = !s.overdue.length && days.every((d) => !d.rows.length) && !s.review.length;
+  const review = s.review.filter((r) => !queued(r));
+  const fresh = review.filter((r) => now - reviewedSince(r) < DAY);
+  const older = review.filter((r) => now - reviewedSince(r) >= DAY);
+  const empty = !s.overdue.length && days.every((d) => !d.rows.length) && !review.length;
   const nextLater = s.nextLater;
   return (
     <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
@@ -137,9 +139,9 @@ export function Assistant() {
 
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>
-        {list === 'today' && <Overview s={s} dueToday={dueToday} onPrep={() => ask(askText(prepText(s.next!), s.next!.profile, snap.items, undefined, codexMeetings(snap.meetings)), s.next!.profile)} />}
+        {list === 'today' && <Overview s={s} dueToday={dueToday} onAsk={askAbout} onPrep={() => ask(askText(prepText(s.next!), s.next!.profile, snap.items, undefined, codexMeetings(snap.meetings)), s.next!.profile)} />}
         {list === 'tasks' && query != null && <SearchBar query={query} setQuery={setQuery} />}
-        {list === 'tasks' && query?.trim() && <SearchResults query={query} candidates={[...s.overdue, ...days.flatMap((d) => d.rows), ...s.review, ...s.doneToday]} rows={rows} />}
+        {list === 'tasks' && query?.trim() && <SearchResults query={query} candidates={[...s.overdue, ...days.flatMap((d) => d.rows), ...review, ...s.doneToday]} rows={rows} />}
         {list === 'tasks' && !query?.trim() && (
           <>
             {s.overdue.length > 0 && (

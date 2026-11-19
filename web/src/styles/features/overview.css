@@ -25,6 +25,9 @@
 .ov-ask-actions { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }
 .ov-more { position: relative; display: inline-flex; }
 .ov-ask-under { display: flex; flex-direction: column; gap: var(--sp-2); padding: 0 var(--list-pad) var(--sp-4); font-size: var(--type-meta-size); line-height: var(--type-meta-line); color: var(--meta-fg); }
+.ov-ask-under > .badge { align-self: flex-start; }
+.ov-ask-quote { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+.ov-ask-ready { color: var(--on-surface); }
 .ov-ask-draft { white-space: pre-wrap; overflow-wrap: anywhere; }
 .ov-ask-draft.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ov-ask-edit { width: 100%; padding: 0; border: 0; background: transparent; color: var(--on-surface); font: inherit; resize: vertical; }

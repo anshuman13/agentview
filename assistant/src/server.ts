@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { APP_ORIGINS, allowedHostHeader, allowedPeer, peerName } from '../../server/src/http/access.js';
+import { suggestOpenAsks } from './slack/slackSave.js';
 import { openDb } from './core/db.js';
 import { trackSpend } from './core/claude.js';
 import { startCommands } from './slack/commands.js';
@@ -78,6 +79,7 @@ async function start() {
   process.on('unhandledRejection', (err) => console.error('unhandled rejection:', err));
   const port = Number(process.env.ASSISTANT_PORT ?? 7790);
 
+  suggestOpenAsks(getDb());
   startReminders(getDb);
   startBrief(getDb);
   if (process.env.ASSISTANT_CALENDAR !== '0') {

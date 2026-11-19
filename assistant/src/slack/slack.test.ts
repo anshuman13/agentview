@@ -3,7 +3,7 @@ import { openDb, setMeta } from '../core/db.js';
 import { askPush, pushHours, scanDue, scanPrompt, sinceOf } from './slack.js';
 import { DAY } from '../core/time.js';
 import { failedReplies } from './autopilot.js';
-import { acceptAsk, askId, askTags, saveScan, skipAsk } from './slackSave.js';
+import { acceptAsk, askId, askTags, saveScan, skipAsk, suggestOpenAsks } from './slackSave.js';
 import { applyChanges } from '../core/sync.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
@@ -27,21 +27,21 @@ describe('scan prompt and counts', () => {
 });
 
 describe('saveScan', () => {
-  test('keeps new asks open as tasks past a week', () => {
+  test('dismisses untouched new asks after a week', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [ask('u1')], answered: [] }, at(10, 10));
     saveScan(db, { chats: [], asks: [ask('u2')], answered: [] }, at(15, 10));
     saveScan(db, { chats: [], asks: [], answered: [] }, at(18, 11));
-    expect(item(db, 'u1')!.status).toBe('open');
-    expect(item(db, 'u2')!.status).toBe('open');
+    expect(item(db, 'u1')!.status).toBe('dismissed');
+    expect(item(db, 'u2')!.status).toBe('suggested');
   });
 
-  test('saves chats and new asks as open tasks, and returns only new urgent asks', () => {
+  test('saves chats and new asks as suggestions, and returns only new urgent asks', () => {
     const db = openDb(':memory:');
     const { added, urgent } = saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.' }], asks: [ask('u1', true), ask('u2')], answered: [] }, at(27, 10));
     expect(added).toBe(2);
     expect(urgent.map((a) => a.url)).toEqual(['u1']);
-    expect(item(db, 'u1')).toEqual({ status: 'open', source: 'slack', people: 'Kim · #ai' });
+    expect(item(db, 'u1')).toEqual({ status: 'suggested', source: 'slack', people: 'Kim · #ai' });
     expect(db.prepare("SELECT summary FROM chats WHERE id = 'C1'").get()).toEqual({ summary: 'Talk.' });
     expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ chats: 0, added: 0, urgent: [], said: 0, messages: 0, newAsks: [] });
   });
@@ -67,7 +67,7 @@ describe('saveScan', () => {
     saveScan(db, { chats: [], asks: [{ ...ask('u1'), chat: 'DM', title: 'Review the doc' }, ask('u2')], answered: [] }, at(27, 10));
     saveScan(db, { chats: [{ id: 'D1', name: 'kim', kind: 'dm', summary: 'I answered.', waiting: false }], asks: [], answered: [] }, at(27, 11));
     expect(item(db, 'u1')!.status).toBe('done');
-    expect(item(db, 'u2')!.status).toBe('open');
+    expect(item(db, 'u2')!.status).toBe('suggested');
   });
 
   test('keeps different short asks apart, and an ask apart from my promise on it', () => {
@@ -110,7 +110,23 @@ describe('saveScan', () => {
   test('does not add an ask someone else already answered', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [{ ...ask('u1'), answered_by_other: true }, ask('u2')], answered: [] }, at(27, 10));
-    expect(db.prepare("SELECT id FROM items WHERE status = 'open'").all()).toEqual([{ id: askId('u2') }]);
+    expect(db.prepare("SELECT id FROM items WHERE status = 'suggested'").all()).toEqual([{ id: askId('u2') }]);
+  });
+
+  test('moves undated open slack asks to suggested once and leaves other tasks alone', () => {
+    const db = openDb(':memory:');
+    const ins = db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at) VALUES (?, 'work', 1, 0, 't', 'slack', 'open', ?)");
+    ins.run(askId('u1'), null);
+    ins.run(`said:${askId('u2')}`, null);
+    ins.run('rand123', null);
+    ins.run(askId('u3'), 5);
+    suggestOpenAsks(db, 1000);
+    const expected = [{ id: 'rand123', status: 'open' }, { id: `said:${askId('u2')}`, status: 'open' }, { id: askId('u1'), status: 'suggested' }, { id: askId('u3'), status: 'open' }];
+    expect(db.prepare('SELECT id, status FROM items ORDER BY id').all()).toEqual(expected);
+    expect(db.prepare('SELECT updated_at FROM items WHERE id = ?').get(askId('u1'))).toEqual({ updated_at: 1000 });
+    db.prepare("UPDATE items SET status = 'open' WHERE id = ?").run(askId('u1'));
+    suggestOpenAsks(db, 2000);
+    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId('u1'))).toEqual({ status: 'open' });
   });
 
 

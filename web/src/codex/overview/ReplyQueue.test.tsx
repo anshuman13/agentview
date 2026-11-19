@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from 'bun:test';
 import type { ItemRow } from '../data/sync';
-import { askKey, replyQueue, snoozeOptions, staleAsks } from './ReplyQueue';
+import { readFileSync } from 'node:fs';
+import { askKey, askMenu, askPrimary, askStatus, queued, replyQueue, snoozeOptions, staleAsks } from './ReplyQueue';
 
 vi.mock('../data/tasks/engine', () => ({ reviewedSince: (r: { at?: number }) => r.at ?? 0, errorText: String }));
 vi.mock('../data', () => ({ useAssistantStore: () => ({}) }));
 vi.mock('../useActions', () => ({ useActions: () => ({}) }));
 
-const row = (id: string, tags: string, extra: Partial<ItemRow> = {}) => ({ id, profile: 'work', title: `Ask ${id}`, people: 'Ada', source: 'slack', status: 'open', tags, draft: 'Hello\nthere', source_url: 'https://x.test/t', ...extra }) as ItemRow;
+const row = (id: string, tags: string, extra: Partial<ItemRow> = {}) => ({ id, profile: 'work', title: `Ask ${id}`, people: 'Ada', source: 'slack', status: 'suggested', tags, draft: 'Hello\nthere', source_url: 'https://x.test/t', ...extra }) as ItemRow;
 
 describe('staleAsks', () => {
   const now = 10 * 86400_000;
@@ -66,4 +67,16 @@ describe('askKey', () => {
     expect(t.send).not.toHaveBeenCalled();
     expect(t.skip).not.toHaveBeenCalled();
   });
+});
+
+describe('ask rows shared with the phone', () => {
+  type Case = { name: string; row: ItemRow; now: number; queued: boolean; inQueue: boolean; status?: string; primary?: string; menu?: string[] };
+  const cases: Case[] = JSON.parse(readFileSync(new URL('../../../../shared/fixtures/ask-rows.json', import.meta.url), 'utf8'));
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(queued(c.row)).toBe(c.queued);
+      expect(replyQueue([c.row], c.now).length === 1).toBe(c.inQueue);
+      if (c.status) expect([askStatus(c.row), askPrimary(c.row), askMenu(c.row)]).toEqual([c.status, c.primary, c.menu]);
+    });
+  }
 });

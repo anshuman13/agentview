@@ -8,7 +8,7 @@ import { FILTER_LABEL, setView, useView, type Filter, type List } from './view';
 import { sharedSplit, useMinute, useSplit } from './tasks/split';
 import { rowCounts } from '../app/shell/counts';
 import { useNeedsYou } from './NeedsYou';
-import { replyQueue } from './overview/ReplyQueue';
+import { queued, replyQueue } from './overview/ReplyQueue';
 import { clock } from './tasks/time';
 import type { Paused, ScanHealth } from './data/sync';
 
@@ -22,7 +22,7 @@ export const LISTS: { id: List; icon: string; label: string; hidden?: boolean }[
   { id: 'goals', icon: 'target', label: 'All goals', hidden: true },
   { id: 'search', icon: 'search', label: 'Search', hidden: true },
 ];
-const taskCount = (s: ReturnType<typeof sharedSplit>, endOfDay: number) => s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
+const taskCount = (s: ReturnType<typeof sharedSplit>, endOfDay: number) => s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.filter((r) => !queued(r)).length;
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
 
 const SCAN_NAME: Record<string, string> = { slack: 'Slack', gmail: 'Gmail', calendar: 'Calendar', 'calendar:work': 'Calendar (work)', 'calendar:personal': 'Calendar (personal)' };

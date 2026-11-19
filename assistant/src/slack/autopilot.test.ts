@@ -87,7 +87,7 @@ describe('afterScan', () => {
     const item = (u: string) => db.prepare('SELECT status, text FROM items WHERE id = ?').get(askId(url(u))) as { status: string; text: string };
     expect(item('u1').status).toBe('done');
     expect(item('u1').text).toContain(`Autopilot replied ${url('u1')}/reply: `);
-    expect(item('u2').status).toBe('open');
+    expect(item('u2').status).toBe('suggested');
     expect(db.prepare("SELECT status, url FROM replies WHERE id = ?").get(askId(url('u1')))).toEqual({ status: 'sent', url: url('u1') + '/reply' });
     expect(db.prepare("SELECT status FROM replies WHERE id = ?").get(askId(url('u4')))).toEqual({ status: 'held' });
     expect(holdDue(db, 'ann', now + HOUR)).toBe(false);
@@ -101,7 +101,7 @@ describe('afterScan', () => {
     const r = await afterScan(db, away, ['ai-help'], asks, now, async () => ANSWERED);
     expect(r).toEqual({ answered: [], held: [], skipped: ['Answer u1', 'Answer u2'], followups: [] });
     expect(db.prepare("SELECT status, why FROM replies WHERE id = ?").get(askId(url('u2')))).toEqual({ status: 'skipped', why: 'someone else answered' });
-    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'open' });
+    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'suggested' });
     expect(toPush('assist', {}, ['ai-help'], asks).map((a) => a.title)).toEqual(['Answer u2']);
   });
 
@@ -112,7 +112,7 @@ describe('afterScan', () => {
     const r = await afterScan(db, away, ['ai-help'], asks, now, async () => CHANGED);
     expect(r).toEqual({ answered: [], held: [], skipped: ['Answer u1'], followups: [] });
     expect(db.prepare('SELECT status, why FROM replies WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'held', why: 'thread changed since draft' });
-    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'open' });
+    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'suggested' });
   });
 
   test('a tier answer with no live claim becomes a hold, and a second ask in an answered thread only pushes me', async () => {
@@ -151,7 +151,7 @@ describe('afterScan', () => {
     await afterScan(db, { ...away, dry_run: true }, ['ai-help'], [ask('u1')], now, post);
     expect(posts).toEqual([]);
     expect(db.prepare('SELECT status FROM replies').get()).toEqual({ status: 'dry' });
-    expect(db.prepare('SELECT status, text FROM items').get()).toEqual({ status: 'open', text: "How?\n\nAutopilot would reply: (auto-reply from the owner's assistant: away until 5 January, Kim covers meanwhile) Use the guide." });
+    expect(db.prepare('SELECT status, text FROM items').get()).toEqual({ status: 'suggested', text: "How?\n\nAutopilot would reply: (auto-reply from the owner's assistant: away until 5 January, Kim covers meanwhile) Use the guide." });
   });
 
   test('never replies twice to the same ask, and stops at the hourly cap', async () => {
@@ -307,7 +307,7 @@ test('a Send that failed in assist mode is posted again on the next scan', async
   const assist: AutopilotConfig = { enabled: true };
   await afterScan(db, assist, ['ai-help'], asks, now, post);
   await expect(replyNow(db, assist, asks[0].id, now + 1, async () => { throw new Error('no connector'); })).rejects.toThrow('no connector');
-  expect(db.prepare("SELECT status FROM items WHERE id = ?").get(asks[0].id)).toEqual({ status: 'open' });
+  expect(db.prepare("SELECT status FROM items WHERE id = ?").get(asks[0].id)).toEqual({ status: 'suggested' });
   const before = posts.length;
   const out = await afterScan(db, assist, ['ai-help'], [], now + 2, post);
   expect(out.answered).toEqual(['Answer r1']);

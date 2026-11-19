@@ -7,25 +7,34 @@ import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.net.Writes
 import no.pradhan.agentview.nativeapp.net.protocolJson
 
-// web/src/codex/overview/ReplyQueue.tsx: Slack asks with a reply draft, and what sending, skipping and snoozing them does.
+// web/src/codex/overview/ReplyQueue.tsx: Slack and Gmail asks, and what sending, skipping and snoozing them does.
 const val STALE_DAYS = 3
 
 fun isSaid(r: Row) = r.id.startsWith("said:")
 fun needsMine(r: Row) = "needs-you" in tagList(r.tags)
 fun isFaq(r: Row) = "faq" in tagList(r.tags)
 fun drafted(r: Row) = !r.draft.isNullOrBlank()
-// A Slack ask with a draft or tagged needs-you belongs to the reply queue, so Needs you leaves it out.
-fun queued(r: Row) = r.source == "slack" && (drafted(r) || needsMine(r))
+// An ask is a Slack or Gmail row waiting for review; it lives in the reply queue only, so Up next, Today, Tasks and Needs you leave it out.
+fun queued(r: Row) = (r.source == "slack" || r.source == "gmail") && r.status == "suggested" && !r.deleted && !isSaid(r)
+
+// What an ask row shows: the status line, the primary button and the More menu entries ("Snooze" stands for the snooze options).
+fun askStatus(r: Row) = if (needsMine(r)) "Needs you" else if (drafted(r)) "Reply ready" else "No draft"
+private fun sendable(r: Row) = r.source == "slack" && drafted(r)
+fun askPrimary(r: Row) = if (sendable(r)) (if (needsMine(r)) "Approve" else "Send") else "Open"
+fun askMenu(r: Row) = listOfNotNull(
+    "Edit draft".takeIf { sendable(r) },
+    "History".takeIf { sendable(r) && r.people != null },
+    "Open thread".takeIf { !r.sourceUrl.isNullOrEmpty() && askPrimary(r) != "Open" },
+) + listOf("Done", "Make task", "Snooze", "Ask Claude", "Skip")
 private fun isAdmin(r: Row) = tagList(r.tags).any { it == "access" || it == "limit" }
 
 fun adminList(rows: List<Row>) = rows.filter(::isAdmin).joinToString("\n") { "- ${it.people?.ifEmpty { null } ?: "Slack"}: ${it.title}${it.sourceUrl?.takeIf { u -> u.isNotEmpty() }?.let { u -> " $u" } ?: ""}" }
 fun adminCount(rows: List<Row>) = rows.count(::isAdmin)
 
-// The ones that need me first, then FAQ answers, then oldest first; an ask without a draft that needs me comes last.
+// Asks with a draft first, the ones that need me first, then FAQ answers, then oldest first.
 fun replyQueue(items: List<Row>, profile: String?, now: Long): List<Row> = items
     .filter { r ->
-        queued(r) && (r.status == "suggested" || r.status == "open") && !r.deleted && matchesProfile(profile, r) &&
-            !isSaid(r) && !((r.snoozedUntil ?: 0L) > now)
+        queued(r) && matchesProfile(profile, r) && !((r.snoozedUntil ?: 0L) > now)
     }
     .sortedWith(compareByDescending<Row> { drafted(it) }.thenByDescending { needsMine(it) }.thenByDescending { isFaq(it) }.thenBy { it.statusTime })
 

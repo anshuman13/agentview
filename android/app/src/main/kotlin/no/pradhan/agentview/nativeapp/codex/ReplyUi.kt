@@ -35,7 +35,7 @@ import no.pradhan.agentview.nativeapp.ui.agoShort
 
 // The Replies group of the Needs you sheet (web/src/codex/overview/ReplyQueue.tsx).
 @Composable
-fun ReplySection(rows: List<Row>, filtered: Boolean, onClear: () -> Unit, now: Long, actions: TaskActions, replies: ReplyOps, onOpen: (Row) -> Unit) {
+fun ReplySection(rows: List<Row>, filtered: Boolean, onClear: () -> Unit, now: Long, actions: TaskActions, replies: ReplyOps, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit) {
     if (rows.isEmpty()) return
     val faq = rows.filter(::isFaq)
     val admins = adminCount(rows)
@@ -62,15 +62,16 @@ fun ReplySection(rows: List<Row>, filtered: Boolean, onClear: () -> Unit, now: L
     Group {
         rows.forEachIndexed { i, r ->
             if (i > 0) Hairline()
-            AskRow(r, now, actions, replies) { onOpen(r) }
+            AskRow(r, now, actions, replies, onAsk) { onOpen(r) }
         }
     }
 }
 
 @Composable
-private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps, onOpen: () -> Unit) {
-    val has = drafted(row)
-    val needs = needsMine(row)
+private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps, onAsk: (Row) -> Unit, onOpen: () -> Unit) {
+    val primary = askPrimary(row)
+    val has = primary != "Open"
+    val status = askStatus(row)
     val uri = LocalUriHandler.current
     var editing by remember(row.key) { mutableStateOf(false) }
     var text by remember(row.key) { mutableStateOf(row.draft ?: "") }
@@ -101,29 +102,37 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
     val link = safeHref(row.sourceUrl)
     Column {
         ListRow(
-            row.title ?: "", listOfNotNull(row.people?.ifEmpty { null } ?: "Slack", agoShort(row.statusTime, now), if (row.snoozedUntil != null) "Snoozed" else null, if (isFaq(row)) "FAQ" else null).joinToString(" · "),
+            row.title ?: "", listOfNotNull(row.people?.ifEmpty { null } ?: if (row.source == "gmail") "Gmail" else "Slack", agoShort(row.statusTime, now), if (row.snoozedUntil != null) "Snoozed" else null, if (isFaq(row)) "FAQ" else null).joinToString(" · "),
             onClick = onOpen,
             trailing = {
-                if (needs) Badge("Needs you", BadgeTone.Waiting)
-                if (has) Button(if (error.isNotEmpty()) "Retry" else if (needs) "Send note" else "Send", { send() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !busy)
+                if (has) Button(if (error.isNotEmpty()) "Retry" else primary, { send() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !busy)
                 else if (link != null) Button("Open", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 MoreButton { close ->
-                    if (has) MenuItem("Edit", "edit", { close(); editing = true })
-                    if (has && row.people != null) MenuItem("History", "history", { close(); showHistory = !showHistory })
-                    if (has && link != null) MenuItem("Open thread", "link", { close(); uri.openUri(link) })
-                    snoozeOptions(now, row.profile).forEach { o -> MenuItem(o.label, "clock", { close(); actions.snoozeAsk(row, o.at) }, enabled = !busy) }
-                    MenuItem("Skip", "close", { close(); busy = true; replies.skip(row) { busy = false } }, enabled = !busy)
+                    askMenu(row).forEach { k ->
+                        when (k) {
+                            "Edit draft" -> MenuItem(k, "edit", { close(); editing = true })
+                            "History" -> MenuItem(k, "history", { close(); showHistory = !showHistory })
+                            "Open thread" -> link?.let { l -> MenuItem(k, "link", { close(); uri.openUri(l) }) }
+                            "Done" -> MenuItem(k, "check", { close(); actions.done(row) }, enabled = !busy)
+                            "Make task" -> MenuItem(k, "pass", { close(); actions.accept(row) }, enabled = !busy)
+                            "Snooze" -> snoozeOptions(now, row.profile).forEach { o -> MenuItem(o.label, "clock", { close(); actions.snoozeAsk(row, o.at) }, enabled = !busy) }
+                            "Ask Claude" -> MenuItem(k, "sparkle", { close(); onAsk(row) })
+                            "Skip" -> MenuItem(k, "close", { close(); if (row.source == "gmail") actions.dismiss(row) else { busy = true; replies.skip(row) { busy = false } } }, enabled = !busy)
+                        }
+                    }
                 }
             },
         )
         Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4)) {
+            row.text?.trim()?.takeIf { it.isNotEmpty() }?.let { Text(it, style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            if (status == "Needs you") Badge(status, BadgeTone.Waiting)
+            else Text(status, style = Type.meta, color = if (status == "Reply ready") av.fg else av.metaFg)
             when {
-                !has -> Text("no draft, open the thread", style = Type.meta, color = av.metaFg)
-                editing -> {
+                has && editing -> {
                     TextField(text, { text = it }, minLines = 3, placeholder = "Reply draft")
                     Button("Done", { keep() }, Modifier.padding(top = Tokens.sp2), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
-                else -> Text(row.draft ?: "", style = Type.subheadline, color = av.fgMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                drafted(row) -> Text(row.draft ?: "", style = Type.subheadline, color = av.fgMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (showHistory && row.people != null) {
                 val h = history

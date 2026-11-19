@@ -25,7 +25,7 @@ export { Review } from './overview/Review';
 type Split = ReturnType<typeof useSplit>;
 
 // The day in three blocks: the next meeting or task, what needs me (a row opening a sheet), and what is left today.
-export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
+export function Overview({ s, dueToday, onPrep, onAsk }: { s: Split; dueToday: ItemRow[]; onPrep: () => void; onAsk: (r: ItemRow) => void }) {
   const snap = useAssistantData();
   const { filter } = useView();
   const now = Date.now();
@@ -71,7 +71,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       )}
       <RunningChats />
       <TodayList meetings={others} overdue={late} tasks={task ? todo.filter((r) => r !== task) : todo} now={now} done={s.doneToday.length} open={openCount} />
-      {sheet && <NeedsYouSheet needs={needs} queue={queue} now={now} onClose={closeSheet} />}
+      {sheet && <NeedsYouSheet needs={needs} queue={queue} now={now} onClose={closeSheet} onAsk={onAsk} />}
       {adding && <AddSheet filter={filter} onClose={() => setAdding(false)} />}
     </>
   );

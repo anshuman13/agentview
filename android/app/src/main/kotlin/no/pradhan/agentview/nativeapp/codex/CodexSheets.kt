@@ -230,7 +230,7 @@ fun parseCapture(typed: String, pickedAt: Long?, picked: Boolean, now: Long): Ca
 }
 
 @Composable
-fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onDismiss: () -> Unit) {
+fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onDismiss: () -> Unit) {
     var all by remember { mutableStateOf(setOf<String>()) }
     var onlyStale by remember { mutableStateOf(false) }
     val old = staleAsks(queue, now)
@@ -250,7 +250,7 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActi
                 if (shown.size < rows.size) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = all + label }) }
             }
         }
-        ReplySection(if (filtered) old else queue, filtered, { onlyStale = false }, now, actions, replies, onOpen)
+        ReplySection(if (filtered) old else queue, filtered, { onlyStale = false }, now, actions, replies, onOpen, onAsk)
     }
 }
 
