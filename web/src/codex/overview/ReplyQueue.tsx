@@ -16,6 +16,8 @@ import { nextNine, SNOOZES } from '../data/tasks/when';
 import { copyText, openTask, showSnack } from '../view';
 import { useActions } from '../useActions';
 import { Badge } from '../../ui/Badge';
+import { Icon } from '../../ui/Icon';
+import { askParts } from '../tasks/editor/taskChecklist';
 
 const mine = (r: ItemRow) => tagList(r.tags).includes('needs-you');
 // The scan tags an answer that rests on a live wiki claim with high confidence as faq: safe to send without reading.
@@ -119,6 +121,8 @@ function Ask({ row, onAsk }: { row: ItemRow; onAsk: (r: ItemRow) => void }) {
   const has = sendable(row);
   const primary = askPrimary(row);
   const status = askStatus(row);
+  const { quote, steps } = askParts(row.text);
+  const showStatus = status !== 'No draft' || !steps.length;
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(row.draft ?? '');
@@ -212,8 +216,9 @@ function Ask({ row, onAsk }: { row: ItemRow; onAsk: (r: ItemRow) => void }) {
         </span>
       </>}>
       <div className="ov-ask-under">
-        {row.text?.trim() && <span className="ov-ask-quote">{row.text}</span>}
-        {status === 'Needs you' ? <Badge status="waiting" label="Needs you" /> : <span className={status === 'Reply ready' ? 'ov-ask-ready' : undefined}>{status}</span>}
+        {quote && <span className="ov-ask-quote">{quote}</span>}
+        {status === 'Needs you' ? <Badge status="waiting" label="Needs you" /> : showStatus && <span className={status === 'Reply ready' ? 'ov-ask-ready' : undefined}>{status}</span>}
+        {steps.map((st, i) => <span key={i} className={st.done ? 'ov-ask-step' : 'ov-ask-step ov-ask-wait'}>{st.done && <Icon name="check" small />}{st.label}</span>)}
         {has && editing
           ? <textarea className="ov-ask-edit" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
           : drafted(row) && <span className="ov-ask-draft clamp">{row.draft}</span>}

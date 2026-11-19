@@ -599,6 +599,13 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun askParts() {
+        for (c in cases("ask-parts")) {
+            val steps = c.getValue("steps").jsonArray.map { it.jsonObject.let { o -> Check(o.getValue("done").jsonPrimitive.boolean, o.str("label")) } }
+            assertEquals(c.str("name"), AskParts(c.str("quote"), steps), askParts(c.str("text")))
+        }
+    }
+
     @Test fun capabilities() {
         for (c in cases("capabilities")) {
             val caps = c.nullable("capabilities")?.let { protocolJson.decodeFromJsonElement<Capabilities>(it) } ?: Capabilities()

@@ -60,10 +60,10 @@ fun taskMeta(row: Row, now: Long, inDay: Boolean, showProfile: Boolean): android
     val due = dueText(row, now, inDay)
     val at = row.at
     val done = row.status == "done"
-    val checks = Regex("^\\s*[-*] \\[([ xX])\\]", RegexOption.MULTILINE).findAll(row.text ?: "").toList()
+    val checks = checkItems(row.text)
     val extra = when {
         isRepeat(row.text) -> "Repeats"
-        checks.isNotEmpty() -> "${checks.count { it.groupValues[1].lowercase() == "x" }}/${checks.size}"
+        checks.isNotEmpty() -> "${checks.count { it.done }}/${checks.size}"
         !done && row.priority == 3 -> "High"
         !done && row.priority == 2 -> "Medium"
         else -> null

@@ -6,6 +6,14 @@ const LINE_RE = new RegExp(CHECK_RE.source, 'm');
 
 export const checkItems = (text: string | null) => [...(text ?? '').matchAll(CHECK_RE)].map((m) => ({ done: /x/i.test(m[1]), label: m[2].trim() }));
 
+// An ask's text split into its quote (the lines before the first checklist line) and its steps.
+export const askParts = (text: string | null) => {
+  const t = (text ?? '').trim();
+  const lines = t.split('\n');
+  const first = lines.findIndex((l) => LINE_RE.test(l));
+  return { quote: first < 0 ? t : lines.slice(0, first).join('\n').trim(), steps: checkItems(t) };
+};
+
 // Flips the box of the nth checklist line.
 export const toggleCheck = (text: string, n: number) => {
   let i = 0;

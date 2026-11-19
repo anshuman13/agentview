@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row as LRow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,12 +11,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
+import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -124,9 +128,17 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
             },
         )
         Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4)) {
-            row.text?.trim()?.takeIf { it.isNotEmpty() }?.let { Text(it, style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            val parts = askParts(row.text)
+            parts.quote.takeIf { it.isNotEmpty() }?.let { Text(it, style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            val showStatus = status != "No draft" || parts.steps.isEmpty()
             if (status == "Needs you") Badge(status, BadgeTone.Waiting)
-            else Text(status, style = Type.meta, color = if (status == "Reply ready") av.fg else av.metaFg)
+            else if (showStatus) Text(status, style = Type.meta, color = if (status == "Reply ready") av.fg else av.metaFg)
+            parts.steps.forEach { st ->
+                LRow(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+                    if (st.done) AvIcon("check", null, Tokens.size2xs, tint = av.metaFg)
+                    Text(st.label, style = Type.meta, color = if (st.done) av.metaFg else av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
             when {
                 has && editing -> {
                     TextField(text, { text = it }, minLines = 3, placeholder = "Reply draft")

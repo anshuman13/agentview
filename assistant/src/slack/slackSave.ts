@@ -46,6 +46,7 @@ export const Ask = z.object({
   claims: z.array(z.string()).optional().describe('Ids of the wiki claims from ask_context the draft rests on'),
   external: z.boolean().optional().describe('True when the channel is shared with another company (Slack Connect) or who asked is a guest or outside the company'),
   kind: z.enum(['access', 'limit', 'other']).optional().describe('access: they want an invite, seat, account, plan move, connector or permission that I grant. limit: they want a higher usage or spend limit. other: anything else.'),
+  steps: z.array(z.object({ text: z.string(), done: z.boolean() })).optional().describe('Give at most 4 steps toward settling the ask, in order. done true: read-only work you did this pass, with its result in the text (read the thread, found the FAQ claim or link, found the owner, found free slots). done false: what waits for me to do or approve (grant access, decide, review, confirm the answer, ask the owner). Never mark an action in Slack or another system as done. Sending the draft is not a step.'),
 });
 // A commitment I made myself, like "I'll send it tomorrow".
 export const Said = z.object({
@@ -126,6 +127,17 @@ export function expireWaiting(db: Database, now: number): Change[] {
   return rows.map((r) => ({ table: 'chats', id: r.id, profile: PROFILE, updated_at: now, fields: { waiting: 0 } }));
 }
 
+const MAX_STEPS = 4;
+// The text of a new ask: the quote, then the scan's steps as checklist lines.
+export function buildAskText(quote: string, steps: { text: string; done: boolean }[] = []) {
+  const lines = steps
+    .map((s) => ({ done: s.done, text: s.text.replace(/\n/g, ' ').trim() }))
+    .filter((s) => s.text)
+    .slice(0, MAX_STEPS)
+    .map((s) => `- [${s.done ? 'x' : ' '}] ${s.text}`);
+  return [quote.trim(), lines.join('\n')].filter(Boolean).join('\n\n');
+}
+
 type Asked = ScanResult['asks'][number] & { id: string };
 type Has = { get(...args: [string, string]): unknown };
 
@@ -149,7 +161,7 @@ function askChanges(db: Database, r: ScanResult, seen: ReturnType<typeof seenIte
     const people = `${a.from} · ${a.chat}`;
     if (answeredIds.has(id) || a.answered_by_other || has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people) || replied(a)) continue;
     seen.add(id, a.title, people);
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null, tags: askTags(db, a) } });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: buildAskText(a.quote, a.steps), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null, tags: askTags(db, a) } });
     newAsks.push({ ...a, id });
     if (a.urgent) urgent.push({ ...a, id });
   }

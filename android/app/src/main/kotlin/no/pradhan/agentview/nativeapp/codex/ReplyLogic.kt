@@ -17,6 +17,21 @@ fun drafted(r: Row) = !r.draft.isNullOrBlank()
 // An ask is a Slack or Gmail row waiting for review; it lives in the reply queue only, so Up next, Today, Tasks and Needs you leave it out.
 fun queued(r: Row) = (r.source == "slack" || r.source == "gmail") && r.status == "suggested" && !r.deleted && !isSaid(r)
 
+data class Check(val done: Boolean, val label: String)
+data class AskParts(val quote: String, val steps: List<Check>)
+
+private val CHECK_RE = Regex("^\\s*[-*] \\[([ xX])\\](.*)$", RegexOption.MULTILINE)
+// web/src/codex/tasks/editor/taskChecklist.ts: the checklist lines of a text.
+fun checkItems(text: String?): List<Check> = CHECK_RE.findAll(text ?: "").map { Check(it.groupValues[1].lowercase() == "x", it.groupValues[2].trim()) }.toList()
+
+// An ask's text split into its quote (the lines before the first checklist line) and its steps.
+fun askParts(text: String?): AskParts {
+    val t = (text ?: "").trim()
+    val lines = t.lines()
+    val first = lines.indexOfFirst { CHECK_RE.containsMatchIn(it) }
+    return AskParts(if (first < 0) t else lines.take(first).joinToString("\n").trim(), checkItems(t))
+}
+
 // What an ask row shows: the status line, the primary button and the More menu entries ("Snooze" stands for the snooze options).
 fun askStatus(r: Row) = if (needsMine(r)) "Needs you" else if (drafted(r)) "Reply ready" else "No draft"
 private fun sendable(r: Row) = r.source == "slack" && drafted(r)

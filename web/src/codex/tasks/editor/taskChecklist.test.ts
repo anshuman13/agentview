@@ -1,5 +1,6 @@
 import { expect, it } from 'bun:test';
-import { addCheck, checkItems, moveCheck, noteView, toggleCheck } from './taskChecklist';
+import { readFileSync } from 'node:fs';
+import { addCheck, askParts, checkItems, moveCheck, noteView, toggleCheck } from './taskChecklist';
 
 it('flips only the nth checklist line', () => {
   const text = 'Plan\n- [ ] a\n* [x] b\n  - [ ] c [x]';
@@ -29,4 +30,9 @@ it('adds a subtask after the last checklist line', () => {
 it('leaves the checklist and repeat lines out of the read view', () => {
   expect(noteView('Repeats: every monday 09:00\n# Plan\n- [ ] a\ntext\n* [x] b\n\nend')).toBe('# Plan\ntext\n\nend');
   expect(noteView('Repeats: every day 09:00\n- [ ] a\n- [x] b')).toBe('');
+});
+
+it('splits an ask into its quote and steps', () => {
+  const cases: { name: string; text: string; quote: string; steps: { done: boolean; label: string }[] }[] = JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/ask-parts.json', import.meta.url), 'utf8'));
+  for (const c of cases) expect(askParts(c.text), c.name).toEqual({ quote: c.quote, steps: c.steps });
 });

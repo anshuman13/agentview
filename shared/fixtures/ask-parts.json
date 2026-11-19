@@ -1,0 +1,6 @@
+[
+  {"name": "no steps", "text": "What is plan X?", "quote": "What is plan X?", "steps": []},
+  {"name": "quote plus 2 steps", "text": "Can I get a seat?\n\n- [x] Found the FAQ link\n- [ ] Grant the seat", "quote": "Can I get a seat?", "steps": [{"done": true, "label": "Found the FAQ link"}, {"done": false, "label": "Grant the seat"}]},
+  {"name": "empty quote", "text": "- [ ] a\n- [x] b", "quote": "", "steps": [{"done": false, "label": "a"}, {"done": true, "label": "b"}]},
+  {"name": "steps plus a detail note", "text": "Q\n\n- [x] A\n- [ ] B\n\nKim on Slack: more https://x", "quote": "Q", "steps": [{"done": true, "label": "A"}, {"done": false, "label": "B"}]}
+]

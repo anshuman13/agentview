@@ -127,6 +127,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     'Add an ask when a message clearly asks me to do, answer or decide something, puts a direct question to me, makes a request to me in a thread I am in, or asks me to review or approve something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     'The one bot exception is a bot DM about Claude spend or usage: add an ask only when it needs action from me, such as pending seat or limit requests, blocked people, or spend near a limit. Put the numbers in the title, leave draft out, set tier hold and kind access or limit.',
     DRAFT_STEP,
+    'A hold or escalate ask gets at least one step that is not done; an answer ask gets no steps.',
     ...voiceLines(db),
     ...correctionLines(db),
     ...extra,

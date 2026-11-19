@@ -3,7 +3,7 @@ import { openDb, setMeta } from '../core/db.js';
 import { askPush, pushHours, scanDue, scanPrompt, sinceOf } from './slack.js';
 import { DAY } from '../core/time.js';
 import { failedReplies } from './autopilot.js';
-import { acceptAsk, askId, askTags, saveScan, skipAsk, suggestOpenAsks } from './slackSave.js';
+import { acceptAsk, Ask, askId, askTags, buildAskText, saveScan, skipAsk, suggestOpenAsks } from './slackSave.js';
 import { applyChanges } from '../core/sync.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
@@ -252,5 +252,38 @@ describe('askPush', () => {
     skipAsk(db, 'a1', '', 5);
     expect(db.prepare('SELECT status FROM replies WHERE id = ?').get('a1')).toEqual({ status: 'skipped' });
     expect(failedReplies(db, 'assist')).toEqual([]);
+  });
+});
+
+describe('ask steps', () => {
+  const text = (db: ReturnType<typeof openDb>, url: string) => (db.prepare('SELECT text FROM items WHERE id = ?').get(askId(url)) as { text: string }).text;
+  const step = (t: string, done = false) => ({ text: t, done });
+
+  test('writes the quote and the steps once', () => {
+    const db = openDb(':memory:');
+    const a = { ...ask('u1'), quote: ' Can I get a seat? ', steps: [step('Found the FAQ link', true), step('Grant the seat')] };
+    saveScan(db, { chats: [], asks: [a], answered: [] }, at(27, 10));
+    expect(text(db, 'u1')).toBe('Can I get a seat?\n\n- [x] Found the FAQ link\n- [ ] Grant the seat');
+    saveScan(db, { chats: [], asks: [{ ...a, steps: [step('Other')] }], answered: [] }, at(27, 11));
+    expect(text(db, 'u1')).toBe('Can I get a seat?\n\n- [x] Found the FAQ link\n- [ ] Grant the seat');
+  });
+
+  test('drops empty steps and keeps the first 4', () => {
+    expect(buildAskText('Q', [step(''), step('a\nb'), step('c'), step('d'), step('e'), step('f')])).toBe('Q\n\n- [ ] a b\n- [ ] c\n- [ ] d\n- [ ] e');
+    expect(buildAskText(' Q ')).toBe('Q');
+    expect(buildAskText(' Q ', [step('  ')])).toBe('Q');
+    expect(buildAskText('', [step('a')])).toBe('- [ ] a');
+  });
+
+  test('rejects a malformed step and the prompt asks for steps', () => {
+    const base = { ...ask('u1') };
+    expect(Ask.safeParse({ ...base, steps: [{ text: 'a' }] }).success).toBe(false);
+    expect(Ask.safeParse({ ...base, steps: [{ text: 1, done: false }] }).success).toBe(false);
+    const desc = Ask.shape.steps.description ?? '';
+    expect(desc).toContain('at most 4 steps');
+    expect(desc).toContain('read-only');
+    expect(desc).toContain('Sending the draft is not a step');
+    const db = openDb(':memory:');
+    expect(scanPrompt(db, { me: 'U1', domain: 'x.slack.com', channels: [] }, at(27, 9), at(27, 10))).toContain('A hold or escalate ask gets at least one step that is not done; an answer ask gets no steps.');
   });
 });
