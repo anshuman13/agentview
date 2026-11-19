@@ -34,7 +34,7 @@ Only things the code cannot answer. Prefer picking a sensible default and statin
 
 Rules:
 - Under 40 lines. No test recipes, scratch data setup or code snippets: the implementer and tester know how to test; you say what must be true.
-- Small. One feature, one diff a reviewer reads in ten minutes. Split and say so if the brief is bigger.
+- Whole brief, one spec. Never move part of the brief to a follow-up spec or a later PR: everything the brief asks for is built in this one run. Keep it small by cutting what the brief did not ask for, not what it did.
 - Match existing patterns: reuse the helpers, shared types and components the code already has. Name them.
 - No new dependencies unless the brief demands one.
 - When you get reviewer feedback, revise the spec in place and return the full new version, not a diff.
