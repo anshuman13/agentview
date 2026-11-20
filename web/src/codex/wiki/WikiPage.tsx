@@ -4,8 +4,7 @@ import { ask, wikiAskText } from '../data/ask/ask';
 import { olderClaims, pageClaims, staleClaims, proposals } from '../data/wiki/wiki';
 import { mentionsOf, type Mentions } from '../data/meetings/mentions';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
-import { Icon } from '../../ui/Icon';
-import { Button } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { Sheet } from '../../ui/Sheet';
 import { EmptyState } from '../../ui/Panel';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
@@ -64,7 +63,7 @@ export function WikiPage({ id }: { id: string }) {
   return (
     <div className="wk">
       <header className="wk-head">
-        <button className="icon-btn" title="Back to the wiki" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
+        <IconButton icon="arrow-left" label="Back" title="Back to the wiki" onClick={back} />
         {page && (
           <WikiPageHead page={page} isMemory={!pid} groups={groups} pending={pending} renaming={renaming} setRenaming={setRenaming} cancelled={edits.cancelled} onRename={rename} onPropose={() => setProposing((v) => v ?? '')}
             menu={menu} setMenu={setMenu} moreBtn={moreBtn} onAsk={() => setAsking(true)} onArchive={edits.archive} />

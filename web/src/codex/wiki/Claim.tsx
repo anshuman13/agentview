@@ -50,8 +50,8 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
               <textarea autoFocus rows={2} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') setEditing(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} />
               <span className="wk-contest-btns">
-                <button className="btn" onClick={() => setEditing(false)}>Cancel</button>
-                <button className="btn primary" onClick={save}>Save</button>
+                <Button onClick={() => setEditing(false)}>Cancel</Button>
+                <Button variant="primary" onClick={save}>Save</Button>
               </span>
             </span>
           ) : fact.text}
@@ -69,8 +69,8 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
           <textarea autoFocus rows={2} value={note} aria-label="Why this claim is wrong" placeholder="What is wrong or out of date? Link a source if you have one." onChange={(e) => setNote(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Escape') setContesting(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) contest(); }} />
           <div className="wk-contest-btns">
-            <button className="btn" onClick={() => setContesting(false)}>Cancel</button>
-            <button className="btn primary" onClick={contest}>Contest</button>
+            <Button onClick={() => setContesting(false)}>Cancel</Button>
+            <Button variant="primary" onClick={contest}>Contest</Button>
           </div>
         </div>
       )}

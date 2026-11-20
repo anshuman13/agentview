@@ -20,8 +20,8 @@ export function ProposeForm({ value, setValue, save }: { value: string; setValue
       <textarea autoFocus rows={2} value={value} aria-label="Claim" onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') { e.stopPropagation(); setValue(null); } if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} />
       <div className="wk-contest-btns">
-        <button className="btn" onClick={() => setValue(null)}>Cancel</button>
-        <button className="btn primary" onClick={save}>Save</button>
+        <Button onClick={() => setValue(null)}>Cancel</Button>
+        <Button variant="primary" onClick={save}>Save</Button>
       </div>
     </div>
   );
@@ -35,8 +35,8 @@ export function PendingBanner({ pending, page, decided, setDecided, review, setC
     <div className="wk-pending">
       <span>{page.state === 'proposed' ? 'New page with ' : ''}{pending.length} proposed {pending.length === 1 ? 'claim' : 'claims'}</span>
       <span className="spacer" />
-      <button className="btn" onClick={() => setConfirm({ title: `Reject ${plural(pending.length, 'claim')}?`, detail: page.title ?? '', action: 'Reject all', run: async () => { review.reject(pending); setDecided(`Rejected ${plural(pending.length, 'claim')}`); } })}>Reject all</button>
-      <button className="btn primary" onClick={() => { review.approve(pending); setDecided(`Approved ${plural(pending.length, 'claim')}`); }}><Icon name="check" small /> Approve all</button>
+      <Button onClick={() => setConfirm({ title: `Reject ${plural(pending.length, 'claim')}?`, detail: page.title ?? '', action: 'Reject all', run: async () => { review.reject(pending); setDecided(`Rejected ${plural(pending.length, 'claim')}`); } })}>Reject all</Button>
+      <Button variant="primary" icon="check" onClick={() => { review.approve(pending); setDecided(`Approved ${plural(pending.length, 'claim')}`); }}>Approve all</Button>
     </div>
   );
 }

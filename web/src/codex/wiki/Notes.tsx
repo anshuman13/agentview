@@ -4,6 +4,7 @@ import type { ItemRow } from '../data/sync';
 import { errorText, splitTitle } from '../data/tasks/engine';
 import { queryWords, rowMatcher } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
+import { Button, IconButton } from '../../ui/Button';
 import { ago } from '../../ui/util';
 import { ShowMore, useWindow } from '../../ui/useWindow';
 import { showSnack, useFocusBack, useView } from '../view';
@@ -40,9 +41,9 @@ function NoteCard({ row }: { row: ItemRow }) {
         <textarea autoFocus value={text} aria-label="Note" onChange={(e) => { setText(e.target.value); setLine(caretLine(e.target)); }} onBlur={save} onKeyDown={(e) => e.key === 'Escape' && setText(null)} />
         <RelatedStrip text={line} profile={row.profile} skip={row.id} />
         <span className="wk-card-foot">
-          <button className="btn sm" onMouseDown={(e) => e.preventDefault()} onClick={toTask}>Make task</button>
+          <Button size="sm" onMouseDown={(e) => e.preventDefault()} onClick={toTask}>Make task</Button>
           <span className="spacer" />
-          <button className="icon-btn" title="Delete" aria-label="Delete" onMouseDown={(e) => e.preventDefault()} onClick={remove}><Icon name="trash" small /></button>
+          <IconButton icon="trash" small label="Delete" onMouseDown={(e) => e.preventDefault()} onClick={remove} />
         </span>
       </div>
     );

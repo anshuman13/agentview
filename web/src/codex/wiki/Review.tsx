@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { approveAllChanges, chatOf, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki/wiki';
-import { Button } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
@@ -63,15 +63,15 @@ function ReviewCard({ fact }: { fact: Fact }) {
         {editing ? (
           <>
             <span className="spacer" />
-            <button className="btn" onClick={() => { setEditing(false); setText(fact.text ?? ''); }}>Cancel</button>
-            <button className="btn primary" onClick={save}>Save</button>
+            <Button onClick={() => { setEditing(false); setText(fact.text ?? ''); }}>Cancel</Button>
+            <Button variant="primary" onClick={save}>Save</Button>
           </>
         ) : (
           <>
             <button className="wk-act" onClick={() => { setText(fact.text ?? ''); setEditing(true); }}><Icon name="edit" small /> Edit</button>
             <span className="spacer" />
-            <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={reject}><Icon name="close" /></button>
-            <button className="btn primary mt-approve" onClick={approve}><Icon name="check" small /> Approve</button>
+            <IconButton icon="close" label="Reject" className="mt-reject" onClick={reject} />
+            <Button variant="primary" icon="check" className="mt-approve" onClick={approve}>Approve</Button>
           </>
         )}
       </div>
@@ -128,8 +128,8 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
       <div className="mt-action-foot">
         <button className="wk-act" onClick={() => setView({ open: page.id, anchor: null })}><Icon name="book" small /> {list.length > PEEK ? `Read all ${list.length}` : 'Read and edit'}</button>
         <span className="spacer" />
-        <button className="icon-btn mt-reject" title="Reject all" aria-label="Reject all" onClick={() => review.reject(list)}><Icon name="close" /></button>
-        <button className="btn primary mt-approve" onClick={() => review.approve(list)}><Icon name="check" small /> Approve all</button>
+        <IconButton icon="close" label="Reject all" className="mt-reject" onClick={() => review.reject(list)} />
+        <Button variant="primary" icon="check" className="mt-approve" onClick={() => review.approve(list)}>Approve all</Button>
       </div>
     </div>
   );
@@ -148,8 +148,8 @@ function ChatReview({ chat, list }: { chat: string; list: Fact[] }) {
       <div className="wk-claim-foot"><ClaudeChip chat={chat} /></div>
       <div className="mt-action-foot">
         <span className="spacer" />
-        <button className="icon-btn mt-reject" title="Reject all" aria-label="Reject all" onClick={() => review.reject(list)}><Icon name="close" /></button>
-        <button className="btn primary mt-approve" onClick={() => review.approve(list)}><Icon name="check" small /> Approve all</button>
+        <IconButton icon="close" label="Reject all" className="mt-reject" onClick={() => review.reject(list)} />
+        <Button variant="primary" icon="check" className="mt-approve" onClick={() => review.approve(list)}>Approve all</Button>
       </div>
     </div>
   );

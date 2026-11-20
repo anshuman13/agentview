@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCodex } from '../data';
 import { chatOf, proposals, sourcesOf, type Fact } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
-import { Button } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { setView, useEscapeBack } from '../view';
 import { Swipe } from '../gestures/Swipe';
@@ -41,7 +41,7 @@ export function ReviewMode() {
   return (
     <div className="wk wk-mode">
       <header className="wk-head">
-        <button className="icon-btn" title="Back to the wiki" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
+        <IconButton icon="arrow-left" label="Back" title="Back to the wiki" onClick={back} />
         <h1>Review claims</h1>
         <span className="spacer" />
         {fact && <span className="wk-mode-n" aria-live="polite">{n} of {total}</span>}

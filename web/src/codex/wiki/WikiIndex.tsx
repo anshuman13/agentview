@@ -3,9 +3,8 @@ import { useAssistantStore, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask/ask';
 import { live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
-import { IconButton } from '../../ui/Button';
+import { IconButton, Button } from '../../ui/Button';
 import { Row } from '../../ui/Row';
-import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { Section, sectionCount } from '../../ui/Section';
@@ -154,13 +153,13 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
   return (
     <div className="wk">
       <header className="wk-head">
-        <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
+        <IconButton icon="menu" label="Lists" className="as-menu" onClick={onMenu} />
         <h1>Wiki</h1>
         <span className="spacer" />
         <label className="wk-search">
           <Icon name="search" small />
           <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search the wiki" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
-          {query && <button className="icon-btn" aria-label="Clear" onClick={() => setQuery('')}><Icon name="close" small /></button>}
+          {query && <IconButton icon="close" small label="Clear" onClick={() => setQuery('')} />}
         </label>
         <IconButton ref={add} size="sm" icon="add" label="New page" disabled={adding} onClick={() => setAdding(true)} />
         <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
