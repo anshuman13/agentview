@@ -104,5 +104,5 @@
 .doc-editor { display: flex; flex-direction: column; gap: var(--sp-4); }
 .doc-editor textarea { width: 100%; min-height: 80px; padding: var(--sp-5) var(--sp-6); border: 1px solid var(--accent); border-radius: var(--radius); background: var(--surface); color: var(--fg); font: var(--fs-lg)/var(--lh-loose) var(--font-mono); resize: vertical; }
 .doc-editor-bar { display: flex; justify-content: flex-end; gap: var(--sp-4); }
-.doc-ask { position: absolute; z-index: 5; display: flex; gap: var(--sp-4); align-items: center; padding: var(--sp-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-md, 0 4px 16px rgb(0 0 0 / 0.2)); }
+.doc-ask { position: absolute; z-index: 5; display: flex; gap: var(--sp-4); align-items: center; padding: var(--sp-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-md); }
 .doc-ask input { width: 240px; max-width: 60vw; }
