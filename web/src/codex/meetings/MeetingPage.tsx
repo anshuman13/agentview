@@ -105,7 +105,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
           {event && notes}
 
           <section className="mt-sec">
-            <h2>My actions{count.total > 0 && <span className="mt-of">{count.done} of {count.total} done</span>}</h2>
+            <Section label="My actions" count={count.total > 0 ? `${count.done} of ${count.total} done` : undefined} />
             {mine.length > 0 && <div className="mt-tasks">{mine.map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>}
             {event && <AddAction m={m} />}
             {!event && !mine.length && !review.length && (
@@ -123,7 +123,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
               )}
 
               <section className="mt-sec">
-                <h2><Icon name="sparkle" small /> Summary{m.summary && <SummaryFormat m={m} series={prior} />}</h2>
+                <Section label="Summary" action={m.summary && <SummaryFormat m={m} series={prior} />} />
                 {m.summary ? <PinnableSummary m={m} /> : <p className="mt-pending">{state === 'missing' ? 'No summary without a transcript.' : 'Written from the transcript after the meeting.'}</p>}
                 {m.summary && pins.length > 0 && <PinList pins={pins} />}
               </section>
