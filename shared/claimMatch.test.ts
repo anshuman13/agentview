@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'bun:test';
-import { keyWords, overlap, repeatedInFolder, similarClaim } from './claimMatch';
+import { keyWords, overlap, repeatedInFolder, samePage, similarClaim } from './claimMatch';
+
+describe('samePage', () => {
+  const pages = [
+    { id: 'r', title: 'Billing', state: 'rejected' },
+    { id: 'p1', title: 'Importer', state: null },
+    { id: 'p2', title: 'Deploys', state: 'proposed' },
+  ];
+
+  it('matches case, punctuation, a leading the and a trailing plural s', () => {
+    expect(samePage('The importers', pages)?.id).toBe('p1');
+    expect(samePage('IMPORTER!', pages)?.id).toBe('p1');
+    expect(samePage('Deploy', pages)?.id).toBe('p2');
+  });
+
+  it('skips a rejected page and a different title', () => {
+    expect(samePage('Billing', pages)).toBeUndefined();
+    expect(samePage('Importer pipeline', pages)).toBeUndefined();
+    expect(samePage('  ', pages)).toBeUndefined();
+  });
+});
 
 describe('overlap', () => {
   it('is the share of the shorter text key words found in the other', () => {

@@ -119,6 +119,21 @@ describe('learn from chats', () => {
     expect(db.prepare("SELECT text FROM facts WHERE id LIKE 'learn:%' ORDER BY text").all()).toEqual([{ text: 'Deploy always on Fridays afternoon.' }, { text: 'Run tests before commits.' }]);
   });
 
+  it('files a decision under a near-title page and creates a page for a rejected title', async () => {
+    const db = openDb(':memory:');
+    applyChanges(db, [
+      { table: 'pages', id: 'p1', profile: 'work', updated_at: 1, fields: { title: 'Importer', section: 'Ops', state: null } },
+      { table: 'pages', id: 'p2', profile: 'work', updated_at: 1, fields: { title: 'Billing', section: 'Ops', state: 'rejected' } },
+    ]);
+    const decisions = [
+      { text: 'As of 20 Nov 2026, the importer runs nightly (OPS-2).', page: 'The importers' },
+      { text: 'As of 20 Nov 2026, billing closes monthly (OPS-3).', page: 'Billing', section: 'Finance' },
+    ];
+    await learnFromChat(db, chat([user('u1', 10, 'OPS-2 and OPS-3 settled')]), 100, async () => ({ claims: [], decisions }));
+    expect(db.prepare("SELECT title FROM pages WHERE id LIKE 'learn:page:%'").all()).toEqual([{ title: 'Billing' }]);
+    expect(db.prepare("SELECT page_id FROM facts WHERE id LIKE 'learn:%' AND text LIKE '%importer%'").all()).toEqual([{ page_id: 'p1' }]);
+  });
+
   it('tells the run about live and proposed claims, page or not', async () => {
     const db = openDb(':memory:');
     const row = (id: string, state: string, text: string, page_id: string | null = null) => ({ table: 'facts', id, profile: 'work' as const, updated_at: 1, fields: { text, state, page_id } });

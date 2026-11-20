@@ -61,6 +61,22 @@ test('wiki_propose names a similar live or proposed claim of the same profile an
   expect(pushed).toHaveLength(3);
 });
 
+test('wiki_propose files under a near-title live page and never onto a rejected one', async () => {
+  const page = (id: string, title: string, state: string) => ({ table: 'pages', id, profile: 'work', deleted: false, updated_at: 1, fields: { title, state } });
+  const pushed: { table: string; id: string; fields: Record<string, unknown> }[][] = [];
+  stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') pushed.push(JSON.parse(String(init.body)).changes ?? JSON.parse(String(init.body)));
+    return json(200, { version: 1, hasMore: false, changes: init?.method === 'POST' ? [] : [page('p1', 'Importer', 'live'), page('p2', 'Billing', 'rejected')] });
+  }));
+  const on = (title: string) => wikiProposeTool.handler({ text: 'As of 20 Nov 2026, the importer runs nightly', sources: [], page: title, section: 'Systems', profile: 'work' }, { cwd: '/tmp', chatId: 'c1', provider: 'claude', host: { setStatus: () => undefined, goal: () => false } });
+  expect(await on('The Importers')).toContain('Filed under existing page Importer.');
+  expect(pushed.at(-1)!.map((c) => c.table)).toEqual(['facts']);
+  expect(pushed.at(-1)![0]!.fields.page_id).toBe('p1');
+  expect(await on('Importer')).not.toContain('Filed under');
+  await on('Billing');
+  expect(pushed.at(-1)!.map((c) => c.table)).toEqual(['pages', 'facts']);
+});
+
 test('wiki_search tells the hub which claims it showed and keeps a recently used old claim current', async () => {
   const day = 86_400_000;
   const claims = [
