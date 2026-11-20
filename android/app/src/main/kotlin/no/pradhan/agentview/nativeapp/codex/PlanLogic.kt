@@ -1,9 +1,9 @@
 package no.pradhan.agentview.nativeapp.codex
 
 // shared/plan.ts packDay and planToday: slots for today's estimated tasks in the free work gaps.
-private const val SLOT_MS = 5 * 60_000L
+internal const val SLOT_MS = 5 * 60_000L
 
-private fun toSlot(t: Long) = (t + SLOT_MS - 1) / SLOT_MS * SLOT_MS
+internal fun toSlot(t: Long) = (t + SLOT_MS - 1) / SLOT_MS * SLOT_MS
 
 // True when a due time has a time of day; 09:00 sharp is how a date-only due is stored.
 fun hasTime(at: Long?) = at != null && !(hourOf(at) == MORNING && minuteOf(at) == 0)

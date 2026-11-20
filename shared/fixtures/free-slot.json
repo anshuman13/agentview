@@ -1,0 +1,10 @@
+[
+  {"name": "meeting running now", "now": [13, 30], "busy": [[[13, 0], [14, 0]]], "afterNext": [14, 0], "freeSlot": [14, 0]},
+  {"name": "back-to-back meetings", "now": [13, 30], "busy": [[[13, 0], [14, 0]], [[14, 0], [14, 32]]], "afterNext": [14, 35], "freeSlot": [14, 35]},
+  {"name": "running meeting before a later one", "now": [13, 30], "busy": [[[13, 0], [14, 0]], [[16, 0], [16, 30]]], "afterNext": [14, 0], "freeSlot": [14, 0]},
+  {"name": "no meeting left", "now": [13, 0], "busy": [[[9, 0], [10, 0]]], "afterNext": null, "freeSlot": [13, 5]},
+  {"name": "meeting ends at 17:00", "now": [13, 0], "busy": [[[16, 0], [17, 0]]], "afterNext": null, "freeSlot": [13, 5]},
+  {"name": "past 17:00", "now": [17, 30], "busy": [], "afterNext": null, "freeSlot": null},
+  {"name": "short gaps skipped", "now": [12, 0], "busy": [[[12, 10], [12, 30]], [[12, 40], [13, 30]]], "afterNext": [12, 30], "freeSlot": [13, 30]},
+  {"name": "booked until 17:00", "now": [9, 0], "busy": [[[8, 0], [17, 0]]], "afterNext": null, "freeSlot": null}
+]

@@ -678,6 +678,17 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun freeSlot() {
+        fun at(a: JsonElement) = a.jsonArray.map { it.jsonPrimitive.int }.let { (h, m) -> ZonedDateTime.of(2026, 10, 30, h, m, 0, 0, codexZone).toInstant().toEpochMilli() }
+        fun time(k: String, c: JsonObject) = c.nullable(k)?.let(::at)
+        for (c in cases("free-slot")) {
+            val busy = c.getValue("busy").jsonArray.map { it.jsonArray.let { s -> at(s[0]) to at(s[1]) } }
+            val now = at(c.getValue("now"))
+            assertEquals(c.str("name"), time("afterNext", c), afterNextMeeting(busy, now))
+            assertEquals(c.str("name"), time("freeSlot", c), nextFreeSlot(busy, now))
+        }
+    }
+
     @Test fun eventRule() {
         for (c in cases("event-rule")) {
             val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()

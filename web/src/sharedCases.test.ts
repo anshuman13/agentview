@@ -54,7 +54,7 @@ import { editedClaimText } from '../../shared/claimEdit';
 import { claimActions } from '../../shared/claimActions';
 import { isLate } from '../../shared/waiting';
 import { goalAtRisk } from './codex/data/tasks/goals';
-import { weekFreeMinutes, type Span } from './codex/data/tasks/plan';
+import { afterNextMeeting, nextFreeSlot, weekFreeMinutes, type Span } from './codex/data/tasks/plan';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -231,6 +231,16 @@ describe('cases shared with the Android app', () => {
       const free = weekFreeMinutes(c.busy.map(([a, b]) => [at(a), at(b)] as Span), at(c.now));
       expect(free).toBe(c.free);
       expect(goalAtRisk(items, goal, free)).toBe(c.risk);
+    });
+  }
+
+  type Clock = [number, number];
+  for (const c of cases<{ name: string; now: Clock; busy: Clock[][]; afterNext: Clock | null; freeSlot: Clock | null }>('free-slot')) {
+    const at = ([h, m]: Clock) => new Date(2026, 9, 30, h, m).getTime();
+    const busy = c.busy.map(([a, b]) => [at(a), at(b)] as Span);
+    it(`afterNextMeeting and nextFreeSlot: ${c.name}`, () => {
+      expect(afterNextMeeting(busy, at(c.now))).toBe(c.afterNext && at(c.afterNext));
+      expect(nextFreeSlot(busy, at(c.now))).toBe(c.freeSlot && at(c.freeSlot));
     });
   }
 
