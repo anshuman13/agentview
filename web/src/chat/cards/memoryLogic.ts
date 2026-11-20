@@ -3,7 +3,8 @@ import { similarClaim } from '../../../../shared/claimMatch';
 import type { Profile } from '../../codex/data/sync';
 import { restatedClaim, type Fact } from '../../codex/data/wiki/wiki';
 import { shortDate } from '../../codex/wiki/shared';
-import { isMemoryIndex, MEMORY_FILE } from '../transcript/workFold';
+import { MEMORY_FILE } from '../transcript/steps';
+import { isMemoryIndex } from '../transcript/workFold';
 
 export type MemoryFile = { path: string; name: string; description: string; text: string; editable?: boolean; at: number };
 

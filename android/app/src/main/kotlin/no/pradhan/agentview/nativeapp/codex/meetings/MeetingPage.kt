@@ -138,7 +138,7 @@ private fun rememberTranscript(hub: Hub, m: Row, done: Boolean): Pair<Result<Str
 }
 
 @Composable
-fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskActions, ops: CodexOps, onMeeting: (Row) -> Unit, onPerson: (String) -> Unit, onSeries: (String) -> Unit, onTask: (Row) -> Unit, focusNotes: Boolean) {
+fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskActions, ops: CodexOps, onMeeting: (Row) -> Unit, onPerson: (String) -> Unit, onSeries: (String) -> Unit, onTask: (Row) -> Unit, onFocusNotes: (() -> Unit)?) {
     val c = MeetingCtx(hub, st, m, now, actions, ops, onMeeting, onPerson, onSeries, onTask)
     val state = meetingState(m, now)
     val all = remember(st.items, m.key) { actionsOf(st.items, m) }
@@ -152,10 +152,9 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val scrollFromEnd = { k: Int -> scope.launch { list.animateScrollToItem(list.layoutInfo.totalItemsCount - 1 - k) }; Unit }
     val notesFocus = remember { FocusRequester() }
     val toNotes = { scope.launch { if (list.scrollToKey(NOTES_KEY)) notesFocus.requestFocus() }; Unit }
-    var notesPending by rememberSaveable(m.key) { mutableStateOf(focusNotes) }
     LaunchedEffect(m.key) {
-        if (notesPending) {
-            notesPending = false
+        if (onFocusNotes != null) {
+            onFocusNotes()
             snapshotFlow { list.layoutInfo.totalItemsCount }.first { it > 0 }
             toNotes()
         }

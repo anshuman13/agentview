@@ -11,8 +11,8 @@ import { keyText } from '../app/shell/keys';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { endedRun, finishedLine, runDetail } from '../../../shared/goalText';
 import { since } from '../sessions/folders';
-import { Confirm } from '../ui/Confirm';
-import { copyChatMarkdown, copyLastReply, copyResumeCommand, forkChat, rememberChat, remindChat, sideChat } from './chatActions';
+import { firstLine } from '../ui/util';
+import { copyChatMarkdown, copyLastReply, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
 import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
@@ -51,7 +51,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     ]],
     ['Goal', [
       action('goal', 'Goal', run ? runLine(run) : ended ? (finishedLine(ended, since) ?? 'Ended') : 'Off'),
-      ...(ended ? [ended.kind === 'goal' ? action('again', 'Run again…', ended.what.split('\n')[0]) : action('again', 'New goal…', 'Start a goal in this chat')] : []),
+      ...(ended ? [ended.kind === 'goal' ? action('again', 'Run again…', firstLine(ended.what)) : action('again', 'New goal…', 'Start a goal in this chat')] : []),
       picker('build', 'Build', buildFlow ? 'Spec flow' : 'Off'),
     ]],
     ['Chat', [
@@ -155,10 +155,6 @@ export function RemindPick({ pick, close, back }: SubProps) {
       onClose={close}
     />
   );
-}
-
-export function RememberPick({ close }: { close: () => void }) {
-  return <Confirm title="Remember" detail="Saved to Memory for every later chat." action="Save" icon="lightbulb" input={{ value: '', placeholder: 'What to remember', maxLength: 400 }} run={async (text) => rememberChat(text)} onClose={close} />;
 }
 
 export function HooksPick({ pick, close, back }: SubProps) {

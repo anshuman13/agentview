@@ -1,9 +1,9 @@
 import { useStore } from '../app/store';
-import { MemoryPick } from './cards/Memory';
+import { MemoryPick, RememberPick } from './cards/Memory';
 import { TodosPick } from './cards/Todos';
 import { EFFORT_LABEL } from '../../../shared/protocol';
 import { menuModes, providerModes } from '../../../shared/providers';
-import { CopyPick, ForkPick, HooksPick, RememberPick, RemindPick, SettingsMenu, ToolsPick } from './SettingsMenu';
+import { CopyPick, ForkPick, HooksPick, RemindPick, SettingsMenu, ToolsPick } from './SettingsMenu';
 import { AccountPick, BuildPick, EffortPick, ModePick, ModelPick } from './SettingsPickers';
 
 const MODE_ICON: Record<string, string> = { default: 'shield', acceptEdits: 'edit', plan: 'eye', readOnly: 'eye', auto: 'zap', dontAsk: 'circle-slash' };

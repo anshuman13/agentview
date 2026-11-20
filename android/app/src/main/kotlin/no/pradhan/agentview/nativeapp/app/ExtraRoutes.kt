@@ -65,7 +65,7 @@ fun ExtraContent(
         route == "meetings" -> MeetingsListPage(hub, st, profile, now, chips, decisions, onChip, { push("meeting:${it.key}#notes") }, openMeeting)
         route.startsWith("meeting:") -> {
             val m = st.meetings.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
-            if (m == null) EmptyState("This meeting is gone", icon = "calendar") else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask, anchor == "notes")
+            if (m == null) EmptyState("This meeting is gone", icon = "calendar") else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask, if (anchor == "notes") ({ pop(); push(wikiRoute) }) else null)
         }
         route.startsWith("series:") -> SeriesPage(st, key, now, actions, hub.readOnly, openMeeting)
         route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }

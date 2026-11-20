@@ -3,7 +3,7 @@ import { costRise } from '../../../../shared/cost';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { isSketchPath } from '../../../../shared/sketches';
 import { money, plural } from '../../ui/util';
-import { denied, duration, firstLine, specCards, type Item } from './steps';
+import { denied, duration, firstLine, MEMORY_FILE, specCards, type Item } from './steps';
 
 export type Work = { tools: number; files: number; agents: number; failed: number; ms: number; cost: number; note?: string };
 
@@ -52,8 +52,6 @@ export function proposedOf(items: Item[]): Proposal[] {
   return [...out.values()];
 }
 
-// A file Claude keeps memory in for a folder: <account>/projects/<slug>/memory/<name>.md. Android WorkFold.kt MEMORY_FILE says the same.
-export const MEMORY_FILE = /\/projects\/[^/]+\/memory\/[^/]+\.md$/;
 export const isMemoryIndex = (path: string) => path.endsWith('/MEMORY.md');
 
 // The memory files a turn wrote: its successful Write, Edit or MultiEdit steps on one, each path once, MEMORY.md only when it is the only one. Android WorkFold.kt rememberedOf says the same.

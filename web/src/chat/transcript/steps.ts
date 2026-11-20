@@ -4,10 +4,12 @@ import { exploreLabelOf, exploreRunsOf } from '../../../../shared/explore';
 import { buildStageOf } from '../../../../shared/builds';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { firstLine } from '../../ui/util';
-import { MEMORY_FILE } from './workFold';
 
 export type ToolUse = Extract<ChatEvent, { kind: 'tool_use' }>;
 export type ToolResult = Extract<ChatEvent, { kind: 'tool_result' }>;
+
+// A file Claude keeps memory in for a folder: <account>/projects/<slug>/memory/<name>.md. Android WorkFold.kt MEMORY_FILE says the same.
+export const MEMORY_FILE = /\/projects\/[^/]+\/memory\/[^/]+\.md$/;
 
 export type Item =
   | { kind: 'user'; id: string; text: string; at: number; stopping?: boolean; queued?: boolean }

@@ -24,8 +24,7 @@ import { loadErrorText } from '../../../../shared/loadError';
 import { givenPreferences } from '../../../../shared/preferences';
 import { Markdown } from '../Chat';
 import { fetchMemory, saveMemory } from '../chatApi';
-import { moveMemoryToWiki } from '../chatActions';
-import { RememberPick } from '../SettingsMenu';
+import { moveMemoryToWiki, rememberChat } from '../chatActions';
 import { isMemoryIndex } from '../transcript/workFold';
 import { markLine, memoryMark, type MemoryFile, type MemoryMark } from './memoryLogic';
 
@@ -40,6 +39,10 @@ export function memoryWhere(f: Pick<MemoryFile, 'path'>, cwd: string) {
 
 // Rules go to the first instruction file, the repo's, as a path in the folder; android MemoryUi.kt ruleFile says the same.
 export const ruleFile = (cwd: string, files?: string[]) => (files?.[0]?.startsWith(`${cwd}/`) ? files[0].slice(cwd.length + 1) : 'CLAUDE.md');
+
+export function RememberPick({ close }: { close: () => void }) {
+  return <Confirm title="Remember" detail="Saved to Memory for every later chat." action="Save" icon="lightbulb" input={{ value: '', placeholder: 'What to remember', maxLength: 400 }} run={async (text) => rememberChat(text)} onClose={close} />;
+}
 
 export async function readRepoFile(file: string, chat?: string): Promise<string> {
   const r = await fileRequest(file, undefined, chat);
