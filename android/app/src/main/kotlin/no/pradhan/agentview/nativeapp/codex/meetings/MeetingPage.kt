@@ -74,8 +74,8 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint
 
-private fun LazyListScope.actionGroup(rows: List<Row>, m: Row, now: Long, actions: TaskActions, onTask: (Row) -> Unit) {
-    item { Group { rows.forEachIndexed { i, r -> if (i > 0) Hairline(); ActionLine(r, m, now, actions, onTask = onTask) } } }
+private fun LazyListScope.actionGroup(rows: List<Row>, c: MeetingCtx) {
+    item { Group { rows.forEachIndexed { i, r -> if (i > 0) Hairline(); ActionLine(r, c.m, c.now, c.actions, c.hub.readOnly, onTask = c.onTask) } } }
 }
 
 
@@ -211,11 +211,11 @@ private fun LazyListScope.meetingActions(c: MeetingCtx, all: List<Row>, alwaysHe
     val count = actionCount(c.st.items, c.m)
     if (alwaysHeader || mine.isNotEmpty()) {
         item { SectionHeader("My actions", if (count.total > 0) "${count.done} of ${count.total} done" else null) }
-        actionGroup(mine, c.m, c.now, actions, c.onTask)
+        actionGroup(mine, c)
     }
     if (review.isNotEmpty()) {
         item { SectionHeader("To review", review.size.toString(), action = { if (review.size > 1) Button("Confirm all", { review.forEach { actions.edit(it, mapOf("status" to "open")) }; actions.undoable("${review.size} added to Today") { review.forEach { r -> actions.edit(r, mapOf("status" to "suggested")) } } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
-        actionGroup(review, c.m, c.now, actions, c.onTask)
+        actionGroup(review, c)
     }
 }
 
@@ -319,7 +319,7 @@ private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Ro
     meetingContext(c, all, folds, talk)
     val unassigned = all.filter { it.status == "unassigned" }
     item { Fold("Unassigned", unassigned.size, folds.unassigned.value) { folds.unassigned.value = !folds.unassigned.value } }
-    if (folds.unassigned.value) actionGroup(unassigned, m, c.now, c.actions, c.onTask)
+    if (folds.unassigned.value) actionGroup(unassigned, c)
     val others = othersOf(m)
     if (others.isNotEmpty()) {
         item { SectionHeader("Others took", others.size.toString()) }
@@ -327,7 +327,7 @@ private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Ro
     }
     val dismissed = all.filter { it.status == "dismissed" }
     item { Fold("Not mine", dismissed.size, folds.notMine.value) { folds.notMine.value = !folds.notMine.value } }
-    if (folds.notMine.value) actionGroup(dismissed, m, c.now, c.actions, c.onTask)
+    if (folds.notMine.value) actionGroup(dismissed, c)
     if (state == MState.Done) meetingTranscript(folds, transcript)
 }
 

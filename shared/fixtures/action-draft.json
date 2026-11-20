@@ -1,0 +1,6 @@
+[
+  {"name": "owner and due", "meeting": {"title": "Planning", "starts_at": 1793268000000}, "action": {"title": "send notes", "people": " Grace Hopper ", "at": 1793404800000}, "expected": "send notes\nOwner: Grace Hopper\nFrom: Planning (2026-10-29)\nDue: 2026-10-31"},
+  {"name": "no owner", "meeting": {"title": "Planning", "starts_at": 1793268000000}, "action": {"title": "send notes", "people": null, "at": 1793404800000}, "expected": "send notes\nFrom: Planning (2026-10-29)\nDue: 2026-10-31"},
+  {"name": "no due", "meeting": {"title": "Planning", "starts_at": 1793268000000}, "action": {"title": "send notes", "people": "Ada", "at": null}, "expected": "send notes\nOwner: Ada\nFrom: Planning (2026-10-29)"},
+  {"name": "untitled meeting", "meeting": {"title": null, "starts_at": null}, "action": {"title": "send notes", "people": "  ", "at": null}, "expected": "send notes\nFrom: Meeting"}
+]

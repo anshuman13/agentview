@@ -138,10 +138,13 @@ import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.heldUntil
 import no.pradhan.agentview.nativeapp.codex.jobs.jobEdits
+import no.pradhan.agentview.nativeapp.codex.jobs.parseSchedule
+import no.pradhan.agentview.nativeapp.codex.jobs.scheduleOf
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.codex.jobs.tasksOf
 import no.pradhan.agentview.nativeapp.codex.meetings.actionCount
 import no.pradhan.agentview.nativeapp.codex.meetings.agendaMarkdown
+import no.pradhan.agentview.nativeapp.codex.meetings.draftFor
 import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.codex.meetings.filterMeetings
 import no.pradhan.agentview.nativeapp.codex.meetings.followUpText
@@ -590,6 +593,15 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun jobSchedule() {
+        for (c in cases("job-schedule")) {
+            val p = parseSchedule(c.prim("schedule")?.content)
+            val name = c.str("name")
+            assertEquals(name, listOf(c.str("kind"), c.str("day"), c.str("time")), listOf(p.kind, p.day, p.time))
+            c.prim("written")?.let { assertEquals(name, it.content, scheduleOf(p.kind, p.day, p.time)) }
+        }
+    }
+
     @Test fun specHome() {
         for (c in cases("spec-home")) {
             val items = c.getValue("items").jsonArray.map {
@@ -806,6 +818,14 @@ class SharedCasesTest {
             assertEquals(name, c.getValue("hasContent").jsonPrimitive.boolean, hasContent(m, actions))
             assertEquals(name, c.str("followUp"), followUpText(m, actions))
             assertEquals(name, c.str("markdown"), meetingMarkdown(m, actions))
+        }
+    }
+
+    @Test fun actionDraft() {
+        for (c in cases("action-draft")) {
+            val m = Row("meetings", "m", "work", f = c.getValue("meeting").jsonObject)
+            val a = Row("items", "a", "work", f = c.getValue("action").jsonObject)
+            assertEquals(c.str("name"), c.str("expected"), draftFor(m = m, a = a))
         }
     }
 

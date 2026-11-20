@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,7 @@ import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.TaskActions
 import no.pradhan.agentview.nativeapp.codex.Today
 
+import no.pradhan.agentview.nativeapp.codex.firstName
 import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 
@@ -153,8 +155,14 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
 }
 
 @Composable
-fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = null, onTask: ((Row) -> Unit)? = null) {
+fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolean, from: String? = null, onTask: ((Row) -> Unit)? = null) {
     val status = r.status ?: ""
+    val clip = LocalClipboardManager.current
+    val menu = remember(r.key) { mutableStateOf(false) }
+    var assigning by remember(r.key) { mutableStateOf(false) }
+    LaunchedEffect(menu.value) { if (!menu.value) assigning = false }
+    val cur = r.str("assignee")?.ifEmpty { null }
+    val assign = { who: String? -> if (who != cur) actions.change(r, mapOf("assignee" to who), "Assigned to ${who?.let { firstName(displayName(it)) } ?: "me"}") }
     val at = r.at
     val late = status == "open" && at != null && at < now
     val rest = listOfNotNull(
@@ -176,10 +184,20 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = 
     }
     ListRow(r.title ?: UNTITLED, meta, strike = status == "done", onClick = onTask?.let { { it(r) } }, trailing = {
         if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        if (status == "open" || status == "suggested" || status == "done") MoreButton { close ->
-            if (status != "done") MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r) })
-            if (status == "open") MenuItem("Snooze", "clock", { close(); actions.snoozeLater(r) })
-            MenuItem("Delete", "trash", { close(); actions.delete(r) }, danger = true)
+        if (status == "open" || status == "suggested" || status == "done") MoreButton(expanded = menu) { close ->
+            if (assigning) {
+                MenuItem("Me", "person", { close(); assign(null) }, checked = cur == null)
+                val people = peopleOf(m)
+                (if (cur != null && cur !in people) listOf(cur) + people else people).forEach { n ->
+                    MenuItem(displayName(n), "person", { close(); assign(n) }, checked = n == cur)
+                }
+            } else {
+                if (status != "done") MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r) })
+                if (status == "open") MenuItem("Assign", "person", { assigning = true }, enabled = !readOnly)
+                if (status == "open") MenuItem("Snooze", "clock", { close(); actions.snoozeLater(r) })
+                MenuItem("Copy as message", "copy", { close(); clip.setText(AnnotatedString(draftFor(r, m))); actions.say("Message copied") })
+                MenuItem("Delete", "trash", { close(); actions.delete(r) }, danger = true)
+            }
         }
     })
 }

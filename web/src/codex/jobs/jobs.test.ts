@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import type { Job, Run } from '../data/wiki/wiki';
 import { describe as group, expect, test } from 'bun:test';
 import { clock } from '../tasks/time';
@@ -8,6 +9,14 @@ group('job schedules', () => {
     expect(parseSchedule(scheduleOf('weekly', 'fri', '16:00'))).toEqual({ kind: 'weekly', day: 'fri', time: '16:00' });
     expect(scheduleOf('hourly', 'mon', '08:00')).toBe('hourly');
   });
+  const shared: { name: string; schedule: string | null; kind: string; day: string; time: string; written: string | null }[] = JSON.parse(readFileSync(new URL('../../../../shared/fixtures/job-schedule.json', import.meta.url), 'utf8'));
+  for (const c of shared) {
+    test(`shared with the phone: ${c.name}`, () => {
+      const p = parseSchedule(c.schedule);
+      expect(p).toEqual({ kind: c.kind, day: c.day, time: c.time });
+      if (c.written) expect(scheduleOf(p.kind, p.day, p.time)).toBe(c.written);
+    });
+  }
   test('describe in words', () => {
     expect(describe('weekdays 07:30')).toBe('Weekdays at 07:30');
     expect(describe('weekly fri 16:00')).toBe('Fridays at 16:00');

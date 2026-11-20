@@ -61,7 +61,7 @@ import no.pradhan.agentview.nativeapp.ui.plural
 
 // A recurring series: open actions across the occurrences, then the occurrences newest first.
 @Composable
-fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onMeeting: (Row) -> Unit) {
+fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, readOnly: Boolean, onMeeting: (Row) -> Unit) {
     val (profile, title) = remember(key) { parseSeriesKey(key) }
     val minute = now / 60_000
     val members = remember(st.meetings, key, minute) { seriesMeetings(st.meetings, profile, title, now) }
@@ -90,7 +90,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
         if (open.isEmpty()) item { EmptyState("Nothing open", icon = "check") }
         else item {
             Group {
-                (if (allOpen) open else open.take(5)).forEachIndexed { i, (m, r) -> if (i > 0) Hairline(); ActionLine(r, m, now, actions, from = weekdayDate(m.startsAt!!)) }
+                (if (allOpen) open else open.take(5)).forEachIndexed { i, (m, r) -> if (i > 0) Hairline(); ActionLine(r, m, now, actions, readOnly, from = weekdayDate(m.startsAt!!)) }
             }
             if (!allOpen && open.size > 5) Button("Show all ${open.size}", { allOpen = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         }

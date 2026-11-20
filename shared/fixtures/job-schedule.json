@@ -1,0 +1,13 @@
+[
+  {"name": "hourly", "schedule": "hourly", "kind": "hourly", "day": "mon", "time": "08:00", "written": "hourly"},
+  {"name": "daily", "schedule": "daily 07:30", "kind": "daily", "day": "mon", "time": "07:30", "written": "daily 07:30"},
+  {"name": "weekdays", "schedule": "weekdays 16:00", "kind": "weekdays", "day": "mon", "time": "16:00", "written": "weekdays 16:00"},
+  {"name": "weekly on Friday", "schedule": "weekly fri 16:00", "kind": "weekly", "day": "fri", "time": "16:00", "written": "weekly fri 16:00"},
+  {"name": "time without a leading zero", "schedule": "daily 9:05", "kind": "daily", "day": "mon", "time": "09:05", "written": "daily 09:05"},
+  {"name": "untrimmed and upper case", "schedule": " Weekly SAT 6:00 ", "kind": "weekly", "day": "sat", "time": "06:00", "written": "weekly sat 06:00"},
+  {"name": "weekly without a day or time", "schedule": "weekly", "kind": "weekly", "day": "mon", "time": "08:00", "written": "weekly mon 08:00"},
+  {"name": "cron line", "schedule": "*/15 0-8 * * 1-5", "kind": "custom", "day": "mon", "time": "08:00", "written": null},
+  {"name": "one-off", "schedule": "once 2026-11-02 09:00", "kind": "custom", "day": "mon", "time": "08:00", "written": null},
+  {"name": "empty", "schedule": "", "kind": "weekdays", "day": "mon", "time": "08:00", "written": "weekdays 08:00"},
+  {"name": "none", "schedule": null, "kind": "weekdays", "day": "mon", "time": "08:00", "written": "weekdays 08:00"}
+]

@@ -16,6 +16,21 @@ val DAY_NAMES = listOf("Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursday
 val DAYS = listOf("sun", "mon", "tue", "wed", "thu", "fri", "sat")
 private val SCHEDULE = Regex("^(hourly|daily|weekdays|weekly)(?: (sun|mon|tue|wed|thu|fri|sat))?(?: (\\d{1,2}:\\d{2}))?$")
 
+class Schedule(val kind: String, val day: String, val time: String)
+
+// parseSchedule and scheduleOf of web/src/codex/jobs/schedule.tsx; shared/fixtures/job-schedule.json holds the cases. A cron line or a one-off is "custom".
+fun parseSchedule(s: String?): Schedule {
+    val t = (s ?: "").trim().lowercase()
+    val m = SCHEDULE.find(t)
+    return Schedule(m?.groupValues?.get(1) ?: if (t.isNotEmpty()) "custom" else "weekdays", m?.groupValues?.get(2)?.ifEmpty { null } ?: "mon", m?.groupValues?.get(3)?.ifEmpty { null }?.padStart(5, '0') ?: "08:00")
+}
+
+fun scheduleOf(kind: String, day: String, time: String) = when (kind) {
+    "hourly" -> "hourly"
+    "weekly" -> "weekly $day $time"
+    else -> "$kind $time"
+}
+
 fun describeSchedule(s: String?): String {
     val t = (s ?: "").trim().lowercase()
     val m = SCHEDULE.find(t)

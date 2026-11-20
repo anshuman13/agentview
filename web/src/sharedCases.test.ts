@@ -49,7 +49,7 @@ import { pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meetin
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
 import { heldUntil, jobEdits, tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
-import { agendaMarkdown, followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
+import { agendaMarkdown, draftFor, followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
@@ -347,7 +347,11 @@ describe('cases shared with the Android app', () => {
     });
   }
 
-  type AgendaCase = { name: string; meeting: Record<string, unknown>; points: { people: string | null; title: string }[]; actions: string[]; questions: string[]; markdown: string };
+  for (const c of cases<{ name: string; meeting: Record<string, unknown>; action: Record<string, unknown>; expected: string }>('action-draft')) {
+    it(`draftFor: ${c.name}`, () => expect(draftFor(c.action as unknown as ItemRow, c.meeting as unknown as Meeting)).toBe(c.expected));
+  }
+
+  type AgendaCase ={ name: string; meeting: Record<string, unknown>; points: { people: string | null; title: string }[]; actions: string[]; questions: string[]; markdown: string };
   for (const c of cases<AgendaCase>('agenda')) {
     it(`agendaMarkdown: ${c.name}`, () => {
       const m = { id: 'm', profile: 'work', ...c.meeting } as unknown as Meeting;

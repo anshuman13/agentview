@@ -3,6 +3,8 @@ package no.pradhan.agentview.nativeapp.codex.jobs
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,6 +43,8 @@ import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
+import no.pradhan.agentview.nativeapp.ui.Chip
+import no.pradhan.agentview.nativeapp.ui.TimeDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.FieldLabel
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -93,6 +97,36 @@ private fun JobEditSheet(actions: TaskActions, j: Row, onDismiss: () -> Unit) {
             }
         }
     }
+}
+
+private val KINDS = listOf("hourly" to "Every hour", "daily" to "Every day", "weekdays" to "Weekdays", "weekly" to "Once a week")
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun JobScheduleSheet(actions: TaskActions, j: Row, onDismiss: () -> Unit) {
+    val s = parseSchedule(j.str("schedule"))
+    var pickTime by remember { mutableStateOf(false) }
+    val write = { kind: String, day: String, time: String -> actions.change(j, mapOf("schedule" to scheduleOf(kind, day, time), "next_run_at" to null), "Schedule changed") }
+    Sheet(onDismiss, "When") {
+        Column(Modifier.padding(vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
+            FieldLabel("How often")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                KINDS.forEach { (k, label) -> Chip(label, { if (k != s.kind) write(k, s.day, s.time) }, on = k == s.kind) }
+                if (s.kind == "custom") Chip("Custom", null, on = true)
+            }
+            if (s.kind == "weekly") {
+                FieldLabel("Day")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    listOf(1, 2, 3, 4, 5, 6, 0).forEach { i -> Chip(DAY_NAMES[i].take(3), { if (DAYS[i] != s.day) write("weekly", DAYS[i], s.time) }, on = DAYS[i] == s.day) }
+                }
+            }
+            if (s.kind != "hourly" && s.kind != "custom") {
+                FieldLabel("Time")
+                FlowRow { Chip(s.time, { pickTime = true }, icon = "clock") }
+            }
+        }
+    }
+    if (pickTime) TimeDialog("Time", s.time.take(2).toInt(), s.time.takeLast(2).toInt(), "Set", "Cancel", { h, m -> pickTime = false; write(s.kind, s.day, "%02d:%02d".format(h, m)) }, { pickTime = false }, { pickTime = false })
 }
 
 @Composable
@@ -150,6 +184,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     var runsOpen by rememberSaveable(job.key) { mutableStateOf(false) }
     var allTasks by rememberSaveable(job.key) { mutableStateOf(false) }
     var editing by remember(job.key) { mutableStateOf(false) }
+    var scheduling by remember(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
     var servers by remember { mutableStateOf<List<String>>(emptyList()) }
     LaunchedEffect(tools) { if (tools != null) runCatching { servers = hub.mcpProbe(false).map { it.name } } }
@@ -166,7 +201,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
         item { Group { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.fillMaxWidth().clickable { editing = true }.padding(horizontal = Tokens.listPad, vertical = Tokens.sp5), style = Type.body, color = av.fg) } }
         item {
             Group(Modifier.padding(top = Tokens.sp4)) {
-                ListRow("When", jobMeta(job, runs, st.paused, now)); Hairline()
+                ListRow("When", jobMeta(job, runs, st.paused, now), onClick = if (hub.readOnly) null else ({ scheduling = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
                 repoLabel(job.str("repo"))?.let { ListRow("Repo", it); Hairline() }
                 if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is kept in the runs but not pushed", trailing = { Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) } }); Hairline() }
                 if (tools != null) { ListRow("Tools", toolLabels(tools, servers).joinToString(", ")); Hairline() }
@@ -190,6 +225,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
     if (editing) JobEditSheet(actions, job) { editing = false }
+    if (scheduling) JobScheduleSheet(actions, job) { scheduling = false }
     if (runsOpen) RunsSheet(runs, now, { hub.notice.value = it }) { runsOpen = false }
 }
 

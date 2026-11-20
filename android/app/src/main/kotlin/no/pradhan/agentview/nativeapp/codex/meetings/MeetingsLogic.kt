@@ -332,6 +332,16 @@ fun followUpText(m: Row, actions: List<Row>): String {
     return out.joinToString("\n\n") + "\n"
 }
 
+// Mirrors draftFor of web/src/codex/data/meetings/meetingMarkdown.ts; shared/fixtures/action-draft.json holds the texts.
+fun draftFor(a: Row, m: Row): String {
+    val date = m.startsAt?.let(::ymd)
+    val out = mutableListOf(a.title ?: "")
+    a.people?.trim()?.takeIf { it.isNotEmpty() }?.let { out.add("Owner: $it") }
+    out.add("From: ${m.title ?: "Meeting"}${if (date != null) " ($date)" else ""}")
+    a.at?.let { out.add("Due: ${ymd(it)}") }
+    return out.joinToString("\n")
+}
+
 // Mirrors agendaMarkdown of web/src/codex/data/meetings/meetingMarkdown.ts; shared/fixtures/agenda.json holds the texts.
 fun agendaMarkdown(m: Row, points: List<Row>, actions: List<String>, questions: List<String>): String {
     val date = m.startsAt?.let(::ymd)
