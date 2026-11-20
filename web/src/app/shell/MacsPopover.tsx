@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { stored, useEscape } from '../../ui/util';
 import { bundled, knownMacs, macPort, macUrl, setApiBase, trusted, useApiBase } from '../api';
@@ -94,7 +95,7 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
         <div className="connect-head">
           <span>Macs</span>
           <span className="spacer" />
-          <button className="icon-btn" title="Close" onClick={onClose}><Icon name="close" /></button>
+          <IconButton icon="close" label="Close" size="sm" onClick={onClose} />
         </div>
         <ul className="macs">
           <li className="current">

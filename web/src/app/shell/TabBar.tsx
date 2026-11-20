@@ -5,6 +5,7 @@ import { appSettings } from '../appSettings';
 import { track } from '../featureUse';
 import { ChangesBadge } from '../../workspace/gitStatus';
 import { GitHubBadge } from '../../ops/pulls';
+import { IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { Sheet } from '../../ui/Sheet';
 import { AssistantCounts } from '../lazy';
@@ -93,11 +94,9 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
           <Icon name="folder" small /><span>{project}</span>
         </button>
         {canNotify && (
-          <button className="icon-btn" title={notifying ? 'Turn off notifications' : 'Notify me when the agent finishes or needs you'} onClick={toggleNotify}>
-            <Icon name={notifying ? 'bell' : 'bell-slash'} />
-          </button>
+          <IconButton icon={notifying ? 'bell' : 'bell-slash'} label={notifying ? 'Turn off notifications' : 'Notify me when the agent finishes or needs you'} onClick={toggleNotify} />
         )}
-        <button className="icon-btn" title={`Theme: ${THEME_NAMES[theme]}. Tap to switch`} onClick={toggleTheme}><Icon name="color-mode" /></button>
+        <IconButton icon="color-mode" label={`Theme: ${THEME_NAMES[theme]}. Tap to switch`} onClick={toggleTheme} />
       </div>
       {shown('files') && (
         <button className={tab === 'code' ? 'active' : ''} onClick={() => { track('more:files'); goTab('code'); }}>

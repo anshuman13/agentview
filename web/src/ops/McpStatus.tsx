@@ -25,9 +25,9 @@ function McpStats({ probed, busy, at, ok, total, attention, onCheck }: Stats) {
     <div className="mcp-stats">
       {probed && <span className={attention ? 'warn' : ''}><b>{ok}</b> connected of {total}</span>}
       {attention > 0 && <span className="bad"><b>{attention}</b> need you</span>}
-      <button className={`btn mcp-refresh ${busy ? 'busy' : ''}`} onClick={onCheck} disabled={busy} title="Connect to every server again">
+      <Button size="sm" className="mcp-refresh" onClick={onCheck} disabled={busy} title="Connect to every server again">
         <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at, ' ago')}` : 'Check'}
-      </button>
+      </Button>
     </div>
   );
 }

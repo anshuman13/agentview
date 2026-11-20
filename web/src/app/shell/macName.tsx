@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { apiBase, macOrigin, shell } from '../api';
 import { connectInfo } from './macApi';
@@ -49,7 +50,7 @@ export function SwitchedBanner() {
     <div className="app-update">
       <Icon name="vm" small />
       <span>Switched to {name}</span>
-      <button className="icon-btn" title="Close" onClick={() => setShown(false)}><Icon name="close" small /></button>
+      <IconButton icon="close" label="Close" size="sm" small onClick={() => setShown(false)} />
     </div>
   );
 }

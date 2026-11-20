@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantTable, useAssistantStore } from '../data';
 import { EmptyState } from '../../ui/Panel';
-import { IconButton } from '../../ui/Button';
+import { IconButton, buttonClass } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Badge } from '../../ui/Badge';
 import { Row } from '../../ui/Row';
@@ -57,7 +57,7 @@ export function Review({ now }: { now: number }) {
       title={row.title}
       meta={(row.rolls ?? 0) > 0 ? `Moved ${row.rolls}x` : undefined}
       trailing={<>
-        <PickTime className="btn btn-gray btn-sm" title="Reschedule" label="Reschedule" onPick={(t) => reschedule(row, t)} />
+        <PickTime className={buttonClass({ size: 'sm' })} title="Reschedule" label="Reschedule" onPick={(t) => reschedule(row, t)} />
         <More>{(close) => <>
           <MenuItem title="Next Monday 09:00" onClick={() => { close(); reschedule(row, nextMonday(now)); }}>Next Monday</MenuItem>
           <MenuItem danger onClick={() => { close(); change(row, { deleted: 1 }, 'Dropped'); }}>Drop</MenuItem>

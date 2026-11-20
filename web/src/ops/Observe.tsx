@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ObserveInfo } from '../../../shared/observe';
 import { useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
-import { Button } from '../ui/Button';
+import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
@@ -38,7 +38,7 @@ function ProjectPicker({ input, setInput, names, commit, picked, reset }: Picker
         onBlur={() => commit(input)}
       />
       <datalist id="obs-repos">{names.map((n) => <option key={n} value={n} />)}</datalist>
-      {picked && <button className="icon-btn" title="Back to this chat's repo" onClick={reset}><Icon name="discard" small /></button>}
+      {picked && <IconButton icon="discard" label="Back to this chat's repo" size="sm" small onClick={reset} />}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import type { ObserveInfo } from '../../../shared/observe';
 import { useStore } from '../app/store';
 import { providerLabel } from '../../../shared/providers';
 import { Icon } from '../ui/Icon';
-import { IconButton } from '../ui/Button';
+import { Button, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
@@ -100,9 +100,7 @@ export function AddToClaude({ server, added, disabled, title, onDone }: { server
   if (added) return <span className="chip st-ok" title={`${server} is in ~/.claude.json`}><Icon name="check" small /> In Claude</span>;
   return (
     <span className="obs-add">
-      <button className="btn xs" disabled={disabled} title={title} onClick={() => addToClaude(server).then((r) => onDone(r.info), (e) => setMsg(e.message))}>
-        <Icon name="add" small /> Add to Claude Code config
-      </button>
+      <Button size="sm" icon="add" disabled={disabled} title={title} onClick={() => addToClaude(server).then((r) => onDone(r.info), (e) => setMsg(e.message))}>Add to Claude Code config</Button>
       {msg && <span className="error" role="alert">{msg}</span>}
     </span>
   );
