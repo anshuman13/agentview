@@ -38,6 +38,7 @@ fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 val sharedHttp: OkHttpClient by lazy { OkHttpClient() }
 
 class Api(private val origin: () -> String, private val http: OkHttpClient = sharedHttp) : AssistantRemote, NoticeRemote {
+    private val quick = http.newBuilder().readTimeout(20, java.util.concurrent.TimeUnit.SECONDS).build()
     private val slow = http.newBuilder().readTimeout(120, java.util.concurrent.TimeUnit.SECONDS).build()
     private val long = http.newBuilder().readTimeout(300, java.util.concurrent.TimeUnit.SECONDS).build()
 
@@ -98,6 +99,7 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
     // web/src/codex/data/remote.ts: the assistant hub's rows are pulled by version and pushed as per-column changes.
     suspend fun assistantChanges(since: Long, full: Boolean): String = call(url("/api/assistant/changes?since=$since" + if (full) "&full=1" else "")).decodeToString()
     suspend fun assistantSync(body: String): String = call(url("/api/assistant/sync").post(body.toRequestBody(json))).decodeToString()
+    suspend fun parseTask(body: String): String = call(url("/api/assistant/parse").post(body.toRequestBody(json)), quick).decodeToString()
 
     override suspend fun autopilot(patch: String?): String = call(url("/api/assistant/autopilot").let { if (patch == null) it else it.post(patch.toRequestBody(json)) }).decodeToString()
     override suspend fun replyHistory(who: String): String = call(url("/api/assistant/history?who=${enc(who)}")).decodeToString()

@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp.chat
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -112,6 +114,7 @@ private fun MarkBadge(m: MemoryMark) = Badge(m.mark, if (m.mark == "Conflicts") 
 
 // What the agent is told and remembers in this folder, like Windsurf's memories panel. The repo instruction file and Claude's memory files can be changed.
 // `initial` opens that file once the list has loaded.
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: String? = null, onDismiss: () -> Unit) {
     val file = ruleFile(cwd, instructionFiles)
@@ -159,7 +162,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
                     Button("Cancel", { draft = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
                     if ((f.path == "$cwd/$file" || f.editable) && !hub.readOnly) Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "edit")
                     if (f.editable && !hub.readOnly && !isMemoryIndex(f.path)) {
                         val leave = { gone: Boolean ->

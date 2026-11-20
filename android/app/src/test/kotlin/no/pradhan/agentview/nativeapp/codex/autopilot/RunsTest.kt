@@ -37,10 +37,7 @@ class RunsTest {
         val r = run("a", rounds = listOf(Round(1, 400, "progress", "round", 0.0))).copy(startedAt = 100)
         assertEquals(LoopNow("Working", 500, "status", next = "a", stepsLeft = 2), loopNow(r, LiveNow("Working", 500, next = listOf("a", "b"))))
         assertTrue(Regex("Round 1 · \\d\\d:\\d\\d · progress: round").matches(loopNow(r, LiveNow("Working", 300)).title))
-        assertEquals("First round 14:20", loopNow(r.copy(rounds = emptyList()), LiveNow("Old", 50)).title)
-        assertEquals("12 min", agentAge(0, 12 * 60_000))
-        assertEquals("1 h 5 min", agentAge(0, 65 * 60_000))
-    }
+        assertEquals("First round 14:20", loopNow(r.copy(rounds = emptyList()), LiveNow("Old", 50)).title)    }
 
     @Test fun mergedQuietRoundsReadAsARange() {
         val q = { n: Int, report: String? -> Round(n, 14 * 3_600_000L, "quiet", "", 0.0, report) }

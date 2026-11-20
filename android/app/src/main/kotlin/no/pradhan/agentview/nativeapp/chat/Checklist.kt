@@ -1,9 +1,6 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateMapOf
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -42,17 +39,3 @@ fun checklistCurrent(items: List<ChecklistItem>): String {
 
 // Hidden when the list is empty, or finished and the turn has ended.
 fun visibleChecklist(items: List<ChecklistItem>?, running: Boolean) = items?.takeIf { it.isNotEmpty() && (running || checklistDone(it) < it.size) }
-
-private val cardChoices = mutableStateMapOf<String, Boolean>()
-
-// A card is closed until tapped, opens itself while it needs you and then stays as the last tap left it; kept in memory per chat and card.
-@Composable
-fun rememberCardOpen(key: String, needsYou: Boolean): Pair<Boolean, () -> Unit> {
-    LaunchedEffect(key, needsYou) {
-        val chat = key.substringBeforeLast(':')
-        cardChoices.keys.removeAll { !it.startsWith("$chat:") }
-        if (needsYou && key !in cardChoices) cardChoices[key] = true
-    }
-    val open = cardChoices[key] ?: needsYou
-    return open to { cardChoices[key] = !open }
-}

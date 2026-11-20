@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import java.time.Instant
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.codex.jobs.canRunNow
@@ -226,14 +227,18 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
                 if (row.status == "open" && !hub.readOnly) Button(if (tidying) "Tidying…" else "Tidy", {
                     tidying = true
                     scope.launch {
-                        runCatching { hub.parseTask(listOf(title, text).filter { it.isNotBlank() }.joinToString("\n"), row.profile) }
-                            .onSuccess { p ->
-                                title = p.title
-                                text = p.details ?: ""
-                                if (p.at != null && latest.at == null) actions.edit(latest, mapOf("at" to p.at))
-                            }
-                            .onFailure { actions.say("Not tidied: ${it.message}") }
-                        tidying = false
+                        try {
+                            val p = hub.parseTask(listOf(title, text).filter { it.isNotBlank() }.joinToString("\n"), row.profile)
+                            title = p.title
+                            text = p.details ?: ""
+                            if (p.at != null && latest.at == null) actions.edit(latest, mapOf("at" to p.at))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            actions.say("Not tidied: ${e.message}")
+                        } finally {
+                            tidying = false
+                        }
                     }
                 }, variant = ButtonVariant.Plain, icon = "wand", enabled = !tidying)
                 Button("Start a chat…", { commit(); onChat { repo -> taskChatPrompt(row.id, row.status, title, text, row.sourceUrl, repo != null && segmentOf(repo) == row.profile) }; onDismiss() })

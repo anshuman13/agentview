@@ -181,7 +181,7 @@ private fun Hub.savedToMemory(claim: RememberedClaim?) {
 
 // Haiku turns a quick or dictated task into a clear title, notes and the time the text names.
 suspend fun Hub.parseTask(text: String, profile: String): ParsedTask =
-    protocolJson.decodeFromString(api.post("/api/assistant/parse", buildJsonObject { put("profile", profile); put("text", text) }.toString()))
+    protocolJson.decodeFromString(api.parseTask(buildJsonObject { put("profile", profile); put("text", text) }.toString()))
 
 fun Hub.remindChat(title: String, sessionId: String, cwd: String, at: Long) {
     val extra = mapOf("source" to "chat", "source_url" to "${origin.value}/?session=$sessionId")

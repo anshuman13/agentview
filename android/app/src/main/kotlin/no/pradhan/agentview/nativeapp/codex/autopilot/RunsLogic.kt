@@ -117,11 +117,6 @@ fun nowMeta(now: LoopNow, builds: String): String = listOfNotNull(
     builds.ifEmpty { null },
 ).joinToString(" · ")
 
-fun agentAge(startedAt: Long, now: Long): String {
-    val min = maxOf(1L, (now - startedAt) / 60_000)
-    return if (min < 60) "$min min" else "${min / 60} h ${min % 60} min"
-}
-
 fun stoppedText(run: ChatRun, running: Boolean) = "${KIND[run.kind] ?: "Loop"} stopped" + if (running && run.round > 0 && (run.kind == "goal" || run.kind == "loop")) " · round ${run.round} was running" else ""
 
 fun outcomeDot(outcome: String) = when (outcome) {
