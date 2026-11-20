@@ -19,12 +19,12 @@ import { UNTITLED } from '../../../../shared/util';
 
 export function JobActions({ j, prompt, nameInput, back }: { j: Job; prompt: string; nameInput: RefObject<HTMLInputElement | null>; back: () => void }) {
   const store = useAssistantStore();
-  const { runs, enable } = useJobs();
+  const { runs, paused, enable } = useJobs();
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const now = Date.now();
   const canRun = canRunNow({ ...j, prompt }, runs, now);
-  const state = jobState(j, runs, now);
+  const state = jobState(j, runs, now, paused);
   const pick = (fn: () => void) => () => { setMenu(false); fn(); };
   const remove = () => {
     removeJob(store, j);

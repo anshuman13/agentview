@@ -1,5 +1,6 @@
 import type { Job, Run } from '../data/wiki/wiki';
 import { describe as group, expect, test } from 'bun:test';
+import { clock } from '../tasks/time';
 import { canRunNow, describe, jobState, queued, rowMeta, runMeta, parseSchedule, scheduleOf } from './schedule';
 
 group('job schedules', () => {
@@ -18,13 +19,13 @@ group('job schedules', () => {
 group('rowMeta', () => {
   const job = { id: 'j', profile: 'work', enabled: 1, next_run_at: null } as Job;
   test('queued shows Queued on or off, off shows Off', () => {
-    expect(rowMeta({ ...job, enabled: 0, next_run_at: 100 }, [], 200)).toBe('Queued');
-    expect(rowMeta({ ...job, enabled: 0 }, [], 200)).toBe('Off');
-    expect(rowMeta({ ...job, next_run_at: 100 }, [], 200)).toBe('Queued');
+    expect(rowMeta({ ...job, enabled: 0, next_run_at: 100 }, [], 200, [])).toBe('Queued');
+    expect(rowMeta({ ...job, enabled: 0 }, [], 200, [])).toBe('Off');
+    expect(rowMeta({ ...job, next_run_at: 100 }, [], 200, [])).toBe('Queued');
   });
   test('an enabled job shows its next run when set', () => {
-    expect(rowMeta({ ...job, next_run_at: 5000 }, [], 200)).toMatch(/^Next /);
-    expect(rowMeta(job, [], 200)).toBeNull();
+    expect(rowMeta({ ...job, next_run_at: 5000 }, [], 200, [])).toMatch(/^Next /);
+    expect(rowMeta(job, [], 200, [])).toBeNull();
   });
 });
 
@@ -71,10 +72,17 @@ group('jobState', () => {
   const job = { id: 'j', profile: 'work', enabled: 1, next_run_at: null } as Job;
   const run = (status: string) => ({ id: 'r', job_id: 'j', profile: 'work', status, started_at: 1 }) as Run;
   test('one badge in the order Running, Queued, Failed, Off', () => {
-    expect(jobState(job, [run('running')], 10)).toEqual({ status: 'running' });
-    expect(jobState({ ...job, next_run_at: 5 }, [run('error')], 10)).toEqual({ status: 'waiting', reason: 'Queued' });
-    expect(jobState(job, [run('error')], 10)).toEqual({ status: 'failed' });
-    expect(jobState({ ...job, enabled: 0 }, [run('ok')], 10)).toEqual({ status: 'skipped', reason: 'Off' });
-    expect(jobState(job, [run('ok')], 10)).toBeNull();
+    expect(jobState(job, [run('running')], 10, [])).toEqual({ status: 'running' });
+    expect(jobState({ ...job, next_run_at: 5 }, [run('error')], 10, [])).toEqual({ status: 'waiting', reason: 'Queued' });
+    expect(jobState(job, [run('error')], 10, [])).toEqual({ status: 'failed' });
+    expect(jobState({ ...job, enabled: 0 }, [run('ok')], 10, [])).toEqual({ status: 'skipped', reason: 'Off' });
+    expect(jobState(job, [run('ok')], 10, [])).toBeNull();
+  });
+  test('a queued job under its profile pause says why', () => {
+    const held = [{ scan: 'jobs:work', reason: 'Claude usage limit', until: 20_000 }];
+    const reason = `Usage limit until ${clock(20_000)}`;
+    expect(jobState({ ...job, next_run_at: 5 }, [], 10, held)).toEqual({ status: 'waiting', reason });
+    expect(rowMeta({ ...job, next_run_at: 5 }, [], 10, held)).toBe(reason);
+    expect(jobState(job, [run('error')], 10, held)).toEqual({ status: 'failed' });
   });
 });

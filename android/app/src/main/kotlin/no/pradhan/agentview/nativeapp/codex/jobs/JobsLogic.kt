@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex.jobs
 
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.codex.SyncPaused
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.codex.daysFrom
@@ -78,10 +79,19 @@ fun nextText(t: Long, now: Long): String {
     return "$day ${clock(t)}"
 }
 
-// The row's second line: the schedule, then when the job runs next.
-fun jobMeta(j: Row, own: List<Row>, now: Long): String {
+// Until when the hub holds the job's runs for its profile's usage limit (the `jobs:<profile>` pause), or null.
+fun heldUntil(j: Row, paused: List<SyncPaused>, now: Long) = paused.firstOrNull { it.scan == "jobs:${j.profile}" && it.until > now }?.until
+
+// The row's second line: the schedule, then why the job is queued or when it runs next.
+fun jobMeta(j: Row, own: List<Row>, paused: List<SyncPaused>, now: Long): String {
     val next = j.long("next_run_at")
-    val extra = if (next != null && isEnabled(j) && !isQueued(j, own, now)) "Next ${nextText(next, now)}" else null
+    val queued = isQueued(j, own, now)
+    val held = if (queued) heldUntil(j, paused, now) else null
+    val extra = when {
+        held != null -> "Usage limit until ${clock(held)}"
+        next != null && isEnabled(j) && !queued -> "Next ${nextText(next, now)}"
+        else -> null
+    }
     return listOfNotNull(describeSchedule(j.str("schedule")), extra).joinToString(" · ")
 }
 

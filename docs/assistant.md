@@ -68,7 +68,7 @@ with other attendees they are held and sent as one push when it ends.
 Scan slots follow the hub's local clock, so half hours start at :00 and :30 in any time zone.
 While a Claude account is at its usage limit, the Slack and Gmail scans and the calendar import of its profiles skip
 their runs, and the scans catch up from their last read afterwards. The hub logs the pause once per limit, and each sync reply lists the paused scans so the apps can show them
-until the limit ends.
+until the limit ends. A job whose profile's account is at its limit is skipped the same way and stays queued, with the pause `jobs:<profile>` in the same list; the Jobs list and job page show "Usage limit until 14:20" for it in place of "Queued", and it runs at the next tick after the limit ends.
 Each Slack and Gmail run, and each profile's calendar import (`calendar:work`, `calendar:personal`), records its last success with counts and its last error in meta `scan:<name>`, and
 the sync reply returns them as `scans`. A pushed change that fails validation is skipped while the rest of the batch applies; the reply lists the skipped ones as `rejected` (table, id, reason), and the app keeps those rows dirty and shows the first reason as its sync error. `POST /scan?name=slack|gmail` runs one scan now outside its slot; it still
 honors the usage-limit pause and joins a scan that is already running.

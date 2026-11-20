@@ -14,7 +14,9 @@ import no.pradhan.agentview.nativeapp.codex.NOW
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
+import no.pradhan.agentview.nativeapp.codex.SyncPaused
 import no.pradhan.agentview.nativeapp.codex.WORK
+import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.item
@@ -280,7 +282,10 @@ class MeetingsWikiTest {
         assertEquals(listOf("new", "old"), runsOf(listOf(run("old", "ok", 1), run("new", "ok", 2)), job).map { it.id })
         assertEquals(listOf("new", "old"), runsByJob(listOf(run("old", "ok", 1), run("new", "ok", 2))).of(job).map { it.id })
         assertEquals("1 min 5 s · $0.50", runMeta(run("r", "ok", NOW)))
-        assertEquals("Every hour", jobMeta(job, emptyList(), NOW))
+        assertEquals("Every hour", jobMeta(job, emptyList(), emptyList(), NOW))
+        val held = listOf(SyncPaused("jobs:work", NOW + 60_000))
+        assertEquals("Every hour · Usage limit until ${clock(NOW + 60_000)}", jobMeta(row("jobs", "j4", WORK, "enabled" to 1, "schedule" to "hourly", "next_run_at" to NOW - 1), emptyList(), held, NOW))
+        assertEquals("Every hour", jobMeta(job, emptyList(), held, NOW))
     }
 
     @Test fun runNowIsOffWhileRunningQueuedOrBlank() {

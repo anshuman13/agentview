@@ -1,6 +1,6 @@
-import { useAssistantStore, useAssistantData } from '../data';
+import { useAssistantStore, useAssistantData, useSyncStatus } from '../data';
 import type { Job, Run } from '../data/wiki/wiki';
-import { madeAt, type ItemRow } from '../data/sync';
+import { madeAt, type ItemRow, type Paused } from '../data/sync';
 import { clock } from '../tasks/time';
 import { dayLabel, dayStart } from '../data/dates';
 import { money } from '../../ui/util';
@@ -48,12 +48,20 @@ export const tasksOf = (items: ItemRow[], j: Job) => items
 
 export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
-export const jobState = (j: Job, runs: Run[], now: number): BadgeSpec | null => {
-  const latest = runsOf(runs, j)[0]?.status;
-  return latest === 'running' ? { status: 'running' } : queued(j, runs, now) ? { status: 'waiting', reason: 'Queued' } : latest === 'error' ? { status: 'failed' } : !j.enabled ? { status: 'skipped', reason: 'Off' } : null;
+// Until when the hub holds the job's runs for its profile's usage limit (the `jobs:<profile>` pause), or null.
+export const heldUntil = (j: Job, paused: Paused[], now: number) => paused.find((p) => p.scan === `jobs:${j.profile}` && p.until > now)?.until ?? null;
+
+const queuedText = (j: Job, paused: Paused[], now: number) => {
+  const held = heldUntil(j, paused, now);
+  return held ? `Usage limit until ${clock(held)}` : 'Queued';
 };
 
-export const rowMeta = (j: Job, runs: Run[], now: number) => (queued(j, runs, now) ? 'Queued' : !j.enabled ? 'Off' : j.next_run_at ? `Next ${at(j.next_run_at)}` : null);
+export const jobState = (j: Job, runs: Run[], now: number, paused: Paused[]): BadgeSpec | null => {
+  const latest = runsOf(runs, j)[0]?.status;
+  return latest === 'running' ? { status: 'running' } : queued(j, runs, now) ? { status: 'waiting', reason: queuedText(j, paused, now) } : latest === 'error' ? { status: 'failed' } : !j.enabled ? { status: 'skipped', reason: 'Off' } : null;
+};
+
+export const rowMeta = (j: Job, runs: Run[], now: number, paused: Paused[]) => (queued(j, runs, now) ? queuedText(j, paused, now) : !j.enabled ? 'Off' : j.next_run_at ? `Next ${at(j.next_run_at)}` : null);
 
 export const canRunNow = (j: Job, runs: Run[], now: number) => !!j.prompt?.trim() && runsOf(runs, j)[0]?.status !== 'running' && !queued(j, runs, now);
 
@@ -79,9 +87,10 @@ export function runMeta(r: Run) {
 export function useJobs() {
   const store = useAssistantStore();
   const snap = useAssistantData();
+  const { paused } = useSyncStatus();
   const { filter } = useView();
   const jobs = snap.jobs.filter((j) => !j.deleted && (filter === 'all' || j.profile === filter)).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   const enable = (j: Job, on: boolean) => void store.editRow('jobs', j, { enabled: on ? 1 : 0, next_run_at: null });
-  return { jobs, runs: snap.runs, store, filter, enable };
+  return { jobs, runs: snap.runs, paused, store, filter, enable };
 }
 

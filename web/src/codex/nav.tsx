@@ -25,7 +25,7 @@ export const LISTS: { id: List; icon: string; label: string; hidden?: boolean }[
 const taskCount = (s: ReturnType<typeof sharedSplit>, endOfDay: number) => s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.filter((r) => !queued(r)).length;
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
 
-const SCAN_NAME: Record<string, string> = { slack: 'Slack', gmail: 'Gmail', calendar: 'Calendar', 'calendar:work': 'Calendar (work)', 'calendar:personal': 'Calendar (personal)' };
+const SCAN_NAME: Record<string, string> = { 'jobs:work': 'Jobs', 'jobs:personal': 'Jobs', slack: 'Slack', gmail: 'Gmail', calendar: 'Calendar', 'calendar:work': 'Calendar (work)', 'calendar:personal': 'Calendar (personal)' };
 
 function pausedText(paused: Paused[], now = Date.now()) {
   const on = paused.filter((p) => p.until > now);

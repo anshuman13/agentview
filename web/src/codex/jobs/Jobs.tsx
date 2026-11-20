@@ -21,17 +21,17 @@ import { Badge } from '../../ui/Badge';
 
 type Jobs = ReturnType<typeof useJobs>;
 
-function JobRow({ j, runs, now, store, enable }: { j: Job; runs: Run[]; now: number; store: Jobs['store']; enable: Jobs['enable'] }) {
+function JobRow({ j, runs, paused, now, store, enable }: { j: Job; runs: Run[]; paused: Jobs['paused']; now: number; store: Jobs['store']; enable: Jobs['enable'] }) {
   const [open, setOpen] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const choose = (fn: () => void) => () => { setOpen(false); fn(); };
-  const meta = rowMeta(j, runs, now);
-  const state = jobState(j, runs, now);
+  const meta = rowMeta(j, runs, now, paused);
+  const state = jobState(j, runs, now, paused);
   return (
     <div className={`ui-row-wrap${j.enabled ? '' : ' off'}`}>
       <Row
         title={j.name || 'Untitled job'}
-        meta={[describe(j.schedule), meta?.startsWith('Next') && meta].filter(Boolean).join(' · ')}
+        meta={[describe(j.schedule), meta && /^(Next|Usage limit)/.test(meta) && meta].filter(Boolean).join(' · ')}
         trailing={state && <Badge {...state} />}
         onClick={() => setView({ open: rowKey(j) })}
         onLongPress={() => setOpen(true)}
@@ -55,7 +55,7 @@ function JobRow({ j, runs, now, store, enable }: { j: Job; runs: Run[]; now: num
 function JobsList({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
   useMinute();
-  const { jobs, runs, store, filter, enable } = useJobs();
+  const { jobs, runs, paused, store, filter, enable } = useJobs();
   const now = Date.now();
   const add = (preset?: JobPreset) => {
     const t = Date.now();
@@ -78,7 +78,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
           <Autopilot />
           {jobs.length > 0 && (
             <div className="ui-group">
-              {jobs.map((j) => <JobRow key={rowKey(j)} j={j} runs={runs} now={now} store={store} enable={enable} />)}
+              {jobs.map((j) => <JobRow key={rowKey(j)} j={j} runs={runs} paused={paused} now={now} store={store} enable={enable} />)}
             </div>
           )}
           {!jobs.length && <EmptyState size="md" icon="history" title="No jobs yet" hint="A job runs a prompt on a schedule, can add tasks, and sends you the result" />}
