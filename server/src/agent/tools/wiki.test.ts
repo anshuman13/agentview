@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from 'bun:test';
-import { wikiProposeTool, wikiSearchTool } from './wiki.js';
+import { hubRows } from '../../integrations/assistant.js';
+import { preferencesText, wikiProposeTool, wikiSearchTool } from './wiki.js';
 import { stubGlobal, unstubAllGlobals } from '../../../../testing.js';
 
 afterEach(() => unstubAllGlobals());
@@ -45,4 +46,30 @@ test('wiki_propose names a similar live or proposed claim of the same profile an
   expect(await propose('Deploys happen every Friday afternoon')).not.toContain('Similar to');
   expect(await propose('Brand new unrelated claim')).toMatch(/^Proposed \[[^\]]+\] for the user to approve in memory\.$/);
   expect(pushed).toHaveLength(3);
+});
+
+test('preferencesText lists the profile\'s live Memory claims newest first, capped at 15', async () => {
+  const now = Date.now();
+  const fact = (id: string, fields: Record<string, unknown>, profile = 'work') => ({ table: 'facts', id, profile, deleted: false, updated_at: 2, fields: { state: 'live', at: now, ...fields } });
+  const changes = [
+    ...Array.from({ length: 20 }, (_, i) => fact(`p${i}`, { text: `Preference ${i}`, at: now - i * 1000 })),
+    fact('paged', { text: 'On a page', page_id: 'pg' }),
+    fact('gone', { text: 'Superseded one', superseded_by: 'p0' }),
+    fact('old', { text: 'Old one', at: now - 100 * 86_400_000 }),
+    fact('proposed', { text: 'Proposed one', state: 'proposed' }),
+    fact('other', { text: 'Personal one' }, 'personal'),
+  ];
+  stubGlobal('fetch', vi.fn(async () => json(200, { version: 2, hasMore: false, changes })));
+  preferencesText('/tmp');
+  await hubRows('facts');
+  const lines = preferencesText('/tmp').split('\n');
+  expect(lines[0]).toBe('The user\'s approved preferences:');
+  expect(lines.slice(1, 4)).toEqual(['- Preference 0', '- Preference 1', '- Preference 2']);
+  expect(lines).toHaveLength(16);
+  expect(lines.join('\n')).not.toMatch(/On a page|Superseded|Old one|Proposed|Personal/);
+});
+
+test('preferencesText is empty and does not throw while the hub is unreachable', async () => {
+  stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+  expect(() => preferencesText('/tmp')).not.toThrow();
 });

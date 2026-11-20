@@ -3,7 +3,7 @@ import { profileOf } from '../claude/accounts.js';
 import { isOld as isOldClaim } from '../../../../shared/claimAge.js';
 import { similarClaim } from '../../../../shared/claimMatch.js';
 import { errText } from '../../../../shared/util.js';
-import { hubGet, hubPush, hubRows, type HubChange, type HubRow } from '../../integrations/assistant.js';
+import { hubGet, hubPush, hubRows, mirrored, type HubChange, type HubRow } from '../../integrations/assistant.js';
 import { defineTool } from './tool.js';
 
 export const WIKI_RULES = [
@@ -16,6 +16,26 @@ export const WIKI_RULES = [
   'Call wiki_search first. Do not repeat a live, proposed or rejected claim; pass replaces when a claim updates or contradicts a live one. Prefer the newest claims; treat old, retired and superseded ones as history.',
   'Never propose secrets, credentials, tokens or file contents.',
 ].join(' ');
+
+const PREFERENCES = 15;
+const PREFERENCE_CHARS = 1500;
+
+// The profile's approved Memory claims for the system text, newest first. It reads what the hub mirror holds and pulls
+// again for the next chat, so a hub that is down never delays a chat start.
+export function preferencesText(cwd: string): string {
+  void hubRows('facts').catch(() => undefined);
+  const profile = profileOf(cwd);
+  const lines: string[] = [];
+  let chars = 0;
+  const live = mirrored('facts').filter((r) => r.profile === profile && state(r) === 'live' && !r.page_id && !r.superseded_by && !isOld(r) && typeof r.text === 'string');
+  for (const r of live.sort(newest).slice(0, PREFERENCES)) {
+    const line = `- ${(r.text as string).replace(/\s+/g, ' ').trim()}`;
+    if (chars + line.length > PREFERENCE_CHARS) break;
+    lines.push(line);
+    chars += line.length;
+  }
+  return lines.length ? `The user's approved preferences:\n${lines.join('\n')}` : '';
+}
 
 const PROFILE = z.enum(['work', 'personal']).optional().describe('Which wiki: work or personal. Defaults to the profile of the chat\'s folder');
 const state = (r: HubRow) => (r.state as string | null) ?? 'live';

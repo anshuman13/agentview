@@ -164,6 +164,8 @@ There is no delete or edit tool; contest, resolve and delete stay with me.
 
 ### Rules in the system prompt
 
+Claude and OpenRouter chats also get "The user's approved preferences:" after the rules: the chat's profile's live Memory claims (no page, not superseded, not old), newest first, at most 15 and 1500 characters (`preferencesText` in `tools/wiki.ts`). It reads the server's hub mirror when the chat starts and pulls again for the next one, so a hub that is down adds no delay and the claim list can lag one chat start. Codex chats do not get it yet.
+
 Propose facts that stay true: decisions, ownership, how a system works, people and my preferences. One sentence,
 with a source (the chat link, plus Slack, Linear or PR links when known). Search first; do not repeat a live,
 proposed or rejected claim; use `replaces` when a claim contradicts a live one. Never propose secrets, credentials,
