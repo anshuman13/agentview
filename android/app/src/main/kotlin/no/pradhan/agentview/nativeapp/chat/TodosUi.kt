@@ -33,7 +33,7 @@ fun TodosSheet(hub: Hub, cwd: String, onDismiss: () -> Unit) {
         val list = todos.data
         when {
             list == null && todos.busy -> EmptyState("Looking for TODOs…")
-            list.isNullOrEmpty() -> EmptyState("No TODOs", todos.error.ifEmpty { "No TODO, FIXME or AI! comments in tracked files." })
+            list.isNullOrEmpty() -> EmptyState("No TODOs", todos.error.ifEmpty { "No TODO, FIXME or AI! comments in tracked files" })
             else -> list.forEach { t ->
                 ListRow(todoTitle(t), "${t.path}:${t.line}", trailing = { AvIcon("edit", tint = av.fgMuted) }, onClick = {
                     hub.draftPrompt(todoPrompt(t))

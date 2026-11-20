@@ -109,7 +109,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss
         val list = files.data
         when {
             list == null && files.busy -> EmptyState("Loading memory…")
-            list.isNullOrEmpty() -> EmptyState("No memory", files.error.ifEmpty { "No $file or memory files for this folder." })
+            list.isNullOrEmpty() -> EmptyState("No memory", files.error.ifEmpty { "No $file or memory files for this folder" })
             else -> list.forEach { f ->
                 ListRow(f.name, listOf(f.description, memoryWhere(f, cwd)).filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
             }
