@@ -85,3 +85,25 @@ describe('foldTurns', () => {
     expect(costs[1]).toBeCloseTo(0.3);
   });
 });
+
+describe('claims read', () => {
+  const claims = (events: ChatEvent[]) => (fold(events).find((r) => r.kind === 'fold') as Extract<FoldRow, { kind: 'fold' }>).claims;
+  const search = tool('mcp__agentview__wiki_search', { query: 'q' });
+  const page = tool('mcp__agentview__wiki_page', { id: 'p1' });
+  const text = ['- page [p1] Notes (Work, live)', '- [c1] (2026-11-01, live) Uses bun (on Notes / Tools)', '- [c2] (undated, proposed) Prefers (short) replies'].join('\n');
+
+  it('lists claim lines once per id, with their page, and skips page lines', () => {
+    const events = [user('go'), search, result(search.id, false, text), page, result(page.id, false, '# Notes\n## Tools\n- [c1] (2026-11-01, live) Uses bun (on Notes / Tools)'), say('ok')];
+    expect(claims(events)).toEqual([
+      { id: 'c1', text: 'Uses bun', where: 'Notes / Tools' },
+      { id: 'c2', text: 'Prefers (short) replies', where: '' },
+    ]);
+  });
+
+  it('has none for no match, an error or another tool', () => {
+    const none = tool('mcp__agentview__wiki_search');
+    const bad = tool('mcp__agentview__wiki_page');
+    const other = tool('Bash');
+    expect(claims([user('go'), none, result(none.id, false, 'Nothing matches.'), bad, result(bad.id, true, text), other, result(other.id, false, text), say('ok')])).toEqual([]);
+  });
+});

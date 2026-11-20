@@ -1,7 +1,7 @@
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { forgetSeenBefore, getState, loadEarlier, seenBefore, send, setUi, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
-import { IconButton, ShowToggle } from '../../ui/Button';
+import { Chip, IconButton, ShowToggle } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
@@ -13,7 +13,7 @@ import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
-import { foldTurns, openWork, type FoldRow, type StatusStep } from './workFold';
+import { foldTurns, openWork, type Claim, type FoldRow, type StatusStep } from './workFold';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
@@ -219,7 +219,7 @@ function TranscriptView({ events, earlier, cwd, running, bill }: { events: ChatE
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
         const day = r.kind === 'item' ? days.get(r.it.id) : undefined;
         const row = r.kind === 'fold'
-          ? <Tasks key={id} id={r.id} steps={r.steps} now={r.now} tools={r.work.tools} live={running && r.last} />
+          ? <Tasks key={id} id={r.id} steps={r.steps} now={r.now} tools={r.work.tools} claims={r.claims} live={running && r.last} />
           : rowOf(r.it, i === 0, 'shown');
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
@@ -303,7 +303,8 @@ const UserText = ({ id, text }: { id: string; text: string }) => <Folded id={'pr
 
 // A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
 // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
-function Tasks({ id, steps: all, now, tools, live }: { id: string; steps: StatusStep[]; now: string; tools: number; live: boolean }) {
+function Tasks({ id, steps: all, now, tools, claims, live }: { id: string; steps: StatusStep[]; now: string; tools: number; claims: Claim[]; live: boolean }) {
+  const [reading, setReading] = useState(false);
   const steps = live ? all : all.filter((s) => s.done);
   const done = steps.filter((s) => s.done).length;
   const current = live ? steps.find((s) => !s.done) : undefined;
@@ -312,8 +313,10 @@ function Tasks({ id, steps: all, now, tools, live }: { id: string; steps: Status
     <div className="tr-steps">
       <div className="tr-steps-head">
         {steps.length > 0 && <span>{done < steps.length ? `Tasks \u00b7 ${done} of ${steps.length}` : plural(steps.length, 'task')}</span>}
+        {claims.length > 0 && <Chip size="sm" on={reading} className="tr-claims-chip" aria-expanded={reading} onClick={() => setReading((v) => !v)}>{`Used ${plural(claims.length, 'claim')}`}</Chip>}
         {tools > 0 && <button className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{plural(tools, 'tool')}<Icon name="chevron-right" small /></button>}
       </div>
+      {reading && <ul className="tr-claims">{claims.map((c) => <li key={c.id}>{c.text}{c.where && <span className="tr-claim-where"> ({c.where})</span>}</li>)}</ul>}
       {steps.length > 0 && <ul className="tr-tasks">
         {steps.map((s) => (
           <li key={s.id} className={s.done ? 'done' : s === current ? 'now' : undefined}>

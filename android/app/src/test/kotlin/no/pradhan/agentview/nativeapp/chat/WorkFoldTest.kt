@@ -80,4 +80,23 @@ class WorkFoldTest {
         assertEquals(0.0, costs[0], 1e-9)
         assertEquals(0.3, costs[1], 1e-9)
     }
+
+    @Test
+    fun claimsAreTheClaimLinesOfWikiResultsOncePerIdWithTheirPage() {
+        val text = listOf("- page [p1] Notes (Work, live)", "- [c1] (2026-11-01, live) Uses bun (on Notes / Tools)", "- [c2] (undated, proposed) Prefers (short) replies").joinToString("\n")
+        val search = tool("mcp__agentview__wiki_search")
+        val page = tool("mcp__agentview__wiki_page")
+        val events = listOf(user(), search, result(search, text = text), page, result(page, text = "# Notes\n- [c1] (2026-11-01, live) Uses bun (on Notes / Tools)"), say("ok"))
+        assertEquals(listOf(Claim("c1", "Uses bun", "Notes / Tools"), Claim("c2", "Prefers (short) replies", "")), fold(events).filterIsInstance<FoldRow.Fold>().first().claims)
+    }
+
+    @Test
+    fun noClaimsForNoMatchAnErrorOrAnotherTool() {
+        val none = tool("mcp__agentview__wiki_search")
+        val bad = tool("mcp__agentview__wiki_page")
+        val other = tool("Bash")
+        val text = "- [c1] (undated, live) Uses bun"
+        val events = listOf(user(), none, result(none, text = "Nothing matches."), bad, result(bad, true, text), other, result(other, text = text), say("ok"))
+        assertEquals(emptyList<Claim>(), fold(events).filterIsInstance<FoldRow.Fold>().first().claims)
+    }
 }

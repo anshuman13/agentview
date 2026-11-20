@@ -51,9 +51,31 @@ sealed interface FoldRow {
         override val key get() = it.id
     }
 
-    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean, val steps: List<StatusStep> = emptyList(), val now: String = "") : FoldRow {
+    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean, val steps: List<StatusStep> = emptyList(), val now: String = "", val claims: List<Claim> = emptyList()) : FoldRow {
         override val key get() = "work:$id"
     }
+}
+
+data class Claim(val id: String, val text: String, val where: String)
+
+private val wikiRead = Regex("(^|__)wiki_(search|page)$")
+private val claimLine = Regex("^- \\[([^\\]]+)\\] \\([^)]*\\) (.*)$")
+private val claimWhere = Regex("^(.*) \\(on (.+)\\)$")
+
+// web workFold.ts claimsOf: the claims a turn read, the `- [id] (...) text` lines of its wiki_search and wiki_page results, each id once. `- page [id]` lines do not match.
+fun claimsOf(items: List<Item>): List<Claim> {
+    val out = LinkedHashMap<String, Claim>()
+    for (it in items) {
+        if (it !is Item.Step || !wikiRead.containsMatchIn(it.use.name) || it.result == null || it.result.isError) continue
+        for (line in it.result.text.lines()) {
+            val m = claimLine.matchEntire(line) ?: continue
+            val id = m.groupValues[1]
+            if (id in out) continue
+            val w = claimWhere.matchEntire(m.groupValues[2])
+            out[id] = Claim(id, w?.groupValues?.get(1) ?: m.groupValues[2], w?.groupValues?.get(2) ?: "")
+        }
+    }
+    return out.values.toList()
 }
 
 data class WorkTitle(val text: String, val failed: String, val detail: String)
@@ -128,7 +150,7 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
         val tasks = steps[key]
         if (hidden.isNotEmpty() || tasks != null) {
             val at = if (reply < 0) rows.size else rows.indexOfFirst { it is FoldRow.Row && it.it === group[reply] }
-            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), g == groups.lastIndex, tasks?.list().orEmpty(), tasks?.now.orEmpty()))
+            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), g == groups.lastIndex, tasks?.list().orEmpty(), tasks?.now.orEmpty(), claimsOf(hidden)))
         }
         out += rows
     }
