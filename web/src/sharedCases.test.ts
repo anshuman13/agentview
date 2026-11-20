@@ -44,6 +44,7 @@ import type { ItemRow } from './codex/data/sync';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
+import { isLate } from '../../shared/waiting';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -179,6 +180,11 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; state: string | null; at: number | null; now: number; expected: boolean }>('claim-age')) {
     it(`isOld: ${c.name}`, () => expect(isOld(c, c.now)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; since: number[]; now: number[]; expected: boolean }>('late-promise')) {
+    const at = ([y, m, d, h]: number[]) => new Date(y, m - 1, d, h).getTime();
+    it(`isLate: ${c.name}`, () => expect(isLate(at(c.since), at(c.now))).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; id: string; people: string; links: string | null; expected: boolean }>('event-rule')) {

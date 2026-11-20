@@ -194,6 +194,21 @@ it('returns rows per section with meta, targets and a 20 row cap, and keeps the 
   expect(buildBrief(db, 'work', at(MON, 8)).rows.filter((r) => r.section === 'tasks')).toHaveLength(20);
 });
 
+it('adds a line for promises from others that are over 3 workdays old', () => {
+  const db = seed();
+  expect(buildBrief(db, 'work', at(MON, 8)).text).not.toContain('late');
+  const item = db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status) VALUES (?, 'work', 1, ?, ?, 'capture', ?)");
+  item.run('w1', at(MON - 6, 10), 'Waiting on Sara: contract', 'open');
+  item.run('w2', at(MON - 1, 10), 'Waiting on Jon: pricing', 'open');
+  item.run('w3', at(MON - 6, 10), 'Waiting on Eva: draft', 'done');
+  const one = buildBrief(db, 'work', at(MON, 8));
+  expect(one.text).toContain('\n\n1 promise from others is late');
+  db.prepare("INSERT INTO briefs (id, profile, version, updated_at, kind, text) VALUES ('waiting', 'work', 1, 0, 'waiting', ?)").run(JSON.stringify([{ thread: 't', url: 'u', to: 'Dee', subject: 'Quote', sent_at: at(MON - 7, 9) }]));
+  const two = buildBrief(db, 'work', at(MON, 8));
+  expect(two.text).toContain('2 promises from others are late');
+  expect(two.rows.filter((r) => r.section === 'plan').map((r) => r.title)).toContain('2 promises from others are late');
+});
+
 it('writes no brief for an empty day and none twice', async () => {
   const db = openDb(':memory:');
   expect(await runBriefs(db, at(MON, 8), async () => true)).toEqual([]);

@@ -144,6 +144,7 @@ class MeetingsWikiTest {
         val g = waitingByPerson(listOf(a, b, done), listOf(mail), null, NOW)
         assertEquals(listOf("Anna Berg", "Dee"), g.map { it.name })
         assertEquals(listOf("the contract" to 5, "Review budget" to 2), g[0].rows.map { it.title to it.days })
+        assertEquals(listOf(true, false), g[0].rows.map { it.late })
         assertEquals("https://x.test", g[1].rows[0].url)
         assertEquals("Hi Anna, a quick nudge on the contract; Review budget. Any update when you have a moment? Thanks!", nudgeText(g[0]))
     }

@@ -314,8 +314,19 @@ fun meetingMeta(m: Row, now: Long, noDay: Boolean = false): String {
 
 // web/src/codex/data/tasks/review.ts: what waits on a person, from open tasks that name them and from sent mail with no reply.
 @Serializable class Unanswered(val thread: String = "", val url: String = "", val to: String = "", val subject: String = "", @SerialName("sent_at") val sentAt: Long = 0)
-class WaitingRow(val key: String, val title: String, val days: Int, val url: String? = null)
+class WaitingRow(val key: String, val title: String, val days: Int, val late: Boolean, val url: String? = null)
 class Waiting(val name: String, val rows: List<WaitingRow>)
+
+// Mirrors shared/waiting.ts, checked by shared/fixtures/late-promise.json: waiting over 3 workdays (Monday to Friday) is late.
+fun isLate(since: Long, now: Long): Boolean {
+    var d = Instant.ofEpochMilli(since).atZone(codexZone)
+    var n = 0
+    while (n < 3) {
+        d = d.plusDays(1)
+        if (d.dayOfWeek.value <= 5) n++
+    }
+    return now > d.toInstant().toEpochMilli()
+}
 
 private val WAITING_NAME = Regex("^(?:waiting\\s+(?:on|for)\\s+([^:,\\-\\n(]+)|@(\\S+))", RegexOption.IGNORE_CASE)
 private val WAITING_WORD = Regex("\\bwaiting\\b", RegexOption.IGNORE_CASE)
@@ -337,14 +348,14 @@ fun waitingByPerson(items: List<Row>, briefs: List<Row>, profile: String?, now: 
         val name = waitingOn(r) ?: continue
         val title = (r.title ?: "").replace(WAITING_NAME, "").trimStart(' ', '\t', '\n', ':', ',', '-').trim().ifEmpty { r.title ?: "" }
         val created = minOf(r.updatedAt, *r.times.values.filter { it > 0 }.toLongArray())
-        add(name, WaitingRow(r.key, title, daysSince(created, now)))
+        add(name, WaitingRow(r.key, title, daysSince(created, now), isLate(created, now)))
     }
     for (b in briefs) {
         if (b.deleted || b.str("kind") != "waiting" || !matchesProfile(profile, b)) continue
         val list = try { protocolJson.decodeFromString(ListSerializer(Unanswered.serializer()), b.str("text") ?: "[]") } catch (e: Exception) { emptyList() }
-        for (w in list.filter { it.to.isNotEmpty() && it.subject.isNotEmpty() }) add(w.to, WaitingRow("mail:${w.thread}", w.subject, daysSince(w.sentAt, now), w.url.ifEmpty { null }))
+        for (w in list.filter { it.to.isNotEmpty() && it.subject.isNotEmpty() }) add(w.to, WaitingRow("mail:${w.thread}", w.subject, daysSince(w.sentAt, now), isLate(w.sentAt, now), w.url.ifEmpty { null }))
     }
-    return groups.values.map { (name, rows) -> Waiting(name, rows.sortedByDescending { it.days }) }.sortedWith(compareByDescending<Waiting> { it.rows[0].days }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+    return groups.values.map { (name, rows) -> Waiting(name, rows.sortedWith(compareByDescending<WaitingRow> { it.late }.thenByDescending { it.days })) }.sortedWith(compareByDescending<Waiting> { it.rows[0].late }.thenByDescending { it.rows[0].days }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
 }
 
 fun nudgeText(g: Waiting): String =
