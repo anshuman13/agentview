@@ -257,7 +257,20 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   (off while blank) and Cancel; Save posts `{ path, text }` to /api/memory/save, which resolves the path with realpath, writes only a file
   that is editable in the chat's list, keeps the front matter and returns the previous body, and answers 400 for anything else. The
   save shows "Memory updated" with Undo, which writes the previous body back; the phone hides Edit in read-only mode. Account
-  instruction files stay read-only
+  instruction files stay read-only. A memory file row (never MEMORY.md) has one state Badge from `memoryMark` (web
+  `chat/cards/memoryLogic.ts`, phone `chat/MemoryLogic.kt`, `shared/fixtures/memory-marks.json`): Conflicts (waiting) when its
+  description or body is like a Memory claim the user rejected in the chat's profile, else In wiki when a current Memory claim
+  restates it, else Stale when its modified time (`at` in /api/memory) is over 90 days old; the file view says it in full under
+  the source line ("Similar to a claim you rejected: ...", "Also in the wiki: ...", "Not changed since <date>"). Beside Edit, an
+  editable memory file other than MEMORY.md has Move to wiki (hidden in phone read-only mode): it makes a live Memory claim from
+  the description (or the body on one line), cut to 400 characters and superseding the claim it restates, then posts `{ path }`
+  to /api/memory/remove, which deletes the file and the MEMORY.md lines that link to it and returns `{ raw, lines }`. The sheet
+  goes back to the list with "Moved to wiki" and Undo, which posts them to /api/memory/restore (only into a memory folder of the
+  chat, never over a file) and deletes the claim; a failed remove deletes the claim and says "Could not move the memory". On the
+  phone, system Back in a file view returns to the list and asks "Discard the edit?" over an open edit
+- A turn that wrote Claude memory files (successful Write, Edit or MultiEdit on `projects/<folder>/memory/*.md`, MEMORY.md only
+  when alone: `rememberedOf`, `shared/fixtures/remembered.json`) shows a "Remembered N memories" chip in its task head after
+  Proposed; a tap opens the Memory sheet at the file when there is one, else the list
 - On the phone, a prompt starting with ! runs as a shell command in the chat's last terminal (or a new one) and opens the
   Terminal page, as on the web
 - Typing 3 or more characters in the phone Sessions search also searches every chat's prompts and replies (from

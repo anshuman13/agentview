@@ -1,9 +1,9 @@
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'bun:test';
-import { saveMemory } from '../memory.js';
-import { chatMemory, claudeInstructionFiles } from './memory.js';
+import { removeMemory, restoreMemory, saveMemory } from '../memory.js';
+import { chatMemory, claudeInstructionFiles, memoryDirs } from './memory.js';
 
 const root = mkdtempSync(path.join(os.tmpdir(), 'agentview-memory-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -94,12 +94,86 @@ describe('chatMemory', () => {
       const stray = path.join(root, 'stray', 'memory');
       mkdirSync(stray, { recursive: true });
       writeFileSync(path.join(stray, 'a.md'), 'a');
-      await expect(saveMemory([{ path: path.join(stray, 'a.md'), name: 'a', description: '', text: 'a', editable: true }], path.join(stray, 'a.md'), 'changed')).rejects.toThrow();
+      await expect(saveMemory([{ path: path.join(stray, 'a.md'), name: 'a', description: '', text: 'a', editable: true, at: 0 }], path.join(stray, 'a.md'), 'changed')).rejects.toThrow();
       expect(readFileSync(path.join(stray, 'a.md'), 'utf8')).toBe('a');
     });
 
     it('refuses a text over the cap', async () => {
       await expect(saveMemory(await list(), git, 'x'.repeat(20_001))).rejects.toThrow();
+    });
+  });
+
+  describe('removeMemory and restoreMemory', () => {
+    const cwd = path.join(root, 'move_repo');
+    const account = path.join(root, 'move-account');
+    const mem = path.join(account, 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'), 'memory');
+    const git = path.join(mem, 'git.md');
+    const index = path.join(mem, 'MEMORY.md');
+    const raw = '---\nname: git-workflow\ndescription: "push after rebase"\n---\n\nAlways rebase.\n';
+    const indexText = '- [Git](git.md) - push after rebase\n- [Tests](tests.md)\n- [Git again](./git.md)\n';
+    const outside = path.join(root, 'move-outside');
+    mkdirSync(cwd);
+    mkdirSync(mem, { recursive: true });
+    mkdirSync(outside);
+    writeFileSync(path.join(cwd, 'CLAUDE.md'), '# Repo\n');
+    writeFileSync(path.join(mem, 'tests.md'), 'Run bun test.\n');
+    writeFileSync(path.join(mem, 'notes.txt'), 'not markdown');
+    writeFileSync(path.join(outside, 'secret.md'), 'secret');
+    symlinkSync(path.join(outside, 'secret.md'), path.join(mem, 'link.md'));
+    const list = () => chatMemory(cwd, [account]);
+    const reset = () => {
+      writeFileSync(git, raw);
+      writeFileSync(index, indexText);
+    };
+
+    it('removes the file and only its index lines, and restore puts both back exactly', async () => {
+      reset();
+      const removed = await removeMemory(await list(), git);
+      expect(removed).toEqual({ raw, lines: ['- [Git](git.md) - push after rebase', '- [Git again](./git.md)'] });
+      expect(existsSync(git)).toBe(false);
+      expect(readFileSync(index, 'utf8')).toBe('- [Tests](tests.md)\n');
+      await restoreMemory(memoryDirs(cwd, [account]), git, removed.raw, removed.lines);
+      expect(readFileSync(git, 'utf8')).toBe(raw);
+      expect(readFileSync(index, 'utf8')).toBe('- [Tests](tests.md)\n- [Git](git.md) - push after rebase\n- [Git again](./git.md)\n');
+      expect(readdirSync(mem).filter((n) => n.endsWith('.tmp'))).toEqual([]);
+    });
+
+    it('does not double index lines that are still there', async () => {
+      reset();
+      const removed = await removeMemory(await list(), git);
+      writeFileSync(index, indexText);
+      await restoreMemory(memoryDirs(cwd, [account]), git, removed.raw, removed.lines);
+      expect(readFileSync(index, 'utf8')).toBe(indexText);
+    });
+
+    it('refuses MEMORY.md, instruction files, non-md files, unlisted paths, traversal and symlinks', async () => {
+      reset();
+      const files = await list();
+      const tries = [index, path.join(cwd, 'CLAUDE.md'), path.join(mem, 'notes.txt'), path.join(mem, 'missing.md'), path.join(mem, '..', '..', '..', '..', 'move-outside', 'secret.md'), path.join(mem, 'link.md')];
+      for (const p of tries) await expect(removeMemory(files, p)).rejects.toThrow();
+      expect(readFileSync(index, 'utf8')).toBe(indexText);
+      expect(readFileSync(path.join(cwd, 'CLAUDE.md'), 'utf8')).toBe('# Repo\n');
+      expect(readFileSync(path.join(outside, 'secret.md'), 'utf8')).toBe('secret');
+      expect(existsSync(path.join(mem, 'notes.txt'))).toBe(true);
+    });
+
+    it('refuses a restore into a foreign folder, over a file, of MEMORY.md, a non-md file or a line that links elsewhere', async () => {
+      reset();
+      const dirs = memoryDirs(cwd, [account]);
+      const foreign = path.join(root, 'foreign', 'projects', 'x', 'memory');
+      mkdirSync(foreign, { recursive: true });
+      symlinkSync(foreign, path.join(mem, 'via'));
+      await expect(restoreMemory(dirs, path.join(foreign, 'new.md'), 'x', [])).rejects.toThrow();
+      await expect(restoreMemory(dirs, path.join(mem, 'via', 'new.md'), 'x', [])).rejects.toThrow();
+      await expect(restoreMemory(dirs, path.join(mem, '..', 'memory', '..', 'new.md'), 'x', [])).rejects.toThrow();
+      await expect(restoreMemory(dirs, git, 'changed', [])).rejects.toThrow();
+      await expect(restoreMemory(dirs, index, 'changed', [])).rejects.toThrow();
+      await expect(restoreMemory(dirs, path.join(mem, 'new.txt'), 'x', [])).rejects.toThrow();
+      await expect(restoreMemory(dirs, path.join(mem, 'new.md'), 'x', ['- [Other](other.md)'])).rejects.toThrow();
+      expect(readdirSync(foreign)).toEqual([]);
+      expect(readFileSync(git, 'utf8')).toBe(raw);
+      expect(readFileSync(index, 'utf8')).toBe(indexText);
+      expect(existsSync(path.join(mem, 'new.md'))).toBe(false);
     });
   });
 

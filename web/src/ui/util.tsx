@@ -24,7 +24,7 @@ export const escapeHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, 
 // Links from synced or model-written text open only as web or mail links.
 export const safeHref = (url: string | null | undefined) => (url && /^(https?:|mailto:)/i.test(url) ? url : undefined);
 
-export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+export const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 export const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
 
 export const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');

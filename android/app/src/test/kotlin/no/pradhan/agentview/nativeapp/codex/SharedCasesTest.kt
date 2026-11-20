@@ -81,6 +81,10 @@ import no.pradhan.agentview.nativeapp.chat.editCount
 import no.pradhan.agentview.nativeapp.chat.exploreLabelOf
 import no.pradhan.agentview.nativeapp.chat.exploreRunsOf
 import no.pradhan.agentview.nativeapp.chat.FoldRow
+import no.pradhan.agentview.nativeapp.chat.MemoryFile
+import no.pradhan.agentview.nativeapp.chat.MemoryMark
+import no.pradhan.agentview.nativeapp.chat.memoryMark
+import no.pradhan.agentview.nativeapp.chat.rememberedOf
 import no.pradhan.agentview.nativeapp.chat.Proposal
 import no.pradhan.agentview.nativeapp.chat.StatusStep
 import no.pradhan.agentview.nativeapp.chat.buildTranscript
@@ -316,6 +320,25 @@ class SharedCasesTest {
                 assertEquals(c.str("name"), want, rows.filterIsInstance<FoldRow.Fold>().map { it.proposed })
             }
             c["now"]?.let { expected -> assertEquals(c.str("name"), expected.jsonArray.map { it.jsonPrimitive.content }, rows.filterIsInstance<FoldRow.Fold>().map { it.now }) }
+        }
+    }
+
+    @Test fun remembered() {
+        for (c in cases("remembered")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, rememberedOf(buildTranscript(events)))
+        }
+    }
+
+    @Test fun memoryMarks() {
+        for (c in cases("memory-marks")) {
+            val facts = c.getValue("facts").jsonArray.map { it.jsonObject }.map { o ->
+                val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+                for (k in listOf("text", "state")) o[k]?.let { f[k] = it }
+                Row("facts", o.str("id"), o.str("profile"), f = f)
+            }
+            val want = c.nullable("expected")?.jsonObject?.let { MemoryMark(it.str("mark"), it.str("claim")) }
+            assertEquals(c.str("name"), want, memoryMark(c.getValue("file").decode<MemoryFile>(), facts, c.str("profile"), c.getValue("now").jsonPrimitive.long))
         }
     }
 

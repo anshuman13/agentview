@@ -202,7 +202,7 @@ on the left, an action (IconButton sm or Button quiet sm) on the right. No neste
 `<Badge status label? reason? count?>` in `ui/Badge.tsx`; `.badge`. Pill, `--size-2xs` high, `--fs-2xs` 600, foreground `--bg`.
 The visible text is the status word in sentence case, or "N word" with `count` ("2 failed"). No other text.
 - Seven words (Status language): waiting `--warn`; sent and done `--ok`; failed and late `--err`; skipped `--hover` with `--fg-muted`; new `--accent-fill`.
-- Labels: `label` replaces the word only for "Needs you" on waiting and "Live" on running.
+- Labels: `label` replaces the word only for "Needs you" on waiting and "Live" on running, and on a Memory file row for "Conflicts" on waiting and "In wiki" or "Stale" on skipped.
 - Reason: `reason` becomes `aria-label` and `title`, never visible text ("Overdue" and "Missed" render Late with that reason).
 - Digits-only exception: count badges (tab bar, nav, Section count, group counts, the phone Jump to latest reply count) stay a raw `.badge` with neutral, quiet, waiting or running tone and hold only digits.
 - Progress exception: the Today header shows one quiet `.badge` "N of M done" in its Section `action` once N is at least 1.

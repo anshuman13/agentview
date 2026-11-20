@@ -140,20 +140,27 @@ fun Hub.shareToTask(item: SharedItem, profile: String): Boolean {
     return codex.capture(if (t.body.isNotEmpty()) "${t.title}\n${t.body}" else t.title, "open", profile, null, extra) != null
 }
 
-// Saves a live Memory claim in the chat's profile with the chat as its source, superseding the Memory claim it restates.
-fun Hub.rememberFromChat(text: String, title: String, cwd: String) {
+class RememberedClaim(val replaced: Boolean, val undo: () -> Unit)
+
+// Saves a live Memory claim in the chat's profile with the chat as its source, superseding the Memory claim it restates; null when it was not saved.
+fun Hub.rememberClaim(text: String, title: String, cwd: String): RememberedClaim? {
     val profile = segmentOf(cwd)
-    val fact = newFact(text, null, profile, System.currentTimeMillis(), "live", chatSource(title, cwd)) ?: return
+    val fact = newFact(text, null, profile, System.currentTimeMillis(), "live", chatSource(title, cwd)) ?: return null
     val old = restatedClaim(fact.str("text") ?: "", codex.state.value.facts, profile)
-    if (!codex.add(fact)) return
+    if (!codex.add(fact)) return null
     if (old != null) {
         codex.update(fact, mapOf("replaces" to old.id))
         codex.update(old, mapOf("superseded_by" to fact.id))
     }
-    undoable.tryEmit(Undoable(if (old != null) "Saved to Memory, replacing a similar claim" else "Saved to Memory") {
+    return RememberedClaim(old != null) {
         codex.update(fact, mapOf("deleted" to true))
         if (old != null) codex.update(old, mapOf("superseded_by" to null))
-    })
+    }
+}
+
+fun Hub.rememberFromChat(text: String, title: String, cwd: String) {
+    val claim = rememberClaim(text, title, cwd) ?: return
+    undoable.tryEmit(Undoable(if (claim.replaced) "Saved to Memory, replacing a similar claim" else "Saved to Memory", claim.undo))
 }
 
 fun Hub.remindChat(title: String, sessionId: String, cwd: String, at: Long) {

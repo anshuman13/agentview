@@ -5,6 +5,8 @@ import { assistantStore } from '../codex/data';
 import { restatedClaim, rememberedFact } from '../codex/data/wiki/wiki';
 import { showSnack } from '../codex/view';
 import { profileOfPath } from '../../../shared/workspace';
+import { removeMemory, restoreMemory, type RemovedMemory } from './chatApi';
+import { memoryClaimText, type MemoryFile } from './cards/memoryLogic';
 
 // Side chat (like Claude desktop's): forks this chat into the column beside it, so a question does not land in the
 // running chat. The server views the fork once it starts; the original moves back to the main column.
@@ -48,8 +50,8 @@ export async function remindChat(at: number) {
   await store.update(row, { source: 'chat', source_url: `${location.origin}/?session=${sessionId}` });
 }
 
-// A live Memory claim in the chat's profile, superseding the Memory claim it restates; Undo deletes it and clears that.
-export function rememberChat(text: string) {
+// A live Memory claim in the chat's profile, superseding the Memory claim it restates; its undo deletes it and clears that.
+function rememberClaim(text: string) {
   const st = getState();
   const { cwd } = st.session;
   const profile = profileOfPath(cwd);
@@ -58,10 +60,34 @@ export function rememberChat(text: string) {
   const fact = rememberedFact(text, profile, st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd);
   void store.editRow('facts', fact, old ? { replaces: old.id } : {});
   if (old) void store.editRow('facts', old, { superseded_by: fact.id });
-  showSnack(old ? 'Saved to Memory, replacing a similar claim' : 'Saved to Memory', () => {
+  const undo = () => {
     void store.editRow('facts', fact, { deleted: 1 });
     if (old) void store.editRow('facts', old, { superseded_by: null });
+  };
+  return { replaced: !!old, undo };
+}
+
+export function rememberChat(text: string) {
+  const { replaced, undo } = rememberClaim(text);
+  showSnack(replaced ? 'Saved to Memory, replacing a similar claim' : 'Saved to Memory', undo);
+}
+
+// Makes a memory file a Memory claim and removes the file; Undo puts the file and its MEMORY.md lines back and deletes the claim, then runs `restored`. True once the file is gone.
+export async function moveMemoryToWiki(file: MemoryFile, restored: () => void) {
+  const claim = rememberClaim(memoryClaimText(file));
+  let removed: RemovedMemory;
+  try {
+    removed = await removeMemory(file.path);
+  } catch {
+    claim.undo();
+    showSnack('Could not move the memory');
+    return false;
+  }
+  showSnack(claim.replaced ? 'Moved to wiki, replacing a similar claim' : 'Moved to wiki', () => {
+    claim.undo();
+    restoreMemory(file.path, removed).then(restored, () => showSnack('Could not restore the memory'));
   });
+  return true;
 }
 
 export function copyChatMarkdown() {

@@ -32,6 +32,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarDuration
@@ -59,14 +61,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-// Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle and a title row.
+// Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle and a title row. With `onBack`, system Back calls it instead of closing the sheet.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Boolean = true, count: String? = null, action: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Boolean = true, count: String? = null, action: (@Composable () -> Unit)? = null, onBack: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     val c = av
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = full),
+        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = onBack == null),
         containerColor = c.containerLow,
         contentColor = c.fg,
         scrimColor = c.scrimStrong,
@@ -78,6 +81,7 @@ fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Bo
             }
         },
     ) {
+        if (onBack != null) BackHandler(onBack = onBack)
         // The sheet is its own window: no text in it may register with a SelectionContainer behind it (that crashes on a long press), so the body gets its own.
         DisableSelection { Column(Modifier.navigationBarsPadding().nestedScroll(remember { DragOnlyToSheet() }).verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp8)) {
             Row(Modifier.fillMaxWidth().height(Tokens.rowOne).padding(start = Tokens.listPad, end = if (action != null) Tokens.sp2 else Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {

@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,14 +21,21 @@ import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.Undoable
 import no.pradhan.agentview.nativeapp.app.memoryFiles
+import no.pradhan.agentview.nativeapp.app.moveMemoryToWiki
 import no.pradhan.agentview.nativeapp.app.read
 import no.pradhan.agentview.nativeapp.app.readFile
 import no.pradhan.agentview.nativeapp.app.saveFile
 import no.pradhan.agentview.nativeapp.app.saveMemory
+import no.pradhan.agentview.nativeapp.sessions.segmentOf
 import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.Badge
+import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
+import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
+import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.ListRow
@@ -38,7 +47,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 @Serializable
-data class MemoryFile(val path: String, val name: String, val description: String = "", val text: String = "", val editable: Boolean = false)
+data class MemoryFile(val path: String, val name: String, val description: String = "", val text: String = "", val editable: Boolean = false, val at: Long = 0)
 
 // Where a memory file comes from: the repo, or the account folder (.claude, .claude-alt, .codex) it was read from.
 fun memoryWhere(f: MemoryFile, cwd: String): String {
@@ -84,16 +93,33 @@ private fun AddRule(hub: Hub, file: String, onSaved: () -> Unit) {
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { add() }))
 }
 
-// What the agent is told and remembers in this folder, like Windsurf's memories panel. The repo instruction file and Claude's memory files can be changed.
+// The mark as a row's state Badge: Conflicts in the waiting tone, the others quiet.
 @Composable
-fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss: () -> Unit) {
+private fun MarkBadge(m: MemoryMark) = Badge(m.mark, if (m.mark == "Conflicts") BadgeTone.Waiting else BadgeTone.Quiet)
+
+// What the agent is told and remembers in this folder, like Windsurf's memories panel. The repo instruction file and Claude's memory files can be changed.
+// `initial` opens that file once the list has loaded.
+@Composable
+fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: String? = null, onDismiss: () -> Unit) {
     val file = ruleFile(cwd, instructionFiles)
     val (files, reload) = rememberLoad(cwd) { hub.memoryFiles() }
     var open by remember { mutableStateOf<MemoryFile?>(null) }
+    var opened by remember { mutableStateOf(initial == null) }
+    val facts by hub.codex.state.select { it.facts }
+    val now = System.currentTimeMillis()
+    val markOf = { f: MemoryFile -> memoryMark(f, facts, segmentOf(cwd), now) }
+    LaunchedEffect(files.data) {
+        val list = files.data ?: return@LaunchedEffect
+        if (!opened) { opened = true; open = list.firstOrNull { it.path == initial } }
+    }
     open?.let { f ->
         var draft by remember(f) { mutableStateOf<String?>(null) }
         var saving by remember(f) { mutableStateOf(false) }
-        Sheet(onDismiss = onDismiss, title = f.name, action = { Button("Back", { open = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) {
+        var discard by remember(f) { mutableStateOf(false) }
+        val back: () -> Unit = { if (draft != null) discard = true else open = null }
+        if (discard) ConfirmDialog("Discard the edit?", "Your changes to ${f.name} are not saved.", "Discard", { open = null }, onDismiss = { discard = false })
+        Sheet(onDismiss = onDismiss, title = f.name, onBack = back, action = { Button("Back", back, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) {
+            markOf(f)?.let { Text(markLine(it, f.at, now), style = Type.footnote, color = av.fgMuted) }
             val text = draft
             if (text != null) {
                 TextField(text, { draft = it }, minLines = 6)
@@ -116,7 +142,16 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss
                     Button("Cancel", { draft = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
             } else {
-                if (f.path == "$cwd/$file" || (f.editable && !hub.readOnly)) Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                    if (f.path == "$cwd/$file" || (f.editable && !hub.readOnly)) Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    if (f.editable && !hub.readOnly && !isMemoryIndex(f.path)) Button("Move to wiki", {
+                        saving = true
+                        hub.moveMemoryToWiki(f, cwd, reload) { moved ->
+                            saving = false
+                            if (moved) { open = null; reload() }
+                        }
+                    }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "book", enabled = !saving)
+                }
                 Markdown(f.text.ifBlank { "Empty" })
             }
         }
@@ -129,7 +164,8 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss
             files.error.isNotEmpty() && list.isNullOrEmpty() -> EmptyState("Could not load memory", files.error, action = { Button("Retry", reload, size = ButtonSize.Sm) })
             list.isNullOrEmpty() -> EmptyState("No $file or memory files", "Add a rule below to create one")
             else -> list.forEach { f ->
-                ListRow(f.name, listOf(f.description, memoryWhere(f, cwd)).filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
+                val mark = markOf(f)
+                ListRow(f.name, listOf(f.description, memoryWhere(f, cwd)).filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, state = mark?.let { { MarkBadge(it) } }, stateSlot = true, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
             }
         }
         if (list != null) AddRule(hub, file, reload)

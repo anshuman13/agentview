@@ -1,0 +1,64 @@
+[
+  {
+    "name": "a Write to a memory file",
+    "events": [
+      { "id": "w1", "kind": "tool_use", "name": "Write", "input": { "file_path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "content": "Always rebase." }, "summary": "", "at": 1 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "w1", "text": "ok", "isError": false, "at": 2 }
+    ],
+    "expected": ["/Users/me/.claude/projects/-Users-me-app/memory/git.md"]
+  },
+  {
+    "name": "an Edit of the same file twice is listed once",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "Edit", "input": { "file_path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "old_string": "a", "new_string": "b" }, "summary": "", "at": 1 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "e1", "text": "ok", "isError": false, "at": 2 },
+      { "id": "b1", "kind": "tool_use", "name": "Bash", "input": { "command": "ls" }, "summary": "ls", "at": 3 },
+      { "id": "r2", "kind": "tool_result", "toolUseId": "b1", "text": "ok", "isError": false, "at": 4 },
+      { "id": "e2", "kind": "tool_use", "name": "MultiEdit", "input": { "file_path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "edits": [{ "old_string": "b", "new_string": "c" }] }, "summary": "", "at": 5 },
+      { "id": "r3", "kind": "tool_result", "toolUseId": "e2", "text": "ok", "isError": false, "at": 6 }
+    ],
+    "expected": ["/Users/me/.claude/projects/-Users-me-app/memory/git.md"]
+  },
+  {
+    "name": "MEMORY.md alone",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "Edit", "input": { "file_path": "/Users/me/.claude/projects/-Users-me-app/memory/MEMORY.md", "old_string": "a", "new_string": "b" }, "summary": "", "at": 1 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "e1", "text": "ok", "isError": false, "at": 2 }
+    ],
+    "expected": ["/Users/me/.claude/projects/-Users-me-app/memory/MEMORY.md"]
+  },
+  {
+    "name": "MEMORY.md with a file leaves MEMORY.md out",
+    "events": [
+      { "id": "w1", "kind": "tool_use", "name": "Write", "input": { "file_path": "/Users/me/.claude/projects/-Users-me-app/memory/tests.md", "content": "Run the tests." }, "summary": "", "at": 1 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "w1", "text": "ok", "isError": false, "at": 2 },
+      { "id": "e1", "kind": "tool_use", "name": "Edit", "input": { "file_path": "/Users/me/.claude/projects/-Users-me-app/memory/MEMORY.md", "old_string": "a", "new_string": "b" }, "summary": "", "at": 3 },
+      { "id": "r2", "kind": "tool_result", "toolUseId": "e1", "text": "ok", "isError": false, "at": 4 }
+    ],
+    "expected": ["/Users/me/.claude/projects/-Users-me-app/memory/tests.md"]
+  },
+  {
+    "name": "a failed Write is left out",
+    "events": [
+      { "id": "w1", "kind": "tool_use", "name": "Write", "input": { "file_path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "content": "Always rebase." }, "summary": "", "at": 1 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "w1", "text": "Error: no permission", "isError": true, "at": 2 }
+    ],
+    "expected": []
+  },
+  {
+    "name": "a CLAUDE.md edit is not a memory",
+    "events": [
+      { "id": "e1", "kind": "tool_use", "name": "Edit", "input": { "file_path": "/Users/me/app/CLAUDE.md", "old_string": "a", "new_string": "b" }, "summary": "", "at": 1 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "e1", "text": "ok", "isError": false, "at": 2 }
+    ],
+    "expected": []
+  },
+  {
+    "name": "a memory folder outside projects is not a memory",
+    "events": [
+      { "id": "w1", "kind": "tool_use", "name": "Write", "input": { "file_path": "/Users/me/app/docs/memory/notes.md", "content": "Notes." }, "summary": "", "at": 1 },
+      { "id": "r1", "kind": "tool_result", "toolUseId": "w1", "text": "ok", "isError": false, "at": 2 }
+    ],
+    "expected": []
+  }
+]

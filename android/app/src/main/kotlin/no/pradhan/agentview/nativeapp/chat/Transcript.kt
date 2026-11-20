@@ -304,7 +304,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
             it?.let { row -> days[row.id]?.let { DayDivider(it) } }
             if (r.key == newKey) NewLine()
             when {
-                r is FoldRow.Fold -> TaskLines(hub, r, running && r.last, onOpenWork)
+                r is FoldRow.Fold -> TaskLines(hub, r, cwd, running && r.last, onOpenWork)
                 it == null || it.id in folded -> {}
                 else -> {
                     val run = runs[it.id]
@@ -323,7 +323,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
 
 // The turn's tasks from set_status as small lines, and on the right a button that opens the turn's tool calls on their own screen (web Transcript.tsx Tasks).
 @Composable
-private fun TaskLines(hub: Hub, fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) -> Unit) {
+private fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, onOpenWork: (String) -> Unit) {
     // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
     val steps = if (live) fold.steps else fold.steps.filter { it.done }
     val done = steps.count { it.done }
@@ -331,12 +331,18 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, live: Boolean, onOpenWork: (
     val spin = @Composable { CircularProgressIndicator(Modifier.size(Tokens.sp5), strokeWidth = Tokens.stroke, color = av.fgFaint) }
     var reading by remember { mutableStateOf(false) }
     var proposing by remember { mutableStateOf(false) }
+    var memory by remember { mutableStateOf(false) }
+    if (memory) {
+        val files by hub.store.state.select { it.session?.instructionFiles.orEmpty() }
+        MemorySheet(hub, cwd, files, fold.remembered.singleOrNull()) { memory = false }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (steps.isNotEmpty()) Text(if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task"), style = Type.label, color = av.fgFaint)
+            if (steps.isNotEmpty()) Text(if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task"), style = Type.label, color = av.fgMuted)
             Spacer(Modifier.weight(1f))
             if (fold.claims.isNotEmpty()) Chip("Used ${plural(fold.claims.size, "claim")}", { reading = !reading }, on = reading)
             if (fold.proposed.isNotEmpty()) Chip("Proposed ${plural(fold.proposed.size, "claim")}", { proposing = !proposing }, on = proposing)
+            if (fold.remembered.isNotEmpty()) Chip("Remembered ${plural(fold.remembered.size, "memory", "memories")}", { memory = true })
             if (fold.work.tools > 0) Row(
                 Modifier.clip(RoundedCornerShape(Tokens.shapeFull)).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.shapeFull)).clickable { onOpenWork(fold.id) }.padding(horizontal = Tokens.sp4, vertical = Tokens.sp1),
                 verticalAlignment = Alignment.CenterVertically,

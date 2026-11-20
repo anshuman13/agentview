@@ -10,10 +10,17 @@ import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import { fileRequest } from '../../workspace/fileApi';
 import { showSnack } from '../../codex/view';
+import { useAssistantTable } from '../../codex/data';
+import { Badge } from '../../ui/Badge';
+import { profileOfPath } from '../../../../shared/workspace';
 import { Markdown } from '../Chat';
 import { fetchMemory, saveMemory } from '../chatApi';
+import { moveMemoryToWiki } from '../chatActions';
+import { isMemoryIndex } from '../transcript/workFold';
+import { markLine, memoryMark, type MemoryFile, type MemoryMark } from './memoryLogic';
 
-type MemoryFile = { path: string; name: string; description: string; text: string; editable?: boolean };
+const MARK_BADGE = { Conflicts: 'waiting', 'In wiki': 'skipped', Stale: 'skipped' } as const;
+const markBadge = (m: MemoryMark | null) => (m ? <Badge status={MARK_BADGE[m.mark]} label={m.mark} /> : null);
 
 // Where a memory file comes from; android MemoryUi.kt memoryWhere says the same.
 export function memoryWhere(f: Pick<MemoryFile, 'path'>, cwd: string) {
@@ -81,8 +88,8 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
   );
 }
 
-// A memory file's body as a field with Save and Cancel; a save can be undone while the file stays open.
-function MemoryEdit({ file, onSaved }: { file: MemoryFile; onSaved: (text: string) => void }) {
+// A memory file's body as a field with Save and Cancel; a save can be undone while the file stays open. Move to wiki is beside Edit on every file but MEMORY.md.
+function MemoryEdit({ file, onSaved, onMove }: { file: MemoryFile; onSaved: (text: string) => void; onMove: () => Promise<void> }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const save = async (text: string, undo = false) => {
@@ -102,6 +109,7 @@ function MemoryEdit({ file, onSaved }: { file: MemoryFile; onSaved: (text: strin
       {draft === null ? (
         <>
           <Button size="sm" variant="plain" icon="edit" onClick={() => setDraft(file.text)}>Edit</Button>
+          {!isMemoryIndex(file.path) && <Button size="sm" variant="plain" icon="book" disabled={saving} onClick={() => { setSaving(true); void onMove().finally(() => setSaving(false)); }}>Move to wiki</Button>}
           <Markdown text={file.text || 'Empty'} />
         </>
       ) : (
@@ -116,22 +124,38 @@ function MemoryEdit({ file, onSaved }: { file: MemoryFile; onSaved: (text: strin
 }
 
 // What the agent is told and remembers in this folder, like Windsurf's memories panel. The repo instruction file and Claude's memory files can be changed.
-export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void }) {
+// `initial` opens that file once the list has loaded.
+export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: string; onClose: () => void }) {
   const [files, setFiles] = useState<MemoryFile[] | null>(null);
   const [open, setOpen] = useState<MemoryFile | null>(null);
   const [reloads, setReloads] = useState(0);
   const file = ruleFile(cwd, useStore((s) => s.session.instructionFiles));
+  const facts = useAssistantTable('facts');
+  const now = Date.now();
+  const markOf = (f: MemoryFile) => memoryMark(f, facts, profileOfPath(cwd), now);
+  const reload = () => setReloads((n) => n + 1);
   useEffect(() => {
-    fetchMemory().then((l: MemoryFile[]) => setFiles(Array.isArray(l) ? l : [])).catch(() => setFiles([]));
+    fetchMemory().then((l: MemoryFile[]) => {
+      const list = Array.isArray(l) ? l : [];
+      setFiles(list);
+      if (reloads === 0 && initial) setOpen(list.find((f) => f.path === initial) ?? null);
+    }).catch(() => setFiles([]));
   }, [reloads]);
   if (open) {
     const edit = () => { setUi({ openFile: file, openEdit: true, follow: false }); onClose(); };
+    const mark = markOf(open);
+    const move = async () => {
+      if (!(await moveMemoryToWiki(open, reload))) return;
+      setOpen(null);
+      reload();
+    };
     return (
       <Sheet label={open.name} onClose={onClose}>
         <Section label={open.name} />
         <div className="muted">{memoryWhere(open, cwd)}</div>
+        {mark && <div className="muted">{markLine(mark, open.at)}</div>}
         {open.editable ? (
-          <MemoryEdit file={open} onSaved={(text) => { setOpen({ ...open, text }); setReloads((n) => n + 1); }} />
+          <MemoryEdit file={open} onSaved={(text) => { setOpen({ ...open, text }); reload(); }} onMove={move} />
         ) : (
           <>
             {open.path === `${cwd}/${file}` && <Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button>}
@@ -146,8 +170,8 @@ export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void 
       <Section label="Memory" />
       {files === null && <Skeleton rows={3} />}
       {files?.length === 0 && <EmptyState size="sm" title={`No ${file} or memory files`} hint="Add a rule below to create one" />}
-      {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ')} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
-      {files && <AddRule file={file} onSaved={() => setReloads((n) => n + 1)} />}
+      {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ')} state={markBadge(markOf(f))} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
+      {files && <AddRule file={file} onSaved={reload} />}
     </Sheet>
   );
 }

@@ -13,7 +13,7 @@ const notes = (items: Item[]) => (items.length === 1 ? noteOf(items[0]) : '') ||
 
 export type FoldRow =
   | { kind: 'item'; it: Item }
-  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[]; now: string; claims: Claim[]; proposed: Proposal[] };
+  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[]; now: string; claims: Claim[]; proposed: Proposal[]; remembered: string[] };
 
 export type Claim = { id: string; text: string; where: string };
 
@@ -50,6 +50,17 @@ export function proposedOf(items: Item[]): Proposal[] {
     if (m && !out.has(m[1])) out.set(m[1], { id: m[1], text: text(it.use.input.text) });
   }
   return [...out.values()];
+}
+
+// A file Claude keeps memory in for a folder: <account>/projects/<slug>/memory/<name>.md. Android WorkFold.kt MEMORY_FILE says the same.
+export const MEMORY_FILE = /\/projects\/[^/]+\/memory\/[^/]+\.md$/;
+export const isMemoryIndex = (path: string) => path.endsWith('/MEMORY.md');
+
+// The memory files a turn wrote: its successful Write, Edit or MultiEdit steps on one, each path once, MEMORY.md only when it is the only one. Android WorkFold.kt rememberedOf says the same.
+export function rememberedOf(items: Item[]): string[] {
+  const paths = [...new Set(items.flatMap((it) => (it.kind === 'file' && !it.error && !it.pending && MEMORY_FILE.test(it.path) ? [it.path] : [])))];
+  const files = paths.filter((p) => !isMemoryIndex(p));
+  return files.length ? files : paths;
 }
 
 // What the hub mirror says of a proposed claim; Android WorkFold.kt proposalState says the same.
@@ -157,7 +168,7 @@ export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(
     });
     const tasks = steps.get(key);
     if (hidden.length > 0 || tasks) {
-      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '', claims: claimsOf(hidden), proposed: proposedOf(hidden) };
+      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '', claims: claimsOf(hidden), proposed: proposedOf(hidden), remembered: rememberedOf(hidden) };
       const at = reply < 0 ? rows.length : rows.findIndex((r) => r.kind === 'item' && r.it === group[reply]);
       rows.splice(at, 0, fold);
     }
@@ -178,7 +189,8 @@ function sameRow(a: FoldRow, b: FoldRow) {
     && sameList(a.hidden, b.hidden, Object.is)
     && sameList(a.steps, b.steps, sameFields)
     && sameList(a.claims, b.claims, sameFields)
-    && sameList(a.proposed, b.proposed, sameFields);
+    && sameList(a.proposed, b.proposed, sameFields)
+    && sameList(a.remembered, b.remembered, Object.is);
 }
 
 const rowKey = (r: FoldRow) => (r.kind === 'item' ? `item:${r.it.id}` : `fold:${r.id}`);

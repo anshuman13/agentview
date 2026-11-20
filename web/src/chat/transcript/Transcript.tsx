@@ -30,6 +30,7 @@ import { clickOnKey, command, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { copyPrompt, copyReply } from '../chatActions';
 import { imageUrl } from '../chatApi';
+import { MemoryPick } from '../cards/Memory';
 import { failedLine, userParts } from '../composer/composerLogic';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
@@ -459,10 +460,12 @@ function UserText({ id, text }: { id: string; text: string }) {
 
 // A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
 // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
-const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, claims, proposed }, live }: { row: Extract<FoldRow, { kind: 'fold' }>; live: boolean }) {
+const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, claims, proposed, remembered }, live }: { row: Extract<FoldRow, { kind: 'fold' }>; live: boolean }) {
   const tools = work.tools;
   const [reading, setReading] = useState(false);
   const [proposing, setProposing] = useState(false);
+  const [memory, setMemory] = useState(false);
+  const cwd = useStore((s) => s.session.cwd);
   const steps = live ? all : all.filter((s) => s.done);
   const done = steps.filter((s) => s.done).length;
   const current = live ? steps.find((s) => !s.done) : undefined;
@@ -473,10 +476,12 @@ const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, claims, pr
         {steps.length > 0 && <span>{done < steps.length ? `Tasks \u00b7 ${done} of ${steps.length}` : plural(steps.length, 'task')}</span>}
         {claims.length > 0 && <Chip size="sm" on={reading} className="tr-claims-chip" aria-expanded={reading} onClick={() => setReading((v) => !v)}>{`Used ${plural(claims.length, 'claim')}`}</Chip>}
         {proposed.length > 0 && <Chip size="sm" on={proposing} className="tr-claims-chip" aria-expanded={proposing} onClick={() => setProposing((v) => !v)}>{`Proposed ${plural(proposed.length, 'claim')}`}</Chip>}
+        {remembered.length > 0 && <Chip size="sm" className="tr-claims-chip" onClick={() => setMemory(true)}>{`Remembered ${plural(remembered.length, 'memory', 'memories')}`}</Chip>}
         {tools > 0 && <Chip size="sm" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{plural(tools, 'tool')}<Icon name="chevron-right" small /></Chip>}
       </div>
       {reading && <UsedClaims claims={claims} />}
       {proposing && <ProposedClaims proposed={proposed} />}
+      {memory && <MemoryPick cwd={cwd} initial={remembered.length === 1 ? remembered[0] : undefined} onClose={() => setMemory(false)} />}
       {steps.length > 0 && <ul className="tr-tasks">
         {steps.map((s) => (
           <li key={s.id} className={s.done ? 'done' : s === current ? 'now' : undefined}>

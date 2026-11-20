@@ -1,0 +1,64 @@
+[
+  {
+    "name": "a memory like a rejected Memory claim conflicts",
+    "file": { "name": "git", "path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "description": "", "text": "Always rebase before pushing to main.", "at": 1799913600000 },
+    "profile": "work",
+    "now": 1800000000000,
+    "facts": [{ "id": "f1", "profile": "work", "text": "Always rebase before pushing to main", "state": "rejected" }],
+    "expected": { "mark": "Conflicts", "claim": "Always rebase before pushing to main" }
+  },
+  {
+    "name": "a memory a live Memory claim restates is in the wiki",
+    "file": { "name": "git", "path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "description": "rebase before pushing", "text": "Some longer body.", "at": 1799913600000 },
+    "profile": "work",
+    "now": 1800000000000,
+    "facts": [{ "id": "f1", "profile": "work", "text": "Rebase before pushing", "state": "live" }],
+    "expected": { "mark": "In wiki", "claim": "Rebase before pushing" }
+  },
+  {
+    "name": "a rejected match wins over a live one",
+    "file": { "name": "git", "path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "description": "", "text": "Always rebase before pushing to main.", "at": 1799913600000 },
+    "profile": "work",
+    "now": 1800000000000,
+    "facts": [
+      { "id": "f1", "profile": "work", "text": "Rebase before pushing to main", "state": "live" },
+      { "id": "f2", "profile": "work", "text": "Always rebase before pushing to main", "state": "rejected" }
+    ],
+    "expected": { "mark": "Conflicts", "claim": "Always rebase before pushing to main" }
+  },
+  {
+    "name": "a memory not changed in over 90 days is stale",
+    "file": { "name": "git", "path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "description": "", "text": "Always rebase.", "at": 1791360000000 },
+    "profile": "work",
+    "now": 1800000000000,
+    "facts": [{ "id": "f1", "profile": "work", "text": "Deploys run on Fridays", "state": "live" }],
+    "expected": { "mark": "Stale", "claim": "" }
+  },
+  {
+    "name": "a fresh memory with no match has no mark",
+    "file": { "name": "git", "path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "description": "", "text": "Always rebase.", "at": 1799913600000 },
+    "profile": "work",
+    "now": 1800000000000,
+    "facts": [{ "id": "f1", "profile": "work", "text": "Deploys run on Fridays", "state": "rejected" }],
+    "expected": null
+  },
+  {
+    "name": "MEMORY.md has no mark",
+    "file": { "name": "git", "path": "/Users/me/.claude/projects/-Users-me-app/memory/MEMORY.md", "description": "", "text": "Always rebase before pushing to main.", "at": 1791360000000 },
+    "profile": "work",
+    "now": 1800000000000,
+    "facts": [{ "id": "f1", "profile": "work", "text": "Always rebase before pushing to main", "state": "rejected" }],
+    "expected": null
+  },
+  {
+    "name": "a claim in the other profile does not count",
+    "file": { "name": "git", "path": "/Users/me/.claude/projects/-Users-me-app/memory/git.md", "description": "", "text": "Always rebase before pushing to main.", "at": 1799913600000 },
+    "profile": "work",
+    "now": 1800000000000,
+    "facts": [
+      { "id": "f1", "profile": "personal", "text": "Always rebase before pushing to main", "state": "rejected" },
+      { "id": "f2", "profile": "personal", "text": "Always rebase before pushing to main", "state": "live" }
+    ],
+    "expected": null
+  }
+]

@@ -35,7 +35,8 @@ import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
 import { buildTranscript, openAtNew, turnAnswers, type Item } from './chat/transcript/steps';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
-import { foldTurns, proposalState, usedClaimState, workTitle } from './chat/transcript/workFold';
+import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
+import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memoryLogic';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { addUse, buildHistory, chatMarkdown, draftKey, failedLine, ghostFor, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
@@ -115,6 +116,18 @@ describe('cases shared with the Android app', () => {
       if (c.steps) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.steps] : []))).toEqual(c.steps);
       if (c.now) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.now] : []))).toEqual(c.now);
       if (c.proposed) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.proposed] : []))).toEqual(c.proposed);
+    });
+  }
+
+  for (const c of cases<{ name: string; events: ChatEvent[]; expected: string[] }>('remembered')) {
+    it(`rememberedOf: ${c.name}`, () => expect(rememberedOf(buildTranscript(c.events))).toEqual(c.expected));
+  }
+
+  type MarkCase = { name: string; file: MemoryFile; profile: Profile; now: number; facts: { id: string; profile: Profile; text: string; state: string }[]; expected: MemoryMark | null };
+  for (const c of cases<MarkCase>('memory-marks')) {
+    it(`memoryMark: ${c.name}`, () => {
+      const facts = c.facts.map((f) => ({ ...f, deleted: 0, page_id: null, superseded_by: null }) as unknown as Fact);
+      expect(memoryMark(c.file, facts, c.profile, c.now)).toEqual(c.expected);
     });
   }
 

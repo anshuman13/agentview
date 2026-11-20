@@ -53,7 +53,7 @@ sealed interface FoldRow {
         override val key get() = it.id
     }
 
-    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean, val steps: List<StatusStep> = emptyList(), val now: String = "", val claims: List<Claim> = emptyList(), val proposed: List<Proposal> = emptyList()) : FoldRow {
+    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean, val steps: List<StatusStep> = emptyList(), val now: String = "", val claims: List<Claim> = emptyList(), val proposed: List<Proposal> = emptyList(), val remembered: List<String> = emptyList()) : FoldRow {
         override val key get() = "work:$id"
     }
 }
@@ -94,6 +94,16 @@ fun proposedOf(items: List<Item>): List<Proposal> {
         if (id !in out) out[id] = Proposal(id, it.use.input.s("text").trim())
     }
     return out.values.toList()
+}
+
+// web workFold.ts MEMORY_FILE: a file Claude keeps memory in for a folder, <account>/projects/<slug>/memory/<name>.md.
+val MEMORY_FILE = Regex("/projects/[^/]+/memory/[^/]+\\.md$")
+fun isMemoryIndex(path: String) = path.endsWith("/MEMORY.md")
+
+// web workFold.ts rememberedOf: the memory files a turn wrote, its successful Write, Edit or MultiEdit steps on one, each path once, MEMORY.md only when it is the only one.
+fun rememberedOf(items: List<Item>): List<String> {
+    val paths = items.filterIsInstance<Item.File>().filter { it.error == null && !it.pending && MEMORY_FILE.containsMatchIn(it.path) }.map { it.path }.distinct()
+    return paths.filterNot(::isMemoryIndex).ifEmpty { paths }
 }
 
 // web workFold.ts proposalState: what the hub mirror says of a proposed claim.
@@ -188,7 +198,7 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
         val tasks = steps[key]
         if (hidden.isNotEmpty() || tasks != null) {
             val at = if (reply < 0) rows.size else rows.indexOfFirst { it is FoldRow.Row && it.it === group[reply] }
-            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), g == groups.lastIndex, tasks?.list().orEmpty(), tasks?.now.orEmpty(), claimsOf(hidden), proposedOf(hidden)))
+            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), g == groups.lastIndex, tasks?.list().orEmpty(), tasks?.now.orEmpty(), claimsOf(hidden), proposedOf(hidden), rememberedOf(hidden)))
         }
         out += rows
     }

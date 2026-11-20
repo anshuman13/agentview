@@ -9,6 +9,14 @@ export const fetchMemory = () => fetch(api('/api/memory')).then((r) => r.json())
 export const saveMemory = (path: string, text: string) =>
   fetchJson<{ previous: string }>(api('/api/memory/save'), { method: 'POST', body: JSON.stringify({ path, text }) }).then((r) => r.previous);
 
+export type RemovedMemory = { raw: string; lines: string[] };
+
+// Deletes a memory file and its MEMORY.md lines; resolves to both, for restoreMemory.
+export const removeMemory = (path: string) => fetchJson<RemovedMemory>(api('/api/memory/remove'), { method: 'POST', body: JSON.stringify({ path }) });
+
+export const restoreMemory = (path: string, removed: RemovedMemory) =>
+  fetchJson(api('/api/memory/restore'), { method: 'POST', body: JSON.stringify({ path, ...removed }) });
+
 export const fetchSavedSessions = () => fetch(api('/api/sessions')).then((r) => r.json());
 
 export const imageUrl = (path: string) => api(`/api/image?path=${encodeURIComponent(path)}`);

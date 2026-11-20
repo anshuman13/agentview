@@ -4,7 +4,7 @@ import { providerLabel } from '../../../shared/providers.js';
 import { readJsonSync, writeJsonSync } from '../json.js';
 import { STATE_DIR, loggedInAccounts, verifyLimit } from './claude/accounts.js';
 import { claudeTranscript } from './claude/chatMentions.js';
-import { chatMemory } from './claude/memory.js';
+import { chatMemory, memoryDirs } from './claude/memory.js';
 import { allowedServers, mcpProbe } from './claude/mcp.js';
 import { claudeDriver } from './claude/driver.js';
 import { NOT_SIGNED_IN, codexSignedIn } from './codex/binary.js';
@@ -26,6 +26,8 @@ type Entry = {
   transcriptPath(id: string): string | null;
   // The instruction files the Memory list shows for a folder.
   memory(cwd: string): Promise<MemoryFile[]>;
+  // The folders the provider writes memory files in for a folder, where a removed one may be restored.
+  memoryDirs(cwd: string): string[];
   // The shell line that continues a chat in the provider's own CLI, or null when it has none.
   resume(cwd: string, sessionId: string, account: Account): string | null;
   // The MCP servers the provider's own config defines for a folder, probed, and the plain definitions of those it would start.
@@ -43,6 +45,7 @@ const PROVIDERS: Record<Provider, Entry> = {
     verifyLimits: () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
     transcriptPath: claudeTranscript,
     memory: (cwd) => chatMemory(cwd),
+    memoryDirs: (cwd) => memoryDirs(cwd),
     resume: claudeResume,
     mcpProbe,
     servers: allowedServers,
@@ -54,6 +57,7 @@ const PROVIDERS: Record<Provider, Entry> = {
     verifyLimits: () => Promise.resolve(),
     transcriptPath: claudeTranscript,
     memory: (cwd) => chatMemory(cwd),
+    memoryDirs: (cwd) => memoryDirs(cwd),
     resume: () => null,
     mcpProbe,
     servers: allowedServers,
@@ -65,6 +69,7 @@ const PROVIDERS: Record<Provider, Entry> = {
     verifyLimits: () => Promise.resolve(),
     transcriptPath: codexTranscript,
     memory: (cwd) => readMemory(codexInstructionFiles(cwd)),
+    memoryDirs: () => [],
     resume: (cwd, sessionId) => codexResume(cwd, sessionId),
     mcpProbe: codexMcpProbe,
     servers: readCodexServers,

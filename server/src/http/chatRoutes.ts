@@ -5,7 +5,7 @@ import { openInChrome } from '../chrome/chrome.js';
 import { configDef, inSettings, mcpCall, mcpConfig } from '../agent/claude/mcp.js';
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import { provider } from '../agent/registry.js';
-import { saveMemory } from '../agent/memory.js';
+import { removeMemory, restoreMemory, saveMemory } from '../agent/memory.js';
 import { listDir, listFiles, listSketches, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
 import { github } from '../integrations/github.js';
 import { attention, dismissAttention, refreshAttention } from '../integrations/attention.js';
@@ -24,6 +24,8 @@ import { isPhone } from '../presence.js';
 import { currentChat, entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 
 const MAX_FILE_BODY = 5_000_000;
+
+const refused = (err: unknown) => failed(400, err instanceof Error ? err.message : String(err));
 
 // The Designer writes its sketches on the hub Mac. Elsewhere the list adds that Mac's sketches of the same project (a local file of
 // the same name wins), and a sketch missing here is read from there.
@@ -78,11 +80,16 @@ export function chatSessionRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> 
     'ANY /api/memory': entry(({ chat }) => provider(chat.provider ?? 'claude').memory(chat.cwd)),
     'POST /api/memory/save': entry(async ({ body, chat }) => {
       if (typeof body.path !== 'string' || typeof body.text !== 'string') return failed(400, 'path and text are required');
-      try {
-        return await saveMemory(await provider(chat.provider ?? 'claude').memory(chat.cwd), body.path, body.text);
-      } catch (err) {
-        return failed(400, err instanceof Error ? err.message : String(err));
-      }
+      return saveMemory(await provider(chat.provider ?? 'claude').memory(chat.cwd), body.path, body.text).catch(refused);
+    }, true),
+    'POST /api/memory/remove': entry(async ({ body, chat }) => {
+      if (typeof body.path !== 'string') return failed(400, 'path is required');
+      return removeMemory(await provider(chat.provider ?? 'claude').memory(chat.cwd), body.path).catch(refused);
+    }, true),
+    'POST /api/memory/restore': entry(({ body, chat }) => {
+      const { path: file, raw, lines } = body;
+      if (typeof file !== 'string' || typeof raw !== 'string' || !Array.isArray(lines) || !lines.every((l) => typeof l === 'string')) return failed(400, 'path, raw and lines are required');
+      return restoreMemory(provider(chat.provider ?? 'claude').memoryDirs(chat.cwd), file, raw, lines).catch(refused);
     }, true),
     'ANY /api/findings': entry(({ url, chat }) => getFindings(chat.cwd, url.searchParams.get('target') ?? 'local')),
     'POST /api/findings/dismiss': entry(({ body, chat }) => dismissFinding(chat.cwd, String(body.target ?? 'local'), String(body.key ?? '')), true),

@@ -10,6 +10,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
+import no.pradhan.agentview.nativeapp.chat.MemoryFile
+import no.pradhan.agentview.nativeapp.chat.memoryClaimText
+import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.withRestored
@@ -112,6 +120,25 @@ private fun Hub.restore(sessionId: String, row: SavedSession?, pinned: Boolean) 
     if (row != null) workspace.value = withRestored(workspace.value, row, pinned)
     if (pinned) runCatching { api.pin(sessionId, true) }
     if (row == null) refreshWorkspace(force = true)
+}
+
+private const val MOVE_FAILED = "Could not move the memory"
+
+// web chatActions.ts moveMemoryToWiki: makes a memory file a Memory claim and removes the file; Undo puts the file and its MEMORY.md lines back
+// and deletes the claim, then runs `restored`. `done` gets true once the file is gone.
+fun Hub.moveMemoryToWiki(file: MemoryFile, cwd: String, restored: () -> Unit, done: (Boolean) -> Unit) {
+    val st = store.state.value
+    val claim = rememberClaim(memoryClaimText(file), st.live.firstOrNull { it.id == st.shownId }?.title.orEmpty(), cwd) ?: return done(false)
+    var removed = JsonObject(emptyMap())
+    val body = buildJsonObject { put("path", file.path) }.toString()
+    writes.run(MOVE_FAILED, { removed = runCatching { protocolJson.parseToJsonElement(api.post("/api/memory/remove", body, pageChat)).jsonObject }.getOrElse { throw ApiError(MOVE_FAILED) } }) { ok ->
+        if (!ok) claim.undo()
+        else undoable.tryEmit(Undoable(if (claim.replaced) "Moved to wiki, replacing a similar claim" else "Moved to wiki") {
+            claim.undo()
+            write("/api/memory/restore", JsonObject(removed + ("path" to JsonPrimitive(file.path))).toString(), "Could not restore the memory") { if (it) restored() }
+        })
+        done(ok)
+    }
 }
 
 fun Hub.pin(sessionId: String, on: Boolean) = write("Could not ${if (on) "pin" else "unpin"} the chat. Try again.") {
