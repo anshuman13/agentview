@@ -37,6 +37,9 @@ fun replyTime(at: Long, now: Long): String = when {
     else -> "${dayLabel(at)} ${clock(at)}"
 }
 
+// The chat menu's Prompts list: the loaded prompts that are not queued, newest first.
+fun sentPrompts(items: List<Item>) = items.filterIsInstance<Item.User>().filter { !it.queued }.asReversed()
+
 // Running agents whose Agent call is not loaded yet (web AgentsPane unseen).
 fun unseenAgents(running: List<LiveAgent>, agents: List<Agent>) = running.filter { r -> agents.none { it.id == r.id } }
 

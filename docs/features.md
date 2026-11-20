@@ -35,7 +35,7 @@ At max-width 480px (900px where noted) the app is one column with a tab bar. Tas
 - **Load errors**: a page that cannot load, and a phone write that fails, say "Can't reach the Mac" for a dropped link and "The Mac took too long to answer" for a timeout, with Retry where the page had it; the server's own error text shows as is (`loadErrorText` in `shared/loadError.ts`, `net/LoadError.kt`). Web reads give up when the reply has not started within 20 s (70 s for Ops reads and a run's diff, whose gh and MCP calls take up to 60 s); writes have no timeout
 - **Bottom-sheet menus**: a Menu opens as a bottom sheet at max-width 480px. A long press of 500ms on a row with a More menu opens it with a haptic tap; the kebab stays
 - **Swipe undo**: every row swipe that completes, snoozes, moves, deletes, pins or archives shows one snack with Undo for 5 s; a newer swipe replaces it, so only the latest can be undone
-- **Chat actions**: a chat row in Sessions swipes right to Pin or Unpin and left to Archive, with Undo; a running or waiting chat only swipes right, and a chat with no session id yet does not swipe
+- **Chat actions**: a chat row in Sessions swipes right to Pin or Unpin and left to Archive, with Undo; a running or waiting chat only swipes right, and a chat with no session id yet does not swipe. The native Sessions rows swipe the same way (pin snack "Pinned" or "Unpinned"), and not in read-only mode
 - **Section headers**: grouped Section headers on Overview (Today), Tasks and Meetings stick to the top while the list scrolls
 - **Pull to refresh**: at max-width 900px, pulling down 64px at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs
 - **Scroll restore**: Back from a task or meeting returns the list to its scroll position, kept per list and profile filter (Tasks and Meetings)
@@ -361,6 +361,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   file editor the browser keeps the key; in Codex, or with Codex shown and no chat, it opens the task search on Tasks, focuses the wiki
   search on the wiki start page and otherwise opens the Codex Search page on the selected text; anywhere else it opens Find in the shown
   chat, on the sidebar search text when pressed from there
+- The phone chat menu's Prompts, after Find in chat, lists the loaded prompts that are not queued, newest first, with "Sent <time>"
+  (`sentPrompts`); a tap closes it and scrolls the transcript to that prompt, and while earlier events are not loaded the list ends with
+  Load earlier
 - The phone's + sheet has "Choose file" for any document type (kept under its display name, refused over 50 MB, the server's limit); an
   upload is marked `[Image: path]` or `[File: path]` by its type (`attachMark`, used by the web and the phone composer)
 - The phone's Tools sheet starts with Saved prompts, the last 50 prompts sent from the phone in any chat (newest first, kept once, not saved
