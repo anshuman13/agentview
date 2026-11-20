@@ -21,6 +21,19 @@ test('wiki_search lists current claims before old ones and marks the old block',
   expect(text.indexOf('may be out of date')).toBeLessThan(text.indexOf('[old]'));
 });
 
+test('wiki_search marks a contested claim with its note', async () => {
+  const claims = [
+    { id: 'c1', text: 'Limit is 60', at: Date.now(), state: 'live', page_id: 'p', contested: JSON.stringify({ by: 'you', at: 1, note: 'now 100' }) },
+    { id: 'c2', text: 'Limit is 70', at: Date.now(), state: 'live', page_id: 'p', contested: 'not json' },
+    { id: 'c3', text: 'Limit is 80', at: Date.now(), state: 'live', page_id: 'p', contested: null },
+  ];
+  stubGlobal('fetch', vi.fn(async () => json(200, { pages: [], claims })));
+  const text = await search('limit');
+  expect(text).toContain(', contested: now 100) Limit is 60');
+  expect(text).toContain(', contested: no note) Limit is 70');
+  expect(text).not.toMatch(/\[c3\].*contested/);
+});
+
 test('wiki_search reports a hub error and a failed fetch', async () => {
   stubGlobal('fetch', vi.fn(async () => json(400, { error: 'Missing or invalid profile' })));
   expect(await search('limit')).toBe('Wiki search failed: Missing or invalid profile');
@@ -72,6 +85,7 @@ test('preferencesText lists the profile\'s live Memory claims newest first, capp
     fact('gone', { text: 'Superseded one', superseded_by: 'p0' }),
     fact('old', { text: 'Old one', at: now - 100 * 86_400_000 }),
     fact('proposed', { text: 'Proposed one', state: 'proposed' }),
+    fact('disputed', { text: 'Disputed one', contested: '{"by":"you","at":1,"note":"no"}' }),
     fact('other', { text: 'Personal one' }, 'personal'),
   ];
   stubGlobal('fetch', vi.fn(async () => json(200, { version: 2, hasMore: false, changes })));
@@ -81,7 +95,7 @@ test('preferencesText lists the profile\'s live Memory claims newest first, capp
   expect(lines[0]).toBe('The user\'s approved preferences:');
   expect(lines.slice(1, 4)).toEqual(['- Preference 0', '- Preference 1', '- Preference 2']);
   expect(lines).toHaveLength(16);
-  expect(lines.join('\n')).not.toMatch(/On a page|Superseded|Old one|Proposed|Personal/);
+  expect(lines.join('\n')).not.toMatch(/On a page|Superseded|Old one|Proposed|Disputed|Personal/);
 });
 
 test('preferencesText is empty and does not throw while the hub is unreachable', async () => {

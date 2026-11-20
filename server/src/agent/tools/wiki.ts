@@ -13,7 +13,7 @@ export const WIKI_RULES = [
   'Write claims the way a good internal wiki does: one or two specific sentences that lead with the subject and carry the detail a colleague needs, such as names, numbers, limits, ticket and PR ids and absolute dates.',
   'Bad: "The team uses a gateway for APIs." Good: "As of 3 Mar 2026 the API gateway runs in prod, deploys on merge to main and limits each user to 60 requests a minute (PLAT-412)."',
   'Date anything that can change ("As of 28 Oct 2026, ..."). Prefer several specific claims over one summary. Give each claim its sources (Slack, Linear or PR links).',
-  'Call wiki_search first. Do not repeat a live, proposed or rejected claim; pass replaces when a claim updates or contradicts a live one. Prefer the newest claims; treat old, retired and superseded ones as history.',
+  'Call wiki_search first. Do not repeat a live, proposed or rejected claim; pass replaces when a claim updates or contradicts a live one. Prefer the newest claims; treat old, retired and superseded ones as history and contested ones as unsettled.',
   'Never propose secrets, credentials, tokens or file contents.',
 ].join(' ');
 
@@ -27,7 +27,7 @@ export function preferencesText(cwd: string): string {
   const profile = profileOf(cwd);
   const lines: string[] = [];
   let chars = 0;
-  const live = mirrored('facts').filter((r) => r.profile === profile && state(r) === 'live' && !r.page_id && !r.superseded_by && !isOld(r) && typeof r.text === 'string');
+  const live = mirrored('facts').filter((r) => r.profile === profile && state(r) === 'live' && !r.page_id && !r.superseded_by && !r.contested && !isOld(r) && typeof r.text === 'string');
   for (const r of live.sort(newest).slice(0, PREFERENCES)) {
     const line = `- ${(r.text as string).replace(/\s+/g, ' ').trim()}`;
     if (chars + line.length > PREFERENCE_CHARS) break;
@@ -43,7 +43,15 @@ const state = (r: HubRow) => (r.state as string | null) ?? 'live';
 const isOld = (f: HubRow) => isOldClaim({ state: state(f), at: typeof f.at === 'number' ? f.at : null, used_at: typeof f.used_at === 'number' ? f.used_at : null });
 const day = (f: HubRow) => (typeof f.at === 'number' && f.at > 0 ? new Date(f.at).toISOString().slice(0, 10) : 'undated');
 const where = (f: HubRow) => (f.page_title ? ` (on ${f.page_title}${f.heading ? ` / ${f.heading}` : ''})` : '');
-const claim = (f: HubRow) => `- [${f.id}] (${day(f)}, ${state(f)}${f.superseded_by ? ', superseded' : ''}${state(f) !== 'retired' && isOld(f) ? ', old' : ''}) ${f.text}${where(f)}`;
+const contestNote = (f: HubRow) => {
+  if (typeof f.contested !== 'string' || !f.contested) return '';
+  try {
+    return (JSON.parse(f.contested) as { note?: string }).note?.trim() || 'no note';
+  } catch {
+    return 'no note';
+  }
+};
+const claim = (f: HubRow) => `- [${f.id}] (${day(f)}, ${state(f)}${f.superseded_by ? ', superseded' : ''}${state(f) !== 'retired' && isOld(f) ? ', old' : ''}${f.contested ? `, contested: ${contestNote(f)}` : ''}) ${f.text}${where(f)}`;
 const newest = (a: HubRow, b: HubRow) => ((b.at as number) ?? 0) - ((a.at as number) ?? 0);
 
 // A chat reads only its own profile's wiki, so work chats never see personal claims and the other way round.

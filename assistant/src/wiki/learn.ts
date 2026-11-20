@@ -8,11 +8,14 @@ import { ACCOUNT_OF } from '../calendar/calendar.js';
 import { ask } from '../core/claude.js';
 import { getMeta, pruneMeta, setMeta, type Profile } from '../core/db.js';
 import { applyChanges, type Change } from '../core/sync.js';
+import { similarClaim } from '../../../shared/claimMatch.js';
 import { norm } from './wikiUpdates.js';
 import { searchWiki } from './wikiSearch.js';
 
 const MAX_CLAIMS = 3;
 const MAX_DECISIONS = 2;
+const MAX_REJECTED = 20;
+const REJECTED_DAYS = 90;
 const SECRET = /[a-z0-9]{24,}|sk-|ghp_|xox|password/i;
 const TICKET_OR_PR = /\b(?!(?:UTF|SHA|ISO|AES|RSA|GPT)-)[A-Z]{2}[A-Z0-9]*-\d+\b|(?<![\w&#])#\d{1,6}\b(?![0-9a-fA-F])|github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/;
 
@@ -26,20 +29,26 @@ const cursorKey = (profile: Profile, chat: string) => `learn:${profile}:${chat}`
 const hash = (s: string) => createHash('sha1').update(s).digest('hex').slice(0, 16);
 
 function known(db: Database, profile: Profile) {
-  return db.prepare("SELECT text, state FROM facts WHERE profile = ? AND deleted = 0 AND text IS NOT NULL AND text != ''").all(profile) as { text: string; state: string | null }[];
+  return db.prepare("SELECT text, state, updated_at FROM facts WHERE profile = ? AND deleted = 0 AND text IS NOT NULL AND text != ''").all(profile) as { text: string; state: string | null; updated_at: number }[];
 }
 
 // The claims Haiku is told are already known: the profile's live and proposed claims, page or not.
 export const alreadyKnown = (rows: { text: string; state: string | null }[]) => rows.filter((f) => f.state === null || f.state === 'live' || f.state === 'proposed').map((f) => f.text);
 
+// The claims the user rejected in the last 90 days, newest 20, which Haiku must not propose again and saveLearned skips.
+export const recentlyRejected = (rows: { text: string; state: string | null; updated_at: number }[], now: number) =>
+  rows.filter((f) => f.state === 'rejected' && f.updated_at > now - REJECTED_DAYS * 86_400_000).sort((a, b) => b.updated_at - a.updated_at).slice(0, MAX_REJECTED).map((f) => ({ text: f.text }));
+
 // Saves each claim as a proposed claim from the chat, unless a claim with the same text exists in any state or it looks like a secret. Preferences go to memory; a decision goes to its wiki page, which a new title creates as a proposed page.
 function saveLearned(db: Database, c: Chat, claims: string[], decisions: Decision[], now = Date.now()) {
-  const seen = new Set(known(db, c.profile).map((f) => norm(f.text)));
+  const rows = known(db, c.profile);
+  const seen = new Set(rows.map((f) => norm(f.text)));
+  const rejected = recentlyRejected(rows, now);
   const pages = db.prepare("SELECT id, title FROM pages WHERE profile = ? AND deleted = 0 AND COALESCE(state, 'live') != 'rejected'").all(c.profile) as Page[];
   const changes: Change[] = [];
   const add = (raw: string, page: Decision | null) => {
     const text = raw.trim().replace(/\s+/g, ' ');
-    if (!text || SECRET.test(text) || seen.has(norm(text))) return false;
+    if (!text || SECRET.test(text) || seen.has(norm(text)) || similarClaim(text, rejected)) return false;
     let page_id: string | null = null;
     if (page) {
       const title = page.page.trim().toLowerCase();
@@ -65,7 +74,7 @@ function saveLearned(db: Database, c: Chat, claims: string[], decisions: Decisio
   return applyChanges(db, changes).applied;
 }
 
-async function decide(c: Chat, events: ChatEvent[], memory: string[], pages: Page[] | null, now: number) {
+async function decide(c: Chat, events: ChatEvent[], memory: string[], pages: Page[] | null, now: number, rejected: { text: string }[] = []) {
   const claims: string[] = [];
   const decisions: Decision[] = [];
   const save = tool('save_claim', 'Save one preference or correction the user taught in the chat.', {
@@ -97,6 +106,9 @@ async function decide(c: Chat, events: ChatEvent[], memory: string[], pages: Pag
     '',
     'Already known:',
     ...(memory.length ? memory.map((t) => `- ${t}`) : ['(nothing)']),
+    '',
+    'Rejected, do not propose again (or anything that says the same):',
+    ...(rejected.length ? rejected.map((r) => `- ${r.text}`) : ['(nothing)']),
     '',
     'Chat:',
     ...events.map((e) => `${e.kind === 'user' ? 'Me' : 'Claude'}: ${e.text}`),
@@ -132,8 +144,8 @@ export async function learnFromChat(db: Database, c: Chat, now = Date.now(), run
   const events = c.events.filter((e) => (e.kind === 'user' || e.kind === 'assistant') && e.at > cursor);
   if (!events.some((e) => e.kind === 'user')) return { proposed: 0 };
   if (isLimited(ACCOUNT_OF[c.profile])) return { skipped: 'limit' };
-  const memory = alreadyKnown(known(db, c.profile));
-  const { claims, decisions } = await run(c, events, memory, decisionPages(db, c, events), now);
+  const rows = known(db, c.profile);
+  const { claims, decisions } = await run(c, events, alreadyKnown(rows), decisionPages(db, c, events), now, recentlyRejected(rows, now));
   const proposed = saveLearned(db, c, claims, decisions, now);
   setMeta(db, key, String(Math.max(...events.map((e) => e.at))));
   // A cursor only skips events already read, so one for a chat quiet for three months can go.

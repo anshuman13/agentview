@@ -100,6 +100,25 @@ describe('learn from chats', () => {
     expect(db.prepare("SELECT text FROM facts WHERE id LIKE 'learn:%'").all()).toEqual([{ text: 'Run tests before commits.' }]);
   });
 
+  it('skips a reworded rejected claim and lists recent rejections for the run', async () => {
+    const db = openDb(':memory:');
+    const now = 200 * 86_400_000;
+    const row = (id: string, text: string, updated_at: number) => ({ table: 'facts', id, profile: 'work' as const, updated_at, fields: { text, state: 'rejected' } });
+    applyChanges(db, [
+      row('a', 'Never use em dashes in replies.', now - 1000),
+      row('b', 'Always deploy on Fridays afternoon.', now - 100 * 86_400_000),
+      ...Array.from({ length: 25 }, (_, i) => row(`n${i}`, `Rejected topic${i} wording`, now - 2000 - i)),
+    ]);
+    let rejected: { text: string }[] = [];
+    const claims = ['Replies should never use em dashes.', 'Deploy always on Fridays afternoon.', 'Run tests before commits.'];
+    const run = async (_c: Chat, _e: Chat['events'], _m: string[], _p: unknown, _n: number, r: { text: string }[] = []) => ((rejected = r), { claims, decisions: [] });
+    expect(await learnFromChat(db, chat([user('u1', 10)]), now, run)).toEqual({ proposed: 2 });
+    expect(rejected).toHaveLength(20);
+    expect(rejected[0]).toEqual({ text: 'Never use em dashes in replies.' });
+    expect(rejected.map((r) => r.text)).not.toContain('Always deploy on Fridays afternoon.');
+    expect(db.prepare("SELECT text FROM facts WHERE id LIKE 'learn:%' ORDER BY text").all()).toEqual([{ text: 'Deploy always on Fridays afternoon.' }, { text: 'Run tests before commits.' }]);
+  });
+
   it('tells the run about live and proposed claims, page or not', async () => {
     const db = openDb(':memory:');
     const row = (id: string, state: string, text: string, page_id: string | null = null) => ({ table: 'facts', id, profile: 'work' as const, updated_at: 1, fields: { text, state, page_id } });
