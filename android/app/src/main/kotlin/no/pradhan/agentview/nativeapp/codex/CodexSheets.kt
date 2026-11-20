@@ -29,7 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import java.time.Instant
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
@@ -95,6 +97,7 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
     var text by remember(row.key) { mutableStateOf(row.text ?: "") }
     var pickDue by remember { mutableStateOf(false) }
     var tag by remember { mutableStateOf("") }
+    val clip = LocalClipboardManager.current
     val latest by androidx.compose.runtime.rememberUpdatedState(row)
     val commit = {
         val patch = mutableMapOf<String, Any?>()
@@ -164,6 +167,7 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
                 else if (row.status == "open") Button("Done", { commit(); actions.done(row); onDismiss() }, variant = ButtonVariant.Filled)
                 Button("Move to ${profileLabel(if (row.profile == WORK) PERSONAL else WORK)}", { actions.move(row, if (row.profile == WORK) PERSONAL else WORK) })
                 Button("Ask Claude", { commit(); onAsk(latest); onDismiss() })
+                row.draft?.takeIf { it.isNotBlank() }?.let { d -> Button("Copy draft", { clip.setText(AnnotatedString(d)); actions.say("Copied draft") }) }
                 Button("Delete", { actions.delete(row); onDismiss() }, variant = ButtonVariant.Danger)
             }
         }

@@ -9,6 +9,7 @@ import { readJsonSync } from '../../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from '../core/db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool, slotsTool } from '../slack/draft.js';
 import { HUB_URL, pushHours, run } from '../slack/slack.js';
+import { voiceLines } from '../slack/voice.js';
 import { PROFILE, expireSuggested, saidId, seenItems, webUrl } from '../slack/slackSave.js';
 import { runScan, startScan } from '../core/scan.js';
 import { applyChanges, type Change } from '../core/sync.js';
@@ -155,6 +156,7 @@ async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) {
     'Skip newsletters, notifications, receipts, calendar invites and replies, mailing lists, and anything sent by a system or a no-reply address. Skip mail older than the time above and anything already in my open asks.',
     'Use the thread id, and the thread viewUrl when the tool returns one.',
     DRAFT_STEP,
+    ...voiceLines(db),
     ...(open.length ? ['In answered, list thread ids of the open asks below that appear in my sent search.'] : []),
     `In said, add each new mail of mine that commits me to do something ("I'll send it tomorrow", "will get back to you"). Skip promises I kept later in the same thread. Today is ${localDate(now)}; set due only when I named a time.`,
     ...(daily ? ['In waiting, add threads from the unanswered search where the newest message is mine, it asks a person a question or for something, and nobody has replied since. Skip mail to systems, mailing lists and calendar replies.'] : []),
