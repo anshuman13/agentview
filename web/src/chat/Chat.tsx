@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import type { Token } from './transcript/md';
 import { copyText } from '../ui/util';
 import { setUi } from '../app/store';
+import { runInTerminal } from './chatApi';
 import { cachedHtml, mdKey, storeHtml } from './transcript/mdCache';
 
 export { Composer } from './composer/Composer';
@@ -25,6 +26,8 @@ function onCopy(e: MouseEvent<HTMLDivElement>) {
     e.preventDefault();
     return setUi({ openFile: link.dataset.open!, openLine: Number(link.dataset.line) || null, follow: false });
   }
+  const run = (e.target as HTMLElement).closest<HTMLElement>('[data-run]');
+  if (run) return void runInTerminal(run.dataset.run!, false);
   const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy]');
   if (!btn) return;
   const code = btn.closest('.md-code')?.querySelector('code')?.textContent ?? '';

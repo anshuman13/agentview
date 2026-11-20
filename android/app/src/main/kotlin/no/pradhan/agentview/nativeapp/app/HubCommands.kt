@@ -167,18 +167,18 @@ fun Hub.runHook(name: String) = post(runHookCmd(name), store.wanted)
 
 fun Hub.sendNow(id: String) = post(sendNowCmd(id), store.wanted)
 
-// Types the command into the chat's last terminal, or a new one, and opens the Terminal page.
-fun Hub.runInTerminal(cmd: String): Boolean {
+// Types the command into the chat's last terminal, or a new one, and opens the Terminal page; with enter false the user presses Enter.
+fun Hub.runInTerminal(cmd: String, enter: Boolean = true): Boolean {
     if (!writes.allowed()) return false
-    write("Terminal unavailable") { typeInTerminal(cmd) }
+    write("Terminal unavailable") { typeInTerminal(cmd, enter) }
     return true
 }
 
-internal suspend fun Hub.typeInTerminal(cmd: String) {
+internal suspend fun Hub.typeInTerminal(cmd: String, enter: Boolean) {
     val chat = pageChat
     val id = parseTerms(api.get("/api/terms", chat)).lastOrNull()?.id ?: protocolJson.decodeFromString<TermTab>(api.post("/api/terms", "", chat)).id
     client.newWebSocket(Request.Builder().url("${wsOrigin(origin.value)}/ws?term=${enc(id)}").build(), object : WebSocketListener() {
-        override fun onOpen(webSocket: WebSocket, response: Response) { webSocket.send(termInput("$cmd\r")); webSocket.close(1000, null) }
+        override fun onOpen(webSocket: WebSocket, response: Response) { webSocket.send(termInput(if (enter) "$cmd\r" else cmd)); webSocket.close(1000, null) }
     })
     link.value = DeepLink(page = "terminal")
 }
