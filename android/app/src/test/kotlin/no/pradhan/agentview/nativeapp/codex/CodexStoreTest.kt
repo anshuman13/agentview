@@ -279,6 +279,19 @@ class CodexStoreTest {
         assertEquals(null, s.state.value.items[0].long("spent"))
     }
 
+    @Test fun dismissTakesTheSnackTextAndUndoRestoresTheStatus() = runTest {
+        val fake = Fake(mutableListOf(reply(5, change("a", "one", "suggested", 100, 1))))
+        val s = store(this, fake)
+        s.sync()
+        val snacks = mutableListOf<Pair<String, (() -> Unit)?>>()
+        val actions = TaskActions(s, { t, u -> snacks.add(t to u) }, { 5000L })
+        actions.dismiss(s.state.value.items[0], "Moved to Not mine")
+        assertEquals("dismissed", s.state.value.items[0].status)
+        assertEquals("Moved to Not mine", snacks[0].first)
+        snacks[0].second!!()
+        assertEquals("suggested", s.state.value.items[0].status)
+    }
+
     @Test fun bulkActionsShowOneSnackAndUndoSkipsARowEditedSince() = runTest {
         val fake = Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1), change("b", "two", "open", 100, 1))))
         val s = store(this, fake)

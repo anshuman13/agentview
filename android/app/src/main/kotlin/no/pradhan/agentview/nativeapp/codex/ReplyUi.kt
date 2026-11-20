@@ -118,7 +118,7 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
                             "History" -> MenuItem(k, "history", { close(); showHistory = !showHistory })
                             "Open thread" -> link?.let { l -> MenuItem(k, "link", { close(); uri.openUri(l) }) }
                             "Done" -> MenuItem(k, "check", { close(); actions.done(row) }, enabled = !busy)
-                            "Make task" -> MenuItem(k, "pass", { close(); actions.accept(row) }, enabled = !busy)
+                            "Make task" -> MenuItem(k, "add",{ close(); actions.accept(row) }, enabled = !busy)
                             "Snooze" -> snoozeOptions(now, row.profile).forEach { o -> MenuItem(o.label, "clock", { close(); actions.snoozeAsk(row, o.at) }, enabled = !busy) }
                             "Ask Claude" -> MenuItem(k, "sparkle", { close(); onAsk(row) })
                             "Skip" -> MenuItem(k, "close", { close(); if (row.source == "gmail") actions.dismiss(row) else { busy = true; replies.skip(row) { busy = false } } }, enabled = !busy)

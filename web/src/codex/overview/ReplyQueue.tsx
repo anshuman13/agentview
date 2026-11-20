@@ -192,7 +192,7 @@ function Ask({ row, onAsk }: { row: ItemRow; onAsk: (r: ItemRow) => void }) {
     History: <MenuItem icon="history" onClick={choose(toggleHistory)}>History</MenuItem>,
     'Open thread': <MenuItem icon="link" href={row.source_url ?? undefined} onClick={() => setMenu(false)}>Open thread</MenuItem>,
     Done: <MenuItem icon="check" disabled={busy} onClick={choose(() => act.done(row))}>Done</MenuItem>,
-    'Make task': <MenuItem icon="pass" disabled={busy} onClick={choose(() => act.toTask(row))}>Make task</MenuItem>,
+    'Make task': <MenuItem icon="add" disabled={busy} onClick={choose(() => act.toTask(row))}>Make task</MenuItem>,
     'Ask Claude': <MenuItem icon="sparkle" onClick={choose(() => onAsk(row))}>Ask Claude</MenuItem>,
     Skip: <MenuItem icon="close" disabled={busy} onClick={choose(() => void skip())}>Skip</MenuItem>,
   };

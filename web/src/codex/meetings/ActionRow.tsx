@@ -17,6 +17,7 @@ import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { copyText, openTask, showSnack } from '../view';
 import { Swipe } from '../gestures/Swipe';
+import { actionMenu } from '../../../../shared/actionMenu';
 import { safeHref } from '../../ui/util';
 import { UNROLL, useActions } from '../useActions';
 import { type BadgeSpec, Badge } from '../../ui/Badge';
@@ -106,7 +107,7 @@ export function ActionRow({ row, meeting, meta: metaText, noBadge, extraItems }:
     dismissed: ['Restore', () => change({ status: 'suggested' }, 'Back to review')],
   }[status] as [string, () => void] | undefined;
   const close = (f: () => void) => () => { setMenu(null); f(); };
-  const snoozable = status === 'open' || status === 'suggested';
+  const items = actionMenu(status);
   const el = (
     <Row
       plain
@@ -122,9 +123,9 @@ export function ActionRow({ row, meeting, meta: metaText, noBadge, extraItems }:
           {menu === 'more' && (
             <Menu trigger={kebab} onClose={() => setMenu(null)}>
               {extraItems?.(close)}
-              {snoozable && <MenuItem icon="circle-slash" onClick={close(dismiss)}>Not mine</MenuItem>}
-              {meeting && status === 'open' && <MenuItem icon="person" onClick={() => setMenu('assign')}>Assign</MenuItem>}
-              {snoozable && <MenuItem icon="clock" onClick={() => setMenu('snooze')}>Snooze</MenuItem>}
+              {items.notMine && <MenuItem icon="circle-slash" onClick={close(dismiss)}>Not mine</MenuItem>}
+              {meeting && items.assign && <MenuItem icon="person" onClick={() => setMenu('assign')}>Assign</MenuItem>}
+              {items.snooze && <MenuItem icon="clock" onClick={() => setMenu('snooze')}>Snooze</MenuItem>}
               <MenuItem icon="edit" onClick={close(() => openTask(row))}>Edit</MenuItem>
               {meeting && status === 'open' && <MenuItem icon="issues" href={linearIssue(row, meeting)} onClick={() => setMenu(null)}>New Linear issue</MenuItem>}
               {meeting && <MenuItem icon="copy" onClick={close(() => copyText(draftFor(row, meeting), 'Message copied'))}>Copy as message</MenuItem>}

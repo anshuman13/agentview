@@ -106,17 +106,18 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
         showSnack(type === 'note' ? NOTE_FAILED : `Could not add: ${errorText(err)}`);
       });
   };
-  const added = (hide: () => void) => () => { hide(); showSnack('Added to Tasks'); };
-  const noted = (key: string, hide: () => void, unhide: () => void) => (r: ItemRow) => {
+  const undoable = (text: string) => (key: string, hide: () => void, unhide: () => void) => (r: ItemRow) => {
     hide();
-    showSnack(NOTED, () => { pending.current.delete(key); unhide(); void store.update(r, { deleted: 1 }); });
+    showSnack(text, () => { pending.current.delete(key); unhide(); void store.update(r, { deleted: 1 }); });
   };
+  const added = undoable('Added to Tasks');
+  const noted = undoable(NOTED);
   const chatTask = (c: Chat) => {
     const name = c.name ?? 'DM';
-    capture(waitKey(c), `Reply to ${name}`, c.profile, 'task', (r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }), added(() => hideChat(c)));
+    capture(waitKey(c), `Reply to ${name}`, c.profile, 'task', (r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }), added(waitKey(c), () => hideChat(c), () => unhideChat(c)));
   };
   const bulletTask = (b: Brief, x: Bullet) => {
-    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, b.profile, 'task', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), added(() => hideBullet(b, x)));
+    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, b.profile, 'task', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), added(bulletKey(x), () => hideBullet(b, x), () => unhideBullet(b, x)));
   };
   const chatNote = (c: Chat) => {
     capture(waitKey(c), [c.name ?? 'DM', c.summary].filter(Boolean).join(': '), c.profile, 'note', (r) => (safeHref(c.url) ? store.update(r, { text: safeHref(c.url) }) : undefined), noted(waitKey(c), () => hideChat(c), () => unhideChat(c)));
@@ -176,7 +177,7 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
             <CardRow title={c.name} meta={`DM · ${c.last_at ? `${ago(c.last_at, ' ago')} · ` : ''}${c.summary ?? ''}`} onOpen={() => setView({ person: c.name })}
               menu={(
                 <>
-                  <MenuItem icon="add" onClick={() => n.chatTask(c)}>Make a task</MenuItem>
+                  <MenuItem icon="add" onClick={() => n.chatTask(c)}>Make task</MenuItem>
                   {slackLink(c.url)}
                   <MenuItem icon="note" onClick={() => n.chatNote(c)}>Nothing asked</MenuItem>
                   <MenuItem icon="close" onClick={() => n.dismissChat(c)}>Dismiss</MenuItem>
@@ -191,7 +192,7 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
             <CardRow title={x.x.title} meta={`Slack${x.x.why ? ` · ${x.x.why}` : ''}`} onOpen={() => setView({ list: 'summary', open: null })}
               menu={(
                 <>
-                  <MenuItem icon="add" onClick={() => n.bulletTask(x.brief, x.x)}>Make a task</MenuItem>
+                  <MenuItem icon="add" onClick={() => n.bulletTask(x.brief, x.x)}>Make task</MenuItem>
                   {slackLink(x.x.url)}
                   <MenuItem icon="note" onClick={() => n.bulletNote(x.brief, x.x)}>Nothing asked</MenuItem>
                   <MenuItem icon="close" onClick={() => n.dismissBullet(x.brief, x.x)}>Dismiss</MenuItem>

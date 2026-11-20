@@ -255,7 +255,7 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
     }
     if (nav.needsOpen) {
         val view by hub.needed.collectAsState()
-        NeedsSheet(view.list, view.queue, ignoredToday(st.briefs, profile, now), now, actions, ops.replies, hub, { nav.needsOpen = false; nav.editKey = it.key }, askAbout, { nav.needsOpen = false; nav.push("review") }, { nav.needsOpen = false; nav.push("person:$it") }) { nav.needsOpen = false }
+        NeedsSheet(view.list, view.queue, ignoredToday(st.briefs, profile, now), now, actions, ops.replies, hub, { nav.needsOpen = false; nav.editKey = it.key }, askAbout, { nav.needsOpen = false; nav.push("review") }, { nav.needsOpen = false; nav.push("person:$it") }, { nav.needsOpen = false; nav.push("meeting:${it.key}") }) { nav.needsOpen = false }
     }
 }
 

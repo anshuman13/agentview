@@ -812,6 +812,13 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun actionMenu() {
+        for (c in cases("action-menu")) {
+            val a = no.pradhan.agentview.nativeapp.codex.meetings.actionMenu(c.str("status"))
+            assertEquals(c.str("status"), listOf("notMine", "assign", "snooze").map { c.getValue(it).jsonPrimitive.boolean }, listOf(a.notMine, a.assign, a.snooze))
+        }
+    }
+
     @Test fun latePromise() {
         fun at(c: JsonObject, k: String) = c.getValue(k).jsonArray.map { it.jsonPrimitive.int }.let { (y, m, d, h) -> ZonedDateTime.of(y, m, d, h, 0, 0, 0, codexZone).toInstant().toEpochMilli() }
         for (c in cases("late-promise")) assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isLate(at(c, "since"), at(c, "now")))

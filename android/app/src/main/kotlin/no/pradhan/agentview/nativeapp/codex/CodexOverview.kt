@@ -62,7 +62,7 @@ sealed class Need(val keys: List<String>, val marks: List<String> = emptyList())
     class OverdueAll(val rows: List<Row>) : Need(emptyList())
     class Ask(val row: Row) : Need(listOf("task:${row.key}"), listOfNotNull(row.sourceUrl?.takeIf { it.startsWith("http") }?.let { "url:$it" }))
     class Dm(val chat: Row) : Need(listOf("chat:${chat.key}") + listOfNotNull(chat.str("url")?.let { "url:$it" }))
-    class JustEnded(val row: Row, val meeting: Row) : Need(listOf("task:${row.key}"))
+    class JustEnded(val row: Row, val meeting: Row, val actions: List<Row>) : Need(listOf("task:${row.key}"))
     class StaleAsks(val count: Int, val oldest: Long) : Need(listOf("stale-asks"))
     class Wiki(val count: Int) : Need(listOf("wiki-claims"))
 
@@ -119,7 +119,7 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
         s.review.filter { !queued(it) }.map { Need.Ask(it) },
         dms.map { Need.Dm(it) },
         bullets.map { Need.Slack(it, brief!!) },
-        ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.map { Need.JustEnded(it, m) } },
+        ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.let { open -> open.map { Need.JustEnded(it, m, open) } } },
         if (old.isNotEmpty()) listOf(Need.StaleAsks(old.size, old.minOf { it.statusTime })) else emptyList(),
         if (claims > 0) listOf(Need.Wiki(claims)) else emptyList(),
     )

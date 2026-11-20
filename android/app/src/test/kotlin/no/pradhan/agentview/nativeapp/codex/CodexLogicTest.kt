@@ -125,6 +125,11 @@ class CodexLogicTest {
         assertEquals(ms(2026, 11, 9, 9), SNOOZES.first { it.label == "Next week" }.at(NOW, WORK))
     }
 
+    @Test fun snoozeChoicesHideTonightFromSevenInTheEvening() {
+        assertEquals(listOf("In 1 hour", "In 3 hours", "Tonight", "Tomorrow", "Next week"), snoozeChoices(ms(2026, 11, 7, 18, 59)).map { it.label })
+        assertEquals(listOf("In 1 hour", "In 3 hours", "Tomorrow", "Next week"), snoozeChoices(ms(2026, 11, 7, 19)).map { it.label })
+    }
+
     @Test fun moveToTodayKeepsTheTimeOfDay() {
         assertEquals(ms(2026, 11, 7, 15), todayAt(ms(2026, 11, 3, 15), NOW))
         assertEquals(NOW, todayAt(ms(2026, 11, 3, 8), NOW))
@@ -225,6 +230,14 @@ class CodexLogicTest {
         assertEquals(listOf("Ask", "Dm"), needsYou(listOf(ask), emptyList(), listOf(chat, chat.copy(f = chat.f + ("waiting" to JsonNull))), null, NOW).map { it::class.simpleName })
         val held = item("held", "suggested", null, WORK, "source" to "slack", "tags" to "needs-you")
         assertEquals(listOf("Ask"), needsYou(listOf(held, ask), emptyList(), emptyList(), null, NOW).map { it::class.simpleName })
+    }
+
+    @Test fun aJustEndedRowCarriesItsMeetingsOpenActions() {
+        val m = Row("meetings", "m", WORK, f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as kotlinx.serialization.json.JsonElement } + ("title" to JsonPrimitive("Sync")) + ("starts_at" to JsonPrimitive(ms(2026, 11, 7, 8))) + ("ends_at" to JsonPrimitive(ms(2026, 11, 7, 9))))
+        val items = listOf(item("a", "open", null, WORK, "meeting_id" to "m"), item("b", "open", null, WORK, "meeting_id" to "m"), item("c", "done", null, WORK, "meeting_id" to "m"))
+        val ended = needsYou(items, listOf(m), emptyList(), null, NOW).filterIsInstance<Need.JustEnded>()
+        assertEquals(listOf("a", "b"), ended.map { it.row.id })
+        assertEquals(listOf("a", "b"), ended[0].actions.map { it.id })
     }
 
     @Test fun todayShowsTheNextTaskOnlyWithoutAMeeting() {

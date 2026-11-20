@@ -68,6 +68,21 @@ describe('NeedsYou triage', () => {
     expect(show([{ kind: 'overdue', row: { id: 'o', profile: 'work', title: 'Renew pass', at: 1 }, keys: [] }])).not.toContain('Nothing asked');
   });
 
+  it('reads Make task in the DM and Slack menus and Undo deletes the new task and brings the row back', async () => {
+    const html = show([{ kind: 'dm', chat: dm, keys: [] }, { kind: 'slack', x: { title: 'Reply to Bo', why: '', url: null }, brief: { profile: 'work', id: 'b' }, keys: ['s'] }]);
+    expect(html.match(/Make task/g)).toHaveLength(2);
+    expect(html).not.toContain('Make a task');
+    const made = { id: 't', profile: 'work' } as unknown as ItemRow;
+    mocks.store.capture = vi.fn(() => Promise.resolve(made));
+    rendered().chatTask(dm as never);
+    await new Promise((r) => setTimeout(r));
+    expect(mocks.store.editRow).toHaveBeenLastCalledWith('chats', dm, { waiting: 0 });
+    expect(mocks.snack.mock.calls[0][0]).toBe('Added to Tasks');
+    mocks.snack.mock.calls[0][1]();
+    expect(mocks.store.update).toHaveBeenLastCalledWith(made, { deleted: 1 });
+    expect(mocks.store.editRow).toHaveBeenLastCalledWith('chats', dm, { waiting: 1 });
+  });
+
   it('keeps the row and shows the error when the note write fails', async () => {
     mocks.store.capture = vi.fn(() => Promise.reject(new Error('offline')));
     rendered().chatNote(dm as never);

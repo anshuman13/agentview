@@ -64,6 +64,9 @@ val SNOOZES = listOf(
     Snooze("Next week") { now, _ -> atHour(date(now).plusDays((((8 - jsDow.getValue(date(now).dayOfWeek)) % 7).takeIf { it != 0 } ?: 7).toLong()), MORNING) },
 )
 
+// web snoozes() (AskBar.tsx): Tonight is hidden from 19:00.
+fun snoozeChoices(now: Long) = SNOOZES.filter { it.label != "Tonight" || hourOf(now) < EVENING }
+
 // web/src/codex/time.tsx when: "this morning", "tomorrow 14:30", "Fri 09:00", else the date.
 fun whenText(at: Long, now: Long, withTime: Boolean = false): String {
     val days = daysFrom(at, now)
