@@ -32,6 +32,10 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
         if (store.update(r, patch)) snack(text) { store.update(r, before) }
     }
 
+    fun create(r: Row, text: String) {
+        if (store.add(r)) snack(text) { store.update(r, mapOf("deleted" to true)) }
+    }
+
     fun done(r: Row) {
         val next = nextRepeat(r, now(), store.state.value.items)
         if (next == null) {

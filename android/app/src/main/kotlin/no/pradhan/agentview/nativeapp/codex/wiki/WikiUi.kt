@@ -108,6 +108,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             }
             return@LazyColumn
         }
+        item { Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4)) { ProposeClaim(null, profile, actions) } }
         val waiting = proposals(facts).size
         if (waiting > 0) {
             item { Group { ListRow("Review claims", onClick = onReview, trailing = { Badge("$waiting", BadgeTone.Quiet); Chevron() }) } }
@@ -139,6 +140,28 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
 }
 
 @Composable
+private fun ClaimTextSheet(title: String, initial: String, save: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var text by remember { mutableStateOf(initial) }
+    Sheet(onDismiss, title, full = false) {
+        TextField(text, { text = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is true?", minLines = 2)
+        LayoutRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4, Alignment.End)) {
+            Button("Cancel", onDismiss, variant = ButtonVariant.Plain)
+            Button(save, { onDismiss(); onSave(text) }, variant = ButtonVariant.Filled)
+        }
+    }
+}
+
+// Saves a proposed claim on the page, or in Memory when the page is null, for Review.
+@Composable
+private fun ProposeClaim(page: Row?, filter: String?, actions: TaskActions) {
+    var open by remember { mutableStateOf(false) }
+    Button("Propose claim", { open = true }, variant = ButtonVariant.Filled, icon = "add")
+    if (open) ClaimTextSheet("Propose claim", "", "Propose", { open = false }) { text ->
+        newFact(text, page?.id, proposalProfile(page, filter), System.currentTimeMillis())?.let { actions.create(it, "Claim proposed") }
+    }
+}
+
+@Composable
 private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, stale: Boolean = false) {
     val f = c.fact
     val menu = remember(f.key) { mutableStateOf(false) }
@@ -162,10 +185,12 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
         }
     }
     var contesting by remember(f.key) { mutableStateOf(false) }
+    var editing by remember(f.key) { mutableStateOf(false) }
     val retired = f.str("state") == "retired"
     val links = sourcesOf(f).drop(1).mapNotNull { s -> safeHref(s.url)?.let { s to it } }
     val menuContent: @Composable ColumnScope.(() -> Unit) -> Unit = { dismiss ->
         val pick = { act: () -> Unit -> { dismiss(); act() } }
+        MenuItem("Edit", "edit", pick { editing = true })
         MenuItem("Cite", "link", pick {
             val srcs = sourcesOf(f).map { it.label }
             val at = f.long("at")?.let { ", ${shortDate(it, now)}" } ?: ""
@@ -183,6 +208,9 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
     Column {
         ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = if (contest != null) 2 else 1, onClick = { expanded = !expanded }, onLongClick = if (proposed) null else ({ menu.value = true }),
             trailing = if (proposed) ({ Badge("New", BadgeTone.New) }) else ({ MoreButton(expanded = menu, content = menuContent) }))
+        if (editing) ClaimTextSheet("Edit claim", f.str("text") ?: "", "Save", { editing = false }) { text ->
+            editedClaimText(f.str("text"), text)?.let { actions.change(f, mapOf("text" to it), "Claim updated") }
+        }
         if (contesting) Sheet({ contesting = false }, "Contest claim", full = false) {
             FieldLabel("Why is this claim wrong?")
             TextField(note, { note = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is wrong or out of date? Link a source if you have one.", minLines = 2)
@@ -220,6 +248,7 @@ fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
                 page.str("summary")?.takeIf { it.isNotEmpty() }?.let {
                     Text(it, Modifier.heightIn(min = Tokens.touchSm).clickable { summaryOpen = !summaryOpen }, style = Type.body, color = av.fg, maxLines = if (summaryOpen) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
                 }
+                ProposeClaim(page, null, actions)
             }
         }
         groups.forEach { g ->
