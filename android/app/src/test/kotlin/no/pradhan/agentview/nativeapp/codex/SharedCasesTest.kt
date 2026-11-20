@@ -111,7 +111,11 @@ import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
 import no.pradhan.agentview.nativeapp.codex.wiki.claimActions
 import no.pradhan.agentview.nativeapp.codex.wiki.editedClaimText
+import no.pradhan.agentview.nativeapp.codex.wiki.hasLiveClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.isOld
+import no.pradhan.agentview.nativeapp.codex.wiki.pageClaims
+import no.pradhan.agentview.nativeapp.codex.wiki.wikiMarkdown
+import kotlinx.serialization.json.buildJsonArray
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
 import no.pradhan.agentview.nativeapp.codex.wiki.similarClaim
@@ -643,6 +647,20 @@ class SharedCasesTest {
                 Row("facts", o.str("id"), o.str("profile"), f = f)
             }
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, restatedClaim(c.str("text"), facts, c.str("profile"))?.id)
+        }
+    }
+
+    @Test fun wikiMarkdown() {
+        for (c in cases("wiki-markdown")) {
+            val facts = c.getValue("claims").jsonArray.map { it.jsonObject }.mapIndexed { i, o ->
+                val sources = buildJsonArray { o.getValue("sources").jsonArray.forEach { s -> add(buildJsonObject { put("kind", "doc"); put("label", s.jsonPrimitive.content) }) } }.toString()
+                val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+                f["text"] = o.getValue("text"); f["heading"] = o.getValue("heading"); f["state"] = o.getValue("state"); f["at"] = o.getValue("at"); f["page_id"] = toJson("p"); f["sources"] = toJson(sources)
+                Row("facts", "f$i", "work", f = f)
+            }
+            val groups = pageClaims(facts, "p", c.getValue("now").jsonPrimitive.long)
+            assertEquals(c.str("name"), c.str("markdown"), wikiMarkdown(c.nullable("title")?.jsonPrimitive?.content, groups))
+            assertEquals(c.str("name"), c.getValue("hasLive").jsonPrimitive.boolean, hasLiveClaims(groups))
         }
     }
 

@@ -1,0 +1,7 @@
+[
+  {"name": "sources", "title": "Page", "now": 1800000000000, "claims": [{"heading": "One", "text": "Alpha", "sources": ["X-1", "X-2"], "state": null, "at": 1799999999000}, {"heading": "Two", "text": "Beta", "sources": [], "state": null, "at": 1799999998000}], "hasLive": true, "markdown": "# Page\n\n## One\n\n- Alpha\n  Sources: X-1, X-2\n\n## Two\n\n- Beta\n"},
+  {"name": "duplicate labels", "title": "Page", "now": 1800000000000, "claims": [{"heading": "One", "text": "Alpha", "sources": ["X-1", "X-1"], "state": null, "at": 1799999999000}], "hasLive": true, "markdown": "# Page\n\n## One\n\n- Alpha\n  Sources: X-1\n"},
+  {"name": "proposed only", "title": "Page", "now": 1800000000000, "claims": [{"heading": "One", "text": "Alpha", "sources": [], "state": "proposed", "at": 1799999999000}], "hasLive": false, "markdown": "# Page\n"},
+  {"name": "headingless claim and a proposed heading", "title": "Page", "now": 1800000000000, "claims": [{"heading": "One", "text": "Alpha", "sources": [], "state": "proposed", "at": 1799999999000}, {"heading": null, "text": "Beta", "sources": [], "state": null, "at": 1799999998000}], "hasLive": true, "markdown": "# Page\n\n## Notes\n\n- Beta\n"},
+  {"name": "untitled page", "title": null, "now": 1800000000000, "claims": [{"heading": "One", "text": "Alpha", "sources": [], "state": null, "at": 1799999999000}], "hasLive": true, "markdown": "# Untitled\n\n## One\n\n- Alpha\n"}
+]
