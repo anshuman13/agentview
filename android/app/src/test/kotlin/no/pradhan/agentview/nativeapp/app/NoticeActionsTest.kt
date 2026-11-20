@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonObject
 import no.pradhan.agentview.nativeapp.codex.meetings.Pending
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
 import no.pradhan.agentview.nativeapp.net.Ask
+import no.pradhan.agentview.nativeapp.net.AskOption
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.net.answerCmd
@@ -73,6 +74,36 @@ class NoticeActionsTest {
         val done = Fake()
         assertEquals(ActionResult.Sent, run(done, NoticeOp.REPLY, "go on"))
         assertEquals(promptCmd("go on", false, "id1"), done.sent.single().second)
+    }
+
+    private fun pick(vararg labels: String, multi: Boolean = false) = Pending.Question("q1", listOf(Ask("Which?", "", multi, labels.map { AskOption(it) })))
+
+    @Test fun aSingleSelectQuestionShowsItsOptions() {
+        val n = runBlocking { noticeAsk(Fake(listOf(pick("Red", "Blue"))), notice) }
+        assertEquals(NoticeAsk.Question, n.ask)
+        assertEquals("Which?", n.body)
+        assertEquals("1. Red\n2. Blue", n.detail)
+        assertEquals(listOf("Red", "Blue"), n.options)
+        assertEquals(emptyList<String>(), runBlocking { noticeAsk(Fake(listOf(pick("Red", "Blue", multi = true))), notice) }.options)
+    }
+
+    @Test fun anAnswerTapSendsTheLabelWhileTheQuestionIsOpen() {
+        val f = Fake(listOf(pick("Red", "Blue")))
+        assertEquals(ActionResult.Sent, run(f, NoticeOp.ANSWER, "Blue"))
+        assertEquals(answerCmd("q1", mapOf("Which?" to "Blue")), f.sent.single().second)
+        assertEquals(ActionResult.Failed("Already answered"), run(Fake(), NoticeOp.ANSWER, "Blue"))
+        assertEquals(ActionResult.Failed("Already answered"), run(f, NoticeOp.ANSWER, "Green"))
+        assertEquals(ActionResult.ReadOnly, run(f, NoticeOp.ANSWER, "Blue", readOnly = true))
+        assertEquals(1, f.sent.size)
+    }
+
+    @Test fun aReplyThatNamesAnOptionAnswersWithItsLabel() {
+        val f = Fake(listOf(pick("Red", "Blue", "Green")))
+        run(f, NoticeOp.REPLY, "2")
+        run(f, NoticeOp.REPLY, "GREEN")
+        run(f, NoticeOp.REPLY, "7")
+        run(f, NoticeOp.REPLY, "teal")
+        assertEquals(listOf("Blue", "Green", "7", "teal"), f.sent.map { Regex("\"Which\\?\":\"([^\"]*)\"").find(it.second)!!.groupValues[1] })
     }
 
     @Test fun replyNeedsTextAndASingleQuestion() {

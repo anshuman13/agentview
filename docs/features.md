@@ -389,6 +389,8 @@ bar turns browser notifications on or off.
 
 On the phone and in the browser, a chat that stops running notifies "<Provider> finished in <repo>" with the reply's first line as the body (the chat title as the phone's sub text, the first body line on web; the title alone when there is no reply line), and "<Provider> failed in <repo>" when it failed. A chat on a loop or goal never gets that notice: it notifies once when a round ends done, blocked, question or failed ("Loop in <repo>: blocked", the round line as the body), and quiet or progress rounds stay silent. Muted chats skip Finished and round notices. The rule is `chatNotices` in `shared/notices.ts` with `shared/fixtures/chat-notices.json`, mirrored in `chatNotice` in `app/ExtrasLogic.kt`.
 
+On the phone, a chat that asks one single-select question notifies with the question as the body and the options listed as "1. <label>" in the expanded text. With two options each is an action button next to Reply (label clipped to 20 characters); with more, only Reply shows, and a reply that is an option number or a label (any case) answers with that label, other text goes as free text. A tap on a question that is no longer open says "Already answered". Multi-question and multi-select asks keep the plain notice.
+
 On the phone, an approval for Edit, Write or MultiEdit shows the file name and "+N -M" in the title and the first 8 changed lines (prefixed + or -) in the expanded text, so you can decide from the shade.
 
 For a phone in the background, the same notifications can go to an [ntfy](https://ntfy.sh) topic. Push is off
