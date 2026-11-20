@@ -48,6 +48,13 @@ data class CodexState(
     val reconnecting: Boolean = false,
 )
 
+private const val PARK_AFTER = 3
+
+// A row is parked after its third reject under one key; editing it gives it a new key (web engine.ts rejectKey).
+private fun rejectKey(r: Row) = "${r.table}|${r.profile}|${r.id}|${r.updatedAt}|${r.times}"
+
+private fun parkedNotice(count: Int) = if (count == 1) "1 change not synced, edit it to retry" else "$count changes not synced, edit them to retry"
+
 private val RETRY_AFTER_MS = listOf(2_000L, 5_000L, 15_000L)
 
 // The wait before the next retry of a sync that failed because the hub could not be reached, null when the error shows (web hubRetry).
@@ -80,6 +87,7 @@ class CodexStore(
     private var scans = emptyList<SyncScan>()
     private var paused = emptyList<SyncPaused>()
     private var timer: Job? = null
+    private val rejects = HashMap<String, Int>()
     // The rows of each table as last written to the cache, so a save rewrites only the tables that changed.
     private val saved = HashMap<String, List<Row>>()
 
@@ -202,8 +210,9 @@ class CodexStore(
 
     private suspend fun attempt(): Exception? = lock.withLock {
         try {
-            val dirty = tables.values.flatMap { t -> t.values.filter { it.dirty } }
-            var queue = dirty
+            var queue = tables.values.flatMap { t -> t.values.filter { it.dirty && (rejects[rejectKey(it)] ?: 0) < PARK_AFTER } }
+            val parked = mutableListOf<Row>()
+            val rejected = mutableListOf<JsonObject>()
             var more = true
             var changed = false
             while (more) {
@@ -214,8 +223,15 @@ class CodexStore(
                 if (health != null) scans = health
                 if (held != null) paused = held
                 changed = changed || batch.isNotEmpty() || changes.isNotEmpty()
+                for (r in refused) {
+                    val sent = batch.find { it.table == r["table"]?.jsonPrimitive?.contentOrNull && it.id == r["id"]?.jsonPrimitive?.contentOrNull }
+                    val count = if (sent == null) 0 else (rejects[rejectKey(sent)] ?: 0) + 1
+                    if (sent != null) rejects[rejectKey(sent)] = count
+                    if (sent != null && count >= PARK_AFTER) parked.add(sent) else rejected.add(r)
+                }
                 for (sent in batch) {
-                    if (refused.any { it["id"]?.jsonPrimitive?.contentOrNull == sent.id }) continue
+                    if (refused.any { it["table"]?.jsonPrimitive?.contentOrNull == sent.table && it["id"]?.jsonPrimitive?.contentOrNull == sent.id }) continue
+                    rejects.remove(rejectKey(sent))
                     val map = tables.getValue(sent.table)
                     val cur = map[sent.key]
                     if (cur != null && cur.updatedAt == sent.updatedAt && cur.times == sent.times) map[sent.key] = cur.copy(dirty = false)
@@ -224,8 +240,9 @@ class CodexStore(
                 apply(changes)
                 more = hasMore && version != since
                 since = version
-                if (refused.isNotEmpty()) error("${refused.size} change${if (refused.size > 1) "s" else ""} rejected: ${refused[0]["reason"]?.jsonPrimitive?.contentOrNull}")
             }
+            if (parked.isNotEmpty()) notify(parkedNotice(parked.size))
+            if (rejected.isNotEmpty()) error("${rejected.size} change${if (rejected.size > 1) "s" else ""} rejected: ${rejected[0]["reason"]?.jsonPrimitive?.contentOrNull}")
             if (changed) save()
             publish(error = null, loaded = true, reconnecting = false)
             null

@@ -80,6 +80,46 @@ class CodexStoreTest {
         assertEquals("1 change rejected: bad", s.state.value.error)
     }
 
+    @Test fun aRowIsParkedOnItsThirdRejectAndEditingSendsItAgain() = runTest {
+        val fake = Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1)), reply(9), reply(9)))
+        val notices = mutableListOf<String>()
+        val s = store(this, fake, notices = notices)
+        s.sync()
+        s.update(s.state.value.items[0], mapOf("title" to "new"))
+        fake.pushReply = reply(6, rejected = """[{"table":"items","id":"a","reason":"bad"}]""")
+        advanceUntilIdle()
+        s.sync()
+        assertEquals("1 change rejected: bad", s.state.value.error)
+        assertEquals(emptyList<String>(), notices)
+        s.sync()
+        assertEquals(3, fake.pushes.size)
+        assertEquals(listOf("1 change not synced, edit it to retry"), notices)
+        assertNull(s.state.value.error)
+        s.sync()
+        assertEquals(3, fake.pushes.size)
+        assertEquals(1, notices.size)
+        assertEquals(1, s.state.value.pending)
+        s.update(s.state.value.items[0], mapOf("title" to "newer"))
+        advanceUntilIdle()
+        assertEquals(4, fake.pushes.size)
+    }
+
+    @Test fun theErrorNamesOnlyTheRowsNotParked() = runTest {
+        val fake = Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1), change("b", "two", "open", 100, 1)), reply(9)))
+        val notices = mutableListOf<String>()
+        val s = store(this, fake, notices = notices)
+        s.sync()
+        s.update(s.state.value.items[0], mapOf("title" to "x"))
+        fake.pushReply = reply(6, rejected = """[{"table":"items","id":"a","reason":"no a"}]""")
+        advanceUntilIdle()
+        s.sync()
+        s.update(s.state.value.items[1], mapOf("title" to "y"))
+        fake.pushReply = reply(6, rejected = """[{"table":"items","id":"a","reason":"no a"},{"table":"items","id":"b","reason":"no b"}]""")
+        advanceUntilIdle()
+        assertEquals(listOf("1 change not synced, edit it to retry"), notices)
+        assertEquals("1 change rejected: no b", s.state.value.error)
+    }
+
     @Test fun readOnlyBlocksEveryWrite() = runTest {
         val fake = Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1))))
         val notices = mutableListOf<String>()
