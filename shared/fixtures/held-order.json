@@ -1,0 +1,7 @@
+[
+  { "name": "no held list keeps the given order", "held": null, "keys": ["b", "a", "c"], "expected": ["b", "a", "c"] },
+  { "name": "same keys keep the held order", "held": ["c", "a", "b"], "keys": ["a", "b", "c"], "expected": ["c", "a", "b"] },
+  { "name": "a new key comes first", "held": ["a", "b"], "keys": ["a", "n", "b"], "expected": ["n", "a", "b"] },
+  { "name": "a key gone is dropped", "held": ["a", "gone", "b"], "keys": ["b", "a"], "expected": ["a", "b"] },
+  { "name": "new keys keep the given order before the held ones", "held": ["a", "gone", "b"], "keys": ["b", "x", "a", "y"], "expected": ["x", "y", "a", "b"] }
+]

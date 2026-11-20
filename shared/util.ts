@@ -1,7 +1,12 @@
 export const clock = (t: number) => new Date(t).toTimeString().slice(0, 5);
 export const span = (ms: number) => (ms % 3_600_000 === 0 ? `${ms / 3_600_000}h` : `${Math.round(ms / 60_000)}m`);
 export const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
-export const blockId = (itemId: string) => `block:${itemId}`;
+// The keys in their held order; keys not held come first in the order given, held keys no longer present are dropped.
+export function heldOrder(held: readonly string[] | null, keys: readonly string[]) {
+  const slot = new Map((held ?? []).map((k, i) => [k, i]));
+  return [...keys.filter((k) => !slot.has(k)), ...keys.filter((k) => slot.has(k)).sort((a, b) => slot.get(a)! - slot.get(b)!)];
+}
+export const blockId =(itemId: string) => `block:${itemId}`;
 export const isBlock = (meetingId: string) => meetingId.startsWith('block:');
 export const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 // The prompt that /loop at runs once at HH:MM.

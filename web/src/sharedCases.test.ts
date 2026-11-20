@@ -59,6 +59,7 @@ import { claimActions } from '../../shared/claimActions';
 import { isLate } from '../../shared/waiting';
 import { goalAtRisk } from './codex/data/tasks/goals';
 import { afterNextMeeting, nextFreeSlot, weekFreeMinutes, type Span } from './codex/data/tasks/plan';
+import { heldOrder } from '../../shared/util';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -287,6 +288,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; job: Pick<Job, 'name' | 'prompt'>; name_in: string; prompt_in: string; expected: object }>('job-edit')) {
     it(`jobEdits: ${c.name}`, () => expect(jobEdits(c.job, c.name_in, c.prompt_in)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; held: string[] | null; keys: string[]; expected: string[] }>('held-order')) {
+    it(`heldOrder: ${c.name}`, () => expect(heldOrder(c.held, c.keys)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; id: string; people: string; links: string | null; expected: boolean }>('event-rule')) {

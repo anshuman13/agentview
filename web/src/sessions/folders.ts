@@ -4,7 +4,7 @@ import { notice, send, useStore } from '../app/store';
 import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
-import { inside } from '../../../shared/util';
+import { heldOrder, inside } from '../../../shared/util';
 import { advisorOf } from '../../../shared/advisors';
 import { profileOfPath } from '../../../shared/workspace';
 import { matcher, queryWords } from '../codex/data/ask/match';
@@ -259,7 +259,14 @@ export function chatFinder(filter: string, chats: SavedSession[]) {
   };
 }
 
-export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter = '', pinned: ReadonlySet<string> = new Set()) {
+const holdRows = <T>(rows: T[], id: (row: T) => string, held: readonly string[] | null) => {
+  const byId = new Map(rows.map((r) => [id(r), r]));
+  return heldOrder(held, [...byId.keys()]).map((k) => byId.get(k)!);
+};
+const liveKey = (c: LiveChat) => c.sessionId ?? c.id;
+const savedKey = (s: SavedSession) => s.sessionId;
+
+export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter = '', pinned: ReadonlySet<string> = new Set(), held: readonly string[] | null = null) {
   const find = chatFinder(filter, chats);
   const m = new Map<string, RepoGroup>();
   const add = (cwd: string, title: string, sessionId: string | null, last: number) => {
@@ -286,24 +293,25 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
   for (const g of m.values()) {
     g.open.sort(byUrgency);
     g.recent.sort((a, b) => b.lastModified - a.lastModified);
+    g.open = holdRows(g.open, liveKey, held);
+    g.recent = holdRows(g.recent, savedKey, held);
   }
   return [...m.values()].sort((a, b) => b.last - a.last);
 }
 
 // Needs you groups first, then the rest; a frozen key list keeps the rest in that order, with groups missing from it first.
 export function orderGroups(groups: RepoGroup[], frozen: readonly string[] | null = null) {
-  const slot = new Map((frozen ?? []).map((k, i) => [k, i]));
-  const rank = (g: RepoGroup) => (frozen ? slot.get(g.key) ?? -1 : 0);
-  return [...groups].sort((a, b) => Number(b.waiting > 0) - Number(a.waiting > 0) || (a.waiting > 0 ? 0 : rank(a) - rank(b)) || b.last - a.last);
+  const byLast = [...groups].sort((a, b) => b.last - a.last);
+  return [...byLast.filter((g) => g.waiting > 0), ...holdRows(byLast.filter((g) => !g.waiting), (g) => g.key, frozen)];
 }
 
-export type HeldOrder = { id: string; keys: string[]; loaded: boolean } | null;
+export type HeldOrder = { groups: string[]; chats: string[]; loaded: boolean; shown: number };
 
-// The group order taken when a chat opens, retaken once the saved chats load so their repos do not all count as new.
-export function holdOrder(prev: HeldOrder, viewing: string, open: boolean, groups: RepoGroup[], loaded: boolean): HeldOrder {
-  if (!viewing || !open) return null;
-  if (prev?.id === viewing && prev.keys.length && prev.loaded === loaded) return prev;
-  return { id: viewing, keys: orderGroups(groups).map((g) => g.key), loaded };
+// The group and chat order taken each time the tab is shown again, retaken once the saved chats load so their repos do not all count as new.
+export function holdOrder(prev: HeldOrder | null, groups: RepoGroup[], loaded: boolean, shown: number): HeldOrder {
+  if (prev?.groups.length && prev.loaded === loaded && prev.shown === shown) return prev;
+  const ordered = orderGroups(groups);
+  return { groups: ordered.map((g) => g.key), chats: ordered.flatMap((g) => [...g.open.map(liveKey), ...g.recent.map(savedKey)]), loaded, shown };
 }
 
 export type ChatState = 'needs' | 'failed' | 'running' | 'done';
@@ -329,6 +337,12 @@ export function groupGlance(g: RepoGroup, seen: Record<string, number>) {
   for (const s of g.recent) count(chatState({ saved: s }, seen));
   return { ...n, last: g.last };
 }
+
+// The session ids of the listed chats that are Done.
+export const doneChats = (live: LiveChat[], saved: SavedSession[], seen: Record<string, number>) => [
+  ...live.filter((c) => chatState({ live: c }, seen) === 'done').map((c) => c.sessionId),
+  ...saved.filter((s) => chatState({ saved: s }, seen) === 'done').map((s) => s.sessionId),
+].filter((id): id is string => Boolean(id));
 
 // Group keys that gained a live chat the previous list did not have; a chat that only moved between groups is not new.
 export const newChatGroups = (prev: ReadonlySet<string> | null, live: [id: string, group: string][]) =>

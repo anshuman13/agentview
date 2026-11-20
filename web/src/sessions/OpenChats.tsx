@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { embedded, notice, send, setUi, useStore } from '../app/store';
+import { embedded, markSeen, markUnread, notice, send, setUi, useStore } from '../app/store';
+import { showSnack } from '../codex/view';
 import { Icon } from '../ui/Icon';
 import { IconButton, ShowAll } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { LiveChat, SavedSession } from '../../../shared/protocol';
-import { ago, markSegments, pressable, save, stored } from '../ui/util';
+import { ago, markSegments, plural, pressable, save, stored } from '../ui/util';
 import { queryWords } from '../codex/data/ask/match';
 import { Bin } from './Bin';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
-import { byUrgency, chatFinder, chatState, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, waitingChats, repoName, usePins, useWorkspace, type Folder, type HeldOrder, type RepoGroup } from './folders';
+import { byUrgency, chatFinder, chatState, doneChats, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, waitingChats, repoName, usePins, useWorkspace, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
@@ -79,6 +80,21 @@ function usePeekedGroups(live: LiveChat[], folders: Folder[], collapsed: Record<
   return { peeking, unpeek };
 }
 
+// Counts the times the tab becomes visible after being hidden.
+function useShownCount() {
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    let hidden = document.hidden;
+    const onChange = () => {
+      if (document.hidden) hidden = true;
+      else if (hidden) { hidden = false; setShown((n) => n + 1); }
+    };
+    document.addEventListener('visibilitychange', onChange);
+    return () => document.removeEventListener('visibilitychange', onChange);
+  }, []);
+  return shown;
+}
+
 export function OpenChats() {
   const current = useStore((s) => s.session.sessionId);
   const cwd = useStore((s) => s.session.cwd);
@@ -96,10 +112,11 @@ export function OpenChats() {
   const { pins, setPin } = usePins();
   const pinSet = useMemo(() => new Set(pins), [pins]);
   const allGroups = useMemo(() => groupByRepo(live, chats, folders, '', pinSet), [live, chats, folders, pinSet]);
-  const snapshot = useRef<HeldOrder>(null);
-  snapshot.current = holdOrder(snapshot.current, viewing, live.some((c) => c.id === viewing), allGroups, chats.length > 0);
-  const frozen = snapshot.current?.keys ?? null;
-  const groups = useMemo(() => orderGroups(groupByRepo(live, chats, folders, filter, pinSet), frozen), [live, chats, folders, filter, pinSet, frozen]);
+  const shown = useShownCount();
+  const snapshot = useRef<HeldOrder | null>(null);
+  snapshot.current = holdOrder(snapshot.current, allGroups, chats.length > 0, shown);
+  const held = snapshot.current;
+  const groups = useMemo(() => orderGroups(groupByRepo(live, chats, folders, filter, pinSet, held.chats), held.groups), [live, chats, folders, filter, pinSet, held]);
   const pinnedRows = useMemo(() => {
     const find = chatFinder(filter, chats);
     return pins.flatMap((id) => {
@@ -113,9 +130,18 @@ export function OpenChats() {
   const shownWaiting = useMemo(() => waitingChats(live, chats, folders, filter), [live, chats, folders, filter]);
   const order = useMemo(() => {
     const pinned = pins.flatMap((id) => live.filter((c) => c.sessionId === id));
-    return chatOrder(waiting, pinned, orderGroups(allGroups, frozen));
-  }, [live, pins, allGroups, frozen]);
+    return chatOrder(waiting, pinned, orderGroups(groupByRepo(live, chats, folders, '', pinSet, held.chats), held.groups));
+  }, [live, chats, folders, pins, pinSet, held]);
   const seen = useStore((s) => s.seen);
+  const done = useMemo(() => doneChats(
+    [...groups.flatMap((g) => g.open), ...pinnedRows.flatMap((p) => (p.c ? [p.c] : []))],
+    [...groups.flatMap((g) => g.recent), ...pinnedRows.flatMap((p) => (p.s ? [p.s] : []))],
+    seen,
+  ), [groups, pinnedRows, seen]);
+  const markAllRead = () => {
+    done.forEach(markSeen);
+    showSnack(`Marked ${plural(done.length, 'chat')} as read`, () => done.forEach(markUnread));
+  };
   const unread = useMemo(() => order.filter((id) => {
     const c = live.find((x) => x.id === id);
     const state = c && chatState({ live: c, saved: c.sessionId ? savedById.get(c.sessionId) : undefined }, seen);
@@ -148,6 +174,7 @@ export function OpenChats() {
     <div className="sessions chats">
       <div className="sessions-bar">
         <FilterInput value={filter} set={setFilter} />
+        {done.length > 0 && <IconButton icon="check-all" label="Mark all as read" onClick={markAllRead} />}
         <IconButton icon="add" label="New session in a repo" onClick={() => setUi({ repoPicker: true })} />
       </div>
       <NeedsYou n={shownWaiting.length} filter={filter}>

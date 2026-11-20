@@ -85,6 +85,7 @@ import no.pradhan.agentview.nativeapp.sessions.Repo
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.Worktree
 import no.pradhan.agentview.nativeapp.sessions.chatPlace
+import no.pradhan.agentview.nativeapp.sessions.heldOrder
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.mergeQuiet
@@ -665,6 +666,11 @@ class SharedCasesTest {
 
     @Test fun appendRule() {
         for (c in cases("append-rule")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, appendRule(c.str("text"), c.str("rule")))
+    }
+
+    @Test fun heldOrder() {
+        fun strings(e: JsonElement) = e.jsonArray.map { it.jsonPrimitive.content }
+        for (c in cases("held-order")) assertEquals(c.str("name"), strings(c.getValue("expected")), heldOrder(c.nullable("held")?.let(::strings), strings(c.getValue("keys"))))
     }
 
     @Test fun dismissed() {
