@@ -60,7 +60,7 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
             SearchField(query, setQuery, "Search tasks")
         }
         if (searching && query.isNotBlank()) {
-            item { SectionHeader("Results", hit.size.toString()) }
+            item { SectionHeader("Results", hit.size.takeIf { it > 0 }?.toString()) }
             if (hit.isEmpty()) item { EmptyState("No task matches") } else item { Group { hit.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
             return@LazyColumn
         }

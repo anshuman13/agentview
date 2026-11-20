@@ -15,7 +15,7 @@ import type { BulkKind } from './useActions';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Button } from '../ui/Button';
-import { Section } from '../ui/Section';
+import { Section, sectionCount } from '../ui/Section';
 import { haptic } from '../ui/haptic';
 import { searchRun, setView, showSnack, useSpotBack, useView } from './view';
 import { when } from './tasks/time';
@@ -146,7 +146,7 @@ export function Assistant() {
           <>
             {s.overdue.length > 0 && (
               <section>
-                <Section label="Overdue" count={s.overdue.length} action={!picked && <Button variant="quiet" size="sm" onClick={() => moveOverdue(act, s.overdue, startOfDay)}>Move all to today</Button>} />
+                <Section label="Overdue" count={sectionCount(s.overdue.length)} action={!picked && <Button variant="quiet" size="sm" onClick={() => moveOverdue(act, s.overdue, startOfDay)}>Move all to today</Button>} />
                 {rows(s.overdue, 'overdue', false)}
               </section>
             )}
@@ -154,7 +154,7 @@ export function Assistant() {
             <Review rows={fresh} />
             {older.length > 0 && (
               <section>
-                <Section label="Older to review" count={older.length} open={olderOpen} onToggle={() => setOlderOpen((v) => !v)} />
+                <Section label="Older to review" count={sectionCount(older.length)} open={olderOpen} onToggle={() => setOlderOpen((v) => !v)} />
                 {olderOpen && <Review rows={older} />}
               </section>
             )}

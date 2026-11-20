@@ -3,7 +3,7 @@ import { taskMatches } from '../data/ask/match';
 import type { ItemRow } from '../data/sync';
 import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import type { List } from '../view';
 
 // / on Tasks opens the search when nothing else has focus.
@@ -39,7 +39,7 @@ export function SearchResults({ query, candidates, rows }: { query: string; cand
   const found = candidates.filter((r) => taskMatches(r, q) && !seen.has(r.profile + r.id) && seen.add(r.profile + r.id));
   return (
     <section className="as-results">
-      <Section label="Results" count={found.length} />
+      <Section label="Results" count={sectionCount(found.length)} />
       {found.length ? rows(found, undefined, false) : <EmptyState size="sm" title="No task matches" />}
     </section>
   );

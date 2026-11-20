@@ -5,7 +5,7 @@ import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { Fold } from '../Fold';
 import { setView, showSnack } from '../view';
 import { ClaudeChip, SourceChip } from './Chips';
@@ -205,7 +205,7 @@ function Rows<T>({ label, list, row }: { label: string; list: T[]; row: (t: T) =
   if (!list.length) return null;
   return (
     <div>
-      <Section label={label} count={list.length} />
+      <Section label={label} count={sectionCount(list.length)} />
       <div className="as-group">{(all ? list : list.slice(0, LOOK_CAP)).map(row)}</div>
       {!all && list.length > LOOK_CAP && <button className="wk-more" onClick={() => setAll(true)}>+{list.length - LOOK_CAP} more</button>}
     </div>
