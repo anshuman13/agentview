@@ -404,7 +404,9 @@ export type GitFile = { path: string; status: 'M' | 'A' | 'D' | 'R' | '?'; stage
 
 export type GitStatus = { branch: string; ahead: number; behind: number; files: GitFile[] };
 
-export type CheckState = 'success' | 'failure' | 'pending' | 'none';
+export type GitCommit = { hash: string; subject: string; at: number };
+
+export type CheckState ='success' | 'failure' | 'pending' | 'none';
 
 export type PullRequest = {
   number: number;

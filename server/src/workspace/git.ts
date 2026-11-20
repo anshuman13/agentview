@@ -2,7 +2,7 @@ import { copyFile, lstat, mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { safeResolve } from './files.js';
-import type { GitFile, GitStatus } from '../../../shared/protocol.js';
+import type { GitCommit, GitFile, GitStatus } from '../../../shared/protocol.js';
 import { exec } from '../exec.js';
 import { execText } from '../execText.js';
 import { NotFound } from '../json.js';
@@ -219,9 +219,24 @@ export function parseTodos(out: string, max = 100): Todo[] {
   return [...asks, ...todos].slice(0, max);
 }
 
+const MAX_COMMITS = 20;
+
+// `git log --format=%h%x1f%ct%x1f%s` lines, newest first as git prints them.
+export function parseLog(out: string): GitCommit[] {
+  return out.split('\n').filter(Boolean).map((l) => {
+    const [hash, ct, ...subject] = l.split('\x1f');
+    return { hash, subject: subject.join('\x1f'), at: Number(ct) * 1000 };
+  });
+}
+
 export async function gitRoute(cwd: string, route: string, query: URLSearchParams, body: Record<string, unknown> | null) {
   if (route === 'status') return gitStatus(cwd);
   if (route === 'branch') return branchDiff(cwd);
+  if (route === 'log') {
+    const since = Number(query.get('since'));
+    if (!query.get('since') || !Number.isFinite(since) || since < 0) throw new Error('since must be a time in milliseconds');
+    return { commits: parseLog(await git(cwd, ['log', `--since=${new Date(since).toISOString()}`, `--max-count=${MAX_COMMITS}`, '--format=%h%x1f%ct%x1f%s'], [0, 128])) };
+  }
   if (route === 'todos') return { todos: parseTodos(await git(cwd, ['grep', '-n', '-I', '-w', '-E', 'TODO|FIXME|AI[!?]'], [0, 1])) };
   if (route === 'diff') return { diff: await diff(cwd, query.get('path') ?? '', query.get('staged') === 'true') };
   if (!body) throw new Error('Use POST');

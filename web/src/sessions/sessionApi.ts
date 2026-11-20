@@ -1,6 +1,7 @@
 import { api } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
 import type { AdvisorInfo, Audit, BacklogItem } from '../../../shared/advisors';
+import type { ChatRun, GitCommit } from '../../../shared/protocol';
 import type { BuildDetail, ReviewPhase, SpecHomeItem } from '../../../shared/builds';
 
 export const deleteRequest = (url: string) => fetch(apiUrl(url), { method: 'DELETE' }).catch(() => null);
@@ -55,3 +56,6 @@ export const postRunApprove = (run: string) => fetchJson<{ url: string }>(runUrl
 export const postRunRevise = (run: string, text: string) => fetchJson<{ ok: true }>(runUrl('revise', run), { method: 'POST', body: JSON.stringify({ text }) });
 
 export const postRunDiscard = (run: string) => fetchJson<{ ok: true }>(runUrl('discard', run), { method: 'POST' });
+
+// Commits in the run's chat folder since the run started, newest first.
+export const fetchRunCommits = (run: ChatRun) => fetchJson<{ commits: GitCommit[] }>(apiUrl(`/api/git/log?since=${run.startedAt}&chat=${encodeURIComponent(run.chatId)}`)).then((r) => r.commits);

@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { send, useStore } from '../app/store';
 import { clock } from '../../../shared/util';
 import { Badge } from '../ui/Badge';
@@ -10,12 +10,13 @@ import { Section, sectionCount } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { money } from '../ui/util';
 import { billing } from '../../../shared/providers';
-import type { RunEdit, RunOp } from '../../../shared/protocol';
+import type { ChatRun, GitCommit, RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
 import { finishedLine, mergeQuiet } from '../../../shared/goalText';
 import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, runControl, startGoal, stopAtMs, usageLine } from './goalLogic';
 import { since } from './folders';
+import { fetchRunCommits } from './sessionApi';
 import { usePlanProgress } from './usePlanProgress';
 import { RoundRow } from './RoundRow';
 
@@ -32,6 +33,23 @@ function EditRow({ title, value, options, onEdit }: { title: string; value: Reac
         </Menu>
       )}
     </div>
+  );
+}
+
+function Changes({ run }: { run: ChatRun }) {
+  const [commits, setCommits] = useState<GitCommit[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetchRunCommits(run).then((c) => live && setCommits(c), () => live && setCommits(null));
+    return () => { live = false; };
+  }, [run.id, run.startedAt, run.chatId, run.rounds.length]);
+  return (
+    <>
+      <Section label="Changes" count={commits ? sectionCount(commits.length) : undefined} />
+      <div className="ui-group">
+        {commits?.length ? commits.map((c) => <Row plain key={c.hash} lines={1} title={c.subject} meta={`${c.hash} · ${since(c.at)}`} />) : <Row plain title={commits ? 'No commits' : 'Could not read commits'} />}
+      </div>
+    </>
   );
 }
 
@@ -75,6 +93,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
         {ended && <Button onClick={() => startGoal({ from: run, here: chat === run.chatId })}>Run again…</Button>}
         <Button variant="plain" onClick={() => open()}>Open chat</Button>
       </div>
+      <Changes run={run} />
       <Section label="Rounds" count={sectionCount(run.rounds.length)} />
       {run.rounds.length ? (
         <div className="ui-group">

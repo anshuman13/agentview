@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'bun:test';
-import { gitRoute, gitStatus, parseStatus, parseNumstat, parseTodos } from './git.js';
+import { gitRoute, gitStatus, parseStatus, parseLog, parseNumstat, parseTodos } from './git.js';
 
 const repo = mkdtempSync(path.join(os.tmpdir(), 'agentview-git-'));
 const sh = (...args: string[]) => execFileSync('git', args, { cwd: repo });
@@ -88,6 +88,25 @@ describe('parseNumstat', () => {
       { path: 'src/new/b.ts', add: 0, del: 0 },
       { path: 'docs/y.md', add: 2, del: 0 },
     ]);
+  });
+});
+
+describe('parseLog', () => {
+  it('reads hash, subject and time in milliseconds', () => {
+    expect(parseLog('abc1234\x1f1700000000\x1fFix a\x1fb\ndef5678\x1f1699999000\x1fAdd c\n')).toEqual([
+      { hash: 'abc1234', subject: 'Fix a\x1fb', at: 1700000000000 },
+      { hash: 'def5678', subject: 'Add c', at: 1699999000000 },
+    ]);
+  });
+});
+
+describe('git log route', () => {
+  it('lists commits since a time and rejects a bad since', async () => {
+    const r = (await route('log', null, 'since=0')) as { commits: { subject: string }[] };
+    expect(r.commits.at(-1)?.subject).toBe('init');
+    expect(((await route('log', null, `since=${Date.now() + 60_000}`)) as { commits: unknown[] }).commits).toEqual([]);
+    await expect(route('log', null, 'since=abc')).rejects.toThrow('since');
+    await expect(route('log', null)).rejects.toThrow('since');
   });
 });
 
