@@ -6,9 +6,10 @@ import { IconButton } from '../ui/Button';
 import type { ConfirmRequest } from '../ui/Confirm';
 import type { BinnedSession } from '../../../shared/protocol';
 import { pressable } from '../ui/util';
-import { binLeft, deleteChat, get, restoreChat } from './folders';
+import { binLeft, deleteChat, get, repoName, restoreChat, type Folder } from './folders';
+import { metaLine } from './ChatRows';
 
-export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: (b: BinnedSession) => void }) {
+export function Bin({ folders, ask, onRestore }: { folders: Folder[]; ask: (r: ConfirmRequest) => void; onRestore: (b: BinnedSession) => void }) {
   const [list, setList] = useState<BinnedSession[]>([]);
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -21,6 +22,7 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
   const restore = async (b: BinnedSession) => {
     if (!(await restoreChat(b.sessionId))) return notice('Could not restore the chat. It is still in the bin.');
     setList((l) => l.filter((x) => x.sessionId !== b.sessionId));
+    notice('Chat restored');
     onRestore(b);
   };
   const empty = () => ask({
@@ -46,15 +48,21 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
         </span>
       </div>
       {open && list.map((b) => (
-        <div key={b.sessionId} className="row session recent" title={`${b.title}\n${b.cwd}\nDeleted for good after 24 hours`}>
-          <span className="name">{b.title}</span>
-          <span className="when">{binLeft(b.deletedAt)}</span>
-          <span className="acts">
-            <IconButton icon="discard" small label="Restore chat" onClick={() => restore(b)} />
-            <IconButton icon="close" small label="Delete for good" onClick={() => ask(deleteChat(b, () => setList((l) => l.filter((x) => x.sessionId !== b.sessionId)), notice, true))} />
-          </span>
-        </div>
+        <BinRow key={b.sessionId} b={b} folders={folders} onRestore={() => restore(b)} onDelete={() => ask(deleteChat(b, () => setList((l) => l.filter((x) => x.sessionId !== b.sessionId)), notice, true))} />
       ))}
+    </div>
+  );
+}
+
+export function BinRow({ b, folders, onRestore, onDelete }: { b: BinnedSession; folders: Folder[]; onRestore: () => void; onDelete: () => void }) {
+  return (
+    <div className="row session recent" title={`${b.title}\n${b.cwd}\nDeleted for good after 24 hours`}>
+      <span className="name">{b.title || 'Untitled'}</span>
+      <span className="when">{metaLine(repoName(folders, b.cwd), binLeft(b.deletedAt))}</span>
+      <span className="acts">
+        <IconButton icon="discard" small label="Restore chat" onClick={onRestore} />
+        <IconButton icon="close" small label="Delete for good" onClick={onDelete} />
+      </span>
     </div>
   );
 }

@@ -144,6 +144,15 @@ fun Hub.restoreFromBin(sessionId: String) {
     }
 }
 
+fun Hub.deleteFromBin(sessionId: String) {
+    if (readOnly) return
+    viewModelScope.launch {
+        val ok = runCatching { api.deleteChat(sessionId) }.isSuccess
+        notice.value = if (ok) "Chat deleted" else "Could not delete the chat. It is still in the bin."
+        if (ok) bin.value = bin.value.filterNot { it.sessionId == sessionId }
+    }
+}
+
 fun Hub.emptyBin() = write("Could not empty the bin") {
     api.emptyBin()
     bin.value = emptyList()
