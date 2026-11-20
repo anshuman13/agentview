@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
-import { approveAllChanges, chatOf, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki/wiki';
+import { rowKey } from '../data/sync';
+import { approveAllChanges, approveChanges, chatOf, meetingOf, proposals, reviewCount, reviewGroups, similarLive, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki/wiki';
 import { Button, IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { MenuItem } from '../../ui/Menu';
@@ -18,12 +19,12 @@ import { useStore } from '../../app/store';
 import { addRepoRule } from '../../chat/cards/Memory';
 
 // On phones the replaced claim is clamped to two lines; a tap shows all of it.
-export function Replaces({ old }: { old: Fact }) {
+export function Replaces({ old, similar }: { old: Fact; similar?: boolean }) {
   const [open, setOpen] = useState(false);
-  return <div className={`wk-old wk-replaces${open ? ' open' : ''}`} onClick={() => setOpen(!open)}><s>{old.text}</s><span>Replaces</span></div>;
+  return <div className={`wk-old wk-replaces${similar ? ' wk-similar' : ''}${open ? ' open' : ''}`} onClick={() => setOpen(!open)}><s>{old.text}</s><span>{similar ? 'Similar to' : 'Replaces'}</span></div>;
 }
 
-function ReviewCard({ fact, repeated }: { fact: Fact; repeated: boolean }) {
+function ReviewCard({ fact, repeated, similar }: { fact: Fact; repeated: boolean; similar?: Fact }) {
   const { store, pages, facts, meetings } = useCodex();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(fact.text ?? '');
@@ -70,6 +71,7 @@ function ReviewCard({ fact, repeated }: { fact: Fact; repeated: boolean }) {
         <div className="mt-action-title">{fact.text}</div>
       )}
       {old && <Replaces old={old} />}
+      {similar && <Replaces old={similar} similar />}
       <div className="wk-claim-foot">
         {sourcesOf(fact).filter((s) => s.kind !== 'chat').map((s, i) => <SourceChip key={i} s={s} />)}
         {chat && <ClaudeChip chat={chat} />}
@@ -85,6 +87,7 @@ function ReviewCard({ fact, repeated }: { fact: Fact; repeated: boolean }) {
         ) : (
           <>
             <button className="wk-act" onClick={() => { setText(fact.text ?? ''); setEditing(true); }}><Icon name="edit" small /> Edit</button>
+            {similar && <button className="wk-act" onClick={() => review.replace(fact, similar)}><Icon name="arrow-swap" small /> Replace it</button>}
             {repeated && repoChat && !added && <button className="wk-act" onClick={() => void addRule()}><Icon name="add" small /> Add to CLAUDE.md</button>}
             <span className="spacer" />
             <IconButton icon="close" label="Reject" className="mt-reject" onClick={reject} />
@@ -118,6 +121,10 @@ export function useReview() {
   };
   return {
     approve: (list: Fact[]) => run(approveAllChanges(list, store.snapshot().pages, store.snapshot().facts), `Approved ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`, list.length),
+    replace: (fact: Fact, old: Fact) => {
+      const [first, ...rest] = approveChanges({ ...fact, replaces: old.id }, store.snapshot().pages, store.snapshot().facts);
+      run([{ ...first, patch: { state: 'live', replaces: old.id }, undo: { state: 'proposed', replaces: null } }, ...rest], 'Approved 1 claim, replacing the old one', 1);
+    },
     reject: (list: Fact[]) => {
       const { pages, facts } = store.snapshot();
       const page = pages.find((p) => list.length && p.id === list[0].page_id && p.profile === list[0].profile && p.state === 'proposed');
@@ -188,6 +195,7 @@ export function ToReview({ facts }: { facts: Fact[] }) {
     const dir = sourcesOf(f).find((s) => s.kind === 'chat')?.folder;
     return dir && !f.deleted && !f.page_id && (f.state === 'proposed' || (f.state ?? 'live') === 'live') ? [{ id: f.profile + f.id, text: f.text ?? '', folder: dir }] : [];
   })), [everyFact]);
+  const similar = useMemo(() => similarLive(loose, everyFact), [loose, everyFact]);
   const [all, setAll] = useState(false);
   const order = useRef<Map<string, { n: number; page: boolean }>>(new Map());
   const live = new Map<string, ReactNode>();
@@ -203,7 +211,7 @@ export function ToReview({ facts }: { facts: Fact[] }) {
   }
   for (const f of loose) {
     const k = f.profile + f.id;
-    live.set(k, <ReviewCard key={k} fact={f} repeated={repeated.has(k)} />);
+    live.set(k, <ReviewCard key={k} fact={f} repeated={repeated.has(k)} similar={similar.get(rowKey(f))} />);
     if (!order.current.has(k)) order.current.set(k, { n: 1, page: false });
   }
   if (!order.current.size) return null;

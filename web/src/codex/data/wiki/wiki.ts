@@ -1,5 +1,5 @@
 import { isOld, RETIRE_AFTER } from '../../../../../shared/claimAge';
-import { decisionKey, keyWords, mayChange, titleWords } from '../../../../../shared/claimMatch';
+import { decisionKey, keyWords, mayChange, similarClaim, titleWords } from '../../../../../shared/claimMatch';
 import { newId, rowKey, type Profile } from '../sync';
 
 type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
@@ -298,6 +298,18 @@ export function approveChanges(fact: Fact, pages: Page[], facts: Fact[]) {
     ...(page ? [{ table: 'pages' as const, row: page, patch: { state: 'live' }, undo: { state: 'proposed' } }] : []),
     ...(old ? [{ table: 'facts' as const, row: old, patch: { superseded_by: fact.id }, undo: { superseded_by: null } }] : []),
   ];
+}
+
+// For each proposed claim with no replaces, the current live claim of its profile that it repeats, keyed by profile and id.
+export function similarLive(list: Fact[], facts: Fact[]) {
+  const current = currentClaim(facts);
+  const claims = live(facts).filter(current).map((c) => ({ text: c.text ?? '', fact: c }));
+  const out = new Map<string, Fact>();
+  for (const f of list) {
+    const match = f.replaces ? undefined : similarClaim(f.text ?? '', claims.filter((c) => c.fact.profile === f.profile))?.fact;
+    if (match) out.set(rowKey(f), match);
+  }
+  return out;
 }
 
 // Approving several claims at once sets their proposed pages live once.

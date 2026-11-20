@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCodex } from '../data';
-import { chatOf, proposals, sourcesOf, type Fact } from '../data/wiki/wiki';
+import { rowKey } from '../data/sync';
+import { chatOf, proposals, similarLive, sourcesOf, type Fact } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
@@ -33,6 +34,7 @@ export function ReviewMode() {
   useEffect(() => { if (!fact && skipped.length) setSkipped([]); }, [fact, skipped.length]);
   const page = fact?.page_id ? pages.find((p) => p.id === fact.page_id && p.profile === fact.profile) : undefined;
   const old = fact?.replaces ? facts.find((f) => f.id === fact.replaces && f.profile === fact.profile) : undefined;
+  const similar = useMemo(() => (fact ? similarLive([fact], facts).get(rowKey(fact)) : undefined), [fact, facts]);
   const skip = () => {
     if (!fact) return;
     if (queue.length === 1) return back();
@@ -60,6 +62,7 @@ export function ReviewMode() {
               </div>
               <p className="wk-mode-text">{fact.text}</p>
               {old && <Replaces old={old} />}
+              {similar && <Replaces old={similar} similar />}
               <div className="wk-claim-foot">
                 {sourcesOf(fact).filter((s) => s.kind !== 'chat').map((s, i) => <SourceChip key={i} s={s} />)}
                 {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
@@ -73,6 +76,7 @@ export function ReviewMode() {
         <div className="wk-mode-acts">
           <Button icon="close" onClick={() => review.reject([fact])}>Reject</Button>
           <Button icon="arrow-right" onClick={skip}>Skip</Button>
+          {similar && <Button icon="arrow-swap" onClick={() => review.replace(fact, similar)}>Replace it</Button>}
           <Button variant="filled" icon="check" onClick={() => review.approve([fact])}>Approve</Button>
         </div>
       )}

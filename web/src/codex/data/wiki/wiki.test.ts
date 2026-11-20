@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import type { ItemRow } from '../sync';
 import { dayLabel } from '../dates';
 import { clock } from '../../../../../shared/util';
-import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
+import { decisionLog, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
 import { briefFor, decisionsWith, commitmentsOf, priorWith, seriesOf, seriesMeetings, seriesRepeats, seriesTitle, joinMinutes, meetingBadge, meetingMeta, openQuestions, searchMeetings, topicTimeline, trackedTopics } from '../meetings/meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
@@ -67,6 +67,20 @@ describe('wiki', () => {
     expect(pageStats(chain, 'p1').claims).toBe(2);
     const proposed = fact('x', 'p1', 'One', 'New', { state: 'proposed', replaces: 'k' });
     expect(approveChanges(proposed, [], chain).map((c) => c.row.id)).toEqual(['x', 'k']);
+  });
+
+  it('picks the current live claim a proposal repeats, in its own profile', () => {
+    const base = [
+      fact('l1', 'p1', 'One', 'Deploys go out on Tuesday mornings'),
+      fact('l2', 'p1', 'One', 'Deploys go out on Tuesday mornings', { profile: 'personal' }),
+      fact('l3', 'p1', 'One', 'Deploys go out on Tuesday mornings', { superseded_by: 'l4' }),
+      fact('l4', 'p1', 'One', 'Standups happen daily'),
+    ];
+    const near = fact('n1', 'p1', 'One', 'Deploys go out on Tuesday mornings now', { state: 'proposed' });
+    const all = [...base, near];
+    expect([...similarLive([near], all)].map(([k, v]) => [k, v.id])).toEqual([['work:n1', 'l1']]);
+    expect(similarLive([{ ...near, replaces: 'l1' }], all).size).toBe(0);
+    expect(similarLive([fact('n2', 'p1', 'One', 'Unrelated lunch order', { state: 'proposed' })], all).size).toBe(0);
   });
 
   it('shows proposed claims on their page, and leaves rejected ones and search out', () => {
