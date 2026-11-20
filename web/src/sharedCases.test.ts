@@ -28,7 +28,7 @@ import { buildTranscript } from './chat/transcript/steps';
 import { foldTurns, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { failedLine, handoffText, joinMarks, markChip, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
+import { chatMarkdown, failedLine, handoffText, joinMarks, lastReply, markChip, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
 import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -302,6 +302,13 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; kind: SetupKind; repo: string; mcpCommand: string; expected: string }>('setup-prompts')) {
     it(`setupPrompt: ${c.name}`, () => expect(setupPrompt(c.kind, c.repo, c.mcpCommand)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; title: string; events: ChatEvent[]; markdown: string; lastReply: string | null }>('chat-markdown')) {
+    it(`chatMarkdown: ${c.name}`, () => {
+      expect(chatMarkdown(c.events, c.title)).toBe(c.markdown);
+      expect(lastReply(c.events)).toBe(c.lastReply);
+    });
   }
 
   for (const c of cases<{ name: string; sessionId: string; expected: string }>('handoff-text')) {

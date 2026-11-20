@@ -300,20 +300,24 @@ fun newMarker(items: List<Item>, ats: Map<String, Long>, seen: Long, openedAt: L
     return items.firstOrNull { it !is Item.User && (ats[it.id] ?: 0L).let { at -> at > seen && at <= openedAt } }?.id
 }
 
-// The prompts and replies of the loaded transcript as Markdown, for the share sheet. Tools and system lines are left out.
 // Slack's "Remind me about this": when a reminder task for a chat falls due.
 fun remindChoices(now: Long, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): List<Pair<String, Long>> {
     val tomorrow = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate().plusDays(1).atTime(9, 0).atZone(zone).toInstant().toEpochMilli()
     return listOf("In 1 hour" to now + 3_600_000, "In 3 hours" to now + 3 * 3_600_000, "Tomorrow at 9:00" to tomorrow)
 }
 
+// The text of the last top-level assistant reply, or null when there is none.
+fun lastReply(events: List<ChatEvent>): String? =
+    events.lastOrNull { it.kind == "assistant" && it.parent == null && it.text.isNotBlank() }?.text?.trim()
+
+// The prompts and replies of the loaded transcript as Markdown, for the share sheet. Tools, subagent text and system lines are left out.
 fun chatMarkdown(title: String, events: List<ChatEvent>): String = buildString {
-    if (title.isNotBlank()) append("# ").append(title.trim()).append("\n\n")
+    append("# ").append(title.trim().ifEmpty { "Chat" }).append("\n\n")
     for (e in events) {
         if (e.text.isBlank() || e.queued) continue
-        when (e.kind) {
-            "user" -> append("**You:** ").append(e.text.trim()).append("\n\n")
-            "assistant" -> append(e.text.trim()).append("\n\n")
+        when {
+            e.kind == "user" -> append("**You:** ").append(e.text.trim()).append("\n\n")
+            e.kind == "assistant" && e.parent == null -> append(e.text.trim()).append("\n\n")
         }
     }
 }.trimEnd() + "\n"

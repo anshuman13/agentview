@@ -11,6 +11,7 @@ import no.pradhan.agentview.nativeapp.net.PlanUsage
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.menuModes
+import no.pradhan.agentview.nativeapp.sessions.SavedSession
 
 // web/src/chat/composerLogic.ts and ChatSettings.tsx, the parts the phone composer uses.
 
@@ -77,6 +78,12 @@ fun rankCommands(commands: List<CommandInfo>, query: String, limit: Int = MAX_RO
 
 fun rankFiles(files: List<String>, query: String, limit: Int = MAX_ROWS): List<String> =
     files.mapNotNull { f -> matchScore(f, query)?.let { f to it } }.sortedByDescending { it.second }.take(limit).map { it.first }
+
+// "@chat:" lists other chats by title; picking one inserts @chat:<session id>, which the server expands to its transcript.
+fun chatQuery(t: Trigger?): String? = t?.takeIf { it.file && it.query.startsWith("chat:") }?.query?.removePrefix("chat:")
+
+fun rankChats(chats: List<SavedSession>, query: String, limit: Int = MAX_ROWS): List<SavedSession> =
+    chats.filter { it.title.isNotEmpty() }.mapNotNull { c -> matchScore(c.title, query)?.let { c to it } }.sortedByDescending { it.second }.take(limit).map { it.first }
 
 fun acceptSuggestion(text: String, start: Int, caret: Int, insert: String): Pair<String, Int> =
     Pair("${text.substring(0, start)}$insert ${text.substring(caret)}", start + insert.length + 1)

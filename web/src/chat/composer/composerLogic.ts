@@ -195,7 +195,16 @@ export function saveDraft(chat: string, text: string) {
 // The loaded prompts and replies as Markdown, like the phone's Share chat and Goose's session export.
 export function chatMarkdown(events: ChatEvent[], title: string) {
   const parts = events.flatMap((e) => (e.kind === 'user' && !e.queued ? [`**You:** ${e.text.trim()}`] : e.kind === 'assistant' && !e.parent && e.text.trim() ? [e.text.trim()] : []));
-  return [`# ${title || 'Chat'}`, ...parts].join('\n\n') + '\n';
+  return [`# ${title.trim() || 'Chat'}`, ...parts].join('\n\n') + '\n';
+}
+
+// The text of the last top-level assistant reply, or null when there is none.
+export function lastReply(events: ChatEvent[]) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.kind === 'assistant' && !e.parent && e.text.trim()) return e.text.trim();
+  }
+  return null;
 }
 
 // A reply saved to Notes: the chat title on the first line, in the profile of the chat's folder.

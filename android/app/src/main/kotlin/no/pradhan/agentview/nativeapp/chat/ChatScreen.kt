@@ -220,6 +220,7 @@ private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double
 @Composable
 private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
     MoreButton { close ->
         MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
@@ -231,6 +232,10 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
             close()
             val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, hub.store.state.value.events))
             context.startActivity(android.content.Intent.createChooser(send, null))
+        }, enabled = hasReply)
+        MenuItem("Copy last reply", "copy", {
+            close()
+            lastReply(hub.store.state.value.events)?.let { clip.setText(AnnotatedString(it)); hub.notice.value = "Reply copied" }
         }, enabled = hasReply)
         MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })
         MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) panels.dialog = "close" else hub.closeChat(live.id) })

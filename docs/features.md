@@ -208,7 +208,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   Send to all field that messages every try still in the run, reopening closed ones. When every try has reported, the
   parent chat gets one turn ("All N tries reported") that compares them and recommends one with a ROUND line, and the run
   ends ("all tries reported"); it also ends when the parent chat closes or on Keep
-- `@chat:` in the web composer lists the other chats by title; picking one inserts `@chat:<session id>`, and the server
+- `@chat:` in the web and phone composers lists the other chats by title; picking one inserts `@chat:<session id>`, and the server
   adds that chat's transcript path to the prompt so Claude can read it (the chat shows the prompt as typed)
 - "Fork chat" (New chat in the Fork pick of the web chat settings menu, the phone chat menu, or the palette) starts a new chat in the same folder and model
   whose first prompt asks Claude to read the old chat (through `@chat:`) and summarise it in at most 15 lines, so the work
@@ -220,7 +220,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   Goal and Build rows, the permission modes (Supervised follows Auto), Account and Effort. The model you pick
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
   (Permission mode, Model, Effort, Claude account, Goal, Build, Fork, Remind me, Copy, Tools…); Fork holds Side chat and
-  New chat, Copy holds Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Memory, Hooks and TODOs.
+  New chat, Copy holds Last reply, Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Memory, Hooks and TODOs.
   Remember… (also in the phone's chat menu) opens one field; Save stores a live Memory claim in the chat's profile with a
   Chat source of the chat's title and folder and shows "Saved to Memory" with Undo; empty text saves nothing. When the
   text overlaps a current Memory claim (no page, same profile, `rememberChanges`) the new claim supersedes it, the snack
@@ -277,7 +277,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Opening a chat with replies or steps since you last saw it shows a red New line above the first of them, like Slack's
   unread divider: on the web from the seen time before this page opened the chat, on the phone from when the phone last showed it
 - "Copy as Markdown" in the Copy pick of the web chat settings menu copies the loaded prompts and replies under the chat title
-- "Share chat" in the phone chat menu sends the loaded prompts and replies as Markdown to the Android share sheet
+  and leaves out subagent text; an untitled chat is headed "Chat". "Last reply" in the same pick (only when there is a reply) copies the
+  latest top-level answer; the phone's chat menu has "Copy last reply" for the same
+- "Share chat" in the phone chat menu sends the same Markdown to the Android share sheet
 - "Side chat" in the Fork pick of the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
 - "Continue in terminal" in the Copy pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for

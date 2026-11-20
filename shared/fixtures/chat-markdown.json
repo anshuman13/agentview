@@ -1,0 +1,36 @@
+[
+  {
+    "name": "prompts and top-level replies under the title",
+    "title": "Importer",
+    "events": [
+      { "id": "1", "kind": "user", "text": "Fix it ", "at": 1 },
+      { "id": "2", "kind": "assistant", "text": "Subagent note", "at": 2, "parent": "x" },
+      { "id": "3", "kind": "assistant", "text": "Fixed.", "at": 3 },
+      { "id": "4", "kind": "user", "text": "queued", "at": 4, "queued": true }
+    ],
+    "markdown": "# Importer\n\n**You:** Fix it\n\nFixed.\n",
+    "lastReply": "Fixed."
+  },
+  {
+    "name": "blank title becomes Chat and the last reply skips subagent text",
+    "title": "  ",
+    "events": [
+      { "id": "1", "kind": "user", "text": "Hi", "at": 1 },
+      { "id": "2", "kind": "assistant", "text": " First ", "at": 2 },
+      { "id": "3", "kind": "assistant", "text": "Later subagent", "at": 3, "parent": "x" },
+      { "id": "4", "kind": "assistant", "text": " ", "at": 4 }
+    ],
+    "markdown": "# Chat\n\n**You:** Hi\n\nFirst\n",
+    "lastReply": "First"
+  },
+  {
+    "name": "no reply",
+    "title": "T",
+    "events": [
+      { "id": "1", "kind": "user", "text": "Hi", "at": 1 },
+      { "id": "2", "kind": "tool_use", "name": "Bash", "input": {}, "summary": "ls", "at": 2 }
+    ],
+    "markdown": "# T\n\n**You:** Hi\n",
+    "lastReply": null
+  }
+]

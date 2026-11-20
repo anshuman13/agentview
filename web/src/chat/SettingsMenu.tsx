@@ -1,5 +1,5 @@
 import { notice, send, setUi, useStore } from '../app/store';
-import { remindChoices } from './composer/composerLogic';
+import { lastReply, remindChoices } from './composer/composerLogic';
 import { runLine } from '../sessions/runLogic';
 import { useChatRun } from '../sessions/useChatRun';
 import { openGoal, startGoal } from '../sessions/goalLogic';
@@ -9,7 +9,7 @@ import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { Confirm } from '../ui/Confirm';
-import { copyChatMarkdown, copyResumeCommand, forkChat, rememberChat, remindChat, sideChat } from './chatActions';
+import { copyChatMarkdown, copyLastReply, copyResumeCommand, forkChat, rememberChat, remindChat, sideChat } from './chatActions';
 import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
@@ -119,16 +119,18 @@ export function ForkPick({ pick, close, back }: SubProps) {
 
 export function CopyPick({ pick, close, back }: SubProps) {
   const resumeCommand = useStore((s) => s.session.resumeCommand);
+  const hasReply = useStore((s) => lastReply(s.events) !== null);
   return (
     <ChoicePick
       back={back}
       anchor={pick.at}
       title="Copy"
       items={[
+        ...(hasReply ? [{ value: 'reply', label: 'Last reply', detail: 'The latest answer as Markdown' }] : []),
         { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
         ...(resumeCommand ? [{ value: 'terminal', label: 'Continue in terminal', detail: 'Copy the command that resumes this chat' }] : []),
       ]}
-      onPick={(v) => { if (v === 'terminal') copyResumeCommand(resumeCommand!); else copyChatMarkdown(); close(); }}
+      onPick={(v) => { if (v === 'terminal') copyResumeCommand(resumeCommand!); else if (v === 'reply') copyLastReply(); else copyChatMarkdown(); close(); }}
       onClose={close}
     />
   );
