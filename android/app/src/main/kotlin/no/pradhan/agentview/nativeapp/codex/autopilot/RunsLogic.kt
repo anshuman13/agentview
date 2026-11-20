@@ -97,11 +97,14 @@ fun roundsSummary(rounds: List<Round>) = listOf("done", "progress", "blocked", "
     .filter { it.second > 0 }
     .joinToString(" · ") { (o, n) -> "$n ${if (o == "quiet") "nothing to do" else o}" }
 
+// The summary and the rounds' total cost: "2 done · 1 blocked · $0.42" (web shared/goalText.ts roundsMeta).
+fun roundsMeta(rounds: List<Round>, provider: String?) = "${roundsSummary(rounds)} · ${money(rounds.sumOf { it.costUsd }, billing(provider))}"
+
 fun roundGroupText(g: RoundGroup) = if (g.count > 1) "Rounds ${g.first.n}-${g.last.n} · ${clock(g.last.at)} · nothing to do" else roundText(g.last)
 
 // A run's rounds as Markdown to paste in a chat or note, oldest first; "" with no rounds (web shared/goalText.ts roundsMarkdown, fixture rounds-markdown.json).
 fun roundsMarkdown(title: String, rounds: List<Round>, provider: String?) = if (rounds.isEmpty()) "" else (
-    listOf("## $title", "${roundsSummary(rounds)} · ${money(rounds.sumOf { it.costUsd }, billing(provider))}", "") + mergeQuiet(rounds).map { "- ${roundGroupText(it)}" }
+    listOf("## $title", roundsMeta(rounds, provider), "") + mergeQuiet(rounds).map { "- ${roundGroupText(it)}" }
 ).joinToString("\n")
 
 // The loop card's first row (web composerLogic loopNow): the agent's status or the last round, whichever is newer.

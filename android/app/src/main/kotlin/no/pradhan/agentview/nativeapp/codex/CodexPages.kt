@@ -209,8 +209,11 @@ internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Tas
                             }
                         })
                         tasks.forEach { t -> Hairline(); TaskRowView(t, now, actions, onOpen = { onOpen(t) }) }
-                        if (tasks.isEmpty()) EmptyState("No tasks yet", "Tasks linked to this goal show here", icon = "target",
-                            action = if (past) null else ({ Button("Add task", { onAddTask(g) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, icon = "add") }))
+                        if (tasks.isEmpty()) {
+                            Hairline()
+                            EmptyState("No tasks yet", "Tasks linked to this goal show here", icon = "target",
+                                action = if (past) null else ({ Button("Add task", { onAddTask(g) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, icon = "add") }))
+                        }
                     }
                 }
             }

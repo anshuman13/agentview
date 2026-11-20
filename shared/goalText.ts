@@ -74,13 +74,17 @@ export const roundsSummary = (rounds: Round[]) =>
     .map(([o, n]) => `${n} ${o === 'quiet' ? 'nothing to do' : o}`)
     .join(' · ');
 
+// The summary and the rounds' total cost: "2 done · 1 blocked · $0.42" (Android roundsMeta).
+export const roundsMeta = (rounds: Round[], provider?: Provider) =>
+  `${roundsSummary(rounds)} · ${money(rounds.reduce((sum, r) => sum + r.costUsd, 0), billing(provider))}`;
+
 export const roundGroupText = (g: RoundGroup) =>
   g.count > 1 ? `Rounds ${g.first.n}-${g.last.n} · ${clock(g.last.at)} · nothing to do` : g.last.report ? 'Weekly report' : roundText(g.last);
 
 // A run's rounds as Markdown to paste in a chat or note, oldest first; "" with no rounds (Android roundsMarkdown, fixture rounds-markdown.json).
 export const roundsMarkdown = (title: string, rounds: Round[], provider?: Provider) =>
   rounds.length
-    ? [`## ${title}`, `${roundsSummary(rounds)} · ${money(rounds.reduce((sum, r) => sum + r.costUsd, 0), billing(provider))}`, '', ...mergeQuiet(rounds).map((g) => `- ${roundGroupText(g)}`)].join('\n')
+    ? [`## ${title}`, roundsMeta(rounds, provider), '',...mergeQuiet(rounds).map((g) => `- ${roundGroupText(g)}`)].join('\n')
     : '';
 
 export const firstRound = (at: number | null) => `First round${at ? ` ${clock(at)}` : ''}`;

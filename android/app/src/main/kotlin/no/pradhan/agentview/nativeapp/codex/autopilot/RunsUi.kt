@@ -104,7 +104,7 @@ fun RunRows(hub: Hub, run: ChatRun, live: LiveChat) {
         }
         if ((goal || run.kind == "loop") && run.rounds.isNotEmpty()) {
             ListRow(
-                plural(run.round, "round"), "${roundsSummary(run.rounds)} · ${money(run.rounds.sumOf { it.costUsd }, billing(run.provider))}", lines = 1, compact = true,
+                plural(run.round, "round"), roundsMeta(run.rounds, run.provider), lines = 1, compact = true,
                 trailing = { AvIcon(if (rounds) "chevron-up" else "chevron-down", null, Tokens.iconSm, tint = av.fgMuted) },
                 onClick = { rounds = !rounds },
             )
