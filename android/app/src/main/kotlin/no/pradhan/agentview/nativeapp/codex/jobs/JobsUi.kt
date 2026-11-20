@@ -24,6 +24,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.AutopilotRow
 import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.codex.replyQueue
 import no.pradhan.agentview.nativeapp.codex.split
+import no.pradhan.agentview.nativeapp.codex.wiki.agoText
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.app.mcpProbe
@@ -42,6 +44,7 @@ import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
+import no.pradhan.agentview.nativeapp.ui.Toggle
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
@@ -100,6 +103,8 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     }
 }
 
+private const val TASKS_SHOWN = 5
+
 fun mcpToolId(server: String) = "mcp__${server.replace(Regex("[^A-Za-z0-9_-]"), "_")}__*"
 
 fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String> = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { id ->
@@ -107,10 +112,12 @@ fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String>
 }
 
 @Composable
-fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActions) {
+fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActions, onTask: (Row) -> Unit) {
     val runs = remember(st.runs, job.key) { runsOf(st.runs, job) }
+    val tasks = remember(st.items, job.key, job.str("name")) { tasksOf(st.items, job) }
     val state = jobState(job, runs, now)
     var runsOpen by rememberSaveable(job.key) { mutableStateOf(false) }
+    var allTasks by rememberSaveable(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
     var servers by remember { mutableStateOf<List<String>>(emptyList()) }
     LaunchedEffect(tools) { if (tools != null) runCatching { servers = hub.mcpProbe(false).map { it.name } } }
@@ -134,6 +141,18 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
                 val latest = runs.firstOrNull()
                 if (latest == null) ListRow("Runs", "Not run yet")
                 else ListRow("Runs", runTime(latest), onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
+            }
+        }
+        if (tasks.isNotEmpty()) {
+            item { SectionHeader("Tasks it added", tasks.size.toString()) }
+            item {
+                Group {
+                    (if (allTasks) tasks else tasks.take(TASKS_SHOWN)).forEachIndexed { i, t ->
+                        if (i > 0) Hairline()
+                        ListRow(t.title ?: UNTITLED, listOfNotNull(if (t.status == "done") "Done" else null, agoText(t.madeAt, now)).joinToString(" · "), strike = t.status == "done", onClick = { onTask(t) })
+                    }
+                }
+                if (!allTasks && tasks.size > TASKS_SHOWN) Button("Show all ${tasks.size}", { allTasks = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }

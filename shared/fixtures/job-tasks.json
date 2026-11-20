@@ -1,0 +1,31 @@
+[
+  {
+    "name": "open first, then done, newest first inside each",
+    "job": { "name": "Linear sweep", "profile": "work" },
+    "items": [
+      { "id": "done-new", "status": "done", "madeAt": 50 },
+      { "id": "open-old", "status": "open", "madeAt": 10 },
+      { "id": "open-new", "status": "open", "madeAt": 40 },
+      { "id": "done-old", "status": "done", "madeAt": 20 }
+    ],
+    "expected": ["open-new", "open-old", "done-new", "done-old"]
+  },
+  {
+    "name": "other profile, deleted, other source and other job name are left out",
+    "job": { "name": "Linear sweep", "profile": "work" },
+    "items": [
+      { "id": "mine", "status": "open", "madeAt": 1 },
+      { "id": "personal", "status": "open", "madeAt": 2, "profile": "personal" },
+      { "id": "deleted", "status": "open", "madeAt": 3, "deleted": true },
+      { "id": "slack", "status": "open", "madeAt": 4, "source": "slack" },
+      { "id": "renamed", "status": "open", "madeAt": 5, "people": "Old name" }
+    ],
+    "expected": ["mine"]
+  },
+  {
+    "name": "a job with no tasks has none",
+    "job": { "name": "Quiet job", "profile": "personal" },
+    "items": [{ "id": "work-one", "status": "open", "madeAt": 1, "profile": "work" }],
+    "expected": []
+  }
+]

@@ -73,7 +73,7 @@ fun ExtraContent(
         route == "jobs" -> JobsListPage(hub, st, profile, now, actions, { push("autopilot") }) { push("job:${it.key}") }
         else -> {
             val j = st.jobs.firstOrNull { it.key == key && !it.deleted }
-            if (j == null) EmptyState("This job is gone") else JobPageView(hub, st, j, now, actions)
+            if (j == null) EmptyState("This job is gone") else JobPageView(hub, st, j, now, actions, onTask)
         }
     }
 }

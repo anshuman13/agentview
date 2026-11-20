@@ -40,7 +40,8 @@ import { ago, money } from './ui/util';
 import { setSystemTime } from '../../testing';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
-import type { Meeting } from './codex/data/wiki/wiki';
+import type { Job, Meeting } from './codex/data/wiki/wiki';
+import { tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
@@ -195,6 +196,12 @@ describe('cases shared with the Android app', () => {
   for (const c of cases<{ name: string; since: number[]; now: number[]; expected: boolean }>('late-promise')) {
     const at = ([y, m, d, h]: number[]) => new Date(y, m - 1, d, h).getTime();
     it(`isLate: ${c.name}`, () => expect(isLate(at(c.since), at(c.now))).toBe(c.expected));
+  }
+
+  type JobTaskSpec = { id: string; status: string; madeAt: number; profile?: Profile; deleted?: boolean; source?: string; people?: string };
+  for (const c of cases<{ name: string; job: { name: string; profile: Profile }; items: JobTaskSpec[]; expected: string[] }>('job-tasks')) {
+    const items = c.items.map((i) => ({ id: i.id, profile: i.profile ?? c.job.profile, deleted: i.deleted ? 1 : 0, source: i.source ?? 'job', people: i.people ?? c.job.name, status: i.status, updated_at: i.madeAt, field_times: '{}' }) as unknown as ItemRow);
+    it(`tasksOf: ${c.name}`, () => expect(tasksOf(items, c.job as Job).map((r) => r.id)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; id: string; people: string; links: string | null; expected: boolean }>('event-rule')) {

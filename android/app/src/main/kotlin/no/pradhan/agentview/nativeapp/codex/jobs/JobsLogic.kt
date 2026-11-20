@@ -38,6 +38,11 @@ fun describeSchedule(s: String?): String {
 
 fun runsOf(runs: List<Row>, j: Row) = runs.filter { !it.deleted && it.profile == j.profile && it.str("job_id") == j.id }.sortedByDescending { it.long("started_at") ?: 0L }
 
+// The tasks a job's add_task wrote (source job, people the job name): open first, then done, newest first.
+fun tasksOf(items: List<Row>, j: Row) = items
+    .filter { !it.deleted && it.profile == j.profile && it.source == "job" && it.people == j.str("name") }
+    .sortedWith(compareBy<Row> { it.status == "done" }.thenByDescending { it.madeAt })
+
 // Each job's runs, newest first, keyed by profile and job id: one pass for the whole list.
 fun runsByJob(runs: List<Row>): Map<Pair<String, String?>, List<Row>> =
     runs.filter { !it.deleted }.sortedByDescending { it.long("started_at") ?: 0L }.groupBy { it.profile to it.str("job_id") }
