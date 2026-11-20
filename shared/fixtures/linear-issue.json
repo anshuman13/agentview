@@ -1,0 +1,5 @@
+[
+  {"name": "owner and due", "meeting": {"title": "Planning", "starts_at": 1793268000000}, "action": {"title": "send notes", "people": " Grace Hopper ", "at": 1793404800000}, "expected": "https://linear.app/new?title=send+notes&description=Owner%3A+Grace+Hopper%0AFrom%3A+Planning+%282026-10-29%29%0ADue%3A+2026-10-31"},
+  {"name": "no owner, no due, untitled meeting", "meeting": {"title": null, "starts_at": null}, "action": {"title": "send notes", "people": null, "at": null}, "expected": "https://linear.app/new?title=send+notes&description=From%3A+Meeting"},
+  {"name": "ampersand and spaces in the title", "meeting": {"title": "Planning", "starts_at": 1793268000000}, "action": {"title": "Q&A prep for R&D", "people": null, "at": null}, "expected": "https://linear.app/new?title=Q%26A+prep+for+R%26D&description=From%3A+Planning+%282026-10-29%29"}
+]

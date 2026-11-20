@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAssistantStore } from '../data';
 import { atTime } from '../data/tasks/engine';
 import type { AssistantStore, Patch } from '../data/store';
-import { draftFor } from '../data/meetings/meetingMarkdown';
+import { draftFor, linearIssue } from '../data/meetings/meetingMarkdown';
 import { displayName, peopleOf } from '../data/meetings/meetings';
 import { firstName } from '../data/meetings/points';
 import type { ItemRow } from '../data/sync';
@@ -24,9 +24,6 @@ import { type BadgeSpec, Badge } from '../../ui/Badge';
 
 // Matches STALE in assistant/src/jobs/rollover.ts: at this many rolls a task goes back to review.
 const STALE_ROLLS = 3;
-
-// Opens Linear's new-issue form filled in; nothing is created until you submit it there.
-const linearIssue = (r: ItemRow, m: Meeting) => `https://linear.app/new?${new URLSearchParams({ title: r.title ?? '', description: draftFor(r, m).split('\n').slice(1).join('\n') })}`;
 
 const before = (row: ItemRow, patch: Patch) => Object.fromEntries(Object.keys(patch).map((k) => [k, row[k as keyof ItemRow]])) as Patch;
 

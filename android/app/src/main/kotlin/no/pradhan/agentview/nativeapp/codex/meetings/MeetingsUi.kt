@@ -185,13 +185,14 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolea
     }
     ListRow(r.title ?: UNTITLED, meta, strike = status == "done", onClick = onTask?.let { { it(r) } }, trailing = {
         if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !readOnly)
-        MoreButton { close -> ActionMenuItems(r, m, now, actions, readOnly, close) }
+        MoreButton { close -> ActionMenuItems(r, m, now, actions, readOnly, close, onTask) }
     })
 }
 
 @Composable
-fun ColumnScope.ActionMenuItems(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolean, close: () -> Unit, extra: @Composable ColumnScope.() -> Unit = {}) {
+fun ColumnScope.ActionMenuItems(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolean, close: () -> Unit, onEdit: ((Row) -> Unit)?, extra: @Composable ColumnScope.() -> Unit = {}) {
     val clip = LocalClipboardManager.current
+    val uri = LocalUriHandler.current
     var sub by remember(r.key) { mutableStateOf<String?>(null) }
     val cur = r.str("assignee")?.ifEmpty { null }
     val assign = { who: String? -> if (who != cur) actions.change(r, mapOf("assignee" to who), "Assigned to ${who?.let { firstName(displayName(it)) } ?: "me"}") }
@@ -211,6 +212,8 @@ fun ColumnScope.ActionMenuItems(r: Row, m: Row, now: Long, actions: TaskActions,
         if (items.notMine) MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r, "Moved to Not mine") }, enabled = !readOnly)
         if (items.assign) MenuItem("Assign", "person", { sub = "assign" }, enabled = !readOnly)
         if (items.snooze) MenuItem("Snooze", "clock", { sub = "snooze" }, enabled = !readOnly)
+        if (onEdit != null) MenuItem("Edit", "edit", { close(); onEdit(r) })
+        if (r.status == "open") MenuItem("New Linear issue", "issues", { close(); uri.openUri(linearIssue(r, m)) })
         MenuItem("Copy as message", "copy", { close(); clip.setText(AnnotatedString(draftFor(r, m))); actions.say("Message copied") })
         extra()
         MenuItem("Delete", "trash", { close(); actions.delete(r) }, danger = true, enabled = !readOnly)

@@ -410,7 +410,7 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
             ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) },
                 trailing = {
                     MoreButton { close ->
-                        ActionMenuItems(n.row, n.meeting, now, actions, hub.readOnly, close) {
+                        ActionMenuItems(n.row, n.meeting, now, actions, hub.readOnly, close, onOpen) {
                             MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(n.meeting, n.actions))); actions.say("Follow-up copied") })
                             MenuItem("Notes", "edit", { close(); onNotes(n.meeting) })
                         }

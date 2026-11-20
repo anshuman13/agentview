@@ -59,6 +59,9 @@ import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
+import no.pradhan.agentview.nativeapp.ui.ChoiceRow
+import no.pradhan.agentview.nativeapp.ops.McpServer
+import no.pradhan.agentview.nativeapp.ops.mcpScope
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.TimeDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
@@ -146,6 +149,31 @@ private fun JobScheduleSheet(actions: TaskActions, j: Row, onDismiss: () -> Unit
     if (pickTime) TimeDialog("Time", s.time.take(2).toInt(), s.time.takeLast(2).toInt(), "Set", "Cancel", { h, m -> pickTime = false; write(s.kind, s.day, "%02d:%02d".format(h, m)) }, { pickTime = false }, { pickTime = false })
 }
 
+// JobTools of web/src/codex/jobs/JobParts.tsx: Chrome, each MCP server, then any other saved entry; a tap adds or removes it.
+@Composable
+private fun JobToolsSheet(hub: Hub, j: Row, onDismiss: () -> Unit) {
+    var probe by remember { mutableStateOf<List<McpServer>?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { runCatching { hub.mcpProbe(false) }.onSuccess { probe = it }.onFailure { failed = true } }
+    val tools = j.str("tools") ?: ""
+    val picked = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    val toggle = { id: String -> hub.codex.update(j, mapOf("tools" to toggleConnector(tools, id).ifEmpty { null })) }
+    val known = listOf("browser") + probe.orEmpty().map { mcpToolId(it.name) }
+    Sheet(onDismiss, "Allowed tools") {
+        Group {
+            ChoiceRow("Chrome", checked = "browser" in picked, onClick = { toggle("browser") })
+            if (probe == null && !failed) { Hairline(); ListRow("Loading servers…", muted = true) }
+            probe.orEmpty().forEach { s -> Hairline(); ChoiceRow(s.name, mcpScope(s.scope).first, checked = mcpToolId(s.name) in picked, onClick = { toggle(mcpToolId(s.name)) }) }
+            picked.filter { it !in known }.forEach { id -> Hairline(); ChoiceRow(id, checked = true, onClick = { toggle(id) }) }
+        }
+        if (failed) Footnote("Could not load the MCP servers")
+        Footnote("Connectors it may use beyond reading, with no one watching. Chrome is AgentView's own browser; a server lets it use every tool that server has.")
+    }
+}
+
+@Composable
+private fun Footnote(text: String) = Text(text, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
+
 @Composable
 private fun JobMenu(hub: Hub, actions: TaskActions, j: Row, canRun: Boolean, close: () -> Unit, onEdit: (() -> Unit)? = null) {
     val on = isEnabled(j)
@@ -206,6 +234,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     var allTasks by rememberSaveable(job.key) { mutableStateOf(false) }
     var editing by rememberSaveable(job.key) { mutableStateOf(startEditing) }
     var scheduling by remember(job.key) { mutableStateOf(false) }
+    var pickingTools by remember(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
     var servers by remember { mutableStateOf<List<String>>(emptyList()) }
     LaunchedEffect(tools) { if (tools != null) runCatching { servers = hub.mcpProbe(false).map { it.name } } }
@@ -225,7 +254,10 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
                 ListRow("When", jobMeta(job, runs, st.paused, now), onClick = if (hub.readOnly) null else ({ scheduling = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
                 repoLabel(job.str("repo"))?.let { ListRow("Repo", it); Hairline() }
                 if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is kept in the runs but not pushed", toggle = Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) }); Hairline() }
-                if (tools != null) { ListRow("Tools", toolLabels(tools, servers).joinToString(", ")); Hairline() }
+                if (job.str("repo") == null) {
+                    ListRow("Allowed tools", tools?.let { toolLabels(it, servers).joinToString(", ") } ?: "None", onClick = if (hub.readOnly) null else ({ pickingTools = true }), trailing = if (hub.readOnly) null else ({ Chevron() }))
+                    Hairline()
+                }
                 val latest = runs.firstOrNull()
                 if (latest == null) ListRow("Runs", "Not run yet")
                 else ListRow("Runs", runTime(latest, now), onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
@@ -247,6 +279,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     }
     if (editing) JobEditSheet(actions, job) { editing = false }
     if (scheduling) JobScheduleSheet(actions, job) { scheduling = false }
+    if (pickingTools) JobToolsSheet(hub, job) { pickingTools = false }
     val ask = if (hub.readOnly) null else ({ r: Row, output: String ->
         runsOpen = false
         hub.askCodex(runAsk(job.str("name")?.ifEmpty { null } ?: "Untitled job", r.long("started_at") ?: 0L, output), job.profile)

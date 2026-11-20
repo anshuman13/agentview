@@ -78,6 +78,9 @@ export function draftFor(a: ItemRow, m: Meeting) {
   return out.join('\n');
 }
 
+// Opens Linear's new-issue form filled in; nothing is created until you submit it there.
+export const linearIssue = (a: ItemRow, m: Meeting) => `https://linear.app/new?${new URLSearchParams({ title: a.title ?? '', description: draftFor(a, m).split('\n').slice(1).join('\n') })}`;
+
 type AgendaParts = { points: ItemRow[]; actions: string[]; questions: string[] };
 
 export function agendaMarkdown(m: Meeting, parts: AgendaParts) {

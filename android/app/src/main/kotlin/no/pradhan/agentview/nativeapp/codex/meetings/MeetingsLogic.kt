@@ -32,6 +32,7 @@ import no.pradhan.agentview.nativeapp.codex.whenText
 import no.pradhan.agentview.nativeapp.codex.wiki.factTime
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
 import no.pradhan.agentview.nativeapp.net.Ask
+import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.sessions.queryWords
@@ -391,6 +392,10 @@ fun draftFor(a: Row, m: Row): String {
     a.at?.let { out.add("Due: ${ymd(it)}") }
     return out.joinToString("\n")
 }
+
+// Mirrors linearIssue of web/src/codex/data/meetings/meetingMarkdown.ts; shared/fixtures/linear-issue.json holds the URLs.
+fun linearIssue(a: Row, m: Row): String =
+    "https://linear.app/new?title=${enc(a.title ?: "")}&description=${enc(draftFor(a, m).split("\n").drop(1).joinToString("\n"))}"
 
 // Mirrors agendaMarkdown of web/src/codex/data/meetings/meetingMarkdown.ts; shared/fixtures/agenda.json holds the texts.
 fun agendaMarkdown(m: Row, points: List<Row>, actions: List<String>, questions: List<String>): String {

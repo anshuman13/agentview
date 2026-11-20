@@ -1,0 +1,7 @@
+[
+  {"name": "adds to an empty list", "tools": "", "id": "browser", "expected": "browser"},
+  {"name": "appends after other entries", "tools": "foo, mcp__a__*", "id": "browser", "expected": "foo, mcp__a__*, browser"},
+  {"name": "removes and keeps the order", "tools": "foo, browser, bar", "id": "browser", "expected": "foo, bar"},
+  {"name": "removes the last entry", "tools": "browser", "id": "browser", "expected": ""},
+  {"name": "trims and drops duplicates and empty entries", "tools": " a ,, a , b ,", "id": "c", "expected": "a, b, c"}
+]

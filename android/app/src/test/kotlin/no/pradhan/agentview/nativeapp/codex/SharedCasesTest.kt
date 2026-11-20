@@ -216,6 +216,8 @@ import no.pradhan.agentview.nativeapp.codex.jobs.tasksOf
 import no.pradhan.agentview.nativeapp.codex.meetings.actionCount
 import no.pradhan.agentview.nativeapp.codex.meetings.agendaMarkdown
 import no.pradhan.agentview.nativeapp.codex.meetings.draftFor
+import no.pradhan.agentview.nativeapp.codex.meetings.linearIssue
+import no.pradhan.agentview.nativeapp.codex.jobs.toggleConnector
 import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.codex.meetings.filterMeetings
 import no.pradhan.agentview.nativeapp.codex.meetings.followUpText
@@ -1344,6 +1346,18 @@ class SharedCasesTest {
             val a = Row("items", "a", "work", f = c.getValue("action").jsonObject)
             assertEquals(c.str("name"), c.str("expected"), draftFor(m = m, a = a))
         }
+    }
+
+    @Test fun linearIssueUrl() {
+        for (c in cases("linear-issue")) {
+            val m = Row("meetings", "m", "work", f = c.getValue("meeting").jsonObject)
+            val a = Row("items", "a", "work", f = c.getValue("action").jsonObject)
+            assertEquals(c.str("name"), c.str("expected"), linearIssue(a, m))
+        }
+    }
+
+    @Test fun toggleConnectorCases() {
+        for (c in cases("toggle-connector")) assertEquals(c.str("name"), c.str("expected"), toggleConnector(c.str("tools"), c.str("id")))
     }
 
     @Test fun agenda() {
