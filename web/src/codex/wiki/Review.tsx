@@ -3,12 +3,14 @@ import { useAssistantStore, useCodex } from '../data';
 import { approveAllChanges, chatOf, factTime, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki/wiki';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
+import { MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { Fold } from '../Fold';
 import { setView, showSnack } from '../view';
 import { ClaudeChip, SourceChip } from './Chips';
 import { PageTile } from './PageTile';
+import { useClaimEdits } from './useClaimEdits';
 import { REVIEW, shortDate } from './shared';
 
 function ReviewCard({ fact }: { fact: Fact }) {
@@ -187,20 +189,23 @@ function useLook() {
   return { stale, drift, title };
 }
 
-function staleRow(title: Map<string, string | null>) {
-  return (f: Fact) => {
-    const months = Math.floor((Date.now() - factTime(f)) / (30 * 86_400_000));
-    return (
-      <Row
-        key={f.profile + f.id}
-        lines={2}
-        title={f.text}
-        meta={`${title.get(`${f.profile}:${f.page_id}`)} · ${months} ${months === 1 ? 'month' : 'months'}`}
-        onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}
-      />
-    );
-  };
+function StaleRow({ fact: f, title }: { fact: Fact; title: Map<string, string | null> }) {
+  const pageTitle = title.get(`${f.profile}:${f.page_id}`);
+  const edits = useClaimEdits(f, pageTitle ?? '');
+  const months = Math.floor((Date.now() - factTime(f)) / (30 * 86_400_000));
+  return (
+    <Row
+      lines={2}
+      title={f.text}
+      meta={`${pageTitle} · ${months} ${months === 1 ? 'month' : 'months'}`}
+      onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}
+      action={<Button variant="tinted" size="sm" onClick={edits.confirm}>Confirm</Button>}
+      menu={<MenuItem icon="archive" danger onClick={edits.retire}>Retire</MenuItem>}
+    />
+  );
 }
+
+const staleRow = (title: Map<string, string | null>) => (f: Fact) => <StaleRow key={f.profile + f.id} fact={f} title={title} />;
 
 // Claims a later meeting decision may have changed; opening one goes to the claim to edit or replace it.
 function driftRow(title: Map<string, string | null>) {
