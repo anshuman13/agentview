@@ -10,12 +10,15 @@ private val EST_RE = Regex("~\\s*(?:(\\d+)\\s*h(?:\\s*(\\d+)\\s*m?)?|(\\d+)\\s*m
 private const val MIN_GAP_MS = 15 * 60_000L
 private const val DEFAULT_MIN = 30L
 
-fun taskMinutes(title: String?): Long {
-    val m = title?.let { EST_RE.find(it) } ?: return DEFAULT_MIN
+// Minutes from "~30m", "~1h" or "~1h30m" in a title, or null.
+fun estimateMinutes(title: String?): Long? {
+    val m = title?.let { EST_RE.find(it) } ?: return null
     val g = m.groupValues
     val n = if (g[3].isNotEmpty()) g[3].toLong() else g[1].toLong() * 60 + (g[2].toLongOrNull() ?: 0)
-    return if (n > 0) n else DEFAULT_MIN
+    return n.takeIf { it > 0 }
 }
+
+fun taskMinutes(title: String?) = estimateMinutes(title) ?: DEFAULT_MIN
 
 private fun freeGaps(busy: List<Span>, from: Long, to: Long): List<Span> {
     val out = ArrayList<Span>()
@@ -32,7 +35,7 @@ private fun freeGaps(busy: List<Span>, from: Long, to: Long): List<Span> {
 
 private fun hourAt(t: Long, plusDays: Int, hour: Int) = atHour(Instant.ofEpochMilli(t).atZone(codexZone).toLocalDate().plusDays(plusDays.toLong()), hour)
 
-private fun workGaps(busy: List<Span>, now: Long, startHour: Int, endHour: Int) =
+fun workGaps(busy: List<Span>, now: Long, startHour: Int, endHour: Int) =
     freeGaps(busy, maxOf(now, hourAt(now, 0, startHour)), hourAt(now, 0, endHour))
 
 // Tasks due by the end of this week's Friday whose estimates, summed in due order, exceed the free work time before their due
