@@ -36,10 +36,10 @@ export function takeFind(sessionId: string | null) {
 // The bar above the transcript: a field, the hit count, Previous and Next (Enter and Shift+Enter) and Close (Esc); Load earlier takes their place while a query has no hit and earlier events exist. `go` scrolls to a hit and returns a function that stops its retries. `start` fills the query and picks the hit nearest its time.
 export function FindBar({ events, earlier, start, go, onClose }: { events: ChatEvent[]; earlier: number; start: FindRequest | null; go: (id: string) => () => void; onClose: () => void }) {
   const [query, setQuery] = useState(start?.query ?? '');
-  const [cur, setCur] = useState(() => (start ? findStart(events, findInChat(events, start.query), start.at) : 0));
+  const [cur, setCur] = useState(() => (start ? findStart(events, findInChat(events, start.query, start.at), start.at) : 0));
   const [loading, setLoading] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const hits = useMemo(() => findInChat(events, query), [events, query]);
+  const hits = useMemo(() => findInChat(events, query, query === start?.query ? start.at : null), [events, query, start]);
   const at = Math.min(cur, Math.max(hits.length - 1, 0));
   useEffect(() => input.current?.focus(), []);
   const stop = useRef(() => {});

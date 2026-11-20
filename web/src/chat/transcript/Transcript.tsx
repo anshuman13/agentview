@@ -226,8 +226,10 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const [finding, setFinding] = useState(false);
   // n remounts the bar when a message hit arrives while it is open.
   const [begun, setBegun] = useState<{ n: number; request: FindRequest | null }>({ n: 0, request: null });
+  const chatId = useRef(sessionId);
+  chatId.current = sessionId;
   const begin = () => {
-    const request = takeFind(sessionId);
+    const request = takeFind(chatId.current);
     if (request) setBegun((b) => ({ n: b.n + 1, request }));
     return request;
   };

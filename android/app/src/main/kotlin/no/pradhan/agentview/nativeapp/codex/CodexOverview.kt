@@ -121,7 +121,7 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
         s.review.filter { !queued(it) }.map { Need.Ask(it) },
         dms.map { Need.Dm(it) },
         bullets.map { Need.Slack(it, brief!!) },
-        failedJobs(jobs.filter { matchesProfile(profile, it) }, runs, minute).map { Need.FailedJobRow(it.job, it.run) },
+        failedJobs(jobs.filter { matchesProfile(profile, it) }, runs, now).map { Need.FailedJobRow(it.job, it.run) },
         ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.let { open -> open.map { Need.JustEnded(it, m, open) } } },
         if (old.isNotEmpty()) listOf(Need.StaleAsks(old.size, old.minOf { it.statusTime })) else emptyList(),
         if (claims > 0) listOf(Need.Wiki(claims)) else emptyList(),

@@ -164,7 +164,7 @@ export async function prompt(cwd: string, text: string, from?: string, fresh = f
   const reuse = fresh ? undefined : [...live.values()].map((l) => l.chat).filter((c) => c.cwd === cwd && c.driver.provider === choice && !c.state.session.running && !c.state.pending.length).sort((a, b) => lastActive(b) - lastActive(a))[0];
   const chat = reuse ?? (from ? await newChat(cwd, get(from), undefined, choice) : await createChat(cwd, undefined, '', false, choice));
   if (!reuse) applyInitialModel(chat, model);
-  void chat.prompt(text);
+  chat.prompt(text).catch((err) => chat.system(`Not sent: ${errText(err)}`, true));
   return chat.id;
 }
 

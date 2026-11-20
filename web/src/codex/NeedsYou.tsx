@@ -74,7 +74,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     const bullets = brief?.text ? needsYou(brief.text).filter((x) => !dismissedOf(brief).includes(bulletKey(x))) : [];
     const ended = s.meetingsToday.filter((m) => m.ends_at != null && m.ends_at <= minute * 60000 && minute * 60000 - m.ends_at < JUST_ENDED_MS);
     const old = staleAsks(replyQueue(s.asks, minute * 60000), minute * 60000);
-    const failed = failedJobs(snap.jobs.filter((j) => filter === 'all' || j.profile === filter), snap.runs, minute * 60000);
+    const failed = failedJobs(snap.jobs.filter((j) => filter === 'all' || j.profile === filter), snap.runs, now);
     const claims = proposals(facts).length;
     const ranked = rankNeeds<Need>([
       s.overdue.map((row) => ({ kind: 'overdue', row, keys: [taskKey(row)] })),
@@ -82,7 +82,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
       s.review.filter((row) => !queued(row)).map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
       dms.map((chat) => ({ kind: 'dm', chat, keys: [`chat:${chat.profile}:${chat.id}`, ...urlKey(chat.url)] })),
       bullets.map((x) => ({ kind: 'slack', x, brief: brief!, keys: urlKey(x.url).length ? urlKey(x.url) : [`slack:${x.title}`] })),
-      failed.map(({ job, run }) => ({ kind: 'failedJob', job, run, canRun: canRunNow(job, snap.runs, minute * 60000), keys: [`job:${rowKey(job)}`] })),
+      failed.map(({ job, run }) => ({ kind: 'failedJob', job, run, canRun: canRunNow(job, snap.runs, now), keys: [`job:${rowKey(job)}`] })),
       ended.flatMap((meeting) => {
         const actions = actionsOf(snap.items, meeting).filter((r) => r.status === 'open');
         return actions.map((row) => ({ kind: 'justEnded', row, meeting, actions, keys: [taskKey(row)] }));

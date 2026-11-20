@@ -39,7 +39,7 @@ fun Hub.refreshWorkspace(force: Boolean = false): Job? {
     val now = System.currentTimeMillis()
     if (!force && now - workspaceAt < WORKSPACE_MIN_AGE_MS) return null
     workspaceAt = now
-    seenMarks.values.filter { !it.sent }.forEach(::postMark)
+    seenMarks.values.filter { !it.sent }.forEach { m -> SeenMark(m.id, m.value, now, false).also { seenMarks[m.id] = it; postMark(it) } }
     return viewModelScope.launch {
         val from = origin.value
         runCatching {
@@ -50,12 +50,15 @@ fun Hub.refreshWorkspace(force: Boolean = false): Job? {
                 val trees = async { runCatching { api.worktrees() }.getOrDefault(was.trees) }
                 val pins = async { runCatching { api.pins() }.getOrDefault(was.pins) }
                 val seen = async { runCatching { api.seen() }.getOrDefault(was.seen) }
-                val merged = mergeSeen(seen.await(), seenMarks.values.toList(), now)
-                seenMarks.values.removeAll { it.sent && it.at < now }
-                Workspace(repos.await(), trees.await(), saved.await(), pins.await(), merged)
+                Workspace(repos.await(), trees.await(), saved.await(), pins.await(), seen.await())
             }
-        }.onSuccess { if (from == origin.value) workspace.value = it }.onFailure { workspaceAt = 0 }
-        if (from == origin.value) syncResolved()
+        }.onSuccess {
+            if (from == origin.value) {
+                workspace.value = it.copy(seen = mergeSeen(it.seen, seenMarks.values.toList(), now))
+                seenMarks.values.removeAll { m -> m.sent && m.at < now }
+            }
+        }.onFailure { workspaceAt = 0 }
+        if (from == origin.value) viewModelScope.launch { syncResolved() }
     }
 }
 

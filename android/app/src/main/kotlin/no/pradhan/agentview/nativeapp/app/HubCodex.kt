@@ -44,6 +44,8 @@ fun Hub.restoreNeed(n: Need) {
     }
 }
 
+private const val RESOLVED_KEEP = 500
+
 private fun Hub.holdResolved(keys: List<String>) {
     resolvedQuestions.value = keys
     prefs.edit().putString("questionsResolved", encodeResolved(keys)).apply()
@@ -58,8 +60,9 @@ fun Hub.resolveQuestion(q: Question, meetings: List<Row>, now: Long) {
 // A load posts the keys held here that the Mac lacks, then holds both lists.
 internal suspend fun Hub.syncResolved() {
     val server = runCatching { api.resolvedQuestions() }.getOrNull() ?: return
-    if (!readOnly) resolvedQuestions.value.filter { it !in server }.forEach { runCatching { api.resolveQuestion(it) } }
-    holdResolved((server + resolvedQuestions.value).distinct())
+    val posted = resolvedQuestions.value.filter { it !in server }
+    if (!readOnly) posted.forEach { runCatching { api.resolveQuestion(it) } }
+    holdResolved((posted + server + resolvedQuestions.value).distinct().take(RESOLVED_KEEP))
 }
 
 // The profile a new task or question goes to when the filter shows both.

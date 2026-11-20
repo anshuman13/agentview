@@ -24,21 +24,23 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 
-// web shared/findInChat.ts: the ids, oldest first, of the rows the transcript draws holding every word of the query, ignoring case: user prompts and each turn's last top-level reply; none under two characters.
-fun findInChat(events: List<ChatEvent>, query: String): List<String> {
+// web shared/findInChat.ts: the ids, oldest first, of the rows the transcript draws holding every word of the query, ignoring case: user prompts and each turn's last top-level reply; none under two characters. With no hit and an `at` (a message hit's time, whose reply may be an earlier one of its turn), the row that ends the turn holding that time.
+fun findInChat(events: List<ChatEvent>, query: String, at: Long? = null): List<String> {
     val q = query.trim().lowercase()
     if (q.length < 2) return emptyList()
     val words = q.split(Regex("\\s+"))
     val hits = mutableListOf<String>()
+    val turns = mutableListOf<Pair<Long, String>>()
     var reply: ChatEvent? = null
     fun has(e: ChatEvent) = e.text.lowercase().let { t -> words.all(t::contains) }
     fun endTurn() { reply?.takeIf(::has)?.let { hits.add(it.id) }; reply = null }
     for (e in events) {
-        if (e.kind == "user") { endTurn(); if (has(e)) hits.add(e.id) }
-        else if (e.kind == "assistant" && e.parent == null) reply = e
+        if (e.kind == "user") { endTurn(); turns.add(e.at to e.id); if (has(e)) hits.add(e.id) }
+        else if (e.kind == "assistant" && e.parent == null) { reply = e; if (turns.isNotEmpty()) turns[turns.size - 1] = turns.last().first to e.id }
     }
     endTurn()
-    return hits
+    if (hits.isNotEmpty() || at == null) return hits
+    return listOfNotNull((turns.lastOrNull { it.first <= at } ?: turns.firstOrNull())?.second)
 }
 
 // A sidebar message hit waiting for its chat: the find bar opens on it once that chat shows. `at` is the hit's time, null when unknown.
@@ -68,11 +70,13 @@ fun FindBar(hub: Hub, events: List<ChatEvent>, earlier: Int, request: FindReques
     var query by rememberSaveable { mutableStateOf("") }
     var cur by remember { mutableStateOf(0) }
     val loading by hub.loadingEarlier.collectAsState()
-    val hits = remember(events, query) { findInChat(events, query) }
+    var from by remember { mutableStateOf<FindRequest?>(null) }
+    val hits = remember(events, query, from) { findInChat(events, query, from?.takeIf { it.query == query }?.at) }
     val at = cur.coerceIn(0, maxOf(hits.size - 1, 0))
     LaunchedEffect(request) {
         if (request == null) return@LaunchedEffect
-        val found = findInChat(events, request.query)
+        from = request
+        val found = findInChat(events, request.query, request.at)
         query = request.query
         cur = findStart(events, found, request.at)
         found.getOrNull(cur)?.let { hub.showTurn.value = it }

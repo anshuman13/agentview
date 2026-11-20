@@ -534,7 +534,7 @@ class SharedCasesTest {
     @Test fun chatFind() {
         for (c in cases("chat-find")) {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
-            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, findInChat(events, c.str("query")))
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, findInChat(events, c.str("query"), c["at"]?.jsonPrimitive?.long))
         }
     }
 

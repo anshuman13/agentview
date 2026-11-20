@@ -563,8 +563,8 @@ describe('cases shared with the Android app', () => {
     it(`mergeSeen: ${c.name}`, () => expect(mergeSeen(c.server, c.marks, c.startedAt)).toEqual(c.expected));
   }
 
-  for (const c of cases<{ name: string; query: string; events: ChatEvent[]; expected: string[] }>('chat-find')) {
-    it(`findInChat: ${c.name}`, () => expect(findInChat(c.events, c.query)).toEqual(c.expected));
+  for (const c of cases<{ name: string; query: string; at?: number; events: ChatEvent[]; expected: string[] }>('chat-find')) {
+    it(`findInChat: ${c.name}`, () => expect(findInChat(c.events, c.query, c.at ?? null)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; events: ChatEvent[]; hits: string[]; at: number | null; expected: number }>('find-start')) {

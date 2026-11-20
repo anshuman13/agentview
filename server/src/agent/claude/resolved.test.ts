@@ -43,5 +43,7 @@ describe('resolved questions route', () => {
     expect(await resolved.resolvedRoute('POST', null)).toEqual({ status: 400, body: { error: 'key is required' } });
     expect((await resolved.resolvedRoute('POST', '')).status).toBe(400);
     expect((await resolved.resolvedRoute('DELETE', 'a')).status).toBe(405);
+    expect((await resolved.resolvedRoute('POST', 'x'.repeat(501))).status).toBe(400);
+    expect((await resolved.resolvedRoute('POST', 'x'.repeat(500))).status).toBe(200);
   });
 });

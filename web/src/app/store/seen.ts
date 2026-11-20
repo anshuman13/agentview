@@ -21,7 +21,7 @@ function mark(id: string, value: number) {
 // Seen times live on the Mac, so every device clears the same unread marks.
 export function loadSeen() {
   const startedAt = Date.now();
-  for (const m of Object.values(marks)) if (!m.sent) post(m);
+  for (const id in marks) if (!marks[id].sent) post((marks[id] = { ...marks[id], at: startedAt }));
   fetchSeen().then((seen) => {
     if (!seen || typeof seen !== 'object' || Array.isArray(seen)) return;
     seenLoaded = true;

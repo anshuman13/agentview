@@ -17,7 +17,7 @@ import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
 import { NeedsYou } from './NeedsYou';
 import { newChat } from '../app/newChat';
-import { requestFind } from '../chat/transcript/FindBar';
+import { requestFind, takeFind } from '../chat/transcript/FindBar';
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 const RECENT = 5;
@@ -166,14 +166,17 @@ export function OpenChats() {
 
   const openHit = (h: MessageHit) => {
     requestFind({ sessionId: h.sessionId, query: filter.trim(), at: h.at ? Date.parse(h.at) : null }, h.sessionId === current);
-    if (h.sessionId !== current) send({ type: 'open_session', sessionId: h.sessionId });
+    if (h.sessionId !== current) {
+      setOpening(h.sessionId);
+      send({ type: 'open_session', sessionId: h.sessionId });
+    }
   };
 
   useEffect(() => setOpening(null), [current]);
   // A failed or lost open never changes the current chat.
   useEffect(() => {
     if (!opening) return;
-    const t = setTimeout(() => setOpening(null), 20_000);
+    const t = setTimeout(() => { takeFind(opening); setOpening(null); }, 20_000);
     return () => clearTimeout(t);
   }, [opening]);
 

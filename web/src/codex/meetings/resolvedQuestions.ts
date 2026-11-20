@@ -7,6 +7,7 @@ import { showSnack } from '../view';
 
 const RESOLVED = 'agentview.questionsResolved';
 const RESOLVED_URL = '/api/questions/resolved';
+const KEEP = 500;
 
 const store = createStore<string[]>(storedStrings(RESOLVED));
 
@@ -22,8 +23,9 @@ const post = (key: string) => fetchJson(apiUrl(`${RESOLVED_URL}?key=${encodeURIC
 async function load() {
   const server = await fetchJson<string[]>(apiUrl(RESOLVED_URL)).catch(() => null);
   if (!server) return;
-  await Promise.all(store.get().filter((k) => !server.includes(k)).map((k) => post(k).catch(() => null)));
-  hold([...new Set([...server, ...store.get()])]);
+  const posted = store.get().filter((k) => !server.includes(k));
+  await Promise.all(posted.map((k) => post(k).catch(() => null)));
+  hold([...new Set([...posted, ...server, ...store.get()])].slice(0, KEEP));
 }
 
 // The resolved question keys; reloads from the Mac whenever the stream connects.
