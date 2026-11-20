@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { Run } from '../data/wiki/wiki';
+import type { Job, Run } from '../data/wiki/wiki';
+import { ask, runAsk } from '../data/ask/ask';
 import { Badge } from '../../ui/Badge';
 import { Icon } from '../../ui/Icon';
 import { Button } from '../../ui/Button';
@@ -17,7 +18,7 @@ function CopyOutput({ r }: { r: Run }) {
   return <Button variant="plain" size="sm" icon="copy" onClick={() => copyText(r.output!, 'Output copied')}>Copy output</Button>;
 }
 
-export function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query: string; setQuery: (q: string) => void }) {
+export function RunRow({ r, latest, query, setQuery, onAsk }: { r: Run; latest: boolean; query: string; setQuery: (q: string) => void; onAsk: () => void }) {
   const [open, setOpen] = useState(latest);
   const meta = runMeta(r);
   const output = r.output && <div className="jb-md"><Markdown text={r.output} files={false} /></div>;
@@ -33,7 +34,7 @@ export function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean
       />
       {open && r.output && (
         <div className="jb-run-body">
-          <div className="jb-run-tools"><CopyOutput r={r} /></div>
+          <div className="jb-run-tools"><CopyOutput r={r} /><Button variant="plain" size="sm" icon="sparkle" onClick={onAsk}>Ask Claude</Button></div>
           {latest ? <SearchedOutput text={r.output} query={query} setQuery={setQuery} label="Search output" className="jb-output">{output}</SearchedOutput> : output}
         </div>
       )}
@@ -47,13 +48,14 @@ export function RunsRow({ latest, onOpen }: { latest?: Run; onOpen: () => void }
 }
 
 // The 10 latest runs of a job in a bottom sheet; the latest starts open with the output search.
-export function RunsSheet({ runs, query, setQuery, onClose }: { runs: Run[]; query: string; setQuery: (q: string) => void; onClose: () => void }) {
+export function RunsSheet({ job, runs, query, setQuery, onClose }: { job: Job; runs: Run[]; query: string; setQuery: (q: string) => void; onClose: () => void }) {
   const shown = runs.slice(0, 10);
+  const askAbout = (r: Run) => { if (ask(runAsk(job.name || 'Untitled job', r.started_at ?? 0, r.output!), job.profile)) onClose(); };
   return (
     <Sheet label="Runs" onClose={onClose}>
       <Section label="Runs" count={sectionCount(shown.length)} />
       <div className="as-group">
-        {shown.map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} />)}
+        {shown.map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} onAsk={() => askAbout(r)} />)}
       </div>
     </Sheet>
   );

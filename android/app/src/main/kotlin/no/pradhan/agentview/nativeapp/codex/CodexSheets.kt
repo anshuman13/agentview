@@ -21,6 +21,8 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -44,6 +46,7 @@ import no.pradhan.agentview.nativeapp.sessions.segmentOf
 import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.codexProfile
+import no.pradhan.agentview.nativeapp.app.linkTitle
 import no.pradhan.agentview.nativeapp.app.hideNeed
 import no.pradhan.agentview.nativeapp.app.restoreNeed
 import no.pradhan.agentview.nativeapp.ui.AvIcon
@@ -97,7 +100,7 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, from: Row?, onMeeting: (Row) -> Unit, onRaise: (String, String) -> Unit, onAsk: (Row) -> Unit, onChat: ((String?) -> String) -> Unit, onOpenChat: (String) -> Unit, onDismiss: () -> Unit) {
+fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, from: Row?, onMeeting: (Row) -> Unit, onRaise: (String, String) -> Unit, onAsk: (Row) -> Unit, onChat: ((String?) -> String) -> Unit, onOpenChat: (String) -> Unit, onDismiss: () -> Unit) {
     var title by remember(row.key) { mutableStateOf(row.title ?: "") }
     var text by remember(row.key) { mutableStateOf(row.text ?: "") }
     var pickDue by remember { mutableStateOf(false) }
@@ -117,11 +120,14 @@ fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, acti
             TextField(title, { title = it }, placeholder = "Title", style = Type.title)
             FieldLabel("Notes")
             TextField(text, { text = it }, placeholder = "Notes", minLines = 3)
+            NoteLinks(hub, text)
             FieldLabel("Due")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 val late = (row.at ?: Long.MAX_VALUE) < now && row.status == "open"
                 Chip(dueLabel(row.at, now), { pickDue = true }, icon = if (late) "warning" else "calendar", on = row.at != null, late = late, quiet = row.at == null)
                 if (row.at != null) Chip("Clear", { actions.due(row, null) })
+                val skipAt = if (row.status == "open" && row.at != null && !hub.readOnly) skipTarget(row, now) else null
+                if (skipAt != null) Chip("Skip · ${whenText(skipAt, now, true)}", { actions.change(row, mapOf("at" to skipAt) + unrollFor(skipAt, now), "Skipped · next ${whenText(skipAt, now)}") })
             }
             FieldLabel("Snooze")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
@@ -215,6 +221,28 @@ fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, acti
         }
     }
     if (pickDue) DueDialog(row.at, now, { actions.due(row, it) }, { pickDue = false })
+}
+
+// The http(s) links in the notes as typed (web Links in TaskDraft.tsx): the page title, else the domain; a tap opens the browser.
+@Composable
+private fun NoteLinks(hub: Hub, text: String) {
+    val urls = remember(text) { linksIn(text, Int.MAX_VALUE) }
+    var all by remember { mutableStateOf(false) }
+    if (urls.isEmpty()) return
+    val uri = LocalUriHandler.current
+    Column {
+        SectionHeader("Links", urls.size.toString())
+        Group {
+            (if (all) urls else urls.take(LINK_LIMIT)).forEachIndexed { i, u ->
+                key(u) {
+                    if (i > 0) Hairline()
+                    val title by produceState<String?>(null, u) { value = hub.linkTitle(u) }
+                    ListRow(title ?: linkDomain(u), if (title != null) linkDomain(u) else linkPath(u).ifEmpty { null }, trailing = { AvIcon("link-external", tint = av.fgMuted) }, onClick = { uri.openUri(u) })
+                }
+            }
+        }
+        if (!all && urls.size > LINK_LIMIT) Button("Show all ${urls.size}", { all = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+    }
 }
 
 // Quick capture: "call the bank tomorrow 9 #home" becomes a task due tomorrow 09:00 tagged home; the sheet stays open to add more.

@@ -200,6 +200,7 @@ import no.pradhan.agentview.nativeapp.codex.jobs.parseSchedule
 import no.pradhan.agentview.nativeapp.codex.jobs.scheduleOf
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.codex.jobs.runMeta
+import no.pradhan.agentview.nativeapp.codex.jobs.runAsk
 import no.pradhan.agentview.nativeapp.codex.jobs.tasksOf
 import no.pradhan.agentview.nativeapp.codex.meetings.actionCount
 import no.pradhan.agentview.nativeapp.codex.meetings.agendaMarkdown
@@ -1229,6 +1230,18 @@ class SharedCasesTest {
 
     @Test fun prepText() {
         for (c in cases("prep-text")) assertEquals(c.str("name"), c.str("expected"), prepText(copyMeeting(c)))
+    }
+
+    @Test fun runAskText() {
+        fun xs(s: String) = Regex("\\{x(\\d+)\\}").replace(s) { "x".repeat(it.groupValues[1].toInt()) }
+        for (c in cases("run-ask")) assertEquals(c.str("name"), xs(c.str("expected")), runAsk(c.str("job"), c.getValue("started_at").jsonPrimitive.long, xs(c.str("output"))))
+    }
+
+    @Test fun linksInNotes() {
+        for (c in cases("links-in")) {
+            val expected = c.getValue("expected").jsonArray.map { it.jsonObject.let { o -> listOf(o.str("url"), o.str("domain"), o.str("path")) } }
+            assertEquals(c.str("name"), expected, linksIn(c.str("notes")).map { listOf(it, linkDomain(it), linkPath(it)) })
+        }
     }
 
     @Test fun personCopy() {

@@ -9,7 +9,7 @@ const { RunRow } = await import('./RunsSheet');
 await import('../../chat/transcript/md');
 
 const run = { id: 'r1', job_id: 'j1', status: 'ok', started_at: 1, output: '## Done\n\n- one\n- two' } as Run;
-const render = (query: string) => renderToStaticMarkup(<RunRow r={run} latest query={query} setQuery={() => {}} />);
+const render = (query: string) => renderToStaticMarkup(<RunRow r={run} latest query={query} setQuery={() => {}} onAsk={() => {}} />);
 
 describe('RunRow', () => {
   it('shows the output as Markdown while the search is blank', () => {
@@ -21,7 +21,7 @@ describe('RunRow', () => {
   });
 
   it('leaves file paths in the output as plain code', () => {
-    const html = renderToStaticMarkup(<RunRow r={{ ...run, output: 'Wrote `notes/plan.md` and [the log](logs/run.md)' }} latest query="" setQuery={() => {}} />);
+    const html = renderToStaticMarkup(<RunRow r={{ ...run, output: 'Wrote `notes/plan.md` and [the log](logs/run.md)' }} latest query="" setQuery={() => {}} onAsk={() => {}} />);
     expect(html).toContain('<code>notes/plan.md</code>');
     expect(html).not.toContain('data-open');
   });

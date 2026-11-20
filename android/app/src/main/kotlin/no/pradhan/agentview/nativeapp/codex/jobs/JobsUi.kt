@@ -52,6 +52,7 @@ import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.app.mcpProbe
+import no.pradhan.agentview.nativeapp.app.askCodex
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -246,7 +247,11 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     }
     if (editing) JobEditSheet(actions, job) { editing = false }
     if (scheduling) JobScheduleSheet(actions, job) { scheduling = false }
-    if (runsOpen) RunsSheet(runs, now, { hub.notice.value = it }) { runsOpen = false }
+    val ask = if (hub.readOnly) null else ({ r: Row, output: String ->
+        runsOpen = false
+        hub.askCodex(runAsk(job.str("name")?.ifEmpty { null } ?: "Untitled job", r.long("started_at") ?: 0L, output), job.profile)
+    })
+    if (runsOpen) RunsSheet(runs, now, { hub.notice.value = it }, ask) { runsOpen = false }
 }
 
 @Composable
@@ -257,7 +262,7 @@ private fun RunStatus(status: String) = when (status) {
 }
 
 @Composable
-private fun RunsSheet(runs: List<Row>, now: Long, say: (String) -> Unit, onDismiss: () -> Unit) {
+private fun RunsSheet(runs: List<Row>, now: Long, say: (String) -> Unit, ask: ((Row, String) -> Unit)?, onDismiss: () -> Unit) {
     val shown = runs.take(10)
     var open by remember { mutableStateOf(shown.firstOrNull()?.id) }
     val clip = LocalClipboardManager.current
@@ -271,7 +276,10 @@ private fun RunsSheet(runs: List<Row>, now: Long, say: (String) -> Unit, onDismi
                     onClick = if (output != null) ({ open = if (expanded) null else r.id }) else null,
                     trailing = { RunStatus(r.str("status") ?: ""); if (output != null) Chevron() })
                 if (expanded && output != null) {
-                    Button("Copy output", { clip.setText(AnnotatedString(output)); say("Output copied") }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "copy")
+                    LayoutRow(Modifier.padding(start = Tokens.sp4)) {
+                        Button("Copy output", { clip.setText(AnnotatedString(output)); say("Output copied") }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "copy")
+                        if (ask != null) Button("Ask Claude", { ask(r, output) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "sparkle")
+                    }
                     if (i == 0) SearchedOutput(output)
                     else Markdown(output, OutputPad)
                 }

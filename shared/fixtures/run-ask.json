@@ -1,0 +1,7 @@
+[
+  { "name": "short output", "job": "Morning scan", "started_at": 1795165500000, "output": "Two new posts in #team.", "expected": "Help me with this job run.\n\nAbout the job run \"Morning scan\" at 2026-11-20 09:05:\nTwo new posts in #team." },
+  { "name": "output over 6000 characters is cut with a note", "job": "Digest", "started_at": 1795129200000, "output": "{x7000}", "expected": "Help me with this job run.\n\nAbout the job run \"Digest\" at 2026-11-19 23:00:\n{x6000}\n(output cut at 6000 characters)" },
+  { "name": "output of exactly 6000 characters is kept whole", "job": "Digest", "started_at": 1795129200000, "output": "{x6000}", "expected": "Help me with this job run.\n\nAbout the job run \"Digest\" at 2026-11-19 23:00:\n{x6000}" },
+  { "name": "Markdown output kept as is", "job": "Weekly digest", "started_at": 1795165500000, "output": "## Decisions\n\n- Ship *Friday*\n- [PR 12](https://github.com/a/b/pull/12)", "expected": "Help me with this job run.\n\nAbout the job run \"Weekly digest\" at 2026-11-20 09:05:\n## Decisions\n\n- Ship *Friday*\n- [PR 12](https://github.com/a/b/pull/12)" },
+  { "name": "a name with quotes", "job": "Scan \"urgent\" asks", "started_at": 1795165500000, "output": "None", "expected": "Help me with this job run.\n\nAbout the job run \"Scan \"urgent\" asks\" at 2026-11-20 09:05:\nNone" }
+]

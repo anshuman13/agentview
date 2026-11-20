@@ -1,5 +1,15 @@
 package no.pradhan.agentview.nativeapp.app
 
+import androidx.lifecycle.viewModelScope
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
 import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.protocolJson
@@ -48,6 +58,16 @@ suspend fun Hub.backlog(root: String): List<BacklogItem> = protocolJson.decodeFr
 suspend fun Hub.specs(root: String): List<SpecHomeItem> = protocolJson.decodeFromString(read("/api/advisors/specs?root=${enc(root)}"))
 suspend fun Hub.audit(root: String): AuditInfo? = protocolJson.decodeFromString(read("/api/advisors/audit?root=${enc(root)}"))
 suspend fun Hub.postBuildReview(slug: String, decision: String, phase: String? = null, note: String? = null) { api.postReview(pageChat, slug, decision, phase, note) }
+
+private val linkTitles = ConcurrentHashMap<String, Deferred<String?>>()
+private val linkSlots = Semaphore(3)
+
+// linkTitle of web/src/codex/data/ask/links.ts: one request per URL per app run, at most 3 at once; a failed request stays null.
+suspend fun Hub.linkTitle(url: String): String? = linkTitles.computeIfAbsent(url) {
+    viewModelScope.async {
+        linkSlots.withPermit { runCatching { protocolJson.parseToJsonElement(read("/api/link-title?url=${enc(url)}")).jsonObject["title"]?.jsonPrimitive?.contentOrNull?.ifEmpty { null } }.getOrNull() }
+    }
+}.await()
 
 // The build, or null when the server has no such spec any more.
 suspend fun Hub.build(slug: String) = try { parseBuild(read("/api/builds/one?slug=${enc(slug)}")) } catch (e: ApiError) { if (e.code == 404) null else throw e }

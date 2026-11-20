@@ -58,8 +58,9 @@ import { splitDiff } from './ui/DiffFiles';
 import { ago, markSegments, matchLabel, money, stepMatch } from './ui/util';
 import { notesTemplateCaret, notesTemplateChips, notesTemplateText, type NotesTemplate } from './codex/data/meetings/notesTemplates';
 import { setSystemTime } from '../../testing';
-import { guessProfile, meetingAsk } from './codex/data/ask/ask';
+import { guessProfile, meetingAsk, runAsk } from './codex/data/ask/ask';
 import { prepText } from './codex/AskBar';
+import { linkDomain, linkPath, linksIn } from './codex/data/ask/links';
 import type { Profile } from './codex/data/sync';
 import { memoryClaim, pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
@@ -470,6 +471,15 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; meeting: Record<string, unknown>; expected: string }>('prep-text')) {
     it(`prepText: ${c.name}`, () => expect(prepText({ id: 'm', profile: 'work', ...c.meeting } as unknown as Meeting)).toBe(c.expected));
+  }
+
+  const xs = (s: string) => s.replace(/\{x(\d+)\}/g, (_, n: string) => 'x'.repeat(Number(n)));
+  for (const c of cases<{ name: string; job: string; started_at: number; output: string; expected: string }>('run-ask')) {
+    it(`runAsk: ${c.name}`, () => expect(runAsk(c.job, c.started_at, xs(c.output))).toBe(xs(c.expected)));
+  }
+
+  for (const c of cases<{ name: string; notes: string; expected: { url: string; domain: string; path: string }[] }>('links-in')) {
+    it(`linksIn: ${c.name}`, () => expect(linksIn(c.notes).map((url) => ({ url, domain: linkDomain(url), path: linkPath(url) }))).toEqual(c.expected));
   }
 
   type PersonCopyCase ={ name: string; person: string; commitments: { what: string; meeting: Record<string, unknown> }[]; questions: string[]; tasks: object[]; points: object[]; pins: object[]; meetings: Record<string, unknown>[]; claims: { text: string }[]; expected: string };

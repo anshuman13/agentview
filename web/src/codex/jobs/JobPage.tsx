@@ -71,7 +71,7 @@ export function JobPage({ j }: { j: Job }) {
           <JobTasks tasks={tasks} id={j.id} />
         </article>
       </div>
-      {runsOpen && <RunsSheet runs={list} query={query} setQuery={setQuery} onClose={() => setRunsOpen(false)} />}
+      {runsOpen && <RunsSheet job={j} runs={list} query={query} setQuery={setQuery} onClose={() => setRunsOpen(false)} />}
     </div>
   );
 }

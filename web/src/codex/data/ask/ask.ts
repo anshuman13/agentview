@@ -1,6 +1,7 @@
 import { getState, notice, prompt, queueNext, send } from '../../../app/store';
 import { macOrigin } from '../../../app/api';
 import { atTime } from '../tasks/engine';
+import { ymd } from '../dates';
 import { toMarkdown } from '../meetings/meetingMarkdown';
 import type { ItemRow, Profile } from '../sync';
 import { currentClaim, factTime, isOld, listOf, live, othersOf, sourcesOf, type Fact, type Meeting, type Page } from '../wiki/wiki';
@@ -134,6 +135,14 @@ export function wikiAskText(question: string, pages: Page[], facts: Fact[], page
     `\n${pageId ? `Claims on the wiki page "${title.get(pageId)}"` : 'Claims in my team wiki'}:\n${claims.join('\n')}`,
     '\nAnswer from these claims first and name the claims you used; use my Slack, Linear and Calendar connectors when they are not enough.',
   ].join('\n');
+}
+
+const RUN_OUTPUT_MAX = 6000;
+
+// The prompt Ask Claude on a job run sends: the job's name, when it ran and its output, cut at 6000 characters.
+export function runAsk(name: string, startedAt: number, output: string) {
+  const cut = output.length > RUN_OUTPUT_MAX ? `${output.slice(0, RUN_OUTPUT_MAX)}\n(output cut at ${RUN_OUTPUT_MAX} characters)` : output;
+  return `Help me with this job run.\n\nAbout the job run "${name}" at ${ymd(startedAt)} ${hhmm(startedAt)}:\n${cut}`;
 }
 
 export const meetingAsk = (m: Meeting, actions: ItemRow[], now: number) =>

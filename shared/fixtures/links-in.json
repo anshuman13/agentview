@@ -1,0 +1,30 @@
+[
+  { "name": "a Markdown link and a bare URL of the same address kept once", "notes": "See [the PR](https://github.com/acme/app/pull/12) and https://github.com/acme/app/pull/12 again", "expected": [
+    { "url": "https://github.com/acme/app/pull/12", "domain": "github.com", "path": "/acme/app/pull/12" }
+  ] },
+  { "name": "trailing punctuation dropped", "notes": "Thread: https://acme.slack.com/archives/C01/p1763634900. Issue (https://linear.app/acme/issue/AIE-9),", "expected": [
+    { "url": "https://acme.slack.com/archives/C01/p1763634900", "domain": "acme.slack.com", "path": "/archives/C01/p1763634900" },
+    { "url": "https://linear.app/acme/issue/AIE-9", "domain": "linear.app", "path": "/acme/issue/AIE-9" }
+  ] },
+  { "name": "http:// with no host left out, the domain lowercased without www", "notes": "Broken http:// and http:///x, then https://Www.Example.com/a?b=1", "expected": [
+    { "url": "https://Www.Example.com/a?b=1", "domain": "example.com", "path": "/a?b=1" }
+  ] },
+  { "name": "a path over 40 characters cut", "notes": "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123/edit?tab=t.0", "expected": [
+    { "url": "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123/edit?tab=t.0", "domain": "docs.google.com", "path": "/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0..." }
+  ] },
+  { "name": "a root path empty", "notes": "Home https://www.example.com/ and https://example.org", "expected": [
+    { "url": "https://www.example.com/", "domain": "example.com", "path": "" },
+    { "url": "https://example.org", "domain": "example.org", "path": "" }
+  ] },
+  { "name": "at most 8 links", "notes": "https://e.com/0 https://e.com/1 https://e.com/2 https://e.com/3 https://e.com/4 https://e.com/5 https://e.com/6 https://e.com/7 https://e.com/8", "expected": [
+    { "url": "https://e.com/0", "domain": "e.com", "path": "/0" },
+    { "url": "https://e.com/1", "domain": "e.com", "path": "/1" },
+    { "url": "https://e.com/2", "domain": "e.com", "path": "/2" },
+    { "url": "https://e.com/3", "domain": "e.com", "path": "/3" },
+    { "url": "https://e.com/4", "domain": "e.com", "path": "/4" },
+    { "url": "https://e.com/5", "domain": "e.com", "path": "/5" },
+    { "url": "https://e.com/6", "domain": "e.com", "path": "/6" },
+    { "url": "https://e.com/7", "domain": "e.com", "path": "/7" }
+  ] },
+  { "name": "no links", "notes": "Call Kim about the offsite", "expected": [] }
+]

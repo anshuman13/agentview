@@ -10,6 +10,7 @@ import no.pradhan.agentview.nativeapp.codex.daysFrom
 import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
+import no.pradhan.agentview.nativeapp.codex.ymd
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.unbilledText
 import java.util.UUID
@@ -163,6 +164,14 @@ fun runMeta(r: Row): String {
     val cost = r.str("cost")?.toDoubleOrNull()?.takeIf { it > 0 }?.let { money(it) }
     val quiet = r.str("status") == "ok" && r.str("output")?.startsWith("NOTHING NEW", ignoreCase = true) == true
     return listOfNotNull(if (quiet) "Nothing new" else null, dur.ifEmpty { null }, cost).joinToString(" · ")
+}
+
+private const val RUN_OUTPUT_MAX = 6000
+
+// runAsk of web/src/codex/data/ask/ask.ts; shared/fixtures/run-ask.json holds the cases. The prompt Ask Claude on a job run sends.
+fun runAsk(name: String, startedAt: Long, output: String): String {
+    val cut = if (output.length > RUN_OUTPUT_MAX) "${output.take(RUN_OUTPUT_MAX)}\n(output cut at $RUN_OUTPUT_MAX characters)" else output
+    return "Help me with this job run.\n\nAbout the job run \"$name\" at ${ymd(startedAt)} ${clock(startedAt)}:\n$cut"
 }
 
 fun jobsOf(jobs: List<Row>, profile: String?) = jobs.filter { !it.deleted && matchesProfile(profile, it) }.sortedBy { (it.str("name") ?: "").lowercase() }
