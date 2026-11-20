@@ -5,6 +5,7 @@ import { configDir, loggedInAccounts, profileOf } from './accounts.js';
 import { listBin } from './bin.js';
 import { CLAUDE_DIR } from './history.js';
 import { listSessions } from './sessions.js';
+import { readSummaries, type Summaries } from './summaryStore.js';
 import { homeRelative } from '../../settings.js';
 
 export type MessageHit = { sessionId: string; role: 'user' | 'assistant'; text: string; at: string };
@@ -18,7 +19,7 @@ function messageText(o: { type?: string; isMeta?: boolean; isCompactSummary?: bo
 }
 
 // A transcript line as its session, role, time and one-line prompt or reply text; null for anything else.
-function messageLine(line: string) {
+export function messageLine(line: string) {
   let o;
   try { o = JSON.parse(line); } catch { return null; }
   const text = messageText(o).replace(/\s+/g, ' ').trim();
@@ -96,6 +97,7 @@ type ChatSearchDeps = {
   dirs: () => string[];
   binned: () => Promise<string[]>;
   titles: () => Promise<Map<string, string>>;
+  summaries: () => Promise<Summaries>;
   read: typeof readFile;
 };
 
@@ -103,6 +105,7 @@ const defaultDeps: ChatSearchDeps = {
   dirs: () => [CLAUDE_DIR, ...loggedInAccounts().map(configDir).filter((d): d is string => !!d)],
   binned: async () => (await listBin()).map((b) => b.sessionId),
   titles: async () => new Map((await listSessions({ limit: 1000 })).map((s) => [s.sessionId, s.summary ?? ''])),
+  summaries: readSummaries,
   read: readFile,
 };
 
@@ -135,7 +138,7 @@ export async function searchChats(query: string, cwd: string, self: string | nul
   const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
   if (!words.length) return 'Give at least one word to search for.';
   await refreshIndex(d.dirs(), d.read);
-  const [binned, titles] = await Promise.all([d.binned().catch(() => [] as string[]), d.titles().catch(() => new Map<string, string>())]);
+  const [binned, titles, summaries] = await Promise.all([d.binned().catch(() => [] as string[]), d.titles().catch(() => new Map<string, string>()), d.summaries().catch(() => ({} as Summaries))]);
   const skip = new Set(binned);
   if (self) skip.add(self);
   const profile = profileOf(cwd);
@@ -144,7 +147,8 @@ export async function searchChats(query: string, cwd: string, self: string | nul
     if (skip.has(chat.sessionId) || !chat.cwd || profileOf(chat.cwd) !== profile) continue;
     const all = new Set<string>();
     let lines = 0, newest = '', best: IndexedLine | null = null, bestWords: string[] = [];
-    for (const l of chat.lines) {
+    const summary = summaries[chat.sessionId]?.text;
+    for (const l of summary ? [...chat.lines, { text: summary, low: summary.toLowerCase(), at: '' }] : chat.lines) {
       const hit = words.filter((w) => l.low.includes(w));
       if (!hit.length) continue;
       hit.forEach((w) => all.add(w));

@@ -157,7 +157,7 @@ const branchOf = (saved?: string | null, repoBranch?: string) => {
 
 export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
   const seen = useStore((x) => x.seen);
-  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={metaLine(repo, branchOf(s.gitBranch, branch), providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
+  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={s.summary || metaLine(repo, branchOf(s.gitBranch, branch), providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
 }
 
 export function WaitingRows({ rows, folders, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; folders: Folder[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {

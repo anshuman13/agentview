@@ -323,6 +323,7 @@ export type SavedSession = {
   gitBranch: string | null;
   lastModified: number;
   firstPrompt?: string;
+  summary?: string;
   provider?: Provider;
 };
 

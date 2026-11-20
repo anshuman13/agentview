@@ -56,7 +56,7 @@ export function lastMessageTime(tail: string) {
 
 const TAIL = 256 * 1024;
 
-async function readTail(x: SDKSessionInfo) {
+export async function readTail(x: SDKSessionInfo) {
   if (!x.cwd) return '';
   const file = await open(path.join(projectDir(x.cwd), `${x.sessionId}.jsonl`)).catch(() => null);
   if (!file) return '';
@@ -89,9 +89,9 @@ const ownTail = (all: SDKSessionInfo[]) => Promise.all(all.map(async (x) => {
   return { ...x, lastModified: lastMessageTime(tail) ?? x.lastModified, gitBranch: ownBranch(tail) };
 }));
 
-export function savedSession(x: SDKSessionInfo): SavedSession {
+export function savedSession(x: SDKSessionInfo, summary?: string): SavedSession {
   const firstPrompt = x.firstPrompt?.replace(/\s+/g, ' ').trim().slice(0, 300);
-  return { sessionId: x.sessionId, title: x.customTitle ? x.summary : chatTitle(x.summary.startsWith('@') && x.firstPrompt ? x.firstPrompt : x.summary), cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified, provider: providerOf(x.sessionId), ...(firstPrompt && { firstPrompt }) };
+  return { sessionId: x.sessionId, title: x.customTitle ? x.summary : chatTitle(x.summary.startsWith('@') && x.firstPrompt ? x.firstPrompt : x.summary), cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified, provider: providerOf(x.sessionId), ...(firstPrompt && { firstPrompt }), ...(summary && { summary }) };
 }
 
 export const renameRoute = async (id: string | null, title: unknown): Promise<{ status: number; body: unknown }> => {

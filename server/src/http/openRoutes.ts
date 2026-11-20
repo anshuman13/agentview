@@ -10,6 +10,7 @@ import { pinsRoute, removeChat } from '../agent/claude/pins.js';
 import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
+import { readSummaries } from '../agent/claude/summaryStore.js';
 import { advisorsMac, askAdvisorsMac, assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
@@ -84,9 +85,9 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return { ok: true };
     }),
     'ANY /api/sessions': entry(async () => {
-      const [list, codex, bin] = await Promise.all([listSessions({ limit: 300 }), codexSessions(), listBin()]);
+      const [list, codex, bin, summaries] = await Promise.all([listSessions({ limit: 300 }), codexSessions(), listBin(), readSummaries()]);
       const binned = new Set(bin.map((b) => b.sessionId));
-      return [...list.filter((x) => !binned.has(x.sessionId)).map(savedSession), ...codex].sort((a, b) => b.lastModified - a.lastModified);
+      return [...list.filter((x) => !binned.has(x.sessionId)).map((x) => savedSession(x, summaries[x.sessionId]?.text)), ...codex].sort((a, b) => b.lastModified - a.lastModified);
     }),
     'ANY /api/sessions/search': entry(async ({ url }) => {
       const [hits, list, bin] = await Promise.all([searchMessages(url.searchParams.get('q') ?? ''), listSessions({ limit: 300 }), listBin()]);
