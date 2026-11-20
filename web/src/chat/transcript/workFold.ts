@@ -12,7 +12,7 @@ const notes = (items: Item[]) => (items.length === 1 ? noteOf(items[0]) : '') ||
 
 export type FoldRow =
   | { kind: 'item'; it: Item }
-  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[]; now: string; claims: Claim[] };
+  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[]; now: string; claims: Claim[]; proposed: Proposal[] };
 
 export type Claim = { id: string; text: string; where: string };
 
@@ -34,6 +34,25 @@ export function claimsOf(items: Item[]): Claim[] {
   }
   return [...out.values()];
 }
+
+export type Proposal = { id: string; text: string };
+
+const WIKI_PROPOSE = /(^|__)wiki_propose$/;
+const PROPOSED = /^Proposed \[([^\]]+)\]/;
+
+// The claims a turn proposed: its successful wiki_propose steps whose result starts "Proposed [id]", with the step's text, each id once. A refused call does not start so. Android WorkFold.kt proposedOf says the same.
+export function proposedOf(items: Item[]): Proposal[] {
+  const out = new Map<string, Proposal>();
+  for (const it of items) {
+    if (it.kind !== 'step' || !WIKI_PROPOSE.test(it.use.name) || !it.result || it.result.isError) continue;
+    const m = PROPOSED.exec(it.result.text);
+    if (m && !out.has(m[1])) out.set(m[1], { id: m[1], text: text(it.use.input.text) });
+  }
+  return [...out.values()];
+}
+
+// What the hub mirror says of a proposed claim; Android WorkFold.kt proposalState says the same.
+export const proposalState = (fact?: { state: string | null }) => (!fact ? 'Not synced yet' : fact.state === 'proposed' ? 'Waiting' : fact.state === 'rejected' ? 'Rejected' : 'Approved');
 
 export type StatusStep = { id: string; title: string; done: boolean };
 
@@ -124,7 +143,7 @@ export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(
     });
     const tasks = steps.get(key);
     if (hidden.length > 0 || tasks) {
-      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '', claims: claimsOf(hidden) };
+      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '', claims: claimsOf(hidden), proposed: proposedOf(hidden) };
       const at = reply < 0 ? rows.length : rows.findIndex((r) => r.kind === 'item' && r.it === group[reply]);
       rows.splice(at, 0, fold);
     }

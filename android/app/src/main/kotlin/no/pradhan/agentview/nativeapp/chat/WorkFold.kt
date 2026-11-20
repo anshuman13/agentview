@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.chat
 import java.util.Locale
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
@@ -51,7 +52,7 @@ sealed interface FoldRow {
         override val key get() = it.id
     }
 
-    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean, val steps: List<StatusStep> = emptyList(), val now: String = "", val claims: List<Claim> = emptyList()) : FoldRow {
+    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean, val steps: List<StatusStep> = emptyList(), val now: String = "", val claims: List<Claim> = emptyList(), val proposed: List<Proposal> = emptyList()) : FoldRow {
         override val key get() = "work:$id"
     }
 }
@@ -76,6 +77,29 @@ fun claimsOf(items: List<Item>): List<Claim> {
         }
     }
     return out.values.toList()
+}
+
+data class Proposal(val id: String, val text: String)
+
+private val wikiPropose = Regex("(^|__)wiki_propose$")
+private val proposedLine = Regex("^Proposed \\[([^\\]]+)\\]")
+
+// web workFold.ts proposedOf: the claims a turn proposed, its successful wiki_propose steps whose result starts "Proposed [id]", with the step's text, each id once.
+fun proposedOf(items: List<Item>): List<Proposal> {
+    val out = LinkedHashMap<String, Proposal>()
+    for (it in items) {
+        if (it !is Item.Step || !wikiPropose.containsMatchIn(it.use.name) || it.result == null || it.result.isError) continue
+        val id = proposedLine.find(it.result.text)?.groupValues?.get(1) ?: continue
+        if (id !in out) out[id] = Proposal(id, it.use.input.s("text").trim())
+    }
+    return out.values.toList()
+}
+
+// web workFold.ts proposalState: what the hub mirror says of a proposed claim.
+fun proposalState(fact: Row?) = if (fact == null) "Not synced yet" else when (fact.str("state")) {
+    "proposed" -> "Waiting"
+    "rejected" -> "Rejected"
+    else -> "Approved"
 }
 
 data class WorkTitle(val text: String, val failed: String, val detail: String)
@@ -150,7 +174,7 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
         val tasks = steps[key]
         if (hidden.isNotEmpty() || tasks != null) {
             val at = if (reply < 0) rows.size else rows.indexOfFirst { it is FoldRow.Row && it.it === group[reply] }
-            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), g == groups.lastIndex, tasks?.list().orEmpty(), tasks?.now.orEmpty(), claimsOf(hidden)))
+            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), g == groups.lastIndex, tasks?.list().orEmpty(), tasks?.now.orEmpty(), claimsOf(hidden), proposedOf(hidden)))
         }
         out += rows
     }

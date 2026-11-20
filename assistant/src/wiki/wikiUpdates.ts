@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import os from 'node:os';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { decisionKey, keyWords, mayChange, titleWords } from '../../../shared/claimMatch.js';
+import { decisionKey, keyWords, mayChange, norm, titleWords } from '../../../shared/claimMatch.js';
 import { errText } from '../../../shared/util.js';
 import { isLimited } from '../../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from '../calendar/calendar.js';
@@ -97,8 +97,6 @@ function candidates(db: Database, profile: Profile, o: Origin): Candidate[] {
   }
   return out.sort((a, b) => (b.claim.at ?? 0) - (a.claim.at ?? 0)).slice(0, MAX_CLAIMS);
 }
-
-export const norm = (t: string) => t.trim().replace(/\s+/g, ' ').toLowerCase();
 
 // Saves each update as a proposed claim that replaces the old one, unless the same text already replaces it.
 function saveUpdates(db: Database, profile: Profile, o: Origin, found: Candidate[], updates: Update[], now = Date.now()) {

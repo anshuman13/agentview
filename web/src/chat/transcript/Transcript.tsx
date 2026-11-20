@@ -13,11 +13,13 @@ import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
-import { foldTurns, openWork, type Claim, type FoldRow, type StatusStep } from './workFold';
+import { foldTurns, openWork, proposalState, type Claim, type FoldRow, type Proposal, type StatusStep } from './workFold';
+import { useAssistantTable } from '../../codex/data';
+import { setView } from '../../codex/view';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
-import { clickOnKey, plural, pressable } from '../../ui/util';
+import { clickOnKey, command, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { copyPrompt } from '../chatActions';
 import { imageUrl } from '../chatApi';
@@ -238,7 +240,7 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
         const day = r.kind === 'item' ? days.get(r.it.id) : undefined;
         const row = r.kind === 'fold'
-          ? <Tasks key={id} id={r.id} steps={r.steps} now={r.now} tools={r.work.tools} claims={r.claims} live={running && r.last} />
+          ? <Tasks key={id} id={r.id} steps={r.steps} now={r.now} tools={r.work.tools} claims={r.claims} proposed={r.proposed} live={running && r.last} />
           : rowOf(r.it, i === 0, 'shown');
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
@@ -342,8 +344,9 @@ function UserText({ id, text }: { id: string; text: string }) {
 
 // A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
 // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
-function Tasks({ id, steps: all, now, tools, claims, live }: { id: string; steps: StatusStep[]; now: string; tools: number; claims: Claim[]; live: boolean }) {
+function Tasks({ id, steps: all, now, tools, claims, proposed, live }: { id: string; steps: StatusStep[]; now: string; tools: number; claims: Claim[]; proposed: Proposal[]; live: boolean }) {
   const [reading, setReading] = useState(false);
+  const [proposing, setProposing] = useState(false);
   const steps = live ? all : all.filter((s) => s.done);
   const done = steps.filter((s) => s.done).length;
   const current = live ? steps.find((s) => !s.done) : undefined;
@@ -353,9 +356,11 @@ function Tasks({ id, steps: all, now, tools, claims, live }: { id: string; steps
       <div className="tr-steps-head">
         {steps.length > 0 && <span>{done < steps.length ? `Tasks \u00b7 ${done} of ${steps.length}` : plural(steps.length, 'task')}</span>}
         {claims.length > 0 && <Chip size="sm" on={reading} className="tr-claims-chip" aria-expanded={reading} onClick={() => setReading((v) => !v)}>{`Used ${plural(claims.length, 'claim')}`}</Chip>}
+        {proposed.length > 0 && <Chip size="sm" on={proposing} className="tr-claims-chip" aria-expanded={proposing} onClick={() => setProposing((v) => !v)}>{`Proposed ${plural(proposed.length, 'claim')}`}</Chip>}
         {tools > 0 && <Chip size="sm" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{plural(tools, 'tool')}<Icon name="chevron-right" small /></Chip>}
       </div>
       {reading && <ul className="tr-claims">{claims.map((c) => <li key={c.id}>{c.text}{c.where && <span className="tr-claim-where"> ({c.where})</span>}</li>)}</ul>}
+      {proposing && <ProposedClaims proposed={proposed} />}
       {steps.length > 0 && <ul className="tr-tasks">
         {steps.map((s) => (
           <li key={s.id} className={s.done ? 'done' : s === current ? 'now' : undefined}>
@@ -366,6 +371,18 @@ function Tasks({ id, steps: all, now, tools, claims, live }: { id: string; steps
         {live && !current && now && <li className="now">{spin}<span>{now}</span></li>}
       </ul>}
     </div>
+  );
+}
+
+// The claims a turn proposed, each with its state in the hub mirror, and a way to Review while one waits.
+function ProposedClaims({ proposed }: { proposed: Proposal[] }) {
+  const facts = useAssistantTable('facts');
+  const states = proposed.map((p) => proposalState(facts.find((f) => f.id === p.id && !f.deleted)));
+  return (
+    <>
+      <ul className="tr-claims">{proposed.map((p, i) => <li key={p.id}>{p.text} <span className="tr-claim-where">({states[i]})</span></li>)}</ul>
+      {states.includes('Waiting') && <Button variant="plain" size="sm" className="tr-review" onClick={() => { setView({ list: 'wiki', open: 'review', anchor: null, person: null }); command('assistant'); }}>Review</Button>}
+    </>
   );
 }
 

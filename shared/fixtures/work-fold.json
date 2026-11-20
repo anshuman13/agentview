@@ -287,5 +287,37 @@
       "x",
       "Writing the docs"
     ]
+  },
+  {
+    "name": "proposed claims: successful wiki_propose steps, each id once, refusals and errors skipped",
+    "events": [
+      {"id": "u1", "kind": "user", "text": "learn", "at": 1000},
+      {"id": "t1", "kind": "tool_use", "name": "mcp__agentview__wiki_propose", "input": {"text": "Uses bun"}, "summary": "", "at": 2000},
+      {"id": "r1", "kind": "tool_result", "toolUseId": "t1", "text": "Proposed [c1] for the user to approve in memory.", "isError": false, "at": 2100},
+      {"id": "t2", "kind": "tool_use", "name": "mcp__agentview__wiki_propose", "input": {"text": "Ships on Fridays"}, "summary": "", "at": 3000},
+      {"id": "r2", "kind": "tool_result", "toolUseId": "t2", "text": "Proposed [c2] for the user to approve. Similar to [c9]: Ships weekly.", "isError": false, "at": 3100},
+      {"id": "t3", "kind": "tool_use", "name": "mcp__agentview__wiki_propose", "input": {"text": "Uses bun again"}, "summary": "", "at": 4000},
+      {"id": "r3", "kind": "tool_result", "toolUseId": "t3", "text": "Proposed [c1] for the user to approve in memory.", "isError": false, "at": 4100},
+      {"id": "t4", "kind": "tool_use", "name": "mcp__agentview__wiki_propose", "input": {"text": "Rejected before"}, "summary": "", "at": 5000},
+      {"id": "r4", "kind": "tool_result", "toolUseId": "t4", "text": "The user rejected a similar claim [c8]: Rejected before. Do not propose it again.", "isError": false, "at": 5100},
+      {"id": "t5", "kind": "tool_use", "name": "mcp__agentview__wiki_propose", "input": {"text": "Broken"}, "summary": "", "at": 6000},
+      {"id": "r5", "kind": "tool_result", "toolUseId": "t5", "text": "Proposed [c5] for the user to approve.", "isError": true, "at": 6100},
+      {"id": "a1", "kind": "assistant", "text": "done", "streaming": false, "at": 7000},
+      {"id": "d1", "kind": "result", "text": "", "costUsd": 0.1, "isError": false, "at": 8000},
+      {"id": "u2", "kind": "user", "text": "ls", "at": 9000},
+      {"id": "t6", "kind": "tool_use", "name": "Bash", "input": {"command": "ls"}, "summary": "ls", "at": 9100},
+      {"id": "r6", "kind": "tool_result", "toolUseId": "t6", "text": "Proposed [c6]", "isError": false, "at": 9200},
+      {"id": "a2", "kind": "assistant", "text": "ok", "streaming": false, "at": 9300}
+    ],
+    "rows": ["u1", "work:u1", "a1", "u2", "work:u2", "a2"],
+    "titles": [
+      {"text": "5 tools", "failed": "1 failed", "detail": "7s"},
+      {"text": "1 tool", "failed": "", "detail": ""}
+    ],
+    "billing": "plan",
+    "proposed": [
+      [{"id": "c1", "text": "Uses bun"}, {"id": "c2", "text": "Ships on Fridays"}],
+      []
+    ]
   }
 ]

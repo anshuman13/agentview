@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { profileOf } from '../claude/accounts.js';
 import { isOld as isOldClaim } from '../../../../shared/claimAge.js';
-import { samePage, similarClaim } from '../../../../shared/claimMatch.js';
+import { norm, recentlyRejected, samePage, similarClaim } from '../../../../shared/claimMatch.js';
 import { givenPreferences, preferenceLine, type Preference } from '../../../../shared/preferences.js';
 import { errText } from '../../../../shared/util.js';
 import { hubGet, hubPush, hubRows, hubUsed, mirrored, type HubChange, type HubRow } from '../../integrations/assistant.js';
@@ -105,7 +105,13 @@ export const wikiProposeTool = defineTool({
     const profile = a.profile ?? profileOf(cwd);
     const now = Date.now();
     const { pages, facts } = await own(cwd, profile);
-    const similar = similarClaim(a.text, facts.filter((r) => !r.superseded_by && ['live', 'proposed'].includes(state(r)) && typeof r.text === 'string') as (HubRow & { text: string })[]);
+    const withText = facts.filter((r) => typeof r.text === 'string') as (HubRow & { text: string })[];
+    const rejected = similarClaim(a.text, recentlyRejected(withText.map((r) => ({ ...r, state: state(r) })), now));
+    if (rejected) return `The user rejected a similar claim [${rejected.id}]: ${rejected.text}. Do not propose it again.`;
+    const current = withText.filter((r) => !r.superseded_by && ['live', 'proposed'].includes(state(r)));
+    const same = current.find((r) => norm(r.text) === norm(a.text));
+    if (same) return `Already ${state(same) === 'live' ? 'live' : 'proposed'} as [${same.id}].`;
+    const similar = similarClaim(a.text, current);
     const similarNote = similar ? ` Similar to [${similar.id}]: ${similar.text}. Pass replaces if it updates that claim.` : '';
     const replaces = a.replaces?.trim().replace(/^\[(.*)\]$/, '$1').trim();
     if (replaces && !facts.some((r) => r.id === replaces && state(r) === 'live' && !r.superseded_by)) return `No live claim [${replaces}] to replace. Call wiki_search for its id, or leave replaces out.${similarNote}`;

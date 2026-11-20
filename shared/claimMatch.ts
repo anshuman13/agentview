@@ -36,6 +36,15 @@ export function similarClaim<T extends { text: string }>(text: string, claims: T
   return best;
 }
 
+export const norm = (t: string) => t.trim().replace(/\s+/g, ' ').toLowerCase();
+
+const MAX_REJECTED = 20;
+const REJECTED_DAYS = 90;
+
+// The claims the user rejected in the last 90 days, newest 20, which Haiku must not propose again and saveLearned and wiki_propose skip.
+export const recentlyRejected = <T extends { text: string; state: string | null; updated_at: number }>(rows: T[], now: number) =>
+  rows.filter((f) => f.state === 'rejected' && f.updated_at > now - REJECTED_DAYS * 86_400_000).sort((a, b) => b.updated_at - a.updated_at).slice(0, MAX_REJECTED);
+
 // Drops a final "s" that follows four letters other than s.
 const singular = (t: string) => (/[^s]{4}s$/.test(t) ? t.slice(0, -1) : t);
 

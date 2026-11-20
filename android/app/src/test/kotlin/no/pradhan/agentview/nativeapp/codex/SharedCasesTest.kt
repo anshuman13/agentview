@@ -46,6 +46,7 @@ import no.pradhan.agentview.nativeapp.chat.editCount
 import no.pradhan.agentview.nativeapp.chat.exploreLabelOf
 import no.pradhan.agentview.nativeapp.chat.exploreRunsOf
 import no.pradhan.agentview.nativeapp.chat.FoldRow
+import no.pradhan.agentview.nativeapp.chat.Proposal
 import no.pradhan.agentview.nativeapp.chat.StatusStep
 import no.pradhan.agentview.nativeapp.chat.buildTranscript
 import no.pradhan.agentview.nativeapp.chat.foldTurns
@@ -247,6 +248,10 @@ class SharedCasesTest {
             c["steps"]?.let { expected ->
                 val want = expected.jsonArray.map { turn -> turn.jsonArray.map { s -> s.jsonObject.let { StatusStep(it.str("id"), it.str("title"), it["done"]?.jsonPrimitive?.boolean == true) } } }
                 assertEquals(c.str("name"), want, rows.filterIsInstance<FoldRow.Fold>().map { it.steps })
+            }
+            c["proposed"]?.let { expected ->
+                val want = expected.jsonArray.map { turn -> turn.jsonArray.map { p -> p.jsonObject.let { Proposal(it.str("id"), it.str("text")) } } }
+                assertEquals(c.str("name"), want, rows.filterIsInstance<FoldRow.Fold>().map { it.proposed })
             }
             c["now"]?.let { expected -> assertEquals(c.str("name"), expected.jsonArray.map { it.jsonPrimitive.content }, rows.filterIsInstance<FoldRow.Fold>().map { it.now }) }
         }

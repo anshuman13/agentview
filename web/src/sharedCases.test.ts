@@ -98,6 +98,7 @@ describe('cases shared with the Android app', () => {
       expect(rows.flatMap((r) => (r.kind === 'fold' ? [workTitle(r.work, false, c.billing, true)] : []))).toEqual(c.titles);
       if (c.steps) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.steps] : []))).toEqual(c.steps);
       if (c.now) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.now] : []))).toEqual(c.now);
+      if (c.proposed) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.proposed] : []))).toEqual(c.proposed);
     });
   }
 

@@ -63,6 +63,30 @@ test('wiki_propose names a similar live or proposed claim of the same profile an
   expect(pushed).toHaveLength(3);
 });
 
+test('wiki_propose saves nothing for a recently rejected or an already proposed or live claim', async () => {
+  const day = 86_400_000;
+  const fact = (id: string, profile: string, state: string, text: string, updated_at = 1) => ({ table: 'facts', id, profile, deleted: false, updated_at, fields: { text, state } });
+  const changes = [
+    fact('rej10', 'work', 'rejected', 'The gateway limits each user to 60 requests a minute', Date.now() - 10 * day),
+    fact('rej100', 'work', 'rejected', 'The importer retries failed uploads five times daily', Date.now() - 100 * day),
+    fact('rejOther', 'personal', 'rejected', 'Deploys happen every Friday afternoon', Date.now() - day),
+    fact('prop', 'work', 'proposed', 'Billing runs on the first of the month'),
+    fact('live', 'work', 'live', 'Search results are cached for ten minutes'),
+  ];
+  const pushed: unknown[] = [];
+  stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') pushed.push(JSON.parse(String(init.body)));
+    return json(200, { version: 1, hasMore: false, changes: init?.method === 'POST' ? [] : changes });
+  }));
+  expect(await propose('Gateway limits every user to 60 requests per minute')).toBe('The user rejected a similar claim [rej10]: The gateway limits each user to 60 requests a minute. Do not propose it again.');
+  expect(await propose('The importer retries failed uploads five times daily')).toMatch(/^Proposed /);
+  expect(await propose('Deploys happen every Friday afternoon')).toMatch(/^Proposed /);
+  expect(await propose('  billing RUNS on  the first of the month ')).toBe('Already proposed as [prop].');
+  expect(await propose('Search results are cached for ten minutes')).toBe('Already live as [live].');
+  expect(await propose('Search results are cached for ten minutes, per user')).toContain('Similar to [live]');
+  expect(pushed).toHaveLength(3);
+});
+
 test('wiki_propose files under a near-title live page and never onto a rejected one', async () => {
   const page = (id: string, title: string, state: string) => ({ table: 'pages', id, profile: 'work', deleted: false, updated_at: 1, fields: { title, state } });
   const pushed: { table: string; id: string; fields: Record<string, unknown> }[][] = [];
@@ -134,7 +158,7 @@ test('wiki_propose reads a bracketed replaces id and refuses one that replaces n
   expect(await replace('[live1]')).toStartWith('Proposed [');
   expect(pushed.map((p) => p.changes[0]!.fields.replaces)).toEqual(['live1', 'live1']);
   for (const id of ['nope', 'gone', 'mine', 'idea']) expect(await replace(`[${id}]`)).toBe(`No live claim [${id}] to replace. Call wiki_search for its id, or leave replaces out.`);
-  expect(await replace('nope', 'Claim live1 about gateways')).toContain('Similar to [live1]: Claim live1 about gateways.');
+  expect(await replace('nope', 'Claim live1 about gateways today')).toContain('Similar to [live1]: Claim live1 about gateways.');
   expect(pushed).toHaveLength(2);
 });
 
