@@ -48,6 +48,12 @@ export function AddAction({ m }: { m: Meeting }) {
   );
 }
 
+// Marks a missing transcript as done, so the warning goes; Undo puts the previous value back.
+export function dismissTranscript(store: ReturnType<typeof useAssistantStore>, m: Meeting) {
+  void store.editRow('meetings', m, { transcript: 'done' });
+  showSnack('Transcript dismissed', () => void store.editRow('meetings', m, { transcript: m.transcript }));
+}
+
 // One line on where the meeting is, so an empty action list always has a reason.
 export function StateLine({ m, now }: { m: Meeting; now: number }) {
   const store = useAssistantStore();
@@ -62,7 +68,7 @@ export function StateLine({ m, now }: { m: Meeting; now: number }) {
     <div className={`mt-state ${state}`}>
       <span>{parts.join(' · ')}</span>
       {(state === 'waiting' || state === 'missing') && <TranscriptButton m={m} label={state === 'missing' ? 'Retry' : 'Read now'} />}
-      {state === 'missing' && <Button size="sm" title="Nothing to add for this meeting" onClick={() => void store.editRow('meetings', m, { transcript: 'done' })}>Dismiss</Button>}
+      {state === 'missing' && <Button size="sm" title="Nothing to add for this meeting" onClick={() => dismissTranscript(store, m)}>Dismiss</Button>}
     </div>
   );
 }

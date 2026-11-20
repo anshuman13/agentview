@@ -1,0 +1,9 @@
+[
+  { "name": "repeat", "status": "open", "text": "Repeats: weekly\nwater the plants", "priority": 3, "people": null, "extra": "Repeats", "preview": "" },
+  { "name": "checklist", "status": "open", "text": "- [x] call\n- [ ] book\n- [ ] pay", "priority": 2, "people": null, "extra": "1/3", "preview": "" },
+  { "name": "high", "status": "open", "text": "Some context", "priority": 3, "people": null, "extra": "High", "preview": "" },
+  { "name": "medium on a done row", "status": "done", "text": null, "priority": 2, "people": null, "extra": "", "preview": "" },
+  { "name": "note with a preview", "status": "note", "text": "\n  First idea  \nmore", "priority": 0, "people": null, "extra": "", "preview": "First idea" },
+  { "name": "note with a bare URL", "status": "note", "text": "https://example.com/a", "priority": 0, "people": null, "extra": "", "preview": "" },
+  { "name": "note with people", "status": "note", "text": "Talked about the plan", "priority": 0, "people": "Sam", "extra": "", "preview": "" }
+]

@@ -242,6 +242,7 @@ private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>, onNotes: 
             LRow(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp8)) {
                 Text(line, Modifier.weight(1f, fill = false), style = Type.callout, color = if (state == MState.Missing) av.warn else av.info)
                 if (readText != null) Button(if (reading) "Reading" else readText, { read() }, size = ButtonSize.Sm, enabled = !reading && !c.hub.readOnly)
+                if (state == MState.Missing && !c.hub.readOnly) Button("Dismiss", { c.actions.change(m, mapOf("transcript" to "done"), "Transcript dismissed") }, size = ButtonSize.Sm)
             }
         }
     }

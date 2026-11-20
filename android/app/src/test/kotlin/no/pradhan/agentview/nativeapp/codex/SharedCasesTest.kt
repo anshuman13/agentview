@@ -967,6 +967,13 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun taskMeta() {
+        for (c in cases("task-meta")) {
+            val row = Row("items", "t", "work", f = listOf("status", "text", "priority", "people").associateWith { c.getValue(it) })
+            assertEquals(c.str("name"), TaskMetaParts(c.str("extra"), c.str("preview")), taskMetaParts(row))
+        }
+    }
+
     @Test fun jobSchedule() {
         for (c in cases("job-schedule")) {
             val p = parseSchedule(c.prim("schedule")?.content)

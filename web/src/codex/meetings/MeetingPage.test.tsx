@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Meeting } from '../data/wiki/wiki';
 import * as data from '../data';
+import * as view from '../view';
 import { stubGlobal } from '../../../../testing';
 
 vi.mock('../data', () => ({
@@ -10,10 +11,13 @@ vi.mock('../data', () => ({
   useAssistantData: () => ({ items: [], facts: [], meetings: [] }),
   useCodex: () => ({ meetings: [] }),
 }));
+const snacks: { text: string; undo?: () => void }[] = [];
+vi.mock('../view', () => ({ ...view, showSnack: (text: string, undo?: () => void) => snacks.push({ text, undo }) }));
 
 stubGlobal('window', {});
 
 const { MeetingPage } = await import('./MeetingPage');
+const { dismissTranscript } = await import('./MeetingPageParts');
 
 const start = Date.UTC(2026, 9, 29, 8);
 const meeting = (extra: Partial<Meeting>) =>
@@ -36,5 +40,16 @@ describe('MeetingPage', () => {
     const html = render(meeting({ people: '["Sam"]' }));
     expect(html).toContain('>Meetings<');
     expect(html).toContain('Summary');
+  });
+
+  it('dismisses a missing transcript and Undo brings the line back', () => {
+    let m = meeting({ people: '["Sam"]', transcript: 'missing' });
+    const store = { editRow: async (_table: string, _row: Meeting, patch: Partial<Meeting>) => { m = { ...m, ...patch }; } };
+    expect(render(m)).toContain('No transcript for this meeting');
+    dismissTranscript(store as never, m);
+    expect(render(m)).not.toContain('No transcript for this meeting');
+    expect(snacks.at(-1)?.text).toBe('Transcript dismissed');
+    snacks.at(-1)?.undo?.();
+    expect(render(m)).toContain('No transcript for this meeting');
   });
 });

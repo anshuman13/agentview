@@ -1,17 +1,15 @@
 import { atTime, nextNine } from '../data/tasks/engine';
-import { isRepeat } from '../data/tasks/recur';
 import type { ItemRow, Profile } from '../data/sync';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
 import { MenuItem } from '../../ui/Menu';
-import { firstLine } from '../../ui/util';
 import { FILTER_LABEL } from '../view';
 import { useActions } from '../useActions';
 import { clock, EVENING, MORNING, when } from './time';
 import { Swipe } from '../gestures/Swipe';
 import { rowKey } from './taskKeys';
 import { Check } from './TaskCheck';
-import { checkItems } from './editor/taskChecklist';
+import { taskMetaParts } from './taskMeta';
 import { Badge } from '../../ui/Badge';
 import { UNTITLED } from '../../../../shared/util';
 
@@ -21,12 +19,6 @@ const DAY = 86400_000;
 
 // A touch hold on a row starts selection (see the drag gesture), so the row's long press does not open its menu.
 const noHold = () => undefined;
-
-// Checklist lines in the notes, like "- [ ] call" and "- [x] done".
-const checklist = (s: string | null) => {
-  const items = checkItems(s);
-  return { items, done: items.filter((c) => c.done).length, total: items.length };
-};
 
 const lateDays = (at: number, now: number) => Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY);
 
@@ -65,18 +57,15 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected 
   const pickable = !isDone && !isNote;
   const late = at != null ? lateDays(at, now) : 0;
   const due = dueText(row, now, inDay);
-  const list = checklist(row.text);
-  const preview = isRepeat(row.text) ? '' : firstLine(row.text);
-  const extra = isRepeat(row.text) ? 'Repeats' : list.total > 0 ? `${list.done}/${list.total}` : !isDone && row.priority === 3 ? 'High' : !isDone && row.priority === 2 ? 'Medium' : '';
+  const { extra, preview } = taskMetaParts(row);
   const later = nextNine(new Date(Math.max(at ?? 0, now)), row.profile);
-  const quote = isNote && !list.total && !row.people && !/^https?:\/\/\S+$/.test(preview) ? preview : '';
   const meta = due || extra ? (
     <>
       {due && <span className={at! < now ? 'as-due late' : late === 0 ? 'as-due today' : 'as-due'}>{due}{at! < now && late <= 0 && <span className="sr-only"> overdue</span>}</span>}
       {due && extra && ' · '}
       {extra}
     </>
-  ) : quote;
+  ) : preview;
   const body = (
     <Row plain className={`tk-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}${selected ? ' selected' : ''}`} data-row={row.profile + row.id} onPointerDown={picking ? undefined : onGrab} onLongPress={noHold} onClick={picking && !pickable ? undefined : onOpen} role="button" aria-pressed={picking && pickable ? !!selected : undefined} tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && (picking ? (pickable && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())) : rowKey(e, row, onOpen, act))}
       leading={picking && !isNote ? <span className={`as-check${isDone ? ' on' : selected ? ' picked' : ''}`}><Icon name={selected || isDone ? 'pass-filled' : 'circle-large-outline'} /></span> : <Check row={row} />}

@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -48,11 +49,11 @@ import no.pradhan.agentview.nativeapp.ui.av
 // The Codex task row: check circle, meta line, swipes and the long-press menu.
 
 @Composable
-fun CheckCircle(done: Boolean, label: String, onClick: () -> Unit) {
+fun CheckCircle(done: Boolean, label: String, ring: Color? = null, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     Box(Modifier.size(Tokens.leadWidth), contentAlignment = Alignment.Center) {
         Box(Modifier.requiredSize(Tokens.touch).clip(CircleShape).clickable(onClickLabel = label) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); onClick() }, contentAlignment = Alignment.Center) {
-            Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.okContainer) else Modifier.border(Tokens.stroke, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.okContainer) else Modifier.border(Tokens.stroke, ring ?: av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
                 if (done) AvIcon("check", null, Tokens.size2xs, tint = av.onOkContainer)
             }
         }
@@ -62,28 +63,35 @@ fun CheckCircle(done: Boolean, label: String, onClick: () -> Unit) {
 fun profileLabel(p: String) = if (p == WORK) "Work" else "Personal"
 fun priorityLabel(p: Int) = when (p) { 3 -> "High"; 2 -> "Medium"; 1 -> "Low"; else -> "None" }
 
-// The meta line of a task: due text (red when late), then repeat, checklist or priority, tags and the profile.
-@Composable
-fun taskMeta(row: Row, now: Long, inDay: Boolean, showProfile: Boolean): androidx.compose.ui.text.AnnotatedString {
-    val due = dueText(row, now, inDay)
-    val at = row.at
+data class TaskMetaParts(val extra: String, val preview: String)
+
+// web taskMetaParts in codex/tasks/taskMeta.ts: Repeats, the checklist count, or High or Medium on an open row; and a note's first line as its preview, when it has no checklist, no people and is not a bare URL.
+fun taskMetaParts(row: Row): TaskMetaParts {
     val done = row.status == "done"
     val checks = checkItems(row.text)
+    val first = if (isRepeat(row.text)) "" else firstLine(row.text)
     val extra = when {
         isRepeat(row.text) -> "Repeats"
         checks.isNotEmpty() -> "${checks.count { it.done }}/${checks.size}"
         !done && row.priority == 3 -> "High"
         !done && row.priority == 2 -> "Medium"
-        else -> null
+        else -> ""
     }
-    val tags = tagList(row.tags).joinToString(" ") { "#$it" }
-    val preview = if (row.status == "note" && !isRepeat(row.text)) firstLine(row.text) else ""
-    val bits = listOfNotNull(extra, tags.ifEmpty { null }, if (showProfile) profileLabel(row.profile) else null)
+    val preview = if (row.status == "note" && checks.isEmpty() && row.people.isNullOrEmpty() && !Regex("^https?://\\S+$").matches(first)) first else ""
+    return TaskMetaParts(extra, preview)
+}
+
+// The meta line of a task: due text (red when late), then repeat, checklist or priority, else a note's preview.
+@Composable
+fun taskMeta(row: Row, now: Long, inDay: Boolean): androidx.compose.ui.text.AnnotatedString {
+    val due = dueText(row, now, inDay)
+    val at = row.at
+    val (extra, preview) = taskMetaParts(row)
     return buildAnnotatedString {
         if (due != null) withStyle(SpanStyle(color = if (at != null && at < now) av.err else av.fgMuted)) { append(due) }
-        if (due != null && bits.isNotEmpty()) append(" · ")
-        append(bits.joinToString(" · "))
-        if (due == null && bits.isEmpty()) append(preview)
+        if (due != null && extra.isNotEmpty()) append(" · ")
+        append(extra)
+        if (due == null && extra.isEmpty()) append(preview)
     }
 }
 
@@ -118,8 +126,8 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
         Box(Modifier.background(av.groupCard)) {
             ListRow(
                 title = row.title ?: UNTITLED,
-                meta = taskMeta(row, now, inDay, showProfile),
-                leading = if (row.status == "note") null else if (picking) { { CheckCircle(pick!!.selected, if (pick.selected) "Deselect ${row.title}" else "Select ${row.title}") { pick.toggle() } } } else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done") { if (isDone) actions.reopen(row) else actions.done(row) } } },
+                meta = taskMeta(row, now, inDay),
+                leading = if (row.status == "note") null else if (picking) { { CheckCircle(pick!!.selected, if (pick.selected) "Deselect ${row.title}" else "Select ${row.title}") { pick.toggle() } } } else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done", if (isDone) null else if (row.profile == WORK) av.work else av.personal) { if (isDone) actions.reopen(row) else actions.done(row) } } },
                 state = if (row.status == "suggested") ({ Badge("Needs you", BadgeTone.Waiting) }) else null,
                 stateSlot = true,
                 menu = { dismiss -> TaskMenu(row, dismiss, actions, onOpen) },

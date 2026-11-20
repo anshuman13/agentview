@@ -70,6 +70,7 @@ import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
 import { heldUntil, jobEdits, newJob, tasksOf } from './codex/jobs/schedule';
 import { WEEKLY_DIGEST } from './codex/data/tasks/presets';
 import { sourceLink } from './codex/tasks/taskSource';
+import { taskMetaParts } from './codex/tasks/taskMeta';
 import type { ItemRow } from './codex/data/sync';
 import { agendaMarkdown, draftFor, followUpText, hasContent, linearIssue, personMarkdown, toMarkdown } from './codex/data/meetings/meetingMarkdown';
 import { toggleConnector } from './ops/mcpHelpers';
@@ -423,6 +424,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; id: string; source: string | null; meeting_id: string | null; expected: { icon: string; label: string } }>('task-source')) {
     it(`sourceLink: ${c.name}`, () => expect(sourceLink(c as unknown as ItemRow)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; status: string; text: string | null; priority: number; people: string | null; extra: string; preview: string }>('task-meta')) {
+    it(`taskMetaParts: ${c.name}`, () => expect(taskMetaParts(c as unknown as ItemRow)).toEqual({ extra: c.extra, preview: c.preview }));
   }
 
   for (const c of cases<{ name: string; held: string[] | null; keys: string[]; expected: string[] }>('held-order')) {
