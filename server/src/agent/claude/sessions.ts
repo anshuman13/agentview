@@ -30,12 +30,12 @@ const cache = new Map<string, { sig: string; list: Promise<SDKSessionInfo[]> }>(
 
 // The SDK reads the head and tail of each listed transcript on every call; the result is kept until a file changes.
 export async function listSessions(opts: ListSessionsOptions = {}) {
-  if (opts.dir) return listAll(opts);
+  if (opts.dir) return listAll(opts).then(ownTail);
   const key = JSON.stringify(opts);
   const sig = await signature();
   const hit = cache.get(key);
   if (hit?.sig === sig) return hit.list;
-  const list = listAll(opts).then((all) => Promise.all(all.map(async (x) => ({ ...x, lastModified: (await lastMessageAt(x)) ?? x.lastModified }))));
+  const list = listAll(opts).then(ownTail);
   cache.set(key, { sig, list });
   list.catch(() => cache.get(key)?.list === list && cache.delete(key));
   return list;
@@ -56,20 +56,38 @@ export function lastMessageTime(tail: string) {
 
 const TAIL = 256 * 1024;
 
-async function lastMessageAt(x: SDKSessionInfo) {
-  if (!x.cwd) return null;
+async function readTail(x: SDKSessionInfo) {
+  if (!x.cwd) return '';
   const file = await open(path.join(projectDir(x.cwd), `${x.sessionId}.jsonl`)).catch(() => null);
-  if (!file) return null;
+  if (!file) return '';
   try {
     const { size } = await file.stat();
     const len = Math.min(size, TAIL);
     const buf = Buffer.alloc(len);
     await file.read(buf, 0, len, size - len);
-    return lastMessageTime(buf.toString('utf8'));
+    return buf.toString('utf8');
   } finally {
     await file.close();
   }
 }
+
+// The SDK takes gitBranch from the last transcript entry, which can be a subagent's in its own worktree. The chat's branch is the last entry outside a sidechain.
+export function ownBranch(tail: string) {
+  const lines = tail.split('\n');
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (!lines[i].includes('"gitBranch"') || lines[i].includes('"isSidechain":true')) continue;
+    try {
+      const b = JSON.parse(lines[i]).gitBranch;
+      if (b) return b as string;
+    } catch {}
+  }
+  return undefined;
+}
+
+const ownTail = (all: SDKSessionInfo[]) => Promise.all(all.map(async (x) => {
+  const tail = await readTail(x);
+  return { ...x, lastModified: lastMessageTime(tail) ?? x.lastModified, gitBranch: ownBranch(tail) };
+}));
 
 export function savedSession(x: SDKSessionInfo): SavedSession {
   const firstPrompt = x.firstPrompt?.replace(/\s+/g, ' ').trim().slice(0, 300);

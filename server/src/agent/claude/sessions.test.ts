@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
-import { lastMessageTime, savedSession } from './sessions.js';
+import { lastMessageTime, ownBranch, savedSession } from './sessions.js';
 
 const info = (firstPrompt?: string, extra: Partial<SDKSessionInfo> = {}) => ({ sessionId: 's', summary: 'T', lastModified: 1, firstPrompt, ...extra }) as SDKSessionInfo;
 
@@ -34,5 +34,18 @@ describe('lastMessageTime', () => {
   });
   it('returns null for a cut first line or no messages', () => {
     expect(lastMessageTime('mp":"x"}\n{"type":"cost-state"}')).toBeNull();
+  });
+});
+
+describe('ownBranch', () => {
+  it('skips subagent entries and takes the last branch of the chat itself', () => {
+    const tail = [
+      '{"type":"user","gitBranch":"main"}',
+      '{"type":"user","isSidechain":true,"gitBranch":"worktree-agent-abe367bd95ef2938b"}',
+      '{"type":"assistant","isSidechain":true,"gitBranch":"worktree-agent-abe367bd95ef2938b"}',
+      '{"type":"system"}',
+    ].join('\n');
+    expect(ownBranch(tail)).toBe('main');
+    expect(ownBranch('{"isSidechain":true,"gitBranch":"x"}')).toBeUndefined();
   });
 });
