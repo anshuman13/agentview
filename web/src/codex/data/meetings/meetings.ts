@@ -224,7 +224,7 @@ const isCallLink = (url: string) => {
 // A solo calendar event with no call link: a plain page without the meeting sections.
 export const isEvent = (m: Meeting) => isSolo(m) && !linksOf(m).some((l) => isCallLink(l.url));
 
-type MeetingState = 'upcoming' | 'live' | 'waiting' | 'done' | 'missing' | 'manual';
+export type MeetingState = 'upcoming' | 'live' | 'waiting' | 'done' | 'missing' | 'manual';
 
 // Where a meeting is between the calendar and its transcript.
 export function meetingState(m: Meeting, now = Date.now()): MeetingState {
@@ -235,6 +235,14 @@ export function meetingState(m: Meeting, now = Date.now()): MeetingState {
   if (m.transcript === 'missing') return 'missing';
   if (m.transcript === 'done' || (!m.transcript && m.summary)) return 'done';
   return 'waiting';
+}
+
+// What an empty My actions or Summary section says, by meeting state.
+export function meetingEmpty(state: MeetingState, part: 'actions' | 'summary') {
+  if (part === 'summary') return state === 'missing' ? { title: 'No summary', hint: 'There is no transcript to write it from' } : { title: 'No summary yet', hint: 'Written from the transcript after the meeting' };
+  if (state === 'missing') return { title: 'No transcript', hint: 'Add actions under More' };
+  if (state === 'done') return { title: 'Nothing for you', hint: 'The transcript gave you no actions' };
+  return { title: 'No actions yet', hint: 'Your actions from the transcript land here and in Today' };
 }
 
 // The row's one state badge: Live while it runs.

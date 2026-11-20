@@ -4,12 +4,13 @@ import { rowKey } from '../data/sync';
 import { linksOf, listOf, othersOf, type Meeting } from '../data/wiki/wiki';
 import { linkDomain } from '../data/ask/links';
 import { Row } from '../../ui/Row';
-import { actionCount, actionsOf, isEvent, isSolo, meetingState, peopleOf, pinsOf, seriesMeetings, seriesOf, seriesTitleOf } from '../data/meetings/meetings';
+import { actionCount, actionsOf, isEvent, isSolo, meetingEmpty, meetingState, peopleOf, pinsOf, seriesMeetings, seriesOf, seriesTitleOf } from '../data/meetings/meetings';
 import { clock } from '../tasks/time';
 import { useMinute } from '../tasks/split';
 import { Button, IconButton } from '../../ui/Button';
 import { Section, sectionCount } from '../../ui/Section';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { safeHref } from '../../ui/util';
 import { notesFocusFor, setView, showSnack, useEscapeBack } from '../view';
 import { ActionRow, confirmAll } from './ActionRow';
@@ -107,9 +108,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
             <Section label="My actions" count={count.total > 0 ? `${count.done} of ${count.total} done` : undefined} />
             {mine.length > 0 && <div className="mt-tasks">{mine.map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>}
             {event && <AddAction m={m} />}
-            {!event && !mine.length && !review.length && (
-              <p className="mt-pending">{state === 'missing' ? 'No transcript. Add actions under More.' : state === 'done' ? 'Nothing for you in the transcript.' : 'Your actions from the transcript land here and in Today.'}</p>
-            )}
+            {!event && !mine.length && !review.length && <EmptyState size="sm" {...meetingEmpty(state, 'actions')} />}
           </section>
 
           {!event && (
@@ -123,7 +122,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
               <section className="mt-sec">
                 <Section label="Summary" action={m.summary && <SummaryFormat m={m} series={prior} />} />
-                {m.summary ? <PinnableSummary m={m} /> : <p className="mt-pending">{state === 'missing' ? 'No summary without a transcript.' : 'Written from the transcript after the meeting.'}</p>}
+                {m.summary ? <PinnableSummary m={m} /> : <EmptyState size="sm" {...meetingEmpty(state, 'summary')} />}
                 {m.summary && pins.length > 0 && <PinList pins={pins} />}
               </section>
 

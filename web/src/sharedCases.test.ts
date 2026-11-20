@@ -70,7 +70,7 @@ import { WEEKLY_DIGEST } from './codex/data/tasks/presets';
 import { sourceLink } from './codex/tasks/taskSource';
 import type { ItemRow } from './codex/data/sync';
 import { agendaMarkdown, draftFor, followUpText, hasContent, personMarkdown, toMarkdown } from './codex/data/meetings/meetingMarkdown';
-import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip, type Question } from './codex/data/meetings/meetings';
+import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingEmpty, meetingState, sameName, seriesTitle, type MeetingChip, type MeetingState, type Question } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
 import { similarClaim } from '../../shared/claimMatch';
@@ -431,6 +431,9 @@ describe('cases shared with the Android app', () => {
     filter: { meetings: MeetingSpec[]; items: ItemSpec[]; cases: { name: string; chips: MeetingChip[]; expected: string[] }[] };
   };
   for (const c of meetingCases.state) it(`meetingState: ${c.name}`, () => expect(meetingState(meetingOf(c.meeting), NOW)).toBe(c.expected));
+  for (const c of cases<{ name: string; state: MeetingState; part: 'actions' | 'summary'; title: string; hint: string }>('meeting-empty')) {
+    it(`meetingEmpty: ${c.name}`, () => expect(meetingEmpty(c.state, c.part)).toEqual({ title: c.title, hint: c.hint }));
+  }
   for (const c of meetingCases.groups) {
     it(`groupMeetings: ${c.name}`, () => {
       const groups = groupMeetings(c.meetings.map(meetingOf), NOW);

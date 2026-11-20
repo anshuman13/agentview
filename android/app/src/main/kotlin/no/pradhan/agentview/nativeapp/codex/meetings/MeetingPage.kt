@@ -165,11 +165,11 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
         if (isEvent(m)) {
             item(key = NOTES_KEY) { NotesHeader(c, all) }
             item { NotesField(hub, m, notesEmptyAtOpen, notesFocus) }
-            meetingActions(c, all, alwaysHeader = true)
+            meetingActions(c, all, null)
             item { NewActionField(c, folds.newAction) }
         } else {
-            meetingActions(c, all)
-            meetingSummary(c, folds)
+            meetingActions(c, all, state)
+            meetingSummary(c, state, folds)
             meetingDecisions(c)
             prep?.let { meetingPrep(c, it) }
             item(key = NOTES_KEY) { NotesHeader(c, all) }
@@ -248,26 +248,26 @@ private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>, onNotes: 
     }
 }
 
-private fun LazyListScope.meetingActions(c: MeetingCtx, all: List<Row>, alwaysHeader: Boolean = false) {
+// state is null on an event, which shows no empty state under My actions.
+private fun LazyListScope.meetingActions(c: MeetingCtx, all: List<Row>, state: MState?) {
     val actions = c.actions
     val mine = all.filter { it.status == "open" || it.status == "done" }.sortedBy { if (it.status == "open") 0 else 1 }
     val review = all.filter { it.status == "suggested" }
     val count = actionCount(c.st.items, c.m)
-    if (alwaysHeader || mine.isNotEmpty()) {
-        item { SectionHeader("My actions", if (count.total > 0) "${count.done} of ${count.total} done" else null) }
-        actionGroup(mine, c)
-    }
+    item { SectionHeader("My actions", if (count.total > 0) "${count.done} of ${count.total} done" else null) }
+    if (mine.isNotEmpty()) actionGroup(mine, c)
+    else if (state != null && review.isEmpty()) meetingEmpty(state, "actions").let { (title, hint) -> item { EmptyState(title, hint) } }
     if (review.isNotEmpty()) {
         item { SectionHeader("To review", review.size.toString(), action = { if (review.size > 1) Button("Confirm all", { review.forEach { actions.edit(it, mapOf("status" to "open")) }; actions.undoable("${review.size} added to Today") { review.forEach { r -> actions.edit(r, mapOf("status" to "suggested")) } } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
         actionGroup(review, c)
     }
 }
 
-private fun LazyListScope.meetingSummary(c: MeetingCtx, folds: MeetingFolds) {
+private fun LazyListScope.meetingSummary(c: MeetingCtx, state: MState, folds: MeetingFolds) {
     val m = c.m
     val pins = pinsOf(c.st.items, listOf(m))
     item { SectionHeader("Summary", action = if (!m.str("summary").isNullOrEmpty()) { { Button("Pin", { folds.pinning.value = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } } else null) }
-    m.str("summary")?.takeIf { it.isNotEmpty() }?.let { item { Markdown(it, Modifier.padding(horizontal = Tokens.listPad)) } } ?: item { EmptyState("No summary yet", "It is written after the meeting ends") }
+    m.str("summary")?.takeIf { it.isNotEmpty() }?.let { item { Markdown(it, Modifier.padding(horizontal = Tokens.listPad)) } } ?: meetingEmpty(state, "summary").let { (title, hint) -> item { EmptyState(title, hint) } }
     if (pins.isNotEmpty()) {
         item { SectionHeader("Pinned", pins.size.toString()) }
         item { PinList(pins, c.ops) }

@@ -109,6 +109,14 @@ fun meetingState(m: Row, now: Long): MState {
     return MState.Waiting
 }
 
+// Mirrors web meetingEmpty: the title and hint of an empty My actions ("actions") or Summary ("summary") section.
+fun meetingEmpty(state: MState, part: String): Pair<String, String> = when {
+    part == "summary" -> if (state == MState.Missing) "No summary" to "There is no transcript to write it from" else "No summary yet" to "Written from the transcript after the meeting"
+    state == MState.Missing -> "No transcript" to "Add actions under More"
+    state == MState.Done -> "Nothing for you" to "The transcript gave you no actions"
+    else -> "No actions yet" to "Your actions from the transcript land here and in Today"
+}
+
 // A calendar meeting that has started has a transcript to read.
 fun readable(m: Row, now: Long) = m.id.startsWith("cal:") && (m.startsAt ?: Long.MAX_VALUE) <= now
 

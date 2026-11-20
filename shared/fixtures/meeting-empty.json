@@ -1,0 +1,14 @@
+[
+  { "name": "upcoming actions", "state": "upcoming", "part": "actions", "title": "No actions yet", "hint": "Your actions from the transcript land here and in Today" },
+  { "name": "live actions", "state": "live", "part": "actions", "title": "No actions yet", "hint": "Your actions from the transcript land here and in Today" },
+  { "name": "waiting actions", "state": "waiting", "part": "actions", "title": "No actions yet", "hint": "Your actions from the transcript land here and in Today" },
+  { "name": "done actions", "state": "done", "part": "actions", "title": "Nothing for you", "hint": "The transcript gave you no actions" },
+  { "name": "missing actions", "state": "missing", "part": "actions", "title": "No transcript", "hint": "Add actions under More" },
+  { "name": "manual actions", "state": "manual", "part": "actions", "title": "No actions yet", "hint": "Your actions from the transcript land here and in Today" },
+  { "name": "upcoming summary", "state": "upcoming", "part": "summary", "title": "No summary yet", "hint": "Written from the transcript after the meeting" },
+  { "name": "live summary", "state": "live", "part": "summary", "title": "No summary yet", "hint": "Written from the transcript after the meeting" },
+  { "name": "waiting summary", "state": "waiting", "part": "summary", "title": "No summary yet", "hint": "Written from the transcript after the meeting" },
+  { "name": "done summary", "state": "done", "part": "summary", "title": "No summary yet", "hint": "Written from the transcript after the meeting" },
+  { "name": "missing summary", "state": "missing", "part": "summary", "title": "No summary", "hint": "There is no transcript to write it from" },
+  { "name": "manual summary", "state": "manual", "part": "summary", "title": "No summary yet", "hint": "Written from the transcript after the meeting" }
+]

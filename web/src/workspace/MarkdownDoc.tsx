@@ -16,7 +16,7 @@ import { escapeHtml } from '../ui/util';
 import { shownRunItems } from './docLogic';
 import { DocAsk, BlockEditor, useSelectionAsk } from './DocEdit';
 import { replaceBlock } from '../../../shared/docEdit';
-import { showSnack } from '../codex/view';
+import { copyText, showSnack } from '../codex/view';
 import '../styles/features/doc.css';
 
 type Heading = { id: string; text: string; depth: number };
@@ -45,6 +45,12 @@ function frontmatter(text: string) {
 }
 
 export type Block = { start: number; raw: string };
+
+export function copyCode(t: Element) {
+  const copy = t.closest('[data-copy]');
+  if (copy) copyText(copy.closest('.doc-code')?.querySelector('code')?.textContent ?? '', 'Code copied');
+  return Boolean(copy);
+}
 
 // Each top-level block renders in its own wrapper with its place in the file, so it can be edited on its own.
 function toHtml(text: string) {
@@ -277,15 +283,7 @@ export function MarkdownDoc({ path, text, onSave }: { path: string; text: string
       track('action:startTask');
       return sendToChat(startTaskPrompt(tasks[Number(start.dataset.task)], path));
     }
-    const copy = t.closest<HTMLElement>('[data-copy]');
-    if (copy) {
-      const code = copy.closest('.doc-code')?.querySelector('code')?.textContent ?? '';
-      navigator.clipboard?.writeText(code).then(() => {
-        copy.textContent = 'Copied';
-        setTimeout(() => (copy.textContent = 'Copy'), 1200);
-      });
-      return;
-    }
+    if (copyCode(t)) return;
     const a = t.closest('a');
     if (!a) return;
     const href = a.getAttribute('href') ?? '';

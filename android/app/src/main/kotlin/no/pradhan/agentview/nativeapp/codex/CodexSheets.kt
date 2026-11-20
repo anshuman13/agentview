@@ -217,7 +217,7 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
                 else safeHref(row.sourceUrl)?.let { href -> sourceLink(row).let { s -> Button(s.label, { uri.openUri(href) }, icon = s.icon) } }
                 Button("Ask Claude", { commit(); onAsk(latest); onDismiss() })
                 Button("Start a chat…", { commit(); onChat { repo -> taskChatPrompt(row.id, row.status, title, text, row.sourceUrl, repo != null && segmentOf(repo) == row.profile) }; onDismiss() })
-                row.draft?.takeIf { it.isNotBlank() }?.let { d -> Button("Copy draft", { clip.setText(AnnotatedString(d)); actions.say("Draft copied") }) }
+                row.draft?.takeIf { it.isNotBlank() }?.let { d -> Button("Copy draft", { clip.setText(AnnotatedString(d)); actions.say("Draft copied") }, icon = "copy") }
                 Button("Delete", { actions.delete(row); onDismiss() }, variant = ButtonVariant.Danger)
             }
         }

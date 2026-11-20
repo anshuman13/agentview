@@ -24,7 +24,6 @@ import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
-import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
@@ -77,7 +76,7 @@ private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, onBack: () 
     val clip = LocalClipboardManager.current
     Column(Modifier.fillMaxSize()) {
         PageHeader(a.description, onBack, subtitle = { Text(agentMeta(a, now), maxLines = 1) }) {
-            if (running && canStop && a.group == null) Button("Stop", { hub.stopTask(a.id) }, Modifier.padding(end = Tokens.sp6), variant = ButtonVariant.Danger, size = ButtonSize.Sm)
+            if (running && canStop && a.group == null) Button("Stop", { hub.stopTask(a.id) }, Modifier.padding(end = Tokens.sp6), size = ButtonSize.Sm, icon = "debug-stop")
         }
         val pad = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2)
         LazyColumn(Modifier.fillMaxSize()) {
@@ -87,7 +86,7 @@ private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, onBack: () 
                 item { Text("The report shows here when the agent finishes.", pad, style = Type.footnote, color = av.fgMuted) }
             } else {
                 item { Markdown(reportText(a), pad) }
-                item { Box(pad) { Button("Copy report", { clip.setText(AnnotatedString(reportText(a))); hub.notice.value = "Report copied" }, size = ButtonSize.Sm) } }
+                item { Box(pad) { Button("Copy report", { clip.setText(AnnotatedString(reportText(a))); hub.notice.value = "Report copied" }, size = ButtonSize.Sm, icon = "copy") } }
             }
             if (a.prompt.isNotEmpty()) {
                 item { SectionHeader("Prompt", open = prompt, onToggle = { prompt = !prompt }) }

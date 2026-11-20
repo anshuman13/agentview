@@ -219,6 +219,8 @@ import no.pradhan.agentview.nativeapp.codex.meetings.Question
 import no.pradhan.agentview.nativeapp.codex.meetings.groupMeetings
 import no.pradhan.agentview.nativeapp.codex.meetings.inSeries
 import no.pradhan.agentview.nativeapp.codex.meetings.meetingState
+import no.pradhan.agentview.nativeapp.codex.meetings.meetingEmpty
+import no.pradhan.agentview.nativeapp.codex.meetings.MState
 import no.pradhan.agentview.nativeapp.codex.meetings.isLate
 import no.pradhan.agentview.nativeapp.codex.meetings.sameName
 import no.pradhan.agentview.nativeapp.codex.meetings.seriesTitle
@@ -1302,6 +1304,13 @@ class SharedCasesTest {
         val now = 1_800_000_000_000
         for (c in meetingCases.getValue("state").jsonArray.map { it.jsonObject }) {
             assertEquals(c.str("name"), c.str("expected"), meetingState(specMeeting(c.getValue("meeting").jsonObject, now), now).name.lowercase())
+        }
+    }
+
+    @Test fun meetingEmptyStates() {
+        for (c in cases("meeting-empty")) {
+            val state = MState.valueOf(c.str("state").replaceFirstChar { it.uppercase() })
+            assertEquals(c.str("name"), c.str("title") to c.str("hint"), meetingEmpty(state, c.str("part")))
         }
     }
 

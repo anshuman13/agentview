@@ -185,7 +185,7 @@ export function OpenChats() {
     <div className="sessions chats">
       <div className="sessions-bar">
         <FilterInput value={filter} set={setFilter} />
-        {done.length > 0 && <IconButton icon="check-all" label="Mark all as read" onClick={markAllRead} />}
+        {done.length > 0 && <IconButton icon="check-all" label="Mark all read" onClick={markAllRead} />}
         <IconButton icon="add" label="New session in a repo" onClick={() => setNewIn({})} />
       </div>
       <NeedsYou n={shownWaiting.length} filter={filter}>
