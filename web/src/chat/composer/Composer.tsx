@@ -1,4 +1,4 @@
-import { memo, useId, useRef, useState } from 'react';
+import { memo, useId, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { touch } from '../../app/touch/touch';
@@ -8,7 +8,8 @@ import { AddMenu } from './AddMenu';
 import { PopItems } from './ComposerPop';
 import { Announcer } from '../Announcer';
 import { ChatSettings, useChatSettings, type Pick } from '../ChatSettings';
-import { ghostFor, type Use } from './composerLogic';
+import { ghostFor, joinMarks, splitMarks, type Use } from './composerLogic';
+import { AttachmentsBar } from './AttachmentsBar';
 import { ComposerFoot, SendButton } from './ComposerFoot';
 import { ComposerStats } from './ComposerStats';
 import { PickerSheets } from './PickerSheets';
@@ -46,24 +47,34 @@ export const Composer = memo(function Composer() {
   const mirror = useRef<HTMLDivElement>(null);
   const wantCaret = useRef<number | null>(null);
   const popId = useId();
-  const [text, setText] = useDraft(chat, () => { setUses([]); h.setHist(null); setPick(null); });
+  const [full, setFull] = useDraft(chat, () => { setUses([]); h.setHist(null); setPick(null); });
+  const { body: text, marks } = splitMarks(full);
+  const setText: Dispatch<SetStateAction<string>> = (next) => setFull((f) => {
+    const s = splitMarks(f);
+    return joinMarks(typeof next === 'function' ? next(s.body) : next, s.marks);
+  });
+  const setMarks = (change: (marks: string[]) => string[]) => setFull((f) => {
+    const s = splitMarks(f);
+    return joinMarks(s.body, change(s.marks));
+  });
   const h = usePromptHistory(chat);
   const ac = useAutocomplete(text, caret);
   const dictate = useDictation(text, setText);
-  const { uploading, attach } = useUploads(setText, ta);
+  const { uploading, attach } = useUploads((m) => setMarks((l) => [...l, m]), ta);
   const [shared, setShared] = useSharedIntake(attach);
 
   const ghost = !ac.open && !ac.shell && ac.at === text.length ? ghostFor(text, h.history) : '';
-  const typed = text.trim().length > 0;
+  const typed = full.trim().length > 0;
   const multi = useAutoHeight(ta, mirror, wantCaret, setCaret, [text, ghost]);
   useBarHidden(ta, typed);
 
-  const apply = (next: string, c = next.length) => {
-    wantCaret.current = c;
-    setText(next);
+  const apply = (next: string, c?: number) => {
+    const s = splitMarks(next);
+    wantCaret.current = c ?? s.body.length;
+    setFull(joinMarks(s.body, s.marks.length ? s.marks : marks));
   };
   const { submit, sendBuild } = useSubmit({
-    text, setText, shell: ac.shell, uploading, uses, setUses, apply,
+    text: full, setText: setFull, shell: ac.shell, uploading, uses, setUses, clear: () => { wantCaret.current = 0; setFull(''); },
     sentHistory: h.sentHistory, setSentHistory: h.setSentHistory, clearHistoryStep: () => h.setHist(null),
   });
 
@@ -81,6 +92,7 @@ export const Composer = memo(function Composer() {
         onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }}
       >
         <UsesBar uses={uses} remove={(u) => setUses((l) => l.filter((x) => x !== u))} />
+        <AttachmentsBar marks={marks} remove={(i) => setMarks((l) => l.filter((_, j) => j !== i))} />
         <div className={narrow ? 'cp-row' : undefined}>
         {narrow && <AddMenu uploading={uploading} setPick={setPick} attach={attach} />}
         <div className="cp-text">

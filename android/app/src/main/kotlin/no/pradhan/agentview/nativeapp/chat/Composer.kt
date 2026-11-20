@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -75,6 +76,7 @@ import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
+import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.IconBtn
@@ -96,36 +98,52 @@ private val BUILD_CHOICES = listOf(Choice("off", "Off", "Prompts run as usual"))
 private enum class Picker { Add, Settings, Effort, Account, Build }
 
 private class ComposerState(val hub: Hub, val chatId: String) {
-    var text by mutableStateOf(hub.draft(chatId).let { TextFieldValue(it, TextRange(it.length)) })
+    private val draft = splitMarks(hub.draft(chatId))
+    var text by mutableStateOf(TextFieldValue(draft.body, TextRange(draft.body.length)))
+    var marks by mutableStateOf(draft.marks)
     var dismissed by mutableStateOf("")
     var files by mutableStateOf<List<String>?>(null)
+    val full get() = joinMarks(text.text, marks)
 
     fun set(v: TextFieldValue) {
         val changed = v.text != text.text
         text = v
-        if (changed) hub.setDraft(chatId, v.text)
+        if (changed) hub.setDraft(chatId, full)
+    }
+
+    fun replaceMarks(next: List<String>) {
+        marks = next
+        hub.setDraft(chatId, full)
+    }
+
+    private fun clear() {
+        marks = emptyList()
+        text = TextFieldValue("")
+        hub.setDraft(chatId, "")
     }
 
     private fun restore(sent: String) {
-        val back = restoreUnsent(text.text, sent)
-        set(TextFieldValue(back, TextRange(back.length)))
+        val back = splitMarks(restoreUnsent(full, sent))
+        marks = back.marks
+        text = TextFieldValue(back.body, TextRange(back.body.length))
+        hub.setDraft(chatId, full)
     }
 
     fun build(uploading: Int) {
-        when (val step = buildStep(text.text, uploading, hub.readOnly)) {
+        when (val step = buildStep(full, uploading, hub.readOnly)) {
             is BuildStep.Notice -> hub.notice.value = step.text
             is BuildStep.Send -> {
-                set(TextFieldValue(""))
+                clear()
                 hub.submit(buildPrompt(step.brief), false) { restore(step.brief) }
             }
         }
     }
 
     fun submit(steer: Boolean, uploading: Int) {
-        val t = text.text
+        val t = full
         if (t.isBlank() || uploading > 0) return
-        shellCommand(t)?.let { if (hub.runInTerminal(it)) set(TextFieldValue("")); return }
-        set(TextFieldValue(""))
+        shellCommand(t)?.let { if (hub.runInTerminal(it)) clear(); return }
+        clear()
         hub.submit(t, steer) { restore(t) }
     }
 }
@@ -140,28 +158,33 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     var multiline by remember(chatId) { mutableStateOf(false) }
     val trigger = commandTrigger(s.text.text, s.text.selection.end)
     val suggestions = rememberSuggestions(s, trigger, session)
-    val attach = rememberAttach(hub, { uploading += it }) { path -> val t = appendWord(s.text.text, "[Image: $path] "); s.set(TextFieldValue(t, TextRange(t.length))) }
-    var bar by remember(chatId) { mutableStateOf(barState(BarState(), if (s.text.text.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled)) }
+    val attach = rememberAttach(hub, { uploading += it }) { path -> s.replaceMarks(s.marks +"[Image: $path]") }
+    var bar by remember(chatId) { mutableStateOf(barState(BarState(), if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled)) }
     val imeVisible = WindowInsets.isImeVisible
     LaunchedEffect(imeVisible) { bar = barState(bar, if (imeVisible) BarEvent.KeyboardUp else BarEvent.KeyboardDown) }
-    LaunchedEffect(s.text.text.isEmpty()) { bar = barState(bar, if (s.text.text.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled) }
+    LaunchedEffect(s.full.isEmpty()) { bar = barState(bar, if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled) }
     LaunchedEffect(bar) { hub.shell.composing.value = barHidden(bar) }
     DisposableEffect(chatId) { onDispose { hub.shell.composing.value = false } }
     val c = av
-    val shape = RoundedCornerShape(if (multiline) Tokens.radius else Tokens.radiusPill)
+    val shape = RoundedCornerShape(if (multiline || s.marks.isNotEmpty()) Tokens.radius else Tokens.radiusPill)
     Column(Modifier.fillMaxWidth().background(c.bg).padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp4, bottom = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
         if (suggestions.isNotEmpty()) SuggestionList(suggestions) { sg ->
             val r = acceptSuggestion(s.text.text, trigger!!.start, s.text.selection.end, sg.insert)
             s.set(TextFieldValue(r.first, TextRange(r.second)))
         }
-        Row(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape), verticalAlignment = Alignment.Bottom) {
-            if (uploading > 0) Box(Modifier.size(Tokens.touch).semantics { contentDescription = "Uploading" }, contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = c.accent, strokeWidth = Tokens.sp1) }
-            else IconBtn("add", "Add", { sheet = Picker.Add })
-            ComposerInput(
-                s, composerPlaceholder(providerLabel(session?.provider), waiting, session?.compacting == true, running),
-                Modifier.weight(1f).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
-            )
-            ComposerActions(hub, s, running, uploading, dictation)
+        Column(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape)) {
+            if (s.marks.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+                s.marks.forEachIndexed { i, m -> Chip(markLabel(m), { s.replaceMarks(s.marks.filterIndexed { j, _ -> j != i }) }, icon = if (m.startsWith("[Image")) "file-media" else "file", trailingIcon = "close", trailingLabel = "Remove") }
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                if (uploading > 0) Box(Modifier.size(Tokens.touch).semantics { contentDescription = "Uploading" }, contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = c.accent, strokeWidth = Tokens.sp1) }
+                else IconBtn("add", "Add", { sheet = Picker.Add })
+                ComposerInput(
+                    s, composerPlaceholder(providerLabel(session?.provider), waiting, session?.compacting == true, running),
+                    Modifier.weight(1f).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
+                )
+                ComposerActions(hub, s, running, uploading, dictation)
+            }
         }
     }
     ComposerSheets(hub, s, uploading, session, run, sheet, attach) { sheet = it }
@@ -227,7 +250,7 @@ private fun ComposerInput(s: ComposerState, placeholder: String, modifier: Modif
 private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, uploading: Int, dictation: Dictation) {
     val c = av
     val text = s.text
-    val typed = text.text.isNotBlank()
+    val typed = s.full.isNotBlank()
     var dictating by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
     if (!typed || dictating) VoiceButton({ spoken, final -> dictating = !final; dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> s.set(TextFieldValue(t, TextRange(caret))) } }, { hub.notice.value = it })

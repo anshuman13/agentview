@@ -28,7 +28,7 @@ function build(text: string, over: { uploading?: number; uses?: { server: string
   const Harness = () => {
     const { sendBuild } = useSubmit({
       text, setText: () => {}, shell: text.startsWith('!'), uploading: over.uploading ?? 0, uses: over.uses ?? [],
-      setUses: (u) => { calls.uses = u; }, sentHistory: ['old'], setSentHistory: (h) => { calls.history = h; }, clearHistoryStep: () => {}, apply: (n) => { calls.applied = n; },
+      setUses: (u) => { calls.uses = u; }, sentHistory: ['old'], setSentHistory: (h) => { calls.history = h; }, clearHistoryStep: () => {}, clear: () => { calls.applied = ''; },
     });
     sendBuild();
     return null;

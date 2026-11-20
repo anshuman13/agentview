@@ -133,6 +133,27 @@ fun userParts(text: String): List<Part> {
     return out.filter { it !is Part.Text || it.text.isNotEmpty() }
 }
 
+private const val MARK = "\\[(?:Image|File): [^\\]]+]"
+private val ANY_MARK = Regex(" ?$MARK ?")
+private val TRAILING_MARKS = Regex(" ?(?:$MARK ?)+$")
+
+// An attachment is the "[Image: path]" or "[File: path]" marker in the prompt text. The composer edits the body and shows the markers as chips (web splitMarks).
+class Marks(val body: String, val marks: List<String>)
+
+fun splitMarks(text: String) = Marks(
+    text.replace(TRAILING_MARKS, "").replace(ANY_MARK, " "),
+    Regex(MARK).findAll(text).map { it.value }.toList(),
+)
+
+fun joinMarks(body: String, marks: List<String>) = "$body${if (body.isNotEmpty() && marks.isNotEmpty()) " " else ""}${marks.joinToString("") { "$it " }}"
+
+// The chip label of a marker: its kind and file name.
+fun markLabel(mark: String): String {
+    val kind = mark.substring(1, mark.indexOf(':'))
+    val path = mark.substring(mark.indexOf(' ') + 1, mark.length - 1)
+    return "$kind ${path.substringAfterLast('/').ifEmpty { path }}"
+}
+
 // A prompt starting with "!" is a shell command for the chat's terminal, as on the web; null when it is a prompt or empty.
 fun shellCommand(text: String): String? = text.trim().takeIf { it.startsWith("!") }?.drop(1)?.trim()?.ifEmpty { null }
 

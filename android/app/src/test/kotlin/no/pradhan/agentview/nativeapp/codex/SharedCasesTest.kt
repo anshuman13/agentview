@@ -43,6 +43,9 @@ import no.pradhan.agentview.nativeapp.chat.foldTurns
 import no.pradhan.agentview.nativeapp.chat.WorkTitle
 import no.pradhan.agentview.nativeapp.chat.workTitle
 import no.pradhan.agentview.nativeapp.chat.handoffText
+import no.pradhan.agentview.nativeapp.chat.joinMarks
+import no.pradhan.agentview.nativeapp.chat.markLabel
+import no.pradhan.agentview.nativeapp.chat.splitMarks
 import no.pradhan.agentview.nativeapp.chat.latestChecklist
 import no.pradhan.agentview.nativeapp.chat.reviewLabel
 import no.pradhan.agentview.nativeapp.chat.s
@@ -236,6 +239,16 @@ class SharedCasesTest {
     private fun JsonObject.nullable(k: String) = this[k]?.takeIf { it !is JsonNull }
 
     private inline fun <reified T> JsonElement.decode(): T = protocolJson.decodeFromJsonElement(this)
+
+    @Test fun attachments() {
+        for (c in cases("attachments")) {
+            val s = splitMarks(c.str("text"))
+            assertEquals(c.str("name"), c.str("body"), s.body)
+            assertEquals(c.str("name"), c.getValue("marks").jsonArray.map { it.jsonPrimitive.content }, s.marks)
+            assertEquals(c.str("name"), c.getValue("names").jsonArray.map { it.jsonPrimitive.content }, s.marks.map { markLabel(it) })
+            assertEquals(c.str("name"), c.str("joined"), joinMarks(s.body, s.marks))
+        }
+    }
 
     @Test fun handoffText() {
         for (c in cases("handoff-text")) assertEquals(c.str("name"), c.str("expected"), handoffText(c.str("sessionId")))

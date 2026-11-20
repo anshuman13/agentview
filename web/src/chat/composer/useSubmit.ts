@@ -27,7 +27,7 @@ type Input = {
   sentHistory: string[];
   setSentHistory: (list: string[]) => void;
   clearHistoryStep: () => void;
-  apply: (next: string) => void;
+  clear: () => void;
 };
 
 export function useSubmit(i: Input) {
@@ -63,7 +63,7 @@ export function useSubmit(i: Input) {
       sendPrompt(t, stop);
     }
     i.clearHistoryStep();
-    i.apply('');
+    i.clear();
   };
 
   const sendBuild = () => {
@@ -76,7 +76,7 @@ export function useSubmit(i: Input) {
     else prompt(used, lost);
     i.setUses([]);
     i.clearHistoryStep();
-    i.apply('');
+    i.clear();
   };
 
   useEffect(() => {

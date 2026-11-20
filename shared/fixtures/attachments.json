@@ -1,0 +1,9 @@
+[
+  { "name": "no markers", "text": "fix the bug", "body": "fix the bug", "marks": [], "names": [], "joined": "fix the bug" },
+  { "name": "one image after text", "text": "look at this [Image: /tmp/av/paste-1.png] ", "body": "look at this", "marks": ["[Image: /tmp/av/paste-1.png]"], "names": ["Image paste-1.png"], "joined": "look at this [Image: /tmp/av/paste-1.png] " },
+  { "name": "only a marker", "text": "[Image: /tmp/av/paste-1.png] ", "body": "", "marks": ["[Image: /tmp/av/paste-1.png]"], "names": ["Image paste-1.png"], "joined": "[Image: /tmp/av/paste-1.png] " },
+  { "name": "an image and a file", "text": "see [Image: /tmp/a.png] [File: /tmp/notes.txt] ", "body": "see", "marks": ["[Image: /tmp/a.png]", "[File: /tmp/notes.txt]"], "names": ["Image a.png", "File notes.txt"], "joined": "see [Image: /tmp/a.png] [File: /tmp/notes.txt] " },
+  { "name": "a trailing space in the text is kept", "text": "see  [Image: /tmp/a.png] ", "body": "see ", "marks": ["[Image: /tmp/a.png]"], "names": ["Image a.png"], "joined": "see  [Image: /tmp/a.png] " },
+  { "name": "a marker in the middle of an older draft", "text": "before [Image: /tmp/a.png] after", "body": "before after", "marks": ["[Image: /tmp/a.png]"], "names": ["Image a.png"], "joined": "before after [Image: /tmp/a.png] " },
+  { "name": "a marker without a trailing space", "text": "hi [Image: /tmp/a.png]", "body": "hi", "marks": ["[Image: /tmp/a.png]"], "names": ["Image a.png"], "joined": "hi [Image: /tmp/a.png] " }
+]

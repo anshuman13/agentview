@@ -26,7 +26,7 @@ import { buildTranscript } from './chat/transcript/steps';
 import { foldTurns, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { handoffText } from './chat/composer/composerLogic';
+import { handoffText, joinMarks, markChip, splitMarks } from './chat/composer/composerLogic';
 import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -233,6 +233,15 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; sessionId: string; expected: string }>('handoff-text')) {
     it(`handoffText: ${c.name}`, () => expect(handoffText(c.sessionId)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; text: string; body: string; marks: string[]; names: string[]; joined: string }>('attachments')) {
+    it(`splitMarks: ${c.name}`, () => {
+      const s = splitMarks(c.text);
+      expect(s).toEqual({ body: c.body, marks: c.marks });
+      expect(s.marks.map((m) => `${markChip(m).kind} ${markChip(m).name}`)).toEqual(c.names);
+      expect(joinMarks(s.body, s.marks)).toBe(c.joined);
+    });
   }
 
   for (const c of cases<{ name: string; events: unknown[]; expected: TodoItem[] | null }>('checklist-events')) {
