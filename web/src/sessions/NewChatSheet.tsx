@@ -13,7 +13,7 @@ import { UNTITLED } from '../../../shared/util';
 import { dirChoices, since, useWorkspace } from './folders';
 import { openChat } from './goalLogic';
 
-// The sheet behind the new chat buttons (Android NewChatSheet): the repo when none is given (the open chat's first), and the model, which starts on the last one used.
+// The sheet behind the new chat buttons (Android NewChatSheet): the repo when none is given (the open chat's first), and the model, which starts on the last one used, else the provider's default (its first model, which the chat gets when none is sent).
 export function NewChatSheet({ repo: fixed, onClose }: { repo?: string; onClose: () => void }) {
   const cwd = useStore((s) => s.session.cwd);
   const live = useStore((s) => s.live);
@@ -61,11 +61,13 @@ export function NewChatSheet({ repo: fixed, onClose }: { repo?: string; onClose:
         <>
           <Section label="Repo" />
           <div className="ui-group">
-            <div className="ui-fields">
+            <label className="as-date-row">
+              <Icon name="repo" /><span>Repo</span>
+              <em>{dirs.find((d) => d.cwd === repo)?.name}</em><Icon name="chevron-right" small />
               <select aria-label="Repo" value={repo} onChange={(e) => setPicked(e.target.value)}>
                 {dirs.map((d) => <option key={d.cwd} value={d.cwd}>{d.name}</option>)}
               </select>
-            </div>
+            </label>
           </div>
         </>
       )}
@@ -82,7 +84,7 @@ export function NewChatSheet({ repo: fixed, onClose }: { repo?: string; onClose:
           <Section label="Model" />
           <div className="ui-group">
             <div className="ui-fields">
-              <div className="gl-chips">{models.map((m) => <Chip key={m.value} on={m.value === model} onClick={() => setModel(m.value)}>{m.displayName || m.value}</Chip>)}</div>
+              <div className="gl-chips">{models.map((m) => <Chip key={m.value} on={m.value === (model ?? models[0].value)} onClick={() => setModel(m.value)}>{m.displayName || m.value}</Chip>)}</div>
             </div>
           </div>
         </>

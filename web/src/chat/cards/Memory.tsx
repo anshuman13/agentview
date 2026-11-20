@@ -115,15 +115,19 @@ function MemoryEdit({ file, draft, setDraft, onSaved, onMove }: { file: MemoryFi
     <>
       {draft === null ? (
         <>
-          <Button size="sm" variant="plain" icon="edit" onClick={() => setDraft(file.text)}>Edit</Button>
-          {!isMemoryIndex(file.path) && <Button size="sm" variant="plain" icon="book" disabled={saving} onClick={() => { setSaving(true); void onMove().finally(() => setSaving(false)); }}>Move to wiki</Button>}
-          <Markdown text={file.text || 'Empty'} />
+          <div className="gl-actions">
+            <Button size="sm" variant="plain" icon="edit" onClick={() => setDraft(file.text)}>Edit</Button>
+            {!isMemoryIndex(file.path) && <Button size="sm" variant="plain" icon="book" disabled={saving} onClick={() => { setSaving(true); void onMove().finally(() => setSaving(false)); }}>Move to wiki</Button>}
+          </div>
+          <div className="bd-doc"><Markdown text={file.text || 'Empty'} /></div>
         </>
       ) : (
         <>
           <div className="ui-fields"><textarea rows={8} aria-label="Memory text" value={draft} onChange={(e) => setDraft(e.target.value)} /></div>
-          <Button size="sm" disabled={!draft.trim() || saving} onClick={() => void save(draft)}>Save</Button>
-          <Button size="sm" variant="plain" onClick={() => setDraft(null)}>Cancel</Button>
+          <div className="gl-actions">
+            <Button size="sm" variant="plain" onClick={() => setDraft(null)}>Cancel</Button>
+            <Button size="sm" disabled={!draft.trim() || saving} onClick={() => void save(draft)}>Save</Button>
+          </div>
         </>
       )}
     </>
@@ -166,16 +170,18 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
       else setAsk({ title: 'Discard the edit?', detail: `Your changes to ${open.name} are not saved.`, action: 'Discard', run: async () => toList() });
     };
     return (
-      <Sheet label={open.name} onClose={onClose} onBack={back}>
+      <Sheet label={open.name} onClose={onClose} onBack={back} className="gl-sheet">
         <Section label={open.name} action={<Button size="sm" variant="plain" onClick={back}>Back</Button>} />
-        <div className="muted">{memoryWhere(open, cwd)}</div>
-        {mark && <div className="muted">{markLine(mark, open.at)}</div>}
+        <div className="bd-doc muted">
+          <div>{memoryWhere(open, cwd)}</div>
+          {mark && <div>{markLine(mark, open.at)}</div>}
+        </div>
         {open.editable ? (
           <MemoryEdit file={open} draft={draft} setDraft={setDraft} onSaved={(text) => { setOpen({ ...open, text }); reload(); }} onMove={move} />
         ) : (
           <>
-            {open.path === `${cwd}/${file}` && <Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button>}
-            <Markdown text={open.text || 'Empty'} />
+            {open.path === `${cwd}/${file}` && <div className="gl-actions"><Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button></div>}
+            <div className="bd-doc"><Markdown text={open.text || 'Empty'} /></div>
           </>
         )}
         {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
@@ -184,7 +190,7 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
   }
   const retry = () => { setError(''); reload(); };
   return (
-    <Sheet label="Memory" onClose={onClose}>
+    <Sheet label="Memory" onClose={onClose} className="gl-sheet">
       <Section label="Memory" />
       {files === null && !error && <Skeleton rows={3} />}
       {error && !files?.length && <EmptyState size="sm" title="Could not load memory" hint={error} action={<Button size="sm" onClick={retry}>Retry</Button>} />}

@@ -13,5 +13,10 @@
   { "name": "uses phone", "label": "Codex", "state": "uses", "device": "phone", "expected": "What should Codex do with it?" },
   { "name": "idle desktop", "label": "Claude", "state": "idle", "device": "desktop", "expected": "Ask anything · / commands · @ files · @chat: chats" },
   { "name": "idle touch", "label": "Claude", "state": "idle", "device": "touch", "expected": "Ask anything · / commands · @ files · @chat: chats" },
-  { "name": "idle phone", "label": "Claude", "state": "idle", "device": "phone", "expected": "Ask anything · / commands · @ files · @chat: chats" }
+  { "name": "idle phone", "label": "Claude", "state": "idle", "device": "phone", "expected": "Ask anything · / commands · @ files · @chat: chats" },
+  { "name": "waiting narrow", "label": "Claude", "state": "waiting", "device": "narrow", "expected": "Answer above or send to stop" },
+  { "name": "compacting narrow", "label": "Claude", "state": "compacting", "device": "narrow", "expected": "Sends after compacting" },
+  { "name": "running narrow", "label": "Codex", "state": "running", "device": "narrow", "expected": "Codex reads this next" },
+  { "name": "uses narrow", "label": "Claude", "state": "uses", "device": "narrow", "expected": "What should Claude do?" },
+  { "name": "idle narrow", "label": "Claude", "state": "idle", "device": "narrow", "expected": "Ask · / commands · @ files" }
 ]

@@ -27,9 +27,9 @@ import { useUploads } from './useUploads';
 import { providerLabel } from '../../../../shared/providers';
 import { composerPlaceholder } from '../../../../shared/composerText';
 
-function placeholderFor(label: string, running: boolean, waiting: boolean, compacting: boolean, hasUses: boolean) {
+function placeholderFor(label: string, running: boolean, waiting: boolean, compacting: boolean, hasUses: boolean, narrow: boolean) {
   const state = waiting ? 'waiting' : compacting ? 'compacting' : running ? 'running' : hasUses ? 'uses' : 'idle';
-  return composerPlaceholder(label, state, touch() ? 'touch' : 'desktop');
+  return composerPlaceholder(label, state, narrow ? 'narrow' : touch() ? 'touch' : 'desktop');
 }
 
 export const Composer = memo(function Composer() {
@@ -110,7 +110,7 @@ export const Composer = memo(function Composer() {
             aria-autocomplete="list"
             aria-controls={ac.open ? popId : undefined}
             aria-activedescendant={ac.open ? `${popId}-${ac.sel}` : undefined}
-            placeholder={placeholderFor(label, running, waiting, compacting, uses.length > 0)}
+            placeholder={placeholderFor(label, running, waiting, compacting, uses.length > 0, narrow)}
             spellCheck={!ac.shell}
             onChange={(e) => { setText(e.target.value); setCaret(e.target.selectionStart); }}
             onSelect={(e) => setCaret(e.currentTarget.selectionStart)}

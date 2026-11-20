@@ -15,6 +15,9 @@ export function focusOf(el: Element | null): FindFocus {
   return 'none';
 }
 
+// The pane ⌘F acts on: the focused element's, or with focus on the body (a click on empty space) the pane of the last pointer press while it is still on the page.
+export const findFocus = (active: Element | null, pressed: Element | null) => focusOf(active && active !== document.body ? active : pressed?.isConnected ? pressed : null);
+
 // Where ⌘F searches. `list` is the Codex list, null while a page is open over it.
 export function findScope({ focus, chatShown, codexShown, list }: { focus: FindFocus; chatShown: boolean; codexShown: boolean; list: List | null }): FindScope {
   if (focus === 'modal' || focus === 'terminal' || focus === 'editor') return null;

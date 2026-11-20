@@ -58,7 +58,7 @@ export function SeriesPage({ series }: { series: string }) {
         <article className="mt-page">
           {!members.length ? <EmptyState size="md" icon="calendar" title="No meetings" /> : (
             <>
-              <Section label={members[0].title} action={(
+              <div className="mt-title"><Section label={members[0].title} action={(
                 <>
                   {next && <Button variant="filled" size="sm" onClick={() => openMeeting(next)}>Open next</Button>}
                   <span className="mt-series-more"><IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
@@ -70,7 +70,7 @@ export function SeriesPage({ series }: { series: string }) {
                     )}
                   </span>
                 </>
-              )} />
+              )} /></div>
               <div className="mt-chips">
                 {cadence && <span className="chip">{cadence}</span>}
                 {people.length > 0 && <span className="chip">{people.length === 1 ? '1 person' : `${people.length} people`}</span>}

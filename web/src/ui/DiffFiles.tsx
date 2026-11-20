@@ -16,6 +16,9 @@ export function splitDiff(diff: string) {
 
 const lineClass = (l: string) => (l[0] === '+' ? 'add' : l[0] === '-' ? 'del' : l.startsWith('@@') ? 'hunk' : '');
 
+// A folder path that wraps after its slashes before it breaks inside a folder name.
+const breakAtSlashes = (dir: string) => dir.split('/').map((s, i) => <Fragment key={i}>{i > 0 && <>/<wbr /></>}{s}</Fragment>);
+
 export function Files({ files, diffs }: { files: { path: string; additions: number; deletions: number }[]; diffs: Map<string, string> }) {
   const [open, setOpen] = useState<string | null>(null);
   return (
@@ -28,7 +31,7 @@ export function Files({ files, diffs }: { files: { path: string; additions: numb
             <Row
               title={name}
               leading={<FileIcon name={name} />}
-              meta={f.path.slice(0, -name.length - 1)}
+              meta={f.path.includes('/') && breakAtSlashes(f.path.slice(0, -name.length - 1))}
               trailing={<Counts a={f.additions} d={f.deletions} />}
               aria-expanded={shown}
               onClick={() => setOpen(shown ? null : f.path)}

@@ -4,14 +4,17 @@ import { sideChat } from '../../chat/chatActions';
 import { requestFind } from '../../chat/transcript/FindBar';
 import { openSearch, useView, type View } from '../../codex/view';
 import { command } from '../../ui/util';
-import { findScope, focusOf } from './findScope';
+import { findFocus, findScope } from './findScope';
 import { MAC } from './keys';
 
 const shown = (selector: string) => document.querySelector<HTMLElement>(selector)?.offsetParent != null;
 
+let pressed: Element | null = null;
+const onPress = (e: PointerEvent) => { pressed = e.target instanceof Element ? e.target : null; };
+
 function find(e: KeyboardEvent, view: View) {
   const at = document.activeElement;
-  const focus = focusOf(at);
+  const focus = findFocus(at, pressed);
   const scope = findScope({ focus, chatShown: shown('.brief .tr'), codexShown: shown('.as-editor .assistant'), list: view.open || view.tag ? null : view.list });
   if (!scope) return;
   e.preventDefault();
@@ -55,6 +58,10 @@ export function useWorkbenchKeys({ toggleChat, toggleSidebar, toggleTerminal, sw
       if (k === 'i') { e.preventDefault(); command('assistant'); setTimeout(() => window.dispatchEvent(new Event('assistant:focus')), 50); }
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onPress, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onPress, true);
+    };
   }, []);
 }

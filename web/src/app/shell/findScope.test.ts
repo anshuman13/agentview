@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { findScope, focusOf, type FindFocus, type FindScope } from './findScope';
+import { findFocus, findScope, focusOf, type FindFocus, type FindScope } from './findScope';
 import type { List } from '../../codex/view';
 import { stubGlobal } from '../../../../testing';
 
@@ -42,5 +42,14 @@ describe('focusOf', () => {
     expect(focusOf(inside('as-list', 'assistant', 'editor as-editor shown'))).toBe('codex');
     expect(focusOf(inside('brief'))).toBe('chat');
     expect(focusOf(inside('elsewhere'))).toBe('none');
+  });
+
+  it('takes the pane of the last press while focus is on the body', () => {
+    const pressed = (on: boolean, ...ancestors: string[]) => Object.assign(inside(...ancestors), { isConnected: on });
+    expect(findFocus(document.body, pressed(true, 'as-list', 'assistant'))).toBe('codex');
+    expect(findFocus(null, pressed(true, 'brief'))).toBe('chat');
+    expect(findFocus(inside('brief'), pressed(true, 'assistant'))).toBe('chat');
+    expect(findFocus(document.body, pressed(false, '[dialog]'))).toBe('none');
+    expect(findFocus(document.body, null)).toBe('none');
   });
 });

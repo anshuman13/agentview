@@ -23,7 +23,7 @@ export function ActivityBar({ showing, sidebar, view, browserShown, showView, op
   return (
     <aside className="activitybar desktop-only">
       {VIEWS.map((v) => (
-        <button key={v.id} data-view={v.id} className={(v.id === 'assistant' ? showing === 'assistant' : sidebar && view === v.id) ? 'active' : ''} title={v.id === 'assistant' ? `Codex (${keyText('⌘I')})` : v.title} aria-keyshortcuts={v.id === 'assistant' ? ariaKeys('⌘I') : undefined} onClick={() => showView(v.id)}>
+        <button key={v.id} data-view={v.id} className={(v.id === 'assistant' ? showing === 'assistant' : sidebar && view === v.id) ? 'active' : ''} title={v.id === 'assistant' ? `Codex (${keyText('⌘I')})` : v.title} aria-label={v.title} aria-keyshortcuts={v.id === 'assistant' ? ariaKeys('⌘I') : undefined} onClick={() => showView(v.id)}>
           <Icon name={v.icon} />
           {v.id === 'chats' && chats > 0 && <span className="badge">{chats}</span>}
           {v.id === 'changes' && <ChangesBadge />}
@@ -32,12 +32,12 @@ export function ActivityBar({ showing, sidebar, view, browserShown, showView, op
       ))}
       <span className="divider" />
       {pages.map((p) => (
-        <button key={p.id} data-view={p.id} className={showing === p.id ? 'active' : ''} title={p.title} onClick={() => openPage(p.id)}>
+        <button key={p.id} data-view={p.id} className={showing === p.id ? 'active' : ''} title={p.title} aria-label={p.title} onClick={() => openPage(p.id)}>
           <Icon name={p.icon} />
         </button>
       ))}
       <span className="spacer" />
-      <button className={browserShown ? 'active' : ''} title={`Switch between the file and the browser (${keyText('⌘E')})`} aria-keyshortcuts={ariaKeys('⌘E')} onClick={switchEditor}>
+      <button className={browserShown ? 'active' : ''} title={`Switch between the file and the browser (${keyText('⌘E')})`} aria-label="Switch between the file and the browser" aria-keyshortcuts={ariaKeys('⌘E')} onClick={switchEditor}>
         <Icon name="globe" />
       </button>
     </aside>

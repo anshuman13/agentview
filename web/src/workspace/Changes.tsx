@@ -99,12 +99,12 @@ function Section({ label, files, isSelected, actions, rowActions, onRowClick }: 
   );
 }
 
-// What the branch committed since it left the default branch; rows expand to their patch.
-function Committed({ branch }: { branch: BranchDiff }) {
+// What the branch committed since it left the default branch, on the default branch itself what it has not pushed; rows expand to their patch.
+function Committed({ branch, current }: { branch: BranchDiff; current?: string }) {
   const diffs = useMemo(() => (branch.diff ? splitDiff(branch.diff) : new Map(branch.files.map((f) => [f.path, 'Diff too large to show']))), [branch]);
   return (
     <>
-      <ListSection label={`Committed since ${branch.base}`} count={branch.files.length} />
+      <ListSection label={current === branch.base ? 'Not pushed' : `Committed since ${branch.base}`} count={branch.files.length} />
       <div className="as-group gh-group">
         <Files files={branch.files} diffs={diffs} />
       </div>
@@ -240,7 +240,7 @@ export function Changes() {
           )}
         />
         {status && !files.length && <EmptyState size="sm" title="No changes" />}
-        {branch && branch.files.length > 0 && <Committed branch={branch} />}
+        {branch && branch.files.length > 0 && <Committed branch={branch} current={status?.branch} />}
         <Findings target="local" />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}

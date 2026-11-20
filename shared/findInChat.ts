@@ -1,20 +1,18 @@
 import type { ChatEvent } from './protocol';
+import { matcher, queryWords } from './match';
 
-// The ids, oldest first, of the rows the transcript draws holding every word of the query, ignoring case: user prompts and each turn's last top-level reply; none under two characters. With no hit and an `at` (a message hit's time, whose reply may be an earlier one of its turn), the row that ends the turn holding that time. shared/fixtures/chat-find.json holds the cases.
+// The ids, oldest first, of the user prompts and top-level replies holding every word of the query, ignoring case, the rule the sidebar message search uses; none under two characters. A reply inside a turn's work is found too: the transcript shows the fold that holds it. With no hit and an `at` (a message hit's time), the row that ends the turn holding that time. shared/fixtures/chat-find.json holds the cases.
 export function findInChat(events: ChatEvent[], query: string, at: number | null = null): string[] {
-  const q = query.trim().toLowerCase();
-  if (q.length < 2) return [];
-  const words = q.split(/\s+/);
-  const has = (e: { text: string }) => words.every((w) => e.text.toLowerCase().includes(w));
+  if (query.trim().length < 2) return [];
+  const has = matcher(queryWords(query));
   const hits: string[] = [];
   const turns: { at: number; id: string }[] = [];
-  let reply: { id: string; text: string } | undefined;
-  const endTurn = () => { if (reply && has(reply)) hits.push(reply.id); reply = undefined; };
   for (const e of events) {
-    if (e.kind === 'user') { endTurn(); turns.push({ at: e.at, id: e.id }); if (has(e)) hits.push(e.id); }
-    else if (e.kind === 'assistant' && !e.parent) { reply = e; if (turns.length) turns[turns.length - 1].id = e.id; }
+    if (e.kind === 'user') turns.push({ at: e.at, id: e.id });
+    else if (e.kind === 'assistant' && !e.parent) { if (turns.length) turns[turns.length - 1].id = e.id; }
+    else continue;
+    if (has(e.text)) hits.push(e.id);
   }
-  endTurn();
   if (hits.length || at == null) return hits;
   const turn = turns.filter((t) => t.at <= at).pop() ?? turns[0];
   return turn ? [turn.id] : [];
