@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { appSettings } from '../app/appSettings';
 import { track } from '../app/featureUse';
-import { notice, prompt, send, useStore } from '../app/store';
+import { newChat, knownModels, startModel } from '../app/newChat';
+import { notice, prompt, useStore } from '../app/store';
 import { Button, Chip } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Row } from '../ui/Row';
@@ -39,16 +40,20 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const [inHere, setInHere] = useState(false);
   const [dir, setDir] = useState(cwd);
   const [provider, setProvider] = useState<Provider>(defaultProvider);
+  const [model, setModel] = useState(() => startModel(defaultProvider));
   const [menu, setMenu] = useState(false);
+  const [modelMenu, setModelMenu] = useState(false);
   const [sent, setSent] = useState(false);
   const [presets, setPresets] = useState(loadPresets);
   const [preset, setPreset] = useState<string | null>(null);
   const [naming, setNaming] = useState<string | null>(null);
   const pick = useRef<HTMLSpanElement>(null);
+  const modelPick = useRef<HTMLSpanElement>(null);
   const opened = useRef(chat);
   useEffect(() => { if (chat !== opened.current) onClose(); }, [chat, onClose]);
   const canHere = Boolean(here && !active);
   const target = canHere && inHere ? chatProvider : provider;
+  const models = knownModels(provider);
   const dirs = folders.flatMap((f) => [{ cwd: f.cwd, name: f.name }, ...f.trees.map((w) => ({ cwd: w.cwd, name: w.name.split('/').pop()! }))]);
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
   const badEvery = Boolean(custom.trim()) && parseEvery(custom) === null;
@@ -65,7 +70,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
       // The sheet closes when the new chat opens; a server error re-enables Start.
       setSent(true);
       setTimeout(() => setSent(false), 10_000);
-      send({ type: 'new_session', cwd: root, provider, text });
+      newChat({ cwd: root, provider, text, ...(model && { model }) });
     }
   };
   const applyPreset = (p: GoalPreset) => {
@@ -145,10 +150,20 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
                 <Chip on aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>{providerLabel(provider)}</Chip>
                 {menu && (
                   <Menu trigger={pick} onClose={() => setMenu(false)}>
-                    {providers.map((p) => <MenuItem key={p.id} onClick={() => { setProvider(p.id); setMenu(false); }}>{p.label}</MenuItem>)}
+                    {providers.map((p) => <MenuItem key={p.id} onClick={() => { setProvider(p.id); setModel(startModel(p.id)); setMenu(false); }}>{p.label}</MenuItem>)}
                   </Menu>
                 )}
               </span>
+              {models.length > 0 && (
+                <span className="gl-anchor" ref={modelPick}>
+                  <Chip on aria-haspopup="menu" aria-expanded={modelMenu} onClick={() => setModelMenu(!modelMenu)}>{models.find((m) => m.value === model)?.displayName ?? 'Default model'}</Chip>
+                  {modelMenu && (
+                    <Menu trigger={modelPick} onClose={() => setModelMenu(false)}>
+                      {models.map((m) => <MenuItem key={m.value} onClick={() => { setModel(m.value); setModelMenu(false); }}>{m.displayName}</MenuItem>)}
+                    </Menu>
+                  )}
+                </span>
+              )}
             </>
           )}
         </div>
