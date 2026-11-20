@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'bun:test';
 import type { ItemRow } from '../sync';
 import { dayLabel } from '../dates';
+import { givenPreferences } from '../../../../../shared/preferences';
 import { clock } from '../../../../../shared/util';
-import { decisionLog, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
+import { ungivenPreferences, decisionLog, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
 import { briefFor, decisionsWith, commitmentsOf, priorWith, seriesOf, seriesMeetings, seriesRepeats, seriesTitle, joinMinutes, meetingBadge, meetingMeta, openQuestions, searchMeetings, topicTimeline, trackedTopics } from '../meetings/meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
@@ -89,6 +91,25 @@ describe('wiki', () => {
     expect([...similarLive([near], all)].map(([k, v]) => [k, v.id])).toEqual([['work:n1', 'l1']]);
     expect(similarLive([{ ...near, replaces: 'l1' }], all).size).toBe(0);
     expect(similarLive([fact('n2', 'p1', 'One', 'Unrelated lunch order', { state: 'proposed' })], all).size).toBe(0);
+  });
+
+  it('marks the Memory claims chats do not get', () => {
+    const now = 1_000_000_000_000;
+    const memory = (id: string, extra: Partial<Fact> = {}) => fact(id, null as never, '', id, { state: 'live', at: now - Number(id.slice(1)) * 1000, ...extra });
+    const list = [
+      ...Array.from({ length: 16 }, (_, i) => memory(`m${i}`)),
+      memory('m17', { profile: 'personal' }),
+      memory('m18', { contested: JSON.stringify({ by: 'you', at: 1, note: 'no' }) }),
+      memory('m19', { at: now - 100 * 86_400_000 }),
+      memory('m20', { superseded_by: 'm0' }),
+      fact('pg', 'p1', 'One', 'On a page'),
+    ];
+    expect([...ungivenPreferences(list, now)]).toEqual(['work:m15']);
+  });
+
+  it('gives the shared preference cases', () => {
+    const cases = JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/preferences.json', import.meta.url), 'utf8')) as { name: string; profile: string; now: number; facts: Fact[]; expected: string[] }[];
+    for (const c of cases) expect(givenPreferences(c.facts, c.profile, c.now).map((f) => f.id), c.name).toEqual(c.expected);
   });
 
   it('shows proposed claims on their page, and leaves rejected ones and search out', () => {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantTable, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask/ask';
-import { olderClaims, pageClaims, staleClaims, proposals } from '../data/wiki/wiki';
+import { olderClaims, pageClaims, staleClaims, proposals, ungivenPreferences } from '../data/wiki/wiki';
 import { mentionsOf, type Mentions } from '../data/meetings/mentions';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Button, IconButton } from '../../ui/Button';
@@ -34,6 +34,7 @@ export function WikiPage({ id }: { id: string }) {
   const groups = useMemo(() => pageClaims(facts, pid), [facts, pid]);
   const older = useMemo(() => olderClaims(facts, pid), [facts, pid]);
   const stale = useMemo(() => new Set(staleClaims(facts, pid).map((f) => f.id)), [facts, pid]);
+  const ungiven = useMemo(() => (pid ? undefined : ungivenPreferences(facts)), [facts, pid]);
   const total = useMemo(() => groups.reduce((n, g) => n + g.claims.length, 0), [groups]);
   const { showAll, showOlder, setShowOlder, flash } = useClaimAnchor(id, older, facts.length > 0);
   const [shown, more] = useWindow(String(pid));
@@ -79,7 +80,7 @@ export function WikiPage({ id }: { id: string }) {
               {pid && <PageTile page={page} />}
               {page.summary && <p className="wk-lede">{page.summary}</p>}
               <PendingBanner pending={pending} page={page} decided={decided} setDecided={setDecided} review={review} setConfirm={setConfirm} />
-              <ClaimGroups groups={visible} page={page.title ?? ''} flash={flash} mentions={mentions} review={review} />
+              <ClaimGroups groups={visible} page={page.title ?? ''} flash={flash} mentions={mentions} review={review} ungiven={ungiven} />
               <ShowMore shown={shown} total={total} onMore={more} />
               <OlderClaims older={older} stale={stale} open={showOlder} toggle={() => setShowOlder((v) => !v)} page={page.title ?? ''} flash={flash} />
               {!groups.length && !older.length && <EmptyState size="sm" icon="book" title="No claims yet" hint={`They appear here as meetings, Slack threads and issues mention ${page.title}`} />}

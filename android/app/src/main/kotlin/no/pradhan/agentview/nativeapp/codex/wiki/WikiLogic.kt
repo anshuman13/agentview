@@ -171,6 +171,30 @@ fun isOld(f: Row, now: Long): Boolean {
     return f.str("state") == "retired" || (f.str("state") != "proposed" && at != null && at > 0 && now - at > RETIRE_AFTER && !(usedAt != null && usedAt > 0 && now - usedAt <= USED_WITHIN))
 }
 
+const val PREFERENCES = 15
+const val PREFERENCE_CHARS = 1500
+
+// The profile's Memory claims that chats get; mirrors shared/preferences.ts givenPreferences, checked by shared/fixtures/preferences.json.
+fun givenPreferences(facts: List<Row>, profile: String, now: Long): List<Row> {
+    val live = liveRows(facts).filter { it.profile == profile && it.str("page_id").isNullOrEmpty() && it.str("superseded_by").isNullOrEmpty() && it.str("contested").isNullOrEmpty() && !isOld(it, now) && it.str("text") != null }
+    val given = ArrayList<Row>()
+    var chars = 0
+    for (f in live.sortedByDescending { it.long("at") ?: 0L }.take(PREFERENCES)) {
+        val length = "- ${f.str("text")!!.replace(Regex("\\s+"), " ").trim()}".length
+        if (chars + length > PREFERENCE_CHARS) break
+        given.add(f)
+        chars += length
+    }
+    return given
+}
+
+// The Memory claims on the page's main list that chats do not get, by key.
+fun ungivenPreferences(facts: List<Row>, now: Long): Set<String> {
+    val given = facts.map { it.profile }.distinct().flatMap { p -> givenPreferences(facts, p, now).map { it.key } }.toSet()
+    val current = currentClaims(facts)
+    return liveRows(facts).filter { it.str("page_id").isNullOrEmpty() && current(it) && it.str("contested").isNullOrEmpty() && !isOld(it, now) && it.key !in given }.map { it.key }.toSet()
+}
+
 class Claim(val fact: Row, val old: List<Row>)
 class ClaimGroup(val heading: String, val claims: List<Claim>)
 

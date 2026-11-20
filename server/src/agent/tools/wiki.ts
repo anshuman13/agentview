@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { profileOf } from '../claude/accounts.js';
 import { isOld as isOldClaim } from '../../../../shared/claimAge.js';
 import { samePage, similarClaim } from '../../../../shared/claimMatch.js';
+import { givenPreferences, preferenceLine, type Preference } from '../../../../shared/preferences.js';
 import { errText } from '../../../../shared/util.js';
 import { hubGet, hubPush, hubRows, hubUsed, mirrored, type HubChange, type HubRow } from '../../integrations/assistant.js';
 import { defineTool } from './tool.js';
@@ -17,23 +18,11 @@ export const WIKI_RULES = [
   'Never propose secrets, credentials, tokens or file contents.',
 ].join(' ');
 
-const PREFERENCES = 15;
-const PREFERENCE_CHARS = 1500;
-
 // The profile's approved Memory claims for the system text, newest first. It reads what the hub mirror holds and pulls
 // again for the next chat, so a hub that is down never delays a chat start.
 export function preferencesText(cwd: string): string {
   void hubRows('facts').catch(() => undefined);
-  const profile = profileOf(cwd);
-  const lines: string[] = [];
-  let chars = 0;
-  const live = mirrored('facts').filter((r) => r.profile === profile && state(r) === 'live' && !r.page_id && !r.superseded_by && !r.contested && !isOld(r) && typeof r.text === 'string');
-  for (const r of live.sort(newest).slice(0, PREFERENCES)) {
-    const line = `- ${(r.text as string).replace(/\s+/g, ' ').trim()}`;
-    if (chars + line.length > PREFERENCE_CHARS) break;
-    lines.push(line);
-    chars += line.length;
-  }
+  const lines = givenPreferences(mirrored('facts') as (HubRow & Preference)[], profileOf(cwd)).map((r) => preferenceLine(r.text as string));
   return lines.length ? `The user's approved preferences:\n${lines.join('\n')}` : '';
 }
 
@@ -116,6 +105,10 @@ export const wikiProposeTool = defineTool({
     const profile = a.profile ?? profileOf(cwd);
     const now = Date.now();
     const { pages, facts } = await own(cwd, profile);
+    const similar = similarClaim(a.text, facts.filter((r) => !r.superseded_by && ['live', 'proposed'].includes(state(r)) && typeof r.text === 'string') as (HubRow & { text: string })[]);
+    const similarNote = similar ? ` Similar to [${similar.id}]: ${similar.text}. Pass replaces if it updates that claim.` : '';
+    const replaces = a.replaces?.trim().replace(/^\[(.*)\]$/, '$1').trim();
+    if (replaces && !facts.some((r) => r.id === replaces && state(r) === 'live' && !r.superseded_by)) return `No live claim [${replaces}] to replace. Call wiki_search for its id, or leave replaces out.${similarNote}`;
     const changes: HubChange[] = [];
     const candidates = pages.map((r) => ({ id: r.id as string, title: String(r.title), state: state(r) }));
     const found = a.page ? candidates.find((r) => r.id === a.page && r.state !== 'rejected') ?? samePage(a.page, candidates) : undefined;
@@ -125,14 +118,13 @@ export const wikiProposeTool = defineTool({
       pageId = crypto.randomUUID();
       changes.push({ table: 'pages', id: pageId, profile, updated_at: now, fields: { title: a.page, section: a.section, summary: null, sort: now, state: 'proposed' } });
     }
-    const similar = similarClaim(a.text, facts.filter((r) => !r.superseded_by && ['live', 'proposed'].includes(state(r)) && typeof r.text === 'string') as (HubRow & { text: string })[]);
     const id = crypto.randomUUID();
     changes.push({
       table: 'facts', id, profile, updated_at: now,
-      fields: { text: a.text, page_id: pageId ?? null, heading: a.heading ?? null, sources: JSON.stringify(a.sources), at: now, state: 'proposed', replaces: a.replaces ?? null, added_by: chatId ? `${provider}:${chatId}` : provider },
+      fields: { text: a.text, page_id: pageId ?? null, heading: a.heading ?? null, sources: JSON.stringify(a.sources), at: now, state: 'proposed', replaces: replaces || null, added_by: chatId ? `${provider}:${chatId}` : provider },
     });
     await hubPush(changes);
     const filed = found && found.id !== a.page && found.title !== a.page ? ` Filed under existing page ${found.title}.` : '';
-    return `Proposed [${id}] for the user to approve${pageId ? '' : ' in memory'}.${filed}${similar ? ` Similar to [${similar.id}]: ${similar.text}. Pass replaces if it updates that claim.` : ''}`;
+    return `Proposed [${id}] for the user to approve${pageId ? '' : ' in memory'}.${filed}${similarNote}`;
   },
 });

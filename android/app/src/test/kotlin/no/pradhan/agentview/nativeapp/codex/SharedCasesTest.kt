@@ -118,6 +118,7 @@ import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
 import no.pradhan.agentview.nativeapp.codex.wiki.claimActions
 import no.pradhan.agentview.nativeapp.codex.wiki.editedClaimText
+import no.pradhan.agentview.nativeapp.codex.wiki.givenPreferences
 import no.pradhan.agentview.nativeapp.codex.wiki.hasLiveClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.isOld
 import no.pradhan.agentview.nativeapp.codex.wiki.pageClaims
@@ -681,6 +682,17 @@ class SharedCasesTest {
                 Row("facts", o.str("id"), o.str("profile"), f = f)
             }
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, restatedClaim(c.str("text"), facts, c.str("profile"))?.id)
+        }
+    }
+
+    @Test fun givenPreferences() {
+        for (c in cases("preferences")) {
+            val facts = c.getValue("facts").jsonArray.map { it.jsonObject }.map { o ->
+                val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+                for (k in listOf("text", "page_id", "state", "superseded_by", "contested", "at", "used_at")) o[k]?.let { f[k] = it }
+                Row("facts", o.str("id"), o.str("profile"), f = f)
+            }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, givenPreferences(facts, c.str("profile"), c.getValue("now").jsonPrimitive.long).map { it.id })
         }
     }
 

@@ -5,6 +5,7 @@ import { Section, sectionCount } from '../../ui/Section';
 import type { ConfirmRequest } from '../../ui/Confirm';
 import { plural } from '../../ui/util';
 import type { Fact, Page, pageClaims } from '../data/wiki/wiki';
+import { rowKey } from '../data/sync';
 import type { Mentions } from '../data/meetings/mentions';
 import { Claim } from './Claim';
 import type { useReview } from './Review';
@@ -41,9 +42,9 @@ export function PendingBanner({ pending, page, decided, setDecided, review, setC
   );
 }
 
-type GroupsProps = { groups: ReturnType<typeof pageClaims>; page: string; flash: string | null; mentions: Map<string, Mentions>; review: Review };
+type GroupsProps = { groups: ReturnType<typeof pageClaims>; page: string; flash: string | null; mentions: Map<string, Mentions>; review: Review; ungiven?: Set<string> };
 
-export function ClaimGroups({ groups, page, flash, mentions, review }: GroupsProps) {
+export function ClaimGroups({ groups, page, flash, mentions, review, ungiven }: GroupsProps) {
   return (
     <>
       {groups.map((g) => {
@@ -52,7 +53,7 @@ export function ClaimGroups({ groups, page, flash, mentions, review }: GroupsPro
           <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
             <Section label={g.heading} count={sectionCount(g.claims.length)} action={open.length > 1 && <Button size="sm" variant="plain" onClick={() => review.approve(open)}>Approve {open.length}</Button>} />
             <ul className="ui-group wk-list">
-              {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page} flash={flash === fact.id} mentions={mentions.get(fact.profile + fact.id)} />)}
+              {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page} flash={flash === fact.id} mentions={mentions.get(fact.profile + fact.id)} ungiven={ungiven?.has(rowKey(fact))} />)}
             </ul>
           </section>
         );

@@ -1,5 +1,6 @@
 import { isOld, RETIRE_AFTER } from '../../../../../shared/claimAge';
-import { decisionKey, keyWords, mayChange, similarClaim, titleWords } from '../../../../../shared/claimMatch';
+import { givenPreferences } from '../../../../../shared/preferences';
+import { decisionKey,keyWords, mayChange, similarClaim, titleWords } from '../../../../../shared/claimMatch';
 import { newId, rowKey, type Profile } from '../sync';
 
 type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
@@ -106,6 +107,13 @@ export function currentClaim(facts: Fact[]) {
 }
 
 export { isOld, RETIRE_AFTER };
+
+// The live, current, uncontested Memory claims on the page's main list that chats do not get (shared/preferences.ts), as profile:id keys.
+export function ungivenPreferences(facts: Fact[], now = Date.now()) {
+  const given = new Set([...new Set(facts.map((f) => f.profile))].flatMap((p) => givenPreferences(facts, p, now).map(rowKey)));
+  const current = currentClaim(facts);
+  return new Set(live(facts).filter((f) => !f.page_id && current(f) && !f.contested && !isOld(f, now) && !given.has(rowKey(f))).map(rowKey));
+}
 
 // The claims shown on a page: current claims newest first under each heading, headings with the newest claim first,
 // each claim with the claims it superseded, directly or down the chain. Old claims are left to olderClaims.
