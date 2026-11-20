@@ -64,6 +64,22 @@ export function currentMeeting(meetings: Meeting[], now: number) {
 
 export const append = (text: string, add: string) => `${text}${text && !/\s$/.test(text) ? ' ' : ''}${add}`;
 
+const MARK = '\\[(?:Image|File): [^\\]]+\\]';
+
+// An attachment is the "[Image: path]" or "[File: path]" marker in the prompt text. The composer edits the body and shows the markers as chips.
+export function splitMarks(text: string) {
+  const marks = text.match(new RegExp(MARK, 'g')) ?? [];
+  const body = text.replace(new RegExp(` ?(?:${MARK} ?)+$`), '').replace(new RegExp(` ?${MARK} ?`, 'g'), ' ');
+  return { body, marks };
+}
+
+export const joinMarks = (body: string, marks: string[]) => `${body}${body && marks.length ? ' ' : ''}${marks.map((m) => `${m} `).join('')}`;
+
+export function markChip(mark: string) {
+  const [, kind, path] = /^\[(Image|File): (.+)]$/.exec(mark)!;
+  return { kind, name: path.split('/').pop() || path };
+}
+
 export function addUse(uses: Use[], u: Use): Use[] {
   const keep = (x: Use) => x.server !== u.server || (!!u.tool && !!x.tool && x.tool !== u.tool);
   return [...uses.filter(keep), u];
