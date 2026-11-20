@@ -25,7 +25,7 @@ import no.pradhan.agentview.nativeapp.codex.Need
 import no.pradhan.agentview.nativeapp.codex.withDismissal
 import no.pradhan.agentview.nativeapp.codex.wiki.chatSource
 import no.pradhan.agentview.nativeapp.codex.wiki.newFact
-import no.pradhan.agentview.nativeapp.codex.wiki.rememberChanges
+import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
 import no.pradhan.agentview.nativeapp.sessions.segmentOf
 
 // A dismissed DM stops waiting and a dismissed bullet is stored on its brief, so every device hides them.
@@ -128,7 +128,7 @@ fun Hub.shareToTask(item: SharedItem, profile: String): Boolean {
 fun Hub.rememberFromChat(text: String, title: String, cwd: String) {
     val profile = segmentOf(cwd)
     val fact = newFact(text, null, profile, System.currentTimeMillis(), "live", chatSource(title, cwd)) ?: return
-    val old = rememberChanges(fact.str("text") ?: "", codex.state.value.facts, profile)
+    val old = restatedClaim(fact.str("text") ?: "", codex.state.value.facts, profile)
     if (!codex.add(fact)) return
     if (old != null) {
         codex.update(fact, mapOf("replaces" to old.id))

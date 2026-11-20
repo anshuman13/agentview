@@ -221,9 +221,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
                     }
                 }
             })
-        if (editing) ClaimTextSheet("Edit claim", f.str("text") ?: "", "Save", { editing = false }) { text ->
-            editedClaimText(f.str("text"), text)?.let { actions.change(f, mapOf("text" to it), "Claim updated") }
-        }
+        if (editing) ClaimTextSheet("Edit claim", f.str("text") ?: "", "Save", { editing = false }) { text -> review.edit(f, text) }
         if (contesting) Sheet({ contesting = false }, "Contest claim", full = false) {
             FieldLabel("Why is this claim wrong?")
             TextField(note, { note = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is wrong or out of date? Link a source if you have one.", minLines = 2)

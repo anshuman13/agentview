@@ -223,7 +223,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   New chat, Copy holds Last reply, Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Memory, Hooks and TODOs.
   Remember… (also in the phone's chat menu) opens one field; Save stores a live Memory claim in the chat's profile with a
   Chat source of the chat's title and folder and shows "Saved to Memory" with Undo; empty text saves nothing. When the
-  text overlaps a current Memory claim (no page, same profile, `rememberChanges`) the new claim supersedes it, the snack
+  text overlaps a current Memory claim (no page, same profile, `restatedClaim`) the new claim supersedes it, the snack
   reads "Saved to Memory, replacing a similar claim", and Undo deletes the new claim and restores the old one.
   The Build row picks Off or Spec flow, which makes Claude
   run every build request through the `/agentview:build` skill (`buildFlow`, a UserPromptSubmit hook says so on each

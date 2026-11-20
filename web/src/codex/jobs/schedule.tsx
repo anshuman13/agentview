@@ -54,7 +54,7 @@ export function jobEdits(j: Pick<Job, 'name' | 'prompt'>, name: string, prompt: 
   return patch;
 }
 
-export const queued =(j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
+export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
 // Until when the hub holds the job's runs for its profile's usage limit (the `jobs:<profile>` pause), or null.
 export const heldUntil = (j: Job, paused: Paused[], now: number) => paused.find((p) => p.scan === `jobs:${j.profile}` && p.until > now)?.until ?? null;

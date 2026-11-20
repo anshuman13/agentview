@@ -113,7 +113,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.claimActions
 import no.pradhan.agentview.nativeapp.codex.wiki.editedClaimText
 import no.pradhan.agentview.nativeapp.codex.wiki.isOld
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
-import no.pradhan.agentview.nativeapp.codex.wiki.rememberChanges
+import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
 import no.pradhan.agentview.nativeapp.codex.wiki.similarClaim
 import no.pradhan.agentview.nativeapp.chat.appendRule
 import no.pradhan.agentview.nativeapp.chat.can
@@ -635,14 +635,14 @@ class SharedCasesTest {
         }
     }
 
-    @Test fun rememberChanges() {
+    @Test fun restatedClaim() {
         for (c in cases("remember")) {
             val facts = c.getValue("facts").jsonArray.map { it.jsonObject }.map { o ->
                 val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
                 for (k in listOf("text", "page_id", "state", "superseded_by")) o[k]?.let { f[k] = it }
                 Row("facts", o.str("id"), o.str("profile"), f = f)
             }
-            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, rememberChanges(c.str("text"), facts, c.str("profile"))?.id)
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, restatedClaim(c.str("text"), facts, c.str("profile"))?.id)
         }
     }
 

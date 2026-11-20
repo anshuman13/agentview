@@ -42,7 +42,7 @@ import { ago, money } from './ui/util';
 import { setSystemTime } from '../../testing';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
-import { rememberChanges, type Fact, type Job, type Meeting } from './codex/data/wiki/wiki';
+import { restatedClaim, type Fact, type Job, type Meeting } from './codex/data/wiki/wiki';
 import { heldUntil, jobEdits, tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
 import { followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
@@ -206,7 +206,7 @@ describe('cases shared with the Android app', () => {
 
   type RememberCase = { name: string; text: string; profile: Profile; facts: { id: string; profile: Profile; text: string; page_id?: string; state?: string; superseded_by?: string }[]; expected: string | null };
   for (const c of cases<RememberCase>('remember')) {
-    it(`rememberChanges: ${c.name}`, () => expect(rememberChanges(c.text, c.facts as unknown as Fact[], c.profile)?.id ?? null).toBe(c.expected));
+    it(`restatedClaim: ${c.name}`, () => expect(restatedClaim(c.text, c.facts as unknown as Fact[], c.profile)?.id ?? null).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; old: string | null; next: string; expected: string | null }>('claim-edit')) {

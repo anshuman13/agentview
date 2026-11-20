@@ -7,6 +7,7 @@ import { Button, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { setView, useEscapeBack } from '../view';
 import { Swipe } from '../gestures/Swipe';
+import { ClaimTextForm } from './Claim';
 import { ClaudeChip, SourceChip } from './Chips';
 import { Replaces, useReview } from './Review';
 import { reviewQueue } from './reviewQueue';
@@ -28,13 +29,7 @@ function EditableText({ fact }: { fact: Fact }) {
     );
   }
   return (
-    <span className="wk-contest-form">
-      <textarea autoFocus rows={3} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)} />
-      <span className="wk-contest-btns">
-        <Button onClick={() => setEditing(false)}>Cancel</Button>
-        <Button variant="primary" onClick={() => { edits.save(draft); setEditing(false); }}>Save</Button>
-      </span>
-    </span>
+    <ClaimTextForm draft={draft} setDraft={setDraft} onSave={() => { edits.save(draft); setEditing(false); }} onCancel={() => setEditing(false)} rows={3} />
   );
 }
 

@@ -172,7 +172,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
                 if (tools != null) { ListRow("Tools", toolLabels(tools, servers).joinToString(", ")); Hairline() }
                 val latest = runs.firstOrNull()
                 if (latest == null) ListRow("Runs", "Not run yet")
-                else ListRow("Runs", runTime(latest, now),onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
+                else ListRow("Runs", runTime(latest, now), onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
             }
         }
         if (tasks.isNotEmpty()) {

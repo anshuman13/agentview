@@ -11,6 +11,19 @@ import { useClaimEdits } from './useClaimEdits';
 import { useReview } from './Review';
 import { actionsFor, shortDate, type ClaimButton } from './shared';
 
+export function ClaimTextForm({ draft, setDraft, onSave, onCancel, rows }: { draft: string; setDraft: (v: string) => void; onSave: () => void; onCancel: () => void; rows: number }) {
+  return (
+    <span className="wk-contest-form">
+      <textarea autoFocus rows={rows} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') onCancel(); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) onSave(); }} />
+      <span className="wk-contest-btns">
+        <Button onClick={onCancel}>Cancel</Button>
+        <Button variant="primary" onClick={onSave}>Save</Button>
+      </span>
+    </span>
+  );
+}
+
 export const Claim = memo(function Claim({ fact, old, page, flash, mentions, stale }: { fact: Fact; old: Fact[]; page: string; flash: boolean; mentions?: Mentions; stale?: boolean }) {
   const review = useReview();
   const edits = useClaimEdits(fact, page);
@@ -45,14 +58,7 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
       <Swipe onRight={proposed ? () => review.approve([fact]) : undefined} onLeft={proposed ? () => review.reject([fact]) : undefined} rightLabel="Approve" leftLabel="Reject" leftIcon="close">
         <Row plain lines={2} onLongPress={items.length ? () => setMenu(true) : undefined}
           title={editing ? (
-            <span className="wk-contest-form">
-              <textarea autoFocus rows={2} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') setEditing(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} />
-              <span className="wk-contest-btns">
-                <Button onClick={() => setEditing(false)}>Cancel</Button>
-                <Button variant="primary" onClick={save}>Save</Button>
-              </span>
-            </span>
+            <ClaimTextForm draft={draft} setDraft={setDraft} onSave={save} onCancel={() => setEditing(false)} rows={2} />
           ) : fact.text}
           meta={editing ? undefined : (
             <>

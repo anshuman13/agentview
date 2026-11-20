@@ -2,7 +2,7 @@ import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../a
 import { copyText, showChat } from '../ui/util';
 import { chatMarkdown, handoffText, lastReply, replyNote } from './composer/composerLogic';
 import { assistantStore } from '../codex/data';
-import { rememberChanges, rememberedFact } from '../codex/data/wiki/wiki';
+import { restatedClaim, rememberedFact } from '../codex/data/wiki/wiki';
 import { showSnack } from '../codex/view';
 import { profileOfPath } from '../../../shared/workspace';
 
@@ -54,7 +54,7 @@ export function rememberChat(text: string) {
   const { cwd } = st.session;
   const profile = profileOfPath(cwd);
   const store = assistantStore();
-  const old = rememberChanges(text, store.snapshot().facts, profile);
+  const old = restatedClaim(text, store.snapshot().facts, profile);
   const fact = rememberedFact(text, profile, st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd);
   void store.editRow('facts', fact, old ? { replaces: old.id } : {});
   if (old) void store.editRow('facts', old, { superseded_by: fact.id });
