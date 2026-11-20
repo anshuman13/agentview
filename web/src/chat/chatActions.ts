@@ -69,9 +69,13 @@ export function copyChatMarkdown() {
   copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? '')).then(() => notice('Chat copied'), () => notice('Could not copy'));
 }
 
+export function copyReply(text: string) {
+  copyText(text).then(() => notice('Reply copied'), () => notice('Could not copy'));
+}
+
 export function copyLastReply() {
   const reply = lastReply(getState().events);
-  if (reply) copyText(reply).then(() => notice('Reply copied'), () => notice('Could not copy'));
+  if (reply) copyReply(reply);
 }
 
 export function copyPrompt(text: string) {

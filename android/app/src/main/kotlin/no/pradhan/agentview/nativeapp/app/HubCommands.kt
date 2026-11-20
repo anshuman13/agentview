@@ -106,6 +106,7 @@ fun Hub.retryTurn(chat: String) = post(retryCmd(), chat)
 fun Hub.submit(text: String, steer: Boolean, onLost: () -> Unit) {
     val t = text.trim()
     if (t.isEmpty()) return
+    if (!readOnly) savedPrompts.add(t)
     val chat = store.wanted
     val running = store.state.value.let { s -> s.session?.running ?: s.live.firstOrNull { it.id == chat }?.running } == true
     val id = UUID.randomUUID().toString()

@@ -11,6 +11,7 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import no.pradhan.agentview.nativeapp.chat.CACHED_CHATS
 import no.pradhan.agentview.nativeapp.chat.RecentChats
+import no.pradhan.agentview.nativeapp.chat.rememberPrompt
 
 const val MAX_DRAFTS = 30
 const val MAX_CHAT_BYTES = 200_000
@@ -38,6 +39,17 @@ class Drafts(private val kv: KeyValue) {
         if (text.isNotEmpty()) map[chat] = text
         while (map.size > MAX_DRAFTS) map.remove(map.keys.first())
         kv.put("drafts", protocolJson.encodeToString(serializer, map))
+    }
+}
+
+// The prompts sent from any chat on this phone, oldest first, like the web's Saved prompts.
+class SavedPrompts(private val kv: KeyValue) {
+    private val serializer = ListSerializer(String.serializer())
+    val items = MutableStateFlow(runCatching { protocolJson.decodeFromString(serializer, kv.get("prompts") ?: "[]") }.getOrDefault(emptyList()))
+
+    fun add(text: String) {
+        items.value = rememberPrompt(text, items.value)
+        kv.put("prompts", protocolJson.encodeToString(serializer, items.value))
     }
 }
 

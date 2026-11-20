@@ -263,6 +263,19 @@ export function rewindReplies(items: Item[]) {
   return out;
 }
 
+// The last reply of each finished turn, when nothing follows it in the turn: the answers that get a Copy action.
+export function turnAnswers(items: Item[]) {
+  const out = new Set<string>();
+  let last: Item | undefined;
+  const flush = () => { if (last?.kind === 'assistant' && !last.streaming) out.add(last.id); };
+  for (const it of items) {
+    if (it.kind === 'user') { flush(); last = undefined; }
+    else last = it;
+  }
+  flush();
+  return out;
+}
+
 export function newMarker(items: Item[], ats: Map<string, number>, seen: number, openedAt: number) {
   if (seen <= 0) return null;
   return items.find((it) => it.kind !== 'user' && (ats.get(it.id) ?? 0) > seen && (ats.get(it.id) ?? 0) <= openedAt)?.id ?? null;

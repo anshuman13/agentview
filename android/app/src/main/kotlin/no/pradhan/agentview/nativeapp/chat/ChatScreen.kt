@@ -99,6 +99,7 @@ class ChatPanels {
     var remind by mutableStateOf(false)
     var memory by mutableStateOf(false)
     var hooks by mutableStateOf(false)
+    var saved by mutableStateOf(false)
     var tools by mutableStateOf(false)
     var dialog by mutableStateOf<String?>(null)
 }
@@ -257,6 +258,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
     val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
     val now = rememberNow(panels.agents && agents.any { it.status == "running" })
+    val prompts by hub.savedPrompts.items.collectAsState()
     if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false, action = { AgentsActions(hub, run, agents) }) {
         run?.let { r ->
             val line = listOfNotNull(runLine(r), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
@@ -268,6 +270,8 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
         val hooks = session?.hooks.orEmpty()
         val open = { panel: () -> Unit -> { panels.tools = false; panel() } }
         Group {
+            ListRow("Saved prompts", plural(prompts.size, "prompt"), muted = prompts.isEmpty(), onClick = if (prompts.isEmpty()) null else open { panels.saved = true }, trailing = { Chevron() })
+            Hairline()
             ListRow("Images", plural(images.size, "image"), muted = images.isEmpty(), onClick = if (images.isEmpty()) null else open { panels.images = true }, trailing = { Chevron() })
             Hairline()
             ListRow("Dev servers", "Dev servers on this Mac", onClick = open { panels.servers = true }, trailing = { Chevron() })
@@ -286,6 +290,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
             }
         }
     }
+    if (panels.saved) SavedPromptsSheet(hub, prompts, live.id) { panels.saved = false }
     if (panels.images) ImagesSheet(hub, live.id, images, cwd) { panels.images = false }
     if (panels.servers) DevServersSheet(hub) { panels.servers = false }
     if (panels.todos) TodosSheet(hub, cwd) { panels.todos = false }

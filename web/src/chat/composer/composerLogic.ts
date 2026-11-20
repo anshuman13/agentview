@@ -121,7 +121,7 @@ export function ghostFor(text: string, history: string[]) {
   return '';
 }
 
-export const remember = (text: string, stored: string[], max = MAX_STORED) => [...stored.filter((t) => t !== text), text].slice(-max);
+export const remember = (text: string, stored: string[], max = MAX_STORED) => (text.trim() ? [...stored.filter((t) => t !== text), text].slice(-max) : stored);
 
 export function filesEdited(events: ChatEvent[]) {
   const paths = new Set<string>();
