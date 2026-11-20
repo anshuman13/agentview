@@ -1,3 +1,4 @@
+import type { ChatRun } from './protocol.js';
 import { clock, span } from './util.js';
 
 // What the start sheet collects: every in ms (0 for until done), the stop as ms from now or as HH:MM, the weekly cap in percent, the run cost cap in dollars, the builds limit.
@@ -22,3 +23,8 @@ export function parseEvery(text: string) {
 
 // The plan path of a goal that runs every task of a plan file, else null.
 export const planOf = (what: string) => /^(?:\/goal\s+)?(?:every task in (\S+) is ticked|every step of the plan in (\S+) is done)/.exec(what.trim())?.slice(1).find(Boolean) ?? null;
+
+// The goal sheet's values for running an ended run again: its condition and limits, and no stop time. A plan goal gives its plan path.
+export function rerunForm(run: Pick<ChatRun, 'what' | 'every' | 'capPct' | 'capUsd' | 'maxBuilds'>): GoalForm & { plan: string | null } {
+  return { what: run.what.trim().replace(/^\/goal\s+/, ''), every: run.every ?? 0, stopIn: null, stopAt: null, capPct: run.capPct ?? null, capUsd: run.capUsd ?? null, builds: run.maxBuilds ?? null, plan: planOf(run.what) };
+}

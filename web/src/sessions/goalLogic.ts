@@ -84,8 +84,8 @@ export function runControl(run: ChatRun, op: RunOp, running = false) {
 
 export const openGoal = (run?: string) => setUi({ goalSheet: run ? { mode: 'detail', run } : { mode: 'start' } });
 
-// The start sheet, for a plan file or for this chat (Android GoalStartSheet callers track the same).
-export function startGoal(opts: { plan?: string; here?: boolean } = {}) {
+// The start sheet, for a plan file, for this chat or filled from an ended run (Android GoalStartSheet callers track the same).
+export function startGoal(opts: { plan?: string; here?: boolean; from?: ChatRun } = {}) {
   if (opts.plan) track('action:runAsGoal');
   setUi({ goalSheet: { mode: 'start', ...opts } });
 }

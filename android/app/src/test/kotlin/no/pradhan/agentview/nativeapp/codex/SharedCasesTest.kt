@@ -56,6 +56,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
 import no.pradhan.agentview.nativeapp.codex.autopilot.addPreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
 import no.pradhan.agentview.nativeapp.codex.autopilot.parsePresets
+import no.pradhan.agentview.nativeapp.codex.autopilot.rerunForm
 import no.pradhan.agentview.nativeapp.codex.autopilot.removePreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.parseEvery
 import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
@@ -273,6 +274,23 @@ class SharedCasesTest {
 
     @Test fun goalEnd() {
         for (c in cases("goal-end")) assertEquals(c.str("name"), c.str("expected"), goalEnd(c.str("why")))
+    }
+
+    @Test fun rerunForm() {
+        for (c in cases("rerun-form")) {
+            val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
+            val f = c.getValue("form").jsonObject
+            val got = rerunForm(run)
+            val name = c.str("name")
+            assertEquals(name, f.str("what"), got.form.what)
+            assertEquals(name, f.getValue("every").jsonPrimitive.long, got.form.every)
+            assertEquals(name, f.nullable("stopIn")?.jsonPrimitive?.long, got.form.stopIn)
+            assertEquals(name, f.nullable("stopAt")?.jsonPrimitive?.content, got.form.stopAt)
+            assertEquals(name, f.nullable("capPct")?.jsonPrimitive?.int, got.form.capPct)
+            assertEquals(name, f.nullable("capUsd")?.jsonPrimitive?.int, got.form.capUsd)
+            assertEquals(name, f.nullable("builds")?.jsonPrimitive?.int, got.form.builds)
+            assertEquals(name, f.nullable("plan")?.jsonPrimitive?.content, got.plan)
+        }
     }
 
     @Test fun runLine() {

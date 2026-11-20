@@ -125,8 +125,10 @@ private fun <T> MenuChip(label: String, items: List<T>, name: (T) -> String, che
 
 // The start sheet (web GoalSheet): what, how often, stop at, usage cap and where, then Start.
 @Composable
-private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit) {
-    val cwd by hub.store.state.select { it.session?.cwd.orEmpty() }
+private fun GoalStartSheet(hub: Hub, opened: GoalSheet.Start, onClose: () -> Unit) {
+    val init = remember(opened) { opened.from?.let { rerunForm(it) } }
+    val sheet = if (opened.plan == null && init?.plan != null) opened.copy(plan = init.plan) else opened
+    val cwd by hub.store.state.select { st -> st.live.firstOrNull { it.id == opened.from?.chatId }?.cwd ?: st.session?.cwd.orEmpty() }
     val chatProvider by hub.store.state.select { it.session?.provider }
     val active by hub.store.state.select { st -> activeRun(st.runs, st.shownId) != null }
     val ws by hub.workspace.collectAsState()
@@ -134,15 +136,15 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val defaultProvider by hub.defaultProvider.collectAsState()
     val providers = allProviders.filter { it.enabled }
     val canHere = sheet.here && !active
-    var what by remember { mutableStateOf("") }
-    var every by remember { mutableStateOf(EVERY.first().ms) }
-    var custom by remember { mutableStateOf("") }
+    var what by remember { mutableStateOf(init?.form?.what.orEmpty()) }
+    var every by remember { mutableStateOf(init?.form?.every ?: EVERY.first().ms) }
+    var custom by remember { mutableStateOf(init?.form?.every?.takeIf { e -> EVERY.none { it.ms == e } }?.let { everyText(it) }.orEmpty()) }
     var stopIn by remember { mutableStateOf<Long?>(null) }
     var stopAt by remember { mutableStateOf<String?>(null) }
-    var capPct by remember { mutableStateOf<Int?>(70) }
-    var capUsd by remember { mutableStateOf<Int?>(null) }
-    var builds by remember { mutableStateOf<Int?>(null) }
-    var inHere by remember { mutableStateOf(false) }
+    var capPct by remember { mutableStateOf(if (init != null) init.form.capPct else 70) }
+    var capUsd by remember { mutableStateOf(init?.form?.capUsd) }
+    var builds by remember { mutableStateOf(init?.form?.builds) }
+    var inHere by remember { mutableStateOf(init != null && canHere) }
     var dir by remember { mutableStateOf(cwd) }
     var providerId by remember { mutableStateOf(defaultProvider) }
     val group = modelGroup(providerId, allProviders)
@@ -304,6 +306,7 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
                 Button(if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
                 Button("Stop", { hub.runControl(run, "stop") }, variant = ButtonVariant.Danger, enabled = !hub.readOnly)
             }
+            if (ended) Button("Run again…", { hub.shell.goalSheet.value = GoalSheet.Start(here = hub.store.state.value.shownId == run.chatId, from = run) }, enabled = !hub.readOnly)
             Button("Open chat", { open(run.rounds.lastOrNull()?.report) }, variant = ButtonVariant.Plain)
         }
         SectionHeader("Rounds", run.rounds.size.toString())
