@@ -14,7 +14,7 @@ import { askLine } from './runLogic';
 import { Swipe } from '../codex/gestures/Swipe';
 import { copyText, showSnack } from '../codex/view';
 import { isMuted, setMuted } from '../app/runtime/mute';
-import { draftLine, readDraft } from '../chat/composer/composerLogic';
+import { draftKey, draftLine, readDraft } from '../chat/composer/composerLogic';
 import { clock } from '../../../shared/util';
 import { useChatRun } from './useChatRun';
 
@@ -111,6 +111,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
   const row = (
     <div className={`chat-row ${unread ? 'unread' : ''}`}>
       <Row
+        lines={1}
         data-chat-row
         onKeyDown={rowKey}
         title={opening ? `Opening… ${title}` : title}
@@ -155,14 +156,17 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
 
 export const metaLine = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ');
 
-const branchOf = (saved?: string | null, repoBranch?: string) => {
+const draftMeta = (draft: string) => <><span className="chat-draft">Draft:</span> {draft}</>;
+
+const branchOf =(saved?: string | null, repoBranch?: string) => {
   const b = saved || repoBranch;
   return isDefault(b) ? undefined : b;
 };
 
 export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
   const seen = useStore((x) => x.seen);
-  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={s.summary ? metaLine(since(s.lastModified), s.summary) : metaLine(repo, branchOf(s.gitBranch, branch), providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
+  const draft = draftLine(readDraft(s.sessionId));
+  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.summary) : metaLine(repo, branchOf(s.gitBranch, branch), providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
 }
 
 export function WaitingRows({ rows, folders, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; folders: Folder[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
@@ -180,8 +184,8 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   const checkIcon = checks && checks !== 'none' && <CheckIcon state={checks} />;
   const when = c.pending ? metaLine(c.ask, since(c.lastActive)) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : metaLine(since(Math.max(c.lastActive, saved?.lastModified ?? 0)), askLine(c.run));
   // Slack's sidebar draft line: an unsent composer draft replaces the meta line, except in the chat you are in.
-  const draft = selected ? '' : draftLine(readDraft(c.id));
-  const main = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
+  const draft = selected ? '' : draftLine(readDraft(draftKey(c.id, c.sessionId), c.id));
+  const main = draft ? draftMeta(draft) : (
     <>
       {metaLine(repo, branchOf(saved?.gitBranch, branch), c.model && shortModel(c.model), providerMark(c.provider), when)}
       {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{prText(c.pr, pr)}{checkIcon}</a> : <>#{c.pr}{checkIcon}</>}</>}

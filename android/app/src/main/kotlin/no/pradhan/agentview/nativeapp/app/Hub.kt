@@ -58,6 +58,7 @@ import no.pradhan.agentview.nativeapp.WaitingWidget
 import no.pradhan.agentview.nativeapp.chat.ChatStore
 import no.pradhan.agentview.nativeapp.chat.RecentChats
 import no.pradhan.agentview.nativeapp.chat.TranscriptFeed
+import no.pradhan.agentview.nativeapp.chat.draftKey
 import no.pradhan.agentview.nativeapp.chat.encodeModels
 import no.pradhan.agentview.nativeapp.chat.modelGroup
 import no.pradhan.agentview.nativeapp.chat.modelsKey
@@ -360,9 +361,18 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         viewModelScope.launch { s.fill(id) }
     }
 
-    fun draft(chat: String) = drafts.get(chat)
+    private fun draftKeyOf(chat: String) = draftKey(chat, store.state.value.live.firstOrNull { it.id == chat }?.sessionId)
 
-    fun setDraft(chat: String, text: String) = drafts.set(chat, text)
+    // A draft saved under the live id before the chat had a session id is still read until the next write moves it.
+    fun draft(chat: String) = drafts.get(draftKeyOf(chat)).ifEmpty { drafts.get(chat) }
+
+    fun draftOfSession(sessionId: String) = drafts.get(sessionId)
+
+    fun setDraft(chat: String, text: String) {
+        val key = draftKeyOf(chat)
+        drafts.set(key, text)
+        if (key != chat && drafts.get(chat).isNotEmpty()) drafts.set(chat, "")
+    }
 
     // The title a chat had when it was last saved to disk, for showing it offline.
     fun savedTitle(chat: String) = titles.get(chat)

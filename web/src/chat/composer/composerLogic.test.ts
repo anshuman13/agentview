@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, laterDay, sharedTask, triggerAt, turnEnd, withUses, draftLine } from './composerLogic';
+import { accept, addUse, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, laterDay, sharedTask, triggerAt, turnEnd, withUses, draftLine, readDraft } from './composerLogic';
+import { stubGlobal, unstubAllGlobals } from '../../../../testing';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, SavedSession } from '../../../../shared/protocol';
 
@@ -209,6 +210,17 @@ describe('replyNote', () => {
     WORKSPACE.personalRoot = '/Users/me/workspace_personal';
     expect(replyNote(' Fixed. ', 'Importer', '/Users/me/workspace_personal/app')).toEqual({ text: 'Importer\nFixed.', profile: 'personal' });
     expect(replyNote('Fixed.', '', '/Users/me/workspace/app')).toEqual({ text: 'Saved reply\nFixed.', profile: 'work' });
+  });
+});
+
+describe('readDraft', () => {
+  it('moves a draft stored under the live id to the session id', () => {
+    const store = new Map([['agentview.draft.live-1', 'half typed']]);
+    stubGlobal('localStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) });
+    expect(readDraft('sess-1', 'live-1')).toBe('half typed');
+    expect([...store]).toEqual([['agentview.draft.sess-1', 'half typed']]);
+    expect(readDraft('sess-1', 'live-1')).toBe('half typed');
+    unstubAllGlobals();
   });
 });
 

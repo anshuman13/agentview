@@ -35,6 +35,7 @@ function placeholderFor(label: string, running: boolean, waiting: boolean, compa
 
 export const Composer = memo(function Composer() {
   const chat = useStore((s) => s.session.id);
+  const sessionId = useStore((s) => s.session.sessionId);
   const running = useStore((s) => s.session.running);
   const label = useStore((s) => providerLabel(s.session.provider));
   const compacting = useStore((s) => s.session.compacting);
@@ -48,7 +49,7 @@ export const Composer = memo(function Composer() {
   const mirror = useRef<HTMLDivElement>(null);
   const wantCaret = useRef<number | null>(null);
   const popId = useId();
-  const [full, setFull] = useDraft(chat, () => { setUses([]); h.setHist(null); setPick(null); });
+  const [full, setFull] = useDraft(chat, sessionId, () => { setUses([]); h.setHist(null); setPick(null); });
   const { body: text, marks } = splitMarks(full);
   const setText: Dispatch<SetStateAction<string>> = (next) => setFull((f) => {
     const s = splitMarks(f);

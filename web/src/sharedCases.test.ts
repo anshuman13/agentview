@@ -30,7 +30,7 @@ import { buildTranscript } from './chat/transcript/steps';
 import { foldTurns, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { chatMarkdown, failedLine, handoffText, joinMarks, lastReply, markChip, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
+import { chatMarkdown, draftKey, failedLine, handoffText, joinMarks, lastReply, markChip, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
 import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -393,6 +393,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; text: string; parts: unknown[] }>('user-parts')) {
     it(`userParts: ${c.name}`, () => expect(userParts(c.text)).toEqual(c.parts));
+  }
+
+  for (const c of cases<{ name: string; chat: string; sessionId: string | null; expected: string }>('draft-key')) {
+    it(`draftKey: ${c.name}`, () => expect(draftKey(c.chat, c.sessionId)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; events: unknown[]; expected: TodoItem[] | null }>('checklist-events')) {

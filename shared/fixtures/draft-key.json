@@ -1,0 +1,5 @@
+[
+  { "name": "session id set", "chat": "live-1", "sessionId": "1b4e28ba-2fa1-4d3b-a3f0-0c9d2a1e7f10", "expected": "1b4e28ba-2fa1-4d3b-a3f0-0c9d2a1e7f10" },
+  { "name": "no session id yet", "chat": "live-1", "sessionId": null, "expected": "live-1" },
+  { "name": "empty session id", "chat": "live-1", "sessionId": "", "expected": "live-1" }
+]
