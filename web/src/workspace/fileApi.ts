@@ -12,6 +12,10 @@ export const listDir = (path: string) => fetch(api(`/api/dir?path=${encodeURICom
 
 export const fetchGitStatus = () => fetch(api('/api/git/status'));
 
+export type BranchDiff = { base: string; files: { path: string; additions: number; deletions: number }[]; diff: string };
+
+export const fetchBranchDiff = () => fetchJson<BranchDiff>(api('/api/git/branch'));
+
 export const postGit = (action: string, body: unknown) =>
   fetchJson(api(`/api/git/${action}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 

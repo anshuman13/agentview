@@ -151,6 +151,7 @@ import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
+import no.pradhan.agentview.nativeapp.workspace.splitDiff
 import no.pradhan.agentview.nativeapp.codex.wiki.claimActions
 import no.pradhan.agentview.nativeapp.codex.wiki.editedClaimText
 import no.pradhan.agentview.nativeapp.codex.wiki.givenPreferences
@@ -1185,6 +1186,10 @@ class SharedCasesTest {
 
     @Test fun revertBlock() {
         for (c in cases("revert-block")) assertEquals(c.str("name"), c.str("expected"), revertBlock(fileDiff(c.str("original"), c.str("content")), c.getValue("block").jsonPrimitive.int))
+    }
+
+    @Test fun splitDiff() {
+        for (c in cases("split-diff")) assertEquals(c.str("name"), c.getValue("expected").jsonObject.entries.map { it.key to it.value.jsonPrimitive.content }, splitDiff(c.str("diff")).toList())
     }
 
     @Test fun specPrompt() {

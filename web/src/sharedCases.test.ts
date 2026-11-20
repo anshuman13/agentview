@@ -50,6 +50,7 @@ import { HubError, hubRetry } from './codex/data/hubFetch';
 import type { Brief } from './codex/data/wiki/wiki';
 import { reviewQueue } from './codex/wiki/reviewQueue';
 import { revertBlock } from './workspace/revertBlock';
+import { splitDiff } from './ui/DiffFiles';
 import { ago, markSegments, matchLabel, money, stepMatch } from './ui/util';
 import { notesTemplateCaret, notesTemplateChips, notesTemplateText, type NotesTemplate } from './codex/data/meetings/notesTemplates';
 import { setSystemTime } from '../../testing';
@@ -654,6 +655,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; original: string; content: string; block: number; expected: string }>('revert-block')) {
     it(`revertBlock: ${c.name}`, () => expect(revertBlock(c.original, c.content, c.block)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; diff: string; expected: Record<string, string> }>('split-diff')) {
+    it(`splitDiff: ${c.name}`, () => expect([...splitDiff(c.diff)]).toEqual(Object.entries(c.expected)));
   }
 
   for (const c of cases<{ name: string; text: string; expected: { title: string; url: string | null; why: string }[] }>('brief-bullets')) {

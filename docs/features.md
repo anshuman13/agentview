@@ -316,7 +316,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 it reports show up in the pull request's pane, most severe first: a row opens the file on that line, Fix sends
 the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentview/findings.json`). "Review changes
 with Claude" in the Changes view and "Review changes" in the chat menu (web and phone; off while Claude runs or when no file changed)
-run `/code-review` on the working tree; those findings show at the bottom of the Changes view.
+run `/code-review` on the working tree; those findings show at the bottom of the Changes view. The Findings header
+reads the count and "Reviewed <since>" (web and phone). On the phone a working-tree finding opens the file as text,
+scrolled to its line (the last line when it is past the end) and tinted for 1.6 s; read-only mode hides Fix and Dismiss.
 
 In the web Changes view ⌘-click (Ctrl-click) toggles a file into a selection and Shift-click picks a range within
 one section. Discard, Stage and Unstage on a selected row then act on every selected file in that section; Esc
@@ -557,7 +559,7 @@ palette), so they get the full width instead of the sidebar. One page is open at
 
 On the phone Observe, Deploy, MCP Servers, Settings, Files, Source Control and Pull Requests have no editor tab strip. One header row replaces it: Back, the title, a muted one-line subtitle (the repo folder; "N connected of M" on MCP; the file's folder in an open file) and at most one trailing control (Refresh on Observe, Deploy and Pull Requests, Check on MCP, the Explorer's More menu on Files, a More menu with Close file on an open file). Back, the system back and the edge swipe return to the tab that was open before, or to Codex when there was none; in an open file Back shows the Explorer first. With nothing set up, Observe, Deploy and MCP show an empty state with one "Set up with Claude" button (the chat's provider) that asks the chat on screen to do the setup.
 
-Two parts of Source Control are on the phone only: a "Committed since <base>" section listing what the branch committed since it left the default branch (`/api/git/branch`), and a review pager that swipes through the changed files with Keep and Revert, where Revert restores the whole file (`/api/git/revert`).
+Source Control on web and phone has a "Committed since <base>" section below Changes, listing what the branch committed since it left the default branch (`/api/git/branch`); a row expands to its patch, or "Diff too large to show" when the server left the patch out. It is absent when the branch committed nothing or the load fails. The phone only has a review pager that swipes through the changed files with Keep and Revert, where Revert restores the whole file (`/api/git/revert`).
 
 Without a Grafana MCP server, Observe makes no Grafana requests. Observe's Grafana section shows a card per entry in a repo's `grafana.panels` (`{ title, query, unit }`, a PromQL query in
 `~/.agentview/observe.json`): the last value, a 6 hour sparkline with min and max in the hover title, and a link to Explore.

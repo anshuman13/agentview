@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.workspace
 
 import no.pradhan.agentview.nativeapp.ui.DiffLine
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,12 +22,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.shownFeature
@@ -121,14 +125,15 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
 }
 
 // A file of the chat's folder: syntax highlighted, as a diff against HEAD when it changed, Markdown rendered.
+// With a line (a review finding) it opens as plain file text scrolled to that line.
 @Composable
-fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = true) {
+fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = true, line: Int? = null) {
     BackHandler(onBack = onBack)
     val (load, reload) = rememberLoad(path, hub.pageChat) { hub.readFile(path) }
     val file = load.data
     LaunchedEffect(hub, path) { hub.fileChanged.collect { if (it == path) reload() } }
-    var mode by rememberSaveable(path) { mutableStateOf(if (diffFirst) "diff" else "file") }
-    var preview by rememberSaveable(path) { mutableStateOf(true) }
+    var mode by rememberSaveable(path, line) { mutableStateOf(if (diffFirst && line == null) "diff" else "file") }
+    var preview by rememberSaveable(path, line) { mutableStateOf(line == null) }
     var wrap by rememberSaveable { mutableStateOf(false) }
     var changes by rememberSaveable { mutableStateOf(true) }
     val canDiff = file != null && file.original.isNotEmpty() && file.original != file.content
@@ -167,7 +172,7 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
                     DocAskSheet(hub, path, docEdit)
                 }
                 diff -> DiffLinesView(remember(file, changes) { fileDiff(file.original, file.content).let { if (changes) changesOnly(it) else it } }, langOf(path), wrap)
-                else -> CodeView(file.content, langOf(path), wrap)
+                else -> CodeView(file.content, langOf(path), wrap, line)
             }
         }
     }
@@ -204,17 +209,24 @@ private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
 }
 
 private const val HIGHLIGHT_LIMIT = 400_000
+private const val FLASH_MS = 1600L
 
 @Composable
-fun CodeView(text: String, lang: Lang, wrap: Boolean) {
+fun CodeView(text: String, lang: Lang, wrap: Boolean, line: Int? = null) {
     val lines = remember(text) { text.split('\n') }
     val spans by androidx.compose.runtime.produceState<List<List<SynSpan>>?>(null, text, lang) {
         value = if (text.length > HIGHLIGHT_LIMIT) null else withContext(Dispatchers.Default) { highlight(text, lang) }
     }
     val scroll = rememberScrollState()
-    LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4)) {
+    val target = findingScroll(line ?: 0, lines.size)
+    val list = rememberLazyListState(initialFirstVisibleItemIndex = target ?: 0)
+    var flash by remember(line) { mutableStateOf(target) }
+    LaunchedEffect(line) { delay(FLASH_MS); flash = null }
+    LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4), list) {
         itemsIndexed(lines, key = { i, _ -> i }, contentType = { _, _ -> "line" }) { i, l ->
-            CodeLine("${i + 1}", spans?.getOrNull(i)?.let { highlighted(l, it) } ?: AnnotatedString(l), wrap = wrap, scroll = scroll)
+            Box(Modifier.background(if (i == flash) av.accentSoft else Color.Transparent)) {
+                CodeLine("${i + 1}", spans?.getOrNull(i)?.let { highlighted(l, it) } ?: AnnotatedString(l), wrap = wrap, scroll = scroll)
+            }
         }
     }
 }

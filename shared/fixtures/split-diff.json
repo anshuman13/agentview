@@ -1,0 +1,29 @@
+[
+  {
+    "name": "two files, each from its first hunk",
+    "diff": "diff --git a/src/a.ts b/src/a.ts\nindex 1111111..2222222 100644\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1,2 +1,2 @@\n-old\n+new\n same\ndiff --git a/README.md b/README.md\nindex 3333333..4444444 100644\n--- a/README.md\n+++ b/README.md\n@@ -3 +3,2 @@ intro\n line\n+added\n",
+    "expected": {
+      "src/a.ts": "@@ -1,2 +1,2 @@\n-old\n+new\n same\n",
+      "README.md": "@@ -3 +3,2 @@ intro\n line\n+added\n"
+    }
+  },
+  {
+    "name": "a rename into a path with spaces keeps the new path",
+    "diff": "diff --git a/notes/old.md b/my notes/new name.md\nsimilarity index 90%\nrename from notes/old.md\nrename to my notes/new name.md\n--- a/notes/old.md\n+++ b/my notes/new name.md\n@@ -1 +1 @@\n-a\n+b\n",
+    "expected": {
+      "my notes/new name.md": "@@ -1 +1 @@\n-a\n+b\n"
+    }
+  },
+  {
+    "name": "a binary file with no hunk has an empty patch",
+    "diff": "diff --git a/logo.png b/logo.png\nindex 5555555..6666666 100644\nBinary files a/logo.png and b/logo.png differ\n",
+    "expected": {
+      "logo.png": ""
+    }
+  },
+  {
+    "name": "an empty diff has no files",
+    "diff": "",
+    "expected": {}
+  }
+]

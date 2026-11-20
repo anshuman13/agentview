@@ -21,4 +21,7 @@ fun findingKey(f: Finding) = "${f.file}:${f.line}:${f.summary.take(60)}"
 
 fun findingFixPrompt(f: Finding) = "Fix this review finding in ${f.file}:${f.line}: ${f.summary}" + (f.failure?.let { " ($it)" } ?: "")
 
+// The 0-based line index a finding scrolls the file to: its line, or the last one past the end; null for no line.
+fun findingScroll(line: Int, lineCount: Int): Int? = if (line <= 0 || lineCount <= 0) null else minOf(line, lineCount) - 1
+
 fun dismissBody(target: String, f: Finding) = buildJsonObject { put("target", target); put("key", findingKey(f)) }.toString()

@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.workspace
 
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -7,6 +8,7 @@ import androidx.compose.runtime.getValue
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.dismissFinding
 import no.pradhan.agentview.nativeapp.app.reviewFindings
+import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.DotState
@@ -18,16 +20,17 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.StatusDot
+import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.select
 
-// Findings (web/src/ops/Findings.tsx): what /code-review reported, most severe first; a row opens the file.
+// Findings (web/src/ops/Findings.tsx): what /code-review reported, most severe first; a row opens the file on its line.
 @Composable
 fun Findings(hub: Hub, target: String, onOpen: ((Finding) -> Unit)? = null) {
     val cwd by hub.store.state.select { it.session?.cwd }
     val all by hub.findings.collectAsState()
     LaunchedEffect(target, cwd) { runCatching { hub.reviewFindings(target) }.onSuccess { hub.setFindings(target, it) } }
     val review = all[target] ?: return
-    SectionHeader("Findings", review.findings.size.toString())
+    SectionHeader("Findings", review.findings.size.toString(), action = if (review.at > 0) ({ Text("Reviewed ${since(review.at)}", style = Type.callout, maxLines = 1) }) else null)
     Group {
         if (review.findings.isEmpty()) EmptyState("No findings")
         review.findings.forEachIndexed { i, f ->
@@ -35,12 +38,12 @@ fun Findings(hub: Hub, target: String, onOpen: ((Finding) -> Unit)? = null) {
             ListRow(
                 f.summary, "${f.file}:${f.line}", lines = 3,
                 leading = { StatusDot(if (f.verdict == "CONFIRMED") DotState.Bad else DotState.Warn) },
-                trailing = {
+                trailing = if (hub.readOnly) null else ({
                     Button("Fix", { hub.askChat(findingFixPrompt(f)) }, size = ButtonSize.Sm)
                     MoreButton { close ->
                         MenuItem("Dismiss", "close", { close(); hub.dismissFinding(target, f) { r -> if (r != null) hub.setFindings(target, r) } })
                     }
-                },
+                }),
                 onClick = onOpen?.let { { it(f) } },
             )
         }

@@ -69,13 +69,14 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     val provider by hub.store.state.select { it.session?.provider }
     val chat = shownId
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
+    var openLine by rememberSaveable(chat) { mutableStateOf<Int?>(null) }
     var pager by rememberSaveable(chat) { mutableStateOf<List<String>?>(null) }
     var reviewed by rememberSaveable(chat) { mutableStateOf(listOf<String>()) }
     val message = rememberSaveable(chat) { mutableStateOf("") }
     val shownPatch = rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var ask by androidx.compose.runtime.remember { mutableStateOf<List<GitFile>?>(null) }
     val o = open
-    if (o != null) { FileScreen(hub, o, onBack = { open = null }); return }
+    if (o != null) { FileScreen(hub, o, onBack = { open = null; openLine = null }, line = openLine); return }
     val (load, reload) = rememberLoad(chat) { hub.gitStatus() }
     val pg = pager
     if (pg != null) {
@@ -104,7 +105,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                 MenuItem("Review changes with $label", "sparkle", { close(); hub.askChat(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
             }
         }
-        PageBody { ChangesList(hub, load, branchLoad.data, ops, message, shownPatch) { open = it } }
+        PageBody { ChangesList(hub, load, branchLoad.data, ops, message, shownPatch) { open = it.file; openLine = it.line } }
     }
     ask?.let { list ->
         ConfirmDialog(discardTitle(list), discardDetail(list), if (list.any { it.status == "?" }) "Discard and Delete" else "Discard", { ops.run("discard", pathsBody(list)) }, onDismiss = { ask = null })
@@ -112,7 +113,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
 }
 
 @Composable
-private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, ops: GitOps, message: MutableState<String>, shownPatch: MutableState<String?>, onOpenFile: (String) -> Unit) {
+private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, ops: GitOps, message: MutableState<String>, shownPatch: MutableState<String?>, onOpenFinding: (Finding) -> Unit) {
     val status = load.data
     val files = status?.files ?: emptyList()
     val staged = files.filter { it.staged }
@@ -135,7 +136,7 @@ private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, 
         changesSection(changes, ops)
         if (status != null && files.isEmpty()) item { EmptyState("No changes", icon = "source-control", small = false) }
         branch?.takeIf { it.files.isNotEmpty() }?.let { committedSection(it, shownPatch) }
-        item { Column { Findings(hub, "local") { onOpenFile(it.file) } } }
+        item { Column { Findings(hub, "local", onOpenFinding) } }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
 }

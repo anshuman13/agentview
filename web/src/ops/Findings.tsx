@@ -7,6 +7,7 @@ import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { pressable } from '../ui/util';
+import { since } from '../sessions/folders';
 import type { Finding } from '../../../shared/protocol';
 import '../styles/features/github.css';
 
@@ -58,7 +59,7 @@ export function Findings({ target }: { target: string }) {
   const dismiss = (f: Finding) => dismissFinding(target, findingKey(f)).then(setFindings, () => {});
   return (
     <>
-      <Section label="Findings" count={review.findings.length} />
+      <Section label="Findings" count={review.findings.length} action={review.at > 0 && <span className="ui-section-label">Reviewed {since(review.at)}</span>} />
       {review.findings.length === 0 ? (
         <EmptyState size="sm" title="No findings" />
       ) : (

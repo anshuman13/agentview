@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { GitFile, GitStatus } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { setUi, useStore } from '../app/store';
-import { postGit } from './fileApi';
+import { fetchBranchDiff, postGit, type BranchDiff } from './fileApi';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
+import { Files, splitDiff } from '../ui/DiffFiles';
+import { Section as ListSection } from '../ui/Section';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
 import { refresh, useGit } from './gitStatus';
@@ -97,6 +99,19 @@ function Section({ label, files, isSelected, actions, rowActions, onRowClick }: 
   );
 }
 
+// What the branch committed since it left the default branch; rows expand to their patch.
+function Committed({ branch }: { branch: BranchDiff }) {
+  const diffs = useMemo(() => (branch.diff ? splitDiff(branch.diff) : new Map(branch.files.map((f) => [f.path, 'Diff too large to show']))), [branch]);
+  return (
+    <>
+      <ListSection label={`Committed since ${branch.base}`} count={branch.files.length} />
+      <div className="as-group gh-group">
+        <Files files={branch.files} diffs={diffs} />
+      </div>
+    </>
+  );
+}
+
 const NOT_GIT = /not a git repository/i;
 
 export function Changes() {
@@ -109,10 +124,15 @@ export function Changes() {
   const root = useRef<HTMLDivElement>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const anchor = useRef<string | null>(null);
+  const [branch, setBranch] = useState<BranchDiff | null>(null);
+  const reload = () => {
+    void refresh();
+    fetchBranchDiff().then(setBranch, () => setBranch(null));
+  };
 
-  useEffect(() => void refresh(), [id]);
+  useEffect(reload, [id]);
   // ChangesBadge refreshes after each file change; this catches git commands run outside.
-  usePoll(root, 30_000, refresh, [id]);
+  usePoll(root, 30_000, reload, [id]);
 
   const run: Run = async (action, body) => {
     setFailed('');
@@ -124,7 +144,7 @@ export function Changes() {
       return false;
     } finally {
       setPicked(new Set());
-      void refresh();
+      reload();
     }
   };
 
@@ -168,7 +188,7 @@ export function Changes() {
 
   return (
     <div className="scm" ref={root} onKeyDown={(e) => e.key === 'Escape' && picked.size > 0 && setPicked(new Set())}>
-      <BranchBar status={status} onRefresh={() => void refresh()} />
+      <BranchBar status={status} onRefresh={reload} />
       {files.length > 0 && (
         <>
           <CommitBox branch={status?.branch ?? ''} staged={staged.length} onCommit={(message) => run('commit', { message })} />
@@ -214,6 +234,7 @@ export function Changes() {
           )}
         />
         {status && !files.length && <EmptyState size="sm" title="No changes" />}
+        {branch && branch.files.length > 0 && <Committed branch={branch} />}
         <Findings target="local" />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
