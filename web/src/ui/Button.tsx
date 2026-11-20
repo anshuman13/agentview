@@ -31,6 +31,10 @@ export function ShowToggle({ open, count, onClick }: { open?: boolean; count?: n
   return <Button variant="quiet" size="sm" className="show-toggle" onClick={onClick}>{open ? 'Show less' : count ? `Show more (${count})` : 'Show more'}</Button>;
 }
 
+export function ShowAll({ count, open, className, onClick }: { count: number; open?: boolean; className?: string; onClick: () => void }) {
+  return <Button variant="quiet" size="sm" className={className} onClick={onClick}>{open ? 'Show less' : `Show all ${count}`}</Button>;
+}
+
 export function IconButton({ icon, label, size = 'md', on, small, spin, className, type = 'button', href, ...rest }: Native & {
   icon: string;
   label: string;

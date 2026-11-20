@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { embedded, notice, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
-import { IconButton } from '../ui/Button';
+import { IconButton, ShowAll } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
@@ -173,9 +173,7 @@ export function OpenChats() {
             {isOpen(g) && g.open.filter((c) => !c.pending).map((c) => row(c))}
             {isOpen(g) && (full.has(g.key) || filter ? g.recent : g.recent.slice(0, RECENT)).map((s) => savedRow(s))}
             {isOpen(g) && !filter && g.recent.length > RECENT && (
-              <div className="row more" {...pressable(() => flip(setFull, g.key))}>
-                {full.has(g.key) ? 'Show less' : `Show ${g.recent.length - RECENT} more`}
-              </div>
+              <ShowAll count={g.recent.length} open={full.has(g.key)} className="more" onClick={() => flip(setFull, g.key)} />
             )}
           </div>
         ))}

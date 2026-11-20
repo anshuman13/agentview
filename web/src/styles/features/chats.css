@@ -15,7 +15,8 @@
 .sessions .row.project { font-weight: 600; color: var(--fg); }
 .sessions .row.project .name { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
 .sessions .row.project.here .name { color: var(--accent-text); }
-.sessions .row:is(.session, .more) { padding-left: var(--sp-12); }
+.sessions .row.session { padding-left: var(--sp-12); }
+.sessions .btn.more { margin-left: var(--sp-12); }
 .sessions .row .name { flex: 1; min-width: 0; }
 .sessions .row :is(.count, .when) {
   flex: none; margin-left: auto; padding: 0 var(--sp-5) 0 var(--sp-4); font-size: var(--fs-xs); font-weight: 400;
@@ -34,8 +35,6 @@
 .sessions .row .busy { display: inline-flex; margin: 0 var(--sp-5) 0 auto; }
 .sessions .row .dirty { flex: none; font-size: var(--fs-xs); color: var(--warn); margin-left: var(--sp-3); }
 .sessions .row .merged { flex: none; font-size: var(--fs-xs); color: var(--ok); margin-left: var(--sp-3); }
-.sessions .row.more { font-size: var(--fs-sm); color: var(--fg-muted); }
-@media (hover: hover) { .sessions .row.more:hover { color: var(--fg); text-decoration: underline; } }
 .sessions .group, .sessions .row.group-row {
   font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-muted);
 }
@@ -97,7 +96,8 @@
 .sessions.workspace .row.repo-row .branch-chip {
   display: block; align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.sessions.workspace .row:is(.session, .more) { padding-left: 54px; }
+.sessions.workspace .row.session { padding-left: 54px; }
+.sessions.workspace .btn.more { margin-left: 54px; }
 
 @media (max-width: 900px) {
   .sessions .row, .sessions .group, .sessions .row.group-row { height: var(--touch-sm); }

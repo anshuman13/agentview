@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { dayKey, dayNumber, featureRows, type Feature, type FeatureKind, type UsedFeature, type UseDays } from '../../../../shared/featureUse';
 import { errText } from '../../../../shared/util';
 import { showSnack } from '../../codex/view';
-import { Button, Chip } from '../../ui/Button';
+import { Chip, ShowAll } from '../../ui/Button';
 import { MenuItem } from '../../ui/Menu';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
@@ -25,7 +25,7 @@ function FeatureSection<T extends Feature>({ label, rows, meta, menu }: { label:
       <div className="ui-group">
         {shown.map((r) => <Row key={r.id} plain title={r.label} meta={meta(r)} menu={menu(r)} />)}
       </div>
-      {shown.length < rows.length && <Button variant="quiet" size="sm" className="ov-more" onClick={() => setAll(true)}>Show all {rows.length}</Button>}
+      {shown.length < rows.length && <ShowAll count={rows.length} className="ov-more" onClick={() => setAll(true)} />}
     </>
   );
 }

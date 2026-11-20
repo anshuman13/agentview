@@ -4,7 +4,7 @@ import { joinMinutes, meetingBadge } from '../data/meetings/meetings';
 import { atTime } from '../data/tasks/engine';
 import type { ItemRow } from '../data/sync';
 import { Badge } from '../../ui/Badge';
-import { Button, IconButton } from '../../ui/Button';
+import { Button, IconButton, ShowAll } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
@@ -76,7 +76,7 @@ export function TodayList({ meetings, overdue, tasks, now, done, open }: { meeti
       <div className="as-group">
         {shown.map((x) => ('m' in x ? <MeetingRow key={x.key} m={x.m} now={now} /> : <TaskRow key={x.key} r={x.r} late={'late' in x} now={now} />))}
       </div>
-      {rows.length > shown.length && <Button variant="quiet" size="sm" className="ov-more" onClick={() => setAll(true)}>Show all {rows.length}</Button>}
+      {rows.length > shown.length && <ShowAll count={rows.length} className="ov-more" onClick={() => setAll(true)} />}
     </section>
   );
 }

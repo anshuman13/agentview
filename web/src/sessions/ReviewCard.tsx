@@ -4,7 +4,7 @@ import { notice } from '../app/store';
 import { track } from '../app/featureUse';
 import { AskRow } from '../ui/AskRow';
 import { Badge } from '../ui/Badge';
-import { Button, IconButton } from '../ui/Button';
+import { Button, IconButton, ShowAll } from '../ui/Button';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { Counts, Files, splitDiff } from '../ui/DiffFiles';
 import { Menu, MenuItem } from '../ui/Menu';
@@ -44,7 +44,7 @@ export function ReviewFiles({ diff, all, onAll }: { diff: RunDiff; all: boolean;
   return (
     <>
       <Files files={all ? diff.files : diff.files.slice(0, SHOWN)} diffs={diffs} />
-      {!all && diff.files.length > SHOWN && <Row plain title={<Button size="sm" variant="quiet" onClick={onAll}>Show all {diff.files.length}</Button>} />}
+      {!all && diff.files.length > SHOWN && <Row plain title={<ShowAll count={diff.files.length} onClick={onAll} />} />}
     </>
   );
 }

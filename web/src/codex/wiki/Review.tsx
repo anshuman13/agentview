@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { rowKey } from '../data/sync';
 import { approveAllChanges, approveChanges, chatOf, meetingOf, proposals, reviewCount, reviewGroups, similarLive, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki/wiki';
-import { Button, IconButton } from '../../ui/Button';
+import { Button, IconButton, ShowAll } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
@@ -225,7 +225,7 @@ export function ToReview({ facts }: { facts: Fact[] }) {
       <Section label="To review" count={reviewCount(pages, facts)} action={<Button size="sm" variant="quiet" icon="checklist" onClick={() => setView({ open: REVIEW, anchor: null })}>One at a time</Button>} />
       <div className="wk-reviews">
         {shown}
-        {!all && cards.length > shown.length && <button className="wk-more" onClick={() => setAll(true)}>Show {cards.length - shown.length} more</button>}
+        {!all && cards.length > shown.length && <ShowAll count={cards.length} onClick={() => setAll(true)} />}
       </div>
     </section>
   );
@@ -238,7 +238,7 @@ function Rows<T>({ label, list, row }: { label: string; list: T[]; row: (t: T) =
     <div>
       <Section label={label} count={sectionCount(list.length)} />
       <div className="as-group">{(all ? list : list.slice(0, LOOK_CAP)).map(row)}</div>
-      {!all && list.length > LOOK_CAP && <button className="wk-more" onClick={() => setAll(true)}>+{list.length - LOOK_CAP} more</button>}
+      {!all && list.length > LOOK_CAP && <ShowAll count={list.length} onClick={() => setAll(true)} />}
     </div>
   );
 }

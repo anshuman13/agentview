@@ -1,5 +1,5 @@
 import { Fragment, useState, type ReactNode } from 'react';
-import { Button } from '../../ui/Button';
+import { ShowAll } from '../../ui/Button';
 import { Section } from '../../ui/Section';
 import { save, stored } from '../../ui/util';
 import { visibleRows, type DigestGroup } from './digest';
@@ -13,7 +13,7 @@ export function GroupList<R>({ foldKey, capOpen, group, render }: { foldKey: str
     <>
       <Section label={group.label} count={group.rows.length} open={open} onToggle={toggle} />
       {open && rows.map((r, i) => <Fragment key={i}>{render(r)}</Fragment>)}
-      {open && !all && rows.length < group.rows.length && <Button variant="quiet" size="sm" className="ov-more" onClick={() => setAll(true)}>Show all {group.rows.length}</Button>}
+      {open && !all && rows.length < group.rows.length && <ShowAll count={group.rows.length} className="ov-more" onClick={() => setAll(true)} />}
     </>
   );
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getState, useStore } from '../app/store';
-import { Button, IconButton } from '../ui/Button';
+import { Button, IconButton, ShowAll } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
@@ -87,7 +87,7 @@ export function McpPage() {
             <section key={g}>
               <Section label={g === 'work' ? 'Work' : 'Personal'} count={rowCount(mine)} />
               <div className="as-group">{folded ? all.slice(0, FOLD) : all}</div>
-              {folded && <Button variant="quiet" size="sm" onClick={() => setExpanded((e) => [...e, g])}>Show all {all.length}</Button>}
+              {folded && <ShowAll count={all.length} onClick={() => setExpanded((e) => [...e, g])} />}
             </section>
           );
         })}

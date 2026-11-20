@@ -3,7 +3,7 @@ import { notice, setUi, useStore } from '../app/store';
 import { useNarrow } from '../app/shell/useNarrow';
 import { useThemeName } from '../app/theme';
 import { Back } from '../app/touch/back';
-import { Button, Chip, IconButton } from '../ui/Button';
+import { Button, Chip, IconButton, ShowAll } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
@@ -28,7 +28,7 @@ export function SketchList({ sketches, onOpen }: { sketches: SketchFile[]; onOpe
       <div className="ui-group">
         {rows.map((s) => <Row key={s.name} title={sketchTitle(s.name)} meta={ago(s.mtime, ' ago')} onClick={() => onOpen(s.name)} />)}
       </div>
-      {rows.length < sketches.length && <Button variant="quiet" size="sm" className="ov-more" onClick={() => setAll(true)}>Show all {sketches.length}</Button>}
+      {rows.length < sketches.length && <ShowAll count={sketches.length} className="ov-more" onClick={() => setAll(true)} />}
     </>
   );
 }

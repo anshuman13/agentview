@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from './data';
 import { GROUP_CAP, searchAll, type Group, type Hit } from './data/ask/search';
-import { Button, IconButton } from '../ui/Button';
+import { IconButton, ShowAll } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
@@ -22,7 +22,7 @@ function Hits({ label, group, open, onAll, said }: { label: string; group: Group
           <Row key={h.profile + h.id} className={said ? 'sr-said' : undefined} title={h.title} meta={[h.profile === 'work' ? 'Work' : 'Personal', h.when, h.snippet].filter(Boolean).join(' \u00b7 ')} onClick={() => open(h)} />
         ))}
       </div>
-      {group.total > group.hits.length && <Button variant="quiet" size="sm" onClick={onAll}>Show all {group.total}</Button>}
+      {group.total > group.hits.length && <ShowAll count={group.total} onClick={onAll} />}
     </section>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { AssistantStore } from '../data/store';
 import type { ItemRow } from '../data/sync';
 import { Icon } from '../../ui/Icon';
-import { Button } from '../../ui/Button';
+import { Button, ShowAll } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { reveal } from '../../ui/util';
@@ -90,7 +90,7 @@ export function Links({ text }: { text: string }) {
     <div className="as-links">
       <Section label="Links" count={urls.length} />
       <div className="ui-group">{shown.map((u) => <LinkRow key={u} url={u} />)}</div>
-      {urls.length > LINK_LIMIT && <Button variant="quiet" size="sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `+${urls.length - LINK_LIMIT} more`}</Button>}
+      {urls.length > LINK_LIMIT && <ShowAll count={urls.length} open={all} onClick={() => setAll(!all)} />}
     </div>
   );
 }

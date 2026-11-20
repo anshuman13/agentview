@@ -3,7 +3,7 @@ import { deleteRequest } from './sessionApi';
 import { send, setUi, useStore } from '../app/store';
 import { appSettings } from '../app/appSettings';
 import { Icon } from '../ui/Icon';
-import { IconButton } from '../ui/Button';
+import { IconButton, ShowAll } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { LiveChat, SavedSession, Worktree } from '../../../shared/protocol';
@@ -121,9 +121,7 @@ export function Sessions() {
         {isOpen(d) && d.trees.map((w) => <WorktreeRow key={w.id} w={w} removing={removing.has(w.id)} start={() => start(w.cwd)} remove={() => { setError(null); removeTree(w); }} />)}
         {isOpen(d) && (full.has(d.cwd) || filter ? d.chats : d.chats.slice(0, PAGE)).map((c) => <SessionRow key={c.sessionId} s={c} selected={c.sessionId === current} opening={opening === c.sessionId} open={() => open(c.sessionId)} remove={() => { setError(null); remove(c); }} />)}
         {isOpen(d) && !filter && d.chats.length > PAGE && (
-          <div className="row more" {...pressable(() => flip(setFull, d.cwd))}>
-            {full.has(d.cwd) ? 'Show less' : `Show ${d.chats.length - PAGE} more`}
-          </div>
+          <ShowAll count={d.chats.length} open={full.has(d.cwd)} className="more" onClick={() => flip(setFull, d.cwd)} />
         )}
       </div>
     );

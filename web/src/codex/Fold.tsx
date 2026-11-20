@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { save, stored } from '../ui/util';
 import { Section } from '../ui/Section';
-import { Chip } from '../ui/Button';
+import { ShowAll } from '../ui/Button';
 
 // The header line of an overview card: title, count and an optional control on the right.
 export function SectionHead({ title, count, action, className = '', id }: { title: string; count?: number; action?: ReactNode; className?: string; id?: string }) {
@@ -25,13 +25,13 @@ export function Fold({ id, title, count, remember = true, action, onOpen, childr
 
 const SHOWN = 5;
 
-// The first rows of a list with a +N more button that expands in place and Show fewer after.
+// The first rows of a list with a Show all N button that expands in place and Show less after.
 export function Capped<T>({ items, render, limit = SHOWN }: { items: T[]; render: (item: T, i: number) => ReactNode; limit?: number }) {
   const [more, setMore] = useState(false);
   return (
     <>
       {(more ? items : items.slice(0, limit)).map(render)}
-      {items.length > limit && <Chip quiet className="ov-more" onClick={() => setMore(!more)}>{more ? 'Show fewer' : `+${items.length - limit} more`}</Chip>}
+      {items.length > limit && <ShowAll count={items.length} open={more} className="ov-more" onClick={() => setMore(!more)} />}
     </>
   );
 }

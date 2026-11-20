@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAssistantStore, useAssistantTable } from '../data';
 import type { AutopilotConfig, AutopilotReply, AutopilotState } from '../data/store';
 import { Badge, type BadgeSpec } from '../../ui/Badge';
-import { Button, Chip, IconButton } from '../../ui/Button';
+import { Button, Chip, IconButton, ShowAll } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
@@ -44,7 +44,7 @@ function ActivitySheet({ state, onClose }: { state: AutopilotState; onClose: () 
               const props = { title: `${r.who}${r.chat ? ` · ${r.chat}` : ''}`, lines: 2 as const, trailing: <Badge {...seen(r)} />, meta: r.text ? `${when(r.at)} · ${r.text}` : when(r.at) };
               return askRow(r) || r.url ? <Row key={r.id} {...props} onClick={() => openAsk(r)} /> : <Row key={r.id} plain {...props} />;
             })}
-            {!all && state.replies.length > 5 && <div className="jb-fields"><Button variant="quiet" size="sm" onClick={() => setAll(true)}>Show all {state.replies.length}</Button></div>}
+            {!all && state.replies.length > 5 && <div className="jb-fields"><ShowAll count={state.replies.length} onClick={() => setAll(true)} /></div>}
           </div>
         </>
       )}
