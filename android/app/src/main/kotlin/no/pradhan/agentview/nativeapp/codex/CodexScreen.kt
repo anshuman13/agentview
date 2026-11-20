@@ -65,6 +65,11 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.codex.wiki.ReviewOps
+import no.pradhan.agentview.nativeapp.app.refreshWorkspace
+import no.pradhan.agentview.nativeapp.chat.NewChatSheet
+import no.pradhan.agentview.nativeapp.sessions.groupByRepo
+import no.pradhan.agentview.nativeapp.sessions.newChatChoices
+import no.pradhan.agentview.nativeapp.ui.select
 
 private const val SYNC_EVERY_MS = 30_000L
 
@@ -229,11 +234,20 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
 @Composable
 private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: String?, now: Long, actions: TaskActions, ops: CodexOps, editing: Row?, snack: SnackbarHostState) {
     val scope = rememberCoroutineScope()
+    var chatText by remember { mutableStateOf<String?>(null) }
     val askAbout = { r: Row -> hub.askCodex(askText("Help me with this item.", r.profile, st.items.filter { !it.deleted && it.profile == r.profile }, r, st.meetings.filter { it.profile == r.profile }), r.profile) }
     editing?.let { row ->
         val from = st.meetings.firstOrNull { it.profile == row.profile && it.id == row.meetingId }
         val people = if (row.status == "open") remember(st.meetings, row.key, now / 60_000) { recentPeople(st.meetings, row.profile, from, now) } else emptyList()
-        EditorSheet(row, st.items, now, actions, people, { p, t -> ops.points.raise(t, p, row.profile) }, askAbout) { nav.editKey = null }
+        EditorSheet(row, st.items, now, actions, people, { p, t -> ops.points.raise(t, p, row.profile) }, askAbout, { chatText = it }) { nav.editKey = null }
+    }
+    chatText?.let { text ->
+        val live by hub.store.state.select { it.live }
+        val sessionCwd by hub.store.state.select { it.session?.cwd }
+        val ws by hub.workspace.collectAsState()
+        LaunchedEffect(Unit) { hub.refreshWorkspace() }
+        val (here, choices) = newChatChoices(groupByRepo(live, ws), ws, sessionCwd)
+        NewChatSheet(hub, null, choices, onDismiss = { chatText = null }, initial = here, text = text)
     }
     if (nav.adding) AddSheet(hub, profile, now, { nav.adding = false }) { added ->
         scope.launch { snack.currentSnackbarData?.dismiss(); snack.showSnackbar("Task · $added", duration = SnackbarDuration.Short) }

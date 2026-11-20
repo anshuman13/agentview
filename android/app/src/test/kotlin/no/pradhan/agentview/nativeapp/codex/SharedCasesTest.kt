@@ -324,6 +324,13 @@ class SharedCasesTest {
         for (c in cases("spec-item-prompt")) assertEquals(c.str("name"), c.str("expected"), specItemPrompt(c.str("root"), c.getValue("item").decode<BacklogItem>()))
     }
 
+    @Test fun taskChatPrompt() {
+        for (c in cases("task-chat-prompt")) {
+            val t = c.getValue("task").jsonObject
+            assertEquals(c.str("name"), c.str("expected"), taskChatPrompt(t.nullable("title")?.jsonPrimitive?.content, t.nullable("text")?.jsonPrimitive?.content, t.nullable("sourceUrl")?.jsonPrimitive?.content))
+        }
+    }
+
     @Test fun mergeQuiet() {
         for (c in cases("merge-quiet")) {
             val rounds = c.getValue("rounds").jsonArray.map { it.decode<Round>() }
