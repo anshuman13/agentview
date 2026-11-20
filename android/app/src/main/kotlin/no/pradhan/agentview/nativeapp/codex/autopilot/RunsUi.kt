@@ -102,16 +102,16 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAg
             ListRow(
                 state.title, meta.ifEmpty { null }, lines = 2, compact = true,
                 leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
-                onClick = if (goal) detail else if (run.kind == "loop" && state.source == "round") ({ rounds = !rounds }) else null,
+                onClick = if ((goal || run.kind == "loop") && state.source == "round") ({ rounds = !rounds }) else if (goal) detail else null,
             )
             agents.singleOrNull()?.let { a ->
                 ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, compact = true, onClick = { onOpenAgent(a.id) })
             }
             if (agents.size > 1) ListRow(plural(agents.size, "agent"), agents.joinToString(", ") { it.slug ?: it.description }, compact = true, leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, onClick = onOpenAgents)
-            if (goal) progress?.let { ListRow("Plan $it", compact = true, stateSlot = false, onClick = detail) }
+            if (goal) ListRow(progress?.let { "Plan $it" } ?: run.what, compact = true, stateSlot = false, onClick = detail)
             else ListRow(run.what, money(run.costUsd, billing(run.provider)), compact = true, stateSlot = false, onClick = detail)
             run.rounds.lastOrNull { it.report != null }?.let { r -> RoundRow(RoundGroup(r, r, 1, r.costUsd), run.provider, compact = true) { hub.showTurn.value = it } }
-            if (rounds && run.kind == "loop") mergeQuiet(run.rounds).takeLast(10).asReversed().forEach { g -> RoundRow(g, run.provider, compact = true) { hub.showTurn.value = it } }
+            if (rounds && (goal || run.kind == "loop")) mergeQuiet(run.rounds).takeLast(10).asReversed().forEach { g -> RoundRow(g, run.provider, compact = true) { hub.showTurn.value = it } }
           }
         }
     }
