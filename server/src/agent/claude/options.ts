@@ -48,6 +48,7 @@ export function agentOptions(o: {
   configDir?: string;
   openrouter?: OpenRouterSettings | null;
   unattended?: Unattended;
+  preferences?: string;
 }): Options {
   return {
     cwd: o.cwd,
@@ -55,7 +56,7 @@ export function agentOptions(o: {
     forkSession: o.fork,
     effort: o.effort,
     env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(o.configDir && { CLAUDE_CONFIG_DIR: o.configDir }), ...(o.openrouter && openRouterEnv(o.openrouter)) },
-    systemPrompt: { type: 'preset', preset: 'claude_code', append: o.unattended ? TOOL_INSTRUCTIONS : [TOOL_INSTRUCTIONS, CHROME, ...(ownProfile() ? [OWN_CHROME] : [])].join(' ') },
+    systemPrompt: { type: 'preset', preset: 'claude_code', append: [TOOL_INSTRUCTIONS, ...(o.preferences ? [o.preferences] : []), ...(o.unattended ? [] : [CHROME, ...(ownProfile() ? [OWN_CHROME] : [])])].join(' ') },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
     includeHookEvents: true,

@@ -95,8 +95,11 @@ let syncing: Promise<void> | null = null;
 export async function hubRows(table: string): Promise<HubRow[]> {
   syncing ??= pull().finally(() => (syncing = null));
   await syncing;
-  return [...(rows.get(table)?.values() ?? [])].filter((r) => !r.deleted);
+  return mirrored(table);
 }
+
+// The rows pulled so far, without waiting for the hub.
+export const mirrored = (table: string): HubRow[] => [...(rows.get(table)?.values() ?? [])].filter((r) => !r.deleted);
 
 const KEPT = new Set(['items', 'meetings', 'actions', 'jobs', 'pages', 'facts']);
 

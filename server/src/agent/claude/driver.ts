@@ -10,6 +10,7 @@ import { Messages } from './messages.js';
 import { SystemMessages } from './systemMessages.js';
 import { claudeInstructionFiles } from './memory.js';
 import { agentOptions, userMessage } from './options.js';
+import { preferencesText } from '../tools/wiki.js';
 import { mcpFrom } from './mcp.js';
 import { loadOpenRouter, openRouterModels, openRouterValue } from './openrouter.js';
 import { McpControl } from './mcpControl.js';
@@ -225,6 +226,7 @@ export class ClaudeDriver implements AgentDriver {
       configDir: configDir(this.account),
       openrouter,
       unattended,
+      preferences: preferencesText(this.cwd),
     });
     this.mcp.servers = options.mcpServers ?? {};
     this.q = query({ prompt: this.input.stream(), options });
