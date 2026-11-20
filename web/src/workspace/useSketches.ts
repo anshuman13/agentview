@@ -29,6 +29,7 @@ export function useSketch(path: string) {
   const changed = recent[0]?.endsWith(path) ? recent : null;
   const [html, setHtml] = useState<string | null>(null);
   const [problem, setProblem] = useState<'failed' | 'large' | null>(null);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     let stale = false;
     readSketch(path).then(
@@ -40,6 +41,10 @@ export function useSketch(path: string) {
       () => !stale && setProblem('failed'),
     );
     return () => { stale = true; };
-  }, [path, changed]);
-  return { html, problem };
+  }, [path, changed, tick]);
+  const reload = () => {
+    setProblem(null);
+    setTick((t) => t + 1);
+  };
+  return { html, problem, reload };
 }

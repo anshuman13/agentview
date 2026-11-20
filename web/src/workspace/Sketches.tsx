@@ -62,7 +62,7 @@ export function SketchFrame({ name, html, device, theme, fitWidth }: { name: str
 
 function SketchView({ file, device, theme, onDevice, onTheme, onBack }: { file: SketchFile; device: Device; theme: SketchTheme; onDevice: (d: Device) => void; onTheme: (t: SketchTheme) => void; onBack: () => void }) {
   const cwd = useStore((s) => s.session.cwd);
-  const { html, problem } = useSketch(file.path);
+  const { html, problem, reload } = useSketch(file.path);
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const narrow = useNarrow();
@@ -89,7 +89,7 @@ function SketchView({ file, device, theme, onDevice, onTheme, onBack }: { file: 
         </span>
       </div>
       {problem ? (
-        <EmptyState size="sm" title="Could not load the sketch" hint={problem === 'large' ? 'Too large to show' : 'It may have moved. Go back to the list'} />
+        <EmptyState size="sm" title="Could not load the sketch" hint={problem === 'large' ? 'Too large to show' : 'It may have moved. Go back to the list'} action={<Button size="sm" onClick={reload}>Retry</Button>} />
       ) : html === null ? (
         <Skeleton />
       ) : (
@@ -122,7 +122,7 @@ export function Sketches({ shown }: { shown: boolean }) {
       ) : data ? (
         <EmptyState icon="paintcan" title="No sketches yet" hint="Mockups the agent writes with /sketch show here" action={<Button size="sm" onClick={newSketch}>New sketch</Button>} />
       ) : error ? (
-        <EmptyState size="sm" icon="paintcan" title="Could not load sketches" hint={error} />
+        <EmptyState size="sm" icon="paintcan" title="Could not load sketches" hint={error} action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} />
       ) : (
         <Skeleton />
       )}

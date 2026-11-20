@@ -11,6 +11,7 @@ import { EmptyState, Panel } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
+import { Loading } from '../ui/Skeleton';
 import { blockLink, designSearch, parseDesignQuery, type Width } from './url';
 import '../styles/features/design.css';
 
@@ -210,6 +211,10 @@ function Stories() {
         <Panel><EmptyState title="No items" /></Panel>
         <Panel><EmptyState size="sm" icon="inbox" title="No items" hint="Items you add show up here" action={<Button size="sm">Add item</Button>} /></Panel>
         <Panel><EmptyState size="sm" title="No items" /></Panel>
+      </Block>
+      <Block name="Loading">
+        <Panel><Loading /></Panel>
+        <Panel><Loading text="Loading the audit…" /></Panel>
       </Block>
       <Block name="Section"><SectionStory /></Block>
     </>

@@ -50,7 +50,6 @@ export function useLoad<T>(load: (() => Promise<T>) | null, key: string): [Load<
   return [state, () => setTick((t) => t + 1)];
 }
 
-export const Loading = () => <div className="obs-hint"><Icon name="loading" small spin /> Loading</div>;
 export const Err = ({ text }: { text: string }) => (text ? <div className="obs-hint error" role="alert">{text}</div> : null);
 
 export function Pane({ label, action, open: initial = true, children }: { label: string; action?: ReactNode; open?: boolean; children: ReactNode }) {

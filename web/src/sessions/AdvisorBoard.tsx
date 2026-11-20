@@ -103,7 +103,7 @@ function AuditCard({ root, audit, failed, onOpen }: { root: string; audit: Audit
   return (
     <Row
       title="Audit"
-      meta={failed ? 'Could not load the audit' : audit === undefined ? 'Loading the audit' : audit ? `${audit.date} · ${auditCountLine(audit.findings)}` : 'Not run yet'}
+      meta={failed ? 'Could not load the audit' : audit === undefined ? 'Loading the audit…' : audit ? `${audit.date} · ${auditCountLine(audit.findings)}` : 'Not run yet'}
       plain
       action={running ? <Badge status="running" /> : <Button size="sm" variant="tinted" disabled={!audit} onClick={() => askAdvisor('pm', specsFromAuditPrompt(root))}>Specs from audit</Button>}
       menu={<>
@@ -115,7 +115,7 @@ function AuditCard({ root, audit, failed, onOpen }: { root: string; audit: Audit
 }
 
 // One project's board: Ideas, Specced, Building and Done as columns, or as chips with one stage when the page is narrow.
-export function AdvisorBoard({ root, backlog, specs, audit, auditFailed }: { root: string; backlog: BacklogItem[] | null | undefined; specs: SpecHomeItem[] | null | undefined; audit: Audit | null | undefined; auditFailed?: boolean }) {
+export function AdvisorBoard({ root, backlog, specs, audit, auditFailed, onRetry }: { root: string; backlog: BacklogItem[] | null | undefined; specs: SpecHomeItem[] | null | undefined; audit: Audit | null | undefined; auditFailed?: boolean; onRetry: () => void }) {
   const loop = advisorLoopOf(useStore((s) => s.runs), root);
   const [moved, setMoved] = useState<BacklogItem[] | null>(null);
   useEffect(() => setMoved(null), [backlog]);
@@ -126,7 +126,7 @@ export function AdvisorBoard({ root, backlog, specs, audit, auditFailed }: { roo
   useEffect(() => { if (board) setChip(board.defaultStage); }, [loaded]);
   const [auditOpen, setAuditOpen] = useState(false);
   if (backlog === undefined || specs === undefined) return <Skeleton rows={6} />;
-  if (!board) return <EmptyState size="sm" title="Could not load the board" />;
+  if (!board) return <EmptyState size="sm" title="Could not load the board" hint="Try again" action={<Button size="sm" onClick={onRetry}>Retry</Button>} />;
   const stage = chip ?? board.defaultStage;
   const openSlugs = items!.filter((i) => i.status !== 'done').sort((a, b) => a.rank - b.rank).map((i) => i.slug);
   const move = (slug: string, dir: 'up' | 'down') => moveBacklogItem(root, slug, dir).then((list) => (list ? setMoved(list) : notice('Could not move the item')));

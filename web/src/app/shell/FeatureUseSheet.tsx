@@ -2,12 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { dayKey, dayNumber, featureRows, type Feature, type FeatureKind, type UsedFeature, type UseDays } from '../../../../shared/featureUse';
 import { errText } from '../../../../shared/util';
 import { showSnack } from '../../codex/view';
-import { Chip, ShowAll } from '../../ui/Button';
+import { Button, Chip, ShowAll } from '../../ui/Button';
 import { MenuItem } from '../../ui/Menu';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
+import { Loading } from '../../ui/Skeleton';
 import { appSettings } from '../appSettings';
 import { fetchFeatureUse, saveHiddenFeatures } from '../featureUseApi';
 
@@ -39,9 +40,14 @@ export function FeatureUseSheet({ onClose }: { onClose: () => void }) {
   const [days, setDays] = useState<UseDays>();
   const [error, setError] = useState('');
   const [span, setSpan] = useState<7 | 30>(30);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     fetchFeatureUse().then((r) => setDays(r.days), (err) => setError(errText(err)));
-  }, []);
+  }, [tick]);
+  const retry = () => {
+    setError('');
+    setTick((t) => t + 1);
+  };
   const today = dayKey(new Date());
   const rows = days && featureRows(days, today, span);
   const usedMeta = (f: UsedFeature) => {
@@ -68,7 +74,8 @@ export function FeatureUseSheet({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       )}
-      {error && <EmptyState size="sm" title="Could not load feature use" hint={error} />}
+      {error && <EmptyState size="sm" title="Could not load feature use" hint={error} action={<Button size="sm" onClick={retry}>Retry</Button>} />}
+      {!rows && !error && <Loading />}
       {rows && (
         <>
           {on && <FeatureSection label="Never used" rows={rows.never.filter(shown)} meta={(f) => KIND[f.kind]} menu={menu} />}

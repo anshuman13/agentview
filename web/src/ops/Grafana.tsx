@@ -10,7 +10,8 @@ import { EmptyState } from '../ui/Panel';
 import '../styles/features/observe.css';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
-import { Err, Loading, Pane, Sub, SubHead, useLoad } from './observeShared';
+import { Loading } from '../ui/Skeleton';
+import { Err, Pane, Sub, SubHead, useLoad } from './observeShared';
 import { fetchGrafanaDashboards, fetchGrafanaLogs, fetchGrafanaPanels, fetchGrafanaPatterns } from './opsApi';
 
 const clock = (iso: string) => {

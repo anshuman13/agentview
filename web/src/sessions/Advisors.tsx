@@ -28,13 +28,18 @@ function ProjectPicker({ root, folders, onPick }: { root: string | null; folders
 // Loads one project's data when the page shows and after an advisor's turn; failed is set when the request rejects.
 function useRootFetch<T>(fetcher: (root: string) => Promise<T>, root: string | null, shown: boolean, turns: string) {
   const [state, setState] = useState<{ root?: string | null; data?: T; failed?: boolean }>({});
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     if (!shown || !root) return;
     let stale = false;
     fetcher(root).then((data) => !stale && setState({ root, data }), () => !stale && setState({ root, failed: true }));
     return () => { stale = true; };
-  }, [fetcher, shown, root, turns]);
-  return state.root === root ? state : {};
+  }, [fetcher, shown, root, turns, tick]);
+  const reload = () => {
+    setState({});
+    setTick((t) => t + 1);
+  };
+  return { ...(state.root === root ? state : {}), reload };
 }
 
 // The Advisors page: one project's board from idea to merged build, the Ask buttons for each advisor, and the sheet with their conversations and memory.
@@ -54,8 +59,8 @@ export function Advisors({ shown }: { shown: boolean }) {
   const turns = useStore(turnsOf());
   const pmTurns = useStore(turnsOf('pm'));
   const designerTurns = useStore(turnsOf('designer'));
-  const backlog = useRootFetch(fetchBacklog, root, shown, pmTurns).data;
-  const specs = useRootFetch(fetchSpecs, root, shown, pmTurns).data;
+  const { data: backlog, reload: reloadBacklog } = useRootFetch(fetchBacklog, root, shown, pmTurns);
+  const { data: specs, reload: reloadSpecs } = useRootFetch(fetchSpecs, root, shown, pmTurns);
   const { data: audit, failed: auditFailed } = useRootFetch(fetchAudit, root, shown, designerTurns);
   return (
     <div className="wk"><div className="wk-scroll"><div className="mt-page adv-page">
@@ -64,7 +69,7 @@ export function Advisors({ shown }: { shown: boolean }) {
         {ADVISORS.map((a) => <Button key={a.id} size="sm" variant="quiet" onClick={() => openAdvisor(a)}>Ask {a.name}</Button>)}
         <Button size="sm" variant="quiet" icon="comment-discussion" onClick={() => setSheet(true)}>Conversations and memory</Button>
       </div>
-      {root ? <AdvisorBoard key={root} root={root} backlog={backlog} specs={specs} audit={audit} auditFailed={auditFailed} /> : <div className="ui-group"><Row title="Pick a project to see its work" plain /></div>}
+      {root ? <AdvisorBoard key={root} root={root} backlog={backlog} specs={specs} audit={audit} auditFailed={auditFailed} onRetry={() => { reloadBacklog(); reloadSpecs(); }} /> : <div className="ui-group"><Row title="Pick a project to see its work" plain /></div>}
       {sheet && <AdvisorsSheet turns={turns} onClose={() => setSheet(false)} />}
     </div></div></div>
   );

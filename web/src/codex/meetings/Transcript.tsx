@@ -6,7 +6,9 @@ import { talkTime } from '../data/meetings/talkTime';
 import type { Meeting } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { Button } from '../../ui/Button';
+import { EmptyState } from '../../ui/Panel';
 import { Section } from '../../ui/Section';
+import { Loading } from '../../ui/Skeleton';
 import { SearchedOutput } from '../../ui/SearchedOutput';
 import { markSegments, matchLabel, plural } from '../../ui/util';
 import { queryWords } from '../data/ask/match';
@@ -18,6 +20,7 @@ import { useSnackTask } from '../tasks/useSnackTask';
 export function useTranscript(m: Meeting, on: boolean) {
   const store = useAssistantStore();
   const [got, setGot] = useState<{ key: string; text: string | null; error?: string }>();
+  const [tick, setTick] = useState(0);
   const key = rowKey(m);
   useEffect(() => {
     if (!on) return;
@@ -26,8 +29,12 @@ export function useTranscript(m: Meeting, on: boolean) {
     return () => {
       live = false;
     };
-  }, [key, on, m.summary, store]);
-  return got?.key === key ? got : undefined;
+  }, [key, on, m.summary, store, tick]);
+  const reload = () => {
+    setGot(undefined);
+    setTick((t) => t + 1);
+  };
+  return got?.key === key ? { ...got, reload } : undefined;
 }
 
 const TOP = 5;
@@ -52,14 +59,14 @@ export function TalkTime({ text, actions, decisions }: { text: string; actions: 
   );
 }
 
-export function Transcript({ got }: { got: { text: string | null; error?: string } | undefined }) {
+export function Transcript({ got }: { got: { text: string | null; error?: string; reload: () => void } | undefined }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const count = useMemo(() => got?.text && query.trim() ? markSegments(got.text, queryWords(query)).filter((s) => s.hit).length : -1, [got?.text, query]);
   return (
     <section className="mt-sec mt-fold">
       <Section label="Transcript" count={!open && count >= 0 ? matchLabel(count) : undefined} open={open} onToggle={() => setOpen((v) => !v)} />
-      {open && (!got ? <p className="mt-pending">Loading…</p> : got.error ? <p className="mt-pending">Could not load the transcript: {got.error}</p> : got.text ? <SearchedOutput text={got.text} query={query} setQuery={setQuery} label="Search transcript" className="mt-transcript" /> : <p className="mt-pending">No transcript text kept for this meeting.</p>)}
+      {open && (!got ? <Loading /> : got.error ? <EmptyState size="sm" title="Could not load the transcript" hint={got.error} action={<Button size="sm" onClick={got.reload}>Retry</Button>} /> : got.text ? <SearchedOutput text={got.text} query={query} setQuery={setQuery} label="Search transcript" className="mt-transcript" /> : <EmptyState size="sm" title="No transcript kept for this meeting" />)}
     </section>
   );
 }

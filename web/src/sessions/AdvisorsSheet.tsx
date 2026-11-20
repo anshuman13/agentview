@@ -20,15 +20,20 @@ export function AdvisorsSheet({ turns, onClose }: { turns: string; onClose: () =
   const viewing = useStore((s) => s.session.id);
   const [info, setInfo] = useState<AdvisorInfo[] | null | undefined>(undefined);
   const [memory, setMemory] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     let stale = false;
     void fetchAdvisors().then((x) => !stale && setInfo(x));
     return () => { stale = true; };
-  }, [turns]);
+  }, [turns, tick]);
+  const retry = () => {
+    setInfo(undefined);
+    setTick((t) => t + 1);
+  };
   return (
     <Sheet label="Conversations and memory" onClose={onClose} className="au-sheet">
       <h2>Conversations and memory</h2>
-      {info === undefined ? <Skeleton rows={6} /> : !info ? <EmptyState size="sm" title="Could not load the advisors" /> : ADVISORS.map((a) => {
+      {info === undefined ? <Skeleton rows={6} /> : !info ? <EmptyState size="sm" title="Could not load the advisors" hint="Try again" action={<Button size="sm" onClick={retry}>Retry</Button>} /> : ADVISORS.map((a) => {
         const c = live.find((x) => advisorOf(x.cwd)?.id === a.id);
         const state = c && chatState({ live: c }, seen);
         const got = info.find((x) => x.id === a.id);

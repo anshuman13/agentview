@@ -12,7 +12,8 @@ import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 import { Grafana } from './Grafana';
 import { Snowflake } from './Snowflake';
-import { Err, Loading } from './observeShared';
+import { Loading } from '../ui/Skeleton';
+import { Err } from './observeShared';
 import { fetchObserve, fetchRepos, saveObserveConfig } from './opsApi';
 import { SetupButton } from './SetupButton';
 

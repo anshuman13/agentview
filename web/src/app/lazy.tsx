@@ -45,5 +45,5 @@ export const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ defa
 export const Settings = lazy(() => import('./shell/Settings').then((m) => ({ default: m.Settings })));
 export const ConnectPopover = lazy(() => import('./shell/ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
 export const MacsPopover = lazy(() => import('./shell/MacsPopover').then((m) => ({ default: m.MacsPopover })));
-export const Loading = () => <div className="loading">Loading…</div>;
+export { Loading } from '../ui/Skeleton';
 export const DesignPage = lazy(() => import('../design/Stories').then((m) => ({ default: m.DesignPage })));
