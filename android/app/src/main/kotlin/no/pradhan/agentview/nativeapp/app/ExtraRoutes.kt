@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import no.pradhan.agentview.nativeapp.codex.CodexOps
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
+import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.wiki.MEMORY
 import no.pradhan.agentview.nativeapp.codex.wiki.ReviewModePage
 import no.pradhan.agentview.nativeapp.codex.Row
@@ -47,7 +48,7 @@ fun routeTitle(route: String, st: CodexState): String = when {
     else -> "Job"
 }
 
-// The wiki page a claim sits on, as a route; claims without a page have none.
+// The wiki page a claim sits on, as a route; a claim with no page opens Memory.
 fun claimRoute(f: Row): String = f.str("page_id")?.ifEmpty { null }?.let { "wiki:${f.profile}:$it" } ?: "wiki:$MEMORY"
 
 @Composable
@@ -68,7 +69,7 @@ fun ExtraContent(
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
         route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { p, id -> push("wiki:$p:$id") }, onTask)
         route == "wiki" -> WikiIndexPage(st, profile, now, actions, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") })
-        route == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts), profile, now, actions, ops.review, { push("review") }, pop)
+        route == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop)
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == key && !it.deleted }
             if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop)

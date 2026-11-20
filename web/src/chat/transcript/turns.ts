@@ -1,5 +1,6 @@
 import { editCount, stripRound } from '../../../../shared/edits';
 import { BIG_BRO, type ChatEvent } from '../../../../shared/protocol';
+import { isNoteText, WOKE_UP } from '../../../../shared/limitResume';
 import { denied, fastFrom, tailStart, firstLine, str, type ToolResult, type ToolUse } from './steps';
 
 type FileFact = { path: string; add: number; del: number };
@@ -22,7 +23,6 @@ export type Turn = {
   notes: NoteFact[];
 };
 
-const WOKE_UP = /^\w+ woke up/;
 
 function handBack(text: string) {
   if (!text.startsWith('[Subagent hand-back]')) return text.trim();
@@ -45,7 +45,6 @@ const cloneTurn = (t: Turn): Turn => ({ ...t, notes: [...t.notes] });
 
 export const buildTurns = (events: ChatEvent[]) => turnsFrom(events).out;
 
-const isNoteText = (text: string) => ['Compact', 'Loop ', 'Goal', 'Usage limit', 'Logged out'].some((p) => text.startsWith(p));
 
 function recordStatus(turn: Turn, e: ToolUse, next: string[]) {
   const done = str(e.input.done).trim();
