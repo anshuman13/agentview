@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { GROUP_CAP, related, relatedToTask, searchAll, snippet } from './search';
 import type { ItemRow } from '../sync';
 import type { Fact, Job, Meeting, Page } from '../wiki/wiki';
@@ -103,5 +104,13 @@ describe('search', () => {
     expect(relatedToTask(data, { ...task, people: null }).map((h) => h.id)).toEqual(['m2', 'm1', 's3']);
     const many = { meetings: Array.from({ length: 8 }, (_, i) => meeting(`x${i}`, 'Gateway migration', { starts_at: i + 1 })), items: [] };
     expect(relatedToTask(many, task).map((h) => h.id)).toEqual(['x7', 'x6', 'x5', 'x4', 'x3']);
+  });
+
+  it('matches shared/fixtures/related-to-task.json', () => {
+    type Case = { name: string; now: number; task: Pick<ItemRow, 'id' | 'profile' | 'title' | 'people'>; meetings: (Partial<Meeting> & { id: string; title: string })[]; items: (Partial<ItemRow> & { id: string; title: string })[]; expected: string[] };
+    for (const c of JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/related-to-task.json', import.meta.url), 'utf8')) as Case[]) {
+      const data = { meetings: c.meetings.map((m) => meeting(m.id, m.title, m)), items: c.items.map((r) => item(r.id, r.title, r)) };
+      expect(relatedToTask(data, c.task, c.now).map((h) => h.id), c.name).toEqual(c.expected);
+    }
   });
 });

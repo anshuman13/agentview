@@ -119,7 +119,10 @@ being written, most shared words first. A claim or meeting opens in Codex, a Sla
 
 A task page also shows a Related section under the notes as soon as it opens: up to 5 past meetings and Slack tasks of
 the same profile that share two key words with the saved title, or one key word and a person on the task, most shared
-words first, then newest. It is left out when nothing matches and follows the saved title, not each keystroke.
+words first, then newest. It is left out when nothing matches and follows the saved title, not each keystroke. The
+phone task sheet has the same section under the Checklist, also in read-only mode: a meeting opens its page, a Slack
+task its link (`relatedToTask` in `codex/data/ask/search.ts` and `codex/TaskRelated.kt`, with
+`shared/fixtures/related-to-task.json`).
 
 ### Meetings
 
@@ -148,7 +151,9 @@ The header has one segmented control, Decisions (the log, filtered by person, wi
 - Load: hours per week, share recorded, who you meet most, time and actions done per recurring series, and a series
   value audit: meetings, hours, decisions and my actions per series over 8 weeks, with series that brought no decision
   or action of mine in 4 weeks flagged first as Nothing for you lately with the hours they cost; a tap opens the
-  latest meeting
+  latest meeting. The phone has the series value list as Series value in the Meetings More menu, following the
+  profile filter (`seriesAudit` in `codex/data/meetings/seriesAudit.ts` and `codex/meetings/SeriesValue.kt`, with
+  `shared/fixtures/series-audit.json`)
 - Week: Goals this week, where up to 3 goals per profile are set and renamed (under All, a Work/Personal choice picks the profile), with an All goals button that opens the goals history (the page follows the Profile filter, opens with the same add field and Work/Personal choice while the profile has fewer than 3 goals this week, lists next week (when it has goals), this week and the 7 before it, each goal as a header with its done/total task count and a row per task (due date, open before done; tap opens the task), and a menu with Rename, Move to next week or Reopen this week for past goals, and Delete; Back returns to Week), then the week's decisions, new claims,
   tasks done and open meeting actions. Its Review lists done, slipped and stuck tasks and Waiting on by person: waiting
   tasks and sent mail with no reply after 3 workdays, with Copy nudge and Open. The decision log, Week (with Waiting

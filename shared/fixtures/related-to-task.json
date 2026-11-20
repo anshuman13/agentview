@@ -1,0 +1,62 @@
+[
+  {
+    "name": "two shared words, or one plus a person; future meetings, meeting actions, the task itself, deleted rows and the other profile left out",
+    "now": 1000000,
+    "task": {"id": "t", "profile": "work", "title": "Gateway migration", "people": "Ann Lee, Bo Ek"},
+    "meetings": [
+      {"id": "m1", "title": "Gateway migration sync", "starts_at": 5},
+      {"id": "m2", "title": "Gateway migration", "starts_at": 9},
+      {"id": "m3", "title": "Gateway migration", "starts_at": 2000000},
+      {"id": "m4", "title": "Gateway migration", "starts_at": 7, "profile": "personal"},
+      {"id": "m5", "title": "Gateway lunch", "starts_at": 6, "people": "bo ek"}
+    ],
+    "items": [
+      {"id": "t", "title": "Gateway migration", "source": "slack", "source_url": "https://chat.example/t"},
+      {"id": "s1", "title": "Gateway lunch", "source": "slack", "source_url": "https://chat.example/s1", "people": "Ann Lee,Cy Do", "updated_at": 3},
+      {"id": "s2", "title": "Gateway lunch", "source": "slack", "source_url": "https://chat.example/s2", "people": "Cy Do"},
+      {"id": "s3", "title": "Gateway migration plan", "source": "slack", "source_url": "https://chat.example/s3"},
+      {"id": "s4", "title": "Gateway migration", "source": "slack", "source_url": "https://chat.example/s4", "deleted": 1},
+      {"id": "s5", "title": "Gateway migration", "source": "slack", "source_url": "https://chat.example/s5", "meeting_id": "m1"},
+      {"id": "s6", "title": "Gateway migration", "source": "linear", "source_url": "https://linear.example/s6"}
+    ],
+    "expected": ["m2", "m1", "s3", "m5", "s1"]
+  },
+  {
+    "name": "without people only two shared words count, also in meeting notes",
+    "now": 1000000,
+    "task": {"id": "t", "profile": "work", "title": "Gateway migration", "people": null},
+    "meetings": [
+      {"id": "m1", "title": "Gateway migration sync", "starts_at": 5},
+      {"id": "m6", "title": "Lunch", "starts_at": 8, "notes": "the gateway migration went fine"},
+      {"id": "m5", "title": "Gateway lunch", "starts_at": 6, "people": "bo ek"}
+    ],
+    "items": [
+      {"id": "s1", "title": "Gateway lunch", "source": "slack", "source_url": "https://chat.example/s1", "people": "Ann Lee"}
+    ],
+    "expected": ["m6", "m1"]
+  },
+  {
+    "name": "one shared word and no person matches nothing",
+    "now": 1000000,
+    "task": {"id": "t", "profile": "work", "title": "Pricing budget", "people": null},
+    "meetings": [{"id": "m1", "title": "Pricing rollout review", "starts_at": 5}],
+    "items": [],
+    "expected": []
+  },
+  {
+    "name": "most shared words first, then newest, 5 at most",
+    "now": 1000000,
+    "task": {"id": "t", "profile": "work", "title": "Pricing rollout email", "people": null},
+    "meetings": [
+      {"id": "x1", "title": "Pricing rollout", "starts_at": 1},
+      {"id": "x2", "title": "Pricing rollout", "starts_at": 2},
+      {"id": "x3", "title": "Pricing rollout", "starts_at": 3},
+      {"id": "x4", "title": "Pricing rollout", "starts_at": 4},
+      {"id": "x5", "title": "Pricing rollout", "starts_at": 5},
+      {"id": "x6", "title": "Pricing rollout", "starts_at": 6},
+      {"id": "y1", "title": "Pricing rollout email draft", "starts_at": 0}
+    ],
+    "items": [],
+    "expected": ["y1", "x6", "x5", "x4", "x3"]
+  }
+]

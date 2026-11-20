@@ -11,6 +11,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.MEMORY
 import no.pradhan.agentview.nativeapp.codex.wiki.ReviewModePage
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.meetings.SeriesPage
+import no.pradhan.agentview.nativeapp.codex.meetings.SeriesValuePage
 import no.pradhan.agentview.nativeapp.codex.TaskActions
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.autopilot.AutopilotPage
@@ -29,7 +30,7 @@ import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 
 // The pages the Codex tab shows beyond Overview, Tasks and Goals: Meetings, Wiki and Jobs with the pages under them.
-// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>" (ending in #notes to focus My notes),"person:<name>", "wiki:<key>" (ending in #<claim id> to open a claim), "job:<key>", "jobnew:<key>" (a job just added, its Edit sheet open), "series:<key>", "review" or "autopilot".
+// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>" (ending in #notes to focus My notes),"person:<name>", "wiki:<key>" (ending in #<claim id> to open a claim), "job:<key>", "jobnew:<key>" (a job just added, its Edit sheet open), "series:<key>", "series-value", "review" or "autopilot".
 val EXTRA_ROOTS = setOf("meetings", "jobs", "wiki")
 const val ROUTE_SEP = '\u0001'
 
@@ -44,6 +45,7 @@ fun routeTitle(route: String, st: CodexState): String = when {
     route.startsWith("meeting:") -> "Meeting"
     route.startsWith("person:") -> "Person"
     route.startsWith("series:") -> "Series"
+    route == "series-value" -> "Series value"
     route == "review" -> "Review claims"
     route == "autopilot" -> "Reply for me in Slack"
     route == "wiki" || route.startsWith("wiki:") -> "Wiki"
@@ -72,6 +74,7 @@ fun ExtraContent(
             if (m == null) EmptyState("This meeting is gone", icon = "calendar") else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask, if (anchor == "notes") ({ pop(); push(wikiRoute) }) else null)
         }
         route.startsWith("series:") -> SeriesPage(hub, st, key, now, actions, openMeeting)
+        route == "series-value" -> SeriesValuePage(st, profile, now, openMeeting)
         route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
         route.startsWith("person:") -> PersonPage(hub, st, key, now, actions, ops, openMeeting, { f -> push(claimRoute(f)) }, onTask) { push("meeting:${it.key}#notes") }
@@ -96,6 +99,7 @@ fun ExtraContent(
 fun ExtraMenu(route: String, hub: Hub, profile: String?, now: Long, decisions: Boolean, onDecisions: () -> Unit, push: (String) -> Unit, close: () -> Unit) {
     if (route != "meetings") return
     MenuItem("Decisions", "check", { close(); onDecisions() }, checked = decisions)
+    MenuItem("Series value", "graph", { close(); push("series-value") })
     MenuItem("Take notes", "edit", {
         close()
         val row = newNotes(if (profile == PERSONAL) PERSONAL else WORK, now)

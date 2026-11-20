@@ -1,6 +1,7 @@
 process.env.TZ = 'Europe/Oslo';
 
 import { expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { seriesAudit } from './seriesAudit';
 import type { ItemRow } from '../sync';
 import type { Meeting } from '../wiki/wiki';
@@ -35,4 +36,14 @@ it('flags series with nothing for me in four weeks first, by recent hours', () =
     ['Demo', false, 2, 1, 1, 0, 1],
   ]);
   expect(rows[1].latest.id).toBe('s1');
+});
+
+it('matches shared/fixtures/series-audit.json', () => {
+  type Case = { name: string; now: number; meetings: Partial<Meeting>[]; items: Partial<ItemRow>[]; expected: Record<string, unknown>[] };
+  for (const c of JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/series-audit.json', import.meta.url), 'utf8')) as Case[]) {
+    const ms = c.meetings.map((m) => ({ profile: 'work', deleted: 0, decisions: null, ...m }) as Meeting);
+    const its = c.items.map((r) => ({ profile: 'work', deleted: 0, ...r }) as ItemRow);
+    const got = seriesAudit(ms, its, c.now).map((r) => ({ title: r.title, quiet: r.quiet, count: r.count, hours: r.hours, recentHours: r.recentHours, decisions: r.decisions, actions: r.actions, latest: r.latest.id }));
+    expect(got, c.name).toEqual(c.expected);
+  }
 });

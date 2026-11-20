@@ -131,6 +131,17 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
             TextField(text, { text = it }, placeholder = "Notes", minLines = 3)
             NoteLinks(hub, text)
             Checklist(text, !hub.readOnly && (row.status == "open" || row.status == "done")) { text = it }
+            val related = remember(items, meetings, row.key, row.title, row.people, now / 60_000) { relatedToTask(items, meetings, row, now) }
+            if (related.isNotEmpty()) Column {
+                SectionHeader("Related", "${related.size}")
+                Group {
+                    related.forEachIndexed { i, r ->
+                        if (i > 0) Hairline()
+                        if (r.table == "meetings") ListRow(r.title?.ifEmpty { null } ?: "Meeting", r.startsAt?.let(::dayLabel), leading = { AvIcon("record") }, onClick = { commit(); onDismiss(); onMeeting(r) })
+                        else ListRow(r.title?.ifEmpty { null } ?: r.text?.ifEmpty { null } ?: "Slack", "Slack", leading = { AvIcon("comment-discussion") }, onClick = safeHref(r.sourceUrl)?.let { h -> { uri.openUri(h) } })
+                    }
+                }
+            }
             FieldLabel("Due")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 val late = (row.at ?: Long.MAX_VALUE) < now && row.status == "open"

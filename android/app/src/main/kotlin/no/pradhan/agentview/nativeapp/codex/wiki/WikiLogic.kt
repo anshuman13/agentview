@@ -57,7 +57,7 @@ private val WORD = Regex("[\\p{L}\\p{N}]{4,}")
 private val SPACE = Regex("\\s+")
 private const val SIMILAR = 0.6
 
-private fun keyWords(t: String) = WORD.findAll(t.lowercase()).map { it.value }.filter { it !in STOP }.toSet()
+internal fun keyWords(t: String) = WORD.findAll(t.lowercase()).map { it.value }.filter { it !in STOP }.toSet()
 
 private val WORD_CHAR = Regex("[\\p{L}\\p{N}]")
 
