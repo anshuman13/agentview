@@ -71,7 +71,7 @@
 .as-mirror { position: absolute; inset: 0 0 auto 0; pointer-events: none; color: transparent; }
 .as-mirror mark { color: transparent; background: var(--accent-soft); border-radius: var(--radius-xs); box-shadow: 0 0 0 2px var(--accent-soft); }
 
-.as-snack { position: fixed; left: 50%; bottom: 170px; transform: translateX(-50%); z-index: calc(var(--z-sheet) + 1); display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-8); max-width: calc(100% - 32px); border-radius: var(--radius); background: var(--fg); color: var(--bg); font-size: var(--fs-md); box-shadow: var(--shadow-md); animation: as-up var(--dur) var(--ease); }
+.as-snack { position: fixed; left: 50%; bottom: 170px; transform: translateX(-50%); z-index: calc(var(--z-sheet) + 1); display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-8); width: max-content; max-width: calc(100% - 32px); border-radius: var(--radius); background: var(--fg); color: var(--bg); font-size: var(--fs-md); box-shadow: var(--shadow-md); animation: as-up var(--dur) var(--ease); }
 .as-snack button { border: 0; background: transparent; color: var(--accent-text); font-weight: 600; font-size: var(--fs-md); padding: var(--sp-2) var(--sp-4); filter: brightness(0.8); }
 @keyframes as-up { from { opacity: 0; transform: translate(-50%, 8px); } }
 
