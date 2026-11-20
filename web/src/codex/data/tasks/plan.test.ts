@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { afterNextMeeting, atRisk, defaultBlock, estimateMin, fitBlock, freeMinutes, nextFreeSlot, packDay, suggestEstimate, takeEstimate, timedMeetings, weekFreeMinutes, withEstimate, workGaps } from './plan';
+import { afterNextMeeting, atRisk, defaultBlock, estimateMin, fitBlock, freeMinutes, nextFreeSlot, packDay, planToday, suggestEstimate, takeEstimate, timedMeetings, weekFreeMinutes, withEstimate, workGaps } from './plan';
 import { parseWhen, stripWhen } from './engine';
 import { parseRepeat } from './recur';
 import { goalProgress, goalsOf } from './goals';
@@ -72,6 +72,22 @@ describe('packDay', () => {
       ['Write doc ~1h', [at(10, 45), at(11, 45)]],
       ['Read notes', [at(9, 5), at(9, 35)]],
     ]);
+  });
+});
+
+describe('planToday', () => {
+  it('fits only estimated tasks by due time into the gaps around meetings, from now', () => {
+    const tasks = [
+      { title: 'No estimate', due: at(9) },
+      { title: 'Write doc ~1h', due: at(15) },
+      { title: 'Reply to Mira ~45m', due: at(11) },
+    ];
+    const out = planToday(tasks, [[at(9), at(10)], [at(12), at(16, 30)]], at(8, 30));
+    expect(out.map((p) => [p.task.title, p.span])).toEqual([
+      ['Reply to Mira ~45m', [at(10), at(10, 45)]],
+      ['Write doc ~1h', [at(10, 45), at(11, 45)]],
+    ]);
+    expect(planToday(tasks, [], at(16, 30))).toEqual([]);
   });
 });
 

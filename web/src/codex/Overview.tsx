@@ -18,6 +18,7 @@ import { when } from './tasks/time';
 import type { useSplit } from './tasks/split';
 import { UpNext } from './overview/UpNext';
 import { TodayList } from './overview/TodayList';
+import { PlanDay } from './overview/PlanDay';
 import { NeedsYouSheet } from './overview/NeedsYouSheet';
 import { RunningChats } from './overview/RunningChats';
 import { CalendarSyncBanner } from './overview/CalendarSyncBanner';
@@ -75,6 +76,7 @@ export function Overview({ s, dueToday, onPrep, onAsk }: { s: Split; dueToday: I
       )}
       <RunningChats />
       <TodayList meetings={others} overdue={late} tasks={task ? todo.filter((r) => r !== task) : todo} now={now} done={s.doneToday.length} open={openCount} />
+      <PlanDay meetings={s.meetingsToday} tasks={todo} now={now} />
       {sheet && <NeedsYouSheet needs={needs} queue={queue} ignored={ignored} now={now} onClose={closeSheet} onAsk={onAsk} />}
       {adding && <AddSheet filter={filter} onClose={() => setAdding(false)} />}
     </>
