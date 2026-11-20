@@ -102,7 +102,7 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
     fun delete(r: Row) = change(r, mapOf("deleted" to true), "Deleted")
     fun accept(r: Row) = change(r, mapOf("status" to "open"), "Added to Today")
     fun restore(r: Row) = change(r, mapOf("status" to "suggested"), "Back to review")
-    fun dismiss(r: Row) = change(r, mapOf("status" to "dismissed"), "Dismissed")
+    fun dismiss(r: Row, text: String = "Dismissed") = change(r, mapOf("status" to "dismissed"), text)
     fun toNote(r: Row) {
         if (store.update(r, mapOf("status" to "note"))) snack(NOTED) { store.update(r, mapOf("status" to "suggested")) } else say(NOTE_FAILED)
     }

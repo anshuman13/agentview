@@ -321,6 +321,14 @@ fun meetingMarkdown(m: Row, actions: List<Row>): String {
     return out.joinToString("\n\n") + "\n"
 }
 
+class ActionMenu(val notMine: Boolean, val assign: Boolean, val snooze: Boolean)
+
+// Which menu items a meeting action shows for its status (shared/actionMenu.ts, checked by shared/fixtures/action-menu.json). Delete shows for every status.
+fun actionMenu(status: String): ActionMenu {
+    val live = status == "open" || status == "suggested"
+    return ActionMenu(live, status == "open", live)
+}
+
 fun followUpText(m: Row, actions: List<Row>): String {
     val people = peopleOf(m).map(::firstName)
     val decisions = jsonList(m.str("decisions"))

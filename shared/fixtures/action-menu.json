@@ -1,0 +1,7 @@
+[
+  { "status": "open", "notMine": true, "assign": true, "snooze": true },
+  { "status": "suggested", "notMine": true, "assign": false, "snooze": true },
+  { "status": "done", "notMine": false, "assign": false, "snooze": false },
+  { "status": "dismissed", "notMine": false, "assign": false, "snooze": false },
+  { "status": "unassigned", "notMine": false, "assign": false, "snooze": false }
+]

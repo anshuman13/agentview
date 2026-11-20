@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import java.time.Instant
+import no.pradhan.agentview.nativeapp.codex.meetings.followUpText
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import no.pradhan.agentview.nativeapp.codex.wiki.agoText
 import no.pradhan.agentview.nativeapp.net.Ask
@@ -269,7 +270,7 @@ fun parseCapture(typed: String, pickedAt: Long?, picked: Boolean, now: Long): Ca
 }
 
 @Composable
-fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onDismiss: () -> Unit) {
+fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onMeeting: (Row) -> Unit, onDismiss: () -> Unit) {
     var all by remember { mutableStateOf(setOf<String>()) }
     var onlyStale by remember { mutableStateOf(false) }
     val old = staleAsks(queue, now)
@@ -284,7 +285,7 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now:
             Group {
                 shown.forEachIndexed { i, n ->
                     if (i > 0) Hairline()
-                    NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson)
+                    NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson, onMeeting)
                 }
                 if (shown.size < rows.size) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = all + label }) }
             }
@@ -311,14 +312,24 @@ private fun IgnoredSection(list: List<Ignored>) {
 }
 
 @Composable
-private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onStale: () -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit) {
+private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onStale: () -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onMeeting: (Row) -> Unit) {
     when (n) {
         is Need.StaleAsks -> ListRow("${plural(n.count, "ask")} older than $STALE_DAYS days", "oldest ${agoShort(n.oldest, now)}", onClick = onStale)
-        is Need.Wiki -> ListRow("${n.count} wiki ${if (n.count == 1) "claim waits" else "claims wait"} for you", onClick = onReview)
+        is Need.Wiki -> ListRow("${n.count} wiki ${if (n.count == 1) "claim waits" else "claims wait"} for you", "Review one at a time", onClick = onReview,
+            trailing = { Button("Review", onReview, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) })
         is Need.Overdue -> ListRow(n.row.title ?: "", n.row.at?.let { "Overdue · due ${whenText(it, now)}" }, leading = { CheckCircle(false, "Done") { actions.done(n.row) } },
-            trailing = { MoreButton { close -> MenuItem("Snooze to next 09:00", "clock", { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })
+            trailing = { SnoozeMore(n.row, actions) }, onClick = { onOpen(n.row) })
         is Need.OverdueAll -> ListRow("${n.rows.size} overdue", "Move them all to today", trailing = { Button("Move all to today", { actions.moveToToday(n.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
-        is Need.JustEnded -> ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
+        is Need.JustEnded -> {
+            val clip = LocalClipboardManager.current
+            ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) },
+                trailing = {
+                    MoreButton { close ->
+                        MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(n.meeting, n.actions))); actions.say("Follow-up copied") })
+                        MenuItem("Notes", "edit", { close(); onMeeting(n.meeting) })
+                    }
+                })
+        }
         is Need.Ask -> DismissSwipe({ actions.dismiss(n.row) }) {
             ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · "), onClick = { onOpen(n.row) },
                 trailing = { Button("Add", { actions.accept(n.row) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) },
@@ -328,18 +339,30 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
                     MenuItem("Dismiss", "close", { close(); actions.dismiss(n.row) })
                 })
         }
-        is Need.Risk -> ListRow(n.row.title ?: "", "At risk · due ${whenText(n.due, now)} · ${minutesText(n.short)} short", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
+        is Need.Risk -> ListRow(n.row.title ?: "", "At risk · due ${whenText(n.due, now)} · ${minutesText(n.short)} short", leading = { CheckCircle(false, "Done") { actions.done(n.row) } },
+            trailing = { SnoozeMore(n.row, actions) }, onClick = { onOpen(n.row) })
         is Need.Slack -> NeedCard(n.bullet.title, "Slack" + (n.bullet.why.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), n.bullet.url, { dismissNeed(hub, actions, n) }, null, !hub.readOnly, { noteNeed(hub, actions, listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), n.bullet.url, n.profile, n) }) {
-            if (hub.codex.capture(listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), "open", n.profile, null, mapOf("text" to n.bullet.url)) != null) hub.hideNeed(n)
+            taskNeed(hub, actions, listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), n.profile, mapOf("text" to n.bullet.url), n)
         }
         is Need.Dm -> NeedCard(n.chat.str("name") ?: "DM", listOfNotNull(listOfNotNull("DM", n.chat.long("last_at")?.let { agoText(it, now) }).joinToString(" · "), n.chat.str("summary")?.ifEmpty { null }).joinToString("\n"), n.chat.str("url"), { dismissNeed(hub, actions, n) }, n.chat.str("name")?.let { name -> { onPerson(name) } }, !hub.readOnly, { noteNeed(hub, actions, listOfNotNull(n.chat.str("name") ?: "DM", n.chat.str("summary")?.ifEmpty { null }).joinToString(": "), n.chat.str("url"), n.chat.profile, n) }) {
-            if (hub.codex.capture("Reply to ${n.chat.str("name") ?: "DM"}", "open", n.chat.profile, null, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM")) != null) hub.hideNeed(n)
+            taskNeed(hub, actions, "Reply to ${n.chat.str("name") ?: "DM"}", n.chat.profile, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM"), n)
         }
     }
 }
 
 private fun dismissNeed(hub: Hub, actions: TaskActions, n: Need) {
     if (hub.hideNeed(n)) actions.undoable("Dismissed") { hub.restoreNeed(n) }
+}
+
+private fun taskNeed(hub: Hub, actions: TaskActions, title: String, profile: String, fields: Map<String, Any?>, n: Need) {
+    val made = hub.codex.capture(title, "open", profile, null, fields) ?: return
+    hub.hideNeed(n)
+    actions.undoable("Added to Tasks") { hub.codex.update(made, mapOf("deleted" to true)); hub.restoreNeed(n) }
+}
+
+@Composable
+private fun SnoozeMore(row: Row, actions: TaskActions) {
+    MoreButton { close -> MenuItem("Snooze to next 09:00", "clock", { close(); actions.snoozeLater(row) }) }
 }
 
 private fun noteNeed(hub: Hub, actions: TaskActions, title: String, text: String?, profile: String, n: Need) {

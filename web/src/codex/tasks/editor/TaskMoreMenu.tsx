@@ -115,7 +115,7 @@ export function TaskMoreMenu({ row, draft, suggested, addEstimate, then, onAsk }
       )}
       {row.meeting_id && <MenuItem onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))} icon="record">Open meeting</MenuItem>}
       {row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(false)} icon={src.icon}>{src.label}</MenuItem>}
-      {row.status === 'note' && <MenuItem onClick={then(() => act.toTask(row))} icon="check">Make task</MenuItem>}
+      {row.status === 'note' && <MenuItem onClick={then(() => act.toTask(row))} icon="add">Make task</MenuItem>}
       {row.status === 'open' && <MenuItem disabled={tidying} onClick={() => { setMenu(false); void tidy(); }} icon={tidying ? 'loading' : 'wand'} spin={tidying}>Tidy</MenuItem>}
       {row.draft && <MenuItem onClick={() => { setMenu(false); copyText(row.draft!, 'Draft copied'); }} icon="copy">Copy draft</MenuItem>}
       {row.status === 'open' && <RaiseWith className="ui-menu-item" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
