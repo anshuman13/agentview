@@ -20,7 +20,7 @@ data class SavedSession(
 )
 
 @Serializable
-data class Repo(val name: String, val cwd: String, val kind: String = "other", val branch: String = "", val dirty: Int = 0, val lastCommit: Double = 0.0)
+data class Repo(val name: String, val cwd: String, val root: String = "", val kind: String = "other", val branch: String = "", val dirty: Int = 0, val lastCommit: Double = 0.0)
 
 @Serializable
 data class Worktree(val id: String = "", val repo: String = "", val cwd: String, val name: String = "")
@@ -60,6 +60,9 @@ fun chatState(live: LiveChat?, saved: SavedSession?, seen: Map<String, Long>): C
     val s = seen[id] ?: return null
     return if (at > s) ChatState.Done else null
 }
+
+// The line under a repo in a picker: its root folder and branch (web RepoPicker).
+fun repoDetail(r: Repo) = metaLine(r.root, if (r.kind == "new") "empty" else r.branch.ifEmpty { "no git" })
 
 private fun urgency(c: LiveChat) = if (c.pending > 0) 0 else if (c.running) 1 else 2
 val byUrgency = Comparator<LiveChat> { a, b -> urgency(a) - urgency(b) }.thenByDescending { it.lastActive }
@@ -170,6 +173,16 @@ fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatIt
         val repo = folderName(folderKey(cwd, ws.repos, ws.trees))
         if (words.isNotEmpty() && !matchesWords(words, title, saved[id]?.firstPrompt, repo)) null else ChatItem(c, s, repo)
     }
+}
+
+// Chats waiting on the user that match the filter, most urgent first.
+fun waitingRows(live: List<LiveChat>, ws: Workspace, filter: String): List<LiveChat> {
+    val words = queryWords(filter)
+    val saved = ws.saved.associateBy { it.sessionId }
+    return live.filter { c ->
+        val s = saved[c.sessionId]
+        c.pending > 0 && (words.isEmpty() || matchesWords(words, c.title, s?.title, s?.firstPrompt, folderName(folderKey(c.cwd, ws.repos, ws.trees))))
+    }.sortedWith(byUrgency)
 }
 
 data class Glance(val running: Int, val needs: Int, val unread: Int)

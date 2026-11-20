@@ -64,6 +64,22 @@ class FoldersTest {
     }
 
     @Test
+    fun repoDetailNamesRootAndBranch() {
+        assertEquals("workspace · main", repoDetail(Repo("shop", "/w/shop", "workspace", branch = "main")))
+        assertEquals("workspace · empty", repoDetail(Repo("shop", "/w/shop", "workspace", kind = "new", branch = "main")))
+        assertEquals("workspace · no git", repoDetail(Repo("shop", "/w/shop", "workspace")))
+    }
+
+    @Test
+    fun waitingRowsFollowTheSearch() {
+        val ws = Workspace(repos, trees)
+        val l = listOf(live("a", "/w/shop", pending = 1, active = 1), live("b", "/w/agentview", pending = 1, active = 2), live("c", "/w/shop"))
+        assertEquals(listOf("b", "a"), waitingRows(l, ws, "").map { it.id })
+        assertEquals(listOf("a"), waitingRows(l, ws, "shop").map { it.id })
+        assertEquals(emptyList<String>(), waitingRows(l, ws, "nothing").map { it.id })
+    }
+
+    @Test
     fun recentRowsMergeOpenAndSavedNewestFirst() {
         val ws = Workspace(repos, trees, listOf(saved("s1", "/w/agentview", at = 5), saved("s2", "/w/agentview", at = 1)))
         val l = listOf(live("l1", "/w/shop", active = 9), live("l2", "/w/shop", active = 8, pending = 1))

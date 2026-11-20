@@ -6,13 +6,12 @@ import { useChatSettings, type Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
 import { Voice, type useDictation } from './Voice';
 import type { Use } from './composerLogic';
-import { providerLabel } from '../../../../shared/providers';
+import { providerLabel, shortModel } from '../../../../shared/providers';
 
 export function useModeText() {
   const { effort, modelName, effortName, menu } = useChatSettings();
   const canEffort = useCan('effort');
-  const shortModel = modelName.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);
-  return `${shortModel}${effort && canEffort ? ` · ${effortName}` : ''} · ${menu.label}`;
+  return `${shortModel(modelName)}${effort && canEffort ? ` · ${effortName}` : ''} · ${menu.label}`;
 }
 
 function ModeChip({ setPick }: { setPick: (p: Pick) => void }) {

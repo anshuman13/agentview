@@ -23,11 +23,15 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.DeepLink
+import no.pradhan.agentview.nativeapp.chat.modelGroup
+import no.pradhan.agentview.nativeapp.chat.startModel
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.billing
+import no.pradhan.agentview.nativeapp.app.lastModel
+import no.pradhan.agentview.nativeapp.app.modelsOf
 import no.pradhan.agentview.nativeapp.app.newChat
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.app.readFile
@@ -140,6 +144,9 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     var inHere by remember { mutableStateOf(false) }
     var dir by remember { mutableStateOf(cwd) }
     var providerId by remember { mutableStateOf(defaultProvider) }
+    val group = modelGroup(providerId, allProviders)
+    val models by hub.modelsOf(group).collectAsState()
+    var model by remember(models, group) { mutableStateOf(startModel(models, hub.lastModel(group))) }
     var pickTime by remember { mutableStateOf(false) }
     var sent by remember { mutableStateOf(false) }
     val presets by hub.goalPresets.collectAsState()
@@ -148,7 +155,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     LaunchedEffect(sent) { if (sent) { delay(10_000); sent = false } }
     val here = canHere && inHere
     val target = if (here) chatProvider else providerId
-    val dirs = (ws.repos.map { it.cwd to it.name } + ws.trees.map { it.cwd to it.name.substringAfterLast('/') }).let { l -> if (cwd.isNotEmpty() && l.none { it.first == cwd }) listOf(cwd to folderName(cwd)) + l else l }
+    val dirs = (ws.repos.map { it.cwd to it.name } + ws.trees.map { it.cwd to "${folderName(it.repo)} · ${it.name.substringAfterLast('/')}" }).let { l -> if (cwd.isNotEmpty() && l.none { it.first == cwd }) listOf(cwd to folderName(cwd)) + l else l }
     val read = planRead(hub, sheet.plan, hub.pageChat)
     val badEvery = custom.isNotBlank() && parseEvery(custom) == null
     val ready = !badEvery && (sheet.plan == null || (read.markdown != null && !read.error))
@@ -162,7 +169,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
             onClose()
         } else {
             sent = true
-            hub.newChat(cwd = root.ifEmpty { null }, provider = providerId, text = text, onOpened = onClose)
+            hub.newChat(cwd = root.ifEmpty { null }, provider = providerId, model = model, text = text, onOpened = onClose)
         }
     }
     val applyPreset = { p: GoalPreset ->
@@ -222,8 +229,9 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
                     Chip("This chat", { inHere = true }, on = inHere)
                 }
                 if (!here) {
-                    if (sheet.plan == null) MenuChip(folderName(root), dirs, { it.second }, { it.first == root }) { dir = it.first }
+                    if (sheet.plan == null) MenuChip(dirs.firstOrNull { it.first == root }?.second ?: folderName(root), dirs, { it.second }, { it.first == root }) { dir = it.first }
                     MenuChip(providerLabel(providerId), providers, { it.label }, { it.id == providerId }) { providerId = it.id }
+                    if (models.isNotEmpty()) MenuChip(models.firstOrNull { it.value == model }?.displayName ?: "Default model", models, { it.displayName }, { it.value == model }) { model = it.value }
                 }
             }
         }

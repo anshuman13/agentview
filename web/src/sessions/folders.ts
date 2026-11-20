@@ -8,6 +8,7 @@ import { inside } from '../../../shared/util';
 import { advisorOf } from '../../../shared/advisors';
 import { profileOfPath } from '../../../shared/workspace';
 import { matcher, queryWords } from '../codex/data/ask/match';
+import { newChat } from '../app/newChat';
 
 export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
 
@@ -103,7 +104,7 @@ export function worktreeRequest(d: Folder, track: (branch: string | null, error?
       const r = await fetch(apiUrl('/api/worktrees'), { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) }).catch(() => null);
       const body = await r?.json().catch(() => null);
       invalidateWorkspace();
-      if (r?.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
+      if (r?.ok && body?.cwd) newChat({ cwd: body.cwd });
       track(null, r?.ok && body?.cwd ? undefined : body?.error ?? 'Could not create the worktree');
     },
   };
@@ -207,6 +208,12 @@ export function findHere(folders: Folder[], cwd: string) {
 
 const urgency = (c: LiveChat) => (c.pending ? 0 : c.running ? 1 : 2);
 export const byUrgency = (a: LiveChat, b: LiveChat) => urgency(a) - urgency(b) || b.lastActive - a.lastActive;
+
+// The chats waiting on the user that match the search, most urgent first.
+export function waitingChats(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter: string) {
+  const find = chatFinder(filter, chats);
+  return live.filter((c) => c.pending && (!find.active || find.match(c.title, c.sessionId, repoName(folders, c.cwd)))).sort(byUrgency);
+}
 
 export const PINS_URL = '/api/sessions/pins';
 

@@ -267,6 +267,8 @@ export type LiveChat = {
   agentList?: LiveAgent[];
   now?: LiveNow;
   pending: number;
+  // What the first pending request asks: "Question", "Plan approval" or "Permission: Bash".
+  ask?: string;
   status: string;
   lastActive: number;
   mcpFailed?: number;

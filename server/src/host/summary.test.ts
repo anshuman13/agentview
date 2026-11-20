@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
+import type { PendingRequest } from '../../../shared/protocol.js';
 import type { AgentSession } from '../session/session.js';
-import { summary } from './summary.js';
+import { askLabel, summary } from './summary.js';
 
 const chat = (text: string, title = '') => ({
   id: 'c1',
@@ -18,5 +19,17 @@ describe('summary title', () => {
   });
   it('keeps a title the user set', () => {
     expect(title(chat('@chat:3f2a also check the importer', 'My name'))).toBe('My name');
+  });
+});
+
+const permission = (toolName: string): PendingRequest => ({ id: 'p', kind: 'permission', toolName, title: '', input: {}, canAlwaysAllow: true });
+
+describe('askLabel', () => {
+  it('names what the first request asks', () => {
+    expect(askLabel(undefined)).toBeUndefined();
+    expect(askLabel({ id: 'q', kind: 'question', questions: [] })).toBe('Question');
+    expect(askLabel(permission('Bash'))).toBe('Permission: Bash');
+    expect(askLabel(permission('ExitPlanMode'))).toBe('Plan approval');
+    expect(askLabel(permission('mcp__agentview__data_write'))).toBe('Permission: data_write');
   });
 });

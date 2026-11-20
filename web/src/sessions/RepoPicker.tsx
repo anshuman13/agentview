@@ -1,8 +1,9 @@
 import { createFolder } from './sessionApi';
-import { notice, send, setUi, useStore } from '../app/store';
+import { notice, setUi, useStore } from '../app/store';
 import { appSettings } from '../app/appSettings';
 import { QuickPick } from '../ui/QuickPick';
 import { useWorkspace } from './folders';
+import { newChat } from '../app/newChat';
 
 export function RepoPicker() {
   const cwd = useStore((s) => s.session.cwd);
@@ -21,11 +22,11 @@ export function RepoPicker() {
       extra={(q) => (/^[A-Za-z0-9][\w.-]*$/.test(q) && !folders.some((f) => f.name === q) ? roots.map((root) => ({ value: `create:${root}:${q}`, label: `Create ${q}`, detail: `new project in ~/${root}` })) : [])}
       onPick={async (v) => {
         close();
-        if (!v.startsWith('create:')) return send({ type: 'new_session', cwd: v });
+        if (!v.startsWith('create:')) return newChat({ cwd: v });
         const [, root, name] = v.split(':');
         const r = await createFolder(root, name);
         const body = await r?.json().catch(() => null);
-        if (r?.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
+        if (r?.ok && body?.cwd) newChat({ cwd: body.cwd });
         else notice(body?.error ?? 'Could not create the folder');
       }}
       onClose={close}

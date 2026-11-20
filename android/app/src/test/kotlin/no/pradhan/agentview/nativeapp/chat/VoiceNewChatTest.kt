@@ -24,8 +24,8 @@ class VoiceNewChatTest {
     @Test
     fun startsOnTheLastModelWhenOffered() {
         assertEquals("opus", startModel(models, "opus"))
-        assertEquals("default", startModel(models, "gone"))
-        assertEquals("default", startModel(models, null))
+        assertNull(startModel(models, "gone"))
+        assertNull(startModel(models, null))
         assertNull(startModel(emptyList(), "opus"))
     }
 

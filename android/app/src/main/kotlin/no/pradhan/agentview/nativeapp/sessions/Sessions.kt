@@ -82,8 +82,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
 
     newChat?.let { choice ->
         val here = sessionCwd?.ifEmpty { null }?.let { c -> folderKey(c, ws.repos, ws.trees) }?.takeIf { k -> unfiltered.any { g -> g.key == k } }
-        val choices = unfiltered.filter { g -> g.key == here || g.open.isNotEmpty() || g.recent.isNotEmpty() }.sortedByDescending { g -> g.key == here }
-        NewChatSheet(hub, choice.key, choices.map { RepoChoice(it.key, it.name) }, onDismiss = { newChat = null }, initial = here)
+        val choices = unfiltered.sortedByDescending { g -> g.key == here }.map { g -> RepoChoice(g.key, g.name, ws.repos.firstOrNull { it.cwd == g.key }?.let(::repoDetail)) }
+        NewChatSheet(hub, choice.key, choices, onDismiss = { newChat = null }, initial = here)
     }
     dialogs.Show(hub)
 }
@@ -165,7 +165,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
     val all = remember(live, ws, filter) { groupByRepo(live, ws, filter) }
     val groups = remember(all, segment) { all.filter { segmentOf(it.key) == segment } }
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
-    val waiting = remember(live) { live.filter { it.pending > 0 }.sortedWith(byUrgency) }
+    val waiting = remember(live, ws, filter) { waitingRows(live, ws, filter) }
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {

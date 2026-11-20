@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
-import { buildFolders, type Folder, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
+import { buildFolders, type Folder, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
 import { RepoRow } from './RepoRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 import { WORKSPACE } from '../../../shared/workspace';
@@ -143,6 +143,17 @@ describe('chat search', () => {
     expect(names('invoice', [live('a', 's1')])).toEqual(['a']);
     expect(chatFinder('invoice', saved).match('b', null, 'shop')).toBe(false);
     expect(chatFinder('invoice', saved).match('b', 's1', 'shop')).toBe(true);
+  });
+});
+
+describe('waitingChats', () => {
+  const live = (id: string, cwd: string, pending: number, lastActive = 1): LiveChat => ({ id, sessionId: id, cwd, title: id, running: false, pending, status: '', lastActive });
+  const f = buildFolders([repo('shop'), repo('cafe')], [], []);
+  const l = [live('a', '/w/shop', 1, 1), live('b', '/w/cafe', 1, 2), live('c', '/w/shop', 0)];
+  it('lists the waiting chats, newest first, and keeps those matching the search', () => {
+    expect(waitingChats(l, [], f, '').map((c) => c.id)).toEqual(['b', 'a']);
+    expect(waitingChats(l, [], f, 'sho').map((c) => c.id)).toEqual(['a']);
+    expect(waitingChats(l, [], f, 'nothing')).toEqual([]);
   });
 });
 

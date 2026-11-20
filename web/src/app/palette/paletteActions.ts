@@ -14,6 +14,7 @@ import { startModeFor } from '../../../../shared/providers';
 import { advisorOf, auditPrompt, type AdvisorId } from '../../../../shared/advisors';
 import { paletteFeature } from '../../../../shared/featureUse';
 import type { PaletteItem } from './paletteLogic';
+import { newChat, rememberModel } from '../newChat';
 
 const KIND_LABEL = { task: 'Task', meeting: 'Meeting', wiki: 'Wiki' };
 
@@ -46,13 +47,16 @@ export function perform(id: string) {
     const chat = getState().live.find((c) => c.sessionId === arg);
     send(chat ? { type: 'view', id: chat.id } : { type: 'open_session', sessionId: arg });
   } else if (kind === 'advisor') send({ type: 'open_advisor', id: arg as AdvisorId });
-  else if (kind === 'model') send({ type: 'set_model', model: arg });
+  else if (kind === 'model') {
+    rememberModel(getState().session.provider, arg);
+    send({ type: 'set_model', model: arg });
+  }
   else if (kind === 'effort') send({ type: 'set_effort', effort: arg });
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
-  else if (id === 'newChat') send({ type: 'new_session' });
+  else if (id === 'newChat') newChat();
   else if (kind === 'newChat') {
     const p = appSettings.get().providers.find((o) => o.id === arg);
-    if (p?.enabled) send({ type: 'new_session', provider: p.id });
+    if (p?.enabled) newChat({ provider: p.id });
     else notice(p?.note ?? 'That provider is not available');
   }
   else if (id === 'audit') {

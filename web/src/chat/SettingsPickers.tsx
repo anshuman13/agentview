@@ -10,6 +10,7 @@ import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL } from '../../../shared/proto
 import { modeSteps, newestModels } from '../../../shared/providers';
 import { effortsFor } from './capabilitiesLogic';
 import { useChatSettings, type Pick } from './ChatSettings';
+import { rememberModel } from '../app/newChat';
 
 const BUILD_ITEMS = [
   { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
@@ -41,6 +42,7 @@ export function ChoicePick({ back, ...props }: ComponentProps<typeof QuickPick> 
 
 export function ModelPick({ pick, close, back }: Props) {
   const { model, models } = useChatSettings();
+  const provider = useStore((s) => s.session.provider);
   const [all, setAll] = useState(false);
   const newest = newestModels(models, model);
   const more = all ? 0 : models.length - newest.length;
@@ -56,6 +58,7 @@ export function ModelPick({ pick, close, back }: Props) {
       ]}
       onPick={(v) => {
         if (v === OLDER) return setAll(true);
+        rememberModel(provider, v);
         send({ type: 'set_model', model: v });
         close();
       }}

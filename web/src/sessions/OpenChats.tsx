@@ -10,11 +10,12 @@ import { ago, markSegments, pressable, save, stored } from '../ui/util';
 import { queryWords } from '../codex/data/ask/match';
 import { Bin } from './Bin';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
-import { byUrgency, chatFinder, chatState, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, repoName, usePins, useWorkspace, type Folder, type HeldOrder, type RepoGroup } from './folders';
+import { byUrgency, chatFinder, chatState, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, waitingChats, repoName, usePins, useWorkspace, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
 import { NeedsYou } from './NeedsYou';
+import { newChat } from '../app/newChat';
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 const RECENT = 5;
@@ -109,6 +110,7 @@ export function OpenChats() {
     });
   }, [live, chats, folders, filter, pins]);
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
+  const shownWaiting = useMemo(() => waitingChats(live, chats, folders, filter), [live, chats, folders, filter]);
   const order = useMemo(() => {
     const pinned = pins.flatMap((id) => live.filter((c) => c.sessionId === id));
     return chatOrder(waiting, pinned, orderGroups(allGroups, frozen));
@@ -148,8 +150,8 @@ export function OpenChats() {
         <FilterInput value={filter} set={setFilter} />
         <IconButton icon="add" label="New session in a repo" onClick={() => setUi({ repoPicker: true })} />
       </div>
-      <NeedsYou n={waiting.length}>
-        {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
+      <NeedsYou n={shownWaiting.length} filter={filter}>
+        {shownWaiting.map((c) => row(c, repoName(folders, c.cwd)))}
       </NeedsYou>
       {pinnedRows.length > 0 && (
         <div className="tree needs">
@@ -165,7 +167,7 @@ export function OpenChats() {
               <span className="name">{g.name}</span>
               <span className="meta"><GroupGlance g={g} seen={seen} /></span>
               <span className="acts">
-                <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); send({ type: 'new_session', cwd: g.key }); }}><Icon name="add" small /></button>
+                <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); newChat({ cwd: g.key }); }}><Icon name="add" small /></button>
               </span>
             </div>
             {isOpen(g) && g.open.filter((c) => !c.pending).map((c) => row(c))}

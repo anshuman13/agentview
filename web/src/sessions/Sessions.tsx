@@ -5,14 +5,15 @@ import { appSettings } from '../app/appSettings';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
-import type { SavedSession, Worktree } from '../../../shared/protocol';
+import type { LiveChat, SavedSession, Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
 import { pressable, save, stored } from '../ui/util';
-import { chatFinder, deleteChat, findHere, flip, groupByKind, invalidateWorkspace, segmentOf, usePins, useWorkspace, worktreeRequest, type Folder } from './folders';
+import { chatFinder, deleteChat, findHere, flip, groupByKind, invalidateWorkspace, segmentOf, usePins, useWorkspace, waitingChats, worktreeRequest, type Folder } from './folders';
 import { FilterInput } from './FilterInput';
 import { RepoRow, SessionRow, WorktreeRow } from './RepoRow';
 import { WaitingRows } from './ChatRows';
 import { NeedsYou } from './NeedsYou';
+import { newChat } from '../app/newChat';
 
 const PAGE = 5;
 
@@ -23,7 +24,9 @@ export function Sessions() {
   const { folders, chats, setTrees, setChats } = useWorkspace(current + cwd);
   const { pins, setPin } = usePins();
   const liveKey = useStore((s) => s.live.map((c) => c.cwd).join('\n'));
-  const waitingCount = useStore((s) => s.live.reduce((n, c) => n + (c.pending ? 1 : 0), 0));
+  // Only the chats waiting on the user matter here, so the string keeps other live updates from re-rendering the list.
+  const waitingJson = useStore((s) => JSON.stringify(s.live.filter((c) => c.pending)));
+  const pending = useMemo<LiveChat[]>(() => JSON.parse(waitingJson), [waitingJson]);
   const [filter, setFilter] = useState('');
   const viewing = useStore((s) => s.session.id);
   const personalRoot = appSettings.use((s) => s.personalRoot);
@@ -44,6 +47,7 @@ export function Sessions() {
   useEffect(() => setOpening(null), [current, cwd]);
 
   const here = findHere(folders, cwd).folder?.cwd;
+  const waiting = useMemo(() => waitingChats(pending, chats, folders, filter), [pending, chats, folders, filter]);
 
   const shown = useMemo(() => {
     const find = chatFinder(filter, chats);
@@ -65,7 +69,7 @@ export function Sessions() {
   const start = (dir: string) => {
     setError(null);
     invalidateWorkspace();
-    send({ type: 'new_session', cwd: dir });
+    newChat({ cwd: dir });
   };
 
   const call = async (url: string, fallback: string) => {
@@ -132,8 +136,8 @@ export function Sessions() {
         <button className="icon-btn" title="New chat in this folder" onClick={() => start(cwd)}><Icon name="add" /></button>
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
-      <NeedsYou n={waitingCount}>
-        <WaitingRows viewing={viewing} ask={setAsk} pins={pins} setPin={setPin} setChats={setChats} />
+      <NeedsYou n={waiting.length} filter={filter}>
+        <WaitingRows rows={waiting} folders={folders} viewing={viewing} ask={setAsk} pins={pins} setPin={setPin} setChats={setChats} />
       </NeedsYou>
       <div className="side-switch">
         {(['work', 'personal'] as const).map((k) => (

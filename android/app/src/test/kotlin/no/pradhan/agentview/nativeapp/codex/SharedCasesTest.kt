@@ -21,6 +21,7 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
 import no.pradhan.agentview.nativeapp.app.BarEvent
 import no.pradhan.agentview.nativeapp.chat.mergeTail
+import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.chat.startModeFor
 import no.pradhan.agentview.nativeapp.app.BarState
 import no.pradhan.agentview.nativeapp.app.FEATURES
@@ -262,6 +263,10 @@ class SharedCasesTest {
             val mode = c.nullable("mode")?.jsonPrimitive?.content
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, startModeFor(mode, c.nullable("provider")?.jsonPrimitive?.content))
         }
+    }
+
+    @Test fun shortModelNames() {
+        for (c in cases("short-model")) assertEquals(c.str("name"), c.str("expected"), shortModel(c.str("model")))
     }
 
     @Test fun goalEnd() {

@@ -21,9 +21,9 @@ fun modelsKey(group: String) = if (group == "claude") "models" else "models:$gro
 
 fun lastModelKey(group: String) = if (group == "claude") "lastModel" else "lastModel:$group"
 
-// The model the sheet starts on: the last one used when the server still offers it, else the first on the list.
+// The model the sheet starts on: the last one used when the server still offers it, else none and the server chooses.
 fun startModel(models: List<ModelInfo>, last: String?): String? =
-    models.firstOrNull { it.value == last }?.value ?: models.firstOrNull()?.value
+    models.firstOrNull { it.value == last }?.value
 
 // The "Start as" choices of the new chat sheet: no mode keeps the chat's default; the others are set once the chat opens, and Spec also puts the spec request prefix in the composer.
 class StartMode(val label: String, val mode: String?, val draft: String? = null)

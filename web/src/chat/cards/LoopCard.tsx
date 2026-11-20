@@ -41,6 +41,7 @@ export function LoopCard() {
   // Tries and jobs have no pause or rounds of their own to run now: Stop is their only control.
   const stopOnly = run.kind === 'tries' || run.kind === 'job';
   const goal = run.kind === 'goal';
+  const rounded = goal || run.kind === 'loop';
   const paused = run.state === 'paused';
   const report = run.rounds.filter((r) => r.report).at(-1);
   const state = loopNow(run, live?.now);
@@ -48,7 +49,7 @@ export function LoopCard() {
   const stop = () => control('stop');
   const details = goal ? () => openGoal(run.id) : undefined;
   const meta = [state.at && clock(state.at), state.next && `Next: ${state.next}`, state.stepsLeft && `${state.stepsLeft} ${state.stepsLeft === 1 ? 'step' : 'steps'} left`, buildsLine(run)].filter(Boolean).join(' · ');
-  const nowClick = details ? { onClick: details } : run.kind === 'loop' && state.source === 'round' ? { onClick: () => setOpen(!open), 'aria-expanded': open } : { plain: true };
+  const nowClick = rounded && state.source === 'round' ? { onClick: () => setOpen(!open), 'aria-expanded': open } : details ? { onClick: details } : { plain: true };
   const dot = working ? 'running' : OUTCOME_DOT[run.rounds.at(-1)?.outcome ?? 'quiet'];
   return (
     <>
@@ -85,10 +86,10 @@ export function LoopCard() {
       <Row lines={2} leading={<span className={`dot ${dot}`} />} title={state.title} meta={meta || undefined} {...nowClick} />
       {agents.length === 1 && <Row leading={<Icon name="hubot" />} title={agents[0].slug ?? agents[0].description} meta={`${agents[0].type} · ${agentAge(agents[0].startedAt, now)}`} state="" onClick={() => openAgent(agents[0].id)} />}
       {agents.length > 1 && <Row leading={<Icon name="hubot" />} title={plural(agents.length, 'agent')} meta={agents.map((a) => a.slug ?? a.description).join(', ')} state="" onClick={() => openAgent()} />}
-      {goal ? progress && <button className="lc-line lc-last" onClick={details}><span className="lc-what">Plan {progress}</span></button>
+      {goal ? <button className="lc-line lc-last" onClick={details}><span className="lc-what">{progress ? `Plan ${progress}` : run.what}</span></button>
         : <button className="lc-line lc-last" onClick={details}><span className="lc-what">{run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></button>}
       {report && <button className="lc-line lc-last" onClick={() => showTurn(report.report!)}><span className="lc-time">{clock(report.at)}</span><span className="lc-what">Weekly report</span></button>}
-      {open && run.kind === 'loop' && (
+      {open && rounded && (
         <div className="lc-rounds">
           {mergeQuiet(run.rounds).slice(-10).reverse().map((g) => <RoundRow key={g.first.at} group={g} provider={run.provider} open={showTurn} />)}
         </div>
