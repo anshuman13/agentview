@@ -150,7 +150,7 @@ private suspend fun LazyListState.scrollToTop(index: Int) {
 // Keeps the newest row in view while the user is at the bottom, and jumps to a turn or a just-sent message.
 // A chat opens once with the New line (the row `open`) at the top, held there while the row grows until the reader drags.
 @Composable
-private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listState: LazyListState, stick: MutableState<Boolean>, atBottom: Boolean, chatId: String, open: String?, lead: Int) {
+private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listState: LazyListState, stick: MutableState<Boolean>, pin: MutableState<Boolean>, atBottom: Boolean, chatId: String, open: String?, lead: Int) {
     val rows = view.rows
     val bottom by rememberUpdatedState(atBottom)
     LaunchedEffect(listState) {
@@ -165,22 +165,25 @@ private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listStat
         if (turn != null && list.isNotEmpty()) hub.showTurn.value = null
     }
     var opened by rememberSaveable(chatId) { mutableStateOf(false) }
-    val pin = remember { mutableStateOf(false) }
+    val pin = remember(chatId) { mutableStateOf(false) }
     LaunchedEffect(open, list) {
+        if (opened || list.isEmpty()) return@LaunchedEffect
         val at = list.indexOfFirst { it.key == open }
-        if (opened || open == null || at < 0) return@LaunchedEffect
         val info = listState.layoutInfo
         val row = info.visibleItemsInfo.firstOrNull { it.index == at + lead }
-        if (turn != null || hub.findRequest.value != null || (row != null && row.offset + row.size <= info.viewportEndOffset)) { opened = true; return@LaunchedEffect }
+        if (at < 0 || !stick.value || turn != null || hub.findRequest.value != null || (row != null && row.offset + row.size <= info.viewportEndOffset)) { opened = true; return@LaunchedEffect }
+        opened = true
         stick.value = false
         pin.value = true
         listState.scrollToTop(at + lead)
-        opened = true
+        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 80) { stick.value = true; pin.value = false }
     }
     LaunchedEffect(listState) { listState.interactionSource.interactions.collect { if (it is DragInteraction.Start) pin.value = false } }
     LaunchedEffect(pin.value, list) {
         if (!pin.value) return@LaunchedEffect
-        val index = list.indexOfFirst { it.key == open } + lead
+        val at = list.indexOfFirst { it.key == open }
+        if (at < 0) return@LaunchedEffect
+        val index = at + lead
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.size }.collect { size ->
             if (size != null && pin.value && !stick.value) listState.scrollToTop(index)
         }
@@ -188,7 +191,7 @@ private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listStat
     var lastSent by remember { mutableStateOf<String?>(null) }
     val sent = view.sent
     LaunchedEffect(sent) {
-        if (lastSent != null) { stick.value = true; if (rows.isNotEmpty()) listState.scrollToItem(0) }
+        if (lastSent != null) { stick.value = true; pin.value = false; if (rows.isNotEmpty()) listState.scrollToItem(0) }
         lastSent = sent
     }
 }
@@ -241,7 +244,8 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val blank = rows.isEmpty() && earlier > 0
     val earlierDue = rememberEarlierDue(hub, chatId, view.replyCount, loading, earlier, settled)
     val open = remember(items, newId, newKey) { if (openAtNew(items, newId) != null) newKey else null }
-    FollowNewest(hub, view, list, listState, stick, atBottom, chatId, open, queued.size + if (failed != null) 1 else 0)
+    val pin = remember(chatId) { mutableStateOf(false) }
+    FollowNewest(hub, view, list, listState, stick, pin, atBottom, chatId, open, queued.size + if (failed != null) 1 else 0)
 
     Box(modifier) {
         LazyColumn(
@@ -275,6 +279,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
         pill?.let { DayPill(it, Modifier.align(Alignment.TopCenter).padding(top = Tokens.sp4)) }
         if (!atBottom) JumpButton(replies, Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp4, bottom = Tokens.sp4)) {
             stick.value = true
+            pin.value = false
             hub.shell.navHidden.value = false
             scope.launch { listState.animateScrollToItem(0) }
         }

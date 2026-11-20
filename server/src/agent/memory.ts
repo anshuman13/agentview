@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { readFile, realpath, writeFile } from 'node:fs/promises';
+import { readFile, realpath, rename, unlink, writeFile } from 'node:fs/promises';
 
 export type MemoryFile = { path: string; name: string; description: string; text: string; editable: boolean };
 
@@ -42,6 +42,13 @@ export async function saveMemory(files: MemoryFile[], file: string, text: string
   const raw = await readFile(real, 'utf8');
   const head = frontOf(raw)?.[0] ?? '';
   const body = raw.slice(head.length);
-  await writeFile(real, `${head}${/^\s*/.exec(body)![0]}${text.trim()}\n`, 'utf8');
+  const tmp = path.join(path.dirname(real), `.${path.basename(real)}.${process.pid}.${Date.now()}.tmp`);
+  try {
+    await writeFile(tmp, `${head}${/^\s*/.exec(body)![0]}${text.trim()}\n`, { encoding: 'utf8', flag: 'wx' });
+    await rename(tmp, real);
+  } catch (e) {
+    await unlink(tmp).catch(() => {});
+    throw e;
+  }
   return { previous: body.trim() };
 }

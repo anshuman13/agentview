@@ -9,6 +9,7 @@ import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import { fileRequest } from '../../workspace/fileApi';
+import { showSnack } from '../../codex/view';
 import { Markdown } from '../Chat';
 import { fetchMemory, saveMemory } from '../chatApi';
 
@@ -83,34 +84,33 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
 // A memory file's body as a field with Save and Cancel; a save can be undone while the file stays open.
 function MemoryEdit({ file, onSaved }: { file: MemoryFile; onSaved: (text: string) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
-  const [note, setNote] = useState('');
-  const [back, setBack] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const save = async (text: string, undo = false) => {
+    setSaving(true);
     try {
       const previous = await saveMemory(file.path, text);
-      setBack(undo ? null : previous);
-      setNote(undo ? 'Memory restored' : 'Memory updated');
+      showSnack(undo ? 'Memory restored' : 'Memory updated', undo ? undefined : () => void save(previous, true));
       setDraft(null);
       onSaved(text);
     } catch {
-      setNote(undo ? 'Could not undo the memory update' : 'Could not save the memory. Your text is still here.');
+      showSnack(undo ? 'Could not undo the memory update' : 'Could not save the memory. Your text is still here.');
     }
+    setSaving(false);
   };
   return (
     <>
       {draft === null ? (
         <>
-          <Button size="sm" variant="plain" icon="edit" onClick={() => { setDraft(file.text); setNote(''); }}>Edit</Button>
+          <Button size="sm" variant="plain" icon="edit" onClick={() => setDraft(file.text)}>Edit</Button>
           <Markdown text={file.text || 'Empty'} />
         </>
       ) : (
         <>
           <div className="ui-fields"><textarea rows={8} aria-label="Memory text" value={draft} onChange={(e) => setDraft(e.target.value)} /></div>
-          <Button size="sm" disabled={!draft.trim()} onClick={() => void save(draft)}>Save</Button>
+          <Button size="sm" disabled={!draft.trim() || saving} onClick={() => void save(draft)}>Save</Button>
           <Button size="sm" variant="plain" onClick={() => setDraft(null)}>Cancel</Button>
         </>
       )}
-      {note && <div className="muted" role="status">{note}{back !== null && <Button size="sm" variant="plain" onClick={() => void save(back, true)}>Undo</Button>}</div>}
     </>
   );
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.loadEarlier
+import no.pradhan.agentview.nativeapp.codex.meetings.stepMatch
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -90,8 +91,8 @@ fun FindBar(hub: Hub, events: List<ChatEvent>, earlier: Int, request: FindReques
         if (query.trim().length >= 2 && hits.isEmpty() && earlier > 0) {
             Button(if (loading) "Loading…" else "Load earlier", { hub.loadEarlier() }, size = ButtonSize.Sm, enabled = !loading)
         } else if (query.trim().length >= 2) {
-            IconBtn("arrow-up", "Previous", { go((at - 1 + hits.size) % hits.size) }, enabled = hits.isNotEmpty())
-            IconBtn("arrow-down", "Next", { go((at + 1) % hits.size) }, enabled = hits.isNotEmpty())
+            IconBtn("arrow-up", "Previous", { go(stepMatch(at, -1, hits.size)) }, enabled = hits.isNotEmpty())
+            IconBtn("arrow-down", "Next", { go(stepMatch(at, 1, hits.size)) }, enabled = hits.isNotEmpty())
         }
         IconBtn("close", "Close", onClose)
     }

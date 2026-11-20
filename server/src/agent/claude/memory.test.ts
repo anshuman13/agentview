@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'bun:test';
@@ -61,6 +61,12 @@ describe('chatMemory', () => {
       expect(readFileSync(git, 'utf8')).toBe('---\nname: git-workflow\ndescription: "push after rebase"\n---\n\nAlways merge.\n');
       await saveMemory(await list(), git, previous);
       expect(readFileSync(git, 'utf8')).toBe('---\nname: git-workflow\ndescription: "push after rebase"\n---\n\nAlways rebase.\n');
+    });
+
+    it('leaves no temp file in the folder after a save', async () => {
+      reset();
+      await saveMemory(await list(), git, 'Always merge.');
+      expect(readdirSync(mem).filter((n) => n.endsWith('.tmp'))).toEqual([]);
     });
 
     it('edits MEMORY.md', async () => {

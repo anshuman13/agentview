@@ -92,24 +92,27 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss
     var open by remember { mutableStateOf<MemoryFile?>(null) }
     open?.let { f ->
         var draft by remember(f) { mutableStateOf<String?>(null) }
+        var saving by remember(f) { mutableStateOf(false) }
         Sheet(onDismiss = onDismiss, title = f.name, action = { Button("Back", { open = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) {
             val text = draft
             if (text != null) {
                 TextField(text, { draft = it }, minLines = 6)
                 Row(Modifier.padding(top = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
                     val saveMemoryBody = {
+                        saving = true
                         hub.saveMemory(f.path, text, "Could not save the memory. Your text is still here.") { previous ->
+                            saving = false
                             if (previous != null) {
                                 open = f.copy(text = text)
                                 reload()
                                 hub.undoable.tryEmit(Undoable("Memory updated") {
-                                    hub.saveMemory(f.path, previous, "Could not undo the memory update") { if (it != null) { open = f.copy(text = previous); reload() } }
+                                    hub.saveMemory(f.path, previous, "Could not undo the memory update") { if (it != null) { if (open?.path == f.path) open = f.copy(text = previous); reload() } }
                                 })
                             }
                         }
                     }
                     val saveRule = { hub.saveFile(file, text) { if (it) { open = f.copy(text = text); reload() } } }
-                    Button("Save", if (f.editable) saveMemoryBody else saveRule, enabled = !f.editable || text.isNotBlank(), size = ButtonSize.Sm)
+                    Button("Save", if (f.editable) saveMemoryBody else saveRule, enabled = if (f.editable) text.isNotBlank() && !saving else true, size = ButtonSize.Sm)
                     Button("Cancel", { draft = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
             } else {

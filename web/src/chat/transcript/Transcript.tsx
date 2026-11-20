@@ -316,13 +316,13 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const openId = useMemo(() => openAtNew(items, newId), [items, newId]);
   const opened = useRef(false);
   useLayoutEffect(() => {
-    if (opened.current || !openId || !newRow) return;
-    if (finding || findPending(sessionId) || turnPending()) { opened.current = true; return; }
+    if (opened.current || !list.length) return;
+    if (!openId || !newRow || finding || findPending(sessionId) || turnPending() || !scroll.stick.current) { opened.current = true; return; }
     const at = list.indexOf(newRow);
     if (at < from) { reveal(list.length - at); return; }
     opened.current = true;
     scroll.openAtLine();
-  }, [openId, newRow, from, finding]);
+  }, [openId, newRow, from, finding, list.length]);
   const folded = useMemo(() => new Set([...runs].flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs]);
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
   const jumpLabel = `Jump to latest${replies > 0 ? ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}` : ''}`;
