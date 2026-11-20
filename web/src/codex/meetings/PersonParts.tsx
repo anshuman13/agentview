@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useActions } from '../useActions';
 import { AskRow } from '../../ui/AskRow';
 import { MenuItem } from '../../ui/Menu';
+import { Row } from '../../ui/Row';
 import { Section, sectionCount } from '../../ui/Section';
 import { CardRow } from '../overview/CardRow';
 import { dueText, taskMenu } from '../tasks/Task';
@@ -82,65 +83,50 @@ export function OpenTasks({ name, rows }: { name: string; rows: ItemRow[] }) {
 type Inbox = ReturnType<typeof personInbox>;
 
 export function SlackDm({ dm }: { dm: NonNullable<Inbox['dm']> }) {
+  const href = safeHref(dm.url);
   return (
     <section className="mt-sec">
-      <h2>Slack DM</h2>
-      <p className="sm-text" title={dm.summary ?? undefined}>{(dm.summary ?? '').split('\n')[0]}</p>
-      <div className="wk-meta">
-        {dm.last_at ? <span>{ago(dm.last_at, ' ago')}</span> : null}
-        {safeHref(dm.url) && <a className="mt-person" href={safeHref(dm.url)} target="_blank" rel="noreferrer">Open in Slack</a>}
+      <Section label="Slack DM" />
+      <div className="as-group">
+        <Row title={(dm.summary ?? '').split('\n')[0] || 'Slack DM'} meta={dm.last_at ? ago(dm.last_at, ' ago') : undefined} href={href} plain={!href} />
       </div>
     </section>
   );
 }
 
-export function UnansweredMail({ mail }: { mail: Inbox['mail'] }) {
+export function UnansweredMail({ name, mail }: { name: string; mail: Inbox['mail'] }) {
   if (!mail.length) return null;
   return (
     <section className="mt-sec">
       <Section label="Unanswered mail" count={sectionCount(mail.length)} />
-      <ul className="wk-claims">
-        {mail.map((w) => (
-          <li key={w.thread} className="wk-claim">
-            <span className="wk-claim-text">{w.subject}</span>
-            <span className="wk-claim-foot">sent {ago(w.sent_at, ' ago')}{safeHref(w.url) && <> · <a className="mt-person" href={safeHref(w.url)} target="_blank" rel="noreferrer">Open</a></>}</span>
-          </li>
-        ))}
-      </ul>
+      <Group rows={mail} name={name} row={(w) => {
+        const href = safeHref(w.url);
+        return <Row key={w.thread} title={w.subject} meta={`sent ${ago(w.sent_at, ' ago')}`} href={href} plain={!href} />;
+      }} />
     </section>
   );
 }
 
-export function Commitments({ commitments }: { commitments: ReturnType<typeof commitmentsOf> }) {
+export function Commitments({ name, commitments }: { name: string; commitments: ReturnType<typeof commitmentsOf> }) {
   if (!commitments.length) return null;
   return (
     <section className="mt-sec">
       <Section label="Commitments" count={sectionCount(commitments.length)} />
-      <ul className="wk-claims">
-        {commitments.map((c, i) => (
-          <li key={i} className="wk-claim">
-            <span className="wk-claim-text">{c.what}</span>
-            <span className="wk-claim-foot"><button className="mt-person" onClick={() => openMeeting(c.meeting)}>{c.meeting.title}</button></span>
-          </li>
-        ))}
-      </ul>
+      <Group rows={commitments} name={name} row={(c) => (
+        <Row key={c.meeting.profile + c.meeting.id + c.what} title={c.what} meta={c.meeting.title} onClick={() => openMeeting(c.meeting)} />
+      )} />
     </section>
   );
 }
 
-export function WikiClaims({ claims, pageTitle }: { claims: Fact[]; pageTitle: Map<string, string | null> }) {
+export function WikiClaims({ name, claims, pageTitle }: { name: string; claims: Fact[]; pageTitle: Map<string, string | null> }) {
   if (!claims.length) return null;
   return (
     <section className="mt-sec">
       <Section label="In the wiki" count={sectionCount(claims.length)} />
-      <ul className="wk-claims">
-        {claims.map((f) => (
-          <li key={f.id} className="wk-claim">
-            <span className="wk-claim-text">{f.text}</span>
-            {f.page_id && <span className="wk-claim-foot"><button className="mt-person" onClick={() => setView({ person: null, list: 'wiki', open: f.page_id, anchor: null })}>{pageTitle.get(f.page_id)}</button></span>}
-          </li>
-        ))}
-      </ul>
+      <Group rows={claims} name={name} row={(f) => (
+        <Row key={f.id} title={f.text} meta={f.page_id ? pageTitle.get(f.page_id) : undefined} plain={!f.page_id} onClick={f.page_id ? () => setView({ person: null, list: 'wiki', open: f.page_id, anchor: null }) : undefined} />
+      )} />
     </section>
   );
 }

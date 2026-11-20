@@ -476,7 +476,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | ov-ask-line | - | Row (AskRow) | Done |
 | settings-* | - | Section and Row | Done |
 | sm-line | codex/summary/Summary.tsx | Row | Done |
-| wk-claim | codex/meetings/OpenQuestions.tsx, codex/meetings/Person.tsx, codex/meetings/Pins.tsx, codex/meetings/Raise.tsx | Row | Partial |
+| wk-claim | codex/meetings/OpenQuestions.tsx, codex/meetings/Pins.tsx, codex/meetings/Raise.tsx | Row | Partial |
 | wk-contest-head | none | Section header | Done |
 | wk-feed-head | none | Section header | Done |
 | wk-feed-list | none | Grouped list | Done |

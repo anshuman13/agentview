@@ -41,11 +41,11 @@ export function Person({ name }: { name: string }) {
 
           {inbox.dm && <SlackDm dm={inbox.dm} />}
           <Asks name={name} rows={waiting} />
-          <UnansweredMail mail={inbox.mail} />
+          <UnansweredMail name={name} mail={inbox.mail} />
 
           <OpenTasks name={name} rows={tasks} />
 
-          <Commitments commitments={commitments} />
+          <Commitments name={name} commitments={commitments} />
 
           <section className="mt-sec">
             <Section label={`Raise with ${firstName(shown)}`} count={sectionCount(points.length)} />
@@ -67,7 +67,7 @@ export function Person({ name }: { name: string }) {
             {mine.length > 0 ? <Group rows={mine} name={name} row={(m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />} /> : <EmptyState size="sm" icon="calendar" title="No meetings" />}
           </section>
 
-          <WikiClaims claims={claims} pageTitle={pageTitle} />
+          <WikiClaims name={name} claims={claims} pageTitle={pageTitle} />
         </article>
       </div>
     </div>
