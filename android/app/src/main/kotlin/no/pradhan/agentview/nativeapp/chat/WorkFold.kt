@@ -96,7 +96,7 @@ fun proposedOf(items: List<Item>): List<Proposal> {
 }
 
 // web workFold.ts proposalState: what the hub mirror says of a proposed claim.
-fun proposalState(fact: Row?) = if (fact == null) "Not synced yet" else when (fact.str("state")) {
+fun proposalState(fact: Row?) = if (fact == null) "Not synced yet" else if (fact.deleted) "Deleted" else when (fact.str("state")) {
     "proposed" -> "Waiting"
     "rejected" -> "Rejected"
     else -> "Approved"

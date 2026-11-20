@@ -1,0 +1,7 @@
+[
+  { "name": "no row", "fact": null, "expected": "Not synced yet" },
+  { "name": "proposed", "fact": { "state": "proposed" }, "expected": "Waiting" },
+  { "name": "rejected", "fact": { "state": "rejected" }, "expected": "Rejected" },
+  { "name": "approved", "fact": { "state": "approved" }, "expected": "Approved" },
+  { "name": "deleted", "fact": { "state": "proposed", "deleted": true }, "expected": "Deleted" }
+]

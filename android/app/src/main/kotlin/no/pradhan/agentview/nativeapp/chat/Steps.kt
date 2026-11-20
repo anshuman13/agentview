@@ -289,14 +289,15 @@ fun rewindable(items: List<Item>): Set<String> {
 }
 
 // The last reply of each finished turn, when nothing follows it in the turn: the answers that get a Copy action.
-fun turnAnswers(items: List<Item>): Set<String> {
+// A prompt, a loop or goal round or a system line ends a turn, and the running turn gets none yet.
+fun turnAnswers(items: List<Item>, running: Boolean = false): Set<String> {
     val out = HashSet<String>()
     var last: Item? = null
     fun flush() { (last as? Item.Assistant)?.takeIf { !it.streaming }?.let { out.add(it.id) } }
     for (it in items) {
-        if (it is Item.User) { flush(); last = null } else last = it
+        if (it is Item.User || it is Item.System) { flush(); last = null } else last = it
     }
-    flush()
+    if (!running) flush()
     return out
 }
 

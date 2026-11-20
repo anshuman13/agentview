@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import java.time.Instant
+import no.pradhan.agentview.nativeapp.codex.meetings.ActionMenuItems
 import no.pradhan.agentview.nativeapp.codex.meetings.followUpText
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import no.pradhan.agentview.nativeapp.codex.wiki.agoText
@@ -197,7 +198,7 @@ fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, acti
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 if (row.status == "done") Button("Not done", { actions.reopen(row) })
                 else if (row.status == "open") Button("Done", { commit(); actions.done(row); onDismiss() }, variant = ButtonVariant.Filled)
-                if (row.status == "note") Button("Make task", { commit(); actions.toTask(row); onDismiss() }, icon = "check")
+                if (row.status == "note") Button("Make task", { commit(); actions.toTask(row); onDismiss() }, icon = "add")
                 Button("Move to ${profileLabel(if (row.profile == WORK) PERSONAL else WORK)}", { actions.move(row, if (row.profile == WORK) PERSONAL else WORK) })
                 if (from != null) Button("Open meeting", { commit(); onDismiss(); onMeeting(from) }, icon = "record")
                 safeHref(row.sourceUrl)?.let { href -> sourceLink(row).let { s -> Button(s.label, { uri.openUri(href) }, icon = s.icon) } }
@@ -325,8 +326,10 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
             ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) },
                 trailing = {
                     MoreButton { close ->
-                        MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(n.meeting, n.actions))); actions.say("Follow-up copied") })
-                        MenuItem("Notes", "edit", { close(); onMeeting(n.meeting) })
+                        ActionMenuItems(n.row, n.meeting, now, actions, hub.readOnly, close) {
+                            MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(n.meeting, n.actions))); actions.say("Follow-up copied") })
+                            MenuItem("Notes", "edit", { close(); onMeeting(n.meeting) })
+                        }
                     }
                 })
         }

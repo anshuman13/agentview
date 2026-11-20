@@ -27,7 +27,7 @@ import { taskChatPrompt } from '../../shared/taskChat';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail } from './app/runtime/pageEvents';
 import { buildTranscript, turnAnswers } from './chat/transcript/steps';
-import { foldTurns, workTitle } from './chat/transcript/workFold';
+import { foldTurns, proposalState, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { chatMarkdown, draftKey, failedLine, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
@@ -522,8 +522,12 @@ describe('cases shared with the Android app', () => {
     it(`remember: ${c.name}`, () => expect(remember(c.text, c.stored)).toEqual(c.expected));
   }
 
-  for (const c of cases<{ name: string; events: ChatEvent[]; expected: string[] }>('turn-answers')) {
-    it(`turnAnswers: ${c.name}`, () => expect([...turnAnswers(buildTranscript(c.events))]).toEqual(c.expected));
+  for (const c of cases<{ name: string; events: ChatEvent[]; running?: boolean; expected: string[] }>('turn-answers')) {
+    it(`turnAnswers: ${c.name}`, () => expect([...turnAnswers(buildTranscript(c.events), c.running)]).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; fact: { state: string | null; deleted?: boolean } | null; expected: string }>('proposal-state')) {
+    it(`proposalState: ${c.name}`, () => expect(proposalState(c.fact ?? undefined)).toBe(c.expected));
   }
 
   const menu = JSON.parse(readFileSync(new URL('../../shared/fixtures/chat-menu.json', import.meta.url), 'utf8'));

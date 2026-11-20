@@ -204,7 +204,7 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
   const { box, rows, stuck, behind, onScroll, jump } = scroll;
   const canRewind = useCan('rewind');
   const rewinds = useMemo(() => rewindReplies(items), [items]);
-  const answers = useMemo(() => turnAnswers(items), [items]);
+  const answers = useMemo(() => turnAnswers(items, running), [items, running]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => new Set([...specCards(items), ...docCards(items)]), [items]);
   const list = useMemo<FoldRow[]>(() => foldTurns(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [items, events, cards]);
@@ -378,7 +378,7 @@ function Tasks({ id, steps: all, now, tools, claims, proposed, live }: { id: str
 // The claims a turn proposed, each with its state in the hub mirror, and a way to Review while one waits.
 function ProposedClaims({ proposed }: { proposed: Proposal[] }) {
   const facts = useAssistantTable('facts');
-  const states = proposed.map((p) => proposalState(facts.find((f) => f.id === p.id && !f.deleted)));
+  const states = proposed.map((p) => proposalState(facts.find((f) => f.id === p.id)));
   return (
     <>
       <ul className="tr-claims">{proposed.map((p, i) => <li key={p.id}>{p.text} <span className="tr-claim-where">({states[i]})</span></li>)}</ul>

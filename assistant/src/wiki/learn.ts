@@ -138,7 +138,7 @@ export async function learnFromChat(db: Database, c: Chat, now = Date.now(), run
   if (!events.some((e) => e.kind === 'user')) return { proposed: 0 };
   if (isLimited(ACCOUNT_OF[c.profile])) return { skipped: 'limit' };
   const rows = known(db, c.profile);
-  const { claims, decisions } = await run(c, events, alreadyKnown(rows), decisionPages(db, c, events), now, recentlyRejected(rows, now).map(({ text }) => ({ text })));
+  const { claims, decisions } = await run(c, events, alreadyKnown(rows), decisionPages(db, c, events), now, recentlyRejected(rows, now));
   const proposed = saveLearned(db, c, claims, decisions, now);
   setMeta(db, key, String(Math.max(...events.map((e) => e.at))));
   // A cursor only skips events already read, so one for a chat quiet for three months can go.

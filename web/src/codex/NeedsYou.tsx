@@ -95,35 +95,32 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   const unhideBullet = (b: Brief, x: Bullet) => void store.editRow('briefs', b, { dismissed: withDismissal(current(b).dismissed, bulletKey(x), false, Date.now()) });
   const dismissChat = (c: Chat) => { hideChat(c); showSnack('Dismissed', () => unhideChat(c)); };
   const dismissBullet = (b: Brief, x: Bullet) => { hideBullet(b, x); showSnack('Dismissed', () => unhideBullet(b, x)); };
-  const capture = (key: string, title: string, profile: Chat['profile'], type: 'task' | 'note', fill: (r: ItemRow) => Promise<unknown> | undefined, done: (r: ItemRow) => void) => {
+  const capture = (key: string, title: string, profile: Chat['profile'], type: 'task' | 'note', fill: (r: ItemRow) => Promise<unknown> | undefined, hide: () => void, unhide: () => void) => {
     if (pending.current.has(key)) return;
     pending.current.add(key);
     haptic('tap');
     void store.capture(title, type, profile)
       .then(async (r) => { await fill(r); return r; })
-      .then(done, (err) => {
+      .then((r) => {
+        hide();
+        showSnack(type === 'note' ? NOTED : 'Added to Tasks', () => { pending.current.delete(key); unhide(); void store.update(r, { deleted: 1 }); });
+      }, (err) => {
         pending.current.delete(key);
         showSnack(type === 'note' ? NOTE_FAILED : `Could not add: ${errorText(err)}`);
       });
   };
-  const undoable = (text: string) => (key: string, hide: () => void, unhide: () => void) => (r: ItemRow) => {
-    hide();
-    showSnack(text, () => { pending.current.delete(key); unhide(); void store.update(r, { deleted: 1 }); });
-  };
-  const added = undoable('Added to Tasks');
-  const noted = undoable(NOTED);
   const chatTask = (c: Chat) => {
     const name = c.name ?? 'DM';
-    capture(waitKey(c), `Reply to ${name}`, c.profile, 'task', (r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }), added(waitKey(c), () => hideChat(c), () => unhideChat(c)));
+    capture(waitKey(c), `Reply to ${name}`, c.profile, 'task', (r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }), () => hideChat(c), () => unhideChat(c));
   };
   const bulletTask = (b: Brief, x: Bullet) => {
-    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, b.profile, 'task', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), added(bulletKey(x), () => hideBullet(b, x), () => unhideBullet(b, x)));
+    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, b.profile, 'task', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), () => hideBullet(b, x), () => unhideBullet(b, x));
   };
   const chatNote = (c: Chat) => {
-    capture(waitKey(c), [c.name ?? 'DM', c.summary].filter(Boolean).join(': '), c.profile, 'note', (r) => (safeHref(c.url) ? store.update(r, { text: safeHref(c.url) }) : undefined), noted(waitKey(c), () => hideChat(c), () => unhideChat(c)));
+    capture(waitKey(c), [c.name ?? 'DM', c.summary].filter(Boolean).join(': '), c.profile, 'note', (r) => (safeHref(c.url) ? store.update(r, { text: safeHref(c.url) }) : undefined), () => hideChat(c), () => unhideChat(c));
   };
   const bulletNote = (b: Brief, x: Bullet) => {
-    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, b.profile, 'note', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), noted(bulletKey(x), () => hideBullet(b, x), () => unhideBullet(b, x)));
+    capture(bulletKey(x), x.why ? `${x.title}: ${x.why}` : x.title, b.profile, 'note', (r) => (x.url ? store.update(r, { text: x.url }) : undefined), () => hideBullet(b, x), () => unhideBullet(b, x));
   };
   const askNote = (row: ItemRow) => {
     const key = taskKey(row);

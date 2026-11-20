@@ -239,7 +239,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     val specCards = view.specCards
     val specBumps = view.specBumps
     val rewinds = view.rewinds
-    val answers = view.answers
+    val answers = turnAnswers(view.items, running)
     val firstId = view.items.firstOrNull()?.id
     itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
         Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
@@ -297,7 +297,7 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, live: Boolean, onOpenWork: (
         if (proposing) {
             val facts by hub.codex.state.select { it.facts }
             fold.proposed.forEach { p ->
-                Text("${p.text} (${proposalState(facts.firstOrNull { it.id == p.id && !it.deleted })})", Modifier.padding(start = Tokens.sp8), style = Type.footnote, color = av.fgMuted)
+                Text("${p.text} (${proposalState(facts.firstOrNull { it.id == p.id })})", Modifier.padding(start = Tokens.sp8), style = Type.footnote, color = av.fgMuted)
             }
         }
         steps.forEach { s ->

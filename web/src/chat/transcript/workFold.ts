@@ -52,7 +52,7 @@ export function proposedOf(items: Item[]): Proposal[] {
 }
 
 // What the hub mirror says of a proposed claim; Android WorkFold.kt proposalState says the same.
-export const proposalState = (fact?: { state: string | null }) => (!fact ? 'Not synced yet' : fact.state === 'proposed' ? 'Waiting' : fact.state === 'rejected' ? 'Rejected' : 'Approved');
+export const proposalState = (fact?: { state: string | null; deleted?: boolean | number }) => (!fact ? 'Not synced yet' : fact.deleted ? 'Deleted' : fact.state === 'proposed' ? 'Waiting' : fact.state === 'rejected' ? 'Rejected' : 'Approved');
 
 export type StatusStep = { id: string; title: string; done: boolean };
 

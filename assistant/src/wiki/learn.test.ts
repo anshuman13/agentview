@@ -114,7 +114,7 @@ describe('learn from chats', () => {
     const run = async (_c: Chat, _e: Chat['events'], _m: string[], _p: unknown, _n: number, r: { text: string }[] = []) => ((rejected = r), { claims, decisions: [] });
     expect(await learnFromChat(db, chat([user('u1', 10)]), now, run)).toEqual({ proposed: 2 });
     expect(rejected).toHaveLength(20);
-    expect(rejected[0]).toEqual({ text: 'Never use em dashes in replies.' });
+    expect(rejected[0].text).toBe('Never use em dashes in replies.');
     expect(rejected.map((r) => r.text)).not.toContain('Always deploy on Fridays afternoon.');
     expect(db.prepare("SELECT text FROM facts WHERE id LIKE 'learn:%' ORDER BY text").all()).toEqual([{ text: 'Deploy always on Fridays afternoon.' }, { text: 'Run tests before commits.' }]);
   });

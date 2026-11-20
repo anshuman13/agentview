@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.codex.meetings
 
 import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -158,13 +159,6 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
 @Composable
 fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolean, from: String? = null, onTask: ((Row) -> Unit)? = null) {
     val status = r.status ?: ""
-    val clip = LocalClipboardManager.current
-    val menu = remember(r.key) { mutableStateOf(false) }
-    var sub by remember(r.key) { mutableStateOf<String?>(null) }
-    LaunchedEffect(menu.value) { if (!menu.value) sub = null }
-    val cur = r.str("assignee")?.ifEmpty { null }
-    val assign = { who: String? -> if (who != cur) actions.change(r, mapOf("assignee" to who), "Assigned to ${who?.let { firstName(displayName(it)) } ?: "me"}") }
-    val items = actionMenu(status)
     val at = r.at
     val late = status == "open" && at != null && at < now
     val rest = listOfNotNull(
@@ -186,25 +180,34 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolea
     }
     ListRow(r.title ?: UNTITLED, meta, strike = status == "done", onClick = onTask?.let { { it(r) } }, trailing = {
         if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        MoreButton(expanded = menu) { close ->
-            if (sub == "assign") {
-                MenuItem("Me", "person", { close(); assign(null) }, checked = cur == null)
-                val people = peopleOf(m)
-                (if (cur != null && cur !in people) listOf(cur) + people else people).forEach { n ->
-                    MenuItem(displayName(n), "person", { close(); assign(n) }, checked = n == cur)
-                }
-            } else if (sub == "snooze") {
-                snoozeChoices(now).forEach { s ->
-                    val to = s.at(now, r.profile)
-                    MenuItem("${s.label} · ${whenText(to, now)}", "clock", { close(); actions.snooze(r, to) })
-                }
-            } else {
-                if (items.notMine) MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r, "Moved to Not mine") }, enabled = !readOnly)
-                if (items.assign) MenuItem("Assign", "person", { sub = "assign" }, enabled = !readOnly)
-                if (items.snooze) MenuItem("Snooze", "clock", { sub = "snooze" }, enabled = !readOnly)
-                MenuItem("Copy as message", "copy", { close(); clip.setText(AnnotatedString(draftFor(r, m))); actions.say("Message copied") })
-                MenuItem("Delete", "trash", { close(); actions.delete(r) }, danger = true, enabled = !readOnly)
-            }
-        }
+        MoreButton { close -> ActionMenuItems(r, m, now, actions, readOnly, close) }
     })
+}
+
+@Composable
+fun ColumnScope.ActionMenuItems(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolean, close: () -> Unit, extra: @Composable ColumnScope.() -> Unit = {}) {
+    val clip = LocalClipboardManager.current
+    var sub by remember(r.key) { mutableStateOf<String?>(null) }
+    val cur = r.str("assignee")?.ifEmpty { null }
+    val assign = { who: String? -> if (who != cur) actions.change(r, mapOf("assignee" to who), "Assigned to ${who?.let { firstName(displayName(it)) } ?: "me"}") }
+    val items = actionMenu(r.status ?: "")
+    if (sub == "assign") {
+        MenuItem("Me", "person", { close(); assign(null) }, checked = cur == null)
+        val people = peopleOf(m)
+        (if (cur != null && cur !in people) listOf(cur) + people else people).forEach { n ->
+            MenuItem(displayName(n), "person", { close(); assign(n) }, checked = n == cur)
+        }
+    } else if (sub == "snooze") {
+        snoozeChoices(now).forEach { s ->
+            val to = s.at(now, r.profile)
+            MenuItem("${s.label} · ${whenText(to, now)}", "clock", { close(); actions.snooze(r, to) })
+        }
+    } else {
+        if (items.notMine) MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r, "Moved to Not mine") }, enabled = !readOnly)
+        if (items.assign) MenuItem("Assign", "person", { sub = "assign" }, enabled = !readOnly)
+        if (items.snooze) MenuItem("Snooze", "clock", { sub = "snooze" }, enabled = !readOnly)
+        MenuItem("Copy as message", "copy", { close(); clip.setText(AnnotatedString(draftFor(r, m))); actions.say("Message copied") })
+        extra()
+        MenuItem("Delete", "trash", { close(); actions.delete(r) }, danger = true, enabled = !readOnly)
+    }
 }

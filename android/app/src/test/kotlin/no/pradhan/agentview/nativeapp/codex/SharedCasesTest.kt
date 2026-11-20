@@ -31,6 +31,7 @@ import no.pradhan.agentview.nativeapp.chat.mergeTail
 import no.pradhan.agentview.nativeapp.chat.turnEnd
 import no.pradhan.agentview.nativeapp.chat.rememberPrompt
 import no.pradhan.agentview.nativeapp.chat.turnAnswers
+import no.pradhan.agentview.nativeapp.chat.proposalState
 import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.chat.startModeFor
 import no.pradhan.agentview.nativeapp.app.BarState
@@ -511,7 +512,14 @@ class SharedCasesTest {
     @Test fun turnAnswers() {
         for (c in cases("turn-answers")) {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
-            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }.toSet(), turnAnswers(buildTranscript(events)))
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }.toSet(), turnAnswers(buildTranscript(events), c["running"]?.jsonPrimitive?.boolean == true))
+        }
+    }
+
+    @Test fun proposalState() {
+        for (c in cases("proposal-state")) {
+            val fact = (c["fact"] as? JsonObject)?.let { f -> Row("facts", "f", "work", deleted = f["deleted"]?.jsonPrimitive?.booleanOrNull == true, f = mapOf("state" to f.getValue("state"))) }
+            assertEquals(c.str("name"), c.str("expected"), proposalState(fact))
         }
     }
 

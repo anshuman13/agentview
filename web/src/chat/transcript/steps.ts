@@ -264,15 +264,16 @@ export function rewindReplies(items: Item[]) {
 }
 
 // The last reply of each finished turn, when nothing follows it in the turn: the answers that get a Copy action.
-export function turnAnswers(items: Item[]) {
+// A prompt, a loop or goal round or a system line ends a turn, and the running turn gets none yet.
+export function turnAnswers(items: Item[], running = false) {
   const out = new Set<string>();
   let last: Item | undefined;
   const flush = () => { if (last?.kind === 'assistant' && !last.streaming) out.add(last.id); };
   for (const it of items) {
-    if (it.kind === 'user') { flush(); last = undefined; }
+    if (it.kind === 'user' || it.kind === 'auto' || it.kind === 'system') { flush(); last = undefined; }
     else last = it;
   }
-  flush();
+  if (!running) flush();
   return out;
 }
 
