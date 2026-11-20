@@ -211,7 +211,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
         newPage(title, "Pages", sort, proposalProfile(null, profile), System.currentTimeMillis())?.let { actions.create(it, "Page created"); onOpen(it) }
     }, { creating = false }, maxLength = 120)
     if (feedOpen) FeedSheet(facts, pages, now, { feedOpen = false }) { feedOpen = false; onClaim(it) }
-    if (asking && onAsk != null) ClaimTextSheet("Ask", "", "Ask", { asking = false }, "Ask the wiki") { q -> onAsk(wikiAskText(q, st.pages, facts, null, now)) }
+    if (asking && onAsk != null) ClaimTextSheet("Ask", "", "Ask", { asking = false }, "Ask the wiki") { q -> onAsk(wikiAskText(q, pages, facts, null, now)) }
 }
 
 // Recently updated (web wiki/Feed.tsx): the 5 newest current claims with their page, source or contester and age.

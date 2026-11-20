@@ -104,7 +104,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
   };
   const resume = () => {
     send({ type: 'view', id: live!.id });
-    send({ type: 'prompt', text: 'continue' }, live!.id);
+    send({ type: 'steer', text: 'continue' }, live!.id);
   };
   const swipe = chatSwipe(!!pinned, live);
   const saved: SavedSession = { sessionId: sessionId!, title, cwd, gitBranch: null, lastModified };

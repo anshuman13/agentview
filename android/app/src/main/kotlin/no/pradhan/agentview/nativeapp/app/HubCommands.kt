@@ -108,7 +108,7 @@ fun Hub.quietCommand(body: String) { if (!readOnly) post(body, store.wanted) }
 
 fun Hub.closeChat(id: String) = post(closeCmd(id), id)
 
-fun Hub.resume(chat: String) = post(promptCmd("continue", false, UUID.randomUUID().toString()), chat)
+fun Hub.resume(chat: String) = post(steerCmd("continue", UUID.randomUUID().toString()), chat)
 
 fun Hub.retryTurn(chat: String) = post(retryCmd(), chat)
 

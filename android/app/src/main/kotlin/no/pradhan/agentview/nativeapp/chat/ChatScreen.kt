@@ -185,7 +185,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         }
         PendingList(pending, session?.permissionMode ?: "default", hub)
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
-            Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
+            Button("Resume", { hub.submit("continue", true) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }
         val resume = remember(view.events) { limitResume(view.events) }
         if (resume != null && !running && run == null && !hub.readOnly) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {

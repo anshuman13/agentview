@@ -53,19 +53,20 @@ fun currentClaims(facts: List<Row>): (Row) -> Boolean {
 // STOP, SIMILAR, keyWords, overlap and similarClaim mirror shared/claimMatch.ts, checked by shared/fixtures/similar-claim.json.
 private val STOP = setOf("about", "after", "also", "from", "have", "into", "just", "more", "next", "only", "over", "should", "some", "than", "that", "their", "them", "then", "there", "they", "this", "until", "week", "when", "will", "with", "would")
 private val WORD = Regex("[\\p{L}\\p{N}]{4,}")
+private val SPACE = Regex("\\s+")
 private const val SIMILAR = 0.6
 
 private fun keyWords(t: String) = WORD.findAll(t.lowercase()).map { it.value }.filter { it !in STOP }.toSet()
 
 // titleWords, decisionKey and mayChange mirror shared/claimMatch.ts, checked by shared/fixtures/drift-claims.json.
-fun titleWords(t: String) = t.lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+private fun titleWords(t: String) = t.lowercase().split(SPACE).filter { it.isNotEmpty() }
 
-class DecisionKey(val words: Set<String>, val hay: String)
+private class DecisionKey(val words: Set<String>, val hay: String)
 
-fun decisionKey(text: String, meetingTitle: String?) = DecisionKey(keyWords(text), "${meetingTitle ?: ""} $text".lowercase())
+private fun decisionKey(text: String, meetingTitle: String?) = DecisionKey(keyWords(text), "${meetingTitle ?: ""} $text".lowercase())
 
 // A decision may change a claim when the decision or its meeting title names the claim's page and the two share at least two key words.
-fun mayChange(d: DecisionKey, claim: Set<String>, title: List<String>) =
+private fun mayChange(d: DecisionKey, claim: Set<String>, title: List<String>) =
     title.isNotEmpty() && title.all { it in d.hay } && d.words.count { it in claim } >= 2
 
 private fun overlap(a: Set<String>, b: Set<String>): Double {

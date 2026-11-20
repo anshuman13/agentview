@@ -53,16 +53,9 @@ export function Transcript() {
   return <TranscriptView key={chat} sessionId={sessionId} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} stalled={stalled} label={providerLabel(provider)} />;
 }
 
-function FailedLine({ events, label }: { events: ChatEvent[]; label: string }) {
+function EndLine({ text, label, onPress }: { text: string; label: string; onPress: () => void }) {
   const [sent, setSent] = useState(false);
-  const line = failedLine(events, label);
-  if (!line) return null;
-  return <div className="tr-failed"><span className="tr-failed-text">{line}</span>{!sent && <Button size="sm" onClick={() => { setSent(true); send({ type: 'retry' }); }}>Retry</Button>}</div>;
-}
-
-function StalledLine() {
-  const [sent, setSent] = useState(false);
-  return <div className="tr-failed"><span className="tr-failed-text">No activity for 15 min</span>{!sent && <Button size="sm" onClick={() => { setSent(true); send({ type: 'prompt', text: 'continue' }); }}>Resume</Button>}</div>;
+  return <div className="tr-failed"><span className="tr-failed-text">{text}</span>{!sent && <Button size="sm" onClick={() => { setSent(true); onPress(); }}>{label}</Button>}</div>;
 }
 
 function UnsentRows() {
@@ -347,6 +340,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const folded = useMemo(() => new Set([...runs].flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs]);
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
   const jumpLabel = `Jump to latest${replies > 0 ? ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}` : ''}`;
+  const failText = failed && !running ? failedLine(events, label) : null;
 
   const rowOf = (it: Item, first: boolean, where: 'flat' | 'shown' | 'hidden') => {
     if (!first && folded.has(it.id)) return null;
@@ -375,8 +369,8 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
           : rowOf(r.it, i === 0, 'shown');
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
-      {failed && !running && <FailedLine key={events.length} events={events} label={label} />}
-      {stalled && !failed && <StalledLine />}
+      {failText && <EndLine key={events.length} text={failText} label="Retry" onPress={() => send({ type: 'retry' })} />}
+      {stalled && !failed && <EndLine text="No activity for 15 min" label="Resume" onPress={() => send({ type: 'steer', text: 'continue' })} />}
       <UnsentRows />
       <QuoteButton rows={rows} />
       </div>
