@@ -56,6 +56,11 @@ fun Hub.setNotify(on: Boolean) {
     if (on && !notifier.granted()) wantsPermission.tryEmit(Unit)
 }
 
+fun Hub.setQuietHours(value: String) {
+    quietHours.value = value
+    prefs.edit().putString("quietHours", value).apply()
+}
+
 fun Hub.saveOrigin(value: String) {
     val v = value.trim().trimEnd('/').let { if (it.isEmpty() || "://" in it) it else "http://$it" }
     if (v.isEmpty()) return

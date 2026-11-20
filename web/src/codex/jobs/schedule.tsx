@@ -4,10 +4,9 @@ import { madeAt, newId, type ItemRow, type Paused, type Profile } from '../data/
 import type { JobPreset } from '../data/tasks/presets';
 import { clock } from '../tasks/time';
 import { dayLabel, dayStart } from '../data/dates';
-import { money } from '../../ui/util';
 import { showSnack, useView } from '../view';
 import { type BadgeSpec } from '../../ui/Badge';
-import { queued, runsOf } from '../../../../shared/jobRuns';
+import { queued, runMeta, runsOf } from '../../../../shared/jobRuns';
 
 export const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 export const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
@@ -41,7 +40,7 @@ export function at(t: number, now = Date.now()) {
   return `${day} ${clock(t)}`;
 }
 
-export { queued, runsOf };
+export { queued, runMeta, runsOf };
 
 // The tasks a job's add_task wrote (source job, people the job name): open first, then done, newest first.
 export const tasksOf = (items: ItemRow[], j: Job) => items
@@ -89,13 +88,6 @@ export function runNow(store: Store, j: Job) {
 export function removeJob(store: Store, j: Job) {
   void store.editRow('jobs', j, { deleted: 1 });
   showSnack(`Deleted ${j.name || 'job'}`, () => void store.editRow('jobs', j, { deleted: 0 }));
-}
-
-export function runMeta(r: Run) {
-  if (r.status === 'running') return 'Running';
-  const secs = r.finished_at && r.started_at ? Math.max(1, Math.round((r.finished_at - r.started_at) / 1000)) : 0;
-  const dur = !secs ? '' : secs < 60 ? `${secs} s` : `${Math.floor(secs / 60)} min ${secs % 60} s`;
-  return [dur, r.cost ? money(r.cost) : ''].filter(Boolean).join(' · ');
 }
 
 export function useJobs() {

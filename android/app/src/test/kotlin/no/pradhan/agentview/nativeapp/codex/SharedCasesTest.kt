@@ -183,6 +183,7 @@ import no.pradhan.agentview.nativeapp.codex.jobs.newJob
 import no.pradhan.agentview.nativeapp.codex.jobs.parseSchedule
 import no.pradhan.agentview.nativeapp.codex.jobs.scheduleOf
 import no.pradhan.agentview.nativeapp.codex.jobs.money
+import no.pradhan.agentview.nativeapp.codex.jobs.runMeta
 import no.pradhan.agentview.nativeapp.codex.jobs.tasksOf
 import no.pradhan.agentview.nativeapp.codex.meetings.actionCount
 import no.pradhan.agentview.nativeapp.codex.meetings.agendaMarkdown
@@ -781,6 +782,10 @@ class SharedCasesTest {
             val expected = c.getValue("expected").jsonArray.map { it.jsonObject.str("job") to it.jsonObject.str("run") }
             assertEquals(c.str("name"), expected, failedJobs(jobs, runs, c.getValue("now").jsonPrimitive.long).map { it.job.id to it.run.id })
         }
+    }
+
+    @Test fun runMetaRule() {
+        for (c in cases("run-meta")) assertEquals(c.str("name"), c.str("expected"), runMeta(Row("runs", "r", "work", f = c.getValue("run").jsonObject)))
     }
 
     @Test fun jobEdit() {

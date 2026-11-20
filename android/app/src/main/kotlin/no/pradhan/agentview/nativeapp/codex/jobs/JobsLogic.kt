@@ -154,13 +154,15 @@ fun money(n: Double, billing: String = "usd") = unbilledText(billing) ?: if (n >
 
 fun runTime(r: Row, now: Long): String? = r.long("started_at")?.let { nextText(it, now) }
 
+// A run's second line: "Nothing new" for a quiet run that found nothing, then the duration and cost.
 fun runMeta(r: Row): String {
     if (r.str("status") == "running") return "Running"
     val start = r.long("started_at"); val end = r.long("finished_at")
     val secs = if (start != null && end != null) maxOf(1L, Math.round((end - start) / 1000.0)) else 0L
     val dur = when { secs == 0L -> ""; secs < 60 -> "$secs s"; else -> "${secs / 60} min ${secs % 60} s" }
     val cost = r.str("cost")?.toDoubleOrNull()?.takeIf { it > 0 }?.let { money(it) }
-    return listOfNotNull(dur.ifEmpty { null }, cost).joinToString(" · ")
+    val quiet = r.str("status") == "ok" && r.str("output")?.startsWith("NOTHING NEW", ignoreCase = true) == true
+    return listOfNotNull(if (quiet) "Nothing new" else null, dur.ifEmpty { null }, cost).joinToString(" · ")
 }
 
 fun jobsOf(jobs: List<Row>, profile: String?) = jobs.filter { !it.deleted && matchesProfile(profile, it) }.sortedBy { (it.str("name") ?: "").lowercase() }

@@ -1,0 +1,8 @@
+[
+  { "name": "running", "run": { "status": "running", "started_at": 1000, "finished_at": null, "cost": null, "output": null }, "expected": "Running" },
+  { "name": "ok with cost", "run": { "status": "ok", "started_at": 1000, "finished_at": 13000, "cost": 0.04, "output": "Two new posts" }, "expected": "12 s · $0.04" },
+  { "name": "ok without cost", "run": { "status": "ok", "started_at": 1000, "finished_at": 13000, "cost": null, "output": "Done" }, "expected": "12 s" },
+  { "name": "nothing new in lowercase", "run": { "status": "ok", "started_at": 1000, "finished_at": 13000, "cost": 0.04, "output": "nothing new today" }, "expected": "Nothing new · 12 s · $0.04" },
+  { "name": "nothing new on an error run stays plain", "run": { "status": "error", "started_at": 1000, "finished_at": 13000, "cost": 0.04, "output": "NOTHING NEW" }, "expected": "12 s · $0.04" },
+  { "name": "65 s", "run": { "status": "ok", "started_at": 1000, "finished_at": 66000, "cost": 0.5, "output": null }, "expected": "1 min 5 s · $0.50" }
+]

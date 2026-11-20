@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import type { Job, Run } from '../data/wiki/wiki';
 import { describe as group, expect, test } from 'bun:test';
 import { clock } from '../tasks/time';
-import { canRunNow, describe, jobState, queued, rowNote, runMeta, parseSchedule, scheduleOf } from './schedule';
+import { canRunNow, describe, jobState, queued, rowNote, parseSchedule, scheduleOf } from './schedule';
 
 group('job schedules', () => {
   test('read back what the form writes', () => {
@@ -60,20 +60,6 @@ group('canRunNow', () => {
     expect(canRunNow({ ...job, next_run_at: 100 }, [], 200)).toBe(false);
     expect(canRunNow({ ...job, prompt: '  ' }, [], 200)).toBe(false);
     expect(canRunNow({ ...job, prompt: null }, [], 200)).toBe(false);
-  });
-});
-
-group('runMeta', () => {
-  const run = (over: Partial<Run>) => ({ status: 'ok', started_at: 1000, finished_at: 13_000, cost: 0.04, ...over }) as Run;
-  test('duration then cost', () => {
-    expect(runMeta(run({}))).toBe('12 s · $0.04');
-    expect(runMeta(run({ finished_at: 1400 }))).toBe('1 s · $0.04');
-    expect(runMeta(run({ finished_at: 66_000 }))).toBe('1 min 5 s · $0.04');
-  });
-  test('no cost part for null or zero, no duration while running', () => {
-    expect(runMeta(run({ cost: null }))).toBe('12 s');
-    expect(runMeta(run({ cost: 0 }))).toBe('12 s');
-    expect(runMeta(run({ status: 'running', finished_at: null }))).toBe('Running');
   });
 });
 

@@ -46,6 +46,23 @@ fun notices(was: List<LiveChat>, now: List<LiveChat>, muted: Set<String> = empty
     chatNotice(before, c, c.sessionId in muted)
 }
 
+// The quiet hours Settings offers; any other stored value is Off.
+val QUIET_HOURS = listOf("22:00-07:00", "20:00-08:00")
+
+// The quiet window as start and end minute of the day, or null when quiet hours are off.
+fun quietWindow(pref: String?): Pair<Int, Int>? {
+    if (pref !in QUIET_HOURS) return null
+    val (start, end) = pref!!.split("-").map { it.substringBefore(":").toInt() * 60 + it.substringAfter(":").toInt() }
+    return start to end
+}
+
+// Inside the window a Finished notice posts without sound; the window may wrap midnight and its end minute is outside it.
+fun silentNotice(kind: NoticeKind, minuteOfDay: Int, window: Pair<Int, Int>?): Boolean {
+    if (kind != NoticeKind.Finished || window == null) return false
+    val (start, end) = window
+    return if (start <= end) minuteOfDay in start until end else minuteOfDay >= start || minuteOfDay < end
+}
+
 const val WAITING_MAX = 5
 
 @Serializable

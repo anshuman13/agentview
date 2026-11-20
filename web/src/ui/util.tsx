@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
-import type { Billing } from '../../../shared/providers';
+import { money } from '../../../shared/cost';
 import { narrow } from '../app/shell/useNarrow';
 
 // Enter or Space on a focusable element that is not a button clicks it.
@@ -145,8 +145,7 @@ export function weekPace(resetsAt: number, now = Date.now()) {
 // The phone keyboard covers the lower half, so a focused field moves into view once it is up.
 export const reveal = (e: { currentTarget: HTMLElement }) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
 
-export const money = (n: number, billing: Billing = 'usd') =>
-  billing === 'plan' ? 'Plan' : billing === 'none' ? '-' : n > 0 && n < 0.005 ? '<$0.01' : n < 10 ? `$${n.toFixed(2)}` : `$${Math.round(n)}`;
+export { money };
 
 export const modelLabel = (id: string, models: Array<{ value: string; displayName: string }>) =>
   models.find((m) => m.value === id)?.displayName ?? id.replace(/^claude-/, '').replace(/-\d{8}$/, '');

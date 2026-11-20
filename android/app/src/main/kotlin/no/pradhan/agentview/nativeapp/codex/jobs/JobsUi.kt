@@ -25,6 +25,19 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import no.pradhan.agentview.nativeapp.codex.meetings.markSegments
+import no.pradhan.agentview.nativeapp.codex.meetings.matchLabel
+import no.pradhan.agentview.nativeapp.codex.meetings.stepMatch
+import no.pradhan.agentview.nativeapp.sessions.queryWords
+import no.pradhan.agentview.nativeapp.ui.IconBtn
+import no.pradhan.agentview.nativeapp.ui.SearchField
 import no.pradhan.agentview.nativeapp.chat.toolId
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.Row
@@ -258,9 +271,44 @@ private fun RunsSheet(runs: List<Row>, now: Long, say: (String) -> Unit, onDismi
                     trailing = { RunStatus(r.str("status") ?: ""); if (output != null) Chevron() })
                 if (expanded && output != null) {
                     Button("Copy output", { clip.setText(AnnotatedString(output)); say("Output copied") }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                    Text(output, Modifier.padding(start = Tokens.sp8, end = Tokens.sp8, bottom = Tokens.sp6), style = Type.body, color = av.fg)
+                    if (i == 0) SearchedOutput(output)
+                    else Text(output, Modifier.padding(start = Tokens.sp8, end = Tokens.sp8, bottom = Tokens.sp6), style = Type.body, color = av.fg)
                 }
             }
+        }
+    }
+}
+
+// The latest run's output with a search, as the meeting transcript has: every match marked, Previous and Next bring the current one into view.
+@Composable
+private fun SearchedOutput(output: String) {
+    var query by remember { mutableStateOf("") }
+    var cur by remember { mutableStateOf(-1) }
+    val lines = remember(output, query) { queryWords(query).let { words -> output.lines().map { markSegments(it, words) } } }
+    val starts = lines.runningFold(0) { n, line -> n + line.count { it.hit } }
+    val count = starts.last()
+    val views = remember(lines.size) { List(lines.size) { BringIntoViewRequester() } }
+    val scope = rememberCoroutineScope()
+    fun step(dir: Int) {
+        val n = stepMatch(cur, dir, count)
+        cur = n
+        scope.launch { views[starts.indexOfLast { it <= n }].bringIntoView() }
+    }
+    SearchField(query, { query = it; cur = -1 }, "Search output")
+    if (query.isNotBlank()) LayoutRow(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad), verticalAlignment = Alignment.CenterVertically) {
+        Text(matchLabel(count), Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted)
+        IconBtn("arrow-up", "Previous match", { step(-1) }, enabled = count > 0)
+        IconBtn("arrow-down", "Next match", { step(1) }, enabled = count > 0)
+    }
+    val soft = av.accentSoft
+    val strong = av.accent.copy(alpha = 0.4f)
+    Column(Modifier.padding(start = Tokens.sp8, end = Tokens.sp8, bottom = Tokens.sp6)) {
+        lines.forEachIndexed { i, line ->
+            var k = 0
+            val shown = buildAnnotatedString {
+                for (s in line) if (s.hit) withStyle(SpanStyle(background = if (starts[i] + k++ == cur) strong else soft)) { append(s.text) } else append(s.text)
+            }
+            Text(shown, Modifier.bringIntoViewRequester(views[i]), style = Type.body, color = av.fg)
         }
     }
 }
