@@ -1,17 +1,15 @@
-import type { ReactNode } from 'react';
+import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { Icon } from './Icon';
 import { cx } from './util';
 
 
-export function Panel({ title, action, padding = 'md', className, children }: {
+export function Panel({ title, action, padding = 'md', className, children, ...rest }: {
   title?: ReactNode;
   action?: ReactNode;
   padding?: 'sm' | 'md';
-  className?: string;
-  children?: ReactNode;
-}) {
+} & ComponentPropsWithRef<'section'>) {
   return (
-    <section className={cx('ui-panel', `ui-panel-${padding}`, className)}>
+    <section className={cx('ui-panel', `ui-panel-${padding}`, className)} {...rest}>
       {(title || action) && (
         <header className="ui-panel-head">
           {title && <h3 className="ui-panel-title">{title}</h3>}

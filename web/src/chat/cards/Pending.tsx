@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import { send, useStore } from '../../app/store';
 import { Button, ShowToggle } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
+import { Panel } from '../../ui/Panel';
 import { pressable, useOnUnmount } from '../../ui/util';
 import { touch } from '../../app/touch/touch';
 import { Markdown } from '../Chat';
@@ -64,10 +65,10 @@ const ICONS: Record<string, string> = {
 type CardProps = { p: PendingPermission; mode: string; first: boolean };
 
 function PermissionCard({ p, mode, first }: CardProps) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const Body = BODIES[p.toolName] ?? RowsBody;
   return (
-    <div ref={ref} className="pd" tabIndex={-1} role="group" aria-label={p.title}>
+    <Panel ref={ref} className="pd" tabIndex={-1} role="group" aria-label={p.title}>
       <div className="pd-head">
         <Icon name={ICONS[p.toolName] ?? 'tools'} />
         <span className="pd-title" title={p.title}>{p.title}</span>
@@ -75,7 +76,7 @@ function PermissionCard({ p, mode, first }: CardProps) {
       <Body tool={p.toolName} input={p.input} title={p.title} />
       {p.detail && <div className="pd-desc">{p.detail}</div>}
       <Decision p={p} mode={mode} first={first} cardRef={ref} yes="Allow" no="Deny" />
-    </div>
+    </Panel>
   );
 }
 
@@ -108,7 +109,7 @@ export function planFeedback(paragraphs: string[], notes: Record<number, string>
 }
 
 function PlanCard({ p, mode, first }: CardProps) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const paragraphs = useMemo(() => planParagraphs(str(p.input.plan)), [p.input.plan]);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [editing, setEditing] = useState<number | null>(null);
@@ -121,7 +122,7 @@ function PlanCard({ p, mode, first }: CardProps) {
     setEditing(null);
   };
   return (
-    <div ref={ref} className="pd" tabIndex={-1} role="group" aria-label={p.title}>
+    <Panel ref={ref} className="pd" tabIndex={-1} role="group" aria-label={p.title}>
       <div className="pd-head">
         <Icon name="checklist" />
         <span className="pd-title" title={p.title}>{p.title}</span>
@@ -151,11 +152,11 @@ function PlanCard({ p, mode, first }: CardProps) {
       )}
       {p.detail && <div className="pd-desc">{p.detail}</div>}
       <Decision p={p} mode={mode} first={first} cardRef={ref} yes="Approve" no="Keep planning" onNo={keep} />
-    </div>
+    </Panel>
   );
 }
 
-function Decision({ p, mode, first, cardRef, yes, no, onNo }: CardProps & { cardRef: RefObject<HTMLDivElement | null>; yes: string; no: string; onNo?: () => void }) {
+function Decision({ p, mode, first, cardRef, yes, no, onNo }: CardProps & { cardRef: RefObject<HTMLElement | null>; yes: string; no: string; onNo?: () => void }) {
   const always = p.canAlwaysAllow && p.toolName !== 'ExitPlanMode';
   const keys = !p.confirmFirst;
   const reply = (allow: boolean, all?: boolean) => send({ type: 'permission', id: p.id, allow, always: all });
@@ -253,7 +254,7 @@ function Diff({ a, b }: { a: string; b: string }) {
 }
 
 function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [picked, setPicked] = useState<string[]>([]);
@@ -286,7 +287,7 @@ function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {
   if (!qq) return null;
 
   return (
-    <div ref={ref} className="pd" tabIndex={-1} role="group" aria-label={qq.question}>
+    <Panel ref={ref} className="pd" tabIndex={-1} role="group" aria-label={qq.question}>
       <div className="pd-head">
         <span className="pd-label">{qq.header || 'Question'}</span>
         {total > 1 && <span className="pd-count">{step + 1} of {total}</span>}
@@ -324,7 +325,7 @@ function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {
           )}
         </div>
       )}
-    </div>
+    </Panel>
   );
 }
 
@@ -347,11 +348,11 @@ function Option({ n, multi, on, label, description, preview, className, onPick }
 export function BlockedCard({ ev }: { ev: Extract<ChatEvent, { kind: 'blocked' }> }) {
   const rule = ev.rule.startsWith('Bash(') ? ev.rule.slice(5, -1).replace(/\\([\\()])/g, '$1') : ev.rule;
   return (
-    <div className="pd blocked-card">
+    <Panel className="pd blocked-card">
       <div className="pd-head"><Icon name="shield" small /><span className="pd-title">Auto mode blocked this</span></div>
       <pre className="pd-code">{rule}</pre>
       {ev.reason && <div className="pd-desc">{ev.reason}</div>}
       {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><Button size="sm" variant="filled" onClick={() => send({ type: 'allow_blocked', id: ev.id })}>Allow and retry</Button></div>}
-    </div>
+    </Panel>
   );
 }
