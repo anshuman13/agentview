@@ -13,6 +13,7 @@ class GoalLogicTest {
         assertEquals("70% cap · Builds 2 of 5", usageLine(ChatRun("a", capPct = 70, maxBuilds = 5, builds = 2)))
         assertEquals("Builds 2 of 5", usageLine(ChatRun("a", maxBuilds = 5, builds = 2)))
         assertEquals("70% cap", usageLine(ChatRun("a", capPct = 70)))
+        assertEquals("\$1.50 of \$5 cap", usageLine(ChatRun("a", capUsd = 5, costUsd = 1.5)))
         assertEquals("No cap", usageLine(ChatRun("a")))
     }
 }

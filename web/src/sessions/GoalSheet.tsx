@@ -14,7 +14,7 @@ import { goalCommand, parseEvery } from '../../../shared/goalForm';
 import { MAX_NAME, addPreset, removePreset, type GoalPreset } from '../../../shared/goalPresets';
 import { span } from '../../../shared/util';
 import { planCondition } from '../../../shared/specTasks';
-import { BUILDS, CAPS, EVERY, STOPS } from './goalLogic';
+import { BUILDS, CAPS, CAPS_USD, EVERY, STOPS } from './goalLogic';
 import { useWorkspace } from './folders';
 import { loadPresets, savePresets } from './goalPresets';
 import { useChatRun } from './useChatRun';
@@ -36,6 +36,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const [stopIn, setStopIn] = useState<number | undefined>();
   const [stopAt, setStopAt] = useState<string | undefined>();
   const [capPct, setCapPct] = useState<number | null>(70);
+  const [capUsd, setCapUsd] = useState<number | null>(null);
   const [builds, setBuilds] = useState<number | null>(null);
   const [inHere, setInHere] = useState(false);
   const [dir, setDir] = useState(cwd);
@@ -62,7 +63,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : what;
   const start = () => {
     track('action:startGoal');
-    const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct, builds }, Date.now());
+    const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct, capUsd: billing(target) === 'plan' ? null : capUsd, builds }, Date.now());
     if (canHere && inHere) {
       prompt(text, () => notice('Could not send the goal. Try again.'));
       onClose();
@@ -127,6 +128,17 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
             <div className="ui-fields">
               {chips(CAPS, (i) => CAPS[i].pct === capPct, (i) => setCapPct(CAPS[i].pct))}
               <div className="gl-note">Skips rounds while the 5-hour window is over 90%</div>
+            </div>
+          </div>
+        </>
+      )}
+      {billing(target) !== 'plan' && (
+        <>
+          <Section label="Cost cap" />
+          <div className="ui-group">
+            <div className="ui-fields">
+              {chips(CAPS_USD, (i) => CAPS_USD[i].usd === capUsd, (i) => setCapUsd(CAPS_USD[i].usd))}
+              <div className="gl-note">Ends the goal when its own cost reaches the cap</div>
             </div>
           </div>
         </>

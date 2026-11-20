@@ -140,6 +140,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     var stopIn by remember { mutableStateOf<Long?>(null) }
     var stopAt by remember { mutableStateOf<String?>(null) }
     var capPct by remember { mutableStateOf<Int?>(70) }
+    var capUsd by remember { mutableStateOf<Int?>(null) }
     var builds by remember { mutableStateOf<Int?>(null) }
     var inHere by remember { mutableStateOf(false) }
     var dir by remember { mutableStateOf(cwd) }
@@ -163,7 +164,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: what
     val start = {
         hub.track("action:startGoal")
-        val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct, builds), System.currentTimeMillis())
+        val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct, builds, if (billing(target) == "plan") null else capUsd), System.currentTimeMillis())
         if (here) {
             hub.submit(text, false) { hub.notice.value = "Could not send the goal. Try again." }
             onClose()
@@ -215,6 +216,13 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
             Group {
                 Chips { CAPS.forEach { Chip(it.label, { capPct = it.pct }, on = it.pct == capPct) } }
                 Text("Skips rounds while the 5-hour window is over 90%", Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, bottom = Tokens.sp6), style = Type.footnote, color = av.fgMuted)
+            }
+        }
+        if (billing(target) != "plan") {
+            SectionHeader("Cost cap")
+            Group {
+                Chips { CAPS_USD.forEach { Chip(it.label, { capUsd = it.usd }, on = it.usd == capUsd) } }
+                Text("Ends the goal when its own cost reaches the cap", Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, bottom = Tokens.sp6), style = Type.footnote, color = av.fgMuted)
             }
         }
         SectionHeader("Build limit")
@@ -283,7 +291,7 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
     val settings = buildList<@Composable () -> Unit> {
         add { EditRow("How often", run.every?.let { "Every ${everyText(it)}" } ?: "Until done", if (run.every != null && editable) EVERY.filter { it.ms > 0 }.map { it.label to mapOf("every" to it.ms) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Stop at", run.endAt?.let { clock(it) } ?: "None", if (editable) STOPS.map { it.label to mapOf("endAt" to stopAtMs(it, now)) } else null) { hub.runEdit(run, it) } }
-        if (billing(run.provider) != "none" || run.maxBuilds != null) add { EditRow("Usage", usageLine(run), if (editable && billing(run.provider) != "none") CAPS.map { (it.pct?.let { p -> "$p% cap" } ?: "No cap") to mapOf("capPct" to it.pct?.toLong()) } else null) { hub.runEdit(run, it) } }
+        if (billing(run.provider) != "none" || run.maxBuilds != null || run.capUsd != null) add { EditRow("Usage", usageLine(run), if (editable && billing(run.provider) != "none") CAPS.map { (it.pct?.let { p -> "$p% cap" } ?: "No cap") to mapOf("capPct" to it.pct?.toLong()) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Build limit", run.maxBuilds?.toString() ?: "None", if (editable) BUILDS.map { it.label to mapOf("maxBuilds" to it.n?.toLong()) } else null) { hub.runEdit(run, it) } }
     }
     Sheet(onClose, run.title.ifBlank { "Goal" }, padded = false) {

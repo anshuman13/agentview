@@ -29,6 +29,8 @@ export const STOPS: (Stop & { label: string })[] = [
 
 export const CAPS = [{ label: '50', pct: 50 }, { label: '70', pct: 70 }, { label: '90', pct: 90 }, { label: 'Off', pct: null }];
 
+export const CAPS_USD = [{ label: '$1', usd: 1 }, { label: '$5', usd: 5 }, { label: '$10', usd: 10 }, { label: 'Off', usd: null }];
+
 export const BUILDS = [{ label: 'None', n: null }, { label: '3', n: 3 }, { label: '5', n: 5 }, { label: '10', n: 10 }];
 
 export function stopAtMs({ stopIn, stopAt }: Stop, now: number) {
@@ -52,8 +54,9 @@ export function usageLine(run: ChatRun) {
   const { week, fiveHour } = run.usage ?? {};
   const parts = [week && `Week ${week.pct}%${run.capPct ? ` of ${run.capPct}% cap` : ''}`, fiveHour && `5-hour ${fiveHour.pct}%`].filter(Boolean);
   const builds = buildsLine(run);
-  const usage = parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : builds ? '' : 'No cap';
-  return [usage, builds].filter(Boolean).join(' · ');
+  const cost = run.capUsd ? `$${run.costUsd.toFixed(2)} of $${run.capUsd} cap` : '';
+  const usage = parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : cost || builds ? '' : 'No cap';
+  return [usage, cost, builds].filter(Boolean).join(' · ');
 }
 
 // The prompt of a round is in the transcript; it may take a moment to show after the chat opens.

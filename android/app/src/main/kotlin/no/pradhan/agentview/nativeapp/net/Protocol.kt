@@ -170,6 +170,7 @@ data class ChatRun(
     val every: Long? = null,
     val endAt: Long? = null,
     val capPct: Int? = null,
+    val capUsd: Int? = null,
     val maxBuilds: Int? = null,
     val builds: Int? = null,
     val usage: PlanUsage? = null,

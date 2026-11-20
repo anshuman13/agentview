@@ -1,6 +1,6 @@
 import { MAX_GOAL_ROUNDS, type ChatRun, type PlanUsage, type Repeat, type RunEdit, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, nextClock, span } from '../../../shared/util.js';
-import { GOAL_RAN_OUT, STOPPED_BY_YOU, goalCapReached, goalNotMet, goalPlan, goalStoppedAt, nextRound, skipText } from '../../../shared/goalText.js';
+import { GOAL_RAN_OUT, STOPPED_BY_YOU, goalCapReached, goalCostCapReached, goalNotMet, goalPlan, goalStoppedAt, nextRound, skipText } from '../../../shared/goalText.js';
 import { MAX_EVERY, MIN_EVERY } from '../../../shared/goalForm.js';
 import type { Cron } from '../agent/types.js';
 
@@ -8,9 +8,11 @@ const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
 const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
 
-const GOAL_USAGE = 'Usage: /goal [every 1h] [until 18:00] [cap 70%] [builds 5] <condition> (every 10m or longer), /goal off';
+const GOAL_USAGE = 'Usage: /goal [every 1h] [until 18:00] [cap 70%] [cap $5] [builds 5] <condition> (every 10m or longer), /goal off';
 
 const MAX_BUILDS = 50;
+
+const MAX_CAP_USD = 1000;
 
 const DAY = 24 * 3_600_000;
 const STANDING_MS = 28 * DAY;
@@ -31,8 +33,8 @@ export const standing = (r: Repeat) => Boolean(r.goal && r.every);
 
 const reportDue = (r: Repeat, now = Date.now()) => standing(r) && r.reportAt !== undefined && now >= r.reportAt;
 
-// /goal [every 1h] [until 18:00] [cap 70%] [builds 5] <condition> checks the condition whenever the agent goes idle, until it reports GOAL MET or the rounds run out.
-// With every it is a standing goal: one heartbeat per interval for up to 28 days. until sets an end time, cap a weekly usage limit, builds a limit on builds started.
+// /goal [every 1h] [until 18:00] [cap 70%] [cap $5] [builds 5] <condition> checks the condition whenever the agent goes idle, until it reports GOAL MET or the rounds run out.
+// With every it is a standing goal: one heartbeat per interval for up to 28 days. until sets an end time, cap a weekly usage limit, cap $ a limit on the goal's own cost, builds a limit on builds started.
 export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usage' | null {
   const m = /^\/goal\b([\s\S]*)$/.exec(text.trim());
   if (!m) return null;
@@ -47,13 +49,15 @@ export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usa
   const e = take(/^every\s+(\d+)\s*(m|min|h)\b\s*([\s\S]*)$/i);
   const u = take(/^until\s+(\d{1,2}):(\d{2})\b\s*([\s\S]*)$/i);
   const c = take(/^cap\s+(\d+)%\s*([\s\S]*)$/i);
+  const d = take(/^cap\s+\$(\d+)\s*([\s\S]*)$/i);
   const b = take(/^builds(?:\s+(\d+)\b|\s*$)\s*([\s\S]*)$/i);
   const every = e ? Number(e[1]) * UNIT[e[2].toLowerCase()] : 0;
   const capPct = c ? Number(c[1]) : 0;
+  const capUsd = d ? Number(d[1]) : 0;
   const maxBuilds = Number(b?.[1] ?? 0);
-  if ((e || u || c || b) && !goal) return 'usage';
-  if ((e && (every < MIN_EVERY || every > MAX_EVERY)) || (u && (Number(u[1]) > 23 || Number(u[2]) > 59)) || (c && (capPct < 1 || capPct > 100)) || (b && (maxBuilds < 1 || maxBuilds > MAX_BUILDS))) return 'usage';
-  const extra = { ...(u && { endAt: nextClock(Number(u[1]), Number(u[2]), now) }), ...(c && { capPct }), ...(b && { maxBuilds, builds: [] }) };
+  if ((e || u || c || d || b) && !goal) return 'usage';
+  if ((e && (every < MIN_EVERY || every > MAX_EVERY)) || (u && (Number(u[1]) > 23 || Number(u[2]) > 59)) || (c && (capPct < 1 || capPct > 100)) || (d && (capUsd < 1 || capUsd > MAX_CAP_USD)) || (b && (maxBuilds < 1 || maxBuilds > MAX_BUILDS))) return 'usage';
+  const extra = { ...(u && { endAt: nextClock(Number(u[1]), Number(u[2]), now) }), ...(c && { capPct }), ...(d && { capUsd }), ...(b && { maxBuilds, builds: [] }) };
   if (e) return { prompt: standingPrompt(goal), every, until: now + STANDING_MS, round: 0, nextAt: null, goal, reportAt: now + REPORT_MS, ...extra };
   return { prompt: goalPrompt(goal), every: 0, until: null, round: 0, nextAt: null, goal, ...extra };
 }
@@ -68,6 +72,9 @@ export function usageGate(r: Repeat, usage: PlanUsage | null, now = Date.now()):
   if (pct(usage.fiveHour) > FIVE_HOUR_LIMIT) return { skipUntil: usage.fiveHour!.resetsAt };
   return null;
 }
+
+// A goal with a dollar cap ends once its own run has cost that much.
+export const costGate = (r: Repeat, spent: number) => (r.capUsd && spent >= r.capUsd ? { note: goalCostCapReached(r.capUsd) } : null);
 
 export const ROUND_INSTRUCTION = 'Reply with the answer or result first, in plain sentences, with no narration of what you did. Then finish with one last line: ROUND: <done|progress|blocked|question|nothing> <one sentence>. The line is shown on the chat row and the loop card and its first sentence is the push text, so name what changed, in at most 100 characters; use nothing when there was nothing to do.';
 
@@ -136,6 +143,7 @@ interface RepeatHost {
   patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'maxBuilds' | 'usage' | 'builds'>>): void;
   push(title: string, body: string): void;
   usage(): PlanUsage | null;
+  runCost(): number;
   asking(): boolean;
   sendPrompt(text: string, auto: 'loop' | 'goal', round: number, report?: boolean): void;
 }
@@ -256,7 +264,7 @@ export class RepeatController {
     if (r.endAt && Date.now() >= r.endAt) return { note: goalStoppedAt(r.endAt, r.round) };
     if (r.until && Date.now() >= r.until && !unrun(r)) return standing(r) ? { note: GOAL_RAN_OUT } : { note: `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`, why: `finished at ${clock(r.until)}` };
     if (r.goal && !standing(r) && r.round >= MAX_GOAL_ROUNDS) return { note: goalNotMet(r.round) };
-    return null;
+    return costGate(r, this.host.runCost());
   }
 
   fire() {
