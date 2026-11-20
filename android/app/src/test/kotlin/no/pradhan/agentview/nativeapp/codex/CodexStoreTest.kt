@@ -262,6 +262,23 @@ class CodexStoreTest {
         file.parentFile.listFiles { f -> f.name.startsWith(file.name) }?.forEach { it.delete() }
     }
 
+    @Test fun logTimeAddsToSpentAndUndoRestoresIt() = runTest {
+        val fake = Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1))))
+        val s = store(this, fake)
+        s.sync()
+        val snacks = mutableListOf<Pair<String, (() -> Unit)?>>()
+        val actions = TaskActions(s, { t, u -> snacks.add(t to u) }, { 5000L })
+        actions.logTime(s.state.value.items[0], 15)
+        assertEquals(15L, s.state.value.items[0].long("spent"))
+        actions.logTime(s.state.value.items[0], 60)
+        assertEquals(75L, s.state.value.items[0].long("spent"))
+        assertEquals("Logged 1h", snacks[1].first)
+        snacks[1].second!!()
+        assertEquals(15L, s.state.value.items[0].long("spent"))
+        snacks[0].second!!()
+        assertEquals(null, s.state.value.items[0].long("spent"))
+    }
+
     @Test fun bulkActionsShowOneSnackAndUndoSkipsARowEditedSince() = runTest {
         val fake = Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1), change("b", "two", "open", 100, 1))))
         val s = store(this, fake)

@@ -48,7 +48,11 @@ export function TaskMoreMenu({ row, draft, suggested, addEstimate, then, onAsk }
   const at = atTime(row.at);
   const focused = isFocused(useFocus(), row);
   const other: Profile = row.profile === 'work' ? 'personal' : 'work';
-  const logTime = (n: number) => write({ spent: (Number(row.spent) || 0) + n });
+  const logTime = (n: number) => {
+    const before = row.spent ?? null;
+    write({ spent: (Number(before) || 0) + n });
+    showSnack(`Logged ${minutesText(n)}`, () => write({ spent: before }));
+  };
   // The move waits for the last save, so the phone's store copies the saved title and notes to the other profile.
   const move = () => {
     save();
