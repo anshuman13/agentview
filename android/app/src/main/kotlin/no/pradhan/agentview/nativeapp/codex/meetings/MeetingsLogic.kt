@@ -25,7 +25,9 @@ import no.pradhan.agentview.nativeapp.codex.isSaid
 import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.split
+import no.pradhan.agentview.nativeapp.codex.firstName
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
+import no.pradhan.agentview.nativeapp.codex.ymd
 import no.pradhan.agentview.nativeapp.codex.whenText
 import no.pradhan.agentview.nativeapp.codex.wiki.factTime
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
@@ -291,6 +293,34 @@ fun peopleOf(m: Row): List<String> {
     val s = m.str("people") ?: return emptyList()
     val list = if (s.startsWith("[")) runCatching { (protocolJson.parseToJsonElement(s) as JsonArray).mapNotNull { (it as? JsonPrimitive)?.contentOrNull } }.getOrDefault(emptyList()) else s.split(",")
     return list.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+}
+
+// Mirrors hasContent, toMarkdown and followUpText of web/src/codex/data/meetings/meetingMarkdown.ts; shared/fixtures/meeting-copy.json holds the texts.
+fun hasContent(m: Row, actions: List<Row>) =
+    !m.str("summary").isNullOrBlank() || jsonList(m.str("decisions")).isNotEmpty() || actions.any { it.status == "open" }
+
+fun meetingMarkdown(m: Row, actions: List<Row>): String {
+    val date = m.startsAt?.let(::ymd)
+    val people = peopleOf(m)
+    val decisions = jsonList(m.str("decisions"))
+    val todo = actions.filter { it.status == "open" }
+    val out = mutableListOf("# ${m.title ?: "Meeting"}${if (date != null) " ($date)" else ""}")
+    if (people.isNotEmpty()) out.add("Attendees: ${people.joinToString(", ")}")
+    m.str("summary")?.trim()?.takeIf { it.isNotEmpty() }?.let { out.add("## Summary\n\n$it") }
+    if (decisions.isNotEmpty()) out.add("## Decisions\n\n${decisions.joinToString("\n") { "- $it" }}")
+    if (todo.isNotEmpty()) out.add("## Actions\n\n${todo.joinToString("\n") { "- [ ] ${it.title ?: ""}" }}")
+    return out.joinToString("\n\n") + "\n"
+}
+
+fun followUpText(m: Row, actions: List<Row>): String {
+    val people = peopleOf(m).map(::firstName)
+    val decisions = jsonList(m.str("decisions"))
+    val who = othersOf(m).map { "- ${firstName(it.who)}: ${it.what}" } + actions.filter { it.status == "open" }.map { "- I will ${it.title ?: ""}" }
+    val out = mutableListOf("Hi ${if (people.isNotEmpty()) people.joinToString(", ") else "all"},", "Thanks for the time on ${m.title ?: "our meeting"}.")
+    if (decisions.isNotEmpty()) out.add("What we decided:\n${decisions.joinToString("\n") { "- $it" }}")
+    if (who.isNotEmpty()) out.add("Who does what:\n${who.joinToString("\n")}")
+    out.add("Let me know if I missed anything."); out.add("Best,")
+    return out.joinToString("\n\n") + "\n"
 }
 
 class Others(val who: String, val what: String)
