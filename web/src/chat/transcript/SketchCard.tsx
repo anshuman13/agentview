@@ -33,7 +33,7 @@ export function SketchCard({ path, meta }: { path: string; meta: string }) {
           <>
             <OnOpen run={() => setAsked(true)} />
             {spec && can && canBuild(spec) && <MenuItem onClick={() => sendToChat(buildSpecPrompt(spec.specFile!))}>Build</MenuItem>}
-            {spec ? <MenuItem onClick={() => sheets.open({ kind: 'spec' })}>Open spec</MenuItem> : <MenuItem disabled>{gone ? 'No spec for this sketch' : 'Loading'}</MenuItem>}
+            {spec ? <MenuItem onClick={() => sheets.open({ kind: 'spec' })}>Open spec</MenuItem> : <MenuItem disabled icon={gone ? undefined : 'loading'} spin={!gone}>{gone ? 'No spec for this sketch' : 'Loading'}</MenuItem>}
           </>
         )}
       />

@@ -28,7 +28,7 @@ export function forkChat() {
     const now = getState().session.id;
     if (!now || now === id) return;
     stop();
-    prompt(handoffText(sessionId), () => notice('The summary was not requested. Try Fork chat again.'));
+    prompt(handoffText(sessionId), () => notice('The summary was not requested. Try Fork again'));
   });
   setTimeout(stop, 30_000);
 }

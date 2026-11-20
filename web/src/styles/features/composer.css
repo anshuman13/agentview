@@ -32,8 +32,8 @@
 }
 .cp-card textarea:focus { outline: none; }
 .cp-mirror { position: absolute; inset: 0 0 auto 0; pointer-events: none; color: transparent; }
-.cp-ghost { color: var(--fg-faint); }
-.cp-key { margin-left: var(--sp-3); padding: 0 var(--sp-2); border: 1px solid var(--border-card); border-radius: var(--radius-sm); color: var(--fg-faint); font: inherit; font-size: var(--fs-xs); white-space: nowrap; }
+.cp-ghost { color: var(--fg-muted); }
+.cp-key { margin-left: var(--sp-3); padding: 0 var(--sp-2); border: 1px solid var(--border-card); border-radius: var(--radius-sm); color: var(--fg-muted); font: inherit; font-size: var(--fs-xs); white-space: nowrap; }
 
 .cp-suggest {
   display: flex; align-items: center; gap: var(--sp-4); min-height: var(--touch-md); margin: var(--sp-2) var(--sp-4) 0; padding: 0 var(--sp-6);
@@ -58,7 +58,7 @@
 .cp-foot .icon-btn.mcp.on { color: var(--fg); }
 .cp-later-pick { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); }
 
-.cp-under { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-6); padding: 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--line-xs); color: var(--fg-faint); }
+.cp-under { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-6); padding: 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--line-xs); color: var(--fg-muted); }
 .cp-hint { flex: none; white-space: nowrap; }
 .cp-stats { flex: 1 1 auto; min-width: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .cp-stats > * + *::before { content: ' · '; }
@@ -84,7 +84,7 @@
 .cp-pop li .codicon { color: var(--fg-muted); }
 .cp-pop b { color: var(--link); font-weight: 600; }
 .cp-name { flex: none; }
-.cp-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-faint); font-size: var(--fs-sm); }
+.cp-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-muted); font-size: var(--fs-sm); }
 
 .voice.on { color: var(--err); animation: voice-pulse var(--pulse-fast) var(--ease) infinite; }
 @media (hover: hover) { .voice.on:hover:not(:disabled) { color: var(--err); } }

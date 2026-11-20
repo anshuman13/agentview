@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { send, useStore } from '../../app/store';
 import { Chip, IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
+import { plural } from '../../ui/util';
 import { useChatSettings, type Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
 import { SendAt } from './SendAt';
@@ -77,7 +78,7 @@ export function ComposerFoot({ uses, uploading, typed, shell, setPick, attach, d
         <IconButton className="mcp" icon="plug" label="Use an MCP server" title={`Ask ${label} to use an MCP server or tool`} small on={uses.length > 0} onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })} />
       )}
       <AttachButton attach={attach} />
-      {uploading > 0 && <span className="cp-hint"><Icon name="loading" small spin /> Uploading {uploading}</span>}
+      {uploading > 0 && <span className="cp-hint"><Icon name="loading" small spin /> Uploading {plural(uploading, 'file')}…</span>}
       <Voice onText={dictate} />
       <SendAt typed={typed} shell={shell} sendLater={sendLater} />
       <SendButton typed={typed} shell={shell} submit={submit} />

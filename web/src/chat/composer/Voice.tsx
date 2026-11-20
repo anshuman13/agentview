@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 
 type Result = { isFinal: boolean; 0: { transcript: string } };
 type Recognition = {
@@ -78,10 +78,12 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
   const stop = () => rec.current?.stop();
 
   return (
-    <button
-      className={`icon-btn voice${listening ? ' on' : ''}${error ? ' error' : ''}`}
+    <IconButton
+      className={`voice${error ? ' error' : ''}`}
+      icon={listening ? 'mic-filled' : 'mic'}
+      label="Dictate"
+      on={listening}
       title={error || (listening ? 'Stop dictation' : 'Dictate (click, or hold to talk)')}
-      aria-label="Dictate"
       aria-pressed={listening}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
@@ -94,9 +96,7 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
         pressed.current = 0;
       }}
       onClick={(e) => { if (e.detail === 0) (rec.current ? stop : start)(); }}
-    >
-      <Icon name={listening ? 'mic-filled' : 'mic'} />
-    </button>
+    />
   );
 }
 
