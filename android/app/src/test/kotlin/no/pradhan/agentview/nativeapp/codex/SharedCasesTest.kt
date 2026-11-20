@@ -159,6 +159,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.pageClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.staleFacts
 import no.pradhan.agentview.nativeapp.codex.wiki.wikiMarkdown
 import kotlinx.serialization.json.buildJsonArray
+import no.pradhan.agentview.nativeapp.codex.wiki.reviewGroups
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 import no.pradhan.agentview.nativeapp.codex.wiki.replaceTarget
 import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
@@ -913,6 +914,24 @@ class SharedCasesTest {
                 Row("facts", o.str("id"), "work", deleted = o["deleted"]?.jsonPrimitive?.booleanOrNull == true, f = f)
             }
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, replaceTarget(facts, c.str("id"), "work")?.id)
+        }
+    }
+
+    @Test fun reviewGroups() {
+        fun row(table: String, o: JsonObject, fields: List<String>, defaults: Map<String, Any?>): Row {
+            val f = SYNCED_FIELDS.getValue(table).associateWith { JsonNull as JsonElement }.toMutableMap()
+            for (k in fields) (o[k] ?: defaults[k]?.let { toJson(it) })?.let { f[k] = it }
+            return Row(table, o.str("id"), o["profile"]?.jsonPrimitive?.content ?: "work", deleted = o["deleted"]?.jsonPrimitive?.booleanOrNull == true, f = f)
+        }
+        fun strings(e: JsonElement) = e.jsonArray.map { it.jsonPrimitive.content }
+        for (c in cases("review-groups")) {
+            val pages = c.getValue("pages").jsonArray.map { row("pages", it.jsonObject, listOf("state"), emptyMap()) }
+            val facts = c.getValue("facts").jsonArray.map { row("facts", it.jsonObject, listOf("page_id", "replaces", "added_by", "at", "state"), mapOf("state" to "proposed", "at" to 0)) }
+            val g = reviewGroups(pages, facts)
+            val want = c.getValue("expected").jsonObject
+            assertEquals(c.str("name"), want.getValue("byPage").jsonArray.map { it.jsonObject.str("page") to strings(it.jsonObject.getValue("claims")) }, g.byPage.map { it.page.id to it.claims.map { f -> f.id } })
+            assertEquals(c.str("name"), want.getValue("chats").jsonArray.map { strings(it) }, g.chats.map { l -> l.map { it.id } })
+            assertEquals(c.str("name"), strings(want.getValue("loose")), g.loose.map { it.id })
         }
     }
 

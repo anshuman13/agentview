@@ -10,9 +10,9 @@ import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import { fileRequest } from '../../workspace/fileApi';
 import { Markdown } from '../Chat';
-import { fetchMemory } from '../chatApi';
+import { fetchMemory, saveMemory } from '../chatApi';
 
-type MemoryFile = { path: string; name: string; description: string; text: string };
+type MemoryFile = { path: string; name: string; description: string; text: string; editable?: boolean };
 
 // Where a memory file comes from; android MemoryUi.kt memoryWhere says the same.
 export function memoryWhere(f: Pick<MemoryFile, 'path'>, cwd: string) {
@@ -80,7 +80,42 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
   );
 }
 
-// What the agent is told and remembers in this folder, like Windsurf's memories panel. Only the repo instruction file can be changed.
+// A memory file's body as a field with Save and Cancel; a save can be undone while the file stays open.
+function MemoryEdit({ file, onSaved }: { file: MemoryFile; onSaved: (text: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+  const [back, setBack] = useState<string | null>(null);
+  const save = async (text: string, undo = false) => {
+    try {
+      const previous = await saveMemory(file.path, text);
+      setBack(undo ? null : previous);
+      setNote(undo ? 'Memory restored' : 'Memory updated');
+      setDraft(null);
+      onSaved(text);
+    } catch {
+      setNote(undo ? 'Could not undo the memory update' : 'Could not save the memory. Your text is still here.');
+    }
+  };
+  return (
+    <>
+      {draft === null ? (
+        <>
+          <Button size="sm" variant="plain" icon="edit" onClick={() => { setDraft(file.text); setNote(''); }}>Edit</Button>
+          <Markdown text={file.text || 'Empty'} />
+        </>
+      ) : (
+        <>
+          <div className="ui-fields"><textarea rows={8} aria-label="Memory text" value={draft} onChange={(e) => setDraft(e.target.value)} /></div>
+          <Button size="sm" disabled={!draft.trim()} onClick={() => void save(draft)}>Save</Button>
+          <Button size="sm" variant="plain" onClick={() => setDraft(null)}>Cancel</Button>
+        </>
+      )}
+      {note && <div className="muted" role="status">{note}{back !== null && <Button size="sm" variant="plain" onClick={() => void save(back, true)}>Undo</Button>}</div>}
+    </>
+  );
+}
+
+// What the agent is told and remembers in this folder, like Windsurf's memories panel. The repo instruction file and Claude's memory files can be changed.
 export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void }) {
   const [files, setFiles] = useState<MemoryFile[] | null>(null);
   const [open, setOpen] = useState<MemoryFile | null>(null);
@@ -95,8 +130,14 @@ export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void 
       <Sheet label={open.name} onClose={onClose}>
         <Section label={open.name} />
         <div className="muted">{memoryWhere(open, cwd)}</div>
-        {open.path === `${cwd}/${file}` && <Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button>}
-        <Markdown text={open.text || 'Empty'} />
+        {open.editable ? (
+          <MemoryEdit file={open} onSaved={(text) => { setOpen({ ...open, text }); setReloads((n) => n + 1); }} />
+        ) : (
+          <>
+            {open.path === `${cwd}/${file}` && <Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button>}
+            <Markdown text={open.text || 'Empty'} />
+          </>
+        )}
       </Sheet>
     );
   }

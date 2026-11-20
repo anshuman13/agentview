@@ -436,7 +436,7 @@ Rules:
 - Hide on scroll and the FAB follow the navigation spec.
 
 ### Worked example: Wiki page
-The Wiki page keeps 16dp side margins and 16dp above the title. In the hero, title, meta line and summary are 8dp apart. Claim rows clamp to 3 lines and a tap expands the row in place. The index shows one "Review claims" row instead of a header button. Older becomes a collapsible SectionHeader "Not used by Claude" (chevron, 48dp, no Show/Hide button and no hint sentence).
+The Wiki page keeps 16dp side margins and 16dp above the title. In the hero, title, meta line and summary are 8dp apart. Claim rows clamp to 3 lines and a tap expands the row in place. The index shows a "To review" SectionHeader with the claim count and a plain "One at a time" button over one Group: a row per page and per chat with proposals, then the first 3 loose claims (Show all N), each with Reject and Approve IconBtns (Reject all and Approve all on a group; hidden in read-only mode). Older becomes a collapsible SectionHeader "Not used by Claude" (chevron, 48dp, no Show/Hide button and no hint sentence).
 
 ## Migration
 

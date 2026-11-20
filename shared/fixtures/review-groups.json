@@ -1,0 +1,56 @@
+[
+  {
+    "name": "claims on a live page are one group, newest first",
+    "pages": [{ "id": "p1" }],
+    "facts": [{ "id": "a", "page_id": "p1", "at": 2 }, { "id": "b", "page_id": "p1", "at": 3 }],
+    "expected": { "byPage": [{ "page": "p1", "claims": ["b", "a"] }], "chats": [], "loose": [] }
+  },
+  {
+    "name": "a proposed page keeps its replacement claims",
+    "pages": [{ "id": "p2", "state": "proposed" }],
+    "facts": [{ "id": "a", "page_id": "p2", "at": 2 }, { "id": "r", "page_id": "p2", "replaces": "old", "at": 1 }],
+    "expected": { "byPage": [{ "page": "p2", "claims": ["a", "r"] }], "chats": [], "loose": [] }
+  },
+  {
+    "name": "a replacement on a live page goes loose",
+    "pages": [{ "id": "p1" }],
+    "facts": [{ "id": "a", "page_id": "p1", "at": 2 }, { "id": "r", "page_id": "p1", "replaces": "old", "added_by": "claude:c1", "at": 1 }],
+    "expected": { "byPage": [{ "page": "p1", "claims": ["a"] }], "chats": [], "loose": ["r"] }
+  },
+  {
+    "name": "a chat with two claims is one group",
+    "pages": [],
+    "facts": [{ "id": "m1", "added_by": "claude:c1", "at": 3 }, { "id": "m2", "added_by": "codex:c1", "at": 2 }, { "id": "x", "added_by": "you", "at": 1 }],
+    "expected": { "byPage": [], "chats": [["m1", "m2"]], "loose": ["x"] }
+  },
+  {
+    "name": "a chat with one claim stays loose",
+    "pages": [],
+    "facts": [{ "id": "m1", "added_by": "claude:c1", "at": 2 }, { "id": "m2", "added_by": "claude:c2", "at": 1 }],
+    "expected": { "byPage": [], "chats": [], "loose": ["m1", "m2"] }
+  },
+  {
+    "name": "a deleted page leaves its claims loose",
+    "pages": [{ "id": "p1", "deleted": true }],
+    "facts": [{ "id": "a", "page_id": "p1" }],
+    "expected": { "byPage": [], "chats": [], "loose": ["a"] }
+  },
+  {
+    "name": "a claim of the other profile does not join the page",
+    "pages": [{ "id": "p1" }],
+    "facts": [{ "id": "a", "page_id": "p1", "profile": "personal" }, { "id": "b", "page_id": "p1", "profile": "work", "at": 0 }],
+    "expected": { "byPage": [{ "page": "p1", "claims": ["b"] }], "chats": [], "loose": ["a"] }
+  },
+  {
+    "name": "chats of different profiles do not group",
+    "pages": [],
+    "facts": [{ "id": "m1", "added_by": "claude:c1", "at": 2 }, { "id": "m2", "added_by": "claude:c1", "profile": "personal", "at": 1 }],
+    "expected": { "byPage": [], "chats": [], "loose": ["m1", "m2"] }
+  },
+  {
+    "name": "claims that are not proposed are ignored",
+    "pages": [{ "id": "p1" }],
+    "facts": [{ "id": "a", "page_id": "p1", "state": "live" }, { "id": "b", "page_id": "p1", "state": "rejected" }, { "id": "c", "page_id": "p1", "deleted": true }],
+    "expected": { "byPage": [], "chats": [], "loose": [] }
+  }
+]

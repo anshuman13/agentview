@@ -22,6 +22,7 @@ import no.pradhan.agentview.nativeapp.app.memoryFiles
 import no.pradhan.agentview.nativeapp.app.read
 import no.pradhan.agentview.nativeapp.app.readFile
 import no.pradhan.agentview.nativeapp.app.saveFile
+import no.pradhan.agentview.nativeapp.app.saveMemory
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -37,7 +38,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 @Serializable
-data class MemoryFile(val path: String, val name: String, val description: String = "", val text: String = "")
+data class MemoryFile(val path: String, val name: String, val description: String = "", val text: String = "", val editable: Boolean = false)
 
 // Where a memory file comes from: the repo, or the account folder (.claude, .claude-alt, .codex) it was read from.
 fun memoryWhere(f: MemoryFile, cwd: String): String {
@@ -83,7 +84,7 @@ private fun AddRule(hub: Hub, file: String, onSaved: () -> Unit) {
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { add() }))
 }
 
-// What the agent is told and remembers in this folder, like Windsurf's memories panel. Only the repo instruction file can be changed.
+// What the agent is told and remembers in this folder, like Windsurf's memories panel. The repo instruction file and Claude's memory files can be changed.
 @Composable
 fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss: () -> Unit) {
     val file = ruleFile(cwd, instructionFiles)
@@ -96,11 +97,23 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss
             if (text != null) {
                 TextField(text, { draft = it }, minLines = 6)
                 Row(Modifier.padding(top = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-                    Button("Save", { hub.saveFile(file, text) { if (it) { open = f.copy(text = text); reload() } } }, size = ButtonSize.Sm)
+                    val saveMemoryBody = {
+                        hub.saveMemory(f.path, text, "Could not save the memory. Your text is still here.") { previous ->
+                            if (previous != null) {
+                                open = f.copy(text = text)
+                                reload()
+                                hub.undoable.tryEmit(Undoable("Memory updated") {
+                                    hub.saveMemory(f.path, previous, "Could not undo the memory update") { if (it != null) { open = f.copy(text = previous); reload() } }
+                                })
+                            }
+                        }
+                    }
+                    val saveRule = { hub.saveFile(file, text) { if (it) { open = f.copy(text = text); reload() } } }
+                    Button("Save", if (f.editable) saveMemoryBody else saveRule, enabled = !f.editable || text.isNotBlank(), size = ButtonSize.Sm)
                     Button("Cancel", { draft = null }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
             } else {
-                if (f.path == "$cwd/$file") Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (f.path == "$cwd/$file" || (f.editable && !hub.readOnly)) Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 Markdown(f.text.ifBlank { "Empty" })
             }
         }
@@ -111,7 +124,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss
         when {
             list == null && files.busy -> Loading("Loading the memory…")
             files.error.isNotEmpty() && list.isNullOrEmpty() -> EmptyState("Could not load memory", files.error, action = { Button("Retry", reload, size = ButtonSize.Sm) })
-            list.isNullOrEmpty() -> EmptyState("No memory", "No $file or memory files for this folder")
+            list.isNullOrEmpty() -> EmptyState("No $file or memory files", "Add a rule below to create one")
             else -> list.forEach { f ->
                 ListRow(f.name, listOf(f.description, memoryWhere(f, cwd)).filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
             }

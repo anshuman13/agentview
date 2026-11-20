@@ -54,6 +54,34 @@ fun rejectChanges(list: List<Row>, pages: List<Row>, facts: List<Row>): List<Cha
     return list.map { Change(it, mapOf("state" to "rejected"), mapOf("state" to "proposed")) } + listOfNotNull(if (rest) Change(page!!, mapOf("state" to "rejected"), mapOf("state" to "proposed")) else null)
 }
 
+class PageReview(val page: Row, val claims: List<Row>)
+class ReviewGroups(val byPage: List<PageReview>, val chats: List<List<Row>>, val loose: List<Row>)
+
+private val CHAT_ADDED_BY = Regex("^(?:claude|openrouter|codex):(.+)$")
+
+// The chat a claim was proposed from, by id; web/src/codex/data/wiki/wiki.ts chatOf says the same.
+fun chatOf(f: Row): String? = f.str("added_by")?.let { CHAT_ADDED_BY.find(it)?.groupValues?.get(1) }
+
+// What the review list shows, checked by shared/fixtures/review-groups.json: one group per page with proposals, one per chat with two or more loose claims, the rest loose.
+fun reviewGroups(pages: List<Row>, facts: List<Row>): ReviewGroups {
+    val alive = pages.filter { !it.deleted }.associateBy { it.key }
+    val byPage = LinkedHashMap<String, PageReview>()
+    val loose = ArrayList<Row>()
+    for (f in proposals(facts)) {
+        val page = f.str("page_id")?.ifEmpty { null }?.let { alive["${f.profile}:$it"] }
+        if (page == null || (!f.str("replaces").isNullOrEmpty() && page.str("state") != "proposed")) { loose.add(f); continue }
+        byPage[page.key] = PageReview(page, (byPage[page.key]?.claims ?: emptyList()) + f)
+    }
+    val byChat = LinkedHashMap<String, MutableList<Row>>()
+    for (f in loose) {
+        if (!f.str("replaces").isNullOrEmpty()) continue
+        chatOf(f)?.let { byChat.getOrPut("${f.profile}:$it") { ArrayList() }.add(f) }
+    }
+    val chats = byChat.values.filter { it.size > 1 }
+    val grouped = chats.flatten().toSet()
+    return ReviewGroups(byPage.values.toList(), chats, loose.filter { it !in grouped })
+}
+
 // The order is fixed when the screen opens; a skipped claim goes to the back, a decided one stays counted.
 fun extendOrder(order: List<String>, open: Collection<String>) = order + open.filter { it !in order }
 

@@ -3,6 +3,11 @@ package no.pradhan.agentview.nativeapp.app
 import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.enc
+import no.pradhan.agentview.nativeapp.net.protocolJson
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +52,10 @@ fun Hub.runReview(action: String, run: String, failure: String, body: String = "
     writes.run(failure, { try { api.post("/api/runs/$action?run=${enc(run)}", body, pageChat) } catch (e: ApiError) { throw ApiError("$failure: ${e.message}", e.code) } }, done)
 
 fun Hub.saveFile(path: String, content: String, failure: String = "Could not save ${path.substringAfterLast('/')}", done: (Boolean) -> Unit) = writes.run(failure, { api.put("/api/file?path=${enc(path)}", content, pageChat) }, done)
+
+// Replaces the body of a memory file; `done` gets the body it had, or null when the save did not go through.
+fun Hub.saveMemory(path: String, text: String, failure: String, done: (String?) -> Unit) =
+    write("/api/memory/save", buildJsonObject { put("path", path); put("text", text) }.toString(), failure, { protocolJson.parseToJsonElement(it).jsonObject.getValue("previous").jsonPrimitive.content }, done)
 
 // A guarded write whose response is parsed and handed to `done`, or null when it did not go through.
 fun <T> Hub.write(path: String, body: String, failure: String, parse: (String) -> T, done: (T?) -> Unit) {

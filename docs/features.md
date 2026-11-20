@@ -248,7 +248,12 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   The web has the same list under Memory in the Tools pick of the chat settings menu. Only the repo instruction file (the first in the chat's `instructionFiles`) can be changed: its file view
   has Edit (the web opens it in the editor tab with the pencil on; the phone shows a field with Save), and the list ends with
   an Add a rule field whose Enter appends `- <text>` to it (created if missing) and shows Rule added with Undo; a failed write
-  says "Could not save the rule. Your text is still here." Account and memory files stay read-only
+  says "Could not save the rule. Your text is still here." A Claude memory file (a .md file in an account's `projects/<folder>/memory`
+  under 20,000 characters, never a CLAUDE.md; `editable` in /api/memory) has Edit in its file view on both clients, a field with Save
+  (off while blank) and Cancel; Save posts `{ path, text }` to /api/memory/save, which resolves the path with realpath, writes only a file
+  that is editable in the chat's list, keeps the front matter and returns the previous body, and answers 400 for anything else. The
+  save shows "Memory updated" with Undo, which writes the previous body back; the phone hides Edit in read-only mode. Account
+  instruction files stay read-only
 - On the phone, a prompt starting with ! runs as a shell command in the chat's last terminal (or a new one) and opens the
   Terminal page, as on the web
 - Typing 3 or more characters in the phone Sessions search also searches every chat's prompts and replies (from

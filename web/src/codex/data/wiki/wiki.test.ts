@@ -42,6 +42,19 @@ describe('wiki', () => {
     expect(g.loose.map((f) => f.id)).toEqual(['s1', 'r1', 'w1', 'w2']);
   });
 
+  it('groups the shared review cases', () => {
+    type C = { name: string; pages: { id: string; state?: string; deleted?: boolean }[]; facts: { id: string; profile?: 'work' | 'personal'; page_id?: string; replaces?: string; added_by?: string; at?: number; state?: string; deleted?: boolean }[]; expected: { byPage: { page: string; claims: string[] }[]; chats: string[][]; loose: string[] } };
+    const cases = JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/review-groups.json', import.meta.url), 'utf8')) as C[];
+    for (const c of cases) {
+      const g = reviewGroups(
+        c.pages.map((p) => ({ ...page(p.id, p.id), state: p.state ?? null, deleted: p.deleted ? 1 : 0 })),
+        c.facts.map((f) => fact(f.id, f.page_id ?? (null as never), '', f.id, { profile: f.profile ?? 'work', state: f.state ?? 'proposed', replaces: f.replaces ?? null, added_by: f.added_by ?? null, at: f.at ?? 0, deleted: f.deleted ? 1 : 0 })),
+      );
+      const ids = (l: Fact[]) => l.map((f) => f.id);
+      expect({ byPage: g.byPage.map((p) => ({ page: p.page.id, claims: ids(p.list) })), chats: g.chats.map(ids), loose: ids(g.loose) }, c.name).toEqual(c.expected);
+    }
+  });
+
   it('proposes a claim on the page in the given profile, or on Memory with no page', () => {
     const f = newFact('Beta ships Friday', 'p1', 'personal', 5);
     expect(f).toMatchObject({ text: 'Beta ships Friday', page_id: 'p1', profile: 'personal', state: 'proposed', added_by: 'you', at: 5, sources: null, dirty: 1 });

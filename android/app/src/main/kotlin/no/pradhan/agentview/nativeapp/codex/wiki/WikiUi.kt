@@ -89,8 +89,10 @@ private fun PageTile(p: Row) {
     }
 }
 
+private class ReviewRow(val key: String, val title: String, val meta: String, val claims: List<Row>, val group: Boolean, val open: () -> Unit)
+
 @Composable
-fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit, onMemory: () -> Unit) {
+fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, readOnly: Boolean, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit, onMemory: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val pages = remember(st.pages, profile) { st.pages.filter { matchesProfile(profile, it) } }
     val facts = remember(st.facts, profile) { st.facts.filter { matchesProfile(profile, it) } }
@@ -101,6 +103,17 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     val titles = remember(pages) { pages.associate { it.id to it.title } }
     val stale = remember(pages, facts, st.meetings, profile, now / 60_000) { staleFacts(facts, pages, st.meetings.filter { matchesProfile(profile, it) }, now) }
     var allStale by rememberSaveable { mutableStateOf(false) }
+    var allLoose by rememberSaveable { mutableStateOf(false) }
+    val waiting = remember(facts) { proposals(facts).size }
+    val grouped = remember(pages, facts) { reviewGroups(pages, facts) }
+    val reviewRows = grouped.byPage.map { g ->
+        ReviewRow("page:${g.page.key}", g.page.title ?: UNTITLED, (if (g.page.str("state") == "proposed") "New page in ${g.page.str("section")}" else "Additions") + " · ${plural(g.claims.size, "claim")}", g.claims, true) { onOpen(g.page) }
+    } + grouped.chats.map { list ->
+        val label = sourcesOf(list[0]).firstOrNull { it.kind == "chat" }?.label?.ifEmpty { null } ?: UNTITLED
+        ReviewRow("chat:${list[0].profile}:${chatOf(list[0])}", "From chat $label", "Memory · ${plural(list.size, "claim")}", list, true, onReview)
+    } + (if (allLoose) grouped.loose else grouped.loose.take(3)).map { f ->
+        ReviewRow("claim:${f.key}", f.str("text") ?: "", f.str("page_id")?.let { titles[it] } ?: "Memory", listOf(f), false) { onClaim(f) }
+    }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             SearchField(query, { query = it }, "Search the wiki", Modifier.padding(top = Tokens.sp4))
@@ -118,9 +131,15 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             return@LazyColumn
         }
         item { Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4)) { ProposeClaim(null, profile, actions) } }
-        val waiting = proposals(facts).size
         if (waiting > 0) {
-            item { Group { ListRow("Review claims", onClick = onReview, trailing = { Badge("$waiting", BadgeTone.Quiet); Chevron() }) } }
+            item { SectionHeader("To review", waiting.toString(), action = { Button("One at a time", onReview, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
+            lazyGroup(reviewRows, key = { it.key }) { r ->
+                ListRow(r.title, r.meta, onClick = r.open, trailing = if (readOnly) null else ({
+                    IconBtn("close", if (r.group) "Reject all" else "Reject", { review.reject(r.claims) })
+                    IconBtn("check", if (r.group) "Approve all" else "Approve", { review.approve(r.claims) })
+                }))
+            }
+            if (!allLoose && grouped.loose.size > 3) item { Button("Show all ${grouped.loose.size}", { allLoose = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         }
         item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Memory", plural(stats[null]?.claims ?: 0, "claim"), onClick = onMemory, trailing = { Chevron() }) } }
         if (stale.isNotEmpty()) {

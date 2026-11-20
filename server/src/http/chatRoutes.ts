@@ -5,6 +5,7 @@ import { openInChrome } from '../chrome/chrome.js';
 import { configDef, inSettings, mcpCall, mcpConfig } from '../agent/claude/mcp.js';
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import { provider } from '../agent/registry.js';
+import { saveMemory } from '../agent/memory.js';
 import { listDir, listFiles, listSketches, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
 import { github } from '../integrations/github.js';
 import { attention, dismissAttention, refreshAttention } from '../integrations/attention.js';
@@ -75,6 +76,14 @@ export function chatSessionRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> 
     }),
     'ANY /api/attention': entry(({ url, chat }) => (url.searchParams.has('fresh') ? refreshAttention(d.attentionSources([chat.cwd])) : attention())),
     'ANY /api/memory': entry(({ chat }) => provider(chat.provider ?? 'claude').memory(chat.cwd)),
+    'POST /api/memory/save': entry(async ({ body, chat }) => {
+      if (typeof body.path !== 'string' || typeof body.text !== 'string') return failed(400, 'path and text are required');
+      try {
+        return await saveMemory(await provider(chat.provider ?? 'claude').memory(chat.cwd), body.path, body.text);
+      } catch (err) {
+        return failed(400, err instanceof Error ? err.message : String(err));
+      }
+    }, true),
     'ANY /api/findings': entry(({ url, chat }) => getFindings(chat.cwd, url.searchParams.get('target') ?? 'local')),
     'POST /api/findings/dismiss': entry(({ body, chat }) => dismissFinding(chat.cwd, String(body.target ?? 'local'), String(body.key ?? '')), true),
     'POST /api/attention/dismiss': entry(({ body }) => dismissAttention(String(body.id ?? '')), true),
