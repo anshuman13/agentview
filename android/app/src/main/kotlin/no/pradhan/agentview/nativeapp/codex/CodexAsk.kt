@@ -61,6 +61,10 @@ fun askText(question: String, profile: String, items: List<Row>, about: Row? = n
     ).joinToString("\n")
 }
 
+// askText with only the items and meetings of profile p.
+fun askIn(st: CodexState, q: String, p: String, about: Row? = null) =
+    askText(q, p, st.items.filter { it.profile == p }, about, st.meetings.filter { it.profile == p })
+
 // web/src/codex/data/ask/ask.ts meetingAsk: Ask Claude about a meeting; shared/fixtures/meeting-ask.json holds the texts.
 fun meetingAsk(m: Row, actions: List<Row>, now: Long) =
     "${if (m.startsAt?.let { it > now } == true) "Help me prepare for this meeting." else "Help me with this meeting."}\n\nAbout this meeting:\n${meetingMarkdown(m, actions)}"

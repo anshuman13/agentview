@@ -174,6 +174,7 @@ private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostStat
         l.chat?.let { hub.open(it) }
         if (l.page == "sketches") l.slug?.let { hub.sketchSlug.value = it }
         else if (l.chat != null && l.slug != null) hub.showSpec(l.slug)
+        l.term?.let { hub.termId.value = it }
         if (l.action == Shortcut.NEW_CHAT) hub.newChat()
         if (l.action == Shortcut.ADD_TASK) hub.shell.addTask.value = true
         l.codexRoute?.let { hub.shell.codexRoute.value = it }

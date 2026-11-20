@@ -26,5 +26,8 @@
     { "url": "https://e.com/6", "domain": "e.com", "path": "/6" },
     { "url": "https://e.com/7", "domain": "e.com", "path": "/7" }
   ] },
+  { "name": "braces in a Grafana link", "notes": "Panel https://grafana.acme.io/d/abc/{x}?var={y}", "expected": [
+    { "url": "https://grafana.acme.io/d/abc/{x}?var={y}", "domain": "grafana.acme.io", "path": "/d/abc/%7Bx%7D?var={y}" }
+  ] },
   { "name": "no links", "notes": "Call Kim about the offsite", "expected": [] }
 ]

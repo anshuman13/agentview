@@ -157,6 +157,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val link = MutableStateFlow<DeepLink?>(null)
     val sketchSlug = MutableStateFlow<String?>(null)
+    val termId = MutableStateFlow<String?>(null)
     val specSlug = MutableStateFlow<String?>(null)
 
     // Review findings by target, a PR number or "local"; null clears one.

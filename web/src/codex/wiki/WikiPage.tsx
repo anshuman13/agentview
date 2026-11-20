@@ -25,7 +25,7 @@ export function WikiPage({ id }: { id: string }) {
   const [menu, setMenu] = useState(false);
   const [asking, setAsking] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
-  const [proposing, setProposing] = useState<string | null>(null);
+  const [claimDraft, setClaimDraft] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const pid = id === MEMORY ? null : id;
@@ -46,14 +46,14 @@ export function WikiPage({ id }: { id: string }) {
   }, [visible, items, meetings, pid, page?.title]);
   // After Approve all or Reject all the banner stays as a note, so the claims below do not jump up under the finger.
   const [decided, setDecided] = useState<string | null>(null);
-  useEffect(() => { setDecided(null); setMenu(false); setAsking(false); setProposing(null); setRenaming(null); }, [id]);
+  useEffect(() => { setDecided(null); setMenu(false); setAsking(false); setClaimDraft(null); setRenaming(null); }, [id]);
   const pending = useMemo(() => proposals(facts).filter((f) => (f.page_id ?? null) === pid), [facts, pid]);
   const back = () => setView({ open: null, anchor: null });
   useEscapeBack(back);
   const edits = usePageEdits(page, pid, filter, back);
-  const propose = () => {
-    const text = proposing?.trim();
-    setProposing(null);
+  const saveClaim = () => {
+    const text = claimDraft?.trim();
+    setClaimDraft(null);
     if (pid) edits.propose(text);
     else edits.remember(text);
   };
@@ -67,7 +67,7 @@ export function WikiPage({ id }: { id: string }) {
       <header className="wk-head">
         <IconButton icon="arrow-left" label="Back" title="Back to the wiki" onClick={back} />
         {page && (
-          <WikiPageHead page={page} isMemory={!pid} groups={groups} pending={pending} renaming={renaming} setRenaming={setRenaming} cancelled={edits.cancelled} onRename={rename} onPropose={() => setProposing((v) => v ?? '')}
+          <WikiPageHead page={page} isMemory={!pid} groups={groups} pending={pending} renaming={renaming} setRenaming={setRenaming} cancelled={edits.cancelled} onRename={rename} onPropose={() => setClaimDraft((v) => v ?? '')}
             menu={menu} setMenu={setMenu} moreBtn={moreBtn} onAsk={() => setAsking(true)} onArchive={edits.archive} />
         )}
       </header>
@@ -77,7 +77,7 @@ export function WikiPage({ id }: { id: string }) {
         ) : (
           <div className="wk-doc">
             <article className="wk-article">
-              {proposing !== null && <ProposeForm value={proposing} setValue={setProposing} save={propose} {...(!pid && { placeholder: 'What to remember', maxLength: 400 })} />}
+              {claimDraft !== null && <ProposeForm value={claimDraft} setValue={setClaimDraft} save={saveClaim} {...(!pid && { placeholder: 'What to remember', maxLength: 400 })} />}
               {pid && <PageTile page={page} />}
               {page.summary && <p className="wk-lede">{page.summary}</p>}
               <PendingBanner pending={pending} page={page} decided={decided} setDecided={setDecided} review={review} setConfirm={setConfirm} />

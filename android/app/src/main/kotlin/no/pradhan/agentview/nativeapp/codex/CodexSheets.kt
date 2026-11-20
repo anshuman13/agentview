@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import java.time.Instant
+import kotlinx.coroutines.delay
 import no.pradhan.agentview.nativeapp.codex.jobs.canRunNow
 import no.pradhan.agentview.nativeapp.codex.jobs.runJobNow
 import no.pradhan.agentview.nativeapp.codex.meetings.ActionMenuItems
@@ -236,7 +237,7 @@ private fun NoteLinks(hub: Hub, text: String) {
             (if (all) urls else urls.take(LINK_LIMIT)).forEachIndexed { i, u ->
                 key(u) {
                     if (i > 0) Hairline()
-                    val title by produceState<String?>(null, u) { value = hub.linkTitle(u) }
+                    val title by produceState<String?>(null, u) { delay(500); value = hub.linkTitle(u) }
                     ListRow(title ?: linkDomain(u), if (title != null) linkDomain(u) else linkPath(u).ifEmpty { null }, trailing = { AvIcon("link-external", tint = av.fgMuted) }, onClick = { uri.openUri(u) })
                 }
             }

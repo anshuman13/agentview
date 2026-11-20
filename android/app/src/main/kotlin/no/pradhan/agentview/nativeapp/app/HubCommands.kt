@@ -180,7 +180,7 @@ internal suspend fun Hub.typeInTerminal(cmd: String, enter: Boolean) {
     client.newWebSocket(Request.Builder().url("${wsOrigin(origin.value)}/ws?term=${enc(id)}").build(), object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) { webSocket.send(termInput(if (enter) "$cmd\r" else cmd)); webSocket.close(1000, null) }
     })
-    link.value = DeepLink(page = "terminal")
+    link.value = DeepLink(page = "terminal", term = id)
 }
 
 fun Hub.rewind(id: String) = post(rewindCmd(id), store.wanted)

@@ -74,7 +74,7 @@ const replyOf = (rows: HTMLElement | null, node: Node | null) => {
 };
 
 function QuoteButton({ rows }: { rows: RefObject<HTMLDivElement | null> }) {
-  const { at, clear } = useSelectionAt(rows, rows, (sel) => {
+  const { at, clear } = useSelectionAt(rows, rows, 100, (sel) => {
     const reply = replyOf(rows.current, sel.anchorNode);
     return !!reply && reply === replyOf(rows.current, sel.focusNode);
   });

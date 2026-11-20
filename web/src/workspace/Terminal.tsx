@@ -115,6 +115,17 @@ function useTermTabs(chat: string, open: boolean, onToggle: () => void) {
     setActive(id);
     setFocus((f) => f + 1);
   };
+
+  // Run in terminal types into a tab; show that one, loading the list first when the tab is new.
+  useEffect(() => {
+    const show = async (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      const known = tabs?.some((t) => t.id === id) || (await load().catch(() => [])).some((t) => t.id === id);
+      if (known && alive.current) pick(id);
+    };
+    window.addEventListener('agentview:terminal', show);
+    return () => window.removeEventListener('agentview:terminal', show);
+  }, [tabs, chat]);
   return { tabs, active, focus, gens, add, close, gone, pick };
 }
 

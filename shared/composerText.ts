@@ -27,10 +27,10 @@ const SHELLS = new Set(['bash', 'sh', 'shell', 'zsh', 'console']);
 
 // The command of a one-line shell block in a reply, without a leading "$ " prompt; shared/fixtures/shell-line.json holds the cases.
 export function shellLine(lang: string | null | undefined, code: string): string | null {
-  if (!SHELLS.has((lang ?? '').toLowerCase())) return null;
+  if (!SHELLS.has((lang ?? '').trim().split(/\s+/)[0].toLowerCase())) return null;
   const lines = code.trim().split('\n');
   const cmd = lines.length === 1 ? lines[0].replace(/^\$(\s+|$)/, '').trim() : '';
-  return cmd || null;
+  return cmd && !/[\x00-\x08\x0a-\x1f\x7f]/.test(cmd) ? cmd : null;
 }
 
 const QUOTE_MAX = 1500;

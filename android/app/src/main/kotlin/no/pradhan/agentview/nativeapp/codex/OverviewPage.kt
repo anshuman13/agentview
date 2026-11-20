@@ -75,7 +75,7 @@ fun AskBar(hub: Hub, st: CodexState, profile: String?) {
         if (q.isNotEmpty() && uploading == 0) {
             val p = guess
             picked = null
-            hub.askCodex(askText(q, p, st.items.filter { !it.deleted && it.profile == p }, null, st.meetings.filter { it.profile == p }), p)
+            hub.askCodex(askIn(st, q, p), p)
             hub.setCodexDraft("")
         }
     }
@@ -149,7 +149,7 @@ private fun UpNextSection(hub: Hub, st: CodexState, d: OverviewData, now: Long, 
         SectionHeader("Up next")
         Group {
             mt.next?.let { m ->
-                val prep = { hub.askCodex(askText(prepText(m), m.profile, st.items.filter { !it.deleted && it.profile == m.profile }, null, st.meetings.filter { it.profile == m.profile }), m.profile) }
+                val prep = { hub.askCodex(askIn(st, prepText(m), m.profile), m.profile) }
                 MeetingRow(m, now, upNext = true, onPrep = prep.takeIf { !hub.readOnly }) { onMeeting(m) }
             }
             if (mt.next != null && task != null) Hairline()

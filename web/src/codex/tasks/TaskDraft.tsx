@@ -74,8 +74,8 @@ function LinkRow({ url }: { url: string }) {
   const [title, setTitle] = useState<string | null>(null);
   useEffect(() => {
     let current = true;
-    void linkTitle(url).then((t) => { if (current) setTitle(t); });
-    return () => { current = false; };
+    const wait = setTimeout(() => void linkTitle(url).then((t) => { if (current) setTitle(t); }), 500);
+    return () => { current = false; clearTimeout(wait); };
   }, [url]);
   return <Row href={url} title={title ?? linkDomain(url)} meta={title ? linkDomain(url) : linkPath(url) || undefined} trailing={<Icon name="link-external" small />} />;
 }

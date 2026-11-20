@@ -183,7 +183,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
 internal fun ClaimTextSheet(title: String, initial: String, save: String, onDismiss: () -> Unit, placeholder: String = "What is true?", maxLength: Int = Int.MAX_VALUE, onSave: (String) -> Unit) {
     var text by remember { mutableStateOf(initial) }
     Sheet(onDismiss, title, full = false) {
-        TextField(text, { if (it.length <= maxLength) text = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = placeholder, minLines = 2)
+        TextField(text, { text = it.take(maxLength) }, Modifier.padding(vertical = Tokens.sp4), placeholder = placeholder, minLines = 2)
         LayoutRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4, Alignment.End)) {
             Button("Cancel", onDismiss, variant = ButtonVariant.Plain)
             Button(save, { onDismiss(); onSave(text) }, variant = ButtonVariant.Filled, enabled = text.isNotBlank())

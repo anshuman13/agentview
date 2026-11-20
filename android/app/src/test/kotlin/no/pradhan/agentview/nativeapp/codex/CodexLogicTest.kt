@@ -265,6 +265,12 @@ class CodexLogicTest {
         assertTrue(askText("Plan", PERSONAL, emptyList(), now = NOW).contains("No personal meetings in the next 3 days."))
     }
 
+    @Test fun askInKeepsOnlyTheProfilesItems() {
+        val text = askIn(CodexState(items = listOf(item("w", profile = WORK), item("p", profile = PERSONAL))), "Help", PERSONAL)
+        assertTrue(text.contains("task p"))
+        assertFalse(text.contains("task w"))
+    }
+
     @Test fun searchHitsEveryWord() {
         val items = listOf(item("a", "open", null, WORK, "text" to "pay the invoice today"), item("b", "dismissed", null, WORK, "text" to "pay invoice"), item("c", GOAL, null, WORK, "text" to "pay invoice"))
         val hits = searchAll(items, emptyList(), "Invoice PAY", null)

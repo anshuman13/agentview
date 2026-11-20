@@ -276,7 +276,7 @@ private fun RunsSheet(runs: List<Row>, now: Long, say: (String) -> Unit, ask: ((
                     onClick = if (output != null) ({ open = if (expanded) null else r.id }) else null,
                     trailing = { RunStatus(r.str("status") ?: ""); if (output != null) Chevron() })
                 if (expanded && output != null) {
-                    LayoutRow(Modifier.padding(start = Tokens.sp4)) {
+                    LayoutRow(Modifier.padding(start = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                         Button("Copy output", { clip.setText(AnnotatedString(output)); say("Output copied") }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "copy")
                         if (ask != null) Button("Ask Claude", { ask(r, output) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "sparkle")
                     }

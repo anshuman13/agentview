@@ -63,6 +63,8 @@ fun TerminalScreen(hub: Hub, onBack: () -> Unit) {
     val (load, reload) = rememberLoad(chat) { hub.terminals() }
     val tabs = load.data ?: emptyList()
     var active by rememberSaveable(chat) { mutableStateOf("") }
+    val want by hub.termId.collectAsState()
+    LaunchedEffect(want) { want?.let { w -> active = w; hub.termId.value = null; if (tabs.none { it.id == w }) reload() } }
     val id = tabs.firstOrNull { it.id == active }?.id ?: tabs.lastOrNull()?.id
 
     Column(Modifier.fillMaxSize()) {

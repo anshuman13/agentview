@@ -46,10 +46,10 @@ import no.pradhan.agentview.nativeapp.chat.attachMark
 import no.pradhan.agentview.nativeapp.chat.buildHistory
 import no.pradhan.agentview.nativeapp.chat.composerPlaceholder
 import no.pradhan.agentview.nativeapp.chat.ghostFor
-import no.pradhan.agentview.nativeapp.chat.shellLine
 import no.pradhan.agentview.nativeapp.chat.withUses
 import no.pradhan.agentview.nativeapp.chat.findInChat
 import no.pradhan.agentview.nativeapp.chat.findStart
+import no.pradhan.agentview.nativeapp.ui.shellLine
 import no.pradhan.agentview.nativeapp.ui.FilePath
 import no.pradhan.agentview.nativeapp.ui.filePath
 import no.pradhan.agentview.nativeapp.sessions.SavedSession

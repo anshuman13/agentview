@@ -41,7 +41,6 @@ import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import no.pradhan.agentview.nativeapp.chat.shellLine
 
 // Opens a file path named in inline code or a link, at its line; set by a chat, so file paths elsewhere stay plain.
 val LocalOpenFile = staticCompositionLocalOf<((String, Int?) -> Unit)?> { null }

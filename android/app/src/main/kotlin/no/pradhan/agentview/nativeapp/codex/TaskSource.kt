@@ -1,6 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
-import java.net.URI
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 class SourceLink(val icon: String, val label: String)
 
@@ -35,10 +35,10 @@ private val HOST_RE = Regex("^https?://[^/?#]")
 fun linksIn(notes: String, limit: Int = LINK_LIMIT) =
     URL_RE.findAll(notes).map { it.value.replace(TRAILING_RE, "") }.filter { HOST_RE.containsMatchIn(it) }.distinct().take(limit).toList()
 
-fun linkDomain(url: String) = runCatching { URI(url).host?.lowercase()?.removePrefix("www.") }.getOrNull() ?: url
+fun linkDomain(url: String) = url.toHttpUrlOrNull()?.host?.removePrefix("www.") ?: url
 
 fun linkPath(url: String): String {
-    val u = runCatching { URI(url) }.getOrNull() ?: return ""
-    val path = if (u.rawPath.isNullOrEmpty() || u.rawPath == "/") "" else u.rawPath + (u.rawQuery?.ifEmpty { null }?.let { "?$it" } ?: "")
+    val u = url.toHttpUrlOrNull() ?: return ""
+    val path = if (u.encodedPath == "/") "" else u.encodedPath + (u.encodedQuery?.ifEmpty { null }?.let { "?$it" } ?: "")
     return if (path.length > 40) "${path.take(40)}..." else path
 }

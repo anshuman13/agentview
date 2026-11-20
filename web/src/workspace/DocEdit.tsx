@@ -7,7 +7,7 @@ import { useSelectionAt, type SelectionAt } from '../ui/useSelectionAt';
 
 // Text selected in the rendered doc outside a block being edited.
 export const useSelectionAsk = (body: RefObject<HTMLElement | null>, scroller: RefObject<HTMLDivElement | null>) =>
-  useSelectionAt(body, scroller, (sel) => !body.current?.querySelector('.doc-b-edit')?.contains(sel.anchorNode));
+  useSelectionAt(body, scroller, 320, (sel) => !body.current?.querySelector('.doc-b-edit')?.contains(sel.anchorNode));
 
 export function DocAsk({ path, at, onDone, open }: { path: string; at: SelectionAt; onDone: () => void; open: { current: boolean } }) {
   const [typing, setTyping] = useState(false);
