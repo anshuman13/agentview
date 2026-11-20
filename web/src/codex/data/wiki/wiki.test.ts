@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import type { ItemRow } from '../sync';
 import { dayLabel } from '../dates';
 import { clock } from '../../../../../shared/util';
-import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
+import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
 import { briefFor, decisionsWith, commitmentsOf, priorWith, seriesOf, seriesMeetings, seriesRepeats, seriesTitle, joinMinutes, meetingBadge, meetingMeta, openQuestions, searchMeetings, topicTimeline, trackedTopics } from '../meetings/meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
@@ -28,6 +28,16 @@ describe('wiki', () => {
     expect(needsReview(pages[0], proposed)).toBe(true);
     expect(needsReview(pages[1], proposed)).toBe(false);
     expect(needsReview({ ...pages[1], state: 'proposed' }, proposed)).toBe(true);
+  });
+
+  it('groups loose proposals by chat and leaves singles and replacements alone', () => {
+    const loose = (id: string, by: string, extra: Partial<Fact> = {}) => fact(id, null as never, '', id, { state: 'proposed', added_by: by, ...extra });
+    const g = reviewGroups(pages, [
+      loose('m1', 'claude:c1'), loose('m2', 'claude:c1'), loose('m3', 'codex:c1'), loose('s1', 'claude:c2'),
+      loose('r1', 'claude:c1', { replaces: 'a', page_id: 'p1' }), loose('w1', 'claude:c3', { profile: 'personal' }), loose('w2', 'claude:c3'),
+    ]);
+    expect(g.chats.map((l) => l.map((f) => f.id))).toEqual([['m1', 'm2', 'm3']]);
+    expect(g.loose.map((f) => f.id)).toEqual(['s1', 'r1', 'w1', 'w2']);
   });
 
   it('proposes a claim on the page in the given profile, or on Memory with no page', () => {

@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'bun:test';
-import { wikiSearchTool } from './wiki.js';
+import { wikiProposeTool, wikiSearchTool } from './wiki.js';
 import { stubGlobal, unstubAllGlobals } from '../../../../testing.js';
 
 afterEach(() => unstubAllGlobals());
@@ -25,4 +25,24 @@ test('wiki_search reports a hub error and a failed fetch', async () => {
   expect(await search('limit')).toBe('Wiki search failed: Missing or invalid profile');
   stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
   expect(await search('limit')).toBe('Wiki search failed: offline');
+});
+
+const propose = (text: string, profile: 'work' | 'personal' = 'work') => wikiProposeTool.handler({ text, sources: [], profile }, { cwd: '/tmp', chatId: 'c1', provider: 'claude', host: { setStatus: () => undefined, goal: () => false } });
+
+test('wiki_propose names a similar live or proposed claim of the same profile and still saves', async () => {
+  const fact = (id: string, profile: string, state: string, text: string, extra = {}) => ({ table: 'facts', id, profile, deleted: false, updated_at: 1, fields: { text, state, ...extra } });
+  const changes = [
+    fact('live1', 'work', 'live', 'The gateway limits each user to 60 requests a minute'),
+    fact('mine', 'personal', 'live', 'Deploys happen every Friday afternoon'),
+    fact('gone', 'work', 'live', 'Deploys happen every Friday afternoon', { superseded_by: 'live1' }),
+  ];
+  const pushed: unknown[] = [];
+  stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') pushed.push(JSON.parse(String(init.body)));
+    return json(200, { version: 1, hasMore: false, changes: init?.method === 'POST' ? [] : changes });
+  }));
+  expect(await propose('Gateway limits every user to 60 requests per minute')).toContain('Similar to [live1]: The gateway limits each user to 60 requests a minute. Pass replaces if it updates that claim.');
+  expect(await propose('Deploys happen every Friday afternoon')).not.toContain('Similar to');
+  expect(await propose('Brand new unrelated claim')).toMatch(/^Proposed \[[^\]]+\] for the user to approve in memory\.$/);
+  expect(pushed).toHaveLength(3);
 });

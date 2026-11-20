@@ -20,8 +20,11 @@ type Learned = { proposed: number } | { skipped: 'limit' };
 const cursorKey = (profile: Profile, chat: string) => `learn:${profile}:${chat}`;
 
 function known(db: Database, profile: Profile) {
-  return db.prepare("SELECT text, page_id, state FROM facts WHERE profile = ? AND deleted = 0 AND text IS NOT NULL AND text != ''").all(profile) as { text: string; page_id: string | null; state: string | null }[];
+  return db.prepare("SELECT text, state FROM facts WHERE profile = ? AND deleted = 0 AND text IS NOT NULL AND text != ''").all(profile) as { text: string; state: string | null }[];
 }
+
+// The claims Haiku is told are already known: the profile's live and proposed claims, page or not.
+export const alreadyKnown = (rows: { text: string; state: string | null }[]) => rows.filter((f) => f.state === null || f.state === 'live' || f.state === 'proposed').map((f) => f.text);
 
 // Saves each claim as a proposed memory claim from the chat, unless a claim with the same text exists in any state or it looks like a secret.
 function saveLearned(db: Database, c: Chat, claims: string[], now = Date.now()) {
@@ -82,8 +85,7 @@ export async function learnFromChat(db: Database, c: Chat, now = Date.now(), run
   const events = c.events.filter((e) => (e.kind === 'user' || e.kind === 'assistant') && e.at > cursor);
   if (!events.some((e) => e.kind === 'user')) return { proposed: 0 };
   if (isLimited(ACCOUNT_OF[c.profile])) return { skipped: 'limit' };
-  // Live claims only: saveLearned already skips a claim whose text exists in any state.
-  const memory = known(db, c.profile).filter((f) => !f.page_id && (f.state === null || f.state === 'live')).map((f) => f.text);
+  const memory = alreadyKnown(known(db, c.profile));
   const claims = await run(c, events, memory);
   const proposed = saveLearned(db, c, claims, now);
   setMeta(db, key, String(Math.max(...events.map((e) => e.at))));
