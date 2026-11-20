@@ -26,6 +26,7 @@ import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
+import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Markdown
@@ -108,8 +109,9 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss
     Sheet(onDismiss = onDismiss, title = "Memory", padded = false, full = false) {
         val list = files.data
         when {
-            list == null && files.busy -> EmptyState("Loading memory…")
-            list.isNullOrEmpty() -> EmptyState("No memory", files.error.ifEmpty { "No $file or memory files for this folder" })
+            list == null && files.busy -> Loading("Loading memory…")
+            files.error.isNotEmpty() && list.isNullOrEmpty() -> EmptyState("Could not load memory", files.error, action = { Button("Retry", reload, size = ButtonSize.Sm) })
+            list.isNullOrEmpty() -> EmptyState("No memory", "No $file or memory files for this folder")
             else -> list.forEach { f ->
                 ListRow(f.name, listOf(f.description, memoryWhere(f, cwd)).filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
             }
