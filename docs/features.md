@@ -266,8 +266,12 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   the description (or the body on one line), cut to 400 characters and superseding the claim it restates, then posts `{ path }`
   to /api/memory/remove, which deletes the file and the MEMORY.md lines that link to it and returns `{ raw, lines }`. The sheet
   goes back to the list with "Moved to wiki" and Undo, which posts them to /api/memory/restore (only into a memory folder of the
-  chat, never over a file) and deletes the claim; a failed remove deletes the claim and says "Could not move the memory". On the
-  phone, system Back in a file view returns to the list and asks "Discard the edit?" over an open edit
+  chat, never over a file) and deletes the claim; a failed remove deletes the claim and says "Could not move the memory". A file
+  view shows its source line and a plain Back button on both clients; Back, web Esc and touch Back and phone system Back return to
+  the list (the scrim and drag still close the sheet), asking "Discard the edit?" over an open edit. When /api/memory fails the
+  list says "Could not load memory" with the reason and Retry. After the files, a "From the wiki" section (count, "New chats get
+  these") lists the Memory claims chats of the folder's profile start with (`givenPreferences`), each with its age; a tap opens the
+  claim on the Memory wiki page and closes the sheet. With none given the section is left out
 - A turn that wrote Claude memory files (successful Write, Edit or MultiEdit on `projects/<folder>/memory/*.md`, MEMORY.md only
   when alone: `rememberedOf`, `shared/fixtures/remembered.json`) shows a "Remembered N memories" chip in its task head after
   Proposed; a tap opens the Memory sheet at the file when there is one, else the list

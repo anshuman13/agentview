@@ -18,8 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.Undoable
+import no.pradhan.agentview.nativeapp.app.claimRoute
+import no.pradhan.agentview.nativeapp.codex.wiki.givenPreferences
+import no.pradhan.agentview.nativeapp.sessions.since
+import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.app.memoryFiles
 import no.pradhan.agentview.nativeapp.app.moveMemoryToWiki
 import no.pradhan.agentview.nativeapp.app.read
@@ -119,6 +124,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
         val back: () -> Unit = { if (draft != null) discard = true else open = null }
         if (discard) ConfirmDialog("Discard the edit?", "Your changes to ${f.name} are not saved.", "Discard", { open = null }, onDismiss = { discard = false })
         Sheet(onDismiss = onDismiss, title = f.name, onBack = back, action = { Button("Back", back, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) {
+            Text(memoryWhere(f, cwd), style = Type.footnote, color = av.fgMuted)
             markOf(f)?.let { Text(markLine(it, f.at, now), style = Type.footnote, color = av.fgMuted) }
             val text = draft
             if (text != null) {
@@ -143,7 +149,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-                    if (f.path == "$cwd/$file" || (f.editable && !hub.readOnly)) Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    if (f.path == "$cwd/$file" || (f.editable && !hub.readOnly)) Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "edit")
                     if (f.editable && !hub.readOnly && !isMemoryIndex(f.path)) Button("Move to wiki", {
                         saving = true
                         hub.moveMemoryToWiki(f, cwd, reload) { moved ->
@@ -169,5 +175,16 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
             }
         }
         if (list != null) AddRule(hub, file, reload)
+        // The wiki's Memory claims that new chats in this profile start with; web Memory.tsx GivenClaims shows the same.
+        val given = givenPreferences(facts, segmentOf(cwd), now)
+        if (given.isNotEmpty()) {
+            SectionHeader("From the wiki", given.size.toString(), action = { Text("New chats get these", style = Type.footnote, color = av.fgMuted) })
+            given.forEach { f ->
+                ListRow(f.str("text") ?: "", f.long("at")?.let { since(it, now) }, leading = { AvIcon("lightbulb", tint = av.fgMuted) }, onClick = {
+                    hub.link.value = DeepLink(codexRoute = claimRoute(f))
+                    onDismiss()
+                })
+            }
+        }
     }
 }

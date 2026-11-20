@@ -6,13 +6,20 @@ import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
 import { Skeleton } from '../../ui/Skeleton';
 import { Row } from '../../ui/Row';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
+import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
+import { command } from '../../ui/util';
 import { fileRequest } from '../../workspace/fileApi';
-import { showSnack } from '../../codex/view';
+import { setView, showSnack } from '../../codex/view';
 import { useAssistantTable } from '../../codex/data';
+import { MEMORY } from '../../codex/wiki/shared';
+import type { Fact } from '../../codex/data/wiki/wiki';
+import { since } from '../../sessions/folders';
 import { Badge, LABEL_ON } from '../../ui/Badge';
 import { profileOfPath } from '../../../../shared/workspace';
+import { loadErrorText } from '../../../../shared/loadError';
+import { givenPreferences } from '../../../../shared/preferences';
 import { Markdown } from '../Chat';
 import { fetchMemory, saveMemory } from '../chatApi';
 import { moveMemoryToWiki } from '../chatActions';
@@ -88,8 +95,7 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
 }
 
 // A memory file's body as a field with Save and Cancel; a save can be undone while the file stays open. Move to wiki is beside Edit on every file but MEMORY.md.
-function MemoryEdit({ file, onSaved, onMove }: { file: MemoryFile; onSaved: (text: string) => void; onMove: () => Promise<void> }) {
-  const [draft, setDraft] = useState<string | null>(null);
+function MemoryEdit({ file, draft, setDraft, onSaved, onMove }: { file: MemoryFile; draft: string | null; setDraft: (draft: string | null) => void; onSaved: (text: string) => void; onMove: () => Promise<void> }) {
   const [saving, setSaving] = useState(false);
   const save = async (text: string, undo = false) => {
     setSaving(true);
@@ -127,6 +133,9 @@ function MemoryEdit({ file, onSaved, onMove }: { file: MemoryFile; onSaved: (tex
 export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: string; onClose: () => void }) {
   const [files, setFiles] = useState<MemoryFile[] | null>(null);
   const [open, setOpen] = useState<MemoryFile | null>(null);
+  const [error, setError] = useState('');
+  const [draft, setDraft] = useState<string | null>(null);
+  const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const [reloads, setReloads] = useState(0);
   const file = ruleFile(cwd, useStore((s) => s.session.instructionFiles));
   const facts = useAssistantTable('facts');
@@ -134,11 +143,11 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
   const markOf = (f: MemoryFile) => memoryMark(f, facts, profileOfPath(cwd), now);
   const reload = () => setReloads((n) => n + 1);
   useEffect(() => {
-    fetchMemory().then((l: MemoryFile[]) => {
-      const list = Array.isArray(l) ? l : [];
+    fetchMemory().then((list) => {
       setFiles(list);
+      setError('');
       if (reloads === 0 && initial) setOpen(list.find((f) => f.path === initial) ?? null);
-    }).catch(() => setFiles([]));
+    }).catch((err: Error) => setError(loadErrorText(err.message)));
   }, [reloads]);
   if (open) {
     const edit = () => { setUi({ openFile: file, openEdit: true, follow: false }); onClose(); };
@@ -148,29 +157,56 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
       setOpen(null);
       reload();
     };
+    const toList = () => { setOpen(null); setDraft(null); };
+    const back = () => {
+      if (ask) return;
+      if (draft === null) toList();
+      else setAsk({ title: 'Discard the edit?', detail: `Your changes to ${open.name} are not saved.`, action: 'Discard', run: async () => toList() });
+    };
     return (
-      <Sheet label={open.name} onClose={onClose}>
-        <Section label={open.name} />
+      <Sheet label={open.name} onClose={onClose} onBack={back}>
+        <Section label={open.name} action={<Button size="sm" variant="plain" onClick={back}>Back</Button>} />
         <div className="muted">{memoryWhere(open, cwd)}</div>
         {mark && <div className="muted">{markLine(mark, open.at)}</div>}
         {open.editable ? (
-          <MemoryEdit file={open} onSaved={(text) => { setOpen({ ...open, text }); reload(); }} onMove={move} />
+          <MemoryEdit file={open} draft={draft} setDraft={setDraft} onSaved={(text) => { setOpen({ ...open, text }); reload(); }} onMove={move} />
         ) : (
           <>
             {open.path === `${cwd}/${file}` && <Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button>}
             <Markdown text={open.text || 'Empty'} />
           </>
         )}
+        {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
       </Sheet>
     );
   }
+  const retry = () => { setError(''); reload(); };
   return (
     <Sheet label="Memory" onClose={onClose}>
       <Section label="Memory" />
-      {files === null && <Skeleton rows={3} />}
-      {files?.length === 0 && <EmptyState size="sm" title={`No ${file} or memory files`} hint="Add a rule below to create one" />}
+      {files === null && !error && <Skeleton rows={3} />}
+      {error && !files?.length && <EmptyState size="sm" title="Could not load memory" hint={error} action={<Button size="sm" onClick={retry}>Retry</Button>} />}
+      {!error && files?.length === 0 && <EmptyState size="sm" title={`No ${file} or memory files`} hint="Add a rule below to create one" />}
       {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ')} state={markBadge(markOf(f))} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
       {files && <AddRule file={file} onSaved={reload} />}
+      <GivenClaims facts={facts} cwd={cwd} onClose={onClose} />
     </Sheet>
+  );
+}
+
+// The wiki's Memory claims that new chats in this profile start with; a tap opens the claim on the Memory page.
+export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: string; onClose: () => void }) {
+  const given = givenPreferences(facts, profileOfPath(cwd));
+  if (!given.length) return null;
+  const openClaim = (id: string) => {
+    setView({ list: 'wiki', open: MEMORY, anchor: id, person: null });
+    command('assistant');
+    onClose();
+  };
+  return (
+    <>
+      <Section label="From the wiki" count={sectionCount(given.length)} action={<span className="muted">New chats get these</span>} />
+      {given.map((f) => <Row key={f.id} leading={<Icon name="lightbulb" />} title={f.text} meta={f.at ? since(f.at) : undefined} onClick={() => openClaim(f.id)} />)}
+    </>
   );
 }

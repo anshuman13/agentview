@@ -6,7 +6,8 @@ import { useSheetDrag } from './useSheetDrag';
 
 const stack: object[] = [];
 
-export function Sheet({ label, onClose, className, overlayClassName, active = true, noSwipe, children }: { label: string; onClose: () => void; className?: string; overlayClassName?: string; active?: boolean; noSwipe?: boolean; children: ReactNode }) {
+// With `onBack`, Esc and the touch Back call it instead of closing the sheet; the scrim and drag still close.
+export function Sheet({ label, onClose, onBack, className, overlayClassName, active = true, noSwipe, children }: { label: string; onClose: () => void; onBack?: () => void; className?: string; overlayClassName?: string; active?: boolean; noSwipe?: boolean; children: ReactNode }) {
   const sheet = useSheetDrag(true, onClose);
   const id = useRef({});
   useEffect(() => {
@@ -15,10 +16,10 @@ export function Sheet({ label, onClose, className, overlayClassName, active = tr
     stack.push(me);
     return () => { stack.splice(stack.lastIndexOf(me), 1); };
   }, [active]);
-  useEscape(() => { if (stack[stack.length - 1] === id.current) sheet.close(); });
+  useEscape(() => { if (stack[stack.length - 1] === id.current) (onBack ?? sheet.close)(); });
   return createPortal(
     <div className={overlayClassName ?? 'as-sheet-overlay'} ref={sheet.overlay} onClick={sheet.close}>
-      {active && <Back close={onClose} />}
+      {active && <Back key={onBack ? 'back' : 'close'} close={onBack ?? onClose} />}
       <div className={className ? `as-sheet ${className}` : 'as-sheet'} ref={sheet.sheet} role="dialog" aria-label={label} onClick={(e) => e.stopPropagation()} data-no-swipe={noSwipe || undefined}>
         <div className="sheet-handle" {...sheet.handle} />
         {children}

@@ -1,9 +1,10 @@
 import { api } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
+import type { MemoryFile } from './cards/memoryLogic';
 
 export const fetchTodos = () => fetch(api('/api/git/todos')).then((r) => r.json());
 
-export const fetchMemory = () => fetch(api('/api/memory')).then((r) => r.json());
+export const fetchMemory = () => fetchJson<MemoryFile[]>(api('/api/memory'));
 
 // Replaces a memory file's body; resolves to the body it had.
 export const saveMemory = (path: string, text: string) =>
