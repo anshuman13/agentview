@@ -120,6 +120,18 @@ describe('runDue', () => {
     expect(titles[0].endsWith('failed')).toBe(true);
     expect(db.prepare('SELECT cost FROM runs').all()).toEqual([{ cost: null }]);
   });
+  test('a quiet job whose reply starts with NOTHING NEW keeps the run but is not pushed', async () => {
+    const pushes: string[] = [];
+    const push = async (t: string) => (pushes.push(t), true);
+    for (const [result, pushed] of [['NOTHING NEW today', 0], ['Two new issues', 1]] as const) {
+      const { db, now } = seed(1);
+      applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: 2, fields: { prompt: 'push me the news', quiet: 1 } }]);
+      pushes.length = 0;
+      await runDue(db, now, async () => ({ result, added: [], notified: false, cost: null }), push, reply);
+      expect(db.prepare('SELECT output FROM runs').all()).toEqual([{ output: result }]);
+      expect(pushes.length).toBe(pushed);
+    }
+  });
   test('a run stores the cost its job reports', async () => {
     const { db, now } = seed(1);
     await runDue(db, now, async () => ({ result: 'done', added: [], notified: false, cost: 0.04 }), async () => true, reply);
