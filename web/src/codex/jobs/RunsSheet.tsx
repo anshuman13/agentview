@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Run } from '../data/wiki/wiki';
 import { Badge } from '../../ui/Badge';
 import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { Section, sectionCount } from '../../ui/Section';
 import { SearchedOutput } from '../../ui/SearchedOutput';
@@ -12,7 +13,7 @@ import { at, runMeta } from './schedule';
 const runBadge = (r: Run) => <Badge status={r.status === 'running' ? 'running' : r.status === 'ok' ? 'done' : 'failed'} reason={r.status === 'ok' ? 'Succeeded' : undefined} />;
 
 function CopyOutput({ r }: { r: Run }) {
-  return <button className="icon-btn" title="Copy output" aria-label="Copy output" onClick={() => copyText(r.output!, 'Output copied')}><Icon name="copy" small /></button>;
+  return <IconButton icon="copy" small label="Copy output" onClick={() => copyText(r.output!, 'Output copied')} />;
 }
 
 export function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query: string; setQuery: (q: string) => void }) {

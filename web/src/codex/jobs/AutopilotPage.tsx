@@ -102,7 +102,7 @@ export function AutopilotPage() {
   return (
     <div className="wk narrow">
       <header className="wk-head">
-        <button className="icon-btn" title="Back to jobs" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
+        <IconButton icon="arrow-left" label="Back" title="Back to jobs" onClick={back} />
         <h1>Reply for me in Slack</h1>
         <span className="spacer" />
         <IconButton icon="info" label="How it works" onClick={() => setSheet('info')} />

@@ -3,10 +3,9 @@ import { useAssistantData } from '../data';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/tasks/presets';
 import { newId, rowKey, type Profile } from '../data/sync';
 import type { Job, Run } from '../data/wiki/wiki';
-import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
-import { IconButton } from '../../ui/Button';
+import { IconButton, Button } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { setView, useView } from '../view';
 import { usePullSync } from '../gestures/pullSync';
@@ -68,7 +67,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
   return (
     <div className="wk narrow">
       <header className="wk-head">
-        <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
+        <IconButton icon="menu" label="Lists" className="as-menu" onClick={onMenu} />
         <h1>Jobs</h1>
         <span className="spacer" />
         <IconButton icon="add" label="New job" onClick={() => add()} />
@@ -83,7 +82,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
             </div>
           )}
           {!jobs.length && <EmptyState size="md" icon="history" title="No jobs yet" hint="A job runs a prompt on a schedule, can add tasks, and sends you the result" />}
-          {!jobs.length && <div className="jb-presets"><button className="btn sm" onClick={() => add(WEEKLY_DIGEST)}><Icon name="sparkle" small /> Weekly digest</button></div>}
+          {!jobs.length && <div className="jb-presets"><Button size="sm" icon="sparkle" onClick={() => add(WEEKLY_DIGEST)}>Weekly digest</Button></div>}
         </div>
       </div>
     </div>
