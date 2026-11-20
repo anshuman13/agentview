@@ -77,8 +77,8 @@ fun parseDaily(s: String?): DailyChat? = s?.let { runCatching { protocolJson.dec
 fun encodeDaily(d: DailyChat) = protocolJson.encodeToString(DailyChat.serializer(), d)
 
 // shared/taskChat.ts taskChatPrompt: the first message of a chat started from a task.
-fun taskChatPrompt(id: String?, status: String?, title: String?, text: String?, sourceUrl: String?) =
-    listOf(title, text, sourceUrl, if (!id.isNullOrEmpty() && status != "note") "AgentView task [$id]. When the work is done, set its status to done with mcp__agentview__data_write." else null)
+fun taskChatPrompt(id: String?, status: String?, title: String?, text: String?, sourceUrl: String?, sameProfile: Boolean = false) =
+    listOf(title, text, sourceUrl, if (!id.isNullOrEmpty() && status != "note" && sameProfile) "AgentView task [$id]. When the work is done, set its status to done with mcp__agentview__data_write." else null)
         .mapNotNull { it?.trim()?.ifEmpty { null } }.joinToString("\n\n")
 
 // shared/chatLink.ts chatSessionOf: the saved chat id of a ?session= link, else null.

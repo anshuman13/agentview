@@ -7,20 +7,14 @@ import { bundled } from '../api';
 import { markSeen } from './seen';
 import { flushOutbox, send } from './send';
 import { cache, cacheShown, view } from './view';
-import { chatNotices } from '../../../../shared/notices';
+import { backgroundNotices } from '../../../../shared/notices';
 import { rememberModels } from '../newChat';
 
 const focus = (id: string) => () => send({ type: 'view', id });
 
 function notifyBackground(chats: LiveChat[]) {
   if (embedded) return;
-  const { live } = getState();
-  for (const c of chats) {
-    const was = live.find((x) => x.id === c.id);
-    if (!was) continue;
-    const n = chatNotices(was, c, isMuted(c.sessionId));
-    if (n) notify(n.title, n.sub ? `${n.sub}\n${n.body}` : n.body, focus(c.id));
-  }
+  for (const { id, notice: n } of backgroundNotices(getState().live, chats, isMuted)) notify(n.title, n.sub ? `${n.sub}\n${n.body}` : n.body, focus(id));
 }
 
 function markViewedDone(chats: LiveChat[]) {

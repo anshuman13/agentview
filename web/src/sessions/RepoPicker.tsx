@@ -5,8 +5,8 @@ import { QuickPick } from '../ui/QuickPick';
 import { useWorkspace } from './folders';
 import { newChat } from '../app/newChat';
 
-// With text, the new chat starts with that first message and the picker closes through onClose, as for a task.
-export function RepoPicker({ text, onClose }: { text?: string; onClose?: () => void }) {
+// With text, the new chat starts with that first message, built from the picked folder, and the picker closes through onClose, as for a task.
+export function RepoPicker({ text, onClose }: { text?: (cwd: string) => string; onClose?: () => void }) {
   const cwd = useStore((s) => s.session.cwd);
   const { folders } = useWorkspace(null);
   const roots = appSettings.use((s) => s.roots);
@@ -23,11 +23,11 @@ export function RepoPicker({ text, onClose }: { text?: string; onClose?: () => v
       extra={(q) => (/^[A-Za-z0-9][\w.-]*$/.test(q) && !folders.some((f) => f.name === q) ? roots.map((root) => ({ value: `create:${root}:${q}`, label: `Create ${q}`, detail: `new project in ~/${root}` })) : [])}
       onPick={async (v) => {
         close();
-        if (!v.startsWith('create:')) return newChat({ cwd: v, text });
+        if (!v.startsWith('create:')) return newChat({ cwd: v, text: text?.(v) });
         const [, root, name] = v.split(':');
         const r = await createFolder(root, name);
         const body = await r?.json().catch(() => null);
-        if (r?.ok && body?.cwd) newChat({ cwd: body.cwd, text });
+        if (r?.ok && body?.cwd) newChat({ cwd: body.cwd, text: text?.(body.cwd) });
         else notice(body?.error ?? 'Could not create the folder');
       }}
       onClose={close}

@@ -35,6 +35,8 @@ describe('data_write', () => {
     expect(pushed()).toMatchObject({ source: 'chat', source_url: '/?session=s1' });
     await dataWriteTool.handler({ table: 'items', fields: { title: 'b', source: 'slack' } }, { cwd, chatId: 's1' } as never);
     expect(pushed()).toEqual({ title: 'b', source: 'slack' });
+    await dataWriteTool.handler({ table: 'items', fields: { title: 'e', source_url: 'https://x.test' } }, { cwd, chatId: 's1' } as never);
+    expect(pushed()).toEqual({ title: 'e', source_url: 'https://x.test' });
     await dataWriteTool.handler({ table: 'items', fields: { title: 'c' } }, { cwd, chatId: null } as never);
     expect(pushed()).toEqual({ title: 'c' });
     hub.rows.mockResolvedValue([{ id: 'x', profile: profileOf(cwd) }]);

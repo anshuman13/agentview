@@ -89,7 +89,7 @@ function SketchView({ file, device, theme, onDevice, onTheme, onBack }: { file: 
         </span>
       </div>
       {problem ? (
-        <EmptyState size="sm" title="Could not load the sketch" hint={problem === 'large' ? 'Too large to show' : 'It may have moved. Go back to the list'} action={<Button size="sm" onClick={reload}>Retry</Button>} />
+        <EmptyState size="sm" title="Could not load the sketch" hint={problem === 'large' ? 'Too large to show' : 'It may have moved. Go back to the list'} action={problem === 'failed' ? <Button size="sm" onClick={reload}>Retry</Button> : undefined} />
       ) : html === null ? (
         <Skeleton />
       ) : (

@@ -74,6 +74,11 @@ export function openChat(ids: { chatId?: string | null; sessionId?: string | nul
   if (report) showTurn(report);
 }
 
+export function showChat(ids: { chatId?: string | null; sessionId?: string | null }) {
+  openChat(ids);
+  window.dispatchEvent(new Event('agentview:chat'));
+}
+
 // Pause, resume, run now or stop a run (Android Hub.runControl). Stop offers Undo for goals and loops, which keep their state to restore.
 export function runControl(run: ChatRun, op: RunOp, running = false) {
   send({ type: 'run', run: run.id, op });

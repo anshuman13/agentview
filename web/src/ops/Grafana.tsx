@@ -11,7 +11,8 @@ import '../styles/features/observe.css';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 import { Loading } from '../ui/Skeleton';
-import { Err, Pane, Sub, SubHead, useLoad } from './observeShared';
+import { Err, Pane, Sub, SubHead } from './observeShared';
+import { useLoad } from '../ui/useLoad';
 import { fetchGrafanaDashboards, fetchGrafanaLogs, fetchGrafanaPanels, fetchGrafanaPatterns } from './opsApi';
 
 const clock = (iso: string) => {

@@ -14,6 +14,7 @@ export function useSketches(shown: boolean) {
   const latest = useRef(0);
   const reload = useCallback(() => {
     const mine = ++latest.current;
+    setError(null);
     return fetchSketches().then(
       (list) => { if (mine === latest.current) { setData(list); setError(null); } return list; },
       (e) => { if (mine === latest.current) setError(e instanceof Error ? e.message : String(e)); return null; },

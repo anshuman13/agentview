@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import type { ObserveInfo } from '../../../shared/observe';
 import { useStore } from '../app/store';
 import { providerLabel } from '../../../shared/providers';
@@ -7,12 +7,11 @@ import { Button, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
+import type { Load } from '../ui/useLoad';
 import { addToClaude } from './opsApi';
 import '../styles/features/observe.css';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
-
-export type Load<T> = { data: T | null; error: string; busy: boolean };
 
 // The latest request per Load state; an older answer that lands later is dropped.
 const latest = new WeakMap<object, number>();
@@ -30,24 +29,6 @@ export function track<T>(set: (l: Load<T>) => void, request: () => Promise<T>) {
     (data) => latest.get(set) === n && set({ data, error: '', busy: false }),
     (e) => latest.get(set) === n && set({ data: null, error: errText(e), busy: false }),
   );
-}
-
-export function useLoad<T>(load: (() => Promise<T>) | null, key: string): [Load<T>, () => void] {
-  const [state, setState] = useState<Load<T>>({ data: null, error: '', busy: false });
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!load) return;
-    let live = true;
-    setState({ data: null, error: '', busy: true });
-    load().then(
-      (data) => live && setState({ data, error: '', busy: false }),
-      (e) => live && setState({ data: null, error: e.message, busy: false }),
-    );
-    return () => {
-      live = false;
-    };
-  }, [key, !load, tick]);
-  return [state, () => setTick((t) => t + 1)];
 }
 
 export const Err = ({ text }: { text: string }) => (text ? <div className="obs-hint error" role="alert">{text}</div> : null);

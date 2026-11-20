@@ -75,7 +75,7 @@ export const dataWriteTool = defineTool({
     const err = checkFields(table, fields);
     if (err) return err;
     // A task a chat creates names that chat as its source, which the task opens.
-    if (table === 'items' && !id && chatId && !fields.source) Object.assign(fields, { source: 'chat', source_url: `/?session=${encodeURIComponent(chatId)}` });
+    if (table === 'items' && !id && chatId && !fields.source && !fields.source_url) Object.assign(fields, { source: 'chat', source_url: `/?session=${encodeURIComponent(chatId)}` });
     const rowId = id ?? crypto.randomUUID();
     await hubPush([{ table, id: rowId, profile: profileOf(cwd), updated_at: Date.now(), fields }]);
     return `${id ? 'Updated' : 'Created'} ${table} [${rowId}].`;

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useStore } from '../app/store';
 import { Markdown } from '../chat/Chat';
 import { Button } from '../ui/Button';
@@ -7,6 +7,7 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
+import { useLoad } from '../ui/useLoad';
 import { ADVISORS, advisorOf, memoryFacts, type AdvisorInfo } from '../../../shared/advisors';
 import { go, openAdvisor } from './advisorChat';
 import { StateDot } from './ChatRows';
@@ -18,22 +19,12 @@ export function AdvisorsSheet({ turns, onClose }: { turns: string; onClose: () =
   const live = useStore((s) => s.live);
   const seen = useStore((s) => s.seen);
   const viewing = useStore((s) => s.session.id);
-  const [info, setInfo] = useState<AdvisorInfo[] | null | undefined>(undefined);
+  const [{ data: info, error }, retry] = useLoad<AdvisorInfo[]>(() => fetchAdvisors().then((x) => x ?? Promise.reject(new Error('Could not load the advisors'))), turns);
   const [memory, setMemory] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    let stale = false;
-    void fetchAdvisors().then((x) => !stale && setInfo(x));
-    return () => { stale = true; };
-  }, [turns, tick]);
-  const retry = () => {
-    setInfo(undefined);
-    setTick((t) => t + 1);
-  };
   return (
     <Sheet label="Conversations and memory" onClose={onClose} className="au-sheet">
       <h2>Conversations and memory</h2>
-      {info === undefined ? <Skeleton rows={6} /> : !info ? <EmptyState size="sm" title="Could not load the advisors" hint="Try again" action={<Button size="sm" onClick={retry}>Retry</Button>} /> : ADVISORS.map((a) => {
+      {!info && !error ? <Skeleton rows={6} /> : !info ? <EmptyState size="sm" title="Could not load the advisors" action={<Button size="sm" onClick={retry}>Retry</Button>} /> : ADVISORS.map((a) => {
         const c = live.find((x) => advisorOf(x.cwd)?.id === a.id);
         const state = c && chatState({ live: c }, seen);
         const got = info.find((x) => x.id === a.id);

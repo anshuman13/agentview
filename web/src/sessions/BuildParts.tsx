@@ -8,7 +8,7 @@ import { Section } from '../ui/Section';
 import { latestRun, type BuildDetail, type BuildStage } from '../../../shared/builds';
 import { DecisionRow } from './BuildPhases';
 import { commitTotals } from './buildsLogic';
-import { openChat } from './goalLogic';
+import { showChat } from './goalLogic';
 
 export type Report = { title: string; text: string; chat?: { id: string; session: string | null } };
 
@@ -57,7 +57,7 @@ export function ReportBody({ report, onOpened }: { report: Report; onOpened: () 
       <div className="bd-doc">{report.text.trim() ? <Markdown text={report.text} /> : <EmptyState size="sm" title="No report yet" />}</div>
       {chat && (
         <div className="gl-actions">
-          <Button size="sm" onClick={() => { openChat({ chatId: chat.id, sessionId: chat.session }); window.dispatchEvent(new Event('agentview:chat')); onOpened(); }}>Open chat</Button>
+          <Button size="sm" onClick={() => { showChat({ chatId: chat.id, sessionId: chat.session }); onOpened(); }}>Open chat</Button>
         </div>
       )}
     </>

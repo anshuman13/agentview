@@ -11,7 +11,8 @@ import { errText } from '../../../shared/util';
 import '../styles/features/observe.css';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
-import { AddToClaude, Err, type Load, Pane, bump, cell, track } from './observeShared';
+import { AddToClaude, Err, Pane, bump, cell, track } from './observeShared';
+import type { Load } from '../ui/useLoad';
 import { fetchSnowflakeObjects, querySnowflake, saveSnowflakeConfig, testSnowflake } from './opsApi';
 
 const FIELDS: { key: keyof Omit<SnowflakeInfo, 'auth' | 'hasSecret'>; label: string; hint: string }[] = [

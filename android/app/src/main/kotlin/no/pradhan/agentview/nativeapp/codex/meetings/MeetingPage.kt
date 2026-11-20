@@ -72,7 +72,6 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.workspace.ErrorHint
 
 private fun LazyListScope.actionGroup(rows: List<Row>, c: MeetingCtx) {
     item { Group { rows.forEachIndexed { i, r -> if (i > 0) Hairline(); ActionLine(r, c.m, c.now, c.actions, c.hub.readOnly, onTask = c.onTask) } } }
@@ -113,12 +112,13 @@ private fun rememberPrep(c: MeetingCtx, state: MState): PrepData? {
 }
 
 @Composable
-private fun rememberTranscript(hub: Hub, m: Row, done: Boolean): Result<String?>? {
+private fun rememberTranscript(hub: Hub, m: Row, done: Boolean): Pair<Result<String?>?, () -> Unit> {
     var transcript by remember(m.key) { mutableStateOf<Result<String?>?>(null) }
-    LaunchedEffect(m.key, done, m.str("summary")) {
+    var tries by remember(m.key) { mutableStateOf(0) }
+    LaunchedEffect(m.key, done, m.str("summary"), tries) {
         if (done) transcript = runCatching { hub.api.transcript(m.profile, m.id) }
     }
-    return transcript
+    return transcript to { transcript = null; tries++ }
 }
 
 @Composable
@@ -128,7 +128,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val all = remember(st.items, m.key) { actionsOf(st.items, m) }
     val prep = rememberPrep(c, state)
     val folds = rememberMeetingFolds(m.key)
-    val transcript = rememberTranscript(hub, m, state == MState.Done)
+    val (transcript, reloadTranscript) = rememberTranscript(hub, m, state == MState.Done)
     val talk = remember(transcript) { transcript?.getOrNull()?.let(::talkTime).orEmpty() }
     LazyColumn(Modifier.fillMaxWidth()) {
         meetingHeader(c, state, all)
@@ -145,7 +145,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             item { NotesHeader(c, all) }
             item { NotesField(hub, m) }
             item { SectionHeader("More", open = folds.more.value, onToggle = { folds.more.value = !folds.more.value }) }
-            if (folds.more.value) meetingMore(c, state, all, folds, transcript, talk)
+            if (folds.more.value) meetingMore(c, state, all, folds, transcript, reloadTranscript, talk)
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
@@ -313,7 +313,7 @@ private fun NewActionField(c: MeetingCtx, newAction: MutableState<String>) {
         }))
 }
 
-private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Row>, folds: MeetingFolds, transcript: Result<String?>?, talk: List<Speaker>) {
+private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Row>, folds: MeetingFolds, transcript: Result<String?>?, reloadTranscript: () -> Unit, talk: List<Speaker>) {
     val m = c.m
     item { NewActionField(c, folds.newAction) }
     meetingContext(c, all, folds, talk)
@@ -328,7 +328,7 @@ private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Ro
     val dismissed = all.filter { it.status == "dismissed" }
     item { Fold("Not mine", dismissed.size, folds.notMine.value) { folds.notMine.value = !folds.notMine.value } }
     if (folds.notMine.value) actionGroup(dismissed, c)
-    if (state == MState.Done) meetingTranscript(folds, transcript)
+    if (state == MState.Done) meetingTranscript(folds, transcript, reloadTranscript)
 }
 
 private fun LazyListScope.meetingContext(c: MeetingCtx, all: List<Row>, folds: MeetingFolds, speakers: List<Speaker>) {
@@ -349,12 +349,12 @@ private fun LazyListScope.meetingContext(c: MeetingCtx, all: List<Row>, folds: M
     if (people.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { people.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(displayName(p), onClick = { c.onPerson(p) }) } } }
 }
 
-private fun LazyListScope.meetingTranscript(folds: MeetingFolds, transcript: Result<String?>?) {
+private fun LazyListScope.meetingTranscript(folds: MeetingFolds, transcript: Result<String?>?, reload: () -> Unit) {
     item { SectionHeader("Transcript", open = folds.transcriptOpen.value, onToggle = { folds.transcriptOpen.value = !folds.transcriptOpen.value }) }
     if (!folds.transcriptOpen.value) return
     when {
         transcript == null -> item { Loading("Loading the transcript…") }
-        transcript.isFailure -> item { ErrorHint("Could not load the transcript: ${transcript.exceptionOrNull()?.message}") }
+        transcript.isFailure -> item { EmptyState("Could not load the transcript", transcript.exceptionOrNull()?.message, action = { Button("Retry", reload, size = ButtonSize.Sm) }) }
         transcript.getOrNull().isNullOrEmpty() -> item { EmptyState("No transcript text kept") }
         else -> items(transcript.getOrNull()!!.lines().filter { it.isNotBlank() }) { line ->
             Text(line, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted, fontFamily = FontFamily.Default)

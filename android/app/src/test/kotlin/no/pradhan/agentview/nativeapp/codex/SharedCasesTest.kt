@@ -474,7 +474,7 @@ class SharedCasesTest {
     @Test fun taskChatPrompt() {
         for (c in cases("task-chat-prompt")) {
             val t = c.getValue("task").jsonObject
-            assertEquals(c.str("name"), c.str("expected"), taskChatPrompt(t.nullable("id")?.jsonPrimitive?.content, t.nullable("status")?.jsonPrimitive?.content, t.nullable("title")?.jsonPrimitive?.content, t.nullable("text")?.jsonPrimitive?.content, t.nullable("sourceUrl")?.jsonPrimitive?.content))
+            assertEquals(c.str("name"), c.str("expected"), taskChatPrompt(t.nullable("id")?.jsonPrimitive?.content, t.nullable("status")?.jsonPrimitive?.content, t.nullable("title")?.jsonPrimitive?.content, t.nullable("text")?.jsonPrimitive?.content, t.nullable("sourceUrl")?.jsonPrimitive?.content, t.nullable("sameProfile")?.jsonPrimitive?.boolean ?: false))
         }
     }
 

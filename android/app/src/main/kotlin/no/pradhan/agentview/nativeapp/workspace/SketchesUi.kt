@@ -112,7 +112,7 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val cwd by hub.store.state.select { st -> st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd.orEmpty() }
     val clip = LocalClipboardManager.current
-    val (load) = rememberLoad(file.path, hub.pageChat) { hub.readFile(file.path) }
+    val (load, reload) = rememberLoad(file.path, hub.pageChat) { hub.readFile(file.path) }
     var desktop by rememberSaveable { mutableStateOf(false) }
     var dark by rememberSaveable { mutableStateOf<Boolean?>(null) }
     val dark0 = when (hub.theme.collectAsState().value) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
@@ -131,7 +131,8 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
         Box(Modifier.fillMaxSize()) {
             when {
                 f == null && load.error.isEmpty() -> Loading("Loading the sketch…")
-                f == null || f.binary || f.error != null -> SketchProblem("It may have moved. Go back to the list")
+                f == null -> EmptyState("Could not load the sketch", load.error, icon = "paintcan", action = { Button("Retry", reload, size = ButtonSize.Sm) })
+                f.binary || f.error != null -> SketchProblem("It may have moved. Go back to the list")
                 else -> SketchPreview(f.content, isDark, desktop)
             }
         }

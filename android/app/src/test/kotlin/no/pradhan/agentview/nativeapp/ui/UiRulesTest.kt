@@ -28,6 +28,7 @@ class UiRulesTest {
 
     @Test fun couldNotLoadOffersRetry() {
         fails("Could not load without an action", lines().filter { it.third.contains("EmptyState(\"Could not load") && !it.third.contains("action =") })
+        fails("ErrorHint for a load that can be retried", lines().filter { it.third.contains("ErrorHint(\"Could not load") })
     }
 
     @Test fun pageHeaderHoldsOneIconButton() {

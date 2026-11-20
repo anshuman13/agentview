@@ -1,6 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { dayKey, dayNumber, featureRows, type Feature, type FeatureKind, type UsedFeature, type UseDays } from '../../../../shared/featureUse';
-import { errText } from '../../../../shared/util';
 import { showSnack } from '../../codex/view';
 import { Button, Chip, ShowAll } from '../../ui/Button';
 import { MenuItem } from '../../ui/Menu';
@@ -9,6 +8,7 @@ import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import { Loading } from '../../ui/Skeleton';
+import { useLoad } from '../../ui/useLoad';
 import { appSettings } from '../appSettings';
 import { fetchFeatureUse, saveHiddenFeatures } from '../featureUseApi';
 
@@ -37,17 +37,8 @@ const SAVE_FAILED = 'Could not save. Nothing changed, try again.';
 export function FeatureUseSheet({ onClose }: { onClose: () => void }) {
   const on = appSettings.use((s) => s.featureUse);
   const hidden = appSettings.use((s) => s.hiddenFeatures);
-  const [days, setDays] = useState<UseDays>();
-  const [error, setError] = useState('');
   const [span, setSpan] = useState<7 | 30>(30);
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    fetchFeatureUse().then((r) => setDays(r.days), (err) => setError(errText(err)));
-  }, [tick]);
-  const retry = () => {
-    setError('');
-    setTick((t) => t + 1);
-  };
+  const [{ data: days, error }, retry] = useLoad<UseDays>(() => fetchFeatureUse().then((r) => r.days), '');
   const today = dayKey(new Date());
   const rows = days && featureRows(days, today, span);
   const usedMeta = (f: UsedFeature) => {

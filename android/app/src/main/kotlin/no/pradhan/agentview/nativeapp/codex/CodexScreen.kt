@@ -235,7 +235,7 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
 @Composable
 private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: String?, now: Long, actions: TaskActions, ops: CodexOps, editing: Row?, snack: SnackbarHostState) {
     val scope = rememberCoroutineScope()
-    var chatText by remember { mutableStateOf<String?>(null) }
+    var chatText by remember { mutableStateOf<((String?) -> String)?>(null) }
     val askAbout = { r: Row -> hub.askCodex(askText("Help me with this item.", r.profile, st.items.filter { !it.deleted && it.profile == r.profile }, r, st.meetings.filter { it.profile == r.profile }), r.profile) }
     editing?.let { row ->
         val from = st.meetings.firstOrNull { it.profile == row.profile && it.id == row.meetingId }

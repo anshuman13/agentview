@@ -24,3 +24,11 @@ export function chatNotices(before: LiveChat, now: LiveChat, muted: boolean): Ch
   const title = `${who} finished in ${repo}`;
   return now.last ? { kind: 'finished', title, body: now.last, sub: now.title } : { kind: 'finished', title, body: now.title };
 }
+
+// The notice per chat in a new live list that was already known; the chat on screen earns one like any other.
+export const backgroundNotices = (was: LiveChat[], now: LiveChat[], isMuted: (sessionId: string | null) => boolean) =>
+  now.flatMap((c) => {
+    const before = was.find((x) => x.id === c.id);
+    const n = before && chatNotices(before, c, isMuted(c.sessionId));
+    return n ? [{ id: c.id, notice: n }] : [];
+  });

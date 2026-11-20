@@ -126,7 +126,7 @@ export function AdvisorBoard({ root, backlog, specs, audit, auditFailed, onRetry
   useEffect(() => { if (board) setChip(board.defaultStage); }, [loaded]);
   const [auditOpen, setAuditOpen] = useState(false);
   if (backlog === undefined || specs === undefined) return <Skeleton rows={6} />;
-  if (!board) return <EmptyState size="sm" title="Could not load the board" hint="Try again" action={<Button size="sm" onClick={onRetry}>Retry</Button>} />;
+  if (!board) return <EmptyState size="sm" title="Could not load the board" action={<Button size="sm" onClick={onRetry}>Retry</Button>} />;
   const stage = chip ?? board.defaultStage;
   const openSlugs = items!.filter((i) => i.status !== 'done').sort((a, b) => a.rank - b.rank).map((i) => i.slug);
   const move = (slug: string, dir: 'up' | 'down') => moveBacklogItem(root, slug, dir).then((list) => (list ? setMoved(list) : notice('Could not move the item')));

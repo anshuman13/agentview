@@ -2,8 +2,10 @@
   {"name": "title only", "task": {"title": "Fix the importer retry"}, "expected": "Fix the importer retry"},
   {"name": "title, notes and link", "task": {"title": "Fix the importer retry", "text": "It retries forever on 429.\nSee the Sentry issue.", "sourceUrl": "https://sentry.io/issues/1"}, "expected": "Fix the importer retry\n\nIt retries forever on 429.\nSee the Sentry issue.\n\nhttps://sentry.io/issues/1"},
   {"name": "blank notes and null link", "task": {"title": "Call the bank", "text": "  ", "sourceUrl": null}, "expected": "Call the bank"},
-  {"name": "task with id", "task": {"id": "t1", "status": "open", "title": "Call the bank", "text": "About the card", "sourceUrl": "https://x.test"}, "expected": "Call the bank\n\nAbout the card\n\nhttps://x.test\n\nAgentView task [t1]. When the work is done, set its status to done with mcp__agentview__data_write."},
-  {"name": "note with id", "task": {"id": "n1", "status": "note", "title": "Call the bank"}, "expected": "Call the bank"},
-  {"name": "no id", "task": {"id": null, "status": "open", "title": "Call the bank"}, "expected": "Call the bank"},
+  {"name": "task with id", "task": {"id": "t1", "status": "open", "title": "Call the bank", "text": "About the card", "sourceUrl": "https://x.test", "sameProfile": true}, "expected": "Call the bank\n\nAbout the card\n\nhttps://x.test\n\nAgentView task [t1]. When the work is done, set its status to done with mcp__agentview__data_write."},
+  {"name": "task from another profile", "task": {"id": "t1", "status": "open", "title": "Call the bank", "sameProfile": false}, "expected": "Call the bank"},
+  {"name": "task without a folder profile", "task": {"id": "t1", "status": "open", "title": "Call the bank"}, "expected": "Call the bank"},
+  {"name": "note with id", "task": {"id": "n1", "status": "note", "title": "Call the bank", "sameProfile": true}, "expected": "Call the bank"},
+  {"name": "no id", "task": {"id": null, "status": "open", "title": "Call the bank", "sameProfile": true}, "expected": "Call the bank"},
   {"name": "no title", "task": {"text": "Only notes", "sourceUrl": "https://x.test"}, "expected": "Only notes\n\nhttps://x.test"}
 ]

@@ -48,6 +48,12 @@ class ExtrasLogicTest {
         assertEquals(listOf(Notice(NoticeKind.Finished, "a", "Claude finished in agentview", "Fix tests")), n)
     }
 
+    @Test fun finishedNoticeComesForTheChatOnScreen() {
+        val shown = chat("a", running = true)
+        val n = notices(listOf(shown), listOf(chat("a")))
+        assertEquals(listOf(NoticeKind.Finished), n.map { it.kind })
+    }
+
     @Test fun noticeNamesTheChatsProvider() {
         val n = notices(listOf(chat("a", running = true, provider = "codex")), listOf(chat("a", provider = "codex")))
         assertEquals(listOf(Notice(NoticeKind.Finished, "a", "Codex finished in agentview", "Fix tests")), n)
