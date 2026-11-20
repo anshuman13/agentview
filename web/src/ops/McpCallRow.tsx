@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
 import { pressable } from '../ui/util';
 import { cite } from './mcpActions';
 import { brief, type Call } from './mcpHelpers';
@@ -14,7 +15,7 @@ export function CallRow({ call }: { call: Call }) {
         <span className="mono name">{call.tool}</span>
         <span className="in" title={brief(call.input)}>{brief(call.input)}</span>
         <span className={`s ${state}`}>{state === 'wait' ? 'running' : state === 'bad' ? 'error' : 'ok'}</span>
-        <button className="icon-btn mcp-insert" title="Add the result to chat" disabled={!call.result} onClick={(e) => { e.stopPropagation(); void cite(call); }}><Icon name="insert" small /></button>
+        <IconButton icon="insert" small className="mcp-insert" label="Add to chat" title="Add the result to chat" disabled={!call.result} onClick={(e) => { e.stopPropagation(); void cite(call); }} />
       </div>
       {open && (
         <div className="r">

@@ -82,7 +82,7 @@ export function Grafana({ info }: { info: ObserveInfo }) {
         }}
       >
         <input value={question} placeholder={`Ask about ${info.repo} in Grafana`} aria-label={`Ask about ${info.repo} in Grafana`} spellCheck={false} onChange={(e) => setQuestion(e.target.value)} />
-        <button className="btn primary" disabled={!question.trim()}><Icon name="sparkle" small /> Ask</button>
+        <Button variant="primary" type="submit" icon="sparkle" disabled={!question.trim()}>Ask</Button>
       </form>
       <div className="obs-dashboards">
         {dash.data && dash.data.dashboards.length > 0 && (
