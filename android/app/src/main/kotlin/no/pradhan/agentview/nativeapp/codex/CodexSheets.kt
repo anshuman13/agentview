@@ -168,7 +168,7 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
                 Button("Move to ${profileLabel(if (row.profile == WORK) PERSONAL else WORK)}", { actions.move(row, if (row.profile == WORK) PERSONAL else WORK) })
                 Button("Ask Claude", { commit(); onAsk(latest); onDismiss() })
                 Button("Start a chat…", { commit(); onChat(taskChatPrompt(title, text, row.sourceUrl)); onDismiss() })
-                row.draft?.takeIf { it.isNotBlank() }?.let { d -> Button("Copy draft", { clip.setText(AnnotatedString(d)); actions.say("Copied draft") }) }
+                row.draft?.takeIf { it.isNotBlank() }?.let { d -> Button("Copy draft", { clip.setText(AnnotatedString(d)); actions.say("Draft copied") }) }
                 Button("Delete", { actions.delete(row); onDismiss() }, variant = ButtonVariant.Danger)
             }
         }

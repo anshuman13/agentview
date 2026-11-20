@@ -129,7 +129,7 @@ export function ActionRow({ row, meeting, meta: metaText, noBadge, extraItems }:
               {meeting && status === 'open' && <MenuItem icon="issues" href={linearIssue(row, meeting)} onClick={() => setMenu(null)}>New Linear issue</MenuItem>}
               {meeting && <MenuItem icon="copy" onClick={close(() => copyText(draftFor(row, meeting)))}>Copy as message</MenuItem>}
               {!meeting && row.source_url && <MenuItem icon="link-external" href={safeHref(row.source_url)} onClick={() => setMenu(null)}>Open source</MenuItem>}
-              {!meeting && row.draft && <MenuItem icon="copy" onClick={close(() => copyText(row.draft!))}>Copy draft</MenuItem>}
+              {!meeting && row.draft && <MenuItem icon="copy" onClick={close(() => copyText(row.draft!, 'Draft copied'))}>Copy draft</MenuItem>}
               <MenuSeparator />
               <MenuItem danger icon="trash" onClick={close(() => act.remove(row))}>Delete</MenuItem>
             </Menu>

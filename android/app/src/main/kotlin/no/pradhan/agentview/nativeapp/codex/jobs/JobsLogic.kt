@@ -97,7 +97,7 @@ fun jobMeta(j: Row, own: List<Row>, paused: List<SyncPaused>, now: Long): String
 
 fun money(n: Double, billing: String = "usd") = unbilledText(billing) ?: if (n > 0 && n < 0.005) "<$0.01" else if (n < 10) "$" + String.format(java.util.Locale.ENGLISH, "%.2f", n) else "$" + Math.round(n)
 
-fun runTime(r: Row): String? = r.long("started_at")?.let { "${weekdayDate(it)} ${clock(it)}" }
+fun runTime(r: Row, now: Long): String? = r.long("started_at")?.let { nextText(it, now) }
 
 fun runMeta(r: Row): String {
     if (r.str("status") == "running") return "Running"

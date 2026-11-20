@@ -93,7 +93,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAg
                 if (scheduled) IconBtn("close", "Cancel", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
                 else {
                     if (run.kind == "tries") IconBtn("layout", "Open board", { board = true })
-                    if (!stopOnly) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") })
+                    if (!stopOnly) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
                     if (stopOnly) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
                     else MoreButton { close ->
                         if (!paused) { MenuItem("Run now", "play", { close(); hub.runControl(run, "now") }, enabled = !hub.readOnly); MenuSeparator() }

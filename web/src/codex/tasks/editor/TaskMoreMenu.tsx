@@ -113,7 +113,7 @@ export function TaskMoreMenu({ row, draft, suggested, addEstimate, then, onAsk }
       {row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(false)} icon={src.icon}>{row.meeting_id ? 'Transcript' : src.label}</MenuItem>}
       {row.status === 'note' && <MenuItem onClick={then(() => act.toTask(row))} icon="check">Make task</MenuItem>}
       {row.status === 'open' && <MenuItem disabled={tidying} onClick={() => { setMenu(false); void tidy(); }} icon={tidying ? 'loading' : 'wand'} spin={tidying}>Tidy</MenuItem>}
-      {row.draft && <MenuItem onClick={() => { setMenu(false); copyText(row.draft!); }} icon="copy">Copy draft</MenuItem>}
+      {row.draft && <MenuItem onClick={() => { setMenu(false); copyText(row.draft!, 'Draft copied'); }} icon="copy">Copy draft</MenuItem>}
       {row.status === 'open' && <RaiseWith className="ui-menu-item" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
       <MenuItem onClick={then(() => onAsk(row))} icon="sparkle">Ask Claude</MenuItem>
       <MenuItem onClick={() => { setMenu(false); save(); setStarting(true); }} icon="comment-discussion">Start a chat…</MenuItem>

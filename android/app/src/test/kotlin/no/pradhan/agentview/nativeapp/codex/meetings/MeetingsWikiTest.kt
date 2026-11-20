@@ -28,6 +28,7 @@ import no.pradhan.agentview.nativeapp.codex.jobs.jobMeta
 import no.pradhan.agentview.nativeapp.codex.jobs.jobState
 import no.pradhan.agentview.nativeapp.codex.jobs.jobsOf
 import no.pradhan.agentview.nativeapp.codex.jobs.runMeta
+import no.pradhan.agentview.nativeapp.codex.jobs.runTime
 import no.pradhan.agentview.nativeapp.codex.jobs.of
 import no.pradhan.agentview.nativeapp.codex.jobs.runsByJob
 import no.pradhan.agentview.nativeapp.codex.jobs.runsOf
@@ -282,6 +283,7 @@ class MeetingsWikiTest {
         assertEquals(listOf("new", "old"), runsOf(listOf(run("old", "ok", 1), run("new", "ok", 2)), job).map { it.id })
         assertEquals(listOf("new", "old"), runsByJob(listOf(run("old", "ok", 1), run("new", "ok", 2))).of(job).map { it.id })
         assertEquals("1 min 5 s · $0.50", runMeta(run("r", "ok", NOW)))
+        assertEquals("today ${clock(NOW)}", runTime(run("r", "ok", NOW), NOW))
         assertEquals("Every hour", jobMeta(job, emptyList(), emptyList(), NOW))
         val held = listOf(SyncPaused("jobs:work", NOW + 60_000))
         assertEquals("Every hour · Usage limit until ${clock(NOW + 60_000)}", jobMeta(row("jobs", "j4", WORK, "enabled" to 1, "schedule" to "hourly", "next_run_at" to NOW - 1), emptyList(), held, NOW))

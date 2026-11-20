@@ -136,11 +136,11 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
             Group(Modifier.padding(top = Tokens.sp4)) {
                 ListRow("When", jobMeta(job, runs, st.paused, now)); Hairline()
                 repoLabel(job.str("repo"))?.let { ListRow("Repo", it); Hairline() }
-                if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is not pushed", trailing = { Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) } }); Hairline() }
+                if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is kept in the runs but not pushed", trailing = { Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) } }); Hairline() }
                 if (tools != null) { ListRow("Tools", toolLabels(tools, servers).joinToString(", ")); Hairline() }
                 val latest = runs.firstOrNull()
                 if (latest == null) ListRow("Runs", "Not run yet")
-                else ListRow("Runs", runTime(latest), onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
+                else ListRow("Runs", runTime(latest, now),onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
             }
         }
         if (tasks.isNotEmpty()) {
@@ -157,18 +157,18 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
-    if (runsOpen) RunsSheet(runs, { hub.notice.value = it }) { runsOpen = false }
+    if (runsOpen) RunsSheet(runs, now, { hub.notice.value = it }) { runsOpen = false }
 }
 
 @Composable
 private fun RunStatus(status: String) = when (status) {
-    "ok" -> Badge("Done", BadgeTone.Done)
+    "ok" -> Badge("Succeeded", BadgeTone.Done)
     "running" -> Badge("Running", BadgeTone.Running)
     else -> Badge("Failed", BadgeTone.Failed)
 }
 
 @Composable
-private fun RunsSheet(runs: List<Row>, say: (String) -> Unit, onDismiss: () -> Unit) {
+private fun RunsSheet(runs: List<Row>, now: Long, say: (String) -> Unit, onDismiss: () -> Unit) {
     val shown = runs.take(10)
     var open by remember { mutableStateOf(shown.firstOrNull()?.id) }
     val clip = LocalClipboardManager.current
@@ -178,7 +178,7 @@ private fun RunsSheet(runs: List<Row>, say: (String) -> Unit, onDismiss: () -> U
                 if (i > 0) Hairline()
                 val output = r.str("output")?.ifEmpty { null }
                 val expanded = output != null && open == r.id
-                ListRow(runTime(r) ?: "Run", runMeta(r).ifEmpty { null },
+                ListRow(runTime(r, now) ?: "Run", runMeta(r).ifEmpty { null },
                     onClick = if (output != null) ({ open = if (expanded) null else r.id }) else null,
                     trailing = { RunStatus(r.str("status") ?: ""); if (output != null) Chevron() })
                 if (expanded && output != null) {
