@@ -256,33 +256,27 @@ private fun SpecBody(hub: Hub, d: BuildDetail, open: (BuildSheet) -> Unit) {
     val failed = d.criteria.any { it.result == "fail" }
     val now = System.currentTimeMillis()
     val step = if (d.summary.state == "done") null else currentStep(d.flow)
-    val scroll = rememberScrollState()
-    val spans = remember(d.slug) { mutableStateMapOf<Int, IntRange>() }
-    val at = if (step != null) d.flow.indexOf(step) else d.flow.indexOfFirst { it.state != "done" }
-    var placed by remember(d.slug, at) { mutableStateOf(false) }
-    val cur = spans[at]
-    LaunchedEffect(d.slug, at, scroll.maxValue, cur) {
-        if (placed || scroll.maxValue == 0 || cur == null) return@LaunchedEffect
-        placed = true
-        val prev = spans[at - 1]
-        val left = if (prev != null) (prev.first + prev.last) / 2 else cur.first
-        scroll.scrollTo(minOf(left, cur.last - scroll.viewportSize).coerceAtLeast(0))
+    var list by remember(d.slug) { mutableStateOf(false) }
+    val cur = currentStep(d.flow) ?: d.flow.firstOrNull()
+    if (cur != null) {
+        val curBadge = flowBadge(cur)
+        Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touchSm).clickable { list = !list }.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
+            Text("Step ${d.flow.indexOf(cur) + 1} of ${d.flow.size}: ${FLOW_LABEL[cur.key] ?: cur.key}", Modifier.weight(1f), style = Type.callout, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (curBadge != null) Badge(curBadge.first, curBadge.second)
+            AvIcon(if (list) "chevron-down" else "chevron-right", null, Tokens.icon, tint = av.fgMuted)
+        }
     }
-    Box(Modifier.fillMaxWidth()) {
-    Row(Modifier.fillMaxWidth().horizontalScroll(scroll).padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
-        d.flow.forEachIndexed { i, f ->
+    if (list) Column(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad)) {
+        d.flow.forEach { f ->
             val sheet = flowSheet(f, d)
             Row(
-                Modifier.heightIn(min = Tokens.touchSm).onGloballyPositioned { spans[i] = it.positionInParent().x.roundToInt()..(it.positionInParent().x.roundToInt() + it.size.width) }
-                    .then(if (sheet != null) Modifier.clickable { open(sheet) } else Modifier),
+                Modifier.fillMaxWidth().heightIn(min = Tokens.touchSm).then(if (sheet != null) Modifier.clickable { open(sheet) } else Modifier),
                 horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically,
             ) {
                 StatusDot(if (f.state == "running") DotState.Running else stateDot(f.state))
                 Text(FLOW_LABEL[f.key] ?: f.key, style = if (f == step) Type.callout else Type.subheadline, color = if (f.state == "todo") av.fgMuted else av.fg)
             }
         }
-    }
-    if (scroll.value < scroll.maxValue) Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(Tokens.sp12).background(Brush.horizontalGradient(listOf(Color.Transparent, av.raised))))
     }
     val total = buildTotals(d.entries, now)
     if (total.runs > 0) {
