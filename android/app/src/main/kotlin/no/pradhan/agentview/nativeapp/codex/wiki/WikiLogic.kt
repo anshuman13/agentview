@@ -224,6 +224,22 @@ fun olderClaims(facts: List<Row>, pageId: String?, now: Long): List<Row> {
     }.sortedByDescending { it.long("at") ?: 0L }
 }
 
+// Current claims on a live page that are old and that no live meeting of the last RETIRE_AFTER about the page's title touches, oldest first (web wiki.ts staleFacts, checked by shared/fixtures/stale-claims.json).
+fun staleFacts(facts: List<Row>, pages: List<Row>, meetings: List<Row>, now: Long): List<Row> {
+    val current = currentClaims(facts)
+    val titles = liveRows(pages).associate { it.key to it.title }
+    val recent = liveRows(meetings).filter { (it.long("starts_at") ?: 0L) > now - RETIRE_AFTER }
+    val touched = HashMap<String, Boolean>()
+    fun mentioned(key: String) = touched.getOrPut(key) {
+        val words = queryWords(titles[key] ?: "")
+        recent.any { matchesWords(words, it.title, it.str("summary"), it.str("decisions")) }
+    }
+    return liveRows(facts).filter { f ->
+        val key = "${f.profile}:${f.str("page_id")}"
+        !f.str("page_id").isNullOrEmpty() && key in titles && current(f) && isOld(f, now) && !mentioned(key)
+    }.sortedBy { it.long("at") ?: 0L }
+}
+
 class WikiHits(val pages: List<Row>, val claims: List<Row>)
 
 fun searchWiki(pages: List<Row>, facts: List<Row>, query: String): WikiHits {

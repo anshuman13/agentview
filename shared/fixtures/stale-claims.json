@@ -1,0 +1,23 @@
+{
+  "now": 20000000000,
+  "pages": [
+    {"id": "pricing", "title": "Pricing"},
+    {"id": "hiring", "title": "Hiring plan"}
+  ],
+  "meetings": [
+    {"id": "m1", "title": "Hiring plan sync", "summary": null, "decisions": null, "startsAgoDays": 10},
+    {"id": "m2", "title": "Pricing review", "summary": null, "decisions": null, "startsAgoDays": 120},
+    {"id": "m3", "title": "Pricing deleted", "summary": null, "decisions": null, "startsAgoDays": 5, "deleted": true}
+  ],
+  "facts": [
+    {"id": "none", "page_id": "pricing", "at": 5000000000},
+    {"id": "older", "page_id": "pricing", "at": 3000000000},
+    {"id": "named", "page_id": "hiring", "at": 4000000000},
+    {"id": "fresh", "page_id": "pricing", "at": 19000000000},
+    {"id": "gone", "page_id": "pricing", "at": 2000000000, "superseded_by": "none"},
+    {"id": "used", "page_id": "pricing", "at": 2000000000, "used_at": 19000000000},
+    {"id": "memory", "page_id": null, "at": 2000000000},
+    {"id": "retired", "page_id": "pricing", "at": 2000000000, "state": "retired"}
+  ],
+  "expected": ["older", "none"]
+}
