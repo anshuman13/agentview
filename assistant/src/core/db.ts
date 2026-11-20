@@ -142,7 +142,12 @@ function createLookupIndexes(db: Database) {
 }
 
 function createSearchIndexes(db: Database) {
-  for (const [fts, table, cols] of [['facts_fts', 'facts', ['text']], ['pages_fts', 'pages', ['title', 'summary']]] as const) {
+  for (const [fts, table, cols] of [['facts_fts', 'facts', ['text', 'sources']], ['pages_fts', 'pages', ['title', 'summary']]] as const) {
+    const have = columnsOf(db, fts);
+    if (have.size && (have.size !== cols.length || cols.some((c) => !have.has(c)))) {
+      for (const suffix of ['ai', 'ad', 'au']) db.exec(`DROP TRIGGER IF EXISTS ${fts}_${suffix}`);
+      db.exec(`DROP TABLE ${fts}`);
+    }
     const fresh = !db.prepare('SELECT 1 FROM sqlite_master WHERE name = ?').get(fts);
     const list = cols.join(', ');
     const old = cols.map((c) => `old.${c}`).join(', ');
