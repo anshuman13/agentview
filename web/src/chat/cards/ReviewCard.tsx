@@ -1,6 +1,7 @@
 import { send } from '../../app/store';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
+import { Panel } from '../../ui/Panel';
 import { plural } from '../../ui/util';
 import type { ChatEvent, ReviewFile, ReviewHunk } from '../../../../shared/protocol';
 
@@ -57,19 +58,19 @@ export function ReviewCard({ ev }: { ev: ReviewEvent }) {
   const count = ev.files.reduce((n, f) => n + (f.hunks.length || 1), 0);
   if (ev.result) {
     return (
-      <div className="pd review-card">
+      <Panel className="pd review-card">
         <div className="pd-head"><Icon name="check" small /><span className="pd-title">Reviewed {plural(count, 'change')}</span><span className="pd-count">{ev.result}</span></div>
-      </div>
+      </Panel>
     );
   }
   return (
-    <div className="pd review-card">
+    <Panel className="pd review-card">
       <div className="pd-head">
         <Icon name="diff" small />
         <span className="pd-title">Review {plural(count, 'change')}</span>
         <Button size="sm" variant="filled" onClick={() => decide(ev.id, 'keep')}>Keep all</Button>
       </div>
       {ev.files.map((f) => <FileReview key={f.path} id={ev.id} f={f} />)}
-    </div>
+    </Panel>
   );
 }
