@@ -3,12 +3,13 @@ import path from 'node:path';
 import { jsonFile } from '../json.js';
 import { checkState, repoKey, type Check, type Method } from './github.js';
 type Entry = { cwd: string; number: number; method: Method; since: number; error?: string };
-type View = { state: string; title?: string; isDraft?: boolean; mergeable?: string; reviewDecision?: string; statusCheckRollup?: Check[]; headRefOid?: string };
+type View = { state: string; title?: string; url?: string; isDraft?: boolean; mergeable?: string; reviewDecision?: string; statusCheckRollup?: Check[]; headRefOid?: string };
 type Step = { kind: 'delete' } | { kind: 'wait'; note: string } | { kind: 'merge'; sha: string };
 type Gh = (cwd: string, ...args: string[]) => Promise<string>;
+type Shipped = { cwd: string; repo: string; title: string; url: string };
 type Post = (title: string, subtitle: string, body: string) => void;
 
-const VIEW = 'state,title,isDraft,mergeable,reviewDecision,statusCheckRollup,headRefOid';
+const VIEW = 'state,title,url,isDraft,mergeable,reviewDecision,statusCheckRollup,headRefOid';
 const FIRST_NOTE = 'Waiting for checks';
 const wait = (note: string): Step => ({ kind: 'wait', note });
 
@@ -30,8 +31,8 @@ export function autoMergeStep(view: View): Step {
 const same = (e: Entry, cwd: string, number: number) => repoKey(e.cwd) === repoKey(cwd) && e.number === number;
 const keyOf = (e: Entry) => `${e.cwd}#${e.number}`;
 
-export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; changed: (cwd: string) => void; exists?: (cwd: string) => boolean }) {
-  const { gh, post, file, changed, exists = existsSync } = deps;
+export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; changed: (cwd: string) => void; shipped?: (pr: Shipped) => void; exists?: (cwd: string) => boolean }) {
+  const { gh, post, file, changed, shipped, exists = existsSync } = deps;
   const store = jsonFile<Entry[]>(file, []);
   const notes = new Map<string, string>();
   const merging = new Set<string>();
@@ -87,6 +88,7 @@ export function createAutoMerge(deps: { gh: Gh; post: Post; file: string; change
       await drop(e);
       changed(e.cwd);
       post(`Merged in ${repo}`, `#${e.number}`, view.title ?? '');
+      if (view.url && view.title) shipped?.({ cwd: e.cwd, repo, title: view.title, url: view.url });
     } finally {
       merging.delete(k);
     }

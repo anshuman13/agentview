@@ -5,7 +5,9 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { attachTerminal, closeTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, ownProfile } from './chrome/chrome.js';
-import { ADVISORS_ELSEWHERE, STARTED_ON_HUB, advisorsMac, askAdvisorsMac } from './integrations/assistant.js';
+import { ADVISORS_ELSEWHERE, STARTED_ON_HUB, advisorsMac, askAdvisorsMac, hubShipped } from './integrations/assistant.js';
+import { profileOf } from './agent/claude/accounts.js';
+import { errText } from '../../shared/util.js';
 import { ntfyTopic, post } from './integrations/notify.js';
 import { CODEX_WORK } from './workspace/files.js';
 import { createAutoMerge } from './integrations/automerge.js';
@@ -123,7 +125,7 @@ function attentionSources(extra: string[] = []) {
 const fixChat = (item: AttentionItem) => host.req<string>({ op: 'ask', cwd: item.cwd, prompt: item.prompt, fresh: true });
 startAttention(attentionSources, fixChat);
 onPrsChanged((cwd) => host.notify({ op: 'prs_changed', cwd }));
-const autoMerge = createAutoMerge({ gh, post, file: path.join(os.homedir(), '.agentview/automerge.json'), changed: forgetPrs });
+const autoMerge = createAutoMerge({ gh, post, file: path.join(os.homedir(), '.agentview/automerge.json'), changed: forgetPrs, shipped: ({ cwd, ...pr }) => hubShipped({ ...pr, profile: profileOf(cwd) }).catch((err) => console.error('hub shipped:', errText(err))) });
 useAutoMerge(autoMerge);
 autoMerge.start();
 

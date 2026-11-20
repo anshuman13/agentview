@@ -32,7 +32,8 @@ function ReviewCard({ fact }: { fact: Fact }) {
   const fromChat = sourcesOf(fact).find((s) => s.kind === 'chat');
   const label = from
     ? meeting?.title ?? sourcesOf(fact).find((s) => s.kind === 'meeting')?.label ?? 'a meeting'
-    : fact.added_by?.startsWith('slack:') ? sourcesOf(fact).find((s) => s.kind === 'slack')?.label ?? 'Slack' : fromChat ? `chat ${fromChat.label || UNTITLED}` : null;
+    : fact.added_by?.startsWith('slack:') ? sourcesOf(fact).find((s) => s.kind === 'slack')?.label ?? 'Slack'
+    : fact.added_by?.startsWith('pr:') ? sourcesOf(fact).find((s) => s.kind === 'pr')?.label ?? 'a pull request' : fromChat ? `chat ${fromChat.label || UNTITLED}` : null;
   const review = useReview();
   const approve = () => review.approve([fact]);
   const reject = () => review.reject([fact]);
