@@ -179,8 +179,8 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
         }
         if (listed.sumOf { it.rows.size } > shown) item { Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         if (groups.isEmpty()) item {
-            if (chips.isNotEmpty()) EmptyState("No meetings match", "Try fewer filters", icon = "calendar", action = { Button("Clear filters", { chips.forEach(onChip) }, size = ButtonSize.Sm) })
-            else EmptyState(if (query.isNotEmpty()) "No meetings match" else "No past meetings yet", if (query.isNotEmpty()) "Search covers titles, people, notes, summaries and decisions" else "Coming meetings are listed by day", icon = "calendar")
+            if (chips.isNotEmpty()) EmptyState("No meetings match", "Try fewer filters", icon = "calendar", small = false, action = { Button("Clear filters", { chips.forEach(onChip) }, size = ButtonSize.Sm) })
+            else EmptyState(if (query.isNotEmpty()) "No meetings match" else "No past meetings yet", if (query.isNotEmpty()) "Search covers titles, people, notes, summaries and decisions" else "Coming meetings are listed by day", icon = "calendar", small = false)
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }

@@ -50,7 +50,7 @@ fun AgentScreen(hub: Hub, id: String, onBack: () -> Unit, onOpenAgent: (String) 
     if (agent != null) { AgentPage(hub, agent, cwd, shownId, onBack, onOpenAgent); return }
     Column(Modifier.fillMaxSize()) {
         PageHeader("Agent", onBack)
-        EmptyState("Agent not found", "It is not in the chat on screen")
+        EmptyState("Agent not found", "It is not in the chat on screen", icon = "hubot", small = false)
     }
 }
 

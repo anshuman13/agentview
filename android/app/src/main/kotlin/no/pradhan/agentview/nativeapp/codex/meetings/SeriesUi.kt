@@ -78,7 +78,7 @@ fun SeriesPage(hub: Hub, st: CodexState, key: String, now: Long, actions: TaskAc
     var allOpen by rememberSaveable(key) { mutableStateOf(false) }
     var allOcc by rememberSaveable(key) { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxWidth()) {
-        if (members.isEmpty()) { item { EmptyState("No meetings", icon = "calendar") }; return@LazyColumn }
+        if (members.isEmpty()) { item { EmptyState("No meetings", icon = "calendar", small = false) }; return@LazyColumn }
         item {
             Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 LRow(verticalAlignment = Alignment.CenterVertically) {
