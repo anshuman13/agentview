@@ -118,6 +118,20 @@ test('wiki_search tells the hub which claims it showed and keeps a recently used
   expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ profile: 'work', ids: ['a'] });
 });
 
+test('wiki_search sends only live claims to the hub as used', async () => {
+  const claims = [
+    { id: 'l', text: 'Live one', at: Date.now(), state: 'live', superseded_by: null },
+    { id: 'n', text: 'No state', at: Date.now(), state: null, superseded_by: null },
+    { id: 'p', text: 'Proposed one', at: Date.now(), state: 'proposed', superseded_by: null },
+    { id: 'r', text: 'Rejected one', at: Date.now(), state: 'rejected', superseded_by: null },
+  ];
+  const f = vi.fn(async (url: string | URL | Request) => (String(url).includes('/wiki/search') ? json(200, { pages: [], claims }) : json(200, { used: 2 })));
+  stubGlobal('fetch', f);
+  await search('one');
+  const post = f.mock.calls.find((c) => String(c[0]).includes('/wiki/used'))!;
+  expect(JSON.parse((post[1] as RequestInit).body as string).ids).toEqual(['l', 'n']);
+});
+
 test('preferencesText lists the profile\'s live Memory claims newest first, capped at 15', async () => {
   const now = Date.now();
   const fact = (id: string, fields: Record<string, unknown>, profile = 'work') => ({ table: 'facts', id, profile, deleted: false, updated_at: 2, fields: { state: 'live', at: now, ...fields } });

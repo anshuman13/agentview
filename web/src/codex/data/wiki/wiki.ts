@@ -1,4 +1,5 @@
 import { isOld, RETIRE_AFTER } from '../../../../../shared/claimAge';
+import { replaceTarget } from '../../../../../shared/claimActions';
 import { givenPreferences } from '../../../../../shared/preferences';
 import { decisionKey, keyWords, mayChange, similarClaim, titleWords } from '../../../../../shared/claimMatch';
 import { newId, rowKey, type Profile } from '../sync';
@@ -309,11 +310,16 @@ export const reviewCount = (_pages: Page[], facts: Fact[]) => proposals(facts).l
 export const chatOf = (f: Fact) => /^(?:claude|openrouter|codex):(.+)$/.exec(f.added_by ?? '')?.[1] ?? null;
 export const meetingOf = (f: Fact) => (f.added_by?.startsWith('meeting:') ? f.added_by.slice(8) : null);
 
+// The live claim a proposal replaces: the named claim, or the claim that has since superseded it.
+export function replacedClaim(fact: Fact, facts: Fact[]) {
+  const id = fact.replaces && replaceTarget(facts, fact.replaces, fact.profile);
+  return id ? facts.find((f) => f.id === id && f.profile === fact.profile) : undefined;
+}
+
 // Approving sets the claim live, its proposed page live, and supersedes the claim it replaces.
 export function approveChanges(fact: Fact, pages: Page[], facts: Fact[]) {
   const page = pages.find((p) => p.id === fact.page_id && p.profile === fact.profile && p.state === 'proposed');
-  const current = currentClaim(facts);
-  const old = facts.find((f) => f.id === fact.replaces && f.profile === fact.profile && current(f));
+  const old = replacedClaim(fact, facts);
   return [
     { table: 'facts' as const, row: fact, patch: { state: 'live' }, undo: { state: 'proposed' } },
     ...(page ? [{ table: 'pages' as const, row: page, patch: { state: 'live' }, undo: { state: 'proposed' } }] : []),
@@ -333,15 +339,27 @@ export function similarLive(list: Fact[], facts: Fact[]) {
   return out;
 }
 
-// Approving several claims at once sets their proposed pages live once.
+// Approving several claims at once sets their proposed pages live once. Each approval sees the claims the ones before it changed.
 export function approveAllChanges(list: Fact[], pages: Page[], facts: Fact[]) {
   const seen = new Set<string>();
-  return list.flatMap((f) => approveChanges(f, pages, facts)).filter((c) => {
-    const k = `${c.table}:${c.row.profile}:${c.row.id}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  const out: ReturnType<typeof approveChanges> = [];
+  let now = facts;
+  for (const f of list) {
+    const changes = approveChanges(f, pages, now);
+    for (const c of changes) {
+      const k = `${c.row.profile}:${c.row.id}`;
+      if (c.table === 'pages') {
+        if (seen.has(k)) continue;
+        seen.add(k);
+      }
+      out.push(c);
+    }
+    now = now.map((r) => {
+      const c = changes.find((x) => x.table === 'facts' && x.row.id === r.id && x.row.profile === r.profile);
+      return c ? { ...r, ...c.patch } : r;
+    });
+  }
+  return out;
 }
 
 export type Decision = { meeting: Meeting; text: string; at: number };

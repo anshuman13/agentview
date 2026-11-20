@@ -132,6 +132,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.staleFacts
 import no.pradhan.agentview.nativeapp.codex.wiki.wikiMarkdown
 import kotlinx.serialization.json.buildJsonArray
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
+import no.pradhan.agentview.nativeapp.codex.wiki.replaceTarget
 import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
 import no.pradhan.agentview.nativeapp.codex.wiki.similarClaim
 import no.pradhan.agentview.nativeapp.chat.appendRule
@@ -757,6 +758,17 @@ class SharedCasesTest {
                 Row("facts", o.str("id"), o.str("profile"), f = f)
             }
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, restatedClaim(c.str("text"), facts, c.str("profile"))?.id)
+        }
+    }
+
+    @Test fun replaceTarget() {
+        for (c in cases("replace-target")) {
+            val facts = c.getValue("facts").jsonArray.map { it.jsonObject }.map { o ->
+                val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+                for (k in listOf("state", "superseded_by")) o[k]?.let { f[k] = it }
+                Row("facts", o.str("id"), "work", deleted = o["deleted"]?.jsonPrimitive?.booleanOrNull == true, f = f)
+            }
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, replaceTarget(facts, c.str("id"), "work")?.id)
         }
     }
 

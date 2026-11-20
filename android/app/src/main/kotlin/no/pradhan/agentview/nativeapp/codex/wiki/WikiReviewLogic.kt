@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.codex.wiki
 
 import no.pradhan.agentview.nativeapp.codex.CodexStore
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.codex.toJson
 import no.pradhan.agentview.nativeapp.ui.plural
 
 // web/src/codex/data/wiki.ts approveChanges and wiki/ReviewMode.tsx: deciding proposed claims one at a time.
@@ -9,11 +10,23 @@ class Change(val row: Row, val patch: Map<String, Any?>, val undo: Map<String, A
 
 private fun pageOf(pages: List<Row>, fact: Row) = pages.firstOrNull { it.id == fact.str("page_id") && it.profile == fact.profile }
 
+// shared/claimActions.ts replaceTarget, checked by shared/fixtures/replace-target.json: the current claim at the end of id's superseded_by chain.
+fun replaceTarget(facts: List<Row>, id: String, profile: String): Row? {
+    fun alive(at: String) = facts.firstOrNull { it.id == at && it.profile == profile }?.takeIf { !it.deleted && (it.str("state") ?: "live") == "live" }
+    val seen = HashSet<String>()
+    var f = alive(id)
+    while (f != null && seen.add(f.id)) {
+        f = f.str("superseded_by")?.ifEmpty { null }?.let { alive(it) } ?: return f
+    }
+    return null
+}
+
+fun replacedClaim(fact: Row, facts: List<Row>, replaces: String? = fact.str("replaces")) = replaces?.let { replaceTarget(facts, it, fact.profile) }
+
 // Approving sets the claim live, its proposed page live, and supersedes the claim it replaces.
 fun approveChanges(fact: Row, pages: List<Row>, facts: List<Row>, replaces: String? = fact.str("replaces")): List<Change> {
     val page = pageOf(pages, fact)?.takeIf { it.str("state") == "proposed" }
-    val current = currentClaims(facts)
-    val old = facts.firstOrNull { it.id == replaces && it.profile == fact.profile && !it.deleted && current(it) }
+    val old = replacedClaim(fact, facts, replaces)
     return listOfNotNull(
         Change(fact, mapOf("state" to "live"), mapOf("state" to "proposed")),
         page?.let { Change(it, mapOf("state" to "live"), mapOf("state" to "proposed")) },
@@ -26,7 +39,12 @@ fun replaceChanges(fact: Row, old: Row, pages: List<Row>, facts: List<Row>) =
 
 fun approveAllChanges(list: List<Row>, pages: List<Row>, facts: List<Row>): List<Change> {
     val seen = HashSet<String>()
-    return list.flatMap { approveChanges(it, pages, facts) }.filter { seen.add("${it.row.table}:${it.row.key}") }
+    var now = facts
+    return list.flatMap { fact ->
+        val changes = approveChanges(fact, pages, now)
+        now = now.map { r -> changes.firstOrNull { it.row.table == "facts" && it.row.key == r.key }?.let { c -> r.copy(f = r.f + c.patch.mapValues { toJson(it.value) }) } ?: r }
+        changes.filter { it.row.table != "pages" || seen.add(it.row.key) }
+    }
 }
 
 fun rejectChanges(list: List<Row>, pages: List<Row>, facts: List<Row>): List<Change> {

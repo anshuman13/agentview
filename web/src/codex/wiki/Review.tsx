@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { rowKey } from '../data/sync';
-import { approveAllChanges, approveChanges, chatOf, meetingOf, proposals, reviewCount, reviewGroups, similarLive, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki/wiki';
+import { approveAllChanges, approveChanges, chatOf, meetingOf, proposals, replacedClaim, reviewCount, reviewGroups, similarLive, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki/wiki';
 import { Button, IconButton, ShowAll } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { MenuItem } from '../../ui/Menu';
@@ -30,7 +30,7 @@ function ReviewCard({ fact, repeated, similar }: { fact: Fact; repeated: boolean
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(fact.text ?? '');
   const page = fact.page_id ? pages.find((p) => p.id === fact.page_id && p.profile === fact.profile) : undefined;
-  const old = fact.replaces ? facts.find((f) => f.id === fact.replaces && f.profile === fact.profile) : undefined;
+  const old = fact.replaces ? replacedClaim(fact, facts) ?? facts.find((f) => f.id === fact.replaces && f.profile === fact.profile) : undefined;
   const chat = chatOf(fact);
   const from = meetingOf(fact);
   const meeting = from ? meetings.find((m) => m.id === from && m.profile === fact.profile) : undefined;

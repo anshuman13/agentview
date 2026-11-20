@@ -1,0 +1,12 @@
+[
+  { "name": "direct", "facts": [{ "id": "x" }], "id": "x", "expected": "x" },
+  { "name": "one hop", "facts": [{ "id": "x", "superseded_by": "a" }, { "id": "a", "state": "live" }], "id": "x", "expected": "a" },
+  { "name": "two hops", "facts": [{ "id": "x", "superseded_by": "a" }, { "id": "a", "superseded_by": "b" }, { "id": "b" }], "id": "x", "expected": "b" },
+  { "name": "link to retired is not followed", "facts": [{ "id": "x", "superseded_by": "a" }, { "id": "a", "state": "retired" }], "id": "x", "expected": "x" },
+  { "name": "link to deleted is not followed", "facts": [{ "id": "x", "superseded_by": "a" }, { "id": "a", "deleted": true }], "id": "x", "expected": "x" },
+  { "name": "hop then retired", "facts": [{ "id": "x", "superseded_by": "a" }, { "id": "a", "superseded_by": "b" }, { "id": "b", "state": "rejected" }], "id": "x", "expected": "a" },
+  { "name": "named claim rejected", "facts": [{ "id": "x", "state": "rejected" }], "id": "x", "expected": null },
+  { "name": "named claim retired", "facts": [{ "id": "x", "state": "retired" }], "id": "x", "expected": null },
+  { "name": "missing", "facts": [], "id": "x", "expected": null },
+  { "name": "loop", "facts": [{ "id": "x", "superseded_by": "a" }, { "id": "a", "superseded_by": "x" }], "id": "x", "expected": null }
+]

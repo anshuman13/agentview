@@ -61,7 +61,7 @@ export const wikiSearchTool = defineTool({
       const lines = pages.map((r) => `- page [${r.id}] ${r.title} (${r.section ?? 'no section'}, ${state(r)})`);
       const shown = claims.filter((r) => !stale(r)).slice(0, 30);
       const old = claims.filter(stale).slice(0, 10);
-      hubUsed(p, shown.map((r) => String(r.id)));
+      hubUsed(p, shown.filter((r) => state(r) === 'live').map((r) => String(r.id)));
       return [...lines, ...shown.map(claim), ...(old.length ? ['Superseded, retired or old, may be out of date:', ...old.map(claim)] : [])].join('\n') || 'Nothing matches.';
     } catch (err) {
       return `Wiki search failed: ${errText(err)}`;
