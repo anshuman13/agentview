@@ -1,7 +1,5 @@
 package no.pradhan.agentview.nativeapp.codex.jobs
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,7 +12,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -22,6 +19,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.codex.TaskActions
 import no.pradhan.agentview.nativeapp.codex.autopilot.AutopilotRow
 import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.codex.replyQueue
@@ -40,10 +38,10 @@ import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
-import no.pradhan.agentview.nativeapp.ui.Toggle
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
@@ -58,8 +56,23 @@ private fun StateBadge(state: JobState) = when (state) {
 
 fun toggleJob(hub: Hub, j: Row, on: Boolean) = hub.codex.update(j, mapOf("enabled" to if (on) 1 else 0, "next_run_at" to null))
 
+private fun runJobNow(hub: Hub, actions: TaskActions, j: Row) {
+    if (hub.codex.update(j, mapOf("next_run_at" to System.currentTimeMillis()))) actions.say("Starts within a minute")
+}
+
+private fun deleteJob(actions: TaskActions, j: Row) = actions.change(j, mapOf("deleted" to true), "Deleted ${j.str("name")?.ifEmpty { null } ?: "job"}")
+
 @Composable
-fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopilot: () -> Unit, onOpen: (Row) -> Unit) {
+private fun JobMenu(hub: Hub, actions: TaskActions, j: Row, canRun: Boolean, close: () -> Unit) {
+    val on = isEnabled(j)
+    MenuItem("Run now", "play", { close(); runJobNow(hub, actions, j) }, enabled = canRun)
+    MenuItem(if (on) "Disable" else "Enable", if (on) "circle-slash" else "play", { close(); toggleJob(hub, j, !on) })
+    MenuSeparator()
+    MenuItem("Delete", "trash", { close(); deleteJob(actions, j) }, danger = true)
+}
+
+@Composable
+fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onAutopilot: () -> Unit, onOpen: (Row) -> Unit) {
     val haptic = LocalHapticFeedback.current
     val jobs = remember(st.jobs, profile) { jobsOf(st.jobs, profile) }
     val byJob = remember(st.runs) { runsByJob(st.runs) }
@@ -78,11 +91,7 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopi
                         onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu.value = true },
                         trailing = {
                             if (state != null) StateBadge(state)
-                            MoreButton(expanded = menu) { close ->
-                                val on = isEnabled(j)
-                                MenuItem(if (on) "Disable" else "Enable", if (on) "circle-slash" else "play", { close(); toggleJob(hub, j, !on) })
-                                MenuItem("Open", "arrow-right", { close(); onOpen(j) })
-                            }
+                            MoreButton(expanded = menu) { close -> JobMenu(hub, actions, j, canRunNow(j, own, now), close) }
                         })
                 }
             }
@@ -98,7 +107,7 @@ fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String>
 }
 
 @Composable
-fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
+fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActions) {
     val runs = remember(st.runs, job.key) { runsOf(st.runs, job) }
     val state = jobState(job, runs, now)
     var runsOpen by rememberSaveable(job.key) { mutableStateOf(false) }
@@ -108,16 +117,17 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             Text(job.str("name")?.ifEmpty { null } ?: "Untitled job", Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)
-            LayoutRow(Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-                Text(listOfNotNull(describeSchedule(job.str("schedule")), profileLabel(job.profile)).joinToString(" · "), style = Type.subheadline, color = av.fgMuted)
+            SectionHeader("${profileLabel(job.profile)} account", action = {
                 if (state != null) StateBadge(state)
-            }
+                Button("Run now", { runJobNow(hub, actions, job) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, icon = "play", enabled = canRunNow(job, runs, now))
+                MoreButton { close -> JobMenu(hub, actions, job, canRunNow(job, runs, now), close) }
+            })
         }
-        item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Enabled", jobMeta(job, runs, now), trailing = { Toggle(isEnabled(job)) { toggleJob(hub, job, it) } }) } }
         item { SectionHeader("Prompt") }
         item { Group { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp5), style = Type.body, color = av.fg) } }
         item {
             Group(Modifier.padding(top = Tokens.sp4)) {
+                ListRow("When", jobMeta(job, runs, now)); Hairline()
                 repoLabel(job.str("repo"))?.let { ListRow("Repo", it); Hairline() }
                 if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is not pushed", trailing = { Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) } }); Hairline() }
                 if (tools != null) { ListRow("Tools", toolLabels(tools, servers).joinToString(", ")); Hairline() }

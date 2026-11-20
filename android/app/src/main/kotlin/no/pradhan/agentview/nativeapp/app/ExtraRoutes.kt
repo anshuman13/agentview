@@ -70,10 +70,10 @@ fun ExtraContent(
             val p = st.pages.firstOrNull { it.key == key && !it.deleted }
             if (p == null) EmptyState("This page is gone") else WikiPageView(st, p, now, actions)
         }
-        route == "jobs" -> JobsListPage(hub, st, profile, now, { push("autopilot") }) { push("job:${it.key}") }
+        route == "jobs" -> JobsListPage(hub, st, profile, now, actions, { push("autopilot") }) { push("job:${it.key}") }
         else -> {
             val j = st.jobs.firstOrNull { it.key == key && !it.deleted }
-            if (j == null) EmptyState("This job is gone") else JobPageView(hub, st, j, now)
+            if (j == null) EmptyState("This job is gone") else JobPageView(hub, st, j, now, actions)
         }
     }
 }

@@ -19,6 +19,7 @@ import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.item
 import no.pradhan.agentview.nativeapp.codex.jobs.JobState
+import no.pradhan.agentview.nativeapp.codex.jobs.canRunNow
 import no.pradhan.agentview.nativeapp.codex.jobs.describeSchedule
 import no.pradhan.agentview.nativeapp.codex.jobs.isEnabled
 import no.pradhan.agentview.nativeapp.codex.jobs.jobMeta
@@ -276,6 +277,17 @@ class MeetingsWikiTest {
         assertEquals(listOf("new", "old"), runsByJob(listOf(run("old", "ok", 1), run("new", "ok", 2))).of(job).map { it.id })
         assertEquals("1 min 5 s · $0.50", runMeta(run("r", "ok", NOW)))
         assertEquals("Every hour", jobMeta(job, emptyList(), NOW))
+    }
+
+    @Test fun runNowIsOffWhileRunningQueuedOrBlank() {
+        val job = row("jobs", "j1", WORK, "enabled" to 1, "prompt" to "Digest")
+        fun run(status: String) = row("runs", "r", WORK, "job_id" to "j1", "status" to status, "started_at" to NOW)
+        assertTrue(canRunNow(job, emptyList(), NOW))
+        assertTrue(canRunNow(job, listOf(run("ok")), NOW))
+        assertFalse(canRunNow(job, listOf(run("running")), NOW))
+        assertFalse(canRunNow(row("jobs", "j4", WORK, "prompt" to "Digest", "next_run_at" to NOW - 1), emptyList(), NOW))
+        assertFalse(canRunNow(row("jobs", "j2", WORK, "prompt" to "  "), emptyList(), NOW))
+        assertFalse(canRunNow(row("jobs", "j3", WORK), emptyList(), NOW))
     }
 
     @Test fun jobsListSortsByNameAndFiltersProfile() {
