@@ -2,6 +2,7 @@ import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { api, notice, prompt, queueNext, steer, useStore } from '../../app/store';
 import { save } from '../../ui/util';
 import { wsUrl } from '../../app/api';
+import { loopAt } from '../../../../shared/util';
 import { buildPrompt } from '../../../../shared/specTasks';
 import { remember, STORED_KEY, terminalId, withUses, type Use } from './composerLogic';
 
@@ -79,9 +80,20 @@ export function useSubmit(i: Input) {
     i.apply('');
   };
 
+  const sendLater = (time: string) => {
+    const t = i.text.trim();
+    if (!t) return;
+    if (i.uploading > 0) return notice('Wait for the upload to finish');
+    const lost = record(t);
+    prompt(loopAt(time, withUses(t, i.uses)), lost);
+    i.setUses([]);
+    i.clearHistoryStep();
+    i.apply('');
+  };
+
   useEffect(() => {
     if (i.uploading === 0 && sendAfter.current !== null) submit(sendAfter.current);
   }, [i.uploading]);
 
-  return { submit, sendBuild };
+  return { submit, sendBuild, sendLater };
 }

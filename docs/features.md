@@ -429,7 +429,10 @@ weekly window is full; a failed check keeps it.
 
 `/loop 10m <prompt>` sends the prompt again every 10 minutes, `/loop until 07:00 <prompt>` sends it again as soon
 as each round ends until that time, `/loop 30m until 07:00 <prompt>` combines the two, and `/loop at 01:50 <prompt>`
-sends it once at that time. When a turn ends on a usage limit, the timeline shows the reset time and a "Continue at
+sends it once at that time. The chat composer's clock button (Send at, web) picks a time, today or the next day
+when it has passed, and sends the message as `/loop at HH:MM`; the menu says when it replaces a running loop or goal,
+and the loop card reads "Sends at HH:MM" with a Cancel button until it fires. When a turn ends on a usage limit,
+the timeline shows the reset time and a "Continue at
 HH:MM" link that schedules the last prompt that way. A fire that lands while
 Claude is still working waits for the round to end. The loop lives in the AgentView server, so it survives a server
 restart and never depends on the CLI's own scheduled jobs. Your messages and Stop interrupt the current round but

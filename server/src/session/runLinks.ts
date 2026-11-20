@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { MAX_GOAL_ROUNDS, type ChatRun, type Repeat, type RunEdit, type RunOp } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
 import { APP, post } from '../integrations/notify.js';
-import { ROUND_INSTRUCTION } from './repeat.js';
+import { ROUND_INSTRUCTION, once } from './repeat.js';
 import { WAITING, openTries, roundResult } from './runs.js';
 import type { AgentSession } from './session.js';
 import { STOPPED_BY_YOU } from '../../../shared/goalText.js';
@@ -44,7 +44,7 @@ export class RunLinks {
 
   private start(r: Repeat) {
     const what = r.goal ?? r.prompt;
-    return this.s.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.s.state.session.sessionId ?? '', chatId: this.s.id, title: this.title(what), what, provider: this.s.state.session.provider, round: r.round, max: r.goal && !r.every ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt, ...(r.goal && r.every && { every: r.every }), ...(r.endAt && { endAt: r.endAt }), ...(r.capPct && { capPct: r.capPct }), ...(r.capUsd && { capUsd: r.capUsd }), ...(r.maxBuilds && { maxBuilds: r.maxBuilds, builds: r.builds?.length ?? 0 }) });
+    return this.s.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.s.state.session.sessionId ?? '', chatId: this.s.id, title: this.title(what), what, provider: this.s.state.session.provider, round: r.round, max: r.goal && !r.every ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt, ...(once(r) && { once: true }), ...(r.goal && r.every && { every: r.every }), ...(r.endAt && { endAt: r.endAt }), ...(r.capPct && { capPct: r.capPct }), ...(r.capUsd && { capUsd: r.capUsd }), ...(r.maxBuilds && { maxBuilds: r.maxBuilds, builds: r.builds?.length ?? 0 }) });
   }
 
   // A restart keeps the run of a loop or goal; the chat has a new id.

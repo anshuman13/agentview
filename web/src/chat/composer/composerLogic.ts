@@ -3,7 +3,7 @@ import { match } from '../../workspace/FileSwitcher';
 import { toolId } from '../../ops/mcpHelpers';
 import { compactAt, type ChatEvent, type SavedSession } from '../../../../shared/protocol';
 import { createTerm, listTerms } from '../../workspace/termApi';
-import { isBlock } from '../../../../shared/util';
+import { isBlock, nextClock } from '../../../../shared/util';
 import { timedMeetings } from '../../../../shared/plan';
 import { profileOfPath } from '../../../../shared/workspace';
 import { live, type Meeting } from '../../codex/data/wiki/wiki';
@@ -182,3 +182,9 @@ export const nextMode = (modes: { value: string }[], mode: string) => modes[(mod
 // Fork chat: the new chat reads the old one's transcript (via @chat) and summarises it, so work continues from a short brief.
 export const handoffText = (sessionId: string) =>
   `Summarise @chat:${sessionId} so we can continue its work in this chat: the goal, decisions made, what is done, what is still open, and the files and commands that matter. At most 15 lines. Then wait for my next message.`;
+
+// The day a time picked in Send at falls on: today unless it has passed.
+export function laterDay(time: string, now = Date.now()) {
+  const [h, m] = time.split(':').map(Number);
+  return new Date(nextClock(h, m, now)).getDate() === new Date(now).getDate() ? 'today' : 'tomorrow';
+}

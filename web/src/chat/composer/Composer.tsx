@@ -10,6 +10,7 @@ import { Announcer } from '../Announcer';
 import { ChatSettings, useChatSettings, type Pick } from '../ChatSettings';
 import { ghostFor, type Use } from './composerLogic';
 import { ComposerFoot, SendButton } from './ComposerFoot';
+import { SendAt } from './SendAt';
 import { ComposerStats } from './ComposerStats';
 import { PickerSheets } from './PickerSheets';
 import { SharedConfirm, useSharedIntake } from './SharedText';
@@ -62,7 +63,7 @@ export const Composer = memo(function Composer() {
     wantCaret.current = c;
     setText(next);
   };
-  const { submit, sendBuild } = useSubmit({
+  const { submit, sendBuild, sendLater } = useSubmit({
     text, setText, shell: ac.shell, uploading, uses, setUses, apply,
     sentHistory: h.sentHistory, setSentHistory: h.setSentHistory, clearHistoryStep: () => h.setHist(null),
   });
@@ -102,14 +103,14 @@ export const Composer = memo(function Composer() {
             onPaste={(e) => { if (e.clipboardData.files.length) { e.preventDefault(); void attach([...e.clipboardData.files]); } }}
           />
         </div>
-        {narrow && (typed || running ? <SendButton typed={typed} shell={ac.shell} submit={submit} /> : <Voice onText={dictate} />)}
+        {narrow && (typed || running ? <>{typed && <SendAt typed={typed} shell={ac.shell} sendLater={sendLater} />}<SendButton typed={typed} shell={ac.shell} submit={submit} /></> : <Voice onText={dictate} />)}
         </div>
         {ghost && touch() && (
           <button className="cp-suggest" title="Use this suggestion" onPointerDown={(e) => e.preventDefault()} onClick={() => apply(text + ghost)}>
             <Icon name="arrow-right" small /><span>{text.length > 12 && '…'}{text.slice(-12)}<b>{ghost}</b></span>
           </button>
         )}
-        {!narrow && <ComposerFoot uses={uses} uploading={uploading} typed={typed} shell={ac.shell} setPick={setPick} attach={attach} dictate={dictate} submit={submit} />}
+        {!narrow && <ComposerFoot uses={uses} uploading={uploading} typed={typed} shell={ac.shell} setPick={setPick} attach={attach} dictate={dictate} submit={submit} sendLater={sendLater} />}
       </div>
       <ComposerStats hint={ac.shell ? 'Runs in the terminal' : ''} />
       {ac.open && (

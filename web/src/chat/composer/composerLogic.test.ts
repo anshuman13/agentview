@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sharedTask, triggerAt, turnEnd, withUses, draftLine } from './composerLogic';
+import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, laterDay, sharedTask, triggerAt, turnEnd, withUses, draftLine } from './composerLogic';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, SavedSession } from '../../../../shared/protocol';
 
@@ -224,5 +224,13 @@ describe('draftLine', () => {
   it('takes the first non-empty line, trimmed', () => {
     expect(draftLine('\n  fix the login \nand more')).toBe('fix the login');
     expect(draftLine('  \n ')).toBe('');
+  });
+});
+
+describe('laterDay', () => {
+  const now = new Date(2026, 10, 9, 14, 0).getTime();
+  it('is today when the time is ahead and tomorrow when it has passed', () => {
+    expect(laterDay('22:00', now)).toBe('today');
+    expect(laterDay('09:30', now)).toBe('tomorrow');
   });
 });
