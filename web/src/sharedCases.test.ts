@@ -41,7 +41,7 @@ import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memor
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { addUse, buildHistory, chatMarkdown, draftKey, failedLine, ghostFor, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
-import { composerPlaceholder, shellLine, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
+import { composerPlaceholder, quoteText, shellLine, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
 import { headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { capLine } from './sessions/goalLogic';
 import { tryColumn } from './sessions/triesLogic';
@@ -685,6 +685,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; lang: string | null; code: string; expected: string | null }>('shell-line')) {
     it(`shellLine: ${c.name}`, () => expect(shellLine(c.lang, c.code)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; text: string; times?: number; after?: string; expected?: string; endsWith?: string; length?: number }>('quote-text')) {
+    it(`quoteText: ${c.name}`, () => {
+      const out = quoteText(c.text.repeat(c.times ?? 1) + (c.after ?? ''));
+      if (c.expected !== undefined) expect(out).toBe(c.expected);
+      else expect([out.endsWith(c.endsWith!), out.length]).toEqual([true, c.length!]);
+    });
   }
 
   for (const c of cases<{ name: string; events: ChatEvent[]; running?: boolean; expected: string[] }>('turn-answers')) {

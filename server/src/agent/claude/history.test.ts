@@ -128,6 +128,39 @@ describe('sessionMessages', () => {
 
 });
 
+describe('historyFrom sub-agents', () => {
+  const msg = (uuid: string, type: string, content: unknown) => ({ type, uuid, session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
+  const call = (uuid: string, id: string) => msg(uuid, 'assistant', [{ type: 'tool_use', id, name: 'Agent', input: { description: `agent ${id}` } }]);
+  const done = (uuid: string, id: string) => msg(uuid, 'user', [{ type: 'tool_result', tool_use_id: id, content: 'done' }]);
+  const step = (uuid: string, text: string) => msg(uuid, 'assistant', [{ type: 'text', text }]);
+  const order = (events: { kind: string; id: string; text?: string; parent?: string }[]) =>
+    events.map((e) => (e.kind === 'assistant' ? `${e.parent ?? 'main'}:${e.text}` : e.kind === 'user' || e.kind === 'result' ? e.kind : `${e.kind}:${e.id}`));
+
+  it('puts each sub-agent after its own call and the reply last', () => {
+    const main = [msg('u', 'user', 'go'), call('c1', 'a1'), done('r1', 'a1'), call('c2', 'a2'), done('r2', 'a2'), step('m', 'reply')];
+    const subs = { a1: [step('s1', 'one'), step('s2', 'two')], a2: [step('s3', 'three')] };
+    expect(order(historyFrom(main, subs).events as never)).toEqual([
+      'user', 'tool_use:a1', 'agent:a1:agent', 'a1:one', 'a1:two', 'tool_result:r1:0',
+      'tool_use:a2', 'agent:a2:agent', 'a2:three', 'tool_result:r2:0', 'main:reply', 'result',
+    ]);
+  });
+
+  it('puts a nested sub-agent after its call inside its parent, and an unmatched one at the end', () => {
+    const main = [msg('u', 'user', 'go'), call('c1', 'a1'), done('r1', 'a1')];
+    const subs = { orphanChild: [step('s5', 'deep')], b1: [step('s3', 'inner')], a1: [step('s1', 'outer'), call('s2', 'b1'), done('s4', 'b1')], gone: [step('s6', 'lost'), call('s7', 'orphanChild')] };
+    expect(order(historyFrom(main, subs).events as never)).toEqual([
+      'user', 'tool_use:a1', 'agent:a1:agent', 'a1:outer', 'tool_use:b1', 'agent:b1:agent', 'b1:inner', 'tool_result:s4:0', 'tool_result:r1:0', 'result',
+      'gone:lost', 'tool_use:orphanChild', 'agent:orphanChild:agent', 'orphanChild:deep',
+    ]);
+  });
+
+  it('keeps every sub-agent step exactly once', () => {
+    const main = [call('c1', 'a1'), call('c2', 'a1')];
+    const events = historyFrom(main, { a1: [step('s1', 'once')] }).events;
+    expect(events.filter((e) => e.kind === 'assistant' && e.text === 'once')).toHaveLength(1);
+  });
+});
+
 describe('subagentMessages', () => {
   it('keeps every parallel tool call and result, not only one parent chain', async () => {
     const sid = '11111111-2222-4333-8444-000000000002';

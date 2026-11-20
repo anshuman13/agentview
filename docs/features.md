@@ -295,6 +295,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   a Markdown quote ("> " on each line, cut at 1500 characters, a blank line after) after any draft (`quoteText` in
   `shared/composerText.ts`). A selection in a prompt, a step, an agent box or across two replies shows nothing; Esc or a
   click elsewhere hides it. The phone uses the system selection menu.
+- On the phone a finished reply's footer has Quote after Copy (not in read-only mode). It opens a Quote sheet with the
+  reply's blocks (split at blank lines, fenced code whole), each clamped to 4 lines and checked by a tap; Quote N puts the
+  picked blocks, in reply order, after the draft with the same rule as web (`quoteText` in `chat/QuoteSheet.kt`,
+  `shared/fixtures/quote-text.json`).
 - A fenced bash, sh, shell, zsh or console block of one line in a chat reply shows Run in terminal beside Copy (web on
   hover, Android an icon button, not in read-only mode). It types the command, without a leading "$ ", into the chat's
   last terminal (or a new one) and opens the terminal without pressing Enter (`shellLine`, checked by
@@ -578,6 +582,7 @@ Agents in the More menu of the task box header opens a pane that lists the subag
 Click one for its report, prompt and steps. On the phone it is a tab of its own.
 Agents started by a Workflow call are listed under a section named after the workflow, and update live while it runs, while the chat is open, also during a turn.
 An agent the chat reports as running but whose start is not in the loaded events shows as a Running row, so the pane says "No agents yet" only when none runs.
+A chat rebuilt from its Claude session file after a host restart puts each subagent's steps right after its Agent call (a nested one inside its parent's steps; one whose call is missing at the end), so its agents keep their names like a live chat's.
 
 ## Advisors
 

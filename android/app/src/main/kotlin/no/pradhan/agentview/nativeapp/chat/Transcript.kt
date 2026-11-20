@@ -433,7 +433,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.User -> UserRow(hub, it, chat)
         is Item.Assistant -> {
             Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
-            if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, it, answer, rewind)
+            if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, it, chat, answer, rewind)
         }
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
@@ -480,10 +480,12 @@ private fun BubbleFooter(label: String, action: String, onClick: () -> Unit) {
     }
 }
 
-// Copy and Rewind files under the turn's last reply (web Transcript.tsx RowImpl and Rewind.tsx).
+// Copy, Quote and Rewind files under the turn's last reply (web Transcript.tsx RowImpl and Rewind.tsx).
 @Composable
-private fun ReplyActions(hub: Hub, it: Item.Assistant, answer: Boolean, rewind: Item.User?) {
+private fun ReplyActions(hub: Hub, it: Item.Assistant, chat: String, answer: Boolean, rewind: Item.User?) {
     var ask by remember { mutableStateOf(false) }
+    var quoting by remember { mutableStateOf(false) }
+    if (quoting) QuoteSheet(hub, chat, it.text) { quoting = false }
     if (ask && rewind != null) ConfirmDialog(
         "Rewind files?",
         "Puts every file ${providerLabel(hub.store.state.value.session?.provider)} changed back to how it was before \"${rewind.text.lineSequence().first().take(80)}\". Edits from later turns are undone too; the conversation stays.",
@@ -492,6 +494,7 @@ private fun ReplyActions(hub: Hub, it: Item.Assistant, answer: Boolean, rewind: 
     val clip = LocalClipboardManager.current
     Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
         if (answer) Button("Copy", { clip.setText(AnnotatedString(it.text.trim())); hub.notice.value = "Reply copied" }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "copy")
+        if (answer && !hub.readOnly) Button("Quote", { quoting = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "quote")
         if (rewind != null) Button("Rewind files", { ask = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "discard")
     }
 }

@@ -46,6 +46,7 @@ import no.pradhan.agentview.nativeapp.chat.attachMark
 import no.pradhan.agentview.nativeapp.chat.buildHistory
 import no.pradhan.agentview.nativeapp.chat.composerPlaceholder
 import no.pradhan.agentview.nativeapp.chat.ghostFor
+import no.pradhan.agentview.nativeapp.chat.quoteText
 import no.pradhan.agentview.nativeapp.chat.withUses
 import no.pradhan.agentview.nativeapp.chat.findInChat
 import no.pradhan.agentview.nativeapp.chat.findStart
@@ -694,6 +695,15 @@ class SharedCasesTest {
     @Test fun shellLine() {
         for (c in cases("shell-line")) {
             assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.contentOrNull, shellLine(c.getValue("lang").jsonPrimitive.contentOrNull, c.str("code")))
+        }
+    }
+
+    @Test fun quoteText() {
+        for (c in cases("quote-text")) {
+            val out = quoteText(c.str("text").repeat(c["times"]?.jsonPrimitive?.int ?: 1) + (c["after"]?.jsonPrimitive?.content ?: ""))
+            val expected = c["expected"]?.jsonPrimitive?.content
+            if (expected != null) assertEquals(c.str("name"), expected, out)
+            else assertEquals(c.str("name"), listOf(true, c.getValue("length").jsonPrimitive.int), listOf(out.endsWith(c.str("endsWith")), out.length))
         }
     }
 

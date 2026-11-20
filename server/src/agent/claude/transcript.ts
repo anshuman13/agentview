@@ -150,6 +150,15 @@ function withWorkflowRuns(st: HistoryState, events: ChatEvent[], runs: WorkflowR
   return events.flatMap((e) => (e.kind === 'tool_use' ? [e, ...(byCall.get(e.id) ?? []).flatMap((run) => workflowEvents(run, st.workflowCalls.get(e.id)!.name, e.at))] : [e]));
 }
 
+// Each sub-agent's steps go right after its Agent call, so a rebuilt chat pages like a live one.
+function withSubagents(events: ChatEvent[], subagents: Subagents, placed: Set<string>): ChatEvent[] {
+  return events.flatMap((e) => {
+    if (e.kind !== 'tool_use' || !subagents[e.id] || placed.has(e.id)) return [e];
+    placed.add(e.id);
+    return [e, ...withSubagents(subagentEvents(subagents[e.id], e.id, subagents), subagents, placed)];
+  });
+}
+
 export function historyFrom(msgs: SessionMessage[], subagents: Subagents = {}, workflows: WorkflowRun[] = []) {
   const st: HistoryState = {
     events: [], context: null, cache: null, lastText: '', lastAt: 0, inTurn: false, prev: '',
@@ -159,8 +168,13 @@ export function historyFrom(msgs: SessionMessage[], subagents: Subagents = {}, w
     if (!m.parent_tool_use_id) readMessage(st, m);
   }
   endTurn(st);
-  for (const [parent, sub] of Object.entries(subagents)) st.events.push(...subagentEvents(sub, parent, subagents));
-  const all = withWorkflowRuns(st, withAgents(st.events, subagents, st.usages, st.agents), workflows);
+  const placed = new Set<string>();
+  const events = withSubagents(st.events, subagents, placed);
+  const calls = new Set(Object.values(subagents).flat().flatMap((m) => (m.type === 'assistant' ? blocksOf(m).filter((b) => b.type === 'tool_use').map((b) => b.id) : [])));
+  for (const [parent, sub] of Object.entries(subagents)) {
+    if (!placed.has(parent) && !calls.has(parent)) events.push(...withSubagents(subagentEvents(sub, parent, subagents), subagents, placed));
+  }
+  const all = withWorkflowRuns(st, withAgents(events, subagents, st.usages, st.agents), workflows);
   return { events: all, context: st.context, cache: st.cache, agents: st.agents };
 }
 
