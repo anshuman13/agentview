@@ -57,6 +57,7 @@ import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.select
 
 @Composable
@@ -117,6 +118,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     val d = rememberOverviewData(hub, st, profile, now)
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }
     var all by remember { mutableStateOf(false) }
+    var plan by remember { mutableStateOf<List<PlanSlot>?>(null) }
     val live by hub.store.state.select { it.live }
     val running = remember(live) { runningChats(live) }
     val counts by hub.counts.collectAsState()
@@ -124,6 +126,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         item { UpNextSection(d, now, actions, onOpen, onNeeds, onAdd, onMeeting) }
         if (running.isNotEmpty()) runningSection(running, counts.running + counts.waiting) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
+        planDaySection(d, plan, { plan = it }, now, actions)
         if (goals.isNotEmpty()) goalsSection(st, goals, onGoals)
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
     }
@@ -186,6 +189,38 @@ private fun LazyListScope.todaySection(d: OverviewData, now: Long, actions: Task
             }
         }
         if (rows.size > shown.size) Button("Show all ${rows.size}", onShowAll, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+    }
+}
+
+// Proposes slots for today's estimated tasks in the free work gaps; Accept sets each task's due time, with one undo.
+private fun LazyListScope.planDaySection(d: OverviewData, plan: List<PlanSlot>?, onPlan: (List<PlanSlot>?) -> Unit, now: Long, actions: TaskActions) {
+    val tasks = listOfNotNull(d.today.upNextTask) + d.today.todo
+    val plans = { tasks.map { PlanTask(it, it.at, hasTime(it.at)) } }
+    fun accept(slots: List<PlanSlot>) {
+        for (x in slots) actions.edit(x.task.row, mapOf("at" to x.span.first))
+        onPlan(plan?.filter { it !in slots }?.takeIf { it.isNotEmpty() })
+        actions.undoable("Planned ${plural(slots.size, "task")}") { slots.forEach { actions.edit(it.task.row, mapOf("at" to it.task.row.at)) } }
+    }
+    if (plan == null) {
+        if (tasks.none { !hasTime(it.at) && estimateMinutes(it.title) != null }) return
+        item {
+            Button("Plan my day", {
+                val busy = d.mt.today.filter { it.endsAt != null && it.endsAt!! > it.startsAt!! && it.endsAt!! - it.startsAt!! < 20 * 3_600_000L }.map { it.startsAt!! to it.endsAt!! }
+                val slots = planToday(plans(), busy, now)
+                if (slots.isNotEmpty()) onPlan(slots) else actions.say("No estimated task fits the free time today")
+            }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+        }
+        return
+    }
+    item { SectionHeader("Plan my day", action = { Button("Close", { onPlan(null) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
+    item {
+        Group {
+            plan.sortedBy { it.span.first }.forEachIndexed { i, x ->
+                if (i > 0) Hairline()
+                ListRow(x.task.title ?: "", "${clock(x.span.first)} - ${clock(x.span.second)}", trailing = { Button("Accept", { accept(listOf(x)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
+            }
+        }
+        Button("Accept all", { accept(plan) }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Filled, size = ButtonSize.Sm)
     }
 }
 
