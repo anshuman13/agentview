@@ -77,9 +77,11 @@ fun taskMetaParts(row: Row): TaskMetaParts {
         !done && row.priority == 2 -> "Medium"
         else -> ""
     }
-    val preview = if (row.status == "note" && checks.isEmpty() && row.people.isNullOrEmpty() && !Regex("^https?://\\S+$").matches(first)) first else ""
+    val preview = if (row.status == "note" && checks.isEmpty() && row.people.isNullOrEmpty() && !BARE_URL.matches(first)) first else ""
     return TaskMetaParts(extra, preview)
 }
+
+private val BARE_URL = Regex("^https?://\\S+$")
 
 // The meta line of a task: due text (red when late), then repeat, checklist or priority, else a note's preview.
 @Composable
@@ -122,12 +124,13 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
         false
     })
     val later = nextNine(now, row.profile)
+    val ring = if (isDone) null else if (row.profile == WORK) av.work else av.personal
     val body = @Composable {
         Box(Modifier.background(av.groupCard)) {
             ListRow(
                 title = row.title ?: UNTITLED,
                 meta = taskMeta(row, now, inDay),
-                leading = if (row.status == "note") null else if (picking) { { CheckCircle(pick!!.selected, if (pick.selected) "Deselect ${row.title}" else "Select ${row.title}") { pick.toggle() } } } else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done", if (isDone) null else if (row.profile == WORK) av.work else av.personal) { if (isDone) actions.reopen(row) else actions.done(row) } } },
+                leading = if (row.status == "note") null else if (picking) { { CheckCircle(pick!!.selected, if (pick.selected) "Deselect ${row.title}" else "Select ${row.title}", ring) { pick.toggle() } } } else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done", ring) { if (isDone) actions.reopen(row) else actions.done(row) } } },
                 state = if (row.status == "suggested") ({ Badge("Needs you", BadgeTone.Waiting) }) else null,
                 stateSlot = true,
                 menu = { dismiss -> TaskMenu(row, dismiss, actions, onOpen) },
