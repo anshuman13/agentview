@@ -26,7 +26,7 @@ export function TagPage({ tag }: { tag: string }) {
           <div className="ui-group">
             {rows.map((r) => <TaskRow key={r.profile + r.id} row={r} onOpen={() => setView({ open: rowKey(r) })} />)}
           </div>
-        ) : <EmptyState size="sm" title={`No open tasks with #${tag}`} />}
+        ) : <EmptyState size="sm" icon="checklist" title={`No open tasks with #${tag}`} />}
       </div>
       <SnackBar />
     </div>

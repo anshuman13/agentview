@@ -57,7 +57,7 @@ export function SeriesPage({ series }: { series: string }) {
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
-          {!members.length ? <EmptyState size="md" title="No meetings" /> : (
+          {!members.length ? <EmptyState size="md" icon="calendar" title="No meetings" /> : (
             <>
               <Section label={members[0].title} action={(
                 <>
@@ -83,7 +83,7 @@ export function SeriesPage({ series }: { series: string }) {
                     <ActionRow row={r} meeting={m} />
                     <button className="mt-person mt-series-from" onClick={() => openMeeting(m)}>{day(m)}</button>
                   </div>
-                )} /></div> : <EmptyState size="sm" title="Nothing open" />}
+                )} /></div> : <EmptyState size="sm" icon="check" title="Nothing open" />}
               </section>
               <section className="mt-sec">
                 <Section label="Occurrences" count={members.length} />

@@ -40,7 +40,7 @@ export function SearchResults({ query, candidates, rows }: { query: string; cand
   return (
     <section className="as-results">
       <Section label="Results" count={sectionCount(found.length)} />
-      {found.length ? rows(found, undefined, false) : <EmptyState size="sm" title="No task matches" />}
+      {found.length ? rows(found, undefined, false) : <EmptyState size="sm" icon="search" title="No task matches" />}
     </section>
   );
 }

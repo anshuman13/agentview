@@ -64,7 +64,7 @@ export function Person({ name }: { name: string }) {
 
           <section className="mt-sec">
             <Section label="Meetings" count={sectionCount(mine.length)} />
-            {mine.length > 0 ? <Group rows={mine} name={name} row={(m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />} /> : <EmptyState size="sm" title="No meetings" />}
+            {mine.length > 0 ? <Group rows={mine} name={name} row={(m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />} /> : <EmptyState size="sm" icon="calendar" title="No meetings" />}
           </section>
 
           <WikiClaims claims={claims} pageTitle={pageTitle} />
