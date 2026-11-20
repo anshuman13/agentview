@@ -4,6 +4,8 @@ import { errText } from '../../../shared/util';
 import { setUi, useStore } from '../app/store';
 import { postGit } from './fileApi';
 import { Icon } from '../ui/Icon';
+import { Button, IconButton } from '../ui/Button';
+import { EmptyState } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
 import { refresh, useGit } from './gitStatus';
@@ -21,9 +23,7 @@ const DRAFT_PROMPT = 'Propose a commit subject for the staged changes in this re
 
 function Action({ icon, title, onClick }: { icon: string; title: string; onClick: () => void }) {
   return (
-    <button className="icon-btn" title={title} onClick={(e) => { e.stopPropagation(); onClick(); }}>
-      <Icon name={icon} small />
-    </button>
+    <IconButton icon={icon} small label={title} onClick={(e) => { e.stopPropagation(); onClick(); }} />
   );
 }
 
@@ -57,12 +57,8 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void commit(); } }}
       />
       <div className="scm-commit-actions">
-        <button className="btn primary" disabled={!canCommit} title={staged ? 'Commit the staged changes' : 'Stage changes to commit them'} onClick={() => void commit()}>
-          <Icon name="check" small /> Commit
-        </button>
-        <button className="btn quiet scm-claude" disabled={staged === 0} title={staged ? 'Ask the agent in the chat for a commit subject' : 'Stage changes first'} onClick={() => askChat(DRAFT_PROMPT)}>
-          <Icon name="sparkle" small /> Write message with {label}
-        </button>
+        <Button variant="primary" icon="check" disabled={!canCommit} title={staged ? 'Commit the staged changes' : 'Stage changes to commit them'} onClick={() => void commit()}>Commit</Button>
+        <Button variant="quiet" icon="sparkle" className="scm-claude" disabled={staged === 0} title={staged ? 'Ask the agent in the chat for a commit subject' : 'Stage changes first'} onClick={() => askChat(DRAFT_PROMPT)}>Write message with {label}</Button>
       </div>
     </div>
   );
@@ -177,9 +173,7 @@ export function Changes() {
         <>
           <CommitBox branch={status?.branch ?? ''} staged={staged.length} onCommit={(message) => run('commit', { message })} />
           <div className="scm-commit-actions scm-review">
-            <button className="btn quiet scm-claude" title={`${label} reviews the working tree, findings show below`} onClick={() => askChat(REVIEW_LOCAL)}>
-              <Icon name="search" small /> Review changes with {label}
-            </button>
+            <Button variant="quiet" icon="search" className="scm-claude" title={`${label} reviews the working tree, findings show below`} onClick={() => askChat(REVIEW_LOCAL)}>Review changes with {label}</Button>
           </div>
         </>
       )}
@@ -219,7 +213,7 @@ export function Changes() {
             </>
           )}
         />
-        {status && !files.length && <div className="scm-empty">No changes</div>}
+        {status && !files.length && <EmptyState size="sm" title="No changes" />}
         <Findings target="local" />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}

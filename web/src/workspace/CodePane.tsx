@@ -6,6 +6,7 @@ import { startGoal } from '../sessions/goalLogic';
 import { fileRequest, isDocPath } from './fileApi';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
+import { EmptyState } from '../ui/Panel';
 import { Menu, MenuItem } from '../ui/Menu';
 import { readFlag, saveFlag, useSlot } from '../ui/util';
 import { FileIcon } from './FileIcon';
@@ -62,7 +63,7 @@ class Guard extends Component<{ children: ReactNode }, { error: boolean }> {
     return { error: true };
   }
   render() {
-    return this.state.error ? <div className="cd-empty">This file could not be shown</div> : this.props.children;
+    return this.state.error ? <EmptyState size="sm" title="This file could not be shown" /> : this.props.children;
   }
 }
 
@@ -203,9 +204,9 @@ export function CodePane() {
           <Toggle icon="vscode" title="Open in VS Code" onClick={openInVsCode} />
         </div>
       </div>
-      {file?.error && <div className="cd-empty">{file.error === 'path outside project' ? 'This file is outside the project folder' : file.error}</div>}
+      {file?.error && <EmptyState size="sm" title={file.error === 'path outside project' ? 'This file is outside the project folder' : file.error} />}
       {file?.image && <div className="cd-empty"><img src={api(`/api/image?path=${encodeURIComponent(file.path)}`)} alt={file.path} style={{ maxWidth: '100%', maxHeight: '100%' }} /></div>}
-      {file?.binary && <div className="cd-empty">Binary file</div>}
+      {file?.binary && <EmptyState size="sm" title="Binary file" />}
       {file && !file.error && !file.image && !file.binary && (
         <Guard key={`${file.path}:${showDoc}`}>
           <Suspense fallback={null}>{showDoc ? (isTable ? <CsvTable path={file.path} text={file.content} /> : <MarkdownDoc path={file.path} text={file.content} onSave={saveText} />) : <Editor file={file} diff={diff} split={split} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} edit={edit} onDirty={setDirty} onSave={(t) => void saveText(t)} />}</Suspense>

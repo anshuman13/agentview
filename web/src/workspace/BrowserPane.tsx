@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui/Icon';
-import { Button } from '../ui/Button';
+import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { readFlag, saveFlag } from '../ui/util';
 import { useChromeSocket, type ChromeState, type Tab } from './useChromeSocket';
@@ -22,9 +22,9 @@ function BrowserBar({ send, tabs, tab, pinned, phone, setPhone, focusKeyboard, g
   };
   return (
     <div className="pane-bar browser-bar">
-      <button className="icon-btn" title="Back" onClick={() => send({ t: 'back' })}><Icon name="arrow-left" /></button>
-      <button className="icon-btn desktop-only" title="Forward" onClick={() => send({ t: 'forward' })}><Icon name="arrow-right" /></button>
-      <button className="icon-btn" title="Reload" onClick={() => send({ t: 'reload' })}><Icon name="refresh" /></button>
+      <IconButton icon="arrow-left" label="Back" onClick={() => send({ t: 'back' })} />
+      <IconButton icon="arrow-right" label="Forward" className="desktop-only" onClick={() => send({ t: 'forward' })} />
+      <IconButton icon="refresh" label="Reload" onClick={() => send({ t: 'reload' })} />
       <input
         className="url"
         placeholder="Address"
@@ -42,15 +42,18 @@ function BrowserBar({ send, tabs, tab, pinned, phone, setPhone, focusKeyboard, g
         <option value="">Follow Claude</option>
         {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
       </select>
-      {tab && <button className="icon-btn" title="Close this tab in Chrome" onClick={() => send({ t: 'close', id: tab.id })}><Icon name="close" /></button>}
-      <button
-        className={`icon-btn phone-only${phone ? ' on' : ''}`}
+      {tab && <IconButton icon="close" label="Close tab" title="Close this tab in Chrome" onClick={() => send({ t: 'close', id: tab.id })} />}
+      <IconButton
+        icon="device-mobile"
+        label="Phone layout"
+        className="phone-only"
+        on={phone}
         title={phone ? 'Phone layout is on. Chrome on the Mac shows the page at phone size' : 'Show the page at phone size. Chrome on the Mac shrinks while this is on'}
         aria-pressed={phone}
         onClick={() => setPhone(!phone)}
-      ><Icon name="device-mobile" /></button>
-      <button className="icon-btn phone-only" title="Keyboard" onClick={focusKeyboard}><Icon name="keyboard" /></button>
-      <button className="icon-btn phone-only" title="Full screen" onClick={goFull}><Icon name="screen-full" /></button>
+      />
+      <IconButton icon="keyboard" label="Keyboard" className="phone-only" onClick={focusKeyboard} />
+      <IconButton icon="screen-full" label="Full screen" className="phone-only" onClick={goFull} />
     </div>
   );
 }
@@ -84,7 +87,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
         goFull={() => setFull(true)}
       />
       <div className="frame-host" ref={host}>
-        {full && <button className="icon-btn browser-exit" title="Exit full screen" onClick={() => setFull(false)}><Icon name="screen-normal" /></button>}
+        {full && <IconButton icon="screen-normal" label="Exit full screen" className="browser-exit" onClick={() => setFull(false)} />}
         <img
           ref={img}
           className="chrome-frame"

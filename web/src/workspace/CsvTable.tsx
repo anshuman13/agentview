@@ -1,5 +1,6 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import { isNumericColumn, parseCsv, sniffDelimiter, sortRows } from './csv';
+import { EmptyState } from '../ui/Panel';
 
 const SHOWN = 1000;
 
@@ -18,7 +19,7 @@ export function CsvTable({ path, text }: { path: string; text: string }) {
   }, [all, q, sort]);
   const pick = (col: number) => setSort((s) => (s?.col !== col ? { col, desc: false } : s.desc ? null : { col, desc: true }));
 
-  if (!head.length) return <div className="cd-empty">Empty file</div>;
+  if (!head.length) return <EmptyState size="sm" title="Empty file" />;
   return (
     <div className="csv">
       <div className="csv-bar">
