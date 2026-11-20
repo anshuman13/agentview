@@ -7,7 +7,6 @@ import { EmptyState } from '../../ui/Panel';
 import { Section, sectionCount } from '../../ui/Section';
 import { setView, useEscapeBack } from '../view';
 import { TaskRow } from './Task';
-import { SnackBar } from './SnackBar';
 
 export function TagPage({ tag }: { tag: string }) {
   const { snap } = useAssistant();
@@ -28,7 +27,6 @@ export function TagPage({ tag }: { tag: string }) {
           </div>
         ) : <EmptyState size="sm" icon="checklist" title={`No open tasks with #${tag}`} />}
       </div>
-      <SnackBar />
     </div>
   );
 }

@@ -8,7 +8,6 @@ import { queued } from './overview/ReplyQueue';
 import { greeting } from './tasks/days';
 import { dropRow as dropRowTo, moveOverdue } from './tasks/rowMoves';
 import { TasksHead } from './TasksHead';
-import { SnackBar } from './tasks/SnackBar';
 import { useHubLifecycle } from './useHubLifecycle';
 import { rowKey, type ItemRow } from './data/sync';
 import type { BulkKind } from './useActions';
@@ -98,7 +97,6 @@ export function Assistant() {
         <Suspense fallback={<Skeleton />}>
           <TaskEditor key={rowKey(current)} row={current} onClose={close} onAsk={askAbout} />
         </Suspense>
-        <SnackBar />
         {drawerSheet}
       </div>
     );
@@ -111,7 +109,6 @@ export function Assistant() {
     return (
       <div className="assistant wide" ref={root}>
         <Suspense fallback={<Skeleton />}><Page key={list === 'search' ? searchRun() : list} onMenu={() => setDrawer(true)} /></Suspense>
-        <SnackBar />
         {drawerSheet}
       </div>
     );
@@ -176,7 +173,6 @@ export function Assistant() {
       {list === 'tasks' && <SpotBack scroller={scroller} />}
 
       {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || UNTITLED}</div>}
-      <SnackBar />
       {picked ? <BulkBar count={picked.size} enabled={chosen.length > 0} bulk={bulk} cancel={() => setPicked(null)} /> : <Composer items={snap.items} next={s.next} filter={filter} />}
       {adding !== false && <AddSheet filter={filter} voice={typeof adding === 'number' ? adding : undefined} onClose={() => setAdding(false)} />}
       {drawerSheet}

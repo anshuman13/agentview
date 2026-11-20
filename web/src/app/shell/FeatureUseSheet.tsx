@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { dayKey, dayNumber, featureRows, type Feature, type FeatureKind, type UsedFeature, type UseDays } from '../../../../shared/featureUse';
 import { errText } from '../../../../shared/util';
-import { SnackBar } from '../../codex/tasks/SnackBar';
 import { showSnack } from '../../codex/view';
 import { Button, Chip } from '../../ui/Button';
 import { MenuItem } from '../../ui/Menu';
@@ -77,7 +76,6 @@ export function FeatureUseSheet({ onClose }: { onClose: () => void }) {
           {hiddenRows.length > 0 && <FeatureSection label="Hidden" rows={hiddenRows} meta={(f) => ('last' in f ? usedMeta(f as UsedFeature) : KIND[f.kind])} menu={menu} />}
         </>
       )}
-      <SnackBar />
     </Sheet>
   );
 }

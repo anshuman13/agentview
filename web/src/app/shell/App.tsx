@@ -26,6 +26,7 @@ import { tauriInvoke } from '../runtime/tauri';
 import { EmbeddedApp, TerminalPanel } from './AppParts';
 import { useWorkbench } from './useWorkbench';
 import { narrow } from './useNarrow';
+import { SnackBar } from '../../codex/tasks/SnackBar';
 
 export function App() {
   const repoPicker = useStore((s) => s.ui.repoPicker);
@@ -120,6 +121,7 @@ export function App() {
       {repoPicker && <Suspense fallback={null}><RepoPicker /></Suspense>}
       {phone && <Suspense fallback={null}><ConnectPopover onClose={() => setPhone(false)} /></Suspense>}
       {macs && <Suspense fallback={null}><MacsPopover onClose={() => setMacs(false)} /></Suspense>}
+      <SnackBar />
     </div>
   );
 }

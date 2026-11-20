@@ -3,6 +3,7 @@ import { Brief, Loading, Terminal } from '../lazy';
 import { Offline, Restarting } from './StatusItems';
 import { SwitchedBanner } from './macName';
 import type { Tab } from './TabBar';
+import { SnackBar } from '../../codex/tasks/SnackBar';
 
 export function EmbeddedApp() {
   return (
@@ -11,6 +12,7 @@ export function EmbeddedApp() {
       <Restarting />
       <Offline />
       <div className="body"><section className="main pane center"><Suspense fallback={<Loading />}><Brief /></Suspense></section></div>
+      <SnackBar />
     </div>
   );
 }
