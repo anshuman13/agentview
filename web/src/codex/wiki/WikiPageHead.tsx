@@ -40,7 +40,7 @@ export function WikiPageHead({ page, isMemory, groups, pending, renaming, setRen
                 {!isMemory && <MenuItem icon="sparkle" onClick={pick(onAsk)}>Ask</MenuItem>}
                 {!isMemory && <MenuItem icon="edit" onClick={pick(() => { cancelled.current = false; setRenaming(page.title ?? ''); })}>Rename</MenuItem>}
                 {pending.length > 0 && <MenuItem icon="checklist" onClick={pick(() => setView({ open: REVIEW, anchor: null }))}>Review</MenuItem>}
-                {hasLiveClaims(groups) && <MenuItem icon="copy" onClick={pick(() => copyText(wikiMarkdown(page.title, groups)))}>Copy as Markdown</MenuItem>}
+                {hasLiveClaims(groups) && <MenuItem icon="copy" onClick={pick(() => copyText(wikiMarkdown(page.title, groups), 'Page copied'))}>Copy as Markdown</MenuItem>}
                 {!isMemory && <MenuSeparator />}
                 {!isMemory && <MenuItem icon="archive" danger onClick={pick(onArchive)}>Archive</MenuItem>}
               </Menu>

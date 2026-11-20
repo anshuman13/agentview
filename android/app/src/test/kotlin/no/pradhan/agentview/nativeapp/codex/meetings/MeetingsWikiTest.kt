@@ -35,7 +35,9 @@ import no.pradhan.agentview.nativeapp.codex.jobs.runsOf
 import no.pradhan.agentview.nativeapp.codex.parseRow
 import no.pradhan.agentview.nativeapp.codex.rowToChange
 import no.pradhan.agentview.nativeapp.codex.toJson
+import no.pradhan.agentview.nativeapp.app.claimRoute
 import no.pradhan.agentview.nativeapp.codex.wiki.chatSource
+import no.pradhan.agentview.nativeapp.codex.wiki.memoryPage
 import no.pradhan.agentview.nativeapp.codex.wiki.contestOf
 import no.pradhan.agentview.nativeapp.codex.wiki.newFact
 import no.pradhan.agentview.nativeapp.codex.wiki.proposalProfile
@@ -239,6 +241,20 @@ class MeetingsWikiTest {
         assertEquals(listOf("f5", "f2"), rules.map { it.fact.id })
         assertEquals(listOf("f1"), rules[1].old.map { it.id })
         assertEquals(2, statsByPage(listOf(old, cur, other, elsewhere))["p1"]!!.claims)
+    }
+
+    @Test fun memoryHoldsClaimsWithNoPage() {
+        val loose = fact("f1", "Prefers short replies", null, null, "at" to NOW - 500)
+        val retired = fact("f2", "Retired", null, null, "state" to "retired", "at" to NOW - 100)
+        val proposed = fact("f3", "Maybe", null, null, "state" to "proposed", "at" to NOW - 50)
+        val paged = fact("f4", "On a page", "p1", "Rules", "at" to NOW - 10)
+        val facts = listOf(loose, retired, proposed, paged)
+        assertEquals(1, statsByPage(facts)[null]!!.claims)
+        assertEquals(NOW - 500, memoryPage(facts).updatedAt)
+        assertEquals("Memory", memoryPage(facts).title)
+        assertEquals(listOf("f1", "f3"), pageClaims(facts, null, NOW).flatMap { g -> g.claims.map { it.fact.id } }.sorted())
+        assertEquals("wiki:memory", claimRoute(loose))
+        assertEquals("wiki:work:p1", claimRoute(paged))
     }
 
     @Test fun oldAndRetiredClaimsMoveToOlder() {

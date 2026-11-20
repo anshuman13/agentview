@@ -21,6 +21,7 @@ import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.sessions.queryWords
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.ui.agoShort
 
 // The wiki index and page of web/src/codex/data/wiki.ts and wiki/WikiIndex.tsx.
@@ -82,6 +83,15 @@ fun restatedClaim(text: String, facts: List<Row>, profile: String): Row? {
     val current = currentClaims(facts)
     return similarClaim(text, liveRows(facts).filter { it.profile == profile && it.str("page_id").isNullOrEmpty() && current(it) }) { it.str("text") ?: "" }
 }
+
+const val MEMORY = "memory"
+
+// The Memory page of web/src/codex/wiki/shared.ts memoryPage: it holds the claims with no page.
+fun memoryPage(facts: List<Row>): Row = Row(
+    "pages", MEMORY, WORK,
+    updatedAt = liveRows(facts).filter { it.str("page_id").isNullOrEmpty() }.maxOfOrNull(::factTime) ?: 0L,
+    f = mapOf("title" to JsonPrimitive("Memory"), "summary" to JsonPrimitive("What Claude remembers about you and your work outside the wiki pages.")),
+)
 
 class PageStats(val claims: Int, val contested: Int, val updated: Long)
 
@@ -186,6 +196,23 @@ fun pageClaims(facts: List<Row>, pageId: String?, now: Long): List<ClaimGroup> {
     for (f in proposals(facts).filter { it.str("page_id")?.ifEmpty { null } == pageId }) add(f, emptyList())
     fun newest(g: List<Claim>) = g.maxOf { it.fact.long("at") ?: 0L }
     return groups.map { (h, cs) -> ClaimGroup(h, cs.sortedByDescending { it.fact.long("at") ?: 0L }) }.sortedByDescending { newest(it.claims) }
+}
+
+fun hasLiveClaims(groups: List<ClaimGroup>) = groups.any { g -> g.claims.any { it.fact.str("state") != "proposed" } }
+
+// The page as Markdown: web/src/codex/data/wiki/wikiMarkdown.ts, checked by shared/fixtures/wiki-markdown.json.
+fun wikiMarkdown(title: String?, groups: List<ClaimGroup>): String {
+    val out = mutableListOf("# ${title?.ifEmpty { null } ?: UNTITLED}")
+    for (g in groups) {
+        val live = g.claims.filter { it.fact.str("state") != "proposed" }
+        if (live.isEmpty()) continue
+        val lines = live.map { c ->
+            val labels = sourcesOf(c.fact).map { it.label }.distinct()
+            "- ${c.fact.str("text") ?: ""}" + if (labels.isNotEmpty()) "\n  Sources: ${labels.joinToString(", ")}" else ""
+        }
+        out.add("## ${g.heading}\n\n${lines.joinToString("\n")}")
+    }
+    return out.joinToString("\n\n") + "\n"
 }
 
 // Retired claims and current ones past RETIRE_AFTER, newest first.

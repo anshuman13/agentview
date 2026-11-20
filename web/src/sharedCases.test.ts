@@ -43,7 +43,8 @@ import { ago, money } from './ui/util';
 import { setSystemTime } from '../../testing';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
-import { restatedClaim, type Fact, type Job, type Meeting } from './codex/data/wiki/wiki';
+import { pageClaims, restatedClaim, type Fact, type Job, type Meeting } from './codex/data/wiki/wiki';
+import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
 import { heldUntil, jobEdits, tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
 import { agendaMarkdown, followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
@@ -208,6 +209,16 @@ describe('cases shared with the Android app', () => {
   type RememberCase = { name: string; text: string; profile: Profile; facts: { id: string; profile: Profile; text: string; page_id?: string; state?: string; superseded_by?: string }[]; expected: string | null };
   for (const c of cases<RememberCase>('remember')) {
     it(`restatedClaim: ${c.name}`, () => expect(restatedClaim(c.text, c.facts as unknown as Fact[], c.profile)?.id ?? null).toBe(c.expected));
+  }
+
+  type MarkdownCase = { name: string; title: string | null; now: number; claims: { heading: string | null; text: string; sources: string[]; state: string | null; at: number }[]; hasLive: boolean; markdown: string };
+  for (const c of cases<MarkdownCase>('wiki-markdown')) {
+    it(`wikiMarkdown: ${c.name}`, () => {
+      const facts = c.claims.map((x, i) => ({ ...x, id: `f${i}`, profile: 'work', page_id: 'p', deleted: 0, sources: JSON.stringify(x.sources.map((label) => ({ kind: 'doc', label }))) }) as unknown as Fact);
+      const groups = pageClaims(facts, 'p', c.now);
+      expect(wikiMarkdown(c.title, groups)).toBe(c.markdown);
+      expect(hasLiveClaims(groups)).toBe(c.hasLive);
+    });
   }
 
   for (const c of cases<{ name: string; old: string | null; next: string; expected: string | null }>('claim-edit')) {

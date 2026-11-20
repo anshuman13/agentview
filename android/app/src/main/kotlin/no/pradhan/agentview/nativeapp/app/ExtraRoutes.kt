@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import no.pradhan.agentview.nativeapp.codex.CodexOps
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
+import no.pradhan.agentview.nativeapp.codex.wiki.MEMORY
 import no.pradhan.agentview.nativeapp.codex.wiki.ReviewModePage
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.meetings.SeriesPage
@@ -18,6 +19,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.PersonPage
 import no.pradhan.agentview.nativeapp.codex.meetings.newNotes
 import no.pradhan.agentview.nativeapp.codex.wiki.WikiIndexPage
 import no.pradhan.agentview.nativeapp.codex.wiki.WikiPageView
+import no.pradhan.agentview.nativeapp.codex.wiki.memoryPage
 
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.MenuItem
@@ -46,7 +48,7 @@ fun routeTitle(route: String, st: CodexState): String = when {
 }
 
 // The wiki page a claim sits on, as a route; claims without a page have none.
-fun claimRoute(f: Row): String? = f.str("page_id")?.ifEmpty { null }?.let { "wiki:${f.profile}:$it" }
+fun claimRoute(f: Row): String = f.str("page_id")?.ifEmpty { null }?.let { "wiki:${f.profile}:$it" } ?: "wiki:$MEMORY"
 
 @Composable
 fun ExtraContent(
@@ -65,10 +67,11 @@ fun ExtraContent(
         route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
         route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { p, id -> push("wiki:$p:$id") }, onTask)
-        route == "wiki" -> WikiIndexPage(st, profile, now, actions, { push("wiki:${it.key}") }, { f -> claimRoute(f)?.let(push) }, { push("review") })
+        route == "wiki" -> WikiIndexPage(st, profile, now, actions, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") })
+        route == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts), profile, now, actions, ops.review, { push("review") }, pop)
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == key && !it.deleted }
-            if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, now, actions, ops.review)
+            if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop)
         }
         route == "jobs" -> JobsListPage(hub, st, profile, now, actions, { push("autopilot") }) { push("job:${it.key}") }
         else -> {
