@@ -19,6 +19,8 @@ import { agentSummary } from '../../sessions/agents';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
+import { imageUrl } from '../chatApi';
+import { userParts } from '../composer/composerLogic';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
 import { isRepoSpec, specSlug } from '../../../../shared/specTasks';
@@ -299,7 +301,25 @@ function Folded({ id, className, children }: { id: string; className: string; ch
   );
 }
 
-const UserText = ({ id, text }: { id: string; text: string }) => <Folded id={'prompt-' + id} className="tr-user-text">{text}</Folded>;
+function UserImage({ path }: { path: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  return (
+    <>
+      {!loaded && <span className="tr-image-tag">Image: {path.split('/').pop()}</span>}
+      {!failed && <img className="tr-image" hidden={!loaded} src={imageUrl(path)} alt={path} onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />}
+    </>
+  );
+}
+
+function UserText({ id, text }: { id: string; text: string }) {
+  const parts = useMemo(() => userParts(text), [text]);
+  return (
+    <Folded id={'prompt-' + id} className="tr-user-text">
+      {parts.map((p, i) => ('image' in p ? <UserImage key={i} path={p.image} /> : <div key={i}>{p.text}</div>))}
+    </Folded>
+  );
+}
 
 // A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
 // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.

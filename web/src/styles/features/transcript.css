@@ -15,6 +15,9 @@
   background: var(--raised); color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .tr-user-text.folded { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.tr-user-text .tr-image { display: block; max-width: 100%; max-height: 280px; object-fit: contain; border-radius: var(--shape-sm); margin: var(--sp-2) 0; }
+.tr-user-text .tr-image[hidden] { display: none; }
+.tr-image-tag { display: inline-block; margin: var(--sp-2) 0; padding: var(--sp-2) var(--sp-4); border-radius: var(--shape-sm); background: var(--surface); color: var(--fg-muted); font-size: var(--fs-xs); }
 .tr-user.stopping { padding-right: var(--sp-16); }
 .tr-user .tr-acts { position: absolute; right: var(--sp-5); top: var(--sp-5); padding-left: var(--sp-3); background: var(--raised); font-size: var(--fs-xs); visibility: hidden; }
 .tr-user:hover .tr-acts, .tr-user .tr-acts:focus-within { visibility: visible; }

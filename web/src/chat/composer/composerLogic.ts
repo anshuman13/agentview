@@ -77,7 +77,15 @@ export const joinMarks = (body: string, marks: string[]) => `${body}${body && ma
 
 export function markChip(mark: string) {
   const [, kind, path] = /^\[(Image|File): (.+)]$/.exec(mark)!;
-  return { kind, name: path.split('/').pop() || path };
+  return { kind, path, name: path.split('/').pop() || path };
+}
+
+export type UserPart = { text: string } | { image: string };
+
+// A sent prompt as text and image parts in order; the images are the "[Image: path]" markers, other text stays as written (Android userParts).
+export function userParts(text: string): UserPart[] {
+  const parts = text.split(/(\[Image: [^\]]+\])/).map((s, i): UserPart => (i % 2 ? { image: markChip(s).path } : { text: s.trim() }));
+  return parts.filter((p) => !('text' in p) || p.text);
 }
 
 export function addUse(uses: Use[], u: Use): Use[] {

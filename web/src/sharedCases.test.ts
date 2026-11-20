@@ -27,7 +27,7 @@ import { buildTranscript } from './chat/transcript/steps';
 import { foldTurns, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { handoffText, joinMarks, markChip, splitMarks } from './chat/composer/composerLogic';
+import { handoffText, joinMarks, markChip, splitMarks, userParts } from './chat/composer/composerLogic';
 import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -282,6 +282,10 @@ describe('cases shared with the Android app', () => {
       expect(s.marks.map((m) => `${markChip(m).kind} ${markChip(m).name}`)).toEqual(c.names);
       expect(joinMarks(s.body, s.marks)).toBe(c.joined);
     });
+  }
+
+  for (const c of cases<{ name: string; text: string; parts: unknown[] }>('user-parts')) {
+    it(`userParts: ${c.name}`, () => expect(userParts(c.text)).toEqual(c.parts));
   }
 
   for (const c of cases<{ name: string; events: unknown[]; expected: TodoItem[] | null }>('checklist-events')) {

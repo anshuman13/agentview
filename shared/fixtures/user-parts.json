@@ -1,0 +1,7 @@
+[
+  { "name": "plain text", "text": "plain", "parts": [{ "text": "plain" }] },
+  { "name": "text around an image", "text": "look [Image: /tmp/a.png] and this", "parts": [{ "text": "look" }, { "image": "/tmp/a.png" }, { "text": "and this" }] },
+  { "name": "only an image", "text": "[Image: /x.png] ", "parts": [{ "image": "/x.png" }] },
+  { "name": "two images", "text": "[Image: /a.png] [Image: /b.png] ", "parts": [{ "image": "/a.png" }, { "image": "/b.png" }] },
+  { "name": "a file marker stays in the text", "text": "see [File: /tmp/n.txt] [Image: /tmp/a.png] ", "parts": [{ "text": "see [File: /tmp/n.txt]" }, { "image": "/tmp/a.png" }] }
+]
