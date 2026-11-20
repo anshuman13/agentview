@@ -40,5 +40,6 @@ describe('usageLine', () => {
     expect(usageLine(run({ capPct: 70, maxBuilds: 5, builds: 2, usage: { week: { pct: 42, resetsAt: null } } }))).toBe('Week 42% of 70% cap · Builds 2 of 5');
     expect(usageLine(run({ capPct: 70, maxBuilds: 5, builds: 2 }))).toBe('70% cap · Builds 2 of 5');
     expect(usageLine(run({ maxBuilds: 5, builds: 2 }))).toBe('Builds 2 of 5');
+    expect(usageLine(run({ capUsd: 5, costUsd: 1.5 }))).toBe('$1.50 of $5 cap');
   });
 });

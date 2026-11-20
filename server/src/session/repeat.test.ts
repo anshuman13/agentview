@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { nextClock } from '../../../shared/util.js';
 import type { PlanUsage, Repeat } from '../../../shared/protocol.js';
-import { ROUND_INSTRUCTION, parseGoal, parseLoop, usageGate } from './repeat.js';
+import { ROUND_INSTRUCTION, parseGoal, parseLoop, costGate, usageGate } from './repeat.js';
 import { setSystemTime } from '../../../testing.js';
 
 const now = new Date(2026, 9, 24, 9, 0, 0).getTime();
@@ -80,11 +80,28 @@ describe('parseGoal options', () => {
     expect(parseGoal('/goal every 1h until tests pass', now)).toMatchObject({ every: 3_600_000, goal: 'until tests pass' });
   });
 
+  it('reads a dollar cap beside a percent cap', () => {
+    expect(parseGoal('/goal cap $5 tests pass', now)).toMatchObject({ capUsd: 5, goal: 'tests pass' });
+    expect(parseGoal('/goal cap 70% cap $5 tests pass', now)).toMatchObject({ capPct: 70, capUsd: 5, goal: 'tests pass' });
+    expect(parseGoal('/goal cap $0 x')).toBe('usage');
+    expect(parseGoal('/goal cap $5')).toBe('usage');
+  });
+
   it('refuses a cap outside 1-100 and options without a condition', () => {
     expect(parseGoal('/goal cap 0% x')).toBe('usage');
     expect(parseGoal('/goal cap 101% x')).toBe('usage');
     expect(parseGoal('/goal cap 70%')).toBe('usage');
     expect(parseGoal('/goal until 25:00 x')).toBe('usage');
+  });
+});
+
+describe('costGate', () => {
+  const r = (capUsd?: number) => ({ prompt: 'p', every: 0, until: null, round: 0, nextAt: null, goal: 'g', capUsd }) as Repeat;
+
+  it('ends the goal once its run cost reaches the cap', () => {
+    expect(costGate(r(5), 4.99)).toBeNull();
+    expect(costGate(r(5), 5)).toEqual({ note: 'Stopped at $5' });
+    expect(costGate(r(), 100)).toBeNull();
   });
 });
 

@@ -447,7 +447,7 @@ class SharedCasesTest {
         for (c in cases("goal-command")) {
             c["command"]?.let {
                 val f = c.getValue("form").jsonObject
-                val form = GoalForm(f.str("what"), f.getValue("every").jsonPrimitive.long, f.nullable("stopIn")?.jsonPrimitive?.long, f.nullable("stopAt")?.jsonPrimitive?.content, f.nullable("capPct")?.jsonPrimitive?.int, f.nullable("builds")?.jsonPrimitive?.int)
+                val form = GoalForm(f.str("what"), f.getValue("every").jsonPrimitive.long, f.nullable("stopIn")?.jsonPrimitive?.long, f.nullable("stopAt")?.jsonPrimitive?.content, f.nullable("capPct")?.jsonPrimitive?.int, f.nullable("builds")?.jsonPrimitive?.int, f.nullable("capUsd")?.jsonPrimitive?.int)
                 assertEquals(c.str("name"), it.jsonPrimitive.content, goalCommand(form, c.getValue("now").jsonPrimitive.long))
             }
             c["condition"]?.let { assertEquals(c.str("name"), it.jsonPrimitive.content, planCondition(c.str("path"), c.str("md"))) }

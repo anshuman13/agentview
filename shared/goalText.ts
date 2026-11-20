@@ -7,9 +7,9 @@ export const activeRun = (runs: ChatRun[], chatId: string) => runs.filter((r) =>
 export const rounds = (n: number) => `${n} ${n === 1 ? 'round' : 'rounds'}`;
 
 // The system note of a goal that starts or changes: how often, until when, the usage cap and the build limit. An edit also says "no cap" and "no build limit".
-export function goalPlan({ every, endAt, capPct, maxBuilds }: { every: number; endAt?: number; capPct?: number; maxBuilds?: number }, edit = false) {
+export function goalPlan({ every, endAt, capPct, capUsd, maxBuilds }: { every: number; endAt?: number; capPct?: number; capUsd?: number; maxBuilds?: number }, edit = false) {
   const head = `${every ? `Goal every ${span(every)}` : 'Goal when idle'}${endAt ? ` until ${clock(endAt)}` : ''}`;
-  return [head, !every && `up to ${rounds(MAX_GOAL_ROUNDS)}`, capPct ? `cap ${capPct}%` : edit && 'no cap', maxBuilds ? `builds ${maxBuilds}` : edit && 'no build limit'].filter(Boolean).join(' · ');
+  return [head, !every && `up to ${rounds(MAX_GOAL_ROUNDS)}`, capPct ? `cap ${capPct}%` : !capUsd && edit && 'no cap', capUsd ? `cap $${capUsd}` : null, maxBuilds ? `builds ${maxBuilds}` : edit && 'no build limit'].filter(Boolean).join(' · ');
 }
 
 export const runLine = (word: string, { round, max, nextAt }: { round: number; max: number; nextAt: number | null }) =>
@@ -54,6 +54,8 @@ export const goalMet = (n: number) => `Goal met after ${rounds(n)}`;
 export const goalStoppedAt = (at: number, n: number, commits = 0) => `Stopped at ${clock(at)} · ${rounds(n)}${commits ? ` · ${commits} ${commits === 1 ? 'commit' : 'commits'}` : ''}`;
 
 export const goalCapReached = (pct: number) => `Usage cap ${pct}% reached`;
+
+export const goalCostCapReached = (usd: number) => `Stopped at $${usd}`;
 
 export const goalNotMet = (n: number) => `Not met after ${rounds(n)}`;
 

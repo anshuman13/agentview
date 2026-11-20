@@ -28,6 +28,7 @@ export class RunLinks {
       patchRun: (id: string, patch: Parameters<AgentSession['runs']['update']>[1]) => s.runs.update(id, patch),
       push: (title: string, body: string) => post(title, s.runs.get(s.state.session.repeat?.runId)?.title ?? '', body, `${APP}/?chat=${s.id}`),
       usage: () => s.state.session.usage ?? null,
+      runCost: () => s.runs.get(s.state.session.repeat?.runId)?.costUsd ?? 0,
       asking: () => s.state.pending.length > 0,
       sendPrompt: (text: string, auto: 'loop' | 'goal', round: number, report?: boolean) => {
         const id = randomUUID();
@@ -43,7 +44,7 @@ export class RunLinks {
 
   private start(r: Repeat) {
     const what = r.goal ?? r.prompt;
-    return this.s.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.s.state.session.sessionId ?? '', chatId: this.s.id, title: this.title(what), what, provider: this.s.state.session.provider, round: r.round, max: r.goal && !r.every ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt, ...(r.goal && r.every && { every: r.every }), ...(r.endAt && { endAt: r.endAt }), ...(r.capPct && { capPct: r.capPct }), ...(r.maxBuilds && { maxBuilds: r.maxBuilds, builds: r.builds?.length ?? 0 }) });
+    return this.s.runs.start({ kind: r.goal ? 'goal' : 'loop', sessionId: this.s.state.session.sessionId ?? '', chatId: this.s.id, title: this.title(what), what, provider: this.s.state.session.provider, round: r.round, max: r.goal && !r.every ? MAX_GOAL_ROUNDS : 0, nextAt: r.nextAt, ...(r.goal && r.every && { every: r.every }), ...(r.endAt && { endAt: r.endAt }), ...(r.capPct && { capPct: r.capPct }), ...(r.capUsd && { capUsd: r.capUsd }), ...(r.maxBuilds && { maxBuilds: r.maxBuilds, builds: r.builds?.length ?? 0 }) });
   }
 
   // A restart keeps the run of a loop or goal; the chat has a new id.

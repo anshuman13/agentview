@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
 import java.time.Instant
+import java.util.Locale
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import kotlinx.serialization.json.Json
@@ -22,12 +23,12 @@ sealed interface GoalSheet {
 }
 
 // What the start sheet collects: every in ms (0 for until done), the stop as ms from now or as HH:MM, the weekly cap in percent.
-class GoalForm(val what: String, val every: Long, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val builds: Int? = null)
+class GoalForm(val what: String, val every: Long, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val builds: Int? = null, val capUsd: Int? = null)
 
 fun goalCommand(form: GoalForm, now: Long): String {
     val stop = form.stopAt ?: form.stopIn?.takeIf { it > 0 }?.let { clock(now + it) }
     val what = form.what.trim().replace(Regex("^/goal\\s+"), "")
-    return listOfNotNull("/goal", form.every.takeIf { it > 0 }?.let { "every ${everyText(it)}" }, stop?.let { "until $it" }, form.capPct?.takeIf { it > 0 }?.let { "cap $it%" }, form.builds?.takeIf { it > 0 }?.let { "builds $it" }, what.ifEmpty { null }).joinToString(" ")
+    return listOfNotNull("/goal", form.every.takeIf { it > 0 }?.let { "every ${everyText(it)}" }, stop?.let { "until $it" }, form.capPct?.takeIf { it > 0 }?.let { "cap $it%" }, form.capUsd?.takeIf { it > 0 }?.let { "cap \$$it" }, form.builds?.takeIf { it > 0 }?.let { "builds $it" }, what.ifEmpty { null }).joinToString(" ")
 }
 
 // shared/goalForm.ts parseEvery: a custom How often such as "45m", "45 min" or "3h", 10 minutes to 7 days, in ms.
@@ -95,6 +96,10 @@ class CapChoice(val label: String, val pct: Int?)
 
 val CAPS = listOf(CapChoice("50", 50), CapChoice("70", 70), CapChoice("90", 90), CapChoice("Off", null))
 
+class CapUsdChoice(val label: String, val usd: Int?)
+
+val CAPS_USD = listOf(CapUsdChoice("$1", 1), CapUsdChoice("$5", 5), CapUsdChoice("$10", 10), CapUsdChoice("Off", null))
+
 class BuildChoice(val label: String, val n: Int?)
 
 val BUILDS = listOf(BuildChoice("None", null), BuildChoice("3", 3), BuildChoice("5", 5), BuildChoice("10", 10))
@@ -130,8 +135,9 @@ fun usageLine(run: ChatRun): String {
     val week = run.usage?.week?.let { "Week ${Math.round(it.pct)}%${run.capPct?.let { c -> " of $c% cap" } ?: ""}" }
     val five = run.usage?.fiveHour?.let { "5-hour ${Math.round(it.pct)}%" }
     val builds = run.maxBuilds?.takeIf { it > 0 }?.let { "Builds ${run.builds ?: 0} of $it" }
-    val usage = listOfNotNull(week, five).joinToString(" · ").ifEmpty { run.capPct?.let { "$it% cap" } ?: if (builds == null) "No cap" else "" }
-    return listOfNotNull(usage.ifEmpty { null }, builds).joinToString(" · ")
+    val cost = run.capUsd?.takeIf { it > 0 }?.let { "$${"%.2f".format(Locale.US, run.costUsd)} of $$it cap" }
+    val usage = listOfNotNull(week, five).joinToString(" · ").ifEmpty { run.capPct?.let { "$it% cap" } ?: if (builds == null && cost == null) "No cap" else "" }
+    return listOfNotNull(usage.ifEmpty { null }, cost, builds).joinToString(" · ")
 }
 
 // shared/goalText.ts buildsLine: a run's build limit as its rows show it; empty without one.
