@@ -27,7 +27,7 @@ import { buildTranscript } from './chat/transcript/steps';
 import { foldTurns, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { handoffText, joinMarks, markChip, splitMarks, userParts } from './chat/composer/composerLogic';
+import { failedLine, handoffText, joinMarks, markChip, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
 import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -368,6 +368,13 @@ describe('cases shared with the Android app', () => {
     it(`appCounts: ${c.name}`, () => {
       const chats = c.chats.map((chat) => countChat({ pending: 0, running: false, status: '', lastActive: 0, cwd: '', title: '', sessionId: null, ...chat } as LiveChat, c.seen ?? {}));
       expect(appCounts({ chats, viewing: c.viewing, attention: c.attention ?? 0, mcp: c.mcp ?? [], hidden: c.hidden ?? {}, needsYouRows: c.needsYouRows ?? 0, replyRows: c.replyRows ?? 0 })).toEqual(c.expected);
+    });
+  }
+
+  for (const c of cases<{ name: string; label: string; events: ChatEvent[]; turnEnd: string; failedLine: string | null }>('turn-end')) {
+    it(`turnEnd: ${c.name}`, () => {
+      expect(turnEnd(c.events, c.label)).toBe(c.turnEnd);
+      expect(failedLine(c.events, c.label)).toBe(c.failedLine);
     });
   }
 

@@ -47,6 +47,7 @@ import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.app.pulls
 import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.app.resume
+import no.pradhan.agentview.nativeapp.app.retryTurn
 import no.pradhan.agentview.nativeapp.app.setMuted
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -113,7 +114,8 @@ class ChatRows(
 
     private fun repoBranch(cwd: String) = ws.repos.firstOrNull { it.cwd == folderKey(cwd, ws.repos, ws.trees) }?.branch
 
-    private fun actions(sessionId: String?, title: String, liveChat: LiveChat?) = RowActions(
+    private fun actions(sessionId: String?, title: String, liveChat: LiveChat?, state: ChatState? = null) = RowActions(
+        onRetry = liveChat?.takeIf { state == ChatState.Failed && !hub.readOnly }?.let { c -> { hub.retryTurn(c.id) } },
         pinned = sessionId != null && sessionId in pins,
         onPin = { sessionId?.let { hub.pin(it, it !in pins) } },
         onRename = { sessionId?.let { dialogs.renaming = it to title } },
@@ -139,12 +141,13 @@ class ChatRows(
     fun LiveRow(c: LiveChat, repo: String? = null) {
         val s = c.sessionId?.let { saved[it] }
         val branch = (s?.gitBranch ?: repoBranch(c.cwd)).takeIf { !isDefaultBranch(it) }
+        val state = chatState(c, s, seen)
         ChatRow(
             title = c.title.ifBlank { "Untitled" },
             meta = liveMeta(c, s, repo, branch, prFor(c)),
-            state = chatState(c, s, seen),
+            state = state,
             selected = c.id == shownId,
-            actions = actions(c.sessionId, c.title, c),
+            actions = actions(c.sessionId, c.title, c, state),
             run = c.run,
             onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
@@ -190,7 +193,7 @@ class ChatRows(
     }
 }
 
-class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {})
+class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null)
 
 @Composable
 fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) {
@@ -251,6 +254,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
             else -> null
         },
         menu = { close ->
+            actions.onRetry?.let { r -> MenuItem("Retry", "refresh", { close(); r() }) }
             if (onResume != null) MenuItem("Resume", "play", { close(); onResume() })
             if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", if (actions.pinned) "pinned" else "pin", { close(); actions.onPin() })
             if (actions.canPin && shown == null && !selected) MenuItem("Mark as unread", "mail", { close(); actions.onUnread() })

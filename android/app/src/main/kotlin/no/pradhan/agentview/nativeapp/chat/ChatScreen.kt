@@ -37,6 +37,7 @@ import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.app.archive
 import no.pradhan.agentview.nativeapp.net.billing
+import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.app.closeChat
 import no.pradhan.agentview.nativeapp.app.forkChat
 import no.pradhan.agentview.nativeapp.app.gitStatus
@@ -151,7 +152,8 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
             CompositionLocalProvider(LocalBuildSheets provides buildSheets) {
-                Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } })
+                val failed = if (live.failed && !running && !hub.readOnly) failedLine(view.events, providerLabel(live.provider)) else null
+                Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed)
             }
         }
         PendingList(pending, session?.permissionMode ?: "default", hub)

@@ -68,6 +68,7 @@ import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.app.loadEarlier
 import no.pradhan.agentview.nativeapp.net.providerLabel
+import no.pradhan.agentview.nativeapp.app.retryTurn
 import no.pradhan.agentview.nativeapp.app.rewind
 import no.pradhan.agentview.nativeapp.app.sendNow
 import no.pradhan.agentview.nativeapp.ops.Agent
@@ -168,7 +169,7 @@ private fun rememberEarlierDue(hub: Hub, chatId: String, replies: Int, loading: 
 }
 
 @Composable
-fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList()) {
+fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList(), failed: String? = null) {
     val items = view.items
     val rows = view.rows
     val noEvents by hub.store.state.select { it.events.isEmpty() }
@@ -202,6 +203,12 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
         ) {
             lazyItems(queued.asReversed(), key = { "out-${it.id}" }) { q ->
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
+            }
+            if (failed != null) item(key = "failed") {
+                Row(Modifier.padding(top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
+                    Text(failed, Modifier.weight(1f), style = Type.footnote, color = av.err, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Button("Retry", { hub.retryTurn(chatId) }, size = ButtonSize.Sm)
+                }
             }
             transcriptRows(hub, view, list, bill, newKey, folded, chatId, cwd, running, canRewind, onOpenAgent, onOpenWork)
             if (earlier > 0) item(key = "earlier") {

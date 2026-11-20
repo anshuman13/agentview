@@ -21,7 +21,9 @@ import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
 import no.pradhan.agentview.nativeapp.app.BarEvent
+import no.pradhan.agentview.nativeapp.chat.failedLine
 import no.pradhan.agentview.nativeapp.chat.mergeTail
+import no.pradhan.agentview.nativeapp.chat.turnEnd
 import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.chat.startModeFor
 import no.pradhan.agentview.nativeapp.app.BarState
@@ -392,6 +394,14 @@ class SharedCasesTest {
         for (c in cases("stopped-text")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
             assertEquals(c.str("name"), c.str("expected"), stoppedText(run, c.getValue("working").jsonPrimitive.boolean))
+        }
+    }
+
+    @Test fun turnEnd() {
+        for (c in cases("turn-end")) {
+            val events = c.getValue("events").jsonArray.mapIndexed { i, e -> JsonObject(mapOf("id" to toJson("e$i")) + e.jsonObject).decode<ChatEvent>() }
+            assertEquals(c.str("name"), c.str("turnEnd"), turnEnd(events, c.str("label")))
+            assertEquals(c.str("name"), c.getValue("failedLine").jsonPrimitive.contentOrNull, failedLine(events, c.str("label")))
         }
     }
 

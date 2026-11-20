@@ -26,6 +26,7 @@ import no.pradhan.agentview.nativeapp.net.setModeCmd
 import no.pradhan.agentview.nativeapp.net.setModelCmd
 import no.pradhan.agentview.nativeapp.net.setReviewCmd
 import no.pradhan.agentview.nativeapp.net.setBuildFlowCmd
+import no.pradhan.agentview.nativeapp.net.retryCmd
 import no.pradhan.agentview.nativeapp.net.steerCmd
 import no.pradhan.agentview.nativeapp.net.stopTaskCmd
 import no.pradhan.agentview.nativeapp.net.triesKeepCmd
@@ -98,6 +99,8 @@ fun Hub.quietCommand(body: String) { if (!readOnly) post(body, store.wanted) }
 fun Hub.closeChat(id: String) = post(closeCmd(id), id)
 
 fun Hub.resume(chat: String) = post(promptCmd("continue", false, UUID.randomUUID().toString()), chat)
+
+fun Hub.retryTurn(chat: String) = post(retryCmd(), chat)
 
 // A message while Claude runs queues for its next step, or with `steer` stops it and sends now.
 fun Hub.submit(text: String, steer: Boolean, onLost: () -> Unit) {

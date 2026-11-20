@@ -366,6 +366,7 @@ private fun cmd(type: String, build: kotlinx.serialization.json.JsonObjectBuilde
 
 fun steerCmd(text: String, id: String) = cmd("steer") { put("text", text); put("id", id) }
 fun interruptCmd() = cmd("interrupt")
+fun retryCmd() = cmd("retry")
 fun runCmd(run: String, op: String) = cmd("run") { put("run", run); put("op", op) }
 // A null value clears the end time or the cap; a key left out stays as it is.
 fun runEditCmd(run: String, edit: Map<String, Long?>) = cmd("run_edit") { put("run", run); edit.forEach { (k, v) -> put(k, v) } }
