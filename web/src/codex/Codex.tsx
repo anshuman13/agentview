@@ -38,6 +38,7 @@ import { Skeleton } from '../ui/Skeleton';
 import { prefetch } from '../app/lazy';
 import '../styles/features/assistant.css';
 import '../styles/features/overview.css';
+import { UNTITLED } from '../../../shared/util';
 
 const TaskEditor = prefetch(() => import('./tasks/editor/TaskEditor').then((m) => m.TaskEditor));
 const Wiki = prefetch(() => import('./wiki/Wiki').then((m) => m.Wiki));
@@ -174,7 +175,7 @@ export function Assistant() {
       </div>
       {list === 'tasks' && <SpotBack scroller={scroller} />}
 
-      {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || '(Untitled)'}</div>}
+      {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || UNTITLED}</div>}
       <SnackBar />
       {picked ? <BulkBar count={picked.size} enabled={chosen.length > 0} bulk={bulk} cancel={() => setPicked(null)} /> : <Composer items={snap.items} next={s.next} filter={filter} />}
       {adding !== false && <AddSheet filter={filter} voice={typeof adding === 'number' ? adding : undefined} onClose={() => setAdding(false)} />}

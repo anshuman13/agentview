@@ -21,6 +21,7 @@ import { RaiseWith } from './Raise';
 import { recentPeople } from '../data/meetings/points';
 import { talkTime } from '../data/meetings/talkTime';
 import { RoomMic, SummaryFormat, readable, useTranscript } from './Transcript';
+import { UNTITLED } from '../../../../shared/util';
 
 const ORDER: Record<string, number> = { open: 0, done: 1 };
 
@@ -80,7 +81,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
-          <Section label={m.title || 'Untitled'} action={(
+          <Section label={m.title || UNTITLED} action={(
             <>
               {state === 'live' && link && !event
                 ? <a className="btn btn-filled btn-sm" href={link} target="_blank" rel="noreferrer"><Icon name="device-camera-video" small />Join</a>

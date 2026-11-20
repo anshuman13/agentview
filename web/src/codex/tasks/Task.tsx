@@ -13,6 +13,7 @@ import { rowKey } from './taskKeys';
 import { Check } from './TaskCheck';
 import { checkItems } from './editor/taskChecklist';
 import { Badge } from '../../ui/Badge';
+import { UNTITLED } from '../../../../shared/util';
 
 export { UNROLL, useActions } from '../useActions';
 
@@ -79,7 +80,7 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected 
   const body = (
     <Row plain className={`tk-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}${selected ? ' selected' : ''}`} data-row={row.profile + row.id} onPointerDown={picking ? undefined : onGrab} onLongPress={noHold} onClick={picking && !pickable ? undefined : onOpen} role="button" aria-pressed={picking && pickable ? !!selected : undefined} tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && (picking ? (pickable && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())) : rowKey(e, row, onOpen, act))}
       leading={picking && !isNote ? <span className={`as-check${isDone ? ' on' : selected ? ' picked' : ''}`}><Icon name={selected || isDone ? 'pass-filled' : 'circle-large-outline'} /></span> : <Check row={row} />}
-      title={row.title || '(Untitled)'}
+      title={row.title || UNTITLED}
       meta={meta}
       state={row.status === 'suggested' ? <Badge status="waiting" label="Needs you" /> : null}
       menu={!picking && (pickable ? taskMenu(row, act, onOpen) : (

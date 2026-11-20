@@ -7,6 +7,7 @@ import { apiUrl, fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { save, stored } from '../ui/util';
 import { showSnack } from './view';
+import { UNTITLED } from '../../../shared/util';
 
 // One focus timer at a time, kept in this browser so it survives a reload.
 type Focus = { profile: Profile; id: string; title: string | null; start: number; end?: number };
@@ -106,7 +107,7 @@ export function FocusBar() {
       <div className={`as-focus ${f.profile}`} role="region" aria-label="Focus timer">
         <div className="as-focus-fill" style={{ width: `${Math.min(100, (ms / (LENGTH * 60_000)) * 100)}%` }} />
         <Icon name="watch" small />
-        <span className="as-focus-title">{focusTitle(title).slice(7) || '(Untitled)'}</span>
+        <span className="as-focus-title">{focusTitle(title).slice(7) || UNTITLED}</span>
         {left > 0
           ? <><span className="as-focus-time" role="timer">{elapsed(left)}</span><button className="btn sm" aria-label="Stop the focus timer" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button></>
           : <><span className="as-focus-time over">Time's up</span><button className="btn sm" onClick={stopFocus}>Log {LENGTH}m</button><button className="btn sm" onClick={discardFocus}>Discard</button></>}
@@ -119,7 +120,7 @@ export function FocusBar() {
     <div className={`as-focus ${f.profile}${over ? ' over' : ''}`} role="region" aria-label="Focus timer">
       {est != null && <div className="as-focus-fill" style={{ width: `${pct}%` }} />}
       <Icon name="watch" small />
-      <span className="as-focus-title">{focusTitle(title).slice(7) || '(Untitled)'}</span>
+      <span className="as-focus-title">{focusTitle(title).slice(7) || UNTITLED}</span>
       <span className="as-focus-time" role="timer">{elapsed(ms)}{est != null && <span className="muted"> / {minutesText(est)}</span>}</span>
       <button className="btn sm" aria-label="Stop the focus timer" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button>
     </div>

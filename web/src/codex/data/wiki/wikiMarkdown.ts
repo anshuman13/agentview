@@ -1,9 +1,10 @@
 import { pageClaims, sourcesOf } from './wiki';
+import { UNTITLED } from '../../../../../shared/util';
 
 type Groups = ReturnType<typeof pageClaims>;
 
 export function wikiMarkdown(title: string | null, groups: Groups) {
-  const out = [`# ${title || 'Untitled'}`];
+  const out = [`# ${title || UNTITLED}`];
   for (const g of groups) {
     const live = g.claims.filter((c) => c.fact.state !== 'proposed');
     if (!live.length) continue;

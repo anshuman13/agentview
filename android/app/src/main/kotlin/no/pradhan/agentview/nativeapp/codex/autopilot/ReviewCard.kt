@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
@@ -51,7 +52,7 @@ fun ReviewCard(hub: Hub, run: ChatRun) {
     var revising by remember { mutableStateOf(false) }
     var asking by remember { mutableStateOf<String?>(null) }
     var approving by remember { mutableStateOf(false) }
-    SectionHeader(run.title.ifBlank { "Untitled" })
+    SectionHeader(run.title.ifBlank { UNTITLED })
     Group {
         ListRow(
             run.rounds.lastOrNull()?.line?.ifEmpty { null } ?: run.title, reviewMeta(run, diff, now),

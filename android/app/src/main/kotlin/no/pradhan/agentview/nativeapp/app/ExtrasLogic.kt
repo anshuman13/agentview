@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.app
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.chat.runningText
 import java.net.URLEncoder
 import kotlinx.serialization.Serializable
@@ -44,14 +45,14 @@ data class WaitingSnapshot(val total: Int = 0, val lines: List<WaitingLine> = em
 // Chats with a request open, the longest idle first; the ongoing notification and the home screen widget list the first five.
 fun waitingSnapshot(live: List<LiveChat>): WaitingSnapshot {
     val waiting = live.filter { it.pending > 0 }.sortedBy { it.lastActive }
-    return WaitingSnapshot(waiting.size, waiting.take(WAITING_MAX).map { WaitingLine(it.id, it.title.ifBlank { "Untitled" }, repoName(it)) })
+    return WaitingSnapshot(waiting.size, waiting.take(WAITING_MAX).map { WaitingLine(it.id, it.title.ifBlank { UNTITLED }, repoName(it)) })
 }
 
 data class RunningNote(val chatId: String, val title: String, val text: String, val since: Long, val pending: Int, val permissionId: String = "")
 
 // The ongoing notification per running chat; a chat counts from the first list that showed it running.
 fun runningNotes(live: List<LiveChat>, was: Map<String, Long>, now: Long): List<RunningNote> = live.filter { it.running }.map {
-    RunningNote(it.id, it.title.ifBlank { "Untitled" }, runningText(it), was[it.id] ?: now, it.pending)
+    RunningNote(it.id, it.title.ifBlank { UNTITLED }, runningText(it), was[it.id] ?: now, it.pending)
 }
 
 // The waiting notification and its badge: the waiting chats plus the Needs-you rows; badge < 0 means notifications are off.

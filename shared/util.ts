@@ -24,3 +24,4 @@ export function chatTitle(prompt: string, max = 80) {
   const mention = prompt.trim().split(/\s/)[0].slice(1);
   return mention.startsWith('chat:') ? 'Follow-up chat' : `About ${mention.split('/').filter(Boolean).pop()}`;
 }
+export const UNTITLED = 'Untitled';

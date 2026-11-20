@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -15,7 +16,7 @@ data class MessageHit(val sessionId: String, val role: String, val text: String,
 fun messageQuery(filter: String): String? = filter.trim().takeIf { it.length >= 3 }
 
 fun messageMeta(h: MessageHit, now: Long): String =
-    listOf(h.title.ifBlank { "Untitled" }, if (h.role == "user") "You" else "Agent", agoShort(isoMillis(h.at), now)).filter { it.isNotEmpty() }.joinToString(" · ")
+    listOf(h.title.ifBlank { UNTITLED }, if (h.role == "user") "You" else "Agent", agoShort(isoMillis(h.at), now)).filter { it.isNotEmpty() }.joinToString(" · ")
 
 // The hit text with each word of the query in bold, ignoring case.
 fun boldMatches(text: String, query: String): AnnotatedString = buildAnnotatedString {

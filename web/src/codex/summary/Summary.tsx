@@ -15,6 +15,7 @@ import { copyText, openTask, setView, showSnack, useView } from '../view';
 import { buildReport, type DateRange, type StatusFilter } from './report';
 import '../../styles/features/wiki.css';
 import '../../styles/features/meetings.css';
+import { UNTITLED } from '../../../../shared/util';
 
 const FIRST = 5;
 const BRIEF_LINES = 8;
@@ -113,7 +114,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
               <div className="ui-group">
                 {(openKinds.includes(g.kind) ? g.chats : g.chats.slice(0, FIRST)).map((c) => {
                   const summary = c.summary ?? '';
-                  const row = { title: <span title={summary}>{c.name || 'Untitled'}</span>, meta: `${c.last_at ? `${ago(c.last_at)} ago · ` : ''}${summary.split('\n')[0]}` };
+                  const row = { title: <span title={summary}>{c.name || UNTITLED}</span>, meta: `${c.last_at ? `${ago(c.last_at)} ago · ` : ''}${summary.split('\n')[0]}` };
                   const url = safeHref(c.url);
                   return url ? <Row key={c.profile + c.id} {...row} href={url} /> : <Row key={c.profile + c.id} {...row} plain />;
                 })}

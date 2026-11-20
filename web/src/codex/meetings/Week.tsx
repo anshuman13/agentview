@@ -13,9 +13,10 @@ import { copyText, openMeeting, setView, useView } from '../view';
 import { plural } from '../../ui/util';
 import { Review } from './Review';
 import { WeekGoals } from '../tasks/Goals';
+import { UNTITLED } from '../../../../shared/util';
 
 const MAX = 8;
-const text = (t: string | null) => t?.trim() || 'Untitled';
+const text = (t: string | null) => t?.trim() || UNTITLED;
 
 function Section({ title, rows }: { title: string; rows: ReactNode[] }) {
   if (!rows.length) return null;

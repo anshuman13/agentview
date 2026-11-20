@@ -21,6 +21,7 @@ import { TaskChecks } from './TaskChecks';
 import { TaskChips } from './TaskChips';
 import { TaskMoreMenu } from './TaskMoreMenu';
 import { TaskTimeLog } from './TaskTimeLog';
+import { UNTITLED } from '../../../../../shared/util';
 
 type Props = { row: ItemRow; onClose: () => void; onAsk: (r: ItemRow) => void };
 
@@ -55,7 +56,7 @@ export function TaskEditor({ row, onClose, onAsk }: Props) {
       </header>
       <div className="wk-scroll" ref={scroller}>
         <div className={`as-edit ${row.profile}`} data-no-swipe>
-          <Section label={title.trim() || 'Untitled'} action={
+          <Section label={title.trim() || UNTITLED} action={
             <span className="as-tt-actions">
               {row.status === 'done' && <Button size="sm" variant="gray" icon="check" onClick={() => act.reopen(row)}>Not done</Button>}
               {row.status !== 'done' && row.status !== 'note' && <Button size="sm" variant="filled" icon="check" onClick={then(() => { haptic('success'); act.done(row); })}>Done</Button>}

@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -176,7 +177,7 @@ private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
 @Composable
 private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Double, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
     PageHeader(
-        live.title.ifBlank { "Untitled" },
+        live.title.ifBlank { UNTITLED },
         subtitle = { Text(cwd.substringAfterLast('/'), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
     ) {
         ChatMenu(hub, live, session, hasReply, panels, canReview, running, cwd, onReview)

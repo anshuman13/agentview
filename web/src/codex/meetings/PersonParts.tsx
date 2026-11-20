@@ -11,6 +11,7 @@ import type { ItemRow } from '../data/sync';
 import type { commitmentsOf } from '../data/meetings/meetings';
 import type { Fact } from '../data/wiki/wiki';
 import type { personInbox } from '../data/tasks/review';
+import { UNTITLED } from '../../../../shared/util';
 
 const FIRST = 5;
 const firstRows = <T,>(rows: T[], all: boolean) => (all ? rows : rows.slice(0, FIRST));
@@ -39,7 +40,7 @@ export function Asks({ name, rows }: { name: string; rows: ItemRow[] }) {
         return (
           <CardRow
             key={r.profile + r.id}
-            title={r.title || '(Untitled)'}
+            title={r.title || UNTITLED}
             meta={`${gmail ? 'Gmail' : 'Slack'} · ${ago(r.updated_at, ' ago')}`}
             badge={r.status === 'suggested' ? { status: 'waiting', label: 'Needs you' } : null}
             onOpen={() => openTask(r)}
@@ -67,7 +68,7 @@ export function OpenTasks({ name, rows }: { name: string; rows: ItemRow[] }) {
       <Group rows={rows} name={name} row={(r) => (
         <CardRow
           key={r.profile + r.id}
-          title={r.title || '(Untitled)'}
+          title={r.title || UNTITLED}
           meta={dueText(r, now)}
           onOpen={() => openTask(r)}
           action={{ icon: 'check', label: 'Done', run: () => act.done(r) }}

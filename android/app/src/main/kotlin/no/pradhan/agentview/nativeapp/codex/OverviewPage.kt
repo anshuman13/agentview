@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.codex.meetings.countdown
 import no.pradhan.agentview.nativeapp.codex.meetings.isLive
 import no.pradhan.agentview.nativeapp.codex.meetings.joinMinutes
@@ -164,7 +165,7 @@ private fun LazyListScope.runningSection(chats: List<LiveChat>, count: Int, onOp
                 if (i > 0) Hairline()
                 val waits = countChat(c, emptyMap()).waits
                 val doing = if (waits) "Waiting for you" else c.status.ifBlank { "Working" }
-                ListRow(c.title.ifBlank { "Untitled" }, "${folderName(c.cwd)} · $doing", onClick = { onOpen(c.id) }, trailing = {
+                ListRow(c.title.ifBlank { UNTITLED }, "${folderName(c.cwd)} · $doing", onClick = { onOpen(c.id) }, trailing = {
                     if (waits) Badge("Needs you", BadgeTone.Waiting) else Badge("Running", BadgeTone.Running)
                 })
             }

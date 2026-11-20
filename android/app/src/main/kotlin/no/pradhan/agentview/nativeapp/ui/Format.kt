@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp.ui
 
 // Text helpers every feature uses.
+const val UNTITLED = "Untitled"
+
 fun plural(n: Int, word: String, many: String = word + "s") = "$n ${if (n == 1) word else many}"
 
 fun isoMillis(iso: String): Long = runCatching { java.time.Instant.parse(iso).toEpochMilli() }.getOrDefault(0L)

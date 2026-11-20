@@ -8,6 +8,7 @@ import { ago } from '../../ui/util';
 import { ShowMore, useWindow } from '../../ui/useWindow';
 import { showSnack, useFocusBack, useView } from '../view';
 import { caretLine, RelatedStrip } from '../Related';
+import { UNTITLED } from '../../../../shared/util';
 
 // A loose note: a capture that is not a task. Tap to edit; the first line is its title.
 function NoteCard({ row }: { row: ItemRow }) {
@@ -48,7 +49,7 @@ function NoteCard({ row }: { row: ItemRow }) {
   }
   return (
     <button ref={card} className="wk-card wk-note" onClick={() => setText(full)}>
-      <span className="wk-card-title">{row.title || '(Untitled)'}</span>
+      <span className="wk-card-title">{row.title || UNTITLED}</span>
       {row.text && <span className="wk-card-summary">{row.text}</span>}
       <span className="wk-card-foot"><span>{ago(row.updated_at, ' ago')}</span><span className="spacer" /><span>{row.profile === 'personal' ? 'Personal' : 'Work'}</span></span>
     </button>

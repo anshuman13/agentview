@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 
@@ -13,7 +14,7 @@ const val VOICE_RULES = "(Spoken question. Answer in at most three short sentenc
 fun voicePrompt(question: String, chats: List<LiveChat>): String {
     val lines = chats.take(30).joinToString("\n") { c ->
         val state = when { c.pending > 0 -> "needs me"; c.running -> "working"; c.failed -> "failed"; else -> "idle" }
-        "- ${c.title.ifBlank { "Untitled" }}: $state"
+        "- ${c.title.ifBlank { UNTITLED }}: $state"
     }
     return listOfNotNull(question, if (lines.isNotEmpty()) "\nMy open chats:\n$lines" else null, "\n$VOICE_RULES").joinToString("\n")
 }

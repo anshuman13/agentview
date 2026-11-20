@@ -12,6 +12,7 @@ import { ClaudeChip, SourceChip } from './Chips';
 import { PageTile } from './PageTile';
 import { useClaimEdits } from './useClaimEdits';
 import { REVIEW, shortDate } from './shared';
+import { UNTITLED } from '../../../../shared/util';
 
 // On phones the replaced claim is clamped to two lines; a tap shows all of it.
 export function Replaces({ old }: { old: Fact }) {
@@ -31,7 +32,7 @@ function ReviewCard({ fact }: { fact: Fact }) {
   const fromChat = sourcesOf(fact).find((s) => s.kind === 'chat');
   const label = from
     ? meeting?.title ?? sourcesOf(fact).find((s) => s.kind === 'meeting')?.label ?? 'a meeting'
-    : fact.added_by?.startsWith('slack:') ? sourcesOf(fact).find((s) => s.kind === 'slack')?.label ?? 'Slack' : fromChat ? `chat ${fromChat.label || 'Untitled'}` : null;
+    : fact.added_by?.startsWith('slack:') ? sourcesOf(fact).find((s) => s.kind === 'slack')?.label ?? 'Slack' : fromChat ? `chat ${fromChat.label || UNTITLED}` : null;
   const review = useReview();
   const approve = () => review.approve([fact]);
   const reject = () => review.reject([fact]);
@@ -136,7 +137,7 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
 
 function ChatReview({ chat, list }: { chat: string; list: Fact[] }) {
   const review = useReview();
-  const title = sourcesOf(list[0]).find((s) => s.kind === 'chat')?.label || 'Untitled';
+  const title = sourcesOf(list[0]).find((s) => s.kind === 'chat')?.label || UNTITLED;
   return (
     <div className="mt-action proposed wk-review">
       <div className="mt-action-kind"><Icon name="lightbulb" small />Memory{list[0].profile === 'personal' && <span className="wk-src">Personal</span>}</div>

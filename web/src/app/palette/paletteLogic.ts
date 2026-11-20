@@ -2,7 +2,7 @@ import { ADVISORS } from '../../../../shared/advisors';
 import { EFFORT_LABEL, EFFORT_LEVELS, type Effort, type ProviderOption } from '../../../../shared/protocol';
 import { providerModes, type ModeOption } from '../../../../shared/providers';
 import { paletteFeature, shownFeature } from '../../../../shared/featureUse';
-import { isBlock } from '../../../../shared/util';
+import { UNTITLED, isBlock } from '../../../../shared/util';
 import { codexMeetings } from '../../codex/data';
 import { isTask, searchAll } from '../../codex/data/ask/search';
 import { live } from '../../codex/data/wiki/wiki';
@@ -144,9 +144,9 @@ export const itemKey = (i: { kind: string; profile: string; id: string }) => `${
 
 export function paletteItems(data: Pick<Snapshot, 'items' | 'meetings' | 'pages'>): PaletteItem[] {
   return [
-    ...data.items.filter(isTask).map((r): PaletteItem => ({ kind: 'task', profile: r.profile, id: r.id, title: r.title || r.text || 'Untitled', at: null })),
+    ...data.items.filter(isTask).map((r): PaletteItem => ({ kind: 'task', profile: r.profile, id: r.id, title: r.title || r.text || UNTITLED, at: null })),
     ...live(data.meetings).filter((m) => !isBlock(m.id)).map((m): PaletteItem => ({ kind: 'meeting', profile: m.profile, id: m.id, title: m.title || 'Meeting', at: m.starts_at })),
-    ...live(data.pages).map((p): PaletteItem => ({ kind: 'wiki', profile: p.profile, id: p.id, title: p.title || 'Untitled', at: null })),
+    ...live(data.pages).map((p): PaletteItem => ({ kind: 'wiki', profile: p.profile, id: p.id, title: p.title || UNTITLED, at: null })),
   ];
 }
 

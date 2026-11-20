@@ -5,6 +5,7 @@ import { keyWords } from '../../../../../shared/claimMatch';
 import { GOAL } from '../tasks/goals';
 import { currentClaim, isOld, live, rowMatcher, queryWords, searchWiki, type Fact, type Job, type Meeting, type Page } from '../wiki/wiki';
 import { peopleOf, sameName, searchMeetings } from '../meetings/meetings';
+import { UNTITLED } from '../../../../../shared/util';
 
 export { snippet };
 
@@ -31,12 +32,12 @@ export function searchAll(data: SearchData, query: string, expanded: string[] = 
   const meetings = searchMeetings(live(data.meetings), query).sort((a, b) => (b.starts_at ?? 0) - (a.starts_at ?? 0));
   const found = searchWiki(data.pages, data.facts, query);
   const wiki = [
-    ...found.pages.map((p) => (): Hit => ({ id: p.id, profile: p.profile, title: p.title || 'Untitled', snippet: snippet(words, p.summary), page: p.id })),
+    ...found.pages.map((p) => (): Hit => ({ id: p.id, profile: p.profile, title: p.title || UNTITLED, snippet: snippet(words, p.summary), page: p.id })),
     ...found.claims.slice(0, WIKI_CLAIM_CAP).map((f) => (): Hit => ({ id: f.id, profile: f.profile, title: snippet(words, f.text) || f.text || '', snippet: '', page: f.page_id })),
   ];
   const jobs = live(data.jobs).filter((j) => hitJob(j));
   return {
-    tasks: group(tasks, (r) => ({ id: r.id, profile: r.profile, title: r.title || r.text || 'Untitled', snippet: snippet(words, r.text, r.people, r.source), page: r.meeting_id }), expanded.includes('tasks')),
+    tasks: group(tasks, (r) => ({ id: r.id, profile: r.profile, title: r.title || r.text || UNTITLED, snippet: snippet(words, r.text, r.people, r.source), page: r.meeting_id }), expanded.includes('tasks')),
     meetings: group(meetings, (m) => ({ id: m.id, profile: m.profile, title: m.title || 'Meeting', snippet: snippet(words, m.summary, m.decisions, m.notes, m.people) }), expanded.includes('meetings')),
     wiki: group(wiki, (hit) => hit(), expanded.includes('wiki')),
     jobs: group(jobs, (j) => ({ id: j.id, profile: j.profile, title: j.name || 'Untitled job', snippet: snippet(words, j.prompt) }), expanded.includes('jobs')),
