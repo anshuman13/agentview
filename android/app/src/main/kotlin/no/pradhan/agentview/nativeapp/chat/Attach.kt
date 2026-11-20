@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +31,7 @@ import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 
 private const val PHOTO_MAX_PX = 2048
+private const val MAX_FILE_BYTES = 50_000_000L
 
 // A camera shot scaled to at most 2048 px on its long side and turned upright, so it uploads quickly over the VPN.
 private fun shrunkJpeg(file: File): ByteArray? {
@@ -51,7 +53,7 @@ private fun shrunkJpeg(file: File): ByteArray? {
 
 private fun readUri(ctx: Context, uri: Uri) = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() }
 
-// The add button with Take photo and Choose photo, or with choose off a camera button; each image is uploaded to the Mac and its path handed to onPath.
+// The add button with Take photo, Choose photo and Choose file, or with choose off a camera button; each upload goes to the Mac and its [Image: path] or [File: path] marker is handed to onPath.
 @Composable
 fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, onPath: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
@@ -62,11 +64,12 @@ fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, o
         Menu(open, { open = false }) {
             MenuItem("Take photo", "device-camera", { open = false; attach.takePhoto() })
             MenuItem("Choose photo", "file-media", { open = false; attach.choosePhoto() })
+            MenuItem("Choose file", "file", { open = false; attach.chooseFile() })
         }
     }
 }
 
-class Attach(val takePhoto: () -> Unit, val choosePhoto: () -> Unit)
+class Attach(val takePhoto: () -> Unit, val choosePhoto: () -> Unit, val chooseFile: () -> Unit)
 
 @Composable
 fun rememberAttach(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Unit): Attach {
@@ -80,7 +83,7 @@ fun rememberAttach(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Uni
             try {
                 val bytes = withContext(Dispatchers.IO) { runCatching(read).getOrNull() }
                 val path = bytes?.let { hub.attach(name, mime, it) }
-                if (path != null) onPath(path) else if (bytes == null) hub.notice.value = "Could not read the image"
+                if (path != null) onPath(attachMark(mime, path)) else if (bytes == null) hub.notice.value = "Could not read the file"
             } finally {
                 onUploading(-1)
             }
@@ -103,5 +106,16 @@ fun rememberAttach(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Uni
         Unit
     }
 
-    return Attach(takePhoto) { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+    val document = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val (name, size) = ctx.contentResolver.query(uri, null, null, null, null)?.use { c ->
+            if (!c.moveToFirst()) return@use null
+            c.getColumnIndex(OpenableColumns.DISPLAY_NAME).let { if (it >= 0) c.getString(it) else null } to
+                c.getColumnIndex(OpenableColumns.SIZE).let { if (it >= 0 && !c.isNull(it)) c.getLong(it) else 0L }
+        } ?: (null to 0L)
+        if (size > MAX_FILE_BYTES) { hub.notice.value = "Files over 50 MB cannot be attached"; return@rememberLauncherForActivityResult }
+        upload(name ?: uri.lastPathSegment ?: "file", ctx.contentResolver.getType(uri) ?: "application/octet-stream") { readUri(ctx, uri) }
+    }
+
+    return Attach(takePhoto, { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, { document.launch(arrayOf("*/*")) })
 }

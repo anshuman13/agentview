@@ -170,6 +170,9 @@ fun splitMarks(text: String) = Marks(
 
 fun joinMarks(body: String, marks: List<String>) = "$body${if (body.isNotEmpty() && marks.isNotEmpty()) " " else ""}${marks.joinToString("") { "$it " }}"
 
+// web shared/attachMark.ts: the marker an upload adds to a prompt, by its mime type.
+fun attachMark(mime: String, path: String) = "[${if (mime.startsWith("image/")) "Image" else "File"}: $path]"
+
 // The chip label of a marker: its kind and file name.
 fun markLabel(mark: String): String {
     val kind = mark.substring(1, mark.indexOf(':'))

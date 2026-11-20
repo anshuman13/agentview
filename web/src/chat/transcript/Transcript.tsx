@@ -11,6 +11,7 @@ import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
+import { FindBar, showHit } from './FindBar';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
 import { foldTurns, openWork, proposalState, type Claim, type FoldRow, type Proposal, type StatusStep } from './workFold';
@@ -193,7 +194,15 @@ function useRowWindow(count: number, replies: number, earlier: number, box: RefO
     showEarlier(true).then((ok) => { if (!ok) autoLoads.current.failed = true; });
   }, [replies, earlier, loading]);
 
-  return { shown, start, from, staging, loading, showEarlier };
+  // Widens the window to the last `rows` rows.
+  const reveal = (rows: number) => {
+    if (rows <= Math.min(staged, shown)) return;
+    const next = Math.max(shown, rows);
+    setShown(next);
+    setStaged(next);
+  };
+
+  return { shown, start, from, staging, loading, showEarlier, reveal };
 }
 
 function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string; failed: boolean; label: string }) {
@@ -208,7 +217,25 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => new Set([...specCards(items), ...docCards(items)]), [items]);
   const list = useMemo<FoldRow[]>(() => foldTurns(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [items, events, cards]);
-  const { shown, start, from, staging, loading, showEarlier } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
+  const { shown, start, from, staging, loading, showEarlier, reveal } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
+  const [finding, setFinding] = useState(false);
+  useEffect(() => {
+    const open = () => setFinding(true);
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'f') { e.preventDefault(); open(); }
+    };
+    window.addEventListener('agentview:find', open);
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('agentview:find', open); window.removeEventListener('keydown', onKey); };
+  }, []);
+  const goToHit = (id: string) => {
+    const at = list.findIndex((r) => (r.kind === 'item' ? r.it.id === id : r.hidden.some((h) => h.id === id)));
+    if (at < 0) return;
+    const r = list[at];
+    scroll.stick.current = false;
+    reveal(list.length - at);
+    showHit(r.kind === 'item' ? r.it.id : `work:${r.id}`);
+  };
   const runs = useMemo(() => exploreRuns(items), [items]);
   const bumps = useMemo(() => specBumps(items), [items]);
   const mark = useSeenMark();
@@ -233,6 +260,7 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
 
   return (
     <div className="tr-host">
+    {finding && <FindBar events={events} earlier={earlier} go={goToHit} onClose={() => setFinding(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <EmptyState size="sm" icon="comment-discussion" title="No messages yet" hint="Your prompts, the agent's steps and replies show up here" />}
@@ -353,7 +381,7 @@ function Tasks({ id, steps: all, now, tools, claims, proposed, live }: { id: str
   const current = live ? steps.find((s) => !s.done) : undefined;
   const spin = <Icon name="loading" small spin />;
   return (
-    <div className="tr-steps">
+    <div id={`turn-work:${id}`} className="tr-steps">
       <div className="tr-steps-head">
         {steps.length > 0 && <span>{done < steps.length ? `Tasks \u00b7 ${done} of ${steps.length}` : plural(steps.length, 'task')}</span>}
         {claims.length > 0 && <Chip size="sm" on={reading} className="tr-claims-chip" aria-expanded={reading} onClick={() => setReading((v) => !v)}>{`Used ${plural(claims.length, 'claim')}`}</Chip>}
@@ -391,11 +419,11 @@ function RowImpl({ it, cwd, settled, card, answer, rewind, bump = 0 }: { it: Ite
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
-      return <div className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}><UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title={`Waiting for ${label}'s next step`}><Icon name="clock" small /><Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><Button variant="plain" size="sm" icon="reply" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</Button><Button variant="plain" size="sm" icon="copy" onClick={() => copyPrompt(it.text)}>Copy</Button></span>}</div>;
+      return <div id={`turn-${it.id}`} className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}><UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title={`Waiting for ${label}'s next step`}><Icon name="clock" small /><Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><Button variant="plain" size="sm" icon="reply" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</Button><Button variant="plain" size="sm" icon="copy" onClick={() => copyPrompt(it.text)}>Copy</Button></span>}</div>;
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <Button variant="plain" size="sm" icon="copy" onClick={() => copyReply(it.text.trim())}>Copy</Button>}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
+      return <div id={`turn-${it.id}`} className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <Button variant="plain" size="sm" icon="copy" onClick={() => copyReply(it.text.trim())}>Copy</Button>}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':

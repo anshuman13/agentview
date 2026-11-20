@@ -9,6 +9,7 @@ const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 export const SHORTCUTS: { group: string; rows: { key: string; label: string }[] }[] = [
   { group: 'Chat', rows: [
     { key: '⌘O', label: 'Start a chat in a repo' },
+    { key: '⌘F', label: 'Find in the shown chat' },
     { key: 'Enter', label: 'Send; Shift+Enter for a new line' },
     { key: 'Tab', label: 'Accept the suggested command or the ghost text' },
     { key: 'Shift+Tab', label: 'Cycle the permission mode' },

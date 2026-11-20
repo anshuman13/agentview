@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.chat
 
 import no.pradhan.agentview.nativeapp.ui.UNTITLED
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -101,6 +102,7 @@ class ChatPanels {
     var hooks by mutableStateOf(false)
     var saved by mutableStateOf(false)
     var tools by mutableStateOf(false)
+    var find by mutableStateOf(false)
     var dialog by mutableStateOf<String?>(null)
 }
 
@@ -149,6 +151,10 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         ChatHeader(hub, live, session, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd) { review = 0 }
         ChatStatus(live, session, view.cost, if (view.agents.isNotEmpty() || run != null) maxOf(view.agents.size, live.agentList.size) else null) { panels.agents = true }
         Hairline()
+        if (panels.find) {
+            BackHandler { panels.find = false }
+            FindBar(hub, view.events, earlier)
+        }
         prLoad.data?.let { pr ->
             ListRow(pr.title, prStripMeta(pr), leading = { StatusDot(checkDot(pr.checks)) }, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { prOpen = pr.number })
             Hairline()
@@ -233,6 +239,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
     val sessionId = live.sessionId ?: session?.sessionId
     MoreButton { close ->
         MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
+        MenuItem("Find in chat", "search", { close(); panels.find = true }, enabled = hasReply)
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
         MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
         MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)

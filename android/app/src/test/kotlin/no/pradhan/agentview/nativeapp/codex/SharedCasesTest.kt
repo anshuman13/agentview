@@ -26,6 +26,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.app.chatNotice
 import no.pradhan.agentview.nativeapp.app.BarEvent
+import no.pradhan.agentview.nativeapp.chat.attachMark
+import no.pradhan.agentview.nativeapp.chat.findInChat
 import no.pradhan.agentview.nativeapp.chat.failedLine
 import no.pradhan.agentview.nativeapp.chat.mergeTail
 import no.pradhan.agentview.nativeapp.chat.turnEnd
@@ -518,6 +520,17 @@ class SharedCasesTest {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
             assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }.toSet(), turnAnswers(buildTranscript(events), c["running"]?.jsonPrimitive?.boolean == true))
         }
+    }
+
+    @Test fun chatFind() {
+        for (c in cases("chat-find")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, findInChat(events, c.str("query")))
+        }
+    }
+
+    @Test fun attachMarkCases() {
+        for (c in cases("attach-mark")) assertEquals(c.str("name"), c.str("expected"), attachMark(c.str("mime"), c.str("path")))
     }
 
     @Test fun proposalState() {

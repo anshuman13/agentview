@@ -1,6 +1,7 @@
 import { useState, type RefObject } from 'react';
 import { notice } from '../../app/store';
 import { errText } from '../../../../shared/util';
+import { attachMark } from '../../../../shared/attachMark';
 import { uploadPaste } from '../chatApi';
 
 export function useUploads(addMark: (mark: string) => void, ta: RefObject<HTMLTextAreaElement | null>) {
@@ -10,7 +11,7 @@ export function useUploads(addMark: (mark: string) => void, ta: RefObject<HTMLTe
     for (const f of list) {
       try {
         const body = await uploadPaste(f);
-        addMark(`[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}]`);
+        addMark(attachMark(f.type, body.path));
       } catch (err) {
         notice(`Could not attach ${f.name || 'the file'}: ${errText(err)}`);
       } finally {

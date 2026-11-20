@@ -31,6 +31,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
     // Tries and jobs have their controls on the loop card only.
+    if (v === 'find') return act(() => window.dispatchEvent(new Event('agentview:find')));
     if (v === 'goal') return act(() => (!run ? startGoal({ here: true }) : runDetail(run).opens && openGoal(run.id)));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
@@ -49,6 +50,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
       picker('build', 'Build', buildFlow ? 'Spec flow' : 'Off'),
     ]],
     ['Chat', [
+      action('find', 'Find in chat', 'Search the prompts and replies'),
       ...(sessionId ? [picker('fork', 'Fork', 'Side chat or a new chat from a summary'), picker('remind', 'Remind me', 'Add a task to check this chat later')] : []),
       picker('remember', 'Remember…', 'Save a preference to Memory'),
       picker('copy', 'Copy', resumeCommand ? 'As Markdown or the terminal command' : 'As Markdown'),
