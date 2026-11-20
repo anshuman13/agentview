@@ -33,6 +33,7 @@ import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunBadge
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunBadgeView
+import no.pradhan.agentview.nativeapp.codex.autopilot.askLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBadge
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
@@ -157,7 +158,7 @@ class ChatRows(
             c.pending > 0 -> metaLine(c.ask, since(c.lastActive))
             c.stalled -> "No activity for 15 min"
             c.running -> c.status.ifBlank { "Working" }
-            else -> since(maxOf(c.lastActive, s?.lastModified ?: 0))
+            else -> metaLine(since(maxOf(c.lastActive, s?.lastModified ?: 0)), askLine(c.run))
         }
         val draft = draftSnippet(hub.draft(c.id))
         return buildAnnotatedString {

@@ -22,6 +22,17 @@ class RunsTest {
     private fun run(id: String, state: String = "running", kind: String = "loop", rounds: List<Round> = emptyList(), why: String = "", endedAt: Long? = null, needsYou: Boolean = false, every: Long? = null) =
         ChatRun(id, kind, round = 4, max = 20, nextAt = 14 * 3_600_000L + 20 * 60_000L, state = state, why = why, rounds = rounds, endedAt = endedAt, needsYou = needsYou, every = every)
 
+    @Test fun askLineIsTheSentenceOfAWaitingQuestionOrBlockedRound() {
+        fun live(outcome: String?, needsYou: Boolean = true, line: String? = "Ship it?") = LiveRun("r", needsYou = needsYou, outcome = outcome, line = line)
+        assertEquals("Ship it?", askLine(live("question")))
+        assertEquals("Ship it?", askLine(live("blocked")))
+        assertEquals(null, askLine(live("progress")))
+        assertEquals(null, askLine(live("done")))
+        assertEquals(null, askLine(live("question", needsYou = false)))
+        assertEquals(null, askLine(live("question", line = null)))
+        assertEquals(null, askLine(null))
+    }
+
     @Test fun loopNowTakesTheNewerOfStatusAndRound() {
         val r = run("a", rounds = listOf(Round(1, 400, "progress", "round", 0.0))).copy(startedAt = 100)
         assertEquals(LoopNow("Working", 500, "status", next = "a", stepsLeft = 2), loopNow(r, LiveNow("Working", 500, next = listOf("a", "b"))))
