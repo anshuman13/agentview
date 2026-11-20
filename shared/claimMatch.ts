@@ -12,3 +12,26 @@ export function mayChange(d: { words: Set<string>; hay: string }, claim: Set<str
 }
 
 export const decisionKey = (text: string, meetingTitle: string | null) => ({ words: keyWords(text), hay: `${meetingTitle ?? ''} ${text}`.toLowerCase() });
+
+export const SIMILAR = 0.6;
+
+// The share of the shorter text's key words that the other text has too; 0 when either has none.
+export function overlap(a: Set<string>, b: Set<string>) {
+  const [short, long] = a.size <= b.size ? [a, b] : [b, a];
+  if (!short.size) return 0;
+  let n = 0;
+  for (const w of short) if (long.has(w)) n++;
+  return n / short.size;
+}
+
+// The claim that overlaps the text most, when it reaches SIMILAR.
+export function similarClaim<T extends { text: string }>(text: string, claims: T[]): T | undefined {
+  const words = keyWords(text);
+  let best: T | undefined;
+  let top = SIMILAR;
+  for (const c of claims) {
+    const score = overlap(words, keyWords(c.text));
+    if (score >= top && (!best || score > top)) [best, top] = [c, score];
+  }
+  return best;
+}

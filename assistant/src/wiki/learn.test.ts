@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { openDb } from '../core/db.js';
-import { learnFromChat, type Chat } from './learn.js';
+import { alreadyKnown, learnFromChat, type Chat } from './learn.js';
 import { applyChanges } from '../core/sync.js';
 
 const chat = (events: Chat['events'], title = 'Setup'): Chat => ({ chat: 'c1', title, profile: 'work', events });
@@ -46,5 +46,15 @@ describe('learn from chats', () => {
     const claims = ['  use BUN, not npm. ', 'no em dashes.', 'prefer short answers', 'The password is hunter2', 'Token abcdefghijklmnopqrstuvwxyz1234', 'Run tests before commits.'];
     expect(await learnFromChat(db, chat([user('u1', 10)]), 100, async () => claims)).toEqual({ proposed: 1 });
     expect(db.prepare("SELECT text FROM facts WHERE id LIKE 'learn:%'").all()).toEqual([{ text: 'Run tests before commits.' }]);
+  });
+
+  it('tells the run about live and proposed claims, page or not', async () => {
+    const db = openDb(':memory:');
+    const row = (id: string, state: string, text: string, page_id: string | null = null) => ({ table: 'facts', id, profile: 'work' as const, updated_at: 1, fields: { text, state, page_id } });
+    applyChanges(db, [row('a', 'live', 'Use bun.'), row('b', 'live', 'Gateway limits 60 a minute.', 'p1'), row('c', 'proposed', 'Short answers.'), row('d', 'rejected', 'No em dashes.')]);
+    let memory: string[] = [];
+    await learnFromChat(db, chat([user('u1', 10)]), 100, async (_c, _e, m) => ((memory = m), []));
+    expect(memory.sort()).toEqual(['Gateway limits 60 a minute.', 'Short answers.', 'Use bun.']);
+    expect(alreadyKnown([{ text: 'x', state: null }, { text: 'y', state: 'retired' }])).toEqual(['x']);
   });
 });

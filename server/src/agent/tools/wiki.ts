@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { profileOf } from '../claude/accounts.js';
 import { isOld as isOldClaim } from '../../../../shared/claimAge.js';
+import { similarClaim } from '../../../../shared/claimMatch.js';
 import { errText } from '../../../../shared/util.js';
 import { hubGet, hubPush, hubRows, type HubChange, type HubRow } from '../../integrations/assistant.js';
 import { defineTool } from './tool.js';
@@ -83,7 +84,7 @@ export const wikiProposeTool = defineTool({
   async handler(a, { cwd, chatId, provider }) {
     const profile = a.profile ?? profileOf(cwd);
     const now = Date.now();
-    const pages = await hubRows('pages');
+    const { pages, facts } = await own(cwd, profile);
     const changes: HubChange[] = [];
     let pageId = a.page ? pages.find((r) => r.profile === profile && (r.id === a.page || String(r.title).toLowerCase() === a.page!.toLowerCase()))?.id : undefined;
     if (a.page && !pageId) {
@@ -91,12 +92,13 @@ export const wikiProposeTool = defineTool({
       pageId = crypto.randomUUID();
       changes.push({ table: 'pages', id: pageId, profile, updated_at: now, fields: { title: a.page, section: a.section, summary: null, sort: now, state: 'proposed' } });
     }
+    const similar = similarClaim(a.text, facts.filter((r) => !r.superseded_by && ['live', 'proposed'].includes(state(r)) && typeof r.text === 'string') as (HubRow & { text: string })[]);
     const id = crypto.randomUUID();
     changes.push({
       table: 'facts', id, profile, updated_at: now,
       fields: { text: a.text, page_id: pageId ?? null, heading: a.heading ?? null, sources: JSON.stringify(a.sources), at: now, state: 'proposed', replaces: a.replaces ?? null, added_by: chatId ? `${provider}:${chatId}` : provider },
     });
     await hubPush(changes);
-    return `Proposed [${id}] for the user to approve${pageId ? '' : ' in memory'}.`;
+    return `Proposed [${id}] for the user to approve${pageId ? '' : ' in memory'}.${similar ? ` Similar to [${similar.id}]: ${similar.text}. Pass replaces if it updates that claim.` : ''}`;
   },
 });
