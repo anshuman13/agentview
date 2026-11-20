@@ -25,6 +25,7 @@ test('searchWiki ranks claims, matches on any word and scopes by profile', () =>
   const r = searchWiki(db, 'api gateway rate limit', 'work');
   expect(ids(r.claims)).toEqual(['f1', 'f2']);
   expect(r.pages).toEqual([{ id: 'p1', title: 'Gateway', section: 'Systems', state: 'live' }]);
+  expect(r.claims[0]).toMatchObject({ page_title: 'Gateway', heading: null });
   expect(searchWiki(db, 'gateway "limit*', 'work').claims.length).toBe(2);
   expect(searchWiki(db, '(a OR b) - : *', 'work')).toEqual({ pages: [], claims: [] });
   expect(searchWiki(db, 'with that', 'work')).toEqual({ pages: [], claims: [] });

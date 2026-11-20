@@ -21,7 +21,8 @@ const state = (r: HubRow) => (r.state as string | null) ?? 'live';
 const RETIRE_AFTER = 90 * 86_400_000;
 const isOld = (f: HubRow) => state(f) === 'retired' || (state(f) !== 'proposed' && typeof f.at === 'number' && f.at > 0 && Date.now() - f.at > RETIRE_AFTER);
 const day = (f: HubRow) => (typeof f.at === 'number' && f.at > 0 ? new Date(f.at).toISOString().slice(0, 10) : 'undated');
-const claim = (f: HubRow) => `- [${f.id}] (${day(f)}, ${state(f)}${f.superseded_by ? ', superseded' : ''}${state(f) !== 'retired' && isOld(f) ? ', old' : ''}) ${f.text}`;
+const where = (f: HubRow) => (f.page_title ? ` (on ${f.page_title}${f.heading ? ` / ${f.heading}` : ''})` : '');
+const claim = (f: HubRow) => `- [${f.id}] (${day(f)}, ${state(f)}${f.superseded_by ? ', superseded' : ''}${state(f) !== 'retired' && isOld(f) ? ', old' : ''}) ${f.text}${where(f)}`;
 const newest = (a: HubRow, b: HubRow) => ((b.at as number) ?? 0) - ((a.at as number) ?? 0);
 
 // A chat reads only its own profile's wiki, so work chats never see personal claims and the other way round.
