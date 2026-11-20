@@ -2,15 +2,18 @@ import { useMemo } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { dayLabel } from '../data/dates';
 import { agendaMarkdown } from '../data/meetings/meetingMarkdown';
-import { pointsFor, theirActions } from '../data/meetings/points';
+import { betweenRows, personInbox, unanswered } from '../data/tasks/review';
+import { firstName, pointsFor, theirActions } from '../data/meetings/points';
 import { type Meeting } from '../data/wiki/wiki';
-import { briefFor, openQuestions, priorWith, questionKey } from '../data/meetings/meetings';
+import { briefFor, displayName, openQuestions, peopleOf, priorWith, questionKey } from '../data/meetings/meetings';
 import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
+import { safeHref } from '../../ui/util';
 import { Section } from '../../ui/Section';
 import { GroupList } from '../overview/DigestCard';
 import type { DigestGroup } from '../overview/digest';
-import { copyText, openMeeting, openTask } from '../view';
+import { copyText, openMeeting, openTask, setView } from '../view';
+import { UNTITLED } from '../../../../shared/util';
 import { resolvedQuestions } from './OpenQuestions';
 import { PointList, useMarkRaised } from './Raise';
 
@@ -37,7 +40,12 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
     },
     [meetings, prior],
   );
-  if (!points.length && !prior.length && !questions.length && !brief.tasks.length && !brief.claims.length) return null;
+  const person = peopleOf(m).length === 1 ? peopleOf(m)[0] : null;
+  const between = useMemo(
+    () => (person ? betweenRows(personInbox(person, snap.items, snap.chats, unanswered(snap.briefs)), firstName(displayName(person))) : []),
+    [person, snap.items, snap.chats, snap.briefs],
+  );
+  if (!between.length && !points.length && !prior.length && !questions.length && !brief.tasks.length && !brief.claims.length) return null;
   const meta = (meeting: Meeting) => `${meeting.title} · ${dayLabel(meeting.starts_at!)}`;
   const actions: Line[] = prior.flatMap(({ meeting, open }) => open.map((r) => ({ title: r.title ?? '', meta: meta(meeting), open: () => openMeeting(meeting) })));
   const decisions: Line[] = prior.flatMap(({ meeting, decisions: ds }) => ds.map((d, i) => ({ title: d.split('\n')[0], meta: meta(meeting), open: () => openMeeting(meeting) })));
@@ -74,6 +82,18 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
           <GroupList key={g.outcome} foldKey={`codex.prepFold.${m.profile}:${m.id}:${g.outcome}`} capOpen group={g} render={(r) => PLAIN.includes(g.outcome) ? <Row plain lines={2} title={r.title} /> : <Row title={r.title} meta={r.meta} onClick={r.open} />} />
         ))}
       </div>
+      {person && between.length > 0 && (
+        <>
+          <Section label={`Between you and ${firstName(displayName(person))}`} count={between.length} />
+          <div className="ov-group">
+            {between.map((b, i) => {
+              const href = safeHref(b.url);
+              return <Row key={i} title={b.title || UNTITLED} meta={b.meta || undefined} href={href} onClick={b.task ? () => openTask(b.task!) : undefined} />;
+            })}
+            <Row title="Open person" onClick={() => setView({ person })} />
+          </div>
+        </>
+      )}
       {points.length > 0 && (
         <>
           <Section label="To raise" count={points.length} />

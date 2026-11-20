@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import type { ItemRow } from '../sync';
 import type { Meeting } from '../wiki/wiki';
-import { openTasksOf, nextMonday, nudgeText, waitingByPerson, weeklyReview } from './review';
+import { betweenRows, openTasksOf, nextMonday, nudgeText, waitingByPerson, weeklyReview } from './review';
 import { weekStart } from '../dates';
 
 const row = (o: Partial<ItemRow>): ItemRow => ({ id: 'x', profile: 'work', version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0, title: 't', text: null, source: null, source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...o });
@@ -70,5 +70,23 @@ describe('openTasksOf', () => {
     const done = row({ id: 'c', people: 'Ada Lovelace', status: 'done' });
     const other = row({ id: 'd', people: 'Grace Hopper' });
     expect(openTasksOf('Ada Lovelace', [mine, ask, done, other]).map((x) => x.id)).toEqual(['a']);
+  });
+});
+
+describe('betweenRows', () => {
+  const mail = (n: number) => Array.from({ length: n }, (_, i) => ({ thread: `t${i}`, url: `u${i}`, to: 'Ada', subject: `m${i}`, sent_at: 0 }));
+  const inbox = (o: Partial<Parameters<typeof betweenRows>[0]>) => ({ dm: null, asks: [], promises: [], mail: [], ...o });
+  it('orders promises, asks and mail, capped at 5', () => {
+    const rows = betweenRows(inbox({ promises: [row({ id: 'said:1', title: 'p' })], asks: [row({ id: 'a', title: 'a' })], mail: mail(5) }), 'Ada');
+    expect(rows.map((r) => r.title)).toEqual(['p', 'a', 'm0', 'm1', 'm2']);
+  });
+  it('keeps the DM thread as the fifth row', () => {
+    const dm = { summary: 'line one\nline two', url: 'https://slack/x' } as never;
+    const rows = betweenRows(inbox({ dm, mail: mail(6) }), 'Ada');
+    expect(rows.map((r) => r.title)).toEqual(['m0', 'm1', 'm2', 'm3', 'Slack DM']);
+    expect(rows[4]).toMatchObject({ meta: 'line one', url: 'https://slack/x' });
+  });
+  it('is empty with nothing open', () => {
+    expect(betweenRows(inbox({}), 'Ada')).toEqual([]);
   });
 });

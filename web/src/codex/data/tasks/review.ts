@@ -114,6 +114,20 @@ export function personInbox(name: string, items: ItemRow[], chats: Chat[], mail:
   };
 }
 
+export type Between = { title: string; meta: string; task?: ItemRow; url?: string };
+
+// Up to 5 rows of what is open between me and a person: my promises, their asks, my mail they have not answered, then the DM thread.
+export function betweenRows(inbox: ReturnType<typeof personInbox>, first: string): Between[] {
+  const dm = inbox.dm;
+  const rows: Between[] = [
+    ...inbox.promises.map((r) => ({ title: r.title ?? '', meta: `You told ${first}`, task: r })),
+    ...inbox.asks.map((r) => ({ title: r.title ?? '', meta: `${first} asked you`, task: r })),
+    ...inbox.mail.map((w) => ({ title: w.subject, meta: `Waiting on ${first}`, url: w.url })),
+  ].slice(0, dm ? 4 : 5);
+  if (dm) rows.push({ title: 'Slack DM', meta: (dm.summary ?? '').split('\n')[0], url: dm.url ?? undefined });
+  return rows;
+}
+
 // The Monday to Friday day before now's day, as [start, end).
 function prevWorkday(now: number): Span {
   const d = new Date(dayStart(now));
