@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp.codex
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -232,9 +234,9 @@ private fun NoteLinks(hub: Hub, text: String) {
     var all by remember { mutableStateOf(false) }
     if (urls.isEmpty()) return
     val uri = LocalUriHandler.current
-    Column {
-        SectionHeader("Links", urls.size.toString())
-        Group {
+    Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
+        FieldLabel("Links")
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
             (if (all) urls else urls.take(LINK_LIMIT)).forEachIndexed { i, u ->
                 key(u) {
                     if (i > 0) Hairline()

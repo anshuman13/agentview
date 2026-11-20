@@ -184,7 +184,7 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolea
         else -> null
     }
     ListRow(r.title ?: UNTITLED, meta, strike = status == "done", onClick = onTask?.let { { it(r) } }, trailing = {
-        if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+        if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !readOnly)
         MoreButton { close -> ActionMenuItems(r, m, now, actions, readOnly, close) }
     })
 }

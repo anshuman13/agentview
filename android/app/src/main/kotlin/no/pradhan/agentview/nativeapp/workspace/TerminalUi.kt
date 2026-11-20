@@ -75,9 +75,9 @@ fun TerminalScreen(hub: Hub, onBack: () -> Unit) {
         when {
             load.data == null && load.error.isNotEmpty() -> ErrorHint(load.error)
             load.data == null -> Hint("Loading…")
-            id == null -> EmptyState("No terminal open", "A terminal runs a shell in the chat's folder", icon = "terminal", small = false, action = {
+            id == null -> EmptyState("No terminal open", "A terminal runs a shell in the chat's folder", icon = "terminal", small = false, action = if (hub.readOnly) null else ({
                 Button("New terminal", { hub.newTerminal("Terminal unavailable") { if (it) reload() } }, variant = ButtonVariant.Filled)
-            })
+            }))
             else -> TermView(hub, id, onGone = reload)
         }
     }

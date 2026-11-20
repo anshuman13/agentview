@@ -1,0 +1,9 @@
+[
+  { "name": "never synced", "reconnecting": false, "error": "", "ageMs": null, "pending": 0, "expected": "Not synced yet" },
+  { "name": "synced minutes ago", "reconnecting": false, "error": "", "ageMs": 300000, "pending": 0, "expected": "Synced 5m ago" },
+  { "name": "synced just now", "reconnecting": false, "error": "", "ageMs": 1000, "pending": 0, "expected": "Synced now" },
+  { "name": "one change waiting", "reconnecting": false, "error": "", "ageMs": 7200000, "pending": 1, "expected": "Synced 2h ago · 1 change waiting" },
+  { "name": "changes waiting", "reconnecting": false, "error": "", "ageMs": 7200000, "pending": 3, "expected": "Synced 2h ago · 3 changes waiting" },
+  { "name": "error", "reconnecting": false, "error": "Can't reach the hub", "ageMs": 7200000, "pending": 0, "expected": "Sync failed: Can't reach the hub" },
+  { "name": "reconnecting wins over error", "reconnecting": true, "error": "Can't reach the hub", "ageMs": 7200000, "pending": 2, "expected": "Reconnecting to the hub… · 2 changes waiting" }
+]

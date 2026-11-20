@@ -81,7 +81,7 @@ fun ExtraContent(
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
             if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop, openChat, anchor,
-                onAsk = if (hub.readOnly) null else ({ text -> hub.askCodex(text, p.profile) }))
+                onAsk = if (hub.readOnly) null else ({ text -> hub.askCodex(text, p.profile) }), readOnly = hub.readOnly)
         }
         route == "jobs" -> JobsListPage(hub, st, profile, now, actions, { push("autopilot") }, { push("jobnew:${it.key}") }) { push("job:${it.key}") }
         else -> {

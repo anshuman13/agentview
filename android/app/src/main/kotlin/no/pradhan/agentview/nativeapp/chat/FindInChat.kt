@@ -13,6 +13,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.loadEarlier
 import no.pradhan.agentview.nativeapp.codex.meetings.stepMatch
@@ -84,7 +86,9 @@ fun FindBar(hub: Hub, events: List<ChatEvent>, earlier: Int, request: FindReques
     }
     LaunchedEffect(hits.firstOrNull(), query) { hits.getOrNull(at)?.let { hub.showTurn.value = it } }
     val go = { to: Int -> cur = to; hits.getOrNull(to)?.let { hub.showTurn.value = it }; Unit }
-    SearchField(query, { query = it; cur = 0 }, "Find in chat")
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    SearchField(query, { query = it; cur = 0 }, "Find in chat", Modifier.focusRequester(focus))
     Row(Modifier.padding(start = Tokens.listPad, end = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
         Text(if (query.trim().length >= 2) findLabel(at, hits.size, earlier) else "", Modifier.weight(1f), style = Type.footnote, color = av.fgMuted)
         if (query.trim().length >= 2 && hits.isEmpty() && earlier > 0) {

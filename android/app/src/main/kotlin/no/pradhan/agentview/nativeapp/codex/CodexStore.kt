@@ -29,6 +29,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.protocolJson
+import no.pradhan.agentview.nativeapp.ui.agoShort
+import no.pradhan.agentview.nativeapp.ui.plural
 
 const val SYNC_DELAY_MS = 400L
 const val PUSH_BATCH = 100
@@ -63,6 +65,18 @@ fun syncedAt(last: Long, now: Long): String {
         else -> dayLabel(last)
     }
     return "Last synced $at"
+}
+
+// The sync status line Settings shows (web codex/nav.tsx syncLine).
+fun syncLine(st: CodexState, now: Long): String {
+    val waiting = if (st.pending > 0) " · ${plural(st.pending, "change")} waiting" else ""
+    val base = when {
+        st.reconnecting -> "Reconnecting to the hub…"
+        !st.error.isNullOrEmpty() -> "Sync failed: ${st.error}"
+        st.lastSync > 0 -> "Synced ${agoShort(st.lastSync, now, " ago")}"
+        else -> "Not synced yet"
+    }
+    return base + waiting
 }
 
 private const val PARK_AFTER = 3

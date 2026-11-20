@@ -72,6 +72,15 @@ function ScanLines({ scans, show }: { scans: ScanHealth[]; show: boolean }) {
   });
 }
 
+type SyncLineState = { reconnecting: boolean; error: string; last: number; syncing: boolean; pending: number; saveError: boolean };
+
+// The Codex sync status line; Android shows it in Settings (CodexStore.kt syncLine).
+export function syncLine(sync: SyncLineState) {
+  const waiting = sync.pending ? ` · ${sync.pending} ${sync.pending === 1 ? 'change' : 'changes'} waiting` : '';
+  const base = sync.reconnecting ? 'Reconnecting to the hub…' : sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
+  return base + waiting + (sync.saveError ? ' · Not saved on this device' : '');
+}
+
 export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { list, filter } = useView();
   const store = useAssistantStore();
@@ -80,9 +89,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { facts, pages } = useCodex();
   const count: Record<List, number> = { today: 0, tasks: taskCount(s, s.endOfDay), summary: 0, goals: 0, search: 0, meetings: 0, jobs: 0, wiki: reviewCount(pages, facts) };
   const sync = useSyncStatus();
-  const waiting = sync.pending ? ` · ${sync.pending} ${sync.pending === 1 ? 'change' : 'changes'} waiting` : '';
-  const base = sync.reconnecting ? 'Reconnecting to the hub…' : sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
-  const status = base + waiting + (sync.saveError ? ' · Not saved on this device' : '');
+  const status = syncLine(sync);
   const paused = pausedText(sync.paused);
   const [scans, setScans] = useState(false);
   const dot = (sync.error && !sync.reconnecting) || sync.saveError ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';

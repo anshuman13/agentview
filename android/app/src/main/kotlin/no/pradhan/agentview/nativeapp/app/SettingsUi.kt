@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 
+import no.pradhan.agentview.nativeapp.codex.syncLine
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -32,6 +33,7 @@ import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.Toggle
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.rememberNow
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 
 // Settings (web/src/app/shell/Settings.tsx): Appearance, Phone, Privacy and About groups.
@@ -118,7 +120,11 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                     }
                 }
                 SectionHeader("About")
-                Group { ListRow("Installed version", version) }
+                Group {
+                    ListRow("Installed version", version)
+                    Hairline()
+                    CodexSyncRow(hub)
+                }
             }
         }
     }
@@ -129,4 +135,11 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
             Group { ListRow("Counts per feature per day, kept on this Mac for 90 days, never sent anywhere.", lines = 3) }
         }
     }
+}
+
+@Composable
+private fun CodexSyncRow(hub: Hub) {
+    val st by hub.codex.state.collectAsState()
+    val now by rememberNow(true)
+    ListRow("Codex", syncLine(st, now))
 }

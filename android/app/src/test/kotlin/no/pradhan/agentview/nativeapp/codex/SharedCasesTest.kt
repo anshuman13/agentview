@@ -49,6 +49,7 @@ import no.pradhan.agentview.nativeapp.chat.ghostFor
 import no.pradhan.agentview.nativeapp.chat.quoteText
 import no.pradhan.agentview.nativeapp.chat.withUses
 import no.pradhan.agentview.nativeapp.chat.findInChat
+import no.pradhan.agentview.nativeapp.chat.agentChipCount
 import no.pradhan.agentview.nativeapp.chat.findStart
 import no.pradhan.agentview.nativeapp.ui.shellLine
 import no.pradhan.agentview.nativeapp.ui.FilePath
@@ -417,6 +418,15 @@ class SharedCasesTest {
 
     @Test fun syncedAtCases() {
         for (c in cases("synced-at")) assertEquals(c.str("name"), c.str("expected"), syncedAt(c.getValue("last").jsonPrimitive.long, c.getValue("now").jsonPrimitive.long))
+    }
+
+    @Test fun syncLines() {
+        val now = 1_800_000_000_000L
+        for (c in cases("sync-line")) {
+            val age = c.nullable("ageMs")?.jsonPrimitive?.long
+            val st = CodexState(reconnecting = c.getValue("reconnecting").jsonPrimitive.boolean, error = c.str("error"), pending = c.getValue("pending").jsonPrimitive.int, lastSync = if (age == null) 0 else now - age)
+            assertEquals(c.str("name"), c.str("expected"), syncLine(st, now))
+        }
     }
 
     @Test fun checklist() {
@@ -789,6 +799,10 @@ class SharedCasesTest {
             }
             assertEquals(c.str("name"), c.str("expected"), usedClaimState(facts, c.str("id")))
         }
+    }
+
+    @Test fun agentChipCounts() {
+        for (c in cases("agent-count")) assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.int, agentChipCount(c.getValue("all").jsonPrimitive.int, c.getValue("running").jsonPrimitive.int))
     }
 
     @Test fun chatState() {

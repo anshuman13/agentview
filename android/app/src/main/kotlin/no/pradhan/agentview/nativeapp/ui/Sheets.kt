@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.DisableSelection
@@ -64,7 +65,7 @@ import androidx.compose.ui.unit.dp
 // Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle and a title row. With `onBack`, system Back calls it instead of closing the sheet.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Boolean = true, count: String? = null, action: (@Composable () -> Unit)? = null, onBack: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Boolean = true, count: String? = null, action: (@Composable () -> Unit)? = null, onBack: (() -> Unit)? = null, scroll: ScrollState = rememberScrollState(), content: @Composable ColumnScope.() -> Unit) {
     val c = av
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -83,7 +84,7 @@ fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Bo
     ) {
         if (onBack != null) BackHandler(onBack = onBack)
         // The sheet is its own window: no text in it may register with a SelectionContainer behind it (that crashes on a long press), so the body gets its own.
-        DisableSelection { Column(Modifier.navigationBarsPadding().nestedScroll(remember { DragOnlyToSheet() }).verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp8)) {
+        DisableSelection { Column(Modifier.navigationBarsPadding().nestedScroll(remember { DragOnlyToSheet() }).verticalScroll(scroll).padding(bottom = Tokens.sp8)) {
             Row(Modifier.fillMaxWidth().height(Tokens.rowOne).padding(start = Tokens.listPad, end = if (action != null) Tokens.sp2 else Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                     Text(title, Modifier.weight(1f, fill = false), style = Type.title, color = c.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -161,7 +161,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
 
     Column(Modifier.fillMaxSize()) {
         ChatHeader(hub, live, session, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd) { review = 0 }
-        ChatStatus(live, session, view.cost, if (view.agents.isNotEmpty() || run != null) maxOf(view.agents.size, live.agentList.size) else null) { panels.agents = true }
+        ChatStatus(live, session, view.cost, if (view.agents.isNotEmpty() || run != null) agentChipCount(view.agents.size, live.agentList.size) else null) { panels.agents = true }
         Hairline()
         if (panels.find) {
             BackHandler { panels.find = false }

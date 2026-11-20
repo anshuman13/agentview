@@ -1,0 +1,6 @@
+[
+  { "name": "no agents", "all": 0, "running": 0, "expected": 0 },
+  { "name": "all finished shows every agent", "all": 4, "running": 0, "expected": 4 },
+  { "name": "some running shows the running count", "all": 4, "running": 3, "expected": 3 },
+  { "name": "running before the transcript has them", "all": 0, "running": 2, "expected": 2 }
+]

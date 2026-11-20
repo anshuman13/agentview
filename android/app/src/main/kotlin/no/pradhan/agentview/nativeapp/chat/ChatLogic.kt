@@ -21,7 +21,10 @@ fun statusLine(live: LiveChat, session: SessionInfo?): StatusLine = when {
     else -> StatusLine("Idle", ChatTone.Idle)
 }
 
-private val LIMIT_NOTES = listOf("Compact", "Loop ", "Goal", "Usage limit", "Logged out")
+// The agents chip beside the status line (web runLogic agentChipCount): while agents run, the running count the line shows; else every agent in the chat.
+fun agentChipCount(all: Int, running: Int) = if (running > 0) running else all
+
+private val LIMIT_NOTES =listOf("Compact", "Loop ", "Goal", "Usage limit", "Logged out")
 private val WOKE_UP = Regex("^\\w+ woke up")
 
 data class LimitResume(val prompt: String, val reset: Long)

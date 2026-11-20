@@ -130,7 +130,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             }
             return@LazyColumn
         }
-        item { Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4)) { ProposeClaim(null, profile, actions) } }
+        if (!readOnly) item { Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4)) { ProposeClaim(null, profile, actions) } }
         if (waiting > 0) {
             item { SectionHeader("To review", waiting.toString(), action = { Button("One at a time", onReview, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
             lazyGroup(reviewRows, key = { it.key }) { r ->
@@ -292,7 +292,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
 private const val FLASH_MS = 1600L
 
 @Composable
-fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit, onOpenChat: (String) -> Unit, anchor: String? = null, onRemember: ((String) -> Unit)? = null, onAsk: ((String) -> Unit)? = null) {
+fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit, onOpenChat: (String) -> Unit, anchor: String? = null, onRemember: ((String) -> Unit)? = null, onAsk: ((String) -> Unit)? = null, readOnly: Boolean = false) {
     val memory = page.id == MEMORY
     val pid = if (memory) null else page.id
     val facts = remember(st.facts, page.profile, profile, memory) { st.facts.filter { if (memory) matchesProfile(profile, it) else it.profile == page.profile } }
@@ -326,19 +326,8 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
     LazyColumn(Modifier.fillMaxWidth(), listState) {
         item {
             Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Text(page.title ?: UNTITLED, style = Type.title)
-                val n = stat?.claims ?: 0
-                val meta = listOfNotNull(
-                    plural(n, "claim"),
-                    stat?.updated?.takeIf { it > 0 }?.let { "Updated ${shortDate(maxOf(page.updatedAt, it), now)}" },
-                )
-                Text(meta.joinToString(" · "), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
-                page.str("summary")?.takeIf { it.isNotEmpty() }?.let {
-                    Text(it, Modifier.heightIn(min = Tokens.touchSm).clickable { summaryOpen = !summaryOpen }, style = Type.body, color = av.fg, maxLines = if (summaryOpen) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
-                }
-                LayoutRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-                    if (!memory) ProposeClaim(page, profile, actions)
-                    else if (onRemember != null) RememberClaim(onRemember)
+                LayoutRow(verticalAlignment = Alignment.CenterVertically) {
+                    Text(page.title ?: UNTITLED, Modifier.weight(1f), style = Type.title)
                     MoreButton { dismiss ->
                         val pick = { act: () -> Unit -> { dismiss(); act() } }
                         if (!memory && onAsk != null) MenuItem("Ask", "sparkle", pick { asking = true })
@@ -354,6 +343,17 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
                         }
                     }
                 }
+                val n = stat?.claims ?: 0
+                val meta = listOfNotNull(
+                    plural(n, "claim"),
+                    stat?.updated?.takeIf { it > 0 }?.let { "Updated ${shortDate(maxOf(page.updatedAt, it), now)}" },
+                )
+                Text(meta.joinToString(" · "), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
+                page.str("summary")?.takeIf { it.isNotEmpty() }?.let {
+                    Text(it, Modifier.heightIn(min = Tokens.touchSm).clickable { summaryOpen = !summaryOpen }, style = Type.body, color = av.fg, maxLines = if (summaryOpen) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
+                }
+                if (!memory && !readOnly) ProposeClaim(page, profile, actions)
+                else if (onRemember != null) RememberClaim(onRemember)
             }
         }
         groups.forEach { g ->

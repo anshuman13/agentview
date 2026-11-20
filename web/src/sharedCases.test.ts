@@ -42,7 +42,7 @@ import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { addUse, buildHistory, chatMarkdown, draftKey, failedLine, ghostFor, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
 import { composerPlaceholder, quoteText, shellLine, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
-import { headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
+import { agentChipCount, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { capLine } from './sessions/goalLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -61,6 +61,7 @@ import { notesTemplateCaret, notesTemplateChips, notesTemplateText, type NotesTe
 import { setSystemTime } from '../../testing';
 import { guessProfile, meetingAsk, runAsk, wikiAskText } from './codex/data/ask/ask';
 import { prepText } from './codex/AskBar';
+import { syncLine } from './codex/nav';
 import { linkDomain, linkPath, linksIn } from './codex/data/ask/links';
 import type { Profile } from './codex/data/sync';
 import { memoryClaim, pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
@@ -190,6 +191,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; last: number; now: number; expected: string }>('synced-at')) {
     it(`syncedAt: ${c.name}`, () => expect(syncedAt(c.last, c.now)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; reconnecting: boolean; error: string; ageMs: number | null; pending: number; expected: string }>('sync-line')) {
+    it(`syncLine: ${c.name}`, () => expect(syncLine({ ...c, last: c.ageMs === null ? 0 : NOW - c.ageMs, syncing: false, saveError: false })).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; items: TodoItem[]; progress: string; current: string }>('checklist')) {
@@ -661,7 +666,11 @@ describe('cases shared with the Android app', () => {
     });
   }
 
-  type CountsCase = { name: string; viewing: string; seen?: Record<string, number>; attention?: number; chats: (Partial<LiveChat> & { run?: Partial<NonNullable<LiveChat['run']>> })[]; mcp?: { name: string; status: string }[]; hidden?: Record<string, string>; needsYouRows?: number; replyRows?: number; expected: unknown };
+  for (const c of cases<{ name: string; all: number; running: number; expected: number }>('agent-count')) {
+    it(`agentChipCount: ${c.name}`, () => expect(agentChipCount(c.all, c.running)).toBe(c.expected));
+  }
+
+  type CountsCase ={ name: string; viewing: string; seen?: Record<string, number>; attention?: number; chats: (Partial<LiveChat> & { run?: Partial<NonNullable<LiveChat['run']>> })[]; mcp?: { name: string; status: string }[]; hidden?: Record<string, string>; needsYouRows?: number; replyRows?: number; expected: unknown };
   for (const c of cases<CountsCase>('counts')) {
     it(`appCounts: ${c.name}`, () => {
       const chats = c.chats.map((chat) => countChat({ pending: 0, running: false, status: '', lastActive: 0, cwd: '', title: '', sessionId: null, ...chat } as LiveChat, c.seen ?? {}));

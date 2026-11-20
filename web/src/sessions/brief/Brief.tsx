@@ -13,6 +13,7 @@ import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { Sheet } from '../../ui/Sheet';
 import { agentsOf } from '../agents';
+import { agentChipCount } from '../runLogic';
 import { useChatRun } from '../useChatRun';
 import { useNarrow } from '../../app/shell/useNarrow';
 import { plural, useTick } from '../../ui/util';
@@ -63,7 +64,7 @@ export function Brief() {
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
   const phone = useNarrow();
   const run = useChatRun(sessionId);
-  const agentCount = Math.max(agentsOf(events).length, live?.agentList?.length ?? 0);
+  const agentCount = agentChipCount(agentsOf(events).length, live?.agentList?.length ?? 0);
   // The agents and the run's controls live beside the chat on desktop and in a sheet the status line opens on the phone.
   const hasAgents = agentCount > 0 || Boolean(run);
   // On desktop a turn's tool calls open as a second rail tab beside Agents; the phone opens them as their own screen.

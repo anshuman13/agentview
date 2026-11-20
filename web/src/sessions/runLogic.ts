@@ -34,7 +34,10 @@ export function headerState(chat: Pick<LiveChat, 'pending' | 'failed' | 'stalled
   return { text: 'Idle', tone: 'idle' };
 }
 
-export type LoopNow = { title: string; at: number | null; source: 'status' | 'round' | 'none'; next?: string; stepsLeft?: number };
+// The agents chip beside the header line: while agents run, the running count the line shows; else every agent in the chat.
+export const agentChipCount = (all: number, running: number) => running || all;
+
+export type LoopNow ={ title: string; at: number | null; source: 'status' | 'round' | 'none'; next?: string; stepsLeft?: number };
 
 // What the loop card's first row shows: the agent's status or the last round, whichever is newer. A status from before the run started is ignored.
 export function loopNow(run: ChatRun, now?: LiveNow): LoopNow {

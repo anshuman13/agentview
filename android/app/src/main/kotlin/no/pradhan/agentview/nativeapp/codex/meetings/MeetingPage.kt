@@ -218,7 +218,7 @@ private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>, onNotes: 
     val clip = LocalClipboardManager.current
     var reading by remember(m.key) { mutableStateOf(false) }
     val read = { reading = true; c.hub.readNow(m) { reading = false } }
-    val canRead = state == MState.Done && readable(m, c.now)
+    val canRead = state == MState.Done && readable(m, c.now) && !c.hub.readOnly
     val hasNotes = !m.str("notes").isNullOrEmpty()
     val readText = readLabel(state)
     Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
@@ -241,7 +241,7 @@ private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>, onNotes: 
         stateLine(m, c.now)?.let { line ->
             LRow(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp8)) {
                 Text(line, Modifier.weight(1f, fill = false), style = Type.callout, color = if (state == MState.Missing) av.warn else av.info)
-                if (readText != null) Button(if (reading) "Reading" else readText, { read() }, size = ButtonSize.Sm, enabled = !reading)
+                if (readText != null) Button(if (reading) "Reading" else readText, { read() }, size = ButtonSize.Sm, enabled = !reading && !c.hub.readOnly)
             }
         }
     }

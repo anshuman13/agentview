@@ -29,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -177,7 +178,8 @@ fun ListRow(
         if (trailing != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             CompositionLocalProvider(LocalContentColor provides av.fgMuted) { trailing() }
         }
-        if (toggle != null) Switch(toggle.checked, null, Modifier.padding(end = Tokens.sp4), enabled = toggle.enabled)
+        if (toggle != null) Switch(toggle.checked, null, Modifier.padding(end = Tokens.sp4), enabled = toggle.enabled,
+            colors = SwitchDefaults.colors(disabledCheckedTrackColor = av.accent.copy(alpha = 0.38f), disabledCheckedThumbColor = av.onAccent))
         if (menu != null) MoreButton(expanded = menuOpen, content = menu)
     }
 }

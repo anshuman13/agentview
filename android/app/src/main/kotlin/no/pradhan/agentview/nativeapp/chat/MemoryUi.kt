@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.chat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
@@ -116,6 +117,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
     val facts by hub.codex.state.select { it.facts }
     val title by hub.store.state.select { st -> st.live.firstOrNull { it.id == st.shownId }?.title.orEmpty() }
     var remembering by remember { mutableStateOf(false) }
+    val listScroll = rememberScrollState()
     val now = System.currentTimeMillis()
     val markOf = { f: MemoryFile -> memoryMark(f, facts, segmentOf(cwd), now) }
     LaunchedEffect(files.data) {
@@ -154,7 +156,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-                    if (f.path == "$cwd/$file" || (f.editable && !hub.readOnly)) Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "edit")
+                    if ((f.path == "$cwd/$file" || f.editable) && !hub.readOnly) Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "edit")
                     if (f.editable && !hub.readOnly && !isMemoryIndex(f.path)) Button("Move to wiki", {
                         saving = true
                         hub.moveMemoryToWiki(f, cwd, reload) { moved ->
@@ -168,7 +170,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
         }
         return
     }
-    Sheet(onDismiss = onDismiss, title = "Memory", padded = false, full = false) {
+    Sheet(onDismiss = onDismiss, title = "Memory", padded = false, full = false, scroll = listScroll) {
         val list = files.data
         when {
             list == null && files.busy -> Loading("Loading the memory…")
@@ -179,7 +181,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
                 ListRow(f.name, listOf(f.description, memoryWhere(f, cwd), if (f.at > 0) since(f.at, now) else "").filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, state = mark?.let { { MarkBadge(it) } }, stateSlot = true, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
             }
         }
-        if (list != null) AddRule(hub, file, reload)
+        if (list != null && !hub.readOnly) AddRule(hub, file, reload)
         // The wiki's Memory claims that new chats in this profile start with, and Remember to add one; web Memory.tsx GivenClaims shows the same.
         val given = givenPreferences(facts, segmentOf(cwd), now)
         SectionHeader("From the wiki", given.size.takeIf { it > 0 }?.toString(), action = if (hub.readOnly) null else ({ Button("Remember", { remembering = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "add") }))

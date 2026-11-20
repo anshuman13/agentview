@@ -150,7 +150,7 @@ private fun JobScheduleSheet(actions: TaskActions, j: Row, onDismiss: () -> Unit
 private fun JobMenu(hub: Hub, actions: TaskActions, j: Row, canRun: Boolean, close: () -> Unit, onEdit: (() -> Unit)? = null) {
     val on = isEnabled(j)
     if (onEdit != null) MenuItem("Edit", "edit", { close(); onEdit() })
-    MenuItem("Run now", "play", { close(); runJobNow(hub, actions, j) }, enabled = canRun)
+    MenuItem("Run now", "play", { close(); runJobNow(hub, actions, j) }, enabled = canRun && !hub.readOnly)
     MenuItem(if (on) "Disable" else "Enable", if (on) "circle-slash" else "play", { close(); toggleJob(hub, j, !on) })
     MenuSeparator()
     MenuItem("Delete", "trash", { close(); deleteJob(actions, j) }, danger = true)
@@ -214,7 +214,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
             Text(job.str("name")?.ifEmpty { null } ?: "Untitled job", Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)
             SectionHeader("${profileLabel(job.profile)} account", action = {
                 if (state != null) StateBadge(state)
-                Button("Run now", { runJobNow(hub, actions, job) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, icon = "play", enabled = canRunNow(job, runs, now))
+                Button("Run now", { runJobNow(hub, actions, job) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, icon = "play", enabled = canRunNow(job, runs, now) && !hub.readOnly)
                 MoreButton { close -> JobMenu(hub, actions, job, canRunNow(job, runs, now), close, onEdit = { editing = true }) }
             })
         }
