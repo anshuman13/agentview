@@ -24,6 +24,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -40,22 +41,28 @@ import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import no.pradhan.agentview.nativeapp.chat.filePath
+
+// Opens a file path named in inline code or a link, at its line; set by a chat, so file paths elsewhere stay plain.
+val LocalOpenFile = staticCompositionLocalOf<((String, Int?) -> Unit)?> { null }
 
 @Composable
 fun inlineText(inlines: List<Inline>): AnnotatedString {
     val c = av
     val code = SpanStyle(fontFamily = MonoFont, fontSize = Tokens.fsSubheadline, background = c.hover)
     val link = TextLinkStyles(SpanStyle(color = c.link))
-    return remember(inlines, c) {
+    val open = LocalOpenFile.current
+    return remember(inlines, c, open) {
+        fun fileLink(target: String) = open?.let { o -> filePath(target)?.let { f -> LinkAnnotation.Clickable(target, link) { o(f.path, f.line) } } }
         buildAnnotatedString {
             fun walk(list: List<Inline>) {
                 for (i in list) when (i) {
                     is Inline.Text -> append(i.text)
-                    is Inline.Code -> withStyle(code) { append(i.text) }
+                    is Inline.Code -> fileLink(i.text)?.let { withLink(it) { withStyle(code) { append(i.text) } } } ?: withStyle(code) { append(i.text) }
                     is Inline.Strong -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { walk(i.children) }
                     is Inline.Emph -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { walk(i.children) }
                     is Inline.Strike -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { walk(i.children) }
-                    is Inline.Link -> withLink(LinkAnnotation.Url(i.url, link)) { walk(i.children) }
+                    is Inline.Link -> withLink(fileLink(i.url) ?: LinkAnnotation.Url(i.url, link)) { walk(i.children) }
                     Inline.Break -> append('\n')
                 }
             }

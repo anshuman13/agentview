@@ -1,0 +1,11 @@
+[
+  { "name": "absolute with line", "text": "/Users/me/app/src/a.ts:42", "expected": { "path": "/Users/me/app/src/a.ts", "line": 42 } },
+  { "name": "relative with folder", "text": "web/src/app/store.ts", "expected": { "path": "web/src/app/store.ts" } },
+  { "name": "dot slash", "text": "./src/a.ts", "expected": { "path": "src/a.ts" } },
+  { "name": "hash line", "text": "src/a.ts#L12", "expected": { "path": "src/a.ts", "line": 12 } },
+  { "name": "line and column", "text": "src/a.ts:7:3", "expected": { "path": "src/a.ts", "line": 7 } },
+  { "name": "Markdown alone", "text": "README.md", "expected": { "path": "README.md" } },
+  { "name": "code file alone", "text": "x.ts", "expected": null },
+  { "name": "URL", "text": "https://a.b/c.ts", "expected": null },
+  { "name": "home", "text": "~/x/y.md", "expected": { "path": "~/x/y.md" } }
+]

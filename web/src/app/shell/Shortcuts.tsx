@@ -8,7 +8,7 @@ import '../../styles/features/palette.css';
 export const SHORTCUTS: { group: string; rows: { key: string; label: string }[] }[] = [
   { group: 'Chat', rows: [
     { key: '⌘O', label: 'Start a chat in a repo' },
-    { key: '⌘F', label: 'Find in the shown chat' },
+    { key: '⌘F', label: 'Find in the chat, or search in Codex' },
     { key: '⌘;', label: 'Ask in a side chat beside this one' },
     { key: 'Enter', label: 'Send; Shift+Enter for a new line' },
     { key: 'Tab', label: 'Accept the suggested command or the ghost text' },

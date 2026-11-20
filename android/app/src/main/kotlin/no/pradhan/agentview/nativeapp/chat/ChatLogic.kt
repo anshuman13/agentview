@@ -59,3 +59,19 @@ fun failedLine(events: List<ChatEvent>, label: String): String? {
 
 // What a running chat is doing: its status, or Working while it has none.
 fun runningText(live: LiveChat) = live.status.takeIf { it != "Idle" }.orEmpty().ifBlank { "Working" }
+
+data class FilePath(val path: String, val line: Int? = null)
+
+private val FILE_PATH = Regex("""((?:~|\.{1,2})?/?[^\s:*?"<>|`]*\.[A-Za-z][A-Za-z0-9]{0,7})(?::(\d+)(?::\d+)?|#L(\d+))?""")
+private val URL_SCHEME = Regex("^[a-z][a-z0-9+.-]*:", RegexOption.IGNORE_CASE)
+private val BARE_FILE = Regex("""\.(md|markdown|mdx|csv|tsv)$""", RegexOption.IGNORE_CASE)
+
+// A file path a reply names (web filePath in md.ts), checked by shared/fixtures/file-path.json.
+fun filePath(text: String): FilePath? {
+    val m = FILE_PATH.matchEntire(text.trim()) ?: return null
+    val path = m.groupValues[1]
+    if (URL_SCHEME.containsMatchIn(text) || "//" in path) return null
+    if ('/' !in path && !BARE_FILE.containsMatchIn(path)) return null
+    val line = (m.groups[2] ?: m.groups[3])?.value?.toIntOrNull()?.takeIf { it > 0 }
+    return FilePath(path.removePrefix("./"), line)
+}

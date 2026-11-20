@@ -284,16 +284,8 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   useEffect(() => {
     if (begin()) setFinding(true);
     const open = () => { begin(); setFinding(true); document.querySelector<HTMLInputElement>('.tr-find input')?.focus(); };
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f' || box.current?.offsetParent == null) return;
-      const at = document.activeElement;
-      if (at && at !== document.body && !box.current.closest('.brief')?.contains(at)) return;
-      e.preventDefault();
-      open();
-    };
     window.addEventListener('agentview:find', open);
-    window.addEventListener('keydown', onKey);
-    return () => { window.removeEventListener('agentview:find', open); window.removeEventListener('keydown', onKey); };
+    return () => window.removeEventListener('agentview:find', open);
   }, []);
   const rowAt = (id: string) => list.findIndex((r) => (r.kind === 'item' ? r.it.id === id : r.hidden.some((h) => h.id === id)));
   const goToHit = (id: string) => {

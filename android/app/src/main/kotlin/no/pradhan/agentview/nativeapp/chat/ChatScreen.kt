@@ -3,7 +3,9 @@ package no.pradhan.agentview.nativeapp.chat
 import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -75,7 +77,9 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.PageHeader
+import no.pradhan.agentview.nativeapp.ui.LocalOpenFile
 import no.pradhan.agentview.nativeapp.ui.Sheet
+import no.pradhan.agentview.nativeapp.workspace.FileScreen
 import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.TextDialog
 import no.pradhan.agentview.nativeapp.ui.Tokens
@@ -105,6 +109,7 @@ class ChatPanels {
     var saved by mutableStateOf(false)
     var tools by mutableStateOf(false)
     var find by mutableStateOf(false)
+    var file by mutableStateOf<FilePath?>(null)
     var dialog by mutableStateOf<String?>(null)
 }
 
@@ -165,7 +170,8 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         }
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
-            CompositionLocalProvider(LocalBuildSheets provides buildSheets) {
+            val openFile = remember(panels) { { path: String, line: Int? -> panels.file = FilePath(path, line) } }
+            CompositionLocalProvider(LocalBuildSheets provides buildSheets, LocalOpenFile provides openFile) {
                 val failed = if (live.failed && !running && !hub.readOnly) failedLine(view.events, providerLabel(live.provider)) else null
                 Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed)
             }
@@ -307,6 +313,10 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
     if (panels.todos) TodosSheet(hub, cwd) { panels.todos = false }
     if (panels.memory) MemorySheet(hub, cwd, session?.instructionFiles.orEmpty()) { panels.memory = false }
     if (panels.hooks) HooksSheet(hub, session?.hooks.orEmpty()) { panels.hooks = false }
+    panels.file?.let { f ->
+        val close = { panels.file = null }
+        Sheet(close, "File", padded = false) { Box(Modifier.height(sheetHeight())) { FileScreen(hub, f.path, close, line = f.line) } }
+    }
     if (panels.remind) Sheet(onDismiss = { panels.remind = false }, title = "Remind me", padded = false, full = false) {
         val choices = remember { remindChoices(System.currentTimeMillis()) }
         Group { choices.forEachIndexed { i, (label, at) -> if (i > 0) Hairline(); ListRow(label, onClick = { hub.remindChat(live.title, sessionId!!, cwd, at); panels.remind = false }) } }

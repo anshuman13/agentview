@@ -49,6 +49,8 @@ import no.pradhan.agentview.nativeapp.chat.ghostFor
 import no.pradhan.agentview.nativeapp.chat.withUses
 import no.pradhan.agentview.nativeapp.chat.findInChat
 import no.pradhan.agentview.nativeapp.chat.findStart
+import no.pradhan.agentview.nativeapp.chat.FilePath
+import no.pradhan.agentview.nativeapp.chat.filePath
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.chatMatches
 import no.pradhan.agentview.nativeapp.sessions.queryWords
@@ -693,6 +695,13 @@ class SharedCasesTest {
             val hits = c.getValue("hits").jsonArray.map { it.jsonPrimitive.content }
             val at = c.getValue("at").takeIf { it !is JsonNull }?.jsonPrimitive?.long
             assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.int, findStart(events, hits, at))
+        }
+    }
+
+    @Test fun filePathCases() {
+        for (c in cases("file-path")) {
+            val expected = c.getValue("expected").takeIf { it !is JsonNull }?.jsonObject?.let { FilePath(it.str("path"), it["line"]?.jsonPrimitive?.int) }
+            assertEquals(c.str("name"), expected, filePath(c.str("text")))
         }
     }
 

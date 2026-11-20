@@ -34,6 +34,7 @@ import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
 import { buildTranscript, openAtNew, turnAnswers, type Item } from './chat/transcript/steps';
+import { filePath } from './chat/transcript/md';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
 import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memoryLogic';
@@ -647,6 +648,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; events: ChatEvent[]; hits: string[]; at: number | null; expected: number }>('find-start')) {
     it(`findStart: ${c.name}`, () => expect(findStart(c.events, c.hits, c.at)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; text: string; expected: { path: string; line?: number } | null }>('file-path')) {
+    it(`filePath: ${c.name}`, () => expect(filePath(c.text)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; query: string; title: string; saved: Parameters<typeof chatMatches>[2]; repo: string | null; expected: boolean }>('chat-search')) {
