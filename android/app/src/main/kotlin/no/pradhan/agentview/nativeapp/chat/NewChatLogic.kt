@@ -26,6 +26,10 @@ fun lastModelKey(group: String) = if (group == "claude") "lastModel" else "lastM
 fun startModel(models: List<ModelInfo>, last: String?): String? =
     models.firstOrNull { it.value == last }?.value
 
+// The model row the sheet checks (web checkedModel in shared/providers.ts): the picked or last model when shown, else the first shown, which the chat gets when none is sent.
+fun checkedModel(shown: List<ModelInfo>, model: String?): String? =
+    if (shown.any { it.value == model }) model else shown.firstOrNull()?.value
+
 // The "Start as" choices of the new chat sheet (web START_MODES and startTexts in shared/providers.ts): no mode keeps the chat's default; the others are set once the chat opens, and Spec also puts the spec request prefix in the composer.
 class StartMode(val label: String, val mode: String?, val draft: ((String) -> String)? = null)
 

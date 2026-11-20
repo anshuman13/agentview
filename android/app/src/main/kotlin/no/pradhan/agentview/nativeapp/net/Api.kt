@@ -20,6 +20,7 @@ import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.chat.ROW_WINDOW
 import no.pradhan.agentview.nativeapp.codex.AssistantRemote
 import no.pradhan.agentview.nativeapp.sessions.BacklogItem
+import no.pradhan.agentview.nativeapp.sessions.BinnedSession
 import no.pradhan.agentview.nativeapp.sessions.Repo
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.Worktree
@@ -87,6 +88,10 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
     suspend fun archive(sessionId: String) { call(url("/api/sessions?id=${enc(sessionId)}&archive").delete()) }
 
     suspend fun restore(sessionId: String) { call(url("/api/sessions/restore?id=${enc(sessionId)}").post("".toRequestBody())) }
+
+    suspend fun bin() = list("/api/sessions/bin", BinnedSession.serializer())
+
+    suspend fun emptyBin() { call(url("/api/sessions/bin").delete()) }
 
     // web/src/codex/data/remote.ts: the assistant hub's rows are pulled by version and pushed as per-column changes.
     suspend fun assistantChanges(since: Long, full: Boolean): String = call(url("/api/assistant/changes?since=$since" + if (full) "&full=1" else "")).decodeToString()

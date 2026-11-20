@@ -76,6 +76,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.parsePresets
 import no.pradhan.agentview.nativeapp.codex.needsView
 import no.pradhan.agentview.nativeapp.workspace.Findings
 import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
+import no.pradhan.agentview.nativeapp.sessions.BinnedSession
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.advisorOf
 import no.pradhan.agentview.nativeapp.sessions.state
@@ -164,6 +165,9 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val findings = MutableStateFlow<Map<String, ReviewFindings>>(emptyMap())
 
     val workspace = MutableStateFlow(Workspace())
+
+    // The archived chats the server keeps for BIN_MS (/api/sessions/bin), shown at the end of the Sessions list.
+    val bin = MutableStateFlow<List<BinnedSession>>(emptyList())
 
     // The services hidden on the MCP page (/api/mcp/groups); the counts leave them out.
     val mcpGroups = MutableStateFlow<Map<String, String>>(emptyMap())

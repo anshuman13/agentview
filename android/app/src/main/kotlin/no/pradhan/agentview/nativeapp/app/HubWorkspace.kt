@@ -112,14 +112,36 @@ fun Hub.archive(sessionId: String) = write("Could not archive the chat. It is st
     val pinned = sessionId in workspace.value.pins
     api.archive(sessionId)
     workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.filter { it.sessionId != sessionId }) }
+    loadBin()
     undoable.tryEmit(Undoable("Archived") { restore(sessionId, row, pinned) })
 }
 
-private fun Hub.restore(sessionId: String, row: SavedSession?, pinned: Boolean) = write("Could not restore the chat. It is still in the bin.") {
+private fun Hub.restore(sessionId: String, row: SavedSession?, pinned: Boolean) = write(RESTORE_FAILED) {
     api.restore(sessionId)
     if (row != null) workspace.value = withRestored(workspace.value, row, pinned)
     if (pinned) runCatching { api.pin(sessionId, true) }
     if (row == null) refreshWorkspace(force = true)
+    loadBin()
+}
+
+private const val RESTORE_FAILED = "Could not restore the chat. It is still in the bin."
+
+fun Hub.loadBin() {
+    viewModelScope.launch { runCatching { api.bin() }.onSuccess { bin.value = it } }
+}
+
+fun Hub.restoreFromBin(sessionId: String) {
+    if (readOnly) return
+    viewModelScope.launch {
+        val ok = runCatching { api.restore(sessionId) }.isSuccess
+        notice.value = if (ok) "Chat restored" else RESTORE_FAILED
+        if (ok) { refreshWorkspace(force = true); loadBin() }
+    }
+}
+
+fun Hub.emptyBin() = write("Could not empty the bin") {
+    api.emptyBin()
+    bin.value = emptyList()
 }
 
 private const val MOVE_FAILED = "Could not move the memory"

@@ -15,9 +15,9 @@ import { buildsLine, endedRun, finishedLine, goalEnd, mergeQuiet, roundsSummary,
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, SavedSession, Try } from '../../shared/protocol';
-import { START_MODES, billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
+import { START_MODES, billing, checkedModel, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
-import { buildFolders, chatPlace, since } from './sessions/folders';
+import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
@@ -858,6 +858,10 @@ describe('cases shared with the Android app', () => {
     it(`newestModels: ${c.name}`, () => expect(newestModels(c.models.map((n) => ({ value: n, displayName: n })), c.current).map((m) => m.value)).toEqual(c.shown));
   }
 
+  for (const c of cases<{ name: string; shown: string[]; model: string | null; checked: string | null }>('checked-model')) {
+    it(`checkedModel: ${c.name}`, () => expect(checkedModel(c.shown.map((value) => ({ value })), c.model)).toBe(c.checked));
+  }
+
   for (const c of cases<{ name: string; mode: string; review: boolean; picked: string; send: { mode: string | null; review: boolean | null } }>('mode-steps')) {
     it(`modeSteps: ${c.name}`, () => expect(modeSteps(c.mode, c.review, c.picked)).toEqual(c.send));
   }
@@ -885,6 +889,10 @@ describe('cases shared with the Android app', () => {
   for (const c of cases<{ name: string; agoMs: number; expected: string }>('since')) {
     const now = new Date().setHours(12, 0, 0, 0);
     it(`since: ${c.name}`, () => expect(since(now - c.agoMs, now)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; agoMs: number; expected: string }>('bin-left')) {
+    it(`binLeft: ${c.name}`, () => expect(binLeft(1_000_000_000_000 - c.agoMs, 1_000_000_000_000)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; events: BarEvent[]; hidden: boolean[] }>('bottom-bar')) {

@@ -7,7 +7,7 @@ import { Icon } from '../ui/Icon';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
-import { START_MODES, newestModels } from '../../../shared/providers';
+import { START_MODES, checkedModel, newestModels } from '../../../shared/providers';
 import type { Provider } from '../../../shared/protocol';
 import { UNTITLED } from '../../../shared/util';
 import { dirChoices, since, useWorkspace } from './folders';
@@ -27,6 +27,7 @@ export function NewChatSheet({ repo: fixed, onClose }: { repo?: string; onClose:
   const [picked, setPicked] = useState<string>();
   const repo = fixed ?? picked ?? dirs[0]?.cwd;
   const models = newestModels(knownModels(provider), model);
+  const checked = checkedModel(models, model);
   const recent = recentInRepo(chats, live.map((c) => c.sessionId), repo);
   const go = () => {
     startChat({ cwd: repo, provider, ...(model && { model }) }, start);
@@ -84,7 +85,7 @@ export function NewChatSheet({ repo: fixed, onClose }: { repo?: string; onClose:
           <Section label="Model" />
           <div className="ui-group">
             <div className="ui-fields">
-              <div className="gl-chips">{models.map((m) => <Chip key={m.value} on={m.value === (model ?? models[0].value)} onClick={() => setModel(m.value)}>{m.displayName || m.value}</Chip>)}</div>
+              <div className="gl-chips">{models.map((m) => <Chip key={m.value} on={m.value === checked} onClick={() => setModel(m.value)}>{m.displayName || m.value}</Chip>)}</div>
             </div>
           </div>
         </>

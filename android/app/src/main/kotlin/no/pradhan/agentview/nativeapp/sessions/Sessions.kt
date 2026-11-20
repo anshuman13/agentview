@@ -44,9 +44,12 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
+import no.pradhan.agentview.nativeapp.app.emptyBin
+import no.pradhan.agentview.nativeapp.app.loadBin
 import no.pradhan.agentview.nativeapp.app.markRead
 import no.pradhan.agentview.nativeapp.app.read
 import no.pradhan.agentview.nativeapp.app.refreshWorkspace
+import no.pradhan.agentview.nativeapp.app.restoreFromBin
 import no.pradhan.agentview.nativeapp.app.searchMessages
 import no.pradhan.agentview.nativeapp.app.setChatSegment
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -54,6 +57,9 @@ import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ChipTone
+import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
+import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Fab
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -78,7 +84,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val filters = rememberSessionsFilters()
     var newChat by remember { mutableStateOf<RepoChoice?>(null) }
     val dialogs = remember { SessionDialogs() }
-    LaunchedEffect(Unit) { hub.refreshWorkspace() }
+    LaunchedEffect(Unit) { hub.refreshWorkspace(); hub.loadBin() }
     val hits = rememberMessageHits(hub, filters.filter)
     val rows = rememberChatRows(hub, dialogs, onOpen)
     // Every folder unfiltered, only for a repo page or the New chat sheet: the list groups its own.
@@ -182,7 +188,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val refresh = { scope.launch { refreshing = true; hub.refreshWorkspace(force = true)?.join(); refreshing = false }; Unit }
+    val refresh = { scope.launch { refreshing = true; hub.loadBin(); hub.refreshWorkspace(force = true)?.join(); refreshing = false }; Unit }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             PageHeader("Sessions") {
@@ -230,6 +236,9 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
     val filter = filters.filter
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
     val recentRows = remember(groups, filter, ws.pins, held) { recentRows(groups, filter, ws.pins.toSet(), held = held) }
+    val bin by rows.hub.bin.collectAsState()
+    var binOpen by remember { mutableStateOf(false) }
+    var emptying by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
         if (waiting.isNotEmpty()) {
             item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
@@ -250,6 +259,24 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
             Group { ListRow(if (filters.showIdle) "Show fewer repos" else "More repos", trailing = { Chevron(if (!filters.showIdle) "${idle.size}" else null) }, onClick = { filters.showIdle = !filters.showIdle }) }
         }
         if (hits.isNotEmpty()) messageHits(rows, hits, filter)
+        if (filter.isBlank()) binRows(rows, bin, binOpen, { binOpen = !binOpen }) { emptying = true }
+    }
+    if (emptying) ConfirmDialog("Empty the bin?", "${plural(bin.size, "chat")}\n\nThe transcripts are removed permanently.", "Empty bin", { emptying = false; rows.hub.emptyBin() }, onDismiss = { emptying = false })
+}
+
+// The archived chats (web Bin.tsx), folded on every open of the page.
+private fun LazyListScope.binRows(rows: ChatRows, bin: List<BinnedSession>, open: Boolean, onToggle: () -> Unit, onEmpty: () -> Unit) {
+    if (bin.isEmpty()) return
+    val hub = rows.hub
+    item(key = "bin-head") {
+        SectionHeader("Bin", bin.size.toString(), open = open, onToggle = onToggle, action = if (hub.readOnly) null else ({ IconBtn("trash", "Empty bin", onEmpty) }))
+    }
+    if (open) lazyGroup(bin, { "bin-${it.sessionId}" }) { b ->
+        ListRow(
+            b.title.ifBlank { UNTITLED },
+            metaLine(folderName(folderKey(b.cwd, rows.ws.repos, rows.ws.trees)), binLeft(b.deletedAt)),
+            trailing = if (hub.readOnly) null else ({ IconBtn("discard", "Restore chat", { hub.restoreFromBin(b.sessionId) }) }),
+        )
     }
 }
 

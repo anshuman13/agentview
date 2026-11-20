@@ -1,0 +1,6 @@
+[
+  { "name": "just deleted", "agoMs": 0, "expected": "24h left" },
+  { "name": "23.4 hours left", "agoMs": 2160000, "expected": "23h left" },
+  { "name": "30 minutes left gives one hour", "agoMs": 84600000, "expected": "1h left" },
+  { "name": "past the limit gives one hour", "agoMs": 90000000, "expected": "1h left" }
+]

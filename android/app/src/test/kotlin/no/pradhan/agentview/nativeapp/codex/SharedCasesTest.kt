@@ -57,6 +57,7 @@ import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.chatMatches
 import no.pradhan.agentview.nativeapp.sessions.queryWords
 import no.pradhan.agentview.nativeapp.sessions.since
+import no.pradhan.agentview.nativeapp.sessions.binLeft
 import no.pradhan.agentview.nativeapp.chat.failedLine
 import no.pradhan.agentview.nativeapp.chat.mergeTail
 import no.pradhan.agentview.nativeapp.chat.trimHeld
@@ -68,6 +69,7 @@ import no.pradhan.agentview.nativeapp.chat.proposalState
 import no.pradhan.agentview.nativeapp.chat.usedClaimState
 import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.chat.startModeFor
+import no.pradhan.agentview.nativeapp.chat.checkedModel
 import no.pradhan.agentview.nativeapp.chat.START_MODES
 import no.pradhan.agentview.nativeapp.chat.recentInRepo
 import no.pradhan.agentview.nativeapp.chat.startTexts
@@ -1484,6 +1486,13 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun checkedModelCases() {
+        for (c in cases("checked-model")) {
+            val shown = c.getValue("shown").jsonArray.map { ModelInfo(it.jsonPrimitive.content, it.jsonPrimitive.content) }
+            assertEquals(c.str("name"), c.nullable("checked")?.jsonPrimitive?.content, checkedModel(shown, c.nullable("model")?.jsonPrimitive?.content))
+        }
+    }
+
     @Test fun modeStepsCases() {
         for (c in cases("mode-steps")) {
             val (mode, review) = modeSteps(c.str("mode"), c.getValue("review").jsonPrimitive.boolean, c.str("picked"))
@@ -1496,6 +1505,11 @@ class SharedCasesTest {
     @Test fun sinceReadsAges() {
         val now = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 12); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0) }.timeInMillis
         for (c in cases("since")) assertEquals(c.str("name"), c.str("expected"), since(now - c.getValue("agoMs").jsonPrimitive.content.toLong(), now))
+    }
+
+    @Test fun binLeftCases() {
+        val now = 1_000_000_000_000L
+        for (c in cases("bin-left")) assertEquals(c.str("name"), c.str("expected"), binLeft(now - c.getValue("agoMs").jsonPrimitive.long, now))
     }
 
     @Test fun moneyByBilling() {

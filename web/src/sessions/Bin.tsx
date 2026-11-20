@@ -4,9 +4,9 @@ import { notice } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
 import type { ConfirmRequest } from '../ui/Confirm';
-import { BIN_MS, type BinnedSession } from '../../../shared/protocol';
+import type { BinnedSession } from '../../../shared/protocol';
 import { pressable } from '../ui/util';
-import { deleteChat, get, restoreChat } from './folders';
+import { binLeft, deleteChat, get, restoreChat } from './folders';
 
 export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: (b: BinnedSession) => void }) {
   const [list, setList] = useState<BinnedSession[]>([]);
@@ -34,7 +34,6 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
       setList([]);
     },
   });
-  const left = (b: BinnedSession) => `${Math.max(1, Math.round((b.deletedAt + BIN_MS - Date.now()) / 3600000))}h left`;
   return (
     <div className="bin">
       <div className="row project" {...pressable(() => setOpen((v) => !v))}>
@@ -49,7 +48,7 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
       {open && list.map((b) => (
         <div key={b.sessionId} className="row session recent" title={`${b.title}\n${b.cwd}\nDeleted for good after 24 hours`}>
           <span className="name">{b.title}</span>
-          <span className="when">{left(b)}</span>
+          <span className="when">{binLeft(b.deletedAt)}</span>
           <span className="acts">
             <IconButton icon="discard" small label="Restore chat" onClick={() => restore(b)} />
             <IconButton icon="close" small label="Delete for good" onClick={() => ask(deleteChat(b, () => setList((l) => l.filter((x) => x.sessionId !== b.sessionId)), notice, true))} />

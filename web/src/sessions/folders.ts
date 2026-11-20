@@ -365,6 +365,9 @@ export const newChatGroups = (prev: ReadonlySet<string> | null, live: [id: strin
 export const unreadCount = (live: LiveChat[], viewing: string, seen: Record<string, number>, attention: number) =>
   live.filter((c) => c.id !== viewing && ['done', 'needs'].includes(chatState({ live: c }, seen) ?? '')).length + attention;
 
+// The hours a binned chat has left before the server deletes it, at least one (Android binLeft).
+export const binLeft = (deletedAt: number, now = Date.now()) => `${Math.max(1, Math.round((deletedAt + BIN_MS - now) / 3600000))}h left`;
+
 export function since(t: number, now = Date.now()) {
   const m = Math.max(0, Math.floor((now - t) / 60_000));
   if (m < 1) return 'just now';

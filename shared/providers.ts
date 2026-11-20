@@ -85,3 +85,8 @@ export function newestModels<T extends { value: string; displayName: string }>(m
     return !p || m.value === current || num(p[2]).join('.') === num(top.get(p[1])!).join('.');
   });
 }
+
+// The model row the new chat sheet checks: the picked or last model when shown, else the first shown, which the chat gets when none is sent.
+export function checkedModel(shown: { value: string }[], model?: string | null): string | null {
+  return shown.some((m) => m.value === model) ? model! : shown[0]?.value ?? null;
+}

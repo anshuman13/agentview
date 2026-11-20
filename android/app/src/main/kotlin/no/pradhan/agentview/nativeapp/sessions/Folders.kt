@@ -29,6 +29,15 @@ data class Worktree(val id: String = "", val repo: String = "", val cwd: String,
 
 data class Workspace(val repos: List<Repo> = emptyList(), val trees: List<Worktree> = emptyList(), val saved: List<SavedSession> = emptyList(), val pins: List<String> = emptyList(), val seen: Map<String, Long> = emptyMap())
 
+// An archived chat in the bin (shared/protocol.ts BinnedSession); the server deletes it BIN_MS after deletedAt.
+@Serializable
+data class BinnedSession(val sessionId: String, val title: String = "", val cwd: String = "", val lastModified: Long = 0, val deletedAt: Long = 0)
+
+const val BIN_MS = 24 * 60 * 60 * 1000L
+
+// web binLeft in folders.ts: the hours a binned chat has left, at least one.
+fun binLeft(deletedAt: Long, now: Long = System.currentTimeMillis()) = "${maxOf(1L, Math.round((deletedAt + BIN_MS - now) / 3_600_000.0))}h left"
+
 fun withRestored(ws: Workspace, saved: SavedSession, pinned: Boolean) = ws.copy(
     saved = listOf(saved) + ws.saved.filter { it.sessionId != saved.sessionId },
     pins = if (pinned) (ws.pins - saved.sessionId) + saved.sessionId else ws.pins,

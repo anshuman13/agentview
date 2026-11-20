@@ -100,11 +100,12 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
         }
         val shown = remember(models, model) { newestModels(models, model) }
         if (shown.isNotEmpty()) {
+            val checked = checkedModel(shown, model)
             SectionHeader("Model")
             Group {
                 shown.forEachIndexed { i, m ->
                     if (i > 0) Hairline()
-                    ChoiceRow(m.displayName.ifBlank { m.value }, m.description, onClick = { model = m.value }, checked = m.value == model)
+                    ChoiceRow(m.displayName.ifBlank { m.value }, m.description, onClick = { model = m.value }, checked = m.value == checked)
                 }
             }
         }

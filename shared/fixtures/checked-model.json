@@ -1,0 +1,6 @@
+[
+  { "name": "a shown model stays checked", "shown": ["opus", "sonnet", "haiku"], "model": "sonnet", "checked": "sonnet" },
+  { "name": "a model not shown checks the first", "shown": ["opus", "sonnet"], "model": "retired", "checked": "opus" },
+  { "name": "no model checks the first", "shown": ["opus", "sonnet"], "model": null, "checked": "opus" },
+  { "name": "no models checks nothing", "shown": [], "model": "opus", "checked": null }
+]
