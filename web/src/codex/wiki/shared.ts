@@ -1,5 +1,6 @@
 import { contestOf, factTime, live, type Fact, type Page, type Source } from '../data/wiki/wiki';
 import { ago } from '../../ui/util';
+import { claimActions, type ClaimButton, type ClaimMenuItem } from '../../../../shared/claimActions';
 
 export const SOURCE_ICON: Record<Source['kind'], string> = { meeting: 'calendar', slack: 'comment-discussion', linear: 'issues', pr: 'git-pull-request', doc: 'file', chat: 'comment-discussion' };
 export const MEMORY = 'memory';
@@ -13,19 +14,5 @@ export function shortDate(t: number, now = Date.now()) {
   return d.toLocaleDateString([], { day: 'numeric', month: 'short', ...(d.getFullYear() !== new Date(now).getFullYear() && { year: 'numeric' }) });
 }
 
-export type ClaimButton = 'reject' | 'approve' | 'confirm' | 'more';
-export type ClaimMenuItem = 'edit' | 'cite' | 'contest' | 'resolve' | 'retire' | 'restore';
-
-// At most two controls per claim row. Stale wins over proposed, proposed over the menu; a proposed claim has no menu.
-export function actionsFor(fact: Fact, { stale = false, editing = false, contesting = false } = {}): { buttons: ClaimButton[]; menu: ClaimMenuItem[] } {
-  const contested = !!contestOf(fact);
-  const menu: ClaimMenuItem[] = [];
-  if (!editing) menu.push('edit');
-  menu.push('cite');
-  if (!contested && !contesting) menu.push('contest');
-  if (contested) menu.push('resolve');
-  menu.push(fact.state === 'retired' ? 'restore' : 'retire');
-  if (stale) return { buttons: ['confirm', 'more'], menu };
-  if (fact.state === 'proposed') return { buttons: ['reject', 'approve'], menu: [] };
-  return { buttons: ['more'], menu };
-}
+export const actionsFor = (fact: Fact, opts?: { stale?: boolean; editing?: boolean; contesting?: boolean }) => claimActions(fact.state, !!contestOf(fact), opts);
+export type { ClaimButton, ClaimMenuItem };

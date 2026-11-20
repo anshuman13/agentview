@@ -123,7 +123,7 @@ fun newFact(text: String, pageId: String?, profile: String, now: Long, state: St
     return edited(blank, values, now).let { r -> r.copy(times = r.times.mapValues { now }) }
 }
 
-// The text an edited claim saves: trimmed, null when blank or unchanged (web Claim.tsx save).
+// The text an edited claim saves: trimmed, null when blank or unchanged (shared/claimEdit.ts, checked by shared/fixtures/claim-edit.json).
 fun editedClaimText(old: String?, next: String): String? = next.trim().takeIf { it.isNotEmpty() && it != old }
 
 // A proposal's profile: the page's, else the filter's (web usePageEdits propose).
@@ -135,6 +135,23 @@ fun contestOf(f: Row): Contest? = runCatching {
     val o = protocolJson.parseToJsonElement(f.str("contested") ?: return null) as JsonObject
     Contest((o["by"] as? JsonPrimitive)?.contentOrNull ?: "", (o["at"] as? JsonPrimitive)?.content?.toDouble()?.toLong() ?: 0L, (o["note"] as? JsonPrimitive)?.contentOrNull ?: "")
 }.getOrNull()
+
+class ClaimActions(val buttons: List<String>, val menu: List<String>)
+
+// At most two controls per claim row (shared/claimActions.ts, checked by shared/fixtures/claim-actions.json).
+fun claimActions(f: Row, stale: Boolean): ClaimActions {
+    val menu = buildList {
+        add("edit")
+        add("cite")
+        add(if (contestOf(f) == null) "contest" else "resolve")
+        add(if (f.str("state") == "retired") "restore" else "retire")
+    }
+    return when {
+        stale -> ClaimActions(listOf("confirm", "more"), menu)
+        f.str("state") == "proposed" -> ClaimActions(listOf("reject", "approve"), emptyList())
+        else -> ClaimActions(listOf("more"), menu)
+    }
+}
 
 fun factTime(f: Row) = maxOf(f.long("at") ?: 0L, contestOf(f)?.at ?: 0L, f.updatedAt)
 

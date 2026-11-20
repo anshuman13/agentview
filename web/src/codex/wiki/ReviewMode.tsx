@@ -10,9 +10,33 @@ import { Swipe } from '../gestures/Swipe';
 import { ClaudeChip, SourceChip } from './Chips';
 import { Replaces, useReview } from './Review';
 import { reviewQueue } from './reviewQueue';
+import { useClaimEdits } from './useClaimEdits';
 import { MEMORY, shortDate } from './shared';
 
 const key = (f: Fact) => f.profile + f.id;
+
+function EditableText({ fact }: { fact: Fact }) {
+  const edits = useClaimEdits(fact, '');
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  if (!editing) {
+    return (
+      <>
+        <p className="wk-mode-text">{fact.text}</p>
+        <div><Button size="sm" icon="edit" onClick={() => { setDraft(fact.text ?? ''); setEditing(true); }}>Edit</Button></div>
+      </>
+    );
+  }
+  return (
+    <span className="wk-contest-form">
+      <textarea autoFocus rows={3} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)} />
+      <span className="wk-contest-btns">
+        <Button onClick={() => setEditing(false)}>Cancel</Button>
+        <Button variant="primary" onClick={() => { edits.save(draft); setEditing(false); }}>Save</Button>
+      </span>
+    </span>
+  );
+}
 
 // One proposed claim at a time with big Approve, Skip and Reject, so a long list can be cleared with the thumb.
 // The order is fixed when the screen opens; a skipped claim goes to the back, a decided one stays counted.
@@ -60,7 +84,7 @@ export function ReviewMode() {
                   {page ? <>{page.title}{page.state === 'proposed' && <em> (new page)</em>}{fact.heading && <> · {fact.heading}</>}</> : 'Memory'} <Icon name="chevron-right" small />
                 </button>
               </div>
-              <p className="wk-mode-text">{fact.text}</p>
+              <EditableText fact={fact} />
               {old && <Replaces old={old} />}
               {similar && <Replaces old={similar} similar />}
               <div className="wk-claim-foot">

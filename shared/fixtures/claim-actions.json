@@ -1,0 +1,8 @@
+[
+  { "name": "live", "state": null, "contested": false, "stale": false, "buttons": ["more"], "menu": ["edit", "cite", "contest", "retire"] },
+  { "name": "contested", "state": "live", "contested": true, "stale": false, "buttons": ["more"], "menu": ["edit", "cite", "resolve", "retire"] },
+  { "name": "retired", "state": "retired", "contested": false, "stale": false, "buttons": ["more"], "menu": ["edit", "cite", "contest", "restore"] },
+  { "name": "stale", "state": null, "contested": false, "stale": true, "buttons": ["confirm", "more"], "menu": ["edit", "cite", "contest", "retire"] },
+  { "name": "proposed", "state": "proposed", "contested": false, "stale": false, "buttons": ["reject", "approve"], "menu": [] },
+  { "name": "stale and proposed", "state": "proposed", "contested": false, "stale": true, "buttons": ["confirm", "more"], "menu": ["edit", "cite", "contest", "retire"] }
+]

@@ -1,0 +1,8 @@
+[
+  { "name": "changed", "old": "Use npm", "next": "Use bun", "expected": "Use bun" },
+  { "name": "unchanged", "old": "Use bun", "next": "Use bun", "expected": null },
+  { "name": "blank", "old": "Use bun", "next": "   ", "expected": null },
+  { "name": "padded", "old": "Use npm", "next": "  Use bun \n", "expected": "Use bun" },
+  { "name": "padded but unchanged", "old": "Use bun", "next": " Use bun ", "expected": null },
+  { "name": "no old text", "old": null, "next": "Use bun", "expected": "Use bun" }
+]

@@ -37,7 +37,6 @@ import no.pradhan.agentview.nativeapp.codex.rowToChange
 import no.pradhan.agentview.nativeapp.codex.toJson
 import no.pradhan.agentview.nativeapp.codex.wiki.chatSource
 import no.pradhan.agentview.nativeapp.codex.wiki.contestOf
-import no.pradhan.agentview.nativeapp.codex.wiki.editedClaimText
 import no.pradhan.agentview.nativeapp.codex.wiki.newFact
 import no.pradhan.agentview.nativeapp.codex.wiki.proposalProfile
 import no.pradhan.agentview.nativeapp.codex.wiki.olderClaims
@@ -329,12 +328,6 @@ class MeetingsWikiTest {
         assertEquals("proposed", newFact("Loose", null, PERSONAL, 7)!!.str("state"))
         assertEquals("chat · b", sourcesOf(newFact("x", null, WORK, 7, sources = chatSource(" ", "/a/b"))!!).single().label)
         assertNull(newFact("  ", null, WORK, 7))
-    }
-
-    @Test fun anEditedClaimSavesOnlyNewText() {
-        assertEquals("Use bun", editedClaimText("Use npm", "  Use bun "))
-        assertNull(editedClaimText("Use bun", " Use bun "))
-        assertNull(editedClaimText("Use bun", "  "))
     }
 
     @Test fun aProposalTakesThePageProfileElseTheFilter() {

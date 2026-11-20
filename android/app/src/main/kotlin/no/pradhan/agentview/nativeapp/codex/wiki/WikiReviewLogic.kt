@@ -54,5 +54,9 @@ class ReviewOps(private val store: CodexStore, private val snack: (String, (() -
     private fun noun(n: Int) = plural(n, "claim")
     fun approve(list: List<Row>) { val s = store.state.value; run(approveAllChanges(list, s.pages, s.facts), "Approved ${noun(list.size)}") }
     fun replace(fact: Row, old: Row) { val s = store.state.value; run(replaceChanges(fact, old, s.pages, s.facts), "Approved 1 claim, replacing the old one") }
+    fun edit(fact: Row, text: String) {
+        val next = editedClaimText(fact.str("text"), text) ?: return
+        run(listOf(Change(fact, mapOf("text" to next), mapOf("text" to fact.str("text")))), "Claim updated")
+    }
     fun reject(list: List<Row>) { val s = store.state.value; run(rejectChanges(list, s.pages, s.facts), "Rejected ${noun(list.size)}") }
 }
