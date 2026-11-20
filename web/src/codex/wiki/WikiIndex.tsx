@@ -110,7 +110,10 @@ function Results({ pages, facts, stats, query }: { pages: Page[]; facts: Fact[];
   const r = useMemo(() => searchWiki(pages, facts, query), [pages, facts, query]);
   const [n, more] = useWindow(query);
   const title = new Map(pages.map((p) => [p.id, p.title]));
-  if (!r.pages.length && !r.claims.length) return <EmptyState size="sm" icon="search" title={`Nothing in the wiki matches “${query}”`} hint="Ask the wiki below to search Slack and Linear too" />;
+  if (!r.pages.length && !r.claims.length) {
+    return <EmptyState size="sm" icon="search" title={`Nothing in the wiki matches “${query}”`} hint="Ask sends it to today's Codex chat with every claim"
+      action={<Button size="sm" onClick={() => ask(wikiAskText(query.trim(), pages, facts), 'work')}>Ask the wiki</Button>} />;
+  }
   return (
     <>
       {r.pages.length > 0 && (

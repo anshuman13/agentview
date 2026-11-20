@@ -48,6 +48,11 @@ import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.liveRows
+import no.pradhan.agentview.nativeapp.codex.profileLabel
+import no.pradhan.agentview.nativeapp.codex.split
+import no.pradhan.agentview.nativeapp.codex.splitTitle
+import no.pradhan.agentview.nativeapp.sessions.matchesWords
+import no.pradhan.agentview.nativeapp.sessions.queryWords
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.ui.AvIcon
@@ -112,6 +117,10 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     var allLoose by rememberSaveable { mutableStateOf(false) }
     var creating by remember { mutableStateOf(false) }
     var feedOpen by remember { mutableStateOf(false) }
+    var notesOpen by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf<Row?>(null) }
+    val notes = remember(st.items, profile) { split(st.items, profile, now).notes }
+    val noteHits = remember(notes, query) { queryWords(query).let { w -> notes.filter { matchesWords(w, it.title, it.text) } } }
     val waiting = remember(facts) { proposals(facts).size }
     val grouped = remember(pages, facts) { reviewGroups(pages, facts) }
     val reviewRows = grouped.byPage.map { g ->
@@ -127,11 +136,15 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             LayoutRow(Modifier.padding(top = Tokens.sp4, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
                 SearchField(query, { query = it }, "Search the wiki", Modifier.weight(1f))
                 IconBtn("history", "Feed", { feedOpen = true })
+                IconBtn("note", "Notes", { notesOpen = true })
                 if (onAsk != null) IconBtn("sparkle", "Ask", { asking = true })
             }
         }
         if (query.isNotBlank()) {
-            if (hits.pages.isEmpty() && hits.claims.isEmpty()) item { EmptyState("Nothing in the wiki matches “$query”", icon = "search") }
+            if (hits.pages.isEmpty() && hits.claims.isEmpty()) item {
+                EmptyState("Nothing in the wiki matches “$query”", onAsk?.let { "Ask sends it to today's Codex chat with every claim" }, icon = "search",
+                    action = onAsk?.let { ask -> { Button("Ask the wiki", { ask(wikiAskText(query.trim(), pages, facts, null, now)) }, size = ButtonSize.Sm) } })
+            }
             if (hits.pages.isNotEmpty()) {
                 item { SectionHeader("Pages", hits.pages.size.toString()) }
                 item { Group { hits.pages.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(p.title ?: "", p.str("summary")?.let { firstLine(it) }, onClick = { onOpen(p) }) } } }
@@ -139,6 +152,10 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             if (hits.claims.isNotEmpty()) {
                 item { SectionHeader("Claims", hits.claims.size.toString()) }
                 item { Group { hits.claims.take(30).forEachIndexed { i, f -> if (i > 0) Hairline(); ListRow(f.str("text") ?: "", f.str("page_id")?.let { titles[it] } ?: "Memory", onClick = { onClaim(f) }) } } }
+            }
+            if (noteHits.isNotEmpty()) {
+                item { SectionHeader("Notes", noteHits.size.toString()) }
+                lazyGroup(noteHits, key = { "note:${it.key}" }) { NoteRow(it, now, actions, readOnly) { r -> note = r } }
             }
             return@LazyColumn
         }
@@ -210,7 +227,47 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
         newPage(title, "Pages", sort, proposalProfile(null, profile), System.currentTimeMillis())?.let { actions.create(it, "Page created"); onOpen(it) }
     }, { creating = false }, maxLength = 120)
     if (feedOpen) FeedSheet(facts, pages, now, { feedOpen = false }) { feedOpen = false; onClaim(it) }
+    if (notesOpen) NotesSheet(notes, now, actions, proposalProfile(null, profile), readOnly, { notesOpen = false }) { note = it }
+    note?.let { NoteSheet(it, actions) { note = null } }
     if (asking && onAsk != null) ClaimTextSheet("Ask", "", "Ask", { asking = false }, "Ask the wiki") { q -> onAsk(wikiAskText(q, pages, facts, null, now)) }
+}
+
+private const val NOTES_SHOWN = 20
+
+// Loose notes (web wiki/Notes.tsx): New note, then the notes newest first.
+@Composable
+private fun NotesSheet(notes: List<Row>, now: Long, actions: TaskActions, profile: String, readOnly: Boolean, onDismiss: () -> Unit, onNote: (Row) -> Unit) {
+    var adding by remember { mutableStateOf(false) }
+    var all by remember { mutableStateOf(false) }
+    Sheet(onDismiss, "Notes", padded = false, count = notes.size.toString()) {
+        if (!readOnly) Group { ListRow("New note", leading = { AvIcon("add") }, onClick = { adding = true }) }
+        if (notes.isEmpty()) EmptyState("No notes yet", "Notes you save and asks marked Nothing asked show here", icon = "note")
+        else Group(Modifier.padding(top = Tokens.sp4)) {
+            (if (all) notes else notes.take(NOTES_SHOWN)).forEachIndexed { i, r -> if (i > 0) Hairline(); NoteRow(r, now, actions, readOnly, onNote) }
+        }
+        if (!all && notes.size > NOTES_SHOWN) Button("Show all ${notes.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+    }
+    if (adding) ClaimTextSheet("New note", "", "Save", { adding = false }, "First line is the title") { actions.addNote(it, profile) }
+}
+
+@Composable
+private fun NoteRow(r: Row, now: Long, actions: TaskActions, readOnly: Boolean, onOpen: (Row) -> Unit) {
+    ListRow(r.title?.ifEmpty { null } ?: UNTITLED, "${agoText(r.updatedAt, now)} · ${profileLabel(r.profile)}", onClick = if (readOnly) null else ({ onOpen(r) }),
+        menu = if (readOnly) null else ({ dismiss ->
+            MenuItem("Make task", "add", { dismiss(); actions.toTask(r) })
+            MenuItem("Delete", "trash", { dismiss(); actions.deleteNote(r) }, danger = true)
+        }))
+}
+
+// Saves the edited note: unchanged text saves nothing and empty text deletes it.
+@Composable
+private fun NoteSheet(r: Row, actions: TaskActions, onDismiss: () -> Unit) {
+    val full = listOfNotNull(r.title, r.text).filter { it.isNotEmpty() }.joinToString("\n")
+    ClaimTextSheet("Note", full, "Save", onDismiss, "First line is the title", allowBlank = true) { text ->
+        val t = text.trim()
+        if (t.isEmpty()) actions.deleteNote(r)
+        else if (t != full) splitTitle(t).let { (title, body) -> actions.edit(r, mapOf("title" to title, "text" to body)) }
+    }
 }
 
 // Recently updated (web wiki/Feed.tsx): the 5 newest current claims with their page, source or contester and age.
@@ -235,13 +292,13 @@ private fun FeedSheet(facts: List<Row>, pages: List<Row>, now: Long, onDismiss: 
 }
 
 @Composable
-internal fun ClaimTextSheet(title: String, initial: String, save: String, onDismiss: () -> Unit, placeholder: String = "What is true?", maxLength: Int = Int.MAX_VALUE, onSave: (String) -> Unit) {
+internal fun ClaimTextSheet(title: String, initial: String, save: String, onDismiss: () -> Unit, placeholder: String = "What is true?", maxLength: Int = Int.MAX_VALUE, allowBlank: Boolean = false, onSave: (String) -> Unit) {
     var text by remember { mutableStateOf(initial) }
     Sheet(onDismiss, title, full = false) {
         TextField(text, { text = it.take(maxLength) }, Modifier.padding(vertical = Tokens.sp4), placeholder = placeholder, minLines = 2)
         LayoutRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4, Alignment.End)) {
             Button("Cancel", onDismiss, variant = ButtonVariant.Plain)
-            Button(save, { onDismiss(); onSave(text) }, variant = ButtonVariant.Filled, enabled = text.isNotBlank())
+            Button(save, { onDismiss(); onSave(text) }, variant = ButtonVariant.Filled, enabled = allowBlank || text.isNotBlank())
         }
     }
 }
@@ -265,7 +322,7 @@ private fun ProposeClaim(page: Row?, filter: String?, actions: TaskActions) {
 private fun RememberClaim(onRemember: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Button("Remember", { open = true }, variant = ButtonVariant.Filled, icon = "add")
-    if (open) ClaimTextSheet("Remember", "", "Save", { open = false }, "What to remember", 400, onRemember)
+    if (open) ClaimTextSheet("Remember", "", "Save", { open = false }, "What to remember", 400, onSave = onRemember)
 }
 
 @Composable
