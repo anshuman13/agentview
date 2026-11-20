@@ -25,6 +25,7 @@ import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, spe
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { taskChatPrompt } from '../../shared/taskChat';
 import { findInChat } from '../../shared/findInChat';
+import { mergeSeen, type SeenMark } from '../../shared/seen';
 import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
@@ -547,6 +548,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; events: ChatEvent[]; running?: boolean; expected: string[] }>('turn-answers')) {
     it(`turnAnswers: ${c.name}`, () => expect([...turnAnswers(buildTranscript(c.events), c.running)]).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; server: Record<string, number>; marks: SeenMark[]; startedAt: number; expected: Record<string, number> }>('merge-seen')) {
+    it(`mergeSeen: ${c.name}`, () => expect(mergeSeen(c.server, c.marks, c.startedAt)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; query: string; events: ChatEvent[]; expected: string[] }>('chat-find')) {

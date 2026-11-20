@@ -1,0 +1,8 @@
+[
+  { "name": "no marks", "server": { "a": 5 }, "marks": [], "startedAt": 100, "expected": { "a": 5 } },
+  { "name": "an unsent mark from before the load is kept", "server": { "a": 5 }, "marks": [{ "id": "a", "value": 50, "at": 50, "sent": false }], "startedAt": 100, "expected": { "a": 50 } },
+  { "name": "a sent mark from before the load yields to the server", "server": { "a": 70 }, "marks": [{ "id": "a", "value": 50, "at": 50, "sent": true }], "startedAt": 100, "expected": { "a": 70 } },
+  { "name": "a sent mark made after the load began is kept", "server": { "a": 5 }, "marks": [{ "id": "a", "value": 120, "at": 120, "sent": true }], "startedAt": 100, "expected": { "a": 120 } },
+  { "name": "an unsent unread mark sets 0", "server": { "a": 90 }, "marks": [{ "id": "a", "value": 0, "at": 50, "sent": false }], "startedAt": 100, "expected": { "a": 0 } },
+  { "name": "a mark for a chat the server lacks is added", "server": { "a": 5 }, "marks": [{ "id": "b", "value": 60, "at": 60, "sent": false }], "startedAt": 100, "expected": { "a": 5, "b": 60 } }
+]

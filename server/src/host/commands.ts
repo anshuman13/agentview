@@ -8,12 +8,14 @@ type Msg<T extends ClientMessage['type']> = Extract<ClientMessage, { type: T }>;
 
 const shortId = (id: unknown) => (typeof id === 'string' ? id.slice(0, 64) : undefined);
 
+const notSent = (chat: AgentSession, sent: Promise<unknown>) => void sent.catch((err) => chat.system(`Not sent: ${errText(err)}`, true));
+
 function promptCommand(chat: AgentSession, msg: Msg<'prompt'>) {
   if (typeof msg.text !== 'string') return;
   const id = shortId(msg.id);
   if (triesCommand(chat, msg.text, id)) return;
   // The composer sends steer to stop Claude; a prompt during a run (Fix, Compact) waits its turn.
-  void chat.prompt(msg.text, id);
+  notSent(chat, chat.prompt(msg.text, id));
 }
 
 // /tries starts its own chats, however it is sent.
@@ -25,7 +27,7 @@ function triesCommand(chat: AgentSession, text: string, id: string | undefined) 
 
 function queueCommand(chat: AgentSession, msg: Msg<'queue'>) {
   if (typeof msg.text !== 'string' || triesCommand(chat, msg.text, shortId(msg.id))) return;
-  void chat.queueNext(msg.text, shortId(msg.id));
+  notSent(chat, chat.queueNext(msg.text, shortId(msg.id)));
 }
 
 function sendNowCommand(chat: AgentSession, msg: Msg<'send_now'>) {
@@ -34,7 +36,7 @@ function sendNowCommand(chat: AgentSession, msg: Msg<'send_now'>) {
 
 function steerCommand(chat: AgentSession, msg: Msg<'steer'>) {
   if (typeof msg.text !== 'string' || triesCommand(chat, msg.text, shortId(msg.id))) return;
-  void chat.steer(msg.text, shortId(msg.id));
+  notSent(chat, chat.steer(msg.text, shortId(msg.id)));
 }
 
 function planCommand(chat: AgentSession, msg: Msg<'plan'>) {

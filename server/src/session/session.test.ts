@@ -1051,3 +1051,25 @@ describe('job runs', () => {
     expect(runs.get(id)).toMatchObject({ rounds: [{ outcome: 'failed', line: 'Turn ended: error_during_execution: Sandbox dependencies are missing' }] });
   });
 });
+
+describe('connector check before a prompt', () => {
+  it('lets the next prompt through after the refresh fails', async () => {
+    const { s } = fakeSession();
+    const down = vi.spyOn(console, 'error').mockImplementation(() => {});
+    Object.assign(s.driver, { pickUpConnectors: async () => true, mcpStatus: vi.fn().mockRejectedValueOnce(new Error('mcp down')).mockResolvedValue([]) });
+    const sent = vi.spyOn(s, 'sendPrompt').mockImplementation(() => {});
+    await s.prompt('one');
+    await s.prompt('two');
+    expect(sent.mock.calls.map((c) => c[0])).toEqual(['one', 'two']);
+    expect(down).toHaveBeenCalledTimes(1);
+    down.mockRestore();
+  });
+
+  it('shows Not sent when a prompt command throws', async () => {
+    const { s } = fakeSession();
+    vi.spyOn(s, 'prompt').mockRejectedValue(new Error('boom'));
+    const { command } = await import('../host/commands.js');
+    command(s, { type: 'prompt', text: 'hi' });
+    await waitFor(() => expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Not sent: boom', error: true }));
+  });
+});

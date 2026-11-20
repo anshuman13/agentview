@@ -16,7 +16,11 @@ export class Mcp {
   }
 
   async pickUpConnectors() {
-    if (await this.s.driver.pickUpConnectors?.().catch(() => false)) await this.refresh();
+    try {
+      if (await this.s.driver.pickUpConnectors?.().catch(() => false)) await this.refresh();
+    } catch (err) {
+      console.error(`connector refresh failed in chat ${this.s.id}: ${errText(err)}`);
+    }
   }
 
   async toggle(name: string, enabled: boolean) {

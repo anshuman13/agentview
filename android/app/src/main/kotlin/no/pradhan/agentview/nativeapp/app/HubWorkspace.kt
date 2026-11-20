@@ -15,10 +15,31 @@ import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.withRestored
 import no.pradhan.agentview.nativeapp.ui.plural
 
+class SeenMark(val id: String, val value: Long, val at: Long, val sent: Boolean)
+
+// web shared/seen.ts: the server's seen times with each local mark applied that its POST has not confirmed, or that was made once the load began.
+fun mergeSeen(server: Map<String, Long>, marks: List<SeenMark>, startedAt: Long): Map<String, Long> =
+    server + marks.filter { !it.sent || it.at >= startedAt }.associate { it.id to it.value }
+
+private fun Hub.postMark(m: SeenMark) {
+    if (readOnly) return
+    viewModelScope.launch {
+        if (runCatching { api.markSeen(m.id, unread = m.value == 0L) }.isSuccess && seenMarks[m.id] === m) seenMarks[m.id] = SeenMark(m.id, m.value, m.at, true)
+    }
+}
+
+private fun Hub.mark(sessionId: String, value: Long) {
+    val m = SeenMark(sessionId, value, System.currentTimeMillis(), false)
+    seenMarks[sessionId] = m
+    workspace.value = workspace.value.let { it.copy(seen = it.seen + (sessionId to value)) }
+    postMark(m)
+}
+
 fun Hub.refreshWorkspace(force: Boolean = false): Job? {
     val now = System.currentTimeMillis()
     if (!force && now - workspaceAt < WORKSPACE_MIN_AGE_MS) return null
     workspaceAt = now
+    seenMarks.values.filter { !it.sent }.forEach(::postMark)
     return viewModelScope.launch {
         val from = origin.value
         runCatching {
@@ -29,7 +50,9 @@ fun Hub.refreshWorkspace(force: Boolean = false): Job? {
                 val trees = async { runCatching { api.worktrees() }.getOrDefault(was.trees) }
                 val pins = async { runCatching { api.pins() }.getOrDefault(was.pins) }
                 val seen = async { runCatching { api.seen() }.getOrDefault(was.seen) }
-                Workspace(repos.await(), trees.await(), saved.await(), pins.await(), seen.await())
+                val merged = mergeSeen(seen.await(), seenMarks.values.toList(), now)
+                seenMarks.values.removeAll { it.sent && it.at < now }
+                Workspace(repos.await(), trees.await(), saved.await(), pins.await(), merged)
             }
         }.onSuccess { if (from == origin.value) workspace.value = it }.onFailure { workspaceAt = 0 }
     }
@@ -42,9 +65,7 @@ fun Hub.refreshMcpGroups() {
 }
 
 internal fun Hub.markSeen(sessionId: String?) {
-    if (sessionId == null) return
-    workspace.value = workspace.value.let { it.copy(seen = it.seen + (sessionId to System.currentTimeMillis())) }
-    if (!readOnly) viewModelScope.launch { runCatching { api.markSeen(sessionId) } }
+    if (sessionId != null) mark(sessionId, System.currentTimeMillis())
 }
 
 fun Hub.markRead(sessionIds: List<String>) {
@@ -53,10 +74,7 @@ fun Hub.markRead(sessionIds: List<String>) {
 }
 
 // Seen time 0, so the chat shows Done until it is opened again.
-fun Hub.markUnread(sessionId: String) {
-    workspace.value = workspace.value.let { it.copy(seen = it.seen + (sessionId to 0L)) }
-    if (!readOnly) viewModelScope.launch { runCatching { api.markSeen(sessionId, unread = true) } }
-}
+fun Hub.markUnread(sessionId: String) = mark(sessionId, 0L)
 
 fun Hub.loadEarlier() {
     val s = store.state.value

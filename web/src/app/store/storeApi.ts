@@ -10,4 +10,4 @@ export const postCommand = (url: string, m: ClientMessage) => fetch(url, { metho
 
 export const fetchSeen = () => fetch(apiUrl(SEEN_URL)).then((r) => r.json());
 
-export const postSeen = (sessionId: string, unread = false) => fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}${unread ? '&unread=1' : ''}`), { method: 'POST' }).catch(() => {});
+export const postSeen = (sessionId: string, unread = false) => fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}${unread ? '&unread=1' : ''}`), { method: 'POST' }).then((r) => r.ok, () => false);

@@ -26,6 +26,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.app.chatNotice
 import no.pradhan.agentview.nativeapp.app.BarEvent
+import no.pradhan.agentview.nativeapp.app.SeenMark
+import no.pradhan.agentview.nativeapp.app.mergeSeen
 import no.pradhan.agentview.nativeapp.chat.attachMark
 import no.pradhan.agentview.nativeapp.chat.findInChat
 import no.pradhan.agentview.nativeapp.chat.failedLine
@@ -527,6 +529,15 @@ class SharedCasesTest {
         for (c in cases("chat-find")) {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
             assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, findInChat(events, c.str("query")))
+        }
+    }
+
+    @Test fun mergeSeenCases() {
+        for (c in cases("merge-seen")) {
+            val server = c.getValue("server").jsonObject.mapValues { it.value.jsonPrimitive.long }
+            val marks = c.getValue("marks").jsonArray.map { it.jsonObject }.map { SeenMark(it.str("id"), it.getValue("value").jsonPrimitive.long, it.getValue("at").jsonPrimitive.long, it.getValue("sent").jsonPrimitive.boolean) }
+            val expected = c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.long }
+            assertEquals(c.str("name"), expected, mergeSeen(server, marks, c.getValue("startedAt").jsonPrimitive.long))
         }
     }
 

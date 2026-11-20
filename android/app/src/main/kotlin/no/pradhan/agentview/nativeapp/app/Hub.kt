@@ -235,6 +235,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         set(v) { AppState.readOnly = v }
 
     internal var workspaceAt = 0L
+    internal val seenMarks = mutableMapOf<String, SeenMark>()
 
     internal val stream = EventStream(
         viewModelScope,

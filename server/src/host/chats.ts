@@ -171,8 +171,8 @@ export async function prompt(cwd: string, text: string, from?: string, fresh = f
 // A scheduled coding job: a claude chat in a worktree the server made, with a run that holds the job's branch and worktree.
 export async function jobChat(job: Extract<HostRequest, { op: 'job' }>) {
   const chat = await createChat(job.cwd, undefined, job.title, false, 'claude', true);
-  runs.start({ kind: 'job', sessionId: '', chatId: chat.id, title: job.title, what: job.prompt, provider: 'claude', jobId: job.jobId, branch: job.branch, repo: job.repo, worktree: job.cwd, paseo: job.paseo });
-  void chat.prompt(`${job.prompt}\n\n${UNATTENDED_INSTRUCTION}`);
+  const runId = runs.start({ kind: 'job', sessionId: '', chatId: chat.id, title: job.title, what: job.prompt, provider: 'claude', jobId: job.jobId, branch: job.branch, repo: job.repo, worktree: job.cwd, paseo: job.paseo });
+  chat.prompt(`${job.prompt}\n\n${UNATTENDED_INSTRUCTION}`).catch((err) => runs.end(runId, errText(err).split('\n')[0]));
   return chat.id;
 }
 
@@ -219,5 +219,5 @@ export async function reviseRun(id: string, text: string) {
   if (run?.review !== 'pending') throw new Error('The run is not waiting for review');
   const chat = await openSaved(run.sessionId);
   runs.update(id, { chatId: chat.id, state: 'running', why: '', review: undefined });
-  void chat.prompt(text);
+  chat.prompt(text).catch((err) => runs.end(id, errText(err).split('\n')[0]));
 }
