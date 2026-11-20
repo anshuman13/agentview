@@ -10,7 +10,7 @@ export type ConfirmRequest = {
   icon?: string;
   cancel?: string;
   neutral?: boolean;
-  input?: { value: string; placeholder: string };
+  input?: { value: string; placeholder: string; maxLength?: number };
   extra?: { label: string; run: () => Promise<unknown> };
   run: (value: string) => Promise<unknown>;
 };
@@ -40,6 +40,7 @@ export function Confirm({ title, detail, warning, action, icon, cancel, neutral,
               className="dialog-input"
               value={value}
               placeholder={input.placeholder}
+              maxLength={input.maxLength}
               spellCheck={false}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && go()}

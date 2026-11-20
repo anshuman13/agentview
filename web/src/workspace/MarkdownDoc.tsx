@@ -4,7 +4,8 @@ import { Marked } from 'marked';
 import { classHighlighter, highlightCode } from '@lezer/highlight';
 import type { Parser } from '@lezer/common';
 import { isSpecPath, runAllPrompt, specProgress, specTasks, startTaskPrompt, type SpecTask } from '../../../shared/specTasks';
-import { api, sendToChat, setUi } from '../app/store';
+import { sendToChat, setUi } from '../app/store';
+import { imageUrl } from '../chat/chatApi';
 import { appSettings } from '../app/appSettings';
 import { track } from '../app/featureUse';
 import { startGoal } from '../sessions/goalLogic';
@@ -117,7 +118,7 @@ function clean(root: ParentNode, path: string) {
     const src = img.getAttribute('src') ?? '';
     if (/^https?:/i.test(src)) continue;
     if (external(src) || !src) img.removeAttribute('src');
-    else img.setAttribute('src', api(`/api/image?path=${encodeURIComponent(resolve(path, dec(src.split(/[?#]/)[0])))}`));
+    else img.setAttribute('src', imageUrl(resolve(path, dec(src.split(/[?#]/)[0]))));
     img.setAttribute('loading', 'lazy');
   }
   for (const input of root.querySelectorAll('input')) {

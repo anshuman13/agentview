@@ -68,7 +68,7 @@ export function JobPage({ j }: { j: Job }) {
             {!j.repo && <Row plain title="Only push when it found something" meta="A reply starting with NOTHING NEW is kept in the runs but not pushed" trailing={<Switch on={!!j.quiet} label="Only push when it found something" onChange={(on) => void store.editRow('jobs', j, { quiet: on ? 1 : 0 })} />} />}
             <RunsRow latest={list[0]} onOpen={() => setRunsOpen(true)} />
           </div>
-          <JobTasks tasks={tasks} name={j.id} />
+          <JobTasks tasks={tasks} id={j.id} />
         </article>
       </div>
       {runsOpen && <RunsSheet runs={list} query={query} setQuery={setQuery} onClose={() => setRunsOpen(false)} />}

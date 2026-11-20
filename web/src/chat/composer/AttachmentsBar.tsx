@@ -7,9 +7,9 @@ export function AttachmentsBar({ marks, remove }: { marks: string[]; remove: (i:
   return (
     <div className="cp-uses">
       {marks.map((m, i) => {
-        const { kind, name } = markChip(m);
+        const { kind, path, name } = markChip(m);
         return (
-          <Chip key={`${i}${m}`} size="sm" icon={kind === 'Image' ? 'file-media' : 'file'} title={m.slice(m.indexOf(' ') + 1, -1)} aria-label={`Remove ${kind.toLowerCase()} ${name}`} onClick={() => remove(i)}>
+          <Chip key={`${i}${m}`} size="sm" icon={kind === 'Image' ? 'file-media' : 'file'} title={path} aria-label={`Remove ${kind.toLowerCase()} ${name}`} onClick={() => remove(i)}>
             {name}<Icon name="close" small />
           </Chip>
         );

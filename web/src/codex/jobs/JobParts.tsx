@@ -132,12 +132,12 @@ export function JobRepo({ j }: { j: Job }) {
   );
 }
 
-export function JobTasks({ tasks, name }: { tasks: ItemRow[]; name: string }) {
+export function JobTasks({ tasks, id }: { tasks: ItemRow[]; id: string }) {
   if (!tasks.length) return null;
   return (
     <section className="mt-sec">
       <Section label="Tasks it added" count={sectionCount(tasks.length)} />
-      <Group rows={tasks} name={name} row={(r) => (
+      <Group rows={tasks} name={id} row={(r) => (
         <Row key={r.profile + r.id} title={r.title || UNTITLED} meta={[r.status === 'done' ? 'Done' : null, ago(madeAt(r), ' ago')].filter(Boolean).join(' · ')} onClick={() => openTask(r)} />
       )} />
     </section>

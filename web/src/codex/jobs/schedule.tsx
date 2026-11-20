@@ -46,7 +46,7 @@ export const tasksOf = (items: ItemRow[], j: Job) => items
   .filter((i) => !i.deleted && i.profile === j.profile && i.source === 'job' && i.people === j.name)
   .sort((a, b) => Number(a.status === 'done') - Number(b.status === 'done') || madeAt(b) - madeAt(a));
 
-export const queued =(j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
+export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
 export const jobState = (j: Job, runs: Run[], now: number): BadgeSpec | null => {
   const latest = runsOf(runs, j)[0]?.status;

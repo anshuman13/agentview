@@ -148,7 +148,7 @@ export function RemindPick({ pick, close, back }: SubProps) {
 }
 
 export function RememberPick({ close }: { close: () => void }) {
-  return <Confirm title="Remember" detail="Saved to Memory for every later chat." action="Save" icon="lightbulb" input={{ value: '', placeholder: 'What to remember' }} run={async (text) => rememberChat(text)} onClose={close} />;
+  return <Confirm title="Remember" detail="Saved to Memory for every later chat." action="Save" icon="lightbulb" input={{ value: '', placeholder: 'What to remember', maxLength: 400 }} run={async (text) => rememberChat(text)} onClose={close} />;
 }
 
 export function HooksPick({ pick, close, back }: SubProps) {

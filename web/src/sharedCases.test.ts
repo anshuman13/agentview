@@ -44,7 +44,7 @@ import type { Job, Meeting } from './codex/data/wiki/wiki';
 import { tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
 import { followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
-import { actionCount,displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
+import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
 import { similarClaim } from '../../shared/claimMatch';

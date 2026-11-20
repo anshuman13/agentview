@@ -1,7 +1,8 @@
 import { Component, Fragment, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { EditorView } from '@codemirror/view';
-import { api, setUi, useStore } from '../app/store';
+import { setUi, useStore } from '../app/store';
+import { imageUrl } from '../chat/chatApi';
 import { startGoal } from '../sessions/goalLogic';
 import { fileRequest, isDocPath } from './fileApi';
 import { Icon } from '../ui/Icon';
@@ -205,7 +206,7 @@ export function CodePane() {
         </div>
       </div>
       {file?.error && <EmptyState size="sm" title={file.error === 'path outside project' ? 'This file is outside the project folder' : file.error} />}
-      {file?.image && <div className="cd-empty"><img src={api(`/api/image?path=${encodeURIComponent(file.path)}`)} alt={file.path} style={{ maxWidth: '100%', maxHeight: '100%' }} /></div>}
+      {file?.image && <div className="cd-empty"><img src={imageUrl(file.path)} alt={file.path} style={{ maxWidth: '100%', maxHeight: '100%' }} /></div>}
       {file?.binary && <EmptyState size="sm" title="Binary file" />}
       {file && !file.error && !file.image && !file.binary && (
         <Guard key={`${file.path}:${showDoc}`}>
