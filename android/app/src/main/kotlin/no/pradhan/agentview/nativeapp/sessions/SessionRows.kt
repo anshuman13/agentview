@@ -2,9 +2,6 @@ package no.pradhan.agentview.nativeapp.sessions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,7 +41,6 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.RunBadgeView
 import no.pradhan.agentview.nativeapp.codex.autopilot.askLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBadge
 import no.pradhan.agentview.nativeapp.app.Hub
-import no.pradhan.agentview.nativeapp.app.Undoable
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.app.archive
@@ -68,6 +64,7 @@ import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.StatusDot
+import no.pradhan.agentview.nativeapp.ui.SwipeLabel
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
@@ -123,25 +120,23 @@ class ChatRows(
 
     private fun repoBranch(cwd: String) = ws.repos.firstOrNull { it.cwd == folderKey(cwd, ws.repos, ws.trees) }?.branch
 
-    private fun actions(sessionId: String?, title: String, liveChat: LiveChat?, state: ChatState? = null) = RowActions(
-        onRetry = liveChat?.takeIf { state == ChatState.Failed && !hub.readOnly }?.let { c -> { hub.open(c.id); hub.retryTurn(c.id) } },
-        pinned = sessionId != null && sessionId in pins,
-        onPin = { sessionId?.let { hub.pin(it, it !in pins) } },
-        onRename = { sessionId?.let { dialogs.renaming = it to title } },
-        onClose = liveChat?.let { c -> { if (c.running || c.pending > 0) dialogs.closing = c else hub.closeChat(c.id) } },
-        onArchive = { sessionId?.let { dialogs.archiving = it to title } },
-        canPin = sessionId != null,
-        onUnread = { sessionId?.let { hub.markUnread(it) } },
-        muted = sessionId != null && sessionId in muted,
-        onMute = { sessionId?.let { hub.setMuted(it, it !in muted) } },
-        onLink = { sessionId?.let { clipboard.setText(AnnotatedString("${hub.origin.value}/?session=$it")); hub.notice.value = "Link copied" } },
-        onSwipePin = sessionId?.takeIf { !hub.readOnly }?.let { id -> { swipePin(id, id !in pins) } },
-        onSwipeArchive = sessionId?.takeIf { !hub.readOnly && liveChat?.let { it.running || it.pending > 0 } != true }?.let { id -> { hub.archive(id) } },
-    )
-
-    private fun swipePin(id: String, on: Boolean) {
-        hub.pin(id, on)
-        hub.undoable.tryEmit(Undoable(if (on) "Pinned" else "Unpinned") { hub.pin(id, !on) })
+    private fun actions(sessionId: String?, title: String, liveChat: LiveChat?, state: ChatState? = null): RowActions {
+        val busy = liveChat?.let { it.running || it.pending > 0 } == true
+        return RowActions(
+            onRetry = liveChat?.takeIf { state == ChatState.Failed && !hub.readOnly }?.let { c -> { hub.open(c.id); hub.retryTurn(c.id) } },
+            pinned = sessionId != null && sessionId in pins,
+            onPin = { sessionId?.let { hub.pin(it, it !in pins) } },
+            onRename = { sessionId?.let { dialogs.renaming = it to title } },
+            onClose = liveChat?.let { c -> { if (busy) dialogs.closing = c else hub.closeChat(c.id) } },
+            onArchive = { sessionId?.let { dialogs.archiving = it to title } },
+            canPin = sessionId != null,
+            onUnread = { sessionId?.let { hub.markUnread(it) } },
+            muted = sessionId != null && sessionId in muted,
+            onMute = { sessionId?.let { hub.setMuted(it, it !in muted) } },
+            onLink = { sessionId?.let { clipboard.setText(AnnotatedString("${hub.origin.value}/?session=$it")); hub.notice.value = "Link copied" } },
+            onSwipePin = sessionId?.takeIf { !hub.readOnly }?.let { id -> { hub.pin(id, id !in pins, undo = true) } },
+            onSwipeArchive = sessionId?.takeIf { !hub.readOnly && !busy }?.let { id -> { hub.archive(id) } },
+        )
     }
 
     fun openSaved(sessionId: String, find: FindRequest? = null) {
@@ -271,7 +266,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
     val pin by rememberUpdatedState(actions.onSwipePin)
     val archive by rememberUpdatedState(actions.onSwipeArchive)
     val haptic = LocalHapticFeedback.current
-    val state = rememberSwipeToDismissBoxState(confirmValueChange = { v ->
+    val swipe = rememberSwipeToDismissBoxState(confirmValueChange = { v ->
         when (v) {
             SwipeToDismissBoxValue.StartToEnd -> { haptic.performHapticFeedback(HapticFeedbackType.Confirm); pin?.invoke() }
             SwipeToDismissBoxValue.EndToStart -> archive?.let { haptic.performHapticFeedback(HapticFeedbackType.Confirm); it() }
@@ -280,14 +275,13 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
         false
     })
     SwipeToDismissBox(
-        state = state,
+        state = swipe,
         enableDismissFromEndToStart = actions.onSwipeArchive != null,
         backgroundContent = {
-            val dir = state.dismissDirection
-            val pinning = dir == SwipeToDismissBoxValue.StartToEnd
-            Box(Modifier.fillMaxSize().background(if (pinning) av.accentSoft else if (dir == SwipeToDismissBoxValue.EndToStart) av.errContainer else av.groupCard).padding(horizontal = Tokens.sp8), contentAlignment = if (pinning) Alignment.CenterStart else Alignment.CenterEnd) {
-                if (pinning) Row(verticalAlignment = Alignment.CenterVertically) { AvIcon(if (actions.pinned) "pinned" else "pin", null, Tokens.icon, tint = av.onSecondaryContainer); Text(if (actions.pinned) "  Unpin" else "  Pin", color = av.onSecondaryContainer, style = Type.callout) }
-                else if (dir == SwipeToDismissBoxValue.EndToStart) Row(verticalAlignment = Alignment.CenterVertically) { Text("Archive  ", color = av.onErrContainer, style = Type.callout); AvIcon("archive", null, Tokens.icon, tint = av.onErrContainer) }
+            when (swipe.dismissDirection) {
+                SwipeToDismissBoxValue.StartToEnd -> SwipeLabel(av.accentSoft, if (actions.pinned) "pinned" else "pin", if (actions.pinned) "Unpin" else "Pin", av.onSecondaryContainer, start = true)
+                SwipeToDismissBoxValue.EndToStart -> SwipeLabel(av.errContainer, "archive", "Archive", av.onErrContainer)
+                else -> SwipeLabel(av.groupCard)
             }
         },
         content = { body() },

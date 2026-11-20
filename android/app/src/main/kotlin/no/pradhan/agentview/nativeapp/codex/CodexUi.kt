@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
@@ -42,6 +41,7 @@ import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
+import no.pradhan.agentview.nativeapp.ui.SwipeLabel
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
@@ -148,10 +148,11 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, inDay: Boolean = fals
         backgroundContent = {
             val dir = state.dismissDirection
             val deleting = dir == SwipeToDismissBoxValue.EndToStart && deletesOnSwipe(state.requireOffset(), width)
-            Box(Modifier.fillMaxSize().background(if (dir == SwipeToDismissBoxValue.StartToEnd) av.okContainer else if (deleting) av.errContainer else if (dir == SwipeToDismissBoxValue.EndToStart) av.warnContainer else av.groupCard).padding(horizontal = Tokens.sp8), contentAlignment = if (dir == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
-                if (dir == SwipeToDismissBoxValue.StartToEnd) Row(verticalAlignment = Alignment.CenterVertically) { AvIcon("check", null, Tokens.icon, tint = av.onOkContainer); Text("  Done", color = av.onOkContainer, style = Type.callout) }
-                else if (deleting) Row(verticalAlignment = Alignment.CenterVertically) { Text("Delete  ", color = av.onErrContainer, style = Type.callout); AvIcon("trash", null, Tokens.icon, tint = av.onErrContainer) }
-                else if (dir == SwipeToDismissBoxValue.EndToStart) Row(verticalAlignment = Alignment.CenterVertically) { Text("${whenText(later, now)}  ", color = av.onWarnContainer, style = Type.callout); AvIcon("calendar", null, Tokens.icon, tint = av.onWarnContainer) }
+            when {
+                dir == SwipeToDismissBoxValue.StartToEnd -> SwipeLabel(av.okContainer, "check", "Done", av.onOkContainer, start = true)
+                deleting -> SwipeLabel(av.errContainer, "trash", "Delete", av.onErrContainer)
+                dir == SwipeToDismissBoxValue.EndToStart -> SwipeLabel(av.warnContainer, "calendar", whenText(later, now), av.onWarnContainer)
+                else -> SwipeLabel(av.groupCard)
             }
         },
         content = { body() },

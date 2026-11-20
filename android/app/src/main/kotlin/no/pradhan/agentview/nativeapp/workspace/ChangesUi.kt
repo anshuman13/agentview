@@ -135,7 +135,7 @@ private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, 
         stagedSection(staged, ops)
         changesSection(changes, ops)
         if (status != null && files.isEmpty()) item { EmptyState("No changes", icon = "source-control", small = false) }
-        branch?.takeIf { it.files.isNotEmpty() }?.let { committedSection(it, status?.branch.orEmpty(), shownPatch) }
+        branch?.takeIf { it.files.isNotEmpty() }?.let { committedSection(it, status?.branch, shownPatch) }
         item { Column { Findings(hub, "local", onOpenFinding) } }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
@@ -169,7 +169,7 @@ private fun LazyListScope.changesSection(changes: List<GitFile>, ops: GitOps) {
     }
 }
 
-private fun LazyListScope.committedSection(b: BranchDiff, branch: String, shownPatch: MutableState<String?>) {
+private fun LazyListScope.committedSection(b: BranchDiff, branch: String?, shownPatch: MutableState<String?>) {
     val patches = splitDiff(b.diff)
     item { SectionHeader(committedLabel(branch, b.base), b.files.size.toString()) }
     item {

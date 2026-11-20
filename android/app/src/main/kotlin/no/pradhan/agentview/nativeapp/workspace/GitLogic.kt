@@ -149,4 +149,4 @@ fun appendPrompt(draft: String, prompt: String) = if (draft.isBlank()) prompt el
 fun parseBranchDiff(body: String): BranchDiff = protocolJson.decodeFromString(BranchDiff.serializer(), body)
 
 // web/src/workspace/Changes.tsx Committed: on the default branch itself the commits are what origin does not have yet.
-fun committedLabel(branch: String, base: String) = if (branch == base) "Not pushed" else "Committed since $base"
+fun committedLabel(branch: String?, base: String) = if (branch == base) "Not pushed" else "Committed since $base"

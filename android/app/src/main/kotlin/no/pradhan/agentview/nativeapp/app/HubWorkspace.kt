@@ -176,7 +176,8 @@ fun Hub.moveMemoryToWiki(file: MemoryFile, cwd: String, restored: () -> Unit, do
     }
 }
 
-fun Hub.pin(sessionId: String, on: Boolean) = write("Could not ${if (on) "pin" else "unpin"} the chat. Try again.") {
+fun Hub.pin(sessionId: String, on: Boolean, undo: Boolean = false): Unit = write("Could not ${if (on) "pin" else "unpin"} the chat. Try again.") {
     api.pin(sessionId, on)
     workspace.value = workspace.value.let { w -> w.copy(pins = if (on) w.pins + sessionId else w.pins - sessionId) }
+    if (undo) undoable.tryEmit(Undoable(if (on) "Pinned" else "Unpinned") { pin(sessionId, !on) })
 }

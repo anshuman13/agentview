@@ -8,5 +8,5 @@ class GitLogicTest {
 
     @Test fun anotherBranchNamesTheBase() = assertEquals("Committed since main", committedLabel("feature", "main"))
 
-    @Test fun aBlankBranchNamesTheBase() = assertEquals("Committed since main", committedLabel("", "main"))
+    @Test fun aBlankBranchNamesTheBase() = assertEquals("Committed since main", committedLabel(null, "main"))
 }

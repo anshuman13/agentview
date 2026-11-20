@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -122,6 +123,17 @@ fun Hairline(lead: Boolean = false) = HorizontalDivider(Modifier.padding(start =
 @Composable
 fun ChoiceRow(title: CharSequence, meta: CharSequence? = null, checked: Boolean, onClick: (() -> Unit)?) =
     ListRow(title, meta, onClick = onClick, trailing = if (checked) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+
+// The background behind a swiped row: the swipe colour with an icon and label on the side the swipe starts from. Without an icon it is the bare colour.
+@Composable
+fun SwipeLabel(background: Color, icon: String? = null, text: String = "", tint: Color = Color.Unspecified, start: Boolean = false) {
+    Box(Modifier.fillMaxSize().background(background).padding(horizontal = Tokens.sp8), contentAlignment = if (start) Alignment.CenterStart else Alignment.CenterEnd) {
+        if (icon != null) Row(verticalAlignment = Alignment.CenterVertically) {
+            if (start) { AvIcon(icon, null, Tokens.icon, tint = tint); Text("  $text", color = tint, style = Type.callout) }
+            else { Text("$text  ", color = tint, style = Type.callout); AvIcon(icon, null, Tokens.icon, tint = tint) }
+        }
+    }
+}
 
 // List row (web Row): leading slot, a title of one or two lines, a meta line, a fixed-width state slot, trailing content and a More menu.
 // The state slot is at least rowStateW wide and grows to fit its state; a row without a state gives the text the full width. fitState drops the minimum. A long press opens the menu unless onLongClick is set. With toggle the whole row is a switch with the Switch at its end; TalkBack reads it as one item.
