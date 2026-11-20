@@ -147,8 +147,8 @@ export async function searchChats(query: string, cwd: string, self: string | nul
     if (skip.has(chat.sessionId) || !chat.cwd || profileOf(chat.cwd) !== profile) continue;
     const all = new Set<string>();
     let lines = 0, newest = '', best: IndexedLine | null = null, bestWords: string[] = [];
-    const summary = summaries[chat.sessionId]?.text;
-    for (const l of summary ? [...chat.lines, { text: summary, low: summary.toLowerCase(), at: '' }] : chat.lines) {
+    const { text: summary, at: summaryAt } = summaries[chat.sessionId] ?? {};
+    for (const l of summary ? [...chat.lines, { text: summary, low: summary.toLowerCase(), at: new Date(summaryAt!).toISOString() }] : chat.lines) {
       const hit = words.filter((w) => l.low.includes(w));
       if (!hit.length) continue;
       hit.forEach((w) => all.add(w));

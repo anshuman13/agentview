@@ -21,6 +21,7 @@ import type { Hello, HostRequest } from './protocol.js';
 import { readJson } from '../json.js';
 import { applyAccountLabels } from '../settings.js';
 import { forgetPrs } from '../integrations/github.js';
+import { hubRows } from '../integrations/assistant.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -164,6 +165,7 @@ await new Promise<void>((ok) => {
 });
 console.log(`agent host on ${SOCK} for ${PROJECT}`);
 
+void hubRows('facts').catch(() => undefined);
 const last = await readJson<any>(LAST, null);
 hub.lastViewed = (await restoreChats().catch((err) => {
   console.error(`could not restore chats: ${errText(err)}`);

@@ -1,5 +1,6 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import { configDir, guardLimit, verifyLimit } from './accounts.js';
+import type { Account } from '../../../../shared/protocol.js';
+import { configDir, freshAccount, isLimited, stopOnOverage, verifyLimit } from './accounts.js';
 import { listBin } from './bin.js';
 import { messageLine } from './search.js';
 import { listSessions, readTail } from './sessions.js';
@@ -10,6 +11,7 @@ const IDLE = 2 * 3600_000;
 const PER_PASS = 5;
 const EXCERPT = 4000;
 const MAX_LINE = 120;
+const TIMEOUT = 60_000;
 
 type Chat = { sessionId: string; lastModified: number };
 
@@ -41,25 +43,44 @@ export const summaryPrompt = (firstPrompt: string, excerpt: string) => [
 
 const oneLine = (text: string) => text.replace(/\s+/g, ' ').trim().slice(0, MAX_LINE);
 
-async function haiku(prompt: string) {
-  const dir = configDir('main');
-  const q = query({ prompt, options: { model: 'haiku', persistSession: false, settingSources: [], maxTurns: 1, tools: [], thinking: { type: 'disabled' }, env: { ...process.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) } } });
-  for await (const m of q) if (m.type === 'result') return m.subtype === 'success' ? m.result : '';
-  return '';
-}
-
-// Summaries are kept as each chat finishes, so a failed run only leaves the rest for the next pass.
-async function summarisePass(running: Set<string>) {
-  if (await verifyLimit('main')) return;
-  guardLimit('main');
-  const [list, bin, summaries] = await Promise.all([listSessions({ limit: 300 }), listBin(), readSummaries()]);
-  const skip = new Set([...running, ...bin.map((b) => b.sessionId)]);
-  for (const x of pickChats(list, summaries, skip)) {
-    const text = oneLine(await haiku(summaryPrompt(x.firstPrompt ?? '', excerptOf(await readTail(x)))));
-    if (text) await saveSummaries({ [x.sessionId]: { text, at: Date.now() } });
+async function haiku(prompt: string, account: Account) {
+  const dir = configDir(account);
+  const abortController = new AbortController();
+  const timer = setTimeout(() => abortController.abort(), TIMEOUT);
+  try {
+    const q = query({ prompt, options: { model: 'haiku', persistSession: false, settingSources: [], maxTurns: 1, tools: [], thinking: { type: 'disabled' }, abortController, env: { ...process.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) } } });
+    for await (const m of q) {
+      stopOnOverage(account, m);
+      if (m.type === 'result') return m.subtype === 'success' ? m.result : '';
+    }
+    return '';
+  } finally {
+    clearTimeout(timer);
   }
 }
 
+// An empty or failed answer is saved as an empty summary, so the chat is not retried until it changes.
+// Summaries are kept as each chat finishes, so an overage stop only leaves the rest for the next pass.
+async function summarisePass(running: Set<string>) {
+  const [list, bin, summaries] = await Promise.all([listSessions({ limit: 300 }), listBin(), readSummaries()]);
+  const skip = new Set([...running, ...bin.map((b) => b.sessionId)]);
+  for (const x of pickChats(list, summaries, skip)) {
+    const account = x.cwd ? freshAccount(x.cwd) : 'main';
+    if (await verifyLimit(account)) continue;
+    const text = oneLine(await haiku(summaryPrompt(x.firstPrompt ?? '', excerptOf(await readTail(x))), account).catch((err) => {
+      if (isLimited(account)) throw err;
+      return '';
+    }));
+    await saveSummaries({ [x.sessionId]: { text, at: Date.now() } });
+  }
+}
+
+let busy = false;
+
 export function startSummaries(running: () => Set<string>) {
-  setInterval(() => void summarisePass(running()).catch(() => {}), EVERY).unref();
+  setInterval(() => {
+    if (busy) return;
+    busy = true;
+    void summarisePass(running()).catch(() => {}).finally(() => { busy = false; });
+  }, EVERY).unref();
 }

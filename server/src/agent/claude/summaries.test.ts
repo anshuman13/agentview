@@ -14,6 +14,12 @@ describe('pickChats', () => {
     const got = pickChats(chats, summaries, new Set(['skip']), NOW).map((c) => c.sessionId);
     expect(got).toEqual(['stale', 'old', 'a', 'b', 'c']);
   });
+
+  it('does not retry a chat whose empty summary is newer than its last message', () => {
+    const chats = [chat('a', 5 * H)];
+    expect(pickChats(chats, { a: { text: '', at: NOW - H } }, new Set(), NOW)).toEqual([]);
+    expect(pickChats(chats, { a: { text: '', at: NOW - 6 * H } }, new Set(), NOW)).toHaveLength(1);
+  });
 });
 
 describe('excerptOf', () => {

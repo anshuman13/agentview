@@ -93,6 +93,15 @@ describe('searchChats', () => {
     expect(read).toHaveBeenCalledTimes(2);
   });
 
+  it('dates a summary-only hit from the summary and ignores an empty summary', async () => {
+    const dir = base('summary');
+    chat(dir, 's1', [msg('s1', work, '2026-01-01T00:00:00Z', 'unrelated')]);
+    chat(dir, 's2', [msg('s2', work, '2026-01-01T00:00:00Z', 'unrelated')]);
+    const summaries = async () => ({ s1: { text: 'Moved the quokka feed', at: Date.parse('2026-05-06T10:00:00Z') }, s2: { text: '', at: 1 } });
+    const out = await searchChats('quokka', work, null, { dirs: () => [dir], binned: async () => [], titles: async () => new Map(), summaries });
+    expect(out.split('\n').filter((l) => l.startsWith('- '))).toEqual(['- unrelated | /srv/repo | 2026-05-06 | s1']);
+  });
+
   it('answers empty queries and misses with fixed text', async () => {
     const deps = { dirs: () => [base('empty')], binned: async () => [], titles: async () => new Map<string, string>() };
     expect(await searchChats('  a ', work, null, deps)).toBe('Give at least one word to search for.');
