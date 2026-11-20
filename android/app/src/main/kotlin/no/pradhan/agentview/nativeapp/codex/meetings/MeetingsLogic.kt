@@ -494,5 +494,41 @@ fun betweenRows(inbox: PersonInbox, first: String): List<Between> {
     return if (dm == null) rows else rows + Between("Slack DM", (dm.str("summary") ?: "").substringBefore("\n"), url = dm.str("url"))
 }
 
+class Segment(val text: String, val hit: Boolean)
+
+// web/src/ui/util.tsx: splits text into plain and matched pieces for the words of a query, ignoring case. Overlapping or touching matches merge into one piece.
+fun markSegments(text: String, words: List<String>): List<Segment> {
+    if (words.isEmpty()) return listOf(Segment(text, false))
+    val lower = text.lowercase()
+    val ranges = words.flatMap { w ->
+        generateSequence(lower.indexOf(w).takeIf { it >= 0 }) { lower.indexOf(w, it + 1).takeIf { i -> i >= 0 } }.map { it to it + w.length }.toList()
+    }.sortedBy { it.first }
+    val merged = ArrayList<Pair<Int, Int>>()
+    for ((s, e) in ranges) {
+        val last = merged.lastOrNull()
+        if (last != null && s <= last.second) merged[merged.lastIndex] = last.first to maxOf(last.second, e) else merged.add(s to e)
+    }
+    val out = ArrayList<Segment>()
+    var at = 0
+    for ((s, e) in merged) {
+        if (s > at) out.add(Segment(text.substring(at, s), false))
+        out.add(Segment(text.substring(s, e), true))
+        at = e
+    }
+    if (at < text.length) out.add(Segment(text.substring(at), false))
+    return out
+}
+
+private const val MATCH_CAP = 500
+
+fun matchLabel(count: Int) = when {
+    count == 0 -> "No matches"
+    count > MATCH_CAP -> "$MATCH_CAP+ matches"
+    else -> "$count ${if (count == 1) "match" else "matches"}"
+}
+
+// The next current match from cur (-1 for none), wrapping at both ends.
+fun stepMatch(cur: Int, dir: Int, count: Int) = if (cur < 0 && dir < 0) count - 1 else (cur + dir + count) % count
+
 fun nudgeText(g: Waiting): String =
     "Hi ${g.name.substringBefore(" ")}, a quick nudge on ${g.rows.joinToString("; ") { it.title }}. Any update when you have a moment? Thanks!"

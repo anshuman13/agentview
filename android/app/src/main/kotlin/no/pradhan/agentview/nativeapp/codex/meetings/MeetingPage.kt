@@ -10,7 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -26,6 +28,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import kotlinx.coroutines.launch
+import no.pradhan.agentview.nativeapp.sessions.queryWords
+import no.pradhan.agentview.nativeapp.ui.SearchField
 import androidx.compose.ui.text.font.FontFamily
 import no.pradhan.agentview.nativeapp.codex.CodexOps
 import no.pradhan.agentview.nativeapp.codex.CodexState
@@ -82,7 +90,7 @@ private class PrepData(val prior: List<Prior>, val brief: Brief, val points: Lis
 
 private class MeetingCtx(val hub: Hub, val st: CodexState, val m: Row, val now: Long, val actions: TaskActions, val ops: CodexOps, val onMeeting: (Row) -> Unit, val onPerson: (String) -> Unit, val onSeries: (String) -> Unit, val onTask: (Row) -> Unit)
 
-private class MeetingFolds(val pinning: MutableState<Boolean>, val more: MutableState<Boolean>, val unassigned: MutableState<Boolean>, val notMine: MutableState<Boolean>, val transcriptOpen: MutableState<Boolean>, val newAction: MutableState<String>, val context: MutableState<Boolean>)
+private class MeetingFolds(val pinning: MutableState<Boolean>, val more: MutableState<Boolean>, val unassigned: MutableState<Boolean>, val notMine: MutableState<Boolean>, val transcriptOpen: MutableState<Boolean>, val newAction: MutableState<String>, val context: MutableState<Boolean>, val transcriptQuery: MutableState<String>, val transcriptCur: MutableState<Int>)
 
 @Composable
 private fun rememberMeetingFolds(key: String) = MeetingFolds(
@@ -93,6 +101,8 @@ private fun rememberMeetingFolds(key: String) = MeetingFolds(
     rememberSaveable(key) { mutableStateOf(false) },
     rememberSaveable(key) { mutableStateOf("") },
     rememberSaveable(key) { mutableStateOf(false) },
+    rememberSaveable(key) { mutableStateOf("") },
+    rememberSaveable(key) { mutableStateOf(-1) },
 )
 
 @Composable
@@ -128,13 +138,17 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val all = remember(st.items, m.key) { actionsOf(st.items, m) }
     val prep = rememberPrep(c, state)
     val folds = rememberMeetingFolds(m.key)
+    val notesEmptyAtOpen = remember(m.key) { m.str("notes").isNullOrEmpty() }
     val (transcript, reloadTranscript) = rememberTranscript(hub, m, state == MState.Done)
     val talk = remember(transcript) { transcript?.getOrNull()?.let(::talkTime).orEmpty() }
-    LazyColumn(Modifier.fillMaxWidth()) {
+    val list = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val scrollFromEnd = { k: Int -> scope.launch { list.animateScrollToItem(list.layoutInfo.totalItemsCount - 1 - k) }; Unit }
+    LazyColumn(Modifier.fillMaxWidth(), list) {
         meetingHeader(c, state, all)
         if (isEvent(m)) {
             item { NotesHeader(c, all) }
-            item { NotesField(hub, m) }
+            item { NotesField(hub, m, notesEmptyAtOpen) }
             meetingActions(c, all, alwaysHeader = true)
             item { NewActionField(c, folds.newAction) }
         } else {
@@ -143,9 +157,9 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             meetingDecisions(c)
             prep?.let { meetingPrep(c, it) }
             item { NotesHeader(c, all) }
-            item { NotesField(hub, m) }
+            item { NotesField(hub, m, notesEmptyAtOpen) }
             item { SectionHeader("More", open = folds.more.value, onToggle = { folds.more.value = !folds.more.value }) }
-            if (folds.more.value) meetingMore(c, state, all, folds, transcript, reloadTranscript, talk)
+            if (folds.more.value) meetingMore(c, state, all, folds, transcript, reloadTranscript, talk, scrollFromEnd)
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
@@ -313,7 +327,7 @@ private fun NewActionField(c: MeetingCtx, newAction: MutableState<String>) {
         }))
 }
 
-private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Row>, folds: MeetingFolds, transcript: Result<String?>?, reloadTranscript: () -> Unit, talk: List<Speaker>) {
+private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Row>, folds: MeetingFolds, transcript: Result<String?>?, reloadTranscript: () -> Unit, talk: List<Speaker>, scrollFromEnd: (Int) -> Unit) {
     val m = c.m
     item { NewActionField(c, folds.newAction) }
     meetingContext(c, all, folds, talk)
@@ -328,7 +342,7 @@ private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Ro
     val dismissed = all.filter { it.status == "dismissed" }
     item { Fold("Not mine", dismissed.size, folds.notMine.value) { folds.notMine.value = !folds.notMine.value } }
     if (folds.notMine.value) actionGroup(dismissed, c)
-    if (state == MState.Done) meetingTranscript(folds, transcript, reloadTranscript)
+    if (state == MState.Done) meetingTranscript(folds, transcript, reloadTranscript, scrollFromEnd)
 }
 
 private fun LazyListScope.meetingContext(c: MeetingCtx, all: List<Row>, folds: MeetingFolds, speakers: List<Speaker>) {
@@ -349,15 +363,45 @@ private fun LazyListScope.meetingContext(c: MeetingCtx, all: List<Row>, folds: M
     if (people.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { people.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(displayName(p), onClick = { c.onPerson(p) }) } } }
 }
 
-private fun LazyListScope.meetingTranscript(folds: MeetingFolds, transcript: Result<String?>?, reload: () -> Unit) {
-    item { SectionHeader("Transcript", open = folds.transcriptOpen.value, onToggle = { folds.transcriptOpen.value = !folds.transcriptOpen.value }) }
-    if (!folds.transcriptOpen.value) return
+// The transcript is the last section, so a line is counted from the end of the list: k = 1 is the last line, in front of the closing spacer.
+private fun LazyListScope.meetingTranscript(folds: MeetingFolds, transcript: Result<String?>?, reload: () -> Unit, scrollFromEnd: (Int) -> Unit) {
+    val text = transcript?.getOrNull()?.takeIf { it.isNotEmpty() }
+    val query = folds.transcriptQuery.value
+    val words = queryWords(query)
+    val segments = text?.lines()?.filter { it.isNotBlank() }.orEmpty().map { markSegments(it, words) }
+    val starts = segments.runningFold(0) { n, line -> n + line.count { it.hit } }
+    val count = starts.last()
+    val cur = folds.transcriptCur.value
+    val open = folds.transcriptOpen.value
+    item { SectionHeader("Transcript", count = if (!open && text != null && words.isNotEmpty()) matchLabel(count) else null, open = open, onToggle = { folds.transcriptOpen.value = !open }) }
+    if (!open) return
     when {
         transcript == null -> item { Loading("Loading the transcript…") }
         transcript.isFailure -> item { EmptyState("Could not load the transcript", transcript.exceptionOrNull()?.message, action = { Button("Retry", reload, size = ButtonSize.Sm) }) }
-        transcript.getOrNull().isNullOrEmpty() -> item { EmptyState("No transcript text kept") }
-        else -> items(transcript.getOrNull()!!.lines().filter { it.isNotBlank() }) { line ->
-            Text(line, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted, fontFamily = FontFamily.Default)
+        text == null -> item { EmptyState("No transcript kept for this meeting") }
+        else -> {
+            val step = { dir: Int ->
+                val n = stepMatch(cur, dir, count)
+                folds.transcriptCur.value = n
+                scrollFromEnd(segments.size - starts.indexOfLast { it <= n })
+            }
+            item {
+                SearchField(query, { folds.transcriptQuery.value = it; folds.transcriptCur.value = -1 }, "Search transcript")
+                if (query.isNotBlank()) LRow(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad), verticalAlignment = Alignment.CenterVertically) {
+                    Text(matchLabel(count), Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted)
+                    IconBtn("arrow-up", "Previous match", { step(-1) }, enabled = count > 0)
+                    IconBtn("arrow-down", "Next match", { step(1) }, enabled = count > 0)
+                }
+            }
+            itemsIndexed(segments) { i, line ->
+                val soft = av.accentSoft
+                val strong = av.accent.copy(alpha = 0.4f)
+                var k = 0
+                val shown = buildAnnotatedString {
+                    for (s in line) if (s.hit) withStyle(SpanStyle(background = if (starts[i] + k++ == cur) strong else soft)) { append(s.text) } else append(s.text)
+                }
+                Text(shown, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted, fontFamily = FontFamily.Default)
+            }
         }
     }
 }

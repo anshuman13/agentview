@@ -1,6 +1,12 @@
 package no.pradhan.agentview.nativeapp.codex
 
 import no.pradhan.agentview.nativeapp.codex.meetings.isEvent
+import no.pradhan.agentview.nativeapp.codex.meetings.markSegments
+import no.pradhan.agentview.nativeapp.codex.meetings.matchLabel
+import no.pradhan.agentview.nativeapp.codex.meetings.notesTemplateCaret
+import no.pradhan.agentview.nativeapp.codex.meetings.notesTemplateChips
+import no.pradhan.agentview.nativeapp.codex.meetings.notesTemplateText
+import no.pradhan.agentview.nativeapp.codex.meetings.stepMatch
 import java.io.File
 import java.io.IOException
 import no.pradhan.agentview.nativeapp.net.ApiError
@@ -1251,6 +1257,36 @@ class SharedCasesTest {
 
     @Test fun moneyByBilling() {
         for (c in cases("money")) assertEquals(c.str("name"), c.str("expected"), money(c.getValue("n").jsonPrimitive.content.toDouble(), c.str("billing")))
+    }
+
+    private fun fixture(file: String) = Json.parseToJsonElement(File("../../shared/fixtures/$file.json").readText()).jsonObject
+
+    @Test fun notesTemplates() {
+        val fx = fixture("notes-templates")
+        for (c in fx.getValue("templates").jsonArray.map { it.jsonObject }) {
+            assertEquals(c.str("name"), c.str("text"), notesTemplateText(c.str("key")))
+            assertEquals(c.str("name"), c.getValue("caret").jsonPrimitive.int, notesTemplateCaret(c.str("key")))
+        }
+        for (c in fx.getValue("chips").jsonArray.map { it.jsonObject }) {
+            val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()
+            f["title"] = c.getValue("title")
+            val row = Row("meetings", c.str("id"), c.str("profile"), f = f)
+            val picks = c.getValue("picks").jsonObject.mapValues { it.value.jsonPrimitive.content }
+            val chips = notesTemplateChips(row, picks).map { it.key to it.selected }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { e -> e.jsonObject.let { it.str("key") to it.getValue("selected").jsonPrimitive.boolean } }, chips)
+        }
+    }
+
+    @Test fun markSegments() {
+        val fx = fixture("mark-segments")
+        for (c in fx.getValue("segments").jsonArray.map { it.jsonObject }) {
+            val got = markSegments(c.str("text"), c.getValue("words").jsonArray.map { it.jsonPrimitive.content }).map { it.text to it.hit }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { e -> e.jsonArray.let { it[0].jsonPrimitive.content to it[1].jsonPrimitive.boolean } }, got)
+        }
+        for (c in fx.getValue("labels").jsonArray.map { it.jsonObject }) assertEquals(c.str("expected"), matchLabel(c.getValue("n").jsonPrimitive.int))
+        for (c in fx.getValue("steps").jsonArray.map { it.jsonObject }) {
+            assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.int, stepMatch(c.getValue("cur").jsonPrimitive.int, c.getValue("dir").jsonPrimitive.int, c.getValue("count").jsonPrimitive.int))
+        }
     }
 
     @Test fun bottomBar() {

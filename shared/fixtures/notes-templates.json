@@ -1,0 +1,39 @@
+{
+  "templates": [
+    { "name": "1:1", "key": "one_on_one", "text": "## Check-in\n\n## Discussion\n\n## Feedback\n\n## Next steps\n\n", "caret": 12 },
+    { "name": "standup", "key": "standup", "text": "## Done\n\n## Planned\n\n## Blockers\n\n", "caret": 8 },
+    { "name": "decision", "key": "decision", "text": "## Context\n\n## Options\n\n## Decision\n\n## Owner and date\n\n", "caret": 11 }
+  ],
+  "chips": [
+    {
+      "name": "no pick keeps the default order",
+      "profile": "work", "title": "Team sync", "id": "m1", "picks": {},
+      "expected": [{ "key": "one_on_one", "selected": false }, { "key": "standup", "selected": false }, { "key": "decision", "selected": false }]
+    },
+    {
+      "name": "a pick comes first and selected",
+      "profile": "work", "title": "Team sync", "id": "m1", "picks": { "work:team sync": "standup" },
+      "expected": [{ "key": "standup", "selected": true }, { "key": "one_on_one", "selected": false }, { "key": "decision", "selected": false }]
+    },
+    {
+      "name": "the pick is found through the series title",
+      "profile": "work", "title": "Team sync (14 Nov)", "id": "m2", "picks": { "work:team sync": "decision" },
+      "expected": [{ "key": "decision", "selected": true }, { "key": "one_on_one", "selected": false }, { "key": "standup", "selected": false }]
+    },
+    {
+      "name": "an unknown pick is ignored",
+      "profile": "work", "title": "Team sync", "id": "m1", "picks": { "work:team sync": "retro" },
+      "expected": [{ "key": "one_on_one", "selected": false }, { "key": "standup", "selected": false }, { "key": "decision", "selected": false }]
+    },
+    {
+      "name": "a pick of another profile is ignored",
+      "profile": "personal", "title": "Team sync", "id": "m1", "picks": { "work:team sync": "standup" },
+      "expected": [{ "key": "one_on_one", "selected": false }, { "key": "standup", "selected": false }, { "key": "decision", "selected": false }]
+    },
+    {
+      "name": "an untitled meeting is keyed by its id",
+      "profile": "work", "title": null, "id": "m3", "picks": { "work:m3": "standup" },
+      "expected": [{ "key": "standup", "selected": true }, { "key": "one_on_one", "selected": false }, { "key": "decision", "selected": false }]
+    }
+  ]
+}

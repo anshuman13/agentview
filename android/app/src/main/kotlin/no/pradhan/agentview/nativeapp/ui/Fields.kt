@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 
 // Text field (web input): sunken fill, hairline border that turns accent on focus.
@@ -46,7 +47,6 @@ fun TextField(
     val c = av
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(if (pill) Tokens.radiusPill else Tokens.radiusSm)
     BasicTextField(
         value, onValueChange,
         modifier.fillMaxWidth(),
@@ -56,22 +56,54 @@ fun TextField(
         singleLine = singleLine, minLines = minLines, maxLines = maxLines,
         keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
         interactionSource = interaction,
-        decorationBox = { inner ->
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clip(shape).background(c.sunken).border(Tokens.hairline, if (focused) c.accent else c.border, shape)
-                    .padding(start = if (leading != null) Tokens.sp4 else Tokens.sp6, end = if (trailing != null) Tokens.sp1 else Tokens.sp6),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
-            ) {
-                leading?.invoke()
-                Box(Modifier.weight(1f).padding(vertical = Tokens.sp4)) {
-                    if (value.isEmpty() && placeholder.isNotEmpty()) Text(placeholder, style = style, color = c.fgMuted, maxLines = if (singleLine) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
-                    inner()
-                }
-                trailing?.invoke()
-            }
-        },
+        decorationBox = { inner -> FieldFrame(value.isEmpty(), focused, placeholder, singleLine, pill, style, leading, trailing, inner) },
     )
+}
+
+// A multi-line text field whose caret the caller sets, which the plain String field cannot do. Typing moves the caret as usual.
+@Composable
+fun TextField(value: TextFieldValue, onValueChange: (TextFieldValue) -> Unit, modifier: Modifier = Modifier, placeholder: String = "", minLines: Int = 1) {
+    val c = av
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    BasicTextField(
+        value, onValueChange,
+        modifier.fillMaxWidth(),
+        textStyle = Type.body.copy(color = c.fg),
+        cursorBrush = SolidColor(c.accent),
+        minLines = minLines,
+        interactionSource = interaction,
+        decorationBox = { inner -> FieldFrame(value.text.isEmpty(), focused, placeholder, false, false, Type.body, null, null, inner) },
+    )
+}
+
+@Composable
+private fun FieldFrame(
+    empty: Boolean,
+    focused: Boolean,
+    placeholder: String,
+    singleLine: Boolean,
+    pill: Boolean,
+    style: TextStyle,
+    leading: (@Composable () -> Unit)?,
+    trailing: (@Composable () -> Unit)?,
+    inner: @Composable () -> Unit,
+) {
+    val c = av
+    val shape = RoundedCornerShape(if (pill) Tokens.radiusPill else Tokens.radiusSm)
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clip(shape).background(c.sunken).border(Tokens.hairline, if (focused) c.accent else c.border, shape)
+            .padding(start = if (leading != null) Tokens.sp4 else Tokens.sp6, end = if (trailing != null) Tokens.sp1 else Tokens.sp6),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
+    ) {
+        leading?.invoke()
+        Box(Modifier.weight(1f).padding(vertical = Tokens.sp4)) {
+            if (empty && placeholder.isNotEmpty()) Text(placeholder, style = style, color = c.fgMuted, maxLines = if (singleLine) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
+            inner()
+        }
+        trailing?.invoke()
+    }
 }
 
 // Search field (web .jb-search): a pill with a search glyph and a clear button.

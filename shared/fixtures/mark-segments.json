@@ -1,0 +1,28 @@
+{
+  "segments": [
+    { "name": "no words", "text": "Anna: I will send it", "words": [], "expected": [["Anna: I will send it", false]] },
+    { "name": "one hit", "text": "Anna: I will send it", "words": ["send"], "expected": [["Anna: I will ", false], ["send", true], [" it", false]] },
+    { "name": "case ignored", "text": "Anna: I will send it", "words": ["anna"], "expected": [["Anna", true], [": I will send it", false]] },
+    { "name": "no hit", "text": "Anna: I will send it", "words": ["budget"], "expected": [["Anna: I will send it", false]] },
+    { "name": "two words", "text": "Anna sends the budget", "words": ["anna", "budget"], "expected": [["Anna", true], [" sends the ", false], ["budget", true]] },
+    { "name": "overlapping hits merge", "text": "the budgeting plan", "words": ["budget", "geting"], "expected": [["the ", false], ["budgeting", true], [" plan", false]] },
+    { "name": "touching hits merge", "text": "budgetplan ready", "words": ["budget", "plan"], "expected": [["budgetplan", true], [" ready", false]] },
+    { "name": "a word repeated", "text": "go go go", "words": ["go"], "expected": [["go", true], [" ", false], ["go", true], [" ", false], ["go", true]] }
+  ],
+  "labels": [
+    { "n": 0, "expected": "No matches" },
+    { "n": 1, "expected": "1 match" },
+    { "n": 2, "expected": "2 matches" },
+    { "n": 500, "expected": "500 matches" },
+    { "n": 501, "expected": "500+ matches" }
+  ],
+  "steps": [
+    { "name": "first next from none", "cur": -1, "dir": 1, "count": 3, "expected": 0 },
+    { "name": "previous from none goes to the last", "cur": -1, "dir": -1, "count": 3, "expected": 2 },
+    { "name": "next", "cur": 0, "dir": 1, "count": 3, "expected": 1 },
+    { "name": "next wraps", "cur": 2, "dir": 1, "count": 3, "expected": 0 },
+    { "name": "previous", "cur": 2, "dir": -1, "count": 3, "expected": 1 },
+    { "name": "previous wraps", "cur": 0, "dir": -1, "count": 3, "expected": 2 },
+    { "name": "one match stays", "cur": 0, "dir": 1, "count": 1, "expected": 0 }
+  ]
+}

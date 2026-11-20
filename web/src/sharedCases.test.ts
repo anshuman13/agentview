@@ -49,7 +49,8 @@ import { HubError, hubRetry } from './codex/data/hubFetch';
 import type { Brief } from './codex/data/wiki/wiki';
 import { reviewQueue } from './codex/wiki/reviewQueue';
 import { revertBlock } from './workspace/revertBlock';
-import { ago, money } from './ui/util';
+import { ago, markSegments, matchLabel, money, stepMatch } from './ui/util';
+import { notesTemplateCaret, notesTemplateChips, notesTemplateText, type NotesTemplate } from './codex/data/meetings/notesTemplates';
 import { setSystemTime } from '../../testing';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
@@ -716,6 +717,22 @@ describe('cases shared with the Android app', () => {
   for (const c of cases<{ name: string; mode: string; review: boolean; picked: string; send: { mode: string | null; review: boolean | null } }>('mode-steps')) {
     it(`modeSteps: ${c.name}`, () => expect(modeSteps(c.mode, c.review, c.picked)).toEqual(c.send));
   }
+
+  const notes = JSON.parse(readFileSync(new URL('../../shared/fixtures/notes-templates.json', import.meta.url), 'utf8')) as {
+    templates: { name: string; key: NotesTemplate; text: string; caret: number }[];
+    chips: { name: string; profile: string; title: string | null; id: string; picks: Record<string, string>; expected: { key: string; selected: boolean }[] }[];
+  };
+  for (const c of notes.templates) it(`notesTemplate: ${c.name}`, () => { expect(notesTemplateText(c.key)).toBe(c.text); expect(notesTemplateCaret(c.key)).toBe(c.caret); });
+  for (const c of notes.chips) it(`notesTemplateChips: ${c.name}`, () => expect(notesTemplateChips({ profile: c.profile, title: c.title, id: c.id } as unknown as Meeting, c.picks)).toEqual(c.expected));
+
+  const marks = JSON.parse(readFileSync(new URL('../../shared/fixtures/mark-segments.json', import.meta.url), 'utf8')) as {
+    segments: { name: string; text: string; words: string[]; expected: [string, boolean][] }[];
+    labels: { n: number; expected: string }[];
+    steps: { name: string; cur: number; dir: 1 | -1; count: number; expected: number }[];
+  };
+  for (const c of marks.segments) it(`markSegments: ${c.name}`, () => expect(markSegments(c.text, c.words).map((s) => [s.text, s.hit])).toEqual(c.expected));
+  for (const c of marks.labels) it(`matchLabel: ${c.n}`, () => expect(matchLabel(c.n)).toBe(c.expected));
+  for (const c of marks.steps) it(`stepMatch: ${c.name}`, () => expect(stepMatch(c.cur, c.dir, c.count)).toBe(c.expected));
 
   for (const c of cases<{ name: string; n: number; billing: Billing; expected: string }>('money')) {
     it(`money: ${c.name}`, () => expect(money(c.n, c.billing)).toBe(c.expected));

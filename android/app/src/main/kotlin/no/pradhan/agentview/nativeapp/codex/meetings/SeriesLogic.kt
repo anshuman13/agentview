@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex.meetings
 
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import no.pradhan.agentview.nativeapp.codex.DAY_MS
 import no.pradhan.agentview.nativeapp.codex.Row
@@ -122,3 +123,33 @@ fun seriesRepeats(m: Row, prev: Row, now: Long): Repeats {
         openQuestions(listOf(m), now).map { it.text }.filter { t -> asked.any { a -> t.lowercase().contains(a) || a.contains(t.lowercase()) } },
     )
 }
+
+// web/src/codex/data/meetings/notesTemplates.ts: headings a tap puts in empty notes, and the pick remembered per series.
+class NotesTemplate(val label: String, val headings: List<String>)
+
+val NOTES_TEMPLATES = linkedMapOf(
+    "one_on_one" to NotesTemplate("1:1", listOf("Check-in", "Discussion", "Feedback", "Next steps")),
+    "standup" to NotesTemplate("Standup", listOf("Done", "Planned", "Blockers")),
+    "decision" to NotesTemplate("Decision", listOf("Context", "Options", "Decision", "Owner and date")),
+)
+
+fun notesTemplateText(key: String) = NOTES_TEMPLATES.getValue(key).headings.joinToString("") { "## $it\n\n" }
+
+// The caret goes on the blank line under the first heading.
+fun notesTemplateCaret(key: String) = "## ${NOTES_TEMPLATES.getValue(key).headings[0]}\n".length
+
+// web seriesKey (summaryTemplates.ts): the profile, a colon, the series title or the meeting id.
+fun notesPickKey(m: Row) = "${m.profile}:${seriesTitle(m.title).ifEmpty { m.id }}"
+
+class NotesChip(val key: String, val selected: Boolean)
+
+// The series' remembered template first and selected, then the rest in default order.
+fun notesTemplateChips(m: Row, picks: Map<String, String>): List<NotesChip> {
+    val picked = NOTES_TEMPLATES.keys.firstOrNull { it == picks[notesPickKey(m)] }
+    val order = if (picked == null) NOTES_TEMPLATES.keys.toList() else listOf(picked) + NOTES_TEMPLATES.keys.filter { it != picked }
+    return order.map { NotesChip(it, it == picked) }
+}
+
+private val picksSer = MapSerializer(String.serializer(), String.serializer())
+fun parseNotesPicks(text: String?): Map<String, String> = runCatching { protocolJson.decodeFromString(picksSer, text ?: "{}") }.getOrDefault(emptyMap())
+fun encodeNotesPicks(picks: Map<String, String>): String = protocolJson.encodeToString(picksSer, picks)

@@ -42,7 +42,11 @@ import no.pradhan.agentview.nativeapp.chat.modelsKey
 import no.pradhan.agentview.nativeapp.chat.parseModels
 import kotlinx.coroutines.flow.MutableStateFlow
 import no.pradhan.agentview.nativeapp.chat.modelGroup
+import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
+import no.pradhan.agentview.nativeapp.codex.meetings.encodeNotesPicks
+import no.pradhan.agentview.nativeapp.codex.meetings.notesPickKey
+import no.pradhan.agentview.nativeapp.codex.meetings.parseNotesPicks
 import no.pradhan.agentview.nativeapp.workspace.TermTab
 import no.pradhan.agentview.nativeapp.workspace.parseTerms
 import no.pradhan.agentview.nativeapp.workspace.termInput
@@ -57,6 +61,12 @@ fun Hub.modelsOf(group: String) = modelLists.getOrPut(group) { MutableStateFlow(
 fun Hub.lastModel(group: String) = prefs.getString(lastModelKey(group), null)
 
 fun Hub.setLastModel(group: String, model: String) { prefs.edit().putString(lastModelKey(group), model).apply() }
+
+private const val NOTES_PICKS_KEY = "codex.notesTemplatePicks"
+
+fun Hub.notesTemplatePicks() = parseNotesPicks(prefs.getString(NOTES_PICKS_KEY, null))
+
+fun Hub.rememberNotesTemplate(m: Row, key: String) { prefs.edit().putString(NOTES_PICKS_KEY, encodeNotesPicks(notesTemplatePicks() + (notesPickKey(m) to key))).apply() }
 
 // A model is sent only when the provider's own list has it, so a Codex id never reaches a Claude chat or the reverse.
 fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, provider: String? = null, text: String? = null, hub: Boolean = false, onOpened: () -> Unit = {}) {

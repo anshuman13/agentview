@@ -24,10 +24,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.coroutines.delay
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.notesTemplatePicks
 import no.pradhan.agentview.nativeapp.app.readWithRoomMic
+import no.pradhan.agentview.nativeapp.app.rememberNotesTemplate
+import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -41,9 +46,10 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.plural
 
 @Composable
-internal fun NotesField(hub: Hub, m: Row) {
+internal fun NotesField(hub: Hub, m: Row, templates: Boolean) {
     val remote = m.str("notes") ?: ""
-    var text by remember(m.key) { mutableStateOf(remote) }
+    var field by remember(m.key) { mutableStateOf(TextFieldValue(remote)) }
+    val text = field.text
     var dirty by remember(m.key) { mutableStateOf(false) }
     val latest by rememberUpdatedState(text)
     val save = {
@@ -54,11 +60,17 @@ internal fun NotesField(hub: Hub, m: Row) {
         }
     }
     val flush by rememberUpdatedState(save)
-    LaunchedEffect(remote) { if (!dirty) text = remote }
+    LaunchedEffect(remote) { if (!dirty) field = TextFieldValue(remote) }
     LaunchedEffect(text) { if (dirty) { delay(NOTES_SAVE_MS); flush() } }
     DisposableEffect(m.key) { onDispose { flush() } }
-    TextField(text, { text = it; dirty = true }, Modifier.padding(horizontal = Tokens.listPad), minLines = 3,
+    TextField(field, { if (it.text != text) dirty = true; field = it }, Modifier.padding(horizontal = Tokens.listPad), minLines = 3,
         placeholder = "Write your notes. They stay yours; the summary is written separately.")
+    if (templates && text.isEmpty()) {
+        val chips = remember(m.key) { notesTemplateChips(m, hub.notesTemplatePicks()) }
+        LRow(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            for (c in chips) Chip(NOTES_TEMPLATES.getValue(c.key).label, { field = TextFieldValue(notesTemplateText(c.key), TextRange(notesTemplateCaret(c.key))); dirty = true; hub.rememberNotesTemplate(m, c.key) }, on = c.selected)
+        }
+    }
 }
 
 @Composable
