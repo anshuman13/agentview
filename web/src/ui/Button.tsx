@@ -25,6 +25,10 @@ export function Button({ variant = 'gray', size = 'md', icon, className, type = 
   );
 }
 
+export function ShowToggle({ open, count, onClick }: { open?: boolean; count?: number; onClick: () => void }) {
+  return <Button variant="quiet" size="sm" onClick={onClick}>{open ? 'Show less' : count ? `Show more (${count})` : 'Show more'}</Button>;
+}
+
 export function IconButton({ icon, label, size = 'md', on, small, spin, className, type = 'button', href, ...rest }: Native & {
   icon: string;
   label: string;

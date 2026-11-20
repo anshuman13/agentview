@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ShowToggle } from './Button';
 
 const STEP = 50;
 
@@ -23,5 +24,5 @@ export function capGroups<K extends string, G extends Record<K, unknown[]>>(grou
 
 export function ShowMore({ shown, total, onMore }: { shown: number; total: number; onMore: () => void }) {
   if (total <= shown) return null;
-  return <button className="btn" onClick={onMore}>Show more ({total - shown})</button>;
+  return <ShowToggle count={total - shown} onClick={onMore} />;
 }

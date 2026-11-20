@@ -11,7 +11,6 @@
 :is(.tr, .tr-rows) > * + * { margin-top: var(--sp-6); }
 :is(.tr, .tr-rows) > .tr-act + .tr-act { margin-top: 0; }
 :is(.tr, .tr-rows) > .tr-act + .tr-file, :is(.tr, .tr-rows) > .tr-file + .tr-act { margin-top: var(--sp-2); }
-.tr-empty { font-size: var(--fs-sm); color: var(--fg-faint); }
 
 .tr-user {
   position: relative; padding: var(--sp-5) var(--sp-6); border: 1px solid var(--border-card); border-left: 3px solid var(--prompt); border-radius: var(--radius);
@@ -120,7 +119,7 @@
 .tr-new::after { content: ''; flex: 1; border-top: 1px solid var(--danger); }
 .tr-day { display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-muted); font-size: var(--fs-xs); font-weight: var(--type-headline-weight); }
 .tr-day::before, .tr-day::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
-.tr-more, button.link.tr-more { font-size: var(--fs-xs); line-height: var(--size-row); color: var(--fg-faint); cursor: pointer; }
+.tr-more { font-size: var(--fs-xs); line-height: var(--size-row); color: var(--fg-faint); cursor: pointer; }
 @media (hover: hover) { .tr-more:hover { color: var(--fg); } }
 
 @media (max-width: 900px) {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { send, useStore } from '../../app/store';
+import { Button, ShowToggle } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { pressable, useOnUnmount } from '../../ui/util';
 import { touch } from '../../app/touch/touch';
@@ -169,9 +170,9 @@ function Decision({ p, mode, first, cardRef, yes, no, onNo }: CardProps & { card
   return (
     <>
       <div className="pd-actions">
-        <button className="btn lg primary" onClick={() => reply(true)}>{yes}{keys && <kbd>Y</kbd>}</button>
-        {always && <button className="btn lg" onClick={() => reply(true, true)}>Always allow{keys && <kbd>A</kbd>}</button>}
-        <button className="btn lg" autoFocus={p.confirmFirst} onClick={decline}>{no}<kbd>N</kbd></button>
+        <Button size="sm" variant="filled" onClick={() => reply(true)}>{yes}{keys && <kbd>Y</kbd>}</Button>
+        {always && <Button size="sm" onClick={() => reply(true, true)}>Always allow{keys && <kbd>A</kbd>}</Button>}
+        <Button size="sm" autoFocus={p.confirmFirst} onClick={decline}>{no}<kbd>N</kbd></Button>
       </div>
       {MODE_HINTS[mode] && <div className="pd-hint">{MODE_HINTS[mode]}</div>}
     </>
@@ -233,7 +234,7 @@ function Row({ k, v }: { k: string; v: string }) {
       <span className="pd-key">{k}</span>
       <span className="pd-val">
         <span className={long && !open ? 'pd-clip' : undefined}>{v}</span>
-        {long && <button className="pd-more" onClick={() => setOpen(!open)}>{open ? 'Show less' : 'Show more'}</button>}
+        {long && <ShowToggle open={open} onClick={() => setOpen(!open)} />}
       </span>
     </>
   );
@@ -317,9 +318,9 @@ function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {
       </div>
       {(step > 0 || multi || other !== null) && (
         <div className="pd-actions pd-nav">
-          {step > 0 && <button className="btn lg" onClick={() => go(step - 1)}>Back</button>}
+          {step > 0 && <Button size="sm" onClick={() => go(step - 1)}>Back</Button>}
           {(multi || other !== null) && (
-            <button className="btn lg" disabled={!result} onClick={() => answer(result)}>{step + 1 < total ? 'Next' : 'Done'}</button>
+            <Button size="sm" disabled={!result} onClick={() => answer(result)}>{step + 1 < total ? 'Next' : 'Done'}</Button>
           )}
         </div>
       )}
@@ -350,7 +351,7 @@ export function BlockedCard({ ev }: { ev: Extract<ChatEvent, { kind: 'blocked' }
       <div className="pd-head"><Icon name="shield" small /><span className="pd-title">Auto mode blocked this</span></div>
       <pre className="pd-code">{rule}</pre>
       {ev.reason && <div className="pd-desc">{ev.reason}</div>}
-      {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><button className="btn lg primary" onClick={() => send({ type: 'allow_blocked', id: ev.id })}>Allow and retry</button></div>}
+      {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><Button size="sm" variant="filled" onClick={() => send({ type: 'allow_blocked', id: ev.id })}>Allow and retry</Button></div>}
     </div>
   );
 }

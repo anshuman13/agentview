@@ -33,8 +33,6 @@ a.pd-path { text-decoration: underline; text-decoration-color: var(--fg-faint); 
 .pd-key { font-family: var(--mono); color: var(--fg-faint); }
 .pd-val { min-width: 0; white-space: pre-wrap; word-break: break-word; }
 .pd-clip { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-button.pd-more { display: block; padding: 0; border: 0; background: none; font-size: var(--fs-xs); color: var(--fg-muted); text-decoration: underline; }
-@media (hover: hover) { button.pd-more:hover { background: none; color: var(--fg); } }
 
 .pd-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
 .pd-nav { justify-content: flex-end; }
