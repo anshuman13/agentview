@@ -59,7 +59,7 @@ import { splitDiff } from './ui/DiffFiles';
 import { ago, markSegments, matchLabel, money, stepMatch } from './ui/util';
 import { notesTemplateCaret, notesTemplateChips, notesTemplateText, type NotesTemplate } from './codex/data/meetings/notesTemplates';
 import { setSystemTime } from '../../testing';
-import { guessProfile, meetingAsk, runAsk } from './codex/data/ask/ask';
+import { guessProfile, meetingAsk, runAsk, wikiAskText } from './codex/data/ask/ask';
 import { prepText } from './codex/AskBar';
 import { linkDomain, linkPath, linksIn } from './codex/data/ask/links';
 import type { Profile } from './codex/data/sync';
@@ -298,6 +298,12 @@ describe('cases shared with the Android app', () => {
       expect(hasLiveClaims(groups)).toBe(c.hasLive);
     });
   }
+
+  it('wikiAskText', () => {
+    const c = cases<never>('wiki-ask') as unknown as { now: number; pages: Page[]; facts: (Omit<Fact, 'sources'> & { sources: string[] })[]; cases: { name: string; question: string; pageId: string | null; expected: string }[] };
+    const facts = c.facts.map((f) => ({ ...f, profile: 'work', deleted: 0, sources: JSON.stringify(f.sources.map((label) => ({ kind: 'doc', label }))) }) as unknown as Fact);
+    for (const x of c.cases) expect(wikiAskText(x.question, c.pages, facts, x.pageId ?? undefined, c.now), x.name).toBe(x.expected);
+  });
 
   it('cadence', () => {
     const c = cases<never>('cadence') as unknown as { lines: { name: string; cadence: 'daily' | 'weekdays' | 'weekly' | 'monthly'; at: string | null; now: string; expected: string }[]; reads: { name: string; text: string | null; at: string | null; expected: string }[] };

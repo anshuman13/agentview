@@ -1,0 +1,18 @@
+{
+  "now": 1800000000000,
+  "pages": [{"id": "p1", "title": "Payments"}, {"id": "p2", "title": "Search"}],
+  "facts": [
+    {"id": "a", "page_id": "p1", "text": "Payments ships weekly", "at": 1799900000000, "updated_at": 1799900000000, "sources": ["PR 12", "Slack #pay"], "state": null, "contested": null},
+    {"id": "b", "page_id": "p1", "text": "Stripe is the processor", "at": 1799800000000, "updated_at": 1799800000000, "sources": ["Doc"], "state": null, "contested": null},
+    {"id": "c", "page_id": "p1", "text": "Refunds take 5 days", "at": 1799700000000, "updated_at": 1799700000000, "sources": [], "state": null, "contested": "{\"by\":\"you\",\"at\":1799950000000,\"note\":\"Now 3 days\"}"},
+    {"id": "d", "page_id": "p1", "text": "Retired claim", "at": 1799990000000, "updated_at": 1799990000000, "sources": [], "state": "retired", "contested": null},
+    {"id": "e", "page_id": "p1", "text": "Old claim", "at": 1791360000000, "updated_at": 1791360000000, "sources": [], "state": null, "contested": null},
+    {"id": "f", "page_id": "p1", "text": "Owned by the core team", "at": null, "updated_at": 1799600000000, "sources": [], "state": null, "contested": null},
+    {"id": "g", "page_id": "p2", "text": "Search uses Postgres", "at": 1799850000000, "updated_at": 1799850000000, "sources": ["Slack #search"], "state": null, "contested": null},
+    {"id": "h", "page_id": null, "text": "Prefer short replies", "at": 1799990000000, "updated_at": 1799990000000, "sources": [], "state": null, "contested": null}
+  ],
+  "cases": [
+    {"name": "one page", "question": "what changed lately?", "pageId": "p1", "expected": "what changed lately?\n\nClaims on the wiki page \"Payments\":\n- [Payments] 2027-01-11: Refunds take 5 days (contested)\n- [Payments] 2027-01-14: Payments ships weekly (PR 12, Slack #pay)\n- [Payments] 2027-01-13: Stripe is the processor (Doc)\n- [Payments] Owned by the core team\n\nAnswer from these claims first and name the claims you used; use my Slack, Linear and Calendar connectors when they are not enough."},
+    {"name": "whole wiki with Memory", "question": "who owns what?", "pageId": null, "expected": "who owns what?\n\nClaims in my team wiki:\n- [Memory] 2027-01-15: Prefer short replies\n- [Payments] 2027-01-11: Refunds take 5 days (contested)\n- [Payments] 2027-01-14: Payments ships weekly (PR 12, Slack #pay)\n- [Search] 2027-01-13: Search uses Postgres (Slack #search)\n- [Payments] 2027-01-13: Stripe is the processor (Doc)\n- [Payments] Owned by the core team\n\nAnswer from these claims first and name the claims you used; use my Slack, Linear and Calendar connectors when they are not enough."}
+  ]
+}

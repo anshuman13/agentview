@@ -214,7 +214,7 @@ private fun RememberClaim(onRemember: (String) -> Unit) {
 }
 
 @Composable
-private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOps, page: String, stale: Boolean = false, ungiven: Boolean = false, flash: Boolean = false) {
+private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOps, page: String, onOpenChat: (String) -> Unit, stale: Boolean = false, ungiven: Boolean = false, flash: Boolean = false) {
     val f = c.fact
     val menu = remember(f.key) { mutableStateOf(false) }
     var note by remember(f.key) { mutableStateOf("") }
@@ -257,6 +257,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
         if (links.isNotEmpty()) MenuSeparator()
         links.forEach { (s, href) -> MenuItem("${s.kindLabel}: ${s.label}", s.icon, pick { uri.openUri(href) }) }
         c.old.forEach { o -> MenuItem("Replaced ${o.long("at")?.let { shortDate(it, now) } ?: ""}".trim(), "history", {}, enabled = false) }
+        chatOf(f)?.let { id -> MenuSeparator(); MenuItem("Open chat", "sparkle", pick { onOpenChat(id) }) }
         f.long("at")?.let { MenuSeparator(); MenuItem("${if (stale) "Still true? " else ""}Updated ${shortDate(it, now)}", "history", {}, enabled = false) }
         if ("retire" in acts.menu || "restore" in acts.menu) MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { if (retired) actions.change(f, mapOf("state" to null), "Claim restored") else actions.retireClaim(f) }, danger = !retired)
     }
@@ -291,7 +292,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
 private const val FLASH_MS = 1600L
 
 @Composable
-fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit, anchor: String? = null, onRemember: ((String) -> Unit)? = null) {
+fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit, onOpenChat: (String) -> Unit, anchor: String? = null, onRemember: ((String) -> Unit)? = null, onAsk: ((String) -> Unit)? = null) {
     val memory = page.id == MEMORY
     val pid = if (memory) null else page.id
     val facts = remember(st.facts, page.profile, profile, memory) { st.facts.filter { if (memory) matchesProfile(profile, it) else it.profile == page.profile } }
@@ -303,9 +304,11 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
     val staleIds = older.filter { it.str("state") != "retired" }.map { it.id }.toSet()
     var summaryOpen by rememberSaveable(page.key) { mutableStateOf(false) }
     var renaming by rememberSaveable(page.key) { mutableStateOf(false) }
+    var asking by rememberSaveable(page.key) { mutableStateOf(false) }
     val pending = groups.any { g -> g.claims.any { it.fact.str("state") == "proposed" } }
     val clip = LocalClipboardManager.current
     if (renaming) TextDialog("Rename page", page.title ?: "", "Save", { t -> editedClaimText(page.title, t)?.let { actions.change(page, mapOf("title" to it), "Renamed") } }, { renaming = false }, maxLength = 120)
+    if (asking && onAsk != null) ClaimTextSheet("Ask", "", "Ask", { asking = false }, "Ask about ${page.title ?: UNTITLED}") { q -> onAsk(wikiAskText(q, st.pages, facts, page.id, now)) }
     val listState = rememberLazyListState()
     var seek by remember(page.key, anchor) { mutableStateOf(anchor) }
     var flash by remember(page.key, anchor) { mutableStateOf<String?>(null) }
@@ -338,6 +341,7 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
                     else if (onRemember != null) RememberClaim(onRemember)
                     MoreButton { dismiss ->
                         val pick = { act: () -> Unit -> { dismiss(); act() } }
+                        if (!memory && onAsk != null) MenuItem("Ask", "sparkle", pick { asking = true })
                         if (!memory) MenuItem("Rename", "edit", pick { renaming = true })
                         if (pending) MenuItem("Review", "checklist", pick(onReview))
                         if (hasLiveClaims(groups)) MenuItem("Copy as Markdown", "copy", pick {
@@ -354,11 +358,11 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
         }
         groups.forEach { g ->
             item { SectionHeader(g.heading, g.claims.size.toString()) }
-            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "", ungiven = it.fact.key in ungiven, flash = it.fact.id == flash) }
+            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "", onOpenChat, ungiven = it.fact.key in ungiven, flash = it.fact.id == flash) }
         }
         if (older.isNotEmpty()) {
             item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
-            if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, review, page.title ?: "", stale = it.id in staleIds, flash = it.id == flash) }
+            if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, review, page.title ?: "", onOpenChat, stale = it.id in staleIds, flash = it.id == flash) }
         }
         if (groups.isEmpty() && older.isEmpty()) item {
             if (memory) EmptyState("Nothing remembered yet", "Use Remember here or in a chat", icon = "book")
