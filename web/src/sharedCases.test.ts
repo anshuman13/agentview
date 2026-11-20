@@ -24,7 +24,8 @@ import { goalCommand, parseEvery, planOf, rerunForm, type GoalForm } from '../..
 import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { taskChatPrompt } from '../../shared/taskChat';
-import { findInChat } from '../../shared/findInChat';
+import { findInChat, findStart } from '../../shared/findInChat';
+import { chatMatches } from '../../shared/chatSearch';
 import { mergeSeen, type SeenMark } from '../../shared/seen';
 import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
@@ -556,6 +557,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; query: string; events: ChatEvent[]; expected: string[] }>('chat-find')) {
     it(`findInChat: ${c.name}`, () => expect(findInChat(c.events, c.query)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; events: ChatEvent[]; hits: string[]; at: number | null; expected: number }>('find-start')) {
+    it(`findStart: ${c.name}`, () => expect(findStart(c.events, c.hits, c.at)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; query: string; title: string; saved: Parameters<typeof chatMatches>[2]; repo: string | null; expected: boolean }>('chat-search')) {
+    it(`chatMatches: ${c.name}`, () => expect(chatMatches(c.query, c.title, c.saved, c.repo)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; mime: string; path: string; expected: string }>('attach-mark')) {

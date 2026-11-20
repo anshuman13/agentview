@@ -7,7 +7,8 @@ import { replyLine, sumEdits } from '../../../shared/edits';
 import { heldOrder, inside } from '../../../shared/util';
 import { advisorOf } from '../../../shared/advisors';
 import { profileOfPath } from '../../../shared/workspace';
-import { matcher, queryWords } from '../codex/data/ask/match';
+import { chatMatches } from '../../../shared/chatSearch';
+import { queryWords } from '../codex/data/ask/match';
 import { newChat } from '../app/newChat';
 
 export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
@@ -245,17 +246,13 @@ export const chatPlace = (folders: Folder[], cwd: string) => {
   return tree ? `${repoName(folders, cwd)} · ${tree.name.split('/').pop()}` : repoName(folders, cwd);
 };
 
-// A chat matches when every word of the query is in its title, repo or extra texts, or in the title or first prompt of its saved copy.
+// A chat matches by shared/chatSearch.ts; the texts after the session id are the repo name and anything else the row shows.
 export function chatFinder(filter: string, chats: SavedSession[]) {
-  const words = queryWords(filter);
-  const match = matcher(words);
   const saved = new Map(chats.map((s) => [s.sessionId, s]));
   return {
-    active: words.length > 0,
-    match: (title: string, sessionId: string | null | undefined, ...texts: (string | null | undefined)[]) => {
-      const s = sessionId ? saved.get(sessionId) : undefined;
-      return match(title, s?.title, s?.firstPrompt, ...texts);
-    },
+    active: queryWords(filter).length > 0,
+    match: (title: string, sessionId: string | null | undefined, ...texts: (string | null | undefined)[]) =>
+      chatMatches(filter, title, sessionId ? saved.get(sessionId) : undefined, texts.join(' ')),
   };
 }
 

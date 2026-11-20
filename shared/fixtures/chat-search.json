@@ -1,0 +1,13 @@
+[
+  { "name": "title", "query": "deploy", "title": "Fix deploy script", "saved": null, "repo": "api", "expected": true },
+  { "name": "saved title", "query": "renamed", "title": "Old name", "saved": { "title": "Renamed chat" }, "repo": "api", "expected": true },
+  { "name": "first prompt", "query": "importer", "title": "Chat", "saved": { "title": "Chat", "firstPrompt": "Repair the importer" }, "repo": "api", "expected": true },
+  { "name": "summary", "query": "migration", "title": "Chat", "saved": { "title": "Chat", "summary": "Ran the migration and fixed two tests" }, "repo": "api", "expected": true },
+  { "name": "branch", "query": "aie-924", "title": "Chat", "saved": { "title": "Chat", "gitBranch": "anshuman/aie-924/loki" }, "repo": "api", "expected": true },
+  { "name": "repo", "query": "tienda", "title": "Chat", "saved": null, "repo": "tienda", "expected": true },
+  { "name": "ignores case", "query": "DEPLOY", "title": "fix deploy", "saved": null, "repo": null, "expected": true },
+  { "name": "two words split across fields", "query": "migration tienda", "title": "Chat", "saved": { "title": "Chat", "summary": "Ran the migration" }, "repo": "tienda", "expected": true },
+  { "name": "one word missing", "query": "migration comida", "title": "Chat", "saved": { "title": "Chat", "summary": "Ran the migration" }, "repo": "tienda", "expected": false },
+  { "name": "no match", "query": "zebra", "title": "Chat", "saved": { "title": "Chat", "summary": "Ran the migration" }, "repo": "api", "expected": false },
+  { "name": "empty query", "query": "  ", "title": "Chat", "saved": null, "repo": "api", "expected": false }
+]

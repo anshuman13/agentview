@@ -30,12 +30,14 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.text
+import no.pradhan.agentview.nativeapp.chat.FindRequest
 import no.pradhan.agentview.nativeapp.chat.MessageHit
 import no.pradhan.agentview.nativeapp.chat.NewChatSheet
 import no.pradhan.agentview.nativeapp.chat.RepoChoice
 import no.pradhan.agentview.nativeapp.chat.boldMatches
 import no.pradhan.agentview.nativeapp.chat.messageMeta
 import no.pradhan.agentview.nativeapp.chat.messageQuery
+import no.pradhan.agentview.nativeapp.ui.isoMillis
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
@@ -255,6 +257,6 @@ private fun LazyListScope.messageHits(rows: ChatRows, hits: List<MessageHit>, fi
     item(key = "msg-head") { SectionHeader("Messages", hits.size.toString()) }
     val now = System.currentTimeMillis()
     lazyGroup(hits, { "msg-${it.sessionId}-${it.role}-${it.at}" }) { h ->
-        ListRow(boldMatches(h.text, filter), messageMeta(h, now), onClick = { rows.openSaved(h.sessionId) })
+        ListRow(boldMatches(h.text, filter), messageMeta(h, now), onClick = { rows.openSaved(h.sessionId, FindRequest(h.sessionId, filter.trim(), isoMillis(h.at).takeIf { it > 0 })) })
     }
 }

@@ -17,6 +17,7 @@ import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
 import { NeedsYou } from './NeedsYou';
 import { newChat } from '../app/newChat';
+import { requestFind } from '../chat/transcript/FindBar';
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 const RECENT = 5;
@@ -163,6 +164,11 @@ export function OpenChats() {
     <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pins.includes(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={(on) => setPin(s.sessionId, on)} />
   );
 
+  const openHit = (h: MessageHit) => {
+    requestFind({ sessionId: h.sessionId, query: filter.trim(), at: h.at ? Date.parse(h.at) : null }, h.sessionId === current);
+    if (h.sessionId !== current) send({ type: 'open_session', sessionId: h.sessionId });
+  };
+
   useEffect(() => setOpening(null), [current]);
   // A failed or lost open never changes the current chat.
   useEffect(() => {
@@ -208,7 +214,7 @@ export function OpenChats() {
         {!groups.length && !hits.length && <EmptyState size="sm" title={filter ? 'No repo or chat matches' : 'No chats yet'} hint={filter ? undefined : 'Chats you start show here'} />}
         {hits.length > 0 && <div className="group">Messages</div>}
         {hits.map((h) => (
-          <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={markSegments(h.text, queryWords(filter)).map((x, i) => (x.hit ? <b key={i}>{x.text}</b> : x.text))} lines={2} meta={messageMeta(h)} onClick={() => send({ type: 'open_session', sessionId: h.sessionId })} />
+          <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={markSegments(h.text, queryWords(filter)).map((x, i) => (x.hit ? <b key={i}>{x.text}</b> : x.text))} lines={2} meta={messageMeta(h)} onClick={() => openHit(h)} />
         ))}
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>

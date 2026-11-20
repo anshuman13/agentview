@@ -1,0 +1,7 @@
+[
+  { "name": "one hit", "events": [{ "id": "u1", "kind": "user", "text": "deploy", "at": 1000 }], "hits": ["u1"], "at": 5000, "expected": 0 },
+  { "name": "nearest of three", "events": [{ "id": "u1", "kind": "user", "text": "deploy", "at": 1000 }, { "id": "a1", "kind": "assistant", "text": "deploy", "streaming": false, "at": 5000 }, { "id": "u2", "kind": "user", "text": "deploy", "at": 9000 }], "hits": ["u1", "a1", "u2"], "at": 5600, "expected": 1 },
+  { "name": "time before every hit", "events": [{ "id": "u1", "kind": "user", "text": "deploy", "at": 4000 }, { "id": "u2", "kind": "user", "text": "deploy", "at": 9000 }], "hits": ["u1", "u2"], "at": 100, "expected": 0 },
+  { "name": "no time", "events": [{ "id": "u1", "kind": "user", "text": "deploy", "at": 4000 }, { "id": "u2", "kind": "user", "text": "deploy", "at": 9000 }], "hits": ["u1", "u2"], "at": null, "expected": 1 },
+  { "name": "no hits", "events": [], "hits": [], "at": 100, "expected": 0 }
+]

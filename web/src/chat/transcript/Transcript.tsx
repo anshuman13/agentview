@@ -11,7 +11,7 @@ import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
-import { FindBar, markHit } from './FindBar';
+import { FindBar, markHit, takeFind, type FindRequest } from './FindBar';
 import { showTurn } from '../../sessions/goalLogic';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
@@ -42,7 +42,8 @@ export function Transcript() {
   const earlier = useStore((s) => s.earlier ?? 0);
   const provider = useStore((s) => s.session.provider);
   const failed = useStore((s) => !!s.live.find((c) => c.id === s.session.id)?.failed);
-  return <TranscriptView key={chat} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} label={providerLabel(provider)} />;
+  const sessionId = useStore((s) => s.session.sessionId);
+  return <TranscriptView key={chat} sessionId={sessionId} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} label={providerLabel(provider)} />;
 }
 
 function FailedLine({ events, label }: { events: ChatEvent[]; label: string }) {
@@ -208,7 +209,7 @@ function useRowWindow(count: number, replies: number, earlier: number, box: RefO
   return { shown, start, from, staging, loading, showEarlier, reveal };
 }
 
-function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string; failed: boolean; label: string }) {
+function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed, label }: { sessionId: string | null; events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string; failed: boolean; label: string }) {
   const [build] = useState(createTranscriptBuilder);
   const items = useMemo(() => build(events), [build, events]);
   const last = events[events.length - 1];
@@ -223,8 +224,16 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
   const list = useMemo<FoldRow[]>(() => fold(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [fold, items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier, reveal } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const [finding, setFinding] = useState(false);
+  // n remounts the bar when a message hit arrives while it is open.
+  const [begun, setBegun] = useState<{ n: number; request: FindRequest | null }>({ n: 0, request: null });
+  const begin = () => {
+    const request = takeFind(sessionId);
+    if (request) setBegun((b) => ({ n: b.n + 1, request }));
+    return request;
+  };
   useEffect(() => {
-    const open = () => { setFinding(true); document.querySelector<HTMLInputElement>('.tr-find input')?.focus(); };
+    if (begin()) setFinding(true);
+    const open = () => { begin(); setFinding(true); document.querySelector<HTMLInputElement>('.tr-find input')?.focus(); };
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f' || box.current?.offsetParent == null) return;
       const at = document.activeElement;
@@ -273,7 +282,7 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
 
   return (
     <div className="tr-host">
-    {finding && <FindBar events={events} earlier={earlier} go={goToHit} onClose={() => setFinding(false)} />}
+    {finding && <FindBar key={begun.n} events={events} earlier={earlier} start={begun.request} go={goToHit} onClose={() => setFinding(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <EmptyState size="sm" icon="comment-discussion" title="No messages yet" hint="Your prompts, the agent's steps and replies show up here" />}

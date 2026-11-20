@@ -57,6 +57,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import no.pradhan.agentview.nativeapp.WaitingStore
 import no.pradhan.agentview.nativeapp.WaitingWidget
 import no.pradhan.agentview.nativeapp.chat.ChatStore
+import no.pradhan.agentview.nativeapp.chat.FindRequest
 import no.pradhan.agentview.nativeapp.chat.RecentChats
 import no.pradhan.agentview.nativeapp.chat.TranscriptFeed
 import no.pradhan.agentview.nativeapp.chat.draftKey
@@ -190,6 +191,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val undoable = MutableSharedFlow<Undoable>(extraBufferCapacity = 1)
 
     val showTurn = MutableStateFlow<String?>(null)
+    val findRequest = MutableStateFlow<FindRequest?>(null)
     val shell = ShellState()
 
     internal val pullCache = PullCache()

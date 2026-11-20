@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../../ui/Icon';
-import { IconButton } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { stepMatch } from '../../ui/util';
-import { findInChat } from '../../../../shared/findInChat';
+import { loadEarlier } from '../../app/store';
+import { findInChat, findStart } from '../../../../shared/findInChat';
 import type { ChatEvent } from '../../../../shared/protocol';
 
 const HIT = 'find-hit';
@@ -16,10 +17,27 @@ export function markHit(el: HTMLElement) {
 
 export const findLabel = (cur: number, count: number, earlier: number) => `${count ? `${cur + 1} of ${count}` : 'No matches'}${earlier > 0 ? ' · loaded only' : ''}`;
 
-// The bar above the transcript: a field, the hit count, Previous and Next (Enter and Shift+Enter) and Close (Esc). `go` scrolls to a hit and returns a function that stops its retries.
-export function FindBar({ events, earlier, go, onClose }: { events: ChatEvent[]; earlier: number; go: (id: string) => () => void; onClose: () => void }) {
-  const [query, setQuery] = useState('');
-  const [cur, setCur] = useState(0);
+export type FindRequest = { sessionId: string; query: string; at: number | null };
+
+// A sidebar message hit waiting for its chat: the find bar opens on it once that chat shows. `here` is whether the chat is the one on screen.
+let pending: FindRequest | null = null;
+
+export function requestFind(r: FindRequest, here: boolean) {
+  pending = r;
+  if (here) window.dispatchEvent(new Event('agentview:find'));
+}
+
+export function takeFind(sessionId: string | null) {
+  const r = pending?.sessionId === sessionId ? pending : null;
+  if (r) pending = null;
+  return r;
+}
+
+// The bar above the transcript: a field, the hit count, Previous and Next (Enter and Shift+Enter) and Close (Esc); Load earlier takes their place while a query has no hit and earlier events exist. `go` scrolls to a hit and returns a function that stops its retries. `start` fills the query and picks the hit nearest its time.
+export function FindBar({ events, earlier, start, go, onClose }: { events: ChatEvent[]; earlier: number; start: FindRequest | null; go: (id: string) => () => void; onClose: () => void }) {
+  const [query, setQuery] = useState(start?.query ?? '');
+  const [cur, setCur] = useState(() => (start ? findStart(events, findInChat(events, start.query), start.at) : 0));
+  const [loading, setLoading] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const hits = useMemo(() => findInChat(events, query), [events, query]);
   const at = Math.min(cur, Math.max(hits.length - 1, 0));
@@ -44,8 +62,14 @@ export function FindBar({ events, earlier, go, onClose }: { events: ChatEvent[];
         }} />
       </label>
       {query.trim().length >= 2 && <span className="muted small">{findLabel(at, hits.length, earlier)}</span>}
-      <IconButton size="sm" icon="arrow-up" label="Previous match" disabled={!hits.length} onClick={() => step(-1)} />
-      <IconButton size="sm" icon="arrow-down" label="Next match" disabled={!hits.length} onClick={() => step(1)} />
+      {query.trim().length >= 2 && !hits.length && earlier > 0 ? (
+        <Button size="sm" disabled={loading} onClick={() => { setLoading(true); loadEarlier().finally(() => setLoading(false)); }}>{loading ? 'Loading…' : 'Load earlier'}</Button>
+      ) : (
+        <>
+          <IconButton size="sm" icon="arrow-up" label="Previous match" disabled={!hits.length} onClick={() => step(-1)} />
+          <IconButton size="sm" icon="arrow-down" label="Next match" disabled={!hits.length} onClick={() => step(1)} />
+        </>
+      )}
       <IconButton size="sm" icon="close" label="Close" onClick={onClose} />
     </div>
   );

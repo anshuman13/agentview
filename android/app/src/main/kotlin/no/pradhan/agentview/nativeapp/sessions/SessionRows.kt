@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import no.pradhan.agentview.nativeapp.chat.FindRequest
 import no.pradhan.agentview.nativeapp.chat.RenameDialog
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.shortModel
@@ -128,8 +129,11 @@ class ChatRows(
         onLink = { sessionId?.let { clipboard.setText(AnnotatedString("${hub.origin.value}/?session=$it")); hub.notice.value = "Link copied" } },
     )
 
-    fun openSaved(sessionId: String) {
-        scope.launch { if (hub.openSaved(sessionId)) onOpen() }
+    fun openSaved(sessionId: String, find: FindRequest? = null) {
+        scope.launch {
+            hub.findRequest.value = find
+            if (hub.openSaved(sessionId)) onOpen() else hub.findRequest.value = null
+        }
     }
 
     @Composable

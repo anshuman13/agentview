@@ -30,6 +30,10 @@ import no.pradhan.agentview.nativeapp.app.SeenMark
 import no.pradhan.agentview.nativeapp.app.mergeSeen
 import no.pradhan.agentview.nativeapp.chat.attachMark
 import no.pradhan.agentview.nativeapp.chat.findInChat
+import no.pradhan.agentview.nativeapp.chat.findStart
+import no.pradhan.agentview.nativeapp.sessions.SavedSession
+import no.pradhan.agentview.nativeapp.sessions.chatMatches
+import no.pradhan.agentview.nativeapp.sessions.queryWords
 import no.pradhan.agentview.nativeapp.chat.failedLine
 import no.pradhan.agentview.nativeapp.chat.mergeTail
 import no.pradhan.agentview.nativeapp.chat.turnEnd
@@ -539,6 +543,26 @@ class SharedCasesTest {
             val marks = c.getValue("marks").jsonArray.map { it.jsonObject }.map { SeenMark(it.str("id"), it.getValue("value").jsonPrimitive.long, it.getValue("at").jsonPrimitive.long, it.getValue("sent").jsonPrimitive.boolean) }
             val expected = c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.long }
             assertEquals(c.str("name"), expected, mergeSeen(server, marks, c.getValue("startedAt").jsonPrimitive.long))
+        }
+    }
+
+    @Test fun findStartCases() {
+        for (c in cases("find-start")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            val hits = c.getValue("hits").jsonArray.map { it.jsonPrimitive.content }
+            val at = c.getValue("at").takeIf { it !is JsonNull }?.jsonPrimitive?.long
+            assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.int, findStart(events, hits, at))
+        }
+    }
+
+    @Test fun chatSearchCases() {
+        for (c in cases("chat-search")) {
+            val saved = c.getValue("saved").takeIf { it !is JsonNull }?.jsonObject?.let { o ->
+                fun opt(k: String) = o[k]?.jsonPrimitive?.content
+                SavedSession("s", opt("title") ?: "", firstPrompt = opt("firstPrompt"), summary = opt("summary"), gitBranch = opt("gitBranch"))
+            }
+            val repo = c.getValue("repo").takeIf { it !is JsonNull }?.jsonPrimitive?.content
+            assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, chatMatches(queryWords(c.str("query")), c.str("title"), saved, repo))
         }
     }
 

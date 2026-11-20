@@ -159,7 +159,10 @@ fun newChatChoices(groups: List<RepoGroup>, ws: Workspace, sessionCwd: String?):
 fun shownChoices(choices: List<RepoChoice>, picked: String?, all: Boolean, max: Int = 5): List<RepoChoice> =
     if (all || choices.size <= max) choices else choices.filterIndexed { i, c -> i < max || c.key == picked }
 
-// A chat matches when every word of the query is in its title, repo or the title or first prompt of its saved copy.
+// web shared/chatSearch.ts: a chat matches when every word of the query is, ignoring case, in its title, repo name, or the title, first prompt, summary or branch of its saved copy.
+fun chatMatches(words: List<String>, title: String, saved: SavedSession?, repo: String?) =
+    matchesWords(words, title, saved?.title, saved?.firstPrompt, saved?.summary, saved?.gitBranch, repo)
+
 fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: HeldOrder? = null): List<RepoGroup> {
     val words = queryWords(filter)
     val saved = ws.saved.associateBy { it.sessionId }
@@ -171,7 +174,7 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: 
         val name = folderName(key)
         if (words.isNotEmpty()) {
             val s = sessionId?.let { saved[it] }
-            if (!matchesWords(words, title, s?.title, s?.firstPrompt, name)) return null
+            if (!chatMatches(words, title, s, name)) return null
         }
         val g = m.getOrPut(key) { RepoGroup(key, name) }
         g.last = maxOf(g.last, last)
@@ -241,7 +244,7 @@ fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatIt
         val title = c?.title ?: s?.title ?: return@mapNotNull null
         val cwd = c?.cwd ?: s!!.cwd
         val repo = folderName(folderKey(cwd, ws.repos, ws.trees))
-        if (words.isNotEmpty() && !matchesWords(words, title, saved[id]?.firstPrompt, repo)) null else ChatItem(c, s, repo)
+        if (words.isNotEmpty() && !chatMatches(words, title, saved[id], repo)) null else ChatItem(c, s, repo)
     }
 }
 
@@ -251,7 +254,7 @@ fun waitingRows(live: List<LiveChat>, ws: Workspace, filter: String): List<LiveC
     val saved = ws.saved.associateBy { it.sessionId }
     return live.filter { c ->
         val s = saved[c.sessionId]
-        c.pending > 0 && (words.isEmpty() || matchesWords(words, c.title, s?.title, s?.firstPrompt, folderName(folderKey(c.cwd, ws.repos, ws.trees))))
+        c.pending > 0 && (words.isEmpty() || chatMatches(words, c.title, s, folderName(folderKey(c.cwd, ws.repos, ws.trees))))
     }.sortedWith(byUrgency)
 }
 

@@ -16,3 +16,19 @@ export function findInChat(events: ChatEvent[], query: string): string[] {
   endTurn();
   return hits;
 }
+
+// The index in hits of the hit whose event time is nearest `at`, the earliest on a tie; the last hit when `at` or every hit's time is missing. shared/fixtures/find-start.json holds the cases.
+export function findStart(events: ChatEvent[], hits: string[], at: number | null): number {
+  const last = Math.max(hits.length - 1, 0);
+  if (at == null) return last;
+  const times = new Map(events.map((e) => [e.id, e.at]));
+  let best = -1;
+  let gap = Infinity;
+  hits.forEach((id, i) => {
+    const t = times.get(id);
+    if (!t || Math.abs(t - at) >= gap) return;
+    best = i;
+    gap = Math.abs(t - at);
+  });
+  return best < 0 ? last : best;
+}

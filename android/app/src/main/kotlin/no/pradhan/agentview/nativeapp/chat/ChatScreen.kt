@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,6 +130,8 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         return
     }
     val panels = remember { ChatPanels() }
+    val findRequest = hub.findRequest.collectAsState().value?.takeIf { settled && view.events.isNotEmpty() && it.sessionId == live.sessionId }
+    LaunchedEffect(findRequest) { if (findRequest != null) panels.find = true }
     val buildSheets = remember(live.id) { OpenBuildSheets() }
     val running = session?.running ?: live.running
     val cwd = session?.cwd ?: live.cwd
@@ -153,7 +156,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         Hairline()
         if (panels.find) {
             BackHandler { panels.find = false }
-            FindBar(hub, view.events, earlier) { panels.find = false }
+            FindBar(hub, view.events, earlier, findRequest) { panels.find = false }
         }
         prLoad.data?.let { pr ->
             ListRow(pr.title, prStripMeta(pr), leading = { StatusDot(checkDot(pr.checks)) }, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { prOpen = pr.number })
