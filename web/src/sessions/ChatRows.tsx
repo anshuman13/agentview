@@ -102,6 +102,10 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
     send({ type: 'view', id: live!.id });
     send({ type: 'retry' }, live!.id);
   };
+  const resume = () => {
+    send({ type: 'view', id: live!.id });
+    send({ type: 'prompt', text: 'continue' }, live!.id);
+  };
   const swipe = chatSwipe(!!pinned, live);
   const saved: SavedSession = { sessionId: sessionId!, title, cwd, gitBranch: null, lastModified };
   const swipePin = async () => {
@@ -122,8 +126,9 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
         onClick={onOpen}
         onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined}
         onLongPress={sessionId ? () => setRenaming(true) : undefined}
-        menu={chatMenuItems({ failed: state === 'failed' && !!live, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose, unread: !!sessionId && !shown && !selected }).map((key) => {
+        menu={chatMenuItems({ failed: state === 'failed' && !!live, stalled: !!live?.stalled, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose, unread: !!sessionId && !shown && !selected }).map((key) => {
           switch (key) {
+            case 'resume': return <MenuItem key={key} icon="play" onClick={resume}>Resume</MenuItem>;
             case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={retry}>Retry</MenuItem>;
             case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={() => void onPin!(!pinned)}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
             case 'unread': return <MenuItem key={key} icon="mail" onClick={() => markUnread(sessionId!)}>Mark as unread</MenuItem>;

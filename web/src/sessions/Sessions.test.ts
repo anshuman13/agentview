@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
-import { buildFolders, type Folder, type RepoGroup, chatFinder, chatState, doneChats, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
+import { buildFolders, type Folder, type RepoGroup, chatFinder, chatMenuItems, chatState, doneChats, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
 import { RepoRow } from './RepoRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 import { WORKSPACE } from '../../../shared/workspace';
@@ -294,6 +294,23 @@ describe('renameTitle', () => {
     expect(renameTitle('Escape', 'New', 'Old')).toBeUndefined();
     expect(renameTitle('Enter', '   ', 'Old')).toBeUndefined();
     expect(renameTitle('blur', ' Old ', 'Old')).toBeUndefined();
+  });
+});
+
+describe('chatMenuItems', () => {
+  const items = (failed: boolean, stalled: boolean) => chatMenuItems({ failed, stalled, canPin: true, beside: false, closable: false });
+
+  it('puts Resume first for a stalled chat', () => {
+    expect(items(false, true).slice(0, 2)).toEqual(['resume', 'pin']);
+  });
+
+  it('gives a failed and stalled chat Retry only', () => {
+    expect(items(true, true)[0]).toBe('retry');
+    expect(items(true, true)).not.toContain('resume');
+  });
+
+  it('gives an idle chat neither', () => {
+    expect(items(false, false)[0]).toBe('pin');
   });
 });
 

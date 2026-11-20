@@ -1,11 +1,15 @@
 package no.pradhan.agentview.nativeapp.chat
 
 import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
+import no.pradhan.agentview.nativeapp.codex.clock
+import no.pradhan.agentview.nativeapp.codex.dayLabel
+import no.pradhan.agentview.nativeapp.codex.dayStart
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.LiveAgent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.net.SessionInfo
+import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.plural
 
 // The chat header line (web runLogic headerState), checked by shared/fixtures/chat-state.json.
@@ -25,6 +29,13 @@ fun statusLine(live: LiveChat, session: SessionInfo?): StatusLine = when {
 
 // The agents chip beside the status line (web runLogic agentChipCount): while agents run, the running count the line shows; else every agent in the chat.
 fun agentChipCount(all: Int, running: Int) = if (running > 0) running else all
+
+// The time of the last reply beside "Idle" (web brief/time.ts): under an hour "5m", today "14:20", else "3 Nov 14:20".
+fun replyTime(at: Long, now: Long): String = when {
+    now - at < 3_600_000 -> agoShort(at, now)
+    dayStart(at) == dayStart(now) -> clock(at)
+    else -> "${dayLabel(at)} ${clock(at)}"
+}
 
 // Running agents whose Agent call is not loaded yet (web AgentsPane unseen).
 fun unseenAgents(running: List<LiveAgent>, agents: List<Agent>) = running.filter { r -> agents.none { it.id == r.id } }

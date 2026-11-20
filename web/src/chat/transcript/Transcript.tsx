@@ -48,8 +48,9 @@ export function Transcript() {
   const earlier = useStore((s) => s.earlier ?? 0);
   const provider = useStore((s) => s.session.provider);
   const failed = useStore((s) => !!s.live.find((c) => c.id === s.session.id)?.failed);
+  const stalled = useStore((s) => !!s.live.find((c) => c.id === s.session.id)?.stalled);
   const sessionId = useStore((s) => s.session.sessionId);
-  return <TranscriptView key={chat} sessionId={sessionId} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} label={providerLabel(provider)} />;
+  return <TranscriptView key={chat} sessionId={sessionId} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} stalled={stalled} label={providerLabel(provider)} />;
 }
 
 function FailedLine({ events, label }: { events: ChatEvent[]; label: string }) {
@@ -57,6 +58,11 @@ function FailedLine({ events, label }: { events: ChatEvent[]; label: string }) {
   const line = failedLine(events, label);
   if (!line) return null;
   return <div className="tr-failed"><span className="tr-failed-text">{line}</span>{!sent && <Button size="sm" onClick={() => { setSent(true); send({ type: 'retry' }); }}>Retry</Button>}</div>;
+}
+
+function StalledLine() {
+  const [sent, setSent] = useState(false);
+  return <div className="tr-failed"><span className="tr-failed-text">No activity for 15 min</span>{!sent && <Button size="sm" onClick={() => { setSent(true); send({ type: 'prompt', text: 'continue' }); }}>Resume</Button>}</div>;
 }
 
 function UnsentRows() {
@@ -270,7 +276,7 @@ function useRowWindow(count: number, replies: number, earlier: number, box: RefO
   return { shown, start, from, staging, loading, showEarlier, reveal };
 }
 
-function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed, label }: { sessionId: string | null; events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string; failed: boolean; label: string }) {
+function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed, stalled, label }: { sessionId: string | null; events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string; failed: boolean; stalled: boolean; label: string }) {
   const [build] = useState(createTranscriptBuilder);
   const items = useMemo(() => build(events), [build, events]);
   const last = events[events.length - 1];
@@ -370,6 +376,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
       {failed && !running && <FailedLine key={events.length} events={events} label={label} />}
+      {stalled && !failed && <StalledLine />}
       <UnsentRows />
       <QuoteButton rows={rows} />
       </div>

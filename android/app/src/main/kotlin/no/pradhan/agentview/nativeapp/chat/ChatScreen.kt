@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -163,7 +164,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
 
     Column(Modifier.fillMaxSize()) {
         ChatHeader(hub, live, session, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd) { review = 0 }
-        ChatStatus(live, session, view.cost, if (view.agents.isNotEmpty() || live.agentList.isNotEmpty() || run != null) agentChipCount(view.agents.size, live.agentList.size) else null) { panels.agents = true }
+        ChatStatus(live, session, view.cost, remember(view.events) { lastReplyAt(view.events) }, if (view.agents.isNotEmpty() || live.agentList.isNotEmpty() || run != null) agentChipCount(view.agents.size, live.agentList.size) else null) { panels.agents = true }
         Hairline()
         if (panels.find) {
             BackHandler { panels.find = false }
@@ -220,9 +221,9 @@ private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Do
 
 // One line under the title: what the chat is doing, and on the right the agents and run controls it opens.
 @Composable
-private fun ChatStatus(live: LiveChat, session: SessionInfo?, viewCost: Double, agents: Int?, onAgents: () -> Unit) {
+private fun ChatStatus(live: LiveChat, session: SessionInfo?, viewCost: Double, replyAt: Long?, agents: Int?, onAgents: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp2, bottom = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f, fill = false)) { ChatSubtitle(live, session, viewCost) }
+        Column(Modifier.weight(1f, fill = false)) { ChatSubtitle(live, session, viewCost, replyAt) }
         if (agents != null) Row(Modifier.heightIn(min = Tokens.touchSm).clickable(onClick = onAgents).padding(start = Tokens.sp4, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
             Text(if (agents > 0) plural(agents, "agent") else "Run", style = Type.footnote, color = av.fgMuted, maxLines = 1)
             AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgMuted)
@@ -231,16 +232,20 @@ private fun ChatStatus(live: LiveChat, session: SessionInfo?, viewCost: Double, 
 }
 
 @Composable
-private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double) {
+private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double, replyAt: Long?) {
     val status = statusLine(live, session)
+    val idleAt = replyAt.takeIf { status.text == "Idle" }
+    val now = rememberNow(idleAt != null)
+    val replied by remember(idleAt) { derivedStateOf { idleAt?.let { replyTime(it, now.value) } } }
     val cost = live.cost ?: viewCost
     val toneColor = when (status.tone) { ChatTone.Running -> av.agent; ChatTone.Needs -> av.warn; ChatTone.Failed -> av.err; ChatTone.Warn -> av.warn; ChatTone.Idle -> av.fgMuted }
     val muted = av.fgMuted
     val usage = session?.usage
     val warn = av.warn
-    val line = remember(status, cost, toneColor, muted, usage) {
+    val line = remember(status, replied, cost, toneColor, muted, usage) {
         buildAnnotatedString {
             withStyle(SpanStyle(color = toneColor)) { append(status.text) }
+            replied?.let { withStyle(SpanStyle(color = muted)) { append(" · $it") } }
             costLabel(cost, billing(live.provider)).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = muted)) { append(" · $it") } }
             usageText(usage).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = if (usageHigh(usage)) warn else muted)) { append(" · $it") } }
         }
