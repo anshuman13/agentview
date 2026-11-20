@@ -230,7 +230,7 @@ function StaleRow({ fact: f, title }: { fact: Fact; title: Map<string, string | 
     <Row
       lines={2}
       title={f.text}
-      meta={`${pageTitle} · ${months} ${months === 1 ? 'month' : 'months'}`}
+      meta={`${pageTitle} · ${months} ${months === 1 ? 'month' : 'months'}${f.used_count ? ` · Used on ${f.used_count} ${f.used_count === 1 ? 'day' : 'days'}` : ''}`}
       onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}
       action={<Button variant="tinted" size="sm" onClick={edits.confirm}>Confirm</Button>}
       menu={<MenuItem icon="archive" danger onClick={edits.retire}>Retire</MenuItem>}

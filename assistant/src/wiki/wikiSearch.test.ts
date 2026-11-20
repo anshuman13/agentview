@@ -5,7 +5,7 @@ import path from 'node:path';
 import { openDb } from '../core/db.js';
 import { wikiRoutes } from '../routes/wiki.js';
 import { applyChanges } from '../core/sync.js';
-import { searchWiki } from './wikiSearch.js';
+import { markUsed, searchWiki } from './wikiSearch.js';
 import { Reply } from '../routes/http.js';
 
 let tick = 1_000;
@@ -29,6 +29,22 @@ test('searchWiki ranks claims, matches on any word and scopes by profile', () =>
   expect(searchWiki(db, 'gateway "limit*', 'work').claims.length).toBe(2);
   expect(searchWiki(db, '(a OR b) - : *', 'work')).toEqual({ pages: [], claims: [] });
   expect(searchWiki(db, 'with that', 'work')).toEqual({ pages: [], claims: [] });
+});
+
+test('markUsed counts a day of use per live claim and leaves updated_at alone', () => {
+  const day = 86_400_000;
+  const db = openDb(':memory:');
+  applyChanges(db, [row('facts', 'f1', { text: 'Invoices go out nightly.' }), row('facts', 'f2', { text: 'Refunds take a week.' }), row('facts', 'f3', { text: 'Other profile.' }, 'personal')]);
+  const stored = (id: string) => db.prepare('SELECT used_count, used_at, updated_at FROM facts WHERE id = ?').get(id) as { used_count: number | null; used_at: number | null; updated_at: number };
+  const created = stored('f1').updated_at;
+  expect(markUsed(db, 'work', ['f1', 'f1', 'f3', 'nope'], 5_000)).toBe(1);
+  expect(markUsed(db, 'work', ['f1', 'f2'], 6_000)).toBe(1);
+  expect(markUsed(db, 'work', ['f1', 'f2'], 5_000 + day)).toBe(1);
+  expect(markUsed(db, 'work', ['f1'], 6_000 + day)).toBe(0);
+  expect(stored('f1')).toEqual({ used_count: 2, used_at: 5_000 + day, updated_at: created });
+  expect(stored('f2')).toMatchObject({ used_count: 1, used_at: 6_000 });
+  expect(stored('f3')).toMatchObject({ used_count: null, used_at: null });
+  expect(searchWiki(db, 'invoices', 'work').claims[0]).toMatchObject({ used_at: 5_000 + day });
 });
 
 test('the index follows inserts, updates, soft deletes and deletes', () => {

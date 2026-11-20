@@ -6,5 +6,8 @@
   {"name": "retired by hand and recent", "state": "retired", "at": 999000000000, "now": 1000000000000, "expected": true},
   {"name": "proposed and past 90 days", "state": "proposed", "at": 992223999999, "now": 1000000000000, "expected": false},
   {"name": "no date", "state": "live", "at": null, "now": 1000000000000, "expected": false},
-  {"name": "zero date", "state": "live", "at": 0, "now": 1000000000000, "expected": false}
+  {"name": "zero date", "state": "live", "at": 0, "now": 1000000000000, "expected": false},
+  {"name": "past 90 days but used 10 days ago", "state": "live", "at": 992223999999, "used_at": 999136000000, "now": 1000000000000, "expected": false},
+  {"name": "past 90 days and used 31 days ago", "state": "live", "at": 992223999999, "used_at": 997320000000, "now": 1000000000000, "expected": true},
+  {"name": "retired but used recently", "state": "retired", "at": 999000000000, "used_at": 999900000000, "now": 1000000000000, "expected": true}
 ]

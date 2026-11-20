@@ -32,7 +32,9 @@
     "contested",
     "state",
     "replaces",
-    "added_by"
+    "added_by",
+    "used_count",
+    "used_at"
   ],
   "pages": [
     "title",

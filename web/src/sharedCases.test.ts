@@ -178,7 +178,7 @@ describe('cases shared with the Android app', () => {
   for (const c of dismissed.keys) it(`dismissedKeys: ${c.name}`, () => expect(dismissedKeys(c.value)).toEqual(c.expected));
   for (const c of dismissed.merge) it(`mergeDismissed: ${c.name}`, () => expect(mergeDismissed(c.a, c.b)).toBe(c.expected));
 
-  for (const c of cases<{ name: string; state: string | null; at: number | null; now: number; expected: boolean }>('claim-age')) {
+  for (const c of cases<{ name: string; state: string | null; at: number | null; used_at?: number | null; now: number; expected: boolean }>('claim-age')) {
     it(`isOld: ${c.name}`, () => expect(isOld(c, c.now)).toBe(c.expected));
   }
 

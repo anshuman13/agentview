@@ -19,6 +19,8 @@ export type Fact = Common & {
   state: string | null;
   replaces: string | null;
   added_by: string | null;
+  used_count: number | null;
+  used_at: number | null;
 };
 
 export type Meeting = Common & {
@@ -196,7 +198,7 @@ export function newFact(text: string, pageId: string | null, profile: Profile = 
   return {
     id: newId(), profile, version: 0, updated_at: now, deleted: 0, dirty: 1,
     field_times: JSON.stringify({ text: now, page_id: now, at: now, state: now, added_by: now }),
-    text, item_id: null, superseded_by: null, page_id: pageId, heading: null, sources: null, at: now, contested: null, state: 'proposed', replaces: null, added_by: 'you',
+    text, item_id: null, superseded_by: null, page_id: pageId, heading: null, sources: null, at: now, contested: null, state: 'proposed', replaces: null, added_by: 'you', used_count: null, used_at: null,
   };
 }
 

@@ -486,6 +486,7 @@ class SharedCasesTest {
             val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
             c.nullable("state")?.let { f["state"] = toJson(it.jsonPrimitive.content) }
             c.nullable("at")?.let { f["at"] = toJson(it.jsonPrimitive.long) }
+            c.nullable("used_at")?.let { f["used_at"] = toJson(it.jsonPrimitive.long) }
             assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isOld(Row("facts", "f", "work", f = f), c.getValue("now").jsonPrimitive.long))
         }
     }

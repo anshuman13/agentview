@@ -46,3 +46,18 @@ test('wiki_propose names a similar live or proposed claim of the same profile an
   expect(await propose('Brand new unrelated claim')).toMatch(/^Proposed \[[^\]]+\] for the user to approve in memory\.$/);
   expect(pushed).toHaveLength(3);
 });
+
+test('wiki_search tells the hub which claims it showed and keeps a recently used old claim current', async () => {
+  const day = 86_400_000;
+  const claims = [
+    { id: 'a', text: 'Used a lot', at: Date.now() - 200 * day, used_at: Date.now() - day, state: 'live', superseded_by: null },
+    { id: 'b', text: 'Dead', at: Date.now() - 200 * day, state: 'live', superseded_by: null },
+  ];
+  const f = vi.fn(async (url: string | URL | Request) => (String(url).includes('/wiki/search') ? json(200, { pages: [], claims }) : json(200, { used: 2 })));
+  stubGlobal('fetch', f);
+  const text = await search('used');
+  expect(text.indexOf('[a]')).toBeLessThan(text.indexOf('may be out of date'));
+  expect(text.indexOf('may be out of date')).toBeLessThan(text.indexOf('[b]'));
+  const post = f.mock.calls.find((c) => String(c[0]).includes('/wiki/used'))!;
+  expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ profile: 'work', ids: ['a'] });
+});

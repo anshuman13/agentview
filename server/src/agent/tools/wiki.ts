@@ -3,7 +3,7 @@ import { profileOf } from '../claude/accounts.js';
 import { isOld as isOldClaim } from '../../../../shared/claimAge.js';
 import { similarClaim } from '../../../../shared/claimMatch.js';
 import { errText } from '../../../../shared/util.js';
-import { hubGet, hubPush, hubRows, type HubChange, type HubRow } from '../../integrations/assistant.js';
+import { hubGet, hubPush, hubRows, hubUsed, type HubChange, type HubRow } from '../../integrations/assistant.js';
 import { defineTool } from './tool.js';
 
 export const WIKI_RULES = [
@@ -20,7 +20,7 @@ export const WIKI_RULES = [
 const PROFILE = z.enum(['work', 'personal']).optional().describe('Which wiki: work or personal. Defaults to the profile of the chat\'s folder');
 const state = (r: HubRow) => (r.state as string | null) ?? 'live';
 // Old claims (shared/claimAge.ts) are kept apart so they do not crowd out current ones.
-const isOld = (f: HubRow) => isOldClaim({ state: state(f), at: typeof f.at === 'number' ? f.at : null });
+const isOld = (f: HubRow) => isOldClaim({ state: state(f), at: typeof f.at === 'number' ? f.at : null, used_at: typeof f.used_at === 'number' ? f.used_at : null });
 const day = (f: HubRow) => (typeof f.at === 'number' && f.at > 0 ? new Date(f.at).toISOString().slice(0, 10) : 'undated');
 const where = (f: HubRow) => (f.page_title ? ` (on ${f.page_title}${f.heading ? ` / ${f.heading}` : ''})` : '');
 const claim = (f: HubRow) => `- [${f.id}] (${day(f)}, ${state(f)}${f.superseded_by ? ', superseded' : ''}${state(f) !== 'retired' && isOld(f) ? ', old' : ''}) ${f.text}${where(f)}`;
@@ -38,12 +38,14 @@ export const wikiSearchTool = defineTool({
   schema: { query: z.string(), profile: PROFILE },
   async handler({ query, profile }, { cwd }) {
     try {
-      const { pages, claims } = await hubGet<{ pages: HubRow[]; claims: HubRow[] }>(`/wiki/search?q=${encodeURIComponent(query)}&profile=${profile ?? profileOf(cwd)}`);
+      const p = profile ?? profileOf(cwd);
+      const { pages, claims } = await hubGet<{ pages: HubRow[]; claims: HubRow[] }>(`/wiki/search?q=${encodeURIComponent(query)}&profile=${p}`);
       const stale = (r: HubRow) => !!r.superseded_by || isOld(r);
-      const p = pages.map((r) => `- page [${r.id}] ${r.title} (${r.section ?? 'no section'}, ${state(r)})`);
-      const f = claims.filter((r) => !stale(r)).slice(0, 30).map(claim);
-      const old = claims.filter(stale).slice(0, 10).map(claim);
-      return [...p, ...f, ...(old.length ? ['Superseded, retired or old, may be out of date:', ...old] : [])].join('\n') || 'Nothing matches.';
+      const lines = pages.map((r) => `- page [${r.id}] ${r.title} (${r.section ?? 'no section'}, ${state(r)})`);
+      const shown = claims.filter((r) => !stale(r)).slice(0, 30);
+      const old = claims.filter(stale).slice(0, 10);
+      hubUsed(p, shown.map((r) => String(r.id)));
+      return [...lines, ...shown.map(claim), ...(old.length ? ['Superseded, retired or old, may be out of date:', ...old.map(claim)] : [])].join('\n') || 'Nothing matches.';
     } catch (err) {
       return `Wiki search failed: ${errText(err)}`;
     }
@@ -65,6 +67,7 @@ export const wikiPageTool = defineTool({
       byHeading.set(h, [...(byHeading.get(h) ?? []), claim(f)]);
     }
     const old = mine.filter(isOld).map(claim);
+    hubUsed(page.profile as string, mine.filter((r) => !isOld(r)).map((r) => String(r.id)));
     return [`# ${page.title}`, ...[...byHeading].map(([h, cs]) => `## ${h}\n${cs.join('\n')}`), ...(old.length ? [`## Older (retired or over 90 days, may be out of date)\n${old.join('\n')}`] : [])].join('\n');
   },
 });

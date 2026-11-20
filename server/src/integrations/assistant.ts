@@ -150,6 +150,12 @@ export async function hubShipped(post: { profile: string; title: string; repo: s
   if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}: ${await resp.text()}`);
 }
 
+// Tells the hub which claims a chat was shown; the use count only feeds the stale rule, so a failure is dropped.
+export function hubUsed(profile: string, ids: string[]) {
+  if (!ids.length) return;
+  void fetch(`${HUB}/wiki/used`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile, ids }), signal: AbortSignal.timeout(15_000) }).catch(() => undefined);
+}
+
 const LEARN_EVENTS = 60;
 const LEARN_CHARS = 2000;
 

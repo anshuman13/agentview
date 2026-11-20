@@ -17,8 +17,9 @@ import no.pradhan.agentview.nativeapp.ui.agoShort
 // The wiki index and page of web/src/codex/data/wiki.ts and wiki/WikiIndex.tsx.
 
 val SECTION_ORDER = listOf("Teams", "Projects", "People", "Practices")
-// RETIRE_AFTER and isOld mirror shared/claimAge.ts, checked by shared/fixtures/claim-age.json.
+// RETIRE_AFTER, USED_WITHIN and isOld mirror shared/claimAge.ts, checked by shared/fixtures/claim-age.json.
 const val RETIRE_AFTER = 90 * DAY_MS
+const val USED_WITHIN = 30 * DAY_MS
 
 class WikiSection(val name: String, val pages: List<Row>)
 
@@ -74,7 +75,8 @@ fun factTime(f: Row) = maxOf(f.long("at") ?: 0L, contestOf(f)?.at ?: 0L, f.updat
 
 fun isOld(f: Row, now: Long): Boolean {
     val at = f.long("at")
-    return f.str("state") == "retired" || (f.str("state") != "proposed" && at != null && at > 0 && now - at > RETIRE_AFTER)
+    val usedAt = f.long("used_at")
+    return f.str("state") == "retired" || (f.str("state") != "proposed" && at != null && at > 0 && now - at > RETIRE_AFTER && !(usedAt != null && usedAt > 0 && now - usedAt <= USED_WITHIN))
 }
 
 class Claim(val fact: Row, val old: List<Row>)
