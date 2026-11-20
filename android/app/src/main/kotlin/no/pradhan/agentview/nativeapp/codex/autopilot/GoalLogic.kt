@@ -125,6 +125,16 @@ fun goalEnd(why: String) = when {
     else -> "failed"
 }
 
+class RunDetail(val heading: String, val what: String, val editable: Boolean, val opens: Boolean)
+
+// How a run's detail reads (shared runDetail, fixture run-detail.json).
+fun runDetail(run: ChatRun) = RunDetail(
+    if (run.kind == "loop") "Loop" else "Goal",
+    if (run.kind == "loop") "Prompt" else "Condition",
+    run.kind == "goal" && run.state != "done",
+    run.kind == "goal" || run.kind == "loop",
+)
+
 fun goalBadge(run: ChatRun): Pair<String, BadgeTone> = when {
     run.state == "done" -> when (goalEnd(run.why)) {
         "done" -> "Done" to BadgeTone.Done

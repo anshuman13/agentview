@@ -79,7 +79,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAg
     val progress = if (goal) planProgress(hub, planOf(run.what), run.chatId) else null
     val state = loopNow(run, live.now)
     val working = live.running || agents.isNotEmpty()
-    val detail = { hub.shell.goalSheet.value = GoalSheet.Detail(run.id) }
+    val detail = if (runDetail(run).opens) ({ hub.shell.goalSheet.value = GoalSheet.Detail(run.id) }) else null
     val meta = listOfNotNull(
         state.at?.let { clock(it) },
         state.next?.let { "Next: $it" },
@@ -106,7 +106,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAg
             ListRow(
                 state.title, meta.ifEmpty { null }, lines = 2, compact = true,
                 leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
-                onClick = if ((goal || run.kind == "loop") && state.source == "round") ({ rounds = !rounds }) else if (goal) detail else null,
+                onClick = if ((goal || run.kind == "loop") && state.source == "round") ({ rounds = !rounds }) else detail,
             )
             agents.singleOrNull()?.let { a ->
                 ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, compact = true, onClick = { onOpenAgent(a.id) })

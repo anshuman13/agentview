@@ -9,6 +9,7 @@ import { agentsOf } from '../agents';
 import { useChatRun } from '../useChatRun';
 import { useCan } from '../../chat/useCan';
 import type { RunOp } from '../../../../shared/protocol';
+import { runDetail } from '../../../../shared/goalText';
 
 // The rail's title with the run's controls, and the run's state under it.
 export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose?: () => void }) {
@@ -36,7 +37,7 @@ export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose
         {(run || (canStop && running.length > 0)) && <IconButton icon="debug-stop" label={run ? 'Stop the run' : 'Stop all agents'} size="sm" onClick={stop} />}
         {onClose && <IconButton icon="close" label="Close the agents" size="sm" onClick={onClose} />}
       </div>
-      {line && (run.kind === 'goal' ? <button className="rail-s" onClick={() => openGoal(run.id)}>{line}</button> : <div className="rail-s">{line}</div>)}
+      {line && (runDetail(run).opens ? <button className="rail-s" onClick={() => openGoal(run.id)}>{line}</button> : <div className="rail-s">{line}</div>)}
       {board && <TriesBoard runId={run!.id} onClose={() => setBoard(false)} />}
     </>
   );
