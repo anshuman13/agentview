@@ -52,6 +52,8 @@ fun isQueued(j: Row, own: List<Row>, now: Long): Boolean {
 
 fun isEnabled(j: Row) = j.long("enabled") == 1L
 
+fun canRunNow(j: Row, own: List<Row>, now: Long) = !j.str("prompt").isNullOrBlank() && own.firstOrNull()?.str("status") != "running" && !isQueued(j, own, now)
+
 enum class JobState(val label: String) { Running("Running"), Queued("Queued"), Failed("Failed"), Off("Off") }
 
 fun jobState(j: Row, own: List<Row>, now: Long): JobState? {
