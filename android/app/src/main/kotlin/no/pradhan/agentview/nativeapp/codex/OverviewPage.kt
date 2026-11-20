@@ -117,6 +117,7 @@ private fun rememberOverviewData(hub: Hub, st: CodexState, profile: String?, now
 fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onGoals: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit) {
     val d = rememberOverviewData(hub, st, profile, now)
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }
+    val free = remember(st.meetings, profile, now / 60_000) { weekFreeMinutes(timedMeetings(st.meetings, profile).map { it.startsAt!! to it.endsAt!! }, now) }
     var all by remember { mutableStateOf(false) }
     var plan by remember { mutableStateOf<List<PlanSlot>?>(null) }
     val live by hub.store.state.select { it.live }
@@ -131,7 +132,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         if (running.isNotEmpty()) runningSection(running, counts.running + counts.waiting) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
         planDaySection(d, plan, { plan = it }, now, actions)
-        if (goals.isNotEmpty()) goalsSection(st, goals, onGoals)
+        if (goals.isNotEmpty()) goalsSection(st, goals, free, onGoals)
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
     }
 }
@@ -244,14 +245,15 @@ private fun TodayTaskRow(r: Row, late: Boolean, actions: TaskActions, onOpen: (R
     )
 }
 
-private fun LazyListScope.goalsSection(st: CodexState, goals: List<Row>, onGoals: () -> Unit) {
+private fun LazyListScope.goalsSection(st: CodexState, goals: List<Row>, free: Long, onGoals: () -> Unit) {
     item { SectionHeader("Goals this week") }
     item {
         Group {
             goals.forEachIndexed { i, g ->
                 if (i > 0) Hairline()
                 val p = goalProgress(st.items, g)
-                ListRow(g.title ?: "", if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet", onClick = onGoals, trailing = { Chevron() })
+                val meta = listOfNotNull("At risk".takeIf { goalAtRisk(st.items, g, free) }, if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet").joinToString(" · ")
+                ListRow(g.title ?: "", meta, onClick = onGoals, trailing = { Chevron() })
             }
         }
     }

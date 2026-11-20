@@ -618,6 +618,18 @@ class SharedCasesTest {
         for (c in cases("late-promise")) assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isLate(at(c, "since"), at(c, "now")))
     }
 
+    @Test fun goalRisk() {
+        fun at(a: JsonElement) = a.jsonArray.map { it.jsonPrimitive.int }.let { (y, m, d, h, mi) -> ZonedDateTime.of(y, m, d, h, mi, 0, 0, codexZone).toInstant().toEpochMilli() }
+        for (c in cases("goal-risk")) {
+            val goal = item("g", "goal")
+            val tasks = c.getValue("tasks").jsonArray.mapIndexed { i, t -> t.jsonObject.let { item("t$i", it.str("status"), null, WORK, "goal" to "g", "title" to (it["title"]?.jsonPrimitive?.content ?: "x")) } }
+            val busy = c.getValue("busy").jsonArray.map { it.jsonArray.let { s -> at(s[0]) to at(s[1]) } }
+            val free = weekFreeMinutes(busy, at(c.getValue("now")))
+            assertEquals(c.str("name"), c.getValue("free").jsonPrimitive.long, free)
+            assertEquals(c.str("name"), c.getValue("risk").jsonPrimitive.boolean, goalAtRisk(tasks, goal, free))
+        }
+    }
+
     @Test fun eventRule() {
         for (c in cases("event-rule")) {
             val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()

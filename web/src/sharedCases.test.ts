@@ -51,6 +51,8 @@ import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
 import { similarClaim } from '../../shared/claimMatch';
 import { isLate } from '../../shared/waiting';
+import { goalAtRisk } from './codex/data/tasks/goals';
+import { weekFreeMinutes, type Span } from './codex/data/tasks/plan';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -205,7 +207,19 @@ describe('cases shared with the Android app', () => {
     it(`isLate: ${c.name}`, () => expect(isLate(at(c.since), at(c.now))).toBe(c.expected));
   }
 
-  type JobTaskSpec = { id: string; status: string; madeAt: number; profile?: Profile; deleted?: boolean; source?: string; people?: string };
+  type RiskCase = { name: string; now: number[]; busy: number[][][]; tasks: { status: string; title?: string }[]; free: number; risk: boolean };
+  for (const c of cases<RiskCase>('goal-risk')) {
+    const at = ([y, m, d, h, mi]: number[]) => new Date(y, m - 1, d, h, mi).getTime();
+    it(`goalAtRisk: ${c.name}`, () => {
+      const goal = { id: 'g', profile: 'work', deleted: 0, status: 'goal' } as unknown as ItemRow;
+      const items = c.tasks.map((t, i) => ({ id: `t${i}`, profile: 'work', deleted: 0, goal: 'g', title: t.title ?? 'x', status: t.status }) as unknown as ItemRow);
+      const free = weekFreeMinutes(c.busy.map(([a, b]) => [at(a), at(b)] as Span), at(c.now));
+      expect(free).toBe(c.free);
+      expect(goalAtRisk(items, goal, free)).toBe(c.risk);
+    });
+  }
+
+  type JobTaskSpec ={ id: string; status: string; madeAt: number; profile?: Profile; deleted?: boolean; source?: string; people?: string };
   for (const c of cases<{ name: string; job: { name: string; profile: Profile }; items: JobTaskSpec[]; expected: string[] }>('job-tasks')) {
     const items = c.items.map((i) => ({ id: i.id, profile: i.profile ?? c.job.profile, deleted: i.deleted ? 1 : 0, source: i.source ?? 'job', people: i.people ?? c.job.name, status: i.status, updated_at: i.madeAt, field_times: '{}' }) as unknown as ItemRow);
     it(`tasksOf: ${c.name}`, () => expect(tasksOf(items, c.job as Job).map((r) => r.id)).toEqual(c.expected));

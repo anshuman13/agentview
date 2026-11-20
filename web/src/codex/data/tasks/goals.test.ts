@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { goalAtRisk, goalHistory, goalSummary, moveBlock, reopenBlock } from './goals';
-import { weekFreeMinutes, type Span } from './plan';
+import { goalHistory, goalSummary, moveBlock, reopenBlock } from './goals';
 import type { ItemRow } from '../sync';
 
 const row = (o: Partial<ItemRow>) => ({ profile: 'work', deleted: 0, ...o }) as ItemRow;
@@ -64,32 +63,6 @@ describe('moveBlock', () => {
   it('refuses a same-title goal, ignoring case and spacing', () => {
     expect(moveBlock([cur, nxt('1', '  SHIP it ')], cur, now)).toBe('same');
     expect(moveBlock([cur, nxt('1', 'Ship it', { profile: 'personal' })], cur, now)).toBeNull();
-  });
-});
-
-describe('goalAtRisk', () => {
-  const fri = new Date(2026, 10, 6, 16).getTime();
-  const sat = new Date(2026, 10, 7, 10).getTime();
-  const goal = row({ id: 'g', status: 'goal' });
-  const open = (n: number, o: Partial<ItemRow> = {}) => Array.from({ length: n }, (_, i) => row({ id: `t${i}`, status: 'open', goal: 'g', title: 'x', ...o }));
-  const risk = (items: ItemRow[], now: number, busy: Span[] = []) => goalAtRisk(items, goal, weekFreeMinutes(busy, now));
-
-  it('compares open estimates with the free minutes left', () => {
-    expect(risk(open(1), fri)).toBe(false);
-    expect(risk(open(2), fri)).toBe(false);
-    expect(risk(open(3), fri)).toBe(true);
-  });
-
-  it('is at risk on the weekend only with open tasks', () => {
-    expect(risk(open(1), sat)).toBe(true);
-    expect(risk([...open(1, { status: 'done' })], sat)).toBe(false);
-    expect(risk([], sat)).toBe(false);
-  });
-
-  it('counts a task with a focus block as open and takes busy spans as given', () => {
-    const t = open(2, { title: 'x ~1h', at: fri + 1 });
-    expect(risk(t, fri)).toBe(true);
-    expect(risk(open(1), fri, [[fri, fri + 40 * 60_000]])).toBe(true);
   });
 });
 

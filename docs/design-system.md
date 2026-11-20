@@ -313,6 +313,8 @@ me, what is left today. After the Skeleton while loading, a block with nothing i
    first (title, due time or a Late Badge, a leading check IconButton sm and one More IconButton sm with Snooze to
    tomorrow and Open). Seven rows, then a "Show all N" quiet Button sm that expands in place. From the first task done today the header's action slot holds a quiet "N of M done" Badge (Badge progress exception); it is absent at N = 0.
 
+After Today and Plan my day, a **Goals this week** block (hidden when the week has no goals): Section with the goal count over a Grouped list of Rows, each with the goal title, meta "At risk · 2/5 done" or "No tasks yet" (At risk only when the goal's open task estimates exceed the free work minutes left this week; under All the profile follows At risk), and a chevron; a Row opens the Goals page. Running chats show as a Running block after Needs you. The phone has the same Goals block.
+
 The page header is the title and the menu button only: with no count line. A running focus timer shows in its bar.
 
 Job runs: a job page shows run history from one Row (Row density) inside a Grouped list, titled Runs, with the last run's time and Badge and a chevron; it opens a sheet (`as-sheet-overlay`, `Back`, `useSheetDrag`, role dialog) of the 10 latest runs, and focus returns to the row on close.

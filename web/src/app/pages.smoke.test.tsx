@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { stubGlobal } from '../../../testing';
 
 const store = { runs: [] as unknown[], live: [] as unknown[], pending: [] as unknown[], session: { id: 'c1', cwd: '/w' }, recentFiles: [] as string[], ui: { sketch: null } };
-vi.mock('../codex/data', () => ({ useAssistantStore: vi.fn(), assistantStore: vi.fn(), useAssistant: vi.fn(), useAssistantData: () => ({ jobs: [], runs: [] }) }));
+vi.mock('../codex/data', () => ({ useAssistantStore: vi.fn(), assistantStore: vi.fn(), useAssistant: vi.fn(), useAssistantData: () => ({ jobs: [], runs: [] }), useAssistantTable: vi.fn() }));
 
 const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };
 stubGlobal('document', doc);
@@ -16,6 +16,9 @@ const realStore = await import('./store');
 vi.mock('./store', () => ({ ...realStore, useStore: (select: (s: unknown) => unknown) => select(store) }));
 
 const { LoopCard } = await import('../chat/cards/LoopCard');
+const { GoalsBlock } = await import('../codex/overview/GoalsBlock');
+const { GoalField } = await import('../codex/tasks/Goals');
+const { weekStart } = await import('../codex/data/dates');
 const { PrivacyGroup } = await import('./shell/Settings');
 const { SketchFrame, SketchList, Sketches } = await import('../workspace/Sketches');
 
@@ -24,6 +27,25 @@ describe('page smoke', () => {
     store.runs = [{ id: 'r1', kind: 'job', sessionId: 's', chatId: 'c1', title: 'Fix the parser', what: '', startedAt: 1, endedAt: null, state: 'paused', why: '', round: 1, max: 1, nextAt: null, costUsd: 0, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [] }];
     const html = renderToStaticMarkup(<LoopCard />);
     expect(html).toContain('Commit, push and open a PR');
+  });
+
+  it('the Overview goals block shows a goal with its progress and nothing without goals', () => {
+    const row = (o: object) => ({ profile: 'work', deleted: 0, ...o }) as never;
+    const items = [row({ id: 'g', title: 'Ship it', status: 'goal', at: weekStart(Date.now()) }), row({ id: 'a', status: 'done', goal: 'g' }), row({ id: 'b', status: 'open', goal: 'g' })];
+    const html = renderToStaticMarkup(<GoalsBlock items={items} meetings={[]} filter="work" now={Date.now()} />);
+    expect(html).toContain('Goals this week');
+    expect(html).toContain('Ship it');
+    expect(html).toContain('1/2 done');
+    expect(renderToStaticMarkup(<GoalsBlock items={[]} meetings={[]} filter="all" now={Date.now()} />)).toBe('');
+  });
+
+  it('the goal field shows the profile chips under All and hides at the goal limit', () => {
+    const state = (goals: unknown[], pick?: () => void) => ({ goals, profile: 'work', pick, text: '', setText: () => {}, add: async () => {} }) as never;
+    const open = renderToStaticMarkup(<GoalField {...state([], () => {})} />);
+    expect(open).toContain('Add a goal for this week');
+    expect(open).toContain('Personal');
+    expect(renderToStaticMarkup(<GoalField {...state([])} />)).not.toContain('Personal');
+    expect(renderToStaticMarkup(<GoalField {...state([1, 2, 3], () => {})} />)).toBe('');
   });
 
   it('Sketches renders on an empty store', () => {

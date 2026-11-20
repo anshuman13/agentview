@@ -1,0 +1,13 @@
+[
+  {"name": "one open task fits the last hour of the week", "now": [2026, 11, 6, 16, 0], "busy": [], "tasks": [{"status": "open"}], "free": 60, "risk": false},
+  {"name": "two default estimates fill it exactly", "now": [2026, 11, 6, 16, 0], "busy": [], "tasks": [{"status": "open"}, {"status": "open"}], "free": 60, "risk": false},
+  {"name": "three open tasks do not fit", "now": [2026, 11, 6, 16, 0], "busy": [], "tasks": [{"status": "open"}, {"status": "open"}, {"status": "open"}], "free": 60, "risk": true},
+  {"name": "done tasks do not count", "now": [2026, 11, 6, 16, 0], "busy": [], "tasks": [{"status": "open"}, {"status": "done"}, {"status": "done"}, {"status": "done"}], "free": 60, "risk": false},
+  {"name": "estimates in titles are summed", "now": [2026, 11, 6, 16, 0], "busy": [], "tasks": [{"status": "open", "title": "x ~1h"}, {"status": "open", "title": "y ~15m"}], "free": 60, "risk": true},
+  {"name": "a meeting takes free minutes", "now": [2026, 11, 6, 16, 0], "busy": [[[2026, 11, 6, 16, 0], [2026, 11, 6, 16, 40]]], "tasks": [{"status": "open"}], "free": 20, "risk": true},
+  {"name": "a gap under 15 minutes is not free", "now": [2026, 11, 6, 16, 0], "busy": [[[2026, 11, 6, 16, 0], [2026, 11, 6, 16, 50]]], "tasks": [{"status": "open"}], "free": 0, "risk": true},
+  {"name": "a whole week is free on Monday", "now": [2026, 11, 2, 9, 0], "busy": [], "tasks": [{"status": "open"}], "free": 2640, "risk": false},
+  {"name": "the weekend has no free minutes", "now": [2026, 11, 7, 10, 0], "busy": [], "tasks": [{"status": "open"}], "free": 0, "risk": true},
+  {"name": "the weekend with only done tasks is not at risk", "now": [2026, 11, 7, 10, 0], "busy": [], "tasks": [{"status": "done"}], "free": 0, "risk": false},
+  {"name": "a goal without tasks is not at risk", "now": [2026, 11, 7, 10, 0], "busy": [], "tasks": [], "free": 0, "risk": false}
+]
