@@ -29,6 +29,11 @@ data class Worktree(val id: String = "", val repo: String = "", val cwd: String,
 
 data class Workspace(val repos: List<Repo> = emptyList(), val trees: List<Worktree> = emptyList(), val saved: List<SavedSession> = emptyList(), val pins: List<String> = emptyList(), val seen: Map<String, Long> = emptyMap())
 
+fun withRestored(ws: Workspace, saved: SavedSession, pinned: Boolean) = ws.copy(
+    saved = listOf(saved) + ws.saved.filter { it.sessionId != saved.sessionId },
+    pins = if (pinned) (ws.pins - saved.sessionId) + saved.sessionId else ws.pins,
+)
+
 fun inside(cwd: String, dir: String) = cwd == dir || cwd.startsWith("$dir/")
 
 // The repo folder a working directory belongs to: the owner of the worktree it is in, else the deepest repo containing it.

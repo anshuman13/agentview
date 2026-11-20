@@ -23,6 +23,16 @@ class FoldersTest {
     }
 
     @Test
+    fun restoredChatGoesFirstAndKeepsItsPin() {
+        val ws = Workspace(repos, trees, listOf(saved("s1", "/w/shop")), listOf("s1"))
+        val back = withRestored(ws, saved("s2", "/w/agentview"), true)
+        assertEquals(listOf("s2", "s1"), back.saved.map { it.sessionId })
+        assertEquals(listOf("s1", "s2"), back.pins)
+        assertEquals(listOf("s1"), withRestored(ws, saved("s1", "/w/shop"), false).saved.map { it.sessionId })
+        assertEquals(listOf("s1"), withRestored(ws, saved("s2", "/w/agentview"), false).pins)
+    }
+
+    @Test
     fun groupsLiveAndSavedByRepoWithNeedsFirst() {
         val ws = Workspace(repos, trees, listOf(saved("s1", "/w/agentview", 50), saved("s2", "/w/shop", 10), saved("l1", "/w/agentview", 5)))
         val groups = groupByRepo(listOf(live("l1", "/w/agentview/server", active = 100), live("l2", "/wt/shop-x", pending = 1, active = 20)), ws)

@@ -22,22 +22,25 @@ type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
 type Pin = (on: boolean) => Promise<boolean>;
 type Actions = {
   rename: (id: string, title: string) => void;
-  archive: (s: { sessionId: string; title: string }) => void;
-  archiveNow: (s: SavedSession, pinned: boolean, pin: Pin) => void;
+  archive: (s: SavedSession, pinned: boolean, pin?: Pin) => void;
+  archiveNow: (s: SavedSession, pinned: boolean, pin?: Pin) => void;
 };
 
-export const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Actions => ({
-  rename: (id, title) => void renameChat(id, title),
-  archive: (s) => ask(archiveChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), notice)),
-  archiveNow: (s, pinned, pin) => removeRequest(s.sessionId, '&archive', () => {
+export const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Actions => {
+  const archived = (s: SavedSession, pinned: boolean, pin?: Pin) => () => {
     setChats((l) => l.filter((x) => x.sessionId !== s.sessionId));
     showSnack('Archived', async () => {
       if (!(await restoreChat(s.sessionId))) return notice('Could not restore the chat. It is still in the bin.');
       setChats((l) => [s, ...l]);
-      if (pinned) await pin(true);
+      if (pinned) await pin?.(true);
     });
-  }, notice)(),
-});
+  };
+  return {
+    rename: (id, title) => void renameChat(id, title),
+    archive: (s, pinned, pin) => ask(archiveChat(s, archived(s, pinned, pin), notice)),
+    archiveNow: (s, pinned, pin) => removeRequest(s.sessionId, '&archive', archived(s, pinned, pin), notice)(),
+  };
+};
 
 type ChatRowProps = {
   sessionId?: string;
@@ -100,6 +103,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
     send({ type: 'retry' }, live!.id);
   };
   const swipe = chatSwipe(!!pinned, live);
+  const saved: SavedSession = { sessionId: sessionId!, title, cwd, gitBranch: null, lastModified };
   const swipePin = async () => {
     const on = swipe.right === 'pin';
     if (await onPin!(on)) showSnack(on ? 'Pinned' : 'Unpinned', () => void onPin!(!on));
@@ -128,7 +132,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
             case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={onBeside!}>Open beside</MenuItem>;
             case 'close': return <MenuItem key={key} icon="close" onClick={onClose!}>Close chat</MenuItem>;
             case 'separator': return <MenuSeparator key={key} />;
-            case 'archive': return <MenuItem key={key} icon="archive" danger disabled={!sessionId} onClick={() => actions.archive({ sessionId: sessionId!, title })}>Archive</MenuItem>;
+            case 'archive': return <MenuItem key={key} icon="archive" danger disabled={!sessionId} onClick={() => actions.archive(saved, !!pinned, onPin)}>Archive</MenuItem>;
           }
         })}
       />
@@ -142,7 +146,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
       onRight={swipePin}
       leftLabel="Archive"
       leftIcon="archive"
-      onLeft={swipe.left ? () => actions.archiveNow({ sessionId, title, cwd, gitBranch: null, lastModified }, !!pinned, onPin) : undefined}
+      onLeft={swipe.left ? () => actions.archiveNow(saved, !!pinned, onPin) : undefined}
     >
       {row}
     </Swipe>

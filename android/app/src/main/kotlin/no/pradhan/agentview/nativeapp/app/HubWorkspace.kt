@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
+import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.Workspace
+import no.pradhan.agentview.nativeapp.sessions.withRestored
 
 fun Hub.refreshWorkspace(force: Boolean = false) {
     val now = System.currentTimeMillis()
@@ -70,9 +72,18 @@ fun Hub.rename(sessionId: String, title: String) = write("Could not rename the c
     workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.map { if (it.sessionId == sessionId) it.copy(title = title) else it }) }
 }
 
-fun Hub.archive(sessionId: String) = write("Could not archive the chat. It is still in the list.") {
+fun Hub.archive(sessionId: String, title: String) = write("Could not archive the chat. It is still in the list.") {
+    val row = workspace.value.saved.firstOrNull { it.sessionId == sessionId } ?: SavedSession(sessionId, title)
+    val pinned = sessionId in workspace.value.pins
     api.archive(sessionId)
     workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.filter { it.sessionId != sessionId }) }
+    undoable.tryEmit(Undoable("Archived") { restore(row, pinned) })
+}
+
+private fun Hub.restore(row: SavedSession, pinned: Boolean) = write("Could not restore the chat. It is still in the bin.") {
+    api.restore(row.sessionId)
+    if (pinned) api.pin(row.sessionId, true)
+    workspace.value = withRestored(workspace.value, row, pinned)
 }
 
 fun Hub.pin(sessionId: String, on: Boolean) = write("Could not ${if (on) "pin" else "unpin"} the chat. Try again.") {

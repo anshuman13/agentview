@@ -82,6 +82,8 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
 
     suspend fun archive(sessionId: String) { call(url("/api/sessions?id=${enc(sessionId)}&archive").delete()) }
 
+    suspend fun restore(sessionId: String) { call(url("/api/sessions/restore?id=${enc(sessionId)}").post("".toRequestBody())) }
+
     // web/src/codex/data/remote.ts: the assistant hub's rows are pulled by version and pushed as per-column changes.
     suspend fun assistantChanges(since: Long, full: Boolean): String = call(url("/api/assistant/changes?since=$since" + if (full) "&full=1" else "")).decodeToString()
     suspend fun assistantSync(body: String): String = call(url("/api/assistant/sync").post(body.toRequestBody(json))).decodeToString()
