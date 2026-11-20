@@ -8,7 +8,7 @@ import { ACCOUNT_OF } from '../calendar/calendar.js';
 import { ask } from '../core/claude.js';
 import { getMeta, pruneMeta, setMeta, type Profile } from '../core/db.js';
 import { applyChanges, type Change } from '../core/sync.js';
-import { similarClaim } from '../../../shared/claimMatch.js';
+import { samePage, similarClaim } from '../../../shared/claimMatch.js';
 import { norm } from './wikiUpdates.js';
 import { searchWiki } from './wikiSearch.js';
 
@@ -52,7 +52,7 @@ function saveLearned(db: Database, c: Chat, claims: string[], decisions: Decisio
     let page_id: string | null = null;
     if (page) {
       const title = page.page.trim().toLowerCase();
-      page_id = pages.find((p) => p.id === page.page || p.title.toLowerCase() === title)?.id ?? null;
+      page_id = pages.find((p) => p.id === page.page)?.id ?? samePage(page.page, pages)?.id ?? null;
       if (!page_id) {
         if (!title || !page.section?.trim()) return false;
         page_id = `learn:page:${hash(`${c.profile}:${title}`)}`;

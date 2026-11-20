@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { profileOf } from '../claude/accounts.js';
 import { isOld as isOldClaim } from '../../../../shared/claimAge.js';
-import { similarClaim } from '../../../../shared/claimMatch.js';
+import { samePage, similarClaim } from '../../../../shared/claimMatch.js';
 import { errText } from '../../../../shared/util.js';
 import { hubGet, hubPush, hubRows, hubUsed, mirrored, type HubChange, type HubRow } from '../../integrations/assistant.js';
 import { defineTool } from './tool.js';
@@ -117,7 +117,9 @@ export const wikiProposeTool = defineTool({
     const now = Date.now();
     const { pages, facts } = await own(cwd, profile);
     const changes: HubChange[] = [];
-    let pageId = a.page ? pages.find((r) => r.profile === profile && (r.id === a.page || String(r.title).toLowerCase() === a.page!.toLowerCase()))?.id : undefined;
+    const open = pages.map((r) => ({ id: r.id as string, title: String(r.title), state: state(r) }));
+    const found = a.page ? open.find((r) => r.id === a.page && r.state !== 'rejected') ?? samePage(a.page, open) : undefined;
+    let pageId = found?.id;
     if (a.page && !pageId) {
       if (!a.section) return 'A new page needs a section. Pass section, or an existing page id from wiki_search.';
       pageId = crypto.randomUUID();
@@ -130,6 +132,7 @@ export const wikiProposeTool = defineTool({
       fields: { text: a.text, page_id: pageId ?? null, heading: a.heading ?? null, sources: JSON.stringify(a.sources), at: now, state: 'proposed', replaces: a.replaces ?? null, added_by: chatId ? `${provider}:${chatId}` : provider },
     });
     await hubPush(changes);
-    return `Proposed [${id}] for the user to approve${pageId ? '' : ' in memory'}.${similar ? ` Similar to [${similar.id}]: ${similar.text}. Pass replaces if it updates that claim.` : ''}`;
+    const filed = found && found.id !== a.page && found.title !== a.page ? ` Filed under existing page ${found.title}.` : '';
+    return `Proposed [${id}] for the user to approve${pageId ? '' : ' in memory'}.${filed}${similar ? ` Similar to [${similar.id}]: ${similar.text}. Pass replaces if it updates that claim.` : ''}`;
   },
 });

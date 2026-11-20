@@ -36,6 +36,14 @@ export function similarClaim<T extends { text: string }>(text: string, claims: T
   return best;
 }
 
+const pageKey = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean).join(' ').replace(/^the /, '').replace(/(?<=[^s]{3}[^s])s$/, '');
+
+// The first live or proposed page whose title matches, ignoring case, punctuation, a leading "the" and a trailing plural "s". A rejected page never matches.
+export function samePage<T extends { title: string; state?: string | null }>(title: string, pages: T[]): T | undefined {
+  const key = pageKey(title);
+  return key ? pages.find((p) => [undefined, null, 'live', 'proposed'].includes(p.state) && pageKey(p.title) === key) : undefined;
+}
+
 // The ids of claims that another claim from the same folder is similar to, so a correction repeated in one repo can become a rule there.
 export function repeatedInFolder(claims: { id: string; text: string; folder?: string }[]) {
   const byFolder = new Map<string, typeof claims>();
