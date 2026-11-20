@@ -75,7 +75,8 @@ fun ExtraContent(
         route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
         route.startsWith("person:") -> PersonPage(hub, st, key, now, actions, ops, openMeeting, { f -> push(claimRoute(f)) }, onTask) { push("meeting:${it.key}#notes") }
-        route == "wiki" -> WikiIndexPage(st, profile, now, actions, ops.review, hub.readOnly, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") })
+        route == "wiki" -> WikiIndexPage(st, profile, now, actions, ops.review, hub.readOnly, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") },
+            if (hub.readOnly) null else ({ text -> hub.askCodex(text, proposalProfile(null, profile)) }))
         wikiRoute == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop, openChat, anchor,
             if (hub.readOnly) null else ({ text -> hub.rememberInMemory(text, proposalProfile(null, profile)) }))
         route.startsWith("wiki:") -> {

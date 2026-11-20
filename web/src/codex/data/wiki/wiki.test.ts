@@ -441,6 +441,16 @@ describe('driftFacts', () => {
     const proposed = fact('new', 'p1', 'One', 'Basic plan costs 12 euros monthly', { at: 40 * day, state: 'proposed', replaces: 'price' });
     expect(driftFacts([...fs, proposed], ps, [meeting], 60 * day)).toEqual([]);
   });
+
+  it('runs the shared drift cases', () => {
+    type Row = Record<string, unknown> & { agoDays: number };
+    const c = JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/drift-claims.json', import.meta.url), 'utf8')) as { now: number; pages: Row[]; meetings: (Row & { decisions: string[] })[]; facts: Row[]; expected: string[][] };
+    const at = (r: Row) => c.now - r.agoDays * 86_400_000;
+    const ps = c.pages.map((p) => page(p.id as string, p.title as string));
+    const ms = c.meetings.map((m) => ({ ...common(m.id as string), title: m.title, starts_at: at(m), summary: null, decisions: JSON.stringify(m.decisions) }) as unknown as Meeting);
+    const fs = c.facts.map(({ id, page_id, text, agoDays, ...extra }) => fact(id as string, page_id as string, 'One', text as string, { ...extra, at: at({ agoDays }) }));
+    expect(driftFacts(fs, ps, ms, c.now).map((d) => [d.fact.id, d.decision.text])).toEqual(c.expected);
+  });
 });
 
 describe('staleFacts', () => {

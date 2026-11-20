@@ -93,7 +93,7 @@ private fun PageTile(p: Row) {
 private class ReviewRow(val key: String, val title: String, val meta: String, val claims: List<Row>, val group: Boolean, val open: () -> Unit)
 
 @Composable
-fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, readOnly: Boolean, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit, onMemory: () -> Unit) {
+fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, readOnly: Boolean, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit, onMemory: () -> Unit, onAsk: ((String) -> Unit)?) {
     var query by rememberSaveable { mutableStateOf("") }
     val pages = remember(st.pages, profile) { st.pages.filter { matchesProfile(profile, it) } }
     val facts = remember(st.facts, profile) { st.facts.filter { matchesProfile(profile, it) } }
@@ -102,8 +102,13 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     val stats = remember(facts) { statsByPage(facts) }
     val hits = remember(pages, facts, query) { searchWiki(pages, facts, query) }
     val titles = remember(pages) { pages.associate { it.id to it.title } }
-    val stale = remember(pages, facts, st.meetings, profile, now / 60_000) { staleFacts(facts, pages, st.meetings.filter { matchesProfile(profile, it) }, now) }
+    val meetings = remember(st.meetings, profile) { st.meetings.filter { matchesProfile(profile, it) } }
+    val stale = remember(pages, facts, meetings, now / 60_000) { staleFacts(facts, pages, meetings, now) }
+    val drift = remember(pages, facts, meetings, now / 60_000) { driftFacts(facts, pages, meetings, now) }
+    var lookOpen by remember { mutableStateOf(false) }
     var allStale by rememberSaveable { mutableStateOf(false) }
+    var allDrift by rememberSaveable { mutableStateOf(false) }
+    var asking by remember { mutableStateOf(false) }
     var allLoose by rememberSaveable { mutableStateOf(false) }
     var creating by remember { mutableStateOf(false) }
     var feedOpen by remember { mutableStateOf(false) }
@@ -122,6 +127,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             LayoutRow(Modifier.padding(top = Tokens.sp4, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
                 SearchField(query, { query = it }, "Search the wiki", Modifier.weight(1f))
                 IconBtn("history", "Feed", { feedOpen = true })
+                if (onAsk != null) IconBtn("sparkle", "Ask", { asking = true })
             }
         }
         if (query.isNotBlank()) {
@@ -153,7 +159,8 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             if (!allLoose && grouped.loose.size > 3) item { Button("Show all ${grouped.loose.size}", { allLoose = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         }
         item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Memory", plural(stats[null]?.claims ?: 0, "claim"), onClick = onMemory, trailing = { Chevron() }) } }
-        if (stale.isNotEmpty()) {
+        if (stale.isNotEmpty() || drift.isNotEmpty()) item { SectionHeader("Needs a look", (stale.size + drift.size).toString(), lookOpen, { lookOpen = !lookOpen }) }
+        if (lookOpen && stale.isNotEmpty()) {
             item { SectionHeader("Stale", stale.size.toString()) }
             lazyGroup(if (allStale) stale else stale.take(3), key = { "stale:${it.key}" }) { f ->
                 val months = ((now - (f.long("at") ?: 0L)) / (30 * DAY_MS)).toInt()
@@ -163,6 +170,15 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
                     menu = { dismiss -> MenuItem("Retire", "archive", { dismiss(); actions.retireClaim(f) }, danger = true) })
             }
             if (!allStale && stale.size > 3) item { Button("Show all ${stale.size}", { allStale = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
+        }
+        if (lookOpen && drift.isNotEmpty()) {
+            item { SectionHeader("Maybe changed", drift.size.toString()) }
+            lazyGroup(if (allDrift) drift else drift.take(3), key = { "drift:${it.fact.key}" }) { r ->
+                val f = r.fact
+                val d = r.decision
+                ListRow(f.str("text") ?: "", "${titles[f.str("page_id")]} · ${d.meeting.title ?: "Meeting"}, ${shortDate(d.at, now)}: ${d.text}", onClick = { onClaim(f) })
+            }
+            if (!allDrift && drift.size > 3) item { Button("Show all ${drift.size}", { allDrift = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         }
         overview?.let { o ->
             item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow(o.title ?: "Overview", o.str("summary")?.let { firstLine(it) }, onClick = { onOpen(o) }) } }
@@ -195,6 +211,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
         newPage(title, "Pages", sort, proposalProfile(null, profile), System.currentTimeMillis())?.let { actions.create(it, "Page created"); onOpen(it) }
     }, { creating = false }, maxLength = 120)
     if (feedOpen) FeedSheet(facts, pages, now, { feedOpen = false }) { feedOpen = false; onClaim(it) }
+    if (asking && onAsk != null) ClaimTextSheet("Ask", "", "Ask", { asking = false }, "Ask the wiki") { q -> onAsk(wikiAskText(q, st.pages, facts, null, now)) }
 }
 
 // Recently updated (web wiki/Feed.tsx): the 5 newest current claims with their page, source or contester and age.

@@ -1,0 +1,25 @@
+{
+  "now": 20000000000,
+  "pages": [
+    {"id": "pricing", "title": "Pricing"},
+    {"id": "hiring", "title": "Hiring plan"}
+  ],
+  "meetings": [
+    {"id": "m1", "title": "Pricing review", "agoDays": 10, "decisions": ["Basic plan now costs 12 euros", "Support hours move to weekdays only"]},
+    {"id": "m2", "title": "Weekly sync", "agoDays": 5, "decisions": ["Hiring freeze for engineers this quarter"]},
+    {"id": "m3", "title": "Pricing offsite", "agoDays": 120, "decisions": ["Enterprise seats need signed annual contracts"]},
+    {"id": "m4", "title": "Pricing review", "agoDays": 30, "decisions": ["Basic plan now costs 11 euros"]},
+    {"id": "m5", "title": "Hiring plan review", "agoDays": 3, "decisions": ["Hiring plan adds one engineer"]}
+  ],
+  "facts": [
+    {"id": "match", "page_id": "pricing", "text": "Basic plan costs 10 euros monthly", "agoDays": 60},
+    {"id": "newest", "page_id": "hiring", "text": "Hiring plan adds two engineers", "agoDays": 60},
+    {"id": "one-word", "page_id": "pricing", "text": "Support team answers chats in English", "agoDays": 60},
+    {"id": "no-title", "page_id": "hiring", "text": "Hiring freeze ends when budget approved for engineers", "agoDays": 60},
+    {"id": "after-decision", "page_id": "pricing", "text": "Basic plan costs 9 euros", "agoDays": 2},
+    {"id": "pending", "page_id": "pricing", "text": "Basic plan costs 10 euros yearly", "agoDays": 60},
+    {"id": "proposal", "page_id": "pricing", "text": "Basic plan costs 12 euros yearly", "agoDays": 1, "state": "proposed", "replaces": "pending"},
+    {"id": "outside-90", "page_id": "pricing", "text": "Enterprise seats need annual contracts", "agoDays": 200}
+  ],
+  "expected": [["newest", "Hiring plan adds one engineer"], ["match", "Basic plan now costs 12 euros"]]
+}

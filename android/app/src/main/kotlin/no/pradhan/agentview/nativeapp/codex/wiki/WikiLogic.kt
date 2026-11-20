@@ -19,6 +19,8 @@ import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
 import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.liveRows
+import no.pradhan.agentview.nativeapp.codex.meetings.Decision
+import no.pradhan.agentview.nativeapp.codex.meetings.decisionLog
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
 import no.pradhan.agentview.nativeapp.sessions.queryWords
@@ -54,6 +56,17 @@ private val WORD = Regex("[\\p{L}\\p{N}]{4,}")
 private const val SIMILAR = 0.6
 
 private fun keyWords(t: String) = WORD.findAll(t.lowercase()).map { it.value }.filter { it !in STOP }.toSet()
+
+// titleWords, decisionKey and mayChange mirror shared/claimMatch.ts, checked by shared/fixtures/drift-claims.json.
+fun titleWords(t: String) = t.lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+
+class DecisionKey(val words: Set<String>, val hay: String)
+
+fun decisionKey(text: String, meetingTitle: String?) = DecisionKey(keyWords(text), "${meetingTitle ?: ""} $text".lowercase())
+
+// A decision may change a claim when the decision or its meeting title names the claim's page and the two share at least two key words.
+fun mayChange(d: DecisionKey, claim: Set<String>, title: List<String>) =
+    title.isNotEmpty() && title.all { it in d.hay } && d.words.count { it in claim } >= 2
 
 private fun overlap(a: Set<String>, b: Set<String>): Double {
     val (short, long) = if (a.size <= b.size) a to b else b to a
@@ -331,6 +344,22 @@ fun staleFacts(facts: List<Row>, pages: List<Row>, meetings: List<Row>, now: Lon
         val key = "${f.profile}:${f.str("page_id")}"
         !f.str("page_id").isNullOrEmpty() && key in titles && current(f) && isOld(f, now) && !mentioned(key)
     }.sortedBy { it.long("at") ?: 0L }
+}
+
+class Drift(val fact: Row, val decision: Decision)
+
+// Current claims that a later decision of the last 90 days may change, unless a proposed replacement waits in Review; newest decision first, one per claim (web wiki.ts driftFacts, checked by shared/fixtures/drift-claims.json).
+fun driftFacts(facts: List<Row>, pages: List<Row>, meetings: List<Row>, now: Long): List<Drift> {
+    val decisions = decisionLog(meetings).filter { it.at > now - 90 * DAY_MS && it.at <= now }.map { it to decisionKey(it.text, it.meeting.title) }
+    val pageWords = liveRows(pages).associate { it.key to titleWords(it.title ?: "") }
+    val current = currentClaims(facts)
+    val pending = proposals(facts).mapNotNull { f -> f.str("replaces")?.ifEmpty { null }?.let { "${f.profile}:$it" } }.toSet()
+    return liveRows(facts).mapNotNull { f ->
+        if (!current(f) || f.str("page_id").isNullOrEmpty() || f.key in pending) return@mapNotNull null
+        val title = pageWords["${f.profile}:${f.str("page_id")}"]?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+        val words = keyWords(f.str("text") ?: "")
+        decisions.firstOrNull { (d, key) -> d.meeting.profile == f.profile && d.at > factTime(f) && mayChange(key, words, title) }?.let { Drift(f, it.first) }
+    }.sortedByDescending { it.decision.at }
 }
 
 class WikiHits(val pages: List<Row>, val claims: List<Row>)
