@@ -17,7 +17,7 @@ vi.mock('../exec.js', () => ({
   },
 }));
 
-const { github, listPrs, repoKey } = await import('./github.js');
+const { fixPrompt, github, listPrs, repoKey } = await import('./github.js');
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const listCalls = () => calls.filter((a) => a[1] === 'list').length;
 const viewCalls = () => calls.filter((a) => a[1] === 'view').length;
@@ -62,6 +62,27 @@ describe('listPrs', () => {
     await github(cwd, 'GET', new URL('http://x/api/gh/prs?fresh'), async () => '');
     await tick();
     expect(viewCalls()).toBe(prefetched + 1);
+  });
+});
+
+describe('fixPrompt', () => {
+  const pr = { number: 7, title: 'Add x', branch: 'feat/x' };
+  const lines = Array.from({ length: 200 }, (_, i) => `line ${i}`).join('\n');
+
+  it('holds the check, the last 80 log lines and the do-not-push instruction', () => {
+    const text = fixPrompt(pr, 'lint', `${lines}\n\n`, true);
+    expect(text).toContain('"lint"');
+    expect(text).toContain('line 199');
+    expect(text).toContain('line 120');
+    expect(text).not.toContain('line 119');
+    expect(text).toContain('run the checks. Do not push.');
+    expect(text).not.toContain('no local checkout');
+  });
+
+  it('says so when there is no local checkout or no log', () => {
+    const text = fixPrompt(pr, 'lint', '', false);
+    expect(text).toContain('no local checkout of feat/x');
+    expect(text).toContain('No log was available');
   });
 });
 

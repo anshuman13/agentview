@@ -296,6 +296,10 @@ and any git action clear the selection. The phone has no multi-select.
 
 The spec review reports under the target `spec:<slug>`, shown as a Findings section in the opened Spec card (web and phone): the row opens the spec on that line on web and the file on the phone, and Fix makes the agent edit the spec. A repeat review replaces the list and keeps dismissed findings hidden.
 
+A failed check in the web pull request pane has a Fix with Claude button. It starts a new chat in the local checkout or
+worktree of the PR's branch (the repo root when none has it, which the prompt says) with the check name, the last 80
+lines of its `gh run view --log-failed` log and the instruction to fix it, run the checks and not push.
+
 A pull request Claude opened with `gh pr create` stays linked to its chat: the pull request row shows "Open chat"
 while that chat is open.
 

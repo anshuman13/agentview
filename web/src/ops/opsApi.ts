@@ -70,3 +70,5 @@ export const fetchPulls = (fresh: boolean) => get<PullRequest[]>(`/api/gh/prs${f
 export const fetchPull = (number: number) => get<PullRequestDetail>(`/api/gh/pr/${number}`);
 
 export const actOnPull = (number: number, action: string, body: object) => post(`/api/gh/pr/${number}/${action}`, body);
+
+export const fixPull = (number: number, name: string, url: string) => post<{ cwd: string; text: string }>(`/api/gh/pr/${number}/fix`, { name, url });
