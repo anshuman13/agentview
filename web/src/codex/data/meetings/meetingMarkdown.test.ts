@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'bun:test';
 import { agendaMarkdown, decisionsMarkdown, followUpText, hasContent, toMarkdown } from './meetingMarkdown';
+import { decisionsWith } from './meetings';
 import type { ItemRow } from '../sync';
-import type { Decision, Meeting } from '../wiki/wiki';
+import { decisionLog, type Decision, type Meeting } from '../wiki/wiki';
 
 const meeting = (over: Partial<Meeting> = {}) =>
   ({ id: 'm1', profile: 'work', title: 'Planning', starts_at: Date.UTC(2026, 9, 29, 10), people: JSON.stringify(['Ada Lovelace', 'Grace Hopper']), summary: 'We planned the quarter.', decisions: JSON.stringify(['Ship in November']), others: JSON.stringify([{ who: 'Grace Hopper', what: 'draft the spec' }]), ...over }) as unknown as Meeting;
@@ -61,6 +63,15 @@ describe('decisionsMarkdown', () => {
     const rows = [{ meeting: m, text: 'Ship in November' }, { meeting: m, text: 'Hire one more' }, { meeting: other, text: 'Skip the demo' }] as Decision[];
     expect(decisionsMarkdown(rows)).toBe('## Planning, 2026-10-29\n\n- Ship in November\n- Hire one more\n\n## Retro, 2026-10-20\n\n- Skip the demo\n');
   });
+
+  const shared = JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/decisions-markdown.json', import.meta.url), 'utf8')) as {
+    meetings: (Partial<Meeting> & { decisions: string[] })[];
+    cases: { name: string; person: string; markdown: string }[];
+  };
+  const log = decisionLog(shared.meetings.map((m) => meeting({ ...m, decisions: JSON.stringify(m.decisions) })));
+  for (const c of shared.cases) {
+    it(`filters by person and copies: ${c.name}`, () => expect(decisionsMarkdown(decisionsWith(log, c.person))).toBe(c.markdown));
+  }
 });
 
 describe('agendaMarkdown', () => {

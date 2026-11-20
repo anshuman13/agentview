@@ -1,0 +1,12 @@
+{
+  "meetings": [
+    {"id": "hallway", "title": "Hallway", "starts_at": null, "updated_at": 1790848800000, "people": "[\"ada lovelace\"]", "decisions": ["Use the new logo"]},
+    {"id": "retro", "title": "Retro", "starts_at": 1792490400000, "updated_at": 0, "people": "[\"Grace Hopper\"]", "decisions": ["Skip the demo"]},
+    {"id": "planning", "title": "Planning", "starts_at": 1793268000000, "updated_at": 0, "people": "[\"Ada Lovelace\", \"Grace Hopper\"]", "decisions": ["Ship in November", "Hire one more"]}
+  ],
+  "cases": [
+    {"name": "everyone", "person": "", "markdown": "## Planning, 2026-10-29\n\n- Ship in November\n- Hire one more\n\n## Retro, 2026-10-20\n\n- Skip the demo\n\n## Hallway\n\n- Use the new logo\n"},
+    {"name": "one person, any case", "person": "Ada Lovelace", "markdown": "## Planning, 2026-10-29\n\n- Ship in November\n- Hire one more\n\n## Hallway\n\n- Use the new logo\n"},
+    {"name": "someone in no meeting", "person": "Kim", "markdown": "\n"}
+  ]
+}

@@ -246,6 +246,15 @@ class Decision(val meeting: Row, val text: String, val at: Long)
 fun decisionLog(meetings: List<Row>): List<Decision> =
     liveRows(meetings).flatMap { m -> jsonList(m.str("decisions")).map { it.trim() }.filter { it.isNotEmpty() }.map { Decision(m, it, m.startsAt ?: m.updatedAt) } }.sortedByDescending { it.at }
 
+// Mirrors decisionsWith and decisionsMarkdown of web; shared/fixtures/decisions-markdown.json holds the cases.
+fun decisionsWith(log: List<Decision>, person: String) =
+    if (person.isEmpty()) log else log.filter { d -> peopleOf(d.meeting).any { sameName(it, person) } }
+
+fun decisionsMarkdown(rows: List<Decision>) = rows.groupBy { it.meeting }.entries.joinToString("\n\n") { (m, ds) ->
+    val date = m.startsAt?.let(::ymd)
+    "## ${m.title ?: "Meeting"}${if (date != null) ", $date" else ""}\n\n${ds.joinToString("\n") { "- ${it.text}" }}"
+} + "\n"
+
 fun nameOf(meetings: List<Row>, person: String): String =
     if ('@' in person) liveRows(meetings).flatMap { peopleOf(it) }.firstOrNull { '@' !in it && sameName(it, person) } ?: displayName(person) else person.trim()
 

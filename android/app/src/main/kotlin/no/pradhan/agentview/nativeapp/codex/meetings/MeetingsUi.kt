@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.codex.meetings
 
 import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,7 +51,9 @@ import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
+import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SearchField
@@ -94,6 +97,11 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
     val groups = remember(found, minute) { groupMeetings(found, now) }
     val coming = remember(mine, minute) { comingDays(mine, now) }
     val log = remember(mine) { decisionLog(mine) }
+    val people = remember(log) { log.flatMap { peopleOf(it.meeting) }.distinct().sortedWith(String.CASE_INSENSITIVE_ORDER) }
+    var person by remember(decisions) { mutableStateOf("") }
+    val who = if (person in people) person else ""
+    val rows = remember(log, who) { decisionsWith(log, who) }
+    val clip = LocalClipboardManager.current
     val waiting = remember(st.items, st.briefs, profile, minute) { waitingByPerson(st.items, st.briefs, profile, now) }
     val showProfile = profile == null
     val questions = remember(mine, resolved, minute) { visibleQuestions(openQuestions(mine, now), resolved) }
@@ -101,16 +109,33 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
     var showPast by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxWidth()) {
         if (decisions) {
-            item { SectionHeader("Decisions", log.size.toString()) }
-            if (log.isEmpty()) item { EmptyState("No decisions yet", "Decisions come from the meeting summaries", icon = "check") }
+            item {
+                SectionHeader("Decisions", rows.size.toString(), action = if (rows.isEmpty()) null else ({
+                    IconBtn("copy", "Copy as Markdown", { clip.setText(AnnotatedString(decisionsMarkdown(rows))); hub.notice.value = "Decisions copied" })
+                }))
+            }
+            if (people.isNotEmpty()) item {
+                Group {
+                    var menu by remember { mutableStateOf(false) }
+                    ListRow("With", who.ifEmpty { "Everyone" }, onClick = { menu = true }, trailing = {
+                        Box {
+                            Chevron()
+                            Menu(menu, { menu = false }) {
+                                (listOf("") + people).forEach { p -> MenuItem(p.ifEmpty { "Everyone" }, if (p.isEmpty()) "organization" else "person", { menu = false; person = p }, checked = who == p) }
+                            }
+                        }
+                    })
+                }
+            }
+            if (rows.isEmpty()) item { EmptyState(if (who.isEmpty()) "No decisions yet" else "No decisions with this person", "Decisions come from the meeting summaries", icon = "check") }
             else item {
                 Group {
-                    log.take(shown).forEachIndexed { i, d ->
+                    rows.take(shown).forEachIndexed { i, d ->
                         if (i > 0) Hairline()
                         ListRow(d.text, "${d.meeting.title ?: "Meeting"} · ${whenText(d.at, now)}", onClick = { onOpen(d.meeting) })
                     }
                 }
-                if (log.size > shown) Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (rows.size > shown) Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
             return@LazyColumn
         }
