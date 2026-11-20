@@ -4,6 +4,7 @@ import { GitHubBadge } from '../../ops/pulls';
 import { useCounts } from './counts';
 import { usePages, type Page } from '../pages';
 import type { View } from './TabBar';
+import { ariaKeys, keyText } from './keys';
 
 export const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'assistant', icon: 'sparkle', title: 'Codex' },
@@ -22,7 +23,7 @@ export function ActivityBar({ showing, sidebar, view, browserShown, showView, op
   return (
     <aside className="activitybar desktop-only">
       {VIEWS.map((v) => (
-        <button key={v.id} data-view={v.id} className={(v.id === 'assistant' ? showing === 'assistant' : sidebar && view === v.id) ? 'active' : ''} title={v.id === 'assistant' ? 'Codex (⌘I)' : v.title} onClick={() => showView(v.id)}>
+        <button key={v.id} data-view={v.id} className={(v.id === 'assistant' ? showing === 'assistant' : sidebar && view === v.id) ? 'active' : ''} title={v.id === 'assistant' ? `Codex (${keyText('⌘I')})` : v.title} aria-keyshortcuts={v.id === 'assistant' ? ariaKeys('⌘I') : undefined} onClick={() => showView(v.id)}>
           <Icon name={v.icon} />
           {v.id === 'chats' && chats > 0 && <span className="badge">{chats}</span>}
           {v.id === 'changes' && <ChangesBadge />}
@@ -36,7 +37,7 @@ export function ActivityBar({ showing, sidebar, view, browserShown, showView, op
         </button>
       ))}
       <span className="spacer" />
-      <button className={browserShown ? 'active' : ''} title="Switch between the file and the browser (⌘E)" onClick={switchEditor}>
+      <button className={browserShown ? 'active' : ''} title={`Switch between the file and the browser (${keyText('⌘E')})`} aria-keyshortcuts={ariaKeys('⌘E')} onClick={switchEditor}>
         <Icon name="globe" />
       </button>
     </aside>

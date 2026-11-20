@@ -7,6 +7,7 @@ import { QuickPick } from '../ui/QuickPick';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
+import { keyText } from '../app/shell/keys';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { runDetail } from '../../../shared/goalText';
 import { Confirm } from '../ui/Confirm';
@@ -111,7 +112,7 @@ export function ForkPick({ pick, close, back }: SubProps) {
       anchor={pick.at}
       title="Fork"
       items={[
-        { value: 'side', label: 'Side chat', detail: 'Ask in a fork beside this chat (⌘;)' },
+        { value: 'side', label: 'Side chat', detail: `Ask in a fork beside this chat (${keyText('⌘;')})` },
         { value: 'fork', label: 'New chat', detail: 'Start a new chat from a summary of this one' },
       ]}
       onPick={(v) => { (v === 'side' ? sideChat : forkChat)(); close(); }}

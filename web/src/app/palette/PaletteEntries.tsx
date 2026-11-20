@@ -4,6 +4,7 @@ import { Row as UiRow } from '../../ui/Row';
 import { Hl } from '../../ui/util';
 import { itemKey, type Command, type ItemHit, type PaletteItem, type Row } from './paletteLogic';
 import { itemMeta } from './paletteActions';
+import { keyText } from '../shell/keys';
 
 export type Entry = { row: Row } | { item: ItemHit } | { all: number };
 
@@ -41,7 +42,7 @@ export function PaletteEntries({ list, entries, idx, blank, q, run, runItem, run
         return (
           <li key={r.cmd.id} {...active} onClick={() => run(r.cmd)}>
             <span className="palette-label"><Hl text={r.cmd.label} hits={r.hits} /></span>
-            {r.cmd.key && <span className="palette-key">{r.cmd.key}</span>}
+            {r.cmd.key && <span className="palette-key">{keyText(r.cmd.key)}</span>}
             {group && <span className="palette-group">{group}</span>}
           </li>
         );

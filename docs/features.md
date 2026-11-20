@@ -590,6 +590,8 @@ or a page puts focus back on what opened it.
 | Key | Action |
 | --- | --- |
 | ⌘O | Start a chat in a repo |
+| ⌘F | Find in the shown chat |
+| ⌘; | Ask in a side chat beside this one |
 | ⌘P | Open a file |
 | ⇧⌘P or F1 | Command palette |
 | ⌘B | Toggle the sidebar |
@@ -607,12 +609,13 @@ or a page puts focus back on what opened it.
 | y / n / a | Allow, deny or always allow the top permission card |
 | 1-9 | Pick an answer on the top question card |
 | ⌘Enter | Commit in Source Control; run the query in Observe |
-| j / k or arrows, Enter in Sessions | Move between chat rows (stops at the ends; with nothing focused j or k focuses the first row unless Tasks or a Reply queue ask is showing); Enter opens |
+| j / k or arrows | Move between chat rows in Sessions (stops at the ends; with nothing focused j or k focuses the first row unless Tasks or a Reply queue ask is showing); Enter opens |
 | ⇧⌘] / ⇧⌘[ | Next or previous open chat (Sessions view), wraps |
 | ⌥⇧↓ / ⌥⇧↑ | Next or previous unread open chat (Done or Needs you) |
 | j / k | Move between tasks in Tasks; Enter or Space opens, Esc closes, x done (or back to open on a done task), s snooze, Delete removes |
-| j / k, Enter, s, x on a Reply queue ask | Move between asks, open the task, send the draft, skip the ask |
-| n / | New task for today (opens Tasks from Overview or other Codex pages); search tasks (on Tasks) |
+| j / k, Enter, s, x | On a Reply queue ask: move between asks, open the task, send the draft, skip the ask |
+| n | New task for today (opens Tasks from Overview or other Codex pages) |
+| / | Search tasks (on Tasks) |
 
 The palette's Keyboard shortcuts command shows the same list.
 

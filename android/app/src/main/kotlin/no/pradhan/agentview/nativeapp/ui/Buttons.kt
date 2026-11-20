@@ -33,9 +33,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -169,7 +175,12 @@ fun Fab(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = M
     }
 }
 
+// A switch whose semantics do not merge on their own, so the ListRow around it reads title, meta and state as one item.
 @Composable
 fun Toggle(checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
-    Switch(checked, onChange, Modifier.padding(end = Tokens.sp4), enabled = enabled)
+    Switch(checked, onChange, Modifier.padding(end = Tokens.sp4).clearAndSetSemantics {
+        role = Role.Switch
+        toggleableState = ToggleableState(checked)
+        if (enabled) onClick { onChange(!checked); true } else disabled()
+    }, enabled = enabled)
 }

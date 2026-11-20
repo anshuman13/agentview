@@ -3,6 +3,7 @@ import { FileIcon } from '../../workspace/FileIcon';
 import { Icon } from '../../ui/Icon';
 import { pressable } from '../../ui/util';
 import { pageOf, type Page } from '../pages';
+import { ariaKeys, keyText } from './keys';
 
 type Props = {
   showing: string;
@@ -33,7 +34,7 @@ export function EditorTabs({ showing, page, work, showWork, closeWork, mobileExp
       <button className={`tab ex-tab mobile-only ${mobileExplorer ? 'active' : ''}`} title="Explorer" onClick={showExplorer}>
         <Icon name="files" small />
       </button>
-      {(openFile || showing === 'file') && <div className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} {...pressable(showFile)} title={openFile ?? 'Files (⌘E to switch)'}>
+      {(openFile || showing === 'file') && <div className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} {...pressable(showFile)} title={openFile ?? `Files (${keyText('⌘E')} to switch)`}>
         {fileName ? <FileIcon name={fileName} /> : <Icon name="file" small />} {fileName ?? 'File'}
         {openFile && (
           <button className="close" title="Close file" onClick={(e) => { e.stopPropagation(); setUi({ openFile: null }); }}>
@@ -42,7 +43,7 @@ export function EditorTabs({ showing, page, work, showWork, closeWork, mobileExp
         )}
       </div>}
       {showing === 'browser' && (
-        <div className="tab browser active" title="Browser (⌘E to switch)">
+        <div className="tab browser active" title={`Browser (${keyText('⌘E')} to switch)`}>
           <Icon name="globe" small /> Browser
           <button className="close" title="Close the browser" onClick={closeBrowser}><Icon name="close" small /></button>
         </div>
@@ -60,10 +61,10 @@ export function EditorTabs({ showing, page, work, showWork, closeWork, mobileExp
         </div>
       )}
       <span className="tabs-spacer desktop-only" />
-      <button className="tab-tool desktop-only" title={`${sidebar ? 'Hide' : 'Show'} the left sidebar (⌘B)`} onClick={toggleSidebar}>
+      <button className="tab-tool desktop-only" title={`${sidebar ? 'Hide' : 'Show'} the left sidebar (${keyText('⌘B')})`} aria-keyshortcuts={ariaKeys('⌘B')} onClick={toggleSidebar}>
         <Icon name={sidebar ? 'layout-sidebar-left' : 'layout-sidebar-left-off'} small />
       </button>
-      <button className="tab-tool desktop-only" title={`${chatOpen ? 'Hide' : 'Show'} the chat (⌥⌘B)`} onClick={toggleChat}>
+      <button className="tab-tool desktop-only" title={`${chatOpen ? 'Hide' : 'Show'} the chat (${keyText('⌥⌘B')})`} aria-keyshortcuts={ariaKeys('⌥⌘B')} onClick={toggleChat}>
         <Icon name={chatOpen ? 'layout-sidebar-right' : 'layout-sidebar-right-off'} small />
         {!chatOpen && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
       </button>

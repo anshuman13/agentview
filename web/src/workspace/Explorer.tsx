@@ -9,6 +9,7 @@ import { Row as UiRow } from '../ui/Row';
 import { useSlot } from '../ui/util';
 import { Section } from '../ui/Section';
 import { touch } from '../app/touch/touch';
+import { ariaKeys, keyText } from '../app/shell/keys';
 import { FileIcon } from './FileIcon';
 import { OpenEditors } from './OpenEditors';
 import { useFileTree, type Row } from './useFileTree';
@@ -30,7 +31,7 @@ function FilesMenu({ showHidden, setShowHidden, refresh, collapseAll, closeFile 
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" small aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>
-          <MenuItem icon="search" onClick={() => { setMenu(false); setUi({ switcherOpen: true }); }}>Go to File{!touch() && <span className="ex-kbd">⌘P</span>}</MenuItem>
+          <MenuItem icon="search" aria-keyshortcuts={ariaKeys('⌘P')} onClick={() => { setMenu(false); setUi({ switcherOpen: true }); }}>Go to File{!touch() && <span className="ex-kbd">{keyText('⌘P')}</span>}</MenuItem>
           <MenuItem icon={showHidden ? 'eye' : 'eye-closed'} onClick={() => { setMenu(false); setShowHidden(!showHidden); }}>{showHidden ? 'Hide ignored files' : 'Show ignored files'}</MenuItem>
           <MenuItem icon="refresh" onClick={() => { setMenu(false); refresh(); }}>Refresh Explorer</MenuItem>
           <MenuItem icon="collapse-all" onClick={() => { setMenu(false); collapseAll(); }}>Collapse Folders</MenuItem>

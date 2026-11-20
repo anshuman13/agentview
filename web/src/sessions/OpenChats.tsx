@@ -18,8 +18,8 @@ import { searchMessages } from './sessionApi';
 import { NeedsYou } from './NeedsYou';
 import { newChat } from '../app/newChat';
 import { requestFind, takeFind } from '../chat/transcript/FindBar';
+import { MAC } from '../app/shell/keys';
 
-const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 const RECENT = 5;
 const KEY = 'agentview.chats.collapsed';
 const PEEK_MS = 8000;

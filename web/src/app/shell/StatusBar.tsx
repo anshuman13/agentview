@@ -4,6 +4,7 @@ import { CacheItem, McpItem, RunsItem, UsageItem } from './StatusItems';
 import { canNotify, toggleNotify, useNotify } from '../runtime/notify';
 import { headerState } from '../../sessions/runLogic';
 import { THEME_NAMES, type Theme } from '../theme';
+import { ariaKeys, keyText } from './keys';
 
 const ICON = { running: 'loading', needs: 'bell', failed: 'error', warn: 'debug-pause', idle: 'check' } as const;
 
@@ -19,7 +20,7 @@ export function StatusBar({ project, theme, toggleTheme, macName, onPhone, onMac
   const notifying = useNotify();
   return (
     <footer className="statusbar desktop-only">
-      <button className="item project clickable" title={`${cwd}\nStart a chat in another repo (⌘O)`} onClick={() => setUi({ repoPicker: true })}><Icon name="folder" small /> {project}</button>
+      <button className="item project clickable" title={`${cwd}\nStart a chat in another repo (${keyText('⌘O')})`} aria-keyshortcuts={ariaKeys('⌘O')} onClick={() => setUi({ repoPicker: true })}><Icon name="folder" small /> {project}</button>
       <span className={`item ${state.tone === 'running' ? 'busy' : 'idle'}`}>
         <Icon name={ICON[state.tone]} small spin={state.tone === 'running'} /> {state.text}
       </span>

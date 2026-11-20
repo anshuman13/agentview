@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -119,7 +120,7 @@ fun ChoiceRow(title: CharSequence, meta: CharSequence? = null, checked: Boolean,
     ListRow(title, meta, onClick = onClick, trailing = if (checked) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
 
 // List row (web Row): leading slot, a title of one or two lines, a meta line, a fixed-width state slot, trailing content and a More menu.
-// The state slot is at least rowStateW wide and grows to fit its state; a row without a state gives the text the full width. fitState drops the minimum. A long press opens the menu unless onLongClick is set.
+// The state slot is at least rowStateW wide and grows to fit its state; a row without a state gives the text the full width. fitState drops the minimum. A long press opens the menu unless onLongClick is set. Without onClick, TalkBack reads the row and its switch as one item.
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ListRow(
@@ -145,8 +146,9 @@ fun ListRow(
     val menuOpen = remember { mutableStateOf(false) }
     val longClick = onLongClick ?: menu?.let { { menuOpen.value = true } }
     val click = if (onClick != null || longClick != null) Modifier.combinedClickable(onClick = { onClick?.invoke() }, onLongClick = longClick) else Modifier
+    val merge = if (onClick == null) Modifier.semantics(mergeDescendants = true) {} else Modifier
     Row(
-        modifier.fillMaxWidth().background(if (selected) av.accentSoft else Color.Transparent).heightIn(min = if (compact) 44.dp else if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click)
+        modifier.fillMaxWidth().background(if (selected) av.accentSoft else Color.Transparent).heightIn(min = if (compact) 44.dp else if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click).then(merge)
             .padding(start = Tokens.listPad, end = if (trailing != null || menu != null) Tokens.sp4 else Tokens.listPad, top = if (compact) Tokens.sp2 else Tokens.sp5, bottom = if (compact) Tokens.sp2 else Tokens.sp5),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp8),

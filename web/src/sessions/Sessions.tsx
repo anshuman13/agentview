@@ -15,6 +15,7 @@ import { RepoRow, SessionRow, WorktreeRow } from './RepoRow';
 import { WaitingRows } from './ChatRows';
 import { NeedsYou } from './NeedsYou';
 import { newChat } from '../app/newChat';
+import { ariaKeys, keyText } from '../app/shell/keys';
 
 const PAGE = 5;
 
@@ -131,7 +132,7 @@ export function Sessions() {
     <div className="sessions workspace">
       <div className="sessions-bar">
         <FilterInput value={filter} set={setFilter} />
-        <IconButton icon="folder-opened" label="Start a chat" title="Start a chat in a folder or new project (⌘O)" onClick={() => setUi({ repoPicker: true })} />
+        <IconButton icon="folder-opened" label="Start a chat" title={`Start a chat in a folder or new project (${keyText('⌘O')})`} aria-keyshortcuts={ariaKeys('⌘O')} onClick={() => setUi({ repoPicker: true })} />
         <IconButton icon="add" label={`New chat in ${repoName(folders, cwd)}`} onClick={() => start(cwd)} />
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}

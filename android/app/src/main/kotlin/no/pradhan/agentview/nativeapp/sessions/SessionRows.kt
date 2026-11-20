@@ -19,8 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -245,7 +243,7 @@ internal fun StateDot(state: ChatState?) {
         ChatState.Done -> DotState.Unread to "Unread"
         null -> return
     }
-    StatusDot(d, Modifier.semantics { contentDescription = word })
+    StatusDot(d, desc = word)
 }
 
 @Composable

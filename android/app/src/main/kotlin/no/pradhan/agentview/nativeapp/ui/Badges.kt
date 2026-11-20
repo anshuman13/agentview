@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.ui
 
+import android.provider.Settings
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -15,11 +16,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import no.pradhan.agentview.nativeapp.ops.Agent
 
@@ -93,9 +98,24 @@ fun Badge(text: String, tone: BadgeTone = BadgeTone.Default, modifier: Modifier 
 
 enum class DotState { Faint, Ok, Bad, Warn, Busy, Running, Unread, Idle, Agent }
 
+// The word TalkBack reads for a dot; Idle and Agent dots say nothing.
+fun dotWord(state: DotState): String? = when (state) {
+    DotState.Faint -> "Not started"
+    DotState.Ok -> "Done"
+    DotState.Bad -> "Failed"
+    DotState.Warn -> "Needs attention"
+    DotState.Busy -> "Pending"
+    DotState.Running -> "Running"
+    DotState.Unread -> "Unread"
+    DotState.Idle, DotState.Agent -> null
+}
+
+// Running and busy dots pulse unless Remove animations sets the animator scale to 0.
+fun pulses(state: DotState, scale: Float) = (state == DotState.Busy || state == DotState.Running) && scale > 0f
+
 // Status dot (web .dot): running and busy pulse.
 @Composable
-fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
+fun StatusDot(state: DotState, modifier: Modifier = Modifier, desc: String? = dotWord(state)) {
     val c = av
     val color = when (state) {
         DotState.Faint -> c.fgFaint
@@ -107,10 +127,13 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
         DotState.Idle -> Color.Transparent
         DotState.Agent -> Color.Transparent
     }
-    val pulse = if (state == DotState.Busy || state == DotState.Running) {
+    val resolver = LocalContext.current.contentResolver
+    val scale = remember(resolver) { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) }
+    val pulse = if (pulses(state, scale)) {
         val t = rememberInfiniteTransition(label = "dot")
         t.animateFloat(1f, 0.6f, infiniteRepeatable(tween(Tokens.dur * 6), RepeatMode.Reverse), label = "pulse").value
     } else 1f
     val ring = if (state == DotState.Agent) c.agent else null
-    Box(modifier.size(Tokens.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Tokens.stroke, ring, CircleShape) else Modifier))
+    val named = if (desc != null) Modifier.semantics { contentDescription = desc } else Modifier
+    Box(modifier.then(named).size(Tokens.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Tokens.stroke, ring, CircleShape) else Modifier))
 }
