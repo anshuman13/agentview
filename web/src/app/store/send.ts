@@ -55,13 +55,22 @@ const isRunning = (chat: string) => {
 };
 
 let flushing = false;
+let retry: ReturnType<typeof setTimeout> | undefined;
+
+// A refused message is dropped, back in the composer when its chat is shown; only a network failure keeps it queued.
+async function flushOne(q: Queued) {
+  const ok = await post(queuedCommand(q, isRunning(q.chat)), 1, q.chat);
+  if (ok === null && q.chat === getState().session.id) window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: q.text } }));
+  return ok !== false;
+}
 
 // Sends the outbox oldest first with each message's own id, so one that arrived before a lost reply is ignored the second time.
 export async function flushOutbox() {
   if (flushing) return;
   flushing = true;
   try {
-    await flushQueue(() => getState().outbox, async (q) => (await post(queuedCommand(q, isRunning(q.chat)), 1, q.chat)) === true, cancelUnsent);
+    const all = await flushQueue(() => getState().outbox, flushOne, cancelUnsent);
+    if (!all && getState().ui.connected && retry === undefined) retry = setTimeout(() => { retry = undefined; void flushOutbox(); }, 5_000);
   } finally {
     flushing = false;
   }

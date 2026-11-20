@@ -28,7 +28,10 @@ const storedBeside = () => { try { return embedded ? null : localStorage.getItem
 export const OUTBOX_KEY = 'agentview.outbox';
 const storedOutbox = () => { try { return parseOutbox(JSON.parse(localStorage.getItem(OUTBOX_KEY) ?? '[]')); } catch { return []; } };
 
-export type State = ServerState & { live: LiveChat[]; runs: ChatRun[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; outbox: Queued[]; ui: UiState };
+// Another tab or an iframe of this app changed the box.
+if (typeof window !== 'undefined') window.addEventListener?.('storage', (e) => { if (e.key === OUTBOX_KEY) set({ outbox: storedOutbox() }); });
+
+export type State =ServerState & { live: LiveChat[]; runs: ChatRun[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; outbox: Queued[]; ui: UiState };
 
 // The server's session fills these in; a field a server of another version leaves out keeps its default here.
 export const EMPTY_SESSION: State['session'] = { id: '', sessionId: null, model: null, effort: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], repeat: null, pr: null, account: 'main', accounts: [] };

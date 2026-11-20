@@ -39,9 +39,10 @@ export function Transcript() {
 }
 
 function FailedLine({ events, label }: { events: ChatEvent[]; label: string }) {
+  const [sent, setSent] = useState(false);
   const line = failedLine(events, label);
   if (!line) return null;
-  return <div className="tr-failed"><span className="tr-failed-text">{line}</span><Button size="sm" onClick={() => send({ type: 'retry' })}>Retry</Button></div>;
+  return <div className="tr-failed"><span className="tr-failed-text">{line}</span>{!sent && <Button size="sm" onClick={() => { setSent(true); send({ type: 'retry' }); }}>Retry</Button>}</div>;
 }
 
 function UnsentRows() {
@@ -240,7 +241,7 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
           : rowOf(r.it, i === 0, 'shown');
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
-      {failed && !running && <FailedLine events={events} label={label} />}
+      {failed && !running && <FailedLine key={events.length} events={events} label={label} />}
       <UnsentRows />
       </div>
     </div>
