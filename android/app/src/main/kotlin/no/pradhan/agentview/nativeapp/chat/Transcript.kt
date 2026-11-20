@@ -4,7 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Box
@@ -48,8 +50,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +81,8 @@ import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Loading
+import no.pradhan.agentview.nativeapp.ui.Menu
+import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
@@ -351,11 +359,14 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
 fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Tokens.sp1): Modifier =
     drawBehind { drawRect(color, size = androidx.compose.ui.geometry.Size(width.toPx(), size.height)) }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun UserBubble(content: @Composable ColumnScope.() -> Unit) {
+private fun UserBubble(onLongClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Column(
-            Modifier.widthIn(max = maxWidth * 0.85f).background(av.surface, RoundedCornerShape(Tokens.shapeLg)).padding(horizontal = Tokens.sp8, vertical = Tokens.sp6),
+            Modifier.widthIn(max = maxWidth * 0.85f).background(av.surface, RoundedCornerShape(Tokens.shapeLg))
+                .then(if (onLongClick != null) Modifier.combinedClickable(onClick = {}, onLongClick = onLongClick) else Modifier)
+                .padding(horizontal = Tokens.sp8, vertical = Tokens.sp6),
             verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
             content = content,
         )
@@ -379,7 +390,15 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
         "Puts every file Claude changed back to how it was before this prompt. Edits from later prompts are undone too; the conversation stays.",
         "Rewind", { ask = false; hub.rewind(it.id) }, onDismiss = { ask = false },
     )
-    UserBubble {
+    val clip = LocalClipboardManager.current
+    val haptic = LocalHapticFeedback.current
+    var menu by remember { mutableStateOf(false) }
+    val menuable = !it.queued && !it.stopping
+    UserBubble(if (menuable) ({ haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true }) else null) {
+        Menu(menu, { menu = false }) {
+            if (!hub.readOnly) MenuItem("Use again", "reply", { menu = false; hub.useAgain(chat, it.text) })
+            MenuItem("Copy", "copy", { menu = false; clip.setText(AnnotatedString(it.text)); hub.notice.value = "Prompt copied" })
+        }
         userParts(it.text).forEachIndexed { i, p -> when (p) {
             is Part.Text -> FoldText("${it.id}:$i", p.text)
             is Part.Image -> ChatImage(hub, chat, p.path)
