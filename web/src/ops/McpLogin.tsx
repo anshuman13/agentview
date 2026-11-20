@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { send } from '../app/store';
-import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
 import { command } from '../ui/util';
 import { openConnectors } from './mcpActions';
 import { addMcp, loginMcp } from './opsApi';
@@ -16,7 +16,7 @@ export function AddToChat({ name }: { name: string }) {
   };
   return (
     <>
-      <button className="btn" onClick={add} disabled={busy}><Icon name={busy ? 'loading' : 'add'} small spin={busy} /> Load in this chat</button>
+      <Button icon={busy ? 'loading' : 'add'} onClick={add} disabled={busy}>Load in this chat</Button>
       {error && <span className="mcp-act-error bad" role="alert">{error}</span>}
     </>
   );
@@ -29,8 +29,8 @@ export function ClaudeAiLogin({ name, live, account }: { name: string; live: boo
   return (
     <div className="mcp-login">
       <div className="mcp-login-acts">
-        <button className="btn" onClick={() => { openConnectors(account); setOpened(true); }}><Icon name="link-external" small /> Connect on claude.ai</button>
-        {opened && live && <button className="btn" onClick={() => send({ type: 'mcp_reconnect', name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
+        <Button icon="link-external" onClick={() => { openConnectors(account); setOpened(true); }}>Connect on claude.ai</Button>
+        {opened && live && <Button icon="debug-restart" onClick={() => send({ type: 'mcp_reconnect', name })}>Reconnect in chat</Button>}
       </div>
       <div className="muted">{opened ? `Opened in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac. Once it says Connected there, reconnect it here.` : `Opens in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac.`}</div>
     </div>
@@ -59,8 +59,8 @@ export function Login({ name, live }: { name: string; live: boolean }) {
   return (
     <div className="mcp-login">
       <div className="mcp-login-acts">
-        <button className="btn" onClick={start} disabled={busy}><Icon name={busy ? 'loading' : 'key'} small spin={busy} /> {opened ? 'Open again' : 'Log in'}</button>
-        {opened && <button className="btn" onClick={() => command('tab:browser')}><Icon name="globe" small /> Show browser</button>}
+        <Button icon={busy ? 'loading' : 'key'} onClick={start} disabled={busy}>{opened ? 'Open again' : 'Log in'}</Button>
+        {opened && <Button icon="globe" onClick={() => command('tab:browser')}>Show browser</Button>}
       </div>
       {opened && <div className="muted">The login page is open in Chrome on the Mac. This updates once you finish there.</div>}
       {error && <div className="bad" role="alert">{error}</div>}

@@ -5,6 +5,7 @@ import { providerLabel } from '../../../shared/providers';
 import { useCan } from '../chat/useCan';
 import { askChat } from '../chat/chatActions';
 import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { errText } from '../../../shared/util';
 import '../styles/features/observe.css';
@@ -91,8 +92,8 @@ function ConnectionForm({ sf, connected, missing, onInfo }: Conn & { onInfo: (i:
         Tokens: <a className="obs-link" href="https://docs.snowflake.com/en/user-guide/programmatic-access-tokens" target="_blank" rel="noreferrer">Snowflake docs on programmatic access tokens</a>
       </div>
       <div className="obs-save">
-        <button className="btn primary" onClick={saveForm}>Save connection</button>
-        <button className="btn xs" disabled={!connected || test.busy} title={connected ? 'select current_user(), current_role(), current_warehouse()' : `Missing: ${missing.join(', ')}`} onClick={testConnection}>{test.busy ? 'Testing' : 'Test connection'}</button>
+        <Button variant="primary" onClick={saveForm}>Save connection</Button>
+        <Button size="sm" disabled={!connected || test.busy} title={connected ? 'select current_user(), current_role(), current_warehouse()' : `Missing: ${missing.join(', ')}`} onClick={testConnection}>{test.busy ? 'Testing' : 'Test connection'}</Button>
         <span className={saveMsg && saveMsg !== 'Saved' ? 'error' : 'muted'}>{saveMsg || (connected ? `${sf.user} on ${sf.account}` : `missing: ${missing.join(', ')}`)}</span>
       </div>
       {test.data && (
@@ -167,7 +168,7 @@ function QueryPanel({ sf, connected, missingNote }: Pick<Conn, 'sf' | 'connected
         }}
       />
       <div className="obs-save">
-        <button className="btn primary" disabled={!connected || result.busy || !sql.trim()} onClick={run}><Icon name="play" small /> Run</button>
+        <Button variant="primary" icon="play" disabled={!connected || result.busy || !sql.trim()} onClick={run}>Run</Button>
         {result.data && <span className="muted">{result.data.rows.length}{result.data.truncated ? '+' : ''} rows, {result.data.ms} ms{result.data.truncated ? ', showing the first 200' : ''}</span>}
         {result.busy && <span className="muted"><Icon name="loading" small spin /> Running</span>}
         <span className="spacer" />

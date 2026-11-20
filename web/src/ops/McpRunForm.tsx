@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { McpTool } from '../../../shared/protocol';
 import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
 import { share } from './mcpActions';
 import { callMcp } from './opsApi';
 import { argsOf, fieldsOf, initialValues, slug, toolId, type Field } from './mcpHelpers';
@@ -62,7 +63,7 @@ export function RunForm({ server, tool }: { server: string; tool: McpTool }) {
       {out && (
         <div className="mcp-run-out">
           <pre className={out.isError ? 'bad' : ''}>{out.text || '(no output)'}</pre>
-          <button type="button" className="btn" onClick={() => void share(lead(out), out.text, `${slug(server)}-${tool.name}.txt`)}><Icon name="insert" small /> Add result to chat</button>
+          <Button icon="insert" onClick={() => void share(lead(out), out.text, `${slug(server)}-${tool.name}.txt`)}>Add to chat</Button>
         </div>
       )}
     </form>

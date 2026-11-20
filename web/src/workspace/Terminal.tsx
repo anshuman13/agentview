@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
 import { closeTerm, createTerm, listTerms } from './termApi';
 import { notice } from '../app/store';
 
@@ -28,12 +29,12 @@ function TermBar({ tabs, active, pick, close, add, clear, max, toggleMax }: BarP
         <span key={t.id} className={`term-tab${t.id === active ? ' on' : ''}`} onClick={() => pick(t.id)} title={t.name}>
           <Icon name="terminal" small />
           <button className="term-tab-name" aria-pressed={t.id === active}>{t.name}</button>
-          <button className="icon-btn" title="Kill terminal" aria-label={`Kill ${t.name}`} onClick={(e) => { e.stopPropagation(); close(t.id).catch(() => notice('Could not close the terminal')); }}><Icon name="close" small /></button>
+          <IconButton icon="close" small label={`Kill ${t.name}`} title="Kill terminal" onClick={(e) => { e.stopPropagation(); close(t.id).catch(() => notice('Could not close the terminal')); }} />
         </span>
       ))}
-      <button className="icon-btn" title="New terminal" onClick={() => add().catch(() => notice('Terminal unavailable'))}><Icon name="add" small /></button>
-      <button className="icon-btn" title="Clear (⌘K)" onClick={clear}><Icon name="clear-all" small /></button>
-      <button className="icon-btn" title={max ? 'Restore panel size' : 'Maximize panel size'} onClick={toggleMax}><Icon name={max ? 'screen-normal' : 'screen-full'} small /></button>
+      <IconButton icon="add" small label="New terminal" onClick={() => add().catch(() => notice('Terminal unavailable'))} />
+      <IconButton icon="clear-all" small label="Clear" title="Clear (⌘K)" onClick={clear} />
+      <IconButton icon={max ? 'screen-normal' : 'screen-full'} small label={max ? 'Restore panel size' : 'Maximize panel size'} onClick={toggleMax} />
     </span>
   );
 }
@@ -132,9 +133,7 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
         {open && tabs && (
           <TermBar tabs={tabs} active={active} pick={pick} close={close} add={add} clear={() => clears.current.get(active)?.()} max={max} toggleMax={() => setMax((m) => !m)} />
         )}
-        <button className="icon-btn term-toggle" aria-label="Terminal" aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }}>
-          <Icon name={open ? 'chevron-down' : 'chevron-up'} small />
-        </button>
+        <IconButton icon={open ? 'chevron-down' : 'chevron-up'} small label="Terminal" className="term-toggle" aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }} />
       </div>
       {chat && tabs && (
         <div className="panel-body" hidden={!open}>

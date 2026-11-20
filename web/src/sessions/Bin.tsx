@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { deleteRequest } from './sessionApi';
 import { notice } from '../app/store';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
 import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type BinnedSession } from '../../../shared/protocol';
 import { pressable } from '../ui/util';
@@ -42,7 +43,7 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
         <span className="name">Bin</span>
         <span className="meta"><span className="count">{list.length}</span></span>
         <span className="acts">
-          <button className="icon-btn" title="Empty bin" onClick={(e) => { e.stopPropagation(); empty(); }}><Icon name="close" small /></button>
+          <IconButton icon="trash" small label="Empty bin" onClick={(e) => { e.stopPropagation(); empty(); }} />
         </span>
       </div>
       {open && list.map((b) => (
@@ -50,8 +51,8 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
           <span className="name">{b.title}</span>
           <span className="when">{left(b)}</span>
           <span className="acts">
-            <button className="icon-btn" title="Restore chat" onClick={() => restore(b)}><Icon name="discard" small /></button>
-            <button className="icon-btn" title="Delete for good" onClick={() => ask(deleteChat(b, () => setList((l) => l.filter((x) => x.sessionId !== b.sessionId)), notice, true))}><Icon name="close" small /></button>
+            <IconButton icon="discard" small label="Restore chat" onClick={() => restore(b)} />
+            <IconButton icon="close" small label="Delete for good" onClick={() => ask(deleteChat(b, () => setList((l) => l.filter((x) => x.sessionId !== b.sessionId)), notice, true))} />
           </span>
         </div>
       ))}
