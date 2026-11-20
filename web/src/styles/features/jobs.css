@@ -3,10 +3,10 @@
 .ui-row-wrap.off .ui-row-title { color: var(--fg-muted); }
 .jb-actions { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }
 .jb-more { position: relative; display: inline-flex; }
-.jb-switch { flex: none; width: 36px; height: 20px; padding: 2px; border: 0; border-radius: var(--radius-pill); background: var(--border-strong); cursor: pointer; transition: background var(--dur); }
-.jb-switch > span { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--fg-strong); transition: transform var(--dur); }
+.jb-switch { flex: none; width: var(--touch-sm); height: var(--size-sm); padding: var(--sp-1); border: 0; border-radius: var(--radius-pill); background: var(--border-strong); cursor: pointer; transition: background var(--dur); }
+.jb-switch > span { display: block; width: var(--size-2xs); height: var(--size-2xs); border-radius: var(--radius-round); background: var(--fg-strong); transition: transform var(--dur); }
 .jb-switch.on { background: var(--accent); }
-.jb-switch.on > span { transform: translateX(16px); }
+.jb-switch.on > span { background: var(--on-accent); transform: translateX(calc(var(--touch-sm) - var(--size-sm))); }
 .jb-fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--list-pad); }
 .jb-fields > input:not([type='date']) { flex: 1 1 100%; }
 .jb-wrap .ui-row-meta { white-space: normal; }
