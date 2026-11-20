@@ -13,6 +13,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -103,9 +104,10 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
         if (e.code == 404) null else throw e
     }
 
-    suspend fun readTranscript(profile: String, id: String) {
+    suspend fun readTranscript(profile: String, id: String): Int {
         val body = buildJsonObject { put("profile", profile); put("id", id) }.toString().toRequestBody(json)
-        call(url("/api/assistant/transcripts").post(body), long)
+        val saved = protocolJson.parseToJsonElement(call(url("/api/assistant/transcripts").post(body), long).decodeToString()).jsonObject["saved"]
+        return saved?.jsonPrimitive?.intOrNull ?: 0
     }
 
     suspend fun earlier(chat: String, before: String, limit: Int = ROW_WINDOW): Pair<List<ChatEvent>, Int> =

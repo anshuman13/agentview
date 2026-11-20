@@ -62,7 +62,9 @@ import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.MoreButton
+import no.pradhan.agentview.nativeapp.app.readNow
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
@@ -173,19 +175,32 @@ private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>) {
     val copyable = hasContent(m, all)
     val uri = LocalUriHandler.current
     val clip = LocalClipboardManager.current
+    var reading by remember(m.key) { mutableStateOf(false) }
+    val read = { reading = true; c.hub.readNow(m) { reading = false } }
+    val canRead = state == MState.Done && readable(m, c.now)
+    val hasNotes = !m.str("notes").isNullOrEmpty()
+    val readText = readLabel(state)
     Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         if (isEvent(m)) Text("Event", style = Type.footnote, color = av.fgMuted)
         LRow(verticalAlignment = Alignment.CenterVertically) {
             Text(m.title?.ifEmpty { null } ?: UNTITLED, Modifier.weight(1f), style = Type.title)
             if (state == MState.Live && link != null && !isEvent(m)) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-            if (link != null || copyable) MoreButton { close ->
+            if (link != null || copyable || canRead || hasNotes) MoreButton { close ->
                 if (link != null) MenuItem("Open calendar", "calendar", { close(); uri.openUri(link) })
                 if (copyable) MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(m, all))); c.actions.say("Follow-up copied") })
                 if (copyable) MenuItem("Copy as Markdown", "copy", { close(); clip.setText(AnnotatedString(meetingMarkdown(m, all))); c.actions.say("Copied") })
+                if (canRead) MenuItem(if (reading) "Reading" else "Read again", "sync", { close(); read() }, enabled = !reading)
+                if (hasNotes) MenuSeparator()
+                if (hasNotes) MenuItem("Delete notes", "trash", { close(); c.actions.change(m, mapOf("notes" to ""), "Notes deleted") }, danger = true)
             }
         }
         pageMeta(m).takeIf { it.isNotEmpty() }?.let { Text(it, style = Type.subheadline, color = av.fgMuted) }
-        stateLine(m, c.now)?.let { Text(it, style = Type.callout, color = if (state == MState.Missing) av.warn else av.info) }
+        stateLine(m, c.now)?.let { line ->
+            LRow(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp8)) {
+                Text(line, Modifier.weight(1f, fill = false), style = Type.callout, color = if (state == MState.Missing) av.warn else av.info)
+                if (readText != null) Button(if (reading) "Reading" else readText, { read() }, size = ButtonSize.Sm, enabled = !reading)
+            }
+        }
     }
 }
 

@@ -91,6 +91,16 @@ class MeetingsWikiTest {
         assertEquals(listOf("Now"), g[0].rows.map { it.title })
     }
 
+    @Test fun onlyStartedCalendarMeetingsAreReadable() {
+        val past = at(6, 9)
+        assertEquals(false, readable(meeting("manual", "Notes", past), NOW))
+        assertEquals(false, readable(meeting("cal:a", "x", at(7, 12)), NOW))
+        assertEquals(true, readable(meeting("cal:a", "x", past, past + 1), NOW))
+        assertEquals("Read now", readLabel(MState.Waiting))
+        assertEquals("Retry", readLabel(MState.Missing))
+        assertEquals(null, readLabel(MState.Done))
+    }
+
     @Test fun meetingStateFollowsTheCalendarAndTranscript() {
         assertEquals(MState.Manual, meetingState(meeting("manual", "Notes", at(7, 9)), NOW))
         assertEquals(MState.Upcoming, meetingState(meeting("cal:a", "x", at(7, 12)), NOW))

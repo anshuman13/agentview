@@ -69,6 +69,18 @@ fun Hub.readWithRoomMic(m: Row, done: (Boolean) -> Unit) {
     }, done)
 }
 
+fun Hub.readNow(m: Row, done: (Boolean) -> Unit) {
+    writes.run("Transcript sync failed", {
+        try {
+            val saved = api.readTranscript(m.profile, m.id)
+            codex.sync()
+            notice.value = if (saved > 0) "Read the transcript" else "No transcript found yet"
+        } catch (e: Exception) {
+            throw ApiError("Transcript sync failed: ${e.message}")
+        }
+    }, done)
+}
+
 internal fun Hub.write(failure: String, block: suspend () -> Unit) {
     if (readOnly) return
     viewModelScope.launch { runCatching { block() }.onFailure { notice.value = it.message ?: failure } }
