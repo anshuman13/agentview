@@ -377,4 +377,12 @@ describe('staleFacts', () => {
     expect(staleFacts(fs, ps, [], now).map((f) => f.id)).toEqual(['old', 'hire']);
     expect(staleFacts(fs, ps, [meeting], now).map((f) => f.id)).toEqual(['old']);
   });
+
+  it('judges age by `at` alone, as Older does', () => {
+    const now = 200 * RETIRE_AFTER;
+    const ps = [page('p1', 'Pricing')];
+    const edited = { ...fact('edited', 'p1', 'One', 'Edited', { at: now - RETIRE_AFTER - 1 }), updated_at: now };
+    expect(staleFacts([edited], ps, [], now).map((f) => f.id)).toEqual(['edited']);
+    expect(olderClaims([edited], 'p1', now).map((f) => f.id)).toEqual(['edited']);
+  });
 });

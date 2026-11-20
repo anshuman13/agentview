@@ -17,6 +17,7 @@ import no.pradhan.agentview.nativeapp.ui.agoShort
 // The wiki index and page of web/src/codex/data/wiki.ts and wiki/WikiIndex.tsx.
 
 val SECTION_ORDER = listOf("Teams", "Projects", "People", "Practices")
+// RETIRE_AFTER and isOld mirror shared/claimAge.ts, checked by shared/fixtures/claim-age.json.
 const val RETIRE_AFTER = 90 * DAY_MS
 
 class WikiSection(val name: String, val pages: List<Row>)

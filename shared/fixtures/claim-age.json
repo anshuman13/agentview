@@ -1,0 +1,10 @@
+[
+  {"name": "live and recent", "state": "live", "at": 999000000000, "now": 1000000000000, "expected": false},
+  {"name": "live at exactly 90 days", "state": "live", "at": 992224000000, "now": 1000000000000, "expected": false},
+  {"name": "live past 90 days", "state": "live", "at": 992223999999, "now": 1000000000000, "expected": true},
+  {"name": "no state counts as live", "state": null, "at": 992223999999, "now": 1000000000000, "expected": true},
+  {"name": "retired by hand and recent", "state": "retired", "at": 999000000000, "now": 1000000000000, "expected": true},
+  {"name": "proposed and past 90 days", "state": "proposed", "at": 992223999999, "now": 1000000000000, "expected": false},
+  {"name": "no date", "state": "live", "at": null, "now": 1000000000000, "expected": false},
+  {"name": "zero date", "state": "live", "at": 0, "now": 1000000000000, "expected": false}
+]

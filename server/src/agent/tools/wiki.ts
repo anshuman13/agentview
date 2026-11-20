@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { profileOf } from '../claude/accounts.js';
+import { isOld as isOldClaim } from '../../../../shared/claimAge.js';
 import { errText } from '../../../../shared/util.js';
 import { hubGet, hubPush, hubRows, type HubChange, type HubRow } from '../../integrations/assistant.js';
 import { defineTool } from './tool.js';
@@ -17,9 +18,8 @@ export const WIKI_RULES = [
 
 const PROFILE = z.enum(['work', 'personal']).optional().describe('Which wiki: work or personal. Defaults to the profile of the chat\'s folder');
 const state = (r: HubRow) => (r.state as string | null) ?? 'live';
-// Claims retired by hand or older than 90 days are kept apart so they do not crowd out current ones (isOld in web/src/codex/data/wiki.ts).
-const RETIRE_AFTER = 90 * 86_400_000;
-const isOld = (f: HubRow) => state(f) === 'retired' || (state(f) !== 'proposed' && typeof f.at === 'number' && f.at > 0 && Date.now() - f.at > RETIRE_AFTER);
+// Old claims (shared/claimAge.ts) are kept apart so they do not crowd out current ones.
+const isOld = (f: HubRow) => isOldClaim({ state: state(f), at: typeof f.at === 'number' ? f.at : null });
 const day = (f: HubRow) => (typeof f.at === 'number' && f.at > 0 ? new Date(f.at).toISOString().slice(0, 10) : 'undated');
 const claim = (f: HubRow) => `- [${f.id}] (${day(f)}, ${state(f)}${f.superseded_by ? ', superseded' : ''}${state(f) !== 'retired' && isOld(f) ? ', old' : ''}) ${f.text}`;
 const newest = (a: HubRow, b: HubRow) => ((b.at as number) ?? 0) - ((a.at as number) ?? 0);

@@ -1,3 +1,4 @@
+import { isOld, RETIRE_AFTER } from '../../../../../shared/claimAge';
 import { decisionKey, keyWords, mayChange, titleWords } from '../../../../../shared/claimMatch';
 import { newId, rowKey, type Profile } from '../sync';
 
@@ -102,9 +103,7 @@ export function currentClaim(facts: Fact[]) {
   return (f: Fact) => !f.superseded_by || !alive.has(`${f.profile}:${f.superseded_by}`);
 }
 
-// A claim older than this, or one retired by hand, moves to the page's Older section and out of what Claude is given.
-export const RETIRE_AFTER = 90 * 86_400_000;
-export const isOld = (f: Fact, now = Date.now()) => f.state === 'retired' || (f.state !== 'proposed' && f.at != null && f.at > 0 && now - f.at > RETIRE_AFTER);
+export { isOld, RETIRE_AFTER };
 
 // The claims shown on a page: current claims newest first under each heading, headings with the newest claim first,
 // each claim with the claims it superseded, directly or down the chain. Old claims are left to olderClaims.
@@ -232,9 +231,9 @@ export function driftFacts(facts: Fact[], pages: Page[], meetings: Meeting[], no
   return out.sort((a, b) => b.decision.at - a.decision.at);
 }
 
-// Current claims on a page whose own time is older than days and which no recent meeting about the page's title touches; oldest first.
-export function staleFacts(facts: Fact[], pages: Page[], meetings: Meeting[], now = Date.now(), days = 90) {
-  const cutoff = now - days * 86_400_000;
+// Current claims on a page that are old by `at` and which no recent meeting about the page's title touches; oldest first.
+export function staleFacts(facts: Fact[], pages: Page[], meetings: Meeting[], now = Date.now()) {
+  const cutoff = now - RETIRE_AFTER;
   const current = currentClaim(facts);
   const title = new Map(live(pages).map((p) => [`${p.profile}:${p.id}`, p.title]));
   const recent = live(meetings).filter((m) => (m.starts_at ?? 0) > cutoff);
@@ -248,8 +247,8 @@ export function staleFacts(facts: Fact[], pages: Page[], meetings: Meeting[], no
     return v;
   };
   return live(facts)
-    .filter((f) => f.page_id && title.has(`${f.profile}:${f.page_id}`) && current(f) && factTime(f) < cutoff && !mentioned(`${f.profile}:${f.page_id}`))
-    .sort((a, b) => factTime(a) - factTime(b));
+    .filter((f) => f.page_id && title.has(`${f.profile}:${f.page_id}`) && current(f) && isOld(f, now) && !mentioned(`${f.profile}:${f.page_id}`))
+    .sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
 }
 
 export const proposals = (facts: Fact[]) => facts.filter((f) => !f.deleted && f.state === 'proposed').sort((a, b) => (b.at ?? 0) - (a.at ?? 0));

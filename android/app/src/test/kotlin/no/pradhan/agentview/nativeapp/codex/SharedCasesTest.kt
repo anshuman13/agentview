@@ -92,6 +92,7 @@ import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
+import no.pradhan.agentview.nativeapp.codex.wiki.isOld
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 import no.pradhan.agentview.nativeapp.chat.appendRule
 import no.pradhan.agentview.nativeapp.chat.can
@@ -471,6 +472,15 @@ class SharedCasesTest {
         val d = Json.parseToJsonElement(File("../../shared/fixtures/dismissed.json").readText()).jsonObject
         for (c in d.getValue("keys").jsonArray.map { it.jsonObject }) assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, dismissedKeys(c.prim("value")?.contentOrNull))
         for (c in d.getValue("merge").jsonArray.map { it.jsonObject }) assertEquals(c.str("name"), c.prim("expected")?.contentOrNull, mergeDismissed(c.prim("a")?.contentOrNull, c.prim("b")?.contentOrNull))
+    }
+
+    @Test fun claimAge() {
+        for (c in cases("claim-age")) {
+            val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+            c.nullable("state")?.let { f["state"] = toJson(it.jsonPrimitive.content) }
+            c.nullable("at")?.let { f["at"] = toJson(it.jsonPrimitive.long) }
+            assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isOld(Row("facts", "f", "work", f = f), c.getValue("now").jsonPrimitive.long))
+        }
     }
 
     @Test fun eventRule() {
