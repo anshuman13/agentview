@@ -34,18 +34,8 @@ button.link { background: transparent; border: 0; padding: 0; color: var(--link)
 @media (hover: hover) { .btn:hover { background: transparent; } }
 @media (hover: hover) { .btn:hover:not(:disabled) { background: var(--hover); } }
 .btn:disabled { opacity: 0.5; cursor: default; }
-.btn.quiet { color: var(--fg-muted); }
-@media (hover: hover) { .btn.quiet:hover:not(:disabled) { color: var(--fg); } }
-.btn.primary { color: var(--on-accent); background: var(--accent-fill); border-color: var(--accent-fill); }
-@media (hover: hover) { .btn.primary:hover { color: var(--on-accent); background: var(--accent-fill); border-color: var(--accent-fill); } }
-@media (hover: hover) { .btn.primary:hover:not(:disabled) { background: var(--accent-hover); } }
-.btn.danger { color: var(--bg); background: var(--err); border-color: var(--err); }
-@media (hover: hover) { .btn.danger:hover { color: var(--bg); background: var(--err); border-color: var(--err); } }
-.btn.xs { height: var(--size-xs); padding: 0 var(--sp-3); gap: 3px; font-size: var(--fs-xs); }
-.btn.sm { height: var(--size-md); padding: 0 var(--sp-4); }
-.btn.lg { height: var(--size-xl); padding: 0 var(--sp-6); gap: var(--sp-4); font-size: var(--fs-md); }
 @media (max-width: 900px) {
-  .btn, .btn:is(.xs, .sm, .lg) { height: var(--touch); padding: 0 var(--sp-6); font-size: var(--fs-md); }
+  .btn { height: var(--touch); padding: 0 var(--sp-6); font-size: var(--fs-md); }
 }
 
 /* Design system (docs/design-system.md): Button stacks variant and size classes on .btn; IconButton on .icon-btn. iOS styles: filled, tinted, gray, plain. */

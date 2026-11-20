@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef, ReactNode } from 'react';
+import type { ComponentPropsWithRef, MouseEventHandler, ReactNode } from 'react';
 import { Icon } from './Icon';
 import { cx } from './util';
 
@@ -10,19 +10,21 @@ type Tone = 'work' | 'personal' | 'accent';
 
 const variants: Record<LegacyVariant, Variant> = { primary: 'filled', secondary: 'gray', quiet: 'plain' };
 
+export const buttonClass = ({ variant = 'gray', size = 'md' }: { variant?: Variant | LegacyVariant; size?: Size | 'lg' }) => cx('btn', `btn-${variants[variant as LegacyVariant] ?? variant}`, `btn-${size}`);
 
-export function Button({ variant = 'gray', size = 'md', icon, className, type = 'button', children, ...rest }: Native & {
+export function Button({ variant, size, icon, className, type = 'button', href, target, rel, children, ...rest }: Native & {
   variant?: Variant | LegacyVariant;
   size?: Size | 'lg';
   icon?: string;
+  href?: string;
+  target?: string;
+  rel?: string;
   children?: ReactNode;
 }) {
-  return (
-    <button type={type} className={cx('btn', `btn-${variants[variant as LegacyVariant] ?? variant}`, `btn-${size}`, className)} {...rest}>
-      {icon && <Icon name={icon} small />}
-      {children}
-    </button>
-  );
+  const cls = cx(buttonClass({ variant, size }), className);
+  const body = <>{icon && <Icon name={icon} small />}{children}</>;
+  if (href) return <a className={cls} href={href} target={target} rel={rel} title={rest.title} aria-label={rest['aria-label']} onClick={rest.onClick as MouseEventHandler<HTMLElement>}>{body}</a>;
+  return <button type={type} className={cls} {...rest}>{body}</button>;
 }
 
 export function ShowToggle({ open, count, onClick }: { open?: boolean; count?: number; onClick: () => void }) {

@@ -134,7 +134,7 @@ colour at 14% (`--warn-soft`); selected is `--accent-soft`.
 `/design` is the visual review of every primitive, in every state, at desktop and phone width. It is opened from Settings, About, in dev mode or when the hub reports debug. A new primitive in `web/src/ui` gets its story added in `web/src/design/Stories.tsx`. The URL carries the state: `/design?theme=light|dark&width=phone|desktop#<primitive>`, all three optional and unknown values ignored, for example `/design?theme=light&width=phone#chip`. A query theme is not saved as the app theme. Each Block has a link button that copies its URL. A Block's name lowercased is its anchor, so a new primitive's Block name is its anchor.
 
 ### Button (iOS button styles)
-`<Button variant size icon>`; `.btn .btn-{variant} .btn-{size}`. Variants filled, tinted, gray, plain,
+`<Button variant size icon href>`; `.btn .btn-{variant} .btn-{size}`. With `href` (plus `target`, `rel`) it renders an `<a>` with the same classes, for buttons that open a link. Variants filled, tinted, gray, plain,
 danger; sizes sm 28px and md 34px (capsule, `--radius-pill`), lg 50px (12px radius, 17px semibold).
 On coarse pointers sm and md keep their look but get a 44px hit area (an `::after` layer).
 Old names still work: primary is filled, secondary (default) is gray, quiet is plain.

@@ -167,7 +167,7 @@ export function OpenChats() {
               <span className="name">{g.name}</span>
               <span className="meta"><GroupGlance g={g} seen={seen} /></span>
               <span className="acts">
-                <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); newChat({ cwd: g.key }); }}><Icon name="add" small /></button>
+                <IconButton icon="add" label={`New chat in ${g.name}`} size="sm" small onClick={(e) => { e.stopPropagation(); newChat({ cwd: g.key }); }} />
               </span>
             </div>
             {isOpen(g) && g.open.filter((c) => !c.pending).map((c) => row(c))}

@@ -23,7 +23,6 @@
 .mcp-main .badge.bad { color: var(--err); }
 .mcp-main .badge.warn { color: var(--warn); }
 .mcp-seg { display: flex; gap: var(--sp-2); }
-.mcp-seg .btn.on { border-color: var(--accent); background: var(--accent-soft); }
 
 .mcp-tag { font-family: var(--mono); letter-spacing: var(--tracking-wide); }
 

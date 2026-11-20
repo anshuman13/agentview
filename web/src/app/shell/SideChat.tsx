@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { embedded, send, setUi, useStore } from '../store';
+import { IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 
 export function useSideChat() {
@@ -34,8 +35,8 @@ export function SideChat({ beside }: { beside: string }) {
         <Icon name="comment-discussion" small />
         <span className="name" title={chat ? `${chat.title}\n${chat.cwd}` : ''}>{chat ? `${chat.cwd.split('/').pop()} · ${chat.title}` : 'Chat'}</span>
         <span className="spacer" />
-        <button className="icon-btn" title="Show this chat in the main column" onClick={() => send({ type: 'view', id: beside })}><Icon name="arrow-left" small /></button>
-        <button className="icon-btn" title="Close the side chat" onClick={() => setUi({ beside: null })}><Icon name="close" small /></button>
+        <IconButton icon="arrow-left" label="Show this chat in the main column" size="sm" small onClick={() => send({ type: 'view', id: beside })} />
+        <IconButton icon="close" label="Close the side chat" size="sm" small onClick={() => setUi({ beside: null })} />
       </div>
       <iframe key={beside} className="beside-frame" title="Side chat" src={`/?chat=${encodeURIComponent(beside)}`} />
     </section>

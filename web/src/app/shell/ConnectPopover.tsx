@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import QRCode from 'qrcode';
 import { useEscape } from '../../ui/util';
@@ -31,7 +32,7 @@ export function ConnectPopover({ onClose }: { onClose: () => void }) {
         <div className="connect-head">
           <span>Open on phone</span>
           <span className="spacer" />
-          <button className="icon-btn" title="Close" onClick={onClose}><Icon name="close" /></button>
+          <IconButton icon="close" label="Close" size="sm" onClick={onClose} />
         </div>
         {error && <div className="connect-body muted">{error}</div>}
         {urls && urls.length === 0 && <div className="connect-body muted">NetBird is not connected on this Mac.</div>}

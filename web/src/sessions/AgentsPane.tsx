@@ -98,7 +98,7 @@ function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; no
       {running && a.info?.progress && <div className="ag-progress">{a.info.progress}</div>}
       {running && <div className="muted small" title={new Date(a.lastAt).toLocaleString()}>Last activity {elapsed(now - a.lastAt)} ago{a.lastStep && ` · ${a.lastStep}`}</div>}
       <section className="ag-report">
-        {running ? <div className="muted small">The report shows here when the agent finishes.</div> : <><Markdown text={reportText(a)} /><button className="btn sm" onClick={() => copyText(reportText(a), 'Report copied')}><Icon name="copy" small /> Copy report</button></>}
+        {running ? <div className="muted small">The report shows here when the agent finishes.</div> : <><Markdown text={reportText(a)} /><Button size="sm" icon="copy" onClick={() => copyText(reportText(a), 'Report copied')}>Copy report</Button></>}
       </section>
       {a.prompt && (
         <details className="ag-prompt">

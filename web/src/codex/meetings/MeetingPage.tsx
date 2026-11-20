@@ -86,7 +86,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
             <Section label={m.title || UNTITLED} action={(
               <>
                 {state === 'live' && link && !event
-                  ? <a className="btn btn-filled btn-sm" href={link} target="_blank" rel="noreferrer"><Icon name="device-camera-video" small />Join</a>
+                  ? <Button variant="filled" size="sm" icon="device-camera-video" href={link} target="_blank" rel="noreferrer">Join</Button>
                   : <Button variant="filled" size="sm" icon="edit" onClick={takeNotes}>Notes</Button>}
                 {canMenu && <MeetingMenu m={m} all={all} state={state} deleteNotes={deleteNotes} />}
               </>

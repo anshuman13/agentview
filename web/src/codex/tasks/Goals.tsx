@@ -4,9 +4,8 @@ import { GOAL, MAX_GOALS, goalsOf } from '../data/tasks/goals';
 import { weekStart } from '../data/dates';
 import type { ItemRow, Profile } from '../data/sync';
 import { attempt, openWeekGoals, showSnack, useView } from '../view';
-import { Icon } from '../../ui/Icon';
 import { Section } from '../../ui/Section';
-import { Button, chipClass } from '../../ui/Button';
+import { Button, IconButton, chipClass } from '../../ui/Button';
 
 function GoalInput({ row }: { row: ItemRow }) {
   const store = useAssistantStore();
@@ -21,7 +20,7 @@ function GoalInput({ row }: { row: ItemRow }) {
     <div className="gl-row" role="listitem">
       <input ref={input} className="gl-input" value={text} aria-label="Goal" onChange={(e) => setText(e.target.value)} onBlur={() => { if (text.trim()) save(); else setText(row.title ?? ''); }}
         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); else if (e.key === 'Escape') setText(row.title ?? ''); }} />
-      <button className="icon-btn" title="Remove goal" aria-label={`Remove ${row.title}`} onClick={() => { void store.update(row, { deleted: 1 }); showSnack('Goal removed', () => void store.update(row, { deleted: 0 })); }}><Icon name="close" small /></button>
+      <IconButton icon="close" label={`Remove ${row.title}`} title="Remove goal" size="sm" small onClick={() => { void store.update(row, { deleted: 1 }); showSnack('Goal deleted', () => void store.update(row, { deleted: 0 })); }} />
     </div>
   );
 }

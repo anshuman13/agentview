@@ -7,7 +7,6 @@ import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
-import { Icon } from '../../ui/Icon';
 import { Section } from '../../ui/Section';
 import { haptic } from '../../ui/haptic';
 import { safeHref } from '../../ui/util';
@@ -52,7 +51,7 @@ function MeetingRow({ m, now }: { m: Meeting; now: number }) {
   const soon = link ? joinMinutes(m, now) : null;
   return (
     <Row plain role="button" tabIndex={0} title={m.title} meta={soon ? `Starts in ${soon} min` : clock(m.starts_at!)}
-      trailing={live ? <Badge status="running" label="Live" /> : soon ? <a className="btn btn-filled btn-sm" href={link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}><Icon name="device-camera-video" small />Join</a> : undefined}
+      trailing={live ? <Badge status="running" label="Live" /> : soon ? <Button variant="filled" size="sm" icon="device-camera-video" href={link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Join</Button> : undefined}
       onClick={() => openMeeting(m)}
       onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openMeeting(m); } }} />
   );

@@ -54,9 +54,9 @@ export function RunForm({ server, tool }: { server: string; tool: McpTool }) {
       ))}
       {!fields.length && <div className="muted">This tool takes no input.</div>}
       <div className="mcp-run-acts">
-        <button type="submit" className={armed ? 'btn danger' : 'btn primary'} disabled={busy}>
+        <Button type="submit" variant={armed ? 'danger' : 'primary'} size="sm" disabled={busy}>
           <Icon name={busy ? 'loading' : armed ? 'warning' : 'play'} small spin={busy} /> {busy ? 'Running' : armed ? 'Confirm run' : 'Run'}
-        </button>
+        </Button>
         {armed && <span className="bad" role="alert">This tool can change or delete data. Click again to run it.</span>}
         {error && <span className="bad" role="alert">{error}</span>}
       </div>

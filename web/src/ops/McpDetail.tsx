@@ -4,7 +4,7 @@ import { send, useStore } from '../app/store';
 import { providerLabel } from '../../../shared/providers';
 import { useCan } from '../chat/useCan';
 import { Icon } from '../ui/Icon';
-import { Button, IconButton } from '../ui/Button';
+import { Button, Chip, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
 import { openConnectors, use } from './mcpActions';
@@ -45,7 +45,7 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
         {row.live && row.status === 'connected' && <Button icon="comment" onClick={() => use(row.name)} title={`Ask ${label} to use this server in your next message`}>Add to chat</Button>}
         {canEdit && !row.live && !row.account && <AddToChat name={row.name} />}
         {connectors && row.type === 'claudeai' && row.status !== 'needs-auth' && <Button icon="key" onClick={() => openConnectors(row.account)}>Manage on claude.ai</Button>}
-        {url && <a className="btn" href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
+        {url && <Button icon="link-external" href={row.command} target="_blank" rel="noreferrer">Open URL</Button>}
       </div>
       {!canEdit && <div className="muted">Edit ~/.codex/config.toml, then Reconnect</div>}
       <dl className="mcp-kv">
@@ -60,7 +60,7 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
         {row.account ? <><dt>Account</dt><dd>{ACCOUNT_LABEL[row.account as Account] ?? row.account} Claude account</dd></> : <>
           <dt>Group</dt>
           <dd className="mcp-seg">
-            {(['work', 'personal'] as Group[]).map((g) => <button key={g} className={`btn ${g === group ? 'on' : ''}`} onClick={() => g !== group && onGroup(g)}>{g === 'work' ? 'Work' : 'Personal'}</button>)}
+            {(['work', 'personal'] as Group[]).map((g) => <Chip key={g} on={g === group} onClick={() => g !== group && onGroup(g)}>{g === 'work' ? 'Work' : 'Personal'}</Chip>)}
           </dd>
         </>}
       </dl>
