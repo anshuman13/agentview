@@ -149,6 +149,33 @@ class MeetingsWikiTest {
         assertEquals("Hi Anna, a quick nudge on the contract; Review budget. Any update when you have a moment? Thanks!", nudgeText(g[0]))
     }
 
+    private fun mail(n: Int) = List(n) { Unanswered("t$it", "u$it", "Ada", "m$it") }
+    private fun inbox(dm: Row? = null, asks: List<Row> = emptyList(), promises: List<Row> = emptyList(), mail: List<Unanswered> = emptyList()) = PersonInbox(dm, asks, promises, mail)
+
+    @Test fun betweenOrdersPromisesAsksAndMailCappedAtFive() {
+        val rows = betweenRows(inbox(promises = listOf(item("said:1", extra = arrayOf("title" to "p"))), asks = listOf(item("a", extra = arrayOf("title" to "a"))), mail = mail(5)), "Ada")
+        assertEquals(listOf("p", "a", "m0", "m1", "m2"), rows.map { it.title })
+        assertEquals(listOf("You told Ada", "Ada asked you", "Waiting on Ada"), rows.take(3).map { it.meta })
+    }
+
+    @Test fun betweenKeepsTheDmThreadAsTheFifthRow() {
+        val dm = Row("chats", "d", WORK, f = mapOf("summary" to JsonPrimitive("line one\nline two"), "url" to JsonPrimitive("https://slack/x")))
+        val rows = betweenRows(inbox(dm = dm, mail = mail(6)), "Ada")
+        assertEquals(listOf("m0", "m1", "m2", "m3", "Slack DM"), rows.map { it.title })
+        assertEquals("line one" to "https://slack/x", rows[4].meta to rows[4].url)
+        assertEquals(emptyList<Between>(), betweenRows(inbox(), "Ada"))
+    }
+
+    @Test fun personInboxSplitsAsksFromPromisesByName() {
+        val ask = item("a", extra = arrayOf("source" to "slack", "people" to "Ada Lovelace · DM"))
+        val said = item("said:1", extra = arrayOf("source" to "slack", "people" to "Ada Lovelace"))
+        val other = item("b", extra = arrayOf("source" to "gmail", "people" to "Grace Hopper"))
+        val plain = item("c", extra = arrayOf("people" to "Ada Lovelace"))
+        val i = personInbox("Ada Lovelace", listOf(ask, said, other, plain), emptyList(), emptyList())
+        assertEquals(listOf("a"), i.asks.map { it.id })
+        assertEquals(listOf("said:1"), i.promises.map { it.id })
+    }
+
     @Test fun peopleNamesMatchByEmailOrName() {
         assertEquals("Anna Berg", displayName("anna.berg@example.com"))
         assertTrue(sameName("Anna Berg", "anna.berg@example.com"))

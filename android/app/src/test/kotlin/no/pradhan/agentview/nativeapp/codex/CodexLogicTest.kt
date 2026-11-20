@@ -265,4 +265,18 @@ class CodexLogicTest {
         assertFalse(deletesOnSwipe(-55f, 100f))
         assertFalse(deletesOnSwipe(80f, 100f))
     }
+
+    @Test fun calendarBannerShowsFailedOrStalledCalendarScansOnly() {
+        val scans = listOf(
+            SyncScan("calendar:work", ok = 5, error = "x", failed = 9),
+            SyncScan("calendar:personal", ok = 5, stalled = 9),
+            SyncScan("calendar:old", ok = 9, error = "x", failed = 5),
+            SyncScan("calendar:none", missing = true, error = "x"),
+            SyncScan("slack", error = "x", failed = 9),
+        )
+        val bad = failedCalendars(scans)
+        assertEquals(listOf("calendar:work", "calendar:personal"), bad.map { it.scan })
+        assertEquals(listOf("Calendar sync failed (work)", "Calendar sync failed (personal)"), bad.map { calendarFailText(it, bad.size) })
+        assertEquals("Calendar sync failed", calendarFailText(bad[0], 1))
+    }
 }
