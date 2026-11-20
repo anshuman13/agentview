@@ -94,7 +94,7 @@ export const advisorsInfo = (home = ADVISOR_HOME): Promise<AdvisorInfo[]> =>
   Promise.all(ADVISORS.map(async (a) => {
     const dir = path.join(home, a.id);
     const [memory, list] = await Promise.all([readFile(path.join(dir, 'memory.md'), 'utf8').catch(() => ''), existsSync(dir) ? listSessions({ dir, limit: 5 }) : []]);
-    return { id: a.id, memory, chats: list.map(savedSession).map(({ sessionId, title, lastModified }) => ({ sessionId, title, lastModified })) };
+    return { id: a.id, memory, chats: list.map((x) => savedSession(x)).map(({ sessionId, title, lastModified }) => ({ sessionId, title, lastModified })) };
   }));
 
 // A project's ranked backlog, each item with whether its spec file exists.

@@ -13,6 +13,7 @@ import { CODEX_WORK } from './workspace/files.js';
 import { createAutoMerge } from './integrations/automerge.js';
 import { forgetPrs, gh, onPrsChanged, useAutoMerge } from './integrations/github.js';
 import { onAttention, startAttention } from './integrations/attention.js';
+import { startSummaries } from './agent/claude/summaries.js';
 import { thisMac } from './http/macs.js';
 import type { AttentionItem, ClientMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './http/stream.js';
@@ -124,6 +125,7 @@ function attentionSources(extra: string[] = []) {
 }
 const fixChat = (item: AttentionItem) => host.req<string>({ op: 'ask', cwd: item.cwd, prompt: item.prompt, fresh: true });
 startAttention(attentionSources, fixChat);
+startSummaries(() => new Set([...live.chats.values()].filter((c) => c.running && c.sessionId).map((c) => c.sessionId!)));
 onPrsChanged((cwd) => host.notify({ op: 'prs_changed', cwd }));
 const autoMerge = createAutoMerge({ gh, post, file: path.join(os.homedir(), '.agentview/automerge.json'), changed: forgetPrs, shipped: ({ cwd, ...pr }) => hubShipped({ ...pr, profile: profileOf(cwd) }).catch((err) => console.error('hub shipped:', errText(err))) });
 useAutoMerge(autoMerge);

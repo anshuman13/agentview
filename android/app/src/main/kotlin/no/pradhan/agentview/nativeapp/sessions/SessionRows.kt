@@ -180,7 +180,7 @@ class ChatRows(
         val branch = (s.gitBranch ?: repoBranch(s.cwd)).takeIf { !isDefaultBranch(it) }
         ChatRow(
             title = (if (opening.value == s.sessionId) "Opening… " else "") + s.title.ifBlank { "Untitled" },
-            meta = buildAnnotatedString { append(metaLine(repo, branch, providerMark(s.provider), since(s.lastModified))) },
+            meta = buildAnnotatedString { append(s.summary?.takeIf { it.isNotBlank() } ?: metaLine(repo, branch, providerMark(s.provider), since(s.lastModified))) },
             state = chatState(null, s, seen),
             selected = false,
             actions = actions(s.sessionId, s.title, null),
