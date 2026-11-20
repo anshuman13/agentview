@@ -26,7 +26,7 @@ import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
 
-class RepoChoice(val key: String?, val name: String)
+class RepoChoice(val key: String?, val name: String, val detail: String? = null)
 
 // The sheet behind the new chat buttons: the repo when none is fixed (the open chat's repo first), and the model, which starts on the last one used.
 @Composable
@@ -66,7 +66,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
             Group {
                 repos.forEachIndexed { i, r ->
                     if (i > 0) Hairline()
-                    ChoiceRow(r.name, onClick = { repo = r.key }, checked = r.key == repo)
+                    ChoiceRow(r.name, r.detail, onClick = { repo = r.key }, checked = r.key == repo)
                 }
             }
         }

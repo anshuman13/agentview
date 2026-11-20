@@ -20,7 +20,7 @@ data class SavedSession(
 )
 
 @Serializable
-data class Repo(val name: String, val cwd: String, val kind: String = "other", val branch: String = "", val dirty: Int = 0, val lastCommit: Double = 0.0)
+data class Repo(val name: String, val cwd: String, val root: String = "", val kind: String = "other", val branch: String = "", val dirty: Int = 0, val lastCommit: Double = 0.0)
 
 @Serializable
 data class Worktree(val id: String = "", val repo: String = "", val cwd: String, val name: String = "")
@@ -60,6 +60,9 @@ fun chatState(live: LiveChat?, saved: SavedSession?, seen: Map<String, Long>): C
     val s = seen[id] ?: return null
     return if (at > s) ChatState.Done else null
 }
+
+// The line under a repo in a picker: its root folder and branch (web RepoPicker).
+fun repoDetail(r: Repo) = metaLine(r.root, if (r.kind == "new") "empty" else r.branch.ifEmpty { "no git" })
 
 private fun urgency(c: LiveChat) = if (c.pending > 0) 0 else if (c.running) 1 else 2
 val byUrgency = Comparator<LiveChat> { a, b -> urgency(a) - urgency(b) }.thenByDescending { it.lastActive }

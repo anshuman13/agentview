@@ -64,6 +64,13 @@ class FoldersTest {
     }
 
     @Test
+    fun repoDetailNamesRootAndBranch() {
+        assertEquals("workspace · main", repoDetail(Repo("shop", "/w/shop", "workspace", branch = "main")))
+        assertEquals("workspace · empty", repoDetail(Repo("shop", "/w/shop", "workspace", kind = "new", branch = "main")))
+        assertEquals("workspace · no git", repoDetail(Repo("shop", "/w/shop", "workspace")))
+    }
+
+    @Test
     fun waitingRowsFollowTheSearch() {
         val ws = Workspace(repos, trees)
         val l = listOf(live("a", "/w/shop", pending = 1, active = 1), live("b", "/w/agentview", pending = 1, active = 2), live("c", "/w/shop"))
