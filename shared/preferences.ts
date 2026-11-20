@@ -20,3 +20,7 @@ export function givenPreferences<T extends Preference>(facts: T[], profile: stri
   }
   return given;
 }
+
+// How many of the profile's claims chats would get on their own that the 15 or 1500 character limit leaves out.
+export const leftOutPreferences = (facts: Preference[], profile: string, now = Date.now()) =>
+  facts.filter((f) => givenPreferences([f], profile, now).length).length - givenPreferences(facts, profile, now).length;

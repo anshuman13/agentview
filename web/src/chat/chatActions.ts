@@ -79,6 +79,21 @@ export async function moveMemoryToWiki(file: MemoryFile, restored: () => void) {
   return true;
 }
 
+// Deletes a memory file and its MEMORY.md lines; Undo puts them back, then runs `restored`. True once the file is gone.
+export async function forgetMemory(file: MemoryFile, restored: () => void) {
+  let removed: RemovedMemory;
+  try {
+    removed = await removeMemory(file.path);
+  } catch {
+    showSnack('Could not forget the memory');
+    return false;
+  }
+  showSnack('Memory forgotten', () => {
+    restoreMemory(file.path, removed).then(() => restored(), () => showSnack('Could not restore the memory'));
+  });
+  return true;
+}
+
 export function copyChatMarkdown() {
   const st = getState();
   copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? ''), 'Chat copied');

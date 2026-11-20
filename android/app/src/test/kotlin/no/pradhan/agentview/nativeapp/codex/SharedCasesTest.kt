@@ -92,6 +92,7 @@ import no.pradhan.agentview.nativeapp.chat.FoldRow
 import no.pradhan.agentview.nativeapp.chat.MemoryFile
 import no.pradhan.agentview.nativeapp.chat.MemoryMark
 import no.pradhan.agentview.nativeapp.chat.memoryMark
+import no.pradhan.agentview.nativeapp.chat.leftOutPreferences
 import no.pradhan.agentview.nativeapp.chat.rememberedOf
 import no.pradhan.agentview.nativeapp.chat.Proposal
 import no.pradhan.agentview.nativeapp.chat.StatusStep
@@ -1096,14 +1097,21 @@ class SharedCasesTest {
         }
     }
 
+    private fun preferenceFacts(c: JsonObject) = c.getValue("facts").jsonArray.map { it.jsonObject }.map { o ->
+        val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+        for (k in listOf("text", "page_id", "state", "superseded_by", "contested", "at", "used_at")) o[k]?.let { f[k] = it }
+        Row("facts", o.str("id"), o.str("profile"), f = f)
+    }
+
     @Test fun givenPreferences() {
         for (c in cases("preferences")) {
-            val facts = c.getValue("facts").jsonArray.map { it.jsonObject }.map { o ->
-                val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
-                for (k in listOf("text", "page_id", "state", "superseded_by", "contested", "at", "used_at")) o[k]?.let { f[k] = it }
-                Row("facts", o.str("id"), o.str("profile"), f = f)
-            }
-            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, givenPreferences(facts, c.str("profile"), c.getValue("now").jsonPrimitive.long).map { it.id })
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, givenPreferences(preferenceFacts(c), c.str("profile"), c.getValue("now").jsonPrimitive.long).map { it.id })
+        }
+    }
+
+    @Test fun leftOutPreferences() {
+        for (c in cases("preferences-left")) {
+            assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.int, leftOutPreferences(preferenceFacts(c), c.str("profile"), c.getValue("now").jsonPrimitive.long))
         }
     }
 

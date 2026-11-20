@@ -270,14 +270,19 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   the description (or the body on one line), cut to 400 characters and superseding the claim it restates, then posts `{ path }`
   to /api/memory/remove, which deletes the file and the MEMORY.md lines that link to it and returns `{ raw, lines }`. The sheet
   goes back to the list with "Moved to wiki" and Undo, which posts them to /api/memory/restore (only into a memory folder of the
-  chat, never over a file) and deletes the claim; a failed remove deletes the claim and says "Could not move the memory". A file
+  chat, never over a file) and deletes the claim; a failed remove deletes the claim and says "Could not move the memory". Beside
+  it, Forget (also hidden in phone read-only mode, no confirm) posts the same remove and goes back to the list with "Memory
+  forgotten" and Undo, which posts the restore; a failed remove says "Could not forget the memory". A file
   view shows its source line and a plain Back button on both clients; Back, web Esc and touch Back and phone system Back return to
   the list (the scrim and drag still close the sheet), asking "Discard the edit?" over an open edit. When /api/memory fails the
   list says "Could not load memory" with the reason and Retry. After the files, a "From the wiki" section (count, a Remember button,
   then the muted line "New chats get these") lists the Memory claims chats of the folder's profile start with (`givenPreferences`),
   each with its age; a tap opens the claim on the Memory wiki page and closes the sheet. Each row's More menu has Open in wiki (the
   same as a tap) and Retire (danger, hidden in phone read-only mode), which retires the claim with "Claim retired" and Undo; the
-  next given claim takes its place. With none given the section shows "Nothing from the wiki yet". Remember (hidden in phone
+  next given claim takes its place. With none given the section shows "Nothing from the wiki yet". When the 15 or 1500 character
+  limit leaves claims out (`leftOutPreferences`, `shared/fixtures/preferences-left.json`), the section ends with the muted line
+  "N more not given: new chats get the 15 newest, up to 1500 characters" and Open Memory, which opens the Memory wiki page and
+  closes the sheet. Remember (hidden in phone
   read-only mode) opens the same Remember field as the chat menu, and the saved claim shows in the section at once
 - A turn that wrote Claude memory files (successful Write, Edit or MultiEdit on `projects/<folder>/memory/*.md`, MEMORY.md only
   when alone: `rememberedOf`, `shared/fixtures/remembered.json`; `shared/fixtures/remembered-history.json` holds what the

@@ -5,6 +5,8 @@ import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.loadErrorText
 import no.pradhan.agentview.nativeapp.net.protocolJson
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import no.pradhan.agentview.nativeapp.chat.MemoryFile
 import no.pradhan.agentview.nativeapp.chat.Transcript
 import no.pradhan.agentview.nativeapp.codex.Row
 
@@ -57,6 +60,15 @@ fun Hub.saveFile(path: String, content: String, failure: String = "Could not sav
 // Replaces the body of a memory file; `done` gets the body it had, or null when the save did not go through.
 fun Hub.saveMemory(path: String, text: String, failure: String, done: (String?) -> Unit) =
     write("/api/memory/save", buildJsonObject { put("path", path); put("text", text) }.toString(), failure, { protocolJson.parseToJsonElement(it).jsonObject.getValue("previous").jsonPrimitive.content }, done)
+
+// web chatActions.ts forgetMemory: deletes a memory file and its MEMORY.md lines; Undo puts them back, then runs `restored`. `done` gets true once the file is gone.
+fun Hub.forgetMemory(file: MemoryFile, restored: () -> Unit, done: (Boolean) -> Unit) =
+    write("/api/memory/remove", buildJsonObject { put("path", file.path) }.toString(), "Could not forget the memory", { protocolJson.parseToJsonElement(it).jsonObject }) { removed ->
+        if (removed != null) undoable.tryEmit(Undoable("Memory forgotten") {
+            write("/api/memory/restore", JsonObject(removed + ("path" to JsonPrimitive(file.path))).toString(), "Could not restore the memory") { if (it) restored() }
+        })
+        done(removed != null)
+    }
 
 // A guarded write whose response is parsed and handed to `done`, or null when it did not go through.
 fun <T> Hub.write(path: String, body: String, failure: String, parse: (String) -> T, done: (T?) -> Unit) {

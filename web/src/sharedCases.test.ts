@@ -38,6 +38,7 @@ import { filePath } from './chat/transcript/md';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
 import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memoryLogic';
+import { leftOutPreferences, type Preference } from '../../shared/preferences';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { addUse, buildHistory, chatMarkdown, draftKey, failedLine, ghostFor, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
@@ -134,6 +135,10 @@ describe('cases shared with the Android app', () => {
       const facts = c.facts.map((f) => ({ ...f, deleted: 0, page_id: null, superseded_by: null }) as unknown as Fact);
       expect(memoryMark(c.file, facts, c.profile, c.now)).toEqual(c.expected);
     });
+  }
+
+  for (const c of cases<{ name: string; profile: string; now: number; facts: Preference[]; expected: number }>('preferences-left')) {
+    it(`leftOutPreferences: ${c.name}`, () => expect(leftOutPreferences(c.facts, c.profile, c.now)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; rows: ExploreRow[]; runs: { start: number; end: number }[]; labels: string[] }>('explore-runs')) {
