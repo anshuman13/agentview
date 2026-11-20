@@ -81,14 +81,16 @@ export function MeetingPage({ m }: { m: Meeting }) {
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
-          <Section label={m.title || UNTITLED} action={(
-            <>
-              {state === 'live' && link && !event
-                ? <a className="btn btn-filled btn-sm" href={link} target="_blank" rel="noreferrer"><Icon name="device-camera-video" small />Join</a>
-                : <Button variant="filled" size="sm" icon="edit" onClick={takeNotes}>Notes</Button>}
-              {canMenu && <MeetingMenu m={m} all={all} state={state} deleteNotes={deleteNotes} />}
-            </>
-          )} />
+          <div className="mt-title">
+            <Section label={m.title || UNTITLED} action={(
+              <>
+                {state === 'live' && link && !event
+                  ? <a className="btn btn-filled btn-sm" href={link} target="_blank" rel="noreferrer"><Icon name="device-camera-video" small />Join</a>
+                  : <Button variant="filled" size="sm" icon="edit" onClick={takeNotes}>Notes</Button>}
+                {canMenu && <MeetingMenu m={m} all={all} state={state} deleteNotes={deleteNotes} />}
+              </>
+            )} />
+          </div>
           {meta && <p className="mt-meta">{meta}</p>}
           {state !== 'done' && <StateLine m={m} now={now} />}
           {m.room && m.room_me == null && <RoomMic m={m} />}
