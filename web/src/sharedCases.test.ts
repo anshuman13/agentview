@@ -24,6 +24,7 @@ import { goalCommand, parseEvery, planOf, rerunForm, type GoalForm } from '../..
 import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { taskChatPrompt } from '../../shared/taskChat';
+import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail } from './app/runtime/pageEvents';
 import { buildTranscript, turnAnswers } from './chat/transcript/steps';
@@ -492,6 +493,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; task: Parameters<typeof taskChatPrompt>[0]; expected: string }>('task-chat-prompt')) {
     it(`taskChatPrompt: ${c.name}`, () => expect(taskChatPrompt(c.task)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; url: string | null; expected: string | null }>('chat-session-of')) {
+    it(`chatSessionOf: ${c.name}`, () => expect(chatSessionOf(c.url)).toBe(c.expected));
   }
 
   type StateCase = { name: string; chat: Partial<LiveChat> & { agents?: number; run?: { state: ChatRun['state']; why?: string; nextAtLocal?: string } }; expected: unknown };

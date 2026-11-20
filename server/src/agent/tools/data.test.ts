@@ -28,6 +28,19 @@ describe('data_write', () => {
     expect(await dataWriteTool.handler({ table: 'jobs', id: 'a', fields: { prompt: 'x' } }, { cwd } as never)).toBe('A job with a repo is changed on the job page only.');
     expect(await dataWriteTool.handler({ table: 'jobs', id: 'b', fields: { prompt: 'x' } }, { cwd } as never)).toMatch(/Updated jobs/);
   });
+  test('tags an item a chat creates with that chat, keeps a passed source and leaves updates alone', async () => {
+    const cwd = '/tmp';
+    const pushed = () => hub.push.mock.calls.at(-1)![0][0].fields;
+    await dataWriteTool.handler({ table: 'items', fields: { title: 'a' } }, { cwd, chatId: 's1' } as never);
+    expect(pushed()).toMatchObject({ source: 'chat', source_url: '/?session=s1' });
+    await dataWriteTool.handler({ table: 'items', fields: { title: 'b', source: 'slack' } }, { cwd, chatId: 's1' } as never);
+    expect(pushed()).toEqual({ title: 'b', source: 'slack' });
+    await dataWriteTool.handler({ table: 'items', fields: { title: 'c' } }, { cwd, chatId: null } as never);
+    expect(pushed()).toEqual({ title: 'c' });
+    hub.rows.mockResolvedValue([{ id: 'x', profile: profileOf(cwd) }]);
+    await dataWriteTool.handler({ table: 'items', id: 'x', fields: { title: 'd' } }, { cwd, chatId: 's1' } as never);
+    expect(pushed()).toEqual({ title: 'd' });
+  });
   test('refuses job writes from an unattended chat', async () => {
     expect(await dataWriteTool.handler({ table: 'jobs', fields: { prompt: 'x', tools: 'browser' } }, { cwd: '/tmp', unattended: true } as never)).toBe('An unattended chat cannot create or change jobs.');
   });

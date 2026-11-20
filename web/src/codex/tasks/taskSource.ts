@@ -11,6 +11,7 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
   github: { icon: 'github', label: 'GitHub' },
   capture: { icon: 'edit', label: 'You' },
   job: { icon: 'history', label: 'Job' },
+  chat: { icon: 'sparkle', label: 'Chat' },
 };
 export const channelOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
 export const sourceOf = (r: ItemRow) => (isSaid(r) ? { icon: 'reply', label: 'You said' } : channelOf(r));

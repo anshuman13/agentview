@@ -1,0 +1,8 @@
+[
+  {"name": "absolute link", "url": "http://localhost:7777/?session=abc-123", "expected": "abc-123"},
+  {"name": "relative link", "url": "/?session=abc-123", "expected": "abc-123"},
+  {"name": "other params and fragment", "url": "https://x.test/?view=tasks&session=s%201&slug=a#top", "expected": "s 1"},
+  {"name": "no session", "url": "https://sentry.io/issues/1", "expected": null},
+  {"name": "empty session", "url": "/?session=", "expected": null},
+  {"name": "null", "url": null, "expected": null}
+]

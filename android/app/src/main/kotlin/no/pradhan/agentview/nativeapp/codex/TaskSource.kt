@@ -13,6 +13,7 @@ private val SOURCES = mapOf(
     "github" to SourceLink("github", "GitHub"),
     "capture" to SourceLink("edit", "You"),
     "job" to SourceLink("history", "Job"),
+    "chat" to SourceLink("sparkle", "Chat"),
 )
 
 // channelOf, sourceOf and sourceLink of web/src/codex/tasks/taskSource.ts; shared/fixtures/task-source.json holds the cases.

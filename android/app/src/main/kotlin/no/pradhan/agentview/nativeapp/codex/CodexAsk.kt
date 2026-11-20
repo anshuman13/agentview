@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.codex
 import no.pradhan.agentview.nativeapp.codex.meetings.othersOf
 import java.time.Instant
 import java.time.LocalDate
+import java.net.URLDecoder
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.serialization.Serializable
@@ -76,4 +77,10 @@ fun parseDaily(s: String?): DailyChat? = s?.let { runCatching { protocolJson.dec
 fun encodeDaily(d: DailyChat) = protocolJson.encodeToString(DailyChat.serializer(), d)
 
 // shared/taskChat.ts taskChatPrompt: the first message of a chat started from a task.
-fun taskChatPrompt(title: String?, text: String?, sourceUrl: String?) = listOf(title, text, sourceUrl).mapNotNull { it?.trim()?.ifEmpty { null } }.joinToString("\n\n")
+fun taskChatPrompt(id: String?, status: String?, title: String?, text: String?, sourceUrl: String?) =
+    listOf(title, text, sourceUrl, if (!id.isNullOrEmpty() && status != "note") "AgentView task [$id]. When the work is done, set its status to done with mcp__agentview__data_write." else null)
+        .mapNotNull { it?.trim()?.ifEmpty { null } }.joinToString("\n\n")
+
+// shared/chatLink.ts chatSessionOf: the saved chat id of a ?session= link, else null.
+fun chatSessionOf(url: String?): String? =
+    Regex("[?&]session=([^&#]+)").find(url ?: "")?.groupValues?.get(1)?.let { runCatching { URLDecoder.decode(it.replace("+", "%2B"), "UTF-8") }.getOrDefault(it) }

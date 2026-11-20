@@ -474,8 +474,12 @@ class SharedCasesTest {
     @Test fun taskChatPrompt() {
         for (c in cases("task-chat-prompt")) {
             val t = c.getValue("task").jsonObject
-            assertEquals(c.str("name"), c.str("expected"), taskChatPrompt(t.nullable("title")?.jsonPrimitive?.content, t.nullable("text")?.jsonPrimitive?.content, t.nullable("sourceUrl")?.jsonPrimitive?.content))
+            assertEquals(c.str("name"), c.str("expected"), taskChatPrompt(t.nullable("id")?.jsonPrimitive?.content, t.nullable("status")?.jsonPrimitive?.content, t.nullable("title")?.jsonPrimitive?.content, t.nullable("text")?.jsonPrimitive?.content, t.nullable("sourceUrl")?.jsonPrimitive?.content))
         }
+    }
+
+    @Test fun chatSessionOf() {
+        for (c in cases("chat-session-of")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, chatSessionOf(c.nullable("url")?.jsonPrimitive?.content))
     }
 
     @Test fun mergeQuiet() {

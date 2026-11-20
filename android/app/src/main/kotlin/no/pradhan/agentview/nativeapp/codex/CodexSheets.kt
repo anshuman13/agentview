@@ -94,7 +94,7 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, from: Row?, onMeeting: (Row) -> Unit, onRaise: (String, String) -> Unit, onAsk: (Row) -> Unit, onChat: (String) -> Unit, onDismiss: () -> Unit) {
+fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, from: Row?, onMeeting: (Row) -> Unit, onRaise: (String, String) -> Unit, onAsk: (Row) -> Unit, onChat: (String) -> Unit, onOpenChat: (String) -> Unit, onDismiss: () -> Unit) {
     var title by remember(row.key) { mutableStateOf(row.title ?: "") }
     var text by remember(row.key) { mutableStateOf(row.text ?: "") }
     var pickDue by remember { mutableStateOf(false) }
@@ -201,9 +201,11 @@ fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, acti
                 if (row.status == "note") Button("Make task", { commit(); actions.toTask(row); onDismiss() }, icon = "add")
                 Button("Move to ${profileLabel(if (row.profile == WORK) PERSONAL else WORK)}", { actions.move(row, if (row.profile == WORK) PERSONAL else WORK) })
                 if (from != null) Button("Open meeting", { commit(); onDismiss(); onMeeting(from) }, icon = "record")
-                safeHref(row.sourceUrl)?.let { href -> sourceLink(row).let { s -> Button(s.label, { uri.openUri(href) }, icon = s.icon) } }
+                val chat = chatSessionOf(row.sourceUrl)
+                if (chat != null) sourceLink(row).let { s -> Button(s.label, { commit(); onOpenChat(chat) }, icon = s.icon) }
+                else safeHref(row.sourceUrl)?.let { href -> sourceLink(row).let { s -> Button(s.label, { uri.openUri(href) }, icon = s.icon) } }
                 Button("Ask Claude", { commit(); onAsk(latest); onDismiss() })
-                Button("Start a chat…", { commit(); onChat(taskChatPrompt(title, text, row.sourceUrl)); onDismiss() })
+                Button("Start a chat…", { commit(); onChat(taskChatPrompt(row.id, row.status, title, text, row.sourceUrl)); onDismiss() })
                 row.draft?.takeIf { it.isNotBlank() }?.let { d -> Button("Copy draft", { clip.setText(AnnotatedString(d)); actions.say("Draft copied") }) }
                 Button("Delete", { actions.delete(row); onDismiss() }, variant = ButtonVariant.Danger)
             }

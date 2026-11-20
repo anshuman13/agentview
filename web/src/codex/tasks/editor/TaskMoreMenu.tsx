@@ -1,6 +1,8 @@
 import { Suspense, useRef, useState } from 'react';
 import { RepoPicker } from '../../../app/lazy';
 import { taskChatPrompt } from '../../../../../shared/taskChat';
+import { chatSessionOf } from '../../../../../shared/chatLink';
+import { openChat } from '../../../sessions/goalLogic';
 import { useAssistant } from '../../data';
 import { atTime } from '../../data/tasks/engine';
 import type { ItemRow, Profile } from '../../data/sync';
@@ -45,6 +47,7 @@ export function TaskMoreMenu({ row, draft, suggested, addEstimate, then, onAsk }
   const [starting, setStarting] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const src = sourceLink(row);
+  const chat = chatSessionOf(row.source_url);
   const at = atTime(row.at);
   const focused = isFocused(useFocus(), row);
   const other: Profile = row.profile === 'work' ? 'personal' : 'work';
@@ -114,7 +117,8 @@ export function TaskMoreMenu({ row, draft, suggested, addEstimate, then, onAsk }
         </>
       )}
       {row.meeting_id && <MenuItem onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))} icon="record">Open meeting</MenuItem>}
-      {row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(false)} icon={src.icon}>{src.label}</MenuItem>}
+      {chat ? <MenuItem onClick={then(() => { openChat({ sessionId: chat }); window.dispatchEvent(new Event('agentview:chat')); })} icon={src.icon}>{src.label}</MenuItem>
+        : row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(false)} icon={src.icon}>{src.label}</MenuItem>}
       {row.status === 'note' && <MenuItem onClick={then(() => act.toTask(row))} icon="add">Make task</MenuItem>}
       {row.status === 'open' && <MenuItem disabled={tidying} onClick={() => { setMenu(false); void tidy(); }} icon={tidying ? 'loading' : 'wand'} spin={tidying}>Tidy</MenuItem>}
       {row.draft && <MenuItem onClick={() => { setMenu(false); copyText(row.draft!, 'Draft copied'); }} icon="copy">Copy draft</MenuItem>}
@@ -134,7 +138,7 @@ export function TaskMoreMenu({ row, draft, suggested, addEstimate, then, onAsk }
           {snoozing ? snoozeItems : mainItems}
         </Menu>
       )}
-      {starting && <Suspense fallback={null}><RepoPicker text={taskChatPrompt({ title, text, sourceUrl: row.source_url })} onClose={() => setStarting(false)} /></Suspense>}
+      {starting && <Suspense fallback={null}><RepoPicker text={taskChatPrompt({ id: row.id, status: row.status, title, text, sourceUrl: row.source_url })} onClose={() => setStarting(false)} /></Suspense>}
     </div>
   );
 }

@@ -64,7 +64,7 @@ export const dataWriteTool = defineTool({
     id: z.string().optional().describe('Existing row id; omit to create a row'),
     fields: z.record(z.string(), z.union([z.string(), z.number(), z.null()])),
   },
-  async handler({ table, id, fields }, { cwd, unattended }) {
+  async handler({ table, id, fields }, { cwd, chatId, unattended }) {
     // A job runs with the tools it lists, so a sandboxed chat must not make or change one.
     if (table === 'jobs' && unattended) return 'An unattended chat cannot create or change jobs.';
     const bad = Object.keys(fields).filter((f) => !WRITABLE[table].includes(f));
@@ -74,6 +74,8 @@ export const dataWriteTool = defineTool({
     if (table === 'jobs' && row?.repo) return 'A job with a repo is changed on the job page only.';
     const err = checkFields(table, fields);
     if (err) return err;
+    // A task a chat creates names that chat as its source, which the task opens.
+    if (table === 'items' && !id && chatId && !fields.source) Object.assign(fields, { source: 'chat', source_url: `/?session=${encodeURIComponent(chatId)}` });
     const rowId = id ?? crypto.randomUUID();
     await hubPush([{ table, id: rowId, profile: profileOf(cwd), updated_at: Date.now(), fields }]);
     return `${id ? 'Updated' : 'Created'} ${table} [${rowId}].`;
