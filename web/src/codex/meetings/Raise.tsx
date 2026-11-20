@@ -4,6 +4,7 @@ import { POINT, RAISED, endedPoints, firstName, pointMeeting } from '../data/mee
 import type { AssistantStore } from '../data/store';
 import type { ItemRow, Profile } from '../data/sync';
 import { Icon } from '../../ui/Icon';
+import { Button, IconButton } from '../../ui/Button';
 import { when } from '../tasks/time';
 import { openMeeting, showSnack } from '../view';
 import '../../styles/features/wiki.css';
@@ -39,9 +40,9 @@ export function RaiseWith({ text, profile, people, className = 'wk-act' }: { tex
   return (
     <span className="mt-raise">
       {people.map((p) => (
-        <button key={p} className="btn sm" onClick={() => { setOpen(false); void raise(store, text.trim(), p, profile); }}>Raise with {firstName(p)}</button>
+        <Button key={p} size="sm" onClick={() => { setOpen(false); void raise(store, text.trim(), p, profile); }}>Raise with {firstName(p)}</Button>
       ))}
-      <button className="icon-btn" title="Close" aria-label="Close" onClick={() => setOpen(false)}><Icon name="close" small /></button>
+      <IconButton icon="close" small label="Close" onClick={() => setOpen(false)} />
     </span>
   );
 }

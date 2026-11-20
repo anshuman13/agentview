@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { EmptyState } from '../../ui/Panel';
 import { decisionsMarkdown } from '../data/meetings/meetingMarkdown';
@@ -23,7 +23,7 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
             <option value="">Everyone</option>
             {people.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>}
-          {rows.length > 0 && <button className="icon-btn" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={copy}><Icon name="copy" /></button>}
+          {rows.length > 0 && <IconButton icon="copy" label="Copy as Markdown" onClick={copy} />}
         </div>
       )}
       {rows.length > 0 && (

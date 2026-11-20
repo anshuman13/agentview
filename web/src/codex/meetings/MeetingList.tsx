@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useCodex } from '../data';
 import { rowKey } from '../data/sync';
 import { Icon } from '../../ui/Icon';
-import { Button, Chip } from '../../ui/Button';
+import { Button, Chip, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Section } from '../../ui/Section';
 import { ShowMore } from '../../ui/useWindow';
@@ -45,7 +45,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   return (
     <div className="wk narrow">
       <header className="wk-head">
-        <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
+        <IconButton icon="menu" label="Lists" className="as-menu" onClick={onMenu} />
         <h1>Meetings</h1>
         <span className="spacer" />
         <label className="wk-search">

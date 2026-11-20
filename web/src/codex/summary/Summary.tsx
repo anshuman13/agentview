@@ -3,7 +3,7 @@ import { useAssistantStore, useAssistantData } from '../data';
 import { errorText } from '../data/tasks/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
-import { Button, Chip } from '../../ui/Button';
+import { Button, Chip, IconButton } from '../../ui/Button';
 import { EmptyState, Panel } from '../../ui/Panel';
 import { AskRow } from '../../ui/AskRow';
 import { Row } from '../../ui/Row';
@@ -66,10 +66,10 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
   return (
     <div className="wk narrow">
       <header className="wk-head">
-        <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
+        <IconButton icon="menu" label="Lists" className="as-menu" onClick={onMenu} />
         <h1>Summary</h1>
         <span className="spacer" />
-        <button className="btn primary mt-take" disabled={busy} onClick={summarize}><Icon name={busy ? 'loading' : 'sparkle'} small /> <span>{busy ? 'Summarizing' : 'Summarize'}</span></button>
+        <Button variant="primary" icon={busy ? 'loading' : 'sparkle'} className="mt-take" disabled={busy} onClick={summarize}><span>{busy ? 'Summarizing' : 'Summarize'}</span></Button>
       </header>
       <div className="wk-scroll">
         <div className="mt-page">

@@ -3,6 +3,7 @@ import { queryWords, rowMatcher, type Fact, type Meeting } from '../../data/wiki
 import { openQuestions, topicTimeline, type Question } from '../../data/meetings/meetings';
 import { when } from '../../tasks/time';
 import { Icon } from '../../../ui/Icon';
+import { IconButton } from '../../../ui/Button';
 import { Row } from '../../../ui/Row';
 import { openMeeting, setView } from '../../view';
 import { OpenQuestions } from '../OpenQuestions';
@@ -14,7 +15,7 @@ export function TopicBar({ topics, active, fresh, onToggle, onAdd, onRemove }: {
       {topics.map((t) => (
         <span key={t} className="mt-topic">
           <button className={`chip pill${active.includes(t) ? '' : ' outline'}`} aria-pressed={active.includes(t)} title="Show only meetings on this topic" onClick={() => onToggle(t)}>{t}{fresh[t] > 0 && <span className="mt-topic-new" title={`${fresh[t]} new since your last visit`}>{fresh[t]}</span>}</button>
-          <button className="icon-btn" title={`Stop tracking ${t}`} aria-label={`Stop tracking ${t}`} onClick={() => onRemove(t)}><Icon name="close" small /></button>
+          <IconButton icon="close" small label={`Stop tracking ${t}`} onClick={() => onRemove(t)} />
         </span>
       ))}
       <form onSubmit={(e) => { e.preventDefault(); onAdd(text.trim().toLowerCase()); setText(''); }}>

@@ -5,7 +5,7 @@ import { parseWhen, stripWhen } from '../data/tasks/engine';
 import type { ItemRow } from '../data/sync';
 import { displayName, meetingState } from '../data/meetings/meetings';
 import { when } from '../tasks/time';
-import { Chip, IconButton } from '../../ui/Button';
+import { Chip, IconButton, Button } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
@@ -56,7 +56,7 @@ export function StateLine({ m, now }: { m: Meeting; now: number }) {
     <div className={`mt-state ${state}`}>
       <span>{parts.join(' · ')}</span>
       {(state === 'waiting' || state === 'missing') && <TranscriptButton m={m} label={state === 'missing' ? 'Retry' : 'Read now'} />}
-      {state === 'missing' && <button className="btn sm" title="Nothing to add for this meeting" onClick={() => void store.editRow('meetings', m, { transcript: 'done' })}>Dismiss</button>}
+      {state === 'missing' && <Button size="sm" title="Nothing to add for this meeting" onClick={() => void store.editRow('meetings', m, { transcript: 'done' })}>Dismiss</Button>}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useCodex } from '../data';
 import { openQuestions, questionKey, type Question } from '../data/meetings/meetings';
 import { when } from '../tasks/time';
+import { Button } from '../../ui/Button';
 import { save, stored } from '../../ui/util';
 import { Section, sectionCount } from '../../ui/Section';
 import { openMeeting } from '../view';
@@ -30,7 +31,7 @@ export function OpenQuestions({ questions }: { questions: Question[] }) {
             <span className="wk-claim-text">{q.text}</span>
             <span className="wk-claim-foot">
               <button className="mt-person" onClick={() => openMeeting(q.meeting)}>{q.meeting.title} · {when(q.at)}</button>
-              <button className="btn sm" aria-label={`Resolve ${q.text}`} onClick={() => resolve(q)}>Resolve</button>
+              <Button size="sm" aria-label={`Resolve ${q.text}`} onClick={() => resolve(q)}>Resolve</Button>
             </span>
           </li>
         ))}

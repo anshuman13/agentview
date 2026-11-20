@@ -8,7 +8,7 @@ import { Row } from '../../ui/Row';
 import { actionCount, actionsOf, isEvent, isSolo, meetingState, peopleOf, pinsOf, seriesMeetings, seriesOf, seriesTitleOf } from '../data/meetings/meetings';
 import { clock } from '../tasks/time';
 import { useMinute } from '../tasks/split';
-import { Button } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { Section, sectionCount } from '../../ui/Section';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
@@ -76,7 +76,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
   return (
     <div className="wk narrow">
       <header className="wk-head">
-        <button className="icon-btn" title={event ? 'Back' : 'Back to meetings'} aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
+        <IconButton icon="arrow-left" label="Back" title={event ? 'Back' : 'Back to meetings'} onClick={back} />
         <nav className="wk-crumbs"><button onClick={back}>{event ? 'Event' : 'Meetings'}</button></nav>
       </header>
       <div className="wk-scroll">

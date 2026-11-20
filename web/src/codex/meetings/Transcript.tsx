@@ -5,6 +5,7 @@ import { SUMMARY_TEMPLATES, rememberTemplate, summaryInstructions, templateFor, 
 import { talkTime } from '../data/meetings/talkTime';
 import type { Meeting } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
+import { Button } from '../../ui/Button';
 import { Section } from '../../ui/Section';
 import { SearchedOutput } from '../../ui/SearchedOutput';
 import { markSegments, matchLabel, plural } from '../../ui/util';
@@ -97,9 +98,9 @@ export function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
   const { busy, read } = useRead(m);
   if (!readable(m)) return null;
   return (
-    <button className="btn sm mt-sync" disabled={busy} title="Read the transcript: summary and actions" onClick={read}>
+    <Button size="sm" className="mt-sync" disabled={busy} title="Read the transcript: summary and actions" onClick={read}>
       <Icon name={busy ? 'loading' : 'sync'} small spin={busy} /> {busy ? 'Reading' : label}
-    </button>
+    </Button>
   );
 }
 
@@ -128,8 +129,8 @@ export function RoomMic({ m }: { m: Meeting }) {
     <div className="mt-room">
       <Icon name="mic" />
       <span>Were you on the room mic, <b>{m.room}</b>?</span>
-      <button className="btn sm" disabled={busy} onClick={() => void store.editRow('meetings', m, { room_me: 0 })}>No</button>
-      <button className="btn sm primary" disabled={busy} onClick={yes}>{busy ? 'Reading' : 'Yes, me'}</button>
+      <Button size="sm" disabled={busy} onClick={() => void store.editRow('meetings', m, { room_me: 0 })}>No</Button>
+      <Button variant="primary" size="sm" disabled={busy} onClick={yes}>{busy ? 'Reading' : 'Yes, me'}</Button>
     </div>
   );
 }

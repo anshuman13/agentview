@@ -3,6 +3,7 @@ import { useAssistantStore } from '../data';
 import type { ItemRow } from '../data/sync';
 import type { Meeting } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
+import { Button } from '../../ui/Button';
 import { showSnack } from '../view';
 
 type Sel = { text: string; x: number; y: number };
@@ -44,8 +45,8 @@ export function PinnableSummary({ m }: { m: Meeting }) {
     <>
       <p ref={ref} className="mt-summary">{m.summary}</p>
       {sel && (
-        <button className="btn sm primary mt-pin-btn" style={{ left: Math.min(Math.max(sel.x, 40), window.innerWidth - 40), top: sel.y + 8 }}
-          onMouseDown={(e) => e.preventDefault()} onClick={() => void pin()}><Icon name="pin" small /> Pin</button>
+        <Button variant="primary" size="sm" icon="pin" className="mt-pin-btn" style={{ left: Math.min(Math.max(sel.x, 40), window.innerWidth - 40), top: sel.y + 8 }}
+          onMouseDown={(e) => e.preventDefault()} onClick={() => void pin()}>Pin</Button>
       )}
     </>
   );

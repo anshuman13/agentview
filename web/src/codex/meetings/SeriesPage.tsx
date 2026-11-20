@@ -5,7 +5,6 @@ import { cadenceOf, meetingState, nextInSeries, parseSeriesKey, seriesMeetings, 
 import { NOTES_TEMPLATES, notesTemplateChips, rememberNotesTemplate, type NotesTemplate } from '../data/meetings/notesTemplates';
 import type { ItemRow } from '../data/sync';
 import { listOf, type Meeting } from '../data/wiki/wiki';
-import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
 import { Button, IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
@@ -52,7 +51,7 @@ export function SeriesPage({ series }: { series: string }) {
   return (
     <div className="wk narrow">
       <header className="wk-head">
-        <button className="icon-btn" title="Back" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
+        <IconButton icon="arrow-left" label="Back" onClick={back} />
         <nav className="wk-crumbs"><button onClick={back}>Meetings</button></nav>
       </header>
       <div className="wk-scroll">

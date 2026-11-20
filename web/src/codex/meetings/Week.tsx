@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useAssistantTable } from '../data';
-import { Icon } from '../../ui/Icon';
+import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
 import { Section as Head } from '../../ui/Section';
@@ -59,8 +59,8 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
       <div className="mt-log-bar">
         <span className="mt-load-share">Since {dayLabel(r.start)}: {plural(r.meetings, 'meeting')}, {hoursText(r.hours)}</span>
         <span className="spacer" />
-        <button className="btn" title="Done, slipped, stuck and waiting tasks" onClick={() => setReview(!review)}><Icon name="checklist" small /> <span>{review ? 'Summary' : 'Review'}</span></button>
-        <button className="btn" title="Copy the week as Markdown" onClick={copy}><Icon name="copy" small /> <span>Copy as Markdown</span></button>
+        <Button icon="checklist" title="Done, slipped, stuck and waiting tasks" onClick={() => setReview(!review)}><span>{review ? 'Summary' : 'Review'}</span></Button>
+        <Button icon="copy" title="Copy the week as Markdown" onClick={copy}><span>Copy as Markdown</span></Button>
       </div>
       {review ? <Review now={now} /> : <>
       <WeekGoals now={now} />
