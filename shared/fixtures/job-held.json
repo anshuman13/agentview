@@ -1,0 +1,30 @@
+[
+  {
+    "name": "the job's profile pause that has not ended holds it",
+    "job": { "profile": "work" },
+    "paused": [{ "scan": "jobs:work", "until": 5000 }],
+    "now": 1000,
+    "expected": 5000
+  },
+  {
+    "name": "a pause that has ended does not",
+    "job": { "profile": "work" },
+    "paused": [{ "scan": "jobs:work", "until": 1000 }],
+    "now": 1000,
+    "expected": null
+  },
+  {
+    "name": "the other profile's pause and scan pauses do not",
+    "job": { "profile": "work" },
+    "paused": [{ "scan": "jobs:personal", "until": 5000 }, { "scan": "slack", "until": 5000 }],
+    "now": 1000,
+    "expected": null
+  },
+  {
+    "name": "no pauses",
+    "job": { "profile": "personal" },
+    "paused": [],
+    "now": 1000,
+    "expected": null
+  }
+]

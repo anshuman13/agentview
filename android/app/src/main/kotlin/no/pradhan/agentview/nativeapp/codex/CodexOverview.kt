@@ -22,6 +22,9 @@ import no.pradhan.agentview.nativeapp.ui.plural
 // The hub's scan health from a sync reply (web ScanHealth).
 @Serializable class SyncScan(val scan: String = "", val ok: Long? = null, val error: String? = null, val failed: Long? = null, val stalled: Long? = null, val missing: Boolean = false)
 
+// The hub's scans and jobs held at a Claude usage limit from a sync reply (web Paused).
+@Serializable class SyncPaused(val scan: String = "", val until: Long = 0)
+
 // web/src/codex/nav.tsx scanText: a scan that failed at least as recently as it succeeded, or has stalled since its last success.
 val SyncScan.bad get() = !missing && ((error != null && (failed ?: 0) >= (ok ?: 0)) || ((stalled ?: 0) > (ok ?: 0)))
 

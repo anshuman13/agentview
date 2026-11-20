@@ -90,7 +90,7 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
                     val own = byJob.of(j)
                     val state = jobState(j, own, now)
                     val menu = remember(j.key) { mutableStateOf(false) }
-                    ListRow(j.str("name")?.ifEmpty { null } ?: "Untitled job", listOfNotNull(jobMeta(j, own, now), if (profile == null) profileLabel(j.profile) else null).joinToString(" · "), onClick = { onOpen(j) },
+                    ListRow(j.str("name")?.ifEmpty { null } ?: "Untitled job", listOfNotNull(jobMeta(j, own, st.paused, now), if (profile == null) profileLabel(j.profile) else null).joinToString(" · "), onClick = { onOpen(j) },
                         onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu.value = true },
                         trailing = {
                             if (state != null) StateBadge(state)
@@ -134,7 +134,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
         item { Group { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp5), style = Type.body, color = av.fg) } }
         item {
             Group(Modifier.padding(top = Tokens.sp4)) {
-                ListRow("When", jobMeta(job, runs, now)); Hairline()
+                ListRow("When", jobMeta(job, runs, st.paused, now)); Hairline()
                 repoLabel(job.str("repo"))?.let { ListRow("Repo", it); Hairline() }
                 if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is not pushed", trailing = { Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) } }); Hairline() }
                 if (tools != null) { ListRow("Tools", toolLabels(tools, servers).joinToString(", ")); Hairline() }

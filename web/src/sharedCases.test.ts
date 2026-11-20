@@ -41,7 +41,7 @@ import { setSystemTime } from '../../testing';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import type { Job, Meeting } from './codex/data/wiki/wiki';
-import { tasksOf } from './codex/jobs/schedule';
+import { heldUntil, tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
 import { followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
@@ -203,6 +203,10 @@ describe('cases shared with the Android app', () => {
   for (const c of cases<{ name: string; job: { name: string; profile: Profile }; items: JobTaskSpec[]; expected: string[] }>('job-tasks')) {
     const items = c.items.map((i) => ({ id: i.id, profile: i.profile ?? c.job.profile, deleted: i.deleted ? 1 : 0, source: i.source ?? 'job', people: i.people ?? c.job.name, status: i.status, updated_at: i.madeAt, field_times: '{}' }) as unknown as ItemRow);
     it(`tasksOf: ${c.name}`, () => expect(tasksOf(items, c.job as Job).map((r) => r.id)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; job: { profile: Profile }; paused: { scan: string; until: number }[]; now: number; expected: number | null }>('job-held')) {
+    it(`heldUntil: ${c.name}`, () => expect(heldUntil(c.job as Job, c.paused.map((p) => ({ ...p, reason: 'Claude usage limit' })), c.now)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; id: string; people: string; links: string | null; expected: boolean }>('event-rule')) {

@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { markLimited } from '../../../server/src/agent/claude/accounts.js';
+import { pausedScans, type Paused } from '../core/claude.js';
 import { openDb } from '../core/db.js';
 import { applyChanges } from '../core/sync.js';
 import { canRead, dropOrphanRuns, dueJobs, jobAllows, nextRun, orphansDue, runDue } from './jobs.js';
@@ -103,6 +105,22 @@ describe('runDue', () => {
     const { db, now } = seed(1);
     await runDue(db, now, ok, async () => true, reply);
     expect(state(db)).toEqual({ enabled: 1, next_run_at: nextRun('daily 09:00', Date.now()) });
+  });
+  test('a job whose account is at its limit stays queued and records the pause', async () => {
+    const { db, now } = seed(1);
+    const until = Date.now() + HOUR;
+    markLimited('alt', until);
+    let paused: Paused[] = [];
+    try {
+      await runDue(db, now, ok, async () => true, reply);
+      paused = pausedScans(db);
+    } finally {
+      markLimited('alt', 0);
+    }
+    expect(paused).toEqual([{ scan: 'jobs:work', reason: 'Claude usage limit', until }]);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM runs').get()).toEqual({ n: 0 });
+    expect((db.prepare("SELECT next_run_at FROM jobs WHERE id = 'a'").get() as { next_run_at: number }).next_run_at).toBe(now - 1);
+    expect(JSON.parse((db.prepare("SELECT value FROM meta WHERE key = 'paused:jobs:work:alt'").get() as { value: string }).value)).toMatchObject({ scan: 'jobs:work', until });
   });
   test('a disabled job runs once and stays off', async () => {
     const { db, now } = seed(0);
