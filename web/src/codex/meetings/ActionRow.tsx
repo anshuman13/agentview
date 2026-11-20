@@ -28,9 +28,15 @@ const STALE_ROLLS = 3;
 // Opens Linear's new-issue form filled in; nothing is created until you submit it there.
 const linearIssue = (r: ItemRow, m: Meeting) => `https://linear.app/new?${new URLSearchParams({ title: r.title ?? '', description: draftFor(r, m).split('\n').slice(1).join('\n') })}`;
 
+const before = (row: ItemRow, patch: Patch) => Object.fromEntries(Object.keys(patch).map((k) => [k, row[k as keyof ItemRow]])) as Patch;
+
+// Accepting a stale row clears its rolls.
+const acceptPatch = (row: ItemRow): Patch => ({ status: 'open', ...((row.rolls ?? 0) >= STALE_ROLLS && UNROLL) });
+
 export function confirmAll(store: AssistantStore, rows: ItemRow[]) {
-  for (const r of rows) void store.update(r, { status: 'open' });
-  showSnack(`${rows.length} added to Today`, () => rows.forEach((r) => void store.update(r, { status: r.status })));
+  const undo = rows.map((r) => [r, before(r, acceptPatch(r))] as const);
+  for (const r of rows) void store.update(r, acceptPatch(r));
+  showSnack(`${rows.length} added to Today`, () => undo.forEach(([r, prev]) => void store.update(r, prev)));
 }
 
 export function dismissAll(store: AssistantStore, rows: ItemRow[]) {
@@ -52,14 +58,14 @@ export function ActionRow({ row, meeting, meta: metaText, noBadge, extraItems }:
   const [menu, setMenu] = useState<'more' | 'assign' | 'snooze' | null>(null);
   const kebab = useRef<HTMLButtonElement>(null);
   const change = (patch: Patch, text: string) => {
-    const before = Object.fromEntries(Object.keys(patch).map((k) => [k, row[k as keyof ItemRow]])) as Patch;
+    const prev = before(row, patch);
     void store.update(row, patch);
-    showSnack(text, () => void store.update(row, before));
+    showSnack(text, () => void store.update(row, prev));
   };
   const status = row.status ?? '';
   const done = status === 'done';
   const at = atTime(row.at);
-  const accept = () => change({ status: 'open', ...((row.rolls ?? 0) >= STALE_ROLLS && UNROLL) }, 'Added to Today');
+  const accept = () => change(acceptPatch(row), 'Added to Today');
   const dismiss = () => change({ status: 'dismissed' }, meeting ? 'Moved to Not mine' : 'Dismissed');
   const check = () => { haptic(done ? 'tap' : 'success'); change({ status: done ? 'open' : 'done' }, done ? 'Moved back to Today' : 'Done'); };
   const suggestedRows =() => [...document.querySelectorAll<HTMLElement>('.mt-act.suggested')];

@@ -135,6 +135,11 @@ class CodexLogicTest {
         assertEquals(NOW, todayAt(ms(2026, 11, 3, 8), NOW))
     }
 
+    @Test fun moveToTodayTextNamesOneRow() {
+        assertEquals("Moved to Today", movedToTodayText(1))
+        assertEquals("Moved 3 to Today", movedToTodayText(3))
+    }
+
     @Test fun readsTheDueTimeFromTypedText() {
         val w = parseWhen("call the bank tomorrow 9", NOW)!!
         assertEquals(ms(2026, 11, 8, 9), w.at)

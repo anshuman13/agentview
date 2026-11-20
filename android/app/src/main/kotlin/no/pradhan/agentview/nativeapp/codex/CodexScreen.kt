@@ -225,7 +225,7 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
         !st.loaded -> Loading("Loading Codex…")
         extra != null -> ExtraContent(extra, hub, st, profile, now, actions, ops, nav.chips, nav.decisions, nav::toggleChip, nav::push, nav::pop, { nav.pop(); openNeeds() }, nav::openRow)
         page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, openNeeds, { nav.page = "goals" }, { nav.adding = true }, meeting)
-        page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" }, nav.picked, { nav.picked = it })
+        page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" }, nav.picked, { nav.picked = it }, meeting)
         page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, nav::openRow)
         page == "search" -> SearchPage(st, profile, nav::openRow, meeting)
         else -> TagPage(st, page.removePrefix("tag:"), now, actions, profile == null, nav::openRow)

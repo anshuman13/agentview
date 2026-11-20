@@ -13,6 +13,7 @@ import { safeHref } from '../../ui/util';
 import { openMeeting, openTask } from '../view';
 import { useActions } from '../useActions';
 import { clock } from '../tasks/time';
+import { todayTaskMenu } from '../../../../shared/actionMenu';
 
 const SHOWN = 7;
 
@@ -35,6 +36,7 @@ function TaskRow({ r, late, now }: { r: ItemRow; late: boolean; now: number }) {
             <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
             {menu && (
               <Menu trigger={more} onClose={() => setMenu(false)}>
+                {todayTaskMenu(late).includes('moveToday') && <MenuItem icon="calendar" onClick={() => { setMenu(false); haptic('tap'); act.moveToToday([r], now); }}>Move to today</MenuItem>}
                 <MenuItem icon="clock" onClick={() => { setMenu(false); haptic('tap'); act.snoozeLater(r, now); }}>Snooze to tomorrow</MenuItem>
                 <MenuItem icon="arrow-right" onClick={() => { setMenu(false); openTask(r); }}>Open</MenuItem>
               </Menu>

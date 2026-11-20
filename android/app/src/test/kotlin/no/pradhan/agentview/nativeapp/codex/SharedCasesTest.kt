@@ -831,6 +831,24 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun todayTaskMenu() {
+        for (c in cases("today-menu")) assertEquals(c.str("name"), c.getValue("items").jsonArray.map { it.jsonPrimitive.content }, no.pradhan.agentview.nativeapp.codex.meetings.todayTaskMenu(c.getValue("late").jsonPrimitive.boolean))
+    }
+
+    @Test fun actionGroups() {
+        for (c in cases("action-groups")) {
+            val rows = c.getValue("rows").jsonArray.map { it.jsonObject }.map { r ->
+                val f = SYNCED_FIELDS.getValue("items").associateWith { JsonNull as JsonElement }.toMutableMap()
+                r.nullable("meeting_id")?.let { f["meeting_id"] = it }
+                f["source"] = r.getValue("source")
+                Row("items", r.str("id"), r.str("profile"), f = f)
+            }
+            val got = no.pradhan.agentview.nativeapp.codex.meetings.actionGroups(rows).map { it.key to it.rows.map { r -> r.id } }
+            val want = c.getValue("groups").jsonArray.map { it.jsonObject }.map { g -> g.str("key") to g.getValue("ids").jsonArray.map { it.jsonPrimitive.content } }
+            assertEquals(c.str("name"), want, got)
+        }
+    }
+
     @Test fun latePromise() {
         fun at(c: JsonObject, k: String) = c.getValue(k).jsonArray.map { it.jsonPrimitive.int }.let { (y, m, d, h) -> ZonedDateTime.of(y, m, d, h, 0, 0, 0, codexZone).toInstant().toEpochMilli() }
         for (c in cases("late-promise")) assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isLate(at(c, "since"), at(c, "now")))

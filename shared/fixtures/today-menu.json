@@ -1,0 +1,4 @@
+[
+  { "name": "overdue", "late": true, "items": ["moveToday", "snooze", "open"] },
+  { "name": "on time", "late": false, "items": ["snooze", "open"] }
+]

@@ -59,7 +59,7 @@ import { isOld } from '../../shared/claimAge';
 import { similarClaim } from '../../shared/claimMatch';
 import { editedClaimText } from '../../shared/claimEdit';
 import { claimActions } from '../../shared/claimActions';
-import { actionMenu } from '../../shared/actionMenu';
+import { actionGroups, actionMenu, todayTaskMenu } from '../../shared/actionMenu';
 import { isLate } from '../../shared/waiting';
 import { goalAtRisk } from './codex/data/tasks/goals';
 import { afterNextMeeting, nextFreeSlot, weekFreeMinutes, type Span } from './codex/data/tasks/plan';
@@ -257,6 +257,14 @@ describe('cases shared with the Android app', () => {
   for (const c of cases<{ status: string; notMine: boolean; assign: boolean; snooze: boolean }>('action-menu')) {
     const { status, ...menu } = c;
     it(`actionMenu: ${status}`, () => expect(actionMenu(status)).toEqual(menu));
+  }
+
+  for (const c of cases<{ name: string; late: boolean; items: string[] }>('today-menu')) {
+    it(`todayTaskMenu: ${c.name}`, () => expect(todayTaskMenu(c.late)).toEqual(c.items));
+  }
+
+  for (const c of cases<{ name: string; rows: { id: string; profile: string; meeting_id: string | null; source: string }[]; groups: { key: string; ids: string[] }[] }>('action-groups')) {
+    it(`actionGroups: ${c.name}`, () => expect(actionGroups(c.rows).map((g) => ({ key: g.key, ids: g.rows.map((r) => r.id) }))).toEqual(c.groups));
   }
 
   for (const c of cases<{ name: string; since: number[]; now: number[]; expected: boolean }>('late-promise')) {

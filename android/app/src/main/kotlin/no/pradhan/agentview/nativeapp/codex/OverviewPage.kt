@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex
 
 import no.pradhan.agentview.nativeapp.ui.UNTITLED
+import no.pradhan.agentview.nativeapp.codex.meetings.todayTaskMenu
 import no.pradhan.agentview.nativeapp.codex.meetings.countdown
 import no.pradhan.agentview.nativeapp.codex.meetings.isLive
 import no.pradhan.agentview.nativeapp.codex.meetings.joinMinutes
@@ -235,8 +236,9 @@ private fun TodayTaskRow(r: Row, late: Boolean, actions: TaskActions, onOpen: (R
         r.title ?: "", if (late) null else r.at?.let { clock(it) },
         leading = { CheckCircle(false, "Mark ${r.title} done") { actions.done(r) } },
         trailing = {
-            if (late) Badge("Late", BadgeTone.Failed)
+            if (late) Badge("Overdue", BadgeTone.Failed)
             MoreButton { close ->
+                if ("moveToday" in todayTaskMenu(late)) MenuItem("Move to today", "calendar", { close(); actions.moveToToday(listOf(r)) })
                 MenuItem("Snooze to tomorrow", "clock", { close(); actions.snoozeLater(r) })
                 MenuItem("Open", "arrow-right", { close(); onOpen(r) })
             }

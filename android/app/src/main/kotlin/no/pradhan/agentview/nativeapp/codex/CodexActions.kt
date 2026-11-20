@@ -23,7 +23,9 @@ private class Applied(val row: Row, val patch: Map<String, Any?>, val before: Ma
 
 private fun Row.matches(patch: Map<String, Any?>) = patch.all { (k, v) -> if (k == "deleted") deleted == (v == true) else (f[k] ?: JsonNull) == toJson(v) }
 
-const val NOTED = "Saved as a note"
+fun movedToTodayText(n: Int) = if (n == 1) "Moved to Today" else "Moved $n to Today"
+
+const val NOTED ="Saved as a note"
 const val NOTE_FAILED = "Could not save the note. The item is still here."
 
 class TaskActions(private val store: CodexStore, private val snack: (String, (() -> Unit)?) -> Unit, private val now: () -> Long = System::currentTimeMillis) {
@@ -118,6 +120,13 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
             done.forEach { r -> val cur = store.current(r); if (cur.status == "dismissed") store.update(cur, mapOf("status" to r.status)) }
         }
     }
+    fun acceptAll(rows: List<Row>) {
+        val done = rows.filter { store.update(it, mapOf("status" to "open")) }
+        if (done.isEmpty()) return
+        snack("${done.size} added to Today") {
+            done.forEach { r -> val cur = store.current(r); if (cur.status == "open") store.update(cur, mapOf("status" to r.status)) }
+        }
+    }
     fun edit(r: Row, patch: Map<String, Any?>) { store.update(r, patch) }
 
     // Overdue tasks move to today at their own time of day, with one undo for all of them.
@@ -126,7 +135,7 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
         val before = rows.map { r -> r to mapOf("at" to r.at, "rolls" to r.rolls, "rolled_from" to r.f["rolled_from"]) }
         var any = false
         for (r in rows) any = store.update(r, mapOf("at" to todayAt(r.at, t)) + UNROLL) || any
-        if (any) snack("Moved ${rows.size} to Today") { before.forEach { (r, prev) -> store.update(r, prev) } }
+        if (any) snack(movedToTodayText(rows.size)) { before.forEach { (r, prev) -> store.update(r, prev) } }
     }
 
     fun move(r: Row, to: String) {

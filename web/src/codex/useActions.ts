@@ -100,7 +100,7 @@ export function useActions() {
     moveToToday: (rows: ItemRow[], now = Date.now()) => {
       const before = rows.map((r) => ({ r, at: r.at, rolls: r.rolls, rolled_from: r.rolled_from }));
       for (const r of rows) void store.update(r, { at: todayAt(r.at, now), ...UNROLL });
-      showSnack(`Moved ${rows.length} to Today`, () => before.forEach(({ r, ...prev }) => void store.update(r, prev)));
+      showSnack(rows.length === 1 ? 'Moved to Today' : `Moved ${rows.length} to Today`,() => before.forEach(({ r, ...prev }) => void store.update(r, prev)));
     },
     bulk: (rows: ItemRow[], kind: BulkKind) => bulkApply(store, rows, kind),
     remove: (r: ItemRow) => {

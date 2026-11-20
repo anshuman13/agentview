@@ -26,10 +26,7 @@
 .as-section.late { color: var(--err); }
 .as-section.review { color: var(--warn); border-bottom: 0; }
 .as-section.done, .as-section.later { color: var(--fg-muted); }
-.as-confirm-all { display: flex; align-items: center; justify-content: center; gap: var(--sp-3); min-height: var(--touch-sm); border: 0; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--ok) 8%, transparent); color: var(--ok); font: inherit; font-size: var(--fs-md); font-weight: 600; cursor: pointer; }
-@media (hover: hover) { .as-confirm-all:hover { background: color-mix(in srgb, var(--ok) 16%, transparent); } }
-.as-dismiss-all { display: flex; align-items: center; justify-content: center; gap: var(--sp-3); min-height: var(--touch-sm); border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-md); cursor: pointer; }
-@media (hover: hover) { .as-dismiss-all:hover { background: color-mix(in srgb, var(--fg-muted) 12%, transparent); } }
+.as-group-all { display: flex; gap: var(--sp-3); padding: var(--sp-3); border-top: 1px solid var(--border); }
 .as-group > .as-swipe + :is(.as-swipe, .ui-row) { border-top: 1px solid var(--border); }
 .as-group .as-swipe:is(.right, .left) .as-swipe-row { background: var(--raised); }
 

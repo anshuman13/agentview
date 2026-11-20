@@ -1,0 +1,35 @@
+[
+  {
+    "name": "two meetings, a Slack ask, Gmail asks and a said promise",
+    "rows": [
+      { "id": "a1", "profile": "work", "meeting_id": "m1", "source": "action" },
+      { "id": "a2", "profile": "work", "meeting_id": "m2", "source": "action" },
+      { "id": "a3", "profile": "work", "meeting_id": null, "source": "slack" },
+      { "id": "a4", "profile": "work", "meeting_id": "m1", "source": "action" },
+      { "id": "a5", "profile": "work", "meeting_id": null, "source": "gmail" },
+      { "id": "said:1", "profile": "work", "meeting_id": null, "source": "slack" },
+      { "id": "a6", "profile": "work", "meeting_id": null, "source": "slack" },
+      { "id": "a7", "profile": "work", "meeting_id": null, "source": "gmail" },
+      { "id": "said:2", "profile": "work", "meeting_id": null, "source": "slack" }
+    ],
+    "groups": [
+      { "key": "work:m1", "ids": ["a1", "a4"] },
+      { "key": "work:m2", "ids": ["a2"] },
+      { "key": "work:source:slack", "ids": ["a3", "a6"] },
+      { "key": "work:source:gmail", "ids": ["a5", "a7"] },
+      { "key": "work:source:slack:said", "ids": ["said:1", "said:2"] }
+    ]
+  },
+  {
+    "name": "mixed profiles stay apart",
+    "rows": [
+      { "id": "b1", "profile": "work", "meeting_id": "m1", "source": "action" },
+      { "id": "b2", "profile": "personal", "meeting_id": "m1", "source": "action" },
+      { "id": "b3", "profile": "work", "meeting_id": "m1", "source": "action" }
+    ],
+    "groups": [
+      { "key": "work:m1", "ids": ["b1", "b3"] },
+      { "key": "personal:m1", "ids": ["b2"] }
+    ]
+  }
+]

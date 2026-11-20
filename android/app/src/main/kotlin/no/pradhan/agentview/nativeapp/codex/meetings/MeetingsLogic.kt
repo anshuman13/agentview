@@ -329,6 +329,21 @@ fun actionMenu(status: String): ActionMenu {
     return ActionMenu(live, status == "open", live)
 }
 
+// The More menu items of a task row in the Overview's Today list (shared/actionMenu.ts, checked by shared/fixtures/today-menu.json).
+fun todayTaskMenu(late: Boolean) = if (late) listOf("moveToday", "snooze", "open") else listOf("snooze", "open")
+
+class ActionGroup(val key: String, val rows: List<Row>)
+
+// Suggested actions grouped by meeting, else by source with said promises apart (shared/actionMenu.ts, checked by shared/fixtures/action-groups.json).
+fun actionGroups(rows: List<Row>): List<ActionGroup> {
+    val groups = LinkedHashMap<String, MutableList<Row>>()
+    for (r in rows) {
+        val key = "${r.profile}:${r.meetingId.takeUnless { it.isNullOrEmpty() } ?: "source:${r.source ?: ""}${if (isSaid(r)) ":said" else ""}"}"
+        groups.getOrPut(key) { mutableListOf() }.add(r)
+    }
+    return groups.map { (k, v) -> ActionGroup(k, v) }
+}
+
 fun followUpText(m: Row, actions: List<Row>): String {
     val people = peopleOf(m).map(::firstName)
     val decisions = jsonList(m.str("decisions"))

@@ -2,6 +2,8 @@ package no.pradhan.agentview.nativeapp.codex
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import no.pradhan.agentview.nativeapp.codex.meetings.actionGroups
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -39,7 +41,7 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 
 @Composable
-internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, searching: Boolean, query: String, setQuery: (String) -> Unit, onOpen: (Row) -> Unit, onTag: (String) -> Unit, picked: Set<String>?, setPicked: (Set<String>?) -> Unit) {
+internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, searching: Boolean, query: String, setQuery: (String) -> Unit, onOpen: (Row) -> Unit, onTag: (String) -> Unit, picked: Set<String>?, setPicked: (Set<String>?) -> Unit, onMeeting: (Row) -> Unit) {
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val days = remember(s) { taskDays(s, now) }
     val tags = remember(st.items, profile) { allTags(st.items, profile).take(12) }
@@ -74,10 +76,10 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
             item { Group { s.overdue.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, pick = pick(r), onOpen = { onOpen(r) }) } } }
         }
         days.firstOrNull()?.takeIf { it.rows.isNotEmpty() }?.let { d -> daySection(d, now, actions, showProfile, pick, onOpen) }
-        reviewSection("Needs you", fresh, now, actions, showProfile, onOpen)
+        reviewSection("Needs you", fresh, st.meetings, actions, showProfile, onOpen, onMeeting)
         if (older.isNotEmpty()) {
             item { SectionHeader("Older to review", older.size.toString(), open = olderOpen, onToggle = { olderOpen = !olderOpen }) }
-            if (olderOpen) reviewSection(null, older, now, actions, showProfile, onOpen)
+            if (olderOpen) reviewSection(null, older, st.meetings, actions, showProfile, onOpen, onMeeting)
         }
         days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, showProfile, pick, onOpen) }
         if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && review.isEmpty()) item { EmptyState("All clear", "Add a task with the button below, like “call the bank tomorrow 9”") }
@@ -99,18 +101,34 @@ private fun androidx.compose.foundation.lazy.LazyListScope.daySection(d: Day, no
     item { Group { d.rows.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, inDay = d.day != null, pick = pick(r), onOpen = { onOpen(r) }) } } }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: String?, rows: List<Row>, now: Long, actions: TaskActions, showProfile: Boolean, onOpen: (Row) -> Unit) {
+private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: String?, rows: List<Row>, meetings: List<Row>, actions: TaskActions, showProfile: Boolean, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit) {
     if (rows.isEmpty()) return
     if (label != null) item { SectionHeader(label, rows.size.toString()) }
-    item {
-        Group {
-            rows.forEachIndexed { i, r ->
-                if (i > 0) Hairline()
-                ListRow(r.title ?: "", listOfNotNull(r.people?.takeIf { it.isNotEmpty() }, if (showProfile) profileLabel(r.profile) else null).joinToString(" · "), onClick = { onOpen(r) },
-                    trailing = {
-                        Button("Add", { actions.accept(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                        MoreButton { close -> MenuItem("Dismiss", "close", { close(); actions.dismiss(r) }) }
-                    })
+    actionGroups(rows).forEach { g ->
+        val first = g.rows[0]
+        val meeting = first.meetingId?.takeIf { it.isNotEmpty() }?.let { id -> meetings.firstOrNull { it.profile == first.profile && it.id == id } }
+        val header = when {
+            !first.meetingId.isNullOrEmpty() -> "Is this yours? · ${meeting?.title ?: first.people?.takeIf { it.isNotEmpty() } ?: "Meeting"}"
+            isSaid(first) -> "You said · ${channelOf(first).label}"
+            else -> "Is this yours? · ${channelOf(first).label}"
+        }
+        item(g.key) {
+            Column {
+                SectionHeader(header, action = meeting?.let { m -> { Button("Open meeting", { onMeeting(m) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } })
+                Group {
+                    g.rows.forEachIndexed { i, r ->
+                        if (i > 0) Hairline()
+                        ListRow(r.title ?: "", if (showProfile) profileLabel(r.profile) else null, onClick = { onOpen(r) },
+                            trailing = {
+                                Button("Add", { actions.accept(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                                MoreButton { close -> MenuItem("Dismiss", "close", { close(); actions.dismiss(r) }) }
+                            })
+                    }
+                }
+                if (g.rows.size > 1) Row(Modifier.padding(start = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    Button("Confirm all ${g.rows.size}", { actions.acceptAll(g.rows) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
+                    Button("Dismiss all ${g.rows.size}", { actions.dismissAll(g.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                }
             }
         }
     }
