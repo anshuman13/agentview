@@ -79,6 +79,10 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.finishedLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.buildsLine
+import no.pradhan.agentview.nativeapp.sessions.Repo
+import no.pradhan.agentview.nativeapp.sessions.Workspace
+import no.pradhan.agentview.nativeapp.sessions.Worktree
+import no.pradhan.agentview.nativeapp.sessions.chatPlace
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.mergeQuiet
@@ -352,6 +356,15 @@ class SharedCasesTest {
             val mode = c.nullable("mode")?.jsonPrimitive?.content
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, startModeFor(mode, c.nullable("provider")?.jsonPrimitive?.content))
         }
+    }
+
+    @Test fun chatPlaces() {
+        val world = Json.parseToJsonElement(File("../../shared/fixtures/chat-place.json").readText()).jsonObject
+        val ws = Workspace(
+            repos = world.getValue("repos").jsonArray.map { Repo(it.jsonObject.str("name"), it.jsonObject.str("cwd")) },
+            trees = world.getValue("trees").jsonArray.map { Worktree(repo = it.jsonObject.str("repo"), cwd = it.jsonObject.str("cwd"), name = it.jsonObject.str("name")) },
+        )
+        for (c in world.getValue("cases").jsonArray.map { it.jsonObject }) assertEquals(c.str("name"), c.str("expected"), chatPlace(ws, c.str("cwd")))
     }
 
     @Test fun shortModelNames() {

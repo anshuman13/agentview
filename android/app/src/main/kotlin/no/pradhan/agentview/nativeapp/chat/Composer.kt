@@ -63,6 +63,7 @@ import no.pradhan.agentview.nativeapp.net.menuModes
 import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.newestModels
 import no.pradhan.agentview.nativeapp.net.providerLabel
+import no.pradhan.agentview.nativeapp.sessions.chatPlace
 import no.pradhan.agentview.nativeapp.app.refreshUsage
 import no.pradhan.agentview.nativeapp.app.refreshWorkspace
 import no.pradhan.agentview.nativeapp.app.runInTerminal
@@ -232,7 +233,7 @@ private fun rememberSuggestions(s: ComposerState, trigger: Trigger?, session: Se
     val ranked = remember(files, trigger?.query, trigger?.file) { if (trigger?.file == true && chatQ == null) rankFiles(files.orEmpty(), trigger.query) else emptyList() }
     return when {
         trigger == null || key == s.dismissed -> emptyList()
-        chatQ != null -> rankChats(ws.saved.filter { it.sessionId != session?.sessionId }, chatQ).map { Suggestion(it.title, it.cwd.substringAfterLast('/'), "@chat:${it.sessionId}") }
+        chatQ != null -> rankChats(ws.saved.filter { it.sessionId != session?.sessionId }, chatQ).map { Suggestion(it.title, chatPlace(ws, it.cwd),"@chat:${it.sessionId}") }
         trigger.file -> ranked.map { f -> Suggestion(f.substringAfterLast('/'), f.substringBeforeLast('/', ""), "@$f") }
         else -> rankCommands(session?.commands ?: emptyList(), trigger.query).map { Suggestion("/${it.name}", it.description, "/${it.name}") }
     }

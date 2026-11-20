@@ -1,5 +1,6 @@
 import { Hl } from '../../ui/util';
 import { FileIcon } from '../../workspace/FileIcon';
+import { chatPlace, useWorkspace } from '../../sessions/folders';
 import type { SavedSession } from '../../../../shared/protocol';
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export function PopItems({ items, kind, popId, sel, choose }: Props) {
+  const { folders } = useWorkspace(kind);
   return <>{items.map((r, i) => {
     if (kind === 'command') {
       const c = r.item as { name: string; description: string };
@@ -26,7 +28,7 @@ export function PopItems({ items, kind, popId, sel, choose }: Props) {
       return (
         <li key={c.sessionId} id={`${popId}-${i}`} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
           <span className="cp-name"><Hl text={c.title} hits={r.hits} /></span>
-          <span className="cp-detail">{c.cwd.split('/').pop()}</span>
+          <span className="cp-detail">{chatPlace(folders, c.cwd)}</span>
         </li>
       );
     }

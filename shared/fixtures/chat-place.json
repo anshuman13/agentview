@@ -1,0 +1,12 @@
+{
+  "repos": [{ "name": "shop", "cwd": "/w/shop" }, { "name": "agentview", "cwd": "/w/agentview" }],
+  "trees": [{ "repo": "/w/shop", "cwd": "/wt/aie-924-loki", "name": "aie-924-loki" }, { "repo": "/w/agentview", "cwd": "/wt/b/x", "name": "dev/b/x" }],
+  "cases": [
+    { "name": "a repo root", "cwd": "/w/shop", "expected": "shop" },
+    { "name": "a subfolder of a repo", "cwd": "/w/shop/src/app", "expected": "shop" },
+    { "name": "a worktree", "cwd": "/wt/aie-924-loki", "expected": "shop · aie-924-loki" },
+    { "name": "a subfolder of a worktree", "cwd": "/wt/aie-924-loki/server", "expected": "shop · aie-924-loki" },
+    { "name": "a worktree named by path", "cwd": "/wt/b/x", "expected": "agentview · x" },
+    { "name": "a folder in no repo keeps its last folder", "cwd": "/else/where", "expected": "where" }
+  ]
+}

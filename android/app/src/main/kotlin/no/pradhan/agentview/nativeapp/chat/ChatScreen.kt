@@ -56,6 +56,7 @@ import androidx.compose.foundation.layout.heightIn
 import no.pradhan.agentview.nativeapp.net.unbilledText
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
+import no.pradhan.agentview.nativeapp.sessions.chatPlace
 import no.pradhan.agentview.nativeapp.sessions.renameTitle
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -184,9 +185,10 @@ private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
 // Takes the fields it shows, not the ChatView, so a streamed token batch does not redraw the header.
 @Composable
 private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Double, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
+    val ws by hub.workspace.collectAsState()
     PageHeader(
         live.title.ifBlank { UNTITLED },
-        subtitle = { Text(cwd.substringAfterLast('/'), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        subtitle = { Text(chatPlace(ws, cwd),style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
     ) {
         ChatMenu(hub, live, session, hasReply, panels, canReview, running, cwd, onReview)
     }

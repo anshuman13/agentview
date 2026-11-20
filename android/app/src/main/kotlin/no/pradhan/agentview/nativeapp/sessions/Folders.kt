@@ -52,6 +52,13 @@ fun segmentOf(key: String, root: String = personalRoot) = if (root.isNotEmpty() 
 
 fun folderName(key: String) = key.substringAfterLast('/').ifEmpty { key }
 
+// How a chat's place is labelled: its repo, plus the worktree name when the folder is inside a worktree.
+fun chatPlace(ws: Workspace, cwd: String): String {
+    val repo = folderName(folderKey(cwd, ws.repos, ws.trees))
+    val tree = ws.trees.firstOrNull { inside(cwd, it.cwd) } ?: return repo
+    return "$repo · ${tree.name.substringAfterLast('/')}"
+}
+
 fun isDefaultBranch(b: String?) = b.isNullOrEmpty() || b == "main" || b == "master" || b == "HEAD"
 
 enum class ChatState { Needs, Failed, Running, Done }

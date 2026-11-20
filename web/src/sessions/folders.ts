@@ -239,6 +239,12 @@ export const repoName = (folders: Folder[], cwd: string) => {
   return key.split('/').pop() || key;
 };
 
+// How a chat's place is labelled: its repo, plus the worktree name when the folder is inside a worktree.
+export const chatPlace = (folders: Folder[], cwd: string) => {
+  const { tree } = findHere(folders, cwd);
+  return tree ? `${repoName(folders, cwd)} · ${tree.name.split('/').pop()}` : repoName(folders, cwd);
+};
+
 // A chat matches when every word of the query is in its title, repo or extra texts, or in the title or first prompt of its saved copy.
 export function chatFinder(filter: string, chats: SavedSession[]) {
   const words = queryWords(filter);

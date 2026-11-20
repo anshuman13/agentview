@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { embedded, send, setUi, useStore } from '../store';
 import { IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
+import { chatPlace, useWorkspace } from '../../sessions/folders';
 
 export function useSideChat() {
   const chatId = useStore((s) => s.session.id);
@@ -29,11 +30,12 @@ export function useSideChat() {
 
 export function SideChat({ beside }: { beside: string }) {
   const chat = useStore((s) => s.live.find((c) => c.id === s.ui.beside));
+  const { folders } = useWorkspace(beside);
   return (
     <section className="main pane center beside desktop-only">
       <div className="beside-head">
         <Icon name="comment-discussion" small />
-        <span className="name" title={chat ? `${chat.title}\n${chat.cwd}` : ''}>{chat ? `${chat.cwd.split('/').pop()} · ${chat.title}` : 'Chat'}</span>
+        <span className="name" title={chat ? `${chat.title}\n${chat.cwd}` : ''}>{chat ? `${chatPlace(folders, chat.cwd)} · ${chat.title}` : 'Chat'}</span>
         <span className="spacer" />
         <IconButton icon="arrow-left" label="Show this chat in the main column" size="sm" small onClick={() => send({ type: 'view', id: beside })} />
         <IconButton icon="close" label="Close the side chat" size="sm" small onClick={() => setUi({ beside: null })} />

@@ -16,6 +16,7 @@ import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/exp
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
 import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, type Billing } from '../../shared/providers';
+import { buildFolders, chatPlace } from './sessions/folders';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
@@ -516,6 +517,12 @@ describe('cases shared with the Android app', () => {
   type Table = { name: string; provider: Provider | null; label: string; billing: Billing; mark: string | null; modes: string[] };
   for (const c of cases<{ name: string; mode: string | null; provider: Provider | null; expected: string | null }>('start-mode')) {
     it(`startModeFor: ${c.name}`, () => expect(startModeFor(c.mode, c.provider ?? undefined)).toBe(c.expected));
+  }
+
+  const place = JSON.parse(readFileSync(new URL('../../shared/fixtures/chat-place.json', import.meta.url), 'utf8'));
+  const placeFolders = buildFolders(place.repos, place.trees, []);
+  for (const c of place.cases as { name: string; cwd: string; expected: string }[]) {
+    it(`chatPlace: ${c.name}`, () => expect(chatPlace(placeFolders, c.cwd)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; model: string; expected: string }>('short-model')) {
