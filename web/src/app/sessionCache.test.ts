@@ -18,7 +18,7 @@ const ev = (id: string, text = ''): ChatEvent => ({ id, kind: 'user', text, at: 
 const rows = (chat: string, n: number) => Array.from({ length: n }, (_, i) => ev(`${chat}${i}`, chat));
 const emit = (m: ServerMessage) => es.last!.onmessage!({ data: JSON.stringify(m), lastEventId: '' });
 const init = (chat: string, events: ChatEvent[], earlier?: number) => emit({ type: 'init', state: { ...getState(), session: { ...getState().session, id: chat }, events, pending: [], earlier } });
-const chat = (id: string, running = false) => ({ id, sessionId: `s-${id}`, running }) as LiveChat;
+const chat = (id: string, running = false) => ({ id, sessionId: `s-${id}`, cwd: '/w/repo', running }) as LiveChat;
 const live = (...ids: string[]) => emit({ type: 'live', chats: ids.map((id) => chat(id)) });
 const view = (id: string) => send({ type: 'view', id });
 const ids = () => getState().events.map((e) => e.id);

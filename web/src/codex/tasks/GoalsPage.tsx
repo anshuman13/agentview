@@ -111,7 +111,7 @@ export function GoalsPage() {
         <div className="mt-page">
           {gate.loading && !items.length ? <Skeleton /> : (
             <>
-              <div className="mt-wk-sec"><GoalField {...add} /></div>
+              {add.goals.length < MAX_GOALS && <div className="mt-wk-sec"><GoalField {...add} /></div>}
               {!weeks.length ? <EmptyState size="sm" icon="target" title="No goals yet" hint={`Set up to ${MAX_GOALS} goals for this week in the field above`} /> : weeks.map((w) => (
                 <section key={w.start}>
                   <Section label={w.label} />

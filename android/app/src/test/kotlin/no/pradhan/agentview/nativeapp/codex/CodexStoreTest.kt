@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.codex
 
 import java.io.File
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -189,6 +190,53 @@ class CodexStoreTest {
         assertFalse(s.state.value.reconnecting)
         assertNull(s.state.value.error)
         assertEquals(1, s.state.value.items.size)
+    }
+
+    @Test fun aSyncCancelledDuringTheRetryWaitLeavesTheNextSyncFree() = runTest {
+        var calls = 0
+        val s = flaky(this) { if (++calls < 2) throw ApiError("Assistant hub unreachable", 502) else reply(5, change("a", "one", "open", 100, 1)) }
+        val job = launch { s.sync() }
+        runCurrent()
+        assertTrue(s.state.value.reconnecting)
+        job.cancel()
+        runCurrent()
+        assertFalse(s.state.value.reconnecting)
+        s.sync()
+        assertEquals(2, calls)
+        assertEquals(1, s.state.value.items.size)
+    }
+
+    @Test fun aSyncStartedDuringAnAttemptRunsOnceMoreInsteadOfItsOwnLoop() = runTest {
+        var calls = 0
+        val gate = CompletableDeferred<Unit>()
+        val s = flaky(this) { if (++calls == 1) { gate.await(); throw ApiError("Assistant hub unreachable", 502) } else reply(5, change("a", "one", "open", 100, 1)) }
+        launch { s.sync() }
+        runCurrent()
+        launch { s.sync() }
+        runCurrent()
+        assertEquals(1, calls)
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(2, calls)
+        assertFalse(s.state.value.reconnecting)
+        assertEquals(1, s.state.value.items.size)
+    }
+
+    @Test fun parkedRowsDoNotStopTheCacheBeingWritten() = runTest {
+        val file = File.createTempFile("codex", ".json").also { it.delete() }
+        val fake = Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1))))
+        val s = store(this, fake, cache = file)
+        s.sync()
+        s.update(s.state.value.items[0], mapOf("title" to "new"))
+        fake.pushReply = reply(6, rejected = """[{"table":"items","id":"a","reason":"bad"}]""")
+        advanceUntilIdle()
+        s.sync()
+        s.sync()
+        assertEquals(1, s.state.value.pending)
+        val again = store(this, Fake(mutableListOf()), cache = file)
+        again.restore()
+        assertEquals(listOf("new"), again.state.value.items.map { it.title })
+        file.parentFile.listFiles { f -> f.name.startsWith(file.name) }?.forEach { it.delete() }
     }
 
     @Test fun theErrorShowsAfterTheLastRetryFails() = runTest {

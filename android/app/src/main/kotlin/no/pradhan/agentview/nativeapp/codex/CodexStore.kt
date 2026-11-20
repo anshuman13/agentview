@@ -135,11 +135,14 @@ class CodexStore(
         }
     }
 
-    // Rows with an unsent edit are not stored, so the copy never holds an edit as synced.
+    private fun parked(r: Row) = (rejects[rejectKey(r)] ?: 0) >= PARK_AFTER
+
+    // Nothing is stored while a row has an edit still to send, so the copy never holds that edit as synced. A parked row is
+    // not waiting to be sent, so it is stored as it is: its edit stays visible after a restart.
     private suspend fun save() {
         val file = cache ?: return
         val rows = tables.mapValues { it.value.values.toList() }
-        if (rows.values.any { l -> l.any { it.dirty } }) return
+        if (rows.values.any { l -> l.any { it.dirty && !parked(it) } }) return
         // Rows are immutable, so a table whose rows are the same objects as last time is unchanged.
         val changed = rows.filter { (t, l) -> saved[t]?.let { s -> s.size == l.size && s.indices.all { s[it] === l[it] } } != true }
         val head = buildJsonObject { put("version", since); put("columns", COLUMNS) }.toString()
@@ -193,24 +196,44 @@ class CodexStore(
     // A sync that cannot reach the hub waits here between retries, outside the lock, so the 30 s timer, an edit's sync or
     // a manual sync wakes it instead of starting another.
     private var retryWait: CompletableDeferred<Unit>? = null
+    // One sync owns the retry loop; a sync that starts meanwhile asks it to go round once more and returns.
+    private var syncing = false
+    private var again = false
 
     suspend fun sync() {
-        retryWait?.let { it.complete(Unit); return }
-        var failures = 0
-        while (true) {
-            val error = attempt() ?: return
-            val wait = hubRetry(failures++, error)
-            if (wait == null) return publish(error = error.message ?: "Sync failed", loaded = true, reconnecting = false)
-            publish(reconnecting = true)
-            val woken = CompletableDeferred<Unit>().also { retryWait = it }
-            withTimeoutOrNull(wait) { woken.await() }
+        if (syncing) {
+            again = true
+            retryWait?.complete(Unit)
+            return
+        }
+        syncing = true
+        try {
+            var failures = 0
+            while (true) {
+                again = false
+                val error = attempt()
+                if (error == null) {
+                    if (again) { failures = 0; continue }
+                    return
+                }
+                val wait = hubRetry(failures++, error)
+                if (wait == null) return publish(error = error.message ?: "Sync failed", loaded = true, reconnecting = false)
+                publish(reconnecting = true)
+                if (again) continue
+                val woken = CompletableDeferred<Unit>().also { retryWait = it }
+                withTimeoutOrNull(wait) { woken.await() }
+                retryWait = null
+            }
+        } finally {
+            syncing = false
             retryWait = null
+            if (state.value.reconnecting) publish(reconnecting = false)
         }
     }
 
     private suspend fun attempt(): Exception? = lock.withLock {
         try {
-            var queue = tables.values.flatMap { t -> t.values.filter { it.dirty && (rejects[rejectKey(it)] ?: 0) < PARK_AFTER } }
+            var queue = tables.values.flatMap { t -> t.values.filter { it.dirty && !parked(it) } }
             val parked = mutableListOf<Row>()
             val rejected = mutableListOf<JsonObject>()
             var more = true

@@ -89,12 +89,19 @@ class NoticeActionsTest {
 
     @Test fun anAnswerTapSendsTheLabelWhileTheQuestionIsOpen() {
         val f = Fake(listOf(pick("Red", "Blue")))
-        assertEquals(ActionResult.Sent, run(f, NoticeOp.ANSWER, "Blue"))
+        assertEquals(ActionResult.Sent, run(f, NoticeOp.ANSWER, "Blue", permissionId = "q1"))
         assertEquals(answerCmd("q1", mapOf("Which?" to "Blue")), f.sent.single().second)
-        assertEquals(ActionResult.Failed("Already answered"), run(Fake(), NoticeOp.ANSWER, "Blue"))
-        assertEquals(ActionResult.Failed("Already answered"), run(f, NoticeOp.ANSWER, "Green"))
-        assertEquals(ActionResult.ReadOnly, run(f, NoticeOp.ANSWER, "Blue", readOnly = true))
+        assertEquals(ActionResult.Failed("Already answered"), run(Fake(), NoticeOp.ANSWER, "Blue", permissionId = "q1"))
+        assertEquals(ActionResult.Failed("Already answered"), run(f, NoticeOp.ANSWER, "Green", permissionId = "q1"))
+        assertEquals(ActionResult.ReadOnly, run(f, NoticeOp.ANSWER, "Blue", readOnly = true, permissionId = "q1"))
         assertEquals(1, f.sent.size)
+    }
+
+    @Test fun aNewQuestionIsNotAnsweredByAnOldNotification() {
+        val f = Fake(listOf(pick("Red", "Blue")))
+        assertEquals(ActionResult.Failed("Already answered"), run(f, NoticeOp.ANSWER, "Blue", permissionId = "q0"))
+        assertTrue(f.sent.isEmpty())
+        assertEquals("q1", runBlocking { noticeAsk(f, notice) }.questionId)
     }
 
     @Test fun aReplyThatNamesAnOptionAnswersWithItsLabel() {

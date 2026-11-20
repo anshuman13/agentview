@@ -62,7 +62,7 @@ suspend fun noticeAsk(remote: NoticeRemote, n: Notice): Notice {
         }
         pick != null -> {
             val labels = pick.second.options.map { it.label }
-            n.copy(ask = NoticeAsk.Question, body = pick.second.question, detail = labels.withIndex().joinToString("\n") { (i, l) -> "${i + 1}. $l" }, options = labels)
+            n.copy(ask = NoticeAsk.Question, questionId = pick.first, body = pick.second.question, detail = labels.withIndex().joinToString("\n") { (i, l) -> "${i + 1}. $l" }, options = labels)
         }
         open.any { it is Pending.Question } -> n.copy(ask = NoticeAsk.Question)
         else -> n
@@ -70,16 +70,16 @@ suspend fun noticeAsk(remote: NoticeRemote, n: Notice): Notice {
 }
 
 // The same commands the in-app buttons send: interrupt for Stop, permission for Allow and Deny, answer for a question, prompt for a finished chat.
-suspend fun runNoticeAction(remote: NoticeRemote, readOnly: Boolean, op: String, chat: String, text: String = "", permissionId: String = "", slug: String = "", newId: () -> String = { UUID.randomUUID().toString() }): ActionResult {
+suspend fun runNoticeAction(remote: NoticeRemote, readOnly: Boolean, op: String, chat: String, text: String = "", requestId: String = "", slug: String = "", newId: () -> String = { UUID.randomUUID().toString() }): ActionResult {
     if (readOnly) return ActionResult.ReadOnly
     return try {
         if (op == NoticeOp.APPROVE) return if (remote.review(chat, slug)) ActionResult.Failed("Already approved") else ActionResult.Sent
         val open = if (op == NoticeOp.STOP) emptyList() else remote.pending(chat)
         val body = when (op) {
             NoticeOp.STOP -> interruptCmd()
-            NoticeOp.ALLOW, NoticeOp.DENY -> open.permission()?.takeIf { it.id == permissionId }?.let { permissionCmd(it.id, op == NoticeOp.ALLOW) } ?: return ActionResult.Failed("Already answered")
+            NoticeOp.ALLOW, NoticeOp.DENY -> open.permission()?.takeIf { it.id == requestId }?.let { permissionCmd(it.id, op == NoticeOp.ALLOW) } ?: return ActionResult.Failed("Already answered")
             NoticeOp.ANSWER -> {
-                val (id, ask) = open.pick()?.takeIf { (_, a) -> a.options.any { it.label == text } } ?: return ActionResult.Failed("Already answered")
+                val (id, ask) = open.pick()?.takeIf { (qid, a) -> qid == requestId && a.options.any { it.label == text } } ?: return ActionResult.Failed("Already answered")
                 answerCmd(id, mapOf(ask.question to text))
             }
             NoticeOp.REPLY -> {

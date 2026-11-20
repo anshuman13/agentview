@@ -15,7 +15,7 @@ enum class NoticeKind(val channel: String, val label: String) {
 
 enum class NoticeAsk { None, Permission, Question }
 
-data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None, val permissionId: String = "", val detail: String = "", val slug: String = "", val sub: String = "", val options: List<String> = emptyList())
+data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None, val permissionId: String = "", val questionId: String = "", val detail: String = "", val slug: String = "", val sub: String = "", val options: List<String> = emptyList())
 
 fun noticeId(n: Notice) = (n.kind.channel + n.chatId + n.slug).hashCode()
 

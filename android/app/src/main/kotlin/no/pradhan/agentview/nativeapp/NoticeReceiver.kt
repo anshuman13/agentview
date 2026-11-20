@@ -13,7 +13,7 @@ import no.pradhan.agentview.nativeapp.app.EXTRA_ANSWER
 import no.pradhan.agentview.nativeapp.app.EXTRA_CHANNEL
 import no.pradhan.agentview.nativeapp.app.EXTRA_CHAT
 import no.pradhan.agentview.nativeapp.app.EXTRA_NOTICE_ID
-import no.pradhan.agentview.nativeapp.app.EXTRA_PERMISSION
+import no.pradhan.agentview.nativeapp.app.EXTRA_REQUEST
 import no.pradhan.agentview.nativeapp.app.EXTRA_READONLY
 import no.pradhan.agentview.nativeapp.app.EXTRA_SLUG
 import no.pradhan.agentview.nativeapp.app.KEY_REPLY
@@ -31,7 +31,7 @@ class NoticeReceiver : BroadcastReceiver() {
         val id = intent.getIntExtra(EXTRA_NOTICE_ID, 0)
         val channel = intent.getStringExtra(EXTRA_CHANNEL) ?: NoticeKind.Approval.channel
         val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_REPLY)?.toString() ?: intent.getStringExtra(EXTRA_ANSWER).orEmpty()
-        val permissionId = intent.getStringExtra(EXTRA_PERMISSION).orEmpty()
+        val requestId = intent.getStringExtra(EXTRA_REQUEST).orEmpty()
         val slug = intent.getStringExtra(EXTRA_SLUG).orEmpty()
         val readOnly = AppState.readOnly || intent.getBooleanExtra(EXTRA_READONLY, false)
         val origin = context.getSharedPreferences("agentview", 0).getString("origin", null) ?: DEFAULT_ORIGIN
@@ -39,7 +39,7 @@ class NoticeReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = runNoticeAction(Api({ origin }, sharedHttp), readOnly, intent.action.orEmpty(), chat, text, permissionId, slug)
+                val result = runNoticeAction(Api({ origin }, sharedHttp), readOnly, intent.action.orEmpty(), chat, text, requestId, slug)
                 Notifier(app).settle(id, channel, chat, result)
             } finally {
                 pending.finish()
