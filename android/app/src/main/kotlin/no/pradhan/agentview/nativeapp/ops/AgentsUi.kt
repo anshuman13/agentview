@@ -22,6 +22,7 @@ import androidx.compose.ui.text.AnnotatedString
 import no.pradhan.agentview.nativeapp.chat.ItemRow
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.stopTask
+import no.pradhan.agentview.nativeapp.net.LiveAgent
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.EmptyState
@@ -62,6 +63,19 @@ fun AgentList(agents: List<Agent>, now: () -> Long, onOpen: (String) -> Unit) {
                 if (i > 0) Hairline(lead = true)
                 ListRow(a.description, agentRowMeta(a), leading = { StatusDot(agentDot(a.status)) }, trailing = { RowLabel(agentTrailing(a, now())) }, onClick = { onOpen(a.id) })
             }
+        }
+    }
+}
+
+// Running agents whose Agent call is not loaded, as web's AgentsPane lists them; they open nothing.
+@Composable
+fun UnseenAgentList(running: List<LiveAgent>, now: () -> Long) {
+    if (running.isEmpty()) return
+    SectionHeader("Running", running.size.toString())
+    Group {
+        running.forEachIndexed { i, a ->
+            if (i > 0) Hairline(lead = true)
+            ListRow(a.description.ifEmpty { "Sub-agent" }, "Running", leading = { StatusDot(agentDot("running")) }, trailing = { RowLabel(elapsed(now() - a.startedAt)) })
         }
     }
 }

@@ -62,6 +62,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
 import no.pradhan.agentview.nativeapp.net.unbilledText
 import no.pradhan.agentview.nativeapp.ops.AgentList
+import no.pradhan.agentview.nativeapp.ops.UnseenAgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
 import no.pradhan.agentview.nativeapp.sessions.chatPlace
 import no.pradhan.agentview.nativeapp.sessions.renameTitle
@@ -162,7 +163,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
 
     Column(Modifier.fillMaxSize()) {
         ChatHeader(hub, live, session, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd) { review = 0 }
-        ChatStatus(live, session, view.cost, if (view.agents.isNotEmpty() || run != null) agentChipCount(view.agents.size, live.agentList.size) else null) { panels.agents = true }
+        ChatStatus(live, session, view.cost, if (view.agents.isNotEmpty() || live.agentList.isNotEmpty() || run != null) agentChipCount(view.agents.size, live.agentList.size) else null) { panels.agents = true }
         Hairline()
         if (panels.find) {
             BackHandler { panels.find = false }
@@ -279,7 +280,8 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
 private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, images: List<String>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit, run: ChatRun?) {
     val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
-    val now = rememberNow(panels.agents && agents.any { it.status == "running" })
+    val unseen = remember(live.agentList, agents) { unseenAgents(live.agentList, agents) }
+    val now = rememberNow(panels.agents && (unseen.isNotEmpty() || agents.any { it.status == "running" }))
     val prompts by hub.savedPrompts.items.collectAsState()
     if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false, action = { AgentsActions(hub, run, agents) }) {
         run?.let { r ->
@@ -288,6 +290,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
             RunRows(hub, r, live)
         }
         AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
+        UnseenAgentList(unseen) { now.value }
     }
     if (panels.tools) Sheet(onDismiss = { panels.tools = false }, title = "Tools", padded = false, full = false) {
         val hooks = session?.hooks.orEmpty()

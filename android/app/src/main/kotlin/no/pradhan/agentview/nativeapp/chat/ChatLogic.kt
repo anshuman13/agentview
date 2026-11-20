@@ -2,7 +2,9 @@ package no.pradhan.agentview.nativeapp.chat
 
 import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.LiveAgent
 import no.pradhan.agentview.nativeapp.net.LiveChat
+import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.ui.plural
 
@@ -23,6 +25,9 @@ fun statusLine(live: LiveChat, session: SessionInfo?): StatusLine = when {
 
 // The agents chip beside the status line (web runLogic agentChipCount): while agents run, the running count the line shows; else every agent in the chat.
 fun agentChipCount(all: Int, running: Int) = if (running > 0) running else all
+
+// Running agents whose Agent call is not loaded yet (web AgentsPane unseen).
+fun unseenAgents(running: List<LiveAgent>, agents: List<Agent>) = running.filter { r -> agents.none { it.id == r.id } }
 
 private val LIMIT_NOTES =listOf("Compact", "Loop ", "Goal", "Usage limit", "Logged out")
 private val WOKE_UP = Regex("^\\w+ woke up")

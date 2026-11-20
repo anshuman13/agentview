@@ -188,6 +188,10 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
     val waiting = remember(live, ws, filter) { waitingRows(live, ws, filter) }
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
+    val done = remember(live, ws, segment) {
+        val mine = groupByRepo(live, ws).filter { segmentOf(it.key) == segment }
+        doneChats(mine.flatMap { it.open }, mine.flatMap { it.recent }, rows.seen, rows.saved)
+    }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val refresh = { scope.launch { refreshing = true; hub.loadBin(); hub.refreshWorkspace(force = true)?.join(); refreshing = false }; Unit }
@@ -196,6 +200,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
             PageHeader("Sessions") {
                 IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) })
                 MoreButton { close ->
+                    if (done.isNotEmpty()) MenuItem("Mark all read", "check-all", { close(); hub.markRead(done) })
                     MenuItem("New goal", "target", { close(); hub.shell.goalSheet.value = GoalSheet.Start() })
                     MenuItem("Refresh", "refresh", { close(); refresh() })
                 }
