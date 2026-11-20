@@ -1,0 +1,10 @@
+[
+  { "name": "missing", "facts": [], "id": "x", "expected": "Gone" },
+  { "name": "deleted", "facts": [{ "id": "x", "deleted": true }], "id": "x", "expected": "Gone" },
+  { "name": "retired", "facts": [{ "id": "x", "state": "retired" }], "id": "x", "expected": "Retired" },
+  { "name": "rejected", "facts": [{ "id": "x", "state": "rejected" }], "id": "x", "expected": "Rejected" },
+  { "name": "superseded by a live claim", "facts": [{ "id": "x", "superseded_by": "a" }, { "id": "a" }], "id": "x", "expected": "Replaced" },
+  { "name": "superseded by a deleted claim", "facts": [{ "id": "x", "superseded_by": "a" }, { "id": "a", "deleted": true }], "id": "x", "expected": "" },
+  { "name": "contested", "facts": [{ "id": "x", "contested": "{\"by\":\"you\"}" }], "id": "x", "expected": "Contested" },
+  { "name": "live", "facts": [{ "id": "x", "state": "live" }], "id": "x", "expected": "" }
+]

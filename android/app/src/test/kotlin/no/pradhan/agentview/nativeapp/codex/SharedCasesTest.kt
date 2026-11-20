@@ -36,6 +36,7 @@ import no.pradhan.agentview.nativeapp.chat.turnEnd
 import no.pradhan.agentview.nativeapp.chat.rememberPrompt
 import no.pradhan.agentview.nativeapp.chat.turnAnswers
 import no.pradhan.agentview.nativeapp.chat.proposalState
+import no.pradhan.agentview.nativeapp.chat.usedClaimState
 import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.chat.startModeFor
 import no.pradhan.agentview.nativeapp.app.BarState
@@ -549,6 +550,17 @@ class SharedCasesTest {
         for (c in cases("proposal-state")) {
             val fact = (c["fact"] as? JsonObject)?.let { f -> Row("facts", "f", "work", deleted = f["deleted"]?.jsonPrimitive?.booleanOrNull == true, f = mapOf("state" to f.getValue("state"))) }
             assertEquals(c.str("name"), c.str("expected"), proposalState(fact))
+        }
+    }
+
+    @Test fun usedClaimState() {
+        for (c in cases("used-claim-state")) {
+            val facts = c.getValue("facts").jsonArray.map { it.jsonObject }.map { o ->
+                val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+                for (k in listOf("state", "superseded_by", "contested")) o[k]?.let { f[k] = it }
+                Row("facts", o.str("id"), "work", deleted = o["deleted"]?.jsonPrimitive?.booleanOrNull == true, f = f)
+            }
+            assertEquals(c.str("name"), c.str("expected"), usedClaimState(facts, c.str("id")))
         }
     }
 

@@ -175,6 +175,7 @@ private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostStat
         else if (l.chat != null && l.slug != null) hub.showSpec(l.slug)
         if (l.action == Shortcut.NEW_CHAT) hub.newChat()
         if (l.action == Shortcut.ADD_TASK) hub.shell.addTask.value = true
+        l.codexRoute?.let { hub.shell.codexRoute.value = it }
         routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.openMore(r) else nav.goTab(r) }
         hub.link.value = null
     }

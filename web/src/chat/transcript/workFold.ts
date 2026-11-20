@@ -1,3 +1,4 @@
+import { replaceTarget } from '../../../../shared/claimActions';
 import { costRise } from '../../../../shared/cost';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { isSketchPath } from '../../../../shared/sketches';
@@ -54,7 +55,20 @@ export function proposedOf(items: Item[]): Proposal[] {
 // What the hub mirror says of a proposed claim; Android WorkFold.kt proposalState says the same.
 export const proposalState = (fact?: { state: string | null; deleted?: boolean | number }) => (!fact ? 'Not synced yet' : fact.deleted ? 'Deleted' : fact.state === 'proposed' ? 'Waiting' : fact.state === 'rejected' ? 'Rejected' : 'Approved');
 
-export type StatusStep = { id: string; title: string; done: boolean };
+type UsedFact = { id: string; profile: string; deleted?: number | boolean; state?: string | null; superseded_by?: string | null; contested?: string | null };
+
+// What became of a claim a turn read: Gone (not in the mirror or deleted), Retired, Rejected, Replaced (a live claim took its place), Contested, else ''. Android WorkFold.kt usedClaimState says the same.
+export function usedClaimState(facts: UsedFact[], id: string) {
+  const f = facts.find((x) => x.id === id);
+  if (!f || f.deleted) return 'Gone';
+  if (f.state === 'retired') return 'Retired';
+  if (f.state === 'rejected') return 'Rejected';
+  const end = replaceTarget(facts, id, f.profile);
+  if (end && end !== id) return 'Replaced';
+  return f.contested ? 'Contested' : '';
+}
+
+export type StatusStep ={ id: string; title: string; done: boolean };
 
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 

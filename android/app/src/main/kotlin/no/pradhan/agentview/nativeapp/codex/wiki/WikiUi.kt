@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -184,7 +187,7 @@ private fun ProposeClaim(page: Row?, filter: String?, actions: TaskActions) {
 }
 
 @Composable
-private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOps, page: String, stale: Boolean = false, ungiven: Boolean = false) {
+private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOps, page: String, stale: Boolean = false, ungiven: Boolean = false, flash: Boolean = false) {
     val f = c.fact
     val menu = remember(f.key) { mutableStateOf(false) }
     var note by remember(f.key) { mutableStateOf("") }
@@ -231,7 +234,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
         if ("retire" in acts.menu || "restore" in acts.menu) MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { if (retired) actions.change(f, mapOf("state" to null), "Claim restored") else actions.retireClaim(f) }, danger = !retired)
     }
     Column {
-        ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = if (contest != null) 2 else 1, onClick = { expanded = !expanded }, onLongClick = if (acts.menu.isEmpty()) null else ({ menu.value = true }),
+        ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = if (contest != null) 2 else 1, selected = flash, onClick = { expanded = !expanded }, onLongClick = if (acts.menu.isEmpty()) null else ({ menu.value = true }),
             trailing = {
                 acts.buttons.forEach { b ->
                     when (b) {
@@ -258,8 +261,10 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
     }
 }
 
+private const val FLASH_MS = 1600L
+
 @Composable
-fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit) {
+fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit, anchor: String? = null) {
     val memory = page.id == MEMORY
     val pid = if (memory) null else page.id
     val facts = remember(st.facts, page.profile, profile, memory) { st.facts.filter { if (memory) matchesProfile(profile, it) else it.profile == page.profile } }
@@ -274,7 +279,21 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
     val pending = groups.any { g -> g.claims.any { it.fact.str("state") == "proposed" } }
     val clip = LocalClipboardManager.current
     if (renaming) TextDialog("Rename page", page.title ?: "", "Save", { t -> editedClaimText(page.title, t)?.let { actions.change(page, mapOf("title" to it), "Renamed") } }, { renaming = false }, maxLength = 120)
-    LazyColumn(Modifier.fillMaxWidth()) {
+    val listState = rememberLazyListState()
+    var seek by remember(page.key, anchor) { mutableStateOf(anchor) }
+    var flash by remember(page.key, anchor) { mutableStateOf<String?>(null) }
+    // Opens Older when the claim is in it, then scrolls to the claim; an anchor that names no claim on the page leaves it at the top.
+    LaunchedEffect(seek, showOlder) {
+        val id = seek ?: return@LaunchedEffect
+        val spot = claimItemIndex(groups, older, showOlder, id)
+        if (spot?.openOlder == true) { showOlder = true; return@LaunchedEffect }
+        seek = null
+        if (spot == null) return@LaunchedEffect
+        flash = id
+        listState.scrollToItem(spot.index)
+    }
+    LaunchedEffect(flash) { if (flash != null) { delay(FLASH_MS); flash = null } }
+    LazyColumn(Modifier.fillMaxWidth(), listState) {
         item {
             Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Text(page.title ?: UNTITLED, style = Type.title)
@@ -307,11 +326,11 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
         }
         groups.forEach { g ->
             item { SectionHeader(g.heading, g.claims.size.toString()) }
-            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "", ungiven = it.fact.key in ungiven) }
+            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "", ungiven = it.fact.key in ungiven, flash = it.fact.id == flash) }
         }
         if (older.isNotEmpty()) {
             item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
-            if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, review, page.title ?: "", stale = it.id in staleIds) }
+            if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, review, page.title ?: "", stale = it.id in staleIds, flash = it.id == flash) }
         }
         if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "They appear here as meetings, Slack threads and issues mention ${page.title}", icon = "book") }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }

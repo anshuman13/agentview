@@ -263,8 +263,8 @@ class MeetingsWikiTest {
         assertEquals(NOW - 500, memoryPage(facts).updatedAt)
         assertEquals("Memory", memoryPage(facts).title)
         assertEquals(listOf("f1", "f3"), pageClaims(facts, null, NOW).flatMap { g -> g.claims.map { it.fact.id } }.sorted())
-        assertEquals("wiki:memory", claimRoute(loose))
-        assertEquals("wiki:work:p1", claimRoute(paged))
+        assertEquals("wiki:memory#f1", claimRoute(loose))
+        assertEquals("wiki:work:p1#f4", claimRoute(paged))
     }
 
     @Test fun oldAndRetiredClaimsMoveToOlder() {

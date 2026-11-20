@@ -26,7 +26,7 @@ import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 
 // The pages the Codex tab shows beyond Overview, Tasks and Goals: Meetings, Wiki and Jobs with the pages under them.
-// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>", "person:<name>", "wiki:<key>", "job:<key>", "jobnew:<key>" (a job just added, its Edit sheet open), "series:<key>", "review" or "autopilot".
+// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>", "person:<name>", "wiki:<key>" (ending in #<claim id> to open a claim), "job:<key>", "jobnew:<key>" (a job just added, its Edit sheet open), "series:<key>", "review" or "autopilot".
 val EXTRA_ROOTS = setOf("meetings", "jobs", "wiki")
 const val ROUTE_SEP = '\u0001'
 
@@ -48,8 +48,8 @@ fun routeTitle(route: String, st: CodexState): String = when {
     else -> "Job"
 }
 
-// The wiki page a claim sits on, as a route; a claim with no page opens Memory.
-fun claimRoute(f: Row): String = f.str("page_id")?.ifEmpty { null }?.let { "wiki:${f.profile}:$it" } ?: "wiki:$MEMORY"
+// The wiki page a claim sits on, as a route ending in #<claim id>; a claim with no page opens Memory.
+fun claimRoute(f: Row): String = (f.str("page_id")?.ifEmpty { null }?.let { "wiki:${f.profile}:$it" } ?: "wiki:$MEMORY") + "#${f.id}"
 
 @Composable
 fun ExtraContent(
@@ -57,6 +57,8 @@ fun ExtraContent(
     ops: CodexOps, chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, push: (String) -> Unit, pop: () -> Unit, onReplies: () -> Unit, onTask: (Row) -> Unit,
 ) {
     val key = keyOf(route)
+    val wikiRoute = route.substringBefore('#')
+    val anchor = route.substringAfter('#', "").ifEmpty { null }
     val openMeeting = { m: Row -> push("meeting:${m.key}") }
     when {
         route == "meetings" -> MeetingsListPage(hub, st, profile, now, chips, decisions, onChip, openMeeting)
@@ -67,12 +69,12 @@ fun ExtraContent(
         route.startsWith("series:") -> SeriesPage(st, key, now, actions, hub.readOnly, openMeeting)
         route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
-        route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { p, id -> push("wiki:$p:$id") }, onTask)
+        route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { f -> push(claimRoute(f)) }, onTask)
         route == "wiki" -> WikiIndexPage(st, profile, now, actions, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") })
-        route == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop)
+        wikiRoute == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop, anchor)
         route.startsWith("wiki:") -> {
-            val p = st.pages.firstOrNull { it.key == key && !it.deleted }
-            if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop)
+            val p = st.pages.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
+            if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop, anchor)
         }
         route == "jobs" -> JobsListPage(hub, st, profile, now, actions, { push("autopilot") }, { push("jobnew:${it.key}") }) { push("job:${it.key}") }
         else -> {

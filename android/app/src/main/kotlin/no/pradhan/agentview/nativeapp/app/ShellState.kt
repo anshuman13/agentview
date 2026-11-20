@@ -8,5 +8,6 @@ class ShellState {
     val navHidden = MutableStateFlow(false)
     val composing = MutableStateFlow(false)
     val addTask = MutableStateFlow(false)
+    val codexRoute = MutableStateFlow<String?>(null)
     val goalSheet = MutableStateFlow<GoalSheet?>(null)
 }

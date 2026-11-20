@@ -29,7 +29,7 @@ fun morePages(deploy: Boolean, hidden: Collection<String>) = MORE_PAGES.filter {
 fun moreTools(hidden: Collection<String>) = MORE_TOOLS.filter { shownFeature("more:${it.route}", hidden) }
 
 fun routeFor(link: DeepLink): String? = when {
-    link.action == Shortcut.ADD_TASK -> Tab.Codex.route
+    link.action == Shortcut.ADD_TASK || link.codexRoute != null -> Tab.Codex.route
     link.action == Shortcut.NEW_CHAT -> Tab.Chat.route
     link.chat != null || link.session != null -> Tab.Chat.route
     link.page != null -> "more/${link.page}"

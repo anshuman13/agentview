@@ -31,7 +31,7 @@ import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail } from './app/runtime/pageEvents';
 import { buildTranscript, turnAnswers } from './chat/transcript/steps';
-import { foldTurns, proposalState, workTitle } from './chat/transcript/workFold';
+import { foldTurns, proposalState, usedClaimState, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { chatMarkdown, draftKey, failedLine, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
@@ -564,6 +564,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; fact: { state: string | null; deleted?: boolean } | null; expected: string }>('proposal-state')) {
     it(`proposalState: ${c.name}`, () => expect(proposalState(c.fact ?? undefined)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; facts: { id: string; deleted?: boolean; state?: string; superseded_by?: string; contested?: string }[]; id: string; expected: string }>('used-claim-state')) {
+    it(`usedClaimState: ${c.name}`, () => expect(usedClaimState(c.facts.map((f) => ({ ...f, profile: 'work' })), c.id)).toBe(c.expected));
   }
 
   const menu = JSON.parse(readFileSync(new URL('../../shared/fixtures/chat-menu.json', import.meta.url), 'utf8'));

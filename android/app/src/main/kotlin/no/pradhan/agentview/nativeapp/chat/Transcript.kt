@@ -63,7 +63,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.launch
+import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.claimRoute
+import no.pradhan.agentview.nativeapp.codex.wiki.replaceTarget
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.app.loadEarlier
@@ -293,8 +296,15 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, live: Boolean, onOpenWork: (
         }
         @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.footnote, color = color) }
-        if (reading) fold.claims.forEach { c ->
-            Text(if (c.where.isEmpty()) c.text else "${c.text} (${c.where})", Modifier.padding(start = Tokens.sp8), style = Type.footnote, color = av.fgMuted)
+        if (reading) {
+            val facts by hub.codex.state.select { it.facts }
+            fold.claims.forEach { c ->
+                val state = usedClaimState(facts, c.id)
+                val note = listOf(c.where, state).filter { it.isNotEmpty() }.joinToString(" · ")
+                val fact = facts.firstOrNull { it.id == c.id }?.takeIf { state != "Gone" }?.let { if (state == "Replaced") replaceTarget(facts, c.id, it.profile) ?: it else it }
+                val tap = if (fact == null) Modifier else Modifier.heightIn(min = Tokens.touchSm).clickable { hub.link.value = DeepLink(codexRoute = claimRoute(fact)) }
+                Text(if (note.isEmpty()) c.text else "${c.text} ($note)", tap.padding(start = Tokens.sp8), style = Type.footnote, color = av.fgMuted)
+            }
         }
         if (proposing) {
             val facts by hub.codex.state.select { it.facts }

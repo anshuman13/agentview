@@ -239,6 +239,20 @@ fun wikiMarkdown(title: String?, groups: List<ClaimGroup>): String {
     return out.joinToString("\n\n") + "\n"
 }
 
+class ClaimSpot(val index: Int, val openOlder: Boolean)
+
+// The WikiPageView LazyColumn index of a claim (the title item, then each group's header and claims, then the Not used by Claude header and its claims), and whether Older must open to show it; null when the page has no such claim.
+fun claimItemIndex(groups: List<ClaimGroup>, older: List<Row>, showOlder: Boolean, id: String): ClaimSpot? {
+    var at = 1
+    for (g in groups) {
+        val i = g.claims.indexOfFirst { it.fact.id == id }
+        if (i >= 0) return ClaimSpot(at + 1 + i, false)
+        at += 1 + g.claims.size
+    }
+    val i = older.indexOfFirst { it.id == id }
+    return if (i >= 0) ClaimSpot(at + 1 + i, !showOlder) else null
+}
+
 // Retired claims and current ones past RETIRE_AFTER, newest first.
 fun olderClaims(facts: List<Row>, pageId: String?, now: Long): List<Row> {
     val current = currentClaims(facts)

@@ -117,6 +117,7 @@
 .tr-claims-chip + .tr-claims-chip, .tr-claims-chip + .tr-tools { margin-left: 0; }
 .tr-review { align-self: flex-start; margin-left: var(--sp-6); }
 .tr-claims { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; padding: 0 0 var(--sp-2) var(--sp-6); color: var(--fg-muted); line-height: 1.35; }
+.tr-claims > li[role='button'] { cursor: pointer; }
 .tr-claim-where { color: var(--fg-muted); }
 .tr-tools { margin-left: auto; }
 .tr-tasks { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; padding: 0; list-style: none; }

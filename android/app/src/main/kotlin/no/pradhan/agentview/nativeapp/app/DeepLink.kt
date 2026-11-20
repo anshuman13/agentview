@@ -3,7 +3,7 @@ package no.pradhan.agentview.nativeapp.app
 import java.net.URI
 import java.net.URLDecoder
 
-data class DeepLink(val view: String? = null, val page: String? = null, val chat: String? = null, val session: String? = null, val action: String? = null, val slug: String? = null)
+data class DeepLink(val view: String? = null, val page: String? = null, val chat: String? = null, val session: String? = null, val action: String? = null, val slug: String? = null, val codexRoute: String? = null)
 
 val PAGE_IDS = listOf("advisors", "sketches", "observe", "deploy", "mcp", "settings")
 

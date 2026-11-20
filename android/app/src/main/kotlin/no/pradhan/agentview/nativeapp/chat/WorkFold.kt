@@ -4,6 +4,7 @@ import java.util.Locale
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.codex.wiki.replaceTarget
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
@@ -100,6 +101,19 @@ fun proposalState(fact: Row?) = if (fact == null) "Not synced yet" else if (fact
     "proposed" -> "Waiting"
     "rejected" -> "Rejected"
     else -> "Approved"
+}
+
+// web workFold.ts usedClaimState: what became of a claim a turn read. Gone (not in the mirror or deleted), Retired, Rejected, Replaced (a live claim took its place), Contested, else "".
+fun usedClaimState(facts: List<Row>, id: String): String {
+    val f = facts.firstOrNull { it.id == id }
+    if (f == null || f.deleted) return "Gone"
+    return when {
+        f.str("state") == "retired" -> "Retired"
+        f.str("state") == "rejected" -> "Rejected"
+        replaceTarget(facts, id, f.profile)?.let { it.id != id } == true -> "Replaced"
+        !f.str("contested").isNullOrEmpty() -> "Contested"
+        else -> ""
+    }
 }
 
 data class WorkTitle(val text: String, val failed: String, val detail: String)

@@ -143,6 +143,8 @@ fun CodexScreen(hub: Hub) {
     val nav = rememberCodexNav()
     val addRequest by hub.shell.addTask.collectAsState()
     LaunchedEffect(addRequest) { if (addRequest) { nav.adding = true; hub.shell.addTask.value = false } }
+    val routeRequest by hub.shell.codexRoute.collectAsState()
+    LaunchedEffect(routeRequest) { routeRequest?.let { nav.go("wiki"); nav.push(it); hub.shell.codexRoute.value = null } }
     var refreshing by remember { mutableStateOf(false) }
     val now = rememberCodexNow(hub, st)
     val snack = remember { SnackbarHostState() }

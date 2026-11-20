@@ -51,7 +51,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.plural
 
 @Composable
-fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps, onMeeting: (Row) -> Unit, onWikiPage: (String, String) -> Unit, onTask: (Row) -> Unit) {
+fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps, onMeeting: (Row) -> Unit, onClaim: (Row) -> Unit, onTask: (Row) -> Unit) {
     val mine = remember(st.meetings, name) { meetingsWith(st.meetings, name) }
     val shown = remember(st.meetings, name) { nameOf(st.meetings, name) }
     val email = if ('@' in name) name.trim() else mine.flatMap { peopleOf(it) }.firstOrNull { '@' in it && sameName(it, name) }
@@ -114,7 +114,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
                     (if (allClaims) claims else claims.take(5)).forEachIndexed { i, f ->
                         if (i > 0) Hairline()
                         val pid = f.str("page_id")
-                        ListRow(f.str("text") ?: "", pid?.let { titles[it] }, onClick = pid?.let { p -> { onWikiPage(f.profile, p) } })
+                        ListRow(f.str("text") ?: "", pid?.let { titles[it] }, onClick = pid?.let { { onClaim(f) } })
                     }
                 }
                 if (!allClaims && claims.size > 5) Button("Show all ${claims.size}", { allClaims = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)

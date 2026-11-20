@@ -15,9 +15,11 @@ import { FindBar, markHit } from './FindBar';
 import { showTurn } from '../../sessions/goalLogic';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
-import { createFoldBuilder, openWork, proposalState, type FoldRow, type Proposal } from './workFold';
+import { createFoldBuilder, openWork, proposalState, usedClaimState, type Claim, type FoldRow, type Proposal } from './workFold';
 import { useAssistantTable } from '../../codex/data';
 import { setView } from '../../codex/view';
+import { MEMORY } from '../../codex/wiki/shared';
+import { replaceTarget } from '../../../../shared/claimActions';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
 import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, turnAnswers, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
@@ -400,7 +402,7 @@ const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, claims, pr
         {proposed.length > 0 && <Chip size="sm" on={proposing} className="tr-claims-chip" aria-expanded={proposing} onClick={() => setProposing((v) => !v)}>{`Proposed ${plural(proposed.length, 'claim')}`}</Chip>}
         {tools > 0 && <Chip size="sm" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{plural(tools, 'tool')}<Icon name="chevron-right" small /></Chip>}
       </div>
-      {reading && <ul className="tr-claims">{claims.map((c) => <li key={c.id}>{c.text}{c.where && <span className="tr-claim-where"> ({c.where})</span>}</li>)}</ul>}
+      {reading && <UsedClaims claims={claims} />}
       {proposing && <ProposedClaims proposed={proposed} />}
       {steps.length > 0 && <ul className="tr-tasks">
         {steps.map((s) => (
@@ -414,6 +416,26 @@ const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, claims, pr
     </div>
   );
 });
+
+// The claims a turn read, each with what became of it; a claim that is not Gone opens on its wiki page, a replaced one at the end of its chain.
+function UsedClaims({ claims }: { claims: Claim[] }) {
+  const facts = useAssistantTable('facts');
+  return (
+    <ul className="tr-claims">
+      {claims.map((c) => {
+        const state = usedClaimState(facts, c.id);
+        const note = [c.where, state].filter(Boolean).join(' · ');
+        const open = state === 'Gone' ? undefined : pressable(() => {
+          const own = facts.find((f) => f.id === c.id)!;
+          const id = state === 'Replaced' ? replaceTarget(facts, c.id, own.profile) ?? c.id : c.id;
+          setView({ list: 'wiki', open: facts.find((f) => f.id === id)?.page_id ?? MEMORY, anchor: id, person: null });
+          command('assistant');
+        });
+        return <li key={c.id} {...open}>{c.text}{note && <span className="tr-claim-where"> ({note})</span>}</li>;
+      })}
+    </ul>
+  );
+}
 
 // The claims a turn proposed, each with its state in the hub mirror, and a way to Review while one waits.
 function ProposedClaims({ proposed }: { proposed: Proposal[] }) {
