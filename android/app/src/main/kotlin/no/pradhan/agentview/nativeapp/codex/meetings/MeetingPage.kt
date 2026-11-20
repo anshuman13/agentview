@@ -126,7 +126,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     LazyColumn(Modifier.fillMaxWidth()) {
         meetingHeader(c, state)
         if (isEvent(m)) {
-            item { SectionHeader("My notes") }
+            item { NotesHeader(c, all) }
             item { NotesField(hub, m) }
             meetingActions(c, all, alwaysHeader = true)
             item { NewActionField(c, folds.newAction) }
@@ -135,7 +135,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             meetingSummary(c, folds)
             meetingDecisions(c)
             prep?.let { meetingPrep(c, it) }
-            item { SectionHeader("My notes") }
+            item { NotesHeader(c, all) }
             item { NotesField(hub, m) }
             item { SectionHeader("More", open = folds.more.value, onToggle = { folds.more.value = !folds.more.value }) }
             if (folds.more.value) meetingMore(c, state, all, folds, transcript, talk)
@@ -250,16 +250,31 @@ private fun LazyListScope.meetingPrep(c: MeetingCtx, pr: PrepData) {
     }
 }
 
+private fun makeAction(c: MeetingCtx, t: String): Row? {
+    val w = parseWhen(t, c.now)
+    return c.hub.codex.capture(stripWhen(t, w).ifEmpty { t }, "open", c.m.profile, w?.at, mapOf("meeting_id" to c.m.id))
+}
+
+@Composable
+private fun NotesHeader(c: MeetingCtx, all: List<Row>) {
+    val titles = all.filter { it.status == "open" || it.status == "done" }.map { it.title ?: "" }
+    val lines = unmadeActions(c.m.str("notes") ?: "", titles) { t -> stripWhen(t, parseWhen(t, c.now)) }
+    val label = if (lines.size == 1) "Add 1 action" else "Add ${lines.size} actions"
+    SectionHeader("My notes", action = if (lines.isEmpty()) null else { {
+        Button(label, {
+            val made = lines.mapNotNull { makeAction(c, it) }
+            if (made.isNotEmpty()) c.actions.undoable("Added ${made.size} ${if (made.size == 1) "action" else "actions"}") { made.forEach { c.hub.codex.update(it, mapOf("deleted" to true)) } }
+        }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+    } })
+}
+
 @Composable
 private fun NewActionField(c: MeetingCtx, newAction: MutableState<String>) {
     TextField(newAction.value, { newAction.value = it }, Modifier.padding(horizontal = Tokens.listPad), singleLine = true, placeholder = "Add an action",
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
             val t = newAction.value.trim()
-            if (t.isNotEmpty()) {
-                val w = parseWhen(t, c.now)
-                if (c.hub.codex.capture(stripWhen(t, w).ifEmpty { t }, "open", c.m.profile, w?.at, mapOf("meeting_id" to c.m.id)) != null) newAction.value = ""
-            }
+            if (t.isNotEmpty() && makeAction(c, t) != null) newAction.value = ""
         }))
 }
 

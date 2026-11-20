@@ -10,7 +10,8 @@ import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/composer/Voice';
-import { clearNotesFocus, copyText, openSeries, setView } from '../view';
+import { unmadeActions } from '../../../../shared/noteActions';
+import { clearNotesFocus, copyText, openSeries, setView, showSnack } from '../view';
 import { Fold } from '../Fold';
 import { ActionRow } from './ActionRow';
 import { Series } from './Series';
@@ -22,6 +23,12 @@ import { hasContent } from '../data/meetings/meetingMarkdown';
 import { Transcript, TalkTime, TranscriptButton, readable, useRead, useTranscript } from './Transcript';
 import type { Meeting } from '../data/wiki/wiki';
 
+const titleOf = (t: string) => stripWhen(t, parseWhen(t)) || t;
+
+function captureAction(store: ReturnType<typeof useAssistantStore>, m: Meeting, t: string) {
+  return store.capture(titleOf(t), 'task', m.profile, parseWhen(t)?.at ?? null, { id: m.id, title: m.title });
+}
+
 export function AddAction({ m }: { m: Meeting }) {
   const store = useAssistantStore();
   const [text, setText] = useState('');
@@ -29,8 +36,7 @@ export function AddAction({ m }: { m: Meeting }) {
   const add = () => {
     const t = text.trim();
     if (!t) return;
-    const w = parseWhen(t);
-    void store.capture(stripWhen(t, w) || t, 'task', m.profile, w?.at ?? null, { id: m.id, title: m.title });
+    void captureAction(store, m, t);
     setText('');
   };
   return (
@@ -74,7 +80,18 @@ export function Notes({ m, editing, setEditing }: { m: Meeting; editing: boolean
   );
 }
 
-type MenuProps = { m: Meeting; all: ItemRow[]; state: string; deleteNotes: () => void };
+export function NoteActions({ m, all }: { m: Meeting; all: ItemRow[] }) {
+  const store = useAssistantStore();
+  const lines = unmadeActions(m.notes ?? '', all.filter((r) => r.status === 'open' || r.status === 'done').map((r) => r.title ?? ''), titleOf);
+  if (!lines.length) return null;
+  const make = async () => {
+    const rows = await Promise.all(lines.map((t) => captureAction(store, m, t)));
+    showSnack(lines.length === 1 ? 'Added 1 action' : `Added ${lines.length} actions`, () => rows.forEach((r) => void store.update(r, { deleted: 1 })));
+  };
+  return <Button size="sm" onClick={() => void make()}>{lines.length === 1 ? 'Add 1 action' : `Add ${lines.length} actions`}</Button>;
+}
+
+type MenuProps ={ m: Meeting; all: ItemRow[]; state: string; deleteNotes: () => void };
 
 export function MeetingMenu({ m, all, state, deleteNotes }: MenuProps) {
   const [menu, setMenu] = useState(false);
