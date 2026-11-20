@@ -12,6 +12,7 @@ import { connection } from './connection.js';
 import { closeByUser, createChat, dropJobRun, endRun, jobChat, newChat, openAdvisor, openSaved, prompt, reviseRun } from './chats.js';
 import { liveList, broadcastLive, runs } from './listing.js';
 import { sweepIdle, restart } from './lifecycle.js';
+import { startMorningDigest } from '../integrations/morningDigest.js';
 import { LAST, remember, saveAndExit } from './persist.js';
 import { restoreChats } from './restoreChats.js';
 import { SOCK } from '../socket.js';
@@ -40,6 +41,7 @@ if (await served()) process.exit(0);
 
 applyAccountLabels();
 sweepIdle();
+startMorningDigest(() => runs.list());
 process.on('SIGTERM', saveAndExit);
 process.on('SIGINT', saveAndExit);
 
