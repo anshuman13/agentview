@@ -55,6 +55,7 @@ button.rail-s { cursor: pointer; }
 .tl-more:has(> .tl-state) { min-width: 0; flex: 0 1 auto; max-width: 45%; }
 .tl-more > .tl-state { max-width: 100%; }
 .ui-menu.tl-pop { padding: var(--sp-3) var(--sp-4); gap: var(--sp-2); }
+.tl-pop > .btn { align-self: flex-start; }
 .ui-menu.tl-pop:not(.sheet) { width: min(420px, 90vw); }
 .ui-menu.sheet.tl-pop { top: 0; bottom: auto; padding-top: calc(var(--sp-4) + var(--safe-top, 0px)); border-radius: 0 0 var(--radius-sheet) var(--radius-sheet); animation: tl-pop-down var(--dur) var(--ease); }
 @keyframes tl-pop-down { from { transform: translateY(-100%); } }

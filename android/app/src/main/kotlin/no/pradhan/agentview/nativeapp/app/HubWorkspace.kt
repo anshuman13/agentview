@@ -88,7 +88,7 @@ fun Hub.loadEarlier() {
     loadingEarlier.value = true
     viewModelScope.launch {
         runCatching { api.earlier(chat, first) }
-            .onSuccess { (older, earlier) -> store.prepend(chat, older, earlier) }
+            .onSuccess { (older, earlier) -> store.prepend(chat, first, older, earlier) }
             .onFailure { notice.value = "Could not load earlier messages: ${it.message}" }
         loadingEarlier.value = false
     }

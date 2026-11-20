@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { initPage, mergeTail, prependPage } from './pageEvents';
+import { initPage, isBeforePage, mergeTail, prependPage } from './pageEvents';
 import type { ChatEvent } from '../../../../shared/protocol';
 
 const ev = (i: number, text = ''): ChatEvent => ({ id: `e${i}`, kind: 'user', text, at: i });
@@ -30,6 +30,15 @@ describe('initPage', () => {
 
   it('merges a tail init for the same chat', () => {
     expect(initPage(range(100, 400), 100, true, range(250, 400), 250).earlier).toBe(100);
+  });
+});
+
+describe('isBeforePage', () => {
+  it('flags only an event older than the first held one while earlier rows exist', () => {
+    expect(isBeforePage(range(5, 10), 5, ev(2))).toBe(true);
+    expect(isBeforePage(range(5, 10), 5, ev(11))).toBe(false);
+    expect(isBeforePage(range(5, 10), 0, ev(2))).toBe(false);
+    expect(isBeforePage([], 5, ev(2))).toBe(false);
   });
 });
 

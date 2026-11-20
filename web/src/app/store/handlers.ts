@@ -1,7 +1,7 @@
 import { appendTo, ATTENTION_LABEL, ROW_WINDOW, type LiveChat, type ServerMessage } from '../../../../shared/protocol';
 import { notify } from '../runtime/notify';
 import { isMuted } from '../runtime/mute';
-import { initPage, trimHeld } from '../runtime/pageEvents';
+import { initPage, isBeforePage, trimHeld } from '../runtime/pageEvents';
 import { EMPTY_SESSION, embedded, getState, notice, set, setFindings, setUi } from './core';
 import { bundled } from '../api';
 import { markSeen } from './seen';
@@ -89,6 +89,7 @@ function onEvent(m: Extract<ServerMessage, { type: 'event' }>) {
     let i = cur.length - 1;
     while (i >= 0 && cur[i].id !== m.event.id) i--;
     if (i < 0) {
+      if (isBeforePage(cur, s.earlier ?? 0, m.event)) return {};
       const next = [...cur, m.event];
       return view.atLatest ? trimHeld(next, s.earlier ?? 0, 4 * ROW_WINDOW, 2 * ROW_WINDOW) : { events: next };
     }

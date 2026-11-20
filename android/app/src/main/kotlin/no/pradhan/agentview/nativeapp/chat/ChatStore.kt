@@ -83,6 +83,7 @@ class ChatStore(
                 if (!s.settled) return@update s
                 val i = s.events.indexOfLast { it.id == m.event.id }
                 if (i >= 0) return@update s.copy(events = s.events.toMutableList().also { it[i] = m.event })
+                if (s.earlier > 0 && s.events.isNotEmpty() && m.event.at < s.events.first().at) return@update s
                 val next = s.events + m.event
                 if (!atLatest) return@update s.copy(events = next)
                 val (events, earlier) = trimHeld(next, s.earlier, 4 * ROW_WINDOW, 2 * ROW_WINDOW)
@@ -123,10 +124,10 @@ class ChatStore(
         state.update { s -> if (s.shownId == id && !s.settled && s.events.isEmpty()) s.copy(events = hit.events, earlier = hit.earlier) else s }
     }
 
-    // Older rows fetched for `chat`; dropped when the view moved on while they loaded.
-    fun prepend(chat: String, older: List<ChatEvent>, earlier: Int) {
+    // Older rows fetched for `chat` from the row `first`; dropped when the view moved on, or an init changed the first row, while they loaded.
+    fun prepend(chat: String, first: String, older: List<ChatEvent>, earlier: Int) {
         state.update { s ->
-            if (s.shownId != chat) return@update s
+            if (s.shownId != chat || s.events.firstOrNull()?.id != first) return@update s
             val have = s.events.mapTo(HashSet()) { it.id }
             s.copy(events = older.filter { it.id !in have } + s.events, earlier = earlier)
         }

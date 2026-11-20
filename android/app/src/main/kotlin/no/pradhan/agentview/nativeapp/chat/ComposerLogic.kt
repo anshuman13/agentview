@@ -12,6 +12,7 @@ import no.pradhan.agentview.nativeapp.net.PlanUsage
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.menuModes
+import no.pradhan.agentview.nativeapp.ops.mcpSlug
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 
 // web/src/chat/composerLogic.ts and ChatSettings.tsx, the parts the phone composer uses.
@@ -184,7 +185,7 @@ fun markLabel(mark: String): String {
 // An MCP server, or one of its tools, the user asked the agent to use (web composerLogic.ts Use).
 data class Use(val server: String, val tool: String? = null)
 
-fun toolId(server: String, tool: String) = "mcp__${server.replace(Regex("[^A-Za-z0-9_-]"), "_")}__$tool"
+fun toolId(server: String, tool: String) = "mcp__${mcpSlug(server)}__$tool"
 
 // A tool replaces a server-wide pick of its server; a server-wide pick replaces that server's tools.
 fun addUse(uses: List<Use>, u: Use): List<Use> =

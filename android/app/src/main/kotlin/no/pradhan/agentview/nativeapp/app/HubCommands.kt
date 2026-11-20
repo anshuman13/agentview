@@ -103,10 +103,10 @@ fun Hub.resume(chat: String) = post(promptCmd("continue", false, UUID.randomUUID
 fun Hub.retryTurn(chat: String) = post(retryCmd(), chat)
 
 // A message while Claude runs queues for its next step, or with `steer` stops it and sends now.
-fun Hub.submit(text: String, steer: Boolean, onLost: () -> Unit) {
+fun Hub.submit(text: String, steer: Boolean, saved: String = text, onLost: () -> Unit) {
     val t = text.trim()
     if (t.isEmpty()) return
-    if (!readOnly) savedPrompts.add(t)
+    if (!readOnly) savedPrompts.add(saved.trim())
     val chat = store.wanted
     val running = store.state.value.let { s -> s.session?.running ?: s.live.firstOrNull { it.id == chat }?.running } == true
     val id = UUID.randomUUID().toString()

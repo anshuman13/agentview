@@ -167,7 +167,7 @@ private class ComposerState(val hub: Hub, val chatId: String) {
             is BuildStep.Send -> {
                 val (sent, picked) = takeUses(step.brief)
                 clear()
-                hub.submit(buildPrompt(sent), false) { restore(step.brief, picked) }
+                hub.submit(buildPrompt(sent), false, buildPrompt(step.brief)) { restore(step.brief, picked) }
             }
         }
     }
@@ -187,7 +187,7 @@ private class ComposerState(val hub: Hub, val chatId: String) {
         shellCommand(t)?.let { if (hub.runInTerminal(it)) clear(); return }
         val (sent, picked) = takeUses(t)
         clear()
-        hub.submit(sent, steer) { restore(t, picked) }
+        hub.submit(sent, steer, t) { restore(t, picked) }
     }
 }
 
@@ -391,7 +391,6 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
             ListRow("Take photo", leading = icon("device-camera"), onClick = { onSheet(null); attach.takePhoto() })
             Hairline(lead = true)
             ListRow("Choose file", leading = icon("file"), onClick = { onSheet(null); attach.chooseFile() })
-            Hairline(lead = true)
             if (session?.capabilities?.mcp == true && connectedServers(session).isNotEmpty()) {
                 Hairline(lead = true)
                 ListRow("Use an MCP server", leading = icon("plug"), onClick = { onSheet(Picker.Mcp) }, trailing = { Chevron() })

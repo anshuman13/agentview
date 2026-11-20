@@ -163,11 +163,32 @@ class ChatStoreTest {
         val s = ChatStore()
         s.show("a")
         s.handle(ServerMessage.Init("a", listOf(ev("3"), ev("4")), 5))
-        s.prepend("a", listOf(ev("1"), ev("2"), ev("3")), 2)
+        s.prepend("a", "3", listOf(ev("1"), ev("2"), ev("3")), 2)
         assertEquals(listOf("1", "2", "3", "4"), s.state.value.events.map { it.id })
         assertEquals(2, s.state.value.earlier)
-        s.prepend("zzz", listOf(ev("0")), 0)
+        s.prepend("zzz", "1", listOf(ev("0")), 0)
         assertEquals(4, s.state.value.events.size)
+    }
+
+    @Test
+    fun earlierRowsAreDroppedAfterAnInitMovedTheFirstRow() {
+        val s = ChatStore()
+        s.show("a")
+        s.handle(ServerMessage.Init("a", listOf(ev("3"), ev("4")), 5))
+        s.handle(ServerMessage.Init("a", listOf(ev("5"), ev("6")), 7))
+        s.prepend("a", "3", listOf(ev("1"), ev("2")), 4)
+        assertEquals(listOf("5", "6"), s.state.value.events.map { it.id })
+    }
+
+    @Test
+    fun eventOlderThanTheLoadedPageIsIgnored() {
+        val s = ChatStore()
+        s.show("a")
+        s.handle(ServerMessage.Init("a", listOf(ev("5").copy(at = 50), ev("6").copy(at = 60)), 4))
+        s.handle(ServerMessage.Event(ev("2").copy(at = 20)))
+        assertEquals(listOf("5", "6"), s.state.value.events.map { it.id })
+        s.handle(ServerMessage.Event(ev("7").copy(at = 70)))
+        assertEquals(listOf("5", "6", "7"), s.state.value.events.map { it.id })
     }
 
     @Test

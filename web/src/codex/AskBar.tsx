@@ -89,26 +89,27 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
   const fallback: Profile = readFlag('assistant-personal', false) ? 'personal' : 'work';
   const prof: Profile = profile ?? (filter !== 'all' ? filter : m === 'ask' ? guessProfile(typed, meetings, fallback) : fallback);
   const w = m === 'task' && !noWhen ? parseWhen(text) : null;
-  const due = m === 'task' ? pick ?? w?.at ?? null : null;
-  const dated = pick != null || w != null;
+  const c = parseCapture(typed, new Date(), pick ?? (noWhen ? null : undefined));
+  const due = m === 'task' ? c.at : null;
+  const dated = due != null;
 
   const reset = () => { setText(''); setMode(null); setNoWhen(false); setPick(null); setFresh(false); setProfile(null); setAsking(false); };
   const busy = useRef(false);
-  const save = async (at: number | null) => {
-    const c = parseCapture(typed, new Date(), w && pick == null ? undefined : at);
-    const rule = withRule('', c.repeat);
-    if (await captureTask(store, rule ? `${c.title}\n${rule}` : c.title, prof, c.at, c.tags.length ? { tags: c.tags.join(' ') } : {})) reset();
+  const save = async (cap: typeof c) => {
+    const rule = withRule('', cap.repeat);
+    if (await captureTask(store, rule ? `${cap.title}\n${rule}` : cap.title, prof, cap.at, cap.tags.length ? { tags: cap.tags.join(' ') } : {})) reset();
   };
-  // With no time in the text, the chips ask When? before the task is saved.
-  const submit = async (at = due) => {
+  // With no time in the text, the chips ask When? before the task is saved. A time picked from the chips is `picked`.
+  const submit = async (picked?: number | null) => {
     if (!typed || busy.current) return;
     if (m === 'ask') {
       if (ask(askText(typed, prof, items, undefined, meetings), prof, fresh)) reset();
       return;
     }
-    if (at == null && !noWhen && !asking) return setAsking(true);
+    const cap = picked === undefined ? c : parseCapture(typed, new Date(), picked);
+    if (cap.at == null && !noWhen && !asking) return setAsking(true);
     busy.current = true;
-    await save(at);
+    await save(cap);
     busy.current = false;
   };
   const cycle = () => setMode((x) => ((x ?? m) === 'task' ? 'ask' : 'task'));

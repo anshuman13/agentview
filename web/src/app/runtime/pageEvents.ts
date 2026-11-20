@@ -18,6 +18,11 @@ export function trimHeld(events: ChatEvent[], earlier: number, max: number, keep
   return { events: events.slice(-keep), earlier: earlier + events.length - keep };
 }
 
+// An unknown event older than the first held one belongs to the rows before the page, not at the bottom.
+export function isBeforePage(held: ChatEvent[], earlier: number, e: ChatEvent) {
+  return earlier > 0 && held.length > 0 && e.at < held[0].at;
+}
+
 // An older page goes in front only while the events still start where it was asked from; an init meanwhile wins.
 export function prependPage(held: ChatEvent[], first: string, page: ChatEvent[], earlier: number) {
   return held[0]?.id === first ? { events: [...page, ...held], earlier } : null;
