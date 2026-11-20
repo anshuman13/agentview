@@ -278,7 +278,7 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
         is Need.Wiki -> ListRow("${n.count} wiki ${if (n.count == 1) "claim waits" else "claims wait"} for you", onClick = onReview)
         is Need.Overdue -> ListRow(n.row.title ?: "", n.row.at?.let { "Overdue · due ${whenText(it, now)}" }, leading = { CheckCircle(false, "Done") { actions.done(n.row) } },
             trailing = { MoreButton { close -> MenuItem("Snooze to next 09:00", "clock", { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })
-        is Need.OverdueAll -> ListRow("${n.rows.size} overdue", "Move them all to today", trailing = { Button("Move to today", { actions.moveToToday(n.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
+        is Need.OverdueAll -> ListRow("${n.rows.size} overdue", "Move them all to today", trailing = { Button("Move all to today", { actions.moveToToday(n.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
         is Need.JustEnded -> ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
         is Need.Ask -> DismissSwipe({ actions.dismiss(n.row) }) {
             ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · "), onClick = { onOpen(n.row) },

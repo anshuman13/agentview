@@ -60,7 +60,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
         <span className="mt-load-share">Since {dayLabel(r.start)}: {plural(r.meetings, 'meeting')}, {hoursText(r.hours)}</span>
         <span className="spacer" />
         <button className="btn" title="Done, slipped, stuck and waiting tasks" onClick={() => setReview(!review)}><Icon name="checklist" small /> <span>{review ? 'Summary' : 'Review'}</span></button>
-        <button className="btn" title="Copy the week as Markdown" onClick={copy}><Icon name="copy" small /> <span>Copy</span></button>
+        <button className="btn" title="Copy the week as Markdown" onClick={copy}><Icon name="copy" small /> <span>Copy as Markdown</span></button>
       </div>
       {review ? <Review now={now} /> : <>
       <WeekGoals now={now} />

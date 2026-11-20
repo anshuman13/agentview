@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.meetings
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -73,7 +74,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
         }
         if (tasks.isNotEmpty()) {
             item { SectionHeader("Open tasks", tasks.size.toString()) }
-            item { Group { tasks.take(5).forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title ?: "(Untitled)", dueText(r, now), onClick = { onTask(r) }) } } }
+            item { Group { tasks.take(5).forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title ?: UNTITLED, dueText(r, now), onClick = { onTask(r) }) } } }
         }
         if (commitments.isNotEmpty()) {
             item { SectionHeader("Commitments", commitments.size.toString()) }

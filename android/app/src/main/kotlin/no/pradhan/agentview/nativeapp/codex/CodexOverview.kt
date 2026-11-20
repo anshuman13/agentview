@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.codex.meetings.isBlock
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -213,7 +214,7 @@ fun searchAll(items: List<Row>, meetings: List<Row>, query: String, profile: Str
     if (words.isEmpty()) return Hits(emptyList(), emptyList())
     fun hits(vararg texts: String?) = texts.joinToString(" ") { it.orEmpty() }.lowercase().let { hay -> words.all { hay.contains(it) } }
     val tasks = items.filter { !it.deleted && matchesProfile(profile, it) && it.status !in listOf("dismissed", "point", "raised", GOAL) && hits(it.title, it.text, it.people, it.source) }
-        .sortedByDescending { it.updatedAt }.map { Hit(it, it.title ?: it.text ?: "Untitled", snippet(words, it.text, it.people, it.source)) }
+        .sortedByDescending { it.updatedAt }.map { Hit(it, it.title ?: it.text ?: UNTITLED, snippet(words, it.text, it.people, it.source)) }
     val found = meetings.filter { !it.deleted && matchesProfile(profile, it) && hits(it.title, it.str("people"), it.str("notes"), it.str("summary"), it.str("decisions")) }
         .sortedByDescending { it.startsAt ?: 0L }.map { Hit(it, it.title ?: "Meeting", snippet(words, it.str("summary"), it.str("decisions"), it.str("notes"), it.str("people"))) }
     return Hits(tasks, found)

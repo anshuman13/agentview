@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -116,7 +117,7 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
     val body = @Composable {
         Box(Modifier.background(av.groupCard)) {
             ListRow(
-                title = row.title ?: "(Untitled)",
+                title = row.title ?: UNTITLED,
                 meta = taskMeta(row, now, inDay, showProfile),
                 leading = if (row.status == "note") null else if (picking) { { CheckCircle(pick!!.selected, if (pick.selected) "Deselect ${row.title}" else "Select ${row.title}") { pick.toggle() } } } else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done") { if (isDone) actions.reopen(row) else actions.done(row) } } },
                 state = if (row.status == "suggested") ({ Badge("Needs you", BadgeTone.Waiting) }) else null,

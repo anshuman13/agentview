@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.meetings
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -173,7 +174,7 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = 
         "dismissed" -> "Restore" to { actions.restore(r) }
         else -> null
     }
-    ListRow(r.title ?: "(Untitled)", meta, strike = status == "done", onClick = onTask?.let { { it(r) } }, trailing = {
+    ListRow(r.title ?: UNTITLED, meta, strike = status == "done", onClick = onTask?.let { { it(r) } }, trailing = {
         if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         if (status == "open" || status == "suggested" || status == "done") MoreButton { close ->
             if (status != "done") MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r) })

@@ -67,7 +67,7 @@ export function OlderClaims({ older, stale, open, toggle, page, flash }: OlderPr
   if (older.length === 0) return null;
   return (
     <section className="wk-older">
-      <Section label={<>Older{stale.size > 0 && <span className="muted">{stale.size} to confirm</span>}</>} count={older.length} open={open} onToggle={toggle} />
+      <Section label={<>Not used by Claude{stale.size > 0 && <span className="muted">{stale.size} to confirm</span>}</>} count={older.length} open={open} onToggle={toggle} />
       {open && <div className="wk-older-hint">Retired or over 90 days old. The agent does not use these.</div>}
       {open && <ul className="ui-group wk-list">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={NO_OLD} page={page} flash={flash === f.id} stale={stale.has(f.id)} />)}</ul>}
     </section>

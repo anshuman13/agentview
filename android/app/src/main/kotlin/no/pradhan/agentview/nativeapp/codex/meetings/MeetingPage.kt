@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.meetings
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row as LRow
@@ -165,9 +166,9 @@ private fun MeetingTitle(c: MeetingCtx, state: MState) {
     Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         if (isEvent(m)) Text("Event", style = Type.footnote, color = av.fgMuted)
         LRow(verticalAlignment = Alignment.CenterVertically) {
-            Text(m.title?.ifEmpty { null } ?: "Untitled", Modifier.weight(1f), style = Type.title)
+            Text(m.title?.ifEmpty { null } ?: UNTITLED, Modifier.weight(1f), style = Type.title)
             if (state == MState.Live && link != null && !isEvent(m)) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-            else if (link != null && m.id.startsWith("cal:")) IconBtn("link-external", "Open in calendar", { uri.openUri(link) })
+            else if (link != null && m.id.startsWith("cal:")) IconBtn("link-external", "Open calendar", { uri.openUri(link) })
         }
         pageMeta(m).takeIf { it.isNotEmpty() }?.let { Text(it, style = Type.subheadline, color = av.fgMuted) }
         stateLine(m, c.now)?.let { Text(it, style = Type.callout, color = if (state == MState.Missing) av.warn else av.info) }

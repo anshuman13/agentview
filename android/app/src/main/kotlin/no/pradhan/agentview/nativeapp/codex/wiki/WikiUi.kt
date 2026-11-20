@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.wiki
 
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -121,7 +122,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
                     s.pages.forEachIndexed { i, p ->
                         if (i > 0) Hairline()
                         val n = stats[p.id]?.claims ?: 0
-                        ListRow(p.title ?: "Untitled", plural(n, "claim") + if (profile == null) " · ${profileLabel(p.profile)}" else "", leading = { PageTile(p) }, onClick = { onOpen(p) },
+                        ListRow(p.title ?: UNTITLED, plural(n, "claim") + if (profile == null) " · ${profileLabel(p.profile)}" else "", leading = { PageTile(p) }, onClick = { onOpen(p) },
                             state = if (pageNeedsReview(p, facts)) ({ Badge("Needs you", BadgeTone.Waiting) }) else null,
                             menu = { dismiss ->
                                 MenuItem("Open", "file", { dismiss(); onOpen(p) })
@@ -208,7 +209,7 @@ fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Text(page.title ?: "Untitled", style = Type.title)
+                Text(page.title ?: UNTITLED, style = Type.title)
                 val n = stat?.claims ?: 0
                 val meta = listOfNotNull(
                     plural(n, "claim"),
@@ -225,7 +226,7 @@ fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
             lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, page.title ?: "") }
         }
         if (older.isNotEmpty()) {
-            item { SectionHeader("Not used by the agent", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
+            item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
             if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, page.title ?: "", stale = it.id in staleIds) }
         }
         if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "Claims come from meetings and threads", icon = "book") }
