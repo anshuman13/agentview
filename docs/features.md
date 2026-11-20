@@ -561,7 +561,7 @@ or a page puts focus back on what opened it.
 | ? | Show the keyboard shortcuts (outside text fields) |
 | ⌘K | Clear the terminal |
 | Enter | Send; Shift+Enter for a new line |
-| Tab | Accept the suggested command or the ghost text |
+| Tab | Accept the suggested command or the ghost text (a Tab chip follows the ghost text on a keyboard device) |
 | Shift+Tab | Cycle the permission mode |
 | ↑ / ↓ | Step through sent prompts when the box is empty |
 | Esc | Close a popup or clear a filter |

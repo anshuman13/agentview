@@ -84,7 +84,7 @@ export const Composer = memo(function Composer() {
         <div className={narrow ? 'cp-row' : undefined}>
         {narrow && <AddMenu uploading={uploading} setPick={setPick} attach={attach} />}
         <div className="cp-text">
-          <div ref={mirror} className="cp-mirror" aria-hidden><span className="cp-typed">{text}</span><span className="cp-ghost">{ghost}</span></div>
+          <div ref={mirror} className="cp-mirror" aria-hidden><span className="cp-typed">{text}</span><span className="cp-ghost">{ghost}</span>{ghost && !touch() && <kbd className="cp-key">Tab</kbd>}</div>
           <textarea
             ref={ta}
             value={text}
