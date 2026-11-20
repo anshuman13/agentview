@@ -17,7 +17,7 @@ const SECRET = /[a-z0-9]{24,}|sk-|ghp_|xox|password/i;
 const TICKET_OR_PR = /\b[A-Z][A-Z0-9]+-\d+\b|(?<![\w&])#\d+\b|github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/;
 
 export type ChatEvent = { id: string; kind: string; text: string; at: number };
-export type Chat = { chat: string; title: string; profile: Profile; events: ChatEvent[] };
+export type Chat = { chat: string; title: string; folder?: string; profile: Profile; events: ChatEvent[] };
 export type Decision = { text: string; page: string; section?: string };
 type Page = { id: string; title: string; section?: string };
 type Learned = { proposed: number } | { skipped: 'limit' };
@@ -54,7 +54,7 @@ function saveLearned(db: Database, c: Chat, claims: string[], decisions: Decisio
     seen.add(norm(text));
     changes.push({
       table: 'facts', id: `learn:${hash(norm(text))}`, profile: c.profile, updated_at: now,
-      fields: { text, page_id, heading: null, at: now, state: 'proposed', replaces: null, added_by: `claude:${c.chat}`, sources: JSON.stringify([{ kind: 'chat', label: c.title }]) },
+      fields: { text, page_id, heading: null, at: now, state: 'proposed', replaces: null, added_by: `claude:${c.chat}`, sources: JSON.stringify([{ kind: 'chat', label: c.title, ...(c.folder && { folder: c.folder }) }]) },
     });
     return true;
   };

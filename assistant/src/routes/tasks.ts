@@ -99,13 +99,13 @@ export const taskRoutes: Routes = {
 
   // Proposes what a finished chat taught as memory claims: POST /wiki/learn with { chat, title, profile, events }.
   'POST /wiki/learn': async (c) => {
-    const data = await body<{ chat?: unknown; title?: unknown; profile?: unknown; events?: unknown }>(c, 500_000);
+    const data = await body<{ chat?: unknown; title?: unknown; folder?: unknown; profile?: unknown; events?: unknown }>(c, 500_000);
     if (!data) return;
     if (!isProfile(data.profile) || typeof data.chat !== 'string' || !data.chat || !Array.isArray(data.events)) {
       send(c.res, 400, { error: 'Missing chat, profile or events' });
       return;
     }
-    const chat = { chat: data.chat, profile: data.profile, title: typeof data.title === 'string' ? data.title : '', events: data.events as ChatEvent[] };
+    const chat = { chat: data.chat, profile: data.profile, title: typeof data.title === 'string' ? data.title : '', ...(typeof data.folder === 'string' && { folder: data.folder }), events: data.events as ChatEvent[] };
     let started = false;
     try {
       const r = await once(`learn:${chat.profile}:${chat.chat}`, () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { keyWords, overlap, similarClaim } from './claimMatch';
+import { keyWords, overlap, repeatedInFolder, similarClaim } from './claimMatch';
 
 describe('overlap', () => {
   it('is the share of the shorter text key words found in the other', () => {
@@ -25,5 +25,20 @@ describe('similarClaim', () => {
     expect(similarClaim('alpha beta gamma delta zulu', [{ id: 'x', text: 'alpha beta gamma' }, { id: 'y', text: 'alpha beta gamma delta' }])?.id).toBe('x');
     expect(similarClaim('alpha beta gamma', [{ id: 'x', text: 'alpha beta zulu' }, { id: 'y', text: 'alpha beta gamma delta' }])?.id).toBe('y');
     expect(similarClaim('a an', claims)).toBeUndefined();
+  });
+});
+
+describe('repeatedInFolder', () => {
+  const claim = (id: string, text: string, folder?: string) => ({ id, text, folder });
+
+  it('marks similar claims of one folder, not of different folders or without a folder', () => {
+    const claims = [
+      claim('a', 'Use bun for scripts, never npm', '/r1'),
+      claim('b', 'Always use bun for scripts and never npm', '/r1'),
+      claim('c', 'Use bun for scripts, never npm', '/r2'),
+      claim('d', 'Use bun for scripts, never npm'),
+      claim('e', 'unrelated words entirely', '/r1'),
+    ];
+    expect([...repeatedInFolder(claims)]).toEqual(['a', 'b']);
   });
 });

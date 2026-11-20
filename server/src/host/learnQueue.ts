@@ -36,7 +36,7 @@ export class LearnQueue {
     const fresh = events.filter((e) => e.kind === 'user' && !e.auto && e.at > since);
     if (!fresh.length) return;
     // Keyed by the Claude session, which outlives this host's chat id, so the hub's cursor survives a restart.
-    hubLearn({ chat: chat.state.session.sessionId ?? chat.id, title: this.deps.titleOf(chat), profile: profileOf(chat.cwd), events: learnEvents(events) })
+    hubLearn({ chat: chat.state.session.sessionId ?? chat.id, title: this.deps.titleOf(chat), folder: chat.cwd, profile: profileOf(chat.cwd), events: learnEvents(events) })
       .then(() => this.posted.set(chat.id, Math.max(...fresh.map((e) => e.at))))
       .catch((err) => console.error(`learn ${chat.id}:`, errText(err)));
   }
