@@ -35,3 +35,12 @@ export function similarClaim<T extends { text: string }>(text: string, claims: T
   }
   return best;
 }
+
+// The ids of claims that another claim from the same folder is similar to, so a correction repeated in one repo can become a rule there.
+export function repeatedInFolder(claims: { id: string; text: string; folder?: string }[]) {
+  const byFolder = new Map<string, typeof claims>();
+  for (const c of claims) if (c.folder) byFolder.set(c.folder, [...(byFolder.get(c.folder) ?? []), c]);
+  const out = new Set<string>();
+  for (const list of byFolder.values()) for (const c of list) if (similarClaim(c.text, list.filter((o) => o.id !== c.id))) out.add(c.id);
+  return out;
+}

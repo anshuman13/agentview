@@ -27,6 +27,12 @@ describe('learn from chats', () => {
     expect(seen).toEqual([['u1', 'a1'], ['u2']]);
   });
 
+  it('records the chat folder in the source', async () => {
+    const db = openDb(':memory:');
+    await learnFromChat(db, { ...chat([user('u1', 10)]), folder: '/repo' }, 100, async () => ['Use bun.']);
+    expect(db.prepare("SELECT sources FROM facts WHERE id LIKE 'learn:%'").get()).toEqual({ sources: '[{"kind":"chat","label":"Setup","folder":"/repo"}]' });
+  });
+
   it('keeps the cursor when the run fails and moves it when nothing is saved', async () => {
     const db = openDb(':memory:');
     const events = [user('u1', 10)];

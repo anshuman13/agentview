@@ -13,6 +13,10 @@ import { PageTile } from './PageTile';
 import { useClaimEdits } from './useClaimEdits';
 import { REVIEW, shortDate } from './shared';
 import { UNTITLED } from '../../../../shared/util';
+import { repeatedInFolder } from '../../../../shared/claimMatch';
+import { appendRule } from '../../../../shared/steering';
+import { useStore } from '../../app/store';
+import { readRepoFile, writeRepoFile } from '../../chat/cards/Memory';
 
 // On phones the replaced claim is clamped to two lines; a tap shows all of it.
 export function Replaces({ old }: { old: Fact }) {
@@ -34,9 +38,24 @@ function ReviewCard({ fact }: { fact: Fact }) {
     ? meeting?.title ?? sourcesOf(fact).find((s) => s.kind === 'meeting')?.label ?? 'a meeting'
     : fact.added_by?.startsWith('slack:') ? sourcesOf(fact).find((s) => s.kind === 'slack')?.label ?? 'Slack'
     : fact.added_by?.startsWith('pr:') ? sourcesOf(fact).find((s) => s.kind === 'pr')?.label ?? 'a pull request' : fromChat ? `chat ${fromChat.label || UNTITLED}` : null;
+  const folder = fromChat?.folder;
+  const repoChat = useStore((s) => s.live.find((c) => c.cwd === folder)?.id);
+  const repeated = useMemo(() => repeatedInFolder(facts.flatMap((f) => {
+    const dir = sourcesOf(f).find((s) => s.kind === 'chat')?.folder;
+    return dir && !f.deleted && !f.page_id && (f.state === 'proposed' || (f.state ?? 'live') === 'live') ? [{ id: f.profile + f.id, text: f.text ?? '', folder: dir }] : [];
+  })).has(fact.profile + fact.id), [facts, fact]);
   const review = useReview();
   const approve = () => review.approve([fact]);
   const reject = () => review.reject([fact]);
+  const addRule = async () => {
+    try {
+      const old = await readRepoFile('CLAUDE.md', repoChat);
+      await writeRepoFile('CLAUDE.md', appendRule(old, fact.text ?? '')!, repoChat);
+      showSnack('Added to CLAUDE.md', () => void writeRepoFile('CLAUDE.md', old, repoChat));
+    } catch {
+      showSnack('Could not add to CLAUDE.md');
+    }
+  };
   const save = () => {
     void store.editRow('facts', fact, { text: text.trim() || fact.text });
     setEditing(false);
@@ -70,6 +89,7 @@ function ReviewCard({ fact }: { fact: Fact }) {
         ) : (
           <>
             <button className="wk-act" onClick={() => { setText(fact.text ?? ''); setEditing(true); }}><Icon name="edit" small /> Edit</button>
+            {repeated && repoChat && <button className="wk-act" onClick={() => void addRule()}><Icon name="add" small /> Add to CLAUDE.md</button>}
             <span className="spacer" />
             <IconButton icon="close" label="Reject" className="mt-reject" onClick={reject} />
             <Button variant="primary" icon="check" className="mt-approve" onClick={approve}>Approve</Button>

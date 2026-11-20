@@ -163,7 +163,7 @@ const LEARN_CHARS = 2000;
 export const learnEvents = (events: ChatEvent[]) =>
   events.flatMap((e) => (e.kind === 'user' || e.kind === 'assistant' ? [{ id: e.id, kind: e.kind, text: e.text.slice(0, LEARN_CHARS), at: e.at }] : [])).slice(-LEARN_EVENTS);
 
-export async function hubLearn(post: { chat: string; title: string; profile: string; events: ReturnType<typeof learnEvents> }) {
+export async function hubLearn(post: { chat: string; title: string; folder: string; profile: string; events: ReturnType<typeof learnEvents> }) {
   const resp = await fetch(`${HUB}/wiki/learn`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(post), signal: AbortSignal.timeout(10 * 60_000) });
   if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}: ${await resp.text()}`);
 }

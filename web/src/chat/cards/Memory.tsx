@@ -22,14 +22,14 @@ export function memoryWhere(f: Pick<MemoryFile, 'path'>, cwd: string) {
 // Rules go to the first instruction file, the repo's, as a path in the folder; android MemoryUi.kt ruleFile says the same.
 export const ruleFile = (cwd: string, files?: string[]) => (files?.[0]?.startsWith(`${cwd}/`) ? files[0].slice(cwd.length + 1) : 'CLAUDE.md');
 
-async function readRepoFile(file: string): Promise<string> {
-  const r = await fileRequest(file);
+export async function readRepoFile(file: string, chat?: string): Promise<string> {
+  const r = await fileRequest(file, undefined, chat);
   if (!r.ok) throw new Error(await r.text());
   return (await r.json()).content ?? '';
 }
 
-async function writeRepoFile(file: string, text: string) {
-  const r = await fileRequest(file, { method: 'PUT', body: text });
+export async function writeRepoFile(file: string, text: string, chat?: string) {
+  const r = await fileRequest(file, { method: 'PUT', body: text }, chat);
   if (!r.ok) throw new Error(await r.text());
 }
 

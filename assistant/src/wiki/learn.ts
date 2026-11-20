@@ -14,7 +14,7 @@ const MAX_CLAIMS = 3;
 const SECRET = /[a-z0-9]{24,}|sk-|ghp_|xox|password/i;
 
 export type ChatEvent = { id: string; kind: string; text: string; at: number };
-export type Chat = { chat: string; title: string; profile: Profile; events: ChatEvent[] };
+export type Chat = { chat: string; title: string; folder?: string; profile: Profile; events: ChatEvent[] };
 type Learned = { proposed: number } | { skipped: 'limit' };
 
 const cursorKey = (profile: Profile, chat: string) => `learn:${profile}:${chat}`;
@@ -37,7 +37,7 @@ function saveLearned(db: Database, c: Chat, claims: string[], now = Date.now()) 
     seen.add(norm(text));
     changes.push({
       table: 'facts', id: `learn:${createHash('sha1').update(norm(text)).digest('hex').slice(0, 16)}`, profile: c.profile, updated_at: now,
-      fields: { text, page_id: null, heading: null, at: now, state: 'proposed', replaces: null, added_by: `claude:${c.chat}`, sources: JSON.stringify([{ kind: 'chat', label: c.title }]) },
+      fields: { text, page_id: null, heading: null, at: now, state: 'proposed', replaces: null, added_by: `claude:${c.chat}`, sources: JSON.stringify([{ kind: 'chat', label: c.title, ...(c.folder && { folder: c.folder }) }]) },
     });
   }
   return applyChanges(db, changes).applied;
