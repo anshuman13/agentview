@@ -214,7 +214,7 @@ function TranscriptView({ events, earlier, cwd, running, bill }: { events: ChatE
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <EmptyState size="sm" icon="comment-discussion" title="No messages yet" hint="Your prompts, the agent's steps and replies show up here" />}
-      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? <><Icon name="loading" small spin /> Loading earlier…</> :`Show earlier (${hiddenCount(earlier, list.length, shown)} hidden)`}</div>}
+      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? <><Icon name="loading" small spin /> Loading earlier…</> : `Show earlier (${hiddenCount(earlier, list.length, shown)} hidden)`}</div>}
       {list.slice(from).map((r, i) => {
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
         const day = r.kind === 'item' ? days.get(r.it.id) : undefined;

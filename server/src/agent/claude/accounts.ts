@@ -121,6 +121,10 @@ export function overageUntil(m: { type: string; rate_limit_info?: { isUsingOvera
   return r.resetsAt ? r.resetsAt * 1000 : now + 5 * 3600_000;
 }
 
+export function guardLimit(a: Account) {
+  if (isLimited(a)) throw new Error('The Claude account is at its usage limit');
+}
+
 export function stopOnOverage(a: Account, m: Parameters<typeof overageUntil>[0]) {
   const until = overageUntil(m);
   if (!until) return;

@@ -82,16 +82,22 @@ export function Notes({ m, editing, setEditing }: { m: Meeting; editing: boolean
 
 export function NoteActions({ m, all }: { m: Meeting; all: ItemRow[] }) {
   const store = useAssistantStore();
+  const [busy, setBusy] = useState(false);
   const lines = unmadeActions(m.notes ?? '', all.filter((r) => r.status === 'open' || r.status === 'done').map((r) => r.title ?? ''), titleOf);
   if (!lines.length) return null;
   const make = async () => {
-    const rows = await Promise.all(lines.map((t) => captureAction(store, m, t)));
-    showSnack(lines.length === 1 ? 'Added 1 action' : `Added ${lines.length} actions`, () => rows.forEach((r) => void store.update(r, { deleted: 1 })));
+    setBusy(true);
+    try {
+      const rows = (await Promise.all(lines.map((t) => captureAction(store, m, t)))).filter((r) => r !== null);
+      showSnack(lines.length === 1 ? 'Added 1 action' : `Added ${lines.length} actions`, () => rows.forEach((r) => void store.update(r, { deleted: 1 })));
+    } finally {
+      setBusy(false);
+    }
   };
-  return <Button size="sm" onClick={() => void make()}>{lines.length === 1 ? 'Add 1 action' : `Add ${lines.length} actions`}</Button>;
+  return <Button size="sm" disabled={busy} onClick={() => void make()}>{lines.length === 1 ? 'Add 1 action' : `Add ${lines.length} actions`}</Button>;
 }
 
-type MenuProps ={ m: Meeting; all: ItemRow[]; state: string; deleteNotes: () => void };
+type MenuProps = { m: Meeting; all: ItemRow[]; state: string; deleteNotes: () => void };
 
 export function MeetingMenu({ m, all, state, deleteNotes }: MenuProps) {
   const [menu, setMenu] = useState(false);
