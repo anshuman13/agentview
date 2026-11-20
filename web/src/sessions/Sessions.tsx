@@ -3,12 +3,13 @@ import { deleteRequest } from './sessionApi';
 import { send, setUi, useStore } from '../app/store';
 import { appSettings } from '../app/appSettings';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { LiveChat, SavedSession, Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
 import { pressable, save, stored } from '../ui/util';
-import { chatFinder, deleteChat, findHere, flip, groupByKind, invalidateWorkspace, segmentOf, usePins, useWorkspace, waitingChats, worktreeRequest, type Folder } from './folders';
+import { chatFinder, deleteChat, findHere, flip, groupByKind, invalidateWorkspace, repoName, segmentOf, usePins, useWorkspace, waitingChats, worktreeRequest, type Folder } from './folders';
 import { FilterInput } from './FilterInput';
 import { RepoRow, SessionRow, WorktreeRow } from './RepoRow';
 import { WaitingRows } from './ChatRows';
@@ -132,8 +133,8 @@ export function Sessions() {
     <div className="sessions workspace">
       <div className="sessions-bar">
         <FilterInput value={filter} set={setFilter} />
-        <button className="icon-btn" title="Start a chat in a folder or new project (⌘O)" onClick={() => setUi({ repoPicker: true })}><Icon name="folder-opened" /></button>
-        <button className="icon-btn" title="New chat in this folder" onClick={() => start(cwd)}><Icon name="add" /></button>
+        <IconButton icon="folder-opened" label="Start a chat" title="Start a chat in a folder or new project (⌘O)" onClick={() => setUi({ repoPicker: true })} />
+        <IconButton icon="add" label={`New chat in ${repoName(folders, cwd)}`} onClick={() => start(cwd)} />
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
       <NeedsYou n={waiting.length} filter={filter}>

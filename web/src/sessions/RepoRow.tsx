@@ -1,4 +1,5 @@
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
 import { ago, pressable } from '../ui/util';
 import { providerMark } from '../../../shared/providers';
 import type { SavedSession, Worktree } from '../../../shared/protocol';
@@ -30,9 +31,9 @@ export function RepoRow({ d, active, here, open, icon, creating, toggle, newTree
       </span>
       <span className="acts">
         {d.repo?.paseo && (
-          <button className="icon-btn" title="New worktree" disabled={creating} onClick={(e) => { e.stopPropagation(); newTree(); }}><Icon name="git-branch-create" small /></button>
+          <IconButton icon="git-branch-create" small label="New worktree" disabled={creating} onClick={(e) => { e.stopPropagation(); newTree(); }} />
         )}
-        <button className="icon-btn" title={`New chat in ${d.name}`} onClick={(e) => { e.stopPropagation(); start(); }}><Icon name="add" small /></button>
+        <IconButton icon="add" small label={`New chat in ${d.name}`} onClick={(e) => { e.stopPropagation(); start(); }} />
       </span>
     </div>
   );
@@ -53,9 +54,9 @@ export function WorktreeRow({ w, removing, start, remove }: { w: Worktree; remov
         <span className="busy"><Icon name="loading" small spin /></span>
       ) : (
         <span className="acts">
-          <button className="icon-btn" title="New chat in this worktree" onClick={start}><Icon name="add" small /></button>
+          <IconButton icon="add" small label="New chat in this worktree" onClick={start} />
           {w.removable && (
-            <button className="icon-btn" title="Remove worktree, keep the branch" onClick={remove}><Icon name="trash" small /></button>
+            <IconButton icon="trash" small label="Remove worktree" title="Remove worktree, keep the branch" onClick={remove} />
           )}
         </span>
       )}
@@ -69,7 +70,7 @@ export function SessionRow({ s, selected, opening, open, remove }: { s: SavedSes
       <span className="name">{opening ? 'Opening… ' : ''}{s.title}</span>
       <span className="when">{providerMark(s.provider) && `${providerMark(s.provider)} · `}{ago(s.lastModified)}</span>
       <span className="acts">
-        <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); remove(); }}><Icon name="trash" small /></button>
+        <IconButton icon="trash" small label="Delete chat" onClick={(e) => { e.stopPropagation(); remove(); }} />
       </span>
     </div>
   );
