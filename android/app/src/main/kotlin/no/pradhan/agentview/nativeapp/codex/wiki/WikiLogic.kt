@@ -211,6 +211,27 @@ class ClaimGroup(val heading: String, val claims: List<Claim>)
 
 fun proposals(facts: List<Row>) = facts.filter { !it.deleted && it.str("state") == "proposed" }.sortedByDescending { it.long("at") ?: 0L }
 
+// The proposed claims on the page; a null page id is Memory, the claims with no page (web WikiPage pending).
+fun pageProposals(facts: List<Row>, pageId: String?) = proposals(facts).filter { it.str("page_id")?.ifEmpty { null } == pageId }
+
+enum class FeedKind { Added, Updated, Contested }
+
+class FeedEntry(val fact: Row, val kind: FeedKind, val at: Long)
+
+// Recently updated: the live current claims newest first, each contested, updated (another claim's superseded_by names it) or added (web wiki/Feed.tsx).
+fun wikiFeed(facts: List<Row>): List<FeedEntry> {
+    val replaced = facts.mapNotNull { it.str("superseded_by")?.ifEmpty { null } }.toSet()
+    val current = currentClaims(facts)
+    return liveRows(facts).filter(current).map { f ->
+        val kind = when {
+            !f.str("contested").isNullOrEmpty() -> FeedKind.Contested
+            f.id in replaced -> FeedKind.Updated
+            else -> FeedKind.Added
+        }
+        FeedEntry(f, kind, factTime(f))
+    }.sortedByDescending { it.at }
+}
+
 // Current claims newest first under each heading, headings with the newest claim first, each claim with the claims it replaced.
 fun pageClaims(facts: List<Row>, pageId: String?, now: Long): List<ClaimGroup> {
     val all = liveRows(facts)
@@ -228,7 +249,7 @@ fun pageClaims(facts: List<Row>, pageId: String?, now: Long): List<ClaimGroup> {
     val groups = LinkedHashMap<String, MutableList<Claim>>()
     fun add(f: Row, old: List<Row>) { groups.getOrPut(f.str("heading")?.ifEmpty { null } ?: "Notes") { ArrayList() }.add(Claim(f, old)) }
     for (f in mine.filter { current(it) && !isOld(it, now) }) add(f, (replaced[f.key] ?: emptyList<Row>()).sortedByDescending { it.long("at") ?: 0L })
-    for (f in proposals(facts).filter { it.str("page_id")?.ifEmpty { null } == pageId }) add(f, emptyList())
+    for (f in pageProposals(facts, pageId)) add(f, emptyList())
     fun newest(g: List<Claim>) = g.maxOf { it.fact.long("at") ?: 0L }
     return groups.map { (h, cs) -> ClaimGroup(h, cs.sortedByDescending { it.fact.long("at") ?: 0L }) }.sortedByDescending { newest(it.claims) }
 }

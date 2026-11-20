@@ -58,6 +58,7 @@ import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.Chevron
+import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.FieldLabel
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -105,6 +106,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     var allStale by rememberSaveable { mutableStateOf(false) }
     var allLoose by rememberSaveable { mutableStateOf(false) }
     var creating by remember { mutableStateOf(false) }
+    var feedOpen by remember { mutableStateOf(false) }
     val waiting = remember(facts) { proposals(facts).size }
     val grouped = remember(pages, facts) { reviewGroups(pages, facts) }
     val reviewRows = grouped.byPage.map { g ->
@@ -117,7 +119,10 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
-            SearchField(query, { query = it }, "Search the wiki", Modifier.padding(top = Tokens.sp4))
+            LayoutRow(Modifier.padding(top = Tokens.sp4, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+                SearchField(query, { query = it }, "Search the wiki", Modifier.weight(1f))
+                IconBtn("history", "Feed", { feedOpen = true })
+            }
         }
         if (query.isNotBlank()) {
             if (hits.pages.isEmpty() && hits.claims.isEmpty()) item { EmptyState("Nothing in the wiki matches “$query”", icon = "search") }
@@ -189,6 +194,28 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
         val sort = (sections.firstOrNull { it.name == "Pages" }?.pages.orEmpty().maxOfOrNull { it.long("sort") ?: 0L } ?: 0L).coerceAtLeast(0L) + 1
         newPage(title, "Pages", sort, proposalProfile(null, profile), System.currentTimeMillis())?.let { actions.create(it, "Page created"); onOpen(it) }
     }, { creating = false }, maxLength = 120)
+    if (feedOpen) FeedSheet(facts, pages, now, { feedOpen = false }) { feedOpen = false; onClaim(it) }
+}
+
+// Recently updated (web wiki/Feed.tsx): the 5 newest current claims with their page, source or contester and age.
+@Composable
+private fun FeedSheet(facts: List<Row>, pages: List<Row>, now: Long, onDismiss: () -> Unit, onClaim: (Row) -> Unit) {
+    val entries = remember(facts) { wikiFeed(facts) }
+    val titles = remember(pages) { pages.associate { it.key to it.title } }
+    Sheet(onDismiss, "Recently updated", padded = false, count = entries.size.toString()) {
+        if (entries.isEmpty()) EmptyState("No claims yet", "New and changed claims show here", icon = "book")
+        else Group {
+            entries.take(5).forEachIndexed { i, e ->
+                if (i > 0) Hairline()
+                val f = e.fact
+                val contested = e.kind == FeedKind.Contested
+                val page = f.str("page_id")?.ifEmpty { null }?.let { titles["${f.profile}:$it"] ?: UNTITLED } ?: "Memory"
+                val by = if (contested) contestOf(f)?.let { "by ${it.by}" } else sourcesOf(f).firstOrNull()?.label
+                ListRow(f.str("text") ?: "", listOfNotNull(page, by, agoText(e.at, now)).joinToString(" · "), onClick = { onClaim(f) },
+                    state = if (contested) ({ Badge("Contested", BadgeTone.Waiting) }) else null)
+            }
+        }
+    }
 }
 
 @Composable
@@ -301,6 +328,25 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
     }
 }
 
+// The page's proposed claims with Reject all and Approve all, then what was decided until the page is left (web PendingBanner).
+@Composable
+private fun PendingBanner(page: Row, proposed: List<Row>, decided: String?, readOnly: Boolean, onReject: () -> Unit, onApprove: () -> Unit) {
+    if (proposed.isEmpty()) {
+        if (decided != null) LayoutRow(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            AvIcon("check", null, tint = av.fgMuted)
+            Text(decided, style = Type.subheadline, color = av.fgMuted)
+        }
+        return
+    }
+    LayoutRow(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        Text((if (page.str("state") == "proposed") "New page with " else "") + "${proposed.size} proposed ${if (proposed.size == 1) "claim" else "claims"}", Modifier.weight(1f), style = Type.subheadline, color = av.fg)
+        if (!readOnly) {
+            Button("Reject all", onReject, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            Button("Approve all", onApprove, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
+        }
+    }
+}
+
 private const val FLASH_MS = 1600L
 
 @Composable
@@ -317,9 +363,13 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
     var summaryOpen by rememberSaveable(page.key) { mutableStateOf(false) }
     var renaming by rememberSaveable(page.key) { mutableStateOf(false) }
     var asking by rememberSaveable(page.key) { mutableStateOf(false) }
-    val pending = groups.any { g -> g.claims.any { it.fact.str("state") == "proposed" } }
+    val proposed = remember(facts, pid) { pageProposals(facts, pid) }
+    val pending = proposed.isNotEmpty()
+    var decided by remember(page.key) { mutableStateOf<String?>(null) }
+    var rejecting by remember(page.key) { mutableStateOf(false) }
     val clip = LocalClipboardManager.current
     if (renaming) TextDialog("Rename page", page.title ?: "", "Save", { t -> editedClaimText(page.title, t)?.let { actions.change(page, mapOf("title" to it), "Renamed") } }, { renaming = false }, maxLength = 120)
+    if (rejecting) ConfirmDialog("Reject ${plural(proposed.size, "claim")}?", page.title ?: "", "Reject all", { review.reject(proposed); decided = "Rejected ${plural(proposed.size, "claim")}" }) { rejecting = false }
     if (asking && onAsk != null) ClaimTextSheet("Ask", "", "Ask", { asking = false }, "Ask about ${page.title ?: UNTITLED}") { q -> onAsk(wikiAskText(q, st.pages, facts, page.id, now)) }
     val listState = rememberLazyListState()
     var seek by remember(page.key, anchor) { mutableStateOf(anchor) }
@@ -366,14 +416,21 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
                 }
                 if (!memory && !readOnly) ProposeClaim(page, profile, actions)
                 else if (onRemember != null) RememberClaim(onRemember)
+                PendingBanner(page, proposed, decided, readOnly, { rejecting = true }) { review.approve(proposed); decided = "Approved ${plural(proposed.size, "claim")}" }
             }
         }
         groups.forEach { g ->
-            item { SectionHeader(g.heading, g.claims.size.toString()) }
+            val open = g.claims.map { it.fact }.filter { it.str("state") == "proposed" }
+            item { SectionHeader(g.heading, g.claims.size.toString(), action = if (readOnly || open.size < 2) null else ({ Button("Approve ${open.size}", { review.approve(open) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })) }
             lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "", onOpenChat, ungiven = it.fact.key in ungiven, flash = it.fact.id == flash) }
         }
         if (older.isNotEmpty()) {
-            item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
+            item {
+                Column {
+                    SectionHeader("Not used by Claude" + if (staleIds.isNotEmpty()) " · ${staleIds.size} to confirm" else "", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder })
+                    if (showOlder) Text("Retired or over 90 days old. The agent does not use these.", Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
+                }
+            }
             if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, review, page.title ?: "", onOpenChat, stale = it.id in staleIds, flash = it.id == flash) }
         }
         if (groups.isEmpty() && older.isEmpty()) item {
