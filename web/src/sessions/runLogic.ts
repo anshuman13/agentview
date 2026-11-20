@@ -58,3 +58,6 @@ export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', ques
 
 export const loopOpenByDefault = (run: ChatRun, working: boolean, waiting: boolean) => working || waiting || run.needsYou;
 
+// What a waiting loop or goal asked in its last round: the row's meta line carries it after the age.
+export const askLine = (run: LiveChat['run']) => (run?.needsYou && (run.outcome === 'question' || run.outcome === 'blocked') ? run.line : undefined);
+

@@ -24,6 +24,9 @@ private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "tries" to "Tries",
 // A prompt queued with Send at: a one-shot loop that has not fired yet (web sessions/runLogic.ts sendsAt).
 fun sendsAt(run: ChatRun): Long? = run.nextAt.takeIf { run.kind == "loop" && run.once && run.state == "running" && run.round == 0 }
 
+// What a waiting loop or goal asked in its last round: the row's meta line carries it after the age (web sessions/runLogic.ts askLine).
+fun askLine(run: LiveRun?): String? = run?.line?.takeIf { run.needsYou && (run.outcome == "question" || run.outcome == "blocked") }
+
 fun runLine(run: ChatRun): String = sendsAt(run)?.let { "Sends at ${clock(it)}" } ?: when {
     run.state == "paused" -> if (run.why.isNotEmpty()) "Paused · ${run.why}" else "Paused"
     run.kind == "goal" -> roundLine("Goal", run)
