@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { agentAge, loopNow, loopOpenByDefault, runLine } from './runLogic';
+import { agentAge, loopNow, loopOpenByDefault, runLine, sendsAt } from './runLogic';
 import type { ChatRun } from '../../../shared/protocol';
 
 describe('runLine', () => {
@@ -12,6 +12,17 @@ describe('runLine', () => {
     expect(runLine(run({ kind: 'goal', round: 12, every: 3_600_000, nextAt: new Date(2026, 10, 9, 14, 20).getTime() }))).toBe('Goal · round 12 · next 14:20');
     expect(runLine(run({ kind: 'goal', round: 3, every: 3_600_000 }))).toBe('Goal · round 3');
     expect(runLine(run({ kind: 'job', branch: 'jobs/fix-1105' }))).toBe('Job · jobs/fix-1105');
+  });
+});
+
+describe('sendsAt', () => {
+  const at = new Date(2026, 10, 9, 22, 0).getTime();
+  const run = (over: Partial<ChatRun>) => ({ kind: 'loop', state: 'running', why: '', round: 0, max: 0, nextAt: at, once: true, ...over }) as ChatRun;
+  it('names a one-shot loop that has not fired yet', () => {
+    expect(runLine(run({}))).toBe('Sends at 22:00');
+    expect(sendsAt(run({ round: 1 }))).toBeNull();
+    expect(sendsAt(run({ once: undefined }))).toBeNull();
+    expect(sendsAt(run({ state: 'paused' }))).toBeNull();
   });
 });
 

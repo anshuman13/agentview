@@ -183,6 +183,7 @@ export type ChatRun = {
   repo?: string;
   worktree?: string;
   paseo?: boolean;
+  once?: boolean;
   review?: 'pending';
   pr?: string;
 };

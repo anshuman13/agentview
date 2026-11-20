@@ -1,9 +1,15 @@
 import type { ChatRun, LiveChat, LiveNow, RoundOutcome } from '../../../shared/protocol';
+import { clock } from '../../../shared/util';
 import { firstRound, nextRound, roundText, runLine as roundLine } from '../../../shared/goalText';
 
 const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', tries: 'Tries', job: 'Job' };
 
+// A prompt queued with Send at: a one-shot loop that has not fired yet.
+export const sendsAt = (run: ChatRun) => (run.kind === 'loop' && run.once && run.state === 'running' && run.round === 0 ? run.nextAt : null);
+
 export function runLine(run: ChatRun) {
+  const at = sendsAt(run);
+  if (at) return `Sends at ${clock(at)}`;
   if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
   if (run.kind === 'goal') return roundLine(KIND.goal, run);
   if (run.kind === 'tries') return `Tries · ${run.tries?.filter((t) => !t.dropped).length ?? 0} chats`;

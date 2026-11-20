@@ -4,6 +4,7 @@ import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { headerState } from '../runLogic';
+import { loopAt } from '../../../../shared/util';
 import type { LiveChat } from '../../../../shared/protocol';
 import type { ToolUse } from '../../chat/transcript/steps';
 import { time } from './time';
@@ -87,7 +88,7 @@ export function HeadState(p: Props) {
   const count = done.length + next.length;
   return (
     <span className="tl-more">
-      {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` }); }}>Continue at {limit.at}</button>}
+      {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: loopAt(limit.at, limit.prompt) }); }}>Continue at {limit.at}</button>}
       <button ref={btn} className={`tl-state ${state}`} title={text} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         {markIcon(state)}
         <span className="text">{text}</span>
@@ -104,7 +105,7 @@ export function HeadState(p: Props) {
               {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
             </span>
           </div>
-          {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` }); }}>Continue at {limit.at}</button>}
+          {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: loopAt(limit.at, limit.prompt) }); }}>Continue at {limit.at}</button>}
           <StepList done={done} next={next} adding={adding} setAdding={setAdding} />
         </Menu>
       )}

@@ -19,7 +19,7 @@ import type { RunOp } from '../../../../shared/protocol';
 import { useCardOpen } from './useCardOpen';
 import { useChatRun } from '../../sessions/useChatRun';
 import { RoundRow } from '../../sessions/RoundRow';
-import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine } from '../../sessions/runLogic';
+import { OUTCOME_DOT, agentAge, loopNow, loopOpenByDefault, runLine, sendsAt } from '../../sessions/runLogic';
 
 export function LoopCard() {
   const chat = useStore((s) => s.session.id);
@@ -38,6 +38,7 @@ export function LoopCard() {
   if (!run) return null;
   if (run.kind === 'job' && run.review === 'pending') return <ReviewCard run={run} />;
   const control = (op: RunOp) => runControl(run, op, Boolean(live?.running));
+  const scheduled = sendsAt(run) !== null;
   // Tries and jobs have no pause or rounds of their own to run now: Stop is their only control.
   const stopOnly = run.kind === 'tries' || run.kind === 'job';
   const goal = run.kind === 'goal';
@@ -63,9 +64,10 @@ export function LoopCard() {
       title={runLine(run)}
       action={(
         <>
+          {scheduled && <IconButton icon="close" label="Cancel" size="sm" onClick={stop} />}
           {run.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
-          {!stopOnly && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
-          {stopOnly
+          {!stopOnly && !scheduled && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
+          {!scheduled && (stopOnly
             ? <IconButton icon="debug-stop" label="Stop" size="sm" onClick={stop} />
             : (
               <>
@@ -78,7 +80,7 @@ export function LoopCard() {
                   </Menu>
                 )}
               </>
-            )}
+            ))}
         </>
       )}
     >
