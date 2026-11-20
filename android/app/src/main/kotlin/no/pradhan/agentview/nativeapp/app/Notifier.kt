@@ -63,7 +63,7 @@ class Notifier(private val app: Application) {
     }
 
     @android.annotation.SuppressLint("MissingPermission")
-    fun post(n: Notice) {
+    fun post(n: Notice, silent: Boolean = false) {
         if (!granted()) return
         val id = noticeId(n)
         val builder = NotificationCompat.Builder(app, n.kind.channel)
@@ -73,6 +73,7 @@ class Notifier(private val app: Application) {
             .setContentIntent(open(chatLink(n.chatId, n.slug), id))
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+        if (silent) builder.setSilent(true).setPriority(NotificationCompat.PRIORITY_LOW)
         if (n.sub.isNotEmpty()) builder.setSubText(n.sub)
         if (n.detail.isNotEmpty()) builder.setStyle(NotificationCompat.BigTextStyle().bigText(n.detail))
         val replies = n.ask == NoticeAsk.Question || n.kind == NoticeKind.Finished

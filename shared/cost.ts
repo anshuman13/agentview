@@ -1,4 +1,8 @@
 import type { ChatEvent } from './protocol.js';
+import type { Billing } from './providers.js';
+
+export const money = (n: number, billing: Billing = 'usd') =>
+  billing === 'plan' ? 'Plan' : billing === 'none' ? '-' : n > 0 && n < 0.005 ? '<$0.01' : n < 10 ? `$${n.toFixed(2)}` : `$${Math.round(n)}`;
 
 // A result carries the running total of its session, which starts over after /clear.
 export const costRise = (costUsd: number, last: number) => (costUsd >= last ? costUsd - last : costUsd);

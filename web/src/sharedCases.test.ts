@@ -27,7 +27,7 @@ import { taskChatPrompt } from '../../shared/taskChat';
 import { findInChat, findStart } from '../../shared/findInChat';
 import { chatMatches } from '../../shared/chatSearch';
 import { mergeSeen, type SeenMark } from '../../shared/seen';
-import { failedJobs } from '../../shared/jobRuns';
+import { failedJobs, runMeta } from '../../shared/jobRuns';
 import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
@@ -356,6 +356,10 @@ describe('cases shared with the Android app', () => {
     const jobs = c.jobs.map((j) => ({ deleted: 0, enabled: 1, next_run_at: null, ...j })) as unknown as Job[];
     const runs = c.runs.map((r) => ({ deleted: 0, ...r })) as unknown as Run[];
     it(`failedJobs: ${c.name}`, () => expect(failedJobs(jobs, runs, c.now).map((f) => ({ job: f.job.id, run: f.run.id }))).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; run: Parameters<typeof runMeta>[0]; expected: string }>('run-meta')) {
+    it(`runMeta: ${c.name}`, () => expect(runMeta(c.run)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; job: Pick<Job, 'name' | 'prompt'>; name_in: string; prompt_in: string; expected: object }>('job-edit')) {

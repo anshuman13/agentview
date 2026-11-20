@@ -40,6 +40,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val theme by hub.theme.collectAsState()
     val origin by hub.origin.collectAsState()
     val notify by hub.notifyOn.collectAsState()
+    val quiet = hub.quietHours.collectAsState().value.takeIf { it in QUIET_HOURS } ?: ""
     val granted by hub.granted.collectAsState()
     val providers by hub.providers.collectAsState()
     val default by hub.defaultProvider.collectAsState()
@@ -94,6 +95,16 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                         ListRow("Notification types", NoticeKind.entries.joinToString(", ") { it.label }, onClick = {
                             ctx.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName))
                         }, trailing = { Chevron() })
+                        Hairline()
+                        val menu = remember { mutableStateOf(false) }
+                        ListRow("Quiet hours", quiet.ifEmpty { "Off" }, onClick = { menu.value = true }, trailing = {
+                            Box {
+                                Chevron()
+                                Menu(menu.value, { menu.value = false }) {
+                                    (listOf("") + QUIET_HOURS).forEach { v -> MenuItem(v.ifEmpty { "Off" }, "check", { menu.value = false; hub.setQuietHours(v) }, checked = quiet == v) }
+                                }
+                            }
+                        })
                     }
                     Hairline()
                     ListRow("Mac address", origin, onClick = onOrigin, trailing = { Chevron() })

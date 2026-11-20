@@ -31,6 +31,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import java.io.File
+import java.time.LocalTime
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -187,6 +188,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     init { viewModelScope.launch { codex.restore() } }
 
     val notifyOn = MutableStateFlow(prefs.getBoolean("notify", true))
+    val quietHours = MutableStateFlow(prefs.getString("quietHours", "") ?: "")
 
     val shared = MutableStateFlow<SharedItem?>(null)
 
@@ -342,7 +344,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     // A permission notification gets Allow and Deny, a question one Reply; the kind of request is read from the chat first.
     internal fun notify(n: Notice) {
-        if (n.kind != NoticeKind.Approval) return notifier.post(n)
+        if (n.kind != NoticeKind.Approval) return notifier.post(n, silentNotice(n.kind, LocalTime.now().let { it.hour * 60 + it.minute }, quietWindow(quietHours.value)))
         viewModelScope.launch { notifier.post(withContext(Dispatchers.IO) { noticeAsk(api, n) }) }
     }
 
