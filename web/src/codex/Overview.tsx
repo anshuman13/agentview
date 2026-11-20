@@ -20,6 +20,7 @@ import { UpNext } from './overview/UpNext';
 import { TodayList } from './overview/TodayList';
 import { NeedsYouSheet } from './overview/NeedsYouSheet';
 import { RunningChats } from './overview/RunningChats';
+import { CalendarSyncBanner } from './overview/CalendarSyncBanner';
 
 export { Review } from './overview/Review';
 
@@ -61,6 +62,7 @@ export function Overview({ s, dueToday, onPrep, onAsk }: { s: Split; dueToday: I
   };
   return (
     <>
+      <CalendarSyncBanner />
       {s.next || task ? (
         <UpNext meeting={s.next} task={task} now={now} onPrep={onPrep} />
       ) : (

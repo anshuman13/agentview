@@ -37,7 +37,7 @@ function pausedText(paused: Paused[], now = Date.now()) {
 
 const when = (t: number) => (t >= new Date().setHours(0, 0, 0, 0) ? clock(t) : new Date(t).toLocaleDateString([], { day: 'numeric', month: 'short' }));
 
-function scanText(h: ScanHealth) {
+export function scanText(h: ScanHealth) {
   const name = SCAN_NAME[h.scan] ?? h.scan;
   if (h.missing) return { text: `${name} not set up`, bad: false };
   if (h.error && (h.failed ?? 0) >= (h.ok ?? 0)) return { text: `${name} ${when(h.failed!)} failed: ${h.error}`, bad: true };

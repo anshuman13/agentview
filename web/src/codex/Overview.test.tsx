@@ -22,6 +22,7 @@ vi.mock('./tasks/AddSheet', () => ({ ...addSheet, AddSheet: () => null }));
 vi.mock('./overview/ReplyQueue', () => ({ ...replies, replyQueue: () => mocks.queue }));
 vi.mock('./overview/Review', () => ({ Review: () => null }));
 vi.mock('./overview/NeedsYouSheet', () => ({ NeedsYouSheet: () => null }));
+vi.mock('./overview/CalendarSyncBanner', () => ({ CalendarSyncBanner: () => null }));
 const realNeedsYou = await import('./NeedsYou');
 vi.mock('./NeedsYou', () => ({ useNeedsYou: () => ({ rows: mocks.needs }) }));
 
