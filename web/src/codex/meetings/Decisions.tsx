@@ -11,7 +11,7 @@ import { copyText, openMeeting } from '../view';
 export function Decisions({ meetings }: { meetings: Meeting[] }) {
   const [person, setPerson] = useState('');
   const log = useMemo(() => decisionLog(meetings), [meetings]);
-  const people = useMemo(() => [...new Set(log.flatMap((d) => peopleOf(d.meeting)))].sort((a, b) => a.localeCompare(b)), [log]);
+  const people = useMemo(() => [...new Map(log.flatMap((d) => peopleOf(d.meeting)).reverse().map((p) => [p.toLowerCase(), p])).values()].sort((a, b) => a.localeCompare(b)), [log]);
   const who = people.includes(person) ? person : '';
   const rows = decisionsWith(log, who);
   const copy = () => copyText(decisionsMarkdown(rows), 'Decisions copied');

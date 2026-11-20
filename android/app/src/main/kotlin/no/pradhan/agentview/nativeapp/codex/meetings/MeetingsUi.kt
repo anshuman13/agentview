@@ -97,7 +97,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
     val groups = remember(found, minute) { groupMeetings(found, now) }
     val coming = remember(mine, minute) { comingDays(mine, now) }
     val log = remember(mine) { decisionLog(mine) }
-    val people = remember(log) { log.flatMap { peopleOf(it.meeting) }.distinct().sortedWith(String.CASE_INSENSITIVE_ORDER) }
+    val people = remember(log) { log.flatMap { peopleOf(it.meeting) }.distinctBy { it.lowercase() }.sortedWith(String.CASE_INSENSITIVE_ORDER) }
     var person by remember(decisions) { mutableStateOf("") }
     val who = if (person in people) person else ""
     val rows = remember(log, who) { decisionsWith(log, who) }
