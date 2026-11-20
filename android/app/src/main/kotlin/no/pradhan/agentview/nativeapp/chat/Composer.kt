@@ -265,7 +265,7 @@ private fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: 
         Picker.SendAt -> {
             val replaced = run?.kind?.takeIf { it == "goal" || it == "loop" }
             val ahead = ZonedDateTime.now(codexZone).plusHours(1)
-            TimeDialog("Send at" + (replaced?.let { " · Replaces the running $it" } ?: ""), ahead.hour, 0, "Send", "Cancel", { h, m -> onSheet(null); s.sendAt("%02d:%02d".format(h, m), uploading) }, { onSheet(null) }, { onSheet(null) })
+            TimeDialog("Send at ${laterDay(ahead.hour, 0)}" + (replaced?.let { " · Replaces the running $it" } ?: ""), ahead.hour, 0, "Send", "Cancel", { h, m -> onSheet(null); s.sendAt("%02d:%02d".format(h, m), uploading) }, { onSheet(null) }, { onSheet(null) })
         }
         null -> {}
     }
