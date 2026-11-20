@@ -16,7 +16,7 @@ import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/exp
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
 import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, type Billing } from '../../shared/providers';
-import { buildFolders, chatPlace } from './sessions/folders';
+import { buildFolders, chatPlace, since } from './sessions/folders';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
@@ -719,6 +719,11 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; n: number; billing: Billing; expected: string }>('money')) {
     it(`money: ${c.name}`, () => expect(money(c.n, c.billing)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; agoMs: number; expected: string }>('since')) {
+    const now = new Date().setHours(12, 0, 0, 0);
+    it(`since: ${c.name}`, () => expect(since(now - c.agoMs, now)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; events: BarEvent[]; hidden: boolean[] }>('bottom-bar')) {

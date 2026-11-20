@@ -1,0 +1,9 @@
+[
+  { "name": "just now", "agoMs": 0, "expected": "just now" },
+  { "name": "five minutes", "agoMs": 300000, "expected": "5m ago" },
+  { "name": "three hours", "agoMs": 10800000, "expected": "3h ago" },
+  { "name": "a minute short of a day", "agoMs": 86340000, "expected": "23h ago" },
+  { "name": "yesterday", "agoMs": 86400000, "expected": "yesterday" },
+  { "name": "three days", "agoMs": 259200000, "expected": "3d ago" },
+  { "name": "thirteen days", "agoMs": 1123200000, "expected": "1w ago" }
+]

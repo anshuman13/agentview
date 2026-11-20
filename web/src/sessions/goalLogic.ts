@@ -1,6 +1,7 @@
 import { getState, send, setUi } from '../app/store';
 import { track } from '../app/featureUse';
 import type { BadgeSpec } from '../ui/Badge';
+import { money } from '../ui/util';
 import type { ChatRun, RunOp } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
 import { buildsLine, goalEnd } from '../../../shared/goalText';
@@ -54,7 +55,7 @@ export function usageLine(run: ChatRun) {
   const { week, fiveHour } = run.usage ?? {};
   const parts = [week && `Week ${week.pct}%${run.capPct ? ` of ${run.capPct}% cap` : ''}`, fiveHour && `5-hour ${fiveHour.pct}%`].filter(Boolean);
   const builds = buildsLine(run);
-  const cost = run.capUsd ? `$${run.costUsd.toFixed(2)} of $${run.capUsd} cap` : '';
+  const cost = run.capUsd ? `${money(run.costUsd)} of $${run.capUsd} cap` : '';
   const usage = parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : cost || builds ? '' : 'No cap';
   return [usage, cost, builds].filter(Boolean).join(' · ');
 }

@@ -30,6 +30,7 @@ import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.autopilot.loopNow
 import no.pradhan.agentview.nativeapp.codex.autopilot.runDetail
+import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
@@ -91,7 +92,7 @@ import no.pradhan.agentview.nativeapp.ops.prStripMeta
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.plural
 
-fun costLabel(cost: Double, billing: String = "usd") = unbilledText(billing) ?: if (cost > 0) "$" + String.format(java.util.Locale.US, "%.2f", cost) else ""
+fun costLabel(cost: Double, billing: String = "usd") = unbilledText(billing) ?: if (cost > 0) money(cost) else ""
 
 class ChatPanels {
     var agents by mutableStateOf(false)

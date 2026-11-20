@@ -12,6 +12,7 @@ import no.pradhan.agentview.nativeapp.codex.atHour
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.dayStart
+import no.pradhan.agentview.nativeapp.codex.jobs.money as usd
 import no.pradhan.agentview.nativeapp.net.Drafts
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Writes
@@ -61,7 +62,6 @@ fun modeLine(s: AutopilotState, waiting: Int): String {
     return listOf(line, if (waiting > 0) "$waiting waiting for you" else "", if (failed > 0) "$failed failed" else "", if (auto && s.config.dry_run) "Dry run" else "").filter { it.isNotEmpty() }.joinToString(" · ")
 }
 
-private fun usd(n: Double) = "$" + if (n < 10) String.format(java.util.Locale.ENGLISH, "%.2f", n) else Math.round(n).toString()
 private fun modelName(m: String) = m.replace(Regex("^claude-"), "").replace(Regex("-\\d{8}$"), "")
 
 fun spendLine(s: AutopilotState): String {

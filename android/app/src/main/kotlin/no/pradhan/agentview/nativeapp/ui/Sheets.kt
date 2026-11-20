@@ -34,8 +34,15 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalAccessibilityManager
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import no.pradhan.agentview.nativeapp.app.snackMillis
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -152,6 +159,22 @@ fun SnackHost(state: SnackbarHostState, modifier: Modifier = Modifier) {
             contentColor = av.inverseOnSurface,
             actionColor = av.inversePrimary,
         )
+    }
+}
+
+// Shows a snack for snackMillis, dismissing the one showing first (web showSnack).
+@Composable
+fun rememberShowSnack(state: SnackbarHostState): suspend (String, String?, Long) -> SnackbarResult {
+    val access = LocalAccessibilityManager.current
+    return remember(state, access) {
+        { text, action, ms ->
+            coroutineScope {
+                state.currentSnackbarData?.dismiss()
+                val shown = snackMillis(ms, access?.calculateRecommendedTimeoutMillis(ms, containsIcons = false, containsText = true, containsControls = action != null) ?: 0L)
+                val timer = launch { delay(shown); state.currentSnackbarData?.dismiss() }
+                try { state.showSnackbar(text, action, duration = SnackbarDuration.Indefinite) } finally { timer.cancel() }
+            }
+        }
     }
 }
 

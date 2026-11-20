@@ -248,11 +248,11 @@ describe('since', () => {
 
   it('words the elapsed time', () => {
     expect(back(30_000)).toBe('just now');
-    expect(back(2 * 60_000)).toBe('2 min ago');
-    expect(back(3 * 3_600_000)).toBe('3 h ago');
+    expect(back(2 * 60_000)).toBe('2m ago');
+    expect(back(3 * 3_600_000)).toBe('3h ago');
     expect(since(new Date(2026, 5, 14, 9, 0).getTime(), now)).toBe('yesterday');
-    expect(back(3 * 864e5)).toBe('3 d ago');
-    expect(back(14 * 864e5)).toBe('2 w ago');
+    expect(back(3 * 864e5)).toBe('3d ago');
+    expect(back(14 * 864e5)).toBe('2w ago');
   });
 });
 

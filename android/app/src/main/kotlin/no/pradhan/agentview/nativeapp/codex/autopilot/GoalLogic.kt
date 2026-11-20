@@ -1,9 +1,9 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
 import java.time.Instant
-import java.util.Locale
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.codexZone
+import no.pradhan.agentview.nativeapp.codex.jobs.money
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -150,7 +150,7 @@ fun usageLine(run: ChatRun): String {
     val week = run.usage?.week?.let { "Week ${Math.round(it.pct)}%${run.capPct?.let { c -> " of $c% cap" } ?: ""}" }
     val five = run.usage?.fiveHour?.let { "5-hour ${Math.round(it.pct)}%" }
     val builds = run.maxBuilds?.takeIf { it > 0 }?.let { "Builds ${run.builds ?: 0} of $it" }
-    val cost = run.capUsd?.takeIf { it > 0 }?.let { "$${"%.2f".format(Locale.US, run.costUsd)} of $$it cap" }
+    val cost = run.capUsd?.takeIf { it > 0 }?.let { "${money(run.costUsd)} of $$it cap" }
     val usage = listOfNotNull(week, five).joinToString(" · ").ifEmpty { run.capPct?.let { "$it% cap" } ?: if (builds == null && cost == null) "No cap" else "" }
     return listOfNotNull(usage.ifEmpty { null }, cost, builds).joinToString(" · ")
 }

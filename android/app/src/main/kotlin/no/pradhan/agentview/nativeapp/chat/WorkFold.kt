@@ -1,9 +1,9 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import java.util.Locale
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.codex.wiki.replaceTarget
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ui.plural
@@ -205,7 +205,7 @@ fun workTitle(work: Work, live: Boolean, billing: String): WorkTitle {
     val detail = listOfNotNull(
         plural(work.agents, "agent").takeIf { work.agents > 0 },
         duration(work.ms).takeIf { !live && it.isNotEmpty() },
-        ("$" + String.format(Locale.US, "%.2f", work.cost)).takeIf { billing == "usd" && work.cost > 0 },
+        money(work.cost).takeIf { billing == "usd" && work.cost > 0 },
     ).joinToString(" \u00B7 ")
     return WorkTitle(text.ifEmpty { if (failed.isEmpty()) "Work" else "" }, failed, detail)
 }

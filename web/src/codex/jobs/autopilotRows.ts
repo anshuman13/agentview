@@ -1,6 +1,7 @@
 import type { AutopilotState } from '../data/store';
 import { clock } from '../tasks/time';
 import { dayLabel } from '../data/dates';
+import { money as usd } from '../../ui/util';
 
 export const when = (t: number) => (t >= new Date().setHours(0, 0, 0, 0) ? clock(t) : dayLabel(t, true));
 export const day = (d: string) => dayLabel(new Date(`${d}T00:00`).getTime(), true);
@@ -14,7 +15,6 @@ export function modeLine(s: AutopilotState, waiting: number) {
   return [line, waiting ? `${waiting} waiting for you` : '', failed ? `${failed} failed` : '', auto && s.config.dry_run ? 'Dry run' : ''].filter(Boolean).join(' · ');
 }
 
-const usd = (n: number) => `$${n < 10 ? n.toFixed(2) : Math.round(n)}`;
 const modelName = (m: string) => m.replace(/^claude-/, '').replace(/-\d{8}$/, '');
 
 // What the hub's own Claude runs (scans, drafts, jobs) cost, by model.

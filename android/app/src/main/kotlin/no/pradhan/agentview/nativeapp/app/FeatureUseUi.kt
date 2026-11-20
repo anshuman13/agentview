@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,6 +29,7 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.SnackHost
+import no.pradhan.agentview.nativeapp.ui.rememberShowSnack
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
@@ -61,10 +61,10 @@ fun FeatureUseSheet(hub: Hub, onDismiss: () -> Unit) {
     val hidden by hub.hiddenFeatures.collectAsState()
     val snackState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val show = rememberShowSnack(snackState)
     val snack = { text: String, undo: (() -> Unit)? ->
         scope.launch {
-            snackState.currentSnackbarData?.dismiss()
-            if (snackState.showSnackbar(text, if (undo != null) "Undo" else null, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) undo?.invoke()
+            if (show(text, if (undo != null) "Undo" else null, SNACK_MS) == SnackbarResult.ActionPerformed) undo?.invoke()
         }
         Unit
     }

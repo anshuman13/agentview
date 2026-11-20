@@ -2,7 +2,7 @@ import { replaceTarget } from '../../../../shared/claimActions';
 import { costRise } from '../../../../shared/cost';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { isSketchPath } from '../../../../shared/sketches';
-import { plural } from '../../ui/util';
+import { money, plural } from '../../ui/util';
 import { denied, duration, firstLine, specCards, type Item } from './steps';
 
 export type Work = { tools: number; files: number; agents: number; failed: number; ms: number; cost: number; note?: string };
@@ -207,7 +207,7 @@ export function workTitle(work: Work, live: boolean, billing: string, narrow = f
   const rest = [
     work.agents > 0 && plural(work.agents, 'agent'),
     !live && duration(work.ms),
-    billing === 'usd' && work.cost > 0 && `$${work.cost.toFixed(2)}`,
+    billing === 'usd' && work.cost > 0 && money(work.cost),
   ];
   const join = (parts: (string | false)[]) => parts.filter(Boolean).join(' \u00b7 ');
   const text = join(narrow ? counts : [...counts, ...rest]);

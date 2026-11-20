@@ -40,6 +40,7 @@ import no.pradhan.agentview.nativeapp.chat.findStart
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.chatMatches
 import no.pradhan.agentview.nativeapp.sessions.queryWords
+import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.chat.failedLine
 import no.pradhan.agentview.nativeapp.chat.mergeTail
 import no.pradhan.agentview.nativeapp.chat.trimHeld
@@ -1241,6 +1242,11 @@ class SharedCasesTest {
             assertEquals(c.str("name"), send.nullable("mode")?.jsonPrimitive?.content, mode)
             assertEquals(c.str("name"), send.nullable("review")?.jsonPrimitive?.boolean, review)
         }
+    }
+
+    @Test fun sinceReadsAges() {
+        val now = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 12); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0) }.timeInMillis
+        for (c in cases("since")) assertEquals(c.str("name"), c.str("expected"), since(now - c.getValue("agoMs").jsonPrimitive.content.toLong(), now))
     }
 
     @Test fun moneyByBilling() {

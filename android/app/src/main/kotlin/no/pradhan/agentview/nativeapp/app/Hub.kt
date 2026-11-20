@@ -85,7 +85,9 @@ const val WORKSPACE_MIN_AGE_MS = 30_000L
 private const val CHAT_KEY = "chat"
 private const val FLUSH_RETRY_MS = 15_000L
 
-class Undoable(val text: String, val undo: (() -> Unit)?)
+class Undoable(val text: String, val ms: Long, val undo: (() -> Unit)?) {
+    constructor(text: String, undo: (() -> Unit)?) : this(text, SNACK_MS, undo)
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class Hub(internal val app: Application, private val saved: SavedStateHandle) : AndroidViewModel(app) {

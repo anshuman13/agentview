@@ -360,11 +360,11 @@ export const unreadCount = (live: LiveChat[], viewing: string, seen: Record<stri
 export function since(t: number, now = Date.now()) {
   const m = Math.max(0, Math.floor((now - t) / 60_000));
   if (m < 1) return 'just now';
-  if (m < 60) return `${m} min ago`;
-  if (m < 1440) return `${Math.floor(m / 60)} h ago`;
+  if (m < 60) return `${m}m ago`;
+  if (m < 1440) return `${Math.floor(m / 60)}h ago`;
   const day = (x: number) => new Date(x).setHours(0, 0, 0, 0);
   const d = Math.round((day(now) - day(t)) / 864e5);
-  return d === 1 ? 'yesterday' : d < 7 ? `${d} d ago` : `${Math.floor(d / 7)} w ago`;
+  return d === 1 ? 'yesterday' : d < 7 ? `${d}d ago` : `${Math.floor(d / 7)}w ago`;
 }
 
 export function chatLine(c: LiveChat, events: ChatEvent[] | null) {

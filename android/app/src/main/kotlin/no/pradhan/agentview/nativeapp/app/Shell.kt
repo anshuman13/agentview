@@ -33,7 +33,6 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -99,6 +98,7 @@ import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.SnackHost
+import no.pradhan.agentview.nativeapp.ui.rememberShowSnack
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
@@ -161,11 +161,11 @@ private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostStat
     val notice by hub.notice.collectAsState()
     val link by hub.link.collectAsState()
     val scope = rememberCoroutineScope()
-    LaunchedEffect(notice) { notice?.let { snack.showSnackbar(it); hub.notice.value = null } }
+    val show = rememberShowSnack(snack)
+    LaunchedEffect(notice) { notice?.let { show(it, null, SNACK_MS); hub.notice.value = null } }
     LaunchedEffect(Unit) {
         hub.undoable.collectLatest { u ->
-            snack.currentSnackbarData?.dismiss()
-            if (snack.showSnackbar(u.text, if (u.undo != null) "Undo" else null, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) u.undo?.invoke()
+            if (show(u.text, if (u.undo != null) "Undo" else null, u.ms) == SnackbarResult.ActionPerformed) u.undo?.invoke()
         }
     }
     LaunchedEffect(link) {
