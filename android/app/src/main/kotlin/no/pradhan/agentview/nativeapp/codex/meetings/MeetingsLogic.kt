@@ -323,6 +323,17 @@ fun followUpText(m: Row, actions: List<Row>): String {
     return out.joinToString("\n\n") + "\n"
 }
 
+// Mirrors agendaMarkdown of web/src/codex/data/meetings/meetingMarkdown.ts; shared/fixtures/agenda.json holds the texts.
+fun agendaMarkdown(m: Row, points: List<Row>, actions: List<String>, questions: List<String>): String {
+    val date = m.startsAt?.let(::ymd)
+    val people = peopleOf(m)
+    val out = mutableListOf("# Agenda: ${m.title ?: "Meeting"}${if (date != null) " ($date)" else ""}")
+    if (people.isNotEmpty()) out.add("Attendees: ${people.joinToString(", ")}")
+    listOf("To raise" to points.map { "${firstName(it.people ?: "")}: ${it.title ?: ""}" }, "Open actions" to actions, "Open questions" to questions)
+        .forEach { (head, lines) -> if (lines.isNotEmpty()) out.add("## $head\n\n${lines.joinToString("\n") { "- [ ] $it" }}") }
+    return out.joinToString("\n\n") + "\n"
+}
+
 class Others(val who: String, val what: String)
 
 fun othersOf(m: Row): List<Others> = runCatching {

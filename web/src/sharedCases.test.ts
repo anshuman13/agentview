@@ -45,7 +45,7 @@ import type { Profile } from './codex/data/sync';
 import { restatedClaim, type Fact, type Job, type Meeting } from './codex/data/wiki/wiki';
 import { heldUntil, jobEdits, tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
-import { followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
+import { agendaMarkdown, followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
@@ -54,7 +54,7 @@ import { editedClaimText } from '../../shared/claimEdit';
 import { claimActions } from '../../shared/claimActions';
 import { isLate } from '../../shared/waiting';
 import { goalAtRisk } from './codex/data/tasks/goals';
-import { weekFreeMinutes, type Span } from './codex/data/tasks/plan';
+import { afterNextMeeting, nextFreeSlot, weekFreeMinutes, type Span } from './codex/data/tasks/plan';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -234,6 +234,16 @@ describe('cases shared with the Android app', () => {
     });
   }
 
+  type Clock = [number, number];
+  for (const c of cases<{ name: string; now: Clock; busy: Clock[][]; afterNext: Clock | null; freeSlot: Clock | null }>('free-slot')) {
+    const at = ([h, m]: Clock) => new Date(2026, 9, 30, h, m).getTime();
+    const busy = c.busy.map(([a, b]) => [at(a), at(b)] as Span);
+    it(`afterNextMeeting and nextFreeSlot: ${c.name}`, () => {
+      expect(afterNextMeeting(busy, at(c.now))).toBe(c.afterNext && at(c.afterNext));
+      expect(nextFreeSlot(busy, at(c.now))).toBe(c.freeSlot && at(c.freeSlot));
+    });
+  }
+
   type JobTaskSpec ={ id: string; status: string; madeAt: number; profile?: Profile; deleted?: boolean; source?: string; people?: string };
   for (const c of cases<{ name: string; job: { name: string; profile: Profile }; items: JobTaskSpec[]; expected: string[] }>('job-tasks')) {
     const items = c.items.map((i) => ({ id: i.id, profile: i.profile ?? c.job.profile, deleted: i.deleted ? 1 : 0, source: i.source ?? 'job', people: i.people ?? c.job.name, status: i.status, updated_at: i.madeAt, field_times: '{}' }) as unknown as ItemRow);
@@ -303,6 +313,14 @@ describe('cases shared with the Android app', () => {
       expect(hasContent(m, actions)).toBe(c.hasContent);
       expect(followUpText(m, actions)).toBe(c.followUp);
       expect(toMarkdown(m, actions)).toBe(c.markdown);
+    });
+  }
+
+  type AgendaCase = { name: string; meeting: Record<string, unknown>; points: { people: string | null; title: string }[]; actions: string[]; questions: string[]; markdown: string };
+  for (const c of cases<AgendaCase>('agenda')) {
+    it(`agendaMarkdown: ${c.name}`, () => {
+      const m = { id: 'm', profile: 'work', ...c.meeting } as unknown as Meeting;
+      expect(agendaMarkdown(m, { points: c.points as unknown as ItemRow[], actions: c.actions, questions: c.questions })).toBe(c.markdown);
     });
   }
 

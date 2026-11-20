@@ -42,6 +42,32 @@ fun workGaps(busy: List<Span>, now: Long, startHour: Int, endHour: Int) =
 fun timedMeetings(meetings: List<Row>, profile: String?) =
     meetings.filter { !it.deleted && matchesProfile(profile, it) && it.startsAt != null && it.endsAt != null && it.endsAt!! > it.startsAt!! && it.endsAt!! - it.startsAt!! < 20 * 3_600_000L }
 
+// shared/plan.ts afterNextMeeting: the end of the meeting running now (or the next one today), extended through meetings starting
+// before it ends, rounded up to 5 minutes; null when none is left or the result is at the end of work hours or later.
+fun afterNextMeeting(busy: List<Span>, now: Long, endHour: Int = 17): Long? {
+    val sorted = busy.sortedBy { it.first }
+    val first = sorted.firstOrNull { it.first <= now && now < it.second } ?: sorted.firstOrNull { it.first > now } ?: return null
+    var end = first.second
+    for ((a, b) in sorted) if (a > first.first && a <= end) end = maxOf(end, b)
+    val at = toSlot(end)
+    return at.takeIf { it < hourAt(now, 0, endHour) }
+}
+
+// shared/plan.ts nextFreeSlot: the start of the first work gap with 15 minutes left after now + 5 minutes, rounded up to 5 minutes.
+fun nextFreeSlot(busy: List<Span>, now: Long, endHour: Int = 17): Long? {
+    for ((a, b) in workGaps(busy, now, 8, endHour)) {
+        val start = toSlot(maxOf(a, now + SLOT_MS))
+        if (b - start >= MIN_GAP_MS) return start
+    }
+    return null
+}
+
+// The task sheet's Snooze targets from today's timed meetings of the task's profile, as in web TaskMoreMenu.
+fun freeTimes(meetings: List<Row>, profile: String?, now: Long): List<Pair<String, Long>> {
+    val busy = timedMeetings(meetings, profile).filter { it.startsAt!! in dayStart(now) until dayEnd(now) }.map { it.startsAt!! to it.endsAt!! }
+    return listOf("After next meeting" to afterNextMeeting(busy, now), "Next free slot" to nextFreeSlot(busy, now)).mapNotNull { (label, at) -> at?.let { label to it } }
+}
+
 // Work gaps for each remaining workday from now through Friday, and the days left after today; null on Saturday and Sunday.
 private fun weekGaps(busy: List<Span>, now: Long, startHour: Int, endHour: Int): Pair<Int, List<Span>>? {
     val dow = Instant.ofEpochMilli(now).atZone(codexZone).dayOfWeek.value % 7

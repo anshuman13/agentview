@@ -92,7 +92,7 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, onRaise: (String, String) -> Unit, onAsk: (Row) -> Unit, onChat: (String) -> Unit, onDismiss: () -> Unit) {
+fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, onRaise: (String, String) -> Unit, onAsk: (Row) -> Unit, onChat: (String) -> Unit, onDismiss: () -> Unit) {
     var title by remember(row.key) { mutableStateOf(row.title ?: "") }
     var text by remember(row.key) { mutableStateOf(row.text ?: "") }
     var pickDue by remember { mutableStateOf(false) }
@@ -119,6 +119,8 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
             }
             FieldLabel("Snooze")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                val free = remember(meetings, row.profile, now / 60_000) { freeTimes(meetings, row.profile, now) }
+                free.forEach { (label, at) -> Chip("$label · ${whenText(at, now)}", { actions.snooze(row, at) }) }
                 SNOOZES.forEach { s ->
                     val at = s.at(now, row.profile)
                     Chip("${s.label} · ${whenText(at, now)}", { actions.snooze(row, at) })

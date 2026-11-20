@@ -61,7 +61,7 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
   ].filter((g) => g.rows.length);
   const copy = () => {
     const mine = [...prior.flatMap((p) => p.open), ...brief.tasks.flatMap((t) => t.items)].map((r) => r.title ?? '');
-    copyText(agendaMarkdown(m, { points, actions: [...new Set([...theirs, ...mine])], questions: questions.map((q) => q.text) }));
+    copyText(agendaMarkdown(m, { points, actions: [...new Set([...theirs, ...mine])], questions: questions.map((q) => q.text) }), 'Agenda copied');
   };
   const badges = [
     ...(actions.length ? [`${actions.length} open`] : []),
