@@ -44,11 +44,11 @@ import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.DAY_MS
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.TaskActions
+import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
-import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -192,8 +192,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
                 Group {
                     s.pages.forEachIndexed { i, p ->
                         if (i > 0) Hairline()
-                        val n = stats[p.id]?.claims ?: 0
-                        ListRow(p.title ?: UNTITLED, plural(n, "claim") + if (profile == null) " · ${profileLabel(p.profile)}" else "", leading = { PageTile(p) }, onClick = { onOpen(p) },
+                        ListRow(p.title ?: UNTITLED, leading = { PageTile(p) }, onClick = { onOpen(p) },
                             state = if (pageNeedsReview(p, facts)) ({ Badge("Needs you", BadgeTone.Waiting) }) else null,
                             menu = { dismiss ->
                                 MenuItem("Open", "file", { dismiss(); onOpen(p) })
@@ -270,7 +269,8 @@ private fun RememberClaim(onRemember: (String) -> Unit) {
 }
 
 @Composable
-private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOps, page: String, onOpenChat: (String) -> Unit, stale: Boolean = false, ungiven: Boolean = false, flash: Boolean = false) {
+private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOps, page: String, onOpenChat: (String) -> Unit, stale: Boolean = false, ungiven: Boolean = false, flash: Boolean = false,
+    mentions: List<Row> = emptyList(), onTask: (Row) -> Unit = {}, onMeeting: (Row) -> Unit = {}) {
     val f = c.fact
     val menu = remember(f.key) { mutableStateOf(false) }
     var note by remember(f.key) { mutableStateOf("") }
@@ -279,20 +279,16 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
     val contest = contestOf(f)
     val proposed = f.str("state") == "proposed"
     var expanded by remember(f.key) { mutableStateOf(false) }
+    val warn = SpanStyle(color = av.warn)
     val meta: AnnotatedString = buildAnnotatedString {
-        if (contest != null) {
-            withStyle(SpanStyle(color = av.warn)) { append(contest.note.takeIf { it.isNotEmpty() } ?: "Contested by ${contest.by} - ${agoText(contest.at, now)}") }
-        } else {
-            val bits = ArrayList<String>()
-            if (ungiven) bits.add("Not given to chats")
-            if (proposed) bits.add("Proposed")
-            else {
-                if (stale) bits.add("Still true?")
-                sourcesOf(f).firstOrNull()?.let { bits.add(it.label) }
-                f.long("at")?.let { bits.add(shortDate(it, now)) }
-            }
-            append(bits.joinToString(" · "))
+        fun part(text: String, style: SpanStyle? = null) {
+            if (length > 0) append(" · ")
+            if (style != null) withStyle(style) { append(text) } else append(text)
         }
+        if (ungiven) part("Not given to chats")
+        if (proposed) part("Proposed")
+        contest?.let { part("Contested by ${it.by} - ${agoText(it.at, now)}", warn) }
+        sourcesOf(f).firstOrNull()?.let { part(it.label) }
     }
     var contesting by remember(f.key) { mutableStateOf(false) }
     var editing by remember(f.key) { mutableStateOf(false) }
@@ -313,12 +309,17 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
         if (links.isNotEmpty()) MenuSeparator()
         links.forEach { (s, href) -> MenuItem("${s.kindLabel}: ${s.label}", s.icon, pick { uri.openUri(href) }) }
         c.old.forEach { o -> MenuItem("Replaced ${o.long("at")?.let { shortDate(it, now) } ?: ""}".trim(), "history", {}, enabled = false) }
+        if (mentions.isNotEmpty()) MenuSeparator()
+        mentions.forEach { r ->
+            if (r.table == "meetings") MenuItem((r.title?.ifEmpty { null } ?: "Meeting") + (r.long("starts_at")?.let { " ${dayLabel(it)}" } ?: ""), "calendar", pick { onMeeting(r) })
+            else MenuItem(r.title?.ifEmpty { null } ?: r.text?.ifEmpty { null } ?: UNTITLED, "checklist", pick { onTask(r) })
+        }
         chatOf(f)?.let { id -> MenuSeparator(); MenuItem("Open chat", "sparkle", pick { onOpenChat(id) }) }
         f.long("at")?.let { MenuSeparator(); MenuItem("${if (stale) "Still true? " else ""}Updated ${shortDate(it, now)}", "history", {}, enabled = false) }
         if ("retire" in acts.menu || "restore" in acts.menu) MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { if (retired) actions.change(f, mapOf("state" to null), "Claim restored") else actions.retireClaim(f) }, danger = !retired)
     }
     Column {
-        ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = if (contest != null) 2 else 1, selected = flash, onClick = { expanded = !expanded }, onLongClick = if (acts.menu.isEmpty()) null else ({ menu.value = true }),
+        ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, selected = flash, onClick = { expanded = !expanded }, onLongClick = if (acts.menu.isEmpty()) null else ({ menu.value = true }),
             trailing = {
                 acts.buttons.forEach { b ->
                     when (b) {
@@ -367,11 +368,15 @@ private fun PendingBanner(page: Row, proposed: List<Row>, decided: String?, read
 private const val FLASH_MS = 1600L
 
 @Composable
-fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit, onOpenChat: (String) -> Unit, anchor: String? = null, onRemember: ((String) -> Unit)? = null, onAsk: ((String) -> Unit)? = null, readOnly: Boolean = false) {
+fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit, onOpenChat: (String) -> Unit, anchor: String? = null, onRemember: ((String) -> Unit)? = null, onAsk: ((String) -> Unit)? = null, readOnly: Boolean = false,
+    onTask: (Row) -> Unit = {}, onMeeting: (Row) -> Unit = {}) {
     val memory = page.id == MEMORY
     val pid = if (memory) null else page.id
     val facts = remember(st.facts, page.profile, profile, memory) { st.facts.filter { if (memory) matchesProfile(profile, it) else it.profile == page.profile } }
     val groups = remember(facts, pid, now / 60_000) { pageClaims(facts, pid, now) }
+    val mentions = remember(groups, st.items, st.meetings, page.title) {
+        if (memory) emptyMap() else groups.flatMap { g -> g.claims.map { it.fact } }.filter { it.str("state") != "proposed" }.associate { it.key to mentionsOf(st.items, st.meetings, it, page.title) }
+    }
     val older = remember(facts, pid, now / 60_000) { olderClaims(facts, pid, now) }
     val stat = remember(facts) { statsByPage(facts)[pid] }
     var showOlder by rememberSaveable(page.key) { mutableStateOf(false) }
@@ -439,7 +444,8 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
         groups.forEach { g ->
             val open = g.claims.map { it.fact }.filter { it.str("state") == "proposed" }
             item { SectionHeader(g.heading, g.claims.size.toString(), action = if (readOnly || open.size < 2) null else ({ Button("Approve ${open.size}", { review.approve(open) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })) }
-            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "", onOpenChat, ungiven = it.fact.key in ungiven, flash = it.fact.id == flash) }
+            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "", onOpenChat, ungiven = it.fact.key in ungiven, flash = it.fact.id == flash,
+                mentions = mentions[it.fact.key].orEmpty(), onTask = onTask, onMeeting = onMeeting) }
         }
         if (older.isNotEmpty()) {
             item {

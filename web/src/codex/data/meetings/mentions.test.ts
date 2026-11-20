@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { mentionsOf } from './mentions';
 import type { ItemRow } from '../sync';
 import type { Meeting } from '../wiki/wiki';
@@ -35,4 +36,13 @@ describe('mentionsOf', () => {
     expect(out.shown.map((x) => x.id)).toEqual(['b', 'a', 'm3']);
     expect(out.rest.map((x) => x.id)).toEqual(['m2', 'm1']);
   });
+
+  type Case = { name: string; title: string; claim: string; items: Partial<ItemRow>[]; meetings: Partial<Meeting>[]; expected: string[] };
+  const cases = JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/claim-mentions.json', import.meta.url), 'utf8')) as Case[];
+  for (const c of cases) {
+    it(`shared case: ${c.name}`, () => {
+      const out = mentionsOf({ items: c.items.map((r) => task(r.id!, r)), meetings: c.meetings.map((m) => meeting(m.id!, m)) }, { text: c.claim, profile: 'work' }, c.title);
+      expect(ids(out)).toEqual(c.expected);
+    });
+  }
 });
