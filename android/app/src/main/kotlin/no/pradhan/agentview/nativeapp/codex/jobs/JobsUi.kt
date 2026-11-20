@@ -25,6 +25,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
+import no.pradhan.agentview.nativeapp.chat.toolId
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.WORK
@@ -175,7 +176,7 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
 
 private const val TASKS_SHOWN = 5
 
-fun mcpToolId(server: String) = "mcp__${server.replace(Regex("[^A-Za-z0-9_-]"), "_")}__*"
+fun mcpToolId(server: String) = toolId(server, "*")
 
 fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String> = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { id ->
     if (id == "browser") "Chrome" else servers.firstOrNull { mcpToolId(it) == id } ?: id

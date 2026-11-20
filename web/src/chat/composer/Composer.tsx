@@ -25,12 +25,11 @@ import { useDraft, usePromptHistory } from './usePromptHistory';
 import { useSubmit } from './useSubmit';
 import { useUploads } from './useUploads';
 import { providerLabel } from '../../../../shared/providers';
+import { composerPlaceholder } from '../../../../shared/composerText';
 
 function placeholderFor(label: string, running: boolean, waiting: boolean, compacting: boolean, hasUses: boolean) {
-  if (waiting) return `Answer below, or message ${label} to stop and send`;
-  if (compacting) return 'Sends when compacting is done';
-  if (running) return touch() ? `${label} reads this next · hold Send to stop` : `${label} reads this at its next step · ⌘Enter stops and sends`;
-  return hasUses ? `What should ${label} do with it?` : 'Ask anything · / commands · @ files · @chat: chats';
+  const state = waiting ? 'waiting' : compacting ? 'compacting' : running ? 'running' : hasUses ? 'uses' : 'idle';
+  return composerPlaceholder(label, state, touch() ? 'touch' : 'desktop');
 }
 
 export const Composer = memo(function Composer() {

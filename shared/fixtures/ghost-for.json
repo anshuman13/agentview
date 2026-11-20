@@ -1,0 +1,11 @@
+[
+  { "name": "under 3 characters", "text": "ru", "events": [{ "kind": "user", "text": "run the tests" }], "saved": [], "expected": "" },
+  { "name": "prefix match", "text": "run", "events": [{ "kind": "user", "text": "run the tests" }], "saved": [], "expected": " the tests" },
+  { "name": "newest wins", "text": "run", "events": [{ "kind": "user", "text": "run the tests" }, { "kind": "user", "text": "run the build" }], "saved": [], "expected": " the build" },
+  { "name": "exact match gives nothing", "text": "run the tests", "events": [{ "kind": "user", "text": "run the tests" }], "saved": [], "expected": "" },
+  { "name": "chat prompts before saved ones", "text": "run", "events": [{ "kind": "user", "text": "run chat" }], "saved": ["run saved"], "expected": " chat" },
+  { "name": "saved prompts newest first", "text": "run", "events": [], "saved": ["run old", "run new"], "expected": " new" },
+  { "name": "marker stripped", "text": "run", "events": [{ "kind": "user", "text": "run the tests [Image: /tmp/a.png]" }], "saved": [], "expected": " the tests" },
+  { "name": "only user events", "text": "run", "events": [{ "kind": "assistant", "text": "run it" }], "saved": [], "expected": "" },
+  { "name": "no match", "text": "xyz", "events": [{ "kind": "user", "text": "run the tests" }], "saved": ["run old"], "expected": "" }
+]

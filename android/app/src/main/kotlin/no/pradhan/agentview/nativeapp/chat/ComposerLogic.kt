@@ -6,6 +6,7 @@ import java.time.ZoneId
 import no.pradhan.agentview.nativeapp.codex.Week
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.codex.meetings.Repeats
+import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.PlanUsage
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
@@ -178,6 +179,44 @@ fun markLabel(mark: String): String {
     val kind = mark.substring(1, mark.indexOf(':'))
     val path = mark.substring(mark.indexOf(' ') + 1, mark.length - 1)
     return "$kind ${path.substringAfterLast('/').ifEmpty { path }}"
+}
+
+// An MCP server, or one of its tools, the user asked the agent to use (web composerLogic.ts Use).
+data class Use(val server: String, val tool: String? = null)
+
+fun toolId(server: String, tool: String) = "mcp__${server.replace(Regex("[^A-Za-z0-9_-]"), "_")}__$tool"
+
+// A tool replaces a server-wide pick of its server; a server-wide pick replaces that server's tools.
+fun addUse(uses: List<Use>, u: Use): List<Use> =
+    uses.filter { x -> x.server != u.server || (u.tool != null && x.tool != null && x.tool != u.tool) } + u
+
+fun useLabel(u: Use) = if (u.tool != null) toolId(u.server, u.tool) else u.server
+
+// The prompt with "Use the ... for this." appended; a /command stays as typed.
+fun withUses(text: String, uses: List<Use>): String {
+    if (uses.isEmpty() || text.startsWith("/")) return text
+    val names = uses.map { if (it.tool != null) "the ${toolId(it.server, it.tool)} tool" else "the ${it.server} MCP server" }
+    val list = if (names.size > 1) "${names.dropLast(1).joinToString(", ")} and ${names.last()}" else names[0]
+    return "$text\n\nUse $list for this."
+}
+
+// This chat's sent prompts newest first, then the saved ones newest first, without repeats (web buildHistory).
+fun buildHistory(events: List<ChatEvent>, stored: List<String>) =
+    (events.filter { it.kind == "user" }.map { it.text.trim() }.reversed() + stored.reversed()).filter { it.isNotEmpty() }.distinct()
+
+// The rest of the first earlier prompt that starts with the typed text, or "" (web ghostFor).
+fun ghostFor(text: String, history: List<String>): String {
+    if (text.length < 3) return ""
+    return history.firstNotNullOfOrNull { h -> splitMarks(h).body.takeIf { it.length > text.length && it.startsWith(text) } }?.substring(text.length) ?: ""
+}
+
+// shared/composerText.ts composerPlaceholder for the phone; state is waiting, compacting, running, uses or idle.
+fun composerPlaceholder(label: String, state: String) = when (state) {
+    "waiting" -> "Answer above, or message $label to stop and send"
+    "compacting" -> "Sends when compacting is done"
+    "running" -> "$label reads this at its next step"
+    "uses" -> "What should $label do with it?"
+    else -> "Ask anything · / commands · @ files · @chat: chats"
 }
 
 // A prompt starting with "!" is a shell command for the chat's terminal, as on the web; null when it is a prompt or empty.

@@ -42,8 +42,12 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,6 +100,8 @@ import no.pradhan.agentview.nativeapp.app.sendAt
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.plural
+import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.well
 
 private class Choice(val value: String, val label: String, val detail: String = "")
@@ -103,12 +109,14 @@ private class Choice(val value: String, val label: String, val detail: String = 
 private val BUILD_CHOICES = listOf(Choice("off", "Off", "Prompts run as usual")) +
     Choice("flow", "Spec flow", "Spec, sketch and your approval before building")
 
-private enum class Picker { Add, Settings, Effort, Account, Build, SendAt }
+private enum class Picker { Add, Settings, Effort, Account, Build, SendAt, Mcp, McpTools }
 
 private class ComposerState(val hub: Hub, val chatId: String) {
     private val draft = splitMarks(hub.draft(chatId))
     var text by mutableStateOf(TextFieldValue(draft.body, TextRange(draft.body.length)))
     var marks by mutableStateOf(draft.marks)
+    var uses by mutableStateOf<List<Use>>(emptyList())
+    var useServer by mutableStateOf<String?>(null)
 
     fun reload() {
         val back = splitMarks(hub.draft(chatId))
@@ -137,19 +145,29 @@ private class ComposerState(val hub: Hub, val chatId: String) {
         hub.setDraft(chatId, "")
     }
 
-    private fun restore(sent: String) {
+    private fun restore(sent: String, picked: List<Use>) {
         val back = splitMarks(restoreUnsent(full, sent))
         marks = back.marks
         text = TextFieldValue(back.body, TextRange(back.body.length))
+        uses = picked
         hub.setDraft(chatId, full)
+    }
+
+    // The text with the picked uses appended; the chips clear once a send has used them.
+    private fun takeUses(t: String): Pair<String, List<Use>> {
+        val picked = uses
+        val sent = withUses(t, picked)
+        if (sent != t) uses = emptyList()
+        return sent to picked
     }
 
     fun build(uploading: Int) {
         when (val step = buildStep(full, uploading, hub.readOnly)) {
             is BuildStep.Notice -> hub.notice.value = step.text
             is BuildStep.Send -> {
+                val (sent, picked) = takeUses(step.brief)
                 clear()
-                hub.submit(buildPrompt(step.brief), false) { restore(step.brief) }
+                hub.submit(buildPrompt(sent), false) { restore(step.brief, picked) }
             }
         }
     }
@@ -158,16 +176,18 @@ private class ComposerState(val hub: Hub, val chatId: String) {
         val t = full
         if (t.isBlank()) return
         if (uploading > 0) { hub.notice.value = "Wait for the upload to finish"; return }
+        val (sent, picked) = takeUses(t)
         clear()
-        hub.sendAt(time, t) { restore(t) }
+        hub.sendAt(time, sent) { restore(t, picked) }
     }
 
     fun submit(steer: Boolean, uploading: Int) {
         val t = full
         if (t.isBlank() || uploading > 0) return
         shellCommand(t)?.let { if (hub.runInTerminal(it)) clear(); return }
+        val (sent, picked) = takeUses(t)
         clear()
-        hub.submit(t, steer) { restore(t) }
+        hub.submit(sent, steer) { restore(t, picked) }
     }
 }
 
@@ -182,6 +202,10 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     var multiline by remember(chatId) { mutableStateOf(false) }
     val trigger = commandTrigger(s.text.text, s.text.selection.end)
     val suggestions = rememberSuggestions(s, trigger, session)
+    val prompts by hub.savedPrompts.items.collectAsState()
+    val lastPrompt by hub.store.state.select { st -> st.events.lastOrNull { it.kind == "user" }?.id }
+    val history = remember(chatId, lastPrompt, prompts) { buildHistory(hub.store.state.value.events, prompts) }
+    val ghost = if (suggestions.isEmpty() && !s.text.text.startsWith("!") && s.text.selection.end == s.text.text.length) ghostFor(s.text.text, history) else ""
     val attach = rememberAttach(hub, { uploading += it }) { mark -> s.replaceMarks(s.marks + mark) }
     var bar by remember(chatId) { mutableStateOf(barState(BarState(), if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled)) }
     val imeVisible = WindowInsets.isImeVisible
@@ -196,8 +220,11 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
         if (suggestions.isNotEmpty()) SuggestionList(suggestions) { sg ->
             val r = acceptSuggestion(s.text.text, trigger!!.start, s.text.selection.end, sg.insert)
             s.set(TextFieldValue(r.first, TextRange(r.second)))
-        }
+        } else if (ghost.isNotEmpty()) GhostRow(s.text.text, ghost) { val next = s.text.text + ghost; s.set(TextFieldValue(next, TextRange(next.length))) }
         Column(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape)) {
+            if (s.uses.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+                s.uses.forEach { u -> Chip(useLabel(u), { s.uses = s.uses - u }, icon = "plug", trailingIcon = "close", trailingLabel = "Remove") }
+            }
             if (s.marks.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 s.marks.forEachIndexed { i, m -> Chip(markLabel(m), { s.replaceMarks(s.marks.filterIndexed { j, _ -> j != i }) }, icon = if (m.startsWith("[Image")) "file-media" else "file", trailingIcon = "close", trailingLabel = "Remove") }
             }
@@ -205,7 +232,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
                 if (uploading > 0) Box(Modifier.size(Tokens.touch).semantics { contentDescription = "Uploading" }, contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = c.accent, strokeWidth = Tokens.sp1) }
                 else IconBtn("add", "Add", { sheet = Picker.Add })
                 ComposerInput(
-                    s, composerPlaceholder(providerLabel(session?.provider), waiting, session?.compacting == true, running),
+                    s, composerPlaceholder(providerLabel(session?.provider), placeholderState(waiting, session?.compacting == true, running, s.uses.isNotEmpty())),
                     Modifier.weight(1f).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
                 )
                 ComposerActions(hub, s, running, uploading, dictation)
@@ -215,11 +242,28 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     ComposerSheets(hub, s, uploading, session, run, sheet, attach) { sheet = it }
 }
 
-private fun composerPlaceholder(label: String, waiting: Boolean, compacting: Boolean, running: Boolean) = when {
-    waiting -> "Answer above, or message $label to stop and send"
-    compacting -> "Sends when compacting is done"
-    running -> "$label reads this at its next step"
-    else -> "Ask anything, / for commands, @ for files"
+private fun placeholderState(waiting: Boolean, compacting: Boolean, running: Boolean, hasUses: Boolean) = when {
+    waiting -> "waiting"
+    compacting -> "compacting"
+    running -> "running"
+    hasUses -> "uses"
+    else -> "idle"
+}
+
+@Composable
+private fun GhostRow(typed: String, ghost: String, onPick: () -> Unit) {
+    val c = av
+    val tail = (if (typed.length > 12) "…" else "") + typed.takeLast(12)
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(onClickLabel = "Use this suggestion", onClick = onPick).padding(horizontal = Tokens.sp6),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
+    ) {
+        AvIcon("arrow-right", null, Tokens.iconMd, tint = c.fgMuted)
+        Text(buildAnnotatedString {
+            withStyle(SpanStyle(color = c.fgMuted)) { append(tail) }
+            withStyle(SpanStyle(color = c.fg, fontWeight = FontWeight.Bold)) { append(ghost) }
+        }, style = Type.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 @Composable
@@ -307,9 +351,32 @@ private fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: 
             val ahead = ZonedDateTime.now(codexZone).plusHours(1)
             TimeDialog("Send at ${laterDay(ahead.hour, 0)}" + (replaced?.let { " · Replaces the running $it" } ?: ""), ahead.hour, 0, "Send", "Cancel", { h, m -> onSheet(null); s.sendAt("%02d:%02d".format(h, m), uploading) }, { onSheet(null) }, { onSheet(null) })
         }
+        Picker.Mcp -> Sheet({ onSheet(null) }, "Use an MCP server", padded = false, full = false) {
+            Group {
+                connectedServers(session).forEachIndexed { i, m ->
+                    if (i > 0) Hairline()
+                    ListRow(m.name, plural(m.tools?.size ?: 0, "tool"), onClick = { s.useServer = m.name; onSheet(Picker.McpTools) }, trailing = { Chevron() })
+                }
+            }
+        }
+        Picker.McpTools -> {
+            val server = s.useServer.orEmpty()
+            val pick = { use: Use -> s.uses = addUse(s.uses, use); onSheet(null) }
+            Sheet({ onSheet(null) }, "Tool from $server", padded = false, full = false) {
+                Group {
+                    ListRow("Any tool", "The agent picks", onClick = { pick(Use(server)) })
+                    connectedServers(session).firstOrNull { it.name == server }?.tools.orEmpty().forEach { t ->
+                        Hairline()
+                        ListRow(t.name, t.description.ifBlank { null }, onClick = { pick(Use(server, t.name)) })
+                    }
+                }
+            }
+        }
         null -> {}
     }
 }
+
+private fun connectedServers(session: SessionInfo?) = session?.mcp.orEmpty().filter { it.status == "connected" }
 
 @Composable
 private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, attach: Attach, onSheet: (Picker?) -> Unit) {
@@ -324,6 +391,11 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
             ListRow("Take photo", leading = icon("device-camera"), onClick = { onSheet(null); attach.takePhoto() })
             Hairline(lead = true)
             ListRow("Choose file", leading = icon("file"), onClick = { onSheet(null); attach.chooseFile() })
+            Hairline(lead = true)
+            if (session?.capabilities?.mcp == true && connectedServers(session).isNotEmpty()) {
+                Hairline(lead = true)
+                ListRow("Use an MCP server", leading = icon("plug"), onClick = { onSheet(Picker.Mcp) }, trailing = { Chevron() })
+            }
             Hairline(lead = true)
             ListRow("Chat settings", settings, leading = icon("settings-gear"), onClick = { onSheet(Picker.Settings) }, trailing = { Chevron() })
             if (session?.capabilities?.build == true) {

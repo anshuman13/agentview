@@ -28,7 +28,13 @@ import no.pradhan.agentview.nativeapp.app.chatNotice
 import no.pradhan.agentview.nativeapp.app.BarEvent
 import no.pradhan.agentview.nativeapp.app.SeenMark
 import no.pradhan.agentview.nativeapp.app.mergeSeen
+import no.pradhan.agentview.nativeapp.chat.Use
+import no.pradhan.agentview.nativeapp.chat.addUse
 import no.pradhan.agentview.nativeapp.chat.attachMark
+import no.pradhan.agentview.nativeapp.chat.buildHistory
+import no.pradhan.agentview.nativeapp.chat.composerPlaceholder
+import no.pradhan.agentview.nativeapp.chat.ghostFor
+import no.pradhan.agentview.nativeapp.chat.withUses
 import no.pradhan.agentview.nativeapp.chat.findInChat
 import no.pradhan.agentview.nativeapp.chat.findStart
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
@@ -531,6 +537,27 @@ class SharedCasesTest {
         for (c in cases("prompt-history")) {
             val stored = c.getValue("stored").jsonArray.map { it.jsonPrimitive.content }
             assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, rememberPrompt(c.str("text"), stored))
+        }
+    }
+
+    @Test fun withUses() {
+        for (c in cases("with-uses")) {
+            val picks = c.getValue("picks").jsonArray.map { Use(it.jsonObject.str("server"), it.jsonObject["tool"]?.jsonPrimitive?.content) }
+            assertEquals(c.str("name"), c.str("expected"), withUses(c.str("text"), picks.fold(emptyList()) { uses, u -> addUse(uses, u) }))
+        }
+    }
+
+    @Test fun ghostFor() {
+        for (c in cases("ghost-for")) {
+            val events = c.getValue("events").jsonArray.mapIndexed { i, e -> JsonObject(mapOf("id" to toJson("e$i")) + e.jsonObject).decode<ChatEvent>() }
+            val saved = c.getValue("saved").jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(c.str("name"), c.str("expected"), ghostFor(c.str("text"), buildHistory(events, saved)))
+        }
+    }
+
+    @Test fun composerPlaceholder() {
+        for (c in cases("composer-placeholder").filter { it.str("device") == "phone" }) {
+            assertEquals(c.str("name"), c.str("expected"), composerPlaceholder(c.str("label"), c.str("state")))
         }
     }
 

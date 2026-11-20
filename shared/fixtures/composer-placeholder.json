@@ -1,0 +1,17 @@
+[
+  { "name": "waiting desktop", "label": "Claude", "state": "waiting", "device": "desktop", "expected": "Answer above, or message Claude to stop and send" },
+  { "name": "waiting touch", "label": "Claude", "state": "waiting", "device": "touch", "expected": "Answer above, or message Claude to stop and send" },
+  { "name": "waiting phone", "label": "Codex", "state": "waiting", "device": "phone", "expected": "Answer above, or message Codex to stop and send" },
+  { "name": "compacting desktop", "label": "Claude", "state": "compacting", "device": "desktop", "expected": "Sends when compacting is done" },
+  { "name": "compacting touch", "label": "Claude", "state": "compacting", "device": "touch", "expected": "Sends when compacting is done" },
+  { "name": "compacting phone", "label": "Claude", "state": "compacting", "device": "phone", "expected": "Sends when compacting is done" },
+  { "name": "running desktop", "label": "Claude", "state": "running", "device": "desktop", "expected": "Claude reads this at its next step · ⌘Enter stops and sends" },
+  { "name": "running touch", "label": "Claude", "state": "running", "device": "touch", "expected": "Claude reads this next · hold Send to stop" },
+  { "name": "running phone", "label": "Claude", "state": "running", "device": "phone", "expected": "Claude reads this at its next step" },
+  { "name": "uses desktop", "label": "Claude", "state": "uses", "device": "desktop", "expected": "What should Claude do with it?" },
+  { "name": "uses touch", "label": "Claude", "state": "uses", "device": "touch", "expected": "What should Claude do with it?" },
+  { "name": "uses phone", "label": "Codex", "state": "uses", "device": "phone", "expected": "What should Codex do with it?" },
+  { "name": "idle desktop", "label": "Claude", "state": "idle", "device": "desktop", "expected": "Ask anything · / commands · @ files · @chat: chats" },
+  { "name": "idle touch", "label": "Claude", "state": "idle", "device": "touch", "expected": "Ask anything · / commands · @ files · @chat: chats" },
+  { "name": "idle phone", "label": "Claude", "state": "idle", "device": "phone", "expected": "Ask anything · / commands · @ files · @chat: chats" }
+]

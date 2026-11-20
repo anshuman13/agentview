@@ -226,7 +226,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                 }
             }
             if (rows.isEmpty()) item(key = "empty") {
-                if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || earlierDue))) EmptyState("No messages yet", "Your prompts, the agent's steps and replies show up here") else Loading("Loading the chat…")
+                if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || earlierDue))) EmptyState("No messages yet", "Your prompts, the agent's steps and replies show up here", icon = "comment-discussion") else Loading("Loading the chat…")
             }
         }
         val dayOf = view.dayOf

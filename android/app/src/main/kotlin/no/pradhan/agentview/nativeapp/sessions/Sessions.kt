@@ -202,7 +202,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
                 when {
                     live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty() -> OfflineSessions(rows, waitingForServer)
                     groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty() && hits.isEmpty() ->
-                        EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No ${profileLabel(segment).lowercase()} sessions yet")
+                        EmptyState(if (filter.isNotBlank()) "No repo or chat matches" else "No ${profileLabel(segment).lowercase()} chats yet")
                     else -> SessionsList(rows, filters, groups, pinned, waiting, hits, held)
                 }
             }
@@ -215,7 +215,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
 private fun OfflineSessions(rows: ChatRows, waitingForServer: Boolean) {
     val hub = rows.hub
     val offline = if (waitingForServer) remember { hub.savedChats() } else emptyList()
-    if (offline.isEmpty()) EmptyState(if (waitingForServer) "Waiting for the server" else "No sessions yet", if (waitingForServer) "Check the Mac address" else null)
+    if (offline.isEmpty()) EmptyState(if (waitingForServer) "Waiting for the server" else "No chats yet", if (waitingForServer) "Check the Mac address" else null)
     else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
         item(key = "saved-head") { SectionHeader("Saved on this phone", offline.size.toString()) }
         lazyGroup(offline, { "sv-${it.first}" }) { c ->
