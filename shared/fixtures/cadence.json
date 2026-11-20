@@ -1,0 +1,28 @@
+{
+  "lines": [
+    {"name": "daily", "cadence": "daily", "at": "2026-02-02T08:30", "now": "2026-02-04T15:20", "expected": "Repeats: every day 08:30"},
+    {"name": "weekdays", "cadence": "weekdays", "at": "2026-02-02T08:30", "now": "2026-02-04T15:20", "expected": "Repeats: every weekday 08:30"},
+    {"name": "weekly", "cadence": "weekly", "at": "2026-02-02T08:30", "now": "2026-02-04T15:20", "expected": "Repeats: every monday 08:30"},
+    {"name": "monthly", "cadence": "monthly", "at": "2026-02-02T08:30", "now": "2026-02-04T15:20", "expected": "Repeats: every month on the 2nd 08:30"},
+    {"name": "monthly on the 23rd", "cadence": "monthly", "at": "2026-03-23T10:00", "now": "2026-02-04T15:20", "expected": "Repeats: every month on the 23rd 10:00"},
+    {"name": "monthly on the 12th", "cadence": "monthly", "at": "2026-03-12T10:00", "now": "2026-02-04T15:20", "expected": "Repeats: every month on the 12th 10:00"},
+    {"name": "weekly without a due time", "cadence": "weekly", "at": null, "now": "2026-02-04T15:20", "expected": "Repeats: every wednesday 09:00"},
+    {"name": "monthly without a due time", "cadence": "monthly", "at": null, "now": "2026-02-04T15:20", "expected": "Repeats: every month on the 4th 09:00"}
+  ],
+  "reads": [
+    {"name": "no rule", "text": "Notes", "at": "2026-02-02T08:30", "expected": "never"},
+    {"name": "no text", "text": null, "at": "2026-02-02T08:30", "expected": "never"},
+    {"name": "daily", "text": "Repeats: every day 08:30", "at": "2026-02-02T08:30", "expected": "daily"},
+    {"name": "weekdays", "text": "Repeats: every weekday 09:00", "at": "2026-02-02T08:30", "expected": "weekdays"},
+    {"name": "weekly on the due weekday", "text": "Repeats: every monday 08:30", "at": "2026-02-02T08:30", "expected": "weekly"},
+    {"name": "weekly on another weekday", "text": "Repeats: every friday 09:00", "at": "2026-02-02T08:30", "expected": "custom"},
+    {"name": "monthly on the due day", "text": "Repeats: every month on the 2nd 08:30", "at": "2026-02-02T08:30", "expected": "monthly"},
+    {"name": "the 31st on the last day of February", "text": "Repeats: every month on the 31st 09:00", "at": "2026-02-28T09:00", "expected": "monthly"},
+    {"name": "the 31st on the last day of a 30-day month", "text": "Repeats: every month on the 31st 09:00", "at": "2026-04-30T09:00", "expected": "monthly"},
+    {"name": "the 31st on a middle day", "text": "Repeats: every month on the 31st 09:00", "at": "2026-04-15T09:00", "expected": "custom"},
+    {"name": "monthly on another day", "text": "Repeats: every month on the 15th 09:00", "at": "2026-02-28T09:00", "expected": "custom"},
+    {"name": "unreadable rule", "text": "Repeats: whenever", "at": "2026-02-02T08:30", "expected": "custom"},
+    {"name": "weekly without a due time", "text": "Repeats: every friday 09:00", "at": null, "expected": "weekly"},
+    {"name": "monthly without a due time", "text": "Repeats: every month on the 15th 09:00", "at": null, "expected": "monthly"}
+  ]
+}

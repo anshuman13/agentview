@@ -130,6 +130,27 @@ fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, acti
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 PRIORITIES.forEach { (p, label) -> Chip(label, { actions.edit(row, mapOf("priority" to p)) }, on = row.priority == p) }
             }
+            if (row.status == "open") {
+                FieldLabel("Repeat")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    val cadence = cadenceOf(text, row.at, now)
+                    val at = row.at?.let { Instant.ofEpochMilli(it).atZone(codexZone) }
+                    listOf(
+                        "never" to "Never", "daily" to "Daily", "weekdays" to "Weekdays",
+                        "weekly" to "Weekly" + (at?.let { " on ${WEEKDAYS[it.dayOfWeek.value % 7].replaceFirstChar { c -> c.uppercase() }}" } ?: ""),
+                        "monthly" to "Monthly" + (at?.let { " on the ${it.dayOfMonth}" } ?: ""),
+                    ).forEach { (c, label) ->
+                        Chip(label, { if (c != cadence) text = withRule(text, if (c == "never") null else cadenceLine(c, row.at, now)) }, on = c == cadence)
+                    }
+                    if (cadence == "custom") Chip("Custom", null, on = true)
+                }
+                if (estimateMinutes(title) == null) {
+                    FieldLabel("Estimate")
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                        listOf(15L, 30L, 60L, 120L).forEach { n -> Chip(minutesText(n), if (title.isBlank()) null else ({ title = "${title.trim()} ~${minutesText(n)}" })) }
+                    }
+                }
+            }
             FieldLabel("Tags")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 val tags = tagList(row.tags)

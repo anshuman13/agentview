@@ -65,6 +65,27 @@ private fun read(m: MatchResult, now: Long): Rule? {
     return Rule("dow", WEEKDAYS.indexOfFirst { it.startsWith(m.groupValues[3].lowercase().take(3)) }, 1, h, mi)
 }
 
+// cadenceLine and cadenceOf mirror web recur.ts, checked by shared/fixtures/cadence.json. Cadences: never, daily, weekdays, weekly, monthly, custom.
+// The rule line for a cadence, timed and anchored on the due time (or `now` without one).
+fun cadenceLine(cadence: String, at: Long?, now: Long): String {
+    val d = Instant.ofEpochMilli(at ?: now).atZone(codexZone)
+    val kind = mapOf("daily" to "day", "weekdays" to "weekday", "weekly" to "dow", "monthly" to "month").getValue(cadence)
+    return ruleLine(Rule(kind, d.dayOfWeek.value % 7, d.dayOfMonth, if (at == null) 9 else d.hour, if (at == null) 0 else d.minute))
+}
+
+// Which choice the text's rule is, given the due time; a rule that is none of them is custom.
+fun cadenceOf(text: String?, at: Long?, now: Long): String {
+    if (text == null || !isRepeat(text)) return "never"
+    val r = RULE_RE.find(text.substringBefore('\n'))?.let { read(it, at ?: now) } ?: return "custom"
+    if (r.kind == "day") return "daily"
+    if (r.kind == "weekday") return "weekdays"
+    if (at == null) return if (r.kind == "dow") "weekly" else "monthly"
+    val d = Instant.ofEpochMilli(at).atZone(codexZone).toLocalDate()
+    if (r.kind == "dow") return if (r.dow == jsDow(d)) "weekly" else "custom"
+    // A rule on the 31st reads as monthly on the clamped last day of a shorter month.
+    return if (r.dom == d.dayOfMonth || (d.dayOfMonth == d.lengthOfMonth() && r.dom >= d.dayOfMonth)) "monthly" else "custom"
+}
+
 class Repeat(val title: String, val text: String, val at: Long)
 
 // "Water plants every monday 9" gives the title, the "Repeats:" line and the first due time.

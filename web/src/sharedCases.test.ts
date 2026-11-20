@@ -33,6 +33,7 @@ import { chatMarkdown, failedLine, handoffText, joinMarks, lastReply, markChip, 
 import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
+import { cadenceLine, cadenceOf } from './codex/data/tasks/recur';
 import { needsYou } from './codex/summary/needsYou';
 import { ignoredToday } from './codex/data/tasks/review';
 import { HubError, hubRetry } from './codex/data/hubFetch';
@@ -220,6 +221,13 @@ describe('cases shared with the Android app', () => {
       expect(hasLiveClaims(groups)).toBe(c.hasLive);
     });
   }
+
+  it('cadence', () => {
+    const c = cases<never>('cadence') as unknown as { lines: { name: string; cadence: 'daily' | 'weekdays' | 'weekly' | 'monthly'; at: string | null; now: string; expected: string }[]; reads: { name: string; text: string | null; at: string | null; expected: string }[] };
+    const time = (s: string | null) => (s === null ? null : new Date(s).getTime());
+    for (const l of c.lines) expect(cadenceLine(l.cadence, time(l.at), time(l.now) as number), l.name).toBe(l.expected);
+    for (const r of c.reads) expect(cadenceOf(r.text, time(r.at)), r.name).toBe(r.expected);
+  });
 
   it('staleFacts', () => {
     type Row = Record<string, unknown>;

@@ -680,6 +680,13 @@ class SharedCasesTest {
         for (c in cases("claim-edit")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, editedClaimText(c.nullable("old")?.jsonPrimitive?.content, c.str("next")))
     }
 
+    @Test fun cadence() {
+        val c = Json.parseToJsonElement(File("../../shared/fixtures/cadence.json").readText()).jsonObject
+        fun time(o: JsonObject, k: String) = o.nullable(k)?.jsonPrimitive?.content?.let { java.time.LocalDateTime.parse(it).atZone(codexZone).toInstant().toEpochMilli() }
+        for (l in c.getValue("lines").jsonArray.map { it.jsonObject }) assertEquals(l.str("name"), l.str("expected"), cadenceLine(l.str("cadence"), time(l, "at"), time(l, "now")!!))
+        for (r in c.getValue("reads").jsonArray.map { it.jsonObject }) assertEquals(r.str("name"), r.str("expected"), cadenceOf(r.nullable("text")?.jsonPrimitive?.content, time(r, "at"), 0L))
+    }
+
     @Test fun staleClaims() {
         val c = Json.parseToJsonElement(File("../../shared/fixtures/stale-claims.json").readText()).jsonObject
         val now = c.getValue("now").jsonPrimitive.long
