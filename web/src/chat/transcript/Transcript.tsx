@@ -1,5 +1,5 @@
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { forgetSeenBefore, getState, loadEarlier, seenBefore, send, setUi, useStore } from '../../app/store';
+import { cancelUnsent, forgetSeenBefore, getState, loadEarlier, queuedFor, seenBefore, send, setUi, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Button, Chip, IconButton, ShowToggle } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
@@ -42,6 +42,14 @@ function FailedLine({ events, label }: { events: ChatEvent[]; label: string }) {
   const line = failedLine(events, label);
   if (!line) return null;
   return <div className="tr-failed"><span className="tr-failed-text">{line}</span><Button size="sm" onClick={() => send({ type: 'retry' })}>Retry</Button></div>;
+}
+
+function UnsentRows() {
+  const outbox = useStore((s) => s.outbox);
+  const chat = useStore((s) => s.session.id);
+  return <>{queuedFor(outbox, chat).map((q) => (
+    <div key={q.id} className="tr-user unsent"><UserText id={q.id} text={q.text} /><span className="tr-stop"><Icon name="clock" small />Waiting to send<button className="link" onClick={() => cancelUnsent(q.id)}>Cancel</button></span></div>
+  ))}</>;
 }
 
 function lastUserId(items: Item[]) {
@@ -233,6 +241,7 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
       {failed && !running && <FailedLine events={events} label={label} />}
+      <UnsentRows />
       </div>
     </div>
     {!stuck && (behind || running) && (

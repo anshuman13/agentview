@@ -5,7 +5,7 @@ import { initPage } from '../runtime/pageEvents';
 import { EMPTY_SESSION, embedded, getState, notice, set, setFindings, setUi } from './core';
 import { bundled } from '../api';
 import { markSeen } from './seen';
-import { send } from './send';
+import { flushOutbox, send } from './send';
 import { cache, cacheShown, view } from './view';
 import { providerLabel } from '../../../../shared/providers';
 import { rememberModels } from '../newChat';
@@ -138,6 +138,7 @@ function onLive(m: Extract<ServerMessage, { type: 'live' }>) {
   markViewedDone(m.chats);
   for (const id of cache.keys()) if (!m.chats.some((c) => c.id === id)) cache.delete(id);
   set({ live: m.chats });
+  if (getState().outbox.length > 0) void flushOutbox();
 }
 
 function onAttention(m: Extract<ServerMessage, { type: 'attention' }>) {

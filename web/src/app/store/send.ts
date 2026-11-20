@@ -1,6 +1,7 @@
 import { type ClientMessage } from '../../../../shared/protocol';
 import { apiUrl } from '../api';
-import { cid, getState, notice, set, uid } from './core';
+import { cid, getState, notice, OUTBOX_KEY, set, uid } from './core';
+import { addQueued, cancelQueued, flushQueue, queuedCommand, type Queued } from './outboxLogic';
 import { markSeen } from './seen';
 import { showCached } from './view';
 import { connect } from './stream';
@@ -41,10 +42,50 @@ export function send(m: ClientMessage, chat?: string) {
   return true;
 }
 
+function setOutbox(outbox: Queued[]) {
+  try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox)); } catch {}
+  set({ outbox });
+}
+
+export const cancelUnsent = (id: string) => setOutbox(cancelQueued(getState().outbox, id));
+
+const isRunning = (chat: string) => {
+  const { session, live } = getState();
+  return (session.id === chat ? session.running : live.find((c) => c.id === chat)?.running) === true;
+};
+
+let flushing = false;
+
+// Sends the outbox oldest first with each message's own id, so one that arrived before a lost reply is ignored the second time.
+export async function flushOutbox() {
+  if (flushing) return;
+  flushing = true;
+  try {
+    await flushQueue(() => getState().outbox, async (q) => (await post(queuedCommand(q, isRunning(q.chat)), 1, q.chat)) === true, cancelUnsent);
+  } finally {
+    flushing = false;
+  }
+}
+
 // Messages carry an id so a retry after a lost reply does not run twice; the server ignores repeats.
 // A lost message goes back in the box only if its chat is still shown, so it never lands in another chat's draft.
 function deliver(msg: { type: 'prompt' | 'steer' | 'queue'; text: string; id: string }, onLost: () => void) {
-  const chat = getState().session.id;
+  const { session, ui, outbox } = getState();
+  const chat = session.id;
+  // While the stream is down, or older messages wait, the message joins the outbox so order holds.
+  if (!ui.connected || outbox.length > 0) {
+    const next = addQueued(outbox, { id: msg.id, chat, text: msg.text, steer: msg.type === 'steer', at: Date.now() });
+    if (!next) {
+      notice('Too many unsent messages');
+      // After the caller has emptied the composer, so the text lands back in it.
+      queueMicrotask(onLost);
+    } else {
+      setOutbox(next);
+      if (ui.connected) void flushOutbox();
+    }
+    return;
+  }
+  if (msg.type === 'steer') set((s) => ({ events: [...s.events, { id: msg.id, kind: 'user', text: msg.text, at: Date.now(), stopping: true }] }));
   void post(msg, 2).then((ok) => {
     if (ok) return;
     if (msg.type === 'steer') set((s) => ({ events: s.events.filter((e) => e.id !== msg.id) }));
@@ -62,9 +103,7 @@ export function sendToChat(message: string) {
 }
 
 export function steer(text: string, onLost: () => void) {
-  const id = uid();
-  set((s) => ({ events: [...s.events, { id, kind: 'user', text, at: Date.now(), stopping: true }] }));
-  deliver({ type: 'steer', text, id }, onLost);
+  deliver({ type: 'steer', text, id: uid() }, onLost);
 }
 
 export function prompt(text: string, onLost: () => void) {
