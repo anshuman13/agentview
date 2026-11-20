@@ -51,17 +51,20 @@ export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != nul
 // Until when the hub holds the job's runs for its profile's usage limit (the `jobs:<profile>` pause), or null.
 export const heldUntil = (j: Job, paused: Paused[], now: number) => paused.find((p) => p.scan === `jobs:${j.profile}` && p.until > now)?.until ?? null;
 
-const queuedText = (j: Job, paused: Paused[], now: number) => {
+const heldText = (j: Job, paused: Paused[], now: number) => {
   const held = heldUntil(j, paused, now);
-  return held ? `Usage limit until ${clock(held)}` : 'Queued';
+  return held ? `Usage limit until ${clock(held)}` : null;
 };
+
+const queuedText = (j: Job, paused: Paused[], now: number) => heldText(j, paused, now) ?? 'Queued';
 
 export const jobState = (j: Job, runs: Run[], now: number, paused: Paused[]): BadgeSpec | null => {
   const latest = runsOf(runs, j)[0]?.status;
   return latest === 'running' ? { status: 'running' } : queued(j, runs, now) ? { status: 'waiting', reason: queuedText(j, paused, now) } : latest === 'error' ? { status: 'failed' } : !j.enabled ? { status: 'skipped', reason: 'Off' } : null;
 };
 
-export const rowMeta = (j: Job, runs: Run[], now: number, paused: Paused[]) => (queued(j, runs, now) ? queuedText(j, paused, now) : !j.enabled ? 'Off' : j.next_run_at ? `Next ${at(j.next_run_at)}` : null);
+// The line under a job's schedule: why it is held, or when it runs next; the badge already says Queued and Off.
+export const rowNote = (j: Job, runs: Run[], now: number, paused: Paused[]) => (queued(j, runs, now) ? heldText(j, paused, now) : j.enabled && j.next_run_at ? `Next ${at(j.next_run_at)}` : null);
 
 export const canRunNow = (j: Job, runs: Run[], now: number) => !!j.prompt?.trim() && runsOf(runs, j)[0]?.status !== 'running' && !queued(j, runs, now);
 

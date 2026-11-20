@@ -3,7 +3,7 @@ import type { Job } from '../data/wiki/wiki';
 import { Button, Chip, IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { nextRun } from '../../../../shared/schedule';
-import { DAYS, DAY_NAMES, KINDS, type Kind, at, canRunNow, jobState, parseSchedule, removeJob, runNow, scheduleOf, useJobs } from './schedule';
+import { DAYS, DAY_NAMES, KINDS, type Kind, at, canRunNow, jobState, parseSchedule, removeJob, rowNote, runNow, scheduleOf, useJobs } from './schedule';
 import { Badge } from '../../ui/Badge';
 import { useShownMcp } from '../../ops/mcpShown';
 import { scopeInfo, toggleConnector, toolId } from '../../ops/mcpHelpers';
@@ -53,6 +53,8 @@ type WhenProps = { j: Job; custom: string; setCustom: (s: string) => void; custo
 
 export function JobWhen({ j, custom, setCustom, customOk, saveCustom }: WhenProps) {
   const store = useAssistantStore();
+  const { runs, paused } = useJobs();
+  const note = rowNote(j, runs, Date.now(), paused);
   const sched = parseSchedule(j.schedule);
   const setSchedule = (p: Partial<typeof sched>) => {
     const n = { ...sched, ...p };
@@ -75,6 +77,7 @@ export function JobWhen({ j, custom, setCustom, customOk, saveCustom }: WhenProp
         {sched.kind === 'custom' && <input className="jb-custom" value={custom} aria-label="Custom schedule" aria-invalid={!customOk} placeholder="*/15 0-8 * * 1-5" onChange={(e) => setCustom(e.target.value)} onBlur={saveCustom} onKeyDown={(e) => e.key === 'Enter' && saveCustom()} />}
         {sched.kind !== 'hourly' && sched.kind !== 'custom' && <input type="time" value={sched.time} aria-label="Time" onChange={(e) => e.target.value && setSchedule({ time: e.target.value })} />}
       </div>
+      {note && <div className="muted small">{note}</div>}
       {sched.kind === 'custom' && <div className="muted small">{customOk ? `Next ${at(nextRun(custom, Date.now())!)}. ` : 'This never runs. '}Use "once 2026-11-02 09:00" for one run, or a cron line: minute, hour, day, month, weekday.</div>}
     </section>
   );

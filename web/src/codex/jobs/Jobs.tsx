@@ -16,7 +16,7 @@ import '../../styles/features/jobs.css';
 import { Autopilot } from './Autopilot';
 import { AutopilotPage } from './AutopilotPage';
 import { JobPage } from './JobPage';
-import { canRunNow, describe, jobState, removeJob, rowMeta, runNow, useJobs } from './schedule';
+import { canRunNow, describe, jobState, removeJob, rowNote, runNow, useJobs } from './schedule';
 import { Badge } from '../../ui/Badge';
 
 type Jobs = ReturnType<typeof useJobs>;
@@ -25,13 +25,12 @@ function JobRow({ j, runs, paused, now, store, enable }: { j: Job; runs: Run[]; 
   const [open, setOpen] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const choose = (fn: () => void) => () => { setOpen(false); fn(); };
-  const meta = rowMeta(j, runs, now, paused);
   const state = jobState(j, runs, now, paused);
   return (
     <div className={`ui-row-wrap${j.enabled ? '' : ' off'}`}>
       <Row
         title={j.name || 'Untitled job'}
-        meta={[describe(j.schedule), meta && /^(Next|Usage limit)/.test(meta) && meta].filter(Boolean).join(' · ')}
+        meta={[describe(j.schedule), rowNote(j, runs, now, paused)].filter(Boolean).join(' · ')}
         trailing={state && <Badge {...state} />}
         onClick={() => setView({ open: rowKey(j) })}
         onLongPress={() => setOpen(true)}

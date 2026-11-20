@@ -1,7 +1,7 @@
 import type { Job, Run } from '../data/wiki/wiki';
 import { describe as group, expect, test } from 'bun:test';
 import { clock } from '../tasks/time';
-import { canRunNow, describe, jobState, queued, rowMeta, runMeta, parseSchedule, scheduleOf } from './schedule';
+import { canRunNow, describe, jobState, queued, rowNote, runMeta, parseSchedule, scheduleOf } from './schedule';
 
 group('job schedules', () => {
   test('read back what the form writes', () => {
@@ -16,16 +16,16 @@ group('job schedules', () => {
   });
 });
 
-group('rowMeta', () => {
+group('rowNote', () => {
   const job = { id: 'j', profile: 'work', enabled: 1, next_run_at: null } as Job;
-  test('queued shows Queued on or off, off shows Off', () => {
-    expect(rowMeta({ ...job, enabled: 0, next_run_at: 100 }, [], 200, [])).toBe('Queued');
-    expect(rowMeta({ ...job, enabled: 0 }, [], 200, [])).toBe('Off');
-    expect(rowMeta({ ...job, next_run_at: 100 }, [], 200, [])).toBe('Queued');
+  test('queued or off has no note, the badge says it', () => {
+    expect(rowNote({ ...job, enabled: 0, next_run_at: 100 }, [], 200, [])).toBeNull();
+    expect(rowNote({ ...job, enabled: 0 }, [], 200, [])).toBeNull();
+    expect(rowNote({ ...job, next_run_at: 100 }, [], 200, [])).toBeNull();
   });
   test('an enabled job shows its next run when set', () => {
-    expect(rowMeta({ ...job, next_run_at: 5000 }, [], 200, [])).toMatch(/^Next /);
-    expect(rowMeta(job, [], 200, [])).toBeNull();
+    expect(rowNote({ ...job, next_run_at: 5000 }, [], 200, [])).toMatch(/^Next /);
+    expect(rowNote(job, [], 200, [])).toBeNull();
   });
 });
 
@@ -82,7 +82,7 @@ group('jobState', () => {
     const held = [{ scan: 'jobs:work', reason: 'Claude usage limit', until: 20_000 }];
     const reason = `Usage limit until ${clock(20_000)}`;
     expect(jobState({ ...job, next_run_at: 5 }, [], 10, held)).toEqual({ status: 'waiting', reason });
-    expect(rowMeta({ ...job, next_run_at: 5 }, [], 10, held)).toBe(reason);
+    expect(rowNote({ ...job, next_run_at: 5 }, [], 10, held)).toBe(reason);
     expect(jobState(job, [run('error')], 10, held)).toEqual({ status: 'failed' });
   });
 });
