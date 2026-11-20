@@ -23,6 +23,11 @@ describe('Markdown blocks', () => {
     expect(splitBlocks('See [ref][a].\n\n[a]: https://x.test')).toBeNull();
   });
 
+  it('labels a code block with its language', () => {
+    expect(full('```ts\nconst a = 1;\n```')).toContain('<span class="md-lang">ts</span><pre>');
+    expect(full('```\nplain\n```')).not.toContain('md-lang');
+  });
+
   it('shows images as links so their URL is not fetched', () => {
     const html = full('![chart](https://x.test/a.png?q=secret)');
     expect(html).not.toContain('<img');

@@ -9,7 +9,8 @@ import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
 import { keyText } from '../app/shell/keys';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
-import { runDetail } from '../../../shared/goalText';
+import { endedRun, finishedLine, runDetail } from '../../../shared/goalText';
+import { since } from '../sessions/folders';
 import { Confirm } from '../ui/Confirm';
 import { copyChatMarkdown, copyLastReply, copyResumeCommand, forkChat, rememberChat, remindChat, sideChat } from './chatActions';
 import { ruleFile } from './cards/Memory';
@@ -29,11 +30,13 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   const chat = useStore((s) => s.session.id);
   const buildFlow = useStore((s) => Boolean(s.session.buildFlow));
   const run = useChatRun(chat);
+  const ended = useStore((s) => (chat ? endedRun(s.runs, chat) : null));
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
     // Tries and jobs have their controls on the loop card only.
     if (v === 'find') return act(() => window.dispatchEvent(new Event('agentview:find')));
-    if (v === 'goal') return act(() => (!run ? startGoal({ here: true }) : runDetail(run).opens && openGoal(run.id)));
+    if (v === 'goal') return act(() => (ended ? openGoal(ended.id) : !run ? startGoal({ here: true }) : runDetail(run).opens && openGoal(run.id)));
+    if (v === 'again') return act(() => startGoal(ended?.kind === 'goal' ? { from: ended, here: true } : { here: true }));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
   const narrow = useNarrow();
@@ -47,7 +50,8 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
       ...(accounts.length > 1 || account !== 'main' ? [picker('account', 'Claude account', ACCOUNT_LABEL[account])] : []),
     ]],
     ['Goal', [
-      action('goal', 'Goal', run ? runLine(run) : 'Off'),
+      action('goal', 'Goal', run ? runLine(run) : ended ? (finishedLine(ended, since) ?? 'Ended') : 'Off'),
+      ...(ended ? [ended.kind === 'goal' ? action('again', 'Run again…', ended.what.split('\n')[0]) : action('again', 'New goal…', 'Start a goal in this chat')] : []),
       picker('build', 'Build', buildFlow ? 'Spec flow' : 'Off'),
     ]],
     ['Chat', [

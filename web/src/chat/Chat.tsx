@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import type { Token } from './transcript/md';
-import { copyText } from '../ui/util';
+import { copyText } from '../codex/view';
 import { setUi } from '../app/store';
 import { runInTerminal } from './chatApi';
 import { cachedHtml, mdKey, storeHtml } from './transcript/mdCache';
@@ -31,10 +31,7 @@ function onCopy(e: MouseEvent<HTMLDivElement>) {
   const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy]');
   if (!btn) return;
   const code = btn.closest('.md-code')?.querySelector('code')?.textContent ?? '';
-  copyText(code).then(() => {
-    btn.textContent = 'Copied';
-    setTimeout(() => (btn.textContent = 'Copy'), 1200);
-  }, () => {});
+  copyText(code, 'Code copied');
 }
 
 const Block = memo(

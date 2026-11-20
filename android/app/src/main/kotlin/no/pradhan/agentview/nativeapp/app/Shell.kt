@@ -95,6 +95,7 @@ import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.LocalNotice
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
@@ -296,6 +297,7 @@ private fun MoreSheet(deploy: Boolean, hidden: List<String>, onDismiss: () -> Un
 fun App(hub: Hub) {
     val nav = rememberNavController()
     val snack = remember { SnackbarHostState() }
+    val notify = remember(hub) { { text: String -> hub.notice.value = text } }
     val connected by hub.connected.collectAsState()
     val shared by hub.shared.collectAsState()
     var more by rememberSaveable { mutableStateOf(false) }
@@ -327,7 +329,7 @@ fun App(hub: Hub) {
                 if (rail) SideRail(dests)
                 Column(Modifier.weight(1f).fillMaxHeight()) {
                     if (banner == OfflineState.Shown) OfflineBanner(onRetry = hub::retry)
-                    AppNavHost(hub, nav, isExpanded(width), Modifier.weight(1f))
+                    CompositionLocalProvider(LocalNotice provides notify) { AppNavHost(hub, nav, isExpanded(width), Modifier.weight(1f)) }
                 }
             }
         }

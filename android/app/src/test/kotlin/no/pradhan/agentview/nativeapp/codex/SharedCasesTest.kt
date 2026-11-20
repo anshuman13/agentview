@@ -112,6 +112,7 @@ import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.statusLine
 import no.pradhan.agentview.nativeapp.chat.stripRound
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
+import no.pradhan.agentview.nativeapp.codex.autopilot.endedRun
 import no.pradhan.agentview.nativeapp.codex.autopilot.goalEnd
 import no.pradhan.agentview.nativeapp.codex.autopilot.runDetail
 import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
@@ -518,6 +519,13 @@ class SharedCasesTest {
 
     @Test fun shortModelNames() {
         for (c in cases("short-model")) assertEquals(c.str("name"), c.str("expected"), shortModel(c.str("model")))
+    }
+
+    @Test fun endedRun() {
+        for (c in cases("ended-run")) {
+            val runs = c.getValue("runs").decode<List<ChatRun>>()
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, endedRun(runs, c.str("chatId"))?.id)
+        }
     }
 
     @Test fun goalEnd() {

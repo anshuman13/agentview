@@ -4,6 +4,10 @@ import { clock, span } from './util.js';
 // The run a chat is on now: its last open run, as on the server (Runs.activeFor).
 export const activeRun = (runs: ChatRun[], chatId: string) => runs.filter((r) => r.chatId === chatId && r.state !== 'done').at(-1);
 
+// The chat's latest ended goal or loop while it has no open run, else null (Android endedRun, fixture ended-run.json).
+export const endedRun = (runs: ChatRun[], chatId: string) =>
+  activeRun(runs, chatId) ? null : (runs.filter((r) => r.chatId === chatId && (r.kind === 'goal' || r.kind === 'loop')).at(-1) ?? null);
+
 export const rounds = (n: number) => `${n} ${n === 1 ? 'round' : 'rounds'}`;
 
 // The system note of a goal that starts or changes: how often, until when, the usage cap and the build limit. An edit also says "no cap" and "no build limit".

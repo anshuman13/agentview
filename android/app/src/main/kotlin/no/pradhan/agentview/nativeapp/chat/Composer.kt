@@ -56,6 +56,8 @@ import no.pradhan.agentview.nativeapp.app.BarState
 import no.pradhan.agentview.nativeapp.app.barHidden
 import no.pradhan.agentview.nativeapp.app.barState
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
+import no.pradhan.agentview.nativeapp.codex.autopilot.endedRun
+import no.pradhan.agentview.nativeapp.codex.autopilot.finishedLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.runDetail
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.net.Capabilities
@@ -69,6 +71,7 @@ import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.newestModels
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.sessions.chatPlace
+import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.app.refreshUsage
 import no.pradhan.agentview.nativeapp.app.refreshWorkspace
 import no.pradhan.agentview.nativeapp.app.runInTerminal
@@ -458,8 +461,20 @@ private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, on
         SectionHeader("Goal")
         Group {
             // Tries and jobs have their controls on the loop card only.
+            val ended by hub.store.state.select { st -> endedRun(st.runs, st.shownId) }
             val opens = run == null || runDetail(run).opens
-            ListRow("Goal", run?.let { runLine(it) } ?: "Off", onClick = if (opens) ({ hub.shell.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }) else null, trailing = { if (opens) Chevron() })
+            val open = { sheet: GoalSheet -> hub.shell.goalSheet.value = sheet; onSheet(null) }
+            ListRow(
+                "Goal",
+                run?.let { runLine(it) } ?: ended?.let { finishedLine(it.why, it.endedAt, ::since) ?: "Ended" } ?: "Off",
+                onClick = if (opens) ({ open(run?.let { GoalSheet.Detail(it.id) } ?: ended?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true)) }) else null,
+                trailing = { if (opens) Chevron() },
+            )
+            ended?.let { e ->
+                Hairline()
+                if (e.kind == "goal") ListRow("Run again…", firstLine(e.what), onClick = { open(GoalSheet.Start(here = true, from = e)) }, trailing = { Chevron() })
+                else ListRow("New goal…", "Start a goal in this chat", onClick = { open(GoalSheet.Start(here = true)) }, trailing = { Chevron() })
+            }
             Hairline()
             ListRow("Build", if (session?.buildFlow == true) "Spec flow" else "Off", onClick = { onSheet(Picker.Build) }, trailing = { Chevron() })
         }

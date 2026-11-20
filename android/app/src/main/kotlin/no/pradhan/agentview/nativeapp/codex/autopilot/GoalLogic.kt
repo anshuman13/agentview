@@ -174,4 +174,8 @@ fun capLine(run: ChatRun): CapLine? {
 // The run a chat is on now: its last open run (web activeRun in shared/goalText.ts).
 fun activeRun(runs: List<ChatRun>, chatId: String?) = runs.lastOrNull { it.chatId == chatId && it.state != "done" }
 
+// The chat's latest ended goal or loop while it has no open run, else null (web endedRun, fixture ended-run.json).
+fun endedRun(runs: List<ChatRun>, chatId: String?) =
+    if (activeRun(runs, chatId) != null) null else runs.lastOrNull { it.chatId == chatId && (it.kind == "goal" || it.kind == "loop") }
+
 fun buildsLine(run: ChatRun): String = run.maxBuilds?.takeIf { it > 0 }?.let { "Builds ${run.builds ?: 0} of $it" } ?: ""

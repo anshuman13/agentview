@@ -48,6 +48,9 @@ val LocalOpenFile = staticCompositionLocalOf<((String, Int?) -> Unit)?> { null }
 // Types a one-line shell command into the chat's terminal; set by a chat outside read-only mode, so code blocks elsewhere offer only Copy.
 val LocalRunCommand = staticCompositionLocalOf<((String) -> Unit)?> { null }
 
+// Shows a snack naming what was done, such as "Code copied"; set once by the app shell.
+val LocalNotice = staticCompositionLocalOf<((String) -> Unit)?> { null }
+
 @Composable
 fun inlineText(inlines: List<Inline>): AnnotatedString {
     val c = av
@@ -131,12 +134,13 @@ private fun MdBlockView(b: MdBlock) {
 fun CodeBlock(text: String, lang: String = "", modifier: Modifier = Modifier) {
     val clip = LocalClipboardManager.current
     val run = LocalRunCommand.current
+    val notice = LocalNotice.current
     val cmd = run?.let { shellLine(lang, text) }
     Column(modifier.well(av)) {
         Row(Modifier.fillMaxWidth().padding(start = Tokens.sp5, end = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
             Text(lang, style = Type.footnote, color = av.fgMuted, modifier = Modifier.weight(1f))
             if (run != null && cmd != null) IconBtn("terminal", "Run in terminal", { run(cmd) })
-            IconBtn("copy", "Copy code", { clip.setText(AnnotatedString(text)) })
+            IconBtn("copy", "Copy code", { clip.setText(AnnotatedString(text)); notice?.invoke("Code copied") })
         }
         Text(
             text,
