@@ -4,6 +4,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.app.popRoute
 import no.pradhan.agentview.nativeapp.app.pushRoute
 import no.pradhan.agentview.nativeapp.app.routesOf
@@ -133,6 +134,18 @@ class MeetingsWikiTest {
         assertEquals(listOf("Three", "One", "Two"), decisionLog(listOf(a, b)).map { it.text })
         assertTrue(isSolo(meeting("cal:s", "Lunch", at(2, 9), v = arrayOf("people" to "[]"))))
         assertEquals(emptyList<String>(), jsonList("not json"))
+    }
+
+    @Test fun waitingGroupsByPersonAndNudges() {
+        val a = item("a", "open", null, WORK, "title" to "Waiting on Anna Berg: the contract").copy(updatedAt = NOW - 5 * DAY_MS)
+        val b = item("b", "open", null, WORK, "title" to "Review budget", "people" to "anna berg, Bo", "text" to "waiting for numbers").copy(updatedAt = NOW - 2 * DAY_MS)
+        val done = item("c", "done", null, WORK, "title" to "Waiting on Carl: x")
+        val mail = Row("briefs", "m", WORK, f = mapOf("kind" to JsonPrimitive("waiting"), "text" to JsonPrimitive("[{\"thread\":\"t\",\"url\":\"https://x.test\",\"to\":\"Dee\",\"subject\":\"Quote\",\"sent_at\":${NOW - DAY_MS}}]")))
+        val g = waitingByPerson(listOf(a, b, done), listOf(mail), null, NOW)
+        assertEquals(listOf("Anna Berg", "Dee"), g.map { it.name })
+        assertEquals(listOf("the contract" to 5, "Review budget" to 2), g[0].rows.map { it.title to it.days })
+        assertEquals("https://x.test", g[1].rows[0].url)
+        assertEquals("Hi Anna, a quick nudge on the contract; Review budget. Any update when you have a moment? Thanks!", nudgeText(g[0]))
     }
 
     @Test fun peopleNamesMatchByEmailOrName() {

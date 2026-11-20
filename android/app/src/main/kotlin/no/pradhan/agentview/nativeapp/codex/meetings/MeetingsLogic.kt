@@ -3,6 +3,9 @@ package no.pradhan.agentview.nativeapp.codex.meetings
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -17,7 +20,9 @@ import no.pradhan.agentview.nativeapp.codex.dayEnd
 import no.pradhan.agentview.nativeapp.codex.dayPlus
 import no.pradhan.agentview.nativeapp.codex.dayStart
 import no.pradhan.agentview.nativeapp.codex.edited
+import no.pradhan.agentview.nativeapp.codex.DAY_MS
 import no.pradhan.agentview.nativeapp.codex.liveRows
+import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.split
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
 import no.pradhan.agentview.nativeapp.codex.whenText
@@ -306,3 +311,41 @@ fun meetingMeta(m: Row, now: Long, noDay: Boolean = false): String {
     val time = "$day${clock(m.startsAt!!)}${m.endsAt?.let { " - ${clock(it)}" } ?: ""}"
     return listOfNotNull(time, m.str("room")?.takeIf { it.isNotEmpty() }, if (n > 0) plural(n, "person", "people") else null).joinToString(" · ")
 }
+
+// web/src/codex/data/tasks/review.ts: what waits on a person, from open tasks that name them and from sent mail with no reply.
+@Serializable class Unanswered(val thread: String = "", val url: String = "", val to: String = "", val subject: String = "", @SerialName("sent_at") val sentAt: Long = 0)
+class WaitingRow(val key: String, val title: String, val days: Int, val url: String? = null)
+class Waiting(val name: String, val rows: List<WaitingRow>)
+
+private val WAITING_NAME = Regex("^(?:waiting\\s+(?:on|for)\\s+([^:,\\-\\n(]+)|@(\\S+))", RegexOption.IGNORE_CASE)
+private val WAITING_WORD = Regex("\\bwaiting\\b", RegexOption.IGNORE_CASE)
+
+private fun waitingOn(r: Row): String? {
+    val title = r.title?.trim() ?: ""
+    WAITING_NAME.find(title)?.let { m -> return (m.groupValues[1].ifEmpty { m.groupValues[2] }).trim().ifEmpty { null } }
+    val first = r.people?.substringBefore(",")?.trim()
+    return if (!first.isNullOrEmpty() && WAITING_WORD.containsMatchIn("$title ${r.text ?: ""}")) first else null
+}
+
+private fun daysSince(t: Long, now: Long) = maxOf(0L, (now - t) / DAY_MS).toInt()
+
+fun waitingByPerson(items: List<Row>, briefs: List<Row>, profile: String?, now: Long): List<Waiting> {
+    val groups = LinkedHashMap<String, Pair<String, MutableList<WaitingRow>>>()
+    fun add(name: String, row: WaitingRow) = groups.getOrPut(name.lowercase()) { name to mutableListOf() }.second.add(row)
+    for (r in items) {
+        if (r.deleted || r.source == "calendar" || r.status != "open" || !matchesProfile(profile, r)) continue
+        val name = waitingOn(r) ?: continue
+        val title = (r.title ?: "").replace(WAITING_NAME, "").trimStart(' ', '\t', '\n', ':', ',', '-').trim().ifEmpty { r.title ?: "" }
+        val created = minOf(r.updatedAt, *r.times.values.filter { it > 0 }.toLongArray())
+        add(name, WaitingRow(r.key, title, daysSince(created, now)))
+    }
+    for (b in briefs) {
+        if (b.deleted || b.str("kind") != "waiting" || !matchesProfile(profile, b)) continue
+        val list = try { protocolJson.decodeFromString(ListSerializer(Unanswered.serializer()), b.str("text") ?: "[]") } catch (e: Exception) { emptyList() }
+        for (w in list.filter { it.to.isNotEmpty() && it.subject.isNotEmpty() }) add(w.to, WaitingRow("mail:${w.thread}", w.subject, daysSince(w.sentAt, now), w.url.ifEmpty { null }))
+    }
+    return groups.values.map { (name, rows) -> Waiting(name, rows.sortedByDescending { it.days }) }.sortedWith(compareByDescending<Waiting> { it.rows[0].days }.thenBy { it.name })
+}
+
+fun nudgeText(g: Waiting): String =
+    "Hi ${g.name.substringBefore(" ")}, a quick nudge on ${g.rows.joinToString("; ") { it.title }}. Any update when you have a moment? Thanks!"
