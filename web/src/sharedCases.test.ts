@@ -33,6 +33,7 @@ import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { needsYou } from './codex/summary/needsYou';
 import { ignoredToday } from './codex/data/tasks/review';
+import { HubError, hubRetry } from './codex/data/hubFetch';
 import type { Brief } from './codex/data/wiki/wiki';
 import { reviewQueue } from './codex/wiki/reviewQueue';
 import { revertBlock } from './workspace/revertBlock';
@@ -111,6 +112,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; ageMs: number; suffix: string; expected: string }>('ago')) {
     it(`ago: ${c.name}`, () => expect(ago(NOW - c.ageMs, c.suffix)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; failures: number; status: number | null; expected: number | null }>('hub-retry')) {
+    it(`hub retry: ${c.name}`, () => expect(hubRetry(c.failures, c.status === null ? new Error('rejected') : new HubError('failed', c.status))).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; items: TodoItem[]; progress: string; current: string }>('checklist')) {

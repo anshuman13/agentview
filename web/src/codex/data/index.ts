@@ -65,7 +65,7 @@ export function useAssistantTable<K extends Rows>(table: K): Snapshot[K] {
   return useAssistantSelect(select as (snap: Snapshot) => Snapshot[K]);
 }
 
-const selectGate = ({ sync }: Snapshot) => ({ error: sync.error, loading: sync.syncing && !sync.last });
+const selectGate = ({ sync }: Snapshot) => ({ error: sync.error, reconnecting: sync.reconnecting, loading: sync.syncing && !sync.last });
 
 // The sync facts the tasks page shows, equal across ticks that change nothing else.
 export function useSyncGate() {

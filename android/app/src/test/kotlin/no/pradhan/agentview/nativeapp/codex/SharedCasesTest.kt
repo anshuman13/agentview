@@ -2,6 +2,8 @@ package no.pradhan.agentview.nativeapp.codex
 
 import no.pradhan.agentview.nativeapp.codex.meetings.isEvent
 import java.io.File
+import java.io.IOException
+import no.pradhan.agentview.nativeapp.net.ApiError
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -241,6 +243,14 @@ class SharedCasesTest {
     @Test fun ago() {
         val now = 1_800_000_000_000
         for (c in cases("ago")) assertEquals(c.str("name"), c.str("expected"), agoShort(now - c.getValue("ageMs").jsonPrimitive.long, now, c.str("suffix")))
+    }
+
+    @Test fun hubRetryWaits() {
+        for (c in cases("hub-retry")) {
+            val status = c.nullable("status")?.jsonPrimitive?.int
+            val error = when (status) { null -> IllegalStateException("rejected"); 0 -> IOException("timeout"); else -> ApiError("failed", status) }
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.long, hubRetry(c.getValue("failures").jsonPrimitive.int, error))
+        }
     }
 
     @Test fun checklist() {

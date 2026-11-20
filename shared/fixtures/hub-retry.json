@@ -1,0 +1,10 @@
+[
+  { "name": "502 retries after 2 s", "failures": 0, "status": 502, "expected": 2000 },
+  { "name": "503 on the second failure waits 5 s", "failures": 1, "status": 503, "expected": 5000 },
+  { "name": "504 on the third failure waits 15 s", "failures": 2, "status": 504, "expected": 15000 },
+  { "name": "network error or timeout retries", "failures": 0, "status": 0, "expected": 2000 },
+  { "name": "after the last retry the error shows", "failures": 3, "status": 502, "expected": null },
+  { "name": "rejected changes show at once", "failures": 0, "status": null, "expected": null },
+  { "name": "400 shows at once", "failures": 0, "status": 400, "expected": null },
+  { "name": "500 shows at once", "failures": 1, "status": 500, "expected": null }
+]

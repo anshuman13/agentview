@@ -172,6 +172,7 @@
 .assistant.tasks { --tk-pad: var(--sp-16); --tk-indent: 44px; max-width: calc(732px + 2 * var(--tk-pad)); container: tasks / inline-size; }
 .tasks .tasks-head { padding: var(--sp-10) var(--tk-pad) var(--sp-6); }
 .tasks .tasks-head [role='heading'] { font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
+.as-error.muted { color: var(--fg-muted); background: var(--raised); }
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
 .as-error > span { display: inline-flex; }
 .tasks .as-scroll { padding: var(--sp-4) var(--tk-pad) var(--sp-16); gap: var(--sp-8); }
