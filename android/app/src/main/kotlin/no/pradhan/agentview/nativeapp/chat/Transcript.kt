@@ -191,7 +191,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     LaunchedEffect(atBottom) { leftId = if (atBottom) null else leftId ?: rows.firstOrNull()?.id }
     val replies = remember(items, leftId) { leftId?.let { newReplies(items, it) } ?: 0 }
     val blank = rows.isEmpty() && earlier > 0
-    val earlierDue = rememberEarlierDue(hub, chatId, remember(items) { items.count { it is Item.Assistant } }, loading, earlier, settled)
+    val earlierDue = rememberEarlierDue(hub, chatId, view.replyCount, loading, earlier, settled)
     FollowNewest(hub, view, list, listState, stick, atBottom)
 
     Box(modifier) {
@@ -239,7 +239,8 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     val specCards = view.specCards
     val specBumps = view.specBumps
     val rewinds = view.rewinds
-    val answers = turnAnswers(view.items, running)
+    val answers = view.answers
+    val openAnswer = view.openAnswer
     val firstId = view.items.firstOrNull()?.id
     itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
         Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
@@ -257,7 +258,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                         build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump, answer = it.id in answers)
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump, answer = it.id in answers && !(running && it.id == openAnswer))
                     }
                 }
             }

@@ -34,6 +34,29 @@ class TranscriptFeedTest {
     }
 
     @Test
+    fun aTokenKeepsTheAnswersAndTheEndOfAStreamAddsTheReply() {
+        val events = listOf(user("1"), reply("2", "done", false), user("3"), reply("4", "he"))
+        val first = buildView("a", events, 0L, null)
+        val token = nextView(first, "a", events.toMutableList().also { it[3] = appendTo(events[3], 2, "llo")!! }, 0L)
+        assertSame(first.answers, token.answers)
+        assertSame(first.openAnswer, token.openAnswer)
+        assertEquals(setOf("2"), token.answers)
+        val ended = nextView(token, "a", events.toMutableList().also { it[3] = events[3].copy(text = "hello", streaming = false) }, 0L)
+        assertEquals(setOf("2", "4"), ended.answers)
+        assertEquals("4", ended.openAnswer)
+        assertEquals(setOf("2"), ended.answers - ended.openAnswer)
+        assertEquals(2, ended.replyCount)
+    }
+
+    @Test
+    fun theAnswersLessTheOpenOneAreWhatARunningChatShows() {
+        val events = listOf(user("1"), reply("2", "a", false), user("3"), reply("4", "b", false))
+        val view = buildView("a", events, 0L, null)
+        assertEquals(turnAnswers(view.items, true), view.answers - view.openAnswer)
+        assertEquals(turnAnswers(view.items, false), view.answers)
+    }
+
+    @Test
     fun aFullRebuildKeepsTheItemsThatDidNotChange() {
         val events = listOf(user("1"), reply("2", "one", false), user("3"))
         val first = buildView("a", events, 0L, null)

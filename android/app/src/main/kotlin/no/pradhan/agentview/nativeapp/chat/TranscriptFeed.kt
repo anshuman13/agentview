@@ -36,13 +36,17 @@ class ChatView(
     val specCards: Set<String>,
     val specBumps: Map<String, Int>,
     val folds: List<FoldRow>,
+    val answers: Set<String>, // turnAnswers(items, running = false)
+    val openAnswer: String?, // the reply a running chat's turnAnswers leaves out
+    val replyCount: Int,
 ) {
     // Newest first, the order the reversed list draws.
     val rows: List<Item> = items.asReversed()
     val foldRows: List<FoldRow> = folds.asReversed()
 
 
-    fun withItem(events: List<ChatEvent>, items: List<Item>, item: Item) = ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent, checklist, specCards, specBumps, folds.map { it.with(item) })
+    fun withItem(events: List<ChatEvent>, items: List<Item>, item: Item, answers: Set<String> = this.answers, openAnswer: String? = this.openAnswer) =
+        ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent, checklist, specCards, specBumps, folds.map { it.with(item) }, answers, openAnswer, replyCount)
 
     companion object {
         val EMPTY = buildView("", emptyList(), 0L, null)
@@ -54,14 +58,17 @@ fun buildView(chat: String, events: List<ChatEvent>, now: Long, prev: ChatView?)
     val before = if (prev?.chat == chat) prev.items.associateBy { it.id } else emptyMap()
     val items = built.map { b -> before[b.id]?.takeIf { it == b } ?: b }
     val days = dayDividers(items, now)
+    val answers = turnAnswers(items)
     return ChatView(
         chat, events, items, buildAgents(events, items), chatCost(events), chatImages(events),
         items.filterIsInstance<Item.File>().filter { it.error == null }.map { it.path },
         rewindable(items), exploreRuns(items), days, dayOfRows(items, days),
         events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), specCardIds(items) + docCardIds(items), specBumps(items),
-        foldTurns(items, events),
+        foldTurns(items, events), answers, openAnswerOf(items, answers), items.count { it is Item.Assistant },
     )
 }
+
+private fun openAnswerOf(items: List<Item>, answers: Set<String>) = (answers - turnAnswers(items, running = true)).firstOrNull()
 
 private fun FoldRow.with(item: Item): FoldRow = when (this) {
     is FoldRow.Row -> if (it.id == item.id) FoldRow.Row(item) else this
@@ -81,7 +88,10 @@ private fun patched(prev: ChatView, events: List<ChatEvent>): ChatView? {
     val row = prev.items.indexOfFirst { it.id == new.id }
     if (text.isBlank() || row < 0 || prev.items[row] !is Item.Assistant) return null
     val item = Item.Assistant(new.id, text, new.streaming)
-    return prev.withItem(events, prev.items.toMutableList().also { it[row] = item }, item)
+    val items = prev.items.toMutableList().also { it[row] = item }
+    if ((prev.items[row] as Item.Assistant).streaming == item.streaming) return prev.withItem(events, items, item)
+    val answers = turnAnswers(items)
+    return prev.withItem(events, items, item, answers, openAnswerOf(items, answers))
 }
 
 fun nextView(prev: ChatView, chat: String, events: List<ChatEvent>, now: Long): ChatView =

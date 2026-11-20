@@ -13,7 +13,7 @@ import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
-import { foldTurns, openWork, proposalState, type Claim, type FoldRow, type Proposal, type StatusStep } from './workFold';
+import { createFoldBuilder, openWork, proposalState, type FoldRow, type Proposal } from './workFold';
 import { useAssistantTable } from '../../codex/data';
 import { setView } from '../../codex/view';
 import { Badge } from '../../ui/Badge';
@@ -207,13 +207,14 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
   const answers = useMemo(() => turnAnswers(items, running), [items, running]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => new Set([...specCards(items), ...docCards(items)]), [items]);
-  const list = useMemo<FoldRow[]>(() => foldTurns(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [items, events, cards]);
+  const [fold] = useState(createFoldBuilder);
+  const list = useMemo<FoldRow[]>(() => fold(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [fold, items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const bumps = useMemo(() => specBumps(items), [items]);
   const mark = useSeenMark();
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
-  const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [items, events, mark]);
+  const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [mark, events.length]);
   const newRow = useMemo(() => list.find((r) => (r.kind === 'item' ? r.it.id === newId : r.hidden.some((h) => h.id === newId))), [list, newId]);
   const folded = useMemo(() => new Set([...runs].flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs]);
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
@@ -241,7 +242,7 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
         const day = r.kind === 'item' ? days.get(r.it.id) : undefined;
         const row = r.kind === 'fold'
-          ? <Tasks key={id} id={r.id} steps={r.steps} now={r.now} tools={r.work.tools} claims={r.claims} proposed={r.proposed} live={running && r.last} />
+          ? <Tasks key={id} row={r} live={running && r.last} />
           : rowOf(r.it, i === 0, 'shown');
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
@@ -345,7 +346,8 @@ function UserText({ id, text }: { id: string; text: string }) {
 
 // A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
 // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
-function Tasks({ id, steps: all, now, tools, claims, proposed, live }: { id: string; steps: StatusStep[]; now: string; tools: number; claims: Claim[]; proposed: Proposal[]; live: boolean }) {
+const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, claims, proposed }, live }: { row: Extract<FoldRow, { kind: 'fold' }>; live: boolean }) {
+  const tools = work.tools;
   const [reading, setReading] = useState(false);
   const [proposing, setProposing] = useState(false);
   const steps = live ? all : all.filter((s) => s.done);
@@ -373,7 +375,7 @@ function Tasks({ id, steps: all, now, tools, claims, proposed, live }: { id: str
       </ul>}
     </div>
   );
-}
+});
 
 // The claims a turn proposed, each with its state in the hub mirror, and a way to Review while one waits.
 function ProposedClaims({ proposed }: { proposed: Proposal[] }) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { buildTranscript } from './steps';
-import { foldTurns, workTitle, type FoldRow } from './workFold';
+import { buildTranscript, createTranscriptBuilder } from './steps';
+import { createFoldBuilder, foldTurns, workTitle, type FoldRow } from './workFold';
 import type { ChatEvent } from '../../../../shared/protocol';
 
 let n = 0;
@@ -32,6 +32,42 @@ describe('workTitle', () => {
     expect(workTitle({ ...work, failed: 4, tools: 18 }, false, 'usd', true)).toEqual({ text: '18 tools · 3 files', failed: '4 failed', detail: '1 agent · 2m · $0.40' });
     expect(workTitle({ ...work, tools: 0, agents: 0, note: 'Session started with claude' }, false, 'usd', true)).toEqual({ text: 'Session started with claude', failed: '', detail: '' });
     expect(workTitle({ ...work, agents: 0, ms: 0, cost: 0 }, false, 'usd', true).detail).toBe('');
+  });
+});
+
+describe('createFoldBuilder', () => {
+  const setup = () => {
+    const build = createTranscriptBuilder();
+    const folds = createFoldBuilder();
+    return (events: ChatEvent[]) => folds(build(events), events);
+  };
+
+  it('keeps every earlier row when a token lands in the last reply', () => {
+    const run = setup();
+    const t = tool('Bash');
+    const first = [user('one'), t, say('a'), user('two'), tool('Bash')];
+    const reply = say('b');
+    const before = run([...first, reply]);
+    const after = run([...first, { ...reply, text: 'bc' }]);
+    expect(after.length).toBe(before.length);
+    after.slice(0, -1).forEach((r, i) => expect(r).toBe(before[i]));
+  });
+
+  it('replaces the former last fold when a prompt follows it and keeps the others', () => {
+    const run = setup();
+    const events = [user('one'), tool('Bash'), say('a'), user('two'), tool('Bash'), say('b')];
+    const before = run(events);
+    const after = run([...events, user('three')]);
+    const folds = (rows: FoldRow[]) => rows.filter((r) => r.kind === 'fold');
+    expect(folds(after)[0]).toBe(folds(before)[0]);
+    expect(folds(after)[1]).not.toBe(folds(before)[1]);
+    expect(folds(after)[1]).toMatchObject({ last: false });
+  });
+
+  it('gives the rows foldTurns gives', () => {
+    const events = [user('one'), tool('Bash'), say('a'), user('two'), tool('Bash')];
+    const items = buildTranscript(events);
+    expect(createFoldBuilder()(items, events)).toEqual(foldTurns(items, events));
   });
 });
 

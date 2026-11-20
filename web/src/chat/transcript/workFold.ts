@@ -152,6 +152,36 @@ export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(
   return out;
 }
 
+const sameList = <T>(a: T[], b: T[], same: (x: T, y: T) => boolean) => a.length === b.length && a.every((x, i) => same(x, b[i]));
+const sameFields = (a: object, b: object) => {
+  const x = a as Record<string, unknown>, y = b as Record<string, unknown>;
+  return Object.keys(x).length === Object.keys(y).length && Object.keys(x).every((k) => x[k] === y[k]);
+};
+
+function sameRow(a: FoldRow, b: FoldRow) {
+  if (a.kind === 'item' || b.kind === 'item') return a.kind === 'item' && b.kind === 'item' && a.it === b.it;
+  return a.id === b.id && a.last === b.last && a.now === b.now && sameFields(a.work, b.work)
+    && sameList(a.hidden, b.hidden, Object.is)
+    && sameList(a.steps, b.steps, sameFields)
+    && sameList(a.claims, b.claims, sameFields)
+    && sameList(a.proposed, b.proposed, sameFields);
+}
+
+const rowKey = (r: FoldRow) => (r.kind === 'item' ? `item:${r.it.id}` : `fold:${r.id}`);
+
+// foldTurns that hands back the previous row object for every row that came out the same, so an append changes only the rows of its own turn.
+export function createFoldBuilder() {
+  let prev = new Map<string, FoldRow>();
+  return (items: Item[], events: ChatEvent[], cards = specCards(items)): FoldRow[] => {
+    const rows = foldTurns(items, events, cards).map((r) => {
+      const old = prev.get(rowKey(r));
+      return old && sameRow(old, r) ? old : r;
+    });
+    prev = new Map(rows.map((r) => [rowKey(r), r]));
+    return rows;
+  };
+}
+
 // The fold's title, or what it holds when no tool ran: its failed count apart so it can be drawn first in the error colour, and on a narrow screen the agents, duration and cost apart as a first line inside the fold. The duration waits for the turn to end.
 export function workTitle(work: Work, live: boolean, billing: string, narrow = false) {
   const failed = work.failed > 0 ? `${work.failed} failed` : '';
