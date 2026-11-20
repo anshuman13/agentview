@@ -34,6 +34,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import java.time.Instant
+import no.pradhan.agentview.nativeapp.codex.jobs.canRunNow
+import no.pradhan.agentview.nativeapp.codex.jobs.runJobNow
 import no.pradhan.agentview.nativeapp.codex.meetings.ActionMenuItems
 import no.pradhan.agentview.nativeapp.codex.meetings.followUpText
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
@@ -274,7 +276,7 @@ fun parseCapture(typed: String, pickedAt: Long?, picked: Boolean, now: Long): Ca
 }
 
 @Composable
-fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onMeeting: (Row) -> Unit, onDismiss: () -> Unit) {
+fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onMeeting: (Row) -> Unit, onJob: (Row) -> Unit, onDismiss: () -> Unit) {
     var all by remember { mutableStateOf(setOf<String>()) }
     var onlyStale by remember { mutableStateOf(false) }
     val old = staleAsks(queue, now)
@@ -289,7 +291,7 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now:
             Group {
                 shown.forEachIndexed { i, n ->
                     if (i > 0) Hairline()
-                    NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson, onMeeting)
+                    NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson, onMeeting, onJob)
                 }
                 if (shown.size < rows.size) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = all + label }) }
             }
@@ -316,8 +318,10 @@ private fun IgnoredSection(list: List<Ignored>) {
 }
 
 @Composable
-private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onStale: () -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onMeeting: (Row) -> Unit) {
+private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onStale: () -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onMeeting: (Row) -> Unit, onJob: (Row) -> Unit) {
     when (n) {
+        is Need.FailedJobRow -> ListRow("${n.job.str("name")?.ifEmpty { null } ?: "Job"} failed", listOfNotNull(firstLine(n.run.str("output")).ifEmpty { null }, n.run.long("finished_at")?.let { agoText(it, now) }).joinToString(" · "), onClick = { onJob(n.job) },
+            trailing = { Button("Run again", { runJobNow(hub, actions, n.job) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = canRunNow(n.job, listOf(n.run), now)) })
         is Need.StaleAsks -> ListRow("${plural(n.count, "ask")} older than $STALE_DAYS days", "oldest ${agoShort(n.oldest, now)}", onClick = onStale)
         is Need.Wiki -> ListRow("${n.count} wiki ${if (n.count == 1) "claim waits" else "claims wait"} for you", "Review one at a time", onClick = onReview,
             trailing = { Button("Review", onReview, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) })

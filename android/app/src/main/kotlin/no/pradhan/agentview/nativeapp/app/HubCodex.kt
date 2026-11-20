@@ -16,6 +16,7 @@ import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.encodeDaily
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
 import no.pradhan.agentview.nativeapp.codex.meetings.encodeResolved
+import no.pradhan.agentview.nativeapp.codex.meetings.questionKey
 import no.pradhan.agentview.nativeapp.codex.meetings.withResolved
 import no.pradhan.agentview.nativeapp.codex.openDaily
 import no.pradhan.agentview.nativeapp.codex.parseDaily
@@ -43,10 +44,22 @@ fun Hub.restoreNeed(n: Need) {
     }
 }
 
+private fun Hub.holdResolved(keys: List<String>) {
+    resolvedQuestions.value = keys
+    prefs.edit().putString("questionsResolved", encodeResolved(keys)).apply()
+}
+
 fun Hub.resolveQuestion(q: Question, meetings: List<Row>, now: Long) {
-    val next = withResolved(resolvedQuestions.value, q, meetings, now)
-    resolvedQuestions.value = next
-    prefs.edit().putString("questionsResolved", encodeResolved(next)).apply()
+    holdResolved(withResolved(resolvedQuestions.value, q, meetings, now))
+    if (!readOnly) viewModelScope.launch { runCatching { api.resolveQuestion(questionKey(q)) }.onFailure { notice.value = "Could not save. It may show again on other devices." } }
+}
+
+// The Mac holds the resolved question keys so every device hides the same questions; prefs are the offline copy.
+// A load posts the keys held here that the Mac lacks, then holds both lists.
+internal suspend fun Hub.syncResolved() {
+    val server = runCatching { api.resolvedQuestions() }.getOrNull() ?: return
+    if (!readOnly) resolvedQuestions.value.filter { it !in server }.forEach { runCatching { api.resolveQuestion(it) } }
+    holdResolved((server + resolvedQuestions.value).distinct())
 }
 
 // The profile a new task or question goes to when the filter shows both.

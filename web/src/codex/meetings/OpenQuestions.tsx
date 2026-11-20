@@ -1,27 +1,17 @@
-import { useMemo, useState } from 'react';
-import { useCodex } from '../data';
-import { openQuestions, questionKey, type Question } from '../data/meetings/meetings';
+import { useMemo } from 'react';
+import { questionKey, type Question } from '../data/meetings/meetings';
 import { when } from '../tasks/time';
 import { Button } from '../../ui/Button';
-import { save, stored } from '../../ui/util';
 import { Section, sectionCount } from '../../ui/Section';
 import { openMeeting } from '../view';
+import { resolveQuestion, useResolvedQuestions } from './resolvedQuestions';
 
-const RESOLVED = 'agentview.questionsResolved';
-export const resolvedQuestions = () => stored<string[]>(RESOLVED, []);
-
-// Questions the meetings left open; Resolve hides one for good and forgets keys whose question is gone.
+// Questions the meetings left open; Resolve hides one for good on every device.
 export function OpenQuestions({ questions }: { questions: Question[] }) {
-  const { meetings } = useCodex();
-  const [resolved, setResolved] = useState(resolvedQuestions);
+  const resolved = useResolvedQuestions();
   const rows = useMemo(() => questions.filter((q) => !resolved.includes(questionKey(q))), [questions, resolved]);
   if (!rows.length) return null;
-  const resolve = (q: Question) => {
-    const live = new Set(openQuestions(meetings).map(questionKey));
-    const next = [...new Set([...resolved, questionKey(q)])].filter((k) => live.has(k));
-    setResolved(next);
-    save(RESOLVED, next);
-  };
+  const resolve = (q: Question) => resolveQuestion(questionKey(q));
   return (
     <section className="mt-sec">
       <Section label="Open questions" count={sectionCount(rows.length)} />

@@ -8,6 +8,7 @@ import { connectorStatus, mcpGroups, setMcpGroup } from '../agent/claude/mcp.js'
 import { emptyBin, listBin, restoreSession } from '../agent/claude/bin.js';
 import { pinsRoute, removeChat } from '../agent/claude/pins.js';
 import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
+import { resolvedRoute } from '../agent/claude/resolved.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
 import { readSummaries } from '../agent/claude/summaryStore.js';
@@ -74,6 +75,7 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return /^[^/]+\.html$/.test(name) ? readFileWithOriginal(root, `.claude/sketches/${name}`) : failed(400, 'Not a sketch');
     })),
     'ANY /api/sessions/pins': entry(({ method, url }) => pinsRoute(method, url.searchParams.get('id'))),
+    'ANY /api/questions/resolved': entry(({ method, url }) => resolvedRoute(method, url.searchParams.get('key'))),
     'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'), url.searchParams.get('unread') === '1')),
     'DELETE /api/sessions/bin': entry(async () => {
       await emptyBin();

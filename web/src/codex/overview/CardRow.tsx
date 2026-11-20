@@ -12,7 +12,7 @@ export function CardRow({ title, meta, leading, badge, onOpen, button, action, m
   badge?: BadgeSpec | null;
   onOpen: () => void;
   button?: { label: string; run: () => void };
-  action?: { icon: string; label: string; run: () => void };
+  action?: { icon: string; label: string; run: () => void; disabled?: boolean };
   menu?: ReactNode;
 }) {
   return (
@@ -21,7 +21,7 @@ export function CardRow({ title, meta, leading, badge, onOpen, button, action, m
         action={(button || action) && (
           <>
             {button && <Button size="sm" variant="tinted" onClick={(e) => { if (e.detail < 2) button.run(); }}>{button.label}</Button>}
-            {action && <IconButton size="sm" icon={action.icon} label={action.label} onClick={(e) => { if (e.detail < 2) action.run(); }} />}
+            {action && <IconButton size="sm" icon={action.icon} label={action.label} disabled={action.disabled} onClick={(e) => { if (e.detail < 2) action.run(); }} />}
           </>
         )} />
     </div>

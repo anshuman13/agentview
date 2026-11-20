@@ -1,0 +1,94 @@
+[
+  {
+    "name": "the latest run failed",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work" }],
+    "runs": [{ "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 89000000, "finished_at": 90000000 }],
+    "expected": [{ "job": "j1", "run": "r1" }]
+  },
+  {
+    "name": "an older error then a good run is not failed",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work" }],
+    "runs": [
+      { "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 80000000, "finished_at": 81000000 },
+      { "id": "r2", "job_id": "j1", "profile": "work", "status": "ok", "started_at": 90000000, "finished_at": 91000000 }
+    ],
+    "expected": []
+  },
+  {
+    "name": "a good run then a newer error is failed with the newer run",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work" }],
+    "runs": [
+      { "id": "r1", "job_id": "j1", "profile": "work", "status": "ok", "started_at": 80000000, "finished_at": 81000000 },
+      { "id": "r2", "job_id": "j1", "profile": "work", "status": "error", "started_at": 90000000, "finished_at": 91000000 }
+    ],
+    "expected": [{ "job": "j1", "run": "r2" }]
+  },
+  {
+    "name": "an error that finished over 24 hours ago is not failed",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work" }],
+    "runs": [{ "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 9000000, "finished_at": 10000000 }],
+    "expected": []
+  },
+  {
+    "name": "a running job is not failed",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work" }],
+    "runs": [
+      { "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 80000000, "finished_at": 81000000 },
+      { "id": "r2", "job_id": "j1", "profile": "work", "status": "running", "started_at": 90000000, "finished_at": null }
+    ],
+    "expected": []
+  },
+  {
+    "name": "a queued job is not failed",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work", "next_run_at": 99000000 }],
+    "runs": [{ "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 89000000, "finished_at": 90000000 }],
+    "expected": []
+  },
+  {
+    "name": "a job scheduled for later is still failed",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work", "next_run_at": 110000000 }],
+    "runs": [{ "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 89000000, "finished_at": 90000000 }],
+    "expected": [{ "job": "j1", "run": "r1" }]
+  },
+  {
+    "name": "a deleted job is not failed",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work", "deleted": 1 }],
+    "runs": [{ "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 89000000, "finished_at": 90000000 }],
+    "expected": []
+  },
+  {
+    "name": "a job turned off is not failed",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work", "enabled": 0 }],
+    "runs": [{ "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 89000000, "finished_at": 90000000 }],
+    "expected": []
+  },
+  {
+    "name": "a deleted run is skipped",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work" }],
+    "runs": [
+      { "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 80000000, "finished_at": 81000000 },
+      { "id": "r2", "job_id": "j1", "profile": "work", "status": "ok", "started_at": 90000000, "finished_at": 91000000, "deleted": 1 }
+    ],
+    "expected": [{ "job": "j1", "run": "r1" }]
+  },
+  {
+    "name": "runs of the same job id in the other profile do not count",
+    "now": 100000000,
+    "jobs": [{ "id": "j1", "profile": "work" }, { "id": "j1", "profile": "personal" }],
+    "runs": [
+      { "id": "r1", "job_id": "j1", "profile": "work", "status": "error", "started_at": 89000000, "finished_at": 90000000 },
+      { "id": "r2", "job_id": "j1", "profile": "personal", "status": "ok", "started_at": 90000000, "finished_at": 91000000 }
+    ],
+    "expected": [{ "job": "j1", "run": "r1" }]
+  }
+]

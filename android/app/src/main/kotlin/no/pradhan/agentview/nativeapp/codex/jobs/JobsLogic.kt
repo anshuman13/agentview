@@ -94,6 +94,21 @@ fun isEnabled(j: Row) = j.long("enabled") == 1L
 
 fun canRunNow(j: Row, own: List<Row>, now: Long) = !j.str("prompt").isNullOrBlank() && own.firstOrNull()?.str("status") != "running" && !isQueued(j, own, now)
 
+const val FAILED_JOB_MS = 24 * 3_600_000L
+
+class FailedJob(val job: Row, val run: Row)
+
+// failedJobs of shared/jobRuns.ts; shared/fixtures/failed-jobs.json holds the cases. The enabled jobs whose newest run ended in error in the last 24 h and that are not queued.
+fun failedJobs(jobs: List<Row>, runs: List<Row>, now: Long): List<FailedJob> {
+    val byJob = runsByJob(runs)
+    return jobs.filter { !it.deleted && isEnabled(it) }.mapNotNull { job ->
+        val own = byJob.of(job)
+        val run = own.firstOrNull()?.takeIf { it.str("status") == "error" } ?: return@mapNotNull null
+        val done = run.long("finished_at") ?: return@mapNotNull null
+        if (now - done <= FAILED_JOB_MS && !isQueued(job, own, now)) FailedJob(job, run) else null
+    }
+}
+
 enum class JobState(val label: String) { Running("Running"), Queued("Queued"), Failed("Failed"), Off("Off") }
 
 fun jobState(j: Row, own: List<Row>, now: Long): JobState? {

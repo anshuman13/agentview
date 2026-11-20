@@ -153,6 +153,7 @@ import no.pradhan.agentview.nativeapp.net.menuModes
 import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
+import no.pradhan.agentview.nativeapp.codex.jobs.failedJobs
 import no.pradhan.agentview.nativeapp.codex.jobs.heldUntil
 import no.pradhan.agentview.nativeapp.codex.jobs.WEEKLY_DIGEST
 import no.pradhan.agentview.nativeapp.codex.jobs.jobEdits
@@ -685,6 +686,21 @@ class SharedCasesTest {
             val paused = c.getValue("paused").jsonArray.map { it.jsonObject }.map { SyncPaused(it.str("scan"), it.getValue("until").jsonPrimitive.long) }
             val job = Row("jobs", "j", c.getValue("job").jsonObject.str("profile"))
             assertEquals(c.str("name"), c.prim("expected")?.long, heldUntil(job, paused, c.getValue("now").jsonPrimitive.long))
+        }
+    }
+
+    @Test fun failedJobsRule() {
+        fun row(table: String, o: JsonObject, fields: List<String>): Row {
+            val f = SYNCED_FIELDS.getValue(table).associateWith { JsonNull as JsonElement }.toMutableMap()
+            for (k in fields) o[k]?.let { f[k] = it }
+            if (table == "jobs" && o["enabled"] == null) f["enabled"] = toJson(1L)
+            return Row(table, o.str("id"), o.str("profile"), deleted = o["deleted"]?.jsonPrimitive?.long == 1L, f = f)
+        }
+        for (c in cases("failed-jobs")) {
+            val jobs = c.getValue("jobs").jsonArray.map { row("jobs", it.jsonObject, listOf("enabled", "next_run_at")) }
+            val runs = c.getValue("runs").jsonArray.map { row("runs", it.jsonObject, listOf("job_id", "status", "started_at", "finished_at")) }
+            val expected = c.getValue("expected").jsonArray.map { it.jsonObject.str("job") to it.jsonObject.str("run") }
+            assertEquals(c.str("name"), expected, failedJobs(jobs, runs, c.getValue("now").jsonPrimitive.long).map { it.job.id to it.run.id })
         }
     }
 

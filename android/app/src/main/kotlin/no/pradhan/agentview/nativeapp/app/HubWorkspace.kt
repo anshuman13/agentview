@@ -55,6 +55,7 @@ fun Hub.refreshWorkspace(force: Boolean = false): Job? {
                 Workspace(repos.await(), trees.await(), saved.await(), pins.await(), merged)
             }
         }.onSuccess { if (from == origin.value) workspace.value = it }.onFailure { workspaceAt = 0 }
+        if (from == origin.value) syncResolved()
     }
 }
 

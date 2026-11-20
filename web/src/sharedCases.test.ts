@@ -27,6 +27,7 @@ import { taskChatPrompt } from '../../shared/taskChat';
 import { findInChat, findStart } from '../../shared/findInChat';
 import { chatMatches } from '../../shared/chatSearch';
 import { mergeSeen, type SeenMark } from '../../shared/seen';
+import { failedJobs } from '../../shared/jobRuns';
 import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
@@ -50,7 +51,7 @@ import { ago, money } from './ui/util';
 import { setSystemTime } from '../../testing';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
-import { pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page } from './codex/data/wiki/wiki';
+import { pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
 import { heldUntil, jobEdits, newJob, tasksOf } from './codex/jobs/schedule';
 import { WEEKLY_DIGEST } from './codex/data/tasks/presets';
@@ -314,6 +315,13 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; job: { profile: Profile }; paused: { scan: string; until: number }[]; now: number; expected: number | null }>('job-held')) {
     it(`heldUntil: ${c.name}`, () => expect(heldUntil(c.job as Job, c.paused.map((p) => ({ ...p, reason: 'Claude usage limit' })), c.now)).toBe(c.expected));
+  }
+
+  type FailedJobCase = { name: string; now: number; jobs: { id: string; profile: Profile; deleted?: number; enabled?: number; next_run_at?: number }[]; runs: { id: string; deleted?: number }[]; expected: { job: string; run: string }[] };
+  for (const c of cases<FailedJobCase>('failed-jobs')) {
+    const jobs = c.jobs.map((j) => ({ deleted: 0, enabled: 1, next_run_at: null, ...j })) as unknown as Job[];
+    const runs = c.runs.map((r) => ({ deleted: 0, ...r })) as unknown as Run[];
+    it(`failedJobs: ${c.name}`, () => expect(failedJobs(jobs, runs, c.now).map((f) => ({ job: f.job.id, run: f.run.id }))).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; job: Pick<Job, 'name' | 'prompt'>; name_in: string; prompt_in: string; expected: object }>('job-edit')) {

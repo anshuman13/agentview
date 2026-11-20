@@ -8,7 +8,8 @@ import { questionKey } from '../data/meetings/meetings';
 import { personMarkdown } from '../data/meetings/meetingMarkdown';
 import { Avatars, MeetingRow } from './list/MeetingRow';
 import { PinList } from './Pins';
-import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
+import { OpenQuestions } from './OpenQuestions';
+import { useResolvedQuestions } from './resolvedQuestions';
 import { AddPoint, PointList, useMarkRaised } from './Raise';
 import { Asks, Commitments, Group, OpenTasks, SlackDm, UnansweredMail, WikiClaims } from './PersonParts';
 import { usePerson } from './usePerson';
@@ -22,8 +23,8 @@ export function Person({ name }: { name: string }) {
   useMarkRaised();
   const { mine, shown, email, points, pins, commitments, claims, inbox, waiting, tasks, questions, pageTitle } = usePerson(name);
   const now = Date.now();
+  const resolved = useResolvedQuestions();
   const copy = () => {
-    const resolved = resolvedQuestions();
     const text = personMarkdown(name, { commitments, questions: questions.filter((q) => !resolved.includes(questionKey(q))), points, tasks, pins, meetings: mine, claims });
     copyText(text, `${firstName(shown)} copied`);
   };

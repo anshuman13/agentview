@@ -17,7 +17,7 @@ vi.mock('react', () => {
 vi.mock('./data', () => ({
   ...data,
   useAssistantStore: () => mocks.store,
-  useAssistantData: () => ({ meetings: [], chats: [], briefs: [], items: [] }),
+  useAssistantData: () => ({ meetings: [], chats: [], briefs: [], items: [], jobs: [], runs: [] }),
   useCodex: () => ({ facts: [] }),
 }));
 vi.mock('./useActions', () => ({ useActions: () => ({}) }));
@@ -66,6 +66,12 @@ describe('NeedsYou triage', () => {
     for (const part of html.split('Nothing asked').slice(1)) expect(part).toContain('Dismiss');
     expect(html.slice(html.indexOf('Ada'))).toMatch(/Nothing asked.*Dismiss.*Nothing asked.*Dismiss/s);
     expect(show([{ kind: 'overdue', row: { id: 'o', profile: 'work', title: 'Renew pass', at: 1 }, keys: [] }])).not.toContain('Nothing asked');
+  });
+
+  it('titles a failed job row with the job name', () => {
+    const job = { id: 'j', profile: 'work', name: 'Daily digest' };
+    const run = { id: 'r', status: 'error', output: 'Timed out\nstack', finished_at: 1 };
+    expect(show([{ kind: 'failedJob', job, run, canRun: true, keys: ['job:work:j'] }])).toContain('Daily digest failed');
   });
 
   it('reads Make task in the DM and Slack menus and Undo deletes the new task and brings the row back', async () => {

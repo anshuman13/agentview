@@ -1,17 +1,19 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
-import { live, proposals, type Brief, type Chat, type Meeting } from './data/wiki/wiki';
+import { live, proposals, type Brief, type Chat, type Job, type Meeting, type Run } from './data/wiki/wiki';
 import { atTime, errorText, reviewedSince } from './data/tasks/engine';
 import { actionsOf } from './data/meetings/meetings';
 import { followUpText } from './data/meetings/meetingMarkdown';
-import type { ItemRow } from './data/sync';
+import { rowKey, type ItemRow } from './data/sync';
+import { canRunNow, runNow } from './jobs/schedule';
+import { failedJobs } from '../../../shared/jobRuns';
 import { atRisk, minutesText, type Span } from './data/tasks/plan';
 import { CAP, collapse, groupNeeds, rankNeeds } from './data/tasks/needsYou';
 import { needsYou } from './summary/needsYou';
 import { ActionRow } from './meetings/ActionRow';
 import { Swipe } from './gestures/Swipe';
 import { useActions } from './useActions';
-import { ago, plural, safeHref } from '../ui/util';
+import { ago, firstLine, plural, safeHref } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
 import { AskRow } from '../ui/AskRow';
 import { Button } from '../ui/Button';
@@ -36,6 +38,7 @@ type Need =
   | { kind: 'ask'; row: ItemRow; keys: string[]; marks: string[] }
   | { kind: 'dm'; chat: Chat; keys: string[] }
   | { kind: 'slack'; x: Bullet; brief: Brief; keys: string[] }
+  | { kind: 'failedJob'; job: Job; run: Run; canRun: boolean; keys: string[] }
   | { kind: 'justEnded'; row: ItemRow; meeting: Meeting; actions: ItemRow[]; keys: string[] }
   | { kind: 'staleAsks'; count: number; oldest: number; keys: string[] }
   | { kind: 'wiki'; count: number; keys: string[] };
@@ -71,6 +74,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     const bullets = brief?.text ? needsYou(brief.text).filter((x) => !dismissedOf(brief).includes(bulletKey(x))) : [];
     const ended = s.meetingsToday.filter((m) => m.ends_at != null && m.ends_at <= minute * 60000 && minute * 60000 - m.ends_at < JUST_ENDED_MS);
     const old = staleAsks(replyQueue(s.asks, minute * 60000), minute * 60000);
+    const failed = failedJobs(snap.jobs.filter((j) => filter === 'all' || j.profile === filter), snap.runs, minute * 60000);
     const claims = proposals(facts).length;
     const ranked = rankNeeds<Need>([
       s.overdue.map((row) => ({ kind: 'overdue', row, keys: [taskKey(row)] })),
@@ -78,6 +82,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
       s.review.filter((row) => !queued(row)).map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
       dms.map((chat) => ({ kind: 'dm', chat, keys: [`chat:${chat.profile}:${chat.id}`, ...urlKey(chat.url)] })),
       bullets.map((x) => ({ kind: 'slack', x, brief: brief!, keys: urlKey(x.url).length ? urlKey(x.url) : [`slack:${x.title}`] })),
+      failed.map(({ job, run }) => ({ kind: 'failedJob', job, run, canRun: canRunNow(job, snap.runs, minute * 60000), keys: [`job:${rowKey(job)}`] })),
       ended.flatMap((meeting) => {
         const actions = actionsOf(snap.items, meeting).filter((r) => r.status === 'open');
         return actions.map((row) => ({ kind: 'justEnded', row, meeting, actions, keys: [taskKey(row)] }));
@@ -86,7 +91,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
       claims ? [{ kind: 'wiki', count: claims, keys: ['wiki-claims'] }] : [],
     ]);
     return collapse<Need>(ranked, (x) => x.kind === 'overdue', 3, (xs) => ({ kind: 'overdueAll', rows: xs.flatMap((x) => (x.kind === 'overdue' ? [x.row] : [])), keys: [] }));
-  }, [snap.meetings, snap.chats, snap.briefs, snap.items, facts, filter, s, minute]);
+  }, [snap.meetings, snap.chats, snap.briefs, snap.items, snap.jobs, snap.runs, facts, filter, s, minute]);
   // A dismissed DM stops waiting on the hub, so every device hides it until a new message.
   const hideChat = (c: Chat) => void store.editRow('chats', c, { waiting: 0 });
   const unhideChat = (c: Chat) => void store.editRow('chats', c, { waiting: 1 });
@@ -132,7 +137,8 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
       () => { pending.current.delete(key); showSnack(NOTE_FAILED); },
     );
   };
-  return { rows, dismissChat, dismissBullet, chatTask, bulletTask, chatNote, bulletNote, askNote };
+  const runAgain = (j: Job) => runNow(store, j);
+  return { rows, runAgain, dismissChat, dismissBullet, chatTask, bulletTask, chatNote, bulletNote, askNote };
 }
 
 export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsYou>; now: number; onShowOld: () => void }) {
@@ -164,6 +170,11 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
             </>
           )} />
         );
+      }
+      case 'failedJob': {
+        const { job, run } = x;
+        return <CardRow key={x.keys[0]} title={`${job.name || 'Job'} failed`} meta={[firstLine(run.output), ago(run.finished_at!, ' ago')].filter(Boolean).join(' · ')} onOpen={() => setView({ list: 'jobs', open: rowKey(job) })}
+          action={{ icon: 'play', label: 'Run again', disabled: !x.canRun, run: () => { haptic('tap'); n.runAgain(job); } }} />;
       }
       case 'staleAsks': return <CardRow key="stale-asks" title={`${plural(x.count, 'ask')} older than ${STALE_DAYS} days`} meta={`oldest ${ago(x.oldest)}`} onOpen={onShowOld} />;
       case 'wiki': return <CardRow key="wiki-claims" title={`${x.count} wiki ${x.count === 1 ? 'claim waits' : 'claims wait'} for you`} meta="Review one at a time" onOpen={openReview} action={{ icon: 'check', label: 'Review', run: openReview }} />;

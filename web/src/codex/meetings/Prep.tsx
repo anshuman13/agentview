@@ -14,7 +14,7 @@ import { GroupList } from '../overview/DigestCard';
 import type { DigestGroup } from '../overview/digest';
 import { copyText, openMeeting, openTask, setView } from '../view';
 import { UNTITLED } from '../../../../shared/util';
-import { resolvedQuestions } from './OpenQuestions';
+import { useResolvedQuestions } from './resolvedQuestions';
 import { PointList, useMarkRaised } from './Raise';
 
 // What to know before a meeting: open actions, decisions and open questions of earlier meetings with its people, open
@@ -33,12 +33,10 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
   const brief = useMemo(() => briefFor(m, snap.items, snap.facts), [m, snap.items, snap.facts]);
   const points = useMemo(() => pointsFor(m, snap.items, meetings), [m, snap.items, meetings]);
   const theirs = useMemo(() => theirActions(m, prior.map((p) => p.meeting)), [m, prior]);
+  const resolved = useResolvedQuestions();
   const questions = useMemo(
-    () => {
-      const resolved = new Set(resolvedQuestions());
-      return openQuestions(meetings).filter((q) => !resolved.has(questionKey(q)) && prior.some((p) => p.meeting.id === q.meeting.id && p.meeting.profile === q.profile));
-    },
-    [meetings, prior],
+    () => openQuestions(meetings).filter((q) => !resolved.includes(questionKey(q)) && prior.some((p) => p.meeting.id === q.meeting.id && p.meeting.profile === q.profile)),
+    [meetings, prior, resolved],
   );
   const person = peopleOf(m).length === 1 ? peopleOf(m)[0] : null;
   const between = useMemo(

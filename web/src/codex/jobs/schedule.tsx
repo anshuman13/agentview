@@ -7,6 +7,7 @@ import { dayLabel, dayStart } from '../data/dates';
 import { money } from '../../ui/util';
 import { showSnack, useView } from '../view';
 import { type BadgeSpec } from '../../ui/Badge';
+import { queued, runsOf } from '../../../../shared/jobRuns';
 
 export const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 export const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
@@ -40,7 +41,7 @@ export function at(t: number, now = Date.now()) {
   return `${day} ${clock(t)}`;
 }
 
-export const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && r.profile === j.profile && r.job_id === j.id).sort((a, b) => (b.started_at ?? 0) - (a.started_at ?? 0));
+export { queued, runsOf };
 
 // The tasks a job's add_task wrote (source job, people the job name): open first, then done, newest first.
 export const tasksOf = (items: ItemRow[], j: Job) => items
@@ -57,8 +58,6 @@ export function jobEdits(j: Pick<Job, 'name' | 'prompt'>, name: string, prompt: 
   if (prompt !== (j.prompt ?? '')) patch.prompt = prompt;
   return patch;
 }
-
-export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
 // Until when the hub holds the job's runs for its profile's usage limit (the `jobs:<profile>` pause), or null.
 export const heldUntil = (j: Job, paused: Paused[], now: number) => paused.find((p) => p.scan === `jobs:${j.profile}` && p.until > now)?.until ?? null;

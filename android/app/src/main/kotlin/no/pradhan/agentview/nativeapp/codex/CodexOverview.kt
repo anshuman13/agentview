@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex
 
 import no.pradhan.agentview.nativeapp.ui.UNTITLED
+import no.pradhan.agentview.nativeapp.codex.jobs.failedJobs
 import no.pradhan.agentview.nativeapp.codex.meetings.isBlock
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -62,6 +63,7 @@ sealed class Need(val keys: List<String>, val marks: List<String> = emptyList())
     class OverdueAll(val rows: List<Row>) : Need(emptyList())
     class Ask(val row: Row) : Need(listOf("task:${row.key}"), listOfNotNull(row.sourceUrl?.takeIf { it.startsWith("http") }?.let { "url:$it" }))
     class Dm(val chat: Row) : Need(listOf("chat:${chat.key}") + listOfNotNull(chat.str("url")?.let { "url:$it" }))
+    class FailedJobRow(val job: Row, val run: Row) : Need(listOf("job:${job.key}"))
     class JustEnded(val row: Row, val meeting: Row, val actions: List<Row>) : Need(listOf("task:${row.key}"))
     class StaleAsks(val count: Int, val oldest: Long) : Need(listOf("stale-asks"))
     class Wiki(val count: Int) : Need(listOf("wiki-claims"))
@@ -99,7 +101,7 @@ fun mergeDismissed(a: String?, b: String?): String? {
 
 fun withDismissal(v: String?, key: String, on: Boolean, at: Long) = mergeDismissed(v, "${if (on) "+" else "-"}$key\t$at")
 
-fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList(), briefs: List<Row> = emptyList(), s: Split = split(items, profile, now)): List<Need> {
+fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList(), briefs: List<Row> = emptyList(), jobs: List<Row> = emptyList(), runs: List<Row> = emptyList(), s: Split = split(items, profile, now)): List<Need> {
     val mt = meetingsOf(meetings, profile, now)
     val ended = mt.today.filter { it.endsAt != null && it.endsAt!! <= now && now - it.endsAt!! < JUST_ENDED_MS }
     val dms = chats.filter { !it.deleted && it.str("kind") == "dm" && it.long("waiting") == 1L && matchesProfile(profile, it) }.sortedByDescending { it.long("last_at") ?: 0L }
@@ -119,6 +121,7 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
         s.review.filter { !queued(it) }.map { Need.Ask(it) },
         dms.map { Need.Dm(it) },
         bullets.map { Need.Slack(it, brief!!) },
+        failedJobs(jobs.filter { matchesProfile(profile, it) }, runs, minute).map { Need.FailedJobRow(it.job, it.run) },
         ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.let { open -> open.map { Need.JustEnded(it, m, open) } } },
         if (old.isNotEmpty()) listOf(Need.StaleAsks(old.size, old.minOf { it.statusTime })) else emptyList(),
         if (claims > 0) listOf(Need.Wiki(claims)) else emptyList(),
@@ -133,13 +136,13 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
     return ranked.subList(0, first) + Need.OverdueAll(overdue.map { it.row }) + ranked.subList(first, ranked.size).filter { it !is Need.Overdue }
 }
 
-fun needsList(st: CodexState, profile: String?, now: Long) = needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs)
+fun needsList(st: CodexState, profile: String?, now: Long) = needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs, st.jobs, st.runs)
 
 class NeedsView(val list: List<Need>, val queue: List<Row>) { val total get() = list.size + queue.size }
 
 fun needsView(st: CodexState, profile: String?, now: Long): NeedsView {
     val s = split(st.items, profile, now)
-    return NeedsView(needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs, s), replyQueue(s.asks, profile, now))
+    return NeedsView(needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs, st.jobs, st.runs, s), replyQueue(s.asks, profile, now))
 }
 
 fun doneCount(done: Int, open: Int) = if (done > 0) "$done of ${done + open} done" else null

@@ -72,7 +72,7 @@ private fun StateBadge(state: JobState) = when (state) {
 
 fun toggleJob(hub: Hub, j: Row, on: Boolean) = hub.codex.update(j, mapOf("enabled" to if (on) 1 else 0, "next_run_at" to null))
 
-private fun runJobNow(hub: Hub, actions: TaskActions, j: Row) {
+fun runJobNow(hub: Hub, actions: TaskActions, j: Row) {
     if (hub.codex.update(j, mapOf("next_run_at" to System.currentTimeMillis()))) actions.say("Starts within a minute")
 }
 
