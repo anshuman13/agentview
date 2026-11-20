@@ -109,7 +109,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
 - An open task without a "~30m" estimate in its title gets one suggested as a chip: the average time spent on at least
   two done tasks whose titles share half their words, rounded to 5 minutes. A tap adds it to the title
 - The Repeat chip (or Repeat under Add) on a task sets Never, Daily, Weekdays, Weekly (its due weekday) or Monthly (its due day) by writing or removing the "Repeats:" first line of the notes; other rules show as Custom. The chip only opens its menu on an open task, and Repeat is not offered under Add on other tasks. Estimate under Add offers 15m, 30m, 1h and 2h and writes the ~estimate suffix on the title.
-- A goal menu links an open or done task to one of this week's goals of its profile. A this-week or next-week goal's More menu on the Goals page has Add task (web's "No tasks yet" state too): New task opens with a "Goal: <title>" chip that removes the link, the goal's profile, and each saved task linked to it (`goalToLink`, `shared/fixtures/goal-to-link.json`)
+- A goal menu links an open or done task to one of this week's goals of its profile. A this-week or next-week goal's More menu on the Goals page has Add task, and a goal with no linked tasks shows a "No tasks yet" state with Add task on web and phone: New task opens with a "Goal: <title>" chip that removes the link, the goal's profile, and each saved task linked to it (`goalToLink`, `shared/fixtures/goal-to-link.json`)
 
 ### Related while writing
 

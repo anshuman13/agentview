@@ -71,7 +71,7 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
         }
         if (searching && query.isNotBlank()) {
             item { SectionHeader("Results", hit.size.takeIf { it > 0 }?.toString()) }
-            if (hit.isEmpty()) item { EmptyState("No task matches") } else item { Group { hit.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, onOpen = { onOpen(r) }) } } }
+            if (hit.isEmpty()) item { EmptyState("No task matches", icon = "search") } else item { Group { hit.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, onOpen = { onOpen(r) }) } } }
             return@LazyColumn
         }
         if (tags.isNotEmpty() && !searching) item {
@@ -90,7 +90,10 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
             if (olderOpen) reviewSection(null, older, st.meetings, now, actions, showProfile, onOpen, onMeeting)
         }
         days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, pick, onOpen) }
-        if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && review.isEmpty()) item { EmptyState("All clear", "Add a task with the button below, like “call the bank tomorrow 9”") }
+        if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && review.isEmpty()) item {
+            val next = meetingsOf(st.meetings, profile, now).nextLater
+            EmptyState("All clear", next?.let { "Next: ${whenText(it.startsAt!!, now)} ${it.title}" } ?: "Add a task with the + button, like “call the bank tomorrow 9”", icon = "pass", small = false)
+        }
         if (s.doneToday.isNotEmpty()) {
             item { SectionHeader("Done", s.doneToday.size.toString(), open = doneOpen, onToggle = { doneOpen = !doneOpen }, action = if (doneOpen) ({ Button("Clear", { actions.clear(s.doneToday) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) else null) }
             if (doneOpen) item { Group { s.doneToday.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, onOpen = { onOpen(r) }) } } }
@@ -156,7 +159,7 @@ internal fun TagPage(st: CodexState, tag: String, now: Long, actions: TaskAction
     val rows = remember(st.items, tag) { tagTasks(st.items, tag) }
     LazyColumn(Modifier.fillMaxSize()) {
         item { SectionHeader("#$tag", rows.size.toString()) }
-        if (rows.isEmpty()) item { EmptyState("No open tasks with #$tag") }
+        if (rows.isEmpty()) item { EmptyState("No open tasks with #$tag", icon = "checklist") }
         else item { Group { rows.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, onOpen = { onOpen(r) }) } } }
     }
 }
@@ -190,7 +193,7 @@ internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Tas
                 val blocked = if (thisWeek) moveBlock(st.items, g, now) else if (past) reopenBlock(st.items, g, now) else null
                 item {
                     Group(Modifier.padding(bottom = Tokens.sp4)) {
-                        ListRow(g.title ?: "", (if (profile == null) "${profileLabel(g.profile)} · " else "") + if (p.total > 0) "${p.done}/${p.total}" else "No tasks yet", trailing = {
+                        ListRow(g.title ?: "", listOfNotNull(if (profile == null) profileLabel(g.profile) else null, if (p.total > 0) "${p.done}/${p.total}" else null).joinToString(" · ").ifEmpty { null }, trailing = {
                             MoreButton { close ->
                                 if (!past) MenuItem("Add task", "add", { close(); onAddTask(g) })
                                 MenuItem("Rename", "edit", { close(); renaming = g })
@@ -206,6 +209,8 @@ internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Tas
                             }
                         })
                         tasks.forEach { t -> Hairline(); TaskRowView(t, now, actions, onOpen = { onOpen(t) }) }
+                        if (tasks.isEmpty()) EmptyState("No tasks yet", "Tasks linked to this goal show here", icon = "target",
+                            action = if (past) null else ({ Button("Add task", { onAddTask(g) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, icon = "add") }))
                     }
                 }
             }
@@ -231,6 +236,6 @@ internal fun SearchPage(st: CodexState, profile: String?, query: String, onQuery
         section("Meetings", hits.meetings) { onMeeting(it.row) }
         section("Wiki", hits.wiki) { h -> h.route?.let(onRoute) }
         section("Jobs", hits.jobs) { h -> h.route?.let(onRoute) }
-        if (query.isNotBlank() && hits.total == 0) item { EmptyState("No matches") }
+        if (query.isNotBlank() && hits.total == 0) item { EmptyState("No matches", icon = "search") }
     }
 }

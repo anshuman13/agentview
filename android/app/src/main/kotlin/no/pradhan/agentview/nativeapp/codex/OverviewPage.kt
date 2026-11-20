@@ -136,7 +136,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         if (running.isNotEmpty()) runningSection(running, counts.running + counts.waiting) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
         planDaySection(d, plan, { plan = it }, now, actions)
-        if (goals.isNotEmpty()) goalsSection(st, goals, free, onGoals)
+        if (goals.isNotEmpty()) goalsSection(st, profile, goals, free, onGoals)
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
     }
 }
@@ -253,14 +253,14 @@ private fun TodayTaskRow(r: Row, late: Boolean, actions: TaskActions, onOpen: (R
     )
 }
 
-private fun LazyListScope.goalsSection(st: CodexState, goals: List<Row>, free: Long, onGoals: () -> Unit) {
-    item { SectionHeader("Goals this week") }
+private fun LazyListScope.goalsSection(st: CodexState, profile: String?, goals: List<Row>, free: Long, onGoals: () -> Unit) {
+    item { SectionHeader("Goals this week", goals.size.toString()) }
     item {
         Group {
             goals.forEachIndexed { i, g ->
                 if (i > 0) Hairline()
                 val p = goalProgress(st.items, g)
-                val meta = listOfNotNull("At risk".takeIf { goalAtRisk(st.items, g, free) }, if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet").joinToString(" · ")
+                val meta = listOfNotNull("At risk".takeIf { goalAtRisk(st.items, g, free) }, if (profile == null) profileLabel(g.profile) else null, if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet").joinToString(" · ")
                 ListRow(g.title ?: "", meta, onClick = onGoals, trailing = { Chevron() })
             }
         }

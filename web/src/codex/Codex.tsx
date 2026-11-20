@@ -161,7 +161,7 @@ export function Assistant() {
             )}
             {days.slice(1).map(section)}
             {loading ? <Skeleton /> : empty && (
-              <EmptyState size="md" icon="pass" title="All clear" hint={nextLater ? `Next: ${when(nextLater.starts_at!)} ${nextLater.title}` : 'Type a task below, like “call the bank tomorrow 9”'} />
+              <EmptyState size="md" icon="pass" title="All clear" hint={nextLater ? `Next: ${when(nextLater.starts_at!)} ${nextLater.title}` : 'Add a task with the + button, like “call the bank tomorrow 9”'} />
             )}
             {s.doneToday.length > 0 && (
               <section>
