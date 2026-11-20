@@ -143,7 +143,7 @@ private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, 
 private fun LazyListScope.stagedSection(staged: List<GitFile>, ops: GitOps) {
     if (staged.isEmpty()) return
     item {
-        SectionHeader("Staged Changes", staged.size.toString(), action = {
+        SectionHeader("Staged changes", staged.size.toString(), action = {
             MoreButton { close -> MenuItem("Unstage All Changes", "remove", { close(); ops.run("unstage", pathsBody(staged)) }) }
         })
     }
@@ -252,11 +252,11 @@ fun ChangesPager(hub: Hub, paths: List<String>, start: Int, reviewed: Set<String
                 onKeep(path)
                 if (pager.currentPage < paths.size - 1) scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
             }, Modifier.weight(1f), variant = if (kept) ButtonVariant.Tinted else ButtonVariant.Gray, icon = "check", fill = true)
-            Button("Revert", { ask = path }, Modifier.weight(1f), variant = ButtonVariant.Danger, icon = "discard", enabled = !hub.readOnly, fill = true)
+            Button("Discard", { ask = path }, Modifier.weight(1f), variant = ButtonVariant.Danger, icon = "discard", enabled = !hub.readOnly, fill = true)
         }
     }
     ask?.let { p ->
-        ConfirmDialog(revertTitle(p), REVERT_DETAIL, "Revert", { hub.git("revert", pathsBody(listOf(GitFile(p))), "Could not revert") { if (it) onReverted(p) } }, onDismiss = { ask = null })
+        ConfirmDialog(revertTitle(p), REVERT_DETAIL, "Discard", { hub.git("revert", pathsBody(listOf(GitFile(p))), "Could not revert") { if (it) onReverted(p) } }, onDismiss = { ask = null })
     }
     comment?.let { (p, row, revert) ->
         CommentSheet("Comment on ${p.substringAfterLast('/')}:${row.no}", row.line.text, onSend = { text -> hub.draftPrompt(commentPrompt(p, row, text)) }, onRevert = revert?.takeIf { !hub.readOnly }, onDismiss = { comment = null })

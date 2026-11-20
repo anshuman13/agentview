@@ -74,6 +74,7 @@ import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
+import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
@@ -201,7 +202,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                 }
             }
             if (rows.isEmpty()) item(key = "empty") {
-                if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || earlierDue))) EmptyState("No messages yet", "Your prompts, the agent's steps and replies show up here") else EmptyState("Loading…")
+                if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || earlierDue))) EmptyState("No messages yet", "Your prompts, the agent's steps and replies show up here") else Loading("Loading…")
             }
         }
         val dayOf = view.dayOf
@@ -266,7 +267,7 @@ private fun TaskLines(fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) ->
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(plural(fold.work.tools, "tool"), style = Type.label, color = av.fgMuted)
-                AvIcon("chevron-right", null, Tokens.sp5, tint = av.fgMuted)
+                AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgMuted)
             }
         }
         @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
@@ -276,9 +277,9 @@ private fun TaskLines(fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) ->
         }
         steps.forEach { s ->
             when {
-                s.done -> Task({ AvIcon("check", null, Tokens.sp5, tint = av.ok) }, s.title, av.fg)
+                s.done -> Task({ AvIcon("check", null, Tokens.iconSm, tint = av.ok) }, s.title, av.fg)
                 s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
-                else -> Task({ AvIcon("circle-large-outline", null, Tokens.sp5, tint = av.fgFaint) }, s.title, av.fgMuted)
+                else -> Task({ AvIcon("circle-large-outline", null, Tokens.iconSm, tint = av.fgFaint) }, s.title, av.fgMuted)
             }
         }
         if (live && current == null && fold.now.isNotEmpty()) Task(spin, fold.now, av.fgStrong)

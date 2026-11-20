@@ -63,7 +63,7 @@ fun DevServersSheet(hub: Hub, onDismiss: () -> Unit) {
         val list = ports
         when {
             list == null -> EmptyState("Looking for servers…")
-            list.isEmpty() -> EmptyState("No dev servers", error ?: "Start one on the Mac, such as npm run dev.")
+            list.isEmpty() -> EmptyState("No dev servers", error ?: "Start one on the Mac, such as npm run dev")
             else -> list.forEach { p ->
                 ListRow(":${p.port}", devPortMeta(p), trailing = { AvIcon("link-external", tint = av.fgMuted) }, onClick = {
                     scope.launch {

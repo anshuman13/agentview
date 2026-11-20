@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -55,7 +56,7 @@ internal fun TranscriptBox(
     val toggle = { if (onToggle != null) onToggle() else { saved = !saved; saveBox(kv, id, saved) } }
     if (plain && !shown) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = toggle).padding(horizontal = Tokens.listPad, vertical = Tokens.sp3),
+            Modifier.fillMaxWidth().heightIn(min = Tokens.touchSm).clickable(onClick = toggle).padding(horizontal = Tokens.listPad, vertical = Tokens.sp3),
             horizontalArrangement = Arrangement.spacedBy(Tokens.sp2, Alignment.End), verticalAlignment = Alignment.CenterVertically,
         ) {
             AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgFaint)

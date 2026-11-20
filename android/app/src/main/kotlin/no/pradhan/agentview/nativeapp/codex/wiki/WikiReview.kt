@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row as LRow
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.clickable
@@ -94,7 +95,7 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
                 Text(fact.str("text") ?: "", style = Type.body, color = av.fg)
                 if (old != null) {
                     var full by remember(fact.key) { mutableStateOf(false) }
-                    Text(old.str("text") ?: "", Modifier.clickable { full = !full }, style = Type.subheadline, color = av.fgMuted, textDecoration = TextDecoration.LineThrough, maxLines = if (full) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
+                    Text(old.str("text") ?: "", Modifier.heightIn(min = Tokens.touchSm).clickable { full = !full }, style = Type.subheadline, color = av.fgMuted, textDecoration = TextDecoration.LineThrough, maxLines = if (full) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4), itemVerticalAlignment = Alignment.CenterVertically) {
                     sourcesOf(fact).forEach { s -> Chip(s.label, safeHref(s.url)?.let { u -> { uri.openUri(u) } }) }
