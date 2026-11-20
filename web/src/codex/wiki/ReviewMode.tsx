@@ -7,7 +7,7 @@ import { EmptyState } from '../../ui/Panel';
 import { setView, useEscapeBack } from '../view';
 import { Swipe } from '../gestures/Swipe';
 import { ClaudeChip, SourceChip } from './Chips';
-import { useReview } from './Review';
+import { Replaces, useReview } from './Review';
 import { reviewQueue } from './reviewQueue';
 import { MEMORY, shortDate } from './shared';
 
@@ -59,7 +59,7 @@ export function ReviewMode() {
                 </button>
               </div>
               <p className="wk-mode-text">{fact.text}</p>
-              {old && <div className="wk-old"><s>{old.text}</s><span>Replaces</span></div>}
+              {old && <Replaces old={old} />}
               <div className="wk-claim-foot">
                 {sourcesOf(fact).filter((s) => s.kind !== 'chat').map((s, i) => <SourceChip key={i} s={s} />)}
                 {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}

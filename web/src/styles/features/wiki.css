@@ -111,6 +111,10 @@
 .wk-old { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2) var(--sp-5); margin-top: var(--sp-5); padding-left: var(--sp-6); border-left: 2px solid var(--border); font-size: var(--fs-lg); line-height: var(--lh); }
 .wk-old s { color: var(--fg-faint); text-decoration-color: color-mix(in srgb, var(--fg-faint) 70%, transparent); }
 .wk-old span { font-size: var(--fs-sm); color: var(--fg-faint); white-space: nowrap; }
+@media (max-width: 900px) {
+  .wk-replaces { cursor: pointer; }
+  .wk-replaces:not(.open) s { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
 
 
 @media (max-width: 900px) {

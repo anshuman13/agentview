@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import no.pradhan.agentview.nativeapp.codex.meetings.ActionLine
 import no.pradhan.agentview.nativeapp.codex.meetings.MState
 import no.pradhan.agentview.nativeapp.codex.meetings.Question
@@ -90,7 +92,10 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
             Column(Modifier.padding(Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
                 Text(listOfNotNull(page?.title, if (page?.str("state") == "proposed") "(new page)" else null, fact.str("heading")?.ifEmpty { null }).joinToString(" · ").ifEmpty { "Memory" }, style = Type.callout, color = av.fgMuted)
                 Text(fact.str("text") ?: "", style = Type.body, color = av.fg)
-                if (old != null) Text(old.str("text") ?: "", style = Type.subheadline, color = av.fgMuted, textDecoration = TextDecoration.LineThrough)
+                if (old != null) {
+                    var full by remember(fact.key) { mutableStateOf(false) }
+                    Text(old.str("text") ?: "", Modifier.clickable { full = !full }, style = Type.subheadline, color = av.fgMuted, textDecoration = TextDecoration.LineThrough, maxLines = if (full) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
+                }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4), itemVerticalAlignment = Alignment.CenterVertically) {
                     sourcesOf(fact).forEach { s -> Chip(s.label, safeHref(s.url)?.let { u -> { uri.openUri(u) } }) }
                     fact.long("at")?.let { Text(shortDate(it, System.currentTimeMillis()), style = Type.meta, color = av.metaFg) }

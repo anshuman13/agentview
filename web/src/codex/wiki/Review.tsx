@@ -13,6 +13,12 @@ import { PageTile } from './PageTile';
 import { useClaimEdits } from './useClaimEdits';
 import { REVIEW, shortDate } from './shared';
 
+// On phones the replaced claim is clamped to two lines; a tap shows all of it.
+export function Replaces({ old }: { old: Fact }) {
+  const [open, setOpen] = useState(false);
+  return <div className={`wk-old wk-replaces${open ? ' open' : ''}`} onClick={() => setOpen(!open)}><s>{old.text}</s><span>Replaces</span></div>;
+}
+
 function ReviewCard({ fact }: { fact: Fact }) {
   const { store, pages, facts, meetings } = useCodex();
   const [editing, setEditing] = useState(false);
@@ -46,7 +52,7 @@ function ReviewCard({ fact }: { fact: Fact }) {
       ) : (
         <div className="mt-action-title">{fact.text}</div>
       )}
-      {old && <div className="wk-old"><s>{old.text}</s><span>Replaces</span></div>}
+      {old && <Replaces old={old} />}
       <div className="wk-claim-foot">
         {sourcesOf(fact).filter((s) => s.kind !== 'chat').map((s, i) => <SourceChip key={i} s={s} />)}
         {chat && <ClaudeChip chat={chat} />}
