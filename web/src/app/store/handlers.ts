@@ -7,7 +7,6 @@ import { bundled } from '../api';
 import { markSeen } from './seen';
 import { flushOutbox, send } from './send';
 import { cache, cacheShown, view } from './view';
-import { providerLabel } from '../../../../shared/providers';
 import { chatNotices } from '../../../../shared/notices';
 import { rememberModels } from '../newChat';
 
@@ -15,10 +14,10 @@ const focus = (id: string) => () => send({ type: 'view', id });
 
 function notifyBackground(chats: LiveChat[]) {
   if (embedded) return;
-  const { live, session } = getState();
+  const { live } = getState();
   for (const c of chats) {
     const was = live.find((x) => x.id === c.id);
-    if (!was || c.id === session.id) continue;
+    if (!was) continue;
     const n = chatNotices(was, c, isMuted(c.sessionId));
     if (n) notify(n.title, n.sub ? `${n.sub}\n${n.body}` : n.body, focus(c.id));
   }
@@ -91,10 +90,6 @@ function onInit(m: Extract<ServerMessage, { type: 'init' }>) {
 }
 
 function onEvent(m: Extract<ServerMessage, { type: 'event' }>) {
-  const { events, session } = getState();
-  if (m.event.kind === 'result' && !events.some((e) => e.id === m.event.id)) {
-    notify(`${providerLabel(session.provider)} finished`, m.event.text.trim().split('\n')[0], focus(session.id));
-  }
   set((s) => {
     const cur = s.events;
     let i = cur.length - 1;
@@ -118,11 +113,7 @@ function onAppend(m: Extract<ServerMessage, { type: 'append' }>) {
 }
 
 function onPending(m: Extract<ServerMessage, { type: 'pending' }>) {
-  const { pending, session } = getState();
-  if (!pending.some((p) => p.id === m.request.id)) {
-    notify(`${providerLabel(session.provider)} needs you`, m.request.kind === 'question' ? m.request.questions[0]?.question ?? '' : m.request.title, focus(session.id));
-    if (document.visibilityState !== 'visible') navigator.vibrate?.(200);
-  }
+  if (!getState().pending.some((p) => p.id === m.request.id) && document.visibilityState !== 'visible') navigator.vibrate?.(200);
   set((s) => ({ pending: [...s.pending.filter((p) => p.id !== m.request.id), m.request] }));
 }
 

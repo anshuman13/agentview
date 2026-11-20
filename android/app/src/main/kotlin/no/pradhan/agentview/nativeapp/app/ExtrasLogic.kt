@@ -41,8 +41,7 @@ fun chatNotice(before: LiveChat, c: LiveChat, muted: Boolean): Notice? {
     return if (c.last.isNullOrEmpty()) Notice(NoticeKind.Finished, c.id, title, c.title) else Notice(NoticeKind.Finished, c.id, title, c.last, sub = c.title)
 }
 
-fun notices(was: List<LiveChat>, now: List<LiveChat>, shownId: String = "", muted: Set<String> = emptySet()): List<Notice> = now.mapNotNull { c ->
-    if (c.id == shownId) return@mapNotNull null
+fun notices(was: List<LiveChat>, now: List<LiveChat>, muted: Set<String> = emptySet()): List<Notice> = now.mapNotNull { c ->
     val before = was.firstOrNull { it.id == c.id } ?: return@mapNotNull null
     chatNotice(before, c, c.sessionId in muted)
 }

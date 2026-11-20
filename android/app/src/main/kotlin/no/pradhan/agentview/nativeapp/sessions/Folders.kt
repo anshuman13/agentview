@@ -155,6 +155,10 @@ fun newChatChoices(groups: List<RepoGroup>, ws: Workspace, sessionCwd: String?):
     return here to groups.sortedByDescending { g -> g.key == here }.map { g -> RepoChoice(g.key, g.name, ws.repos.firstOrNull { it.cwd == g.key }?.let(::repoDetail)) }
 }
 
+// The first max choices, plus the picked one when it is further down; all of them once expanded.
+fun shownChoices(choices: List<RepoChoice>, picked: String?, all: Boolean, max: Int = 5): List<RepoChoice> =
+    if (all || choices.size <= max) choices else choices.filterIndexed { i, c -> i < max || c.key == picked }
+
 // A chat matches when every word of the query is in its title, repo or the title or first prompt of its saved copy.
 fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: HeldOrder? = null): List<RepoGroup> {
     val words = queryWords(filter)

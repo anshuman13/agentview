@@ -13,6 +13,7 @@ import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.lastModel
 import no.pradhan.agentview.nativeapp.app.modelsOf
 import no.pradhan.agentview.nativeapp.net.newestModels
+import no.pradhan.agentview.nativeapp.sessions.shownChoices
 import no.pradhan.agentview.nativeapp.net.ProviderOption
 import no.pradhan.agentview.nativeapp.app.newChat
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -38,6 +39,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
     val group = modelGroup(provider?.id ?: default, providers)
     val models by hub.modelsOf(group).collectAsState()
     var repo by remember { mutableStateOf(repoKey ?: initial) }
+    var allRepos by remember { mutableStateOf(false) }
     var model by remember(models, group) { mutableStateOf(startModel(models, hub.lastModel(group))) }
     var startMode by remember { mutableStateOf(START_MODES.first()) }
     val start = {
@@ -64,12 +66,14 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
         }
         if (repoKey == null && repos.isNotEmpty()) {
             SectionHeader("Repo")
+            val rows = shownChoices(repos, repo, allRepos)
             Group {
-                repos.forEachIndexed { i, r ->
+                rows.forEachIndexed { i, r ->
                     if (i > 0) Hairline()
                     ChoiceRow(r.name, r.detail, onClick = { repo = r.key }, checked = r.key == repo)
                 }
             }
+            if (rows.size < repos.size) Button("Show all ${repos.size}", { allRepos = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         }
         val shown = remember(models, model) { newestModels(models, model) }
         if (shown.isNotEmpty()) {

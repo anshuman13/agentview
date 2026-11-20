@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.sessions
 
+import no.pradhan.agentview.nativeapp.chat.RepoChoice
 import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.protocolJson
@@ -194,5 +195,15 @@ class FoldersTest {
     fun liveChatModelParsesAndShortens() {
         val c = protocolJson.decodeFromString<LiveChat>("""{"id":"a","model":"claude-opus-4-8"}""")
         assertEquals("Opus 4.8", shortModel(c.model!!))
+    }
+
+    @Test
+    fun shownChoicesFoldsAfterFiveAndKeepsThePicked() {
+        val twelve = (1..12).map { RepoChoice("k$it", "r$it") }
+        assertEquals(twelve.take(3), shownChoices(twelve.take(3), null, false))
+        assertEquals(twelve.take(5), shownChoices(twelve.take(5), null, false))
+        assertEquals(twelve.take(5), shownChoices(twelve, "k1", false))
+        assertEquals(twelve.take(5) + twelve[8], shownChoices(twelve, "k9", false))
+        assertEquals(twelve, shownChoices(twelve, null, true))
     }
 }

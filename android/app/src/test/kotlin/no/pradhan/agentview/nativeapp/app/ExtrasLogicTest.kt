@@ -38,10 +38,6 @@ class ExtrasLogicTest {
         assertEquals(setOf("a"), keptAsks(asks, listOf(a2, RunningNote("b", "Fix tests", "Working", 5L, 0))).keys)
     }
 
-    @Test fun skipsTheChatOnScreen() {
-        assertEquals(emptyList<Notice>(), notices(listOf(chat("a")), listOf(chat("a", pending = 1)), "a"))
-    }
-
     @Test fun approvalWhenPendingGrows() {
         val n = notices(listOf(chat("a")), listOf(chat("a", pending = 1)))
         assertEquals(listOf(Notice(NoticeKind.Approval, "a", "Claude needs you in agentview", "Fix tests")), n)
