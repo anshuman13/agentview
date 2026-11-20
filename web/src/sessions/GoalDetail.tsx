@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { send, useStore } from '../app/store';
 import { clock } from '../../../shared/util';
 import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
+import { Button, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
@@ -13,7 +13,8 @@ import { billing } from '../../../shared/providers';
 import type { ChatRun, GitCommit, RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
-import { finishedLine, fiveHourLabel, fiveHourLimit, mergeQuiet, runDetail } from '../../../shared/goalText';
+import { finishedLine, fiveHourLabel, fiveHourLimit, mergeQuiet, roundsMarkdown, runDetail } from '../../../shared/goalText';
+import { copyText } from '../codex/view';
 import { BUILDS, CAPS, EVERY, FIVE_HOURS, STOPS, goalBadge, openRun, runControl, startGoal, stopAtMs, usageLine } from './goalLogic';
 import { since } from './folders';
 import { fetchRunCommits } from './sessionApi';
@@ -96,7 +97,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
         <Button variant="plain" onClick={() => open()}>Open chat</Button>
       </div>
       <Changes run={run} />
-      <Section label="Rounds" count={sectionCount(run.rounds.length)} />
+      <Section label="Rounds" count={sectionCount(run.rounds.length)} action={run.rounds.length ? <IconButton icon="copy" label="Copy rounds" size="sm" onClick={() => copyText(roundsMarkdown(run.title || heading, run.rounds, run.provider), 'Rounds copied')} /> : undefined} />
       {run.rounds.length ? (
         <div className="ui-group">
           {mergeQuiet(run.rounds).reverse().map((g) => <RoundRow key={g.first.at} group={g} provider={run.provider} open={open} />)}

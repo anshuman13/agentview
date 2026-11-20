@@ -20,6 +20,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.DeepLink
@@ -50,6 +52,7 @@ import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
@@ -297,6 +300,8 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
     val now = System.currentTimeMillis()
     val next = if (paused) "Paused · ${run.why}" else run.nextAt?.let { clock(it) } ?: "When the agent goes idle"
     val (badge, tone) = goalBadge(run)
+    val clip = LocalClipboardManager.current
+    val title = run.title.ifBlank { detail.heading }
     val open = { report: String? -> scope.launch { if (hub.openRun(run, report)) { hub.link.value = DeepLink(view = "agents"); onClose() } }; Unit }
     val facts = buildList<@Composable () -> Unit> {
         add { ListRow(run.what, detail.what, lines = 2) }
@@ -312,7 +317,7 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         if (billing(run.provider) != "none") add { EditRow("5-hour pause", fiveHourLabel(fiveHourLimit(run.fiveHour?.content, run.capPct)), if (editable) FIVE_HOURS.map { v -> fiveHourLabel(v) to mapOf("fiveHour" to (v?.toLongOrNull() ?: v)) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Build limit", run.maxBuilds?.toString() ?: "None", if (editable) BUILDS.map { it.label to mapOf("maxBuilds" to it.n?.toLong()) } else null) { hub.runEdit(run, it) } }
     }
-    Sheet(onClose, run.title.ifBlank { detail.heading }, padded = false) {
+    Sheet(onClose, title, padded = false) {
         SectionHeader(detail.heading, action = { Badge(badge, tone) })
         Group { facts.forEachIndexed { i, row -> if (i > 0) Hairline(); row() } }
         SectionHeader("Settings")
@@ -336,7 +341,9 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
                 ListRow(c.subject, "${c.hash} · ${since(c.at)}", lines = 1)
             }
         }
-        SectionHeader("Rounds", run.rounds.size.toString())
+        SectionHeader("Rounds", run.rounds.size.toString(), action = if (run.rounds.isEmpty()) null else ({
+            IconBtn("copy", "Copy rounds", { clip.setText(AnnotatedString(roundsMarkdown(title, run.rounds, run.provider))); hub.notice.value = "Rounds copied" })
+        }))
         if (run.rounds.isEmpty()) EmptyState("No rounds yet", "The first round runs when the agent goes idle", icon = "history")
         else Group {
             mergeQuiet(run.rounds).asReversed().forEachIndexed { i, g ->

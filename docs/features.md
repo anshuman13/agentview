@@ -298,9 +298,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   /api/sessions/search, newest first, at most 3 per chat); a Messages section lists the matching text with the chat,
   You or Claude and the age, and a tap opens that chat, like Slack's message search. The web sidebar Sessions search
   shows the same Messages list under the repos
-- Hovering a sent prompt in the web transcript shows Use again, which puts that prompt in the composer to edit and send
-  again (like editing a Slack message), and Copy, which copies the prompt text ("Prompt copied"); queued and stopping
-  prompts have neither (a queued one has Send now).
+- Hovering a sent prompt in the web transcript shows when it was sent ("Sent 5m", "Sent 14:20", "Sent Nov 3 14:20"),
+  then Use again, which puts that prompt in the composer to edit and send again (like editing a Slack message), and
+  Copy, which copies the prompt text ("Prompt copied"). On the phone a long press on a prompt opens the same menu, with
+  the Sent time first as a disabled line. Queued and stopping prompts have none of these (a queued one has Send now).
 - Selecting text inside one finished reply in the web transcript shows Quote, which puts the passage in the composer as
   a Markdown quote ("> " on each line, cut at 1500 characters, a blank line after) after any draft (`quoteText` in
   `shared/composerText.ts`). A selection in a prompt, a step, an agent box or across two replies shows nothing; Esc or a
@@ -579,7 +580,7 @@ On Android the run heads the chat's Agents sheet, as on web (`RunActions` and `R
 happening: the agent's latest status (with "Next: ..." and the steps left) or the last round ("Round 4 · 02:10 · progress: merged X", "nothing to do" for a quiet round, "First round 02:00" before the first), whichever is newer, with a
 running dot while a turn or an agent runs. The running agents are listed below the run's rows. On a goal, next comes
 the goal detail row: "Plan N of M done" with a plan file, else the condition; a loop, tries or job shows its what text on one line and the total cost. A run with a cap adds a cap row ("Week 64% of 70% cap", "Stops at 70% of the week" before the first reading, "$3.20 of $5 cap"; `capLine`, `shared/fixtures/cap-line.json`) with a Near cap badge when the week is within 10 points of the cap or the cost at 80% of it. A turn the run did not start, such as a background agent finishing, adds a round when its
-reply ends with a ROUND line, with the current round number. A loop or goal with rounds has a Rounds row ("12 rounds", meta "2 done · 1 blocked · 8 nothing to do · $1.40"; `roundsSummary`, `shared/fixtures/rounds-summary.json`) that shows or hides the rounds, newest first, runs of "nothing to do" rounds merged into one, 10 rows and then Show all N. The Now row opens the goal detail. A loop or goal has Pause (or Resume) and a More menu with Run now and Stop; Run now does nothing
+reply ends with a ROUND line, with the current round number. A loop or goal with rounds has a Rounds row ("12 rounds", meta "2 done · 1 blocked · 8 nothing to do · $1.40"; `roundsSummary`, `shared/fixtures/rounds-summary.json`) that shows or hides the rounds, newest first, runs of "nothing to do" rounds merged into one, 10 rows and then Show all N. The goal detail's Rounds header has Copy rounds, which copies the rounds as Markdown (a "## " title, the summary and cost, then one "- " line per row, oldest first; `roundsMarkdown`, `shared/fixtures/rounds-markdown.json`) and shows "Rounds copied". The Now row opens the goal detail. A loop or goal has Pause (or Resume) and a More menu with Run now and Stop; Run now does nothing
 while Claude is busy. A pause is saved and survives
 a restart. Stop shows "Loop stopped" or "Goal stopped" with Undo, which starts the same run again within 60 s. Tries and jobs only have Stop, with no Undo. The controls take a run id, so they work from any screen. A round
 that ends its run (goal met, last round, end time) sends only the run-end push. The chat header (Android) and the web status bar read "Running · 2 agents" while agents run with no turn, "Next round 14:20" between rounds and "Idle" only with no run and no agent.

@@ -1,6 +1,7 @@
 import { MAX_GOAL_ROUNDS, type ChatRun, type FiveHour, type Provider, type Round, type RoundOutcome } from './protocol.js';
 import { fiveHourFlag } from './goalForm.js';
 import { billing } from './providers.js';
+import { money } from './cost.js';
 import { clock, span } from './util.js';
 
 // The run a chat is on now: its last open run, as on the server (Runs.activeFor).
@@ -75,6 +76,12 @@ export const roundsSummary = (rounds: Round[]) =>
 
 export const roundGroupText = (g: RoundGroup) =>
   g.count > 1 ? `Rounds ${g.first.n}-${g.last.n} · ${clock(g.last.at)} · nothing to do` : g.last.report ? 'Weekly report' : roundText(g.last);
+
+// A run's rounds as Markdown to paste in a chat or note, oldest first; "" with no rounds (Android roundsMarkdown, fixture rounds-markdown.json).
+export const roundsMarkdown = (title: string, rounds: Round[], provider?: Provider) =>
+  rounds.length
+    ? [`## ${title}`, `${roundsSummary(rounds)} · ${money(rounds.reduce((sum, r) => sum + r.costUsd, 0), billing(provider))}`, '', ...mergeQuiet(rounds).map((g) => `- ${roundGroupText(g)}`)].join('\n')
+    : '';
 
 export const firstRound = (at: number | null) => `First round${at ? ` ${clock(at)}` : ''}`;
 

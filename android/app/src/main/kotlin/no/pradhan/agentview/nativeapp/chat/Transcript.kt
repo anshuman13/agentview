@@ -508,6 +508,7 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String) {
     val menuable = !it.queued && !it.stopping
     UserBubble(if (menuable) ({ haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true }) else null) {
         Menu(menu, { menu = false }) {
+            MenuItem("Sent ${replyTime(it.at, System.currentTimeMillis())}", "history", {}, enabled = false)
             if (!hub.readOnly) MenuItem("Use again", "reply", { menu = false; hub.useAgain(chat, it.text) })
             MenuItem("Copy", "copy", { menu = false; clip.setText(AnnotatedString(it.text)); hub.notice.value = "Prompt copied" })
         }

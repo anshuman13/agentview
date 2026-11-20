@@ -11,7 +11,7 @@ import { appCounts } from '../../shared/counts';
 import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
 import { limitResume } from '../../shared/limitResume';
-import { buildsLine, endedRun, finishedLine, fiveHourLabel, fiveHourLine, goalEnd, mergeQuiet, roundsSummary, runDetail } from '../../shared/goalText';
+import { buildsLine, endedRun, finishedLine, fiveHourLabel, fiveHourLine, goalEnd, mergeQuiet, roundsMarkdown, roundsSummary, runDetail } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, FiveHour, LiveChat, Provider, Round, SavedSession, Try } from '../../shared/protocol';
@@ -630,6 +630,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; rounds: Round[]; expected: string }>('rounds-summary')) {
     it(`roundsSummary: ${c.name}`, () => expect(roundsSummary(c.rounds)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; title: string; rounds: Round[]; provider?: Provider; expected: string }>('rounds-markdown')) {
+    it(`roundsMarkdown: ${c.name}`, () => expect(roundsMarkdown(c.title, c.rounds, c.provider)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; run: Partial<ChatRun>; expected: ReturnType<typeof capLine> }>('cap-line')) {

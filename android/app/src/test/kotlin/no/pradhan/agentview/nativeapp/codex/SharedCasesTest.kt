@@ -140,6 +140,7 @@ import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.mergeQuiet
 import no.pradhan.agentview.nativeapp.codex.autopilot.roundsSummary
+import no.pradhan.agentview.nativeapp.codex.autopilot.roundsMarkdown
 import no.pradhan.agentview.nativeapp.codex.autopilot.CapLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.capLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.fiveHourLabel
@@ -652,6 +653,13 @@ class SharedCasesTest {
     @Test fun roundsSummary() {
         for (c in cases("rounds-summary")) {
             assertEquals(c.str("name"), c.str("expected"), roundsSummary(c.getValue("rounds").jsonArray.map { it.decode<Round>() }))
+        }
+    }
+
+    @Test fun roundsMarkdown() {
+        for (c in cases("rounds-markdown")) {
+            val rounds = c.getValue("rounds").jsonArray.map { it.decode<Round>() }
+            assertEquals(c.str("name"), c.str("expected"), roundsMarkdown(c.str("title"), rounds, c.nullable("provider")?.jsonPrimitive?.content))
         }
     }
 

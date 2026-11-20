@@ -1,0 +1,17 @@
+[
+  { "name": "no rounds", "title": "Nightly", "rounds": [], "expected": "" },
+  { "name": "one done round", "title": "Fix the build", "rounds": [
+    { "n": 1, "at": 7200000, "outcome": "done", "line": "merged the fix", "costUsd": 0.42 }
+  ], "expected": "## Fix the build\n1 done · $0.42\n\n- Round 1 · 02:00 · done: merged the fix" },
+  { "name": "quiet runs merged, oldest first", "title": "Inbox loop", "rounds": [
+    { "n": 1, "at": 7200000, "outcome": "progress", "line": "triaged 3", "costUsd": 0.2 },
+    { "n": 2, "at": 9000000, "outcome": "quiet", "line": "", "costUsd": 0.1 },
+    { "n": 3, "at": 10800000, "outcome": "quiet", "line": "", "costUsd": 0.1 },
+    { "n": 4, "at": 12600000, "outcome": "blocked", "line": "needs a key", "costUsd": 0.3 },
+    { "n": 5, "at": 14400000, "outcome": "quiet", "line": "", "costUsd": 0.1 }
+  ], "expected": "## Inbox loop\n1 progress · 1 blocked · 3 nothing to do · $0.80\n\n- Round 1 · 02:00 · progress: triaged 3\n- Rounds 2-3 · 03:00 · nothing to do\n- Round 4 · 03:30 · blocked: needs a key\n- Round 5 · 04:00 · nothing to do" },
+  { "name": "a weekly report row on a plan provider", "title": "Weekly", "provider": "codex", "rounds": [
+    { "n": 1, "at": 7200000, "outcome": "quiet", "line": "", "costUsd": 0 },
+    { "n": 2, "at": 9000000, "outcome": "done", "line": "sent", "costUsd": 0, "report": "t2" }
+  ], "expected": "## Weekly\n1 done · 1 nothing to do · Plan\n\n- Round 1 · 02:00 · nothing to do\n- Weekly report" }
+]
