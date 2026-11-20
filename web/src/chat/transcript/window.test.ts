@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { ROW_WINDOW } from '../../../../shared/protocol';
-import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
+import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
+import { FIRST_ROWS, hiddenCount, hitBeforeLoaded, needsEarlier, revealMore, stageRows, windowStart } from './window';
 
 describe('staged rows', () => {
   it('steps by a batch and stops at the target', () => {
@@ -41,5 +41,18 @@ describe('needsEarlier', () => {
     expect(needsEarlier(3, 600, 0)).toBe(false);
     expect(needsEarlier(0, 0, 0)).toBe(false);
     expect(needsEarlier(0, 600, 3)).toBe(false);
+  });
+});
+
+describe('hitBeforeLoaded', () => {
+  const events: ChatEvent[] = [{ id: 'u1', kind: 'user', text: 'phone install', at: 100 }, { id: 'a1', kind: 'assistant', text: 'done', at: 110 }];
+  it('is before the loaded events when older than the first one', () => {
+    expect(hitBeforeLoaded(events, 'phone', 50)).toBe(true);
+    expect(hitBeforeLoaded(events, 'phone', 100)).toBe(false);
+    expect(hitBeforeLoaded([], 'phone', 100)).toBe(true);
+  });
+  it('without a time, is before them when the query has no match', () => {
+    expect(hitBeforeLoaded(events, 'phone', null)).toBe(false);
+    expect(hitBeforeLoaded(events, 'deploy', null)).toBe(true);
   });
 });

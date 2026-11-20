@@ -78,7 +78,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
     <div className="wk narrow">
       <header className="wk-head">
         <IconButton icon="arrow-left" label="Back" title={event ? 'Back' : 'Back to meetings'} onClick={back} />
-        <nav className="wk-crumbs"><button onClick={back}>{event ? 'Event' : 'Meetings'}</button></nav>
+        <Button variant="plain" size="sm" onClick={back}>{event ? 'Event' : 'Meetings'}</Button>
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
@@ -139,7 +139,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
               {decisions.length > 0 && (
                 <section className="mt-sec">
                   <Section label="Decisions" count={sectionCount(decisions.length)} />
-                  <ul className="mt-decisions">{decisions.map((d, i) => <li key={i}>{d}<RaiseWith text={d} profile={m.profile} people={raiseTo} /></li>)}</ul>
+                  <ul className="mt-decisions">{decisions.map((d, i) => <li key={i}>{d} <RaiseWith text={d} profile={m.profile} people={raiseTo} /></li>)}</ul>
                 </section>
               )}
 

@@ -1,4 +1,5 @@
-import { ROW_WINDOW } from '../../../../shared/protocol';
+import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
+import { findInChat } from '../../../../shared/findInChat';
 
 export function windowStart(total: number, shown: number): number {
   return Math.max(0, total - shown);
@@ -22,6 +23,12 @@ const EARLIER_REPLIES = 3;
 const EARLIER_AUTO_PAGES = 3;
 
 // A chat that opens on too few replies loads earlier pages by itself, a few times.
+// Whether a message hit from the sidebar lies before the loaded events: older than the first one, or with no time, not found in them.
+export function hitBeforeLoaded(events: ChatEvent[], query: string, at: number | null): boolean {
+  if (at == null) return findInChat(events, query).length === 0;
+  return !events.length || events[0].at > at;
+}
+
 export function needsEarlier(replies: number, earlier: number, autoLoads: number): boolean {
   return replies < EARLIER_REPLIES && earlier > 0 && autoLoads < EARLIER_AUTO_PAGES;
 }

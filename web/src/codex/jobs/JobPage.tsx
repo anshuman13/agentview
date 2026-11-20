@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Job } from '../data/wiki/wiki';
-import { IconButton } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { Section } from '../../ui/Section';
 import { useOnUnmount, useReturnFocus } from '../../ui/util';
 import { setView, useEscapeBack } from '../view';
@@ -50,7 +50,7 @@ export function JobPage({ j }: { j: Job }) {
     <div className="wk narrow">
       <header className="wk-head">
         <IconButton icon="arrow-left" label="Back" title="Back to jobs" onClick={back} />
-        <nav className="wk-crumbs"><button onClick={back}>Jobs</button></nav>
+        <Button variant="plain" size="sm" onClick={back}>Jobs</Button>
       </header>
       <div className="wk-scroll">
         <article className="mt-page">

@@ -120,7 +120,7 @@
 .chat-row > .ui-row-wrap:last-child::after { display: block; }
 .chat-row .ui-row[aria-current='true'] { --state: var(--state-hover); }
 .chat-row .ui-row-state:empty { display: none; }
-.chat-row .ui-row-meta { -webkit-line-clamp: 1; }
+.chat-row .ui-row-meta, .chat-hit .ui-row-meta { -webkit-line-clamp: 1; }
 .chat-row.unread .ui-row-title { font-weight: var(--type-headline-weight); color: var(--fg-strong); }
 .chat-row .chat-add { color: var(--diff-add); }
 .chat-row .chat-del { color: var(--diff-del); }

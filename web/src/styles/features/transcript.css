@@ -9,7 +9,8 @@
 .tr-jump.tr-next { max-width: calc(100% - 2 * var(--sp-5)); }
 .tr-next-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-find { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-8); border-bottom: 1px solid var(--border); }
-.tr-find .jb-search { flex: 1 1 240px; max-width: 360px; }
+.tr-find .jb-search { flex: 1 1 240px; min-width: 140px; max-width: 360px; }
+.tr-find-count { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .find-hit { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius); }
 .tr { flex: 1 1 auto; min-height: 0; overflow: auto; padding: var(--sp-6) var(--sp-8) var(--sp-8); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--fg); }
 :is(.tr, .tr-rows) > * + * { margin-top: var(--sp-6); }

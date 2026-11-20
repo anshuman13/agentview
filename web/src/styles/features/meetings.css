@@ -43,6 +43,9 @@
 .mt-load-track i { display: block; height: 100%; min-width: 2px; border-radius: var(--radius-pill); background: var(--c-meeting); }
 .mt-load-num { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg-strong); }
 .mt-load-share { font-size: var(--fs-sm); color: var(--fg-muted); }
+.mt-week-bar { flex-wrap: wrap; row-gap: var(--sp-2); }
+.mt-week-bar .mt-load-share { white-space: nowrap; }
+.mt-week-acts { display: flex; gap: var(--sp-4); margin-left: auto; }
 .mt-wk-sec { display: flex; flex-direction: column; gap: var(--sp-4); }
 /* Meeting page */
 .mt-page { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); }
@@ -125,7 +128,8 @@
 .mt-add:focus-within { background: var(--accent-soft); }
 .mt-add input { flex: 1; min-width: 0; height: var(--touch-sm); border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-lg); outline: 0; }
 .mt-raise { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
-.mt-decisions .mt-raise, .mt-decisions > li > .btn { margin-left: var(--sp-3); vertical-align: middle; }
+.mt-decisions .mt-raise, .mt-decisions > li > .btn { vertical-align: middle; }
+.mt-decisions > li > .btn { padding-inline: 0; }
 
 /* Person view */
 .mt-person { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }

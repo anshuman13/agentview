@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react';
 import { useAssistantStore, useAssistantTable } from '../data';
 import { goalToLink } from '../data/tasks/goals';
-import { parseCapture } from '../data/tasks/quickAdd';
+import { captureChips, parseCapture } from '../data/tasks/quickAdd';
 import { captureTask } from './captureTask';
 import { cadenceLine, withRule, type Cadence } from '../data/tasks/recur';
 import { pad } from '../data/dates';
 import type { Profile } from '../data/sync';
 import { Icon } from '../../ui/Icon';
-import { Chip, IconButton } from '../../ui/Button';
+import { Chip, chipClass, IconButton } from '../../ui/Button';
 import { Menu } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { readFlag } from '../../ui/util';
@@ -32,6 +32,9 @@ export function Flag({ priority }: { priority: number | null | undefined }) {
     </svg>
   );
 }
+
+// The repeat, tags and estimate read from the typed text, as read-only chips.
+export const ParsedChips = ({ chips }: { chips: [string, string][] }) => <>{chips.map(([icon, label]) => <span key={`${icon}${label}`} className={chipClass({ on: true })}><Icon name={icon} small />{label}</span>)}</>;
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const startOf = (t: number) => new Date(t).setHours(0, 0, 0, 0);
@@ -137,10 +140,13 @@ export function AddSheet({ filter, voice, goal, onClose }: { filter: Filter; voi
   const flagBtn = useRef<HTMLButtonElement>(null);
   const profile: Profile = linked?.profile ?? (filter !== 'all' ? filter : picked ?? (readFlag('assistant-personal', false) ? 'personal' : 'work'));
   const typed = title.trim();
+  const parsed = parseCapture(typed, new Date(), pick?.at);
+  const chips = captureChips(parsed);
+  const typedDue = pick ? null : parsed.at;
   const add = async () => {
     if (!typed || busy.current) return;
     busy.current = true;
-    const { title: name, at, tags, repeat } = parseCapture(typed, new Date(), pick?.at);
+    const { title: name, at, tags, repeat } = parsed;
     const rule = pick && pick.cadence !== 'never' && pick.cadence !== 'custom' ? cadenceLine(pick.cadence, at) : null;
     const body = withRule(notes.trim(), repeat ?? rule);
     const extra = { ...(priority && { priority }), ...(tags.length && { tags: tags.join(' ') }), ...(pick?.remind != null && { remind: pick.remind }), ...(linked && { goal: linked.id }) };
@@ -156,6 +162,12 @@ export function AddSheet({ filter, voice, goal, onClose }: { filter: Filter; voi
         <input ref={field} autoFocus className="as-quick-title" value={title} placeholder="What would you like to do?" aria-label="New task" enterKeyHint="send"
           onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void add(); }} />
         <input className="as-quick-notes" value={notes} placeholder="Description" aria-label="Description" onChange={(e) => setNotes(e.target.value)} />
+        {(chips.length > 0 || typedDue != null) && (
+          <div className="as-quick-parsed">
+            {typedDue != null && <span className={chipClass({ on: true })}><Icon name="calendar" small />{cap(when(typedDue))}</span>}
+            <ParsedChips chips={chips} />
+          </div>
+        )}
         {linked && <div className="as-quick-goal"><Chip on icon="target" title="Remove the goal" onClick={() => setGoalId(undefined)}>Goal: {linked.title} <Icon name="close" small /></Chip></div>}
         <div className="as-quick-bar">
           <button className={`as-quick-tool${pick ? ' on' : ''}`} aria-label="Date" onMouseDown={(e) => e.preventDefault()} onClick={() => setDating(true)}>

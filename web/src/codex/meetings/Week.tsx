@@ -56,11 +56,12 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
   const empty = !r.decisions.length && !r.claims.length && !r.done.length && !r.open.length;
   return (
     <div className="mt-load">
-      <div className="mt-log-bar">
+      <div className="mt-log-bar mt-week-bar">
         <span className="mt-load-share">Since {dayLabel(r.start)}: {plural(r.meetings, 'meeting')}, {hoursText(r.hours)}</span>
-        <span className="spacer" />
-        <Button icon="checklist" title="Done, slipped, stuck and waiting tasks" onClick={() => setReview(!review)}><span>{review ? 'Summary' : 'Review'}</span></Button>
-        <Button icon="copy" title="Copy the week as Markdown" onClick={copy}><span>Copy as Markdown</span></Button>
+        <span className="mt-week-acts">
+          <Button icon="checklist" title="Done, slipped, stuck and waiting tasks" onClick={() => setReview(!review)}><span>{review ? 'Summary' : 'Review'}</span></Button>
+          <Button icon="copy" title="Copy the week as Markdown" onClick={copy}><span>Copy as Markdown</span></Button>
+        </span>
       </div>
       {review ? <Review now={now} /> : <>
       <WeekGoals now={now} />

@@ -1,9 +1,9 @@
 import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../app/store';
-import { copyText, showChat } from '../ui/util';
+import { showChat } from '../ui/util';
 import { chatMarkdown, handoffText, lastReply, replyNote } from './composer/composerLogic';
 import { assistantStore } from '../codex/data';
 import { restatedClaim, rememberedFact } from '../codex/data/wiki/wiki';
-import { showSnack } from '../codex/view';
+import { copyText, showSnack } from '../codex/view';
 import { profileOfPath } from '../../../shared/workspace';
 import { removeMemory, restoreMemory, type RemovedMemory } from './chatApi';
 import { memoryClaimText, type MemoryFile } from './cards/memoryLogic';
@@ -92,11 +92,11 @@ export async function moveMemoryToWiki(file: MemoryFile, restored: () => void) {
 
 export function copyChatMarkdown() {
   const st = getState();
-  copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? '')).then(() => notice('Chat copied'), () => notice('Could not copy'));
+  copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? ''), 'Chat copied');
 }
 
 export function copyReply(text: string) {
-  copyText(text).then(() => notice('Reply copied'), () => notice('Could not copy'));
+  copyText(text, 'Reply copied');
 }
 
 export function copyLastReply() {
@@ -105,11 +105,11 @@ export function copyLastReply() {
 }
 
 export function copyPrompt(text: string) {
-  copyText(text).then(() => notice('Prompt copied'), () => notice('Could not copy'));
+  copyText(text, 'Prompt copied');
 }
 
 export function copyResumeCommand(command: string) {
-  copyText(command).then(() => notice('Copied. Stop this chat before resuming it in a terminal'), () => notice('Could not copy'));
+  copyText(command, 'Copied. Stop this chat before resuming it in a terminal');
 }
 
 // A pane sends a prompt and shows the chat, so the reply is seen.

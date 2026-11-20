@@ -52,7 +52,7 @@ export function SeriesPage({ series }: { series: string }) {
     <div className="wk narrow">
       <header className="wk-head">
         <IconButton icon="arrow-left" label="Back" onClick={back} />
-        <nav className="wk-crumbs"><button onClick={back}>Meetings</button></nav>
+        <Button variant="plain" size="sm" onClick={back}>Meetings</Button>
       </header>
       <div className="wk-scroll">
         <article className="mt-page">

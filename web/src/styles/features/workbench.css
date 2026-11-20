@@ -53,7 +53,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
   height: var(--size-row); flex: none; background: var(--surface); border-top: 1px solid var(--border);
   display: flex; align-items: center; font-size: var(--fs-sm); color: var(--fg-muted); padding: 0 var(--sp-3);
 }
-.statusbar .item { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); height: var(--size-row); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+.statusbar .item { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); height: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
 .statusbar button.item { background: none; border: 0; border-radius: 0; color: inherit; }
 @media (hover: hover) { .statusbar .item:hover { background: var(--hover); color: var(--fg); } }
 .statusbar .item.clickable { cursor: pointer; }

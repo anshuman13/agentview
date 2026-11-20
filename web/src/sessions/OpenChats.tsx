@@ -218,7 +218,7 @@ export function OpenChats() {
         {!groups.length && !hits.length && <EmptyState size="sm" title={filter ? 'No repo or chat matches' : 'No chats yet'} hint={filter ? undefined : 'Chats you start show here'} />}
         {hits.length > 0 && <div className="group">Messages</div>}
         {hits.map((h) => (
-          <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={markSegments(h.text, queryWords(filter)).map((x, i) => (x.hit ? <b key={i}>{x.text}</b> : x.text))} lines={2} meta={messageMeta(h)} onClick={() => openHit(h)} />
+          <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={markSegments(h.text, queryWords(filter)).map((x, i) => (x.hit ? <b key={i}>{x.text}</b> : x.text))} lines={2} meta={messageMeta(h)} className="chat-hit" onClick={() => openHit(h)} />
         ))}
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>

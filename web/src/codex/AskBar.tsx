@@ -3,7 +3,8 @@ import { useAssistantStore, useCodex } from './data';
 import type { Meeting } from './data/wiki/wiki';
 import { ask, askText, guessProfile } from './data/ask/ask';
 import { SNOOZES, isQuestion, parseWhen } from './data/tasks/engine';
-import { parseCapture } from './data/tasks/quickAdd';
+import { captureChips, parseCapture } from './data/tasks/quickAdd';
+import { ParsedChips } from './tasks/AddSheet';
 import { withRule } from './data/tasks/recur';
 import { captureTask } from './tasks/captureTask';
 import type { ItemRow, Profile } from './data/sync';
@@ -138,6 +139,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
                 <PickTime className={chipClass({ tone: 'accent' })} onPick={setPick} />
               </>
             ))}
+            {m === 'task' && <ParsedChips chips={captureChips(c)} />}
           </>
         ) : (
           recipes(next).map((r) => <Chip key={r.label} icon="sparkle" onClick={() => ask(askText(r.q, r.profile ?? prof, items, undefined, meetings), r.profile ?? prof)}>{r.label}</Chip>)

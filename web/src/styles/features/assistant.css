@@ -241,6 +241,7 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-quick-title { font-size: var(--type-body-size) !important; line-height: 24px; }
 .as-quick-notes { font-size: var(--type-subheadline-size) !important; color: var(--fg-muted) !important; }
 .as-quick-goal { display: flex; margin-top: var(--sp-4); }
+.as-quick-parsed { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-4); }
 .as-quick-bar { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-6) calc(-1 * var(--sp-4)) 0; }
 .as-quick-tool { display: inline-flex; align-items: center; gap: var(--sp-3); height: var(--touch); min-width: var(--touch); justify-content: center; padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--type-subheadline-size); cursor: pointer; }
 .as-quick-tool .codicon { font-size: 22px; }

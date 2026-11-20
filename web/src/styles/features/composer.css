@@ -130,6 +130,7 @@
   .cp-row .cp-text { flex: 1; min-width: 0; }
   .cp-card.pill :is(textarea, .cp-mirror) { padding: calc((var(--touch) - var(--line-lg)) / 2) var(--sp-2); }
   .cp-card.pill textarea { min-height: var(--touch); }
+  .cp-card.pill textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cp-add { position: relative; flex: none; }
   .cp-add > .icon-btn, .cp-row > :is(.voice, .later) { width: var(--touch); height: var(--touch); border-radius: var(--radius-round); }
   .cp-add > .ui-menu { top: auto; right: auto; bottom: 100%; left: 0; white-space: nowrap; }

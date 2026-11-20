@@ -1,4 +1,4 @@
-import { IconButton } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
 import { Section, sectionCount } from '../../ui/Section';
@@ -32,7 +32,7 @@ export function Person({ name }: { name: string }) {
     <div className="wk narrow">
       <header className="wk-head">
         <IconButton icon="arrow-left" label="Back" onClick={back} />
-        <nav className="wk-crumbs"><button onClick={back}>Back</button></nav>
+        <Button variant="plain" size="sm" onClick={back}>Back</Button>
         <IconButton icon="copy" label="Copy as Markdown" onClick={copy} />
       </header>
       <div className="wk-scroll">
