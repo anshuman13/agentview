@@ -3,7 +3,7 @@ import { type AttentionItem, type ChatRun, type LiveChat, type ReviewFindings, t
 import { apiUrl } from '../api';
 import { track } from '../featureUse';
 
-export type GoalSheetState = { mode: 'start'; plan?: string; here?: boolean } | { mode: 'detail'; run: string };
+export type GoalSheetState = { mode: 'start'; plan?: string; here?: boolean; from?: ChatRun } | { mode: 'detail'; run: string };
 
 type UiState = {
   connected: boolean;

@@ -17,7 +17,7 @@ import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMar
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
-import { goalCommand, parseEvery, planOf, type GoalForm } from '../../shared/goalForm';
+import { goalCommand, parseEvery, planOf, rerunForm, type GoalForm } from '../../shared/goalForm';
 import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
@@ -161,7 +161,11 @@ describe('cases shared with the Android app', () => {
     });
   }
 
-  type PresetCase = { name: string; op: string; raw?: unknown; rawText?: string; list?: GoalPreset[]; preset?: GoalPreset; target?: string; expected: GoalPreset[] };
+  for (const c of cases<{ name: string; run: Parameters<typeof rerunForm>[0]; form: ReturnType<typeof rerunForm> }>('rerun-form')) {
+    it(`rerunForm: ${c.name}`, () => expect(rerunForm(c.run)).toEqual(c.form));
+  }
+
+  type PresetCase ={ name: string; op: string; raw?: unknown; rawText?: string; list?: GoalPreset[]; preset?: GoalPreset; target?: string; expected: GoalPreset[] };
   for (const c of cases<PresetCase>('goal-presets')) {
     it(`goalPresets: ${c.name}`, () => {
       if (c.op === 'parse') expect(parsePresets(c.rawText ?? JSON.stringify(c.raw))).toEqual(c.expected);

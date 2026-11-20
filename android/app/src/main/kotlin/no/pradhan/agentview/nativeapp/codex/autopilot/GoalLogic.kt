@@ -18,7 +18,7 @@ import no.pradhan.agentview.nativeapp.ui.BadgeTone
 // The goal sheet and detail (web/src/sessions/GoalSheet.tsx, GoalDetail.tsx, goalLogic.ts and shared/goalForm.ts).
 
 sealed interface GoalSheet {
-    data class Start(val plan: String? = null, val here: Boolean = false) : GoalSheet
+    data class Start(val plan: String? = null, val here: Boolean = false, val from: ChatRun? = null) : GoalSheet
     data class Detail(val run: String) : GoalSheet
 }
 
@@ -30,6 +30,11 @@ fun goalCommand(form: GoalForm, now: Long): String {
     val what = form.what.trim().replace(Regex("^/goal\\s+"), "")
     return listOfNotNull("/goal", form.every.takeIf { it > 0 }?.let { "every ${everyText(it)}" }, stop?.let { "until $it" }, form.capPct?.takeIf { it > 0 }?.let { "cap $it%" }, form.capUsd?.takeIf { it > 0 }?.let { "cap \$$it" }, form.builds?.takeIf { it > 0 }?.let { "builds $it" }, what.ifEmpty { null }).joinToString(" ")
 }
+
+// shared/goalForm.ts rerunForm: the start sheet's values for running an ended run again, with no stop time. plan is the plan path of a plan goal.
+class RerunForm(val form: GoalForm, val plan: String?)
+
+fun rerunForm(run: ChatRun) = RerunForm(GoalForm(run.what.trim().replace(Regex("^/goal\\s+"), ""), run.every ?: 0, null, null, run.capPct, run.maxBuilds, run.capUsd), planOf(run.what))
 
 // shared/goalForm.ts parseEvery: a custom How often such as "45m", "45 min" or "3h", 10 minutes to 7 days, in ms.
 fun parseEvery(text: String): Long? {

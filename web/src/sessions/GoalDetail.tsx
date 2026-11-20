@@ -14,7 +14,7 @@ import type { RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
 import { finishedLine, mergeQuiet } from '../../../shared/goalText';
-import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, runControl, stopAtMs, usageLine } from './goalLogic';
+import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, runControl, startGoal, stopAtMs, usageLine } from './goalLogic';
 import { since } from './folders';
 import { usePlanProgress } from './usePlanProgress';
 import { RoundRow } from './RoundRow';
@@ -38,6 +38,7 @@ function EditRow({ title, value, options, onEdit }: { title: string; value: Reac
 export function GoalDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const run = useStore((s) => s.runs.find((r) => r.id === id));
   const running = useStore((s) => s.live.find((c) => c.id === run?.chatId)?.running);
+  const chat = useStore((s) => s.session.id);
   const plan = run ? planOf(run.what) : null;
   const { progress } = usePlanProgress(plan, run?.chatId);
   if (!run) return null;
@@ -71,6 +72,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
       <div className="gl-actions">
         {!ended && <Button onClick={() => control(paused ? 'resume' : 'pause')}>{paused ? 'Resume' : 'Pause'}</Button>}
         {!ended && <Button variant="danger" onClick={stop}>Stop</Button>}
+        {ended && <Button onClick={() => startGoal({ from: run, here: chat === run.chatId })}>Run again…</Button>}
         <Button variant="plain" onClick={() => open()}>Open chat</Button>
       </div>
       <Section label="Rounds" count={sectionCount(run.rounds.length)} />
