@@ -71,7 +71,7 @@ private const val SYNC_EVERY_MS = 30_000L
 private fun greeting(now: Long) = when (hourOf(now)) { in 0..4 -> "Good night"; in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; else -> "Good evening" } +
     ", " + java.time.format.DateTimeFormatter.ofPattern("EEE d", java.util.Locale.ENGLISH).format(Instant.ofEpochMilli(now).atZone(codexZone))
 
-private class CodexNav(private val pageS: MutableState<String>, private val routeS: MutableState<String>, private val editS: MutableState<String?>, private val addingS: MutableState<Boolean>, private val needsS: MutableState<Boolean>, private val chipS: MutableState<String>, private val decisionsS: MutableState<Boolean>, private val searchingS: MutableState<Boolean>, private val queryS: MutableState<String>) {
+private class CodexNav(private val pageS: MutableState<String>, private val routeS: MutableState<String>, private val editS: MutableState<String?>, private val addingS: MutableState<Boolean>, private val needsS: MutableState<Boolean>, private val chipS: MutableState<String>, private val decisionsS: MutableState<Boolean>, private val searchingS: MutableState<Boolean>, private val queryS: MutableState<String>, private val pickS: MutableState<Set<String>?>) {
     var page by pageS
     var routeText by routeS
     var editKey by editS
@@ -80,6 +80,7 @@ private class CodexNav(private val pageS: MutableState<String>, private val rout
     var decisions by decisionsS
     var searching by searchingS
     var query by queryS
+    var picked by pickS
     val route get() = routesOf(routeText).lastOrNull()
     val extra get() = route ?: page.takeIf { it in EXTRA_ROOTS }
     val sub get() = route != null || page == "search" || page.startsWith("tag:")
@@ -91,7 +92,8 @@ private class CodexNav(private val pageS: MutableState<String>, private val rout
     fun toggleChip(c: String) { chipS.value = (if (c in chips) chips - c else chips + c).joinToString(",") }
     fun openRow(r: Row) { editKey = r.key }
     fun back() {
-        if (route != null) pop()
+        if (picked != null) picked = null
+        else if (route != null) pop()
         else if (searching && page == "tasks") { searching = false; query = "" }
         else page = if (page.startsWith("tag:")) "tasks" else "overview"
     }
@@ -108,6 +110,7 @@ private fun rememberCodexNav() = CodexNav(
     rememberSaveable { mutableStateOf(false) },
     rememberSaveable { mutableStateOf(false) },
     rememberSaveable { mutableStateOf("") },
+    remember { mutableStateOf<Set<String>?>(null) },
 )
 
 @Composable
@@ -153,8 +156,8 @@ fun CodexScreen(hub: Hub) {
     val ops = remember(hub) { CodexOps(PointActions(hub.codex, say), GoalActions(hub.codex, say), ReviewOps(hub.codex, say), ReplyOps(hub.api, hub.writes, hub.codex, say)) }
     val editing = nav.editKey?.let { k -> st.items.firstOrNull { it.key == k && !it.deleted } }
     LaunchedEffect(editing, nav.editKey) { if (nav.editKey != null && editing == null && st.loaded) nav.editKey = null }
-    LaunchedEffect(nav.page) { if (nav.page != "meetings") nav.decisions = false }
-    BackHandler(enabled = nav.sub || nav.searching || nav.page != "overview") { nav.back() }
+    LaunchedEffect(nav.page, nav.route, nav.searching, filterKey) { nav.picked = null; if (nav.page != "meetings") nav.decisions = false }
+    BackHandler(enabled = nav.picked != null || nav.sub || nav.searching || nav.page != "overview") { nav.back() }
     val refresh = { scope.launch { refreshing = true; hub.codex.sync(); refreshing = false }; Unit }
 
     Box(Modifier.fillMaxSize().background(av.groupPage)) {
@@ -164,7 +167,7 @@ fun CodexScreen(hub: Hub) {
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) { CodexBody(hub, st, nav, profile, now, actions, ops) }
             if (nav.page == "overview" && nav.route == null && st.loaded) AskBar(hub, st, profile)
         }
-        if (nav.route == null && (nav.page == "overview" || nav.page == "tasks" || nav.page.startsWith("tag:"))) Fab(
+        if (nav.route == null && nav.picked == null && (nav.page == "overview" || nav.page == "tasks" || nav.page.startsWith("tag:"))) Fab(
             "add", "Add task", { nav.adding = true },
             Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp8, bottom = if (nav.page == "overview") Tokens.fab + Tokens.sp16 else Tokens.sp8),
         )
@@ -216,7 +219,7 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
         !st.loaded -> Loading("Loading Codex…")
         extra != null -> ExtraContent(extra, hub, st, profile, now, actions, ops, nav.chips, nav.decisions, nav::toggleChip, nav::push, nav::pop, { nav.pop(); openNeeds() }, nav::openRow)
         page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, openNeeds, { nav.page = "goals" }, { nav.adding = true }, meeting)
-        page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" })
+        page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" }, nav.picked, { nav.picked = it })
         page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, nav::openRow)
         page == "search" -> SearchPage(st, profile, nav::openRow, meeting)
         else -> TagPage(st, page.removePrefix("tag:"), now, actions, profile == null, nav::openRow)
