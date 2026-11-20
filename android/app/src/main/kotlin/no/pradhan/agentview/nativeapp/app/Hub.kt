@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.app
 import no.pradhan.agentview.nativeapp.net.Api
 import no.pradhan.agentview.nativeapp.net.ChatTitles
 import no.pradhan.agentview.nativeapp.net.Drafts
+import no.pradhan.agentview.nativeapp.net.SavedPrompts
 import no.pradhan.agentview.nativeapp.net.EventStream
 import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.Outbox
@@ -96,6 +97,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     private val disk = TranscriptDisk(File(app.filesDir, "transcripts"))
 
     val drafts = Drafts(PrefsKeyValue(prefs))
+
+    val savedPrompts = SavedPrompts(PrefsKeyValue(prefs))
 
     val outbox = Outbox(PrefsKeyValue(prefs))
 

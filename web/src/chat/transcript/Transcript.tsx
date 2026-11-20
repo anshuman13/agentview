@@ -16,10 +16,10 @@ import { RewindLink } from './Rewind';
 import { foldTurns, openWork, type Claim, type FoldRow, type StatusStep } from './workFold';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
-import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
+import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, turnAnswers, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
-import { copyPrompt } from '../chatActions';
+import { copyPrompt, copyReply } from '../chatActions';
 import { imageUrl } from '../chatApi';
 import { failedLine, userParts } from '../composer/composerLogic';
 import { billing, providerLabel } from '../../../../shared/providers';
@@ -202,6 +202,7 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
   const { box, rows, stuck, behind, onScroll, jump } = scroll;
   const canRewind = useCan('rewind');
   const rewinds = useMemo(() => rewindReplies(items), [items]);
+  const answers = useMemo(() => turnAnswers(items), [items]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => new Set([...specCards(items), ...docCards(items)]), [items]);
   const list = useMemo<FoldRow[]>(() => foldTurns(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [items, events, cards]);
@@ -225,7 +226,7 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
     const card = cards.has(it.id);
     const agentCard = card && it.kind === 'agent' && slug && where !== 'hidden' ? <SpecCard slug={slug} bump={bump} /> : null;
     if (where === 'shown' && agentCard) return <Fragment key={it.id}>{agentCard}</Fragment>;
-    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
+    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} answer={answers.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
   };
 
   return (
@@ -283,7 +284,7 @@ function sameItem(a: Item, b: Item): boolean {
   }
 }
 
-export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.rewind?.id === n.rewind?.id && p.bump === n.bump && sameItem(p.it, n.it));
+export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.answer === n.answer && p.rewind?.id === n.rewind?.id && p.bump === n.bump && sameItem(p.it, n.it));
 
 function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
   const [open, setOpen] = useState(false);
@@ -369,7 +370,7 @@ function Tasks({ id, steps: all, now, tools, claims, live }: { id: string; steps
   );
 }
 
-function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: string; settled?: boolean; card?: boolean; rewind?: Rewind; bump?: number }) {
+function RowImpl({ it, cwd, settled, card, answer, rewind, bump = 0 }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; rewind?: Rewind; bump?: number }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
@@ -377,7 +378,7 @@ function RowImpl({ it, cwd, settled, card, rewind, bump = 0 }: { it: Item; cwd: 
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && rewind && <div className="tr-acts"><RewindLink rewind={rewind} /></div>}</div>;
+      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <Button variant="plain" size="sm" icon="copy" onClick={() => copyReply(it.text.trim())}>Copy</Button>}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':

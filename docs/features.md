@@ -279,7 +279,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   unread divider: on the web from the seen time before this page opened the chat, on the phone from when the phone last showed it
 - "Copy as Markdown" in the Copy pick of the web chat settings menu copies the loaded prompts and replies under the chat title
   and leaves out subagent text; an untitled chat is headed "Chat". "Last reply" in the same pick (only when there is a reply) copies the
-  latest top-level answer; the phone's chat menu has "Copy last reply" for the same
+  latest top-level answer; the phone's chat menu has "Copy last reply" for the same. Each finished turn's last reply, when nothing follows it in
+  the turn (`turnAnswers`), has its own Copy action on both clients: on hover on the web, under the reply on the phone
+- The phone's Tools sheet starts with Saved prompts, the last 50 prompts sent from the phone in any chat (newest first, kept once, not saved
+  in a read-only check); a tap puts the prompt in the composer
 - "Share chat" in the phone chat menu sends the same Markdown to the Android share sheet
 - "Side chat" in the Fork pick of the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)

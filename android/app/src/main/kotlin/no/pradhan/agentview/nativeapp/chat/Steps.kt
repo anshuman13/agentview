@@ -288,6 +288,18 @@ fun rewindable(items: List<Item>): Set<String> {
     return out
 }
 
+// The last reply of each finished turn, when nothing follows it in the turn: the answers that get a Copy action.
+fun turnAnswers(items: List<Item>): Set<String> {
+    val out = HashSet<String>()
+    var last: Item? = null
+    fun flush() { (last as? Item.Assistant)?.takeIf { !it.streaming }?.let { out.add(it.id) } }
+    for (it in items) {
+        if (it is Item.User) { flush(); last = null } else last = it
+    }
+    flush()
+    return out
+}
+
 // Replies that arrived after the reader scrolled up, for the Jump to latest button.
 fun newReplies(items: List<Item>, lastSeenId: String): Int {
     val i = items.indexOfFirst { it.id == lastSeenId }

@@ -26,11 +26,11 @@ import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches
 import { taskChatPrompt } from '../../shared/taskChat';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail } from './app/runtime/pageEvents';
-import { buildTranscript } from './chat/transcript/steps';
+import { buildTranscript, turnAnswers } from './chat/transcript/steps';
 import { foldTurns, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { chatMarkdown, draftKey, failedLine, handoffText, joinMarks, lastReply, markChip, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
+import { chatMarkdown, draftKey, failedLine, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
 import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -509,6 +509,14 @@ describe('cases shared with the Android app', () => {
       expect(turnEnd(c.events, c.label)).toBe(c.turnEnd);
       expect(failedLine(c.events, c.label)).toBe(c.failedLine);
     });
+  }
+
+  for (const c of cases<{ name: string; text: string; stored: string[]; expected: string[] }>('prompt-history')) {
+    it(`remember: ${c.name}`, () => expect(remember(c.text, c.stored)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; events: ChatEvent[]; expected: string[] }>('turn-answers')) {
+    it(`turnAnswers: ${c.name}`, () => expect([...turnAnswers(buildTranscript(c.events))]).toEqual(c.expected));
   }
 
   const menu = JSON.parse(readFileSync(new URL('../../shared/fixtures/chat-menu.json', import.meta.url), 'utf8'));

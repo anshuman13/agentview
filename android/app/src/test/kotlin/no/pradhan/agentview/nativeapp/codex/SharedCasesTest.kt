@@ -29,6 +29,8 @@ import no.pradhan.agentview.nativeapp.app.BarEvent
 import no.pradhan.agentview.nativeapp.chat.failedLine
 import no.pradhan.agentview.nativeapp.chat.mergeTail
 import no.pradhan.agentview.nativeapp.chat.turnEnd
+import no.pradhan.agentview.nativeapp.chat.rememberPrompt
+import no.pradhan.agentview.nativeapp.chat.turnAnswers
 import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.chat.startModeFor
 import no.pradhan.agentview.nativeapp.app.BarState
@@ -491,6 +493,20 @@ class SharedCasesTest {
             val events = c.getValue("events").jsonArray.mapIndexed { i, e -> JsonObject(mapOf("id" to toJson("e$i")) + e.jsonObject).decode<ChatEvent>() }
             assertEquals(c.str("name"), c.str("turnEnd"), turnEnd(events, c.str("label")))
             assertEquals(c.str("name"), c.getValue("failedLine").jsonPrimitive.contentOrNull, failedLine(events, c.str("label")))
+        }
+    }
+
+    @Test fun promptHistory() {
+        for (c in cases("prompt-history")) {
+            val stored = c.getValue("stored").jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, rememberPrompt(c.str("text"), stored))
+        }
+    }
+
+    @Test fun turnAnswers() {
+        for (c in cases("turn-answers")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }.toSet(), turnAnswers(buildTranscript(events)))
         }
     }
 

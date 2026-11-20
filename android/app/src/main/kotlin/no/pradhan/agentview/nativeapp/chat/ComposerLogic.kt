@@ -16,6 +16,11 @@ import no.pradhan.agentview.nativeapp.sessions.SavedSession
 // web/src/chat/composerLogic.ts and ChatSettings.tsx, the parts the phone composer uses.
 
 const val MAX_ROWS = 8
+const val MAX_SAVED_PROMPTS = 50
+
+// The prompts kept for every chat, oldest first: a repeat moves to the end and a blank is ignored.
+fun rememberPrompt(text: String, stored: List<String>, max: Int = MAX_SAVED_PROMPTS) =
+    if (text.isBlank()) stored else (stored.filter { it != text } + text).takeLast(max)
 const val COMPACT_AT = 200_000
 
 val EFFORT_LEVELS = listOf("low", "medium", "high", "xhigh", "max")

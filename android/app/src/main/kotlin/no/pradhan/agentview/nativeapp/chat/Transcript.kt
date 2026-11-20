@@ -239,6 +239,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     val specCards = view.specCards
     val specBumps = view.specBumps
     val rewinds = view.rewinds
+    val answers = view.answers
     val firstId = view.items.firstOrNull()?.id
     itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
         Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
@@ -256,7 +257,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                         build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump)
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump, answer = it.id in answers)
                     }
                 }
             }
@@ -340,10 +341,16 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, bump: Int? = null) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, bump: Int? = null, answer: Boolean = false) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat, canRewind)
-        is Item.Assistant -> Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
+        is Item.Assistant -> {
+            Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
+            if (answer) {
+                val clip = LocalClipboardManager.current
+                BubbleFooter("", "Copy") { clip.setText(AnnotatedString(it.text.trim())); hub.notice.value = "Reply copied" }
+            }
+        }
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
         is Item.File -> if (it.error != null) FileCard(it, cwd)
