@@ -1,16 +1,12 @@
 package no.pradhan.agentview.nativeapp.codex.autopilot
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -19,10 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.chat.TranscriptBox
-import no.pradhan.agentview.nativeapp.chat.rememberCardOpen
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.net.ChatRun
@@ -42,6 +35,7 @@ import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.DotState
+import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
@@ -61,77 +55,63 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 
-// The loop card above the composer (the web has the same controls and rows in sessions/brief/RailHead.tsx, without the agent rows): state and Pause in the head, what is happening now, the running agents, then the plan line on a goal or the what line and cost on other kinds, the cap row and the Rounds row that shows the history.
-
+// The run's head in a chat's Agents sheet (web sessions/brief/RailHead.tsx): Cancel on a scheduled send, else Open board on tries, Pause, and Stop or More with Run now and Stop.
 @Composable
-fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
-    var rounds by rememberSaveable(run.id) { mutableStateOf(false) }
-    var all by rememberSaveable(run.id) { mutableStateOf(false) }
+fun RunActions(hub: Hub, run: ChatRun) {
     var board by rememberSaveable(run.id) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val stopOnly = run.kind == "tries" || run.kind == "job"
-    val scheduled = sendsAt(run) != null
-    val goal = run.kind == "goal"
     val paused = run.state == "paused"
-    val agents = live.agentList
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(agents.isNotEmpty()) { while (agents.isNotEmpty()) { delay(30_000); now = System.currentTimeMillis() } }
-    val (cardOpen, toggleCard) = rememberCardOpen("${run.chatId}:loop", needsYou || run.needsYou)
-    val progress = if (goal) planProgress(hub, planOf(run.what), run.chatId) else null
-    val state = loopNow(run, live.now)
-    val working = live.running || agents.isNotEmpty()
-    val detail = if (runDetail(run).opens) ({ hub.shell.goalSheet.value = GoalSheet.Detail(run.id) }) else null
-    val meta = nowMeta(state, buildsLine(run))
-    Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
-        TranscriptBox(
-            hub, "loop:${run.id}", runLine(run), open = cardOpen, onToggle = toggleCard,
-            action = {
-                if (scheduled) IconBtn("close", "Cancel", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
-                else {
-                    if (run.kind == "tries") IconBtn("layout", "Open board", { board = true })
-                    if (!stopOnly) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
-                    if (stopOnly) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
-                    else MoreButton { close ->
-                        if (!paused) { MenuItem("Run now", "play", { close(); hub.runControl(run, "now") }, enabled = !hub.readOnly); MenuSeparator() }
-                        MenuItem("Stop", "debug-stop", { close(); hub.runControl(run, "stop") }, danger = true, enabled = !hub.readOnly)
-                    }
-                }
-            },
-        ) {
-          Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) {
-            ListRow(
-                state.title, meta.ifEmpty { null }, lines = 2, compact = true,
-                leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
-                onClick = detail,
-            )
-            agents.singleOrNull()?.let { a ->
-                ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, compact = true, onClick = { onOpenAgent(a.id) })
-            }
-            if (agents.size > 1) ListRow(plural(agents.size, "agent"), agents.joinToString(", ") { it.slug ?: it.description }, compact = true, leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, onClick = onOpenAgents)
-            if (goal) ListRow(progress?.let { "Plan $it" } ?: run.what, compact = true, stateSlot = false, onClick = detail)
-            else ListRow(run.what, money(run.costUsd, billing(run.provider)), compact = true, stateSlot = false, onClick = detail)
-            capLine(run)?.let { cap ->
-                ListRow(cap.text, lines = 1, compact = true, leading = { AvIcon("dashboard", null, Tokens.iconSm, tint = av.fgMuted) }, state = if (cap.near) ({ Badge("Near cap", BadgeTone.Waiting) }) else null)
-            }
-            if ((goal || run.kind == "loop") && run.rounds.isNotEmpty()) {
-                ListRow(
-                    plural(run.round, "round"), "${roundsSummary(run.rounds)} · ${money(run.rounds.sumOf { it.costUsd }, billing(run.provider))}", lines = 1, compact = true,
-                    trailing = { AvIcon(if (rounds) "chevron-up" else "chevron-down", null, Tokens.iconSm, tint = av.fgMuted) },
-                    onClick = { rounds = !rounds },
-                )
-                if (rounds) {
-                    val groups = mergeQuiet(run.rounds).asReversed()
-                    (if (all) groups else groups.take(10)).forEach { g -> RoundRow(g, run.provider, compact = true) { hub.showTurn.value = it } }
-                    if (!all && groups.size > 10) Button("Show all ${groups.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                }
-            }
-            run.rounds.lastOrNull { it.report != null }?.let { r -> RoundRow(RoundGroup(r, r, 1, r.costUsd), run.provider, compact = true) { hub.showTurn.value = it } }
-          }
+    if (sendsAt(run) != null) IconBtn("close", "Cancel", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
+    else {
+        if (run.kind == "tries") IconBtn("layout", "Open board", { board = true })
+        if (!stopOnly) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
+        if (stopOnly) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
+        else MoreButton { close ->
+            if (!paused) { MenuItem("Run now", "play", { close(); hub.runControl(run, "now") }, enabled = !hub.readOnly); MenuSeparator() }
+            MenuItem("Stop", "debug-stop", { close(); hub.runControl(run, "stop") }, danger = true, enabled = !hub.readOnly)
         }
     }
     if (board) {
         val chats by hub.store.state.select { it.live }
         TriesSheet(hub, run, chats, { board = false }, { t -> scope.launch { if (hub.openSaved(t.sessionId)) board = false } })
+    }
+}
+
+// The run's rows: what is happening now, the plan line on a goal or the what line and cost on other kinds, the cap row, the Rounds row that shows the history and the last report.
+@Composable
+fun RunRows(hub: Hub, run: ChatRun, live: LiveChat) {
+    var rounds by rememberSaveable(run.id) { mutableStateOf(false) }
+    var all by rememberSaveable(run.id) { mutableStateOf(false) }
+    val goal = run.kind == "goal"
+    val progress = if (goal) planProgress(hub, planOf(run.what), run.chatId) else null
+    val state = loopNow(run, live.now)
+    val working = live.running || live.agentList.isNotEmpty()
+    val detail = if (runDetail(run).opens) ({ hub.shell.goalSheet.value = GoalSheet.Detail(run.id) }) else null
+    Group {
+        ListRow(
+            state.title, nowMeta(state, buildsLine(run)).ifEmpty { null }, lines = 2, compact = true,
+            leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
+            onClick = detail,
+        )
+        if (goal) ListRow(progress?.let { "Plan $it" } ?: run.what, compact = true, stateSlot = false, onClick = detail)
+        else ListRow(run.what, money(run.costUsd, billing(run.provider)), compact = true, stateSlot = false, onClick = detail)
+        capLine(run)?.let { cap ->
+            ListRow(cap.text, lines = 1, compact = true, leading = { AvIcon("dashboard", null, Tokens.iconSm, tint = av.fgMuted) }, state = if (cap.near) ({ Badge("Near cap", BadgeTone.Waiting) }) else null)
+        }
+        if ((goal || run.kind == "loop") && run.rounds.isNotEmpty()) {
+            ListRow(
+                plural(run.round, "round"), "${roundsSummary(run.rounds)} · ${money(run.rounds.sumOf { it.costUsd }, billing(run.provider))}", lines = 1, compact = true,
+                trailing = { AvIcon(if (rounds) "chevron-up" else "chevron-down", null, Tokens.iconSm, tint = av.fgMuted) },
+                onClick = { rounds = !rounds },
+            )
+            if (rounds) {
+                val groups = mergeQuiet(run.rounds).asReversed()
+                (if (all) groups else groups.take(10)).forEach { g -> RoundRow(g, run.provider, compact = true) { hub.showTurn.value = it } }
+                if (!all && groups.size > 10) Button("Show all ${groups.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            }
+        }
+        run.rounds.lastOrNull { it.report != null }?.let { r -> RoundRow(RoundGroup(r, r, 1, r.costUsd), run.provider, compact = true) { hub.showTurn.value = it } }
     }
 }
 

@@ -33,13 +33,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
@@ -98,6 +103,7 @@ import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.TimeDialog
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import java.time.ZonedDateTime
+import kotlinx.coroutines.flow.first
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.app.sendAt
 import no.pradhan.agentview.nativeapp.ui.Type
@@ -213,6 +219,18 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     var bar by remember(chatId) { mutableStateOf(barState(BarState(), if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled)) }
     val imeVisible = WindowInsets.isImeVisible
     LaunchedEffect(chatId) { hub.draftChanged.collect { if (it == chatId) s.reload() } }
+    val focus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val window = LocalWindowInfo.current
+    // Quote, Use again and Saved prompts tap in a sheet or menu window; focus waits until this window has it back.
+    LaunchedEffect(chatId) {
+        hub.composerFocus.collect {
+            if (it != chatId) return@collect
+            s.reload()
+            snapshotFlow { window.isWindowFocused }.first { f -> f }
+            runCatching { focus.requestFocus(); keyboard?.show() }
+        }
+    }
     LaunchedEffect(imeVisible) { bar = barState(bar, if (imeVisible) BarEvent.KeyboardUp else BarEvent.KeyboardDown) }
     LaunchedEffect(s.full.isEmpty()) { bar = barState(bar, if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled) }
     LaunchedEffect(bar) { hub.shell.composing.value = barHidden(bar) }
@@ -236,7 +254,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
                 else IconBtn("add", "Add", { sheet = Picker.Add })
                 ComposerInput(
                     s, composerPlaceholder(providerLabel(session?.provider), placeholderState(waiting, session?.compacting == true, running, s.uses.isNotEmpty())),
-                    Modifier.weight(1f).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
+                    Modifier.weight(1f).focusRequester(focus).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
                 )
                 ComposerActions(hub, s, running, uploading, dictation)
             }

@@ -137,6 +137,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val draftChanged = MutableSharedFlow<String>(extraBufferCapacity = 1)
 
+    val composerFocus = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
     // The integrations the server's settings file turns on (shared/protocol.ts PublicSettings).
     val deploy = MutableStateFlow(false)
 
@@ -484,7 +486,10 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     }
 
     // Adds a sent prompt to the composer of a chat that is already on screen (web agentview:insert).
-    fun useAgain(chat: String, text: String) = appendDraft(chat, text)
+    fun useAgain(chat: String, text: String) {
+        appendDraft(chat, text)
+        composerFocus.tryEmit(chat)
+    }
 
     private fun appendDraft(chat: String, text: String) {
         setDraft(chat, appendPrompt(draft(chat), text))

@@ -32,6 +32,8 @@ import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.autopilot.loopNow
 import no.pradhan.agentview.nativeapp.codex.autopilot.runDetail
+import no.pradhan.agentview.nativeapp.codex.autopilot.RunActions
+import no.pradhan.agentview.nativeapp.codex.autopilot.RunRows
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
@@ -53,7 +55,6 @@ import no.pradhan.agentview.nativeapp.app.remindChat
 import no.pradhan.agentview.nativeapp.app.rememberFromChat
 import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.app.submit
-import no.pradhan.agentview.nativeapp.app.runControl
 import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.ui.IconBtn
@@ -284,6 +285,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
         run?.let { r ->
             val line = listOfNotNull(runLine(r), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
             Text(line, Modifier.fillMaxWidth().then(if (runDetail(r).opens) Modifier.heightIn(min = Tokens.touchSm).clickable { hub.shell.goalSheet.value = GoalSheet.Detail(r.id) } else Modifier).padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
+            RunRows(hub, r, live)
         }
         AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
     }
@@ -338,12 +340,10 @@ fun RenameDialog(current: String, onSave: (String) -> Unit, onDismiss: () -> Uni
     TextDialog("Rename chat", current, "Save", { t -> renameTitle(t, current)?.let(onSave) }, onDismiss, maxLength = 120)
 }
 
-// The run's controls in the Agents sheet: pause or resume, and stop the run or every running agent.
+// The Agents sheet's head: the run's controls, else stop every running agent.
 @Composable
 private fun AgentsActions(hub: Hub, run: ChatRun?, agents: List<Agent>) {
     val running = agents.filter { it.status == "running" && it.group == null }
-    val paused = run?.state == "paused"
-    if (run != null && run.kind !in setOf("tries", "job")) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
-    if (run != null) IconBtn("debug-stop", "Stop the run", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
+    if (run != null) RunActions(hub, run)
     else if (running.isNotEmpty()) IconBtn("debug-stop", "Stop all agents", { running.forEach { hub.stopTask(it.id) } }, enabled = !hub.readOnly)
 }
