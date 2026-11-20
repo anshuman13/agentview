@@ -7,6 +7,8 @@ import { setView, useEscapeBack } from '../view';
 import { useMinute } from '../tasks/split';
 import { nextRun } from '../../../../shared/schedule';
 import { runsOf, useJobs } from './schedule';
+import { Row } from '../../ui/Row';
+import { Switch } from './Switch';
 import { RunsRow, RunsSheet } from './RunsSheet';
 import { JobActions, JobRepo, JobTools, JobWhen, repoName } from './JobParts';
 
@@ -32,7 +34,7 @@ function useJobEditor(j: Job) {
 
 export function JobPage({ j }: { j: Job }) {
   useMinute();
-  const { runs } = useJobs();
+  const { runs, store } = useJobs();
   const { name, setName, prompt, setPrompt, custom, setCustom, customOk, save, saveCustom } = useJobEditor(j);
   const [query, setQuery] = useState('');
   const [runsOpen, setRunsOpen] = useState(false);
@@ -61,6 +63,7 @@ export function JobPage({ j }: { j: Job }) {
           <JobRepo j={j} />
           {!j.repo && <JobTools j={j} />}
           <div className="as-group" key={j.id}>
+            {!j.repo && <Row plain title="Only push when it found something" meta="A reply starting with NOTHING NEW is kept in the runs but not pushed" trailing={<Switch on={!!j.quiet} label="Only push when it found something" onChange={(on) => void store.editRow('jobs', j, { quiet: on ? 1 : 0 })} />} />}
             <RunsRow latest={list[0]} onOpen={() => setRunsOpen(true)} />
           </div>
         </article>

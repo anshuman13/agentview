@@ -22,7 +22,7 @@ export { nextRun };
 
 const KEEP = 20;
 
-type Job = { id: string; profile: Profile; name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null; tools: string | null; repo: string | null };
+type Job = { id: string; profile: Profile; name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null; tools: string | null; repo: string | null; quiet: number | null };
 
 // The tools a job may use beyond reading: "browser" for AgentView's own Chrome, or MCP tool names, where a trailing * matches a prefix.
 export function jobAllows(tools: string | null) {
@@ -77,6 +77,7 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
       : 'This runs on a schedule with no one watching. Only read: do not send, post, create or change anything outside Codex.',
     ...(browser ? ['The mcp__browser tools drive AgentView\'s own Chrome, which holds its own logins. Wait for a page to finish loading before you read it.'] : []),
     'Use ask_context to see what my wiki, meetings, Slack decisions and open tasks say about something. Use add_task for anything I need to act on, notify for anything I must see right away, and stop_job once its work is done for good. End with a short plain-text result for a phone notification. Do not use the em dash character.',
+    ...(job.quiet ? ['If there is nothing new to report, start your reply with NOTHING NEW.'] : []),
   ].join('\n');
   let result = '';
   let cost: number | null = null;
@@ -118,7 +119,7 @@ async function startCoding(job: Job, repo: string) {
 // Fills in the next run of enabled jobs that have none and returns the jobs that are due. A job that is off has a next
 // run only when Run now was pressed.
 export function dueJobs(db: Database, now = Date.now()): Job[] {
-  const jobs = db.prepare('SELECT id, profile, name, schedule, prompt, enabled, next_run_at, tools, repo FROM jobs WHERE deleted = 0').all() as Job[];
+  const jobs = db.prepare('SELECT id, profile, name, schedule, prompt, enabled, next_run_at, tools, repo, quiet FROM jobs WHERE deleted = 0').all() as Job[];
   const plan: Change[] = [];
   for (const j of jobs) {
     if (j.next_run_at != null || !j.enabled) continue;
@@ -147,9 +148,9 @@ export async function runDue(db: Database, now = Date.now(), run: typeof runJob 
 
 async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof pushNtfy, reply: typeof replyToCommand) {
   // Earlier jobs can run for minutes; skip or update this one if it was turned off, deleted or edited meanwhile.
-  const live = db.prepare('SELECT prompt, tools, repo, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; tools: string | null; repo: string | null; next_run_at: number | null; field_times: string } | null;
+  const live = db.prepare('SELECT prompt, tools, repo, quiet, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; tools: string | null; repo: string | null; quiet: number | null; next_run_at: number | null; field_times: string } | null;
   if (!live || live.next_run_at == null || live.next_run_at > Date.now() || !live.prompt?.trim()) return;
-  const job = { ...due, prompt: live.prompt, tools: live.tools, repo: live.repo };
+  const job = { ...due, prompt: live.prompt, tools: live.tools, repo: live.repo, quiet: live.quiet };
   const planned = JSON.parse(live.field_times).next_run_at;
   if (await verifyLimit(ACCOUNT_OF[job.profile])) return;
   const id = randomUUID();
@@ -160,6 +161,7 @@ async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof
   let notified = false;
   let cost: number | null = null;
   let skipped = false;
+  let nothingNew = false;
   try {
     if (job.repo) {
       const started = await startCoding(job, job.repo);
@@ -171,6 +173,7 @@ async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof
       const { result, added, ...r } = await (jobAllows(job.tools).browser ? serial('job-browser', go) : go());
       notified = r.notified;
       cost = r.cost;
+      nothingNew = !!job.quiet && /^NOTHING NEW/i.test(result);
       output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n') || 'Finished with nothing to report';
     }
   } catch (err) {
@@ -193,7 +196,7 @@ async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof
   applyChanges(db, changes);
   prune(db, job, done);
   await reply(db, job.id, status === 'ok', output);
-  if (status !== 'ok' || (!job.repo && !notified && /\b(push|notify)\b/i.test(job.prompt ?? ''))) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
+  if (status !== 'ok' || (!job.repo && !notified && !nothingNew && /\b(push|notify)\b/i.test(job.prompt ?? ''))) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
 }
 
 // A run cut off by a hub restart is marked failed; its job runs again at the next tick.

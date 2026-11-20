@@ -95,7 +95,8 @@
     "enabled",
     "next_run_at",
     "tools",
-    "repo"
+    "repo",
+    "quiet"
   ],
   "runs": [
     "job_id",
