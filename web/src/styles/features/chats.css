@@ -153,6 +153,7 @@
 @media (max-width: 700px) { .tb-grid { grid-template-columns: minmax(0, 1fr); } }
 .gl-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .gl-anchor { position: relative; display: block; }
+.gl-hint { padding: 0 var(--list-pad); }
 .gl-note { font-size: var(--type-meta-size); line-height: var(--type-meta-line); color: var(--meta-fg); }
 .gl-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-4); padding: var(--sp-8) 0 var(--sp-4); }
 .bd-head { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) 0; }

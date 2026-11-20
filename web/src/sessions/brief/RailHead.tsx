@@ -57,7 +57,7 @@ export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose
         {run?.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
         {run && !stopOnly && !scheduled && <IconButton icon={paused ? 'debug-start' : 'debug-pause'} label={paused ? 'Resume' : 'Pause'} size="sm" onClick={() => control(paused ? 'resume' : 'pause')} />}
         {run && !stopOnly && !scheduled && (
-          <>
+          <span className="tl-more">
             <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
             {menu && (
               <Menu trigger={more} onClose={() => setMenu(false)}>
@@ -66,7 +66,7 @@ export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose
                 <MenuItem danger icon="debug-stop" onClick={() => { setMenu(false); stop(); }}>Stop</MenuItem>
               </Menu>
             )}
-          </>
+          </span>
         )}
         {(stopOnly || (!run && canStop && running.length > 0)) && <IconButton icon="debug-stop" label={run ? 'Stop the run' : 'Stop all agents'} size="sm" onClick={stop} />}
         {onClose && <IconButton icon="close" label="Close the agents" size="sm" onClick={onClose} />}

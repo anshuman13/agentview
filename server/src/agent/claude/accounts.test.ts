@@ -1,9 +1,10 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'bun:test';
 import { setSystemTime } from '../../../../testing.js';
 
-const dir = process.env.AGENTVIEW_LIMITS_DIR!;
+const dir = (process.env.AGENTVIEW_LIMITS_DIR ??= mkdtempSync(path.join(os.tmpdir(), 'accounts-')));
 const HOME = `${os.homedir()}/workspace_personal/app`;
 const WORK = `${os.homedir()}/workspace/app`;
 

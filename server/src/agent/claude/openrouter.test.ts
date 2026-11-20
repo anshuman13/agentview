@@ -1,8 +1,14 @@
 import { describe, expect, it, vi } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import type { CanUseTool, HookCallback } from '@anthropic-ai/claude-agent-sdk';
-import { agentOptions } from './options.js';
-import { loadOpenRouter, openRouterEnv, openRouterModels, openRouterValue, openRouterView, saveOpenRouter, type OpenRouterSettings } from './openrouter.js';
+import type { OpenRouterSettings } from './openrouter.js';
+
+// The settings file lives in AGENTVIEW_LIMITS_DIR; a run without the preload still writes to a temp folder.
+process.env.AGENTVIEW_LIMITS_DIR ??= mkdtempSync(path.join(os.tmpdir(), 'openrouter-'));
+const { agentOptions } = await import('./options.js');
+const { loadOpenRouter, openRouterEnv, openRouterModels, openRouterValue, openRouterView, saveOpenRouter } = await import('./openrouter.js');
 
 const settings: OpenRouterSettings = { key: 'sk-or-test-1234567890', default: 'sonnet', models: { sonnet: 'vendor/model-a', haiku: 'vendor/model-b' } };
 

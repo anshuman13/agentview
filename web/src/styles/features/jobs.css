@@ -13,7 +13,7 @@
 .jb-fields input:not([type='date']) { height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
 .mt-page > .ui-section { padding-right: 0; }
 .mt-page > .ui-section .ui-section-head { padding-left: 0; }
-.jb-name { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
+.jb-name { display: block; width: 100%; padding: 0; border: 0; background: transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jb-when { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
 .jb-when select, .jb-when input { flex: none; width: auto; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
 .jb-when .jb-custom { flex: 1 1 180px; font-family: var(--font-mono, monospace); }

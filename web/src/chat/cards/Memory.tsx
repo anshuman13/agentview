@@ -203,7 +203,7 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
       {files === null && !error && <Skeleton rows={3} />}
       {error && !files?.length && <EmptyState size="sm" title="Could not load memory" hint={error} action={<Button size="sm" onClick={retry}>Retry</Button>} />}
       {!error && files?.length === 0 && <EmptyState size="sm" title={`No ${file} or memory files`} hint="Add a rule below to create one" />}
-      {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd), f.at ? since(f.at, now) : ''].filter(Boolean).join(' · ')} state={markBadge(markOf(f))} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
+      {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ')} state={markBadge(markOf(f))} trailing={<>{f.at ? since(f.at, now) : null}<Icon name="chevron-right" small /></>} onClick={() => setOpen(f)} />)}
       {files && <AddRule file={file} onSaved={reload} />}
       <GivenClaims facts={facts} cwd={cwd} onClose={onClose} />
     </Sheet>
@@ -224,10 +224,10 @@ export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: strin
   return (
     <>
       <Section label="From the wiki" count={sectionCount(given.length)} action={<Button size="sm" variant="plain" icon="add" onClick={() => setRemember(true)}>Remember</Button>} />
-      <div className="muted">New chats get these</div>
+      <div className="gl-hint muted">New chats get these</div>
       {given.length ? given.map((f) => <GivenClaim key={f.id} fact={f} open={() => openMemory(f.id)} />)
         : <EmptyState size="sm" title="Nothing from the wiki yet" hint="Remember adds a preference every new chat in this profile starts with" />}
-      {left > 0 && <div className="muted">{`${left} more not given: new chats get the ${PREFERENCES} newest, up to ${PREFERENCE_CHARS} characters`}<Button size="sm" variant="plain" onClick={() => openMemory()}>Open Memory</Button></div>}
+      {left > 0 && <div className="gl-hint muted">{`${left} more not given: new chats get the ${PREFERENCES} newest, up to ${PREFERENCE_CHARS} characters`}<Button size="sm" variant="plain" onClick={() => openMemory()}>Open Memory</Button></div>}
       {remember && <RememberPick close={() => setRemember(false)} />}
     </>
   );

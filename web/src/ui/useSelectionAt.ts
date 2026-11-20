@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
-export type SelectionAt = { quote: string; x: number; y: number };
+export type SelectionAt = { quote: string; x: number; y: number; top: number };
 
-// Text selected inside body that accept takes, placed under the selection in the scroller's coordinates so a popup
-// width wide stays inside it. Esc hides it.
+// Text selected inside body that accept takes, placed under the selection (y) in the scroller's coordinates so a popup
+// width wide stays inside it; top is the selection's top edge for a popup placed above it. Esc hides it.
 export function useSelectionAt(body: RefObject<HTMLElement | null>, scroller: RefObject<HTMLElement | null>, width: number, accept: (sel: Selection) => boolean) {
   const [at, setAt] = useState<SelectionAt | null>(null);
   const open = useRef(false);
@@ -19,7 +19,7 @@ export function useSelectionAt(body: RefObject<HTMLElement | null>, scroller: Re
       if (!sel || !el || !box || !quote || sel.rangeCount === 0 || !el.contains(sel.anchorNode) || !takes.current(sel)) return setAt(null);
       const r = sel.getRangeAt(0).getBoundingClientRect();
       const b = box.getBoundingClientRect();
-      setAt({ quote, x: Math.max(8, Math.min(r.left - b.left, b.width - width)), y: r.bottom - b.top + box.scrollTop + 6 });
+      setAt({ quote, x: Math.max(8, Math.min(r.left - b.left, b.width - width)), y: r.bottom - b.top + box.scrollTop + 6, top: r.top - b.top + box.scrollTop - 6 });
     };
     let t: ReturnType<typeof setTimeout>;
     const later = () => {

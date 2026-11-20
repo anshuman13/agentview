@@ -92,7 +92,8 @@ describe('MemoryPick', () => {
     const file: MemoryFile = { path: '/Users/me/.claude/projects/-w-repo/memory/prefs.md', name: 'prefs', description: 'Prefers short replies', text: 'Short.', editable: true, at: now - 100 * 86_400_000 };
     states.push([file]);
     const html = renderToStaticMarkup(<MemoryPick cwd="/w/repo" onClose={() => {}} />);
-    expect(html).toContain('Prefers short replies · Memory · .claude · ');
+    expect(html).toContain('Prefers short replies · Memory · .claude<');
+    expect(html).toContain('<span class="ui-row-trail">14w ago');
     expect(html).toContain('>Stale<');
   });
 

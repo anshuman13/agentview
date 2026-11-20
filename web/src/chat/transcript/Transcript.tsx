@@ -84,7 +84,7 @@ function QuoteButton({ rows }: { rows: RefObject<HTMLDivElement | null> }) {
     document.getSelection()?.removeAllRanges();
     clear();
   };
-  return <Button size="sm" variant="filled" icon="quote" className="tr-quote" style={{ left: at.x, top: at.y }} onMouseDown={(e) => e.preventDefault()} onClick={quote}>Quote</Button>;
+  return <Button size="sm" variant="filled" icon="quote" className="tr-quote" style={{ left: at.x, top: at.top }} onMouseDown={(e) => e.preventDefault()} onClick={quote}>Quote</Button>;
 }
 
 function lastUserId(items: Item[]) {

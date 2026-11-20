@@ -37,7 +37,7 @@ export function Person({ name }: { name: string }) {
       <div className="wk-scroll">
         <article className="mt-page">
           <div className="mt-title"><Section label={shown} /></div>
-          <Row plain leading={<Avatars people={[shown]} />} title={email || plural(mine.length, 'meeting')} meta={email ? plural(mine.length, 'meeting') : undefined} />
+          <Row plain className="mt-person" leading={<Avatars people={[shown]} />} title={email || plural(mine.length, 'meeting')} meta={email ? plural(mine.length, 'meeting') : undefined} />
 
           {inbox.dm && <SlackDm dm={inbox.dm} />}
           <Asks name={name} rows={waiting} />

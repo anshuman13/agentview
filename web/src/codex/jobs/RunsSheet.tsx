@@ -52,7 +52,7 @@ export function RunsSheet({ job, runs, query, setQuery, onClose }: { job: Job; r
   const shown = runs.slice(0, 10);
   const askAbout = (r: Run) => { if (ask(runAsk(job.name || 'Untitled job', r.started_at ?? 0, r.output!), job.profile)) onClose(); };
   return (
-    <Sheet label="Runs" onClose={onClose}>
+    <Sheet label="Runs" onClose={onClose} className="gl-sheet">
       <Section label="Runs" count={sectionCount(shown.length)} />
       <div className="as-group">
         {shown.map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} onAsk={() => askAbout(r)} />)}

@@ -9,15 +9,15 @@
 .tr-jump.tr-next { max-width: calc(100% - 2 * var(--sp-5)); }
 .tr-next-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-find { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-8); border-bottom: 1px solid var(--border); }
-.tr-find .jb-search { flex: 1 1 240px; min-width: 140px; max-width: 360px; }
-.tr-find-count { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-find .jb-search { flex: 1 1 240px; max-width: 360px; }
+.tr-find-count { flex: none; white-space: nowrap; }
 .find-hit { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius); }
 .tr { flex: 1 1 auto; min-height: 0; overflow: auto; padding: var(--sp-6) var(--sp-8) var(--sp-8); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--fg); }
 :is(.tr, .tr-rows) > * + * { margin-top: var(--sp-6); }
 :is(.tr, .tr-rows) > .tr-act + .tr-act { margin-top: 0; }
 :is(.tr, .tr-rows) > .tr-act + .tr-file, :is(.tr, .tr-rows) > .tr-file + .tr-act { margin-top: var(--sp-2); }
 .tr-rows { position: relative; }
-.tr-rows > .tr-quote { position: absolute; z-index: 5; margin: 0; box-shadow: var(--elev-3); }
+.tr-rows > .tr-quote { position: absolute; z-index: 5; margin: 0; box-shadow: var(--elev-3); transform: translateY(-100%); }
 
 .tr-user {
   position: relative; padding: var(--sp-5) var(--sp-6); border: 1px solid var(--border-card); border-left: 3px solid var(--prompt); border-radius: var(--radius);
