@@ -1,4 +1,4 @@
-import { MCP_BAD, type ChatEvent, type LiveChat } from '../../../shared/protocol.js';
+import { MCP_BAD, type ChatEvent, type LiveChat, type PendingRequest } from '../../../shared/protocol.js';
 import { chatTitle } from '../../../shared/util.js';
 import { replyLine } from '../../../shared/edits.js';
 import { latestTodos, todoCount } from '../../../shared/todos.js';
@@ -36,6 +36,13 @@ function nowField(e: Of<'status'> | undefined) {
   return e ? { now: { text: e.text, at: e.at, ...(e.done && { done: e.done }), ...(e.next && { next: e.next }) } } : {};
 }
 
+// What the first pending request asks, for the Needs you row.
+export function askLabel(r: PendingRequest | undefined) {
+  if (!r) return undefined;
+  if (r.kind === 'question') return 'Question';
+  return r.toolName === 'ExitPlanMode' ? 'Plan approval' : `Permission: ${r.toolName.split('__').pop()}`;
+}
+
 type SummaryInputs = { stalled: boolean; run: Parameters<typeof runField>[0]; refresh: () => void };
 
 function prChecksField(cwd: string, pr: number, refresh: () => void) {
@@ -61,6 +68,7 @@ export function summary(chat: AgentSession, { stalled, run, refresh }: SummaryIn
     ...(agentList.length > 0 && { agentList }),
     ...nowField(scan.status),
     pending: s.pending.length,
+    ...(s.pending.length > 0 && { ask: askLabel(s.pending[0]) }),
     status: s.status,
     lastActive: lastActive(chat),
     mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,

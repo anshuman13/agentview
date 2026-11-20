@@ -99,6 +99,7 @@ data class LiveChat(
     val cwd: String = "",
     val running: Boolean = false,
     val pending: Int = 0,
+    val ask: String? = null,
     val status: String = "",
     val lastActive: Long = 0,
     val last: String? = null,

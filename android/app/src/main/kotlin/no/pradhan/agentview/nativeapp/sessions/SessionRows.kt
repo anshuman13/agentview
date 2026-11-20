@@ -154,7 +154,7 @@ class ChatRows(
     private fun liveMeta(c: LiveChat, s: SavedSession?, repo: String?, branch: String?, pr: PrChip?): AnnotatedString {
         val line = c.edits?.takeIf { !c.running && c.pending == 0 && (it.add > 0 || it.del > 0) }
         val when_ = when {
-            c.pending > 0 -> since(c.lastActive)
+            c.pending > 0 -> metaLine(c.ask, since(c.lastActive))
             c.stalled -> "No activity for 15 min"
             c.running -> c.status.ifBlank { "Working" }
             else -> since(maxOf(c.lastActive, s?.lastModified ?: 0))

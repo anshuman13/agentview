@@ -174,7 +174,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   const pr = usePullRequests(c.pr && c.cwd === shownCwd ? shownCwd : '').find((p) => p.number === c.pr);
   const checks = pr?.checks ?? c.prChecks;
   const checkIcon = checks && checks !== 'none' && <CheckIcon state={checks} />;
-  const when = c.pending ? since(c.lastActive) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : since(Math.max(c.lastActive, saved?.lastModified ?? 0));
+  const when = c.pending ? metaLine(c.ask, since(c.lastActive)) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : since(Math.max(c.lastActive, saved?.lastModified ?? 0));
   // Slack's sidebar draft line: an unsent composer draft replaces the meta line, except in the chat you are in.
   const draft = selected ? '' : draftLine(readDraft(c.id));
   const main = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
