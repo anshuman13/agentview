@@ -23,6 +23,7 @@ import { useComposerKeys } from './useComposerKeys';
 import { useDraft, usePromptHistory } from './usePromptHistory';
 import { useSubmit } from './useSubmit';
 import { useUploads } from './useUploads';
+import { SnackBar } from '../../codex/tasks/SnackBar';
 import { providerLabel } from '../../../../shared/providers';
 
 function placeholderFor(label: string, running: boolean, waiting: boolean, compacting: boolean, hasUses: boolean) {
@@ -120,6 +121,7 @@ export const Composer = memo(function Composer() {
       )}
       <Announcer key={chat} />
       <ChatSettings pick={pick} setPick={setPick} savedCount={h.sentHistory.length} />
+      <SnackBar />
       <PickerSheets pick={pick} setPick={setPick} sentHistory={h.sentHistory} setUses={setUses} apply={apply} focus={() => ta.current?.focus()} />
     </div>
   );

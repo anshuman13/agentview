@@ -1,12 +1,19 @@
 package no.pradhan.agentview.nativeapp.codex.wiki
 
+import java.util.UUID
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.DAY_MS
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
+import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.net.protocolJson
@@ -94,6 +101,19 @@ fun sourcesOf(f: Row): List<Source> = runCatching {
         Source((o["kind"] as? JsonPrimitive)?.contentOrNull ?: "", label, (o["url"] as? JsonPrimitive)?.contentOrNull)
     }
 }.getOrDefault(emptyList())
+
+// The sources column of a claim saved from a chat: web/src/codex/data/wiki/wiki.ts chatSource.
+fun chatSource(title: String, cwd: String): String =
+    buildJsonArray { add(buildJsonObject { put("kind", "chat"); put("label", "${title.ifBlank { "chat" }} · ${cwd.trimEnd('/').substringAfterLast('/')}") }) }.toString()
+
+// A new claim of web/src/codex/data/wiki/wiki.ts newFact; null for blank text, so nothing is saved.
+fun newFact(text: String, pageId: String?, profile: String, now: Long, state: String = "proposed", sources: String? = null, id: String = UUID.randomUUID().toString()): Row? {
+    val body = text.trim().ifEmpty { return null }
+    val values = mutableMapOf<String, Any?>("text" to body, "page_id" to pageId, "at" to now, "state" to state, "added_by" to "you")
+    if (sources != null) values["sources"] = sources
+    val blank = Row("facts", id, profile, updatedAt = now, f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull })
+    return edited(blank, values, now).let { r -> r.copy(times = r.times.mapValues { now }) }
+}
 
 class Contest(val by: String, val at: Long, val note: String)
 

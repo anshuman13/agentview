@@ -23,6 +23,8 @@ import no.pradhan.agentview.nativeapp.codex.reusableDaily
 import no.pradhan.agentview.nativeapp.codex.today
 import no.pradhan.agentview.nativeapp.codex.Need
 import no.pradhan.agentview.nativeapp.codex.withDismissal
+import no.pradhan.agentview.nativeapp.codex.wiki.chatSource
+import no.pradhan.agentview.nativeapp.codex.wiki.newFact
 import no.pradhan.agentview.nativeapp.sessions.segmentOf
 
 // A dismissed DM stops waiting and a dismissed bullet is stored on its brief, so every device hides them.
@@ -119,6 +121,12 @@ fun Hub.shareToTask(item: SharedItem, profile: String): Boolean {
     val t = shareTask(item.subject, item.text)
     val extra = buildMap<String, Any?> { if (t.url != null) put("source_url", t.url); put("source", "share") }
     return codex.capture(if (t.body.isNotEmpty()) "${t.title}\n${t.body}" else t.title, "open", profile, null, extra) != null
+}
+
+// Saves a live Memory claim in the chat's profile with the chat as its source.
+fun Hub.rememberFromChat(text: String, title: String, cwd: String) {
+    val fact = newFact(text, null, segmentOf(cwd), System.currentTimeMillis(), "live", chatSource(title, cwd)) ?: return
+    if (codex.add(fact)) undoable.tryEmit(Undoable("Saved to Memory") { codex.update(fact, mapOf("deleted" to true)) })
 }
 
 fun Hub.remindChat(title: String, sessionId: String, cwd: String, at: Long) {

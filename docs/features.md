@@ -221,6 +221,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
   (Permission mode, Model, Effort, Claude account, Goal, Build, Fork, Remind me, Copy, Tools…); Fork holds Side chat and
   New chat, Copy holds Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Memory, Hooks and TODOs.
+  Remember… (also in the phone's chat menu) opens one field; Save stores a live Memory claim in the chat's profile with a
+  Chat source of the chat's title and folder and shows "Saved to Memory" with Undo; empty text saves nothing.
   The Build row picks Off or Spec flow, which makes Claude
   run every build request through the `/agentview:build` skill (`buildFlow`, a UserPromptSubmit hook says so on each
   prompt). The phone's chat menu
