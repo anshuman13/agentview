@@ -14,7 +14,7 @@ import { openAgent } from '../../sessions/agents';
 import { usePlanProgress } from '../../sessions/usePlanProgress';
 import { planOf } from '../../../../shared/goalForm';
 import { billing } from '../../../../shared/providers';
-import { buildsLine, mergeQuiet } from '../../../../shared/goalText';
+import { buildsLine, mergeQuiet, runDetail } from '../../../../shared/goalText';
 import type { RunOp } from '../../../../shared/protocol';
 import { useCardOpen } from './useCardOpen';
 import { useChatRun } from '../../sessions/useChatRun';
@@ -48,7 +48,7 @@ export function LoopCard() {
   const state = loopNow(run, live?.now);
   const working = Boolean(live?.running) || agents.length > 0;
   const stop = () => control('stop');
-  const details = goal ? () => openGoal(run.id) : undefined;
+  const details = runDetail(run).opens ? () => openGoal(run.id) : undefined;
   const meta = [state.at && clock(state.at), state.next && `Next: ${state.next}`, state.stepsLeft && `${state.stepsLeft} ${state.stepsLeft === 1 ? 'step' : 'steps'} left`, buildsLine(run)].filter(Boolean).join(' · ');
   const nowClick = rounded && state.source === 'round' ? { onClick: () => setOpen(!open), 'aria-expanded': open } : details ? { onClick: details } : { plain: true };
   const dot = working ? 'running' : OUTCOME_DOT[run.rounds.at(-1)?.outcome ?? 'quiet'];
@@ -89,7 +89,8 @@ export function LoopCard() {
       {agents.length === 1 && <Row leading={<Icon name="hubot" />} title={agents[0].slug ?? agents[0].description} meta={`${agents[0].type} · ${agentAge(agents[0].startedAt, now)}`} state="" onClick={() => openAgent(agents[0].id)} />}
       {agents.length > 1 && <Row leading={<Icon name="hubot" />} title={plural(agents.length, 'agent')} meta={agents.map((a) => a.slug ?? a.description).join(', ')} state="" onClick={() => openAgent()} />}
       {goal ? <button className="lc-line lc-last" onClick={details}><span className="lc-what">{progress ? `Plan ${progress}` : run.what}</span></button>
-        : <button className="lc-line lc-last" onClick={details}><span className="lc-what">{run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></button>}
+        : details ? <button className="lc-line lc-last" onClick={details}><span className="lc-what">{run.what}</span><span className="lc-cost">{money(run.costUsd, billing(run.provider))}</span></button>
+          : <Row plain lines={1} title={run.what} trailing={money(run.costUsd, billing(run.provider))} />}
       {report && <button className="lc-line lc-last" onClick={() => showTurn(report.report!)}><span className="lc-time">{clock(report.at)}</span><span className="lc-what">Weekly report</span></button>}
       {open && rounded && (
         <div className="lc-rounds">

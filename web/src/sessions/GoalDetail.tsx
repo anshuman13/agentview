@@ -13,7 +13,7 @@ import { billing } from '../../../shared/providers';
 import type { ChatRun, GitCommit, RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
-import { finishedLine, mergeQuiet } from '../../../shared/goalText';
+import { finishedLine, mergeQuiet, runDetail } from '../../../shared/goalText';
 import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, runControl, startGoal, stopAtMs, usageLine } from './goalLogic';
 import { since } from './folders';
 import { fetchRunCommits } from './sessionApi';
@@ -61,6 +61,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
   const { progress } = usePlanProgress(plan, run?.chatId);
   if (!run) return null;
   const ended = run.state === 'done';
+  const { heading, what, editable } = runDetail(run);
   const paused = run.state === 'paused';
   const control = (op: RunOp) => runControl(run, op, Boolean(running));
   const edit = (e: RunEdit) => send({ type: 'run_edit', run: run.id, ...e });
@@ -73,24 +74,24 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
   const endedLine = ended ? finishedLine(run, since) : null;
   return (
     <Sheet label={run.title} onClose={onClose} className="gl-sheet">
-      <Section label="Goal" action={<Badge {...goalBadge(run)} />} />
+      <Section label={heading} action={<Badge {...goalBadge(run)} />} />
       <div className="ui-group">
-        <Row plain lines={2} title={run.what} meta="Condition" />
+        <Row plain lines={2} title={run.what} meta={what} />
         {plan && <Row plain title="Plan" trailing={progress ?? ''} />}
         {endedLine ? <Row plain title="Ended" trailing={endedLine} /> : !ended && <Row plain title="Next round" trailing={next} />}
         <Row plain title="Cost" trailing={money(run.costUsd, billing(run.provider))} />
       </div>
       <Section label="Settings" />
       <div className="ui-group">
-        <EditRow title="How often" value={run.every ? `Every ${span(run.every)}` : 'Until done'} options={run.every && !ended ? EVERY.filter((e) => e.ms).map((e) => ({ label: e.label, edit: { every: e.ms } })) : undefined} onEdit={edit} />
-        <EditRow title="Stop at" value={run.endAt ? clock(run.endAt) : 'None'} options={ended ? undefined : STOPS.map((s) => ({ label: s.label, edit: { endAt: stopAtMs(s, Date.now()) } }))} onEdit={edit} />
-        {(billing(run.provider) !== 'none' || run.maxBuilds || run.capUsd) && <EditRow title="Usage" value={usageLine(run)} options={ended || billing(run.provider) === 'none' ? undefined : CAPS.map((c) => ({ label: c.pct ? `${c.pct}% cap` : 'No cap', edit: { capPct: c.pct } }))} onEdit={edit} />}
-        <EditRow title="Build limit" value={run.maxBuilds ? String(run.maxBuilds) : 'None'} options={ended ? undefined : BUILDS.map((b) => ({ label: b.label, edit: { maxBuilds: b.n } }))} onEdit={edit} />
+        <EditRow title="How often" value={run.every ? `Every ${span(run.every)}` : 'Until done'} options={run.every && editable ? EVERY.filter((e) => e.ms).map((e) => ({ label: e.label, edit: { every: e.ms } })) : undefined} onEdit={edit} />
+        <EditRow title="Stop at" value={run.endAt ? clock(run.endAt) : 'None'} options={editable ? STOPS.map((s) => ({ label: s.label, edit: { endAt: stopAtMs(s, Date.now()) } })) : undefined} onEdit={edit} />
+        {(billing(run.provider) !== 'none' || run.maxBuilds || run.capUsd) && <EditRow title="Usage" value={usageLine(run)} options={editable && billing(run.provider) !== 'none' ? CAPS.map((c) => ({ label: c.pct ? `${c.pct}% cap` : 'No cap', edit: { capPct: c.pct } })) : undefined} onEdit={edit} />}
+        <EditRow title="Build limit" value={run.maxBuilds ? String(run.maxBuilds) : 'None'} options={editable ? BUILDS.map((b) => ({ label: b.label, edit: { maxBuilds: b.n } })) : undefined} onEdit={edit} />
       </div>
       <div className="gl-actions">
         {!ended && <Button onClick={() => control(paused ? 'resume' : 'pause')}>{paused ? 'Resume' : 'Pause'}</Button>}
         {!ended && <Button variant="danger" onClick={stop}>Stop</Button>}
-        {ended && <Button onClick={() => startGoal({ from: run, here: chat === run.chatId })}>Run again…</Button>}
+        {ended && run.kind === 'goal' && <Button onClick={() => startGoal({ from: run, here: chat === run.chatId })}>Run again…</Button>}
         <Button variant="plain" onClick={() => open()}>Open chat</Button>
       </div>
       <Changes run={run} />

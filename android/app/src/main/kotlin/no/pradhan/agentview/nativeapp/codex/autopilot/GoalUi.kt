@@ -280,13 +280,14 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
     val progress = planProgress(hub, plan, run.chatId)
     val ended = run.state == "done"
     val paused = run.state == "paused"
-    val editable = !ended && !hub.readOnly
+    val detail = runDetail(run)
+    val editable = detail.editable && !hub.readOnly
     val now = System.currentTimeMillis()
     val next = if (paused) "Paused · ${run.why}" else run.nextAt?.let { clock(it) } ?: "When the agent goes idle"
     val (badge, tone) = goalBadge(run)
     val open = { report: String? -> scope.launch { if (hub.openRun(run, report)) { hub.link.value = DeepLink(view = "agents"); onClose() } }; Unit }
     val facts = buildList<@Composable () -> Unit> {
-        add { ListRow(run.what, "Condition", lines = 2) }
+        add { ListRow(run.what, detail.what, lines = 2) }
         if (plan != null) add { ListRow("Plan", trailing = { RowLabel(progress.orEmpty()) }) }
         if (!ended) add { ListRow("Next round", trailing = { RowLabel(next) }) }
         else finishedLine(run.why, run.endedAt, ::since)?.let { line -> add { ListRow("Ended", trailing = { RowLabel(line) }) } }
@@ -298,8 +299,8 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         if (billing(run.provider) != "none" || run.maxBuilds != null || run.capUsd != null) add { EditRow("Usage", usageLine(run), if (editable && billing(run.provider) != "none") CAPS.map { (it.pct?.let { p -> "$p% cap" } ?: "No cap") to mapOf("capPct" to it.pct?.toLong()) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Build limit", run.maxBuilds?.toString() ?: "None", if (editable) BUILDS.map { it.label to mapOf("maxBuilds" to it.n?.toLong()) } else null) { hub.runEdit(run, it) } }
     }
-    Sheet(onClose, run.title.ifBlank { "Goal" }, padded = false) {
-        SectionHeader("Goal", action = { Badge(badge, tone) })
+    Sheet(onClose, run.title.ifBlank { detail.heading }, padded = false) {
+        SectionHeader(detail.heading, action = { Badge(badge, tone) })
         Group { facts.forEachIndexed { i, row -> if (i > 0) Hairline(); row() } }
         SectionHeader("Settings")
         Group { settings.forEachIndexed { i, row -> if (i > 0) Hairline(); row() } }
@@ -308,7 +309,7 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
                 Button(if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") }, enabled = !hub.readOnly)
                 Button("Stop", { hub.runControl(run, "stop") }, variant = ButtonVariant.Danger, enabled = !hub.readOnly)
             }
-            if (ended) Button("Run again…", { hub.shell.goalSheet.value = GoalSheet.Start(here = hub.store.state.value.shownId == run.chatId, from = run) }, enabled = !hub.readOnly)
+            if (ended && run.kind == "goal") Button("Run again…", { hub.shell.goalSheet.value = GoalSheet.Start(here = hub.store.state.value.shownId == run.chatId, from = run) }, enabled = !hub.readOnly)
             Button("Open chat", { open(run.rounds.lastOrNull()?.report) }, variant = ButtonVariant.Plain)
         }
         val (changes) = rememberLoad(run.id, run.chatId, run.rounds.size) { hub.runCommits(run) }

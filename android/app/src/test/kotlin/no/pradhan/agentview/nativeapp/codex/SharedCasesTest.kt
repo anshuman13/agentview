@@ -68,6 +68,7 @@ import no.pradhan.agentview.nativeapp.chat.statusLine
 import no.pradhan.agentview.nativeapp.chat.stripRound
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
 import no.pradhan.agentview.nativeapp.codex.autopilot.goalEnd
+import no.pradhan.agentview.nativeapp.codex.autopilot.runDetail
 import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
 import no.pradhan.agentview.nativeapp.codex.autopilot.addPreset
 import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
@@ -360,6 +361,14 @@ class SharedCasesTest {
 
     @Test fun goalEnd() {
         for (c in cases("goal-end")) assertEquals(c.str("name"), c.str("expected"), goalEnd(c.str("why")))
+    }
+
+    @Test fun runDetail() {
+        for (c in cases("run-detail")) {
+            val d = runDetail(ChatRun(id = "r", kind = c.str("kind"), state = c.str("state")))
+            val e = c.getValue("expected").jsonObject
+            assertEquals(c.str("name"), listOf(e.str("heading"), e.str("what"), e.getValue("editable").jsonPrimitive.boolean, e.getValue("opens").jsonPrimitive.boolean), listOf(d.heading, d.what, d.editable, d.opens))
+        }
     }
 
     @Test fun rerunForm() {

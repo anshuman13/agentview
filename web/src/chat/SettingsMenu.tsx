@@ -8,6 +8,7 @@ import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
+import { runDetail } from '../../../shared/goalText';
 import { Confirm } from '../ui/Confirm';
 import { copyChatMarkdown, copyLastReply, copyResumeCommand, forkChat, rememberChat, remindChat, sideChat } from './chatActions';
 import { ruleFile } from './cards/Memory';
@@ -29,8 +30,8 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   const run = useChatRun(chat);
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
-    // Loops, tries and jobs have their controls on the loop card only.
-    if (v === 'goal') return act(() => (!run ? startGoal({ here: true }) : run.kind === 'goal' && openGoal(run.id)));
+    // Tries and jobs have their controls on the loop card only.
+    if (v === 'goal') return act(() => (!run ? startGoal({ here: true }) : runDetail(run).opens && openGoal(run.id)));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
   const narrow = useNarrow();

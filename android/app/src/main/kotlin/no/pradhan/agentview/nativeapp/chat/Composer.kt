@@ -52,6 +52,7 @@ import no.pradhan.agentview.nativeapp.app.BarState
 import no.pradhan.agentview.nativeapp.app.barHidden
 import no.pradhan.agentview.nativeapp.app.barState
 import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
+import no.pradhan.agentview.nativeapp.codex.autopilot.runDetail
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.ChatRun
@@ -381,8 +382,8 @@ private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, on
         }
         SectionHeader("Goal")
         Group {
-            // Loops, tries and jobs have their controls on the loop card only.
-            val opens = run == null || run.kind == "goal"
+            // Tries and jobs have their controls on the loop card only.
+            val opens = run == null || runDetail(run).opens
             ListRow("Goal", run?.let { runLine(it) } ?: "Off", onClick = if (opens) ({ hub.shell.goalSheet.value = run?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true); onSheet(null) }) else null, trailing = { if (opens) Chevron() })
             Hairline()
             ListRow("Build", if (session?.buildFlow == true) "Spec flow" else "Off", onClick = { onSheet(Picker.Build) }, trailing = { Chevron() })

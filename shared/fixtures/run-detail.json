@@ -1,0 +1,7 @@
+[
+  { "name": "running goal", "kind": "goal", "state": "running", "expected": { "heading": "Goal", "what": "Condition", "editable": true, "opens": true } },
+  { "name": "ended goal", "kind": "goal", "state": "done", "expected": { "heading": "Goal", "what": "Condition", "editable": false, "opens": true } },
+  { "name": "loop", "kind": "loop", "state": "running", "expected": { "heading": "Loop", "what": "Prompt", "editable": false, "opens": true } },
+  { "name": "tries", "kind": "tries", "state": "running", "expected": { "heading": "Goal", "what": "Condition", "editable": false, "opens": false } },
+  { "name": "job", "kind": "job", "state": "running", "expected": { "heading": "Goal", "what": "Condition", "editable": false, "opens": false } }
+]

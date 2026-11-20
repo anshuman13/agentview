@@ -73,3 +73,11 @@ export function goalEnd(why: string): 'done' | 'skipped' | 'failed' {
 
 // A run's build limit as its rows show it; empty without one.
 export const buildsLine = (run: Pick<ChatRun, 'builds' | 'maxBuilds'>): string => (run.maxBuilds ? `Builds ${run.builds ?? 0} of ${run.maxBuilds}` : '');
+
+// How a run's detail reads: a goal has a condition and edits while it runs, a loop has a prompt and no edits; tries and jobs have no detail (Android runDetail, fixture run-detail.json).
+export const runDetail = ({ kind, state }: Pick<ChatRun, 'kind' | 'state'>) => ({
+  heading: kind === 'loop' ? 'Loop' : 'Goal',
+  what: kind === 'loop' ? 'Prompt' : 'Condition',
+  editable: kind === 'goal' && state !== 'done',
+  opens: kind === 'goal' || kind === 'loop',
+});

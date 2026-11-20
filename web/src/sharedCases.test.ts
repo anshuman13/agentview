@@ -11,7 +11,7 @@ import { appCounts } from '../../shared/counts';
 import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
 import { limitResume } from '../../shared/limitResume';
-import { buildsLine, finishedLine, goalEnd, mergeQuiet } from '../../shared/goalText';
+import { buildsLine, finishedLine, goalEnd, mergeQuiet, runDetail } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
@@ -388,6 +388,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; why: string; endedAt: number | null; expected: string | null }>('finished-line')) {
     it(`finishedLine: ${c.name}`, () => expect(finishedLine(c, (t) => `${t}h ago`)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; kind: ChatRun['kind']; state: ChatRun['state']; expected: ReturnType<typeof runDetail> }>('run-detail')) {
+    it(`runDetail: ${c.name}`, () => expect(runDetail(c)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; why: string; expected: string }>('goal-end')) {
