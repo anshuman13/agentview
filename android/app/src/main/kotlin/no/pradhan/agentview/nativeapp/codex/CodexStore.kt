@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -38,6 +39,7 @@ data class CodexState(
     val loaded: Boolean = false,
     val error: String? = null,
     val pending: Int = 0,
+    val scans: List<SyncScan> = emptyList(),
 )
 
 // The hub's items, meetings and chats (web/src/codex/data/remote.ts RemoteStore without the on-device cache): pulled over
@@ -61,6 +63,7 @@ class CodexStore(
     private val tables = SYNCED_FIELDS.keys.associateWith { LinkedHashMap<String, Row>() }
     private val lock = Mutex()
     private var since = 0L
+    private var scans = emptyList<SyncScan>()
     private var timer: Job? = null
     // The rows of each table as last written to the cache, so a save rewrites only the tables that changed.
     private val saved = HashMap<String, List<Row>>()
@@ -132,7 +135,7 @@ class CodexStore(
         fun rows(t: String) = tables.getValue(t).values.toList()
         state.value = CodexState(
             rows("items"), rows("meetings"), rows("chats"), rows("pages"), rows("facts"), rows("jobs"), rows("runs"), rows("briefs"),
-            loaded, error, tables.values.sumOf { t -> t.values.count { it.dirty } },
+            loaded, error, tables.values.sumOf { t -> t.values.count { it.dirty } }, scans,
         )
     }
 
@@ -153,13 +156,14 @@ class CodexStore(
         }
     }
 
-    private data class Page(val version: Long, val changes: List<Row?>, val hasMore: Boolean, val refused: List<JsonObject>)
+    private data class Page(val version: Long, val changes: List<Row?>, val hasMore: Boolean, val refused: List<JsonObject>, val scans: List<SyncScan>?)
 
     private suspend fun parse(body: String): Page = withContext(parsing) {
         val reply = protocolJson.parseToJsonElement(body).jsonObject
         val version = reply["version"]?.jsonPrimitive?.content?.toLongOrNull() ?: error("Unexpected hub response")
         val changes = reply["changes"]?.jsonArray?.map { parseRow(it.jsonObject) } ?: error("Unexpected hub response")
-        Page(version, changes, (reply["hasMore"] as? JsonPrimitive)?.content == "true", (reply["rejected"] as? JsonArray)?.map { it.jsonObject } ?: emptyList())
+        Page(version, changes, (reply["hasMore"] as? JsonPrimitive)?.content == "true", (reply["rejected"] as? JsonArray)?.map { it.jsonObject } ?: emptyList(),
+            reply["scans"]?.let { runCatching { protocolJson.decodeFromJsonElement(ListSerializer(SyncScan.serializer()), it) }.getOrNull() })
     }
 
     suspend fun sync() = lock.withLock {
@@ -172,7 +176,8 @@ class CodexStore(
                 val batch = queue.take(PUSH_BATCH)
                 queue = queue.drop(batch.size)
                 val body = if (batch.isEmpty() && queue.isEmpty()) pull(since, since == 0L) else push(pushBody(batch))
-                val (version, changes, hasMore, refused) = parse(body)
+                val (version, changes, hasMore, refused, health) = parse(body)
+                if (health != null) scans = health
                 changed = changed || batch.isNotEmpty() || changes.isNotEmpty()
                 for (sent in batch) {
                     if (refused.any { it["id"]?.jsonPrimitive?.contentOrNull == sent.id }) continue

@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontFamily
 import no.pradhan.agentview.nativeapp.codex.CodexOps
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.DigestGroup
+import no.pradhan.agentview.nativeapp.codex.firstName
 import no.pradhan.agentview.nativeapp.codex.DigestLine
 import no.pradhan.agentview.nativeapp.codex.ExpandRow
 import no.pradhan.agentview.nativeapp.codex.GroupList
@@ -71,7 +72,7 @@ private fun LazyListScope.actionGroup(rows: List<Row>, m: Row, now: Long, action
 }
 
 
-private class PrepData(val prior: List<Prior>, val brief: Brief, val points: List<Row>, val theirs: List<String>, val questions: List<Question>)
+private class PrepData(val prior: List<Prior>, val brief: Brief, val points: List<Row>, val theirs: List<String>, val questions: List<Question>, val person: String?, val between: List<Between>)
 
 private class MeetingCtx(val hub: Hub, val st: CodexState, val m: Row, val now: Long, val actions: TaskActions, val ops: CodexOps, val onMeeting: (Row) -> Unit, val onPerson: (String) -> Unit, val onSeries: (String) -> Unit, val onTask: (Row) -> Unit)
 
@@ -93,11 +94,13 @@ private fun rememberPrep(c: MeetingCtx, state: MState): PrepData? {
     val st = c.st
     val m = c.m
     val resolved by c.hub.resolvedQuestions.collectAsState()
-    return remember(st.meetings, st.items, st.facts, m.key, c.now / 60_000, resolved) {
+    return remember(st.meetings, st.items, st.facts, st.chats, st.briefs, m.key, c.now / 60_000, resolved) {
         if ((state == MState.Upcoming || state == MState.Live) && !isSolo(m)) {
             val prior = priorWith(m, st.meetings, st.items)
+            val person = peopleOf(m).singleOrNull()
+            val between = person?.let { betweenRows(personInbox(it, st.items, st.chats, unanswered(st.briefs)), firstName(displayName(it))) } ?: emptyList()
             PrepData(prior, briefFor(m, st.items, st.facts), pointsFor(m, st.items, st.meetings), theirActions(m, prior.map { it.meeting }),
-                visibleQuestions(openQuestions(st.meetings, c.now), resolved).filter { q -> prior.any { it.meeting.id == q.meeting.id && it.meeting.profile == q.profile } })
+                visibleQuestions(openQuestions(st.meetings, c.now), resolved).filter { q -> prior.any { it.meeting.id == q.meeting.id && it.meeting.profile == q.profile } }, person, between)
         } else null
     }
 }
@@ -223,9 +226,24 @@ private fun prepGroups(c: MeetingCtx, pr: PrepData): List<DigestGroup> {
 
 private fun LazyListScope.meetingPrep(c: MeetingCtx, pr: PrepData) {
     val groups = prepGroups(c, pr)
-    if (groups.isEmpty() && pr.points.isEmpty()) return
+    if (groups.isEmpty() && pr.points.isEmpty() && pr.between.isEmpty()) return
     item { SectionHeader("Prep") }
     groups.forEach { g -> item(key = "prep-${g.outcome}") { GroupList("prep:${c.m.key}:${g.outcome}", g, capOpen = true, plain = g.outcome == "theirs" || g.outcome == "claims") } }
+    if (pr.person != null && pr.between.isNotEmpty()) {
+        item { SectionHeader("Between you and ${firstName(displayName(pr.person))}", pr.between.size.toString()) }
+        item {
+            val uri = LocalUriHandler.current
+            Group {
+                pr.between.forEachIndexed { i, b ->
+                    if (i > 0) Hairline()
+                    val href = safeHref(b.url)
+                    ListRow(b.title.ifEmpty { UNTITLED }, b.meta.ifEmpty { null }, onClick = (b.task?.let { t -> { c.onTask(t) } }) ?: href?.let { h -> { uri.openUri(h) } })
+                }
+                Hairline()
+                ListRow("Open person", onClick = { c.onPerson(pr.person) })
+            }
+        }
+    }
     if (pr.points.isNotEmpty()) {
         item { SectionHeader("To raise", pr.points.size.toString()) }
         item { PointList(pr.points, c.st.meetings, c.now, person = true, showMeeting = false, ops = c.ops) }

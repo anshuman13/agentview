@@ -5,6 +5,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.isBlock
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -17,6 +18,17 @@ import no.pradhan.agentview.nativeapp.sessions.queryWords
 import no.pradhan.agentview.nativeapp.ui.plural
 
 // The pieces of the Codex Overview (web/src/codex Overview.tsx, split.ts, NeedsYou.tsx, data/meetings.ts, data/goals.ts).
+
+// The hub's scan health from a sync reply (web ScanHealth).
+@Serializable class SyncScan(val scan: String = "", val ok: Long? = null, val error: String? = null, val failed: Long? = null, val stalled: Long? = null, val missing: Boolean = false)
+
+// web/src/codex/nav.tsx scanText: a scan that failed at least as recently as it succeeded, or has stalled since its last success.
+val SyncScan.bad get() = !missing && ((error != null && (failed ?: 0) >= (ok ?: 0)) || ((stalled ?: 0) > (ok ?: 0)))
+
+fun failedCalendars(scans: List<SyncScan>) = scans.filter { it.scan.startsWith("calendar:") && it.bad }
+
+// The banner title of a calendar scan, naming the account when two fail.
+fun calendarFailText(scan: SyncScan, count: Int) = "Calendar sync failed" + if (scan.scan == "calendar:personal") " (personal)" else if (count > 1) " (work)" else ""
 
 // Meetings with a start time, in the profile, not focus blocks, in the pieces the Overview shows.
 class Meetings(val next: Row?, val today: List<Row>, val nextLater: Row?)

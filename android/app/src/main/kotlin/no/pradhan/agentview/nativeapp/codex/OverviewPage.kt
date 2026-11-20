@@ -120,7 +120,11 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     val live by hub.store.state.select { it.live }
     val running = remember(live) { runningChats(live) }
     val counts by hub.counts.collectAsState()
+    val failedCalendars = remember(st.scans) { failedCalendars(st.scans) }
     LazyColumn(Modifier.fillMaxSize()) {
+        if (failedCalendars.isNotEmpty()) item {
+            Group { failedCalendars.forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(calendarFailText(h, failedCalendars.size), h.ok?.let { "Last synced ${clock(it)}" } ?: "Never synced") } }
+        }
         item { UpNextSection(d, now, actions, onOpen, onNeeds, onAdd, onMeeting) }
         if (running.isNotEmpty()) runningSection(running, counts.running + counts.waiting) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)

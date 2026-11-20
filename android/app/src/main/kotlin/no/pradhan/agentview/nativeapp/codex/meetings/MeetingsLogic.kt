@@ -21,6 +21,7 @@ import no.pradhan.agentview.nativeapp.codex.dayPlus
 import no.pradhan.agentview.nativeapp.codex.dayStart
 import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.DAY_MS
+import no.pradhan.agentview.nativeapp.codex.isSaid
 import no.pradhan.agentview.nativeapp.codex.liveRows
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.split
@@ -314,6 +315,10 @@ fun meetingMeta(m: Row, now: Long, noDay: Boolean = false): String {
 
 // web/src/codex/data/tasks/review.ts: what waits on a person, from open tasks that name them and from sent mail with no reply.
 @Serializable class Unanswered(val thread: String = "", val url: String = "", val to: String = "", val subject: String = "", @SerialName("sent_at") val sentAt: Long = 0)
+fun unanswered(briefs: List<Row>): List<Unanswered> = briefs.filter { !it.deleted && it.str("kind") == "waiting" }.flatMap { b ->
+    val list = try { protocolJson.decodeFromString(ListSerializer(Unanswered.serializer()), b.str("text") ?: "[]") } catch (e: Exception) { emptyList() }
+    list.filter { it.to.isNotEmpty() && it.subject.isNotEmpty() }
+}
 class WaitingRow(val key: String, val title: String, val days: Int, val late: Boolean, val url: String? = null)
 class Waiting(val name: String, val rows: List<WaitingRow>)
 
@@ -352,10 +357,38 @@ fun waitingByPerson(items: List<Row>, briefs: List<Row>, profile: String?, now: 
     }
     for (b in briefs) {
         if (b.deleted || b.str("kind") != "waiting" || !matchesProfile(profile, b)) continue
-        val list = try { protocolJson.decodeFromString(ListSerializer(Unanswered.serializer()), b.str("text") ?: "[]") } catch (e: Exception) { emptyList() }
-        for (w in list.filter { it.to.isNotEmpty() && it.subject.isNotEmpty() }) add(w.to, WaitingRow("mail:${w.thread}", w.subject, daysSince(w.sentAt, now), isLate(w.sentAt, now), w.url.ifEmpty { null }))
+        for (w in unanswered(listOf(b))) add(w.to, WaitingRow("mail:${w.thread}", w.subject, daysSince(w.sentAt, now), isLate(w.sentAt, now), w.url.ifEmpty { null }))
     }
     return groups.values.map { (name, rows) -> Waiting(name, rows.sortedWith(compareByDescending<WaitingRow> { it.late }.thenByDescending { it.days })) }.sortedWith(compareByDescending<Waiting> { it.rows[0].late }.thenByDescending { it.rows[0].days }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+}
+
+// web/src/codex/data/tasks/review.ts personInbox: the person a Slack or Gmail item names ("Ada · DM" or "Ada"), which of these items are asks to me.
+private fun personOf(people: String?) = (people ?: "").substringBefore(" · ").replace(Regex("<[^>]*>"), "").trim()
+private fun isAsk(r: Row) = !r.deleted && (r.source == "slack" || r.source == "gmail") && (r.status == "open" || r.status == "suggested")
+
+class PersonInbox(val dm: Row?, val asks: List<Row>, val promises: List<Row>, val mail: List<Unanswered>)
+
+fun personInbox(name: String, items: List<Row>, chats: List<Row>, mail: List<Unanswered>): PersonInbox {
+    val theirs = items.filter { isAsk(it) && sameName(personOf(it.people), name) }
+    return PersonInbox(
+        liveRows(chats).firstOrNull { it.str("kind") == "dm" && !it.str("summary").isNullOrEmpty() && sameName(it.str("name") ?: "", name) },
+        theirs.filter { !isSaid(it) },
+        theirs.filter { isSaid(it) },
+        mail.filter { sameName(personOf(it.to), name) },
+    )
+}
+
+class Between(val title: String, val meta: String, val task: Row? = null, val url: String? = null)
+
+// Up to 5 rows of what is open between me and a person: my promises, their asks, my mail they have not answered, then the DM thread.
+fun betweenRows(inbox: PersonInbox, first: String): List<Between> {
+    val dm = inbox.dm
+    val rows = (
+        inbox.promises.map { Between(it.title ?: "", "You told $first", it) } +
+            inbox.asks.map { Between(it.title ?: "", "$first asked you", it) } +
+            inbox.mail.map { Between(it.subject, "Waiting on $first", url = it.url) }
+        ).take(if (dm != null) 4 else 5)
+    return if (dm == null) rows else rows + Between("Slack DM", (dm.str("summary") ?: "").substringBefore("\n"), url = dm.str("url"))
 }
 
 fun nudgeText(g: Waiting): String =
