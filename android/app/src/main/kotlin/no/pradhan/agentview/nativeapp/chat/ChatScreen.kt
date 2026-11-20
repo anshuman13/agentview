@@ -77,6 +77,7 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.PageHeader
+import no.pradhan.agentview.nativeapp.ui.FilePath
 import no.pradhan.agentview.nativeapp.ui.LocalOpenFile
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.workspace.FileScreen

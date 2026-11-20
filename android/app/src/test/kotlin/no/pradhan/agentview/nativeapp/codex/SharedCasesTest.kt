@@ -49,8 +49,8 @@ import no.pradhan.agentview.nativeapp.chat.ghostFor
 import no.pradhan.agentview.nativeapp.chat.withUses
 import no.pradhan.agentview.nativeapp.chat.findInChat
 import no.pradhan.agentview.nativeapp.chat.findStart
-import no.pradhan.agentview.nativeapp.chat.FilePath
-import no.pradhan.agentview.nativeapp.chat.filePath
+import no.pradhan.agentview.nativeapp.ui.FilePath
+import no.pradhan.agentview.nativeapp.ui.filePath
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.chatMatches
 import no.pradhan.agentview.nativeapp.sessions.queryWords

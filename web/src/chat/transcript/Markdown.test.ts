@@ -42,4 +42,8 @@ describe('file paths in replies', () => {
     for (const t of ['`x.ts`', '`npm run build`', '`https://x.test/a.md`', '`a.b`', '`foo/bar`']) expect(full(t)).not.toContain('data-open');
     expect(full('[site](https://x.test/a.md)')).toContain('href="https://x.test/a.md"');
   });
+
+  it('keeps a link whose target is not valid percent-encoding', () => {
+    expect(full('see [a](100%)')).toContain('>a</a>');
+  });
 });

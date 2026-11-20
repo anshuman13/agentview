@@ -6,7 +6,8 @@ import { stubGlobal } from '../../../testing';
 const require = createRequire(import.meta.url);
 const react = require('react') as typeof import('react');
 const reactDom = require('react-dom') as typeof import('react-dom');
-vi.mock('react', () => ({ ...react, useEffect: (run: () => void) => { run(); } }));
+let backs = 0;
+vi.mock('react', () => ({ ...react, useEffect: (run: () => void) => { run(); }, useState: () => [backs, (f: (n: number) => number) => { backs = f(backs); }] }));
 vi.mock('react-dom', () => ({ ...reactDom, createPortal: (node: unknown) => node }));
 vi.mock('./useSheetDrag', () => ({ useSheetDrag: (_: boolean, onClose: () => void) => ({ close: onClose, handle: {} }) }));
 let back: () => void = () => {};
@@ -23,7 +24,7 @@ const open = (props: { onClose: () => void; onBack?: () => void }) => {
 };
 
 describe('Sheet', () => {
-  beforeEach(() => { keys = []; });
+  beforeEach(() => { keys = []; backs = 0; });
 
   it('Esc and the touch Back call onBack when given', () => {
     const onClose = vi.fn(), onBack = vi.fn();
@@ -31,6 +32,12 @@ describe('Sheet', () => {
     back();
     expect(onBack).toHaveBeenCalledTimes(2);
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('pushes a new Back entry on every Esc and Back while the sheet stays open', () => {
+    open({ onClose: vi.fn(), onBack: vi.fn() })();
+    back();
+    expect(backs).toBe(2);
   });
 
   it('Esc and the touch Back close the sheet without onBack', () => {

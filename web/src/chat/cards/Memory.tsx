@@ -147,7 +147,7 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
       setFiles(list);
       setError('');
       if (reloads === 0 && initial) setOpen(list.find((f) => f.path === initial) ?? null);
-    }).catch((err: Error) => setError(loadErrorText(err.message)));
+    }).catch((err: Error) => (files?.length ? showSnack : setError)(loadErrorText(err.message)));
   }, [reloads]);
   if (open) {
     const edit = () => { setUi({ openFile: file, openEdit: true, follow: false }); onClose(); };

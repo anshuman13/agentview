@@ -20,6 +20,12 @@ describe('RunRow', () => {
     expect(html).toMatch(/<button[^>]*>.*Copy output<\/button>/);
   });
 
+  it('leaves file paths in the output as plain code', () => {
+    const html = renderToStaticMarkup(<RunRow r={{ ...run, output: 'Wrote `notes/plan.md` and [the log](logs/run.md)' }} latest query="" setQuery={() => {}} />);
+    expect(html).toContain('<code>notes/plan.md</code>');
+    expect(html).not.toContain('data-open');
+  });
+
   it('shows plain marked text once a query is typed', () => {
     const html = render('done');
     expect(html).toContain('<mark>Done</mark>');

@@ -41,7 +41,6 @@ import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import no.pradhan.agentview.nativeapp.chat.filePath
 
 // Opens a file path named in inline code or a link, at its line; set by a chat, so file paths elsewhere stay plain.
 val LocalOpenFile = staticCompositionLocalOf<((String, Int?) -> Unit)?> { null }
@@ -62,7 +61,7 @@ fun inlineText(inlines: List<Inline>): AnnotatedString {
                     is Inline.Strong -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { walk(i.children) }
                     is Inline.Emph -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { walk(i.children) }
                     is Inline.Strike -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { walk(i.children) }
-                    is Inline.Link -> withLink(fileLink(i.url) ?: LinkAnnotation.Url(i.url, link)) { walk(i.children) }
+                    is Inline.Link -> withLink(fileLink(decodedTarget(i.url)) ?: LinkAnnotation.Url(i.url, link)) { walk(i.children) }
                     Inline.Break -> append('\n')
                 }
             }

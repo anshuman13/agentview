@@ -15,18 +15,27 @@ export function filePath(text: string): { path: string; line?: number } | null {
 
 const openAttrs = (f: { path: string; line?: number }) => `href="#" data-open="${escapeHtml(f.path)}"${f.line ? ` data-line="${f.line}"` : ''}`;
 
-export const md = new Marked({
+const decoded = (href: string) => {
+  try {
+    return decodeURI(href);
+  } catch {
+    return href;
+  }
+};
+
+// With `files` false, paths stay plain code and links, for text that is not about a chat's folder.
+const markdown = (files: boolean) => new Marked({
   gfm: true,
   renderer: {
     html: ({ text }) => escapeHtml(text),
     code: ({ text, lang }) =>
       `<div class="md-code"><button class="md-copy" data-copy="">Copy</button><pre><code${lang ? ` data-lang="${escapeHtml(lang)}"` : ''}>${escapeHtml(text)}</code></pre></div>`,
     codespan({ text }) {
-      const f = filePath(text.replace(/&amp;/g, '&'));
+      const f = files && filePath(text.replace(/&amp;/g, '&'));
       return f ? `<a class="md-file" ${openAttrs(f)}><code>${text}</code></a>` : `<code>${text}</code>`;
     },
     link({ href, tokens }) {
-      const f = filePath(decodeURI(href));
+      const f = files && filePath(decoded(href));
       if (f) return `<a class="md-file" ${openAttrs(f)}>${this.parser.parseInline(tokens)}</a>`;
       const safe = /^(https?:|mailto:)/i.test(href) ? href : '#';
       return `<a href="${escapeHtml(safe)}" target="_blank" rel="noreferrer">${this.parser.parseInline(tokens)}</a>`;
@@ -38,6 +47,9 @@ export const md = new Marked({
     },
   },
 });
+
+export const md = markdown(true);
+export const mdNoFiles = markdown(false);
 
 export function splitBlocks(text: string): Token[] | null {
   const tokens = md.lexer(text);

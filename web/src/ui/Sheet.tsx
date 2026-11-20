@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Back } from '../app/touch/back';
 import { useEscape } from './util';
@@ -16,10 +16,13 @@ export function Sheet({ label, onClose, onBack, className, overlayClassName, act
     stack.push(me);
     return () => { stack.splice(stack.lastIndexOf(me), 1); };
   }, [active]);
-  useEscape(() => { if (stack[stack.length - 1] === id.current) (onBack ?? sheet.close)(); });
+  // Each Back press pops its history entry, so `backs` remounts Back to push a new one while the sheet stays open.
+  const [backs, setBacks] = useState(0);
+  const goBack = onBack && (() => { setBacks((n) => n + 1); onBack(); });
+  useEscape(() => { if (stack[stack.length - 1] === id.current) (goBack ?? sheet.close)(); });
   return createPortal(
     <div className={overlayClassName ?? 'as-sheet-overlay'} ref={sheet.overlay} onClick={sheet.close}>
-      {active && <Back key={onBack ? 'back' : 'close'} close={onBack ?? onClose} />}
+      {active && <Back key={goBack ? `back${backs}` : 'close'} close={goBack ?? onClose} />}
       <div className={className ? `as-sheet ${className}` : 'as-sheet'} ref={sheet.sheet} role="dialog" aria-label={label} onClick={(e) => e.stopPropagation()} data-no-swipe={noSwipe || undefined}>
         <div className="sheet-handle" {...sheet.handle} />
         {children}

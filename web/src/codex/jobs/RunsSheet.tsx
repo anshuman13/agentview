@@ -20,7 +20,7 @@ function CopyOutput({ r }: { r: Run }) {
 export function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query: string; setQuery: (q: string) => void }) {
   const [open, setOpen] = useState(latest);
   const meta = runMeta(r);
-  const output = r.output && <div className="jb-md"><Markdown text={r.output} /></div>;
+  const output = r.output && <div className="jb-md"><Markdown text={r.output} files={false} /></div>;
   return (
     <div className="jb-run">
       <Row

@@ -42,7 +42,7 @@ const Block = memo(
   (a, b) => a.token.raw === b.token.raw,
 );
 
-export function Markdown({ text, id }: { text: string; id?: string }) {
+export function Markdown({ text, id, files = true }: { text: string; id?: string; files?: boolean }) {
   const m = useMd();
   const html = useMemo(() => {
     if (!m || !id) return null;
@@ -54,8 +54,9 @@ export function Markdown({ text, id }: { text: string; id?: string }) {
     storeHtml(key, out);
     return out;
   }, [m, id, text]);
-  const blocks = useMemo(() => (m && html === null ? m.splitBlocks(text) : null), [m, html, text]);
+  const blocks = useMemo(() => (m && files && html === null ? m.splitBlocks(text) : null), [m, files, html, text]);
   if (!m) return <div className="md" style={{ whiteSpace: 'pre-wrap' }}>{text}</div>;
+  if (!files) return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: m.mdNoFiles.parse(text, { async: false }) as string }} />;
   if (html !== null) return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: html }} />;
   if (!blocks) {
     return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: m.md.parse(text, { async: false }) as string }} />;

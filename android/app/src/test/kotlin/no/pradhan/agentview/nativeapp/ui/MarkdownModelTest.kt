@@ -57,4 +57,11 @@ class MarkdownModelTest {
         assertEquals(2, l.items.size)
         assertEquals(2, l.items[0].size)
     }
+
+    @Test
+    fun linkTargetsDecodeBeforeTheFileCheck() {
+        assertEquals(FilePath("docs/æble.md"), filePath(decodedTarget("docs/%C3%A6ble.md")))
+        assertEquals("a+b.md", decodedTarget("a+b.md"))
+        assertEquals("100%", decodedTarget("100%"))
+    }
 }

@@ -25,6 +25,7 @@ function find(e: KeyboardEvent, view: View) {
     if (el instanceof HTMLInputElement) el.focus();
     else el?.click();
   } else if (scope === 'wiki') document.querySelector<HTMLInputElement>('.wk-search input')?.focus();
+  else if (view.list === 'search' && !view.open) document.querySelector<HTMLInputElement>('.assistant input[aria-label="Search"]')?.focus();
   else openSearch(window.getSelection()?.toString().trim() ?? '');
 }
 
