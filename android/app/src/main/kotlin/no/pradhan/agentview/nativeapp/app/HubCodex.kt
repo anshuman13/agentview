@@ -8,6 +8,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.chat.voiceAnswer
 import no.pradhan.agentview.nativeapp.chat.voicePrompt
 import no.pradhan.agentview.nativeapp.codex.DailyChat
@@ -171,6 +175,13 @@ private fun Hub.savedToMemory(claim: RememberedClaim?) {
     if (claim == null) return
     undoable.tryEmit(Undoable(if (claim.replaced) "Saved to Memory, replacing a similar claim" else "Saved to Memory", claim.undo))
 }
+
+// web Parsed (codex/data/store.ts): the hub's /parse reply.
+@Serializable class ParsedTask(val title: String, val details: String? = null, val at: Long? = null)
+
+// Haiku turns a quick or dictated task into a clear title, notes and the time the text names.
+suspend fun Hub.parseTask(text: String, profile: String): ParsedTask =
+    protocolJson.decodeFromString(api.post("/api/assistant/parse", buildJsonObject { put("profile", profile); put("text", text) }.toString()))
 
 fun Hub.remindChat(title: String, sessionId: String, cwd: String, at: Long) {
     val extra = mapOf("source" to "chat", "source_url" to "${origin.value}/?session=$sessionId")

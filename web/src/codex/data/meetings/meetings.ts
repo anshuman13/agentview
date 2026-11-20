@@ -256,10 +256,11 @@ export function joinMinutes(m: Meeting, now: number) {
   return left > 0 && left <= 600000 ? Math.ceil(left / 60000) : null;
 }
 
-// The row's meta line: time (with the weekday beyond today unless noDay), room, then the number of people.
+// The row's meta line: time (with the day on any other day than today unless noDay), room, then the number of people.
 export function meetingMeta(m: Meeting, now: number, noDay?: boolean) {
   const n = peopleOf(m).length;
-  const time = `${!noDay && m.starts_at! >= dayEnd(now) ? `${dayLabel(m.starts_at!, true)}, ` : ''}${clock(m.starts_at!)}${m.ends_at ? ` - ${clock(m.ends_at)}` : ''}`;
+  const otherDay = m.starts_at! >= dayEnd(now) || m.starts_at! < dayStart(now);
+  const time = `${!noDay && otherDay ? `${dayLabel(m.starts_at!, true)}, ` : ''}${clock(m.starts_at!)}${m.ends_at ? ` - ${clock(m.ends_at)}` : ''}`;
   return [time, m.room, n > 0 && `${n} ${n === 1 ? 'person' : 'people'}`].filter(Boolean).join(' · ');
 }
 

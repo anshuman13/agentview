@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'bun:test';
 import type { ItemRow } from '../sync';
-import { dayLabel } from '../dates';
+import { dayLabel, dayStart } from '../dates';
 import { givenPreferences } from '../../../../../shared/preferences';
 import { clock } from '../../../../../shared/util';
 import { ungivenPreferences, decisionLog, approveAllChanges, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
@@ -248,6 +248,10 @@ describe('meetings', () => {
     const next = m({ starts_at: at(1, 9), ends_at: at(1, 10) });
     expect(meetingMeta(next, now)).toContain(dayLabel(at(1, 9), true));
     expect(meetingMeta(next, now, true)).toBe(time);
+    const past = m({ starts_at: at(-1, 9), ends_at: at(-1, 10) });
+    expect(meetingMeta(past, now)).toBe(`${dayLabel(at(-1, 9), true)}, ${time}`);
+    expect(meetingMeta(past, now, true)).toBe(time);
+    expect(meetingMeta(m({ starts_at: dayStart(now), ends_at: at(0, 10) }), now)).toBe(`${clock(dayStart(now))} - ${clock(at(0, 10))}`);
     expect(meetingBadge(m({ ends_at: at(0, 13) }), now)).toBe('Live');
     expect(meetingBadge(m({ recorded_ms: 60000 }), now)).toBeNull();
     expect(meetingBadge(m({}), now)).toBeNull();

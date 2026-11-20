@@ -27,6 +27,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import java.time.Instant
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.codex.jobs.canRunNow
 import no.pradhan.agentview.nativeapp.codex.jobs.runJobNow
 import no.pradhan.agentview.nativeapp.codex.meetings.ActionMenuItems
@@ -50,6 +52,7 @@ import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.codexProfile
 import no.pradhan.agentview.nativeapp.app.linkTitle
+import no.pradhan.agentview.nativeapp.app.parseTask
 import no.pradhan.agentview.nativeapp.app.hideNeed
 import no.pradhan.agentview.nativeapp.app.restoreNeed
 import no.pradhan.agentview.nativeapp.ui.AvIcon
@@ -108,6 +111,8 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
     var text by remember(row.key) { mutableStateOf(row.text ?: "") }
     var pickDue by remember { mutableStateOf(false) }
     var tag by remember { mutableStateOf("") }
+    var tidying by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val clip = LocalClipboardManager.current
     val uri = LocalUriHandler.current
     val latest by androidx.compose.runtime.rememberUpdatedState(row)
@@ -218,6 +223,19 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
                 if (chat != null) sourceLink(row).let { s -> Button(s.label, { commit(); onOpenChat(chat) }, icon = s.icon) }
                 else safeHref(row.sourceUrl)?.let { href -> sourceLink(row).let { s -> Button(s.label, { uri.openUri(href) }, icon = s.icon) } }
                 Button("Ask Claude", { commit(); onAsk(latest); onDismiss() })
+                if (row.status == "open" && !hub.readOnly) Button(if (tidying) "Tidying…" else "Tidy", {
+                    tidying = true
+                    scope.launch {
+                        runCatching { hub.parseTask(listOf(title, text).filter { it.isNotBlank() }.joinToString("\n"), row.profile) }
+                            .onSuccess { p ->
+                                title = p.title
+                                text = p.details ?: ""
+                                if (p.at != null && latest.at == null) actions.edit(latest, mapOf("at" to p.at))
+                            }
+                            .onFailure { actions.say("Not tidied: ${it.message}") }
+                        tidying = false
+                    }
+                }, variant = ButtonVariant.Plain, icon = "wand", enabled = !tidying)
                 Button("Start a chat…", { commit(); onChat { repo -> taskChatPrompt(row.id, row.status, title, text, row.sourceUrl, repo != null && segmentOf(repo) == row.profile) }; onDismiss() })
                 row.draft?.takeIf { it.isNotBlank() }?.let { d -> Button("Copy draft", { clip.setText(AnnotatedString(d)); actions.say("Draft copied") }, icon = "copy") }
                 Button("Delete", { actions.delete(row); onDismiss() }, variant = ButtonVariant.Danger)

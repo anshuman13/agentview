@@ -435,7 +435,7 @@ fun joinMinutes(m: Row, now: Long): Long? {
 
 fun meetingMeta(m: Row, now: Long, noDay: Boolean = false): String {
     val n = peopleOf(m).size
-    val day = if (!noDay && m.startsAt!! >= dayEnd(now)) "${DateTimeFormatter.ofPattern("EEE, d MMM", Locale.ENGLISH).format(Instant.ofEpochMilli(m.startsAt!!).atZone(codexZone))}, " else ""
+    val day = if (!noDay && (m.startsAt!! >= dayEnd(now) || m.startsAt!! < dayStart(now))) "${DateTimeFormatter.ofPattern("EEE, d MMM", Locale.ENGLISH).format(Instant.ofEpochMilli(m.startsAt!!).atZone(codexZone))}, " else ""
     val time = "$day${clock(m.startsAt!!)}${m.endsAt?.let { " - ${clock(it)}" } ?: ""}"
     return listOfNotNull(time, m.str("room")?.takeIf { it.isNotEmpty() }, if (n > 0) plural(n, "person", "people") else null).joinToString(" · ")
 }

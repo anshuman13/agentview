@@ -150,7 +150,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
             val rows = g.rows.take(left)
             left -= rows.size
             item { SectionHeader(g.label) }
-            item { Group { rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile, onNotes = onNotes) { onOpen(m) } } } }
+            item { Group { rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile, noDay = true, onNotes = onNotes) { onOpen(m) } } } }
         }
         if (listed.sumOf { it.rows.size } > shown) item { Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         if (groups.isEmpty()) item {

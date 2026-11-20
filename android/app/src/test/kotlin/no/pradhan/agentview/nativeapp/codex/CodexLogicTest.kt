@@ -7,7 +7,9 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
+import no.pradhan.agentview.nativeapp.app.ParsedTask
 import no.pradhan.agentview.nativeapp.net.LiveChat
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -217,9 +219,21 @@ class CodexLogicTest {
         assertEquals("Starts in 3h 30m", countdown(m.nextLater!!, NOW))
         assertEquals("10:00 - 11:00 · 2 people", meetingMeta(m.next!!, NOW))
         assertTrue(meetingMeta(ms1[4], NOW).startsWith("Sun, 8 Nov, 09:00"))
+        val yesterday = meeting("y", ms(2026, 11, 6, 9), ms(2026, 11, 6, 10))
+        assertEquals("Fri, 6 Nov, 09:00 - 10:00 · 2 people", meetingMeta(yesterday, NOW))
+        assertEquals("09:00 - 10:00 · 2 people", meetingMeta(yesterday, NOW, noDay = true))
+        assertEquals("08:00 - 09:00 · 2 people", meetingMeta(ms1[0], NOW))
         assertEquals(4L, joinMinutes(meeting("j", NOW + 3 * 60_000 + 1, NOW + 9_000_000), NOW))
         assertNull(joinMinutes(m.nextLater!!, NOW))
         assertEquals("later", meetingsOf(ms1.filter { it.id != "live" }, WORK, NOW).next!!.id)
+    }
+
+    @Test fun parsedTaskDecodesTheHubReply() {
+        val p = protocolJson.decodeFromString<ParsedTask>("""{"title":"Call the dentist","details":null,"at":null}""")
+        assertEquals("Call the dentist", p.title)
+        assertNull(p.details)
+        assertNull(p.at)
+        assertEquals(ms(2026, 11, 8, 9), protocolJson.decodeFromString<ParsedTask>("""{"title":"x","details":"about the crown","at":${ms(2026, 11, 8, 9)}}""").at)
     }
 
     @Test fun needsYouRanksOnceAndCollapsesOverdue() {

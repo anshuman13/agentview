@@ -69,7 +69,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
           {visible.map((g) => (
             <section key={g.label}>
               <Section label={g.label} />
-              <div className="as-group">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} said={said.get(rowKey(m))} />)}</div>
+              <div className="as-group">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} said={said.get(rowKey(m))} noDay />)}</div>
             </section>
           ))}
           <ShowMore shown={shown} total={total} onMore={more} />
