@@ -143,20 +143,22 @@ function createLookupIndexes(db: Database) {
 
 function createSearchIndexes(db: Database) {
   for (const [fts, table, cols] of [['facts_fts', 'facts', ['text', 'sources']], ['pages_fts', 'pages', ['title', 'summary']]] as const) {
-    const have = columnsOf(db, fts);
-    if (have.size && (have.size !== cols.length || cols.some((c) => !have.has(c)))) {
-      for (const suffix of ['ai', 'ad', 'au']) db.exec(`DROP TRIGGER IF EXISTS ${fts}_${suffix}`);
-      db.exec(`DROP TABLE ${fts}`);
-    }
-    const fresh = !db.prepare('SELECT 1 FROM sqlite_master WHERE name = ?').get(fts);
-    const list = cols.join(', ');
-    const old = cols.map((c) => `old.${c}`).join(', ');
-    const next = cols.map((c) => `new.${c}`).join(', ');
-    db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS ${fts} USING fts5(${list}, content='${table}', tokenize='unicode61 remove_diacritics 2')`);
-    db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_ai AFTER INSERT ON ${table} BEGIN INSERT INTO ${fts}(rowid, ${list}) VALUES (new.rowid, ${next}); END`);
-    db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_ad AFTER DELETE ON ${table} BEGIN INSERT INTO ${fts}(${fts}, rowid, ${list}) VALUES ('delete', old.rowid, ${old}); END`);
-    db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_au AFTER UPDATE ON ${table} BEGIN INSERT INTO ${fts}(${fts}, rowid, ${list}) VALUES ('delete', old.rowid, ${old}); INSERT INTO ${fts}(rowid, ${list}) VALUES (new.rowid, ${next}); END`);
-    if (fresh) db.exec(`INSERT INTO ${fts}(${fts}) VALUES ('rebuild')`);
+    db.transaction(() => {
+      const have = columnsOf(db, fts);
+      if (have.size && (have.size !== cols.length || cols.some((c) => !have.has(c)))) {
+        for (const suffix of ['ai', 'ad', 'au']) db.exec(`DROP TRIGGER IF EXISTS ${fts}_${suffix}`);
+        db.exec(`DROP TABLE ${fts}`);
+      }
+      const fresh = !db.prepare('SELECT 1 FROM sqlite_master WHERE name = ?').get(fts);
+      const list = cols.join(', ');
+      const old = cols.map((c) => `old.${c}`).join(', ');
+      const next = cols.map((c) => `new.${c}`).join(', ');
+      db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS ${fts} USING fts5(${list}, content='${table}', tokenize='unicode61 remove_diacritics 2')`);
+      db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_ai AFTER INSERT ON ${table} BEGIN INSERT INTO ${fts}(rowid, ${list}) VALUES (new.rowid, ${next}); END`);
+      db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_ad AFTER DELETE ON ${table} BEGIN INSERT INTO ${fts}(${fts}, rowid, ${list}) VALUES ('delete', old.rowid, ${old}); END`);
+      db.exec(`CREATE TRIGGER IF NOT EXISTS ${fts}_au AFTER UPDATE ON ${table} BEGIN INSERT INTO ${fts}(${fts}, rowid, ${list}) VALUES ('delete', old.rowid, ${old}); INSERT INTO ${fts}(rowid, ${list}) VALUES (new.rowid, ${next}); END`);
+      if (fresh) db.exec(`INSERT INTO ${fts}(${fts}) VALUES ('rebuild')`);
+    })();
   }
 }
 

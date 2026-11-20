@@ -117,8 +117,8 @@ export const wikiProposeTool = defineTool({
     const now = Date.now();
     const { pages, facts } = await own(cwd, profile);
     const changes: HubChange[] = [];
-    const open = pages.map((r) => ({ id: r.id as string, title: String(r.title), state: state(r) }));
-    const found = a.page ? open.find((r) => r.id === a.page && r.state !== 'rejected') ?? samePage(a.page, open) : undefined;
+    const candidates = pages.map((r) => ({ id: r.id as string, title: String(r.title), state: state(r) }));
+    const found = a.page ? candidates.find((r) => r.id === a.page && r.state !== 'rejected') ?? samePage(a.page, candidates) : undefined;
     let pageId = found?.id;
     if (a.page && !pageId) {
       if (!a.section) return 'A new page needs a section. Pass section, or an existing page id from wiki_search.';

@@ -36,7 +36,10 @@ export function similarClaim<T extends { text: string }>(text: string, claims: T
   return best;
 }
 
-const pageKey = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean).join(' ').replace(/^the /, '').replace(/(?<=[^s]{3}[^s])s$/, '');
+// Drops a final "s" that follows four letters other than s.
+const singular = (t: string) => (/[^s]{4}s$/.test(t) ? t.slice(0, -1) : t);
+
+const pageKey = (t: string) => singular(t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean).join(' ').replace(/^the /, ''));
 
 // The first live or proposed page whose title matches, ignoring case, punctuation, a leading "the" and a trailing plural "s". A rejected page never matches.
 export function samePage<T extends { title: string; state?: string | null }>(title: string, pages: T[]): T | undefined {
