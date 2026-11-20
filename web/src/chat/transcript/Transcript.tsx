@@ -1,7 +1,8 @@
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { forgetSeenBefore, getState, loadEarlier, seenBefore, send, setUi, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
-import { IconButton } from '../../ui/Button';
+import { IconButton, ShowToggle } from '../../ui/Button';
+import { EmptyState } from '../../ui/Panel';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
@@ -212,7 +213,7 @@ function TranscriptView({ events, earlier, cwd, running, bill }: { events: ChatE
     <div className="tr-host">
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
-      {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, the agent's steps and replies show up here.</div>}
+      {items.length === 0 && <EmptyState size="sm" icon="comment-discussion" title="No messages yet" hint="Your prompts, the agent's steps and replies show up here" />}
       {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? 'Loading earlier…' : `Show earlier (${hiddenCount(earlier, list.length, shown)} hidden)`}</div>}
       {list.slice(from).map((r, i) => {
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
@@ -294,7 +295,7 @@ function Folded({ id, className, children }: { id: string; className: string; ch
   return (
     <>
       <div ref={ref} className={`${className}${open ? '' : ' folded'}`}>{children}</div>
-      {long && <button className="link tr-more" onClick={toggle}>{open ? 'Show less' : 'Show more'}</button>}
+      {long && <ShowToggle open={open} onClick={toggle} />}
     </>
   );
 }

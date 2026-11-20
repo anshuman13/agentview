@@ -15,16 +15,10 @@
 .cp-card:focus-within { border-color: var(--cp-ring); }
 
 .cp-uses { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-4) var(--sp-4) 0; }
-.cp-use {
-  height: var(--size-md); padding: 0 var(--sp-1) 0 7px; display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
-  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--sunken);
-  font-size: var(--fs-sm); color: var(--fg); white-space: nowrap;
-}
+.cp-use { max-width: 100%; }
 .cp-use > span { overflow: hidden; text-overflow: ellipsis; }
-.cp-use > .codicon { color: var(--fg-muted); }
-.cp-use .mono { font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-muted); }
+.cp-use .mono { font-family: var(--mono); font-size: var(--fs-xs); }
 .cp-use .mono::before { content: '· '; }
-.cp-use .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 
 .cp-text { position: relative; }
 .cp-card textarea, .cp-mirror {
@@ -102,8 +96,6 @@
   .cp-card textarea, .cp-mirror { font-size: var(--fs-2xl); line-height: var(--line-lg); }
   .cp-card.shell :is(textarea, .cp-mirror) { font-size: var(--fs-xl); }
   .cp-send, .cp-stop, .cp-foot .icon-btn:is(.voice, .mcp) { width: var(--touch); height: var(--touch); }
-  .cp-use { height: var(--size-2xl); font-size: var(--fs-md); }
-  .cp-use .icon-btn { width: var(--size-xl); height: var(--size-xl); }
   .cp-foot { gap: var(--sp-1); padding: var(--sp-1) var(--sp-3) var(--sp-3); }
   .cp-pop li { height: var(--touch); }
   .cp-pop { max-height: min(300px, 45vh); max-height: min(300px, 45dvh); }
@@ -114,7 +106,7 @@
   .cp-stats > :first-child { margin-left: auto; }
   .cp-stats > * + *::before { content: none; }
   .cp-stats > * { flex: none; }
-  .cp-stats > .cp-ctx { display: inline-flex; align-items: center; min-height: 32px; padding: 0 var(--sp-5); border: 1px solid var(--border); border-radius: 16px; text-decoration: none; }
+  .cp-stats > .cp-ctx { display: inline-flex; align-items: center; min-height: var(--size-2xl); padding: 0 var(--sp-5); border: 1px solid var(--border); border-radius: var(--shape-full); text-decoration: none; }
 }
 @media (max-width: 900px) and (max-height: 500px) {
   .cp-card textarea { min-height: var(--touch); max-height: 30vh; max-height: 30dvh; }

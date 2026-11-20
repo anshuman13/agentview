@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { send, useStore } from '../../app/store';
-import { Chip } from '../../ui/Button';
+import { Chip, IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { useChatSettings, type Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
@@ -30,9 +30,7 @@ function AttachButton({ attach }: { attach: (list: File[]) => Promise<void> }) {
   return (
     <>
       <input ref={picker} type="file" multiple hidden onChange={(e) => { void attach([...(e.target.files ?? [])]); e.target.value = ''; }} />
-      <button className="icon-btn attach" title="Add files for the agent to look at (or paste or drop them)" aria-label="Add files" onClick={() => picker.current?.click()}>
-        <Icon name="file-add" small />
-      </button>
+      <IconButton className="attach" icon="file-add" label="Add files" title="Add files for the agent to look at (or paste or drop them)" small onClick={() => picker.current?.click()} />
     </>
   );
 }
@@ -76,9 +74,7 @@ export function ComposerFoot({ uses, uploading, typed, shell, setPick, attach, d
       <ModeChip setPick={setPick} />
       <span className="cp-spacer" />
       {hasServers && (
-        <button className={`icon-btn mcp${uses.length ? ' on' : ''}`} title={`Ask ${label} to use an MCP server or tool`} aria-label="Use an MCP server" onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })}>
-          <Icon name="plug" small />
-        </button>
+        <IconButton className="mcp" icon="plug" label="Use an MCP server" title={`Ask ${label} to use an MCP server or tool`} small on={uses.length > 0} onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })} />
       )}
       <AttachButton attach={attach} />
       {uploading > 0 && <span className="cp-hint"><Icon name="loading" small spin /> Uploading {uploading}</span>}

@@ -4,6 +4,7 @@ import { setUi, useStore } from '../../app/store';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import { fileRequest } from '../../workspace/fileApi';
 import { Markdown } from '../Chat';
@@ -63,7 +64,7 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
   };
   return (
     <>
-      <input value={text} placeholder="Add a rule" aria-label="Add a rule" enterKeyHint="done" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void add()} />
+      <div className="ui-fields"><input value={text} placeholder="Add a rule" aria-label="Add a rule" enterKeyHint="done" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void add()} /></div>
       {note && <div className="muted" role="status">{note}{before !== null && <Button size="sm" variant="plain" onClick={() => void undo()}>Undo</Button>}</div>}
     </>
   );
@@ -82,7 +83,7 @@ export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void 
     const edit = () => { setUi({ openFile: file, openEdit: true, follow: false }); onClose(); };
     return (
       <Sheet label={open.name} onClose={onClose}>
-        <h2>{open.name}</h2>
+        <Section label={open.name} />
         <div className="muted">{memoryWhere(open, cwd)}</div>
         {open.path === `${cwd}/${file}` && <Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button>}
         <Markdown text={open.text || 'Empty'} />
@@ -91,7 +92,7 @@ export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void 
   }
   return (
     <Sheet label="Memory" onClose={onClose}>
-      <h2>Memory</h2>
+      <Section label="Memory" />
       {files === null && <div className="muted">Loading memory…</div>}
       {files?.length === 0 && <div className="muted">No {file} or memory files for this folder</div>}
       {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ')} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
