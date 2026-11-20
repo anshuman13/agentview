@@ -1,0 +1,16 @@
+[
+  { "name": "default", "profile": "work", "preset": null, "expected": { "name": "New job", "schedule": "weekdays 08:00", "prompt": "", "enabled": 1, "profile": "work" } },
+  { "name": "personal default", "profile": "personal", "preset": null, "expected": { "name": "New job", "schedule": "weekdays 08:00", "prompt": "", "enabled": 1, "profile": "personal" } },
+  {
+    "name": "weekly digest",
+    "profile": "work",
+    "preset": "weekly-digest",
+    "expected": {
+      "name": "Weekly digest",
+      "schedule": "weekly fri 16:00",
+      "prompt": "Use mcp__agentview__data_find to read this past week: meetings (with their summary and decisions) and items (tasks opened, tasks done, and tasks still open). Write a digest with these sections: Meetings this week, Decisions, Tasks opened, Tasks closed, Stale tasks (open over 14 days). Keep each section to a few short lines and skip a section that has nothing. Save it with mcp__agentview__data_write as a new item with status note and the title \"Weekly digest\".",
+      "enabled": 1,
+      "profile": "work"
+    }
+  }
+]

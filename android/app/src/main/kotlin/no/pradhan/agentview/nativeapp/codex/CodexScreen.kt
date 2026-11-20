@@ -240,7 +240,7 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
     editing?.let { row ->
         val from = st.meetings.firstOrNull { it.profile == row.profile && it.id == row.meetingId }
         val people = if (row.status == "open") remember(st.meetings, row.key, now / 60_000) { recentPeople(st.meetings, row.profile, from, now) } else emptyList()
-        EditorSheet(row, st.items, st.meetings, now, actions, people, { p, t -> ops.points.raise(t, p, row.profile) }, askAbout, { chatText = it }) { nav.editKey = null }
+        EditorSheet(row, st.items, st.meetings, now, actions, people, from, { nav.push("meeting:${it.key}") }, { p, t -> ops.points.raise(t, p, row.profile) }, askAbout, { chatText = it }) { nav.editKey = null }
     }
     chatText?.let { text ->
         val live by hub.store.state.select { it.live }

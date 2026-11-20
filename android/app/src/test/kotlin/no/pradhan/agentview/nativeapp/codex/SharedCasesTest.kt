@@ -140,7 +140,9 @@ import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.heldUntil
+import no.pradhan.agentview.nativeapp.codex.jobs.WEEKLY_DIGEST
 import no.pradhan.agentview.nativeapp.codex.jobs.jobEdits
+import no.pradhan.agentview.nativeapp.codex.jobs.newJob
 import no.pradhan.agentview.nativeapp.codex.jobs.parseSchedule
 import no.pradhan.agentview.nativeapp.codex.jobs.scheduleOf
 import no.pradhan.agentview.nativeapp.codex.jobs.money
@@ -597,6 +599,23 @@ class SharedCasesTest {
             val job = Row("jobs", "j", "work", f = c.getValue("job").jsonObject)
             val expected = c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.content }
             assertEquals(c.str("name"), expected, jobEdits(job, c.str("name_in"), c.str("prompt_in")))
+        }
+    }
+
+    @Test fun newJobRule() {
+        for (c in cases("new-job")) {
+            val job = newJob(c.str("profile"), if (c.prim("preset") != null) WEEKLY_DIGEST else null, 1000L)
+            val expected = c.getValue("expected").jsonObject
+            assertEquals(c.str("name"), listOf("name", "schedule", "prompt").map { expected.str(it) } + listOf(1L, expected.str("profile")), listOf(job.str("name"), job.str("schedule"), job.str("prompt"), job.long("enabled"), job.profile))
+        }
+    }
+
+    @Test fun taskSource() {
+        for (c in cases("task-source")) {
+            val row = Row("items", c.str("id"), "work", f = mapOf("source" to toJson(c.prim("source")?.content), "meeting_id" to toJson(c.prim("meeting_id")?.content)))
+            val expected = c.getValue("expected").jsonObject
+            val link = sourceLink(row)
+            assertEquals(c.str("name"), listOf(expected.str("icon"), expected.str("label")), listOf(link.icon, link.label))
         }
     }
 

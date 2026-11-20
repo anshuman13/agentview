@@ -1,0 +1,9 @@
+[
+  { "name": "slack", "id": "a", "source": "slack", "meeting_id": null, "expected": { "icon": "comment-discussion", "label": "Slack" } },
+  { "name": "linear", "id": "a", "source": "linear", "meeting_id": null, "expected": { "icon": "issues", "label": "Linear" } },
+  { "name": "action", "id": "a", "source": "action", "meeting_id": null, "expected": { "icon": "checklist", "label": "Meeting" } },
+  { "name": "unknown source", "id": "a", "source": "fax", "meeting_id": null, "expected": { "icon": "circle-small", "label": "fax" } },
+  { "name": "no source", "id": "a", "source": null, "meeting_id": null, "expected": { "icon": "edit", "label": "You" } },
+  { "name": "said row", "id": "said:1", "source": "slack", "meeting_id": null, "expected": { "icon": "reply", "label": "You said" } },
+  { "name": "meeting task", "id": "a", "source": "action", "meeting_id": "m1", "expected": { "icon": "checklist", "label": "Transcript" } }
+]

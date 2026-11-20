@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useAssistantData } from '../data';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/tasks/presets';
-import { newId, rowKey, type Profile } from '../data/sync';
+import { rowKey } from '../data/sync';
 import type { Job, Run } from '../data/wiki/wiki';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
@@ -16,7 +16,7 @@ import '../../styles/features/jobs.css';
 import { Autopilot } from './Autopilot';
 import { AutopilotPage } from './AutopilotPage';
 import { JobPage } from './JobPage';
-import { canRunNow, describe, jobState, removeJob, rowNote, runNow, useJobs } from './schedule';
+import { canRunNow, describe, jobState, newJob, removeJob, rowNote, runNow, useJobs } from './schedule';
 import { Badge } from '../../ui/Badge';
 
 type Jobs = ReturnType<typeof useJobs>;
@@ -57,9 +57,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
   const { jobs, runs, paused, store, filter, enable } = useJobs();
   const now = Date.now();
   const add = (preset?: JobPreset) => {
-    const t = Date.now();
-    const profile: Profile = filter === 'personal' ? 'personal' : 'work';
-    const row: Job = { id: newId(), profile, version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}', name: 'New job', schedule: 'weekdays 08:00', prompt: '', enabled: 1, next_run_at: null, tools: null, repo: null, quiet: null, ...preset };
+    const row = newJob(filter === 'personal' ? 'personal' : 'work', preset);
     void store.editRow('jobs', row, { name: row.name, schedule: row.schedule, prompt: row.prompt, enabled: 1 });
     setView({ open: rowKey(row) });
   };

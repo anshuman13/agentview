@@ -14,3 +14,5 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
 };
 export const channelOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
 export const sourceOf = (r: ItemRow) => (isSaid(r) ? { icon: 'reply', label: 'You said' } : channelOf(r));
+// The link to a task's source: a meeting task links to its transcript.
+export const sourceLink = (r: ItemRow) => { const s = sourceOf(r); return r.meeting_id ? { ...s, label: 'Transcript' } : s; };

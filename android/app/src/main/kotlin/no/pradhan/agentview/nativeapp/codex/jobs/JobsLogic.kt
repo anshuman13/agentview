@@ -1,14 +1,18 @@
 package no.pradhan.agentview.nativeapp.codex.jobs
 
+import kotlinx.serialization.json.JsonNull
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
 import no.pradhan.agentview.nativeapp.codex.SyncPaused
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.codex.daysFrom
+import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.weekdayDate
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.unbilledText
+import java.util.UUID
 
 // Jobs of web/src/codex/jobs/schedule.tsx: how a schedule reads, and the state a job shows.
 
@@ -50,6 +54,21 @@ fun describeSchedule(s: String?): String {
         "weekdays" -> "Weekdays at $time"
         else -> "${DAY_NAMES[DAYS.indexOf(m.groupValues[2].ifEmpty { "mon" })]} at $time"
     }
+}
+
+class JobPreset(val name: String, val schedule: String, val prompt: String)
+
+// web/src/codex/data/tasks/presets.ts; shared/fixtures/new-job.json holds the text.
+val WEEKLY_DIGEST = JobPreset(
+    "Weekly digest",
+    "weekly fri 16:00",
+    "Use mcp__agentview__data_find to read this past week: meetings (with their summary and decisions) and items (tasks opened, tasks done, and tasks still open). Write a digest with these sections: Meetings this week, Decisions, Tasks opened, Tasks closed, Stale tasks (open over 14 days). Keep each section to a few short lines and skip a section that has nothing. Save it with mcp__agentview__data_write as a new item with status note and the title \"Weekly digest\".",
+)
+
+// newJob of web/src/codex/jobs/schedule.tsx: the preset's name, schedule and prompt, else a blank weekday 08:00 job.
+fun newJob(profile: String, preset: JobPreset?, now: Long, id: String = UUID.randomUUID().toString()): Row {
+    val blank = Row("jobs", id, profile, updatedAt = now, f = SYNCED_FIELDS.getValue("jobs").associateWith { JsonNull })
+    return edited(blank, mapOf("name" to (preset?.name ?: "New job"), "schedule" to (preset?.schedule ?: "weekdays 08:00"), "prompt" to (preset?.prompt ?: ""), "enabled" to 1), now)
 }
 
 fun runsOf(runs: List<Row>, j: Row) = runs.filter { !it.deleted && it.profile == j.profile && it.str("job_id") == j.id }.sortedByDescending { it.long("started_at") ?: 0L }

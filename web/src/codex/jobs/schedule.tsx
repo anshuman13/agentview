@@ -1,6 +1,7 @@
 import { useAssistantStore, useAssistantData, useSyncStatus } from '../data';
 import type { Job, Run } from '../data/wiki/wiki';
-import { madeAt, type ItemRow, type Paused } from '../data/sync';
+import { madeAt, newId, type ItemRow, type Paused, type Profile } from '../data/sync';
+import type { JobPreset } from '../data/tasks/presets';
 import { clock } from '../tasks/time';
 import { dayLabel, dayStart } from '../data/dates';
 import { money } from '../../ui/util';
@@ -45,6 +46,9 @@ export const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && 
 export const tasksOf = (items: ItemRow[], j: Job) => items
   .filter((i) => !i.deleted && i.profile === j.profile && i.source === 'job' && i.people === j.name)
   .sort((a, b) => Number(a.status === 'done') - Number(b.status === 'done') || madeAt(b) - madeAt(a));
+
+// A job the user just added: the preset's name, schedule and prompt, else a blank weekday 08:00 job.
+export const newJob = (profile: Profile, preset?: JobPreset): Job => ({ id: newId(), profile, version: 0, updated_at: Date.now(), deleted: 0, dirty: 1, field_times: '{}', name: 'New job', schedule: 'weekdays 08:00', prompt: '', enabled: 1, next_run_at: null, tools: null, repo: null, quiet: null, ...preset });
 
 // The fields a name and prompt edit changes: a blank name saves as "Untitled job", a blank prompt stays blank.
 export function jobEdits(j: Pick<Job, 'name' | 'prompt'>, name: string, prompt: string) {

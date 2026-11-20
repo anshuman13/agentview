@@ -50,6 +50,7 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
         }
     }
 
+    fun toTask(r: Row) = change(r, mapOf("status" to "open") + unrollFor(r.at, now()), "Moved to Today")
     fun reopen(r: Row) = change(r, mapOf("status" to "open"), "Moved back to Today")
     fun logTime(r: Row, minutes: Long) = change(r, mapOf("spent" to (r.long("spent") ?: 0L) + minutes), "Logged ${minutesText(minutes)}")
     fun snooze(r: Row, at: Long) = change(r, mapOf("at" to at) + unrollFor(at, now()), "Snoozed to ${whenText(at, now())}")

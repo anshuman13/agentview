@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.TaskActions
 import no.pradhan.agentview.nativeapp.codex.autopilot.AutopilotRow
 import no.pradhan.agentview.nativeapp.codex.profileLabel
@@ -140,15 +141,19 @@ private fun JobMenu(hub: Hub, actions: TaskActions, j: Row, canRun: Boolean, clo
 }
 
 @Composable
-fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onAutopilot: () -> Unit, onOpen: (Row) -> Unit) {
+fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onAutopilot: () -> Unit, onNew: (Row) -> Unit, onOpen: (Row) -> Unit) {
     val haptic = LocalHapticFeedback.current
+    val add = { preset: JobPreset? -> newJob(profile ?: WORK, preset, System.currentTimeMillis()).let { if (hub.codex.add(it)) onNew(it) } }
     val jobs = remember(st.jobs, profile) { jobsOf(st.jobs, profile) }
     val byJob = remember(st.runs) { runsByJob(st.runs) }
     val waiting = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).asks, profile, now).size }
     LazyColumn(Modifier.fillMaxWidth()) {
+        if (!hub.readOnly) item { Button("New job", { add(null) }, Modifier.padding(start = Tokens.listPad, top = Tokens.sp4), size = ButtonSize.Sm, icon = "add") }
         item { AutopilotRow(hub, waiting, onAutopilot) }
-        if (jobs.isEmpty()) item { EmptyState("No jobs yet", "A job runs a prompt on a schedule, can add tasks, and sends you the result", icon = "history") }
-        else item {
+        if (jobs.isEmpty()) {
+            item { EmptyState("No jobs yet", "A job runs a prompt on a schedule, can add tasks, and sends you the result", icon = "history") }
+            if (!hub.readOnly) item { Button("Weekly digest", { add(WEEKLY_DIGEST) }, Modifier.padding(start = Tokens.listPad), size = ButtonSize.Sm, icon = "sparkle") }
+        } else item {
             Group {
                 jobs.forEachIndexed { i, j ->
                     if (i > 0) Hairline()
@@ -177,13 +182,13 @@ fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String>
 }
 
 @Composable
-fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActions, onTask: (Row) -> Unit) {
+fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActions, startEditing: Boolean, onTask: (Row) -> Unit) {
     val runs = remember(st.runs, job.key) { runsOf(st.runs, job) }
     val tasks = remember(st.items, job.key, job.str("name")) { tasksOf(st.items, job) }
     val state = jobState(job, runs, now)
     var runsOpen by rememberSaveable(job.key) { mutableStateOf(false) }
     var allTasks by rememberSaveable(job.key) { mutableStateOf(false) }
-    var editing by remember(job.key) { mutableStateOf(false) }
+    var editing by rememberSaveable(job.key) { mutableStateOf(startEditing) }
     var scheduling by remember(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
     var servers by remember { mutableStateOf<List<String>>(emptyList()) }

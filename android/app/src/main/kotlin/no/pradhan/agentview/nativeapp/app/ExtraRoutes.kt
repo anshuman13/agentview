@@ -26,7 +26,7 @@ import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 
 // The pages the Codex tab shows beyond Overview, Tasks and Goals: Meetings, Wiki and Jobs with the pages under them.
-// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>", "person:<name>", "wiki:<key>", "job:<key>", "series:<key>", "review" or "autopilot".
+// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>", "person:<name>", "wiki:<key>", "job:<key>", "jobnew:<key>" (a job just added, its Edit sheet open), "series:<key>", "review" or "autopilot".
 val EXTRA_ROOTS = setOf("meetings", "jobs", "wiki")
 const val ROUTE_SEP = '\u0001'
 
@@ -74,10 +74,10 @@ fun ExtraContent(
             val p = st.pages.firstOrNull { it.key == key && !it.deleted }
             if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop)
         }
-        route == "jobs" -> JobsListPage(hub, st, profile, now, actions, { push("autopilot") }) { push("job:${it.key}") }
+        route == "jobs" -> JobsListPage(hub, st, profile, now, actions, { push("autopilot") }, { push("jobnew:${it.key}") }) { push("job:${it.key}") }
         else -> {
             val j = st.jobs.firstOrNull { it.key == key && !it.deleted }
-            if (j == null) EmptyState("This job is gone", icon = "history") else JobPageView(hub, st, j, now, actions, onTask)
+            if (j == null) EmptyState("This job is gone", icon = "history") else JobPageView(hub, st, j, now, actions, route.startsWith("jobnew:"), onTask)
         }
     }
 }

@@ -47,7 +47,9 @@ import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import { pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page } from './codex/data/wiki/wiki';
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
-import { heldUntil, jobEdits, tasksOf } from './codex/jobs/schedule';
+import { heldUntil, jobEdits, newJob, tasksOf } from './codex/jobs/schedule';
+import { WEEKLY_DIGEST } from './codex/data/tasks/presets';
+import { sourceLink } from './codex/tasks/taskSource';
 import type { ItemRow } from './codex/data/sync';
 import { agendaMarkdown, draftFor, followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
@@ -288,6 +290,17 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; job: Pick<Job, 'name' | 'prompt'>; name_in: string; prompt_in: string; expected: object }>('job-edit')) {
     it(`jobEdits: ${c.name}`, () => expect(jobEdits(c.job, c.name_in, c.prompt_in)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; profile: Profile; preset: 'weekly-digest' | null; expected: object }>('new-job')) {
+    it(`newJob: ${c.name}`, () => {
+      const { name, schedule, prompt, enabled, profile } = newJob(c.profile, c.preset ? WEEKLY_DIGEST : undefined);
+      expect({ name, schedule, prompt, enabled, profile }).toEqual(c.expected);
+    });
+  }
+
+  for (const c of cases<{ name: string; id: string; source: string | null; meeting_id: string | null; expected: { icon: string; label: string } }>('task-source')) {
+    it(`sourceLink: ${c.name}`, () => expect(sourceLink(c as unknown as ItemRow)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; held: string[] | null; keys: string[]; expected: string[] }>('held-order')) {
