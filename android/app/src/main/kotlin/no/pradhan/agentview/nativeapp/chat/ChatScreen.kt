@@ -42,6 +42,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.sendAt
+import no.pradhan.agentview.nativeapp.app.loadEarlier
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
@@ -115,6 +116,7 @@ class ChatPanels {
     var saved by mutableStateOf(false)
     var tools by mutableStateOf(false)
     var find by mutableStateOf(false)
+    var prompts by mutableStateOf(false)
     var file by mutableStateOf<FilePath?>(null)
     var dialog by mutableStateOf<String?>(null)
 }
@@ -195,7 +197,26 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         Composer(hub, live.id, live.sessionId, session, running, pending.isNotEmpty(), run)
     }
     ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent, run)
+    if (panels.prompts) PromptsSheet(hub, view.items, earlier) { panels.prompts = false }
     BuildSheetsHost(hub, live.id, buildSheets)
+}
+
+// The chat menu's Prompts: each sent prompt with its time; a tap scrolls the transcript to it. Load earlier ends the list while older events are not loaded.
+@Composable
+private fun PromptsSheet(hub: Hub, items: List<Item>, earlier: Int, onDismiss: () -> Unit) {
+    val prompts = remember(items) { sentPrompts(items) }
+    val loading by hub.loadingEarlier.collectAsState()
+    val now = rememberNow(false)
+    Sheet(onDismiss, "Prompts", padded = false, count = prompts.size.toString()) {
+        if (prompts.isEmpty()) EmptyState("No prompts yet", "Prompts you send show here", icon = "comment-discussion")
+        else Group {
+            prompts.forEachIndexed { i, p ->
+                if (i > 0) Hairline()
+                ListRow(p.text, if (p.at == 0L) null else "Sent ${replyTime(p.at, now.value)}", onClick = { onDismiss(); hub.showTurn.value = p.id })
+            }
+        }
+        if (earlier > 0) Button(if (loading) "Loading…" else "Load earlier", { hub.loadEarlier() }, Modifier.padding(start = Tokens.listPad, top = Tokens.sp4), variant = ButtonVariant.Plain, enabled = !loading)
+    }
 }
 
 @Composable
@@ -261,6 +282,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
     MoreButton { close ->
         MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
         MenuItem("Find in chat", "search", { close(); panels.find = true })
+        MenuItem("Prompts", "list-ordered", { close(); panels.prompts = true })
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
         MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
         MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)

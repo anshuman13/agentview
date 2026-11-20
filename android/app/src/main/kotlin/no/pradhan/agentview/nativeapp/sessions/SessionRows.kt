@@ -2,10 +2,16 @@ package no.pradhan.agentview.nativeapp.sessions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -13,12 +19,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -35,6 +44,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.RunBadgeView
 import no.pradhan.agentview.nativeapp.codex.autopilot.askLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.runBadge
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.Undoable
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.app.archive
@@ -125,7 +135,14 @@ class ChatRows(
         muted = sessionId != null && sessionId in muted,
         onMute = { sessionId?.let { hub.setMuted(it, it !in muted) } },
         onLink = { sessionId?.let { clipboard.setText(AnnotatedString("${hub.origin.value}/?session=$it")); hub.notice.value = "Link copied" } },
+        onSwipePin = sessionId?.takeIf { !hub.readOnly }?.let { id -> { swipePin(id, id !in pins) } },
+        onSwipeArchive = sessionId?.takeIf { !hub.readOnly && liveChat?.let { it.running || it.pending > 0 } != true }?.let { id -> { hub.archive(id) } },
     )
+
+    private fun swipePin(id: String, on: Boolean) {
+        hub.pin(id, on)
+        hub.undoable.tryEmit(Undoable(if (on) "Pinned" else "Unpinned") { hub.pin(id, !on) })
+    }
 
     fun openSaved(sessionId: String, find: FindRequest? = null) {
         scope.launch {
@@ -198,7 +215,7 @@ private fun draftMeta(draft: String) = buildAnnotatedString {
     append(draft)
 }
 
-class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null)
+class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null, val onSwipePin: (() -> Unit)? = null, val onSwipeArchive: (() -> Unit)? = null)
 
 @Composable
 fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) {
@@ -242,12 +259,43 @@ internal fun StateDot(state: ChatState?) {
     StatusDot(d, desc = word)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun? = null, onResume: (() -> Unit)? = null) {
     val badge = run?.let { runBadge(it) }
     val shown = if (badge == RunBadge.Needs) ChatState.Needs else state
     // Like Slack's unread channels, a chat with a reply or question you have not opened has a bold title.
     val unread = shown == ChatState.Done || shown == ChatState.Needs
+    val body = @Composable { Box(Modifier.background(av.groupCard)) { ChatListRow(title, meta, shown, unread, selected, actions, onClick, run, badge, onResume) } }
+    if (actions.onSwipePin == null) return body()
+    val pin by rememberUpdatedState(actions.onSwipePin)
+    val archive by rememberUpdatedState(actions.onSwipeArchive)
+    val haptic = LocalHapticFeedback.current
+    val state = rememberSwipeToDismissBoxState(confirmValueChange = { v ->
+        when (v) {
+            SwipeToDismissBoxValue.StartToEnd -> { haptic.performHapticFeedback(HapticFeedbackType.Confirm); pin?.invoke() }
+            SwipeToDismissBoxValue.EndToStart -> archive?.let { haptic.performHapticFeedback(HapticFeedbackType.Confirm); it() }
+            else -> {}
+        }
+        false
+    })
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromEndToStart = actions.onSwipeArchive != null,
+        backgroundContent = {
+            val dir = state.dismissDirection
+            val pinning = dir == SwipeToDismissBoxValue.StartToEnd
+            Box(Modifier.fillMaxSize().background(if (pinning) av.accentSoft else if (dir == SwipeToDismissBoxValue.EndToStart) av.errContainer else av.groupCard).padding(horizontal = Tokens.sp8), contentAlignment = if (pinning) Alignment.CenterStart else Alignment.CenterEnd) {
+                if (pinning) Row(verticalAlignment = Alignment.CenterVertically) { AvIcon(if (actions.pinned) "pinned" else "pin", null, Tokens.icon, tint = av.onSecondaryContainer); Text(if (actions.pinned) "  Unpin" else "  Pin", color = av.onSecondaryContainer, style = Type.callout) }
+                else if (dir == SwipeToDismissBoxValue.EndToStart) Row(verticalAlignment = Alignment.CenterVertically) { Text("Archive  ", color = av.onErrContainer, style = Type.callout); AvIcon("archive", null, Tokens.icon, tint = av.onErrContainer) }
+            }
+        },
+        content = { body() },
+    )
+}
+
+@Composable
+private fun ChatListRow(title: String, meta: AnnotatedString, shown: ChatState?, unread: Boolean, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun?, badge: RunBadge?, onResume: (() -> Unit)?) {
     ListRow(
         boldIf(unread, title),
         meta, lines = 1, metaLines = 1, selected = selected, onClick = onClick,
