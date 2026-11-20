@@ -26,6 +26,7 @@ import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.EmptyState
+import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.Tokens
@@ -62,7 +63,7 @@ fun DevServersSheet(hub: Hub, onDismiss: () -> Unit) {
     Sheet(onDismiss = onDismiss, title = "Dev servers", padded = false, full = false) {
         val list = ports
         when {
-            list == null -> EmptyState("Looking for servers…")
+            list == null -> Loading("Looking for servers…")
             list.isEmpty() -> EmptyState("No dev servers", error ?: "Start one on the Mac, such as npm run dev")
             else -> list.forEach { p ->
                 ListRow(":${p.port}", devPortMeta(p), trailing = { AvIcon("link-external", tint = av.fgMuted) }, onClick = {

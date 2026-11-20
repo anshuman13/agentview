@@ -57,6 +57,7 @@ import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.EmptyState
+import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.MenuItem
@@ -327,7 +328,7 @@ private fun LazyListScope.meetingTranscript(folds: MeetingFolds, transcript: Res
     item { SectionHeader("Transcript", open = folds.transcriptOpen.value, onToggle = { folds.transcriptOpen.value = !folds.transcriptOpen.value }) }
     if (!folds.transcriptOpen.value) return
     when {
-        transcript == null -> item { EmptyState("Loading…") }
+        transcript == null -> item { Loading("Loading…") }
         transcript.isFailure -> item { ErrorHint("Could not load the transcript: ${transcript.exceptionOrNull()?.message}") }
         transcript.getOrNull().isNullOrEmpty() -> item { EmptyState("No transcript text kept") }
         else -> items(transcript.getOrNull()!!.lines().filter { it.isNotBlank() }) { line ->

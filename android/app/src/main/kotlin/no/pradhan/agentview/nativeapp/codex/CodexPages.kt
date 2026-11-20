@@ -144,7 +144,7 @@ internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Tas
             TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), singleLine = true, placeholder = "Add a goal for this week",
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { add() }))
         }
-        if (weeks.isEmpty()) item { EmptyState("No goals yet", "Add up to $MAX_GOALS goals for this week above") }
+        if (weeks.isEmpty()) item { EmptyState("No goals yet", "Set up to $MAX_GOALS goals for this week in the field above", icon = "target") }
         weeks.forEach { w ->
             item { SectionHeader(w.label) }
             w.goals.forEach { g ->

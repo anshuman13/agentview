@@ -259,7 +259,7 @@ fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
             item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
             if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, page.title ?: "", stale = it.id in staleIds) }
         }
-        if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "Claims come from meetings and threads", icon = "book") }
+        if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "They appear here as meetings, Slack threads and issues mention ${page.title}", icon = "book") }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
 }

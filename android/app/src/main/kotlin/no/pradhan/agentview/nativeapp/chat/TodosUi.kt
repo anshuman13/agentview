@@ -5,7 +5,10 @@ import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.gitTodos
 import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.EmptyState
+import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.av
@@ -28,12 +31,13 @@ fun todoTitle(t: Todo) = t.text.ifEmpty { "TODO" }.let { if (t.ai != null) "AI${
 // Aider-style AI comments, to-do and fix-me comments in the repo as ready-made tasks; a tap puts a prompt for one in the composer.
 @Composable
 fun TodosSheet(hub: Hub, cwd: String, onDismiss: () -> Unit) {
-    val (todos) = rememberLoad(cwd) { hub.gitTodos() }
+    val (todos, reload) = rememberLoad(cwd) { hub.gitTodos() }
     Sheet(onDismiss = onDismiss, title = "TODOs", padded = false, full = false) {
         val list = todos.data
         when {
-            list == null && todos.busy -> EmptyState("Looking for TODOs…")
-            list.isNullOrEmpty() -> EmptyState("No TODOs", todos.error.ifEmpty { "No TODO, FIXME or AI! comments in tracked files" })
+            list == null && todos.busy -> Loading("Looking for TODOs…")
+            todos.error.isNotEmpty() && list.isNullOrEmpty() -> EmptyState("Could not load TODOs", todos.error, action = { Button("Retry", reload, size = ButtonSize.Sm) })
+            list.isNullOrEmpty() -> EmptyState("No TODOs", "No TODO, FIXME or AI! comments in tracked files")
             else -> list.forEach { t ->
                 ListRow(todoTitle(t), "${t.path}:${t.line}", trailing = { AvIcon("edit", tint = av.fgMuted) }, onClick = {
                     hub.draftPrompt(todoPrompt(t))

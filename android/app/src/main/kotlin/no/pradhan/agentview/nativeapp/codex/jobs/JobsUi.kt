@@ -82,7 +82,7 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     val waiting = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).asks, profile, now).size }
     LazyColumn(Modifier.fillMaxWidth()) {
         item { AutopilotRow(hub, waiting, onAutopilot) }
-        if (jobs.isEmpty()) item { EmptyState("No jobs yet", "Runs a prompt on a schedule") }
+        if (jobs.isEmpty()) item { EmptyState("No jobs yet", "A job runs a prompt on a schedule, can add tasks, and sends you the result", icon = "history") }
         else item {
             Group {
                 jobs.forEachIndexed { i, j ->

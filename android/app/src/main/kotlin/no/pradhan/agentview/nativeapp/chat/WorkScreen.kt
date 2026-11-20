@@ -33,7 +33,7 @@ fun WorkScreen(hub: Hub, turn: String, onBack: () -> Unit, onOpenAgent: (String)
     Column(Modifier.fillMaxSize()) {
         PageHeader("Tool calls", onBack, subtitle = if (prompt.isEmpty()) null else { { Text(prompt, maxLines = 1) } })
         if (hidden.isEmpty()) {
-            EmptyState("No tool calls", "This turn is not in the chat on screen, or it ran no tools")
+            EmptyState("No tool calls", "This turn is not in the loaded chat, or it ran no tools", icon = "list-tree")
             return
         }
         LazyColumn(Modifier.fillMaxSize()) {
