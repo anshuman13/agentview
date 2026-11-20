@@ -11,6 +11,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.DAY_MS
+import no.pradhan.agentview.nativeapp.codex.PERSONAL
+import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
 import no.pradhan.agentview.nativeapp.codex.edited
@@ -114,6 +116,12 @@ fun newFact(text: String, pageId: String?, profile: String, now: Long, state: St
     val blank = Row("facts", id, profile, updatedAt = now, f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull })
     return edited(blank, values, now).let { r -> r.copy(times = r.times.mapValues { now }) }
 }
+
+// The text an edited claim saves: trimmed, null when blank or unchanged (web Claim.tsx save).
+fun editedClaimText(old: String?, next: String): String? = next.trim().takeIf { it.isNotEmpty() && it != old }
+
+// A proposal's profile: the page's, else the filter's (web usePageEdits propose).
+fun proposalProfile(page: Row?, filter: String?): String = page?.profile ?: if (filter == PERSONAL) PERSONAL else WORK
 
 class Contest(val by: String, val at: Long, val note: String)
 
