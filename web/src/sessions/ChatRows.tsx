@@ -5,7 +5,7 @@ import { MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
 import { type ConfirmRequest } from '../ui/Confirm';
 import { type ChatRun, type LiveChat, type SavedSession } from '../../../shared/protocol';
-import { providerMark } from '../../../shared/providers';
+import { providerMark, shortModel } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
 import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
@@ -178,7 +178,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   const draft = selected ? '' : draftLine(readDraft(c.id));
   const main = draft ? <><span className="chat-draft">Draft:</span> {draft}</> : (
     <>
-      {metaLine(repo, branchOf(saved?.gitBranch, branch), providerMark(c.provider), when)}
+      {metaLine(repo, branchOf(saved?.gitBranch, branch), c.model && shortModel(c.model), providerMark(c.provider), when)}
       {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{prText(c.pr, pr)}{checkIcon}</a> : <>#{c.pr}{checkIcon}</>}</>}
       {c.todos && ` · ${c.todos.done}/${c.todos.total}`}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}

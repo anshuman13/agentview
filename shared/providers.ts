@@ -33,6 +33,9 @@ export const providerModes = (p?: Provider): ModeOption[] => (p === 'codex' ? CO
 // A start mode the provider does not offer (Plan on Codex) starts in Default (Android startModeFor).
 export const startModeFor = (mode: string | null, p?: Provider) => (mode !== null && !providerModes(p).some((m) => m.value === mode) ? 'default' : mode);
 
+// A model's id or display name as a chip shows it: "claude-opus-4-8" is "Opus 4.8" and a "(1M context)" suffix is dropped (Android shortModel).
+export const shortModel = (name: string) => name.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);
+
 const SUPERVISED: ModeOption = { value: 'supervised', label: 'Supervised', detail: 'Auto, and review each turn' };
 
 // The mode list the pick menus show: Supervised (auto with review each turn) follows Auto. Shift+Tab, the palette and new chats use providerModes.

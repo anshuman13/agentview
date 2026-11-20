@@ -1,0 +1,6 @@
+[
+  { "name": "a Claude model id", "model": "claude-opus-4-8", "expected": "Opus 4.8" },
+  { "name": "an id with a date suffix", "model": "claude-sonnet-4-5-20250929", "expected": "Sonnet 4.5" },
+  { "name": "a display name loses its parenthesis", "model": "Opus 4.8 (1M context)", "expected": "Opus 4.8" },
+  { "name": "another provider's id stays", "model": "gpt-5.1-codex", "expected": "gpt-5.1-codex" }
+]
