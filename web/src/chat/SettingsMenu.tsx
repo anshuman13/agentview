@@ -13,7 +13,6 @@ import { endedRun, finishedLine, runDetail } from '../../../shared/goalText';
 import { since } from '../sessions/folders';
 import { firstLine, plural } from '../ui/util';
 import { copyChatMarkdown, copyLastReply, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
-import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
 import { ChoicePick, SheetRows } from './SettingsPickers';
@@ -59,7 +58,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
       ...(sessionId ? [picker('fork', 'Fork', 'Side chat or a new chat from a summary'), picker('remind', 'Remind me', 'Add a task to check this chat later')] : []),
       picker('remember', 'Remember…', 'Save a preference to Memory'),
       picker('copy', 'Copy', resumeCommand ? 'As Markdown or the terminal command' : 'As Markdown'),
-      picker('tools', 'Tools…', 'Saved prompts, memory, hooks, TODOs, images'),
+      picker('tools', 'Tools…', 'Saved prompts, images, TODOs, memory, hooks'),
     ]],
   ] as const;
   if (narrow) {
@@ -87,8 +86,6 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
 }
 
 export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedCount: number }) {
-  const cwd = useStore((s) => s.session.cwd);
-  const instructionFiles = useStore((s) => s.session.instructionFiles);
   const hooks = useStore((s) => s.session.hooks) ?? [];
   const images = chatImages(useStore((s) => s.events)).length;
   return (
@@ -97,11 +94,11 @@ export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedC
       anchor={pick.at}
       title="Tools"
       items={[
-        { value: 'saved', label: 'Saved prompts', detail: `${savedCount}` },
-        { value: 'memory', label: 'Memory', detail: `${ruleFile(cwd, instructionFiles)} and memory files` },
-        { value: 'hooks', label: 'Hooks', detail: hooks.length ? `${hooks.length}` : 'None' },
+        { value: 'saved', label: 'Saved prompts', detail: plural(savedCount, 'prompt'), disabled: !savedCount },
+        { value: 'images', label: 'Images', detail: plural(images, 'image'), disabled: !images },
         { value: 'todos', label: 'TODOs', detail: 'TODO, FIXME and AI! comments in the repo' },
-        { value: 'images', label: 'Images', detail: images ? plural(images, 'image') : 'None', disabled: !images },
+        { value: 'memory', label: 'Memory', detail: 'Instruction and memory files' },
+        { value: 'hooks', label: 'Hooks', detail: hooks.length ? `${hooks.length}` : 'None' },
       ]}
       onPick={(v) => setPick({ kind: v as Pick['kind'], at: pick.at })}
       onClose={close}

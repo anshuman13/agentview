@@ -226,8 +226,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   Goal and Build rows, the permission modes (Supervised follows Auto), Account and Effort. The model you pick
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
   (Permission mode, Model, Effort, Claude account, Goal, Build, Fork, Remind me, Copy, Tools…); Fork holds Side chat and
-  New chat, Copy holds Last reply, Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Memory, Hooks, TODOs and Images (every image the chat read, wrote or was
-  sent, newest first, with its path, as in the phone's Tools sheet).
+  New chat, Copy holds Last reply, Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Images (every image the chat read, wrote or was
+  sent, newest first, with its path), TODOs, Memory and Hooks, in the phone's order and wording; Saved prompts and
+  Images show "N prompts" and "N images" and are disabled at 0.
   Remember… (also in the phone's chat menu) opens one field; Save stores a live Memory claim in the chat's profile with a
   Chat source of the chat's title and folder and shows "Saved to Memory" with Undo; empty text saves nothing. When the
   text overlaps a current Memory claim (no page, same profile, `restatedClaim`) the new claim supersedes it, the snack

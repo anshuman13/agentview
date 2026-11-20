@@ -165,7 +165,7 @@ private fun RepoSessions(repo: RepoGroup, rows: ChatRows, filters: SessionsFilte
             PageHeader(repo.name, onBack = { filters.repoKey = null })
             ChipRow { StatusChips(listOf(repo), rows, filters) }
             val items = repo.items().map { it.copy(repo = null) }.filter { status.matches(it.state(rows.saved, rows.seen)) }
-            if (items.isEmpty()) EmptyState(if (filters.byStatus) "No ${status.label.lowercase()} chats in ${repo.name}" else "No chats in ${repo.name} yet", action = { Button("New chat", { onNewChat(RepoChoice(repo.key, repo.name)) }, variant = ButtonVariant.Tinted, icon = "add") })
+            if (items.isEmpty()) EmptyState(if (filters.byStatus) "No ${status.label.lowercase()} chats in ${repo.name}" else "No chats in ${repo.name} yet", icon = "comment-discussion", small = false, action = { Button("New chat", { onNewChat(RepoChoice(repo.key, repo.name)) }, variant = ButtonVariant.Tinted, icon = "add") })
             else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Tokens.sp3, bottom = Tokens.fabClear)) {
                 lazyGroup(items, { "c-${it.key}" }) { rows.Row(it) }
             }
@@ -231,7 +231,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
 private fun OfflineSessions(rows: ChatRows) {
     val hub = rows.hub
     val offline = remember { hub.savedChats() }
-    if (offline.isEmpty()) EmptyState("Waiting for the server", "Check the Mac address")
+    if (offline.isEmpty()) EmptyState("Waiting for the server", "Check the Mac address", icon = "plug", small = false)
     else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
         item(key = "saved-head") { SectionHeader("Saved on this phone", offline.size.toString()) }
         lazyGroup(offline, { "sv-${it.first}" }) { c ->
@@ -251,7 +251,10 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
     var emptying by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<BinnedSession?>(null) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
-        if (empty != null) item(key = "empty") { EmptyState(empty) }
+        if (empty != null) item(key = "empty") {
+            if (filter.isNotBlank()) EmptyState(empty, icon = "search", small = false)
+            else EmptyState(empty, "Chats you start show here", icon = "comment-discussion", small = false)
+        }
         if (waiting.isNotEmpty()) {
             item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
             lazyGroup(waiting, { "needs-${it.id}" }) { rows.LiveRow(it, folderName(folderKey(it.cwd, ws.repos, ws.trees))) }

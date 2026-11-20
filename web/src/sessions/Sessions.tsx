@@ -155,7 +155,7 @@ export function Sessions() {
             {(filter || !shut.includes(g.kind)) && g.items.map(({ f, active }) => folderRows(f, active, g.icon))}
           </div>
         ))}
-        {!groups.length && <EmptyState size="sm" title={filter ? 'No repo or chat matches' : 'No repos here'} />}
+        {!groups.length && <EmptyState size="sm" icon={filter ? 'search' : 'repo'} title={filter ? 'No repo or chat matches' : 'No repos here'} />}
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>
