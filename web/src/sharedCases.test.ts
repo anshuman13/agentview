@@ -32,7 +32,8 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { buildTranscript, turnAnswers } from './chat/transcript/steps';
+import { buildTranscript, openAtNew, turnAnswers, type Item } from './chat/transcript/steps';
+import { unreadOrder, type UnreadChat } from './sessions/chatNav';
 import { foldTurns, proposalState, usedClaimState, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
@@ -117,6 +118,18 @@ describe('cases shared with the Android app', () => {
       const runs = exploreRunsOf(c.rows);
       expect(runs).toEqual(c.runs);
       expect(runs.map((r) => exploreLabelOf(c.rows.slice(r.start, r.end).map((x) => x.name!)))).toEqual(c.labels);
+    });
+  }
+
+  for (const c of cases<{ name: string; chats: UnreadChat[]; viewing: string; expected: string[] }>('unread-order')) {
+    it(`unreadOrder: ${c.name}`, () => {
+      expect(unreadOrder(c.chats, c.viewing)).toEqual(c.expected);
+    });
+  }
+
+  for (const c of cases<{ name: string; rows: { id: string; kind: string; streaming: boolean }[]; newId: string | null; expected: string | null }>('open-at-new')) {
+    it(`openAtNew: ${c.name}`, () => {
+      expect(openAtNew(c.rows as unknown as Item[], c.newId)).toBe(c.expected);
     });
   }
 

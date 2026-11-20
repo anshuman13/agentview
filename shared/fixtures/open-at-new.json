@@ -1,0 +1,9 @@
+[
+  {"name": "no marker", "rows": [{"id": "a", "kind": "assistant", "streaming": false}], "newId": null, "expected": null},
+  {"name": "marker on a reply", "rows": [{"id": "u", "kind": "user", "streaming": false}, {"id": "a", "kind": "assistant", "streaming": false}], "newId": "a", "expected": "a"},
+  {"name": "marker on a tool step followed by a reply", "rows": [{"id": "u", "kind": "user", "streaming": false}, {"id": "s", "kind": "step", "streaming": false}, {"id": "a", "kind": "assistant", "streaming": false}], "newId": "s", "expected": "s"},
+  {"name": "marker with only steps after it", "rows": [{"id": "a", "kind": "assistant", "streaming": false}, {"id": "s", "kind": "step", "streaming": false}, {"id": "t", "kind": "step", "streaming": false}], "newId": "s", "expected": null},
+  {"name": "a reply before the marker does not count", "rows": [{"id": "a", "kind": "assistant", "streaming": false}, {"id": "s", "kind": "step", "streaming": false}], "newId": "s", "expected": null},
+  {"name": "reply still streaming", "rows": [{"id": "s", "kind": "step", "streaming": false}, {"id": "a", "kind": "assistant", "streaming": true}], "newId": "s", "expected": null},
+  {"name": "marker not in the rows", "rows": [{"id": "a", "kind": "assistant", "streaming": false}], "newId": "gone", "expected": null}
+]

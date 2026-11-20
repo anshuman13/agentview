@@ -313,6 +313,12 @@ fun newMarker(items: List<Item>, ats: Map<String, Long>, seen: Long, openedAt: L
     return items.firstOrNull { it !is Item.User && (ats[it.id] ?: 0L).let { at -> at > seen && at <= openedAt } }?.id
 }
 
+// The New line a chat opens at: only when a finished reply sits at or after it; web steps.ts openAtNew says the same.
+fun openAtNew(items: List<Item>, newId: String?): String? {
+    val at = items.indexOfFirst { it.id == newId }
+    return if (at >= 0 && items.drop(at).any { it is Item.Assistant && !it.streaming }) newId else null
+}
+
 // Slack's "Remind me about this": when a reminder task for a chat falls due.
 fun remindChoices(now: Long, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): List<Pair<String, Long>> {
     val tomorrow = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate().plusDays(1).atTime(9, 0).atZone(zone).toInstant().toEpochMilli()

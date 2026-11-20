@@ -282,6 +282,12 @@ export function newMarker(items: Item[], ats: Map<string, number>, seen: number,
   return items.find((it) => it.kind !== 'user' && (ats.get(it.id) ?? 0) > seen && (ats.get(it.id) ?? 0) <= openedAt)?.id ?? null;
 }
 
+// The New line a chat opens at: only when a finished reply sits at or after it; android Steps.kt openAtNew says the same.
+export function openAtNew(items: Item[], newId: string | null) {
+  const at = newId ? items.findIndex((it) => it.id === newId) : -1;
+  return at >= 0 && items.slice(at).some((it) => it.kind === 'assistant' && !it.streaming) ? newId : null;
+}
+
 // Runs of at least min finished Read, Grep, Glob and LS steps in a row, keyed by the first step's id, so the
 // transcript folds each into one Explored row like Slack's compact message groups (the phone does the same).
 export function exploreRuns(items: Item[], min = 3) {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Box
@@ -75,6 +76,9 @@ import no.pradhan.agentview.nativeapp.app.retryTurn
 import no.pradhan.agentview.nativeapp.app.rewind
 import no.pradhan.agentview.nativeapp.app.sendNow
 import no.pradhan.agentview.nativeapp.ops.Agent
+import no.pradhan.agentview.nativeapp.sessions.UnreadChat
+import no.pradhan.agentview.nativeapp.sessions.chatState
+import no.pradhan.agentview.nativeapp.sessions.unreadOrder
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -90,6 +94,7 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
@@ -135,9 +140,17 @@ private fun HideNavOnScroll(hub: Hub, listState: LazyListState, atBottom: Boolea
     LaunchedEffect(atBottom) { if (atBottom) hub.shell.navHidden.value = false }
 }
 
+// Puts the row at the top of the list; reversed, that is its far edge, so the offset is how much of it is taller than the screen.
+private suspend fun LazyListState.scrollToTop(index: Int) {
+    scrollToItem(index)
+    val size = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.size ?: return
+    scrollToItem(index, size - (layoutInfo.viewportSize.height - layoutInfo.beforeContentPadding - layoutInfo.afterContentPadding))
+}
+
 // Keeps the newest row in view while the user is at the bottom, and jumps to a turn or a just-sent message.
+// A chat opens once with the New line (the row `open`) at the top, held there while the row grows until the reader drags.
 @Composable
-private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listState: LazyListState, stick: MutableState<Boolean>, atBottom: Boolean) {
+private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listState: LazyListState, stick: MutableState<Boolean>, atBottom: Boolean, chatId: String, open: String?, lead: Int) {
     val rows = view.rows
     val bottom by rememberUpdatedState(atBottom)
     LaunchedEffect(listState) {
@@ -150,6 +163,27 @@ private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listStat
         val at = list.indexOfFirst { it.key == turn || (it is FoldRow.Fold && it.hidden.any { h -> h.id == turn }) }
         if (at >= 0) { stick.value = false; listState.animateScrollToItem(at) }
         if (turn != null && list.isNotEmpty()) hub.showTurn.value = null
+    }
+    var opened by rememberSaveable(chatId) { mutableStateOf(false) }
+    val pin = remember { mutableStateOf(false) }
+    LaunchedEffect(open, list) {
+        val at = list.indexOfFirst { it.key == open }
+        if (opened || open == null || at < 0) return@LaunchedEffect
+        val info = listState.layoutInfo
+        val row = info.visibleItemsInfo.firstOrNull { it.index == at + lead }
+        if (turn != null || hub.findRequest.value != null || (row != null && row.offset + row.size <= info.viewportEndOffset)) { opened = true; return@LaunchedEffect }
+        stick.value = false
+        pin.value = true
+        listState.scrollToTop(at + lead)
+        opened = true
+    }
+    LaunchedEffect(listState) { listState.interactionSource.interactions.collect { if (it is DragInteraction.Start) pin.value = false } }
+    LaunchedEffect(pin.value, list) {
+        if (!pin.value) return@LaunchedEffect
+        val index = list.indexOfFirst { it.key == open } + lead
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.size }.collect { size ->
+            if (size != null && pin.value && !stick.value) listState.scrollToTop(index)
+        }
     }
     var lastSent by remember { mutableStateOf<String?>(null) }
     val sent = view.sent
@@ -198,9 +232,16 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     var leftId by remember(chatId) { mutableStateOf<String?>(null) }
     LaunchedEffect(atBottom) { leftId = if (atBottom) null else leftId ?: rows.firstOrNull()?.id }
     val replies = remember(items, leftId) { leftId?.let { newReplies(items, it) } ?: 0 }
+    val chats by hub.store.state.select { it.live }
+    val ws by hub.workspace.collectAsState()
+    val next = remember(chats, ws.seen, chatId, running) {
+        if (running || chats.any { it.id == chatId && it.pending > 0 }) null
+        else unreadOrder(chats.map { UnreadChat(it.id, chatState(it, null, ws.seen), it.lastActive) }, chatId).firstOrNull()?.let { id -> chats.first { it.id == id } }
+    }
     val blank = rows.isEmpty() && earlier > 0
     val earlierDue = rememberEarlierDue(hub, chatId, view.replyCount, loading, earlier, settled)
-    FollowNewest(hub, view, list, listState, stick, atBottom)
+    val open = remember(items, newId, newKey) { if (openAtNew(items, newId) != null) newKey else null }
+    FollowNewest(hub, view, list, listState, stick, atBottom, chatId, open, queued.size + if (failed != null) 1 else 0)
 
     Box(modifier) {
         LazyColumn(
@@ -237,6 +278,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
             hub.shell.navHidden.value = false
             scope.launch { listState.animateScrollToItem(0) }
         }
+        if (atBottom && !finding && next != null) NextButton(next.title.ifBlank { UNTITLED }, Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp4, bottom = Tokens.sp4)) { hub.open(next.id) }
     }
 }
 
@@ -361,6 +403,16 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
             Box(contentAlignment = Alignment.Center) { AvIcon("arrow-down", null, Tokens.icon) }
         }
         if (replies > 0) Badge(if (replies > 9) "9+" else "$replies", BadgeTone.Quiet, Modifier.align(Alignment.TopEnd))
+    }
+}
+
+@Composable
+private fun NextButton(title: String, modifier: Modifier, onClick: () -> Unit) {
+    Surface(modifier.heightIn(min = Tokens.touch).clickable(onClick = onClick), shape = RoundedCornerShape(Tokens.radiusPill), color = av.raised, contentColor = av.fg, border = BorderStroke(Tokens.hairline, av.borderCard), shadowElevation = Tokens.elev2) {
+        Row(Modifier.padding(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
+            AvIcon("arrow-right", null, Tokens.icon)
+            Text("Next: $title", style = Type.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

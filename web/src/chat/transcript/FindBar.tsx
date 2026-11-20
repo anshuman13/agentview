@@ -27,6 +27,8 @@ export function requestFind(r: FindRequest, here: boolean) {
   if (here) window.dispatchEvent(new Event('agentview:find'));
 }
 
+export const findPending = (sessionId: string | null) => pending?.sessionId === sessionId;
+
 export function takeFind(sessionId: string | null) {
   const r = pending?.sessionId === sessionId ? pending : null;
   if (r) pending = null;

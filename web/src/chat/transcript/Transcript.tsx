@@ -11,8 +11,8 @@ import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
-import { FindBar, markHit, takeFind, type FindRequest } from './FindBar';
-import { showTurn } from '../../sessions/goalLogic';
+import { FindBar, findPending, markHit, takeFind, type FindRequest } from './FindBar';
+import { showTurn, turnPending } from '../../sessions/goalLogic';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
 import { createFoldBuilder, openWork, proposalState, usedClaimState, type Claim, type FoldRow, type Proposal } from './workFold';
@@ -22,7 +22,10 @@ import { MEMORY } from '../../codex/wiki/shared';
 import { replaceTarget } from '../../../../shared/claimActions';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
-import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, rewindReplies, turnAnswers, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
+import { unreadOrder } from '../../sessions/chatNav';
+import { chatState } from '../../sessions/folders';
+import { UNTITLED } from '../../../../shared/util';
+import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, command, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { copyPrompt, copyReply } from '../chatActions';
@@ -89,6 +92,38 @@ function useStickyScroll(items: Item[], last: ChatEvent | undefined, running: bo
   const [stuck, setStuck] = useState(true);
   const [behind, setBehind] = useState(false);
   const [leftAt, setLeftAt] = useState('');
+  const pin = useRef(false);
+
+  const lineTop = () => {
+    const el = box.current;
+    const line = el?.querySelector<HTMLElement>('.tr-new');
+    return el && line ? line.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop : null;
+  };
+
+  // Puts the New line at the top; true when that moved the scroll.
+  const place = () => {
+    const el = box.current;
+    const top = lineTop();
+    if (!el || top === null || el.scrollTop === top) return false;
+    const before = el.scrollTop;
+    el.scrollTop = top;
+    if (el.scrollTop === before) return false;
+    size.current = '';
+    return true;
+  };
+
+  // Opens at the New line, and keeps it there while rows above finish rendering, until the reader scrolls. New content that fits on screen leaves the chat at its end.
+  const openAtLine = () => {
+    const el = box.current;
+    const top = lineTop();
+    if (!el || top === null || top >= el.scrollHeight - el.clientHeight) return;
+    lastUser.current = lastUserId(items);
+    stick.current = false;
+    pin.current = true;
+    setStuck(false);
+    setBehind(true);
+    place();
+  };
 
   useEffect(() => {
     const el = box.current;
@@ -96,7 +131,7 @@ function useStickyScroll(items: Item[], last: ChatEvent | undefined, running: bo
     const mine = lastUserId(items);
     if (mine !== lastUser.current) {
       lastUser.current = mine;
-      if (mine) { stick.current = true; setStuck(true); }
+      if (mine) { stick.current = true; pin.current = false; setStuck(true); }
     }
     if (stick.current) { el.scrollTop = el.scrollHeight; setBehind(false); }
     else setBehind(true);
@@ -108,7 +143,8 @@ function useStickyScroll(items: Item[], last: ChatEvent | undefined, running: bo
     if (!el || !rows.current) return;
     const ro = new ResizeObserver(() => {
       if (stick.current) el.scrollTop = el.scrollHeight;
-      size.current = `${el.scrollHeight},${el.clientHeight}`;
+      // A scroll event for the move still comes, and it must not read as the reader's.
+      if (!(pin.current && place())) size.current = `${el.scrollHeight},${el.clientHeight}`;
     });
     ro.observe(el);
     ro.observe(rows.current);
@@ -122,6 +158,7 @@ function useStickyScroll(items: Item[], last: ChatEvent | undefined, running: bo
     const now = `${el.scrollHeight},${el.clientHeight}`;
     if (now !== size.current) { size.current = now; return; }
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    pin.current = false;
     if (stick.current && !near) setLeftAt(items[items.length - 1]?.id ?? '');
     stick.current = near;
     setStuck(near);
@@ -132,11 +169,12 @@ function useStickyScroll(items: Item[], last: ChatEvent | undefined, running: bo
     const el = box.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
     stick.current = true;
+    pin.current = false;
     setStuck(true);
     setBehind(false);
   };
 
-  return { box, rows, stick, stuck, behind, leftAt, onScroll, jump };
+  return { box, rows, stick, stuck, behind, leftAt, onScroll, jump, openAtLine };
 }
 
 // How many rows are shown, staged in over idle time, and loaded from earlier history on request.
@@ -224,6 +262,11 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const list = useMemo<FoldRow[]>(() => fold(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [fold, items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier, reveal } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const [finding, setFinding] = useState(false);
+  const nextId = useStore((s) => {
+    if (running || s.live.find((c) => c.id === s.session.id)?.pending) return null;
+    return unreadOrder(s.live.map((c) => ({ id: c.id, state: chatState({ live: c }, s.seen), lastActive: c.lastActive })), s.session.id)[0] ?? null;
+  });
+  const nextTitle = useStore((s) => s.live.find((c) => c.id === nextId)?.title.trim() || UNTITLED);
   useEffect(() => {
     setAtLatest(stuck && !finding);
     return () => setAtLatest(false);
@@ -270,6 +313,16 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
   const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [mark, events.length]);
   const newRow = useMemo(() => list.find((r) => (r.kind === 'item' ? r.it.id === newId : r.hidden.some((h) => h.id === newId))), [list, newId]);
+  const openId = useMemo(() => openAtNew(items, newId), [items, newId]);
+  const opened = useRef(false);
+  useLayoutEffect(() => {
+    if (opened.current || !openId || !newRow) return;
+    if (finding || findPending(sessionId) || turnPending()) { opened.current = true; return; }
+    const at = list.indexOf(newRow);
+    if (at < from) { reveal(list.length - at); return; }
+    opened.current = true;
+    scroll.openAtLine();
+  }, [openId, newRow, from, finding]);
   const folded = useMemo(() => new Set([...runs].flatMap(([, r]) => r.slice(1).map((s) => s.id))), [runs]);
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
   const jumpLabel = `Jump to latest${replies > 0 ? ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}` : ''}`;
@@ -309,6 +362,11 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
       <button className="tr-jump" aria-label={jumpLabel} title={jumpLabel} onClick={jump}>
         <Icon name="arrow-down" small /><span className="tr-jump-text">Jump to latest</span>
         {replies > 0 && <span className="badge quiet">{replies > 9 ? '9+' : replies}</span>}
+      </button>
+    )}
+    {stuck && !finding && nextId && (
+      <button className="tr-jump tr-next" aria-label={`Next: ${nextTitle}`} title={`Next: ${nextTitle}`} onClick={() => send({ type: 'view', id: nextId })}>
+        <Icon name="arrow-right" small /><span className="tr-next-title">Next: {nextTitle}</span>
       </button>
     )}
     </div>

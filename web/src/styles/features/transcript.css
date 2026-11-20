@@ -4,7 +4,10 @@
   .tr-jump { left: auto; right: var(--sp-5); transform: none; justify-content: center; width: var(--touch); height: var(--touch); padding: 0; border-radius: var(--radius-pill); box-shadow: var(--elev-2); }
   .tr-jump-text { display: none; }
   .tr-jump .badge { position: absolute; top: 0; right: 0; pointer-events: none; }
+  .tr-jump.tr-next { width: auto; padding: 0 var(--sp-6); border-radius: var(--shape-full); }
 }
+.tr-jump.tr-next { max-width: calc(100% - 2 * var(--sp-5)); }
+.tr-next-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-find { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-8); border-bottom: 1px solid var(--border); }
 .tr-find .jb-search { flex: 1 1 240px; max-width: 360px; }
 .find-hit { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius); }

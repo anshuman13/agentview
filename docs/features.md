@@ -276,7 +276,12 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - "Remind me" in the phone chat menu adds an open task "Check <chat>" due in 1 hour, 3 hours or tomorrow at 9:00, linked to
   the chat; the hub pushes it when due (like Slack's remind me about this); the web chat settings menu has the same Remind me
 - Opening a chat with replies or steps since you last saw it shows a red New line above the first of them, like Slack's
-  unread divider: on the web from the seen time before this page opened the chat, on the phone from when the phone last showed it
+  unread divider: on the web from the seen time before this page opened the chat, on the phone from when the phone last showed it.
+  When a finished reply sits at or after the line (`openAtNew`) and no find or turn link is pending, the chat opens once with the
+  line at the top of the transcript and Following off, held there while rows render until you scroll; with no such reply, or new
+  content that fits on screen, it opens at the end. Sending a prompt still jumps to the end
+- At the end of an idle chat with nothing pending, another open chat that is Needs you or Done (`unreadOrder`: Needs you first,
+  then Done, newest first) shows a "Next: <title>" pill in the Jump to latest spot; a tap opens that chat
 - "Copy as Markdown" in the Copy pick of the web chat settings menu copies the loaded prompts and replies under the chat title
   and leaves out subagent text; an untitled chat is headed "Chat". "Last reply" in the same pick (only when there is a reply) copies the
   latest top-level answer; the phone's chat menu has "Copy last reply" for the same. Each finished turn's last reply, when nothing follows it in
