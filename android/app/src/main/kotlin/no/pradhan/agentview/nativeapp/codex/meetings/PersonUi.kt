@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import no.pradhan.agentview.nativeapp.codex.AddPoint
 import no.pradhan.agentview.nativeapp.codex.CodexOps
@@ -30,7 +31,8 @@ import no.pradhan.agentview.nativeapp.codex.QuestionList
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.dayLabel
-import no.pradhan.agentview.nativeapp.codex.dueText
+import no.pradhan.agentview.nativeapp.codex.TaskActions
+import no.pradhan.agentview.nativeapp.codex.TaskRowView
 import no.pradhan.agentview.nativeapp.codex.firstName
 
 import no.pradhan.agentview.nativeapp.codex.pinsOf
@@ -39,6 +41,8 @@ import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.app.resolveQuestion
 import no.pradhan.agentview.nativeapp.sessions.matchesWords
+import no.pradhan.agentview.nativeapp.ui.Badge
+import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -47,15 +51,20 @@ import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
+import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.plural
 
 @Composable
-fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps, onMeeting: (Row) -> Unit, onClaim: (Row) -> Unit, onTask: (Row) -> Unit, onNotes: (Row) -> Unit) {
+fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, actions: TaskActions, ops: CodexOps, onMeeting: (Row) -> Unit, onClaim: (Row) -> Unit, onTask: (Row) -> Unit, onNotes: (Row) -> Unit) {
     val mine = remember(st.meetings, name) { meetingsWith(st.meetings, name) }
+    val inbox = remember(st.items, st.chats, st.briefs, name) { personInbox(name, st.items, st.chats, unanswered(st.briefs)) }
+    val waiting = remember(inbox) { (inbox.asks + inbox.promises).distinctBy { it.key } }
+    val uri = LocalUriHandler.current
     val shown = remember(st.meetings, name) { nameOf(st.meetings, name) }
     val email = if ('@' in name) name.trim() else mine.flatMap { peopleOf(it) }.firstOrNull { '@' in it && sameName(it, name) }
     val commitments = remember(st.meetings, name) { commitmentsOf(st.meetings, name) }
@@ -64,6 +73,8 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
     val titles = remember(st.pages) { st.pages.associate { it.id to it.title } }
     var all by rememberSaveable(name) { mutableStateOf(false) }
     var allTasks by rememberSaveable(name, "tasks") { mutableStateOf(false) }
+    var allWaiting by rememberSaveable(name, "waiting") { mutableStateOf(false) }
+    var allMail by rememberSaveable(name, "mail") { mutableStateOf(false) }
     var allCommitments by rememberSaveable(name, "commitments") { mutableStateOf(false) }
     var allClaims by rememberSaveable(name, "claims") { mutableStateOf(false) }
     var adding by rememberSaveable(name, "adding") { mutableStateOf(false) }
@@ -83,10 +94,52 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
             }
             Text(listOfNotNull(email, plural(mine.size, "meeting")).joinToString(" · "), Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted)
         }
+        inbox.dm?.let { dm ->
+            item { SectionHeader("Slack DM") }
+            item {
+                val href = safeHref(dm.str("url"))
+                Group { ListRow((dm.str("summary") ?: "").substringBefore('\n').ifEmpty { "Slack DM" }, dm.long("last_at")?.let { agoShort(it, now, " ago") }, onClick = href?.let { h -> { uri.openUri(h) } }) }
+            }
+        }
+        if (waiting.isNotEmpty()) {
+            item { SectionHeader("Waiting on you", waiting.size.toString()) }
+            item {
+                Group {
+                    (if (allWaiting) waiting else waiting.take(5)).forEachIndexed { i, r ->
+                        if (i > 0) Hairline()
+                        val source = if (r.source == "gmail") "Gmail" else "Slack"
+                        val href = safeHref(r.sourceUrl)
+                        ListRow(
+                            r.title ?: UNTITLED, "$source · ${agoShort(r.updatedAt, now, " ago")}",
+                            state = if (r.status == "suggested") ({ Badge("Needs you", BadgeTone.Waiting) }) else null,
+                            trailing = if (hub.readOnly) null else ({ Button("Done", { actions.done(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }),
+                            menu = { dismiss ->
+                                MenuItem("Open", "arrow-right", { dismiss(); onTask(r) })
+                                if (href != null) MenuItem("Open in $source", "link", { dismiss(); uri.openUri(href) })
+                            },
+                            onClick = { onTask(r) },
+                        )
+                    }
+                }
+                if (!allWaiting && waiting.size > 5) Button("Show all ${waiting.size}", { allWaiting = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            }
+        }
+        if (inbox.mail.isNotEmpty()) {
+            item { SectionHeader("Unanswered mail", inbox.mail.size.toString()) }
+            item {
+                Group {
+                    (if (allMail) inbox.mail else inbox.mail.take(5)).forEachIndexed { i, w ->
+                        if (i > 0) Hairline()
+                        ListRow(w.subject, "sent ${agoShort(w.sentAt, now, " ago")}", onClick = safeHref(w.url)?.let { h -> { uri.openUri(h) } })
+                    }
+                }
+                if (!allMail && inbox.mail.size > 5) Button("Show all ${inbox.mail.size}", { allMail = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            }
+        }
         if (tasks.isNotEmpty()) {
             item { SectionHeader("Open tasks", tasks.size.toString()) }
             item {
-                Group { (if (allTasks) tasks else tasks.take(5)).forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title ?: UNTITLED, dueText(r, now), onClick = { onTask(r) }) } }
+                Group { (if (allTasks) tasks else tasks.take(5)).forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, false) { onTask(r) } } }
                 if (!allTasks && tasks.size > 5) Button("Show all ${tasks.size}", { allTasks = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
         }

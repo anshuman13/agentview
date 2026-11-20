@@ -71,10 +71,10 @@ fun ExtraContent(
             val m = st.meetings.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
             if (m == null) EmptyState("This meeting is gone", icon = "calendar") else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask, if (anchor == "notes") ({ pop(); push(wikiRoute) }) else null)
         }
-        route.startsWith("series:") -> SeriesPage(st, key, now, actions, hub.readOnly, openMeeting)
+        route.startsWith("series:") -> SeriesPage(hub, st, key, now, actions, openMeeting)
         route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
-        route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { f -> push(claimRoute(f)) }, onTask) { push("meeting:${it.key}#notes") }
+        route.startsWith("person:") -> PersonPage(hub, st, key, now, actions, ops, openMeeting, { f -> push(claimRoute(f)) }, onTask) { push("meeting:${it.key}#notes") }
         route == "wiki" -> WikiIndexPage(st, profile, now, actions, ops.review, hub.readOnly, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") })
         wikiRoute == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop, openChat, anchor,
             if (hub.readOnly) null else ({ text -> hub.rememberInMemory(text, proposalProfile(null, profile)) }))

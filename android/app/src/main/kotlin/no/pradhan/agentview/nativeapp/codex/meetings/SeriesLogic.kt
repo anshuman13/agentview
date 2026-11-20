@@ -150,6 +150,13 @@ fun notesTemplateChips(m: Row, picks: Map<String, String>): List<NotesChip> {
     return order.map { NotesChip(it, it == picked) }
 }
 
+// The template after the selected one, wrapping; with none selected it counts from 1:1.
+fun nextNotesTemplate(chips: List<NotesChip>): String {
+    val keys = NOTES_TEMPLATES.keys.toList()
+    val current = chips.firstOrNull { it.selected }?.key ?: "one_on_one"
+    return keys[(keys.indexOf(current) + 1) % keys.size]
+}
+
 private val picksSer = MapSerializer(String.serializer(), String.serializer())
 fun parseNotesPicks(text: String?): Map<String, String> = runCatching { protocolJson.decodeFromString(picksSer, text ?: "{}") }.getOrDefault(emptyMap())
 fun encodeNotesPicks(picks: Map<String, String>): String = protocolJson.encodeToString(picksSer, picks)

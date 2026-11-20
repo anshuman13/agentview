@@ -1,5 +1,8 @@
 package no.pradhan.agentview.nativeapp.codex.meetings
 
+import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.notesTemplatePicks
+import no.pradhan.agentview.nativeapp.app.rememberNotesTemplate
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.TaskActions
@@ -61,7 +64,8 @@ import no.pradhan.agentview.nativeapp.ui.plural
 
 // A recurring series: open actions across the occurrences, then the occurrences newest first.
 @Composable
-fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, readOnly: Boolean, onMeeting: (Row) -> Unit) {
+fun SeriesPage(hub: Hub, st: CodexState, key: String, now: Long, actions: TaskActions, onMeeting: (Row) -> Unit) {
+    val readOnly = hub.readOnly
     val (profile, title) = remember(key) { parseSeriesKey(key) }
     val minute = now / 60_000
     val members = remember(st.meetings, key, minute) { seriesMeetings(st.meetings, profile, title, now) }
@@ -80,7 +84,15 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, rea
                 LRow(verticalAlignment = Alignment.CenterVertically) {
                     Text(members[0].title ?: "Meeting", Modifier.weight(1f), style = Type.title)
                     if (next != null) Button("Open next", { onMeeting(next) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
-                    if (calendar != null) MoreButton { close -> MenuItem("Open calendar", "calendar", { close(); uri.openUri(calendar) }) }
+                    MoreButton { close ->
+                        if (calendar != null) MenuItem("Open calendar", "calendar", { close(); uri.openUri(calendar) })
+                        MenuItem("Notes template", "edit", {
+                            close()
+                            val pick = nextNotesTemplate(notesTemplateChips(members[0], hub.notesTemplatePicks()))
+                            hub.rememberNotesTemplate(members[0], pick)
+                            actions.say("Notes template: ${NOTES_TEMPLATES.getValue(pick).label}")
+                        })
+                    }
                 }
                 val meta = listOfNotNull(cadence, if (people.isNotEmpty()) plural(people.size, "person", "people") else null).joinToString(" · ")
                 if (meta.isNotEmpty()) Text(meta, style = Type.subheadline, color = av.fgMuted)
