@@ -1,7 +1,7 @@
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { forgetSeenBefore, getState, loadEarlier, seenBefore, send, setUi, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
-import { Chip, IconButton, ShowToggle } from '../../ui/Button';
+import { Button, Chip, IconButton, ShowToggle } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
@@ -20,7 +20,7 @@ import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers
 import { clickOnKey, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { imageUrl } from '../chatApi';
-import { userParts } from '../composer/composerLogic';
+import { failedLine, userParts } from '../composer/composerLogic';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
 import { isRepoSpec, specSlug } from '../../../../shared/specTasks';
@@ -34,7 +34,14 @@ export function Transcript() {
   const chat = useStore((s) => s.session.id);
   const earlier = useStore((s) => s.earlier ?? 0);
   const provider = useStore((s) => s.session.provider);
-  return <TranscriptView key={chat} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} />;
+  const failed = useStore((s) => !!s.live.find((c) => c.id === s.session.id)?.failed);
+  return <TranscriptView key={chat} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} label={providerLabel(provider)} />;
+}
+
+function FailedLine({ events, label }: { events: ChatEvent[]; label: string }) {
+  const line = failedLine(events, label);
+  if (!line) return null;
+  return <div className="tr-failed"><span className="tr-failed-text">{line}</span><Button size="sm" onClick={() => send({ type: 'retry' })}>Retry</Button></div>;
 }
 
 function lastUserId(items: Item[]) {
@@ -177,7 +184,7 @@ function useRowWindow(count: number, replies: number, earlier: number, box: RefO
   return { shown, start, from, staging, loading, showEarlier };
 }
 
-function TranscriptView({ events, earlier, cwd, running, bill }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string }) {
+function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string; failed: boolean; label: string }) {
   const [build] = useState(createTranscriptBuilder);
   const items = useMemo(() => build(events), [build, events]);
   const last = events[events.length - 1];
@@ -225,6 +232,7 @@ function TranscriptView({ events, earlier, cwd, running, bill }: { events: ChatE
           : rowOf(r.it, i === 0, 'shown');
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
+      {failed && !running && <FailedLine events={events} label={label} />}
       </div>
     </div>
     {!stuck && (behind || running) && (

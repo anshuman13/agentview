@@ -1,6 +1,7 @@
 import { parseWhen, stripWhen } from '../../codex/data/tasks/engine';
 import { match } from '../../workspace/FileSwitcher';
 import { toolId } from '../../ops/mcpHelpers';
+import { firstLine } from '../../ui/util';
 import { compactAt, type ChatEvent, type SavedSession } from '../../../../shared/protocol';
 import { createTerm, listTerms } from '../../workspace/termApi';
 import { isBlock, nextClock } from '../../../../shared/util';
@@ -139,6 +140,13 @@ export function turnEnd(events: ChatEvent[], label: string) {
     if (e.kind === 'result' && e.isError) return `${label} stopped: ${e.text}`;
   }
   return `${label} finished`;
+}
+
+// The line under a failed chat's transcript: the turnEnd text cut to its first line, null when the turn did not end in an error.
+export function failedLine(events: ChatEvent[], label: string) {
+  const end = turnEnd(events, label);
+  const prefix = `${label} stopped:`;
+  return end.startsWith(prefix) ? `${prefix} ${firstLine(end.slice(prefix.length))}`.trimEnd() : null;
 }
 
 export const contextPercent = (context: number | null, contextWindow?: number | null) => (context === null ? null : Math.min(100, Math.round((context / compactAt(contextWindow)) * 100)));

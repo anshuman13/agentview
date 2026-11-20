@@ -1,0 +1,9 @@
+[
+  { "name": "last reply of the turn", "label": "Codex", "events": [{ "kind": "user", "text": "a" }, { "kind": "assistant", "text": "old" }, { "kind": "user", "text": "b" }, { "kind": "assistant", "text": "new" }, { "kind": "assistant", "text": "sub", "parent": "t1" }], "turnEnd": "Codex: new", "failedLine": null },
+  { "name": "no reply yet", "label": "Codex", "events": [{ "kind": "user", "text": "a" }, { "kind": "assistant", "text": "old" }, { "kind": "user", "text": "b" }], "turnEnd": "Codex finished", "failedLine": null },
+  { "name": "error result", "label": "Claude", "events": [{ "kind": "user", "text": "a" }, { "kind": "result", "text": "API Error: 529 overloaded", "isError": true }], "turnEnd": "Claude stopped: API Error: 529 overloaded", "failedLine": "Claude stopped: API Error: 529 overloaded" },
+  { "name": "error text cut to its first line", "label": "Codex", "events": [{ "kind": "user", "text": "a" }, { "kind": "result", "text": "\nRequest failed\nretry later", "isError": true }], "turnEnd": "Codex stopped: \nRequest failed\nretry later", "failedLine": "Codex stopped: Request failed" },
+  { "name": "error without text", "label": "Claude", "events": [{ "kind": "user", "text": "a" }, { "kind": "result", "text": "", "isError": true }], "turnEnd": "Claude stopped: ", "failedLine": "Claude stopped:" },
+  { "name": "earlier turn's error is not this turn's", "label": "Claude", "events": [{ "kind": "user", "text": "a" }, { "kind": "result", "text": "boom", "isError": true }, { "kind": "user", "text": "b" }], "turnEnd": "Claude finished", "failedLine": null },
+  { "name": "result without error", "label": "Claude", "events": [{ "kind": "user", "text": "a" }, { "kind": "result", "text": "done", "isError": false }], "turnEnd": "Claude finished", "failedLine": null }
+]
