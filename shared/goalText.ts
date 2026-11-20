@@ -1,4 +1,6 @@
-import { MAX_GOAL_ROUNDS, type ChatRun, type Round, type RoundOutcome } from './protocol.js';
+import { MAX_GOAL_ROUNDS, type ChatRun, type FiveHour, type Provider, type Round, type RoundOutcome } from './protocol.js';
+import { fiveHourFlag } from './goalForm.js';
+import { billing } from './providers.js';
 import { clock, span } from './util.js';
 
 // The run a chat is on now: its last open run, as on the server (Runs.activeFor).
@@ -10,11 +12,29 @@ export const endedRun = (runs: ChatRun[], chatId: string) =>
 
 export const rounds = (n: number) => `${n} ${n === 1 ? 'round' : 'rounds'}`;
 
-// The system note of a goal that starts or changes: how often, until when, the usage cap and the build limit. An edit also says "no cap" and "no build limit".
-export function goalPlan({ every, endAt, capPct, capUsd, maxBuilds }: { every: number; endAt?: number; capPct?: number; capUsd?: number; maxBuilds?: number }, edit = false) {
+// The system note of a goal that starts or changes: how often, until when, the usage cap, the 5-hour pause and the build limit. An edit also says "no cap" and "no build limit".
+export function goalPlan({ every, endAt, capPct, fiveHour, capUsd, maxBuilds }: { every: number; endAt?: number; capPct?: number; fiveHour?: FiveHour; capUsd?: number; maxBuilds?: number }, edit = false) {
   const head = `${every ? `Goal every ${span(every)}` : 'Goal when idle'}${endAt ? ` until ${clock(endAt)}` : ''}`;
-  return [head, !every && `up to ${rounds(MAX_GOAL_ROUNDS)}`, capPct ? `cap ${capPct}%` : !capUsd && edit && 'no cap', capUsd ? `cap $${capUsd}` : null, maxBuilds ? `builds ${maxBuilds}` : edit && 'no build limit'].filter(Boolean).join(' · ');
+  return [head, !every && `up to ${rounds(MAX_GOAL_ROUNDS)}`, capPct ? `cap ${capPct}%` : !capUsd && edit && 'no cap', fiveHour && fiveHourFlag(fiveHour), capUsd ? `cap $${capUsd}` : null, maxBuilds ? `builds ${maxBuilds}` : edit && 'no build limit'].filter(Boolean).join(' · ');
 }
+
+// Without a 5-hour value of its own, a goal with a weekly cap pauses at 90% of the 5-hour window.
+export const FIVE_HOUR_DEFAULT = 90;
+
+// The 5-hour pause a goal runs with: its own, else the default when it has a weekly cap, else none.
+export const fiveHourLimit = ({ fiveHour, capPct }: { fiveHour?: FiveHour | null; capPct?: number | null }) => fiveHour ?? (capPct ? FIVE_HOUR_DEFAULT : null);
+
+// A 5-hour pause as its choice reads: Off, Auto or 95% (Android fiveHourLabel, fixture five-hour.json).
+export const fiveHourLabel = (v: FiveHour | null | undefined) => (v === 'auto' ? 'Auto' : v ? `${v}%` : 'Off');
+
+// The run head's 5-hour row; empty without a pause or when the provider has no usage figure (Android fiveHourLine, fixture five-hour.json).
+export function fiveHourLine(run: { fiveHour?: FiveHour | null; capPct?: number | null; provider?: Provider }) {
+  const limit = billing(run.provider) === 'none' ? null : fiveHourLimit(run);
+  return limit === 'auto' ? 'Paces the 5-hour window' : limit ? `Pauses at ${limit}% of the 5-hour window` : '';
+}
+
+// Why a round was skipped for the 5-hour window.
+export const fiveHourSkip = (limit: FiveHour) => (limit === 'auto' ? 'pacing the 5-hour window' : `5-hour usage over ${limit}%`);
 
 export const runLine = (word: string, { round, max, nextAt }: { round: number; max: number; nextAt: number | null }) =>
   `${word} · round ${round}${max ? ` of ${max}` : ''}${nextAt ? ` · next ${clock(nextAt)}` : ''}`;

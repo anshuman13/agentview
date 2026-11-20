@@ -144,6 +144,8 @@ private fun GoalStartSheet(hub: Hub, opened: GoalSheet.Start, onClose: () -> Uni
     var stopIn by remember { mutableStateOf<Long?>(null) }
     var stopAt by remember { mutableStateOf<String?>(null) }
     var capPct by remember { mutableStateOf(if (init != null) init.form.capPct else 70) }
+    var fiveHour by remember { mutableStateOf(init?.form?.fiveHour) }
+    var fiveCustom by remember { mutableStateOf(init?.form?.fiveHour?.takeIf { it !in FIVE_HOURS }.orEmpty()) }
     var capUsd by remember { mutableStateOf(init?.form?.capUsd) }
     var builds by remember { mutableStateOf(init?.form?.builds) }
     var inHere by remember { mutableStateOf(init != null && canHere) }
@@ -163,12 +165,14 @@ private fun GoalStartSheet(hub: Hub, opened: GoalSheet.Start, onClose: () -> Uni
     val dirs = (ws.repos.map { it.cwd to it.name } + ws.trees.map { it.cwd to "${folderName(it.repo)} · ${it.name.substringAfterLast('/')}" }).let { l -> if (cwd.isNotEmpty() && l.none { it.first == cwd }) listOf(cwd to folderName(cwd)) + l else l }
     val read = planRead(hub, sheet.plan, hub.pageChat)
     val badEvery = custom.isNotBlank() && parseEvery(custom) == null
-    val ready = !badEvery && (sheet.plan == null || (read.markdown != null && !read.error))
+    val badFive = fiveCustom.isNotBlank() && parseFiveHour(fiveCustom) == null
+    val fiveNote = fiveHourLine(fiveHour, capPct, target)
+    val ready = !badEvery && !badFive && (sheet.plan == null || (read.markdown != null && !read.error))
     val root = dir.ifEmpty { dirs.firstOrNull()?.first.orEmpty() }
     val condition = sheet.plan?.let { p -> read.markdown?.let { planCondition(p, it) } } ?: what
     val start = {
         hub.track("action:startGoal")
-        val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct, builds, if (billing(target) == "plan") null else capUsd), System.currentTimeMillis())
+        val text = goalCommand(GoalForm(condition, every, stopIn, stopAt, if (billing(target) == "none") null else capPct, builds, if (billing(target) == "plan") null else capUsd, if (billing(target) == "none") null else fiveHour), System.currentTimeMillis())
         if (here) {
             hub.submit(text, false) { hub.notice.value = "Could not send the goal. Try again." }
             onClose()
@@ -219,7 +223,15 @@ private fun GoalStartSheet(hub: Hub, opened: GoalSheet.Start, onClose: () -> Uni
             SectionHeader("Usage cap")
             Group {
                 Chips { CAPS.forEach { Chip(it.label, { capPct = it.pct }, on = it.pct == capPct) } }
-                Text("Skips rounds while the 5-hour window is over 90%", Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, bottom = Tokens.sp6), style = Type.footnote, color = av.fgMuted)
+            }
+            SectionHeader("5-hour pause")
+            Group {
+                Chips { FIVE_HOURS.forEach { v -> Chip(fiveHourLabel(v), { fiveCustom = ""; fiveHour = v }, on = fiveCustom.isBlank() && v == fiveHour) } }
+                Box(Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, bottom = Tokens.sp6)) {
+                    TextField(fiveCustom, { fiveCustom = it; fiveHour = parseFiveHour(it)?.toString() }, placeholder = "Custom percent, 1 to 100", singleLine = true)
+                }
+                val note = if (badFive) "Use a percent from 1 to 100" else fiveNote
+                if (note.isNotEmpty()) Text(note, Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, bottom = Tokens.sp6), style = Type.footnote, color = av.fgMuted)
             }
         }
         if (billing(target) != "plan") {
@@ -264,7 +276,7 @@ private fun GoalStartSheet(hub: Hub, opened: GoalSheet.Start, onClose: () -> Uni
 
 // One row of the detail; with options a tap opens a menu of them.
 @Composable
-private fun EditRow(title: String, value: String, options: List<Pair<String, Map<String, Long?>>>?, onEdit: (Map<String, Long?>) -> Unit) {
+private fun EditRow(title: String, value: String, options: List<Pair<String, Map<String, Any?>>>?, onEdit: (Map<String, Any?>) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         ListRow(title, trailing = { RowLabel(value) }, onClick = options?.let { { open = true } })
@@ -297,6 +309,7 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
         add { EditRow("How often", run.every?.let { "Every ${everyText(it)}" } ?: "Until done", if (run.every != null && editable) EVERY.filter { it.ms > 0 }.map { it.label to mapOf("every" to it.ms) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Stop at", run.endAt?.let { clock(it) } ?: "None", if (editable) STOPS.map { it.label to mapOf("endAt" to stopAtMs(it, now)) } else null) { hub.runEdit(run, it) } }
         if (billing(run.provider) != "none" || run.maxBuilds != null || run.capUsd != null) add { EditRow("Usage", usageLine(run), if (editable && billing(run.provider) != "none") CAPS.map { (it.pct?.let { p -> "$p% cap" } ?: "No cap") to mapOf("capPct" to it.pct?.toLong()) } else null) { hub.runEdit(run, it) } }
+        if (billing(run.provider) != "none") add { EditRow("5-hour pause", fiveHourLabel(fiveHourLimit(run.fiveHour?.content, run.capPct)), if (editable) FIVE_HOURS.map { v -> fiveHourLabel(v) to mapOf("fiveHour" to (v?.toLongOrNull() ?: v)) } else null) { hub.runEdit(run, it) } }
         add { EditRow("Build limit", run.maxBuilds?.toString() ?: "None", if (editable) BUILDS.map { it.label to mapOf("maxBuilds" to it.n?.toLong()) } else null) { hub.runEdit(run, it) } }
     }
     Sheet(onClose, run.title.ifBlank { detail.heading }, padded = false) {

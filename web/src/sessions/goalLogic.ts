@@ -2,9 +2,9 @@ import { getState, send, setUi } from '../app/store';
 import { track } from '../app/featureUse';
 import type { BadgeSpec } from '../ui/Badge';
 import { money } from '../ui/util';
-import type { ChatRun, RunOp } from '../../../shared/protocol';
+import type { ChatRun, FiveHour, RunOp } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
-import { buildsLine, goalEnd } from '../../../shared/goalText';
+import { buildsLine, fiveHourLabel, goalEnd } from '../../../shared/goalText';
 import { ADVISOR_LOOP_EVERY } from '../../../shared/advisors';
 import { billing } from '../../../shared/providers';
 import { stoppedText } from './runLogic';
@@ -30,6 +30,8 @@ export const STOPS: (Stop & { label: string })[] = [
 ];
 
 export const CAPS = [{ label: '50', pct: 50 }, { label: '70', pct: 70 }, { label: '90', pct: 90 }, { label: 'Off', pct: null }];
+
+export const FIVE_HOURS = ([null, 'auto', 80, 90, 95] as (FiveHour | null)[]).map((v) => ({ label: fiveHourLabel(v), v }));
 
 export const CAPS_USD = [{ label: '$1', usd: 1 }, { label: '$5', usd: 5 }, { label: '$10', usd: 10 }, { label: 'Off', usd: null }];
 

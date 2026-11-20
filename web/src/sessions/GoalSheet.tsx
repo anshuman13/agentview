@@ -9,12 +9,13 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { billing, providerLabel } from '../../../shared/providers';
-import type { ChatRun, Provider } from '../../../shared/protocol';
-import { goalCommand, parseEvery, rerunForm } from '../../../shared/goalForm';
+import type { ChatRun, FiveHour, Provider } from '../../../shared/protocol';
+import { goalCommand, parseEvery, parseFiveHour, rerunForm } from '../../../shared/goalForm';
+import { fiveHourLine } from '../../../shared/goalText';
 import { MAX_NAME, addPreset, removePreset, type GoalPreset } from '../../../shared/goalPresets';
 import { span } from '../../../shared/util';
 import { planCondition } from '../../../shared/specTasks';
-import { BUILDS, CAPS, CAPS_USD, EVERY, STOPS } from './goalLogic';
+import { BUILDS, CAPS, CAPS_USD, EVERY, FIVE_HOURS, STOPS } from './goalLogic';
 import { dirChoices, useWorkspace } from './folders';
 import { loadPresets, savePresets } from './goalPresets';
 import { useChatRun } from './useChatRun';
@@ -40,6 +41,8 @@ export function GoalSheet({ plan: planProp, here, from, onClose }: { plan?: stri
   const [stopIn, setStopIn] = useState<number | undefined>();
   const [stopAt, setStopAt] = useState<string | undefined>();
   const [capPct, setCapPct] = useState<number | null>(init ? init.capPct : 70);
+  const [fiveHour, setFiveHour] = useState<FiveHour | null>(init?.fiveHour ?? null);
+  const [fiveCustom, setFiveCustom] = useState(init?.fiveHour && !FIVE_HOURS.some((f) => f.v === init.fiveHour) ? String(init.fiveHour) : '');
   const [capUsd, setCapUsd] = useState<number | null>(init?.capUsd ?? null);
   const [builds, setBuilds] = useState<number | null>(init?.builds ?? null);
   const [inHere, setInHere] = useState(Boolean(init && here && !active));
@@ -62,12 +65,14 @@ export function GoalSheet({ plan: planProp, here, from, onClose }: { plan?: stri
   const dirs = dirChoices(folders);
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
   const badEvery = Boolean(custom.trim()) && parseEvery(custom) === null;
-  const ready = !badEvery && (!plan || (markdown !== null && !error));
+  const badFive = Boolean(fiveCustom.trim()) && parseFiveHour(fiveCustom) === null;
+  const fiveNote = fiveHourLine({ fiveHour, capPct, provider: target });
+  const ready = !badEvery && !badFive && (!plan || (markdown !== null && !error));
   const root = dir || dirs[0]?.cwd;
   const condition = plan ? (markdown === null ? '' : planCondition(plan, markdown)) : what;
   const start = () => {
     track('action:startGoal');
-    const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct, capUsd: billing(target) === 'plan' ? null : capUsd, builds }, Date.now());
+    const text = goalCommand({ what: condition, every, stopIn: stopIn ?? null, stopAt: stopAt ?? null, capPct: billing(target) === 'none' ? null : capPct, fiveHour: billing(target) === 'none' ? null : fiveHour, capUsd: billing(target) === 'plan' ? null : capUsd, builds }, Date.now());
     if (canHere && inHere) {
       prompt(text, () => notice('Could not send the goal. Try again.'));
       onClose();
@@ -131,7 +136,14 @@ export function GoalSheet({ plan: planProp, here, from, onClose }: { plan?: stri
           <div className="ui-group">
             <div className="ui-fields">
               {chips(CAPS, (i) => CAPS[i].pct === capPct, (i) => setCapPct(CAPS[i].pct))}
-              <div className="gl-note">Skips rounds while the 5-hour window is over 90%</div>
+            </div>
+          </div>
+          <Section label="5-hour pause" />
+          <div className="ui-group">
+            <div className="ui-fields">
+              {chips(FIVE_HOURS, (i) => !fiveCustom.trim() && FIVE_HOURS[i].v === fiveHour, (i) => { setFiveCustom(''); setFiveHour(FIVE_HOURS[i].v); })}
+              <input aria-label="Custom 5-hour pause" inputMode="numeric" placeholder="Custom percent, 1 to 100" value={fiveCustom} onChange={(e) => { setFiveCustom(e.target.value); setFiveHour(parseFiveHour(e.target.value)); }} />
+              {badFive ? <div className="gl-note">Use a percent from 1 to 100</div> : fiveNote && <div className="gl-note">{fiveNote}</div>}
             </div>
           </div>
         </>

@@ -1,6 +1,6 @@
-import { MAX_GOAL_ROUNDS, type ChatRun, type PlanUsage, type Repeat, type RunEdit, type SessionInfo } from '../../../shared/protocol.js';
+import { MAX_GOAL_ROUNDS, type ChatRun, type FiveHour, type PlanUsage, type Repeat, type RunEdit, type SessionInfo, type UsageWindow } from '../../../shared/protocol.js';
 import { clock, nextClock, span } from '../../../shared/util.js';
-import { GOAL_RAN_OUT, STOPPED_BY_YOU, goalCapReached, goalCostCapReached, goalNotMet, goalPlan, goalStoppedAt, nextRound, skipText } from '../../../shared/goalText.js';
+import { GOAL_RAN_OUT, STOPPED_BY_YOU, fiveHourLimit, fiveHourSkip, goalCapReached, goalCostCapReached, goalNotMet, goalPlan, goalStoppedAt, nextRound, skipText } from '../../../shared/goalText.js';
 import { MAX_EVERY, MIN_EVERY } from '../../../shared/goalForm.js';
 import type { Cron } from '../agent/types.js';
 
@@ -8,7 +8,7 @@ const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
 const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
 
-const GOAL_USAGE = 'Usage: /goal [every 1h] [until 18:00] [cap 70%] [cap $5] [builds 5] <condition> (every 10m or longer), /goal off';
+const GOAL_USAGE = 'Usage: /goal [every 1h] [until 18:00] [cap 70%] [5h 95% or 5h auto] [cap $5] [builds 5] <condition> (every 10m or longer), /goal off';
 
 const MAX_BUILDS = 50;
 
@@ -17,8 +17,9 @@ const MAX_CAP_USD = 1000;
 const DAY = 24 * 3_600_000;
 const STANDING_MS = 28 * DAY;
 const REPORT_MS = 7 * DAY;
-const FIVE_HOUR_LIMIT = 90;
-const USAGE_SKIP = `5-hour usage over ${FIVE_HOUR_LIMIT}%`;
+const FIVE_HOURS = 5 * 3_600_000;
+const AUTO_FLOOR = 10;
+const AUTO_CEIL = 97;
 const GATE_RETRY_MS = 30 * 60_000;
 
 const SEEN = 'You are the only one who sees the reply and the ROUND line.';
@@ -33,8 +34,8 @@ export const standing = (r: Repeat) => Boolean(r.goal && r.every);
 
 const reportDue = (r: Repeat, now = Date.now()) => standing(r) && r.reportAt !== undefined && now >= r.reportAt;
 
-// /goal [every 1h] [until 18:00] [cap 70%] [cap $5] [builds 5] <condition> checks the condition whenever the agent goes idle, until it reports GOAL MET or the rounds run out.
-// With every it is a standing goal: one heartbeat per interval for up to 28 days. until sets an end time, cap a weekly usage limit, cap $ a limit on the goal's own cost, builds a limit on builds started.
+// /goal [every 1h] [until 18:00] [cap 70%] [5h 95%] [cap $5] [builds 5] <condition> checks the condition whenever the agent goes idle, until it reports GOAL MET or the rounds run out.
+// With every it is a standing goal: one heartbeat per interval for up to 28 days. until sets an end time, cap a weekly usage limit, 5h a pause on the 5-hour window (a percent or auto), cap $ a limit on the goal's own cost, builds a limit on builds started.
 export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usage' | null {
   const m = /^\/goal\b([\s\S]*)$/.exec(text.trim());
   if (!m) return null;
@@ -49,28 +50,45 @@ export function parseGoal(text: string, now = Date.now()): Repeat | 'off' | 'usa
   const e = take(/^every\s+(\d+)\s*(m|min|h)\b\s*([\s\S]*)$/i);
   const u = take(/^until\s+(\d{1,2}):(\d{2})\b\s*([\s\S]*)$/i);
   const c = take(/^cap\s+(\d+)%\s*([\s\S]*)$/i);
+  const f = take(/^5h\s+(?:(\d+)%|(auto))(?!\S)\s*([\s\S]*)$/i);
   const d = take(/^cap\s+\$(\d+)\s*([\s\S]*)$/i);
   const b = take(/^builds(?:\s+(\d+)\b|\s*$)\s*([\s\S]*)$/i);
   const every = e ? Number(e[1]) * UNIT[e[2].toLowerCase()] : 0;
   const capPct = c ? Number(c[1]) : 0;
+  const fiveHour: FiveHour = f?.[2] ? 'auto' : Number(f?.[1] ?? 0);
   const capUsd = d ? Number(d[1]) : 0;
   const maxBuilds = Number(b?.[1] ?? 0);
-  if ((e || u || c || d || b) && !goal) return 'usage';
-  if ((e && (every < MIN_EVERY || every > MAX_EVERY)) || (u && (Number(u[1]) > 23 || Number(u[2]) > 59)) || (c && (capPct < 1 || capPct > 100)) || (d && (capUsd < 1 || capUsd > MAX_CAP_USD)) || (b && (maxBuilds < 1 || maxBuilds > MAX_BUILDS))) return 'usage';
-  const extra = { ...(u && { endAt: nextClock(Number(u[1]), Number(u[2]), now) }), ...(c && { capPct }), ...(d && { capUsd }), ...(b && { maxBuilds, builds: [] }) };
+  if ((e || u || c || f || d || b) && !goal) return 'usage';
+  if ((e && (every < MIN_EVERY || every > MAX_EVERY)) || (u && (Number(u[1]) > 23 || Number(u[2]) > 59)) || (c && (capPct < 1 || capPct > 100)) || (f && !validFiveHour(fiveHour)) || (d && (capUsd < 1 || capUsd > MAX_CAP_USD)) || (b && (maxBuilds < 1 || maxBuilds > MAX_BUILDS))) return 'usage';
+  const extra = { ...(u && { endAt: nextClock(Number(u[1]), Number(u[2]), now) }), ...(c && { capPct }), ...(f && { fiveHour }), ...(d && { capUsd }), ...(b && { maxBuilds, builds: [] }) };
   if (e) return { prompt: standingPrompt(goal), every, until: now + STANDING_MS, round: 0, nextAt: null, goal, reportAt: now + REPORT_MS, ...extra };
   return { prompt: goalPrompt(goal), every: 0, until: null, round: 0, nextAt: null, goal, ...extra };
 }
 
-// What the usage numbers say about a goal with a cap: end it at the weekly cap, skip a round while the 5-hour window is nearly full.
-export function usageGate(r: Repeat, usage: PlanUsage | null, now = Date.now()): { note: string } | { skipUntil: number | null } | null {
-  if (!r.capPct || !usage) return null;
-  // A window whose reset has passed holds a stale number.
-  const pct = (w: PlanUsage['week']) => (w && !(w.resetsAt !== null && w.resetsAt <= now) ? w.pct : 0);
-  const week = pct(usage.week);
-  if (week >= r.capPct) return { note: goalCapReached(r.capPct) };
-  if (pct(usage.fiveHour) > FIVE_HOUR_LIMIT) return { skipUntil: usage.fiveHour!.resetsAt };
-  return null;
+const validFiveHour = (v: unknown): v is FiveHour => v === 'auto' || (Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 100);
+
+// A window whose reset has passed holds a stale number.
+const fresh = (w: UsageWindow | null, now: number): w is UsageWindow => Boolean(w) && !(w!.resetsAt !== null && w!.resetsAt <= now);
+
+// Whether a round waits on the 5-hour window, and until when (null when the reset is unknown). A percent waits while usage is over it until the reset.
+// auto paces the window: usage may not run ahead of the share of the window gone by (at least 10%, at most 97%), and waits until that share catches up, or for the reset near the top.
+function fiveHourPause(limit: FiveHour | null, w: UsageWindow | null, now: number): { skipUntil: number | null } | null {
+  if (!limit || !fresh(w, now)) return null;
+  if (limit !== 'auto') return w.pct > limit ? { skipUntil: w.resetsAt } : null;
+  if (w.resetsAt === null) return null;
+  const start = w.resetsAt - FIVE_HOURS;
+  const allowed = Math.min(AUTO_CEIL, Math.max(AUTO_FLOOR, ((now - start) / FIVE_HOURS) * 100));
+  if (w.pct <= allowed) return null;
+  return { skipUntil: w.pct >= AUTO_CEIL ? w.resetsAt : start + (w.pct / 100) * FIVE_HOURS };
+}
+
+// What the usage numbers say about a goal: end it at the weekly cap, skip a round while the 5-hour pause holds.
+export function usageGate(r: Repeat, usage: PlanUsage | null, now = Date.now()): { note: string } | { skipUntil: number | null; why: string } | null {
+  if (!usage) return null;
+  if (r.capPct && fresh(usage.week, now) && usage.week.pct >= r.capPct) return { note: goalCapReached(r.capPct) };
+  const limit = fiveHourLimit(r);
+  const pause = fiveHourPause(limit, usage.fiveHour, now);
+  return pause ? { ...pause, why: fiveHourSkip(limit!) } : null;
 }
 
 // A goal with a dollar cap ends once its own run has cost that much.
@@ -140,7 +158,7 @@ interface RepeatHost {
   resumeRun(r: Repeat): string;
   endRun(id: string, why: string): void;
   reopenRun(id: string): void;
-  patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'maxBuilds' | 'usage' | 'builds'>>): void;
+  patchRun(id: string, patch: Partial<Pick<ChatRun, 'state' | 'why' | 'round' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'fiveHour' | 'maxBuilds' | 'usage' | 'builds'>>): void;
   push(title: string, body: string): void;
   usage(): PlanUsage | null;
   runCost(): number;
@@ -276,7 +294,7 @@ export class RepeatController {
     const usage = this.host.usage();
     const gate = usageGate(r, usage);
     if (gate && 'note' in gate) return this.set(null, gate.note);
-    if (gate) return standing(r) ? this.skip(r, USAGE_SKIP) : this.defer(gate.skipUntil ?? Date.now() + GATE_RETRY_MS, skipText(USAGE_SKIP), true);
+    if (gate) return standing(r) ? this.skip(r, gate.why) : this.defer(gate.skipUntil ?? Date.now() + GATE_RETRY_MS, skipText(gate.why), true);
     // A standing goal skips a heartbeat that finds Claude busy or waiting for the user; the next one is a full interval away.
     if (standing(r) && (this.host.running() || this.host.asking())) return this.skip(r, this.host.asking() ? 'waiting for you' : 'still working');
     if (this.host.running()) {
@@ -338,10 +356,12 @@ export class RepeatController {
     else if (typeof edit.endAt === 'number') next.endAt = edit.endAt;
     if (edit.capPct === null) delete next.capPct;
     else if (typeof edit.capPct === 'number' && edit.capPct >= 1 && edit.capPct <= 100) next.capPct = edit.capPct;
+    if (edit.fiveHour === null) delete next.fiveHour;
+    else if (validFiveHour(edit.fiveHour)) next.fiveHour = edit.fiveHour;
     if (edit.maxBuilds === null) delete next.maxBuilds;
     else if (Number.isInteger(edit.maxBuilds) && edit.maxBuilds! >= 1 && edit.maxBuilds! <= MAX_BUILDS) next.maxBuilds = edit.maxBuilds;
     this.host.setSession({ repeat: next });
-    this.patchRun({ every: next.every || undefined, nextAt: next.nextAt, endAt: next.endAt, capPct: next.capPct, maxBuilds: next.maxBuilds });
+    this.patchRun({ every: next.every || undefined, nextAt: next.nextAt, endAt: next.endAt, capPct: next.capPct, fiveHour: next.fiveHour, maxBuilds: next.maxBuilds });
     this.arm();
     this.host.system(goalPlan(next, true));
   }

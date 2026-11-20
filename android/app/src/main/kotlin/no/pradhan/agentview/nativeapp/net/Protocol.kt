@@ -171,6 +171,8 @@ data class ChatRun(
     val every: Long? = null,
     val endAt: Long? = null,
     val capPct: Int? = null,
+    // A percent or "auto" (shared/protocol.ts FiveHour).
+    val fiveHour: JsonPrimitive? = null,
     val capUsd: Int? = null,
     val maxBuilds: Int? = null,
     val builds: Int? = null,
@@ -369,8 +371,8 @@ fun steerCmd(text: String, id: String) = cmd("steer") { put("text", text); put("
 fun interruptCmd() = cmd("interrupt")
 fun retryCmd() = cmd("retry")
 fun runCmd(run: String, op: String) = cmd("run") { put("run", run); put("op", op) }
-// A null value clears the end time or the cap; a key left out stays as it is.
-fun runEditCmd(run: String, edit: Map<String, Long?>) = cmd("run_edit") { put("run", run); edit.forEach { (k, v) -> put(k, v) } }
+// A null value clears the end time or the cap; a key left out stays as it is. A string is the 5-hour pause's auto.
+fun runEditCmd(run: String, edit: Map<String, Any?>) = cmd("run_edit") { put("run", run); edit.forEach { (k, v) -> if (v is String) put(k, v) else put(k, v as Number?) } }
 fun triesKeepCmd(run: String, n: Int) = cmd("tries_keep") { put("run", run); put("n", n) }
 fun triesSendCmd(run: String, text: String) = cmd("tries_send") { put("run", run); put("text", text) }
 fun permissionCmd(id: String, allow: Boolean, always: Boolean = false) = cmd("permission") {

@@ -1,0 +1,16 @@
+[
+  { "name": "label off", "fiveHour": null, "label": "Off" },
+  { "name": "label auto", "fiveHour": "auto", "label": "Auto" },
+  { "name": "label percent", "fiveHour": 95, "label": "95%" },
+  { "name": "line own percent", "run": { "fiveHour": 95 }, "line": "Pauses at 95% of the 5-hour window" },
+  { "name": "line auto", "run": { "fiveHour": "auto", "capPct": 70 }, "line": "Paces the 5-hour window" },
+  { "name": "line default with a weekly cap", "run": { "capPct": 70 }, "line": "Pauses at 90% of the 5-hour window" },
+  { "name": "line without a cap or a value", "run": {}, "line": "" },
+  { "name": "line hidden without a usage figure", "run": { "provider": "openrouter", "fiveHour": 95 }, "line": "" },
+  { "name": "parse percent", "text": "95", "pct": 95 },
+  { "name": "parse percent with sign and spaces", "text": " 80 % ", "pct": 80 },
+  { "name": "parse 100", "text": "100%", "pct": 100 },
+  { "name": "parse zero", "text": "0", "pct": null },
+  { "name": "parse over 100", "text": "101", "pct": null },
+  { "name": "parse a word", "text": "auto", "pct": null }
+]

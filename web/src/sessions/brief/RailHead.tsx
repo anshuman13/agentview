@@ -18,7 +18,7 @@ import { useCan } from '../../chat/useCan';
 import type { RunOp } from '../../../../shared/protocol';
 import { billing } from '../../../../shared/providers';
 import { planOf } from '../../../../shared/goalForm';
-import { buildsLine, mergeQuiet, rounds, roundsSummary, runDetail } from '../../../../shared/goalText';
+import { buildsLine, fiveHourLine, mergeQuiet, rounds, roundsSummary, runDetail } from '../../../../shared/goalText';
 
 // The rail's title with the run's controls, and the run's state under it.
 export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose?: () => void }) {
@@ -44,6 +44,7 @@ export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose
   const details = run && runDetail(run).opens ? () => openGoal(run.id) : undefined;
   const click = details ? { onClick: details } : { plain: true };
   const cap = run && capLine(run);
+  const fiveHour = run && fiveHourLine(run);
   const groups = run && (run.kind === 'goal' || run.kind === 'loop') ? mergeQuiet(run.rounds).reverse() : [];
   const roundsMeta = run && [roundsSummary(run.rounds), money(run.rounds.reduce((sum, r) => sum + r.costUsd, 0), billing(run.provider))].join(' · ');
   const report = run?.rounds.filter((r) => r.report).at(-1);
@@ -79,6 +80,7 @@ export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose
             ? <Row lines={1} title={progress ? `Plan ${progress}` : run.what} {...click} />
             : <Row lines={1} title={run.what} trailing={money(run.costUsd, billing(run.provider))} {...click} />}
           {cap && <Row plain lines={1} leading={<Icon name="dashboard" />} title={cap.text} state={cap.near ? <Badge status="waiting" label="Near cap" /> : undefined} />}
+          {fiveHour && <Row plain lines={1} leading={<Icon name="watch" />} title={fiveHour} />}
           {groups.length > 0 && <Row lines={1} title={rounds(run.round)} meta={roundsMeta} trailing={<Icon name={open ? 'chevron-up' : 'chevron-down'} small />} aria-expanded={open} onClick={() => setOpen(!open)} />}
           {open && (all ? groups : groups.slice(0, 10)).map((g) => <RoundRow key={g.first.at} group={g} provider={run.provider} open={showTurn} />)}
           {open && !all && groups.length > 10 && <ShowAll count={groups.length} className="ov-more" onClick={() => setAll(true)} />}

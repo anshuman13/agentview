@@ -152,7 +152,7 @@ fun Hub.runControl(run: ChatRun, op: String) {
     if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run, running), if (run.kind == "tries") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
 }
 
-fun Hub.runEdit(run: ChatRun, edit: Map<String, Long?>) = post(runEditCmd(run.id, edit), store.wanted)
+fun Hub.runEdit(run: ChatRun, edit: Map<String, Any?>) = post(runEditCmd(run.id, edit), store.wanted)
 
 fun Hub.triesKeep(run: ChatRun, n: Int) = post(triesKeepCmd(run.id, n), store.wanted)
 fun Hub.triesSend(run: ChatRun, text: String) = post(triesSendCmd(run.id, text), store.wanted)

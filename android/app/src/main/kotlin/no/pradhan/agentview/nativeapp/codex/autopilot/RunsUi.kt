@@ -78,7 +78,7 @@ fun RunActions(hub: Hub, run: ChatRun) {
     }
 }
 
-// The run's rows: what is happening now, the plan line on a goal or the what line and cost on other kinds, the cap row, the Rounds row that shows the history and the last report.
+// The run's rows: what is happening now, the plan line on a goal or the what line and cost on other kinds, the cap row, the 5-hour row, the Rounds row that shows the history and the last report.
 @Composable
 fun RunRows(hub: Hub, run: ChatRun, live: LiveChat) {
     var rounds by rememberSaveable(run.id) { mutableStateOf(false) }
@@ -98,6 +98,9 @@ fun RunRows(hub: Hub, run: ChatRun, live: LiveChat) {
         else ListRow(run.what, money(run.costUsd, billing(run.provider)), compact = true, stateSlot = false, onClick = detail)
         capLine(run)?.let { cap ->
             ListRow(cap.text, lines = 1, compact = true, leading = { AvIcon("dashboard", null, Tokens.iconSm, tint = av.fgMuted) }, state = if (cap.near) ({ Badge("Near cap", BadgeTone.Waiting) }) else null)
+        }
+        fiveHourLine(run.fiveHour?.content, run.capPct, run.provider).takeIf { it.isNotEmpty() }?.let { line ->
+            ListRow(line, lines = 1, compact = true, leading = { AvIcon("watch", null, Tokens.iconSm, tint = av.fgMuted) })
         }
         if ((goal || run.kind == "loop") && run.rounds.isNotEmpty()) {
             ListRow(

@@ -11,17 +11,17 @@ import { appCounts } from '../../shared/counts';
 import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
 import { limitResume } from '../../shared/limitResume';
-import { buildsLine, endedRun, finishedLine, goalEnd, mergeQuiet, roundsSummary, runDetail } from '../../shared/goalText';
+import { buildsLine, endedRun, finishedLine, fiveHourLabel, fiveHourLine, goalEnd, mergeQuiet, roundsSummary, runDetail } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
-import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, SavedSession, Try } from '../../shared/protocol';
+import type { Capabilities, ChatEvent, ChatRun, FiveHour, LiveChat, Provider, Round, SavedSession, Try } from '../../shared/protocol';
 import { START_MODES, billing, checkedModel, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
 import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
-import { goalCommand, parseEvery, planOf, rerunForm, type GoalForm } from '../../shared/goalForm';
+import { goalCommand, parseEvery, parseFiveHour, planOf, rerunForm, type GoalForm } from '../../shared/goalForm';
 import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { taskChatPrompt } from '../../shared/taskChat';
@@ -616,6 +616,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; run: Partial<ChatRun>; expected: ReturnType<typeof capLine> }>('cap-line')) {
     it(`capLine: ${c.name}`, () => expect(capLine(run(c.run))).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; fiveHour?: FiveHour | null; label?: string; run?: Partial<ChatRun>; line?: string; text?: string; pct?: number | null }>('five-hour')) {
+    it(`fiveHour: ${c.name}`, () => {
+      if (c.label !== undefined) expect(fiveHourLabel(c.fiveHour)).toBe(c.label);
+      else if (c.run) expect(fiveHourLine(run(c.run))).toBe(c.line!);
+      else expect(parseFiveHour(c.text!)).toBe(c.pct!);
+    });
   }
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; expected: string }>('run-line')) {

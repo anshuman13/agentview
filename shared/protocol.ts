@@ -134,8 +134,11 @@ export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick
 // What the agent behind a chat supports.
 export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; build: boolean; stopTask: boolean; subagents: boolean };
 
+// A goal's 5-hour pause: rounds wait while 5-hour usage is over the percent, or auto paces usage over the window.
+export type FiveHour = number | 'auto';
+
 // A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
-export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean; reportAt?: number; endAt?: number; capPct?: number; capUsd?: number; maxBuilds?: number; builds?: string[] };
+export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean; reportAt?: number; endAt?: number; capPct?: number; fiveHour?: FiveHour; capUsd?: number; maxBuilds?: number; builds?: string[] };
 
 export const MAX_GOAL_ROUNDS = 20;
 
@@ -143,8 +146,8 @@ export const BIG_BRO = 'big-bro';
 
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
 export type RunOp = 'pause' | 'resume' | 'now' | 'stop' | 'restore';
-// endAt is epoch ms, capPct a percent, maxBuilds a count; null clears them.
-export type RunEdit = { every?: number; endAt?: number | null; capPct?: number | null; maxBuilds?: number | null };
+// endAt is epoch ms, capPct a percent, fiveHour a percent or auto, maxBuilds a count; null clears them.
+export type RunEdit = { every?: number; endAt?: number | null; capPct?: number | null; fiveHour?: FiveHour | null; maxBuilds?: number | null };
 export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number; report?: string };
 
 // One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.
@@ -168,6 +171,7 @@ export type ChatRun = {
   every?: number;
   endAt?: number;
   capPct?: number;
+  fiveHour?: FiveHour;
   capUsd?: number;
   maxBuilds?: number;
   builds?: number;

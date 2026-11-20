@@ -13,8 +13,8 @@ import { billing } from '../../../shared/providers';
 import type { ChatRun, GitCommit, RunEdit, RunOp } from '../../../shared/protocol';
 import { planOf } from '../../../shared/goalForm';
 import { span } from '../../../shared/util';
-import { finishedLine, mergeQuiet, runDetail } from '../../../shared/goalText';
-import { BUILDS, CAPS, EVERY, STOPS, goalBadge, openRun, runControl, startGoal, stopAtMs, usageLine } from './goalLogic';
+import { finishedLine, fiveHourLabel, fiveHourLimit, mergeQuiet, runDetail } from '../../../shared/goalText';
+import { BUILDS, CAPS, EVERY, FIVE_HOURS, STOPS, goalBadge, openRun, runControl, startGoal, stopAtMs, usageLine } from './goalLogic';
 import { since } from './folders';
 import { fetchRunCommits } from './sessionApi';
 import { usePlanProgress } from './usePlanProgress';
@@ -86,6 +86,7 @@ export function GoalDetail({ id, onClose }: { id: string; onClose: () => void })
         <EditRow title="How often" value={run.every ? `Every ${span(run.every)}` : 'Until done'} options={run.every && editable ? EVERY.filter((e) => e.ms).map((e) => ({ label: e.label, edit: { every: e.ms } })) : undefined} onEdit={edit} />
         <EditRow title="Stop at" value={run.endAt ? clock(run.endAt) : 'None'} options={editable ? STOPS.map((s) => ({ label: s.label, edit: { endAt: stopAtMs(s, Date.now()) } })) : undefined} onEdit={edit} />
         {(billing(run.provider) !== 'none' || run.maxBuilds || run.capUsd) && <EditRow title="Usage" value={usageLine(run)} options={editable && billing(run.provider) !== 'none' ? CAPS.map((c) => ({ label: c.pct ? `${c.pct}% cap` : 'No cap', edit: { capPct: c.pct } })) : undefined} onEdit={edit} />}
+        {billing(run.provider) !== 'none' && <EditRow title="5-hour pause" value={fiveHourLabel(fiveHourLimit(run))} options={editable ? FIVE_HOURS.map((f) => ({ label: f.label, edit: { fiveHour: f.v } })) : undefined} onEdit={edit} />}
         <EditRow title="Build limit" value={run.maxBuilds ? String(run.maxBuilds) : 'None'} options={editable ? BUILDS.map((b) => ({ label: b.label, edit: { maxBuilds: b.n } })) : undefined} onEdit={edit} />
       </div>
       <div className="gl-actions">

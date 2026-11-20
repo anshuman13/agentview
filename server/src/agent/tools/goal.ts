@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { goalCommand, parseEvery } from '../../../../shared/goalForm.js';
+import type { FiveHour } from '../../../../shared/protocol.js';
 import { defineTool } from './tool.js';
 
 export const GOAL_RULES = [
@@ -9,8 +10,8 @@ export const GOAL_RULES = [
   'Build features yourself, directly in this chat. Use the agentview:build skill (spec, review, sketch, approval, implementation and test) only when the user asks for that flow or AgentView says the chat\'s Build flow option is on; then run it with the brief when the Skill tool has it. The spec goes to .claude/specs/<slug>.md, a UI spec gets a sketch in .claude/sketches/<slug>.html, and the build waits until the user approves both in the build card in the chat. The user can ask for no sketch or no approval; pass that on to the skill.',
 ].join(' ');
 
-const goalLine = ({ condition, every, until, cap, capUsd, builds, off }: { condition?: string; every?: string; until?: string; cap?: number; capUsd?: number; builds?: number; off?: boolean }) =>
-  off ? '/goal off' : goalCommand({ what: condition ?? '', every: every ? parseEvery(every) ?? 0 : 0, stopIn: null, stopAt: until ?? null, capPct: cap ?? null, capUsd: capUsd ?? null, builds: builds ?? null }, Date.now());
+const goalLine = ({ condition, every, until, cap, fiveHour, capUsd, builds, off }: { condition?: string; every?: string; until?: string; cap?: number; fiveHour?: FiveHour; capUsd?: number; builds?: number; off?: boolean }) =>
+  off ? '/goal off' : goalCommand({ what: condition ?? '', every: every ? parseEvery(every) ?? 0 : 0, stopIn: null, stopAt: until ?? null, capPct: cap ?? null, fiveHour: fiveHour ?? null, capUsd: capUsd ?? null, builds: builds ?? null }, Date.now());
 
 export const goalTool = defineTool({
   name: 'start_goal',
@@ -20,6 +21,7 @@ export const goalTool = defineTool({
     every: z.string().regex(/^\d+(m|h)$/).optional().describe('Standing goal interval such as 30m or 2h, 10m to 168h. Omit to check whenever you go idle.'),
     until: z.string().regex(/^\d{1,2}:\d{2}$/).optional().describe('Stop at this local time, HH:MM.'),
     cap: z.number().int().min(1).max(100).optional().describe('Stop when weekly usage reaches this percent.'),
+    fiveHour: z.union([z.number().int().min(1).max(100), z.literal('auto')]).optional().describe('Pause rounds while 5-hour usage is over this percent, or "auto" to pace usage over the 5-hour window.'),
     capUsd: z.number().int().min(1).max(1000).optional().describe("Stop when the goal's own cost reaches this many dollars."),
     builds: z.number().int().min(1).max(50).optional().describe('Pause after this many builds this goal starts.'),
     off: z.boolean().optional().describe('Stop the running goal.'),

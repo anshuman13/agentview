@@ -142,6 +142,9 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.mergeQuiet
 import no.pradhan.agentview.nativeapp.codex.autopilot.roundsSummary
 import no.pradhan.agentview.nativeapp.codex.autopilot.CapLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.capLine
+import no.pradhan.agentview.nativeapp.codex.autopilot.fiveHourLabel
+import no.pradhan.agentview.nativeapp.codex.autopilot.fiveHourLine
+import no.pradhan.agentview.nativeapp.codex.autopilot.parseFiveHour
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopNow
 import no.pradhan.agentview.nativeapp.codex.autopilot.nowMeta
@@ -569,6 +572,7 @@ class SharedCasesTest {
             assertEquals(name, f.nullable("stopAt")?.jsonPrimitive?.content, got.form.stopAt)
             assertEquals(name, f.nullable("capPct")?.jsonPrimitive?.int, got.form.capPct)
             assertEquals(name, f.nullable("capUsd")?.jsonPrimitive?.int, got.form.capUsd)
+            assertEquals(name, f.nullable("fiveHour")?.jsonPrimitive?.content, got.form.fiveHour)
             assertEquals(name, f.nullable("builds")?.jsonPrimitive?.int, got.form.builds)
             assertEquals(name, f.nullable("plan")?.jsonPrimitive?.content, got.plan)
         }
@@ -654,6 +658,17 @@ class SharedCasesTest {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
             val e = c.nullable("expected")?.jsonObject
             assertEquals(c.str("name"), e?.let { CapLine(it.str("text"), it.getValue("near").jsonPrimitive.boolean) }, capLine(run))
+        }
+    }
+
+    @Test fun fiveHour() {
+        for (c in cases("five-hour")) {
+            val name = c.str("name")
+            if ("label" in c) assertEquals(name, c.str("label"), fiveHourLabel(c.nullable("fiveHour")?.jsonPrimitive?.content))
+            else if ("run" in c) {
+                val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
+                assertEquals(name, c.str("line"), fiveHourLine(run.fiveHour?.content, run.capPct, run.provider))
+            } else assertEquals(name, c.nullable("pct")?.jsonPrimitive?.int, parseFiveHour(c.str("text")))
         }
     }
 
@@ -993,7 +1008,7 @@ class SharedCasesTest {
         for (c in cases("goal-command")) {
             c["command"]?.let {
                 val f = c.getValue("form").jsonObject
-                val form = GoalForm(f.str("what"), f.getValue("every").jsonPrimitive.long, f.nullable("stopIn")?.jsonPrimitive?.long, f.nullable("stopAt")?.jsonPrimitive?.content, f.nullable("capPct")?.jsonPrimitive?.int, f.nullable("builds")?.jsonPrimitive?.int, f.nullable("capUsd")?.jsonPrimitive?.int)
+                val form = GoalForm(f.str("what"), f.getValue("every").jsonPrimitive.long, f.nullable("stopIn")?.jsonPrimitive?.long, f.nullable("stopAt")?.jsonPrimitive?.content, f.nullable("capPct")?.jsonPrimitive?.int, f.nullable("builds")?.jsonPrimitive?.int, f.nullable("capUsd")?.jsonPrimitive?.int, f.nullable("fiveHour")?.jsonPrimitive?.content)
                 assertEquals(c.str("name"), it.jsonPrimitive.content, goalCommand(form, c.getValue("now").jsonPrimitive.long))
             }
             c["condition"]?.let { assertEquals(c.str("name"), it.jsonPrimitive.content, planCondition(c.str("path"), c.str("md"))) }

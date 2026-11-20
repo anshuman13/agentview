@@ -23,19 +23,38 @@ sealed interface GoalSheet {
     data class Detail(val run: String) : GoalSheet
 }
 
-// What the start sheet collects: every in ms (0 for until done), the stop as ms from now or as HH:MM, the weekly cap in percent.
-class GoalForm(val what: String, val every: Long, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val builds: Int? = null, val capUsd: Int? = null)
+// What the start sheet collects: every in ms (0 for until done), the stop as ms from now or as HH:MM, the weekly cap in percent, the 5-hour pause as a percent or "auto".
+class GoalForm(val what: String, val every: Long, val stopIn: Long?, val stopAt: String?, val capPct: Int?, val builds: Int? = null, val capUsd: Int? = null, val fiveHour: String? = null)
 
 fun goalCommand(form: GoalForm, now: Long): String {
     val stop = form.stopAt ?: form.stopIn?.takeIf { it > 0 }?.let { clock(now + it) }
     val what = form.what.trim().replace(Regex("^/goal\\s+"), "")
-    return listOfNotNull("/goal", form.every.takeIf { it > 0 }?.let { "every ${everyText(it)}" }, stop?.let { "until $it" }, form.capPct?.takeIf { it > 0 }?.let { "cap $it%" }, form.capUsd?.takeIf { it > 0 }?.let { "cap \$$it" }, form.builds?.takeIf { it > 0 }?.let { "builds $it" }, what.ifEmpty { null }).joinToString(" ")
+    return listOfNotNull("/goal", form.every.takeIf { it > 0 }?.let { "every ${everyText(it)}" }, stop?.let { "until $it" }, form.capPct?.takeIf { it > 0 }?.let { "cap $it%" }, form.fiveHour?.let { "5h ${if (it == "auto") it else "$it%"}" }, form.capUsd?.takeIf { it > 0 }?.let { "cap \$$it" }, form.builds?.takeIf { it > 0 }?.let { "builds $it" }, what.ifEmpty { null }).joinToString(" ")
 }
 
 // shared/goalForm.ts rerunForm: the start sheet's values for running an ended run again, with no stop time. plan is the plan path of a plan goal.
 class RerunForm(val form: GoalForm, val plan: String?)
 
-fun rerunForm(run: ChatRun) = RerunForm(GoalForm(run.what.trim().replace(Regex("^/goal\\s+"), ""), run.every ?: 0, null, null, run.capPct, run.maxBuilds, run.capUsd), planOf(run.what))
+fun rerunForm(run: ChatRun) = RerunForm(GoalForm(run.what.trim().replace(Regex("^/goal\\s+"), ""), run.every ?: 0, null, null, run.capPct, run.maxBuilds, run.capUsd, run.fiveHour?.content), planOf(run.what))
+
+// shared/goalForm.ts parseFiveHour: a custom 5-hour pause such as "95" or "95%", 1 to 100.
+fun parseFiveHour(text: String): Int? =
+    Regex("^(\\d+)\\s*%?$").find(text.trim())?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it in 1..100 }
+
+// shared/goalText.ts: without a value of its own, a goal with a weekly cap pauses at 90% of the 5-hour window.
+private const val FIVE_HOUR_DEFAULT = 90
+
+fun fiveHourLimit(fiveHour: String?, capPct: Int?): String? = fiveHour ?: capPct?.takeIf { it > 0 }?.let { "$FIVE_HOUR_DEFAULT" }
+
+// shared/goalText.ts fiveHourLabel (fixture five-hour.json): Off, Auto or 95%.
+fun fiveHourLabel(v: String?) = when (v) { null -> "Off"; "auto" -> "Auto"; else -> "$v%" }
+
+// shared/goalText.ts fiveHourLine (fixture five-hour.json): the run head's 5-hour row; empty without a pause or a usage figure.
+fun fiveHourLine(fiveHour: String?, capPct: Int?, provider: String?): String = when (val limit = if (billing(provider) == "none") null else fiveHourLimit(fiveHour, capPct)) {
+    null -> ""
+    "auto" -> "Paces the 5-hour window"
+    else -> "Pauses at $limit% of the 5-hour window"
+}
 
 // shared/goalForm.ts parseEvery: a custom How often such as "45m", "45 min" or "3h", 10 minutes to 7 days, in ms.
 fun parseEvery(text: String): Long? {
@@ -101,6 +120,8 @@ val STOPS = listOf(StopChoice("None"), StopChoice("In 1 hour", stopIn = HOUR), S
 class CapChoice(val label: String, val pct: Int?)
 
 val CAPS = listOf(CapChoice("50", 50), CapChoice("70", 70), CapChoice("90", 90), CapChoice("Off", null))
+
+val FIVE_HOURS = listOf(null, "auto", "80", "90", "95")
 
 class CapUsdChoice(val label: String, val usd: Int?)
 
