@@ -313,7 +313,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                         build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, !running && canRewind && it.id in rewinds, bump = bump, answer = it.id in answers && !(running && it.id == openAnswer))
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, bump = bump, answer = it.id in answers && !(running && it.id == openAnswer))
                     }
                 }
             }
@@ -428,15 +428,12 @@ private fun NextButton(title: String, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, canRewind: Boolean = false, bump: Int? = null, answer: Boolean = false) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, bump: Int? = null, answer: Boolean = false) {
     when (it) {
-        is Item.User -> UserRow(hub, it, chat, canRewind)
+        is Item.User -> UserRow(hub, it, chat)
         is Item.Assistant -> {
             Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
-            if (answer) {
-                val clip = LocalClipboardManager.current
-                BubbleFooter("", "Copy") { clip.setText(AnnotatedString(it.text.trim())); hub.notice.value = "Reply copied" }
-            }
+            if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, it, answer, rewind)
         }
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
@@ -483,15 +480,25 @@ private fun BubbleFooter(label: String, action: String, onClick: () -> Unit) {
     }
 }
 
+// Copy and Rewind files under the turn's last reply (web Transcript.tsx RowImpl and Rewind.tsx).
 @Composable
-private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
+private fun ReplyActions(hub: Hub, it: Item.Assistant, answer: Boolean, rewind: Item.User?) {
     var ask by remember { mutableStateOf(false) }
-    val label = providerLabel(hub.store.state.value.session?.provider)
-    if (ask) ConfirmDialog(
+    if (ask && rewind != null) ConfirmDialog(
         "Rewind files?",
-        "Puts every file Claude changed back to how it was before this prompt. Edits from later prompts are undone too; the conversation stays.",
-        "Rewind", { ask = false; hub.rewind(it.id) }, onDismiss = { ask = false },
+        "Puts every file ${providerLabel(hub.store.state.value.session?.provider)} changed back to how it was before \"${rewind.text.lineSequence().first().take(80)}\". Edits from later turns are undone too; the conversation stays.",
+        "Rewind", { ask = false; hub.rewind(rewind.id) }, onDismiss = { ask = false },
     )
+    val clip = LocalClipboardManager.current
+    Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
+        if (answer) Button("Copy", { clip.setText(AnnotatedString(it.text.trim())); hub.notice.value = "Reply copied" }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "copy")
+        if (rewind != null) Button("Rewind files", { ask = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "discard")
+    }
+}
+
+@Composable
+private fun UserRow(hub: Hub, it: Item.User, chat: String) {
+    val label = providerLabel(hub.store.state.value.session?.provider)
     val clip = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
     var menu by remember { mutableStateOf(false) }
@@ -507,7 +514,6 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String, canRewind: Boolean) {
         } }
         if (it.stopping) Text("Stopping $label to send this", style = Type.footnote, color = av.fgMuted)
         if (it.queued) BubbleFooter("Waiting for $label's next step", "Send now") { hub.sendNow(it.id) }
-        if (canRewind) BubbleFooter("", "Rewind files") { ask = true }
     }
 }
 

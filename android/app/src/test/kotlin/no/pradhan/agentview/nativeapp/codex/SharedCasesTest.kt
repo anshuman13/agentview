@@ -61,6 +61,7 @@ import no.pradhan.agentview.nativeapp.chat.trimHeld
 import no.pradhan.agentview.nativeapp.chat.turnEnd
 import no.pradhan.agentview.nativeapp.chat.rememberPrompt
 import no.pradhan.agentview.nativeapp.chat.turnAnswers
+import no.pradhan.agentview.nativeapp.chat.rewindReplies
 import no.pradhan.agentview.nativeapp.chat.proposalState
 import no.pradhan.agentview.nativeapp.chat.usedClaimState
 import no.pradhan.agentview.nativeapp.chat.shortModel
@@ -205,6 +206,9 @@ import no.pradhan.agentview.nativeapp.codex.meetings.filterMeetings
 import no.pradhan.agentview.nativeapp.codex.meetings.followUpText
 import no.pradhan.agentview.nativeapp.codex.meetings.hasContent
 import no.pradhan.agentview.nativeapp.codex.meetings.meetingMarkdown
+import no.pradhan.agentview.nativeapp.codex.meetings.personMarkdown
+import no.pradhan.agentview.nativeapp.codex.meetings.Commitment
+import no.pradhan.agentview.nativeapp.codex.meetings.Question
 import no.pradhan.agentview.nativeapp.codex.meetings.groupMeetings
 import no.pradhan.agentview.nativeapp.codex.meetings.inSeries
 import no.pradhan.agentview.nativeapp.codex.meetings.meetingState
@@ -670,6 +674,13 @@ class SharedCasesTest {
         for (c in cases("turn-answers")) {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
             assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }.toSet(), turnAnswers(buildTranscript(events), c["running"]?.jsonPrimitive?.boolean == true))
+        }
+    }
+
+    @Test fun rewindRepliesCases() {
+        for (c in cases("rewind-replies")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            assertEquals(c.str("name"), c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.content }, rewindReplies(buildTranscript(events)).mapValues { it.value.id })
         }
     }
 
@@ -1193,6 +1204,17 @@ class SharedCasesTest {
 
     @Test fun meetingAskText() {
         for (c in cases("meeting-ask")) assertEquals(c.str("name"), c.str("expected"), meetingAsk(copyMeeting(c), copyActions(c), c.getValue("now").jsonPrimitive.long))
+    }
+
+    @Test fun personCopy() {
+        for (c in cases("person-copy")) {
+            fun meeting(o: JsonElement) = Row("meetings", "m", "work", f = o.jsonObject)
+            fun rows(k: String) = c.getValue(k).jsonArray.map { Row("items", "i", "work", f = it.jsonObject) }
+            val commitments = c.getValue("commitments").jsonArray.map { Commitment(meeting(it.jsonObject.getValue("meeting")), it.jsonObject.str("what")) }
+            val questions = c.getValue("questions").jsonArray.map { Question(it.jsonPrimitive.content, meeting(JsonObject(emptyMap())), 0, "work") }
+            val md = personMarkdown(c.str("person"), commitments, questions, rows("tasks"), rows("points"), rows("pins"), c.getValue("meetings").jsonArray.map(::meeting), rows("claims"))
+            assertEquals(c.str("name"), c.str("expected"), md)
+        }
     }
 
     @Test fun actionDraft() {

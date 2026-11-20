@@ -135,7 +135,8 @@ meeting with them after it was raised and counts as raised once that meeting end
 A person page starts with what waits outside meetings: the first line of their Slack DM summary (full text on hover) with Open in Slack,
 one "Waiting on you" list of what they asked you and what you promised them in Slack or Gmail (each item once, so two asks from one message both show, each a row with its source and age, a Needs you badge when suggested, a Done button and a More menu with Open and the Slack or Gmail source), and your sent mail to them with no reply, then their open tasks (rows like the Tasks list with a Done check and a More menu, all included when the page is copied as Markdown). Waiting on you, open tasks and meetings each show their first 5 rows and a "Show all N" button, folded again on reload or for another person. Below come their
 commitments (hidden when there are none), the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
-wiki claims that name them. A section shows its count whenever it has rows.
+wiki claims that name them; a claim opens its wiki page, or Memory, at the claim. A section shows its count whenever it has rows.
+The header has a back arrow and Copy as Markdown (on the phone at the end of the title row), which shows "<First name> copied".
 
 A meeting list row is the title, one meta line (time, then the room, then N people; a transcript hit replaces it while searching), at most one state badge (Live while it runs) and a More menu on hover, focus or always on the phone with Open calendar and Notes (opens the meeting page with the notes field in edit mode); the same row serves Overview, Tomorrow and person pages. On the phone an open action swipes right for Done and left to Not mine, with Undo. Rows carry no recording length, repeat icon or topic chips. The calendar syncs on open, on its interval, on pull-to-refresh on the phone and from a small sync icon next to the title on desktop. An action row (meeting page, Series page, Overview Review, Just ended, Needs you asks) is a title and one meta line (due date as text, the assignee's first name, the reason clamped to 2 lines), at most one quiet badge (Needs you, Overdue, Done) and two visible actions: one button for its status (Done, Mine, Take it, Restore, Not done) and a kebab. The kebab lists Assign (open meeting actions; Me and the attendees; an action assigned to someone else leaves the "N of M" counts of the page and the list), Snooze, Edit (opens the task page), New Linear issue (open meeting actions), Copy as message and Delete with Undo; rows without a meeting get Open source and Copy draft instead of the meeting items.
 
@@ -330,9 +331,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
 - "Continue in terminal" in the Copy pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone Tools sheet has the same Continue in terminal, copying to the clipboard
-- A prompt that changed files has a Rewind files link: on the web under the turn's last reply, on the
-  phone under the prompt, while Claude is idle. It puts the files back to how they were before that prompt (later turns' edits go
-  too); the conversation itself stays
+- A prompt that changed files has a Rewind files button under the turn's last reply, beside Copy, on web and phone, while the
+  agent is idle. It puts the files back to how they were before that prompt (later turns' edits go too); the conversation itself
+  stays. Its confirm names the chat's provider and the prompt's first line
 
 ## Review findings
 

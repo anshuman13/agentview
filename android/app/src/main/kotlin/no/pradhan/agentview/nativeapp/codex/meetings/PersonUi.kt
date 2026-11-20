@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex.meetings
 
 import no.pradhan.agentview.nativeapp.ui.UNTITLED
+import androidx.compose.foundation.layout.Row as LRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,7 +17,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import no.pradhan.agentview.nativeapp.codex.AddPoint
 import no.pradhan.agentview.nativeapp.codex.CodexOps
 import no.pradhan.agentview.nativeapp.codex.CodexState
@@ -43,6 +47,7 @@ import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
@@ -60,6 +65,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
     val tasks = remember(st.items, name) { st.items.filter { !it.deleted && it.status == "open" && matchesWords(listOf(name.lowercase()), it.title, it.text, it.people) } }
     val titles = remember(st.pages) { st.pages.associate { it.id to it.title } }
     var all by rememberSaveable(name) { mutableStateOf(false) }
+    var allTasks by rememberSaveable(name, "tasks") { mutableStateOf(false) }
     var allCommitments by rememberSaveable(name, "commitments") { mutableStateOf(false) }
     var allClaims by rememberSaveable(name, "claims") { mutableStateOf(false) }
     var adding by rememberSaveable(name, "adding") { mutableStateOf(false) }
@@ -69,12 +75,22 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
     val questions = remember(mine, resolved, now / 60_000) { visibleQuestions(openQuestions(mine, now), resolved) }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
-            Text(shown, Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)
+            val clip = LocalClipboardManager.current
+            LRow(Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+                Text(shown, Modifier.weight(1f), style = Type.title)
+                IconBtn("copy", "Copy as Markdown", {
+                    clip.setText(AnnotatedString(personMarkdown(name, commitments, questions, tasks, points, pins, mine, claims)))
+                    hub.notice.value = "${firstName(shown)} copied"
+                })
+            }
             Text(listOfNotNull(email, plural(mine.size, "meeting")).joinToString(" · "), Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted)
         }
         if (tasks.isNotEmpty()) {
             item { SectionHeader("Open tasks", tasks.size.toString()) }
-            item { Group { tasks.take(5).forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title ?: UNTITLED, dueText(r, now), onClick = { onTask(r) }) } } }
+            item {
+                Group { (if (allTasks) tasks else tasks.take(5)).forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title ?: UNTITLED, dueText(r, now), onClick = { onTask(r) }) } }
+                if (!allTasks && tasks.size > 5) Button("Show all ${tasks.size}", { allTasks = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            }
         }
         if (commitments.isNotEmpty()) {
             item { SectionHeader("Commitments", commitments.size.toString()) }
@@ -113,8 +129,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
                 Group {
                     (if (allClaims) claims else claims.take(5)).forEachIndexed { i, f ->
                         if (i > 0) Hairline()
-                        val pid = f.str("page_id")
-                        ListRow(f.str("text") ?: "", pid?.let { titles[it] }, onClick = pid?.let { { onClaim(f) } })
+                        ListRow(f.str("text") ?: "", f.str("page_id")?.let { titles[it] }, onClick = { onClaim(f) })
                     }
                 }
                 if (!allClaims && claims.size > 5) Button("Show all ${claims.size}", { allClaims = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)

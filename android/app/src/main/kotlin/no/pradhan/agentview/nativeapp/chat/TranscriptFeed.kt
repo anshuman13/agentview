@@ -26,7 +26,7 @@ class ChatView(
     val cost: Double,
     val images: List<String>,
     val changed: List<String>, // one path per edit, so a later edit of a reverted file shows again
-    val rewinds: Set<String>,
+    val rewinds: Map<String, Item.User>, // rewindReplies(items)
     val runs: Map<String, List<Item.Step>>,
     val days: Map<String, String>,
     val dayOf: Map<String, String>,
@@ -62,7 +62,7 @@ fun buildView(chat: String, events: List<ChatEvent>, now: Long, prev: ChatView?)
     return ChatView(
         chat, events, items, buildAgents(events, items), chatCost(events), chatImages(events),
         items.filterIsInstance<Item.File>().filter { it.error == null }.map { it.path },
-        rewindable(items), exploreRuns(items), days, dayOfRows(items, days),
+        rewindReplies(items), exploreRuns(items), days, dayOfRows(items, days),
         events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), specCardIds(items) + docCardIds(items), specBumps(items),
         foldTurns(items, events), answers, openAnswerOf(items, answers), items.count { it is Item.Assistant },
     )

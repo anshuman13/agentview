@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { agendaMarkdown, decisionsMarkdown, followUpText, hasContent, personMarkdown, toMarkdown } from './meetingMarkdown';
+import { agendaMarkdown, decisionsMarkdown, followUpText, hasContent, toMarkdown } from './meetingMarkdown';
 import type { ItemRow } from '../sync';
 import type { Decision, Meeting } from '../wiki/wiki';
-import type { Question } from './meetings';
 
 const meeting = (over: Partial<Meeting> = {}) =>
   ({ id: 'm1', profile: 'work', title: 'Planning', starts_at: Date.UTC(2026, 9, 29, 10), people: JSON.stringify(['Ada Lovelace', 'Grace Hopper']), summary: 'We planned the quarter.', decisions: JSON.stringify(['Ship in November']), others: JSON.stringify([{ who: 'Grace Hopper', what: 'draft the spec' }]), ...over }) as unknown as Meeting;
@@ -61,21 +60,6 @@ describe('decisionsMarkdown', () => {
     const m = meeting();
     const rows = [{ meeting: m, text: 'Ship in November' }, { meeting: m, text: 'Hire one more' }, { meeting: other, text: 'Skip the demo' }] as Decision[];
     expect(decisionsMarkdown(rows)).toBe('## Planning, 2026-10-29\n\n- Ship in November\n- Hire one more\n\n## Retro, 2026-10-20\n\n- Skip the demo\n');
-  });
-});
-
-describe('personMarkdown', () => {
-  it('writes only the sections that have rows, in page order', () => {
-    const m = meeting();
-    const md = personMarkdown('Ada Lovelace', {
-      commitments: [{ what: 'draft the spec', meeting: m }],
-      questions: [{ text: 'Who owns billing?' } as Question],
-      points: [action('Ask about the offsite', 'point')],
-      pins: [],
-      meetings: [m],
-      claims: [],
-    });
-    expect(md).toBe('# Ada Lovelace\n\n## Commitments\n\n- draft the spec (Planning)\n\n## Open questions\n\n- Who owns billing?\n\n## To raise\n\n- Ask about the offsite\n\n## Meetings\n\n- Planning (2026-10-29)\n');
   });
 });
 

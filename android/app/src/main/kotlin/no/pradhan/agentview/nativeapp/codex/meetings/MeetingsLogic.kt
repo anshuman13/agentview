@@ -321,6 +321,22 @@ fun meetingMarkdown(m: Row, actions: List<Row>): String {
     return out.joinToString("\n\n") + "\n"
 }
 
+// Mirrors personMarkdown of web/src/codex/data/meetings/meetingMarkdown.ts; shared/fixtures/person-copy.json holds the texts.
+fun personMarkdown(name: String, commitments: List<Commitment>, questions: List<Question>, tasks: List<Row>, points: List<Row>, pins: List<Row>, meetings: List<Row>, claims: List<Row>): String {
+    val sections = listOf(
+        "Commitments" to commitments.map { "${it.what} (${it.meeting.title ?: "Meeting"})" },
+        "Open questions" to questions.map { it.text },
+        "Open tasks" to tasks.map { it.title ?: "" },
+        "To raise" to points.map { it.title ?: "" },
+        "Pinned" to pins.map { it.text?.trim()?.ifEmpty { null } ?: it.title ?: "" },
+        "Meetings" to meetings.map { m -> "${m.title ?: "Meeting"}${m.startsAt?.let { " (${ymd(it)})" } ?: ""}" },
+        "In the wiki" to claims.map { it.text ?: "" },
+    )
+    val out = mutableListOf("# $name")
+    for ((head, lines) in sections) if (lines.isNotEmpty()) out.add("## $head\n\n${lines.joinToString("\n") { "- $it" }}")
+    return out.joinToString("\n\n") + "\n"
+}
+
 class ActionMenu(val notMine: Boolean, val assign: Boolean, val snooze: Boolean)
 
 // Which menu items a meeting action shows for its status (shared/actionMenu.ts, checked by shared/fixtures/action-menu.json). Delete shows for every status.

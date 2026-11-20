@@ -33,7 +33,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { buildTranscript, openAtNew, turnAnswers, type Item } from './chat/transcript/steps';
+import { buildTranscript, openAtNew, rewindReplies, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
@@ -66,8 +66,8 @@ import { heldUntil, jobEdits, newJob, tasksOf } from './codex/jobs/schedule';
 import { WEEKLY_DIGEST } from './codex/data/tasks/presets';
 import { sourceLink } from './codex/tasks/taskSource';
 import type { ItemRow } from './codex/data/sync';
-import { agendaMarkdown, draftFor, followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
-import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
+import { agendaMarkdown, draftFor, followUpText, hasContent, personMarkdown, toMarkdown } from './codex/data/meetings/meetingMarkdown';
+import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip, type Question } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
 import { similarClaim } from '../../shared/claimMatch';
@@ -460,6 +460,20 @@ describe('cases shared with the Android app', () => {
     it(`meetingAsk: ${c.name}`, () => expect(meetingAsk({ id: 'm', profile: 'work', ...c.meeting } as unknown as Meeting, c.actions as unknown as ItemRow[], c.now)).toBe(c.expected));
   }
 
+  type PersonCopyCase = { name: string; person: string; commitments: { what: string; meeting: Record<string, unknown> }[]; questions: string[]; tasks: object[]; points: object[]; pins: object[]; meetings: Record<string, unknown>[]; claims: { text: string }[]; expected: string };
+  for (const c of cases<PersonCopyCase>('person-copy')) {
+    it(`personMarkdown: ${c.name}`, () => {
+      const meeting = (m: Record<string, unknown>) => ({ id: 'm', profile: 'work', ...m }) as unknown as Meeting;
+      const rows = (r: object[]) => r as unknown as ItemRow[];
+      expect(personMarkdown(c.person, {
+        commitments: c.commitments.map((x) => ({ what: x.what, meeting: meeting(x.meeting) })),
+        questions: c.questions.map((text) => ({ text }) as Question),
+        tasks: rows(c.tasks), points: rows(c.points), pins: rows(c.pins),
+        meetings: c.meetings.map(meeting), claims: c.claims,
+      })).toBe(c.expected);
+    });
+  }
+
   for (const c of cases<{ name: string; meeting: Record<string, unknown>; action: Record<string, unknown>; expected: string }>('action-draft')) {
     it(`draftFor: ${c.name}`, () => expect(draftFor(c.action as unknown as ItemRow, c.meeting as unknown as Meeting)).toBe(c.expected));
   }
@@ -636,6 +650,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; events: ChatEvent[]; running?: boolean; expected: string[] }>('turn-answers')) {
     it(`turnAnswers: ${c.name}`, () => expect([...turnAnswers(buildTranscript(c.events), c.running)]).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; events: ChatEvent[]; expected: Record<string, string> }>('rewind-replies')) {
+    it(`rewindReplies: ${c.name}`, () => expect(Object.fromEntries([...rewindReplies(buildTranscript(c.events))].map(([reply, r]) => [reply, r.id]))).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; server: Record<string, number>; marks: SeenMark[]; startedAt: number; expected: Record<string, number> }>('merge-seen')) {

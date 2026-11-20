@@ -277,14 +277,19 @@ fun dayOfRows(items: List<Item>, days: Map<String, String>): Map<String, String>
     return out
 }
 
-// Prompts whose turn changed files, which the server can put back from its checkpoint.
-fun rewindable(items: List<Item>): Set<String> {
-    val out = HashSet<String>()
-    var prompt: String? = null
+// The last reply of each prompt that changed files, with the prompt a rewind goes back to (web steps.ts rewindReplies).
+fun rewindReplies(items: List<Item>): Map<String, Item.User> {
+    val out = HashMap<String, Item.User>()
+    var prompt: Item.User? = null
+    var reply: String? = null
+    var changed = false
+    fun flush() { val p = prompt; val r = reply; if (p != null && r != null && changed) out[r] = p }
     for (it in items) when {
-        it is Item.User -> prompt = it.id
-        it is Item.File && it.error == null && !it.denied -> prompt?.let { p -> out.add(p) }
+        it is Item.User -> { flush(); prompt = it; reply = null; changed = false }
+        it is Item.Assistant -> reply = it.id
+        it is Item.File && it.error == null && !it.denied -> changed = true
     }
+    flush()
     return out
 }
 

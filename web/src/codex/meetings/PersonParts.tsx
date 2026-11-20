@@ -11,6 +11,7 @@ import { ago, safeHref } from '../../ui/util';
 import type { ItemRow } from '../data/sync';
 import type { commitmentsOf } from '../data/meetings/meetings';
 import type { Fact } from '../data/wiki/wiki';
+import { MEMORY } from '../wiki/shared';
 import type { personInbox } from '../data/tasks/review';
 import { UNTITLED } from '../../../../shared/util';
 
@@ -125,7 +126,7 @@ export function WikiClaims({ name, claims, pageTitle }: { name: string; claims: 
     <section className="mt-sec">
       <Section label="In the wiki" count={sectionCount(claims.length)} />
       <Group rows={claims} name={name} row={(f) => (
-        <Row key={f.id} title={f.text} meta={f.page_id ? pageTitle.get(f.page_id) : undefined} plain={!f.page_id} onClick={f.page_id ? () => setView({ person: null, list: 'wiki', open: f.page_id, anchor: null }) : undefined} />
+        <Row key={f.id} title={f.text} meta={f.page_id ? pageTitle.get(f.page_id) : undefined} onClick={() => setView({ person: null, list: 'wiki', open: f.page_id ?? MEMORY, anchor: f.id })} />
       )} />
     </section>
   );
