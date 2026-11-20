@@ -122,11 +122,11 @@ function remember(profile: Profile, mac: string, chat: string, sessionId: string
   }, 1000);
 }
 
-export function wikiAskText(question: string, pages: Page[], facts: Fact[], pageId?: string) {
+export function wikiAskText(question: string, pages: Page[], facts: Fact[], pageId?: string, now = Date.now()) {
   const title = new Map(pages.map((p) => [p.id, p.title ?? '']));
   const current = currentClaim(facts);
   const claims = live(facts)
-    .filter((f) => current(f) && !isOld(f) && (!pageId || f.page_id === pageId))
+    .filter((f) => current(f) && !isOld(f, now) &&(!pageId || f.page_id === pageId))
     .sort((a, b) => factTime(b) - factTime(a))
     .slice(0, 200)
     .map((f) => `- [${title.get(f.page_id ?? '') || 'Memory'}]${f.at ? ` ${new Date(f.at).toISOString().slice(0, 10)}:` : ''} ${f.text}${sourcesOf(f).length ? ` (${sourcesOf(f).map((s) => s.label).join(', ')})` : ''}${f.contested ? ' (contested)' : ''}`);

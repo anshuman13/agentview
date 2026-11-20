@@ -178,6 +178,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.isOld
 import no.pradhan.agentview.nativeapp.codex.wiki.memoryClaim
 import no.pradhan.agentview.nativeapp.codex.wiki.pageClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.staleFacts
+import no.pradhan.agentview.nativeapp.codex.wiki.wikiAskText
 import no.pradhan.agentview.nativeapp.codex.wiki.wikiMarkdown
 import kotlinx.serialization.json.buildJsonArray
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewGroups
@@ -1101,6 +1102,22 @@ class SharedCasesTest {
             val groups = pageClaims(facts, "p", c.getValue("now").jsonPrimitive.long)
             assertEquals(c.str("name"), c.str("markdown"), wikiMarkdown(c.nullable("title")?.jsonPrimitive?.content, groups))
             assertEquals(c.str("name"), c.getValue("hasLive").jsonPrimitive.boolean, hasLiveClaims(groups))
+        }
+    }
+
+    @Test fun wikiAskText() {
+        val c = Json.parseToJsonElement(File("../../shared/fixtures/wiki-ask.json").readText()).jsonObject
+        val pages = c.getValue("pages").jsonArray.map { it.jsonObject }.map { Row("pages", it.str("id"), "work", f = mapOf("title" to it.getValue("title"))) }
+        val facts = c.getValue("facts").jsonArray.map { it.jsonObject }.map { o ->
+            val sources = buildJsonArray { o.getValue("sources").jsonArray.forEach { s -> add(buildJsonObject { put("kind", "doc"); put("label", s.jsonPrimitive.content) }) } }.toString()
+            val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+            listOf("text", "page_id", "at", "state", "contested").forEach { f[it] = o.getValue(it) }
+            f["sources"] = toJson(sources)
+            Row("facts", o.str("id"), "work", updatedAt = o.getValue("updated_at").jsonPrimitive.long, f = f)
+        }
+        val now = c.getValue("now").jsonPrimitive.long
+        for (x in c.getValue("cases").jsonArray.map { it.jsonObject }) {
+            assertEquals(x.str("name"), x.str("expected"), wikiAskText(x.str("question"), pages, facts, x.nullable("pageId")?.jsonPrimitive?.content, now))
         }
     }
 

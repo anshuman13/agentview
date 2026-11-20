@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.wiki
 
+import java.time.Instant
 import java.util.UUID
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -240,6 +241,29 @@ fun wikiMarkdown(title: String?, groups: List<ClaimGroup>): String {
         out.add("## ${g.heading}\n\n${lines.joinToString("\n")}")
     }
     return out.joinToString("\n\n") + "\n"
+}
+
+// The prompt Ask on a wiki page sends: web/src/codex/data/ask/ask.ts wikiAskText, checked by shared/fixtures/wiki-ask.json.
+fun wikiAskText(question: String, pages: List<Row>, facts: List<Row>, pageId: String?, now: Long): String {
+    val title = pages.associate { it.id to (it.str("title") ?: "") }
+    val current = currentClaims(facts)
+    val claims = liveRows(facts)
+        .filter { current(it) && !isOld(it, now) && (pageId.isNullOrEmpty() || it.str("page_id") == pageId) }
+        .sortedByDescending { factTime(it) }
+        .take(200)
+        .map { f ->
+            val at = f.long("at")?.takeIf { it != 0L }?.let { " ${Instant.ofEpochMilli(it).toString().take(10)}:" } ?: ""
+            val labels = sourcesOf(f).map { it.label }
+            "- [${title[f.str("page_id") ?: ""]?.ifEmpty { null } ?: "Memory"}]$at ${f.str("text") ?: ""}" +
+                (if (labels.isNotEmpty()) " (${labels.joinToString(", ")})" else "") +
+                if (f.str("contested").isNullOrEmpty()) "" else " (contested)"
+        }
+    val heading = if (pageId.isNullOrEmpty()) "Claims in my team wiki" else "Claims on the wiki page \"${title[pageId]}\""
+    return listOf(
+        question,
+        "\n$heading:\n${claims.joinToString("\n")}",
+        "\nAnswer from these claims first and name the claims you used; use my Slack, Linear and Calendar connectors when they are not enough.",
+    ).joinToString("\n")
 }
 
 class ClaimSpot(val index: Int, val openOlder: Boolean)

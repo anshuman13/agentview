@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.codex.CodexOps
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
@@ -61,6 +63,8 @@ fun ExtraContent(
     val wikiRoute = route.substringBefore('#')
     val anchor = route.substringAfter('#', "").ifEmpty { null }
     val openMeeting = { m: Row -> push("meeting:${m.key}") }
+    val scope = rememberCoroutineScope()
+    val openChat: (String) -> Unit = { id -> scope.launch { if (hub.openSaved(id)) hub.link.value = DeepLink(view = "agents") } }
     when {
         route == "meetings" -> MeetingsListPage(hub, st, profile, now, chips, decisions, onChip, { push("meeting:${it.key}#notes") }, openMeeting)
         route.startsWith("meeting:") -> {
@@ -72,11 +76,12 @@ fun ExtraContent(
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
         route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { f -> push(claimRoute(f)) }, onTask) { push("meeting:${it.key}#notes") }
         route == "wiki" -> WikiIndexPage(st, profile, now, actions, ops.review, hub.readOnly, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") })
-        wikiRoute == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop, anchor,
+        wikiRoute == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop, openChat, anchor,
             if (hub.readOnly) null else ({ text -> hub.rememberInMemory(text, proposalProfile(null, profile)) }))
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
-            if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop, anchor)
+            if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop, openChat, anchor,
+                onAsk = if (hub.readOnly) null else ({ text -> hub.askCodex(text, p.profile) }))
         }
         route == "jobs" -> JobsListPage(hub, st, profile, now, actions, { push("autopilot") }, { push("jobnew:${it.key}") }) { push("job:${it.key}") }
         else -> {

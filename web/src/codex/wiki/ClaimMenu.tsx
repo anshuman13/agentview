@@ -6,6 +6,7 @@ import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { safeHref } from '../../ui/util';
 import { openMeeting, openTask } from '../view';
+import { showChat } from '../../sessions/goalLogic';
 import { KIND } from './Chips';
 import { SOURCE_ICON, shortDate, type ClaimMenuItem } from './shared';
 
@@ -48,7 +49,7 @@ export function ClaimMenu({ fact, items, actions, open, setOpen, mentions, stale
             </MenuItem>
           ))}
           {chat && <MenuSeparator />}
-          {chat && <MenuItem icon="sparkle" href={`/?session=${encodeURIComponent(chat)}`} onClick={() => setOpen(false)}>Open chat</MenuItem>}
+          {chat && <MenuItem icon="sparkle" onClick={pick(() => showChat({ sessionId: chat }))}>Open chat</MenuItem>}
           {fact.at != null && <MenuSeparator />}
           {fact.at != null && <MenuItem icon="history" disabled>{stale ? 'Still true? ' : ''}Updated {shortDate(fact.at)}</MenuItem>}
           {items.slice(-1).map((i) => menuItem[i])}
