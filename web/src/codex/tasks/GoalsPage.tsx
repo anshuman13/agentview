@@ -9,7 +9,8 @@ import { GoalField, useAddGoal } from './Goals';
 import { useMinute } from './split';
 import { LISTS } from '../nav';
 import { dueText } from './Task';
-import { IconButton } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
+import { AddSheet } from './AddSheet';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
@@ -19,9 +20,9 @@ import { Skeleton } from '../../ui/Skeleton';
 const BLOCK_TEXT = { full: `This week is full (${MAX_GOALS} goals)`, same: 'Already this week' };
 const MOVE_TEXT = { full: `Next week is full (${MAX_GOALS} goals)`, same: 'Already a goal next week with this title' };
 
-type Actions = { reopen: (g: ItemRow) => void; move: (g: ItemRow) => void; rename: (g: ItemRow, title: string) => Promise<void>; remove: (g: ItemRow) => void };
+type Actions = { reopen: (g: ItemRow) => void; move: (g: ItemRow) => void; rename: (g: ItemRow, title: string) => Promise<void>; remove: (g: ItemRow) => void; addTask: (g: ItemRow) => void };
 
-function GoalGroup({ goal, items, showProfile, now, reopen, move, rename, remove }: { goal: ItemRow; items: ItemRow[]; showProfile: boolean; now: number } & Actions) {
+function GoalGroup({ goal, items, showProfile, now, reopen, move, rename, remove, addTask }:{ goal: ItemRow; items: ItemRow[]; showProfile: boolean; now: number } & Actions) {
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
@@ -49,6 +50,7 @@ function GoalGroup({ goal, items, showProfile, now, reopen, move, rename, remove
       <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={btn} onClose={() => setMenu(false)}>
+          {!past && <MenuItem icon="add" onClick={() => { setMenu(false); addTask(goal); }}>Add task</MenuItem>}
           <MenuItem icon="edit" onClick={() => { setMenu(false); cancelled.current = false; setEditing(true); }}>Rename</MenuItem>
           {start === thisWeek && <MenuItem icon="arrow-right" disabled={!!block} onClick={() => { setMenu(false); move(goal); }}>{block ? MOVE_TEXT[block] : 'Move to next week'}</MenuItem>}
           {past && <MenuItem icon="discard" disabled={!!block} onClick={() => { setMenu(false); reopen(goal); }}>{block ? BLOCK_TEXT[block] : 'Reopen this week'}</MenuItem>}
@@ -61,7 +63,7 @@ function GoalGroup({ goal, items, showProfile, now, reopen, move, rename, remove
   return (
     <div className="gl-group">
       <Section label={label} count={count} action={action} />
-      {tasks.length ? tasks.map((t) => <Row key={t.id} title={t.title} meta={t.status === 'done' ? 'Done' : dueText(t, now)} onClick={() => openTask(t)} />) : <EmptyState size="sm" icon="target" title="No tasks yet" hint="Tasks linked to this goal show here" />}
+      {tasks.length ? tasks.map((t) => <Row key={t.id} title={t.title} meta={t.status === 'done' ? 'Done' : dueText(t, now)} onClick={() => openTask(t)} />) : <EmptyState size="sm" icon="target" title="No tasks yet" hint="Tasks linked to this goal show here" action={!past && <Button size="sm" variant="tinted" icon="add" onClick={() => addTask(goal)}>Add task</Button>} />}
     </div>
   );
 }
@@ -74,6 +76,7 @@ export function GoalsPage() {
   const now = useMinute();
   const weeks = useMemo(() => goalHistory(items, now, filter === 'all' ? undefined : filter), [items, now, filter]);
   const busy = useRef(false);
+  const [adding, setAdding] = useState<string | null>(null);
   const add = useAddGoal(now);
   useEscapeBack(leaveOverlay);
   const reopen = async (g: ItemRow) => {
@@ -116,7 +119,7 @@ export function GoalsPage() {
                 <section key={w.start}>
                   <Section label={w.label} />
                   <div className="ui-group">
-                    {w.goals.map((g) => <GoalGroup key={g.profile + g.id} goal={g} items={items} showProfile={filter === 'all'} now={now} reopen={reopen} move={move} rename={rename} remove={remove} />)}
+                    {w.goals.map((g) => <GoalGroup key={g.profile + g.id} goal={g} items={items} showProfile={filter === 'all'} now={now} reopen={reopen} move={move} rename={rename} remove={remove} addTask={(g) => setAdding(g.id)} />)}
                   </div>
                 </section>
               ))}
@@ -124,6 +127,7 @@ export function GoalsPage() {
           )}
         </div>
       </div>
+      {adding && <AddSheet filter={filter} goal={adding} onClose={() => setAdding(null)} />}
     </div>
   );
 }

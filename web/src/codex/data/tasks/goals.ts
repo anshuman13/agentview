@@ -17,7 +17,14 @@ export function goalsOf(items: ItemRow[], now: number, profile?: Profile) {
     .sort((a, b) => madeAt(a) - madeAt(b));
 }
 
-const linkedTo = (items: ItemRow[], goal: ItemRow) =>
+// The goal with this id when it is live and in this week or next, else null: the goals a new task can be added to.
+export function goalToLink(items: ItemRow[], id: string | null | undefined, now: number) {
+  const d = new Date(weekStart(now));
+  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7).getTime();
+  return [...goalsOf(items, now), ...goalsOf(items, next)].find((g) => g.id === id) ?? null;
+}
+
+const linkedTo =(items: ItemRow[], goal: ItemRow) =>
   items.filter((r) => !r.deleted && r.profile === goal.profile && r.goal === goal.id && (r.status === 'open' || r.status === 'done'));
 
 export function goalProgress(items: ItemRow[], goal: ItemRow) {

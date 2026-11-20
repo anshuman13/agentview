@@ -1,0 +1,10 @@
+[
+  {"name":"tags, time and estimate","text":"#home write doc friday 10 30m","now":"2026-11-09T10:00:00Z","expected":{"title":"write doc ~30m","at":"2026-11-13T10:00:00Z","tags":["home"],"repeat":null}},
+  {"name":"repeat","text":"water plants every monday 9 #home","now":"2026-11-09T10:00:00Z","expected":{"title":"water plants","at":"2026-11-16T09:00:00Z","tags":["home"],"repeat":"Repeats: every monday 09:00"}},
+  {"name":"estimate after a date","text":"call Ann tomorrow 1h30m","now":"2026-11-09T10:00:00Z","expected":{"title":"call Ann ~1h30","at":"2026-11-10T09:00:00Z","tags":[],"repeat":null}},
+  {"name":"estimate only","text":"write doc 30m","now":"2026-11-09T10:00:00Z","expected":{"title":"write doc ~30m","at":null,"tags":[],"repeat":null}},
+  {"name":"two tags","text":"#a call mum #b tomorrow","now":"2026-11-09T10:00:00Z","expected":{"title":"call mum","at":"2026-11-10T09:00:00Z","tags":["a","b"],"repeat":null}},
+  {"name":"picked date wins","text":"call Ann tomorrow 30m","now":"2026-11-09T10:00:00Z","pickedAt":"2026-11-12T15:00:00Z","expected":{"title":"call Ann tomorrow ~30m","at":"2026-11-12T15:00:00Z","tags":[],"repeat":null}},
+  {"name":"picked no time ignores a repeat","text":"water plants every monday 9","now":"2026-11-09T10:00:00Z","pickedAt":null,"expected":{"title":"water plants every monday 9","at":null,"tags":[],"repeat":null}},
+  {"name":"plain title","text":"buy milk","now":"2026-11-09T10:00:00Z","expected":{"title":"buy milk","at":null,"tags":[],"repeat":null}}
+]

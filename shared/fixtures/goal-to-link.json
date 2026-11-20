@@ -1,0 +1,10 @@
+[
+  {"name":"this week","now":"2026-11-06T16:00:00Z","items":[{"id":"g1","status":"goal","at":"2026-11-02T00:00:00Z"}],"id":"g1","expected":"g1"},
+  {"name":"next week","now":"2026-11-06T16:00:00Z","items":[{"id":"g1","status":"goal","at":"2026-11-09T00:00:00Z"}],"id":"g1","expected":"g1"},
+  {"name":"last week","now":"2026-11-06T16:00:00Z","items":[{"id":"g1","status":"goal","at":"2026-10-26T00:00:00Z"}],"id":"g1","expected":null},
+  {"name":"two weeks ahead","now":"2026-11-06T16:00:00Z","items":[{"id":"g1","status":"goal","at":"2026-11-16T00:00:00Z"}],"id":"g1","expected":null},
+  {"name":"deleted","now":"2026-11-06T16:00:00Z","items":[{"id":"g1","status":"goal","at":"2026-11-02T00:00:00Z","deleted":true}],"id":"g1","expected":null},
+  {"name":"not a goal","now":"2026-11-06T16:00:00Z","items":[{"id":"g1","status":"open","at":"2026-11-02T00:00:00Z"}],"id":"g1","expected":null},
+  {"name":"missing id","now":"2026-11-06T16:00:00Z","items":[{"id":"g1","status":"goal","at":"2026-11-02T00:00:00Z"}],"id":"g2","expected":null},
+  {"name":"no id","now":"2026-11-06T16:00:00Z","items":[{"id":"g1","status":"goal","at":"2026-11-02T00:00:00Z"}],"id":null,"expected":null}
+]

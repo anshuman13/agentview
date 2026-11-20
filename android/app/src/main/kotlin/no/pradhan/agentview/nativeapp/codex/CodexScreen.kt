@@ -76,11 +76,12 @@ private const val SYNC_EVERY_MS = 30_000L
 private fun greeting(now: Long) = when (hourOf(now)) { in 0..4 -> "Good night"; in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; else -> "Good evening" } +
     ", " + java.time.format.DateTimeFormatter.ofPattern("EEE d", java.util.Locale.ENGLISH).format(Instant.ofEpochMilli(now).atZone(codexZone))
 
-private class CodexNav(private val pageS: MutableState<String>, private val routeS: MutableState<String>, private val editS: MutableState<String?>, private val addingS: MutableState<Boolean>, private val needsS: MutableState<Boolean>, private val chipS: MutableState<String>, private val decisionsS: MutableState<Boolean>, private val searchingS: MutableState<Boolean>, private val queryS: MutableState<String>, private val pickS: MutableState<Set<String>?>) {
+private class CodexNav(private val pageS: MutableState<String>, private val routeS: MutableState<String>, private val editS: MutableState<String?>, private val addingS: MutableState<Boolean>, private val addingGoalS: MutableState<String?>, private val needsS: MutableState<Boolean>, private val chipS: MutableState<String>, private val decisionsS: MutableState<Boolean>, private val searchingS: MutableState<Boolean>, private val queryS: MutableState<String>, private val pickS: MutableState<Set<String>?>) {
     var page by pageS
     var routeText by routeS
     var editKey by editS
     var adding by addingS
+    var addingGoal by addingGoalS
     var needsOpen by needsS
     var decisions by decisionsS
     var searching by searchingS
@@ -110,6 +111,7 @@ private fun rememberCodexNav() = CodexNav(
     rememberSaveable { mutableStateOf("") },
     rememberSaveable { mutableStateOf<String?>(null) },
     rememberSaveable { mutableStateOf(false) },
+    rememberSaveable { mutableStateOf<String?>(null) },
     rememberSaveable { mutableStateOf(false) },
     rememberSaveable { mutableStateOf("") },
     rememberSaveable { mutableStateOf(false) },
@@ -228,7 +230,7 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
         extra != null -> ExtraContent(extra, hub, st, profile, now, actions, ops, nav.chips, nav.decisions, nav::toggleChip, nav::push, nav::pop, { nav.pop(); openNeeds() }, nav::openRow)
         page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, openNeeds, { nav.page = "goals" }, { nav.adding = true }, meeting)
         page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" }, nav.picked, { nav.picked = it }, meeting)
-        page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, nav::openRow)
+        page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, nav::openRow) { nav.addingGoal = it.id; nav.adding = true }
         page == "search" -> SearchPage(st, profile, nav::openRow, meeting)
         else -> TagPage(st, page.removePrefix("tag:"), now, actions, profile == null, nav::openRow)
     }
@@ -252,7 +254,7 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
         val (here, choices) = newChatChoices(groupByRepo(live, ws), ws, sessionCwd)
         NewChatSheet(hub, null, choices, onDismiss = { chatText = null }, initial = here, text = text)
     }
-    if (nav.adding) AddSheet(hub, profile, now, { nav.adding = false }) { added ->
+    if (nav.adding) AddSheet(hub, profile, st.items, nav.addingGoal, now, { nav.adding = false; nav.addingGoal = null }) { added ->
         scope.launch { snack.currentSnackbarData?.dismiss(); snack.showSnackbar("Task · $added", duration = SnackbarDuration.Short) }
     }
     if (nav.needsOpen) {
