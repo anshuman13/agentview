@@ -94,6 +94,7 @@ function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
   const badge = now && flowBadge(now);
   const strip = useRef<HTMLDivElement>(null);
   const [more, setMore] = useState(false);
+  const [list, setList] = useState(false);
   const placed = useRef(false);
   // Once the strip overflows, scroll so the current step shows with half of the one before it; later polls leave it alone.
   const place = (el: HTMLDivElement) => {
@@ -122,9 +123,18 @@ function SpecBody({ d, sheets }: { d: BuildDetail; sheets: BuildSheetState }) {
   useEffect(measure, [d]);
   const total = buildTotals(d.entries, Date.now());
   const totalLine = total.runs === 0 ? '' : [`${total.runs} agent run${total.runs === 1 ? '' : 's'}`, duration(total.ms), total.tokens > 0 && `${total.partial ? '~' : ''}${tokens(total.tokens)}`].filter(Boolean).join(' · ');
+  const cur = currentStep(d.flow) ?? d.flow[0];
+  const curBadge = cur && flowBadge(cur);
   return (
     <>
-      <div ref={strip} className={`bd-steps${more ? ' more' : ''}`} onScroll={measure}>
+      {cur && (
+        <button className="bd-compact" aria-expanded={list} onClick={() => setList(!list)}>
+          <span className="bd-compact-text">Step {d.flow.indexOf(cur) + 1} of {d.flow.length}: {FLOW_LABEL[cur.key]}</span>
+          {curBadge && <Badge {...curBadge} />}
+          <Icon name={list ? 'chevron-down' : 'chevron-right'} small />
+        </button>
+      )}
+      <div ref={strip} className={`bd-steps${more ? ' more' : ''}${list ? ' list' : ''}`} onScroll={measure}>
         {d.flow.map((f) => {
           const sheet = sheetOf(f);
           return (
