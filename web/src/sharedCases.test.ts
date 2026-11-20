@@ -50,6 +50,7 @@ import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEv
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
 import { similarClaim } from '../../shared/claimMatch';
+import { editedClaimText } from '../../shared/claimEdit';
 import { isLate } from '../../shared/waiting';
 import { goalAtRisk } from './codex/data/tasks/goals';
 import { weekFreeMinutes, type Span } from './codex/data/tasks/plan';
@@ -200,6 +201,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; text: string; claims: { id: string; text: string }[]; expected: string | null }>('similar-claim')) {
     it(`similarClaim: ${c.name}`, () => expect(similarClaim(c.text, c.claims)?.id ?? null).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; old: string | null; next: string; expected: string | null }>('claim-edit')) {
+    it(`editedClaimText: ${c.name}`, () => expect(editedClaimText(c.old, c.next)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; since: number[]; now: number[]; expected: boolean }>('late-promise')) {

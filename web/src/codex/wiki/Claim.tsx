@@ -24,9 +24,8 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
   const sources = sourcesOf(fact);
   const startEdit = () => { setDraft(fact.text ?? ''); setEditing(true); };
   const save = () => {
-    const next = draft.trim();
     setEditing(false);
-    if (next && next !== fact.text) edits.save(next);
+    edits.save(draft);
   };
   const contest = () => {
     edits.contest(note);

@@ -140,7 +140,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
 }
 
 @Composable
-private fun ClaimTextSheet(title: String, initial: String, save: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+internal fun ClaimTextSheet(title: String, initial: String, save: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
     var text by remember { mutableStateOf(initial) }
     Sheet(onDismiss, title, full = false) {
         TextField(text, { text = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is true?", minLines = 2)

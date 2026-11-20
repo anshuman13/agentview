@@ -98,12 +98,15 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
     val page = fact.str("page_id")?.let { id -> st.pages.firstOrNull { it.id == id && it.profile == fact.profile } }
     val old = fact.str("replaces")?.let { id -> st.facts.firstOrNull { it.id == id && it.profile == fact.profile } }
     val similar = remember(fact, st.facts) { similarLive(fact, st.facts) }
+    var editing by remember(fact.key) { mutableStateOf(false) }
+    if (editing) ClaimTextSheet("Edit claim", fact.str("text") ?: "", "Save", { editing = false }) { ops.edit(fact, it) }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
         Text("${total - left + 1} of $total", Modifier.padding(horizontal = Tokens.listPad), style = Type.label, color = av.fgMuted)
         Group {
             Column(Modifier.padding(Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
                 Text(listOfNotNull(page?.title, if (page?.str("state") == "proposed") "(new page)" else null, fact.str("heading")?.ifEmpty { null }).joinToString(" · ").ifEmpty { "Memory" }, style = Type.callout, color = av.fgMuted)
                 Text(fact.str("text") ?: "", style = Type.body, color = av.fg)
+                Button("Edit", { editing = true }, size = ButtonSize.Sm, icon = "edit")
                 if (old != null) OldClaim(old, "Replaces", true, fact.key)
                 if (similar != null) OldClaim(similar, "Similar to", false, fact.key)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4), itemVerticalAlignment = Alignment.CenterVertically) {

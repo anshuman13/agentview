@@ -25,7 +25,8 @@ export function Replaces({ old, similar }: { old: Fact; similar?: boolean }) {
 }
 
 function ReviewCard({ fact, repeated, similar }: { fact: Fact; repeated: boolean; similar?: Fact }) {
-  const { store, pages, facts, meetings } = useCodex();
+  const { pages, facts, meetings } = useCodex();
+  const edits = useClaimEdits(fact, '');
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(fact.text ?? '');
   const page = fact.page_id ? pages.find((p) => p.id === fact.page_id && p.profile === fact.profile) : undefined;
@@ -54,7 +55,7 @@ function ReviewCard({ fact, repeated, similar }: { fact: Fact; repeated: boolean
     }
   };
   const save = () => {
-    void store.editRow('facts', fact, { text: text.trim() || fact.text });
+    edits.save(text);
     setEditing(false);
   };
   return (

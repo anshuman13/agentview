@@ -107,6 +107,7 @@ import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
+import no.pradhan.agentview.nativeapp.codex.wiki.editedClaimText
 import no.pradhan.agentview.nativeapp.codex.wiki.isOld
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 import no.pradhan.agentview.nativeapp.codex.wiki.similarClaim
@@ -611,6 +612,10 @@ class SharedCasesTest {
             val claims = c.getValue("claims").jsonArray.map { it.jsonObject.str("id") to it.jsonObject.str("text") }
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, similarClaim(c.str("text"), claims) { it.second }?.first)
         }
+    }
+
+    @Test fun claimEdit() {
+        for (c in cases("claim-edit")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, editedClaimText(c.nullable("old")?.jsonPrimitive?.content, c.str("next")))
     }
 
     @Test fun latePromise() {
