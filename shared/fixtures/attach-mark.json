@@ -1,0 +1,7 @@
+[
+  { "name": "png", "mime": "image/png", "path": "/tmp/a/shot.png", "expected": "[Image: /tmp/a/shot.png]" },
+  { "name": "jpeg", "mime": "image/jpeg", "path": "/tmp/a/photo.jpg", "expected": "[Image: /tmp/a/photo.jpg]" },
+  { "name": "pdf", "mime": "application/pdf", "path": "/tmp/a/report.pdf", "expected": "[File: /tmp/a/report.pdf]" },
+  { "name": "text", "mime": "text/plain", "path": "/tmp/a/app.log", "expected": "[File: /tmp/a/app.log]" },
+  { "name": "empty type", "mime": "", "path": "/tmp/a/data.csv", "expected": "[File: /tmp/a/data.csv]" }
+]

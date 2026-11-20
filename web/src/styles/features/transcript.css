@@ -5,6 +5,9 @@
   .tr-jump-text { display: none; }
   .tr-jump .badge { position: absolute; top: 0; right: 0; pointer-events: none; }
 }
+.tr-find { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-8); border-bottom: 1px solid var(--border); }
+.tr-find .jb-search { flex: 1 1 240px; max-width: 360px; }
+.find-hit { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius); }
 .tr { flex: 1 1 auto; min-height: 0; overflow: auto; padding: var(--sp-6) var(--sp-8) var(--sp-8); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--fg); }
 :is(.tr, .tr-rows) > * + * { margin-top: var(--sp-6); }
 :is(.tr, .tr-rows) > .tr-act + .tr-act { margin-top: 0; }

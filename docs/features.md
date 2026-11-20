@@ -281,6 +281,11 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   and leaves out subagent text; an untitled chat is headed "Chat". "Last reply" in the same pick (only when there is a reply) copies the
   latest top-level answer; the phone's chat menu has "Copy last reply" for the same. Each finished turn's last reply, when nothing follows it in
   the turn (`turnAnswers`), has its own Copy action on both clients: on hover on the web, under the reply on the phone
+- "Find in chat" (the web chat settings menu or Cmd/Ctrl+F; the phone chat menu) opens a bar that searches every loaded prompt and
+  top-level reply for all query words (`findInChat`, two characters or more), with "n of N", Previous and Next, and scrolls to the hit,
+  widening the web row window when the hit is outside it; "· loaded only" shows while earlier events are not loaded
+- The phone's + sheet has "Choose file" for any document type (kept under its display name, refused over 50 MB, the server's limit); an
+  upload is marked `[Image: path]` or `[File: path]` by its type (`attachMark`, used by the web and the phone composer)
 - The phone's Tools sheet starts with Saved prompts, the last 50 prompts sent from the phone in any chat (newest first, kept once, not saved
   in a read-only check); a tap puts the prompt in the composer
 - "Share chat" in the phone chat menu sends the same Markdown to the Android share sheet

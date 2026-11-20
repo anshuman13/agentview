@@ -182,7 +182,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     var multiline by remember(chatId) { mutableStateOf(false) }
     val trigger = commandTrigger(s.text.text, s.text.selection.end)
     val suggestions = rememberSuggestions(s, trigger, session)
-    val attach = rememberAttach(hub, { uploading += it }) { path -> s.replaceMarks(s.marks +"[Image: $path]") }
+    val attach = rememberAttach(hub, { uploading += it }) { mark -> s.replaceMarks(s.marks + mark) }
     var bar by remember(chatId) { mutableStateOf(barState(BarState(), if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled)) }
     val imeVisible = WindowInsets.isImeVisible
     LaunchedEffect(chatId) { hub.draftChanged.collect { if (it == chatId) s.reload() } }
@@ -322,6 +322,8 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
             ListRow("Photo", leading = icon("file-media"), onClick = { onSheet(null); attach.choosePhoto() })
             Hairline(lead = true)
             ListRow("Take photo", leading = icon("device-camera"), onClick = { onSheet(null); attach.takePhoto() })
+            Hairline(lead = true)
+            ListRow("Choose file", leading = icon("file"), onClick = { onSheet(null); attach.chooseFile() })
             Hairline(lead = true)
             ListRow("Chat settings", settings, leading = icon("settings-gear"), onClick = { onSheet(Picker.Settings) }, trailing = { Chevron() })
             if (session?.capabilities?.build == true) {

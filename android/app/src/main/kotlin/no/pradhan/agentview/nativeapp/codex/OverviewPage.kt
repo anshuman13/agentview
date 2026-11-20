@@ -85,7 +85,7 @@ fun AskBar(hub: Hub, st: CodexState, profile: String?) {
             recipes.forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title, onClick = { hub.setCodexDraft(r.text) }) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
-            AttachButton(hub, { n -> hub.codexUploads.update { it + n } }, choose = false) { path -> hub.setCodexDraft(appendWord(hub.codexDraft.value, "[Image: $path] ")) }
+            AttachButton(hub, { n -> hub.codexUploads.update { it + n } }, choose = false) { mark -> hub.setCodexDraft(appendWord(hub.codexDraft.value, "$mark ")) }
             TextField(text, hub::setCodexDraft, Modifier.weight(1f), placeholder = if (uploading > 0) "Uploading image…" else "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
             val dictation = remember { Dictation() }

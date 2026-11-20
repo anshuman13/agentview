@@ -144,7 +144,7 @@ private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listStat
     LaunchedEffect(newest, rows.size) { if (stick.value && newest != null) listState.scrollToItem(0) }
     val turn by hub.showTurn.collectAsState()
     LaunchedEffect(turn, list) {
-        val at = list.indexOfFirst { it.key == turn }
+        val at = list.indexOfFirst { it.key == turn || (it is FoldRow.Fold && it.hidden.any { h -> h.id == turn }) }
         if (at >= 0) { stick.value = false; listState.animateScrollToItem(at); hub.showTurn.value = null }
     }
     var lastSent by remember { mutableStateOf<String?>(null) }

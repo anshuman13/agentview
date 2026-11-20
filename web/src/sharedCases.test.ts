@@ -24,6 +24,8 @@ import { goalCommand, parseEvery, planOf, rerunForm, type GoalForm } from '../..
 import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { taskChatPrompt } from '../../shared/taskChat';
+import { findInChat } from '../../shared/findInChat';
+import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail } from './app/runtime/pageEvents';
@@ -537,6 +539,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; events: ChatEvent[]; running?: boolean; expected: string[] }>('turn-answers')) {
     it(`turnAnswers: ${c.name}`, () => expect([...turnAnswers(buildTranscript(c.events), c.running)]).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; query: string; events: ChatEvent[]; expected: string[] }>('chat-find')) {
+    it(`findInChat: ${c.name}`, () => expect(findInChat(c.events, c.query)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; mime: string; path: string; expected: string }>('attach-mark')) {
+    it(`attachMark: ${c.name}`, () => expect(attachMark(c.mime, c.path)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; fact: { state: string | null; deleted?: boolean } | null; expected: string }>('proposal-state')) {
