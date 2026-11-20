@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { openDb } from '../core/db.js';
 import { saveScan } from '../slack/slackSave.js';
 import { applyChanges } from '../core/sync.js';
-import { type Candidate, type Origin, proposeWikiUpdates } from './wikiUpdates.js';
+import { type Candidate, type Origin, proposeWikiUpdates, saveShippedPr } from './wikiUpdates.js';
 
 const DAY = 86_400_000;
 const now = Date.parse('2026-10-30T12:00:00Z');
@@ -93,5 +93,25 @@ describe('wiki updates', () => {
     expect(row.replaces).toBe('price');
     expect(row.added_by).toMatch(/^slack:[0-9a-f]{16}$/);
     expect(JSON.parse(row.sources)).toEqual([{ kind: 'slack', label: '#pricing', url }]);
+  });
+
+  it('proposes updates from a merged pull request once per URL, with a PR source', async () => {
+    const db = setup();
+    db.prepare("INSERT INTO meta (key, value) VALUES ('wikiupdate:work:cal:m', ?)").run(String(now));
+    const pr = { title: 'Basic plan costs 15 euros monthly', repo: 'pricing', url: 'https://github.com/o/pricing/pull/7' };
+    expect(saveShippedPr(db, 'work', pr, now - 3600_000)).toBe(true);
+    expect(saveShippedPr(db, 'work', { ...pr, title: 'Reworded' }, now)).toBe(false);
+    const asked: Origin[] = [];
+    const ask = async (_p: string, o: Origin) => {
+      asked.push(o);
+      return [{ claim: 'price', text: 'As of 30 Oct 2026, the Basic plan costs 15 euros monthly.' }];
+    };
+    expect(await proposeWikiUpdates(db, now, ask)).toBe(1);
+    expect(await proposeWikiUpdates(db, now, ask)).toBe(0);
+    expect(asked.map((o) => o.decisions)).toEqual([[pr.title]]);
+    const row = db.prepare("SELECT replaces, added_by, sources FROM facts WHERE state = 'proposed'").get() as { replaces: string; added_by: string; sources: string };
+    expect(row.replaces).toBe('price');
+    expect(row.added_by).toMatch(/^pr:[0-9a-f]{16}$/);
+    expect(JSON.parse(row.sources)).toEqual([{ kind: 'pr', label: pr.title, url: pr.url }]);
   });
 });

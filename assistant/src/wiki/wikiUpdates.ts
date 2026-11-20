@@ -16,10 +16,11 @@ const WITHIN = 14 * DAY;
 const MAX_CLAIMS = 20;
 const MAX_TRIES = 3;
 
+type ShippedPr = { id: string; title: string; repo: string; url: string; at: number };
 type Meeting = { id: string; title: string | null; starts_at: number; calendar_url: string | null; decisions: string };
 type SlackDecision = { id: string; text: string; channel: string; url: string; at: number };
-// A meeting or a Slack message whose decisions may change claims. id keys the done mark; by is the claim's added_by.
-export type Origin = { id: string; by: string; title: string | null; at: number; decisions: string[]; what: string; source: { kind: 'meeting' | 'slack'; label: string; url?: string } };
+// A meeting, a Slack message or a merged pull request whose decisions may change claims. id keys the done mark; by is the claim's added_by.
+export type Origin = { id: string; by: string; title: string | null; at: number; decisions: string[]; what: string; source: { kind: 'meeting' | 'slack' | 'pr'; label: string; url?: string } };
 type Claim = { id: string; text: string; page_id: string; heading: string | null; at: number | null; updated_at: number; title: string };
 export type Candidate = { claim: Claim; decisions: string[] };
 export type Update = { claim: string; text: string };
@@ -41,13 +42,28 @@ const fromSlack = (d: SlackDecision): Origin => ({
   source: { kind: 'slack', label: d.channel, url: d.url },
 });
 
-// Meetings and Slack decisions of the last two weeks that were not looked at yet, oldest first.
+const fromPr = (p: ShippedPr): Origin => ({
+  id: `pr:${p.id}`, by: `pr:${p.id}`, title: p.repo, at: p.at, decisions: [p.title],
+  what: `The pull request "${p.title}" merged in ${p.repo} on ${dateOf(p.at)}`,
+  source: { kind: 'pr', label: p.title, url: p.url },
+});
+
+// Saves a merged pull request once per URL for wiki updates; ones older than two weeks are dropped.
+export function saveShippedPr(db: Database, profile: Profile, pr: { title: string; repo: string; url: string }, now = Date.now()) {
+  db.prepare('DELETE FROM shipped_prs WHERE at < ?').run(now - WITHIN);
+  if (db.prepare('SELECT 1 FROM shipped_prs WHERE profile = ? AND url = ?').get(profile, pr.url)) return false;
+  db.prepare('INSERT INTO shipped_prs (profile, id, title, repo, url, at) VALUES (?, ?, ?, ?, ?, ?)').run(profile, createHash('sha1').update(pr.url).digest('hex').slice(0, 16), pr.title, pr.repo, pr.url, now);
+  return true;
+}
+
+// Meetings, Slack decisions and merged pull requests of the last two weeks that were not looked at yet, oldest first.
 function pendingOrigins(db: Database, profile: Profile, now = Date.now()): Origin[] {
   const meetings = db.prepare(
     "SELECT id, title, starts_at, calendar_url, decisions FROM meetings WHERE profile = ? AND deleted = 0 AND starts_at >= ? AND COALESCE(ends_at, starts_at) <= ? AND decisions IS NOT NULL AND decisions NOT IN ('', '[]') ORDER BY starts_at",
   ).all(profile, now - WITHIN, now) as Meeting[];
   const slack = db.prepare('SELECT id, text, channel, url, at FROM slack_decisions WHERE profile = ? AND at >= ? AND at <= ?').all(profile, now - WITHIN, now) as SlackDecision[];
-  return [...meetings.map(fromMeeting), ...slack.map(fromSlack)].filter((o) => getMeta(db, doneKey(profile, o)) == null && getMeta(db, legacyKey(profile, o.id)) == null).sort((a, b) => a.at - b.at);
+  const prs = db.prepare('SELECT id, title, repo, url, at FROM shipped_prs WHERE profile = ? AND at >= ? AND at <= ?').all(profile, now - WITHIN, now) as ShippedPr[];
+  return [...meetings.map(fromMeeting), ...slack.map(fromSlack), ...prs.map(fromPr)].filter((o) => getMeta(db, doneKey(profile, o)) == null && getMeta(db, legacyKey(profile, o.id)) == null).sort((a, b) => a.at - b.at);
 }
 
 const triesKey = (profile: Profile, id: string) => `wikiupdate-tries:${profile}:${id}`;
@@ -142,7 +158,7 @@ async function decide(profile: Profile, o: Origin, found: Candidate[]) {
   return updates;
 }
 
-// Proposes wiki updates from the decisions of each recent meeting and Slack message, once each (again when a meeting's decisions change). One stopped by the usage limit waits for the next run;
+// Proposes wiki updates from the decisions of each recent meeting, Slack message and merged pull request, once each (again when a meeting's decisions change). One stopped by the usage limit waits for the next run;
 // one that fails otherwise is tried again on the next runs, up to MAX_TRIES in all.
 export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = decide) {
   let saved = 0;

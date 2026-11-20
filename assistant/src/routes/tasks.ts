@@ -7,6 +7,7 @@ import { pushNtfy } from '../../../server/src/integrations/notify.js';
 import { learnPeople } from '../slack/people.js';
 import { mineFaq } from '../slack/faq.js';
 import { learnCorrections } from '../slack/corrections.js';
+import { saveShippedPr } from '../wiki/wikiUpdates.js';
 import { learnFromChat, type ChatEvent } from '../wiki/learn.js';
 import { learnVoice } from '../slack/voice.js';
 import { acceptAsk, skipAsk } from '../slack/slackSave.js';
@@ -82,6 +83,18 @@ export const taskRoutes: Routes = {
     } catch (err) {
       send(res, 502, { error: errText(err) });
     }
+  },
+
+  // Queues a merged pull request for wiki updates: POST /wiki/shipped with { profile, title, repo, url }.
+  'POST /wiki/shipped': async (c) => {
+    const data = await body<{ profile?: unknown; title?: unknown; repo?: unknown; url?: unknown }>(c, 10_000);
+    if (!data) return;
+    const { profile, title, repo, url } = data;
+    if (!isProfile(profile) || typeof title !== 'string' || typeof repo !== 'string' || typeof url !== 'string' || !title.trim() || !repo.trim() || !/^https?:\/\//.test(url)) {
+      send(c.res, 400, { error: 'Missing profile, title, repo or url' });
+      return;
+    }
+    send(c.res, 200, { saved: saveShippedPr(c.getDb(), profile, { title: title.trim(), repo: repo.trim(), url }) });
   },
 
   // Proposes what a finished chat taught as memory claims: POST /wiki/learn with { chat, title, profile, events }.

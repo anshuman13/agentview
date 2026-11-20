@@ -145,6 +145,11 @@ export async function hubPush(changes: HubChange[]) {
   applyPage((await resp.json()) as Page);
 }
 
+export async function hubShipped(post: { profile: string; title: string; repo: string; url: string }) {
+  const resp = await fetch(`${HUB}/wiki/shipped`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(post), signal: AbortSignal.timeout(15_000) });
+  if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}: ${await resp.text()}`);
+}
+
 const LEARN_EVENTS = 60;
 const LEARN_CHARS = 2000;
 

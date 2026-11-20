@@ -49,6 +49,7 @@ usage the same way chats do (see [features.md](features.md#personal-and-work-cla
 | facts | Memory and wiki claims: one-sentence statements with their sources, page and heading; a contradicting fact supersedes the old one, and a claim can be contested |
 | pages | Wiki pages grouped in sections |
 | meetings | Calendar meetings with my notes, the summary and decisions |
+| shipped_prs | Pull requests the server's auto-merge merged, with repo, URL and time; hub only, kept 14 days, one row per URL, read by the wiki update pass |
 | slack_decisions | Decisions the Slack scan saw in watched channels, with channel, permalink and time; hub only, kept 14 days, read by the wiki update pass |
 | transcripts | The Gemini transcript text of each summarized meeting, kept on the hub only (not synced; the apps search it and read it through the hub) |
 | actions | Proposed Slack messages and Linear issues from a meeting; synced but unused, since meeting actions are items with `meeting_id` |

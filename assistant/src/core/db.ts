@@ -77,6 +77,19 @@ function createHubTables(db: Database) {
     )
   `);
 
+  // Pull requests the server's auto-merge merged, kept on the hub for wiki updates.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS shipped_prs (
+      profile TEXT NOT NULL,
+      id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      repo TEXT NOT NULL,
+      url TEXT NOT NULL,
+      at INTEGER NOT NULL,
+      PRIMARY KEY (profile, id)
+    )
+  `);
+
   // Replies the autopilot sent or would send for Slack asks, hub only: one row per ask.
   db.exec(`
     CREATE TABLE IF NOT EXISTS replies (

@@ -215,6 +215,12 @@ the channel, the permalink and the time), kept once per permalink (a re-worded d
 meeting title, in the same queue and limits as meetings. Its proposals have a Slack source with the permalink and
 `added_by` `slack:<id>`, and the review card says "From #channel".
 
+Merged pull requests go the same way. When the server's auto-merge merges a PR it posts the title, repo name and URL to
+`POST /wiki/shipped` on the hub (profile from the repo folder; a hub error is logged). The hub keeps one row per URL in the
+hub-only `shipped_prs` table for 14 days. Each is looked at once (meta key `wikiupdate:<profile>:pr:<id>`), with the PR title
+as the decision and the repo name in place of the meeting title, in the same queue and limits. Its proposals have a PR
+source with the URL and `added_by` `pr:<id>`, and the review card says "From <PR title>".
+
 ### Learning from chats
 
 When a chat stays idle for 5 minutes (nothing running or pending) and has a message of yours that is not a loop or goal prompt and is newer than the last post, the server posts it once to `POST /wiki/learn` on the hub: the chat id, its title, the profile and its last 60 user and assistant messages (2000 characters each, no tool calls). A hub error is logged and the chat is unaffected. The hub keeps a cursor in meta key `learn:<profile>:<chat id>` (the `at` of the newest message read) and reads only messages after it; with no user message left it does not call Claude. The cursor moves only after a run that finished, so a failed run is retried at the next idle. At the usage limit the answer is `{ skipped: 'limit' }`, and a post for a chat still being read gets `{ skipped: 'running' }`.
