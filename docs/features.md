@@ -448,7 +448,8 @@ sends it once at that time. The chat composer's clock button (Send at, web) pick
 when it has passed, and sends the message as `/loop at HH:MM`; the menu says when it replaces a running loop or goal,
 and the loop card reads "Sends at HH:MM" with a Cancel button until it fires. When a turn ends on a usage limit,
 the timeline shows the reset time and a "Continue at
-HH:MM" link that schedules the last prompt that way. A fire that lands while
+HH:MM" link that schedules the last prompt that way (on the phone a Continue at button above the composer, while the
+chat is idle with no loop and not read-only; both clients use `limitResume`). A fire that lands while
 Claude is still working waits for the round to end. The loop lives in the AgentView server, so it survives a server
 restart and never depends on the CLI's own scheduled jobs. Your messages and Stop interrupt the current round but
 keep the loop; `/loop off` ends it. The loop card above the composer shows the round and the next fire time.

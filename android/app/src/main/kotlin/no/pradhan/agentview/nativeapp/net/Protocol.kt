@@ -61,6 +61,7 @@ data class ChatEvent(
     val group: String? = null,
     val files: List<ReviewFile> = emptyList(),
     val result: String = "",
+    val reset: Long? = null,
 )
 
 // A file of a review event: hunks are the runs of changed lines; a created or binary file has none and is decided whole. state is kept or undone once decided.

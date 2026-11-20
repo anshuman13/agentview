@@ -10,6 +10,7 @@ import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
+import { limitResume } from '../../shared/limitResume';
 import { buildsLine, finishedLine, goalEnd, mergeQuiet } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
@@ -319,6 +320,10 @@ describe('cases shared with the Android app', () => {
       expect(chatMarkdown(c.events, c.title)).toBe(c.markdown);
       expect(lastReply(c.events)).toBe(c.lastReply);
     });
+  }
+
+  for (const c of cases<{ name: string; events: ChatEvent[]; expected: { prompt: string; reset: number } | null }>('limit-resume')) {
+    it(`limitResume: ${c.name}`, () => expect(limitResume(c.events)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; sessionId: string; expected: string }>('handoff-text')) {

@@ -53,6 +53,8 @@ import no.pradhan.agentview.nativeapp.chat.WorkTitle
 import no.pradhan.agentview.nativeapp.chat.workTitle
 import no.pradhan.agentview.nativeapp.chat.chatMarkdown
 import no.pradhan.agentview.nativeapp.chat.handoffText
+import no.pradhan.agentview.nativeapp.chat.LimitResume
+import no.pradhan.agentview.nativeapp.chat.limitResume
 import no.pradhan.agentview.nativeapp.chat.lastReply
 import no.pradhan.agentview.nativeapp.chat.joinMarks
 import no.pradhan.agentview.nativeapp.chat.markLabel
@@ -310,6 +312,14 @@ class SharedCasesTest {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
             assertEquals(c.str("name"), c.str("markdown"), chatMarkdown(c.str("title"), events))
             assertEquals(c.str("name"), c.nullable("lastReply")?.jsonPrimitive?.content, lastReply(events))
+        }
+    }
+
+    @Test fun limitResume() {
+        for (c in cases("limit-resume")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            val expected = c["expected"]?.takeIf { it !is JsonNull }?.jsonObject?.let { LimitResume(it.str("prompt"), it.getValue("reset").jsonPrimitive.long) }
+            assertEquals(c.str("name"), expected, limitResume(events))
         }
     }
 

@@ -21,6 +21,25 @@ fun statusLine(live: LiveChat, session: SessionInfo?): StatusLine = when {
     else -> StatusLine("Idle", ChatTone.Idle)
 }
 
+private val LIMIT_NOTES = listOf("Compact", "Loop ", "Goal", "Usage limit", "Logged out")
+private val WOKE_UP = Regex("^\\w+ woke up")
+
+data class LimitResume(val prompt: String, val reset: Long)
+
+// The last prompt and when its usage limit resets (shared/limitResume.ts), checked by shared/fixtures/limit-resume.json.
+fun limitResume(events: List<ChatEvent>): LimitResume? {
+    var prompt: String? = null
+    var reset: Long? = null
+    for (e in events) {
+        if (e.kind == "user") { prompt = e.text; reset = null }
+        else if (e.kind == "system") {
+            if (WOKE_UP.containsMatchIn(e.text)) prompt = null
+            else if (LIMIT_NOTES.any { e.text.startsWith(it) }) reset = e.reset
+        }
+    }
+    return if (prompt != null && reset != null && reset != 0L) LimitResume(prompt, reset) else null
+}
+
 // What a screen reader hears when a turn ends (web composerLogic turnEnd), checked by shared/fixtures/turn-end.json.
 fun turnEnd(events: List<ChatEvent>, label: String): String {
     for (e in events.asReversed()) {
