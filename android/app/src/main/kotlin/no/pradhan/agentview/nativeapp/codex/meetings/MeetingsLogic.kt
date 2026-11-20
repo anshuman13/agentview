@@ -344,7 +344,7 @@ fun waitingByPerson(items: List<Row>, briefs: List<Row>, profile: String?, now: 
         val list = try { protocolJson.decodeFromString(ListSerializer(Unanswered.serializer()), b.str("text") ?: "[]") } catch (e: Exception) { emptyList() }
         for (w in list.filter { it.to.isNotEmpty() && it.subject.isNotEmpty() }) add(w.to, WaitingRow("mail:${w.thread}", w.subject, daysSince(w.sentAt, now), w.url.ifEmpty { null }))
     }
-    return groups.values.map { (name, rows) -> Waiting(name, rows.sortedByDescending { it.days }) }.sortedWith(compareByDescending<Waiting> { it.rows[0].days }.thenBy { it.name })
+    return groups.values.map { (name, rows) -> Waiting(name, rows.sortedByDescending { it.days }) }.sortedWith(compareByDescending<Waiting> { it.rows[0].days }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
 }
 
 fun nudgeText(g: Waiting): String =
