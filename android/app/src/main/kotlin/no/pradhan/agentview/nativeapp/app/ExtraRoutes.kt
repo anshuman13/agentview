@@ -21,6 +21,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.newNotes
 import no.pradhan.agentview.nativeapp.codex.wiki.WikiIndexPage
 import no.pradhan.agentview.nativeapp.codex.wiki.WikiPageView
 import no.pradhan.agentview.nativeapp.codex.wiki.memoryPage
+import no.pradhan.agentview.nativeapp.codex.wiki.proposalProfile
 
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.MenuItem
@@ -71,7 +72,8 @@ fun ExtraContent(
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
         route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { f -> push(claimRoute(f)) }, onTask)
         route == "wiki" -> WikiIndexPage(st, profile, now, actions, ops.review, hub.readOnly, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") })
-        wikiRoute == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop, anchor)
+        wikiRoute == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop, anchor,
+            if (hub.readOnly) null else ({ text -> hub.rememberInMemory(text, proposalProfile(null, profile)) }))
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
             if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop, anchor)

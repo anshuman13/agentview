@@ -25,6 +25,7 @@ import no.pradhan.agentview.nativeapp.codex.today
 import no.pradhan.agentview.nativeapp.codex.Need
 import no.pradhan.agentview.nativeapp.codex.withDismissal
 import no.pradhan.agentview.nativeapp.codex.wiki.chatSource
+import no.pradhan.agentview.nativeapp.codex.wiki.memoryClaim
 import no.pradhan.agentview.nativeapp.codex.wiki.newFact
 import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
 import no.pradhan.agentview.nativeapp.sessions.segmentOf
@@ -142,11 +143,14 @@ fun Hub.shareToTask(item: SharedItem, profile: String): Boolean {
 
 class RememberedClaim(val replaced: Boolean, val undo: () -> Unit)
 
-// Saves a live Memory claim in the chat's profile with the chat as its source, superseding the Memory claim it restates; null when it was not saved.
-fun Hub.rememberClaim(text: String, title: String, cwd: String): RememberedClaim? {
-    val profile = segmentOf(cwd)
-    val fact = newFact(text, null, profile, System.currentTimeMillis(), "live", chatSource(title, cwd)) ?: return null
-    val old = restatedClaim(fact.str("text") ?: "", codex.state.value.facts, profile)
+// Saves a live Memory claim in the chat's profile with the chat as its source; null when it was not saved.
+fun Hub.rememberClaim(text: String, title: String, cwd: String): RememberedClaim? =
+    saveMemoryClaim(newFact(text, null, segmentOf(cwd), System.currentTimeMillis(), "live", chatSource(title, cwd)))
+
+// Adds a live Memory claim, superseding the Memory claim it restates (web wiki.ts saveMemoryClaim).
+private fun Hub.saveMemoryClaim(fact: Row?): RememberedClaim? {
+    if (fact == null) return null
+    val old = restatedClaim(fact.str("text") ?: "", codex.state.value.facts, fact.profile)
     if (!codex.add(fact)) return null
     if (old != null) {
         codex.update(fact, mapOf("replaces" to old.id))
@@ -158,8 +162,13 @@ fun Hub.rememberClaim(text: String, title: String, cwd: String): RememberedClaim
     }
 }
 
-fun Hub.rememberFromChat(text: String, title: String, cwd: String) {
-    val claim = rememberClaim(text, title, cwd) ?: return
+fun Hub.rememberFromChat(text: String, title: String, cwd: String) = savedToMemory(rememberClaim(text, title, cwd))
+
+// The Memory page's Remember: a live Memory claim in the profile with no source.
+fun Hub.rememberInMemory(text: String, profile: String) = savedToMemory(saveMemoryClaim(memoryClaim(text, profile, System.currentTimeMillis())))
+
+private fun Hub.savedToMemory(claim: RememberedClaim?) {
+    if (claim == null) return
     undoable.tryEmit(Undoable(if (claim.replaced) "Saved to Memory, replacing a similar claim" else "Saved to Memory", claim.undo))
 }
 

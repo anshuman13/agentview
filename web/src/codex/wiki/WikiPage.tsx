@@ -54,7 +54,8 @@ export function WikiPage({ id }: { id: string }) {
   const propose = () => {
     const text = proposing?.trim();
     setProposing(null);
-    edits.propose(text);
+    if (pid) edits.propose(text);
+    else edits.remember(text);
   };
   const rename = () => {
     const title = renaming?.trim();
@@ -76,14 +77,15 @@ export function WikiPage({ id }: { id: string }) {
         ) : (
           <div className="wk-doc">
             <article className="wk-article">
-              {proposing !== null && <ProposeForm value={proposing} setValue={setProposing} save={propose} />}
+              {proposing !== null && <ProposeForm value={proposing} setValue={setProposing} save={propose} {...(!pid && { placeholder: 'What to remember', maxLength: 400 })} />}
               {pid && <PageTile page={page} />}
               {page.summary && <p className="wk-lede">{page.summary}</p>}
               <PendingBanner pending={pending} page={page} decided={decided} setDecided={setDecided} review={review} setConfirm={setConfirm} />
               <ClaimGroups groups={visible} page={page.title ?? ''} flash={flash} mentions={mentions} review={review} ungiven={ungiven} />
               <ShowMore shown={shown} total={total} onMore={more} />
               <OlderClaims older={older} stale={stale} open={showOlder} toggle={() => setShowOlder((v) => !v)} page={page.title ?? ''} flash={flash} />
-              {!groups.length && !older.length && <EmptyState size="sm" icon="book" title="No claims yet" hint={`They appear here as meetings, Slack threads and issues mention ${page.title}`} />}
+              {!groups.length && !older.length && (pid ? <EmptyState size="sm" icon="book" title="No claims yet" hint={`They appear here as meetings, Slack threads and issues mention ${page.title}`} />
+                : <EmptyState size="sm" icon="book" title="Nothing remembered yet" hint="Use Remember here or in a chat" />)}
             </article>
           </div>
         )}

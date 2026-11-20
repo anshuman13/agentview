@@ -14,6 +14,8 @@ import { fileRequest } from '../../workspace/fileApi';
 import { setView, showSnack } from '../../codex/view';
 import { useAssistantTable } from '../../codex/data';
 import { MEMORY } from '../../codex/wiki/shared';
+import { useClaimEdits } from '../../codex/wiki/useClaimEdits';
+import { MenuItem } from '../../ui/Menu';
 import type { Fact } from '../../codex/data/wiki/wiki';
 import { since } from '../../sessions/folders';
 import { Badge, LABEL_ON } from '../../ui/Badge';
@@ -194,7 +196,7 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
   );
 }
 
-// The wiki's Memory claims that new chats in this profile start with; a tap opens the claim on the Memory page.
+// The wiki's Memory claims that new chats in this profile start with; a tap opens the claim on the Memory page, Retire drops it from the list.
 export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: string; onClose: () => void }) {
   const given = givenPreferences(facts, profileOfPath(cwd));
   if (!given.length) return null;
@@ -206,7 +208,18 @@ export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: strin
   return (
     <>
       <Section label="From the wiki" count={sectionCount(given.length)} action={<span className="muted">New chats get these</span>} />
-      {given.map((f) => <Row key={f.id} leading={<Icon name="lightbulb" />} title={f.text} meta={f.at ? since(f.at) : undefined} onClick={() => openClaim(f.id)} />)}
+      {given.map((f) => <GivenClaim key={f.id} fact={f} open={() => openClaim(f.id)} />)}
     </>
+  );
+}
+
+function GivenClaim({ fact, open }: { fact: Fact; open: () => void }) {
+  const { retire } = useClaimEdits(fact, 'Memory');
+  return (
+    <Row leading={<Icon name="lightbulb" />} title={fact.text} meta={fact.at ? since(fact.at) : undefined} onClick={open}
+      menu={<>
+        <MenuItem icon="book" onClick={open}>Open in wiki</MenuItem>
+        <MenuItem icon="archive" danger onClick={retire}>Retire</MenuItem>
+      </>} />
   );
 }

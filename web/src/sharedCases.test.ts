@@ -61,7 +61,7 @@ import { setSystemTime } from '../../testing';
 import { guessProfile, meetingAsk } from './codex/data/ask/ask';
 import { prepText } from './codex/AskBar';
 import type { Profile } from './codex/data/sync';
-import { pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
+import { memoryClaim, pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
 import { heldUntil, jobEdits, newJob, tasksOf } from './codex/jobs/schedule';
 import { WEEKLY_DIGEST } from './codex/data/tasks/presets';
@@ -274,6 +274,13 @@ describe('cases shared with the Android app', () => {
   type RememberCase = { name: string; text: string; profile: Profile; facts: { id: string; profile: Profile; text: string; page_id?: string; state?: string; superseded_by?: string }[]; expected: string | null };
   for (const c of cases<RememberCase>('remember')) {
     it(`restatedClaim: ${c.name}`, () => expect(restatedClaim(c.text, c.facts as unknown as Fact[], c.profile)?.id ?? null).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; text: string; profile: Profile; now: number; expected: Partial<Fact> | null }>('memory-claim')) {
+    it(`memoryClaim: ${c.name}`, () => {
+      const fact = memoryClaim(c.text, c.profile, c.now);
+      expect(fact && { text: fact.text, profile: fact.profile, state: fact.state, page_id: fact.page_id, sources: fact.sources, at: fact.at, added_by: fact.added_by }).toEqual(c.expected);
+    });
   }
 
   type MarkdownCase = { name: string; title: string | null; now: number; claims: { heading: string | null; text: string; sources: string[]; state: string | null; at: number }[]; hasLive: boolean; markdown: string };

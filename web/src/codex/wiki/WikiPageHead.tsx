@@ -32,7 +32,7 @@ export function WikiPageHead({ page, isMemory, groups, pending, renaming, setRen
         onKeyDown={(e) => { if (e.key === 'Enter') onRename(); if (e.key === 'Escape') { e.stopPropagation(); cancelled.current = true; setRenaming(null); } }} />}
       action={
         <span className="as-tt-actions">
-          <Button size="sm" variant="filled" icon="add" onClick={onPropose}>Propose claim</Button>
+          <Button size="sm" variant="filled" icon="add" onClick={onPropose}>{isMemory ? 'Remember' : 'Propose claim'}</Button>
           <span className="wk-stale-more">
             <IconButton ref={moreBtn} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
             {menu && (

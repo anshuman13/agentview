@@ -180,10 +180,10 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
 }
 
 @Composable
-internal fun ClaimTextSheet(title: String, initial: String, save: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+internal fun ClaimTextSheet(title: String, initial: String, save: String, onDismiss: () -> Unit, placeholder: String = "What is true?", maxLength: Int = Int.MAX_VALUE, onSave: (String) -> Unit) {
     var text by remember { mutableStateOf(initial) }
     Sheet(onDismiss, title, full = false) {
-        TextField(text, { text = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is true?", minLines = 2)
+        TextField(text, { if (it.length <= maxLength) text = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = placeholder, minLines = 2)
         LayoutRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4, Alignment.End)) {
             Button("Cancel", onDismiss, variant = ButtonVariant.Plain)
             Button(save, { onDismiss(); onSave(text) }, variant = ButtonVariant.Filled, enabled = text.isNotBlank())
@@ -203,6 +203,14 @@ private fun ProposeClaim(page: Row?, filter: String?, actions: TaskActions) {
     if (open) ClaimTextSheet("Propose claim", "", "Propose", { open = false }) { text ->
         newFact(text, page?.id, proposalProfile(page, filter), System.currentTimeMillis())?.let { actions.create(it, "Claim proposed") }
     }
+}
+
+// Saves a live Memory claim at once, as Remember in a chat does.
+@Composable
+private fun RememberClaim(onRemember: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Button("Remember", { open = true }, variant = ButtonVariant.Filled, icon = "add")
+    if (open) ClaimTextSheet("Remember", "", "Save", { open = false }, "What to remember", 400, onRemember)
 }
 
 @Composable
@@ -283,7 +291,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
 private const val FLASH_MS = 1600L
 
 @Composable
-fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit, anchor: String? = null) {
+fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, onReview: () -> Unit, onBack: () -> Unit, anchor: String? = null, onRemember: ((String) -> Unit)? = null) {
     val memory = page.id == MEMORY
     val pid = if (memory) null else page.id
     val facts = remember(st.facts, page.profile, profile, memory) { st.facts.filter { if (memory) matchesProfile(profile, it) else it.profile == page.profile } }
@@ -326,7 +334,8 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
                     Text(it, Modifier.heightIn(min = Tokens.touchSm).clickable { summaryOpen = !summaryOpen }, style = Type.body, color = av.fg, maxLines = if (summaryOpen) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
                 }
                 LayoutRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-                    ProposeClaim(page.takeIf { !memory }, profile, actions)
+                    if (!memory) ProposeClaim(page, profile, actions)
+                    else if (onRemember != null) RememberClaim(onRemember)
                     MoreButton { dismiss ->
                         val pick = { act: () -> Unit -> { dismiss(); act() } }
                         if (!memory) MenuItem("Rename", "edit", pick { renaming = true })
@@ -351,7 +360,10 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
             item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
             if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, review, page.title ?: "", stale = it.id in staleIds, flash = it.id == flash) }
         }
-        if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "They appear here as meetings, Slack threads and issues mention ${page.title}", icon = "book") }
+        if (groups.isEmpty() && older.isEmpty()) item {
+            if (memory) EmptyState("Nothing remembered yet", "Use Remember here or in a chat", icon = "book")
+            else EmptyState("No claims yet", "They appear here as meetings, Slack threads and issues mention ${page.title}", icon = "book")
+        }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
 }

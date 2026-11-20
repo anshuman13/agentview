@@ -15,10 +15,10 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 type Review = ReturnType<typeof useReview>;
 
-export function ProposeForm({ value, setValue, save }: { value: string; setValue: (v: string | null) => void; save: () => void }) {
+export function ProposeForm({ value, setValue, save, placeholder, maxLength }: { value: string; setValue: (v: string | null) => void; save: () => void; placeholder?: string; maxLength?: number }) {
   return (
     <div className="wk-contest-form">
-      <textarea autoFocus rows={2} value={value} aria-label="Claim" onChange={(e) => setValue(e.target.value)}
+      <textarea autoFocus rows={2} value={value} aria-label="Claim" placeholder={placeholder} maxLength={maxLength} onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') { e.stopPropagation(); setValue(null); } if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} />
       <div className="wk-contest-btns">
         <Button onClick={() => setValue(null)}>Cancel</Button>

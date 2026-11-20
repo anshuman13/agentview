@@ -172,6 +172,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.editedClaimText
 import no.pradhan.agentview.nativeapp.codex.wiki.givenPreferences
 import no.pradhan.agentview.nativeapp.codex.wiki.hasLiveClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.isOld
+import no.pradhan.agentview.nativeapp.codex.wiki.memoryClaim
 import no.pradhan.agentview.nativeapp.codex.wiki.pageClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.staleFacts
 import no.pradhan.agentview.nativeapp.codex.wiki.wikiMarkdown
@@ -1008,6 +1009,16 @@ class SharedCasesTest {
                 Row("facts", o.str("id"), o.str("profile"), f = f)
             }
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, restatedClaim(c.str("text"), facts, c.str("profile"))?.id)
+        }
+    }
+
+    @Test fun memoryClaim() {
+        for (c in cases("memory-claim")) {
+            val fact = memoryClaim(c.str("text"), c.str("profile"), c.getValue("now").jsonPrimitive.long)
+            val expected = c.nullable("expected")?.jsonObject
+            assertEquals(c.str("name"), expected == null, fact == null)
+            if (fact == null || expected == null) continue
+            for ((k, v) in expected) assertEquals("${c.str("name")}: $k", v.takeIf { it !is JsonNull }?.jsonPrimitive?.content, if (k == "profile") fact.profile else fact.str(k))
         }
     }
 

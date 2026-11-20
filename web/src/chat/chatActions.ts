@@ -2,7 +2,7 @@ import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../a
 import { showChat } from '../ui/util';
 import { chatMarkdown, handoffText, lastReply, replyNote } from './composer/composerLogic';
 import { assistantStore } from '../codex/data';
-import { restatedClaim, rememberedFact } from '../codex/data/wiki/wiki';
+import { rememberedFact, saveMemoryClaim } from '../codex/data/wiki/wiki';
 import { copyText, showSnack } from '../codex/view';
 import { profileOfPath } from '../../../shared/workspace';
 import { removeMemory, restoreMemory, type RemovedMemory } from './chatApi';
@@ -50,21 +50,11 @@ export async function remindChat(at: number) {
   await store.update(row, { source: 'chat', source_url: `${location.origin}/?session=${sessionId}` });
 }
 
-// A live Memory claim in the chat's profile, superseding the Memory claim it restates; its undo deletes it and clears that.
+// A live Memory claim in the chat's profile with the chat as its source.
 function rememberClaim(text: string) {
   const st = getState();
   const { cwd } = st.session;
-  const profile = profileOfPath(cwd);
-  const store = assistantStore();
-  const old = restatedClaim(text, store.snapshot().facts, profile);
-  const fact = rememberedFact(text, profile, st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd);
-  void store.editRow('facts', fact, old ? { replaces: old.id } : {});
-  if (old) void store.editRow('facts', old, { superseded_by: fact.id });
-  const undo = () => {
-    void store.editRow('facts', fact, { deleted: 1 });
-    if (old) void store.editRow('facts', old, { superseded_by: null });
-  };
-  return { replaced: !!old, undo };
+  return saveMemoryClaim(assistantStore(), rememberedFact(text, profileOfPath(cwd), st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd));
 }
 
 export function rememberChat(text: string) {

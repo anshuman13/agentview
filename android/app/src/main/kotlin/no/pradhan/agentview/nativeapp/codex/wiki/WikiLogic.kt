@@ -133,6 +133,9 @@ fun newFact(text: String, pageId: String?, profile: String, now: Long, state: St
     return edited(blank, values, now).let { r -> r.copy(times = r.times.mapValues { now }) }
 }
 
+// A live Memory claim saved on the Memory page: trimmed, at most 400 characters, no source; null when blank (web wiki.ts memoryClaim).
+fun memoryClaim(text: String, profile: String, now: Long): Row? = newFact(text.trim().take(400), null, profile, now, "live")
+
 // The text an edited claim saves: trimmed, null when blank or unchanged (shared/claimEdit.ts, checked by shared/fixtures/claim-edit.json).
 fun editedClaimText(old: String?, next: String): String? = next.trim().takeIf { it.isNotEmpty() && it != old }
 

@@ -44,6 +44,7 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.ListRow
+import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.TextField
@@ -180,9 +181,16 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
         if (given.isNotEmpty()) {
             SectionHeader("From the wiki", given.size.toString(), action = { Text("New chats get these", style = Type.footnote, color = av.fgMuted) })
             given.forEach { f ->
-                ListRow(f.str("text") ?: "", f.long("at")?.let { since(it, now) }, leading = { AvIcon("lightbulb", tint = av.fgMuted) }, onClick = {
+                val openClaim = {
                     hub.link.value = DeepLink(codexRoute = claimRoute(f))
                     onDismiss()
+                }
+                ListRow(f.str("text") ?: "", f.long("at")?.let { since(it, now) }, leading = { AvIcon("lightbulb", tint = av.fgMuted) }, onClick = openClaim, menu = { dismiss ->
+                    MenuItem("Open in wiki", "book", { dismiss(); openClaim() })
+                    if (!hub.readOnly) MenuItem("Retire", "archive", {
+                        dismiss()
+                        if (hub.codex.update(f, mapOf("state" to "retired"))) hub.undoable.tryEmit(Undoable("Claim retired") { hub.codex.update(f, mapOf("state" to null)) })
+                    }, danger = true)
                 })
             }
         }

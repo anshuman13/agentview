@@ -3,6 +3,7 @@ import { replaceTarget } from '../../../../../shared/claimActions';
 import { givenPreferences } from '../../../../../shared/preferences';
 import { decisionKey, keyWords, mayChange, similarClaim, titleWords } from '../../../../../shared/claimMatch';
 import { newId, rowKey, type Profile } from '../sync';
+import type { AssistantStore } from '../store';
 
 type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
 
@@ -218,10 +219,28 @@ export function rememberedFact(text: string, profile: Profile, title: string, cw
   return { ...fact, state: 'live', sources: JSON.stringify([{ kind: 'chat', label }]), field_times: JSON.stringify({ ...JSON.parse(fact.field_times), sources: now }) };
 }
 
+// A live Memory claim saved on the Memory page: trimmed, at most 400 characters, no source; null when blank. android WikiLogic.kt memoryClaim says the same.
+export function memoryClaim(text: string, profile: Profile, now = Date.now()): Fact | null {
+  const body = text.trim().slice(0, 400);
+  return body ? { ...newFact(body, null, profile, now), state: 'live' } : null;
+}
+
 // The current live Memory claim (no page) of the profile that the remembered text overlaps; android WikiLogic.kt restatedClaim says the same.
 export function restatedClaim(text: string, facts: Fact[], profile: Profile) {
   const current = currentClaim(facts);
   return similarClaim(text, live(facts).filter((f) => f.profile === profile && !f.page_id && current(f)).map((f) => ({ text: f.text ?? '', fact: f })))?.fact;
+}
+
+// Saves a live Memory claim, superseding the Memory claim it restates; its undo deletes it and clears that.
+export function saveMemoryClaim(store: AssistantStore, fact: Fact) {
+  const old = restatedClaim(fact.text ?? '', store.snapshot().facts, fact.profile);
+  void store.editRow('facts', fact, old ? { replaces: old.id } : {});
+  if (old) void store.editRow('facts', old, { superseded_by: fact.id });
+  const undo = () => {
+    void store.editRow('facts', fact, { deleted: 1 });
+    if (old) void store.editRow('facts', old, { superseded_by: null });
+  };
+  return { replaced: !!old, undo };
 }
 
 // Pages whose title or summary match every word, then current claims that do.
