@@ -93,7 +93,7 @@ export class CodexDriver implements AgentDriver {
     const { account, requiresOpenaiAuth } = await rpc.request<{ account: unknown; requiresOpenaiAuth: boolean }>('account/read', { refreshToken: false });
     if (!account && requiresOpenaiAuth) throw new Error(NOT_SIGNED_IN);
     const { approvalPolicy, sandbox } = policyFor(this.mode);
-    const params = { cwd: this.host.cwd, approvalPolicy, sandbox, ...threadParams(this.host.state.session.id) };
+    const params = { cwd: this.host.cwd, approvalPolicy, sandbox, ...threadParams(this.host.state.session.id, this.host.cwd) };
     const method = this.threadId ? (this.fork ? 'thread/fork' : 'thread/resume') : 'thread/start';
     const res = await rpc.request<{ thread: Thread; model: string }>(method, this.threadId ? { threadId: this.threadId, ...params, ...(!this.fork && { excludeTurns: true }) } : params);
     if (this.fork) this.host.system('Forked into a new chat');
