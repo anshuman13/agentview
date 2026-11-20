@@ -17,6 +17,7 @@ object NoticeOp {
     const val REPLY = "no.pradhan.agentview.native.REPLY"
     const val STOP = "no.pradhan.agentview.native.STOP"
     const val APPROVE = "no.pradhan.agentview.native.APPROVE"
+    const val ANSWER = "no.pradhan.agentview.native.ANSWER"
 }
 
 // The server calls a notification action makes: read a chat's open requests and send it a command.
@@ -35,6 +36,9 @@ sealed interface ActionResult {
 // Never plan approvals: those need the plan on screen.
 private fun List<Pending>.permission() = filterIsInstance<Pending.Permission>().firstOrNull { it.toolName != "ExitPlanMode" }
 
+// The one single-select question a notification can answer with a pick.
+private fun List<Pending>.pick() = filterIsInstance<Pending.Question>().firstOrNull()?.let { q -> q.questions.singleOrNull()?.takeIf { !it.multiSelect && it.options.isNotEmpty() }?.let { q.id to it } }
+
 private const val PREVIEW_LINES = 8
 private const val PREVIEW_WIDTH = 100
 
@@ -50,10 +54,15 @@ fun editPreview(p: Pending.Permission): Pair<String, String>? {
 suspend fun noticeAsk(remote: NoticeRemote, n: Notice): Notice {
     val open = runCatching { remote.pending(n.chatId) }.getOrNull() ?: return n
     val permission = open.permission()
+    val pick = open.pick()
     return when {
         permission != null -> {
             val preview = editPreview(permission)
             n.copy(ask = NoticeAsk.Permission, permissionId = permission.id, title = preview?.first ?: n.title, body = "${permission.toolName}: ${n.body}", detail = preview?.second.orEmpty())
+        }
+        pick != null -> {
+            val labels = pick.second.options.map { it.label }
+            n.copy(ask = NoticeAsk.Question, body = pick.second.question, detail = labels.withIndex().joinToString("\n") { (i, l) -> "${i + 1}. $l" }, options = labels)
         }
         open.any { it is Pending.Question } -> n.copy(ask = NoticeAsk.Question)
         else -> n
@@ -69,12 +78,18 @@ suspend fun runNoticeAction(remote: NoticeRemote, readOnly: Boolean, op: String,
         val body = when (op) {
             NoticeOp.STOP -> interruptCmd()
             NoticeOp.ALLOW, NoticeOp.DENY -> open.permission()?.takeIf { it.id == permissionId }?.let { permissionCmd(it.id, op == NoticeOp.ALLOW) } ?: return ActionResult.Failed("Already answered")
+            NoticeOp.ANSWER -> {
+                val (id, ask) = open.pick()?.takeIf { (_, a) -> a.options.any { it.label == text } } ?: return ActionResult.Failed("Already answered")
+                answerCmd(id, mapOf(ask.question to text))
+            }
             NoticeOp.REPLY -> {
                 val reply = text.trim()
                 if (reply.isEmpty()) return ActionResult.Failed("Nothing to send")
                 val q = open.filterIsInstance<Pending.Question>().firstOrNull()
+                val labels = open.pick()?.second?.options?.map { it.label }.orEmpty()
+                val answer = labels.getOrNull((reply.toIntOrNull() ?: 0) - 1) ?: labels.firstOrNull { it.equals(reply, ignoreCase = true) } ?: reply
                 when {
-                    q != null && q.questions.size == 1 -> answerCmd(q.id, mapOf(q.questions[0].question to reply))
+                    q != null && q.questions.size == 1 -> answerCmd(q.id, mapOf(q.questions[0].question to answer))
                     q != null -> return ActionResult.Failed("Open the chat to answer")
                     open.isNotEmpty() -> return ActionResult.Failed("Open the chat to answer")
                     else -> promptCmd(reply, false, newId())

@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.AppState
+import no.pradhan.agentview.nativeapp.app.EXTRA_ANSWER
 import no.pradhan.agentview.nativeapp.app.EXTRA_CHANNEL
 import no.pradhan.agentview.nativeapp.app.EXTRA_CHAT
 import no.pradhan.agentview.nativeapp.app.EXTRA_NOTICE_ID
@@ -29,7 +30,7 @@ class NoticeReceiver : BroadcastReceiver() {
         val chat = intent.getStringExtra(EXTRA_CHAT) ?: return
         val id = intent.getIntExtra(EXTRA_NOTICE_ID, 0)
         val channel = intent.getStringExtra(EXTRA_CHANNEL) ?: NoticeKind.Approval.channel
-        val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_REPLY)?.toString().orEmpty()
+        val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_REPLY)?.toString() ?: intent.getStringExtra(EXTRA_ANSWER).orEmpty()
         val permissionId = intent.getStringExtra(EXTRA_PERMISSION).orEmpty()
         val slug = intent.getStringExtra(EXTRA_SLUG).orEmpty()
         val readOnly = AppState.readOnly || intent.getBooleanExtra(EXTRA_READONLY, false)
