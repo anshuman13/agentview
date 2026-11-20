@@ -172,6 +172,9 @@ fun goalsOf(items: List<Row>, now: Long, profile: String? = null): List<Row> {
     return items.filter { !it.deleted && it.status == GOAL && it.at != null && it.at!! >= start && it.at!! < end && matchesProfile(profile, it) }.sortedBy { it.madeAt }
 }
 
+// The goal with this id when it is live and in this week or next, else null: the goals a new task can be added to.
+fun goalToLink(items: List<Row>, id: String?, now: Long): Row? = (goalsOf(items, now) + goalsOf(items, dayPlus(weekStart(now), 7))).firstOrNull { it.id == id }
+
 fun linkedTo(items: List<Row>, goal: Row) = items.filter { !it.deleted && it.profile == goal.profile && it.goal == goal.id && (it.status == "open" || it.status == "done") }
 
 class Progress(val done: Int, val total: Int)

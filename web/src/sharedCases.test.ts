@@ -41,6 +41,7 @@ import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { cadenceLine, cadenceOf } from './codex/data/tasks/recur';
+import { parseCapture } from './codex/data/tasks/quickAdd';
 import { needsYou } from './codex/summary/needsYou';
 import { ignoredToday } from './codex/data/tasks/review';
 import { HubError, hubRetry } from './codex/data/hubFetch';
@@ -66,7 +67,7 @@ import { editedClaimText } from '../../shared/claimEdit';
 import { claimActions, replaceTarget } from '../../shared/claimActions';
 import { actionGroups, actionMenu, meetingGroupTitle, todayTaskMenu } from '../../shared/actionMenu';
 import { isLate } from '../../shared/waiting';
-import { goalAtRisk } from './codex/data/tasks/goals';
+import { goalAtRisk, goalToLink } from './codex/data/tasks/goals';
 import { afterNextMeeting, nextFreeSlot, weekFreeMinutes, type Span } from './codex/data/tasks/plan';
 import { heldOrder } from '../../shared/util';
 
@@ -626,6 +627,23 @@ describe('cases shared with the Android app', () => {
     it(`parseWhen: ${c.name}`, () => {
       const w = parseWhen(c.text, new Date(c.now));
       expect(w && { at: w.at === null ? null : new Date(w.at).toISOString().replace('.000Z', 'Z'), spans: w.spans, stripped: stripWhen(c.text, w) }).toEqual(c.expected);
+    });
+  }
+
+  type QuickAddCase = { name: string; text: string; now: string; pickedAt?: string | null; expected: { title: string; at: string | null; tags: string[]; repeat: string | null } };
+  for (const c of cases<QuickAddCase>('quick-add')) {
+    it(`parseCapture: ${c.name}`, () => {
+      const picked = c.pickedAt === undefined ? undefined : c.pickedAt === null ? null : Date.parse(c.pickedAt);
+      const r = parseCapture(c.text, new Date(c.now), picked);
+      expect({ ...r, at: r.at === null ? null : new Date(r.at).toISOString().replace('.000Z', 'Z') }).toEqual(c.expected);
+    });
+  }
+
+  type GoalLinkCase = { name: string; now: string; items: { id: string; status: string; at: string; deleted?: boolean }[]; id: string | null; expected: string | null };
+  for (const c of cases<GoalLinkCase>('goal-to-link')) {
+    it(`goalToLink: ${c.name}`, () => {
+      const items = c.items.map((i) => ({ id: i.id, profile: 'work', status: i.status, at: Date.parse(i.at), deleted: i.deleted ? 1 : 0, updated_at: 0, field_times: '{}' }) as unknown as ItemRow);
+      expect(goalToLink(items, c.id, Date.parse(c.now))?.id ?? null).toBe(c.expected);
     });
   }
 

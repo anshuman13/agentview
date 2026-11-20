@@ -146,7 +146,7 @@ internal fun TagPage(st: CodexState, tag: String, now: Long, actions: TaskAction
 }
 
 @Composable
-internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, goals: GoalActions, onOpen: (Row) -> Unit) {
+internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, goals: GoalActions, onOpen: (Row) -> Unit, onAddTask: (Row) -> Unit) {
     val weeks = remember(st.items, profile, now / 60_000) { goalHistory(st.items, now, profile) }
     var renaming by remember { mutableStateOf<Row?>(null) }
     var text by rememberSaveable { mutableStateOf("") }
@@ -176,6 +176,7 @@ internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Tas
                     Group(Modifier.padding(bottom = Tokens.sp4)) {
                         ListRow(g.title ?: "", (if (profile == null) "${profileLabel(g.profile)} · " else "") + if (p.total > 0) "${p.done}/${p.total}" else "No tasks yet", trailing = {
                             MoreButton { close ->
+                                if (!past) MenuItem("Add task", "add", { close(); onAddTask(g) })
                                 MenuItem("Rename", "edit", { close(); renaming = g })
                                 if (thisWeek) MenuItem(blocked ?: "Move to next week", "arrow-right", {
                                     close()

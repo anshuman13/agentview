@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useAssistantStore, useCodex } from './data';
 import type { Meeting } from './data/wiki/wiki';
 import { ask, askText, guessProfile } from './data/ask/ask';
-import { SNOOZES, isQuestion, parseWhen, stripWhen } from './data/tasks/engine';
-import { withEstimate } from './data/tasks/plan';
+import { SNOOZES, isQuestion, parseWhen } from './data/tasks/engine';
+import { parseCapture } from './data/tasks/quickAdd';
+import { withRule } from './data/tasks/recur';
 import { captureTask } from './tasks/captureTask';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
@@ -93,8 +94,10 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
 
   const reset = () => { setText(''); setMode(null); setNoWhen(false); setPick(null); setFresh(false); setProfile(null); setAsking(false); };
   const busy = useRef(false);
-  const save = async (title: string, at: number | null) => {
-    if (await captureTask(store, title, prof, at)) reset();
+  const save = async (at: number | null) => {
+    const c = parseCapture(typed, new Date(), w && pick == null ? undefined : at);
+    const rule = withRule('', c.repeat);
+    if (await captureTask(store, rule ? `${c.title}\n${rule}` : c.title, prof, c.at, c.tags.length ? { tags: c.tags.join(' ') } : {})) reset();
   };
   // With no time in the text, the chips ask When? before the task is saved.
   const submit = async (at = due) => {
@@ -105,7 +108,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
     }
     if (at == null && !noWhen && !asking) return setAsking(true);
     busy.current = true;
-    await save(withEstimate(stripWhen(text, w) || typed), at);
+    await save(at);
     busy.current = false;
   };
   const cycle = () => setMode((x) => ((x ?? m) === 'task' ? 'ask' : 'task'));

@@ -20,6 +20,28 @@ fun estimateMinutes(title: String?): Long? {
 
 fun taskMinutes(title: String?) = estimateMinutes(title) ?: DEFAULT_MIN
 
+private const val U_MIN = "m|mins?|minutes?"
+private val DUR_RE = Regex("(?<![\\p{L}\\d.,])~?\\s*(?:(\\d+(?:[.,]\\d+)?)\\s*(?:h|hrs?|hours?)(?:\\s*(\\d+)\\s*(?:$U_MIN))?|(\\d+(?:[.,]\\d+)?)\\s*(?:$U_MIN))(?![\\p{L}\\d])", RegexOption.IGNORE_CASE)
+private val BEFORE_DUR_RE = Regex("\\b(?:in|every|for|about)\\s*$", RegexOption.IGNORE_CASE)
+private val AFTER_DUR_RE = Regex("^\\s*(?:from now|later|ago)\\b", RegexOption.IGNORE_CASE)
+
+// shared/plan.ts takeEstimate: moves a typed duration like "30m" or "1.5h" out of a title. Only the last token counts.
+fun takeEstimate(title: String): Pair<String, Long?> {
+    val m = DUR_RE.findAll(title).lastOrNull() ?: return title to null
+    fun num(i: Int) = m.groups[i]!!.value.replace(',', '.').toDouble()
+    val minutes = Math.floor((if (m.groups[3] != null) num(3) else num(1) * 60 + (m.groups[2]?.value?.toLong() ?: 0L)) + 0.5).toLong()
+    val before = title.substring(0, m.range.first)
+    val after = title.substring(m.range.last + 1)
+    if (minutes <= 0 || BEFORE_DUR_RE.containsMatchIn(before) || AFTER_DUR_RE.containsMatchIn(after)) return title to null
+    val rest = "$before $after".replace(Regex("\\s+"), " ").trim()
+    return if (rest.isNotEmpty() && estimateMinutes(rest) == null) rest to minutes else title to null
+}
+
+fun withEstimate(title: String): String {
+    val (rest, minutes) = takeEstimate(title)
+    return if (minutes == null) title else "$rest ~${minutesText(minutes)}"
+}
+
 private fun freeGaps(busy: List<Span>, from: Long, to: Long): List<Span> {
     val out = ArrayList<Span>()
     var at = from

@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react';
-import { useAssistantStore } from '../data';
-import { parseWhen, stripWhen } from '../data/tasks/engine';
+import { useAssistantStore, useAssistantTable } from '../data';
+import { goalToLink } from '../data/tasks/goals';
+import { parseCapture } from '../data/tasks/quickAdd';
 import { captureTask } from './captureTask';
-import { cadenceLine, parseRepeat, withRule, type Cadence } from '../data/tasks/recur';
+import { cadenceLine, withRule, type Cadence } from '../data/tasks/recur';
 import { pad } from '../data/dates';
-import { withEstimate } from '../data/tasks/plan';
 import type { Profile } from '../data/sync';
 import { Icon } from '../../ui/Icon';
-import { IconButton } from '../../ui/Button';
+import { Chip, IconButton } from '../../ui/Button';
 import { Menu } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { readFlag } from '../../ui/util';
@@ -23,8 +23,6 @@ export const PRIORITIES: [number, string][] = [[3, 'High'], [2, 'Medium'], [1, '
 export const REMINDS: [number | null, string][] = [[null, 'On time'], [5, '5 min early'], [30, '30 min early'], [60, '1 hour early'], [1440, '1 day early'], [-1, 'None']];
 const remindLabel = (r: number | null | undefined) => REMINDS.find(([v]) => v === (r ?? null))?.[1] ?? `${r} min early`;
 export const tagList = (tags: string | null | undefined) => (tags ?? '').split(/\s+/).filter(Boolean);
-// "#home call mum #errands" is the title "call mum" with the tags home and errands.
-const takeTags = (typed: string) => ({ title: typed.replace(/(^|\s)#[\p{L}\d_-]+/gu, '').replace(/\s+/g, ' ').trim(), tags: [...typed.matchAll(/(?:^|\s)#([\p{L}\d_-]+)/gu)].map((m) => m[1].toLowerCase()) });
 
 // A flag coloured by priority, like TickTick's.
 export function Flag({ priority }: { priority: number | null | undefined }) {
@@ -121,8 +119,11 @@ export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value
 }
 
 // TickTick's quick add: a bottom sheet with title, description, date and list, and a send button.
-export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: number; onClose: () => void }) {
+export function AddSheet({ filter, voice, goal, onClose }: { filter: Filter; voice?: number; goal?: string; onClose: () => void }) {
   const store = useAssistantStore();
+  const items = useAssistantTable('items');
+  const [goalId, setGoalId] = useState(goal);
+  const linked = goalToLink(items, goalId, Date.now());
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [pick, setPick] = useState<Pick | null>(null);
@@ -134,19 +135,15 @@ export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: n
   const busy = useRef(false);
   const field = useRef<HTMLInputElement>(null);
   const flagBtn = useRef<HTMLButtonElement>(null);
-  const profile: Profile = filter !== 'all' ? filter : picked ?? (readFlag('assistant-personal', false) ? 'personal' : 'work');
+  const profile: Profile = linked?.profile ?? (filter !== 'all' ? filter : picked ?? (readFlag('assistant-personal', false) ? 'personal' : 'work'));
   const typed = title.trim();
   const add = async () => {
     if (!typed || busy.current) return;
     busy.current = true;
-    const { title: plain, tags } = takeTags(typed);
-    const rep = pick ? null : parseRepeat(plain);
-    const w = pick || rep ? null : parseWhen(plain);
-    const at = pick ? pick.at : rep?.at ?? w?.at ?? null;
-    const name = withEstimate((rep ? rep.title : stripWhen(plain, w) || plain) || typed);
+    const { title: name, at, tags, repeat } = parseCapture(typed, new Date(), pick?.at);
     const rule = pick && pick.cadence !== 'never' && pick.cadence !== 'custom' ? cadenceLine(pick.cadence, at) : null;
-    const body = rep ? withRule(notes.trim(), rep.text) : withRule(notes.trim(), rule);
-    const extra = { ...(priority && { priority }), ...(tags.length && { tags: tags.join(' ') }), ...(pick?.remind != null && { remind: pick.remind }) };
+    const body = withRule(notes.trim(), repeat ?? rule);
+    const extra = { ...(priority && { priority }), ...(tags.length && { tags: tags.join(' ') }), ...(pick?.remind != null && { remind: pick.remind }), ...(linked && { goal: linked.id }) };
     if (await captureTask(store, body ? `${name}\n${body}` : name, profile, at, extra)) {
       setTitle(''); setNotes(''); setPick(null); setPriority(0);
       field.current?.focus();
@@ -159,6 +156,7 @@ export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: n
         <input ref={field} autoFocus className="as-quick-title" value={title} placeholder="What would you like to do?" aria-label="New task" enterKeyHint="send"
           onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void add(); }} />
         <input className="as-quick-notes" value={notes} placeholder="Description" aria-label="Description" onChange={(e) => setNotes(e.target.value)} />
+        {linked && <div className="as-quick-goal"><Chip on icon="target" title="Remove the goal" onClick={() => setGoalId(undefined)}>Goal: {linked.title} <Icon name="close" small /></Chip></div>}
         <div className="as-quick-bar">
           <button className={`as-quick-tool${pick ? ' on' : ''}`} aria-label="Date" onMouseDown={(e) => e.preventDefault()} onClick={() => setDating(true)}>
             <Icon name="calendar" />{pick && <span>{pick.at == null ? 'Today' : cap(when(pick.at))}</span>}{pick && pick.cadence !== 'never' && <Icon name="sync" small />}{pick?.remind != null && <Icon name={pick.remind < 0 ? 'bell-slash' : 'bell'} small />}
@@ -172,7 +170,7 @@ export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: n
             )}
           </span>
           <button className="as-quick-tool" aria-label="Tag" onMouseDown={(e) => e.preventDefault()} onClick={() => { setTitle((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}#`); field.current?.focus(); }}><Icon name="tag" /></button>
-          {filter === 'all' && (
+          {filter === 'all' && !linked && (
             <button className="as-quick-tool" aria-label={`List: ${FILTER_LABEL[profile]}`} onMouseDown={(e) => e.preventDefault()} onClick={() => setPicked(profile === 'work' ? 'personal' : 'work')}>
               <ProfileDot profile={profile} /><span>{FILTER_LABEL[profile]}</span>
             </button>

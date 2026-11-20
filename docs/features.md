@@ -74,7 +74,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
 
 - Closed task rows are calm like TickTick: a check circle coloured by profile (blue Work, magenta Personal), the title (one line), a meta line of the exact time such as 14:30 (none for the 09:00 and 19:00 slots, Nd late in red for overdue) then at most one of Repeats, the checklist count or High or Medium priority as text (no tags on the row), a Needs you badge on suggested tasks, and a More menu (Open, Snooze, Tomorrow, Move to the other profile, Delete; Not done on done rows; Open and Delete on notes) shown on hover or focus on desktop; the source, people, Replied and the estimate show on the task page. Notes keep a preview line
 - A #tag chip on the task page opens the tag page: a Section header with the tag and an open-task count, the tasks as Rows in a grouped card, and an EmptyState when none are open
-- The + sheet takes times like "friday 10" (also "next tue 3pm", "end of week" or "eow" for Friday 17:00, and "in 3 days 3pm") and stays open for the next one. A typed duration like "30m", "1.5h" or "1h30m" (not after in, every, for or about) becomes the task's estimate, saved as "~30m" in the title; this applies to the phone quick add and the Ask bar in task mode too
+- The + sheet takes times like "friday 10" (also "next tue 3pm", "end of week" or "eow" for Friday 17:00, and "in 3 days 3pm") and stays open for the next one. A typed duration like "30m", "1.5h" or "1h30m" (not after in, every, for or about) becomes the task's estimate, saved as "~30m" in the title; this applies to the phone quick add and the Ask bar in task mode too, which also read #tags and repeat rules like the + sheet (`parseCapture` in `codex/data/tasks/quickAdd.ts` and `CodexSheets.kt`, with `shared/fixtures/quick-add.json`)
 - A round blue + floats at the bottom right of Tasks, like TickTick, and is the only add control; the n key and the palette's add task open the same sheet. A tap opens a quick-add sheet with the title, a description,
   a date button, a Work/Personal toggle (when both are shown) and send; Enter or send saves and keeps the sheet open for the next task.
   Typed times like "friday 10" still work when no date is picked. The flag sets High, Medium or Low priority, the tag button
@@ -105,7 +105,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
 - An open task without a "~30m" estimate in its title gets one suggested as a chip: the average time spent on at least
   two done tasks whose titles share half their words, rounded to 5 minutes. A tap adds it to the title
 - The Repeat chip (or Repeat under Add) on a task sets Never, Daily, Weekdays, Weekly (its due weekday) or Monthly (its due day) by writing or removing the "Repeats:" first line of the notes; other rules show as Custom. The chip only opens its menu on an open task, and Repeat is not offered under Add on other tasks. Estimate under Add offers 15m, 30m, 1h and 2h and writes the ~estimate suffix on the title.
-- A goal menu links an open or done task to one of this week's goals of its profile
+- A goal menu links an open or done task to one of this week's goals of its profile. A this-week or next-week goal's More menu on the Goals page has Add task (web's "No tasks yet" state too): New task opens with a "Goal: <title>" chip that removes the link, the goal's profile, and each saved task linked to it (`goalToLink`, `shared/fixtures/goal-to-link.json`)
 
 ### Related while writing
 

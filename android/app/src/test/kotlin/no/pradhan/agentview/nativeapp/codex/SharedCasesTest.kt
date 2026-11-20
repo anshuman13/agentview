@@ -1119,6 +1119,25 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun parseCapture() {
+        for (c in cases("quick-add")) {
+            val picked = "pickedAt" in c
+            val pickedAt = c.nullable("pickedAt")?.jsonPrimitive?.content?.let { Instant.parse(it).toEpochMilli() }
+            val r = parseCapture(c.str("text"), pickedAt, picked, Instant.parse(c.str("now")).toEpochMilli())
+            val e = c.getValue("expected").jsonObject
+            val actual = listOf(r.title, r.at?.let { Instant.ofEpochMilli(it).toString() }, r.tags, r.repeat)
+            val expected = listOf(e.str("title"), e.nullable("at")?.jsonPrimitive?.content, e.getValue("tags").jsonArray.map { it.jsonPrimitive.content }, e.nullable("repeat")?.jsonPrimitive?.content)
+            assertEquals(c.str("name"), expected, actual)
+        }
+    }
+
+    @Test fun goalToLink() {
+        for (c in cases("goal-to-link")) {
+            val items = c.getValue("items").jsonArray.map { it.jsonObject }.map { o -> item(o.str("id"), o.str("status"), Instant.parse(o.str("at")).toEpochMilli()).copy(deleted = o["deleted"] != null) }
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, goalToLink(items, c.nullable("id")?.jsonPrimitive?.content, Instant.parse(c.str("now")).toEpochMilli())?.id)
+        }
+    }
+
     @Test fun reviewQueue() {
         fun strings(c: JsonObject, k: String) = c.getValue(k).jsonArray.map { it.jsonPrimitive.content }
         for (c in cases("review-queue")) assertEquals(c.str("name"), strings(c, "expected"), reviewQueue(strings(c, "order"), strings(c, "skipped"), strings(c, "open").toSet()))

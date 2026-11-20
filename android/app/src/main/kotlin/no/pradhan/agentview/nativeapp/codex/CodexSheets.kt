@@ -220,13 +220,15 @@ fun EditorSheet(row: Row, items: List<Row>, meetings: List<Row>, now: Long, acti
 // Quick capture: "call the bank tomorrow 9 #home" becomes a task due tomorrow 09:00 tagged home; the sheet stays open to add more.
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun AddSheet(hub: Hub, profile: String?, now: Long, onDismiss: () -> Unit, onAdded: (String) -> Unit) {
+fun AddSheet(hub: Hub, profile: String?, items: List<Row>, goal: String?, now: Long, onDismiss: () -> Unit, onAdded: (String) -> Unit) {
     var title by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var due by remember { mutableStateOf<Long?>(null) }
     var picked by remember { mutableStateOf(false) }
     var priority by remember { mutableStateOf(0) }
     var target by remember { mutableStateOf(profile ?: hub.codexProfile) }
+    var goalId by remember { mutableStateOf(goal) }
+    val linked = goalToLink(items, goalId, now)
     var pickDue by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -235,9 +237,9 @@ fun AddSheet(hub: Hub, profile: String?, now: Long, onDismiss: () -> Unit, onAdd
         val c = parsed
         if (c.title.isNotEmpty()) {
             val body = if (c.repeat != null) withRule(notes.trim(), c.repeat) else notes.trim()
-            val extra = buildMap<String, Any?> { if (priority > 0) put("priority", priority); if (c.tags.isNotEmpty()) put("tags", c.tags.joinToString(" ")) }
-            if (hub.codex.capture(if (body.isNotEmpty()) "${c.title}\n$body" else c.title, "open", target, c.at, extra) != null) {
-                if (profile == null) hub.codexProfile = target
+            val extra = buildMap<String, Any?> { if (priority > 0) put("priority", priority); if (c.tags.isNotEmpty()) put("tags", c.tags.joinToString(" ")); if (linked != null) put("goal", linked.id) }
+            if (hub.codex.capture(if (body.isNotEmpty()) "${c.title}\n$body" else c.title, "open", linked?.profile ?: target, c.at, extra) != null) {
+                if (profile == null && linked == null) hub.codexProfile = target
                 onAdded(c.title + (c.at?.let { " · ${whenText(it, now)}" } ?: ""))
                 title = ""; notes = ""; due = null; picked = false; priority = 0
             }
@@ -252,7 +254,8 @@ fun AddSheet(hub: Hub, profile: String?, now: Long, onDismiss: () -> Unit, onAdd
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 Chip(if (picked) dueLabel(due, now) else "Date", { pickDue = true }, icon = "calendar", on = picked, quiet = !picked)
                 Chip("Priority: ${priorityLabel(priority)}", { priority = (priority + 3) % 4 }, on = priority > 0)
-                if (profile == null) Chip(profileLabel(target), { target = if (target == WORK) PERSONAL else WORK }, tone = if (target == WORK) ChipTone.Work else ChipTone.Personal)
+                if (linked != null) Chip("Goal: ${linked.title}", { goalId = null }, icon = "target", on = true, trailingIcon = "close", trailingLabel = "Remove goal")
+                else if (profile == null) Chip(profileLabel(target), { target = if (target == WORK) PERSONAL else WORK }, tone = if (target == WORK) ChipTone.Work else ChipTone.Personal)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Button("Add task", { add() }, variant = ButtonVariant.Filled, icon = "send", enabled = parsed.title.isNotEmpty())
@@ -264,7 +267,7 @@ fun AddSheet(hub: Hub, profile: String?, now: Long, onDismiss: () -> Unit, onAdd
 
 class Capture(val title: String, val at: Long?, val tags: List<String>, val repeat: String?)
 
-// How the add sheet reads a typed task: a picked date wins, else a "every monday 9" rule, else a time in the text.
+// How the add sheet reads a typed task (web quickAdd.ts parseCapture): a picked date wins, else a "every monday 9" rule, else a time in the text; then the estimate moves to the end of the title.
 fun parseCapture(typed: String, pickedAt: Long?, picked: Boolean, now: Long): Capture {
     val t = typed.trim()
     val (plain, tags) = takeTags(t)
@@ -272,7 +275,7 @@ fun parseCapture(typed: String, pickedAt: Long?, picked: Boolean, now: Long): Ca
     val w = if (picked || rep != null) null else parseWhen(plain, now)
     val at = if (picked) pickedAt else rep?.at ?: w?.at
     val name = if (rep != null) rep.title else stripWhen(plain, w).ifEmpty { plain }
-    return Capture(if (t.isEmpty()) "" else name.ifEmpty { t }, at, tags, rep?.text)
+    return Capture(if (t.isEmpty()) "" else withEstimate(name.ifEmpty { t }), at, tags, rep?.text)
 }
 
 @Composable
