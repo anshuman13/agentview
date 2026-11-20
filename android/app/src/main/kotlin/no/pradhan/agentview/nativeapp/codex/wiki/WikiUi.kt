@@ -85,7 +85,7 @@ private fun PageTile(p: Row) {
 }
 
 @Composable
-fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit) {
+fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit, onMemory: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val pages = remember(st.pages, profile) { st.pages.filter { matchesProfile(profile, it) } }
     val facts = remember(st.facts, profile) { st.facts.filter { matchesProfile(profile, it) } }
@@ -115,6 +115,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
         if (waiting > 0) {
             item { Group { ListRow("Review claims", onClick = onReview, trailing = { Badge("$waiting", BadgeTone.Quiet); Chevron() }) } }
         }
+        item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Memory", plural(stats[null]?.claims ?: 0, "claim"), onClick = onMemory, trailing = { Chevron() }) } }
         overview?.let { o ->
             item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow(o.title ?: "Overview", o.str("summary")?.let { firstLine(it) }, onClick = { onOpen(o) }) } }
         }
@@ -238,11 +239,13 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
 }
 
 @Composable
-fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions, review: ReviewOps) {
-    val facts = remember(st.facts, page.profile) { st.facts.filter { it.profile == page.profile } }
-    val groups = remember(facts, page.id, now / 60_000) { pageClaims(facts, page.id, now) }
-    val older = remember(facts, page.id, now / 60_000) { olderClaims(facts, page.id, now) }
-    val stat = remember(facts) { statsByPage(facts)[page.id] }
+fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions: TaskActions, review: ReviewOps) {
+    val memory = page.id == MEMORY
+    val pid = if (memory) null else page.id
+    val facts = remember(st.facts, page.profile, profile, memory) { st.facts.filter { if (memory) matchesProfile(profile, it) else it.profile == page.profile } }
+    val groups = remember(facts, pid, now / 60_000) { pageClaims(facts, pid, now) }
+    val older = remember(facts, pid, now / 60_000) { olderClaims(facts, pid, now) }
+    val stat = remember(facts) { statsByPage(facts)[pid] }
     var showOlder by rememberSaveable(page.key) { mutableStateOf(false) }
     val staleIds = older.filter { it.str("state") != "retired" }.map { it.id }.toSet()
     var summaryOpen by rememberSaveable(page.key) { mutableStateOf(false) }
@@ -259,7 +262,7 @@ fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions, rev
                 page.str("summary")?.takeIf { it.isNotEmpty() }?.let {
                     Text(it, Modifier.heightIn(min = Tokens.touchSm).clickable { summaryOpen = !summaryOpen }, style = Type.body, color = av.fg, maxLines = if (summaryOpen) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
                 }
-                ProposeClaim(page, null, actions)
+                ProposeClaim(page.takeIf { !memory }, profile, actions)
             }
         }
         groups.forEach { g ->

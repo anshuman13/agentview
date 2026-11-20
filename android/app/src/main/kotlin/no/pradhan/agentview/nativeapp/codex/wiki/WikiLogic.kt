@@ -83,6 +83,15 @@ fun restatedClaim(text: String, facts: List<Row>, profile: String): Row? {
     return similarClaim(text, liveRows(facts).filter { it.profile == profile && it.str("page_id").isNullOrEmpty() && current(it) }) { it.str("text") ?: "" }
 }
 
+const val MEMORY = "memory"
+
+// The Memory page of web/src/codex/wiki/shared.ts memoryPage: it holds the claims with no page.
+fun memoryPage(facts: List<Row>): Row = Row(
+    "pages", MEMORY, WORK,
+    updatedAt = liveRows(facts).filter { it.str("page_id").isNullOrEmpty() }.maxOfOrNull(::factTime) ?: 0L,
+    f = mapOf("title" to JsonPrimitive("Memory"), "summary" to JsonPrimitive("What Claude remembers about you and your work outside the wiki pages.")),
+)
+
 class PageStats(val claims: Int, val contested: Int, val updated: Long)
 
 fun statsByPage(facts: List<Row>): Map<String?, PageStats> {

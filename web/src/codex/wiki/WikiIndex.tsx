@@ -180,6 +180,9 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
               <>
                 <ToReview facts={facts} />
                 {overview && <Overview page={overview} />}
+                <div className="ui-group">
+                  <Row title="Memory" meta={plural(stats.get(null)?.claims ?? 0, 'claim')} trailing={<Icon name="chevron-right" small />} onClick={() => setView({ open: MEMORY, anchor: null })} />
+                </div>
                 {groups.length ? groups.map((s) => (
                   <section key={s.name}>
                     <Section label={s.name} count={s.pages.length} />
