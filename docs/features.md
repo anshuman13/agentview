@@ -220,7 +220,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   Goal and Build rows, the permission modes (Supervised follows Auto), Account and Effort. The model you pick
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
   (Permission mode, Model, Effort, Claude account, Goal, Build, Fork, Remind me, Copy, Tools…); Fork holds Side chat and
-  New chat, Copy holds Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Memory, Hooks and TODOs.
+  New chat, Copy holds Last reply, Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Memory, Hooks and TODOs.
   Remember… (also in the phone's chat menu) opens one field; Save stores a live Memory claim in the chat's profile with a
   Chat source of the chat's title and folder and shows "Saved to Memory" with Undo; empty text saves nothing.
   The Build row picks Off or Spec flow, which makes Claude
@@ -275,7 +275,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Opening a chat with replies or steps since you last saw it shows a red New line above the first of them, like Slack's
   unread divider: on the web from the seen time before this page opened the chat, on the phone from when the phone last showed it
 - "Copy as Markdown" in the Copy pick of the web chat settings menu copies the loaded prompts and replies under the chat title
-- "Share chat" in the phone chat menu sends the loaded prompts and replies as Markdown to the Android share sheet
+  and leaves out subagent text; an untitled chat is headed "Chat". "Last reply" in the same pick (only when there is a reply) copies the
+  latest top-level answer; the phone's chat menu has "Copy last reply" for the same
+- "Share chat" in the phone chat menu sends the same Markdown to the Android share sheet
 - "Side chat" in the Fork pick of the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
 - "Continue in terminal" in the Copy pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for

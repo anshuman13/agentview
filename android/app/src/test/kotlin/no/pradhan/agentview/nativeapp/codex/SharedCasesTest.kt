@@ -51,7 +51,9 @@ import no.pradhan.agentview.nativeapp.chat.buildTranscript
 import no.pradhan.agentview.nativeapp.chat.foldTurns
 import no.pradhan.agentview.nativeapp.chat.WorkTitle
 import no.pradhan.agentview.nativeapp.chat.workTitle
+import no.pradhan.agentview.nativeapp.chat.chatMarkdown
 import no.pradhan.agentview.nativeapp.chat.handoffText
+import no.pradhan.agentview.nativeapp.chat.lastReply
 import no.pradhan.agentview.nativeapp.chat.joinMarks
 import no.pradhan.agentview.nativeapp.chat.markLabel
 import no.pradhan.agentview.nativeapp.chat.splitMarks
@@ -296,6 +298,14 @@ class SharedCasesTest {
                 p["image"]?.let { i -> Part.Image(i.jsonPrimitive.content) } ?: Part.Text(p.str("text"))
             }
             assertEquals(c.str("name"), expected, userParts(c.str("text")))
+        }
+    }
+
+    @Test fun chatMarkdown() {
+        for (c in cases("chat-markdown")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            assertEquals(c.str("name"), c.str("markdown"), chatMarkdown(c.str("title"), events))
+            assertEquals(c.str("name"), c.nullable("lastReply")?.jsonPrimitive?.content, lastReply(events))
         }
     }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatMarkdown, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, laterDay, sharedTask, triggerAt, turnEnd, withUses, draftLine } from './composerLogic';
+import { accept, addUse, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, laterDay, sharedTask, triggerAt, turnEnd, withUses, draftLine } from './composerLogic';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, SavedSession } from '../../../../shared/protocol';
 
@@ -201,18 +201,6 @@ describe('chat mentions', () => {
     expect(chatQuery(triggerAt('see @src', 8))).toBeNull();
     const chats = [{ sessionId: 'a', title: '/tries worktrees', cwd: '/r' }, { sessionId: 'b', title: 'Day dividers', cwd: '/r' }, { sessionId: 'c', title: '', cwd: '/r' }] as SavedSession[];
     expect(rankChats(chats, 'tri').map((r) => r.item.sessionId)).toEqual(['a']);
-  });
-});
-
-describe('chatMarkdown', () => {
-  it('lists prompts and top-level replies under the title', () => {
-    const events = [
-      { id: '1', kind: 'user', text: 'Fix it ', at: 1 },
-      { id: '2', kind: 'assistant', text: 'Subagent note', streaming: false, at: 2, parent: 'x' },
-      { id: '3', kind: 'assistant', text: 'Fixed.', streaming: false, at: 3 },
-      { id: '4', kind: 'user', text: 'queued', at: 4, queued: true },
-    ] as ChatEvent[];
-    expect(chatMarkdown(events, 'Importer')).toBe('# Importer\n\n**You:** Fix it\n\nFixed.\n');
   });
 });
 

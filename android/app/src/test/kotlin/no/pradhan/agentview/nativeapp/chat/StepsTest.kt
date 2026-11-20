@@ -189,14 +189,6 @@ class StepsTest {
         assertEquals(java.time.ZonedDateTime.of(2026, 11, 10, 9, 0, 0, 0, zone).toInstant().toEpochMilli(), morning)
     }
 
-    @Test fun chatMarkdownKeepsPromptsAndReplies() {
-        val events = listOf(
-            ChatEvent("1", "user", "fix it"), ChatEvent("2", "tool_use", name = "Bash"),
-            ChatEvent("3", "assistant", "Done."), ChatEvent("4", "user", "later", queued = true),
-        )
-        assertEquals("# T\n\n**You:** fix it\n\nDone.\n", chatMarkdown("T", events))
-    }
-
     @Test fun dayOfRowsFollowsTheLastDivider() {
         val ids = listOf("a", "b", "c", "d")
         val items = ids.map { Item.Assistant(it, it, false) }

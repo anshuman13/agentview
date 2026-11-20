@@ -1,6 +1,6 @@
 import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../app/store';
 import { copyText, showChat } from '../ui/util';
-import { chatMarkdown, handoffText, replyNote } from './composer/composerLogic';
+import { chatMarkdown, handoffText, lastReply, replyNote } from './composer/composerLogic';
 import { assistantStore } from '../codex/data';
 import { rememberedFact } from '../codex/data/wiki/wiki';
 import { showSnack } from '../codex/view';
@@ -61,6 +61,11 @@ export function rememberChat(text: string) {
 export function copyChatMarkdown() {
   const st = getState();
   copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? '')).then(() => notice('Copied the chat as Markdown'), () => notice('Could not copy'));
+}
+
+export function copyLastReply() {
+  const reply = lastReply(getState().events);
+  if (reply) copyText(reply).then(() => notice('Reply copied'), () => notice('Could not copy'));
 }
 
 export function copyResumeCommand(command: string) {
