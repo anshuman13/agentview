@@ -5,6 +5,9 @@ import no.pradhan.agentview.nativeapp.codex.meetings.todayTaskMenu
 import no.pradhan.agentview.nativeapp.codex.meetings.countdown
 import no.pradhan.agentview.nativeapp.codex.meetings.isLive
 import no.pradhan.agentview.nativeapp.codex.meetings.joinMinutes
+import no.pradhan.agentview.nativeapp.codex.meetings.isSolo
+import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
+import androidx.compose.ui.platform.LocalUriHandler
 import no.pradhan.agentview.nativeapp.codex.meetings.meetingMeta
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -129,7 +132,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         if (failedCalendars.isNotEmpty()) item {
             Group { failedCalendars.forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(calendarFailText(h, failedCalendars.size), h.ok?.let { "Last synced ${clock(it)}" } ?: "Never synced") } }
         }
-        item { UpNextSection(d, now, actions, onOpen, onNeeds, onAdd, onMeeting) }
+        item { UpNextSection(hub, st, d, now, actions, onOpen, onNeeds, onAdd, onMeeting) }
         if (running.isNotEmpty()) runningSection(running, counts.running + counts.waiting) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
         planDaySection(d, plan, { plan = it }, now, actions)
@@ -139,15 +142,18 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
 }
 
 @Composable
-private fun UpNextSection(d: OverviewData, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit) {
+private fun UpNextSection(hub: Hub, st: CodexState, d: OverviewData, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit) {
     val mt = d.mt
     val task = d.today.upNextTask
     if (mt.next != null || task != null) {
         SectionHeader("Up next")
         Group {
-            mt.next?.let { MeetingRow(it, now, upNext = true) { onMeeting(it) } }
+            mt.next?.let { m ->
+                val prep = { hub.askCodex(askText(prepText(m), m.profile, st.items.filter { !it.deleted && it.profile == m.profile }, null, st.meetings.filter { it.profile == m.profile }), m.profile) }
+                MeetingRow(m, now, upNext = true, onPrep = prep.takeIf { !hub.readOnly }) { onMeeting(m) }
+            }
             if (mt.next != null && task != null) Hairline()
-            task?.let { ListRow(it.title ?: "", it.at?.let { a -> clock(a) }, onClick = { onOpen(it) }, trailing = { Button("Done", { actions.done(it) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
+            task?.let { ListRow(it.title ?: "", it.at?.let { a -> clock(a) }, onClick = { onOpen(it) }, trailing = { Button("Done", { actions.done(it) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) }) }
         }
     } else {
         val later = d.s.later.filter { it.at != null }.minByOrNull { it.at!! }
@@ -261,10 +267,21 @@ private fun LazyListScope.goalsSection(st: CodexState, goals: List<Row>, free: L
     }
 }
 
+// The Up next meeting has Prep (null in read-only mode), Open calendar and Notes in its More menu; a Today meeting about to start has Join.
 @Composable
-private fun MeetingRow(m: Row, now: Long, upNext: Boolean, onClick: () -> Unit) {
+private fun MeetingRow(m: Row, now: Long, upNext: Boolean, onPrep: (() -> Unit)? = null, onClick: () -> Unit) {
     val live = isLive(m, now)
     val soon = joinMinutes(m, now)
+    val link = safeHref(m.str("calendar_url"))
+    val uri = LocalUriHandler.current
     val meta = if (upNext) listOfNotNull(countdown(m, now), meetingMeta(m, now)).joinToString(" · ") else if (soon != null) "Starts in $soon min" else clock(m.startsAt!!)
-    ListRow(m.title ?: "Meeting", meta, onClick = onClick, trailing = { if (live) Badge("Live", BadgeTone.Running) })
+    ListRow(m.title ?: "Meeting", meta, onClick = onClick, trailing = {
+        if (live) Badge("Live", BadgeTone.Running)
+        if (upNext) MoreButton { close ->
+            if (onPrep != null && !isSolo(m)) MenuItem("Prep", "sparkle", { close(); onPrep() })
+            if (link != null && m.id.startsWith("cal:")) MenuItem("Open calendar", "calendar", { close(); uri.openUri(link) })
+            MenuItem("Notes", "edit", { close(); onClick() })
+        }
+        else if (!live && link != null && soon != null) Button("Join", { uri.openUri(link) }, icon = "device-camera-video", variant = ButtonVariant.Filled, size = ButtonSize.Sm)
+    })
 }

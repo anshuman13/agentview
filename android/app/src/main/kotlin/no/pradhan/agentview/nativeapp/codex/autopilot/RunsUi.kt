@@ -61,7 +61,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 
-// The loop card above the composer (the web has the cap and Rounds rows in sessions/brief/RailHead.tsx): state and Pause in the head, what is happening now, the running agents, then the plan line on a goal or the what line and cost on other kinds, the cap row and the Rounds row that shows the history.
+// The loop card above the composer (the web has the same controls and rows in sessions/brief/RailHead.tsx, without the agent rows): state and Pause in the head, what is happening now, the running agents, then the plan line on a goal or the what line and cost on other kinds, the cap row and the Rounds row that shows the history.
 
 @Composable
 fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
@@ -81,12 +81,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAg
     val state = loopNow(run, live.now)
     val working = live.running || agents.isNotEmpty()
     val detail = if (runDetail(run).opens) ({ hub.shell.goalSheet.value = GoalSheet.Detail(run.id) }) else null
-    val meta = listOfNotNull(
-        state.at?.let { clock(it) },
-        state.next?.let { "Next: $it" },
-        state.stepsLeft.takeIf { it > 0 }?.let { "${plural(it, "step")} left" },
-        buildsLine(run).ifEmpty { null },
-    ).joinToString(" · ")
+    val meta = nowMeta(state, buildsLine(run))
     Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3)) {
         TranscriptBox(
             hub, "loop:${run.id}", runLine(run), open = cardOpen, onToggle = toggleCard,

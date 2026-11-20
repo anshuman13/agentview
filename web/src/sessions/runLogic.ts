@@ -1,5 +1,6 @@
 import type { ChatRun, LiveChat, LiveNow, RoundOutcome } from '../../../shared/protocol';
 import { clock } from '../../../shared/util';
+import { plural } from '../ui/util';
 import { firstRound, nextRound, roundText, runLine as roundLine } from '../../../shared/goalText';
 
 const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', tries: 'Tries', job: 'Job' };
@@ -44,6 +45,10 @@ export function loopNow(run: ChatRun, now?: LiveNow): LoopNow {
   if (last) return { title: roundText(last), at: null, source: 'round' };
   return { title: firstRound(run.nextAt), at: null, source: 'none' };
 }
+
+// The meta line of the Now row: the status time, the next step, the steps left and the build limit.
+export const nowMeta = (now: Pick<LoopNow, 'at' | 'next' | 'stepsLeft'>, builds: string) =>
+  [now.at && clock(now.at), now.next && `Next: ${now.next}`, now.stepsLeft && `${plural(now.stepsLeft, 'step')} left`, builds].filter(Boolean).join(' · ');
 
 export const stoppedText = (run: ChatRun, running: boolean) => `${KIND[run.kind]} stopped${running && run.round > 0 && (run.kind === 'goal' || run.kind === 'loop') ? ` · round ${run.round} was running` : ''}`;
 

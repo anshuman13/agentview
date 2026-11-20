@@ -1,0 +1,4 @@
+[
+  { "name": "a titled meeting at 14:00", "meeting": { "title": "Planning", "starts_at": 1800021600000 }, "expected": "Prepare me for \"Planning\" at 14:00: who is in it, related Slack threads, Linear issues and docs, and what is still open from the last time we met." },
+  { "name": "an untitled meeting", "meeting": { "title": "", "starts_at": 1800021600000 }, "expected": "Prepare me for \"\" at 14:00: who is in it, related Slack threads, Linear issues and docs, and what is still open from the last time we met." }
+]

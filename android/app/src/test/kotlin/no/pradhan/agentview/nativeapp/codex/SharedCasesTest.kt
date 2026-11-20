@@ -136,6 +136,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.roundsSummary
 import no.pradhan.agentview.nativeapp.codex.autopilot.CapLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.capLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
+import no.pradhan.agentview.nativeapp.codex.autopilot.LoopNow
+import no.pradhan.agentview.nativeapp.codex.autopilot.nowMeta
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
 import no.pradhan.agentview.nativeapp.chat.BuildEntry
 import no.pradhan.agentview.nativeapp.chat.SpecHomeItem
@@ -631,6 +633,14 @@ class SharedCasesTest {
         for (c in cases("stopped-text")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
             assertEquals(c.str("name"), c.str("expected"), stoppedText(run, c.getValue("working").jsonPrimitive.boolean))
+        }
+    }
+
+    @Test fun nowMeta() {
+        for (c in cases("now-meta")) {
+            val n = c.getValue("now").jsonObject
+            val now = LoopNow("", n.nullable("at")?.jsonPrimitive?.long, "status", n.nullable("next")?.jsonPrimitive?.content, n.nullable("stepsLeft")?.jsonPrimitive?.int ?: 0)
+            assertEquals(c.str("name"), c.str("expected"), nowMeta(now, c.str("builds")))
         }
     }
 
@@ -1204,6 +1214,10 @@ class SharedCasesTest {
 
     @Test fun meetingAskText() {
         for (c in cases("meeting-ask")) assertEquals(c.str("name"), c.str("expected"), meetingAsk(copyMeeting(c), copyActions(c), c.getValue("now").jsonPrimitive.long))
+    }
+
+    @Test fun prepText() {
+        for (c in cases("prep-text")) assertEquals(c.str("name"), c.str("expected"), prepText(copyMeeting(c)))
     }
 
     @Test fun personCopy() {

@@ -42,7 +42,7 @@ import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { addUse, buildHistory, chatMarkdown, draftKey, failedLine, ghostFor, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
 import { composerPlaceholder, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
-import { headerState, runLine, stoppedText } from './sessions/runLogic';
+import { headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { capLine } from './sessions/goalLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -59,6 +59,7 @@ import { ago, markSegments, matchLabel, money, stepMatch } from './ui/util';
 import { notesTemplateCaret, notesTemplateChips, notesTemplateText, type NotesTemplate } from './codex/data/meetings/notesTemplates';
 import { setSystemTime } from '../../testing';
 import { guessProfile, meetingAsk } from './codex/data/ask/ask';
+import { prepText } from './codex/AskBar';
 import type { Profile } from './codex/data/sync';
 import { pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
@@ -460,7 +461,11 @@ describe('cases shared with the Android app', () => {
     it(`meetingAsk: ${c.name}`, () => expect(meetingAsk({ id: 'm', profile: 'work', ...c.meeting } as unknown as Meeting, c.actions as unknown as ItemRow[], c.now)).toBe(c.expected));
   }
 
-  type PersonCopyCase = { name: string; person: string; commitments: { what: string; meeting: Record<string, unknown> }[]; questions: string[]; tasks: object[]; points: object[]; pins: object[]; meetings: Record<string, unknown>[]; claims: { text: string }[]; expected: string };
+  for (const c of cases<{ name: string; meeting: Record<string, unknown>; expected: string }>('prep-text')) {
+    it(`prepText: ${c.name}`, () => expect(prepText({ id: 'm', profile: 'work', ...c.meeting } as unknown as Meeting)).toBe(c.expected));
+  }
+
+  type PersonCopyCase ={ name: string; person: string; commitments: { what: string; meeting: Record<string, unknown> }[]; questions: string[]; tasks: object[]; points: object[]; pins: object[]; meetings: Record<string, unknown>[]; claims: { text: string }[]; expected: string };
   for (const c of cases<PersonCopyCase>('person-copy')) {
     it(`personMarkdown: ${c.name}`, () => {
       const meeting = (m: Record<string, unknown>) => ({ id: 'm', profile: 'work', ...m }) as unknown as Meeting;
@@ -534,6 +539,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; run: Partial<ChatRun>; working: boolean; expected: string }>('stopped-text')) {
     it(`stoppedText: ${c.name}`, () => expect(stoppedText(run(c.run), c.working)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; now: { at?: number; next?: string; stepsLeft?: number }; builds: string; expected: string }>('now-meta')) {
+    it(`nowMeta: ${c.name}`, () => expect(nowMeta({ at: null, ...c.now }, c.builds)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; pipeline: SpecHomeItem['pipeline']; conclusion: string; updatedAt: number; meta: string; when: string }>('spec-row-parts')) {

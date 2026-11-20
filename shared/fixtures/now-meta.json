@@ -1,0 +1,7 @@
+[
+  { "name": "status with a time, next and three steps", "now": { "at": 1800000000000, "next": "Run the tests", "stepsLeft": 3 }, "builds": "", "expected": "08:00 · Next: Run the tests · 3 steps left" },
+  { "name": "one step left", "now": { "at": 1800000000000, "next": "Commit", "stepsLeft": 1 }, "builds": "", "expected": "08:00 · Next: Commit · 1 step left" },
+  { "name": "a round with no time", "now": {}, "builds": "Builds 0 of 2", "expected": "Builds 0 of 2" },
+  { "name": "a builds line", "now": { "at": 1800000000000 }, "builds": "Builds 1 of 3", "expected": "08:00 · Builds 1 of 3" },
+  { "name": "nothing", "now": {}, "builds": "", "expected": "" }
+]

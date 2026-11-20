@@ -65,6 +65,8 @@ fun askText(question: String, profile: String, items: List<Row>, about: Row? = n
 fun meetingAsk(m: Row, actions: List<Row>, now: Long) =
     "${if (m.startsAt?.let { it > now } == true) "Help me prepare for this meeting." else "Help me with this meeting."}\n\nAbout this meeting:\n${meetingMarkdown(m, actions)}"
 
+// web codex/AskBar.tsx prepText: Prep on the Up next meeting; shared/fixtures/prep-text.json holds the texts.
+fun prepText(m: Row) = "Prepare me for \"${m.title}\" at ${clock(m.startsAt!!)}: who is in it, related Slack threads, Linear issues and docs, and what is still open from the last time we met."
 
 // One Codex chat per profile and Mac is reused for the day (web codex/data/ask.ts).
 @Serializable

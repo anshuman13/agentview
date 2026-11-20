@@ -109,6 +109,14 @@ fun loopNow(run: ChatRun, now: LiveNow?): LoopNow {
     return LoopNow(firstRoundText(run.nextAt), null, "none")
 }
 
+// The meta line of the loop card's first row (web runLogic nowMeta): the status time, the next step, the steps left and the build limit.
+fun nowMeta(now: LoopNow, builds: String): String = listOfNotNull(
+    now.at?.let { clock(it) },
+    now.next?.let { "Next: $it" },
+    now.stepsLeft.takeIf { it > 0 }?.let { "${plural(it, "step")} left" },
+    builds.ifEmpty { null },
+).joinToString(" · ")
+
 fun agentAge(startedAt: Long, now: Long): String {
     val min = maxOf(1L, (now - startedAt) / 60_000)
     return if (min < 60) "$min min" else "${min / 60} h ${min % 60} min"
