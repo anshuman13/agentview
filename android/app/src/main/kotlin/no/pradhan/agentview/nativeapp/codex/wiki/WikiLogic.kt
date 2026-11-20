@@ -134,6 +134,13 @@ fun newFact(text: String, pageId: String?, profile: String, now: Long, state: St
     return edited(blank, values, now).let { r -> r.copy(times = r.times.mapValues { now }) }
 }
 
+// A new wiki page of web/src/codex/data/wiki/wiki.ts newPage; null for a blank title, so nothing is saved.
+fun newPage(title: String, section: String, sort: Long, profile: String, now: Long, id: String = UUID.randomUUID().toString()): Row? {
+    val name = title.trim().ifEmpty { return null }
+    val blank = Row("pages", id, profile, updatedAt = now, f = SYNCED_FIELDS.getValue("pages").associateWith { JsonNull })
+    return edited(blank, mapOf("title" to name, "section" to section, "sort" to sort), now)
+}
+
 // A live Memory claim saved on the Memory page: trimmed, at most 400 characters, no source; null when blank (web wiki.ts memoryClaim).
 fun memoryClaim(text: String, profile: String, now: Long): Row? = newFact(text.trim().take(400), null, profile, now, "live")
 
