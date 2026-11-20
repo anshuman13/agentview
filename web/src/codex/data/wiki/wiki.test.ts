@@ -4,7 +4,7 @@ import type { ItemRow } from '../sync';
 import { dayLabel } from '../dates';
 import { givenPreferences } from '../../../../../shared/preferences';
 import { clock } from '../../../../../shared/util';
-import { ungivenPreferences, decisionLog, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
+import { ungivenPreferences, decisionLog, approveAllChanges, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
 import { briefFor, decisionsWith, commitmentsOf, priorWith, seriesOf, seriesMeetings, seriesRepeats, seriesTitle, joinMinutes, meetingBadge, meetingMeta, openQuestions, searchMeetings, topicTimeline, trackedTopics } from '../meetings/meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
@@ -77,6 +77,16 @@ describe('wiki', () => {
     expect(pageStats(chain, 'p1').claims).toBe(2);
     const proposed = fact('x', 'p1', 'One', 'New', { state: 'proposed', replaces: 'k' });
     expect(approveChanges(proposed, [], chain).map((c) => c.row.id)).toEqual(['x', 'k']);
+  });
+
+  it('approving two proposals that replace one claim chains them, one at a time or together', () => {
+    const x = fact('x', 'p1', 'One', 'Old');
+    const a = fact('a', 'p1', 'One', 'First', { state: 'proposed', replaces: 'x' });
+    const b = fact('b', 'p1', 'One', 'Second', { state: 'proposed', replaces: 'x' });
+    const supersedes = (changes: ReturnType<typeof approveChanges>) => changes.filter((c) => 'superseded_by' in c.patch).map((c) => [c.row.id, c.patch.superseded_by]);
+    expect(supersedes(approveAllChanges([a, b], [], [x, a, b]))).toEqual([['x', 'a'], ['a', 'b']]);
+    const afterA = [{ ...x, superseded_by: 'a' }, { ...a, state: 'live' }, b];
+    expect(supersedes(approveChanges(b, [], afterA))).toEqual([['a', 'b']]);
   });
 
   it('picks the current live claim a proposal repeats, in its own profile', () => {

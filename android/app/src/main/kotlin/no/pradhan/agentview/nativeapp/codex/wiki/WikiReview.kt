@@ -96,7 +96,7 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
         return
     }
     val page = fact.str("page_id")?.let { id -> st.pages.firstOrNull { it.id == id && it.profile == fact.profile } }
-    val old = fact.str("replaces")?.let { id -> st.facts.firstOrNull { it.id == id && it.profile == fact.profile } }
+    val old = fact.str("replaces")?.let { id -> replacedClaim(fact, st.facts) ?: st.facts.firstOrNull { it.id == id && it.profile == fact.profile } }
     val similar = remember(fact, st.facts) { similarLive(fact, st.facts) }
     var editing by remember(fact.key) { mutableStateOf(false) }
     if (editing) ClaimTextSheet("Edit claim", fact.str("text") ?: "", "Save", { editing = false }) { ops.edit(fact, it) }

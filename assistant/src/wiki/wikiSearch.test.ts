@@ -80,6 +80,21 @@ test('markUsed counts a day of use per live claim and leaves updated_at alone', 
   expect(searchWiki(db, 'invoices', 'work').claims[0]).toMatchObject({ used_at: 5_000 + day });
 });
 
+test('searchWiki returns the contested note and markUsed skips proposed, rejected and superseded claims', () => {
+  const db = openDb(':memory:');
+  const note = JSON.stringify({ by: 'you', at: 1, note: 'now 100' });
+  applyChanges(db, [
+    row('facts', 'f1', { text: 'Limit is sixty.', contested: note }),
+    row('facts', 'f2', { text: 'Limit is proposed.', state: 'proposed' }),
+    row('facts', 'f3', { text: 'Limit is rejected.', state: 'rejected' }),
+    row('facts', 'f4', { text: 'Limit is old.', superseded_by: 'f1' }),
+  ]);
+  expect(searchWiki(db, 'limit', 'work').claims.find((c) => c.id === 'f1')).toMatchObject({ contested: note });
+  expect(markUsed(db, 'work', ['f1', 'f2', 'f3', 'f4'], 5_000)).toBe(1);
+  const used = db.prepare('SELECT id FROM facts WHERE used_count IS NOT NULL').all();
+  expect(used).toEqual([{ id: 'f1' }]);
+});
+
 test('the index follows inserts, updates, soft deletes and deletes', () => {
   const db = openDb(':memory:');
   const hits = (q: string) => ids(searchWiki(db, q, 'work').claims);
