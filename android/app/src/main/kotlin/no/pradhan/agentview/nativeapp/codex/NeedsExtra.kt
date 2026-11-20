@@ -38,13 +38,26 @@ private fun hourAt(t: Long, plusDays: Int, hour: Int) = atHour(Instant.ofEpochMi
 fun workGaps(busy: List<Span>, now: Long, startHour: Int, endHour: Int) =
     freeGaps(busy, maxOf(now, hourAt(now, 0, startHour)), hourAt(now, 0, endHour))
 
+// Meetings with a start and an end after it, under 20 hours long; all-day events drop out.
+fun timedMeetings(meetings: List<Row>, profile: String?) =
+    meetings.filter { !it.deleted && matchesProfile(profile, it) && it.startsAt != null && it.endsAt != null && it.endsAt!! > it.startsAt!! && it.endsAt!! - it.startsAt!! < 20 * 3_600_000L }
+
+// Work gaps for each remaining workday from now through Friday, and the days left after today; null on Saturday and Sunday.
+private fun weekGaps(busy: List<Span>, now: Long, startHour: Int, endHour: Int): Pair<Int, List<Span>>? {
+    val dow = Instant.ofEpochMilli(now).atZone(codexZone).dayOfWeek.value % 7
+    val days = 5 - dow
+    if (dow == 0 || days < 0) return null
+    return days to (0..days).flatMap { workGaps(busy, maxOf(now, hourAt(now, it, 0)), startHour, endHour) }
+}
+
+// Free work minutes from now through Friday, 0 on the weekend.
+fun weekFreeMinutes(busy: List<Span>, now: Long, startHour: Int = 8, endHour: Int = 17): Long =
+    weekGaps(busy, now, startHour, endHour)?.let { (_, gaps) -> Math.round(gaps.sumOf { (a, b) -> b - a } / 60_000.0) } ?: 0L
+
 // Tasks due by the end of this week's Friday whose estimates, summed in due order, exceed the free work time before their due
 // time; overdue tasks count as due at 17:00 today. short is the missing minutes. Empty on Saturday and Sunday.
 fun atRisk(tasks: List<Pair<Row, Long>>, busy: List<Span>, now: Long, startHour: Int = 8, endHour: Int = 17): List<Pair<Row, Long>> {
-    val dow = Instant.ofEpochMilli(now).atZone(codexZone).dayOfWeek.value % 7
-    val days = 5 - dow
-    if (dow == 0 || days < 0) return emptyList()
-    val gaps = (0..days).flatMap { workGaps(busy, maxOf(now, hourAt(now, it, 0)), startHour, endHour) }
+    val (days, gaps) = weekGaps(busy, now, startHour, endHour) ?: return emptyList()
     fun freeBy(t: Long) = Math.round(gaps.sumOf { (a, b) -> maxOf(0L, minOf(b, t) - a) } / 60_000.0)
     val close = hourAt(now, 0, endHour)
     val horizon = hourAt(now, days + 1, 0)

@@ -106,7 +106,7 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
     // A Slack summary older than the stale-ask age is out of date; its bullets are not shown.
     val brief = briefs.filter { !it.deleted && it.str("kind") == "slack" && matchesProfile(profile, it) && now - (it.long("to_at") ?: 0L) <= STALE_DAYS * DAY_MS }.maxByOrNull { it.long("to_at") ?: 0L }
     val bullets = brief?.str("text")?.let(::briefBullets)?.filter { it.key !in dismissedOf(brief) } ?: emptyList()
-    val timed = meetings.filter { !it.deleted && matchesProfile(profile, it) && it.startsAt != null && it.endsAt != null && it.endsAt!! > it.startsAt!! && it.endsAt!! - it.startsAt!! < 20 * 3_600_000L }
+    val timed = timedMeetings(meetings, profile)
     val minute = now / 60_000 * 60_000
     val blocked = timed.filter { isBlock(it) && it.endsAt!! > minute }.map { "${it.profile}:${it.id}" }.toSet()
     val dated = (s.overdue + s.today + s.later).filter { it.at != null && "${it.profile}:block:${it.id}" !in blocked }
@@ -173,6 +173,9 @@ fun linkedTo(items: List<Row>, goal: Row) = items.filter { !it.deleted && it.pro
 
 class Progress(val done: Int, val total: Int)
 fun goalProgress(items: List<Row>, goal: Row) = linkedTo(items, goal).let { t -> Progress(t.count { it.status == "done" }, t.size) }
+
+// A goal is at risk when its open tasks' estimates, summed, exceed the free work minutes left this week.
+fun goalAtRisk(items: List<Row>, goal: Row, freeMin: Long) = linkedTo(items, goal).filter { it.status == "open" }.sumOf { taskMinutes(it.title) } > freeMin
 
 // A goal's tasks, open ones first then done, and its done/total count.
 fun goalTasks(items: List<Row>, goal: Row): List<Row> = linkedTo(items, goal).sortedBy { it.status != "open" }
