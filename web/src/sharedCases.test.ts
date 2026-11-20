@@ -31,7 +31,7 @@ import { failedJobs } from '../../shared/jobRuns';
 import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
-import { mergeTail } from './app/runtime/pageEvents';
+import { mergeTail, trimHeld } from './app/runtime/pageEvents';
 import { buildTranscript, turnAnswers } from './chat/transcript/steps';
 import { foldTurns, proposalState, usedClaimState, workTitle } from './chat/transcript/workFold';
 import { countChat } from './app/shell/counts';
@@ -121,6 +121,14 @@ describe('cases shared with the Android app', () => {
     it(`mergeTail: ${c.name}`, () => {
       const events = (ids: string[]) => ids.map((id) => ({ id, kind: 'user', text: '', at: 0 }) as ChatEvent);
       const m = mergeTail(events(c.held), c.heldEarlier, events(c.tail), c.earlier);
+      expect(m.events.map((e) => e.id)).toEqual(c.expected);
+      expect(m.earlier).toBe(c.expectedEarlier);
+    });
+  }
+
+  for (const c of cases<{ name: string; events: string[]; earlier: number; max: number; keep: number; expected: string[]; expectedEarlier: number }>('trim-held')) {
+    it(`trimHeld: ${c.name}`, () => {
+      const m = trimHeld(c.events.map((id) => ({ id, kind: 'user', text: '', at: 0 }) as ChatEvent), c.earlier, c.max, c.keep);
       expect(m.events.map((e) => e.id)).toEqual(c.expected);
       expect(m.earlier).toBe(c.expectedEarlier);
     });

@@ -125,7 +125,7 @@
 .mt-add:focus-within { background: var(--accent-soft); }
 .mt-add input { flex: 1; min-width: 0; height: var(--touch-sm); border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-lg); outline: 0; }
 .mt-raise { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
-.mt-decisions .mt-raise, .mt-decisions .wk-act { margin-left: var(--sp-3); vertical-align: middle; }
+.mt-decisions .mt-raise, .mt-decisions > li > .btn { margin-left: var(--sp-3); vertical-align: middle; }
 
 /* Person view */
 .mt-person { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }

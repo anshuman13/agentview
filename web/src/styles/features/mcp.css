@@ -39,7 +39,6 @@
 .mcp-kv dd.wrap { word-break: break-all; font-size: var(--fs-xs); }
 .mcp-kv dd.bad { color: var(--err); }
 .mcp-kv dd.warn { color: var(--warn); }
-.mcp-kv .link { font-size: var(--fs-sm); }
 .mcp-act-error { align-self: center; font-size: var(--fs-sm); }
 .mcp-login { display: flex; flex-direction: column; gap: var(--sp-3); align-items: flex-start; }
 

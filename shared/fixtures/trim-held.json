@@ -1,0 +1,7 @@
+[
+  { "name": "under max stays as is", "events": ["e1", "e2", "e3"], "earlier": 4, "max": 5, "keep": 2, "expected": ["e1", "e2", "e3"], "expectedEarlier": 4 },
+  { "name": "at max stays as is", "events": ["e1", "e2", "e3", "e4", "e5"], "earlier": 0, "max": 5, "keep": 2, "expected": ["e1", "e2", "e3", "e4", "e5"], "expectedEarlier": 0 },
+  { "name": "over max keeps the last events", "events": ["e1", "e2", "e3", "e4", "e5", "e6"], "earlier": 0, "max": 5, "keep": 2, "expected": ["e5", "e6"], "expectedEarlier": 4 },
+  { "name": "dropped count is added to earlier", "events": ["e1", "e2", "e3", "e4", "e5", "e6"], "earlier": 7, "max": 5, "keep": 3, "expected": ["e4", "e5", "e6"], "expectedEarlier": 10 },
+  { "name": "keep larger than the list drops nothing", "events": ["e1", "e2", "e3", "e4"], "earlier": 1, "max": 2, "keep": 9, "expected": ["e1", "e2", "e3", "e4"], "expectedEarlier": 1 }
+]

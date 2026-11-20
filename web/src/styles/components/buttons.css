@@ -15,8 +15,6 @@ button.primary:disabled { opacity: 0.5; cursor: default; }
 button.active { color: var(--fg); }
 button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
 @media (hover: hover) { button.destructive:hover { background: color-mix(in srgb, var(--err) 28%, transparent); } }
-button.link { background: transparent; border: 0; padding: 0; color: var(--link); text-align: left; line-height: var(--line-sm); }
-@media (hover: hover) { button.link:hover { background: transparent; text-decoration: underline; } }
 
 .icon-btn {
   width: var(--size-md); height: var(--size-md); padding: 0; flex: none; border: 0; border-radius: var(--radius-sm);

@@ -173,7 +173,7 @@ private fun rememberEarlierDue(hub: Hub, chatId: String, replies: Int, loading: 
 }
 
 @Composable
-fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList(), failed: String? = null) {
+fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, finding: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList(), failed: String? = null) {
     val items = view.items
     val rows = view.rows
     val noEvents by hub.store.state.select { it.events.isEmpty() }
@@ -191,6 +191,10 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val stick = rememberSaveable(chatId) { mutableStateOf(true) }
     val atBottom by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 80 } }
     HideNavOnScroll(hub, listState, atBottom)
+    DisposableEffect(atBottom, finding) {
+        hub.store.atLatest = atBottom && !finding
+        onDispose { hub.store.atLatest = false }
+    }
     var leftId by remember(chatId) { mutableStateOf<String?>(null) }
     LaunchedEffect(atBottom) { leftId = if (atBottom) null else leftId ?: rows.firstOrNull()?.id }
     val replies = remember(items, leftId) { leftId?.let { newReplies(items, it) } ?: 0 }

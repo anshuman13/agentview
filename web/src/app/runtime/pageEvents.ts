@@ -12,6 +12,12 @@ export function initPage(held: ChatEvent[], heldEarlier: number, same: boolean, 
   return same && earlier !== undefined ? mergeTail(held, heldEarlier, events, earlier) : { events, earlier: earlier ?? 0 };
 }
 
+// A chat left open at its latest row keeps only the last `keep` events once it holds more than `max`; the dropped count joins `earlier`.
+export function trimHeld(events: ChatEvent[], earlier: number, max: number, keep: number) {
+  if (events.length <= max || keep >= events.length) return { events, earlier };
+  return { events: events.slice(-keep), earlier: earlier + events.length - keep };
+}
+
 // An older page goes in front only while the events still start where it was asked from; an init meanwhile wins.
 export function prependPage(held: ChatEvent[], first: string, page: ChatEvent[], earlier: number) {
   return held[0]?.id === first ? { events: [...page, ...held], earlier } : null;

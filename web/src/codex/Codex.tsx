@@ -134,7 +134,7 @@ export function Assistant() {
       <TasksHead list={list} heading={heading} filter={filter} searching={query != null} selecting={!!picked} onMenu={() => setDrawer(true)} onAdd={() => setAdding(true)} onSelect={() => setPicked(new Set())} onSearch={() => setQuery('')} />
       {gate.reconnecting && <div className="as-error muted"><Icon name="sync" small /> Reconnecting to the hub…</div>}
       {gate.error && !gate.reconnecting && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
-      {calError && <div className="as-error"><Icon name="warning" small /> Calendar not updated <span title={calError} aria-label={calError}><Icon name="info" small /></span> · <button className="link" onClick={() => void retryCalendar()}>Retry</button></div>}
+      {calError && <div className="as-error"><Icon name="warning" small /> Calendar not updated <span title={calError} aria-label={calError}><Icon name="info" small /></span> · <Button variant="plain" size="sm" onClick={() => void retryCalendar()}>Retry</Button></div>}
 
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>

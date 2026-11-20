@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Menu } from '../../ui/Menu';
 import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
-import { IconButton } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { headerState } from '../runLogic';
 import { loopAt } from '../../../../shared/util';
 import type { LiveChat } from '../../../../shared/protocol';
@@ -63,7 +63,7 @@ function StepList({ done, next, adding, setAdding }: { done: Props['done']; next
       {adding ? (
         <Step text="" editing onSave={(v) => { setAdding(false); if (v) setNext([...next, v]); }} onDrop={() => setAdding(false)} />
       ) : (
-        <li className="step add"><button className="link" onClick={() => setAdding(true)}><Icon name="add" small /> Add a step</button></li>
+        <li className="step add"><Button variant="plain" size="sm" icon="add" onClick={() => setAdding(true)}>Add a step</Button></li>
       )}
     </ul>
   );
@@ -88,7 +88,7 @@ export function HeadState(p: Props) {
   const count = done.length + next.length;
   return (
     <span className="tl-more">
-      {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: loopAt(limit.at, limit.prompt) }); }}>Continue at {limit.at}</button>}
+      {retry && <Button variant="plain" size="sm" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: loopAt(limit.at, limit.prompt) }); }}>Continue at {limit.at}</Button>}
       <button ref={btn} className={`tl-state ${state}`} title={text} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         {markIcon(state)}
         <span className="text">{text}</span>
@@ -105,7 +105,7 @@ export function HeadState(p: Props) {
               {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
             </span>
           </div>
-          {retry && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: loopAt(limit.at, limit.prompt) }); }}>Continue at {limit.at}</button>}
+          {retry && <Button variant="plain" size="sm" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: loopAt(limit.at, limit.prompt) }); }}>Continue at {limit.at}</Button>}
           <StepList done={done} next={next} adding={adding} setAdding={setAdding} />
         </Menu>
       )}

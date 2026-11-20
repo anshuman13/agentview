@@ -73,6 +73,20 @@ class ChatStoreTest {
     }
 
     @Test
+    fun newEventTrimsHeldRowsOnlyWhileAtLatest() {
+        val s = ChatStore()
+        s.show("a")
+        s.handle(ServerMessage.Init("a", (1..4 * ROW_WINDOW + 100).map { ev("e$it") }, 0))
+        s.handle(ServerMessage.Event(ev("n1")))
+        assertEquals(4 * ROW_WINDOW + 101, s.state.value.events.size)
+        s.atLatest = true
+        s.handle(ServerMessage.Event(ev("n2")))
+        assertEquals(2 * ROW_WINDOW, s.state.value.events.size)
+        assertEquals("n2", s.state.value.events.last().id)
+        assertEquals(2 * ROW_WINDOW + 102, s.state.value.earlier)
+    }
+
+    @Test
     fun initForAnotherChatIsIgnoredAfterAView() {
         val s = ChatStore()
         s.show("a")

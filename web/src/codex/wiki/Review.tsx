@@ -87,9 +87,9 @@ function ReviewCard({ fact, repeated, similar }: { fact: Fact; repeated: boolean
           </>
         ) : (
           <>
-            <button className="wk-act" onClick={() => { setText(fact.text ?? ''); setEditing(true); }}><Icon name="edit" small /> Edit</button>
-            {similar && <button className="wk-act" onClick={() => review.replace(fact, similar)}><Icon name="arrow-swap" small /> Replace it</button>}
-            {repeated && repoChat && !added && <button className="wk-act" onClick={() => void addRule()}><Icon name="add" small /> Add to CLAUDE.md</button>}
+            <Button variant="plain" size="sm" icon="edit" onClick={() => { setText(fact.text ?? ''); setEditing(true); }}>Edit</Button>
+            {similar && <Button variant="plain" size="sm" icon="arrow-swap" onClick={() => review.replace(fact, similar)}>Replace it</Button>}
+            {repeated && repoChat && !added && <Button variant="plain" size="sm" icon="add" onClick={() => void addRule()}>Add to CLAUDE.md</Button>}
             <span className="spacer" />
             <IconButton icon="close" label="Reject" className="mt-reject" onClick={reject} />
             <Button variant="primary" icon="check" className="mt-approve" onClick={approve}>Approve</Button>
@@ -151,7 +151,7 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
         {list.slice(0, PEEK).map((f) => <li key={f.profile + f.id}>{f.text}</li>)}
       </ul>
       <div className="mt-action-foot">
-        <button className="wk-act" onClick={() => setView({ open: page.id, anchor: null })}><Icon name="book" small /> {list.length > PEEK ? `Read all ${list.length}` : 'Read and edit'}</button>
+        <Button variant="plain" size="sm" icon="book" onClick={() => setView({ open: page.id, anchor: null })}>{list.length > PEEK ? `Read all ${list.length}` : 'Read and edit'}</Button>
         <span className="spacer" />
         <IconButton icon="close" label="Reject all" className="mt-reject" onClick={() => review.reject(list)} />
         <Button variant="primary" icon="check" className="mt-approve" onClick={() => review.approve(list)}>Approve all</Button>

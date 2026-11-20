@@ -166,7 +166,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
             CompositionLocalProvider(LocalBuildSheets provides buildSheets) {
                 val failed = if (live.failed && !running && !hub.readOnly) failedLine(view.events, providerLabel(live.provider)) else null
-                Transcript(hub, view, earlier, settled, live.id, cwd, running, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed)
+                Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed)
             }
         }
         PendingList(pending, session?.permissionMode ?: "default", hub)

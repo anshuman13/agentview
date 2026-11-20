@@ -36,6 +36,7 @@ import no.pradhan.agentview.nativeapp.sessions.chatMatches
 import no.pradhan.agentview.nativeapp.sessions.queryWords
 import no.pradhan.agentview.nativeapp.chat.failedLine
 import no.pradhan.agentview.nativeapp.chat.mergeTail
+import no.pradhan.agentview.nativeapp.chat.trimHeld
 import no.pradhan.agentview.nativeapp.chat.turnEnd
 import no.pradhan.agentview.nativeapp.chat.rememberPrompt
 import no.pradhan.agentview.nativeapp.chat.turnAnswers
@@ -276,6 +277,15 @@ class SharedCasesTest {
         for (c in cases("merge-tail")) {
             val (merged, earlier) = mergeTail(events(c, "held"), c.getValue("heldEarlier").jsonPrimitive.int, events(c, "tail"), c.getValue("earlier").jsonPrimitive.int)
             assertEquals(c.str("name"), events(c, "expected").map { it.id }, merged.map { it.id })
+            assertEquals(c.str("name"), c.getValue("expectedEarlier").jsonPrimitive.int, earlier)
+        }
+    }
+
+    @Test fun trimHeld() {
+        fun events(c: JsonObject, k: String) = c.getValue(k).jsonArray.map { ChatEvent(id = it.jsonPrimitive.content, kind = "user") }
+        for (c in cases("trim-held")) {
+            val (kept, earlier) = trimHeld(events(c, "events"), c.getValue("earlier").jsonPrimitive.int, c.getValue("max").jsonPrimitive.int, c.getValue("keep").jsonPrimitive.int)
+            assertEquals(c.str("name"), events(c, "expected").map { it.id }, kept.map { it.id })
             assertEquals(c.str("name"), c.getValue("expectedEarlier").jsonPrimitive.int, earlier)
         }
     }

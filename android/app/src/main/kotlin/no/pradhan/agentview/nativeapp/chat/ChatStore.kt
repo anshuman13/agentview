@@ -62,6 +62,9 @@ class ChatStore(
 
     @Volatile private var switching = false
 
+    // Whether the transcript sits at its latest row with find closed, so new events may drop the oldest held ones.
+    @Volatile var atLatest = false
+
     // The next init for a chat other than the wanted one is the answer to new_session or open_session.
     fun expectSwitch() { switching = true }
     fun cancelSwitch() { switching = false }
@@ -79,7 +82,11 @@ class ChatStore(
             is ServerMessage.Event -> state.update { s ->
                 if (!s.settled) return@update s
                 val i = s.events.indexOfLast { it.id == m.event.id }
-                s.copy(events = if (i < 0) s.events + m.event else s.events.toMutableList().also { it[i] = m.event })
+                if (i >= 0) return@update s.copy(events = s.events.toMutableList().also { it[i] = m.event })
+                val next = s.events + m.event
+                if (!atLatest) return@update s.copy(events = next)
+                val (events, earlier) = trimHeld(next, s.earlier, 4 * ROW_WINDOW, 2 * ROW_WINDOW)
+                s.copy(events = events, earlier = earlier)
             }
             is ServerMessage.Append -> state.update { s ->
                 if (!s.settled) return@update s
@@ -149,6 +156,10 @@ class ChatStore(
         state.value = StoreState()
     }
 }
+
+// A chat left open at its latest row keeps only the last `keep` events once it holds more than `max`; the dropped count joins `earlier`.
+fun trimHeld(events: List<ChatEvent>, earlier: Int, max: Int, keep: Int): Pair<List<ChatEvent>, Int> =
+    if (events.size <= max || keep >= events.size) events to earlier else events.takeLast(keep) to earlier + events.size - keep
 
 fun merged(held: SessionInfo?, m: ServerMessage.SessionUpdate): SessionInfo =
     if (held == null) m.session

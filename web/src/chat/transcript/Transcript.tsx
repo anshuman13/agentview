@@ -1,5 +1,5 @@
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { cancelUnsent, forgetSeenBefore, getState, loadEarlier, queuedFor, seenBefore, send, setUi, useStore } from '../../app/store';
+import { cancelUnsent, forgetSeenBefore, getState, loadEarlier, queuedFor, seenBefore, send, setAtLatest, setUi, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Button, Chip, IconButton, ShowToggle } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
@@ -57,7 +57,7 @@ function UnsentRows() {
   const outbox = useStore((s) => s.outbox);
   const chat = useStore((s) => s.session.id);
   return <>{queuedFor(outbox, chat).map((q) => (
-    <div key={q.id} className="tr-user unsent"><UserText id={q.id} text={q.text} /><span className="tr-stop"><Icon name="clock" small />Waiting to send<button className="link" onClick={() => cancelUnsent(q.id)}>Cancel</button></span></div>
+    <div key={q.id} className="tr-user unsent"><UserText id={q.id} text={q.text} /><span className="tr-stop"><Icon name="clock" small />Waiting to send<Button variant="plain" size="sm" onClick={() => cancelUnsent(q.id)}>Cancel</Button></span></div>
   ))}</>;
 }
 
@@ -224,6 +224,10 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const list = useMemo<FoldRow[]>(() => fold(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [fold, items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier, reveal } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const [finding, setFinding] = useState(false);
+  useEffect(() => {
+    setAtLatest(stuck && !finding);
+    return () => setAtLatest(false);
+  }, [stuck, finding]);
   // n remounts the bar when a message hit arrives while it is open.
   const [begun, setBegun] = useState<{ n: number; request: FindRequest | null }>({ n: 0, request: null });
   const chatId = useRef(sessionId);

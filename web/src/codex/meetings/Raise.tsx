@@ -32,11 +32,12 @@ export function useMarkRaised() {
 }
 
 // A Raise button that opens a row of recent attendees to raise the text with.
-export function RaiseWith({ text, profile, people, className = 'wk-act' }: { text: string; profile: Profile; people: string[]; className?: string }) {
+export function RaiseWith({ text, profile, people, className }: { text: string; profile: Profile; people: string[]; className?: string }) {
   const store = useAssistantStore();
   const [open, setOpen] = useState(false);
   if (!people.length || !text.trim()) return null;
-  if (!open) return <button className={className} title="Raise next time" onClick={() => setOpen(true)}><Icon name="comment" small /> Raise</button>;
+  if (!open && className) return <button className={className} title="Raise next time" onClick={() => setOpen(true)}><Icon name="comment" small /> Raise</button>;
+  if (!open) return <Button variant="plain" size="sm" icon="comment" title="Raise next time" onClick={() => setOpen(true)}>Raise</Button>;
   return (
     <span className="mt-raise">
       {people.map((p) => (
@@ -80,7 +81,7 @@ export function PointList({ points, person = true, meeting = true }: { points: I
             <span className="wk-claim-text">{person && <b>{firstName(r.people ?? '')}: </b>}{r.title}</span>
             <span className="wk-claim-foot">
               {m && <button className="mt-person" onClick={() => openMeeting(m)}>{m.title} · {when(m.starts_at!, Date.now(), true)}</button>}
-              <button className="wk-act" aria-label={`Raised ${r.title}`} onClick={(e) => { e.stopPropagation(); tick(r); }}><Icon name="check" small /> Raised</button>
+              <Button variant="plain" size="sm" icon="check" aria-label={`Raised ${r.title}`} onClick={(e) => { e.stopPropagation(); tick(r); }}>Raised</Button>
             </span>
           </li>
         );
