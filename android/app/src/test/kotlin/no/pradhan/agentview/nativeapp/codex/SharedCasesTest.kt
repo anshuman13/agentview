@@ -111,6 +111,7 @@ import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.money
+import no.pradhan.agentview.nativeapp.codex.jobs.tasksOf
 import no.pradhan.agentview.nativeapp.codex.meetings.actionCount
 import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.codex.meetings.filterMeetings
@@ -452,6 +453,23 @@ class SharedCasesTest {
 
     @Test fun specOpenTasks() {
         for (c in cases("spec-open-tasks")) assertEquals(c.str("name"), c.str("expected"), withoutOpenTasks(c.str("md")))
+    }
+
+    @Test fun jobTasks() {
+        for (c in cases("job-tasks")) {
+            val job = c.getValue("job").jsonObject
+            val profile = job.str("profile")
+            val f = SYNCED_FIELDS.getValue("jobs").associateWith { JsonNull as JsonElement } + ("name" to job.getValue("name"))
+            val items = c.getValue("items").jsonArray.map { it.jsonObject }.map { i ->
+                val fields = SYNCED_FIELDS.getValue("items").associateWith { JsonNull as JsonElement } + mapOf(
+                    "status" to i.getValue("status"),
+                    "source" to (i["source"] ?: toJson("job")),
+                    "people" to (i["people"] ?: job.getValue("name")),
+                )
+                Row("items", i.str("id"), i.prim("profile")?.content ?: profile, updatedAt = i.getValue("madeAt").jsonPrimitive.long, deleted = i.prim("deleted")?.boolean == true, f = fields)
+            }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, tasksOf(items, Row("jobs", "j", profile, f = f)).map { it.id })
+        }
     }
 
     @Test fun specHome() {

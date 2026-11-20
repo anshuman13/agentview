@@ -9,6 +9,13 @@ import { useShownMcp } from '../../ops/mcpShown';
 import { scopeInfo, toggleConnector, toolId } from '../../ops/mcpHelpers';
 import { useAssistantStore } from '../data';
 import { useWorkspace } from '../../sessions/folders';
+import { Row } from '../../ui/Row';
+import { Section, sectionCount } from '../../ui/Section';
+import { ago } from '../../ui/util';
+import { madeAt, type ItemRow } from '../data/sync';
+import { Group } from '../meetings/PersonParts';
+import { openTask } from '../view';
+import { UNTITLED } from '../../../../shared/util';
 
 export function JobActions({ j, prompt, nameInput, back }: { j: Job; prompt: string; nameInput: RefObject<HTMLInputElement | null>; back: () => void }) {
   const store = useAssistantStore();
@@ -121,6 +128,18 @@ export function JobRepo({ j }: { j: Job }) {
         </Menu>
       )}
       {j.repo && <div className="jb-tools"><Chip size="sm" icon="close" aria-label={`Remove ${repoName(j.repo)}`} onClick={() => set(null)}>{repoName(j.repo)}</Chip></div>}
+    </section>
+  );
+}
+
+export function JobTasks({ tasks, name }: { tasks: ItemRow[]; name: string }) {
+  if (!tasks.length) return null;
+  return (
+    <section className="mt-sec">
+      <Section label="Tasks it added" count={sectionCount(tasks.length)} />
+      <Group rows={tasks} name={name} row={(r) => (
+        <Row key={r.profile + r.id} title={r.title || UNTITLED} meta={[r.status === 'done' ? 'Done' : null, ago(madeAt(r), ' ago')].filter(Boolean).join(' · ')} onClick={() => openTask(r)} />
+      )} />
     </section>
   );
 }

@@ -6,11 +6,12 @@ import { useOnUnmount, useReturnFocus } from '../../ui/util';
 import { setView, useEscapeBack } from '../view';
 import { useMinute } from '../tasks/split';
 import { nextRun } from '../../../../shared/schedule';
-import { runsOf, useJobs } from './schedule';
+import { runsOf, tasksOf, useJobs } from './schedule';
+import { useAssistantTable } from '../data';
 import { Row } from '../../ui/Row';
 import { Switch } from './Switch';
 import { RunsRow, RunsSheet } from './RunsSheet';
-import { JobActions, JobRepo, JobTools, JobWhen, repoName } from './JobParts';
+import { JobActions, JobRepo, JobTasks, JobTools, JobWhen, repoName } from './JobParts';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
 
@@ -44,6 +45,7 @@ export function JobPage({ j }: { j: Job }) {
   useEscapeBack(runsOpen ? () => {} : back);
   useReturnFocus(runsOpen);
   const list = runsOf(runs, j);
+  const tasks = tasksOf(useAssistantTable('items'), j);
   return (
     <div className="wk narrow">
       <header className="wk-head">
@@ -66,6 +68,7 @@ export function JobPage({ j }: { j: Job }) {
             {!j.repo && <Row plain title="Only push when it found something" meta="A reply starting with NOTHING NEW is kept in the runs but not pushed" trailing={<Switch on={!!j.quiet} label="Only push when it found something" onChange={(on) => void store.editRow('jobs', j, { quiet: on ? 1 : 0 })} />} />}
             <RunsRow latest={list[0]} onOpen={() => setRunsOpen(true)} />
           </div>
+          <JobTasks tasks={tasks} name={j.id} />
         </article>
       </div>
       {runsOpen && <RunsSheet runs={list} query={query} setQuery={setQuery} onClose={() => setRunsOpen(false)} />}

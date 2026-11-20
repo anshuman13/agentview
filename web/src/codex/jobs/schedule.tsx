@@ -1,5 +1,6 @@
 import { useAssistantStore, useAssistantData } from '../data';
 import type { Job, Run } from '../data/wiki/wiki';
+import { madeAt, type ItemRow } from '../data/sync';
 import { clock } from '../tasks/time';
 import { dayLabel, dayStart } from '../data/dates';
 import { money } from '../../ui/util';
@@ -40,7 +41,12 @@ export function at(t: number, now = Date.now()) {
 
 export const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && r.profile === j.profile && r.job_id === j.id).sort((a, b) => (b.started_at ?? 0) - (a.started_at ?? 0));
 
-export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
+// The tasks a job's add_task wrote (source job, people the job name): open first, then done, newest first.
+export const tasksOf = (items: ItemRow[], j: Job) => items
+  .filter((i) => !i.deleted && i.profile === j.profile && i.source === 'job' && i.people === j.name)
+  .sort((a, b) => Number(a.status === 'done') - Number(b.status === 'done') || madeAt(b) - madeAt(a));
+
+export const queued =(j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
 export const jobState = (j: Job, runs: Run[], now: number): BadgeSpec | null => {
   const latest = runsOf(runs, j)[0]?.status;
