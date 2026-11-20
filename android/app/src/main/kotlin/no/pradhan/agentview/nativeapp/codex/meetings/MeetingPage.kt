@@ -23,7 +23,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import no.pradhan.agentview.nativeapp.codex.CodexOps
 import no.pradhan.agentview.nativeapp.codex.CodexState
@@ -57,7 +59,8 @@ import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
-import no.pradhan.agentview.nativeapp.ui.IconBtn
+import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
@@ -124,7 +127,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val transcript = rememberTranscript(hub, m, state == MState.Done)
     val talk = remember(transcript) { transcript?.getOrNull()?.let(::talkTime).orEmpty() }
     LazyColumn(Modifier.fillMaxWidth()) {
-        meetingHeader(c, state)
+        meetingHeader(c, state, all)
         if (isEvent(m)) {
             item { NotesHeader(c, all) }
             item { NotesField(hub, m) }
@@ -145,11 +148,11 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     if (folds.pinning.value) PinSheet(m, ops) { folds.pinning.value = false }
 }
 
-private fun LazyListScope.meetingHeader(c: MeetingCtx, state: MState) {
+private fun LazyListScope.meetingHeader(c: MeetingCtx, state: MState, all: List<Row>) {
     val m = c.m
     val links = linksOf(m)
     item {
-        MeetingTitle(c, state)
+        MeetingTitle(c, state, all)
         if (!m.str("room").isNullOrEmpty() && m.long("room_me") == null) RoomMic(c.hub, m)
     }
     if (links.isNotEmpty()) {
@@ -162,16 +165,22 @@ private fun LazyListScope.meetingHeader(c: MeetingCtx, state: MState) {
 }
 
 @Composable
-private fun MeetingTitle(c: MeetingCtx, state: MState) {
+private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>) {
     val m = c.m
     val link = safeHref(m.str("calendar_url"))
+    val copyable = hasContent(m, all)
     val uri = LocalUriHandler.current
+    val clip = LocalClipboardManager.current
     Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         if (isEvent(m)) Text("Event", style = Type.footnote, color = av.fgMuted)
         LRow(verticalAlignment = Alignment.CenterVertically) {
             Text(m.title?.ifEmpty { null } ?: UNTITLED, Modifier.weight(1f), style = Type.title)
             if (state == MState.Live && link != null && !isEvent(m)) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-            else if (link != null && m.id.startsWith("cal:")) IconBtn("link-external", "Open calendar", { uri.openUri(link) })
+            if (link != null || copyable) MoreButton { close ->
+                if (link != null) MenuItem("Open calendar", "calendar", { close(); uri.openUri(link) })
+                if (copyable) MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(m, all))); c.actions.say("Follow-up copied") })
+                if (copyable) MenuItem("Copy as Markdown", "copy", { close(); clip.setText(AnnotatedString(meetingMarkdown(m, all))); c.actions.say("Copied") })
+            }
         }
         pageMeta(m).takeIf { it.isNotEmpty() }?.let { Text(it, style = Type.subheadline, color = av.fgMuted) }
         stateLine(m, c.now)?.let { Text(it, style = Type.callout, color = if (state == MState.Missing) av.warn else av.info) }

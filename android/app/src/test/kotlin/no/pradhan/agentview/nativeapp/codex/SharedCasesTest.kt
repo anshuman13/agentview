@@ -111,6 +111,9 @@ import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.codex.meetings.actionCount
 import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.codex.meetings.filterMeetings
+import no.pradhan.agentview.nativeapp.codex.meetings.followUpText
+import no.pradhan.agentview.nativeapp.codex.meetings.hasContent
+import no.pradhan.agentview.nativeapp.codex.meetings.meetingMarkdown
 import no.pradhan.agentview.nativeapp.codex.meetings.groupMeetings
 import no.pradhan.agentview.nativeapp.codex.meetings.inSeries
 import no.pradhan.agentview.nativeapp.codex.meetings.meetingState
@@ -558,6 +561,19 @@ class SharedCasesTest {
         f["status"] = toJson(r.str("status"))
         r.prim("assignee")?.let { f["assignee"] = it }
         return Row("items", "i", r.prim("profile")?.content ?: "work", deleted = r.prim("deleted")?.boolean == true, f = f)
+    }
+
+    @Test fun meetingCopy() {
+        for (c in cases("meeting-copy")) {
+            val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()
+            f.putAll(c.getValue("meeting").jsonObject)
+            val m = Row("meetings", "m", "work", f = f)
+            val actions = c.getValue("actions").jsonArray.map { it.jsonObject }.map { Row("items", it.str("title"), "work", f = mapOf("title" to it.getValue("title"), "status" to it.getValue("status"))) }
+            val name = c.str("name")
+            assertEquals(name, c.getValue("hasContent").jsonPrimitive.boolean, hasContent(m, actions))
+            assertEquals(name, c.str("followUp"), followUpText(m, actions))
+            assertEquals(name, c.str("markdown"), meetingMarkdown(m, actions))
+        }
     }
 
     @Test fun meetingStates() {

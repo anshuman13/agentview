@@ -42,7 +42,8 @@ import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import type { Meeting } from './codex/data/wiki/wiki';
 import type { ItemRow } from './codex/data/sync';
-import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
+import { followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
+import { actionCount,displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
 import { similarClaim } from '../../shared/claimMatch';
@@ -241,6 +242,17 @@ describe('cases shared with the Android app', () => {
     it(`filterMeetings: ${c.name}`, () => {
       const meetings = meetingCases.filter.meetings.map(meetingOf);
       expect(filterMeetings(meetings, meetingCases.filter.items.map(itemOf), c.chips, NOW).map((m) => m.id)).toEqual(c.expected);
+    });
+  }
+
+  type CopyCase = { name: string; meeting: Record<string, unknown>; actions: { title: string; status: string }[]; hasContent: boolean; followUp: string; markdown: string };
+  for (const c of cases<CopyCase>('meeting-copy')) {
+    it(`meeting copy: ${c.name}`, () => {
+      const m = { id: 'm', profile: 'work', ...c.meeting } as unknown as Meeting;
+      const actions = c.actions as unknown as ItemRow[];
+      expect(hasContent(m, actions)).toBe(c.hasContent);
+      expect(followUpText(m, actions)).toBe(c.followUp);
+      expect(toMarkdown(m, actions)).toBe(c.markdown);
     });
   }
 
