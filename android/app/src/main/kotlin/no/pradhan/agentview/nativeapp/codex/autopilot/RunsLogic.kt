@@ -133,6 +133,15 @@ data class RunDiff(val branch: String = "", val files: List<PrFile> = emptyList(
 
 fun parseRunDiff(body: String): RunDiff = protocolJson.decodeFromString(RunDiff.serializer(), body)
 
+// A commit of a run's folder (web GitCommit), from /api/git/log.
+@Serializable
+data class GitCommit(val hash: String, val subject: String, val at: Long)
+
+@Serializable
+private data class GitLog(val commits: List<GitCommit> = emptyList())
+
+fun parseGitLog(body: String): List<GitCommit> = protocolJson.decodeFromString(GitLog.serializer(), body).commits
+
 // The review summary row's meta (web ReviewCard): "<branch> · +A -D · N files · <ago>".
 fun reviewMeta(run: ChatRun, diff: RunDiff?, now: Long): String {
     val size = diff?.let { d -> listOf("+${d.files.sumOf { it.additions }} -${d.files.sumOf { it.deletions }}", plural(d.files.size, "file")) } ?: emptyList()

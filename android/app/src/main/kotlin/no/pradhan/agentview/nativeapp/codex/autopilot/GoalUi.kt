@@ -35,6 +35,7 @@ import no.pradhan.agentview.nativeapp.app.modelsOf
 import no.pradhan.agentview.nativeapp.app.newChat
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.app.readFile
+import no.pradhan.agentview.nativeapp.app.runCommits
 import no.pradhan.agentview.nativeapp.app.runControl
 import no.pradhan.agentview.nativeapp.app.runEdit
 import no.pradhan.agentview.nativeapp.app.submit
@@ -60,6 +61,7 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.planCondition
 import no.pradhan.agentview.nativeapp.workspace.specProgress
@@ -308,6 +310,17 @@ private fun GoalDetailSheet(hub: Hub, run: ChatRun, onClose: () -> Unit) {
             }
             if (ended) Button("Run again…", { hub.shell.goalSheet.value = GoalSheet.Start(here = hub.store.state.value.shownId == run.chatId, from = run) }, enabled = !hub.readOnly)
             Button("Open chat", { open(run.rounds.lastOrNull()?.report) }, variant = ButtonVariant.Plain)
+        }
+        val (changes) = rememberLoad(run.id, run.chatId, run.rounds.size) { hub.runCommits(run) }
+        SectionHeader("Changes", changes.data?.size?.toString())
+        Group {
+            val commits = changes.data
+            if (commits == null) ListRow(if (changes.busy) "Reading commits" else "Could not read commits")
+            else if (commits.isEmpty()) ListRow("No commits")
+            else commits.forEachIndexed { i, c ->
+                if (i > 0) Hairline()
+                ListRow(c.subject, "${c.hash} · ${since(c.at)}", lines = 1)
+            }
         }
         SectionHeader("Rounds", run.rounds.size.toString())
         if (run.rounds.isEmpty()) EmptyState("No rounds yet", "The first round runs when the agent goes idle", icon = "history")
