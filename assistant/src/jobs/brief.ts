@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite';
 import { pushNtfy } from '../../../server/src/integrations/notify.js';
 import { atRisk, minutesText, workGaps, type Span } from '../../../shared/plan.js';
 import { blockId, clock, isBlock } from '../../../shared/util.js';
+import { isLate, waitingOn } from '../../../shared/waiting.js';
 import { deleteMeta, getMeta, pruneMeta, setMeta, type Profile } from '../core/db.js';
 import { loop } from '../core/once.js';
 import { applyChanges } from '../core/sync.js';
@@ -33,6 +34,22 @@ function riskCount(db: Database, profile: Profile, now: number) {
   const busy = db.prepare('SELECT starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = ? AND starts_at < ? AND ends_at > ? AND ends_at - starts_at < ?').all(profile, week, now, LONG) as { starts_at: number; ends_at: number }[];
   const tasks = db.prepare("SELECT i.title, CAST(i.at AS INTEGER) AS due FROM items i WHERE i.deleted = 0 AND i.profile = ? AND i.status = 'open' AND COALESCE(i.source, '') NOT IN ('calendar', 'meeting') AND i.at IS NOT NULL AND i.at <> '' AND CAST(i.at AS INTEGER) < ? AND NOT EXISTS (SELECT 1 FROM meetings m WHERE m.profile = i.profile AND m.id = ? || i.id AND m.deleted = 0 AND m.ends_at > ?)").all(profile, week, blockId(''), now) as { title: string | null; due: number }[];
   return atRisk(tasks, busy.map((m) => [m.starts_at, m.ends_at] as Span), now).length;
+}
+
+// Open items that wait on a person, and sent mail with no reply, that have waited over 3 workdays.
+function latePromises(db: Database, profile: Profile, now: number) {
+  const rows = db.prepare("SELECT title, text, people, updated_at, field_times FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') <> 'calendar'").all(profile) as { title: string | null; text: string | null; people: string | null; updated_at: number; field_times: string }[];
+  const created = (r: (typeof rows)[number]) => Math.min(r.updated_at, ...Object.values(JSON.parse(r.field_times) as Record<string, number>).filter((t) => t > 0));
+  const items = rows.filter((r) => waitingOn(r) && isLate(created(r), now)).length;
+  const mail = (db.prepare("SELECT text FROM briefs WHERE deleted = 0 AND profile = ? AND kind = 'waiting'").all(profile) as { text: string | null }[]).flatMap((b) => {
+    try {
+      const list = JSON.parse(b.text || '[]');
+      return Array.isArray(list) ? (list as { to?: string; subject?: string; sent_at: number }[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  return items + mail.filter((w) => w.to && w.subject && isLate(w.sent_at, now)).length;
 }
 
 // The note left at the last wrap-up, today's meetings and free time, tasks due, overdue or without a date, tasks at risk this week, Slack asks to review, Slack promises of mine and meeting actions left from the last workday.
@@ -68,6 +85,9 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   if (tasks.length) lines.push('', `Tasks · ${due} due today${tasks.length > due ? `, ${tasks.length - due} undated` : ''}${late ? `, ${late} overdue` : ''}${rolled ? `, ${rolled} rolled` : ''}`, ...top(tasks, (t) => `${dated(t) && Number(t.at) < now ? ' (overdue)' : ''}${t.rolls ? ` (rolled ${t.rolls}x)` : ''}`));
   const risk = riskCount(db, profile, now);
   if (risk) lines.push('', `At risk: ${plural(risk, 'task')}`);
+  const promises = latePromises(db, profile, now);
+  const lateText = `${plural(promises, 'promise')} from others ${promises === 1 ? 'is' : 'are'} late`;
+  if (promises) lines.push('', lateText);
   if (older.length) lines.push('', `Waiting from yesterday or older · ${older.length}`, ...top(older, askTag));
   if (today.length) lines.push('', `Slack asks to review · ${today.length}`, ...top(today, askTag));
   if (said.length) lines.push('', `You said · ${said.length}`, ...top(said));
@@ -79,6 +99,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
     ...section('plan', [
       gaps.length ? { title: `Free ${minutesText(Math.round(free / 60_000))}`, meta: gaps.map(([a, b]) => `${clock(a)}-${clock(b)}`).join(', ') } : { title: 'No free time 08:00-17:00' },
       ...(risk ? [{ title: `${plural(risk, 'task')} at risk` }] : []),
+      ...(promises ? [{ title: lateText }] : []),
     ]),
     ...section('tasks', tasks.map((t) => ({ title: orUntitled(t), item: t.id, meta: [dated(t) && Number(t.at) < now ? 'overdue' : '', t.rolls ? `rolled ${t.rolls}x` : ''].filter(Boolean).join(', ') }))),
     ...section('waiting', older.map((a) => ({ title: orUntitled(a), item: a.id, meta: `${who(a)}, ${age(now - a.since)}` }))),
@@ -90,7 +111,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
     title: `Today: ${plural(meetings.length, 'meeting')}, ${plural(due, 'task')}`,
     text: lines.join('\n'),
     rows,
-    empty: !meetings.length && !due && !risk && !slack.length && !left.length,
+    empty: !meetings.length && !due && !risk && !promises && !slack.length && !left.length,
   };
 }
 

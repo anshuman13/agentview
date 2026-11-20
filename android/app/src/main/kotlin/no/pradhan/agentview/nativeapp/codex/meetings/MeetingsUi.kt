@@ -68,7 +68,7 @@ private fun WaitingRowView(g: Waiting, hub: Hub) {
     val clip = LocalClipboardManager.current
     val uri = LocalUriHandler.current
     val links = g.rows.mapNotNull { r -> safeHref(r.url)?.let { r.title to it } }
-    ListRow(g.name, g.rows.joinToString(", ") { "${it.title} (${it.days}d)" }, trailing = {
+    ListRow(g.name, g.rows.joinToString(", ") { "${it.title} (${it.days}d)" }, state = if (g.rows[0].late) ({ Badge("Late", BadgeTone.Failed) }) else null, trailing = {
         Button("Copy nudge", { clip.setText(AnnotatedString(nudgeText(g))); hub.notice.value = "Nudge copied" }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         if (links.isNotEmpty()) MoreButton { close -> links.forEach { (title, href) -> MenuItem("Open $title", "link-external", { close(); uri.openUri(href) }) } }
     })

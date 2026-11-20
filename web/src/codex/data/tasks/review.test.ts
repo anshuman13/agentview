@@ -46,6 +46,15 @@ describe('waitingByPerson', () => {
     expect(g[0].rows[0].days).toBe(9);
   });
 
+  it('puts late rows and groups first', () => {
+    const now = new Date(2026, 10, 18, 12).getTime();
+    const g = waitingByPerson([
+      row({ id: '1', title: 'Waiting on Ann: a', updated_at: now - 86400000 }),
+      row({ id: '2', title: 'Waiting on Bo: b', updated_at: now - 8 * 86400000 }),
+    ], now, [{ thread: 't', url: 'u', to: 'Ann', subject: 'old mail', sent_at: now - 9 * 86400000 }]);
+    expect(g.map((x) => [x.name, x.rows.map((y) => [y.title, y.late])])).toEqual([['Ann', [['old mail', true], ['a', false]]], ['Bo', [['b', true]]]]);
+  });
+
   it('adds unanswered mail to the same person and nudges by subject', () => {
     const now = new Date(2026, 9, 30).getTime();
     const g = waitingByPerson([row({ id: '1', title: 'Waiting on Sara: contract', updated_at: now - 3 * 86400000 })], now, [{ thread: 't1', url: 'https://mail.example.test/t1', to: 'sara', subject: 'Budget', sent_at: now - 5 * 86400000 }]);

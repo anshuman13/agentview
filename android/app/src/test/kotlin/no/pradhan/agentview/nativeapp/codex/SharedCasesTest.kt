@@ -5,6 +5,7 @@ import java.io.File
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -111,6 +112,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.filterMeetings
 import no.pradhan.agentview.nativeapp.codex.meetings.groupMeetings
 import no.pradhan.agentview.nativeapp.codex.meetings.inSeries
 import no.pradhan.agentview.nativeapp.codex.meetings.meetingState
+import no.pradhan.agentview.nativeapp.codex.meetings.isLate
 import no.pradhan.agentview.nativeapp.codex.meetings.sameName
 import no.pradhan.agentview.nativeapp.codex.meetings.seriesTitle
 import no.pradhan.agentview.nativeapp.ops.McpServer
@@ -486,6 +488,11 @@ class SharedCasesTest {
             c.nullable("at")?.let { f["at"] = toJson(it.jsonPrimitive.long) }
             assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isOld(Row("facts", "f", "work", f = f), c.getValue("now").jsonPrimitive.long))
         }
+    }
+
+    @Test fun latePromise() {
+        fun at(c: JsonObject, k: String) = c.getValue(k).jsonArray.map { it.jsonPrimitive.int }.let { (y, m, d, h) -> ZonedDateTime.of(y, m, d, h, 0, 0, 0, codexZone).toInstant().toEpochMilli() }
+        for (c in cases("late-promise")) assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isLate(at(c, "since"), at(c, "now")))
     }
 
     @Test fun eventRule() {

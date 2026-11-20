@@ -3,6 +3,7 @@ import { useAssistantTable, useAssistantStore } from '../data';
 import { EmptyState } from '../../ui/Panel';
 import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
+import { Badge } from '../../ui/Badge';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { nextMonday, nudgeText, unanswered, waitingByPerson, weeklyReview } from '../data/tasks/review';
@@ -83,6 +84,7 @@ export function Review({ now }: { now: number }) {
                   lines={2}
                   title={g.name}
                   meta={g.rows.map((x) => `${x.title} (${x.days}d)`).join(', ')}
+                  state={g.rows[0].late ? <Badge status="late" reason="Over 3 working days" /> : undefined}
                   onClick={() => copyText(nudgeText(g), 'Nudge copied')}
                   action={links.length > 0 ? <More>{(close) => links.map((x) => <MenuItem key={x.key} href={safeHref(x.url!)} onClick={close}>Open {x.title}</MenuItem>)}</More> : undefined}
                 />

@@ -1,4 +1,5 @@
 import { blockId, isBlock } from '../../../../../shared/util';
+import { isLate, nameRe, waitingOn } from '../../../../../shared/waiting';
 import { dayEnd, dayStart, pad, weekStart, ymd } from '../dates';
 import { atTime, statusTime } from './engine';
 import { goalsOf } from './goals';
@@ -38,16 +39,6 @@ export function weeklyReview(items: ItemRow[], now: number) {
   return { start, done, slipped, stuck };
 }
 
-const nameRe = /^(?:waiting\s+(?:on|for)\s+([^:,\-\n(]+)|@(\S+))/i;
-
-const waitingOn = (r: ItemRow): string | null => {
-  const title = r.title?.trim() ?? '';
-  const m = nameRe.exec(title);
-  if (m) return (m[1] ?? m[2]).trim() || null;
-  const first = r.people?.split(',')[0].trim();
-  return first && /\bwaiting\b/i.test(`${title} ${r.text ?? ''}`) ? first : null;
-};
-
 // Sent mail the hub found with no reply after three workdays, kept as one brief row per profile.
 export type Unanswered = { thread: string; url: string; to: string; subject: string; sent_at: number };
 
@@ -77,7 +68,7 @@ export function ignoredToday(briefs: Brief[], profile: string, now: number): Ign
   }).sort((a, b) => b.at - a.at);
 }
 
-export type Waiting = { name: string; rows: { key: string; title: string; days: number; row?: ItemRow; url?: string }[] };
+export type Waiting = { name: string; rows: { key: string; title: string; days: number; late: boolean; row?: ItemRow; url?: string }[] };
 
 export function waitingByPerson(items: ItemRow[], now: number, mail: Unanswered[] = []): Waiting[] {
   const groups = new Map<string, Waiting>();
@@ -92,11 +83,11 @@ export function waitingByPerson(items: ItemRow[], now: number, mail: Unanswered[
     const name = waitingOn(row);
     if (!name) continue;
     const title = (row.title ?? '').replace(nameRe, '').replace(/^[\s:,\-]+/, '').trim() || row.title || '';
-    add(name, { key: row.profile + row.id, title, days: ageDays(row, now), row });
+    add(name, { key: row.profile + row.id, title, days: ageDays(row, now), late: isLate(createdAt(row), now), row });
   }
-  for (const w of mail) add(w.to, { key: `mail:${w.thread}`, title: w.subject, days: Math.max(0, Math.floor((now - w.sent_at) / DAY)), url: w.url });
-  for (const g of groups.values()) g.rows.sort((a, b) => b.days - a.days);
-  return [...groups.values()].sort((a, b) => b.rows[0].days - a.rows[0].days || a.name.localeCompare(b.name));
+  for (const w of mail) add(w.to, { key: `mail:${w.thread}`, title: w.subject, days: Math.max(0, Math.floor((now - w.sent_at) / DAY)), late: isLate(w.sent_at, now), url: w.url });
+  for (const g of groups.values()) g.rows.sort((a, b) => Number(b.late) - Number(a.late) || b.days - a.days);
+  return [...groups.values()].sort((a, b) => Number(b.rows[0].late) - Number(a.rows[0].late) || b.rows[0].days - a.rows[0].days || a.name.localeCompare(b.name));
 }
 
 export function nudgeText(g: Waiting) {

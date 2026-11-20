@@ -1,0 +1,11 @@
+[
+  {"name": "before the third workday ends", "since": [2026, 11, 2, 12], "now": [2026, 11, 5, 11], "expected": false},
+  {"name": "past the third workday", "since": [2026, 11, 2, 12], "now": [2026, 11, 5, 13], "expected": true},
+  {"name": "weekend does not count", "since": [2026, 11, 4, 12], "now": [2026, 11, 8, 13], "expected": false},
+  {"name": "third workday is the next Monday", "since": [2026, 11, 4, 12], "now": [2026, 11, 9, 13], "expected": true},
+  {"name": "sent on Friday, not yet late on Tuesday", "since": [2026, 11, 6, 12], "now": [2026, 11, 10, 13], "expected": false},
+  {"name": "sent on Friday, late on Wednesday", "since": [2026, 11, 6, 12], "now": [2026, 11, 11, 13], "expected": true},
+  {"name": "sent on Saturday, not yet late on Tuesday", "since": [2026, 11, 7, 12], "now": [2026, 11, 10, 13], "expected": false},
+  {"name": "sent on Saturday, late on Wednesday", "since": [2026, 11, 7, 12], "now": [2026, 11, 11, 13], "expected": true},
+  {"name": "now before since", "since": [2026, 11, 5, 12], "now": [2026, 11, 2, 12], "expected": false}
+]
