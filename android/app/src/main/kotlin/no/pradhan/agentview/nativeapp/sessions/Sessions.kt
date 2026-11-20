@@ -74,11 +74,13 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val hits = rememberMessageHits(hub, filters.filter)
     val rows = rememberChatRows(hub, dialogs, onOpen)
     // Every folder unfiltered, only for a repo page or the New chat sheet: the list groups its own.
-    val unfiltered = if (filters.repoKey != null || newChat != null) remember(live, ws) { groupByRepo(live, ws) } else emptyList()
+    val segment by hub.chatSegment.collectAsState()
+    val held = remember(filters.filter, segment, filters.status, ws.saved.isEmpty()) { holdOrder(groupByRepo(live, ws)) }
+    val unfiltered = if (filters.repoKey != null || newChat != null) remember(live, ws, held) { groupByRepo(live, ws, held = held) } else emptyList()
     val repo = filters.repoKey?.let { k -> unfiltered.firstOrNull { it.key == k } }
 
     if (repo != null) RepoSessions(repo, rows, filters) { newChat = it }
-    else AllSessions(rows, filters, hits) { newChat = it }
+    else AllSessions(rows, filters, hits, held) { newChat = it }
 
     newChat?.let { choice ->
         val (here, choices) = newChatChoices(unfiltered, ws, sessionCwd)
@@ -130,7 +132,7 @@ private fun StatusChips(of: List<RepoGroup>, rows: ChatRows, filters: SessionsFi
     }
     // Slack's mark all read, while the Done chip is on.
     if (status == StatusFilter.Done) {
-        val done = of.flatMap { it.items() }.filter { it.state(rows.saved, rows.seen) == ChatState.Done }.mapNotNull { it.live?.sessionId ?: it.saved?.sessionId }
+        val done = doneChats(of.flatMap { it.open }, of.flatMap { it.recent }, rows.seen)
         if (done.isNotEmpty()) Chip("Mark all read", { rows.hub.markRead(done) })
     }
 }
@@ -154,14 +156,14 @@ private fun RepoSessions(repo: RepoGroup, rows: ChatRows, filters: SessionsFilte
 }
 
 @Composable
-private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<MessageHit>, onNewChat: (RepoChoice) -> Unit) {
+private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<MessageHit>, held: HeldOrder, onNewChat: (RepoChoice) -> Unit) {
     val hub = rows.hub
     val live = rows.live
     val ws = rows.ws
     val connected by hub.connected.collectAsState()
     val segment by hub.chatSegment.collectAsState()
     val filter = filters.filter
-    val all = remember(live, ws, filter) { groupByRepo(live, ws, filter) }
+    val all = remember(live, ws, filter, held) { groupByRepo(live, ws, filter, held) }
     val groups = remember(all, segment) { all.filter { segmentOf(it.key) == segment } }
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
     val waiting = remember(live, ws, filter) { waitingRows(live, ws, filter) }
@@ -179,7 +181,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
                 live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty() -> OfflineSessions(rows, waitingForServer)
                 groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty() && hits.isEmpty() ->
                     EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No ${profileLabel(segment).lowercase()} sessions yet")
-                else -> SessionsList(rows, filters, groups, pinned, waiting, hits)
+                else -> SessionsList(rows, filters, groups, pinned, waiting, hits, held)
             }
         }
         if (!waitingForServer) Fab("add", "New chat", { onNewChat(RepoChoice(null, "")) }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
@@ -200,11 +202,11 @@ private fun OfflineSessions(rows: ChatRows, waitingForServer: Boolean) {
 }
 
 @Composable
-private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<RepoGroup>, pinned: List<ChatItem>, waiting: List<LiveChat>, hits: List<MessageHit>) {
+private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<RepoGroup>, pinned: List<ChatItem>, waiting: List<LiveChat>, hits: List<MessageHit>, held: HeldOrder) {
     val ws = rows.ws
     val filter = filters.filter
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
-    val recentRows = remember(groups, filter, ws.pins) { recentRows(groups, filter, ws.pins.toSet()) }
+    val recentRows = remember(groups, filter, ws.pins, held) { recentRows(groups, filter, ws.pins.toSet(), held = held) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
         if (waiting.isNotEmpty()) {
             item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }

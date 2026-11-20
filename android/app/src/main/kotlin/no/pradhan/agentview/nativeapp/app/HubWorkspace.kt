@@ -12,6 +12,7 @@ import kotlinx.serialization.builtins.serializer
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.withRestored
+import no.pradhan.agentview.nativeapp.ui.plural
 
 fun Hub.refreshWorkspace(force: Boolean = false) {
     val now = System.currentTimeMillis()
@@ -45,7 +46,10 @@ internal fun Hub.markSeen(sessionId: String?) {
     if (!readOnly) viewModelScope.launch { runCatching { api.markSeen(sessionId) } }
 }
 
-fun Hub.markRead(sessionIds: List<String>) = sessionIds.forEach(::markSeen)
+fun Hub.markRead(sessionIds: List<String>) {
+    sessionIds.forEach(::markSeen)
+    undoable.tryEmit(Undoable("Marked ${plural(sessionIds.size, "chat")} as read") { sessionIds.forEach(::markUnread) })
+}
 
 // Seen time 0, so the chat shows Done until it is opened again.
 fun Hub.markUnread(sessionId: String) {

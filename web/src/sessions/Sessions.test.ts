@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
-import { buildFolders, type Folder, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
+import { buildFolders, type Folder, type RepoGroup, chatFinder, chatState, doneChats, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
 import { RepoRow } from './RepoRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 import { WORKSPACE } from '../../../shared/workspace';
@@ -85,18 +85,32 @@ describe('orderGroups', () => {
 });
 
 describe('holdOrder', () => {
-  const g = (key: string, last: number) => ({ key, name: key, open: [], recent: [], last, running: 0, waiting: 0 });
-  it('keeps the order while the same chat is open', () => {
-    const held = holdOrder(null, 'c', true, [g('a', 1), g('b', 9)], true);
-    expect(holdOrder(held, 'c', true, [g('a', 99), g('b', 9)], true)).toBe(held);
+  const g = (key: string, last: number): RepoGroup => ({ key, name: key, open: [], recent: [], last, running: 0, waiting: 0 });
+  it('keeps the order until the tab is shown again', () => {
+    const held = holdOrder(null, [g('a', 1), g('b', 9)], true, 0);
+    expect(holdOrder(held, [g('a', 99), g('b', 9)], true, 0)).toBe(held);
+    expect(holdOrder(held, [g('a', 99), g('b', 9)], true, 1).groups).toEqual(['a', 'b']);
   });
   it('retakes the order once the saved chats load', () => {
-    const early = holdOrder(null, 'c', true, [g('live', 5)], false);
-    const later = holdOrder(early, 'c', true, [g('live', 5), g('old', 1), g('busy', 9)], true);
-    expect(orderGroups([g('live', 5), g('old', 1), g('busy', 9)], later!.keys).map((x) => x.key)).toEqual(['busy', 'live', 'old']);
+    const early = holdOrder(null, [g('live', 5)], false, 0);
+    const later = holdOrder(early, [g('live', 5), g('old', 1), g('busy', 9)], true, 0);
+    expect(orderGroups([g('live', 5), g('old', 1), g('busy', 9)], later.groups).map((x) => x.key)).toEqual(['busy', 'live', 'old']);
   });
-  it('drops the order when no open chat is viewed', () => {
-    expect(holdOrder(holdOrder(null, 'c', true, [g('a', 1)], true), 'c', false, [g('a', 1)], true)).toBeNull();
+  it('holds the chat order inside a group', () => {
+    const f = buildFolders([repo('shop')], [], []);
+    const live = (id: string, lastActive: number): LiveChat => ({ id, sessionId: id, cwd: '/w/shop', title: id, running: true, pending: 0, status: '', lastActive });
+    const held = holdOrder(null, groupByRepo([live('a', 2), live('b', 1)], [], f), true, 0);
+    const ids = groupByRepo([live('a', 2), live('b', 9), live('n', 0)], [], f, '', new Set(), held.chats)[0].open.map((c) => c.id);
+    expect(ids).toEqual(['n', 'a', 'b']);
+  });
+});
+
+describe('doneChats', () => {
+  const live = (id: string, o: Partial<LiveChat> = {}): LiveChat => ({ id, sessionId: id, cwd: '/w/shop', title: id, running: false, pending: 0, status: '', lastActive: 100, ...o });
+  it('lists live and saved chats with activity after the seen time', () => {
+    const seen = { a: 50, b: 50, c: 50, d: 50, e: 150, g: 50 };
+    const lives = [live('a'), live('b', { running: true }), live('c', { pending: 1 }), live('d', { failed: true })];
+    expect(doneChats(lives, [chat('/w/shop', 100, 'e'), chat('/w/shop', 100, 'f'), chat('/w/shop', 100, 'g')], seen)).toEqual(['a', 'g']);
   });
 });
 

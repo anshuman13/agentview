@@ -110,6 +110,23 @@ class FoldersTest {
     }
 
     @Test
+    fun heldOrderKeepsRowsInPlaceAndShowsNewChatsFirst() {
+        val ws = Workspace(repos, trees)
+        val held = holdOrder(groupByRepo(listOf(live("a", "/w/shop", active = 2, running = true), live("b", "/w/shop", active = 1, running = true)), ws))
+        val l = listOf(live("a", "/w/shop", active = 3, running = true), live("b", "/w/shop", active = 9, running = true), live("n", "/w/shop", active = 0))
+        val groups = groupByRepo(l, ws, held = held)
+        assertEquals(listOf("n", "a", "b"), groups.first { it.name == "shop" }.open.map { it.id })
+        assertEquals(listOf("n", "a", "b"), recentRows(groups, "", held = held).map { it.key })
+    }
+
+    @Test
+    fun doneChatsListLiveAndSavedChatsNewerThanTheirSeenTime() {
+        val seen = mapOf("a" to 0L, "b" to 0L, "c" to 0L, "e" to 5L, "f" to 50L)
+        val lives = listOf(live("a", "/w", active = 10), live("b", "/w", active = 10, running = true), live("c", "/w", active = 10, pending = 1))
+        assertEquals(listOf("a", "e"), doneChats(lives, listOf(saved("e", "/w", at = 10), saved("f", "/w", at = 10), saved("g", "/w", at = 10)), seen))
+    }
+
+    @Test
     fun glanceCountsStatesOfAClosedGroup() {
         val g = RepoGroup("k", "k").apply {
             open += live("a", "/", running = true)
