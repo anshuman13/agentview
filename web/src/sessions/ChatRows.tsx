@@ -158,7 +158,7 @@ export const metaLine = (...parts: (string | undefined)[]) => parts.filter(Boole
 
 const draftMeta = (draft: string) => <><span className="chat-draft">Draft:</span> {draft}</>;
 
-const branchOf =(saved?: string | null, repoBranch?: string) => {
+const branchOf = (saved?: string | null, repoBranch?: string) => {
   const b = saved || repoBranch;
   return isDefault(b) ? undefined : b;
 };

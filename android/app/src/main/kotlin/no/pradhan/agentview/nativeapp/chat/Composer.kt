@@ -175,7 +175,7 @@ private class ComposerState(val hub: Hub, val chatId: String) {
 @Composable
 fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?, running: Boolean, waiting: Boolean, run: ChatRun?) {
     val s = remember(chatId) { ComposerState(hub, chatId) }
-    LaunchedEffect(chatId, sessionId) { if (sessionId != null) hub.setDraft(chatId, s.text.text) }
+    LaunchedEffect(chatId, sessionId) { if (sessionId != null) hub.setDraft(chatId, s.full) }
     val dictation = remember(chatId) { Dictation() }
     var sheet by remember { mutableStateOf<Picker?>(null) }
     var uploading by remember { mutableIntStateOf(0) }

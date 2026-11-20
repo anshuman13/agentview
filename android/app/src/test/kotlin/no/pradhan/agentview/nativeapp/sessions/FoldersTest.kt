@@ -5,6 +5,7 @@ import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class FoldersTest {
@@ -123,7 +124,26 @@ class FoldersTest {
     fun doneChatsListLiveAndSavedChatsNewerThanTheirSeenTime() {
         val seen = mapOf("a" to 0L, "b" to 0L, "c" to 0L, "e" to 5L, "f" to 50L)
         val lives = listOf(live("a", "/w", active = 10), live("b", "/w", active = 10, running = true), live("c", "/w", active = 10, pending = 1))
-        assertEquals(listOf("a", "e"), doneChats(lives, listOf(saved("e", "/w", at = 10), saved("f", "/w", at = 10), saved("g", "/w", at = 10)), seen))
+        assertEquals(listOf("a", "e"), doneChats(lives, listOf(saved("e", "/w", at = 10), saved("f", "/w", at = 10), saved("g", "/w", at = 10)), seen, emptyMap()))
+    }
+
+    @Test
+    fun doneChatsCountsALiveChatByItsSavedCopy() {
+        val quiet = live("h", "/w", active = 1)
+        val copy = saved("h", "/w", at = 10)
+        assertEquals(emptyList<String>(), doneChats(listOf(quiet), emptyList(), mapOf("h" to 5L), emptyMap()))
+        assertEquals(listOf("h"), doneChats(listOf(quiet), emptyList(), mapOf("h" to 5L), mapOf("h" to copy)))
+    }
+
+    @Test
+    fun extendHoldsNewGroupsAndRowsOnceAndKeepsTheInstanceWhenNothingIsNew() {
+        val ws = Workspace(repos, trees)
+        val held = holdOrder(groupByRepo(listOf(live("a", "/w/shop", active = 2, running = true)), ws))
+        val l = listOf(live("a", "/w/shop", active = 2, running = true), live("n", "/w/shop", active = 0))
+        val added = held.extend(groupByRepo(l, ws))
+        assertEquals(listOf("n", "a"), added.rows)
+        assertEquals(listOf("n", "a"), added.recent)
+        assertSame(added, added.extend(groupByRepo(l, ws)))
     }
 
     @Test

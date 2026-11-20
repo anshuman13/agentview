@@ -100,13 +100,27 @@ private fun <T> MutableList<T>.holdBy(held: List<String>?, id: (T) -> String) {
 
 private val LiveChat.heldKey get() = sessionId ?: id
 
-// The group and chat order taken when the Sessions screen opens or its search or segment changes; the chats are newest first.
-class HeldOrder(val groups: List<String>, val chats: List<String>)
+// The order taken when the Sessions screen opens or its search, segment or status changes: the groups, the rows inside each group (open chats by urgency, then saved) and the Recent list, newest first.
+class HeldOrder(val groups: List<String>, val rows: List<String>, val recent: List<String>)
 
 fun holdOrder(groups: List<RepoGroup>) = HeldOrder(
     groups.map { it.key },
+    groups.flatMap { g -> g.open.map { it.heldKey } + g.recent.map { it.sessionId } },
     groups.flatMap { g -> g.open.map { it.heldKey to it.lastActive } + g.recent.map { it.sessionId to it.lastModified } }.sortedByDescending { it.second }.map { it.first },
 )
+
+private fun List<String>.withNew(keys: List<String>): List<String> {
+    val known = toSet()
+    val added = keys.filter { it !in known }
+    return if (added.isEmpty()) this else added + this
+}
+
+// Groups and chats that appeared since go first, once, and stay held; this when nothing is new.
+fun HeldOrder.extend(groups: List<RepoGroup>): HeldOrder {
+    val now = holdOrder(groups)
+    val next = HeldOrder(this.groups.withNew(now.groups), rows.withNew(now.rows), recent.withNew(now.recent))
+    return if (next.groups === this.groups && next.rows === rows && next.recent === recent) this else next
+}
 
 class RepoGroup(val key: String, val name: String) {
     val open = mutableListOf<LiveChat>()
@@ -170,8 +184,8 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: 
     for (g in m.values) {
         g.open.sortWith(byUrgency)
         g.recent.sortByDescending { it.lastModified }
-        g.open.holdBy(held?.chats) { it.heldKey }
-        g.recent.holdBy(held?.chats) { it.sessionId }
+        g.open.holdBy(held?.rows) { it.heldKey }
+        g.recent.holdBy(held?.rows) { it.sessionId }
     }
     val (waiting, rest) = m.values.sortedByDescending { it.last }.partition { it.waiting > 0 }
     return waiting + rest.heldBy(held?.groups) { it.key }
@@ -188,7 +202,7 @@ fun recentRows(groups: List<RepoGroup>, filter: String, pins: Set<String> = empt
     val every = status != StatusFilter.All
     return groups.flatMap { g -> g.open.filter { every || (it.pending == 0 && it.sessionId !in pins) }.map { ChatItem(it, null, g.name) to it.lastActive } + g.recent.filter { every || it.sessionId !in pins }.map { ChatItem(null, it, g.name) to it.lastModified } }
         .sortedByDescending { it.second }.map { it.first }
-        .heldBy(held?.chats) { it.heldKey }
+        .heldBy(held?.recent) { it.heldKey }
         .filter { status.matches(it.state(saved, seen)) }
         .let { if (filter.isBlank() && !every) it.take(RECENT) else it }
 }
@@ -257,8 +271,8 @@ fun groupGlance(g: RepoGroup, seen: Map<String, Long>): Glance {
 }
 
 // The session ids of the listed chats that are Done.
-fun doneChats(live: List<LiveChat>, saved: List<SavedSession>, seen: Map<String, Long>) =
-    live.filter { chatState(it, null, seen) == ChatState.Done }.mapNotNull { it.sessionId } +
+fun doneChats(live: List<LiveChat>, saved: List<SavedSession>, seen: Map<String, Long>, savedById: Map<String, SavedSession>) =
+    live.filter { chatState(it, it.sessionId?.let(savedById::get), seen) == ChatState.Done }.mapNotNull { it.sessionId } +
         saved.filter { chatState(null, it, seen) == ChatState.Done }.map { it.sessionId }
 
 fun since(t: Long, now: Long = System.currentTimeMillis()): String {

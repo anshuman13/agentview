@@ -184,7 +184,7 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolea
     }
     ListRow(r.title ?: UNTITLED, meta, strike = status == "done", onClick = onTask?.let { { it(r) } }, trailing = {
         if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        if (status == "open" || status == "suggested" || status == "done") MoreButton(expanded = menu) { close ->
+        MoreButton(expanded = menu) { close ->
             if (assigning) {
                 MenuItem("Me", "person", { close(); assign(null) }, checked = cur == null)
                 val people = peopleOf(m)
@@ -192,11 +192,11 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolea
                     MenuItem(displayName(n), "person", { close(); assign(n) }, checked = n == cur)
                 }
             } else {
-                if (status != "done") MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r) })
+                if (status == "open" || status == "suggested") MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r) })
                 if (status == "open") MenuItem("Assign", "person", { assigning = true }, enabled = !readOnly)
                 if (status == "open") MenuItem("Snooze", "clock", { close(); actions.snoozeLater(r) })
                 MenuItem("Copy as message", "copy", { close(); clip.setText(AnnotatedString(draftFor(r, m))); actions.say("Message copied") })
-                MenuItem("Delete", "trash", { close(); actions.delete(r) }, danger = true)
+                if (status == "open" || status == "suggested" || status == "done") MenuItem("Delete", "trash", { close(); actions.delete(r) }, danger = true)
             }
         }
     })

@@ -6,7 +6,7 @@ export function heldOrder(held: readonly string[] | null, keys: readonly string[
   const slot = new Map((held ?? []).map((k, i) => [k, i]));
   return [...keys.filter((k) => !slot.has(k)), ...keys.filter((k) => slot.has(k)).sort((a, b) => slot.get(a)! - slot.get(b)!)];
 }
-export const blockId =(itemId: string) => `block:${itemId}`;
+export const blockId = (itemId: string) => `block:${itemId}`;
 export const isBlock = (meetingId: string) => meetingId.startsWith('block:');
 export const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 // The prompt that /loop at runs once at HH:MM.

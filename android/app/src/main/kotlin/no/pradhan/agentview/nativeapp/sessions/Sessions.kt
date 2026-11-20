@@ -75,7 +75,10 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val rows = rememberChatRows(hub, dialogs, onOpen)
     // Every folder unfiltered, only for a repo page or the New chat sheet: the list groups its own.
     val segment by hub.chatSegment.collectAsState()
-    val held = remember(filters.filter, segment, filters.status, ws.saved.isEmpty()) { holdOrder(groupByRepo(live, ws)) }
+    val everyGroup = remember(live, ws) { groupByRepo(live, ws) }
+    var taken by remember(filters.filter, segment, filters.status, ws.saved.isEmpty()) { mutableStateOf(holdOrder(everyGroup)) }
+    val held = taken.extend(everyGroup)
+    if (held !== taken) taken = held
     val unfiltered = if (filters.repoKey != null || newChat != null) remember(live, ws, held) { groupByRepo(live, ws, held = held) } else emptyList()
     val repo = filters.repoKey?.let { k -> unfiltered.firstOrNull { it.key == k } }
 
@@ -132,7 +135,7 @@ private fun StatusChips(of: List<RepoGroup>, rows: ChatRows, filters: SessionsFi
     }
     // Slack's mark all read, while the Done chip is on.
     if (status == StatusFilter.Done) {
-        val done = doneChats(of.flatMap { it.open }, of.flatMap { it.recent }, rows.seen)
+        val done = doneChats(of.flatMap { it.open }, of.flatMap { it.recent }, rows.seen, rows.saved)
         if (done.isNotEmpty()) Chip("Mark all read", { rows.hub.markRead(done) })
     }
 }

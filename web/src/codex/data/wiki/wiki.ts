@@ -1,6 +1,6 @@
 import { isOld, RETIRE_AFTER } from '../../../../../shared/claimAge';
 import { givenPreferences } from '../../../../../shared/preferences';
-import { decisionKey,keyWords, mayChange, similarClaim, titleWords } from '../../../../../shared/claimMatch';
+import { decisionKey, keyWords, mayChange, similarClaim, titleWords } from '../../../../../shared/claimMatch';
 import { newId, rowKey, type Profile } from '../sync';
 
 type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };

@@ -356,7 +356,7 @@ describe('cases shared with the Android app', () => {
     it(`draftFor: ${c.name}`, () => expect(draftFor(c.action as unknown as ItemRow, c.meeting as unknown as Meeting)).toBe(c.expected));
   }
 
-  type AgendaCase ={ name: string; meeting: Record<string, unknown>; points: { people: string | null; title: string }[]; actions: string[]; questions: string[]; markdown: string };
+  type AgendaCase = { name: string; meeting: Record<string, unknown>; points: { people: string | null; title: string }[]; actions: string[]; questions: string[]; markdown: string };
   for (const c of cases<AgendaCase>('agenda')) {
     it(`agendaMarkdown: ${c.name}`, () => {
       const m = { id: 'm', profile: 'work', ...c.meeting } as unknown as Meeting;

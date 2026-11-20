@@ -103,6 +103,14 @@ describe('holdOrder', () => {
     const ids = groupByRepo([live('a', 2), live('b', 9), live('n', 0)], [], f, '', new Set(), held.chats)[0].open.map((c) => c.id);
     expect(ids).toEqual(['n', 'a', 'b']);
   });
+  it('holds new groups and chats after their first appearance', () => {
+    const held = holdOrder(null, [g('a', 1), g('b', 9)], true, 0);
+    const added = holdOrder(held, [g('a', 1), g('b', 9), g('n', 0)], true, 0);
+    expect(added.groups).toEqual(['n', 'b', 'a']);
+    const again = holdOrder(added, [g('a', 99), g('b', 9), g('n', 5), g('m', 0)], true, 0);
+    expect(again.groups).toEqual(['m', 'n', 'b', 'a']);
+    expect(holdOrder(again, [g('a', 1), g('m', 0), g('n', 9)], true, 0)).toBe(again);
+  });
 });
 
 describe('doneChats', () => {
@@ -110,7 +118,13 @@ describe('doneChats', () => {
   it('lists live and saved chats with activity after the seen time', () => {
     const seen = { a: 50, b: 50, c: 50, d: 50, e: 150, g: 50 };
     const lives = [live('a'), live('b', { running: true }), live('c', { pending: 1 }), live('d', { failed: true })];
-    expect(doneChats(lives, [chat('/w/shop', 100, 'e'), chat('/w/shop', 100, 'f'), chat('/w/shop', 100, 'g')], seen)).toEqual(['a', 'g']);
+    expect(doneChats(lives, [chat('/w/shop', 100, 'e'), chat('/w/shop', 100, 'f'), chat('/w/shop', 100, 'g')], seen, new Map())).toEqual(['a', 'g']);
+  });
+  it('counts a live chat by the newer activity of its saved copy', () => {
+    const quiet = live('h', { lastActive: 10 });
+    const copy = chat('/w/shop', 100, 'h');
+    expect(doneChats([quiet], [], { h: 50 }, new Map())).toEqual([]);
+    expect(doneChats([quiet], [], { h: 50 }, new Map([['h', copy]]))).toEqual(['h']);
   });
 });
 

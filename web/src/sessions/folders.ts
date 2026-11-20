@@ -308,10 +308,19 @@ export function orderGroups(groups: RepoGroup[], frozen: readonly string[] | nul
 export type HeldOrder = { groups: string[]; chats: string[]; loaded: boolean; shown: number };
 
 // The group and chat order taken each time the tab is shown again, retaken once the saved chats load so their repos do not all count as new.
+// Groups and chats that appeared since go first, once, and stay held.
 export function holdOrder(prev: HeldOrder | null, groups: RepoGroup[], loaded: boolean, shown: number): HeldOrder {
-  if (prev?.groups.length && prev.loaded === loaded && prev.shown === shown) return prev;
   const ordered = orderGroups(groups);
-  return { groups: ordered.map((g) => g.key), chats: ordered.flatMap((g) => [...g.open.map(liveKey), ...g.recent.map(savedKey)]), loaded, shown };
+  const keys = ordered.map((g) => g.key);
+  const chats = ordered.flatMap((g) => [...g.open.map(liveKey), ...g.recent.map(savedKey)]);
+  if (!prev?.groups.length || prev.loaded !== loaded || prev.shown !== shown) return { groups: keys, chats, loaded, shown };
+  const withNew = (held: string[], now: string[]) => {
+    const known = new Set(held);
+    const added = now.filter((k) => !known.has(k));
+    return added.length ? [...added, ...held] : held;
+  };
+  const next = { groups: withNew(prev.groups, keys), chats: withNew(prev.chats, chats) };
+  return next.groups === prev.groups && next.chats === prev.chats ? prev : { ...prev, ...next };
 }
 
 export type ChatState = 'needs' | 'failed' | 'running' | 'done';
@@ -339,8 +348,8 @@ export function groupGlance(g: RepoGroup, seen: Record<string, number>) {
 }
 
 // The session ids of the listed chats that are Done.
-export const doneChats = (live: LiveChat[], saved: SavedSession[], seen: Record<string, number>) => [
-  ...live.filter((c) => chatState({ live: c }, seen) === 'done').map((c) => c.sessionId),
+export const doneChats = (live: LiveChat[], saved: SavedSession[], seen: Record<string, number>, savedById: ReadonlyMap<string, SavedSession>) => [
+  ...live.filter((c) => chatState({ live: c, saved: c.sessionId ? savedById.get(c.sessionId) : undefined }, seen) === 'done').map((c) => c.sessionId),
   ...saved.filter((s) => chatState({ saved: s }, seen) === 'done').map((s) => s.sessionId),
 ].filter((id): id is string => Boolean(id));
 

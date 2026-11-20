@@ -137,7 +137,8 @@ export function OpenChats() {
     [...groups.flatMap((g) => g.open), ...pinnedRows.flatMap((p) => (p.c ? [p.c] : []))],
     [...groups.flatMap((g) => g.recent), ...pinnedRows.flatMap((p) => (p.s ? [p.s] : []))],
     seen,
-  ), [groups, pinnedRows, seen]);
+    savedById,
+  ), [groups, pinnedRows, seen, savedById]);
   const markAllRead = () => {
     done.forEach(markSeen);
     showSnack(`Marked ${plural(done.length, 'chat')} as read`, () => done.forEach(markUnread));
