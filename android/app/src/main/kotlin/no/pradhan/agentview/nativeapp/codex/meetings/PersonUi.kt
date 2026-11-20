@@ -139,7 +139,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, actions: TaskA
         if (tasks.isNotEmpty()) {
             item { SectionHeader("Open tasks", tasks.size.toString()) }
             item {
-                Group { (if (allTasks) tasks else tasks.take(5)).forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, false) { onTask(r) } } }
+                Group { (if (allTasks) tasks else tasks.take(5)).forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions) { onTask(r) } } }
                 if (!allTasks && tasks.size > 5) Button("Show all ${tasks.size}", { allTasks = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
         }

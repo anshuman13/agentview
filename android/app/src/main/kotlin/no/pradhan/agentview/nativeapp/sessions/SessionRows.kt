@@ -158,6 +158,7 @@ class ChatRows(
 
     @Composable
     private fun liveMeta(c: LiveChat, s: SavedSession?, repo: String?, branch: String?, pr: PrChip?): AnnotatedString {
+        draftSnippet(hub.draft(c.id))?.let { return draftMeta(it) }
         val line = c.edits?.takeIf { !c.running && c.pending == 0 && (it.add > 0 || it.del > 0) }
         val when_ = when {
             c.pending > 0 -> metaLine(c.ask, since(c.lastActive))
@@ -165,9 +166,7 @@ class ChatRows(
             c.running -> c.status.ifBlank { "Working" }
             else -> metaLine(since(maxOf(c.lastActive, s?.lastModified ?: 0)), askLine(c.run))
         }
-        val draft = draftSnippet(hub.draft(c.id))
         return buildAnnotatedString {
-            appendDraft(draft)
             append(metaLine(repo, branch, c.model?.let(::shortModel), providerMark(c.provider), when_, pr?.text, c.todos?.let { "${it.done}/${it.total}" }))
             if (line != null) {
                 append(" · ")
@@ -183,10 +182,8 @@ class ChatRows(
         val branch = (s.gitBranch ?: repoBranch(s.cwd)).takeIf { !isDefaultBranch(it) }
         ChatRow(
             title = (if (opening.value == s.sessionId) "Opening… " else "") + s.title.ifBlank { "Untitled" },
-            meta = buildAnnotatedString {
-                appendDraft(draftSnippet(hub.draftOfSession(s.sessionId)))
-                append(s.summary?.takeIf { it.isNotBlank() }?.let { metaLine(since(s.lastModified), it) } ?: metaLine(repo, branch, providerMark(s.provider), since(s.lastModified)))
-            },
+            meta = draftSnippet(hub.draftOfSession(s.sessionId))?.let { draftMeta(it) }
+                ?: AnnotatedString(s.summary?.takeIf { it.isNotBlank() }?.let { metaLine(since(s.lastModified), it) } ?: metaLine(repo, branch, providerMark(s.provider), since(s.lastModified))),
             state = chatState(null, s, seen),
             selected = false,
             actions = actions(s.sessionId, s.title, null),
@@ -196,10 +193,9 @@ class ChatRows(
 }
 
 @Composable
-private fun AnnotatedString.Builder.appendDraft(draft: String?) {
-    if (draft == null) return
+private fun draftMeta(draft: String) = buildAnnotatedString {
     withStyle(SpanStyle(color = av.err)) { append("Draft: ") }
-    append("$draft · ")
+    append(draft)
 }
 
 class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null)

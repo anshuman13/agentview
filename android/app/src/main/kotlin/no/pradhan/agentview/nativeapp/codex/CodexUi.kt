@@ -107,7 +107,7 @@ class RowPick(val picking: Boolean, val selected: Boolean, val toggle: () -> Uni
 // An open task: tap opens it, the circle checks it off, a right swipe marks it done, a left swipe snoozes it, a long left swipe deletes it, a long press opens the menu, or with pick starts selecting.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean, inDay: Boolean = false, pick: RowPick? = null, onOpen: () -> Unit) {
+fun TaskRowView(row: Row, now: Long, actions: TaskActions, inDay: Boolean = false, pick: RowPick? = null, onOpen: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     val isDone = row.status == "done"
     val picking = pick?.picking == true

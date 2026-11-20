@@ -70,6 +70,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 A tap opens the task as its own page, with a back button in the header: title and notes are editable for every task, including ones from Slack or a meeting (see the layout below); Back, Esc, ⌘Enter or a phone swipe-back closes it, saves, and returns to the list at the same scroll with focus on its row (Meetings does the same on phones). A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Gmail promises I made myself show under "You said" next to the
 asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source. Slack asks skip that step and go to the Reply queue in Needs you; Slack promises arrive as open tasks.
 A group of more than one shows Confirm all and Dismiss all, which act on the rows listed in it and offer Undo.
+Each row reads the same on web and the phone: a meta of the due time, the assignee's first name and the reason (the profile after them under All on the phone), a Needs you badge, a Mine button and a More menu with Not mine and, on a Slack or Gmail row, Open source and Copy draft.
 A focused "Is this yours?" row takes y or Enter for Mine, n or Delete for Not mine, and j/k or arrows to move between rows.
 The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was
 seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message, and it closes that person's suggested DM asks when I sent the last message; an ask answered in the same scan is not saved. The Gmail scan skips an ask or promise from the same sender with a similar title in the same way, and both scans dismiss suggestions nobody reviewed within a week.
@@ -328,7 +329,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   Tools pick (web), where a tap queues them. The prompt shows in the transcript as "Hook: <name>". A hook turn never
   triggers stop hooks, nothing fires while a permission or question waits, and without the file or an entry for the repo
   no hook exists (an invalid entry is skipped with a log line)
-- Phone Sessions rows of a chat with an unsent draft start with a red "Draft:" and its first line, like Slack's sidebar; web sidebar rows do the same, except for the chat you are viewing. A draft is stored under the chat's Claude session id (the live id until it has one, `draftKey`), so it survives a server restart and an idle close; a draft stored under a live id is moved on first read
+- Phone Sessions rows of a chat with an unsent draft show only a red "Draft:" and its first line as their meta, like Slack's sidebar; web sidebar rows do the same, except for the chat you are viewing. A draft is stored under the chat's Claude session id (the live id until it has one, `draftKey`), so it survives a server restart and an idle close; a draft stored under a live id is moved on first read
 - "Remind me" in the phone chat menu adds an open task "Check <chat>" due in 1 hour, 3 hours or tomorrow at 9:00, linked to
   the chat; the hub pushes it when due (like Slack's remind me about this); the web chat settings menu has the same Remind me
 - Opening a chat with replies or steps since you last saw it shows a red New line above the first of them, like Slack's

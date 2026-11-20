@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import no.pradhan.agentview.nativeapp.codex.meetings.actionGroups
+import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.codex.meetings.meetingGroupTitle
+import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,8 +23,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import no.pradhan.agentview.nativeapp.ui.rememberSettled
+import no.pradhan.agentview.nativeapp.ui.Badge
+import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -64,7 +71,7 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
         }
         if (searching && query.isNotBlank()) {
             item { SectionHeader("Results", hit.size.takeIf { it > 0 }?.toString()) }
-            if (hit.isEmpty()) item { EmptyState("No task matches") } else item { Group { hit.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
+            if (hit.isEmpty()) item { EmptyState("No task matches") } else item { Group { hit.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, onOpen = { onOpen(r) }) } } }
             return@LazyColumn
         }
         if (tags.isNotEmpty() && !searching) item {
@@ -74,19 +81,19 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
         }
         if (s.overdue.isNotEmpty()) {
             item { SectionHeader("Overdue", s.overdue.size.toString(), action = if (picked == null) ({ Button("Move all to today", { actions.moveToToday(s.overdue) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) else null) }
-            item { Group { s.overdue.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, pick = pick(r), onOpen = { onOpen(r) }) } } }
+            item { Group { s.overdue.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, pick = pick(r), onOpen = { onOpen(r) }) } } }
         }
-        days.firstOrNull()?.takeIf { it.rows.isNotEmpty() }?.let { d -> daySection(d, now, actions, showProfile, pick, onOpen) }
-        reviewSection("Needs you", fresh, st.meetings, actions, showProfile, onOpen, onMeeting)
+        days.firstOrNull()?.takeIf { it.rows.isNotEmpty() }?.let { d -> daySection(d, now, actions, pick, onOpen) }
+        reviewSection("Needs you", fresh, st.meetings, now, actions, showProfile, onOpen, onMeeting)
         if (older.isNotEmpty()) {
             item { SectionHeader("Older to review", older.size.toString(), open = olderOpen, onToggle = { olderOpen = !olderOpen }) }
-            if (olderOpen) reviewSection(null, older, st.meetings, actions, showProfile, onOpen, onMeeting)
+            if (olderOpen) reviewSection(null, older, st.meetings, now, actions, showProfile, onOpen, onMeeting)
         }
-        days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, showProfile, pick, onOpen) }
+        days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, pick, onOpen) }
         if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && review.isEmpty()) item { EmptyState("All clear", "Add a task with the button below, like “call the bank tomorrow 9”") }
         if (s.doneToday.isNotEmpty()) {
             item { SectionHeader("Done", s.doneToday.size.toString(), open = doneOpen, onToggle = { doneOpen = !doneOpen }, action = if (doneOpen) ({ Button("Clear", { actions.clear(s.doneToday) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) else null) }
-            if (doneOpen) item { Group { s.doneToday.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
+            if (doneOpen) item { Group { s.doneToday.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, onOpen = { onOpen(r) }) } } }
         }
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp16)) }
     }
@@ -97,12 +104,12 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.daySection(d: Day, now: Long, actions: TaskActions, showProfile: Boolean, pick: (Row) -> RowPick?, onOpen: (Row) -> Unit) {
+private fun androidx.compose.foundation.lazy.LazyListScope.daySection(d: Day, now: Long, actions: TaskActions, pick: (Row) -> RowPick?, onOpen: (Row) -> Unit) {
     item { SectionHeader(d.label, d.rows.size.toString()) }
-    item { Group { d.rows.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, inDay = d.day != null, pick = pick(r), onOpen = { onOpen(r) }) } } }
+    item { Group { d.rows.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, inDay = d.day != null, pick = pick(r), onOpen = { onOpen(r) }) } } }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: String?, rows: List<Row>, meetings: List<Row>, actions: TaskActions, showProfile: Boolean, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit) {
+private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: String?, rows: List<Row>, meetings: List<Row>, now: Long, actions: TaskActions, showProfile: Boolean, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit) {
     if (rows.isEmpty()) return
     if (label != null) item { SectionHeader(label, rows.size.toString()) }
     actionGroups(rows).forEach { g ->
@@ -114,15 +121,29 @@ private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: 
             else -> "Is this yours? · ${channelOf(first).label}"
         }
         item(g.key) {
+            val clip = LocalClipboardManager.current
+            val uri = LocalUriHandler.current
             Column {
                 SectionHeader(header, action = meeting?.let { m -> { Button("Open meeting", { onMeeting(m) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } })
                 Group {
                     g.rows.forEachIndexed { i, r ->
                         if (i > 0) Hairline()
-                        ListRow(r.title ?: "", listOfNotNull(r.people?.takeIf { it.isNotEmpty() }, if (showProfile) profileLabel(r.profile) else null).joinToString(" · "), onClick = { onOpen(r) },
-                            trailing = {
-                                Button("Add", { actions.accept(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                                MoreButton { close -> MenuItem("Dismiss", "close", { close(); actions.dismiss(r) }) }
+                        val meta = listOfNotNull(
+                            dueText(r, now),
+                            r.str("assignee")?.takeIf { it.isNotEmpty() }?.let { displayName(it).substringBefore(' ') },
+                            r.text?.takeIf { it.isNotEmpty() },
+                            if (showProfile) profileLabel(r.profile) else null,
+                        ).joinToString(" · ")
+                        val inMeeting = !r.meetingId.isNullOrEmpty()
+                        ListRow(r.title ?: "", meta, onClick = { onOpen(r) },
+                            state = { Badge("Needs you", BadgeTone.Waiting) },
+                            trailing = { Button("Mine", { actions.accept(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
+                            menu = { close ->
+                                MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r, if (inMeeting) "Moved to Not mine" else "Dismissed") })
+                                if (!inMeeting) {
+                                    safeHref(r.sourceUrl)?.let { href -> MenuItem("Open source", "link-external", { close(); uri.openUri(href) }) }
+                                    r.draft?.takeIf { it.isNotBlank() }?.let { d -> MenuItem("Copy draft", "copy", { close(); clip.setText(AnnotatedString(d)); actions.say("Draft copied") }) }
+                                }
                             })
                     }
                 }
@@ -136,12 +157,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: 
 }
 
 @Composable
-internal fun TagPage(st: CodexState, tag: String, now: Long, actions: TaskActions, showProfile: Boolean, onOpen: (Row) -> Unit) {
+internal fun TagPage(st: CodexState, tag: String, now: Long, actions: TaskActions, onOpen: (Row) -> Unit) {
     val rows = remember(st.items, tag) { tagTasks(st.items, tag) }
     LazyColumn(Modifier.fillMaxSize()) {
         item { SectionHeader("#$tag", rows.size.toString()) }
         if (rows.isEmpty()) item { EmptyState("No open tasks with #$tag") }
-        else item { Group { rows.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
+        else item { Group { rows.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, onOpen = { onOpen(r) }) } } }
     }
 }
 
@@ -189,7 +210,7 @@ internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Tas
                                 MenuItem("Delete", "trash", { close(); goals.remove(g) }, danger = true)
                             }
                         })
-                        tasks.forEach { t -> Hairline(); TaskRowView(t, now, actions, false, onOpen = { onOpen(t) }) }
+                        tasks.forEach { t -> Hairline(); TaskRowView(t, now, actions, onOpen = { onOpen(t) }) }
                     }
                 }
             }
