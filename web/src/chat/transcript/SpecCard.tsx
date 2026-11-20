@@ -63,12 +63,12 @@ function SpecMenu({ path, d, reload, sheets }: { path: string; d: BuildDetail | 
       <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} />
       {open && (
         <Menu trigger={more} onClose={() => setOpen(false)}>
-          {d && <MenuItem onClick={pick(() => sheets.open({ kind: 'spec' }, more.current ?? undefined))}>Open spec</MenuItem>}
-          {d?.specFile && here.folder && !here.tree && <MenuItem onClick={pick(() => setUi({ openFile: d.specFile, follow: false }))}>Open spec file</MenuItem>}
-          {d && <MenuItem onClick={pick(() => void hold(d.slug, d.hold ? 'release' : 'hold'))}>{d.hold ? 'Release hold' : 'Hold'}</MenuItem>}
-          <MenuItem disabled={!can} title={can ? undefined : 'Needs subagents, not in this chat'} onClick={pick(() => send({ type: 'prompt', text: `/${SPEC_REVIEW_COMMAND} ${path}` }))}>Review with fresh eyes</MenuItem>
-          {d && can && canSketch(d) && <MenuItem onClick={pick(() => sendToChat(sketchSpecPrompt(path)))}>Sketch</MenuItem>}
-          {d && can && canBuild(d) && <MenuItem onClick={pick(() => sendToChat(buildSpecPrompt(path)))}>Build</MenuItem>}
+          {d && <MenuItem icon="go-to-file" onClick={pick(() => sheets.open({ kind: 'spec' }, more.current ?? undefined))}>Open spec</MenuItem>}
+          {d?.specFile && here.folder && !here.tree && <MenuItem icon="file" onClick={pick(() => setUi({ openFile: d.specFile, follow: false }))}>Open spec file</MenuItem>}
+          {d && <MenuItem icon="debug-pause" onClick={pick(() => void hold(d.slug, d.hold ? 'release' : 'hold'))}>{d.hold ? 'Release hold' : 'Hold'}</MenuItem>}
+          <MenuItem icon="sparkle" disabled={!can} title={can ? undefined : 'Needs subagents, not in this chat'} onClick={pick(() => send({ type: 'prompt', text: `/${SPEC_REVIEW_COMMAND} ${path}` }))}>Review with fresh eyes</MenuItem>
+          {d && can && canSketch(d) && <MenuItem icon="paintcan" onClick={pick(() => sendToChat(sketchSpecPrompt(path)))}>Sketch</MenuItem>}
+          {d && can && canBuild(d) && <MenuItem icon="play" onClick={pick(() => sendToChat(buildSpecPrompt(path)))}>Build</MenuItem>}
         </Menu>
       )}
     </span>

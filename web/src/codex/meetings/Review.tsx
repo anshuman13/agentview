@@ -59,8 +59,8 @@ export function Review({ now }: { now: number }) {
       trailing={<>
         <PickTime className={buttonClass({ size: 'sm' })} title="Reschedule" label="Reschedule" onPick={(t) => reschedule(row, t)} />
         <More>{(close) => <>
-          <MenuItem title="Next Monday 09:00" onClick={() => { close(); reschedule(row, nextMonday(now)); }}>Next Monday</MenuItem>
-          <MenuItem danger onClick={() => { close(); change(row, { deleted: 1 }, 'Dropped'); }}>Drop</MenuItem>
+          <MenuItem icon="calendar" title="Next Monday 09:00" onClick={() => { close(); reschedule(row, nextMonday(now)); }}>Next Monday</MenuItem>
+          <MenuItem danger icon="trash" onClick={() => { close(); change(row, { deleted: 1 }, 'Dropped'); }}>Drop</MenuItem>
         </>}</More>
       </>}
     />
@@ -86,7 +86,7 @@ export function Review({ now }: { now: number }) {
                   meta={g.rows.map((x) => `${x.title} (${x.days}d)`).join(', ')}
                   state={g.rows[0].late ? <Badge status="late" reason="Over 3 working days" /> : undefined}
                   onClick={() => copyText(nudgeText(g), 'Nudge copied')}
-                  action={links.length > 0 ? <More>{(close) => links.map((x) => <MenuItem key={x.key} href={safeHref(x.url!)} onClick={close}>Open {x.title}</MenuItem>)}</More> : undefined}
+                  action={links.length > 0 ? <More>{(close) => links.map((x) => <MenuItem key={x.key} icon="link-external" href={safeHref(x.url!)} onClick={close}>Open {x.title}</MenuItem>)}</More> : undefined}
                 />
               );
             })}

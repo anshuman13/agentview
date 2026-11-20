@@ -166,6 +166,17 @@ Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 40px, padding 0
 `<Menu trigger onClose>` with `<MenuItem icon danger href>` and `<MenuSeparator>` (web/src/ui/Menu.tsx,
 components/menus.css). Arrow keys, Home and End move, typing a letter focuses the next item starting with it (repeats cycle, a multi-letter buffer resets after 700ms), Esc closes and refocuses the trigger, a press
 outside closes. At max-width 480px the Menu is a bottom sheet portaled to the body (`--scrim` backdrop that closes it, 44px items, top radius `--radius-sheet`, `--safe-bottom` padding); the popover stays above 480px. Status: built; every menu uses it. cp-pop stays (it is a listbox), and `.as-menu` is the drawer hamburger button, not a menu.
+A menu's items either all carry an icon or none do; a list of choices (times, people) carries none. The same action has the same icon on web and Android:
+
+| Action | Icon | Action | Icon |
+| --- | --- | --- | --- |
+| Run now, Build | `play` | Delete, Drop | `trash` |
+| Request changes | `request-changes` | Stop | `debug-stop` |
+| Ask Claude, Review with fresh eyes | `sparkle` | Hold | `debug-pause` |
+| Copy | `copy` | Snooze | `clock` |
+| Rename, Edit | `edit` | Tomorrow, Next Monday | `calendar` |
+| Open source, Open link | `link-external` | Move to | `arrow-swap` |
+| Not mine | `circle-slash` | Open spec | `go-to-file` |
 
 ### Sheet
 `<Sheet label onClose className? overlayClassName? active? noSwipe?>` (web/src/ui/Sheet.tsx) is the bottom sheet. It provides the overlay (scrim, backdrop click closes with the slide-out), the drag handle, the Back entry, Escape and the `role="dialog"` card with `aria-label={label}`; children follow the handle. `className` is appended to `as-sheet`; `overlayClassName` replaces `as-sheet-overlay` (the More sheet uses `more-sheet-overlay mobile-only`). Mount it only while open (`{open && <Sheet>}`). Escape and Back close only the topmost active Sheet, one per press. A sheet that stays mounted under another passes `active={false}` so it registers neither (quick add under the date sheet). `noSwipe` sets `data-no-swipe`. New sheets use Sheet instead of copying the overlay, handle and dialog markup.

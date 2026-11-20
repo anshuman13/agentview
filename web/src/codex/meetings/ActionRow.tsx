@@ -122,16 +122,16 @@ export function ActionRow({ row, meeting, meta: metaText, noBadge, extraItems }:
           {menu === 'more' && (
             <Menu trigger={kebab} onClose={() => setMenu(null)}>
               {extraItems?.(close)}
-              {snoozable && <MenuItem onClick={close(dismiss)}>Not mine</MenuItem>}
-              {meeting && status === 'open' && <MenuItem onClick={() => setMenu('assign')}>Assign</MenuItem>}
-              {snoozable && <MenuItem onClick={() => setMenu('snooze')}>Snooze</MenuItem>}
-              <MenuItem onClick={close(() => openTask(row))}>Edit</MenuItem>
-              {meeting && status === 'open' && <MenuItem href={linearIssue(row, meeting)} onClick={() => setMenu(null)}>New Linear issue</MenuItem>}
-              {meeting && <MenuItem onClick={close(() => copyText(draftFor(row, meeting)))}>Copy as message</MenuItem>}
-              {!meeting && row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(null)}>Open source</MenuItem>}
-              {!meeting && row.draft && <MenuItem onClick={close(() => copyText(row.draft!))}>Copy draft</MenuItem>}
+              {snoozable && <MenuItem icon="circle-slash" onClick={close(dismiss)}>Not mine</MenuItem>}
+              {meeting && status === 'open' && <MenuItem icon="person" onClick={() => setMenu('assign')}>Assign</MenuItem>}
+              {snoozable && <MenuItem icon="clock" onClick={() => setMenu('snooze')}>Snooze</MenuItem>}
+              <MenuItem icon="edit" onClick={close(() => openTask(row))}>Edit</MenuItem>
+              {meeting && status === 'open' && <MenuItem icon="issues" href={linearIssue(row, meeting)} onClick={() => setMenu(null)}>New Linear issue</MenuItem>}
+              {meeting && <MenuItem icon="copy" onClick={close(() => copyText(draftFor(row, meeting)))}>Copy as message</MenuItem>}
+              {!meeting && row.source_url && <MenuItem icon="link-external" href={safeHref(row.source_url)} onClick={() => setMenu(null)}>Open source</MenuItem>}
+              {!meeting && row.draft && <MenuItem icon="copy" onClick={close(() => copyText(row.draft!))}>Copy draft</MenuItem>}
               <MenuSeparator />
-              <MenuItem danger onClick={close(() => act.remove(row))}>Delete</MenuItem>
+              <MenuItem danger icon="trash" onClick={close(() => act.remove(row))}>Delete</MenuItem>
             </Menu>
           )}
           {menu === 'assign' && (

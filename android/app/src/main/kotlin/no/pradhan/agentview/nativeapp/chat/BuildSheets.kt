@@ -146,7 +146,7 @@ internal fun DecisionRow(decision: BuildReview?, now: Long, readOnly: Boolean, a
     ListRow(
         decisionTitle(decision), meta, metaLines = 2,
         trailing = if (readOnly) null else ({ Button("Approve", approve, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }),
-        menu = if (readOnly) null else ({ dismiss -> MenuItem("Request changes", "comment", { dismiss(); askChanges() }) }),
+        menu = if (readOnly) null else ({ dismiss -> MenuItem("Request changes", "request-changes", { dismiss(); askChanges() }) }),
     )
 }
 
