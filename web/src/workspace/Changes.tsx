@@ -188,7 +188,7 @@ export function Changes() {
         : <div className="scm-error" role="alert">{failed || error}</div>)}
       <div className="scm-tree">
         <Section
-          label="Staged Changes"
+          label="Staged changes"
           files={staged}
           isSelected={isSelected}
           onRowClick={clickRow(staged)}
