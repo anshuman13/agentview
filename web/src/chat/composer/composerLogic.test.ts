@@ -82,6 +82,10 @@ describe('ghostFor', () => {
     expect(ghostFor('run the tests', history)).toBe('');
     expect(ghostFor('nothing', history)).toBe('');
   });
+
+  it('matches the body of a prompt that carries image markers', () => {
+    expect(ghostFor('look at', ['look at this [Image: /a/one.png] '])).toBe(' this');
+  });
 });
 
 describe('remember', () => {

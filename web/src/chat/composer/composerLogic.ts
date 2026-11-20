@@ -113,8 +113,11 @@ export function buildHistory(events: ChatEvent[], stored: string[]) {
 
 export function ghostFor(text: string, history: string[]) {
   if (text.length < 3) return '';
-  const hit = history.find((h) => h.length > text.length && h.startsWith(text));
-  return hit ? hit.slice(text.length) : '';
+  for (const h of history) {
+    const { body } = splitMarks(h);
+    if (body.length > text.length && body.startsWith(text)) return body.slice(text.length);
+  }
+  return '';
 }
 
 export const remember = (text: string, stored: string[], max = MAX_STORED) => [...stored.filter((t) => t !== text), text].slice(-max);

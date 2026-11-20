@@ -29,8 +29,8 @@ export function usePromptHistory(chat: string) {
   const [hist, setHist] = useState<Hist | null>(null);
   const history = useMemo(() => buildHistory(getState().events, sentHistory), [chat, lastPrompt, sentHistory]);
 
-  const step = (dir: 1 | -1, text: string, apply: (next: string) => void) => {
-    const h = hist ?? { list: history, index: -1, draft: text };
+  const step = (dir: 1 | -1, full: string, apply: (next: string) => void) => {
+    const h = hist ?? { list: history, index: -1, draft: full };
     const index = Math.min(h.list.length - 1, h.index + dir);
     if (index < 0) { setHist(null); apply(h.draft); return; }
     setHist({ ...h, index });
