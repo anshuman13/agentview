@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -31,8 +32,10 @@ import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
@@ -79,13 +82,17 @@ fun taskMeta(row: Row, now: Long, inDay: Boolean, showProfile: Boolean): android
     }
 }
 
-// An open task: tap opens it, the circle checks it off, a right swipe marks it done, a left swipe snoozes it, a long press opens the menu.
+// Selection on a row: picking is on once any row is chosen, toggle chooses or drops this row. A long press toggles.
+class RowPick(val picking: Boolean, val selected: Boolean, val toggle: () -> Unit)
+
+// An open task: tap opens it, the circle checks it off, a right swipe marks it done, a left swipe snoozes it, a long press opens the menu, or with pick starts selecting.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean, inDay: Boolean = false, onOpen: () -> Unit) {
+fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean, inDay: Boolean = false, pick: RowPick? = null, onOpen: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     val isDone = row.status == "done"
-    val swipeable = row.status == "open"
+    val picking = pick?.picking == true
+    val swipeable = row.status == "open" && !picking
     val current by rememberUpdatedState(row)
     val state = rememberSwipeToDismissBoxState(confirmValueChange = { v ->
         when (v) {
@@ -101,12 +108,14 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
             ListRow(
                 title = row.title ?: "(Untitled)",
                 meta = taskMeta(row, now, inDay, showProfile),
-                leading = if (row.status == "note") null else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done") { if (isDone) actions.reopen(row) else actions.done(row) } } },
+                leading = if (row.status == "note") null else if (picking) { { CheckCircle(pick!!.selected, if (pick.selected) "Deselect ${row.title}" else "Select ${row.title}") { pick.toggle() } } } else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done") { if (isDone) actions.reopen(row) else actions.done(row) } } },
                 state = if (row.status == "suggested") ({ Badge("Needs you", BadgeTone.Waiting) }) else null,
                 stateSlot = true,
                 menu = { dismiss -> TaskMenu(row, dismiss, actions, onOpen) },
                 strike = isDone,
-                onClick = onOpen,
+                selected = pick?.selected == true,
+                onClick = if (picking) pick!!.toggle else onOpen,
+                onLongClick = pick?.toggle,
             )
         }
     }
@@ -135,4 +144,19 @@ fun ColumnScope.TaskMenu(row: Row, dismiss: () -> Unit, actions: TaskActions, on
     if (row.status == "done") MenuItem("Not done", "discard", { dismiss(); actions.reopen(row) })
     MenuItem("Move to ${profileLabel(other)}", "arrow-swap", { dismiss(); actions.move(row, other) })
     MenuItem("Delete", "trash", { dismiss(); actions.delete(row) }, danger = true)
+}
+
+// The bar over a task selection: the count, done, tomorrow, snooze and delete on all chosen rows, the row menu when one is chosen, and an X that exits.
+@Composable
+fun SelectionBar(count: Int, bulk: (BulkKind) -> Unit, exit: () -> Unit, modifier: Modifier = Modifier, menu: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null) {
+    val on = count > 0
+    Row(modifier.fillMaxWidth().background(av.groupCard).padding(horizontal = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+        IconBtn("close", "Exit selection", exit)
+        Text("$count selected", Modifier.weight(1f), color = av.fg, style = Type.callout)
+        IconBtn("check", "Done", { bulk(BulkKind.Done) }, enabled = on)
+        IconBtn("calendar", "Tomorrow", { bulk(BulkKind.Tomorrow) }, enabled = on)
+        IconBtn("clock", "Snooze", { bulk(BulkKind.Snooze) }, enabled = on)
+        IconBtn("trash", "Delete", { bulk(BulkKind.Delete) }, enabled = on, tint = av.err)
+        if (menu != null) MoreButton(content = menu)
+    }
 }

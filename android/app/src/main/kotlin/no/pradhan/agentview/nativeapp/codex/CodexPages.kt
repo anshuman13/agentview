@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -9,11 +10,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import no.pradhan.agentview.nativeapp.ui.rememberSettled
@@ -36,7 +39,7 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 
 @Composable
-internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, searching: Boolean, query: String, setQuery: (String) -> Unit, onOpen: (Row) -> Unit, onTag: (String) -> Unit) {
+internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, searching: Boolean, query: String, setQuery: (String) -> Unit, onOpen: (Row) -> Unit, onTag: (String) -> Unit, picked: Set<String>?, setPicked: (Set<String>?) -> Unit) {
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val days = remember(s) { taskDays(s, now) }
     val tags = remember(st.items, profile) { allTags(st.items, profile).take(12) }
@@ -47,6 +50,11 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
     val review = s.review.filter { !queued(it) }
     val fresh = review.filter { now - it.statusTime < DAY_MS }
     val older = review.filter { now - it.statusTime >= DAY_MS }
+    val pickable = remember(s, days) { s.overdue + days.flatMap { it.rows } }
+    val chosen = pickable.filter { picked != null && it.key in picked }
+    LaunchedEffect(chosen.size, picked?.size) { if (picked != null && chosen.size != picked.size) setPicked(chosen.map { it.key }.toSet()) }
+    val pick = { r: Row -> if (searching) null else RowPick(picked != null, picked?.contains(r.key) == true) { setPicked(((picked ?: emptySet()).let { if (r.key in it) it - r.key else it + r.key })) } }
+    Box(Modifier.fillMaxSize()) {
     LazyColumn(Modifier.fillMaxSize()) {
         if (searching) item {
             SearchField(query, setQuery, "Search tasks")
@@ -62,16 +70,16 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
             }
         }
         if (s.overdue.isNotEmpty()) {
-            item { SectionHeader("Overdue", s.overdue.size.toString(), action = { Button("Move all to today", { actions.moveToToday(s.overdue) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
-            item { Group { s.overdue.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
+            item { SectionHeader("Overdue", s.overdue.size.toString(), action = if (picked == null) ({ Button("Move all to today", { actions.moveToToday(s.overdue) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) else null) }
+            item { Group { s.overdue.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, pick = pick(r), onOpen = { onOpen(r) }) } } }
         }
-        days.firstOrNull()?.takeIf { it.rows.isNotEmpty() }?.let { d -> daySection(d, now, actions, showProfile, onOpen) }
+        days.firstOrNull()?.takeIf { it.rows.isNotEmpty() }?.let { d -> daySection(d, now, actions, showProfile, pick, onOpen) }
         reviewSection("Needs you", fresh, now, actions, showProfile, onOpen)
         if (older.isNotEmpty()) {
             item { SectionHeader("Older to review", older.size.toString(), open = olderOpen, onToggle = { olderOpen = !olderOpen }) }
             if (olderOpen) reviewSection(null, older, now, actions, showProfile, onOpen)
         }
-        days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, showProfile, onOpen) }
+        days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, showProfile, pick, onOpen) }
         if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && review.isEmpty()) item { EmptyState("All clear", "Add a task with the button below, like “call the bank tomorrow 9”") }
         if (s.doneToday.isNotEmpty()) {
             item { SectionHeader("Done", s.doneToday.size.toString(), open = doneOpen, onToggle = { doneOpen = !doneOpen }, action = if (doneOpen) ({ Button("Clear", { actions.clear(s.doneToday) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) else null) }
@@ -79,11 +87,16 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
         }
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp16)) }
     }
+    if (picked != null && !searching) SelectionBar(
+        chosen.size, { kind -> actions.bulk(chosen, kind); setPicked(null) }, { setPicked(null) }, Modifier.align(Alignment.BottomCenter),
+        menu = chosen.singleOrNull()?.let { r -> { close -> TaskMenu(r, { close(); setPicked(null) }, actions) { onOpen(r) } } },
+    )
+    }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.daySection(d: Day, now: Long, actions: TaskActions, showProfile: Boolean, onOpen: (Row) -> Unit) {
+private fun androidx.compose.foundation.lazy.LazyListScope.daySection(d: Day, now: Long, actions: TaskActions, showProfile: Boolean, pick: (Row) -> RowPick?, onOpen: (Row) -> Unit) {
     item { SectionHeader(d.label, d.rows.size.toString()) }
-    item { Group { d.rows.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, inDay = d.day != null, onOpen = { onOpen(r) }) } } }
+    item { Group { d.rows.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, inDay = d.day != null, pick = pick(r), onOpen = { onOpen(r) }) } } }
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: String?, rows: List<Row>, now: Long, actions: TaskActions, showProfile: Boolean, onOpen: (Row) -> Unit) {

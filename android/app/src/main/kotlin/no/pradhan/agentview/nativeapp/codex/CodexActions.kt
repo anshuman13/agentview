@@ -1,5 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import kotlinx.serialization.json.JsonNull
+import no.pradhan.agentview.nativeapp.ui.plural
 
 // web/src/codex/useActions.ts: each action edits through the store and offers one undo.
 private val UNROLL = mapOf("rolls" to null, "rolled_from" to null)
@@ -14,6 +16,12 @@ fun withRule(text: String, rule: String?): String {
     val rest = if (isRepeat(text)) text.replaceFirst(Regex("^[^\\n]*\\n?"), "") else text
     return if (rule != null) (if (rest.isNotEmpty()) "$rule\n$rest" else rule) else rest
 }
+
+enum class BulkKind { Done, Tomorrow, Snooze, Delete }
+
+private class Applied(val row: Row, val patch: Map<String, Any?>, val before: Map<String, Any?>, val made: Row?)
+
+private fun Row.matches(patch: Map<String, Any?>) = patch.all { (k, v) -> if (k == "deleted") deleted == (v == true) else (f[k] ?: JsonNull) == toJson(v) }
 
 const val NOTED = "Saved as a note"
 const val NOTE_FAILED = "Could not save the note. The item is still here."
@@ -46,6 +54,44 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
     fun clear(rows: List<Row>) {
         val done = rows.filter { store.update(it, mapOf("deleted" to true)) }
         if (done.isNotEmpty()) snack("Cleared ${done.size}") { done.forEach { store.update(it, mapOf("deleted" to false)) } }
+    }
+
+    // One action on every selected task with one snack and one undo; undo skips a row edited since.
+    fun bulk(rows: List<Row>, kind: BulkKind) {
+        val t = now()
+        val applied = ArrayList<Applied>()
+        for (r in rows) {
+            var made: Row? = null
+            val patch = when (kind) {
+                BulkKind.Done -> {
+                    val next = nextRepeat(r, t, store.state.value.items)
+                    if (next != null) made = store.capture("${next.title}\n${next.text}", "open", r.profile, next.at) ?: continue
+                    mapOf("status" to "done")
+                }
+                BulkKind.Tomorrow -> mapOf<String, Any?>("at" to nextNine(t, r.profile)) + UNROLL
+                BulkKind.Snooze -> snoozeLaterAt(r.at, t, r.profile).let { mapOf<String, Any?>("at" to it) + unrollFor(it, t) }
+                BulkKind.Delete -> mapOf("deleted" to true)
+            }
+            val before = patch.keys.associateWith { r.col(it) }
+            if (store.update(r, patch)) applied.add(Applied(r, patch, before, made)) else made?.let { store.update(it, mapOf("deleted" to true)) }
+        }
+        val n = applied.size
+        if (n == 0) return
+        val first = rows.first()
+        val text = when (kind) {
+            BulkKind.Done -> "Done ${plural(n, "task")}"
+            BulkKind.Tomorrow -> "Moved ${plural(n, "task")} to ${whenText(nextNine(t, first.profile), t)}"
+            BulkKind.Snooze -> "Snoozed ${plural(n, "task")}"
+            BulkKind.Delete -> "Deleted ${plural(n, "task")}"
+        }
+        snack(text) {
+            for (a in applied) {
+                val cur = store.current(a.row)
+                if (!cur.matches(a.patch)) continue
+                store.update(cur, a.before)
+                a.made?.let { store.update(it, mapOf("deleted" to true)) }
+            }
+        }
     }
     fun delete(r: Row) = change(r, mapOf("deleted" to true), "Deleted")
     fun accept(r: Row) = change(r, mapOf("status" to "open"), "Added to Today")

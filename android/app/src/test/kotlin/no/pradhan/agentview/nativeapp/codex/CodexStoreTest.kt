@@ -140,4 +140,25 @@ class CodexStoreTest {
         assertEquals(listOf("two"), s.state.value.items.map { it.title })
         file.parentFile.listFiles { f -> f.name.startsWith(file.name) }?.forEach { it.delete() }
     }
+
+    @Test fun bulkActionsShowOneSnackAndUndoSkipsARowEditedSince() = runTest {
+        val fake = Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1), change("b", "two", "open", 100, 1))))
+        val s = store(this, fake)
+        s.sync()
+        val snacks = mutableListOf<Pair<String, (() -> Unit)?>>()
+        val actions = TaskActions(s, { t, u -> snacks.add(t to u) }, { 5000L })
+        val rows = s.state.value.items
+        actions.bulk(rows, BulkKind.Done)
+        assertEquals(listOf("done", "done"), s.state.value.items.map { it.status })
+        assertEquals(1, snacks.size)
+        assertEquals("Done 2 tasks", snacks[0].first)
+        s.update(s.state.value.items[1], mapOf("status" to "open"))
+        snacks[0].second!!()
+        assertEquals(listOf("open", "open"), s.state.value.items.map { it.status })
+        actions.bulk(listOf(s.state.value.items[0]), BulkKind.Delete)
+        assertEquals("Deleted 1 task", snacks[1].first)
+        assertEquals(listOf(true, false), s.state.value.items.map { it.deleted })
+        snacks[1].second!!()
+        assertEquals(listOf(false, false), s.state.value.items.map { it.deleted })
+    }
 }
