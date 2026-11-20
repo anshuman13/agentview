@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.app
 import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.enc
+import no.pradhan.agentview.nativeapp.net.loadErrorText
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -90,7 +91,7 @@ fun Hub.readNow(m: Row, done: (Boolean) -> Unit) = transcriptSync(done) {
 
 internal fun Hub.write(failure: String, block: suspend () -> Unit) {
     if (readOnly) return
-    viewModelScope.launch { runCatching { block() }.onFailure { notice.value = it.message ?: failure } }
+    viewModelScope.launch { runCatching { block() }.onFailure { notice.value = it.message?.let(::loadErrorText) ?: failure } }
 }
 
 // Uploads a picked file and returns the path to mention in the prompt.

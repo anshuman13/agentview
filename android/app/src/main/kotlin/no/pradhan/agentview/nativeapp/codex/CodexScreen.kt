@@ -172,8 +172,8 @@ fun CodexScreen(hub: Hub) {
     Box(Modifier.fillMaxSize().background(av.groupPage)) {
         Column(Modifier.fillMaxSize()) {
             CodexHeader(hub, st, nav, profile, filterKey, now)
-            if (st.reconnecting) Group { ListRow("Reconnecting to the hub…", muted = true) }
-            else st.error?.let { Group { ListRow("Sync failed", it, trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) } }
+            if (st.reconnecting) Group { ListRow("Reconnecting to the hub…", syncedAt(st.lastSync, now), muted = true) }
+            else if (st.error != null) Group { ListRow("Can't reach the hub", syncedAt(st.lastSync, now), trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) }
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) { CodexBody(hub, st, nav, profile, now, actions, ops) }
             if (nav.page == "overview" && nav.route == null && st.loaded) AskBar(hub, st, profile)
         }

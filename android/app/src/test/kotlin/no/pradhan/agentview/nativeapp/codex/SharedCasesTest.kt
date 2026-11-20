@@ -10,6 +10,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.stepMatch
 import java.io.File
 import java.io.IOException
 import no.pradhan.agentview.nativeapp.net.ApiError
+import no.pradhan.agentview.nativeapp.net.loadErrorText
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -359,6 +360,14 @@ class SharedCasesTest {
             val error = when (status) { null -> IllegalStateException("rejected"); 0 -> IOException("timeout"); else -> ApiError("failed", status) }
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.long, hubRetry(c.getValue("failures").jsonPrimitive.int, error))
         }
+    }
+
+    @Test fun loadErrors() {
+        for (c in cases("load-error")) assertEquals(c.str("name"), c.str("expected"), loadErrorText(c.str("raw")))
+    }
+
+    @Test fun syncedAtCases() {
+        for (c in cases("synced-at")) assertEquals(c.str("name"), c.str("expected"), syncedAt(c.getValue("last").jsonPrimitive.long, c.getValue("now").jsonPrimitive.long))
     }
 
     @Test fun checklist() {

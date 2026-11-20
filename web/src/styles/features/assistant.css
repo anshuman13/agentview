@@ -172,6 +172,7 @@
 .as-error.muted { color: var(--fg-muted); background: var(--raised); }
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
 .as-error > span { display: inline-flex; }
+.as-error > .as-synced { flex-basis: 100%; color: var(--fg-muted); }
 .tasks .as-scroll { padding: var(--sp-4) var(--tk-pad) var(--sp-16); gap: var(--sp-8); }
 .tasks .as-scroll section { gap: var(--sp-2); }
 .tasks .as-toggle { align-items: center; width: 100%; border: 0; font-family: inherit; cursor: pointer; }

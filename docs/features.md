@@ -31,6 +31,7 @@ At max-width 480px (900px where noted) the app is one column with a tab bar. Tas
 - **Haptics**: a swipe action, a task completion, a long press, a pull refresh and a drag drop give a short native tap in the phone app, and fall back to the WebView vibration; the web and desktop give none (see Row density in the design system)
 - **Sync**: the interval sync runs only while the app is visible
 - **Offline badge**: an Offline and reconnecting badge shows after 2 s without the stream and hides on reconnect
+- **Load errors**: a page that cannot load, and a phone write that fails, say "Can't reach the Mac" for a dropped link and "The Mac took too long to answer" for a timeout, with Retry where the page had it; the server's own error text shows as is (`loadErrorText` in `shared/loadError.ts`, `net/LoadError.kt`). Web reads give up after 20 s; writes have no timeout
 - **Bottom-sheet menus**: a Menu opens as a bottom sheet at max-width 480px. A long press of 500ms on a row with a More menu opens it with a haptic tap; the kebab stays
 - **Swipe undo**: every row swipe that completes, snoozes, moves, deletes, pins or archives shows one snack with Undo for 5 s; a newer swipe replaces it, so only the latest can be undone
 - **Chat actions**: a chat row in Sessions swipes right to Pin or Unpin and left to Archive, with Undo; a running or waiting chat only swipes right, and a chat with no session id yet does not swipe
@@ -45,7 +46,7 @@ At max-width 480px (900px where noted) the app is one column with a tab bar. Tas
 ## Codex
 
 Codex shows Overview, Tasks, Meetings, Jobs and Wiki for the work profile, the personal profile or both. Under the
-nav, the sync line says when the app last synced with the hub, how many changes still wait for the hub, and "Not saved on this device" when the local copy cannot be written. While the hub skips its Slack, Gmail or calendar scan because
+nav, the sync line says when the app last synced with the hub, how many changes still wait for the hub, and "Not saved on this device" when the local copy cannot be written. While the hub cannot be reached, the banner above the list (on the phone "Can't reach the hub" with Retry) says how old the shown data is, such as "Last synced 14:20" or "Last synced yesterday 14:20" (`syncedAt` in `shared/syncText.ts`). While the hub skips its Slack, Gmail or calendar scan because
 that Claude account is at its usage limit, a line below it names the paused scans and the time the limit ends.
 When everything is healthy that one line is all the nav shows; clicking it syncs and shows the scan lines. When a scan failed, stalled or is paused, one small
 line per source appears below it with the last Slack, Gmail and calendar run, its counts, the error in the warning color,

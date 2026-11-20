@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.ui
 
 import androidx.compose.runtime.Composable
 import kotlin.coroutines.cancellation.CancellationException
+import no.pradhan.agentview.nativeapp.net.loadErrorText
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
@@ -65,7 +66,7 @@ fun <T> rememberLoad(vararg keys: Any?, fetch: suspend () -> T): Pair<Loaded<T>,
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Loaded(state.data, e.message?.ifEmpty { null } ?: "Request failed", false)
+            Loaded(state.data, loadErrorText(e.message?.ifEmpty { null } ?: "Request failed"), false)
         }
     }
     return state to { tick++ }

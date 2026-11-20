@@ -38,8 +38,10 @@ const listeners = new Set<() => void>();
 export const apiBase = () => base;
 
 // The parsed JSON body; throws the server's error, or `Request failed (status)` when the body has none or is not JSON.
+// A read with no signal of its own gives up after 20 s; writes wait, so a commit with slow hooks is not cut off.
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(url, init);
+  const get = !init?.method || init.method === 'GET';
+  const r = await fetch(url, get && !init?.signal ? { ...init, signal: AbortSignal.timeout(20_000) } : init);
   const body = await r.json().catch(() => null);
   if (!r.ok || body?.error) throw new Error(body?.error ?? `Request failed (${r.status})`);
   return body as T;

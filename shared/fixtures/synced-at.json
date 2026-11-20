@@ -1,0 +1,8 @@
+[
+  { "name": "never synced", "last": 0, "now": 1795176000000, "expected": "Never synced" },
+  { "name": "today", "last": 1795168800000, "now": 1795176000000, "expected": "Last synced 10:00" },
+  { "name": "yesterday", "last": 1795098000000, "now": 1795176000000, "expected": "Last synced yesterday 14:20" },
+  { "name": "3 days ago", "last": 1794906300000, "now": 1795176000000, "expected": "Last synced Tue 09:05" },
+  { "name": "exactly a week ago", "last": 1794571200000, "now": 1795176000000, "expected": "Last synced 13 Nov" },
+  { "name": "10 days ago", "last": 1794312000000, "now": 1795176000000, "expected": "Last synced 10 Nov" }
+]

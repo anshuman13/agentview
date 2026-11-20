@@ -38,6 +38,7 @@ import { prefetch } from '../app/lazy';
 import '../styles/features/assistant.css';
 import '../styles/features/overview.css';
 import { UNTITLED } from '../../../shared/util';
+import { syncedAt } from '../../../shared/syncText';
 
 const TaskEditor = prefetch(() => import('./tasks/editor/TaskEditor').then((m) => m.TaskEditor));
 const Wiki = prefetch(() => import('./wiki/Wiki').then((m) => m.Wiki));
@@ -129,11 +130,12 @@ export function Assistant() {
   const older = review.filter((r) => now - reviewedSince(r) >= DAY);
   const empty = !s.overdue.length && days.every((d) => !d.rows.length) && !review.length;
   const nextLater = s.nextLater;
+  const synced = <span className="as-synced">{syncedAt(gate.last, now)}</span>;
   return (
     <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
       <TasksHead list={list} heading={heading} filter={filter} searching={query != null} selecting={!!picked} onMenu={() => setDrawer(true)} onAdd={() => setAdding(true)} onSelect={() => setPicked(new Set())} onSearch={() => setQuery('')} />
-      {gate.reconnecting && <div className="as-error muted"><Icon name="sync" small /> Reconnecting to the hub…</div>}
-      {gate.error && !gate.reconnecting && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
+      {gate.reconnecting && <div className="as-error muted"><Icon name="sync" small /> Reconnecting to the hub…{synced}</div>}
+      {gate.error && !gate.reconnecting && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.{synced}</button>}
       {calError && <div className="as-error"><Icon name="warning" small /> Calendar not updated <span title={calError} aria-label={calError}><Icon name="info" small /></span> · <Button variant="plain" size="sm" onClick={() => void retryCalendar()}>Retry</Button></div>}
 
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>

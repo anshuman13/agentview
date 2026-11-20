@@ -73,6 +73,8 @@ import { isLate } from '../../shared/waiting';
 import { goalAtRisk, goalToLink } from './codex/data/tasks/goals';
 import { afterNextMeeting, nextFreeSlot, weekFreeMinutes, type Span } from './codex/data/tasks/plan';
 import { heldOrder } from '../../shared/util';
+import { loadErrorText } from '../../shared/loadError';
+import { syncedAt } from '../../shared/syncText';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -160,6 +162,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; failures: number; status: number | null; expected: number | null }>('hub-retry')) {
     it(`hub retry: ${c.name}`, () => expect(hubRetry(c.failures, c.status === null ? new Error('rejected') : new HubError('failed', c.status))).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; raw: string; expected: string }>('load-error')) {
+    it(`loadErrorText: ${c.name}`, () => expect(loadErrorText(c.raw)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; last: number; now: number; expected: string }>('synced-at')) {
+    it(`syncedAt: ${c.name}`, () => expect(syncedAt(c.last, c.now)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; items: TodoItem[]; progress: string; current: string }>('checklist')) {

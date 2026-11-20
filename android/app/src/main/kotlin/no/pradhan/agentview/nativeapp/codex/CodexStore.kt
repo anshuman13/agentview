@@ -2,6 +2,9 @@ package no.pradhan.agentview.nativeapp.codex
 
 import java.io.File
 import java.io.IOException
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -46,7 +49,21 @@ data class CodexState(
     val scans: List<SyncScan> = emptyList(),
     val paused: List<SyncPaused> = emptyList(),
     val reconnecting: Boolean = false,
+    val lastSync: Long = 0,
 )
+
+// When the shown data last synced (shared/syncText.ts): the time today, "yesterday", the weekday within a week, else the date.
+fun syncedAt(last: Long, now: Long): String {
+    if (last == 0L) return "Never synced"
+    val days = -daysFrom(last, now)
+    val at = when {
+        days == 0L -> clock(last)
+        days == 1L -> "yesterday ${clock(last)}"
+        days < 7 -> "${DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH).format(Instant.ofEpochMilli(last).atZone(codexZone))} ${clock(last)}"
+        else -> dayLabel(last)
+    }
+    return "Last synced $at"
+}
 
 private const val PARK_AFTER = 3
 
@@ -157,11 +174,11 @@ class CodexStore(
         }
     }
 
-    private fun publish(error: String? = state.value.error, loaded: Boolean = state.value.loaded, reconnecting: Boolean = state.value.reconnecting) {
+    private fun publish(error: String? = state.value.error, loaded: Boolean = state.value.loaded, reconnecting: Boolean = state.value.reconnecting, lastSync: Long = state.value.lastSync) {
         fun rows(t: String) = tables.getValue(t).values.toList()
         state.value = CodexState(
             rows("items"), rows("meetings"), rows("chats"), rows("pages"), rows("facts"), rows("jobs"), rows("runs"), rows("briefs"),
-            loaded, error, tables.values.sumOf { t -> t.values.count { it.dirty } }, scans, paused, reconnecting,
+            loaded, error, tables.values.sumOf { t -> t.values.count { it.dirty } }, scans, paused, reconnecting, lastSync,
         )
     }
 
@@ -267,7 +284,7 @@ class CodexStore(
             if (parked.isNotEmpty()) notify(parkedNotice(parked.size))
             if (rejected.isNotEmpty()) error("${rejected.size} change${if (rejected.size > 1) "s" else ""} rejected: ${rejected[0]["reason"]?.jsonPrimitive?.contentOrNull}")
             if (changed) save()
-            publish(error = null, loaded = true, reconnecting = false)
+            publish(error = null, loaded = true, reconnecting = false, lastSync = System.currentTimeMillis())
             null
         } catch (e: Exception) {
             e
