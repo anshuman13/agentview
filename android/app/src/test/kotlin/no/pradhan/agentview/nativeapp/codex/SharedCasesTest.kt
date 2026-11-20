@@ -109,6 +109,7 @@ import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
 import no.pradhan.agentview.nativeapp.codex.wiki.isOld
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
+import no.pradhan.agentview.nativeapp.codex.wiki.rememberChanges
 import no.pradhan.agentview.nativeapp.codex.wiki.similarClaim
 import no.pradhan.agentview.nativeapp.chat.appendRule
 import no.pradhan.agentview.nativeapp.chat.can
@@ -610,6 +611,17 @@ class SharedCasesTest {
         for (c in cases("similar-claim")) {
             val claims = c.getValue("claims").jsonArray.map { it.jsonObject.str("id") to it.jsonObject.str("text") }
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, similarClaim(c.str("text"), claims) { it.second }?.first)
+        }
+    }
+
+    @Test fun rememberChanges() {
+        for (c in cases("remember")) {
+            val facts = c.getValue("facts").jsonArray.map { it.jsonObject }.map { o ->
+                val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+                for (k in listOf("text", "page_id", "state", "superseded_by")) o[k]?.let { f[k] = it }
+                Row("facts", o.str("id"), o.str("profile"), f = f)
+            }
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, rememberChanges(c.str("text"), facts, c.str("profile"))?.id)
         }
     }
 

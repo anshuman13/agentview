@@ -77,6 +77,12 @@ fun similarLive(fact: Row, facts: List<Row>): Row? {
     return similarClaim(fact.str("text") ?: "", liveRows(facts).filter { it.profile == fact.profile && current(it) }) { it.str("text") ?: "" }
 }
 
+// The current live Memory claim (no page) of the profile that the remembered text overlaps; web wiki.ts rememberChanges says the same, checked by shared/fixtures/remember.json.
+fun rememberChanges(text: String, facts: List<Row>, profile: String): Row? {
+    val current = currentClaims(facts)
+    return similarClaim(text, liveRows(facts).filter { it.profile == profile && it.str("page_id").isNullOrEmpty() && current(it) }) { it.str("text") ?: "" }
+}
+
 class PageStats(val claims: Int, val contested: Int, val updated: Long)
 
 fun statsByPage(facts: List<Row>): Map<String?, PageStats> {

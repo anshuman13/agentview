@@ -42,7 +42,7 @@ import { ago, money } from './ui/util';
 import { setSystemTime } from '../../testing';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
-import type { Job, Meeting } from './codex/data/wiki/wiki';
+import { rememberChanges, type Fact, type Job, type Meeting } from './codex/data/wiki/wiki';
 import { heldUntil, tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
 import { followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
@@ -200,6 +200,11 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; text: string; claims: { id: string; text: string }[]; expected: string | null }>('similar-claim')) {
     it(`similarClaim: ${c.name}`, () => expect(similarClaim(c.text, c.claims)?.id ?? null).toBe(c.expected));
+  }
+
+  type RememberCase = { name: string; text: string; profile: Profile; facts: { id: string; profile: Profile; text: string; page_id?: string; state?: string; superseded_by?: string }[]; expected: string | null };
+  for (const c of cases<RememberCase>('remember')) {
+    it(`rememberChanges: ${c.name}`, () => expect(rememberChanges(c.text, c.facts as unknown as Fact[], c.profile)?.id ?? null).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; since: number[]; now: number[]; expected: boolean }>('late-promise')) {
