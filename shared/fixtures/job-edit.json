@@ -1,0 +1,51 @@
+[
+  {
+    "name": "name only",
+    "job": { "name": "Digest", "prompt": "Summarise." },
+    "name_in": "Weekly digest",
+    "prompt_in": "Summarise.",
+    "expected": { "name": "Weekly digest" }
+  },
+  {
+    "name": "prompt only",
+    "job": { "name": "Digest", "prompt": "Summarise." },
+    "name_in": "Digest",
+    "prompt_in": "Summarise the week.",
+    "expected": { "prompt": "Summarise the week." }
+  },
+  {
+    "name": "a blank name saves as Untitled job",
+    "job": { "name": "Digest", "prompt": "Summarise." },
+    "name_in": "   ",
+    "prompt_in": "Summarise.",
+    "expected": { "name": "Untitled job" }
+  },
+  {
+    "name": "a blank prompt is kept blank",
+    "job": { "name": "Digest", "prompt": "Summarise." },
+    "name_in": "Digest",
+    "prompt_in": "",
+    "expected": { "prompt": "" }
+  },
+  {
+    "name": "a padded name is saved trimmed",
+    "job": { "name": "Digest", "prompt": "Summarise." },
+    "name_in": " Digest 2 ",
+    "prompt_in": "Summarise.",
+    "expected": { "name": "Digest 2" }
+  },
+  {
+    "name": "nothing changed",
+    "job": { "name": "Digest", "prompt": "Summarise." },
+    "name_in": "Digest",
+    "prompt_in": "Summarise.",
+    "expected": {}
+  },
+  {
+    "name": "empty fields on a new job change nothing",
+    "job": { "name": null, "prompt": null },
+    "name_in": "",
+    "prompt_in": "",
+    "expected": {}
+  }
+]

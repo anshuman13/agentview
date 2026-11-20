@@ -6,7 +6,7 @@ import { useOnUnmount, useReturnFocus } from '../../ui/util';
 import { setView, useEscapeBack } from '../view';
 import { useMinute } from '../tasks/split';
 import { nextRun } from '../../../../shared/schedule';
-import { runsOf, tasksOf, useJobs } from './schedule';
+import { jobEdits, runsOf, tasksOf, useJobs } from './schedule';
 import { useAssistantTable } from '../data';
 import { Row } from '../../ui/Row';
 import { Switch } from './Switch';
@@ -24,8 +24,8 @@ function useJobEditor(j: Job) {
   useEffect(() => setPrompt(j.prompt ?? ''), [j.prompt]);
   useEffect(() => setCustom(j.schedule ?? ''), [j.schedule]);
   const save = () => {
-    if (name !== (j.name ?? '')) void store.editRow('jobs', j, { name: name.trim() || 'Untitled job' });
-    if (prompt !== (j.prompt ?? '')) void store.editRow('jobs', j, { prompt });
+    const patch = jobEdits(j, name, prompt);
+    if (Object.keys(patch).length) void store.editRow('jobs', j, patch);
   };
   const customOk = nextRun(custom, Date.now()) != null;
   const saveCustom = () => { if (customOk && custom.trim() !== j.schedule) void store.editRow('jobs', j, { schedule: custom.trim(), next_run_at: null }); };
