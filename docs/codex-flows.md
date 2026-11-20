@@ -38,7 +38,7 @@ of four buckets, so "zero for me" is always explained.
 
 | List | Question | Contents |
 | --- | --- | --- |
-| Overview | How does my day look? | The morning brief (a Report card, hides until tomorrow), from Friday 14:00 through Sunday a folded Weekly review per profile (goals Done or Missed, tasks done, meeting hours, Carry over of Missed goals into next week up to 3 goals), counts that open Tasks, Next card, today's meetings, goal lines with a progress bar and an At risk mark when their open estimates exceed the week's free work time, a Plan strip (free gaps 08:00-17:00 against "~30m" estimates in titles; tapping a gap, or dropping a task from the Overview lists on it on desktop, opens a form to block time for a task due today, and only Create adds a "Focus:" event with no attendees to that profile's calendar and moves the task to the block start; blocking the task again deletes its earlier event; blocks count as busy time in the strip but stay out of the Next card, the meeting lists and meeting reminders; Plan my day packs overdue and due tasks without a block, plus open tasks linked to this week's goals, into the free gaps: goal tasks first, then by due time, then list order, using the estimate or 30 minutes, shows the plan as task and time lines you can remove (removing one packs the rest again), and only Create adds the blocks, one hub request per block; Create packs the plan again first, and when a task was done since or its time has passed it shows the new plan instead and waits for another Create), an At risk card (hidden when empty) listing open tasks due by Friday whose estimates, summed in due order, exceed the free work time before their due time (overdue counts as due 17:00 today, tasks with a focus block ahead are left out), with the shortfall, a Wrap up card from 16:00 (an Open tasks section with Move all to tomorrow, rows with Tomorrow and a More menu to snooze or drop, a Done today row, a Note for tomorrow section), from 17:00 a Tomorrow card (a header with free work time, then Meetings and Tasks sections with counts, 5 rows each and Show all N, close hides it until the next day; Plan tomorrow packs tomorrow's tasks without a block into tomorrow's gaps and creates blocks the same way as Plan my day; it replaces the Later and quiet-day Tomorrow lists), what is due today (with the due time when it has one), tomorrow's meetings and tasks, today's job reports |
+| Overview | How does my day look? | The next meeting or task (Up next), a Needs you row opening a sheet of overdue tasks, asks, DMs and finished meetings' actions, running chats, and today's meetings and tasks with done and open counts |
 | Tasks | What needs me? | Overdue, Is this yours?, Today, then dated tasks by day for 7 days and Later, Done today row |
 | Meetings | What happened? | Past meetings only, newest first, with pipeline state; search covers tasks and meetings. Week sets up to 3 goals for the week, and tasks link to one. All goals in Week (or the command palette) opens a history of the last 8 weeks of goals, where a past goal can be reopened into this week as a new goal. Week has a Review: done, slipped and stuck tasks (moved 3+ times or over 30 days old) with Drop and Reschedule, and Waiting on grouped by person (tasks plus sent mail with no reply after 3 workdays, each with Open) with Copy nudge |
 | Jobs | What runs on its own? | Prompts on a schedule (hourly, daily, weekdays, weekly) on the profile's account, read-only tools plus add_task; each run's reply is pushed, and the last 20 runs keep theirs |
@@ -60,7 +60,7 @@ Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its d
 | Counts | "x of y" counts accepted actions only, leaving out those assigned to another attendee (chip on the open row); suggested shown separately as amber "N to review" |
 | Push | Only when there is something to act on. Tapping it opens the meeting page. "Nothing for you" is a muted list badge |
 | Calendar | Sync on app open plus every 30 min, 07:00 to 19:00 |
-| Morning brief | Weekdays at 08:00 the hub writes a brief per profile with no model call: today's meetings and free time 08:00-17:00, tasks due and overdue (top 5), an "At risk: N tasks" line when tasks this week will not fit in the free work time before they are due, Slack asks to review, Slack promises of mine under "You said" and meeting actions still open from the last workday. It syncs to the phone and pushes "Today: N meetings, M tasks" once a day, skipping a profile with nothing on and a hub that starts after 11:00. The apps show it for 24 hours from the hub's midnight, in any time zone |
+| Morning brief | Weekdays from 08:00 until 17:00 the hub writes a brief per profile with no model call: today's meetings and free time 08:00-17:00, tasks due and overdue (top 5), an "At risk: N tasks" line when tasks this week will not fit in the free work time before they are due, Slack asks to review, Slack promises of mine under "You said" and meeting actions still open from the last workday. It syncs to the phone and pushes "Today: N meetings, M tasks" once a day, retrying a failed push or an empty brief, and skipping a profile with nothing on. The apps show it for 24 hours from the hub's midnight, in any time zone |
 | Raise next time | A point is an item with status point, the person in people and source raise, so it syncs like any task and stays out of Tasks and Notes. It belongs to the first meeting with that person, same profile, starting after it was raised; the prep card lists it, and when that meeting ends the app marks it raised. Ticking it off does the same. Raise on a task or decision offers that meeting's attendees, then recent ones |
 | Cut for now | "All ▾" filter and "●" on Today, "Missed Slack" chip, meeting-bound chat (daily chat with the meeting attached instead) |
 
@@ -98,8 +98,7 @@ Taps to confirm 3 actions with dates: push 1, Confirm all 1, 3 date chips 3 = 5 
        tap Prep ─▶ daily chat with open PRs and last standup's actions
 13:00  "send slides to Kim friday" ─▶ toast "Task · Fri 09:00 · Undo"
        swipe right = done, swipe left = tomorrow 09:00
-17:00  Wrap up ─▶ done today, still open, unconfirmed suggestions, tomorrow's first meeting
-       [Move open to tomorrow]
+17:00  Ask preset "Wrap up my day" ─▶ what got done, what is still open, tomorrow's first meeting
 Fri    Ask preset "Draft my weekly update"
 ```
 
@@ -136,7 +135,6 @@ Fri    Ask preset "Draft my weekly update"
 │ └──────────────────────────────┘ │
 │ Done today · 2              ▸    │
 ├──────────────────────────────────┤
-│ [Wrap up my day]                 │
 │ │ Add a task or ask…     🎤  ↑ │ │
 └──────────────────────────────────┘
 ```
