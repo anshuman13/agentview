@@ -83,4 +83,12 @@ class VoiceNewChatTest {
         assertEquals(listOf(null, "plan", "plan"), START_MODES.map { it.mode })
         assertEquals("Auto", START_MODES.first().label)
     }
+
+    @Test
+    fun specDraftsTheRequestAndSendsNothingWhileOtherModesSendIt() {
+        val (draft, first) = startTexts(START_MODES.last(), "fix it")
+        assertNull(first)
+        assertTrue(draft!!.endsWith("Request: fix it"))
+        assertEquals(null to "fix it", startTexts(START_MODES[1], "fix it"))
+    }
 }

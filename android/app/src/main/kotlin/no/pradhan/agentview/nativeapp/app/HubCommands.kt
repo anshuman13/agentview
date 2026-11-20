@@ -64,10 +64,14 @@ fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null
     if (model != null) setLastModel(group, model)
     val sent = (model ?: lastModel(group).takeIf { fork == null })?.takeIf { m -> modelsOf(group).value.any { it.value == m } }
     viewModelScope.launch {
-        val id = switchTo(newSessionCmd(cwd = cwd, model = sent, fork = fork, provider = provider, text = text, hub = hub))
+        val first = text.takeIf { mode == null }
+        val id = switchTo(newSessionCmd(cwd = cwd, model = sent, fork = fork, provider = provider, text = first, hub = hub))
         if (id == null) notice.value = "The chat did not open" else {
             onOpened()
-            if (mode != null) post(setModeCmd(mode), id)
+            if (mode != null) {
+                post(setModeCmd(mode), id)
+                if (text != null) submit(text, false) { notice.value = "The message was not sent" }
+            }
             if (draft != null) setDraft(id, draft)
             link.value = DeepLink(chat = id)
         }

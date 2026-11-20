@@ -26,9 +26,12 @@ fun startModel(models: List<ModelInfo>, last: String?): String? =
     models.firstOrNull { it.value == last }?.value
 
 // The "Start as" choices of the new chat sheet: no mode keeps the chat's default; the others are set once the chat opens, and Spec also puts the spec request prefix in the composer.
-class StartMode(val label: String, val mode: String?, val draft: String? = null)
+class StartMode(val label: String, val mode: String?, val draft: ((String) -> String)? = null)
 
-val START_MODES = listOf(StartMode("Auto", null), StartMode("Plan first", "plan"), StartMode("Spec", "plan", specPrompt("")))
+val START_MODES = listOf(StartMode("Auto", null), StartMode("Plan first", "plan"), StartMode("Spec", "plan", ::specPrompt))
+
+// What the new chat gets: Spec puts the request in the composer after the spec prompt and sends nothing, the others send it as the first message.
+fun startTexts(m: StartMode, text: String?): Pair<String?, String?> = m.draft?.let { it(text.orEmpty()) to null } ?: (null to text)
 
 // A start mode the provider does not offer (Plan on Codex) starts in Default.
 fun startModeFor(mode: String?, provider: String?) = if (mode != null && providerModes(provider).none { it.value == mode }) "default" else mode
