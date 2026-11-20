@@ -35,7 +35,7 @@ fun turnEnd(events: List<ChatEvent>, label: String): String {
 fun failedLine(events: List<ChatEvent>, label: String): String? {
     val end = turnEnd(events, label)
     val prefix = "$label stopped:"
-    return if (end.startsWith(prefix)) "$prefix ${firstLine(end.removePrefix(prefix)).trim()}".trimEnd() else null
+    return if (end.startsWith(prefix)) "$prefix ${firstLine(end.removePrefix(prefix))}".trimEnd() else null
 }
 
 // What a running chat is doing: its status, or Working while it has none.

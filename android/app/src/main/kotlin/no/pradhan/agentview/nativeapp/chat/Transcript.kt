@@ -205,9 +205,10 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
             }
             if (failed != null) item(key = "failed") {
+                var retried by remember(chatId, failed) { mutableStateOf(false) }
                 Row(Modifier.padding(top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
                     Text(failed, Modifier.weight(1f), style = Type.footnote, color = av.err, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Button("Retry", { hub.retryTurn(chatId) }, size = ButtonSize.Sm)
+                    if (!retried) Button("Retry", { retried = true; hub.retryTurn(chatId) }, size = ButtonSize.Sm)
                 }
             }
             transcriptRows(hub, view, list, bill, newKey, folded, chatId, cwd, running, canRewind, onOpenAgent, onOpenWork)

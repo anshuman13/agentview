@@ -115,7 +115,7 @@ class ChatRows(
     private fun repoBranch(cwd: String) = ws.repos.firstOrNull { it.cwd == folderKey(cwd, ws.repos, ws.trees) }?.branch
 
     private fun actions(sessionId: String?, title: String, liveChat: LiveChat?, state: ChatState? = null) = RowActions(
-        onRetry = liveChat?.takeIf { state == ChatState.Failed && !hub.readOnly }?.let { c -> { hub.retryTurn(c.id) } },
+        onRetry = liveChat?.takeIf { state == ChatState.Failed && !hub.readOnly }?.let { c -> { hub.open(c.id); hub.retryTurn(c.id) } },
         pinned = sessionId != null && sessionId in pins,
         onPin = { sessionId?.let { hub.pin(it, it !in pins) } },
         onRename = { sessionId?.let { dialogs.renaming = it to title } },
