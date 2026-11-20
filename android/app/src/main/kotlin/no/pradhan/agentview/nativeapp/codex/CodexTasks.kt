@@ -77,10 +77,12 @@ private val TAG_RE = Regex("(^|\\s)#([\\p{L}\\d_-]+)")
 fun takeTags(typed: String): Pair<String, List<String>> =
     typed.replace(TAG_RE, "").replace(Regex("\\s+"), " ").trim() to TAG_RE.findAll(typed).map { it.groupValues[2].lowercase() }.toList()
 
+// Due time, undated last, then rank.
+val byDue = compareBy<Row> { it.at ?: Long.MAX_VALUE }.thenBy { it.rank ?: 1_000_000_000_000_000L }
+
 fun tagTasks(items: List<Row>, tag: String): List<Row> {
     val t = tag.lowercase()
-    return items.filter { it.status == "open" && !it.deleted && tagList(it.tags).any { x -> x.lowercase() == t } }
-        .sortedWith(compareBy<Row> { it.at ?: Long.MAX_VALUE }.thenBy { it.rank ?: 1_000_000_000_000_000L })
+    return items.filter { it.status == "open" && !it.deleted && tagList(it.tags).any { x -> x.lowercase() == t } }.sortedWith(byDue)
 }
 
 fun allTags(items: List<Row>, profile: String?) = items.filter { !it.deleted && it.status == "open" && matchesProfile(profile, it) }

@@ -319,7 +319,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
         if ("retire" in acts.menu || "restore" in acts.menu) MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { if (retired) actions.change(f, mapOf("state" to null), "Claim restored") else actions.retireClaim(f) }, danger = !retired)
     }
     Column {
-        ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, selected = flash, onClick = { expanded = !expanded }, onLongClick = if (acts.menu.isEmpty()) null else ({ menu.value = true }),
+        ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = 1, selected = flash, onClick = { expanded = !expanded }, onLongClick = if (acts.menu.isEmpty()) null else ({ menu.value = true }),
             trailing = {
                 acts.buttons.forEach { b ->
                     when (b) {
@@ -330,6 +330,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
                     }
                 }
             })
+        contest?.note?.ifEmpty { null }?.let { Text(it, Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted) }
         if (editing) ClaimTextSheet("Edit claim", f.str("text") ?: "", "Save", { editing = false }) { text -> review.edit(f, text) }
         if (contesting) Sheet({ contesting = false }, "Contest claim", full = false) {
             FieldLabel("Why is this claim wrong?")
@@ -374,8 +375,9 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
     val pid = if (memory) null else page.id
     val facts = remember(st.facts, page.profile, profile, memory) { st.facts.filter { if (memory) matchesProfile(profile, it) else it.profile == page.profile } }
     val groups = remember(facts, pid, now / 60_000) { pageClaims(facts, pid, now) }
-    val mentions = remember(groups, st.items, st.meetings, page.title) {
-        if (memory) emptyMap() else groups.flatMap { g -> g.claims.map { it.fact } }.filter { it.str("state") != "proposed" }.associate { it.key to mentionsOf(st.items, st.meetings, it, page.title) }
+    val mentionable = remember(st.items, st.meetings) { mentionables(st.items, st.meetings) }
+    val mentions = remember(groups, mentionable, page.title) {
+        if (memory) emptyMap() else groups.flatMap { g -> g.claims.map { it.fact } }.filter { it.str("state") != "proposed" }.associate { it.key to mentionsOf(mentionable, it, page.title) }
     }
     val older = remember(facts, pid, now / 60_000) { olderClaims(facts, pid, now) }
     val stat = remember(facts) { statsByPage(facts)[pid] }

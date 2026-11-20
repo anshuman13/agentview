@@ -302,7 +302,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     if (scheduling) JobScheduleSheet(actions, job) { scheduling = false }
     if (pickingTools) JobToolsSheet(hub, job, probe, probeFailed) { pickingTools = false }
     if (pickingRepo) JobRepoSheet(hub, job) { pickingRepo = false }
-    val ask = if (hub.readOnly) null else ({ r: Row, output: String ->
+    val ask: ((Row, String) -> Unit)? = if (hub.readOnly) null else ({ r, output ->
         runsOpen = false
         hub.askCodex(runAsk(job.str("name")?.ifEmpty { null } ?: "Untitled job", r.long("started_at") ?: 0L, output), job.profile)
     })

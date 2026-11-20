@@ -385,7 +385,7 @@ private fun AskField(c: MeetingCtx, all: List<Row>) {
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = {
             val t = q.trim()
-            if (t.isNotEmpty()) { c.hub.askCodex(meetingAskText(t, c.m, all), c.m.profile); q = "" }
+            if (t.isNotEmpty() && c.hub.askCodex(meetingAskText(t, c.m, all), c.m.profile)) q = ""
         }))
 }
 

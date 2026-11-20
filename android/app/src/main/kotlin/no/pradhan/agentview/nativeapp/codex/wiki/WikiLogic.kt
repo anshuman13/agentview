@@ -16,6 +16,7 @@ import no.pradhan.agentview.nativeapp.codex.PERSONAL
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
+import no.pradhan.agentview.nativeapp.codex.byDue
 import no.pradhan.agentview.nativeapp.codex.edited
 import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.liveRows
@@ -70,19 +71,22 @@ private fun hasPhrase(hay: String, phrase: String): Boolean {
     return false
 }
 
-// Open tasks (due time, undated last) then live meetings (newest first) of the claim's profile that name the page title as a whole phrase and share a key word of the claim that the title lacks: web data/meetings/mentions.ts mentionsOf, checked by shared/fixtures/claim-mentions.json.
-fun mentionsOf(items: List<Row>, meetings: List<Row>, claim: Row, title: String?): List<Row> {
+class Mentionable(val row: Row, val hay: String, val words: Set<String>)
+
+// Open tasks (due time, undated last) then live meetings (newest first), with their lowercased text and its key words, built once for mentionsOf.
+fun mentionables(items: List<Row>, meetings: List<Row>): List<Mentionable> {
+    fun of(r: Row, vararg parts: String?) = parts.joinToString(" ") { it ?: "" }.lowercase().let { Mentionable(r, it, keyWords(it)) }
+    return items.filter { it.status == "open" && !it.deleted }.sortedWith(byDue).map { of(it, it.title, it.text) } +
+        liveRows(meetings).sortedByDescending { it.long("starts_at") ?: 0L }.map { of(it, it.title, it.str("notes"), it.str("summary"), it.str("decisions")) }
+}
+
+// The mentionables of the claim's profile that name the page title as a whole phrase and share a key word of the claim that the title lacks: web data/meetings/mentions.ts mentionsOf, checked by shared/fixtures/claim-mentions.json.
+fun mentionsOf(rows: List<Mentionable>, claim: Row, title: String?): List<Row> {
     val phrase = title?.trim()?.lowercase() ?: ""
     val text = claim.str("text")
     if (phrase.length < 3 || text.isNullOrEmpty()) return emptyList()
     val words = keyWords(text) - keyWords(phrase)
-    fun names(r: Row, vararg parts: String?): Boolean {
-        val hay = parts.joinToString(" ") { it ?: "" }
-        return r.profile == claim.profile && keyWords(hay).any { it in words } && hasPhrase(hay.lowercase(), phrase)
-    }
-    val tasks = items.filter { it.status == "open" && !it.deleted && names(it, it.title, it.text) }
-        .sortedWith(compareBy<Row> { it.at ?: Long.MAX_VALUE }.thenBy { it.rank ?: 1_000_000_000_000_000L })
-    return tasks + liveRows(meetings).filter { names(it, it.title, it.str("notes"), it.str("summary"), it.str("decisions")) }.sortedByDescending { it.long("starts_at") ?: 0L }
+    return rows.filter { m -> m.row.profile == claim.profile && m.words.any { it in words } && hasPhrase(m.hay, phrase) }.map { it.row }
 }
 
 // titleWords, decisionKey and mayChange mirror shared/claimMatch.ts, checked by shared/fixtures/drift-claims.json.

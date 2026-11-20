@@ -27,7 +27,7 @@ class ClaimMentionsTest {
             val meetings = rows("meetings", c.getValue("meetings").jsonArray.map { it.jsonObject }, false)
             val claim = Row("facts", "c", WORK, f = mapOf("text" to c.getValue("claim")))
             val expected = c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }
-            assertEquals(c.getValue("name").jsonPrimitive.content, expected, mentionsOf(items, meetings, claim, c.getValue("title").jsonPrimitive.content).map { it.id })
+            assertEquals(c.getValue("name").jsonPrimitive.content, expected, mentionsOf(mentionables(items, meetings), claim, c.getValue("title").jsonPrimitive.content).map { it.id })
         }
     }
 }

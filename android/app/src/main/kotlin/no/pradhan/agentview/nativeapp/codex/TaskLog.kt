@@ -1,8 +1,5 @@
 package no.pradhan.agentview.nativeapp.codex
 
-import java.time.Instant
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -50,10 +47,10 @@ fun historyOf(r: Row): List<HistoryEntry> = listOf("status", "at", "assignee")
 
 // The clock today, the weekday within a week, else the date.
 fun historyTime(at: Long, now: Long): String {
-    val days = daysFrom(now, at)
+    val days = -daysFrom(at, now)
     return when {
         days < 1 -> clock(at)
-        days < 7 -> DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH).format(Instant.ofEpochMilli(at).atZone(codexZone))
+        days < 7 -> weekday(at)
         else -> dayLabel(at)
     }
 }

@@ -245,7 +245,7 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
     val scope = rememberCoroutineScope()
     val show = rememberShowSnack(snack)
     var chatText by remember { mutableStateOf<((String?) -> String)?>(null) }
-    val askAbout = { r: Row -> hub.askCodex(askIn(st, "Help me with this item.", r.profile, r), r.profile) }
+    val askAbout: (Row) -> Unit = { r -> hub.askCodex(askIn(st, "Help me with this item.", r.profile, r), r.profile) }
     editing?.let { row ->
         val from = st.meetings.firstOrNull { it.profile == row.profile && it.id == row.meetingId }
         val people = if (row.status == "open") remember(st.meetings, row.key, now / 60_000) { recentPeople(st.meetings, row.profile, from, now) } else emptyList()

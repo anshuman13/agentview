@@ -1,5 +1,6 @@
 [
   {"name": "no log", "log": null, "sessions": []},
+  {"name": "empty string", "log": "", "sessions": []},
   {"name": "bad JSON", "log": "{not json", "sessions": []},
   {"name": "a non-list", "log": "{\"id\":\"a\"}", "sessions": []},
   {"name": "a zero-minute session and junk", "log": "[{\"id\":\"a\",\"at\":1000,\"min\":25},{\"id\":1},null,{\"id\":\"c\",\"at\":1,\"min\":0}]", "sessions": [{"id": "a", "at": 1000, "min": 25}]},

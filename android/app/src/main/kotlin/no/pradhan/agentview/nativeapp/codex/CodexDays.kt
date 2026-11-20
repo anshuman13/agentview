@@ -31,7 +31,7 @@ fun weekStart(now: Long): Long = date(now).minusDays(((date(now).dayOfWeek.value
 fun clock(t: Long): String = DateTimeFormatter.ofPattern("HH:mm").format(Instant.ofEpochMilli(t).atZone(codexZone))
 fun dayLabel(t: Long): String = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH).format(Instant.ofEpochMilli(t).atZone(codexZone))
 fun weekdayDate(t: Long) = DateTimeFormatter.ofPattern("EEE, d MMM", Locale.ENGLISH).format(Instant.ofEpochMilli(t).atZone(codexZone))
-private fun weekday(t: Long) = DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH).format(Instant.ofEpochMilli(t).atZone(codexZone))
+fun weekday(t: Long) = DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH).format(Instant.ofEpochMilli(t).atZone(codexZone))
 
 // "Tomorrow", else the short weekday and date.
 fun dayHeading(t: Long, now: Long) = if (daysFrom(t, now) == 1L) "Tomorrow" else weekdayDate(t)

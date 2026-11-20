@@ -75,10 +75,10 @@ var Hub.codexProfile: String
     get() = prefs.getString("codexProfile", WORK) ?: WORK
     set(v) { prefs.edit().putString("codexProfile", v).apply() }
 
-// Sends the question to today's Codex chat for the profile on this Mac; the first question of the day opens a new chat.
-fun Hub.askCodex(question: String, profile: String) {
-    if (readOnly) { notice.value = "Read-only check, nothing was sent"; return }
-    if (asking) return
+// Sends the question to today's Codex chat for the profile on this Mac; the first question of the day opens a new chat. False when nothing was sent.
+fun Hub.askCodex(question: String, profile: String): Boolean {
+    if (readOnly) { notice.value = "Read-only check, nothing was sent"; return false }
+    if (asking) return false
     asking = true
     viewModelScope.launch {
         try {
@@ -88,6 +88,7 @@ fun Hub.askCodex(question: String, profile: String) {
             asking = false
         }
     }
+    return true
 }
 
 // The finished answer to a question put to the Codex chat, or a failure that says why there is none.
