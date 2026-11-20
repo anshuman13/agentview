@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.chat
 
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.wiki.RETIRE_AFTER
+import no.pradhan.agentview.nativeapp.codex.wiki.givenPreferences
 import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
 import no.pradhan.agentview.nativeapp.codex.wiki.shortDate
 import no.pradhan.agentview.nativeapp.codex.wiki.similarClaim
@@ -21,6 +22,10 @@ fun memoryMark(file: MemoryFile, facts: List<Row>, profile: String, now: Long): 
 
 // web memoryLogic.ts memoryClaimText: the claim Move to wiki makes of a memory file, its description, else its body on one line, cut to the Remember limit.
 fun memoryClaimText(file: MemoryFile) = file.description.trim().ifEmpty { file.text.replace(Regex("\\s+"), " ").trim() }.take(400)
+
+// shared/preferences.ts leftOutPreferences: how many of the profile's claims chats would get on their own that the 15 or 1500 character limit leaves out.
+fun leftOutPreferences(facts: List<Row>, profile: String, now: Long) =
+    facts.count { givenPreferences(listOf(it), profile, now).isNotEmpty() } - givenPreferences(facts, profile, now).size
 
 // The mark's long form under the file's title.
 fun markLine(m: MemoryMark, at: Long, now: Long) = when (m.mark) {

@@ -21,10 +21,10 @@ import { since } from '../../sessions/folders';
 import { Badge, LABEL_ON } from '../../ui/Badge';
 import { profileOfPath } from '../../../../shared/workspace';
 import { loadErrorText } from '../../../../shared/loadError';
-import { givenPreferences } from '../../../../shared/preferences';
+import { PREFERENCE_CHARS, PREFERENCES, givenPreferences, leftOutPreferences } from '../../../../shared/preferences';
 import { Markdown } from '../Chat';
 import { fetchMemory, saveMemory } from '../chatApi';
-import { moveMemoryToWiki, rememberChat } from '../chatActions';
+import { forgetMemory, moveMemoryToWiki, rememberChat } from '../chatActions';
 import { isMemoryIndex } from '../transcript/workFold';
 import { markLine, memoryMark, type MemoryFile, type MemoryMark } from './memoryLogic';
 
@@ -100,9 +100,10 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
   );
 }
 
-// A memory file's body as a field with Save and Cancel; a save can be undone while the file stays open. Move to wiki is beside Edit on every file but MEMORY.md.
-function MemoryEdit({ file, draft, setDraft, onSaved, onMove }: { file: MemoryFile; draft: string | null; setDraft: (draft: string | null) => void; onSaved: (text: string) => void; onMove: () => Promise<void> }) {
+// A memory file's body as a field with Save and Cancel; a save can be undone while the file stays open. Move to wiki and Forget are beside Edit on every file but MEMORY.md.
+function MemoryEdit({ file, draft, setDraft, onSaved, onMove, onForget }: { file: MemoryFile; draft: string | null; setDraft: (draft: string | null) => void; onSaved: (text: string) => void; onMove: () => Promise<void>; onForget: () => Promise<void> }) {
   const [saving, setSaving] = useState(false);
+  const busy = (run: () => Promise<void>) => { setSaving(true); void run().finally(() => setSaving(false)); };
   const save = async (text: string, undo = false) => {
     setSaving(true);
     try {
@@ -121,7 +122,10 @@ function MemoryEdit({ file, draft, setDraft, onSaved, onMove }: { file: MemoryFi
         <>
           <div className="gl-actions">
             <Button size="sm" variant="plain" icon="edit" onClick={() => setDraft(file.text)}>Edit</Button>
-            {!isMemoryIndex(file.path) && <Button size="sm" variant="plain" icon="book" disabled={saving} onClick={() => { setSaving(true); void onMove().finally(() => setSaving(false)); }}>Move to wiki</Button>}
+            {!isMemoryIndex(file.path) && <>
+              <Button size="sm" variant="plain" icon="book" disabled={saving} onClick={() => busy(onMove)}>Move to wiki</Button>
+              <Button size="sm" variant="plain" icon="trash" disabled={saving} onClick={() => busy(onForget)}>Forget</Button>
+            </>}
           </div>
           <div className="bd-doc"><Markdown text={file.text || 'Empty'} /></div>
         </>
@@ -162,8 +166,8 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
   if (open) {
     const edit = () => { setUi({ openFile: file, openEdit: true, follow: false }); onClose(); };
     const mark = markOf(open);
-    const move = async () => {
-      if (!(await moveMemoryToWiki(open, reload))) return;
+    const leave = async (gone: Promise<boolean>) => {
+      if (!(await gone)) return;
       setOpen(null);
       reload();
     };
@@ -181,7 +185,7 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
           {mark && <div>{markLine(mark, open.at)}</div>}
         </div>
         {open.editable ? (
-          <MemoryEdit file={open} draft={draft} setDraft={setDraft} onSaved={(text) => { setOpen({ ...open, text }); reload(); }} onMove={move} />
+          <MemoryEdit file={open} draft={draft} setDraft={setDraft} onSaved={(text) => { setOpen({ ...open, text }); reload(); }} onMove={() => leave(moveMemoryToWiki(open, reload))} onForget={() => leave(forgetMemory(open, reload))} />
         ) : (
           <>
             {open.path === `${cwd}/${file}` && <div className="gl-actions"><Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button></div>}
@@ -209,9 +213,11 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
 // The wiki's Memory claims that new chats in this profile start with; a tap opens the claim on the Memory page, Retire drops it from the list, Remember adds one.
 export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: string; onClose: () => void }) {
   const [remember, setRemember] = useState(false);
-  const given = givenPreferences(facts, profileOfPath(cwd));
-  const openClaim = (id: string) => {
-    setView({ list: 'wiki', open: MEMORY, anchor: id, person: null });
+  const profile = profileOfPath(cwd);
+  const given = givenPreferences(facts, profile);
+  const left = leftOutPreferences(facts, profile);
+  const openMemory = (anchor: string | null = null) => {
+    setView({ list: 'wiki', open: MEMORY, anchor, person: null });
     command('assistant');
     onClose();
   };
@@ -219,8 +225,9 @@ export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: strin
     <>
       <Section label="From the wiki" count={sectionCount(given.length)} action={<Button size="sm" variant="plain" icon="add" onClick={() => setRemember(true)}>Remember</Button>} />
       <div className="muted">New chats get these</div>
-      {given.length ? given.map((f) => <GivenClaim key={f.id} fact={f} open={() => openClaim(f.id)} />)
+      {given.length ? given.map((f) => <GivenClaim key={f.id} fact={f} open={() => openMemory(f.id)} />)
         : <EmptyState size="sm" title="Nothing from the wiki yet" hint="Remember adds a preference every new chat in this profile starts with" />}
+      {left > 0 && <div className="muted">{`${left} more not given: new chats get the ${PREFERENCES} newest, up to ${PREFERENCE_CHARS} characters`}<Button size="sm" variant="plain" onClick={() => openMemory()}>Open Memory</Button></div>}
       {remember && <RememberPick close={() => setRemember(false)} />}
     </>
   );

@@ -1,0 +1,40 @@
+[
+  {"name": "16 claims leave 1 out", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "p0", "profile": "work", "text": "Preference zero", "at": 9999999999000},
+    {"id": "p1", "profile": "work", "text": "Preference one", "at": 9999999998000},
+    {"id": "p2", "profile": "work", "text": "Preference two", "at": 9999999997000},
+    {"id": "p3", "profile": "work", "text": "Preference three", "at": 9999999996000},
+    {"id": "p4", "profile": "work", "text": "Preference four", "at": 9999999995000},
+    {"id": "p5", "profile": "work", "text": "Preference five", "at": 9999999994000},
+    {"id": "p6", "profile": "work", "text": "Preference six", "at": 9999999993000},
+    {"id": "p7", "profile": "work", "text": "Preference seven", "at": 9999999992000},
+    {"id": "p8", "profile": "work", "text": "Preference eight", "at": 9999999991000},
+    {"id": "p9", "profile": "work", "text": "Preference nine", "at": 9999999990000},
+    {"id": "p10", "profile": "work", "text": "Preference ten", "at": 9999999989000},
+    {"id": "p11", "profile": "work", "text": "Preference eleven", "at": 9999999988000},
+    {"id": "p12", "profile": "work", "text": "Preference twelve", "at": 9999999987000},
+    {"id": "p13", "profile": "work", "text": "Preference thirteen", "at": 9999999986000},
+    {"id": "p14", "profile": "work", "text": "Preference fourteen", "at": 9999999985000},
+    {"id": "p15", "profile": "work", "text": "Preference fifteen", "at": 9999999984000}
+  ], "expected": 1},
+  {"name": "3 claims leave none out", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "a", "profile": "work", "text": "One", "at": 9999999999000},
+    {"id": "b", "profile": "work", "text": "Two", "at": 9999999998000},
+    {"id": "c", "profile": "work", "text": "Three", "at": 9999999997000}
+  ], "expected": 0},
+  {"name": "a claim past the 1500 characters is left out", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "a", "profile": "work", "text": "Short", "at": 9999999999000},
+    {"id": "b", "profile": "work", "text": "abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi", "at": 9999999998000},
+    {"id": "c", "profile": "work", "text": "abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi", "at": 9999999997000}
+  ], "expected": 1},
+  {"name": "a claim over 1500 characters on its own is not counted", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "a", "profile": "work", "text": "Short", "at": 9999999999000},
+    {"id": "long", "profile": "work", "text": "abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi", "at": 9999999998000}
+  ], "expected": 0},
+  {"name": "another profile's, retired and contested claims are not counted", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "ok", "profile": "work", "text": "Given", "at": 9999999999000},
+    {"id": "home", "profile": "personal", "text": "Personal", "at": 9999999999000},
+    {"id": "retired", "profile": "work", "text": "Retired", "at": 9999999999000, "state": "retired"},
+    {"id": "disputed", "profile": "work", "text": "Contested", "at": 9999999999000, "contested": "{\"by\":\"you\",\"at\":1,\"note\":\"no\"}"}
+  ], "expected": 0}
+]

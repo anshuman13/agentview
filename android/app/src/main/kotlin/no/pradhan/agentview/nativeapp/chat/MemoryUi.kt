@@ -23,10 +23,14 @@ import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.Undoable
 import no.pradhan.agentview.nativeapp.app.claimRoute
+import no.pradhan.agentview.nativeapp.codex.wiki.MEMORY
+import no.pradhan.agentview.nativeapp.codex.wiki.PREFERENCES
+import no.pradhan.agentview.nativeapp.codex.wiki.PREFERENCE_CHARS
 import no.pradhan.agentview.nativeapp.codex.wiki.givenPreferences
 import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.app.memoryFiles
+import no.pradhan.agentview.nativeapp.app.forgetMemory
 import no.pradhan.agentview.nativeapp.app.moveMemoryToWiki
 import no.pradhan.agentview.nativeapp.app.read
 import no.pradhan.agentview.nativeapp.app.rememberFromChat
@@ -157,13 +161,14 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
                     if ((f.path == "$cwd/$file" || f.editable) && !hub.readOnly) Button("Edit", { draft = f.text }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "edit")
-                    if (f.editable && !hub.readOnly && !isMemoryIndex(f.path)) Button("Move to wiki", {
-                        saving = true
-                        hub.moveMemoryToWiki(f, cwd, reload) { moved ->
+                    if (f.editable && !hub.readOnly && !isMemoryIndex(f.path)) {
+                        val leave = { gone: Boolean ->
                             saving = false
-                            if (moved) { open = null; reload() }
+                            if (gone) { open = null; reload() }
                         }
-                    }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "book", enabled = !saving)
+                        Button("Move to wiki", { saving = true; hub.moveMemoryToWiki(f, cwd, reload, leave) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "book", enabled = !saving)
+                        Button("Forget", { saving = true; hub.forgetMemory(f, reload, leave) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "trash", enabled = !saving)
+                    }
                 }
                 Markdown(f.text.ifBlank { "Empty" })
             }
@@ -199,6 +204,14 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
                     if (hub.codex.update(f, mapOf("state" to "retired"))) hub.undoable.tryEmit(Undoable("Claim retired") { hub.codex.update(f, mapOf("state" to null)) })
                 }, danger = true)
             })
+        }
+        val left = leftOutPreferences(facts, segmentOf(cwd), now)
+        if (left > 0) {
+            Text("$left more not given: new chats get the $PREFERENCES newest, up to $PREFERENCE_CHARS characters", Modifier.padding(horizontal = Tokens.listPad), style = Type.footnote, color = av.fgMuted)
+            Button("Open Memory", {
+                hub.link.value = DeepLink(codexRoute = "wiki:$MEMORY")
+                onDismiss()
+            }, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         }
     }
     if (remembering) TextDialog("Remember", "", "Save", { hub.rememberFromChat(it, title, cwd) }, { remembering = false }, maxLength = 400, detail = "Saved to Memory for every later chat.")
