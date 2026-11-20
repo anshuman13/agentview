@@ -135,7 +135,7 @@ export function Sessions() {
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
       <NeedsYou n={waiting.length} filter={filter}>
-        <WaitingRows rows={waiting} viewing={viewing} ask={setAsk} pins={pins} setPin={setPin} setChats={setChats} />
+        <WaitingRows rows={waiting} folders={folders} viewing={viewing} ask={setAsk} pins={pins} setPin={setPin} setChats={setChats} />
       </NeedsYou>
       <div className="side-switch">
         {(['work', 'personal'] as const).map((k) => (

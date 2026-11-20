@@ -54,7 +54,7 @@ export function GoalSheet({ plan, here, onClose }: { plan?: string; here?: boole
   const canHere = Boolean(here && !active);
   const target = canHere && inHere ? chatProvider : provider;
   const models = knownModels(provider);
-  const dirs = folders.flatMap((f) => [{ cwd: f.cwd, name: f.name }, ...f.trees.map((w) => ({ cwd: w.cwd, name: w.name.split('/').pop()! }))]);
+  const dirs = folders.flatMap((f) => [{ cwd: f.cwd, name: f.name }, ...f.trees.map((w) => ({ cwd: w.cwd, name: `${f.name} · ${w.name.split('/').pop()}` }))]);
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
   const badEvery = Boolean(custom.trim()) && parseEvery(custom) === null;
   const ready = !badEvery && (!plan || (markdown !== null && !error));

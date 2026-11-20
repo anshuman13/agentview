@@ -151,7 +151,7 @@ export function OpenChats() {
         <IconButton icon="add" label="New session in a repo" onClick={() => setUi({ repoPicker: true })} />
       </div>
       <NeedsYou n={shownWaiting.length} filter={filter}>
-        {shownWaiting.map((c) => row(c, c.cwd.split('/').pop()))}
+        {shownWaiting.map((c) => row(c, repoName(folders, c.cwd)))}
       </NeedsYou>
       {pinnedRows.length > 0 && (
         <div className="tree needs">

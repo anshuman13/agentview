@@ -9,7 +9,7 @@ import { providerMark } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
 import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
-import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, removeRequest, restoreChat, since, type ChatState } from './folders';
+import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, repoName, removeRequest, restoreChat, since, type ChatState, type Folder } from './folders';
 import { Swipe } from '../codex/gestures/Swipe';
 import { copyText, showSnack } from '../codex/view';
 import { isMuted, setMuted } from '../app/runtime/mute';
@@ -160,9 +160,9 @@ export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, on
   return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={metaLine(repo, branchOf(s.gitBranch, branch), providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
 }
 
-export function WaitingRows({ rows, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
+export function WaitingRows({ rows, folders, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; folders: Folder[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
   const actions = chatActions(setChats, ask);
-  return <>{rows.map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.includes(c.sessionId ?? '')} onPin={(on) => setPin(c.sessionId!, on)} />)}</>;
+  return <>{rows.map((c) => <LiveRow key={c.id} c={c} repo={repoName(folders, c.cwd)} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.includes(c.sessionId ?? '')} onPin={(on) => setPin(c.sessionId!, on)} />)}</>;
 }
 
 export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; saved?: SavedSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: Pin; onBeside?: () => void }) {
