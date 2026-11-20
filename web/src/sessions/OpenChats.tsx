@@ -220,7 +220,7 @@ export function OpenChats() {
         {hits.map((h) => (
           <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={markSegments(h.text, queryWords(filter)).map((x, i) => (x.hit ? <b key={i}>{x.text}</b> : x.text))} lines={2} meta={messageMeta(h)} className="chat-hit" onClick={() => openHit(h)} />
         ))}
-        <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
+        {!filter && <Bin folders={folders} ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />}
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
       {newIn && <NewChatSheet repo={newIn.repo} onClose={() => setNewIn(null)} />}

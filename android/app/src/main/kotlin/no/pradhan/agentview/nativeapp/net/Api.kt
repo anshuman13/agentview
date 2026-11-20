@@ -87,6 +87,8 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
 
     suspend fun archive(sessionId: String) { call(url("/api/sessions?id=${enc(sessionId)}&archive").delete()) }
 
+    suspend fun deleteChat(sessionId: String) { call(url("/api/sessions?id=${enc(sessionId)}&purge").delete()) }
+
     suspend fun restore(sessionId: String) { call(url("/api/sessions/restore?id=${enc(sessionId)}").post("".toRequestBody())) }
 
     suspend fun bin() = list("/api/sessions/bin", BinnedSession.serializer())

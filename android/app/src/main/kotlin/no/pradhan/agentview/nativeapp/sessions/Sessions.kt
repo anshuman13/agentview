@@ -44,6 +44,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
+import no.pradhan.agentview.nativeapp.app.deleteFromBin
 import no.pradhan.agentview.nativeapp.app.emptyBin
 import no.pradhan.agentview.nativeapp.app.loadBin
 import no.pradhan.agentview.nativeapp.app.markRead
@@ -65,6 +66,7 @@ import no.pradhan.agentview.nativeapp.ui.Fab
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.PageHeader
@@ -206,7 +208,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
             }
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {
                 when {
-                    live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty() -> OfflineSessions(rows, waitingForServer)
+                    waitingForServer -> OfflineSessions(rows)
                     else -> {
                         val empty = if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty() && hits.isEmpty()) {
                             if (filter.isNotBlank()) "No repo or chat matches" else "No ${profileLabel(segment).lowercase()} chats yet"
@@ -221,10 +223,10 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
 }
 
 @Composable
-private fun OfflineSessions(rows: ChatRows, waitingForServer: Boolean) {
+private fun OfflineSessions(rows: ChatRows) {
     val hub = rows.hub
-    val offline = if (waitingForServer) remember { hub.savedChats() } else emptyList()
-    if (offline.isEmpty()) EmptyState(if (waitingForServer) "Waiting for the server" else "No chats yet", if (waitingForServer) "Check the Mac address" else null)
+    val offline = remember { hub.savedChats() }
+    if (offline.isEmpty()) EmptyState("Waiting for the server", "Check the Mac address")
     else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
         item(key = "saved-head") { SectionHeader("Saved on this phone", offline.size.toString()) }
         lazyGroup(offline, { "sv-${it.first}" }) { c ->
@@ -242,6 +244,7 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
     val bin by rows.hub.bin.collectAsState()
     var binOpen by remember { mutableStateOf(false) }
     var emptying by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf<BinnedSession?>(null) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
         if (empty != null) item(key = "empty") { EmptyState(empty) }
         if (waiting.isNotEmpty()) {
@@ -263,13 +266,16 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
             Group { ListRow(if (filters.showIdle) "Show fewer repos" else "More repos", trailing = { Chevron(if (!filters.showIdle) "${idle.size}" else null) }, onClick = { filters.showIdle = !filters.showIdle }) }
         }
         if (hits.isNotEmpty()) messageHits(rows, hits, filter)
-        if (filter.isBlank()) binRows(rows, bin, binOpen, { binOpen = !binOpen }) { emptying = true }
+        if (filter.isBlank()) binRows(rows, bin, binOpen, { binOpen = !binOpen }, { emptying = true }) { deleting = it }
     }
     if (emptying) ConfirmDialog("Empty the bin?", "${plural(bin.size, "chat")}\n\nThe transcripts are removed permanently.", "Empty bin", { emptying = false; rows.hub.emptyBin() }, onDismiss = { emptying = false })
+    deleting?.let { b ->
+        ConfirmDialog("Delete this chat?", "${b.title.ifBlank { UNTITLED }}\n\nThe transcript is removed permanently.", "Delete", { deleting = null; rows.hub.deleteFromBin(b.sessionId) }, onDismiss = { deleting = null })
+    }
 }
 
 // The archived chats (web Bin.tsx), folded on every open of the page.
-private fun LazyListScope.binRows(rows: ChatRows, bin: List<BinnedSession>, open: Boolean, onToggle: () -> Unit, onEmpty: () -> Unit) {
+private fun LazyListScope.binRows(rows: ChatRows, bin: List<BinnedSession>, open: Boolean, onToggle: () -> Unit, onEmpty: () -> Unit, onDelete: (BinnedSession) -> Unit) {
     if (bin.isEmpty()) return
     val hub = rows.hub
     item(key = "bin-head") {
@@ -280,6 +286,11 @@ private fun LazyListScope.binRows(rows: ChatRows, bin: List<BinnedSession>, open
             b.title.ifBlank { UNTITLED },
             metaLine(folderName(folderKey(b.cwd, rows.ws.repos, rows.ws.trees)), binLeft(b.deletedAt)),
             trailing = if (hub.readOnly) null else ({ IconBtn("discard", "Restore chat", { hub.restoreFromBin(b.sessionId) }) }),
+            menu = if (hub.readOnly) null else ({ dismiss ->
+                MenuItem("Restore", "discard", { dismiss(); hub.restoreFromBin(b.sessionId) })
+                MenuSeparator()
+                MenuItem("Delete for good", "trash", { dismiss(); onDelete(b) }, danger = true)
+            }),
         )
     }
 }
