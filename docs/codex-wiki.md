@@ -189,7 +189,8 @@ Rejecting keeps the row as `rejected` so Claude sees it in `wiki_search` and doe
 
 - Wiki index: a "To review" section above the sections with a count, one approve card per proposal: the claim,
   target page and heading (or Memory), what it replaces (struck through), sources, the chat it came from. Buttons
-  Edit, Reject and Approve, as on the meeting action cards. Rejected cards collapse with Undo.
+  Edit, Reject and Approve, as on the meeting action cards. Two or more loose Memory claims from one chat (none replacing a
+  claim) share one card: "From chat <title>", the claim texts, Approve all and Reject all. Rejected cards collapse with Undo.
   Proposals on a live page are grouped into one card per page, except ones that replace a claim, which get their own
   card so the old text shows.
 - The nav shows the review count next to Wiki.

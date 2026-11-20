@@ -253,7 +253,7 @@ export function staleFacts(facts: Fact[], pages: Page[], meetings: Meeting[], no
 
 export const proposals = (facts: Fact[]) => facts.filter((f) => !f.deleted && f.state === 'proposed').sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
 
-// What the review list shows: one card per page with proposals, and one per claim that has no page or replaces a claim on a live page.
+// What the review list shows: one card per page with proposals, one per chat with two or more loose claims, and one per other claim that has no page or replaces a claim on a live page.
 export function reviewGroups(pages: Page[], facts: Fact[]) {
   const list = proposals(facts);
   const alive = new Map(pages.filter((p) => !p.deleted).map((p) => [`${p.profile}:${p.id}`, p]));
@@ -270,7 +270,14 @@ export function reviewGroups(pages: Page[], facts: Fact[]) {
     if (g) g.list.push(f);
     else byPage.set(k, { page, list: [f] });
   }
-  return { byPage: [...byPage.values()], loose };
+  const byChat = new Map<string, Fact[]>();
+  for (const f of loose) {
+    const chat = f.replaces ? null : chatOf(f);
+    if (chat) byChat.set(`${f.profile}:${chat}`, [...(byChat.get(`${f.profile}:${chat}`) ?? []), f]);
+  }
+  const chats = [...byChat.values()].filter((g) => g.length > 1);
+  const grouped = new Set(chats.flat());
+  return { byPage: [...byPage.values()], chats, loose: loose.filter((f) => !grouped.has(f)) };
 }
 
 // How many claims wait for a decision, so the badge says 75 for 75 claims and not 3 for 3 pages.

@@ -134,6 +134,26 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
   );
 }
 
+function ChatReview({ chat, list }: { chat: string; list: Fact[] }) {
+  const review = useReview();
+  const title = sourcesOf(list[0]).find((s) => s.kind === 'chat')?.label || 'Untitled';
+  return (
+    <div className="mt-action proposed wk-review">
+      <div className="mt-action-kind"><Icon name="lightbulb" small />Memory{list[0].profile === 'personal' && <span className="wk-src">Personal</span>}</div>
+      <div className="wk-meta"><span>From chat {title}</span></div>
+      <ul className="wk-review-peek">
+        {list.map((f) => <li key={f.profile + f.id}>{f.text}</li>)}
+      </ul>
+      <div className="wk-claim-foot"><ClaudeChip chat={chat} /></div>
+      <div className="mt-action-foot">
+        <span className="spacer" />
+        <button className="icon-btn mt-reject" title="Reject all" aria-label="Reject all" onClick={() => review.reject(list)}><Icon name="close" /></button>
+        <button className="btn primary mt-approve" onClick={() => review.approve(list)}><Icon name="check" small /> Approve all</button>
+      </div>
+    </div>
+  );
+}
+
 const PEEK = 3;
 const LOOSE_CAP = 3;
 const LOOK_CAP = 3;
@@ -145,7 +165,7 @@ function Decided({ n }: { n: number }) {
 
 export function ToReview({ facts }: { facts: Fact[] }) {
   const { pages } = useCodex();
-  const { byPage, loose } = useMemo(() => reviewGroups(pages, facts), [pages, facts]);
+  const { byPage, chats, loose } = useMemo(() => reviewGroups(pages, facts), [pages, facts]);
   const [all, setAll] = useState(false);
   const order = useRef<Map<string, { n: number; page: boolean }>>(new Map());
   const live = new Map<string, ReactNode>();
@@ -153,6 +173,11 @@ export function ToReview({ facts }: { facts: Fact[] }) {
     const k = page.profile + page.id;
     live.set(k, <PageReview key={k} page={page} list={list} />);
     if (!order.current.has(k)) order.current.set(k, { n: list.length, page: true });
+  }
+  for (const list of chats) {
+    const k = `chat:${list[0].profile}:${chatOf(list[0])}`;
+    live.set(k, <ChatReview key={k} chat={chatOf(list[0])!} list={list} />);
+    if (!order.current.has(k)) order.current.set(k, { n: list.length, page: false });
   }
   for (const f of loose) {
     const k = f.profile + f.id;
