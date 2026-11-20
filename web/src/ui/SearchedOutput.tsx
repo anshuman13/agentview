@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { queryWords } from '../codex/data/ask/match';
 import { Icon } from './Icon';
 import { IconButton } from './Button';
 import { markSegments, matchLabel, stepMatch } from './util';
 
-export function SearchedOutput({ text, query, setQuery, label, className }: { text: string; query: string; setQuery: (q: string) => void; label: string; className: string }) {
+export function SearchedOutput({ text, query, setQuery, label, className, children }: { text: string; query: string; setQuery: (q: string) => void; label: string; className: string; children?: ReactNode }) {
   const [cur, setCur] = useState(-1);
   const box = useRef<HTMLDivElement>(null);
   const segs = useMemo(() => markSegments(text, queryWords(query)), [text, query]);
@@ -33,9 +33,11 @@ export function SearchedOutput({ text, query, setQuery, label, className }: { te
         <IconButton size="sm" icon="arrow-up" label="Previous match" disabled={!count} onClick={() => step(-1)} />
         <IconButton size="sm" icon="arrow-down" label="Next match" disabled={!count} onClick={() => step(1)} />
       </div>
-      <div className={className} ref={box}>
-        {segs.map((s, i) => s.hit ? <mark key={i} className={++k === cur ? 'cur' : undefined}>{s.text}</mark> : s.text)}
-      </div>
+      {children && !query.trim() ? children : (
+        <div className={className} ref={box}>
+          {segs.map((s, i) => s.hit ? <mark key={i} className={++k === cur ? 'cur' : undefined}>{s.text}</mark> : s.text)}
+        </div>
+      )}
     </>
   );
 }

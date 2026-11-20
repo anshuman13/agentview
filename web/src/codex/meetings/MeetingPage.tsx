@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from '../data';
-import { hasContent } from '../data/meetings/meetingMarkdown';
 import { rowKey } from '../data/sync';
 import { linksOf, listOf, othersOf, type Meeting } from '../data/wiki/wiki';
 import { linkDomain } from '../data/ask/links';
@@ -20,7 +19,7 @@ import { AddAction, MeetingMenu, MeetingMore, NoteActions, Notes, StateLine } fr
 import { RaiseWith } from './Raise';
 import { recentPeople } from '../data/meetings/points';
 import { talkTime } from '../data/meetings/talkTime';
-import { RoomMic, SummaryFormat, readable, useTranscript } from './Transcript';
+import { RoomMic, SummaryFormat, useTranscript } from './Transcript';
 import { UNTITLED } from '../../../../shared/util';
 
 const ORDER: Record<string, number> = { open: 0, done: 1 };
@@ -53,7 +52,6 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const notesBox = useRef<HTMLElement>(null);
   const link = m.calendar_url ? safeHref(m.calendar_url) : '';
-  const canMenu = !!link || hasContent(m, all) || (state === 'done' && readable(m)) || !!m.notes;
   const takeNotes = () => {
     setEditing(true);
     notesBox.current?.scrollIntoView({ block: 'center' });
@@ -88,7 +86,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
                 {state === 'live' && link && !event
                   ? <Button variant="filled" size="sm" icon="device-camera-video" href={link} target="_blank" rel="noreferrer">Join</Button>
                   : <Button variant="filled" size="sm" icon="edit" onClick={takeNotes}>Notes</Button>}
-                {canMenu && <MeetingMenu m={m} all={all} state={state} deleteNotes={deleteNotes} />}
+                <MeetingMenu m={m} all={all} state={state} deleteNotes={deleteNotes} />
               </>
             )} />
           </div>

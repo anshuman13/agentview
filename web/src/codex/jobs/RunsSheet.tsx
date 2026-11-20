@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { Run } from '../data/wiki/wiki';
 import { Badge } from '../../ui/Badge';
 import { Icon } from '../../ui/Icon';
-import { IconButton } from '../../ui/Button';
+import { Button } from '../../ui/Button';
+import { Markdown } from '../../chat/Chat';
 import { Row } from '../../ui/Row';
 import { Section, sectionCount } from '../../ui/Section';
 import { SearchedOutput } from '../../ui/SearchedOutput';
@@ -13,12 +14,13 @@ import { at, runMeta } from './schedule';
 const runBadge = (r: Run) => <Badge status={r.status === 'running' ? 'running' : r.status === 'ok' ? 'done' : 'failed'} reason={r.status === 'ok' ? 'Succeeded' : undefined} />;
 
 function CopyOutput({ r }: { r: Run }) {
-  return <IconButton icon="copy" small label="Copy output" onClick={() => copyText(r.output!, 'Output copied')} />;
+  return <Button variant="plain" size="sm" icon="copy" onClick={() => copyText(r.output!, 'Output copied')}>Copy output</Button>;
 }
 
 export function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query: string; setQuery: (q: string) => void }) {
   const [open, setOpen] = useState(latest);
   const meta = runMeta(r);
+  const output = r.output && <div className="jb-md"><Markdown text={r.output} /></div>;
   return (
     <div className="jb-run">
       <Row
@@ -32,7 +34,7 @@ export function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean
       {open && r.output && (
         <div className="jb-run-body">
           <div className="jb-run-tools"><CopyOutput r={r} /></div>
-          {latest ? <SearchedOutput text={r.output} query={query} setQuery={setQuery} label="Search output" className="jb-output" /> : <div className="jb-output">{r.output}</div>}
+          {latest ? <SearchedOutput text={r.output} query={query} setQuery={setQuery} label="Search output" className="jb-output">{output}</SearchedOutput> : output}
         </div>
       )}
     </div>

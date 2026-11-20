@@ -25,3 +25,4 @@
 .jb-run-body { padding: 0 var(--list-pad) var(--sp-6); }
 .jb-output { margin-top: var(--sp-3); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; color: var(--fg); }
 .jb-run-tools { display: flex; }
+.jb-md { margin-top: var(--sp-3); font-size: var(--fs-md); color: var(--fg); }

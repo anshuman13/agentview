@@ -28,7 +28,8 @@ describe('MeetingPage', () => {
     expect(html).toContain('My actions');
     expect(html).not.toContain('Summary');
     expect(html).not.toContain('written after');
-    expect(html).not.toContain('More');
+    expect(html).not.toContain('>More<');
+    expect(html).toContain('aria-label="More"');
   });
 
   it('keeps Summary for a meeting with people', () => {

@@ -60,6 +60,8 @@ import no.pradhan.agentview.nativeapp.codex.recentPeople
 import no.pradhan.agentview.nativeapp.codex.stripWhen
 import no.pradhan.agentview.nativeapp.codex.theirActions
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.askCodex
+import no.pradhan.agentview.nativeapp.codex.meetingAsk
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -199,10 +201,11 @@ private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>) {
         LRow(verticalAlignment = Alignment.CenterVertically) {
             Text(m.title?.ifEmpty { null } ?: UNTITLED, Modifier.weight(1f), style = Type.title)
             if (state == MState.Live && link != null && !isEvent(m)) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-            if (link != null || copyable || canRead || hasNotes) MoreButton { close ->
+            if (link != null || copyable || canRead || hasNotes || !c.hub.readOnly) MoreButton { close ->
                 if (link != null) MenuItem("Open calendar", "calendar", { close(); uri.openUri(link) })
                 if (copyable) MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(m, all))); c.actions.say("Follow-up copied") })
                 if (copyable) MenuItem("Copy as Markdown", "copy", { close(); clip.setText(AnnotatedString(meetingMarkdown(m, all))); c.actions.say("Meeting copied") })
+                if (!c.hub.readOnly) MenuItem("Ask Claude", "sparkle", { close(); c.hub.askCodex(meetingAsk(m, all, c.now), m.profile) })
                 if (canRead) MenuItem(if (reading) "Reading" else "Read again", "sync", { close(); read() }, enabled = !reading)
                 if (hasNotes) MenuSeparator()
                 if (hasNotes) MenuItem("Delete notes", "trash", { close(); c.actions.change(m, mapOf("notes" to ""), "Notes deleted") }, danger = true)

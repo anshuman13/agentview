@@ -57,7 +57,7 @@ import { splitDiff } from './ui/DiffFiles';
 import { ago, markSegments, matchLabel, money, stepMatch } from './ui/util';
 import { notesTemplateCaret, notesTemplateChips, notesTemplateText, type NotesTemplate } from './codex/data/meetings/notesTemplates';
 import { setSystemTime } from '../../testing';
-import { guessProfile } from './codex/data/ask/ask';
+import { guessProfile, meetingAsk } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import { pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
@@ -453,6 +453,10 @@ describe('cases shared with the Android app', () => {
       expect(followUpText(m, actions)).toBe(c.followUp);
       expect(toMarkdown(m, actions)).toBe(c.markdown);
     });
+  }
+
+  for (const c of cases<{ name: string; now: number; meeting: Record<string, unknown>; actions: { title: string; status: string }[]; expected: string }>('meeting-ask')) {
+    it(`meetingAsk: ${c.name}`, () => expect(meetingAsk({ id: 'm', profile: 'work', ...c.meeting } as unknown as Meeting, c.actions as unknown as ItemRow[], c.now)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; meeting: Record<string, unknown>; action: Record<string, unknown>; expected: string }>('action-draft')) {

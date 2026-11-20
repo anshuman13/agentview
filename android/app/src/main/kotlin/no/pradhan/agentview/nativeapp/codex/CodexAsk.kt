@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import no.pradhan.agentview.nativeapp.codex.meetings.meetingMarkdown
 import no.pradhan.agentview.nativeapp.codex.meetings.othersOf
 import java.time.Instant
 import java.time.LocalDate
@@ -59,6 +60,10 @@ fun askText(question: String, profile: String, items: List<Row>, about: Row? = n
         if (personal) "\nRead these events in Calendar for location and notes. Then use Calendar, Gmail and web search to suggest concrete alternatives near where I am, each with opening hours and travel time. Change the calendar only after I confirm." else null,
     ).joinToString("\n")
 }
+
+// web/src/codex/data/ask/ask.ts meetingAsk: Ask Claude about a meeting; shared/fixtures/meeting-ask.json holds the texts.
+fun meetingAsk(m: Row, actions: List<Row>, now: Long) =
+    "${if (m.startsAt?.let { it > now } == true) "Help me prepare for this meeting." else "Help me with this meeting."}\n\nAbout this meeting:\n${meetingMarkdown(m, actions)}"
 
 
 // One Codex chat per profile and Mac is reused for the day (web codex/data/ask.ts).

@@ -1,6 +1,7 @@
 import { getState, notice, prompt, queueNext, send } from '../../../app/store';
 import { macOrigin } from '../../../app/api';
 import { atTime } from '../tasks/engine';
+import { toMarkdown } from '../meetings/meetingMarkdown';
 import type { ItemRow, Profile } from '../sync';
 import { currentClaim, factTime, isOld, listOf, live, othersOf, sourcesOf, type Fact, type Meeting, type Page } from '../wiki/wiki';
 
@@ -134,6 +135,9 @@ export function wikiAskText(question: string, pages: Page[], facts: Fact[], page
     '\nAnswer from these claims first and name the claims you used; use my Slack, Linear and Calendar connectors when they are not enough.',
   ].join('\n');
 }
+
+export const meetingAsk = (m: Meeting, actions: ItemRow[], now: number) =>
+  `${m.starts_at != null && m.starts_at > now ? 'Help me prepare for this meeting.' : 'Help me with this meeting.'}\n\nAbout this meeting:\n${toMarkdown(m, actions)}`;
 
 export function meetingAskText(question: string, m: Meeting, actions: ItemRow[]) {
   const when = m.starts_at ? new Date(m.starts_at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';

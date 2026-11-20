@@ -17,7 +17,7 @@ import { ActionRow } from './ActionRow';
 import { Series } from './Series';
 import { MeetingNotes } from './MeetingNotes';
 import { AskBar } from '../wiki/Wiki';
-import { ask, meetingAskText } from '../data/ask/ask';
+import { ask, meetingAsk, meetingAskText } from '../data/ask/ask';
 import { rowKey } from '../data/sync';
 import { hasContent } from '../data/meetings/meetingMarkdown';
 import { Transcript, TalkTime, TranscriptButton, readable, useRead, useTranscript } from './Transcript';
@@ -113,6 +113,7 @@ export function MeetingMenu({ m, all, state, deleteNotes }: MenuProps) {
           {link && <MenuItem icon="calendar" href={link} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
           {copyable && <MenuItem icon="mail" onClick={() => { setMenu(false); copyText(followUpText(m, all), 'Follow-up copied'); }}>Copy follow-up</MenuItem>}
           {copyable && <MenuItem icon="copy" onClick={() => { setMenu(false); copyText(toMarkdown(m, all), 'Meeting copied'); }}>Copy as Markdown</MenuItem>}
+          <MenuItem icon="sparkle" onClick={() => { setMenu(false); ask(meetingAsk(m, all, Date.now()), m.profile); }}>Ask Claude</MenuItem>
           {canRead && <MenuItem icon={reading ? 'loading' : 'sync'} spin={reading} disabled={reading} onClick={() => { setMenu(false); void read(); }}>{reading ? 'Reading' : 'Read again'}</MenuItem>}
           {m.notes && <MenuSeparator />}
           {m.notes && <MenuItem icon="trash" danger onClick={() => { setMenu(false); deleteNotes(); }}>Delete notes</MenuItem>}

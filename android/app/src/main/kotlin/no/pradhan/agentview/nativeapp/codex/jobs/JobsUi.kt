@@ -65,6 +65,7 @@ import no.pradhan.agentview.nativeapp.ui.FieldLabel
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
+import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.MoreButton
@@ -270,16 +271,19 @@ private fun RunsSheet(runs: List<Row>, now: Long, say: (String) -> Unit, onDismi
                     onClick = if (output != null) ({ open = if (expanded) null else r.id }) else null,
                     trailing = { RunStatus(r.str("status") ?: ""); if (output != null) Chevron() })
                 if (expanded && output != null) {
-                    Button("Copy output", { clip.setText(AnnotatedString(output)); say("Output copied") }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    Button("Copy output", { clip.setText(AnnotatedString(output)); say("Output copied") }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "copy")
                     if (i == 0) SearchedOutput(output)
-                    else Text(output, Modifier.padding(start = Tokens.sp8, end = Tokens.sp8, bottom = Tokens.sp6), style = Type.body, color = av.fg)
+                    else Markdown(output, OutputPad)
                 }
             }
         }
     }
 }
 
+private val OutputPad = Modifier.padding(start = Tokens.sp8, end = Tokens.sp8, bottom = Tokens.sp6)
+
 // The latest run's output with a search, as the meeting transcript has: every match marked, Previous and Next bring the current one into view.
+// A blank query shows the output as Markdown.
 @Composable
 private fun SearchedOutput(output: String) {
     var query by remember { mutableStateOf("") }
@@ -300,9 +304,10 @@ private fun SearchedOutput(output: String) {
         IconBtn("arrow-up", "Previous match", { step(-1) }, enabled = count > 0)
         IconBtn("arrow-down", "Next match", { step(1) }, enabled = count > 0)
     }
+    if (query.isBlank()) return Markdown(output, OutputPad)
     val soft = SpanStyle(background = av.accentSoft)
     val strong = SpanStyle(background = av.primaryContainer, color = av.onPrimaryContainer)
-    Column(Modifier.padding(start = Tokens.sp8, end = Tokens.sp8, bottom = Tokens.sp6)) {
+    Column(OutputPad) {
         lines.forEachIndexed { i, line ->
             var k = 0
             val shown = buildAnnotatedString {

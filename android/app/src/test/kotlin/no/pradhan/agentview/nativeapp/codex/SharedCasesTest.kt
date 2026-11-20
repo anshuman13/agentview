@@ -1162,17 +1162,28 @@ class SharedCasesTest {
         return Row("items", "i", r.prim("profile")?.content ?: "work", deleted = r.prim("deleted")?.boolean == true, f = f)
     }
 
+    private fun copyMeeting(c: JsonObject): Row {
+        val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()
+        f.putAll(c.getValue("meeting").jsonObject)
+        return Row("meetings", "m", "work", f = f)
+    }
+
+    private fun copyActions(c: JsonObject) =
+        c.getValue("actions").jsonArray.map { it.jsonObject }.map { Row("items", it.str("title"), "work", f = mapOf("title" to it.getValue("title"), "status" to it.getValue("status"))) }
+
     @Test fun meetingCopy() {
         for (c in cases("meeting-copy")) {
-            val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()
-            f.putAll(c.getValue("meeting").jsonObject)
-            val m = Row("meetings", "m", "work", f = f)
-            val actions = c.getValue("actions").jsonArray.map { it.jsonObject }.map { Row("items", it.str("title"), "work", f = mapOf("title" to it.getValue("title"), "status" to it.getValue("status"))) }
+            val m = copyMeeting(c)
+            val actions = copyActions(c)
             val name = c.str("name")
             assertEquals(name, c.getValue("hasContent").jsonPrimitive.boolean, hasContent(m, actions))
             assertEquals(name, c.str("followUp"), followUpText(m, actions))
             assertEquals(name, c.str("markdown"), meetingMarkdown(m, actions))
         }
+    }
+
+    @Test fun meetingAskText() {
+        for (c in cases("meeting-ask")) assertEquals(c.str("name"), c.str("expected"), meetingAsk(copyMeeting(c), copyActions(c), c.getValue("now").jsonPrimitive.long))
     }
 
     @Test fun actionDraft() {
