@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'bun:test';
-import { askText, guessProfile } from './ask';
+import { readFileSync } from 'node:fs';
+import { askText, guessProfile, meetingAskText } from './ask';
 import type { ItemRow } from '../sync';
 import type { Meeting } from '../wiki/wiki';
 import { setSystemTime } from '../../../../../testing';
@@ -65,6 +66,11 @@ it('guesses personal for travel and words from personal events, work for work wo
   expect(guessProfile('prep for the rollout', [meeting('Claude rollout', at(1, 9), { profile: 'work' })], 'personal', now)).toBe('work');
   expect(guessProfile('what next', [], 'personal', now)).toBe('personal');
 });
+
+type AskCase = { name: string; question: string; meeting: Partial<Meeting>; actions: { title: string; status: string }[]; expected: string };
+for (const c of JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/meeting-ask-text.json', import.meta.url), 'utf8')) as AskCase[]) {
+  it(`meetingAskText: ${c.name}`, () => expect(meetingAskText(c.question, meeting('m', null, c.meeting), c.actions as unknown as ItemRow[])).toBe(c.expected));
+}
 
 it('tells the work chat to leave private questions alone', () => {
   expect(askText('x', 'work', [])).toContain('it belongs in Personal');

@@ -1,0 +1,10 @@
+[
+  {"name": "no log", "log": null, "sessions": []},
+  {"name": "bad JSON", "log": "{not json", "sessions": []},
+  {"name": "a non-list", "log": "{\"id\":\"a\"}", "sessions": []},
+  {"name": "a zero-minute session and junk", "log": "[{\"id\":\"a\",\"at\":1000,\"min\":25},{\"id\":1},null,{\"id\":\"c\",\"at\":1,\"min\":0}]", "sessions": [{"id": "a", "at": 1000, "min": 25}]},
+  {"name": "remove one of two", "log": "[{\"id\":\"a\",\"at\":1000,\"min\":25},{\"id\":\"b\",\"at\":2000,\"min\":10}]", "sessions": [{"id": "a", "at": 1000, "min": 25}, {"id": "b", "at": 2000, "min": 10}], "spent": 40, "remove": "a", "expected": {"time_log": "[{\"id\":\"b\",\"at\":2000,\"min\":10}]", "spent": 15}},
+  {"name": "remove the last", "log": "[{\"id\":\"a\",\"at\":1000,\"min\":25}]", "sessions": [{"id": "a", "at": 1000, "min": 25}], "spent": 25, "remove": "a", "expected": {"time_log": null, "spent": null}},
+  {"name": "remove more than spent", "log": "[{\"id\":\"a\",\"at\":1000,\"min\":25}]", "sessions": [{"id": "a", "at": 1000, "min": 25}], "spent": 10, "remove": "a", "expected": {"time_log": null, "spent": null}},
+  {"name": "unknown id", "log": "[{\"id\":\"a\",\"at\":1000,\"min\":25}]", "sessions": [{"id": "a", "at": 1000, "min": 25}], "spent": 30, "remove": "x", "expected": {"time_log": "[{\"id\":\"a\",\"at\":1000,\"min\":25}]", "spent": 30}}
+]

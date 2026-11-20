@@ -66,6 +66,7 @@ import no.pradhan.agentview.nativeapp.codex.theirActions
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.askCodex
 import no.pradhan.agentview.nativeapp.codex.meetingAsk
+import no.pradhan.agentview.nativeapp.codex.meetingAskText
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -372,7 +373,20 @@ private fun LazyListScope.meetingMore(c: MeetingCtx, state: MState, all: List<Ro
     val dismissed = all.filter { it.status == "dismissed" }
     item { Fold("Not mine", dismissed.size, folds.notMine.value) { folds.notMine.value = !folds.notMine.value } }
     if (folds.notMine.value) actionGroup(dismissed, c)
-    if (state == MState.Done) meetingTranscript(folds, transcript, reloadTranscript, scrollFromEnd)
+    val ask = !c.hub.readOnly
+    if (state == MState.Done) meetingTranscript(folds, transcript, reloadTranscript) { k -> scrollFromEnd(if (ask) k + 1 else k) }
+    if (ask) item { AskField(c, all) }
+}
+
+@Composable
+private fun AskField(c: MeetingCtx, all: List<Row>) {
+    var q by rememberSaveable(c.m.id) { mutableStateOf("") }
+    TextField(q, { q = it }, Modifier.padding(horizontal = Tokens.listPad), singleLine = true, placeholder = "Ask about this meeting",
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = {
+            val t = q.trim()
+            if (t.isNotEmpty()) { c.hub.askCodex(meetingAskText(t, c.m, all), c.m.profile); q = "" }
+        }))
 }
 
 private fun LazyListScope.meetingContext(c: MeetingCtx, all: List<Row>, folds: MeetingFolds, speakers: List<Speaker>) {
@@ -393,7 +407,8 @@ private fun LazyListScope.meetingContext(c: MeetingCtx, all: List<Row>, folds: M
     if (people.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { people.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(displayName(p), onClick = { c.onPerson(p) }) } } }
 }
 
-// The transcript is the last section, so a line is counted from the end of the list: k = 1 is the last line, in front of the closing spacer.
+// Only the Ask field follows the transcript, so a line is counted from the end of the list: k = 1 is the last line, in front
+// of the closing spacer (meetingMore adds one when the Ask field shows).
 private fun LazyListScope.meetingTranscript(folds: MeetingFolds, transcript: Result<String?>?, reload: () -> Unit, scrollFromEnd: (Int) -> Unit) {
     val text = transcript?.getOrNull()?.takeIf { it.isNotEmpty() }
     val query = folds.transcriptQuery.value

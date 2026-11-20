@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex
 
+import no.pradhan.agentview.nativeapp.codex.meetings.jsonList
 import no.pradhan.agentview.nativeapp.codex.meetings.meetingMarkdown
 import no.pradhan.agentview.nativeapp.codex.meetings.othersOf
 import java.time.Instant
@@ -68,6 +69,24 @@ fun askIn(st: CodexState, q: String, p: String, about: Row? = null) =
 // web/src/codex/data/ask/ask.ts meetingAsk: Ask Claude about a meeting; shared/fixtures/meeting-ask.json holds the texts.
 fun meetingAsk(m: Row, actions: List<Row>, now: Long) =
     "${if (m.startsAt?.let { it > now } == true) "Help me prepare for this meeting." else "Help me with this meeting."}\n\nAbout this meeting:\n${meetingMarkdown(m, actions)}"
+
+// web/src/codex/data/ask/ask.ts meetingAskText: a typed question about a meeting; shared/fixtures/meeting-ask-text.json holds the texts.
+fun meetingAskText(question: String, m: Row, actions: List<Row>): String {
+    val people = m.people
+    val names = (if (people?.startsWith("[") == true) jsonList(people) else listOf(people)).filter { !it.isNullOrEmpty() }
+    val decisions = jsonList(m.str("decisions"))
+    val others = othersOf(m)
+    return listOfNotNull(
+        question,
+        "\nAbout the meeting \"${m.title}\" (${m.startsAt?.let { fmt(it, "EEE, MMM d 'at' HH:mm") } ?: ""}) with ${names.joinToString(", ").ifEmpty { "no listed people" }}.",
+        m.str("notes")?.takeIf { it.isNotEmpty() }?.let { "\nMy notes:\n$it" },
+        m.str("summary")?.takeIf { it.isNotEmpty() }?.let { "\nSummary:\n$it" },
+        if (decisions.isNotEmpty()) "\nDecisions:\n${decisions.joinToString("\n") { "- $it" }}" else null,
+        if (actions.isNotEmpty()) "\nActions from it (open and done are mine, suggested probably mine, unassigned nobody took, dismissed not mine):\n${actions.joinToString("\n") { "- [${it.status}] ${it.title}" }}" else null,
+        if (others.isNotEmpty()) "\nWhat others took on:\n${others.joinToString("\n") { "- ${it.who}: ${it.what}" }}" else null,
+        "\nUse my Calendar, Slack and Linear connectors when the question needs them.",
+    ).joinToString("\n")
+}
 
 // web codex/AskBar.tsx prepText: Prep on the Up next meeting; shared/fixtures/prep-text.json holds the texts.
 fun prepText(m: Row) = "Prepare me for \"${m.title}\" at ${clock(m.startsAt!!)}: who is in it, related Slack threads, Linear issues and docs, and what is still open from the last time we met."

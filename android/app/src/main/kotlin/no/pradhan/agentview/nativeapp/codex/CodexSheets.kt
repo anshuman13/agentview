@@ -208,6 +208,8 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
                     listOf(15L, 30L, 60L).forEach { n -> Chip("+${minutesText(n)}", { actions.logTime(row, n) }) }
                 }
             }
+            TimeLogSection(row, actions, hub.readOnly)
+            HistorySection(row, now)
             if (raiseWith.isNotEmpty()) {
                 FieldLabel("Raise next time")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
@@ -375,6 +377,42 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now:
         }
         ReplySection(if (filtered) old else queue, filtered, { onlyStale = false }, now, actions, replies, onOpen, onAsk)
         if (!filtered && ignored.isNotEmpty()) IgnoredSection(ignored)
+    }
+}
+
+// web TaskTimeLog: each focus session newest first with a Remove that takes its minutes off spent, then the time added by hand.
+@Composable
+private fun TimeLogSection(row: Row, actions: TaskActions, readOnly: Boolean) {
+    var open by remember { mutableStateOf(false) }
+    val sessions = parseLog(row.str("time_log")).sortedByDescending { it.at }
+    val byHand = (row.long("spent") ?: 0L) - sessions.sumOf { it.min }
+    if (sessions.isEmpty() && byHand <= 0) return
+    SectionHeader("Time log", sessions.size.takeIf { it > 0 }?.toString(), open, { open = !open })
+    if (!open) return
+    Group {
+        sessions.forEachIndexed { i, s ->
+            if (i > 0) Hairline()
+            ListRow("${weekdayDate(s.at)} ${clock(s.at)}", minutesText(s.min), trailing = if (readOnly) null else ({
+                IconBtn("close", "Remove ${minutesText(s.min)}", { actions.change(row, removeSession(row.str("time_log"), row.long("spent"), s.id), "Removed ${minutesText(s.min)}") })
+            }))
+        }
+    }
+    if (byHand > 0) Text("Earlier or added by hand: ${minutesText(byHand)}", Modifier.padding(horizontal = Tokens.listPad), style = Type.footnote, color = av.fgMuted)
+}
+
+// web TaskEditor History: when the status, due date and assignee last changed.
+@Composable
+private fun HistorySection(row: Row, now: Long) {
+    var open by remember { mutableStateOf(false) }
+    val history = historyOf(row)
+    if (history.isEmpty()) return
+    SectionHeader("History", history.size.toString(), open, { open = !open })
+    if (!open) return
+    Group {
+        history.forEachIndexed { i, h ->
+            if (i > 0) Hairline()
+            ListRow(h.title, historyTime(h.at, now))
+        }
     }
 }
 
