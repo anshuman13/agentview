@@ -104,6 +104,10 @@
 .tr-box > .tr-report { margin: 0 var(--sp-4) var(--sp-4); }
 .tr-steps { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-sm); }
 .tr-steps-head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--size-row); color: var(--fg-faint); font-size: var(--fs-xs); }
+.tr-claims-chip { margin-left: auto; }
+.tr-claims-chip + .tr-tools { margin-left: 0; }
+.tr-claims { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; padding: 0 0 var(--sp-2) var(--sp-6); color: var(--fg-muted); line-height: 1.35; }
+.tr-claim-where { color: var(--fg-faint); }
 .tr-tools { margin-left: auto; display: inline-flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-2); border: 1px solid var(--border); border-radius: var(--radius-pill); background: none; color: var(--fg-muted); font: inherit; cursor: pointer; }
 @media (hover: hover) { .tr-tools:hover { color: var(--fg); border-color: var(--fg-faint); } }
 .tr-tasks { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; padding: 0; list-style: none; }

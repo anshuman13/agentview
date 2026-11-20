@@ -12,7 +12,28 @@ const notes = (items: Item[]) => (items.length === 1 ? noteOf(items[0]) : '') ||
 
 export type FoldRow =
   | { kind: 'item'; it: Item }
-  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[]; now: string };
+  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[]; now: string; claims: Claim[] };
+
+export type Claim = { id: string; text: string; where: string };
+
+const WIKI_READ = /(^|__)wiki_(search|page)$/;
+const CLAIM_LINE = /^- \[([^\]]+)\] \([^)]*\) (.*)$/;
+const CLAIM_WHERE = /^(.*) \(on (.+)\)$/;
+
+// The claims a turn read: the `- [id] (...) text` lines of its wiki_search and wiki_page results, each id once. `- page [id]` lines do not match. Android WorkFold.kt claimsOf says the same.
+export function claimsOf(items: Item[]): Claim[] {
+  const out = new Map<string, Claim>();
+  for (const it of items) {
+    if (it.kind !== 'step' || !WIKI_READ.test(it.use.name) || !it.result || it.result.isError) continue;
+    for (const line of it.result.text.split('\n')) {
+      const m = CLAIM_LINE.exec(line);
+      if (!m || out.has(m[1])) continue;
+      const w = CLAIM_WHERE.exec(m[2]);
+      out.set(m[1], { id: m[1], text: w ? w[1] : m[2], where: w ? w[2] : '' });
+    }
+  }
+  return [...out.values()];
+}
 
 export type StatusStep = { id: string; title: string; done: boolean };
 
@@ -103,7 +124,7 @@ export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(
     });
     const tasks = steps.get(key);
     if (hidden.length > 0 || tasks) {
-      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '' };
+      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '', claims: claimsOf(hidden) };
       const at = reply < 0 ? rows.length : rows.findIndex((r) => r.kind === 'item' && r.it === group[reply]);
       rows.splice(at, 0, fold);
     }

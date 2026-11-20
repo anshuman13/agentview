@@ -71,6 +71,7 @@ import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
+import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Markdown
@@ -254,10 +255,12 @@ private fun TaskLines(fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) ->
     val done = steps.count { it.done }
     val current = if (live) steps.firstOrNull { !it.done } else null
     val spin = @Composable { CircularProgressIndicator(Modifier.size(Tokens.sp5), strokeWidth = Tokens.stroke, color = av.fgFaint) }
+    var reading by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (steps.isNotEmpty()) Text(if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task"), style = Type.label, color = av.fgFaint)
             Spacer(Modifier.weight(1f))
+            if (fold.claims.isNotEmpty()) Chip("Used ${plural(fold.claims.size, "claim")}", { reading = !reading }, on = reading)
             if (fold.work.tools > 0) Row(
                 Modifier.clip(RoundedCornerShape(Tokens.shapeFull)).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.shapeFull)).clickable { onOpenWork(fold.id) }.padding(horizontal = Tokens.sp4, vertical = Tokens.sp1),
                 verticalAlignment = Alignment.CenterVertically,
@@ -268,6 +271,9 @@ private fun TaskLines(fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) ->
         }
         @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.footnote, color = color) }
+        if (reading) fold.claims.forEach { c ->
+            Text(if (c.where.isEmpty()) c.text else "${c.text} (${c.where})", Modifier.padding(start = Tokens.sp8), style = Type.footnote, color = av.fgMuted)
+        }
         steps.forEach { s ->
             when {
                 s.done -> Task({ AvIcon("check", null, Tokens.sp5, tint = av.ok) }, s.title, av.fg)
