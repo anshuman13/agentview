@@ -14,6 +14,11 @@ import org.junit.Test
 
 class SeriesValueTest {
     @Test fun sharedCases() {
+        val zone = codexZone
+        try { cases() } finally { codexZone = zone }
+    }
+
+    private fun cases() {
         for (c in Json.parseToJsonElement(File("../../shared/fixtures/series-audit.json").readText()).jsonArray.map { it.jsonObject }) {
             codexZone = ZoneId.of(c.getValue("zone").jsonPrimitive.content)
             val meetings = c.getValue("meetings").jsonArray.map { fixtureRow("meetings", it) }

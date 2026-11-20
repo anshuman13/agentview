@@ -33,7 +33,7 @@ fun isAllDay(m: Row): Boolean {
     return e > s && midnight(s) && midnight(e)
 }
 
-class SeriesValue(val key: String, val title: String, val latest: Row, val count: Int, val hours: Double, val decisions: Int, val actions: Int, val recentHours: Double, val quiet: Boolean)
+class SeriesValue(val title: String, val latest: Row, val count: Int, val hours: Double, val decisions: Int, val actions: Int, val recentHours: Double, val quiet: Boolean)
 
 private class Tally(var latest: Row) {
     var count = 0
@@ -70,8 +70,8 @@ fun seriesAudit(meetings: List<Row>, items: List<Row>, now: Long): List<SeriesVa
         }
         if (start >= row.latest.startsAt!!) row.latest = m
     }
-    return rows.filter { it.value.count > 1 }.map { (key, r) ->
-        SeriesValue(key, r.latest.title ?: "", r.latest, r.count, r.hours, r.decisions, r.actions, r.recentHours, r.recentHours > 0 && r.recentValue == 0)
+    return rows.filter { it.value.count > 1 }.values.map { r ->
+        SeriesValue(r.latest.title ?: "", r.latest, r.count, r.hours, r.decisions, r.actions, r.recentHours, r.recentHours > 0 && r.recentValue == 0)
     }.sortedWith(compareByDescending<SeriesValue> { it.quiet }.thenByDescending { if (it.quiet) it.recentHours else it.hours }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.title })
 }
 

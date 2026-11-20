@@ -25,10 +25,7 @@ fun relatedToTask(items: List<Row>, meetings: List<Row>, task: Row, now: Long, m
     val mine = peopleList(task.people)
     return n.values.filter { (r, c) ->
         val meeting = r.table == "meetings"
-        when {
-            !meeting && r.id == task.id -> false
-            if (meeting) relatedAt(r) > now else !r.str("meeting_id").isNullOrEmpty() -> false
-            else -> c >= 2 || mine.any { p -> (if (meeting) peopleOf(r) else peopleList(r.people)).any { sameName(p, it) } }
-        }
+        val skip = if (meeting) relatedAt(r) > now else r.id == task.id || !r.str("meeting_id").isNullOrEmpty()
+        !skip && (c >= 2 || mine.any { p -> (if (meeting) peopleOf(r) else peopleList(r.people)).any { sameName(p, it) } })
     }.sortedWith(compareByDescending<Pair<Row, Int>> { it.second }.thenByDescending { relatedAt(it.first) }).take(max).map { it.first }
 }

@@ -114,7 +114,7 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
         if (store.update(r, mapOf("status" to "note"))) snack(NOTED) { store.update(r, mapOf("status" to "suggested")) } else say(NOTE_FAILED)
     }
     fun addNote(text: String, profile: String) {
-        if (text.isNotBlank()) store.capture(text.trim(), "note", profile)
+        store.capture(text.trim(), "note", profile)
     }
     fun deleteNote(r: Row) = change(r, mapOf("deleted" to true), "Note deleted")
     fun undoable(text: String, undo: () -> Unit) = snack(text, undo)
