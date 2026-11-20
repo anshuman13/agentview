@@ -183,6 +183,7 @@ data class ChatRun(
     val review: String? = null,
     val pr: String? = null,
     val once: Boolean = false,
+    val cwd: String? = null,
 )
 
 @Serializable

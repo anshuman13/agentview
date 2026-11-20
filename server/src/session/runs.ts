@@ -12,7 +12,7 @@ const SAVE_MS = 1000;
 const SHOW_ENDED = 10;
 const SHOW_ENDED_MS = 24 * 3_600_000;
 
-type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' | 'provider'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'maxBuilds' | 'builds' | 'tries' | 'jobId' | 'branch' | 'repo' | 'worktree' | 'paseo' | 'once'>>;
+type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' | 'provider'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'maxBuilds' | 'builds' | 'tries' | 'cwd' | 'jobId' | 'branch' | 'repo' | 'worktree' | 'paseo' | 'once'>>;
 
 export const firstSentence = (text: string, max = 120) => text.trim().split(/(?<=[.!?])\s|\n/)[0].slice(0, max).trim();
 

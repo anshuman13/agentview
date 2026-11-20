@@ -178,6 +178,7 @@ export type ChatRun = {
   asked?: boolean;
   tries?: Try[];
   needsYou: boolean;
+  cwd?: string;
   jobId?: string;
   branch?: string;
   repo?: string;

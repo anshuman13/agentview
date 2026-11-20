@@ -26,7 +26,7 @@ export function GoalSheet({ plan: planProp, here, from, onClose }: { plan?: stri
   const chat = useStore((s) => s.session.id);
   const sessionCwd = useStore((s) => s.session.cwd);
   const runCwd = useStore((s) => s.live.find((c) => c.id === from?.chatId)?.cwd);
-  const cwd = runCwd ?? sessionCwd;
+  const cwd = from?.cwd ?? runCwd ?? sessionCwd;
   const chatProvider = useStore((s) => s.session.provider);
   const active = useChatRun(chat);
   const allProviders = appSettings.use((s) => s.providers);

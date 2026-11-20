@@ -20,6 +20,7 @@ export function runTries(chat: AgentSession, text: string, tries: Exclude<Return
         kind: 'tries',
         sessionId: chat.state.session.sessionId ?? '',
         chatId: chat.id,
+        cwd: chat.cwd,
         title: `Tries: ${firstSentence(tries.prompt, 70)}`,
         what: tries.prompt,
         provider: chat.state.session.provider,
