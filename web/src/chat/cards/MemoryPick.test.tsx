@@ -1,17 +1,28 @@
 import { describe, expect, it, vi } from 'bun:test';
-import type { ComponentProps, ReactElement } from 'react';
+import { createRequire } from 'node:module';
+import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as data from '../../codex/data';
 import * as rowModule from '../../ui/Row';
 import type { Fact } from '../../codex/data/wiki/wiki';
+import type { MemoryFile } from './memoryLogic';
 
 const RealRow = rowModule.Row;
 const rows: ComponentProps<typeof RealRow>[] = [];
 let facts: Fact[] = [];
 const store = { editRow: async (_: string, row: Fact, patch: Partial<Fact>) => { facts = facts.map((f) => (f.id === row.id ? { ...f, ...patch } : f)); } };
-vi.mock('../../codex/data', () => ({ ...data, useAssistantStore: () => store }));
-vi.mock('../../ui/Row', () => ({ Row: (p: ComponentProps<typeof RealRow>) => { rows.push(p); return <RealRow {...p} />; } }));
-const { GivenClaims } = await import('./Memory');
+// The next useState calls return these values, so the sheet renders a loaded list without running its fetch.
+const states: unknown[] = [];
+const react = createRequire(import.meta.url)('react') as typeof import('react');
+vi.mock('react', () => ({
+  ...react,
+  useState: (init: unknown) => (states.length ? [states.shift(), () => {}] : react.useState(init)),
+  useSyncExternalStore: (subscribe: never, get: () => unknown) => react.useSyncExternalStore(subscribe, get, get),
+}));
+vi.mock('../../codex/data', () => ({ ...data, useAssistantStore: () => store, useAssistantTable: () => [] }));
+vi.mock('../../ui/Sheet', () => ({ Sheet: ({ children }: { children: ReactNode }) => <>{children}</> }));
+vi.mock('../../ui/Row',() => ({ Row: (p: ComponentProps<typeof RealRow>) => { rows.push(p); return <RealRow {...p} />; } }));
+const { GivenClaims, MemoryPick } = await import('./Memory');
 
 const now = Date.now();
 const fact = (o: object) => ({ profile: 'work', text: '', at: now - 60_000, ...o }) as Fact;
@@ -28,6 +39,8 @@ describe('GivenClaims', () => {
     const html = renderToStaticMarkup(<GivenClaims facts={facts} cwd="/w/repo" onClose={() => {}} />);
     expect(html).toContain('From the wiki');
     expect(html).toContain('New chats get these');
+    expect(html).toContain('Remember</button>');
+    expect(html).not.toContain('Nothing from the wiki yet');
     expect(html.match(/class="ui-row[ "]/g)).toHaveLength(2);
     expect(html).toContain('Ship small diffs');
     expect(html).toContain('Ask before pushing');
@@ -36,8 +49,11 @@ describe('GivenClaims', () => {
     expect(html).not.toContain('Page rule');
   });
 
-  it('is left out with no given claims', () => {
-    expect(renderToStaticMarkup(<GivenClaims facts={[]} cwd="/w/repo" onClose={() => {}} />)).toBe('');
+  it('says the wiki can feed chats and offers Remember with no given claims', () => {
+    const html = renderToStaticMarkup(<GivenClaims facts={[]} cwd="/w/repo" onClose={() => {}} />);
+    expect(html).toContain('From the wiki');
+    expect(html).toContain('Nothing from the wiki yet');
+    expect(html).toContain('Remember</button>');
   });
 
   it('retires a claim from its More menu', () => {
@@ -51,5 +67,15 @@ describe('GivenClaims', () => {
     const html = renderToStaticMarkup(<GivenClaims facts={facts} cwd="/w/repo" onClose={() => {}} />);
     expect(html).not.toContain('Ship small diffs');
     expect(html).toContain('Ask before pushing');
+  });
+});
+
+describe('MemoryPick', () => {
+  it('marks a memory file not changed in 100 days Stale and shows its age', () => {
+    const file: MemoryFile = { path: '/Users/me/.claude/projects/-w-repo/memory/prefs.md', name: 'prefs', description: 'Prefers short replies', text: 'Short.', editable: true, at: now - 100 * 86_400_000 };
+    states.push([file]);
+    const html = renderToStaticMarkup(<MemoryPick cwd="/w/repo" onClose={() => {}} />);
+    expect(html).toContain('Prefers short replies · Memory · .claude · ');
+    expect(html).toContain('>Stale<');
   });
 });

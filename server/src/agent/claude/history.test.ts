@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 const config = await mkdtemp(path.join(os.tmpdir(), 'av-wf-'));
@@ -88,6 +88,21 @@ describe('workflow runs', () => {
     expect(workflowName({ scriptPath: '/a/.claude/workflows/native.js' })).toBe('native');
     expect(workflowName({ script: "export const meta = { name: 'batch-ab', description: 'x' }" })).toBe('batch-ab');
     expect(workflowName({})).toBe('Workflow');
+  });
+});
+
+describe('a Write to a memory file', () => {
+  it('gives the events in shared/fixtures/remembered-history.json, which the clients fold into Remembered', async () => {
+    const file = '/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md';
+    const msg = (uuid: string, type: string, content: unknown) => ({ type, uuid, session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
+    const msgs = [
+      msg('u1', 'user', 'remember that I prefer short replies'),
+      msg('a1', 'assistant', [{ type: 'tool_use', id: 'w1', name: 'Write', input: { file_path: file, content: 'Prefers short replies.' } }]),
+      msg('u2', 'user', [{ type: 'tool_result', tool_use_id: 'w1', content: `File created successfully at: ${file}` }]),
+      msg('a2', 'assistant', [{ type: 'text', text: 'Saved.' }]),
+    ];
+    const fixture = JSON.parse(await readFile(new URL('../../../../shared/fixtures/remembered-history.json', import.meta.url), 'utf8'));
+    expect(historyFrom(msgs).events).toEqual(fixture);
   });
 });
 

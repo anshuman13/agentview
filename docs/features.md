@@ -259,7 +259,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   (off while blank) and Cancel; Save posts `{ path, text }` to /api/memory/save, which resolves the path with realpath, writes only a file
   that is editable in the chat's list, keeps the front matter and returns the previous body, and answers 400 for anything else. The
   save shows "Memory updated" with Undo, which writes the previous body back; the phone hides Edit in read-only mode. Account
-  instruction files stay read-only. A memory file row (never MEMORY.md) has one state Badge from `memoryMark` (web
+  instruction files stay read-only. Every file row's meta ends with its age from `at` ("3d ago"; left out when `at` is 0). A
+  memory file row (never MEMORY.md) has one state Badge from `memoryMark` (web
   `chat/cards/memoryLogic.ts`, phone `chat/MemoryLogic.kt`, `shared/fixtures/memory-marks.json`): Conflicts (waiting) when its
   description or body is like a Memory claim the user rejected in the chat's profile, else In wiki when a current Memory claim
   restates it, else Stale when its modified time (`at` in /api/memory) is over 90 days old; the file view says it in full under
@@ -271,13 +272,15 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   chat, never over a file) and deletes the claim; a failed remove deletes the claim and says "Could not move the memory". A file
   view shows its source line and a plain Back button on both clients; Back, web Esc and touch Back and phone system Back return to
   the list (the scrim and drag still close the sheet), asking "Discard the edit?" over an open edit. When /api/memory fails the
-  list says "Could not load memory" with the reason and Retry. After the files, a "From the wiki" section (count, "New chats get
-  these") lists the Memory claims chats of the folder's profile start with (`givenPreferences`), each with its age; a tap opens the
-  claim on the Memory wiki page and closes the sheet. Each row's More menu has Open in wiki (the same as a tap) and Retire
-  (danger, hidden in phone read-only mode), which retires the claim with "Claim retired" and Undo; the next given claim takes
-  its place. With none given the section is left out
+  list says "Could not load memory" with the reason and Retry. After the files, a "From the wiki" section (count, a Remember button,
+  then the muted line "New chats get these") lists the Memory claims chats of the folder's profile start with (`givenPreferences`),
+  each with its age; a tap opens the claim on the Memory wiki page and closes the sheet. Each row's More menu has Open in wiki (the
+  same as a tap) and Retire (danger, hidden in phone read-only mode), which retires the claim with "Claim retired" and Undo; the
+  next given claim takes its place. With none given the section shows "Nothing from the wiki yet". Remember (hidden in phone
+  read-only mode) opens the same Remember field as the chat menu, and the saved claim shows in the section at once
 - A turn that wrote Claude memory files (successful Write, Edit or MultiEdit on `projects/<folder>/memory/*.md`, MEMORY.md only
-  when alone: `rememberedOf`, `shared/fixtures/remembered.json`) shows a "Remembered N memories" chip in its task head after
+  when alone: `rememberedOf`, `shared/fixtures/remembered.json`; `shared/fixtures/remembered-history.json` holds what the
+  server's `historyFrom` returns for such a Write) shows a "Remembered N memories" chip in its task head after
   Proposed; a tap opens the Memory sheet at the file when there is one, else the list
 - On the phone, a prompt starting with ! runs as a shell command in the chat's last terminal (or a new one) and opens the
   Terminal page, as on the web

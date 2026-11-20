@@ -1,8 +1,8 @@
-import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'bun:test';
-import { removeMemory, restoreMemory, saveMemory } from '../memory.js';
+import { readMemory, removeMemory, restoreMemory, saveMemory } from '../memory.js';
 import { chatMemory, claudeInstructionFiles, memoryDirs } from './memory.js';
 
 const root = mkdtempSync(path.join(os.tmpdir(), 'agentview-memory-'));
@@ -175,6 +175,15 @@ describe('chatMemory', () => {
       expect(readFileSync(index, 'utf8')).toBe(indexText);
       expect(existsSync(path.join(mem, 'new.md'))).toBe(false);
     });
+  });
+
+  it('readMemory gives a file its last change as at', async () => {
+    const file = path.join(root, 'aged', 'projects', '-w-repo', 'memory', 'prefs.md');
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, 'Prefers short replies.\n');
+    const old = new Date(Date.now() - 100 * 86_400_000);
+    utimesSync(file, old, old);
+    expect((await readMemory([file]))[0].at).toBe(old.getTime());
   });
 
   it('claudeInstructionFiles lists the repo file first, then each account once', () => {

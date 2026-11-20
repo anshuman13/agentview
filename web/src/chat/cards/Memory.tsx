@@ -25,6 +25,7 @@ import { givenPreferences } from '../../../../shared/preferences';
 import { Markdown } from '../Chat';
 import { fetchMemory, saveMemory } from '../chatApi';
 import { moveMemoryToWiki } from '../chatActions';
+import { RememberPick } from '../SettingsMenu';
 import { isMemoryIndex } from '../transcript/workFold';
 import { markLine, memoryMark, type MemoryFile, type MemoryMark } from './memoryLogic';
 
@@ -195,17 +196,17 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
       {files === null && !error && <Skeleton rows={3} />}
       {error && !files?.length && <EmptyState size="sm" title="Could not load memory" hint={error} action={<Button size="sm" onClick={retry}>Retry</Button>} />}
       {!error && files?.length === 0 && <EmptyState size="sm" title={`No ${file} or memory files`} hint="Add a rule below to create one" />}
-      {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ')} state={markBadge(markOf(f))} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
+      {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd), f.at ? since(f.at, now) : ''].filter(Boolean).join(' · ')} state={markBadge(markOf(f))} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
       {files && <AddRule file={file} onSaved={reload} />}
       <GivenClaims facts={facts} cwd={cwd} onClose={onClose} />
     </Sheet>
   );
 }
 
-// The wiki's Memory claims that new chats in this profile start with; a tap opens the claim on the Memory page, Retire drops it from the list.
+// The wiki's Memory claims that new chats in this profile start with; a tap opens the claim on the Memory page, Retire drops it from the list, Remember adds one.
 export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: string; onClose: () => void }) {
+  const [remember, setRemember] = useState(false);
   const given = givenPreferences(facts, profileOfPath(cwd));
-  if (!given.length) return null;
   const openClaim = (id: string) => {
     setView({ list: 'wiki', open: MEMORY, anchor: id, person: null });
     command('assistant');
@@ -213,8 +214,11 @@ export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: strin
   };
   return (
     <>
-      <Section label="From the wiki" count={sectionCount(given.length)} action={<span className="muted">New chats get these</span>} />
-      {given.map((f) => <GivenClaim key={f.id} fact={f} open={() => openClaim(f.id)} />)}
+      <Section label="From the wiki" count={sectionCount(given.length)} action={<Button size="sm" variant="plain" icon="add" onClick={() => setRemember(true)}>Remember</Button>} />
+      <div className="muted">New chats get these</div>
+      {given.length ? given.map((f) => <GivenClaim key={f.id} fact={f} open={() => openClaim(f.id)} />)
+        : <EmptyState size="sm" title="Nothing from the wiki yet" hint="Remember adds a preference every new chat in this profile starts with" />}
+      {remember && <RememberPick close={() => setRemember(false)} />}
     </>
   );
 }

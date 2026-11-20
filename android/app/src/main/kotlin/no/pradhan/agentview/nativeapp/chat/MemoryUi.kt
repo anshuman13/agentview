@@ -28,6 +28,7 @@ import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.app.memoryFiles
 import no.pradhan.agentview.nativeapp.app.moveMemoryToWiki
 import no.pradhan.agentview.nativeapp.app.read
+import no.pradhan.agentview.nativeapp.app.rememberFromChat
 import no.pradhan.agentview.nativeapp.app.readFile
 import no.pradhan.agentview.nativeapp.app.saveFile
 import no.pradhan.agentview.nativeapp.app.saveMemory
@@ -47,6 +48,7 @@ import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.Sheet
+import no.pradhan.agentview.nativeapp.ui.TextDialog
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
@@ -112,6 +114,8 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
     var open by remember { mutableStateOf<MemoryFile?>(null) }
     var opened by remember { mutableStateOf(initial == null) }
     val facts by hub.codex.state.select { it.facts }
+    val title by hub.store.state.select { st -> st.live.firstOrNull { it.id == st.shownId }?.title.orEmpty() }
+    var remembering by remember { mutableStateOf(false) }
     val now = System.currentTimeMillis()
     val markOf = { f: MemoryFile -> memoryMark(f, facts, segmentOf(cwd), now) }
     LaunchedEffect(files.data) {
@@ -172,27 +176,28 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
             list.isNullOrEmpty() -> EmptyState("No $file or memory files", "Add a rule below to create one")
             else -> list.forEach { f ->
                 val mark = markOf(f)
-                ListRow(f.name, listOf(f.description, memoryWhere(f, cwd)).filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, state = mark?.let { { MarkBadge(it) } }, stateSlot = true, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
+                ListRow(f.name, listOf(f.description, memoryWhere(f, cwd), if (f.at > 0) since(f.at, now) else "").filter { it.isNotEmpty() }.joinToString(" · "), lines = 2, state = mark?.let { { MarkBadge(it) } }, stateSlot = true, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { open = f })
             }
         }
         if (list != null) AddRule(hub, file, reload)
-        // The wiki's Memory claims that new chats in this profile start with; web Memory.tsx GivenClaims shows the same.
+        // The wiki's Memory claims that new chats in this profile start with, and Remember to add one; web Memory.tsx GivenClaims shows the same.
         val given = givenPreferences(facts, segmentOf(cwd), now)
-        if (given.isNotEmpty()) {
-            SectionHeader("From the wiki", given.size.toString(), action = { Text("New chats get these", style = Type.footnote, color = av.fgMuted) })
-            given.forEach { f ->
-                val openClaim = {
-                    hub.link.value = DeepLink(codexRoute = claimRoute(f))
-                    onDismiss()
-                }
-                ListRow(f.str("text") ?: "", f.long("at")?.let { since(it, now) }, leading = { AvIcon("lightbulb", tint = av.fgMuted) }, onClick = openClaim, menu = { dismiss ->
-                    MenuItem("Open in wiki", "book", { dismiss(); openClaim() })
-                    if (!hub.readOnly) MenuItem("Retire", "archive", {
-                        dismiss()
-                        if (hub.codex.update(f, mapOf("state" to "retired"))) hub.undoable.tryEmit(Undoable("Claim retired") { hub.codex.update(f, mapOf("state" to null)) })
-                    }, danger = true)
-                })
+        SectionHeader("From the wiki", given.size.takeIf { it > 0 }?.toString(), action = if (hub.readOnly) null else ({ Button("Remember", { remembering = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "add") }))
+        Text("New chats get these", Modifier.padding(horizontal = Tokens.listPad), style = Type.footnote, color = av.fgMuted)
+        if (given.isEmpty()) EmptyState("Nothing from the wiki yet", "Remember adds a preference every new chat in this profile starts with")
+        else given.forEach { f ->
+            val openClaim = {
+                hub.link.value = DeepLink(codexRoute = claimRoute(f))
+                onDismiss()
             }
+            ListRow(f.str("text") ?: "", f.long("at")?.let { since(it, now) }, leading = { AvIcon("lightbulb", tint = av.fgMuted) }, onClick = openClaim, menu = { dismiss ->
+                MenuItem("Open in wiki", "book", { dismiss(); openClaim() })
+                if (!hub.readOnly) MenuItem("Retire", "archive", {
+                    dismiss()
+                    if (hub.codex.update(f, mapOf("state" to "retired"))) hub.undoable.tryEmit(Undoable("Claim retired") { hub.codex.update(f, mapOf("state" to null)) })
+                }, danger = true)
+            })
         }
     }
+    if (remembering) TextDialog("Remember", "", "Save", { hub.rememberFromChat(it, title, cwd) }, { remembering = false }, maxLength = 400, detail = "Saved to Memory for every later chat.")
 }

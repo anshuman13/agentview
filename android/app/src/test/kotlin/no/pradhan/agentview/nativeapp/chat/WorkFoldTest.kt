@@ -3,8 +3,10 @@ package no.pradhan.agentview.nativeapp.chat
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.io.File
 
 class WorkFoldTest {
     private var n = 0L
@@ -98,5 +100,11 @@ class WorkFoldTest {
         val text = "- [c1] (undated, live) Uses bun"
         val events = listOf(user(), none, result(none, text = "Nothing matches."), bad, result(bad, true, text), other, result(other, text = text), say("ok"))
         assertEquals(emptyList<Claim>(), fold(events).filterIsInstance<FoldRow.Fold>().first().claims)
+    }
+
+    @Test
+    fun theServersEventsForAMemoryWriteAreRemembered() {
+        val events = protocolJson.decodeFromString<List<ChatEvent>>(File("../../shared/fixtures/remembered-history.json").readText())
+        assertEquals(listOf("/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md"), rememberedOf(buildTranscript(events)))
     }
 }

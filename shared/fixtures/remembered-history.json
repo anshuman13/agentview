@@ -1,0 +1,7 @@
+[
+  { "id": "u1:0", "kind": "user", "text": "remember that I prefer short replies", "at": 1792058400000 },
+  { "id": "w1", "kind": "tool_use", "name": "Write", "input": { "file_path": "/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md", "content": "Prefers short replies." }, "summary": "Write /Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md", "at": 1792058400000 },
+  { "id": "u2:0", "kind": "tool_result", "toolUseId": "w1", "text": "File created successfully at: /Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md", "isError": false, "at": 1792058400000 },
+  { "id": "a2:0", "kind": "assistant", "text": "Saved.", "streaming": false, "at": 1792058400000 },
+  { "id": "a2:result", "kind": "result", "text": "Saved.", "costUsd": 0, "isError": false, "at": 1792058400000 }
+]

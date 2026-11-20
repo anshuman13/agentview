@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { buildTranscript, createTranscriptBuilder } from './steps';
-import { createFoldBuilder, foldTurns, workTitle, type FoldRow } from './workFold';
+import { createFoldBuilder, foldTurns, rememberedOf, workTitle, type FoldRow } from './workFold';
 import type { ChatEvent } from '../../../../shared/protocol';
 
 let n = 0;
@@ -141,5 +142,12 @@ describe('claims read', () => {
     const bad = tool('mcp__agentview__wiki_page');
     const other = tool('Bash');
     expect(claims([user('go'), none, result(none.id, false, 'Nothing matches.'), bad, result(bad.id, true, text), other, result(other.id, false, text), say('ok')])).toEqual([]);
+  });
+});
+
+describe('remembered', () => {
+  it('holds the memory file a Write in the server history wrote', () => {
+    const events: ChatEvent[] = JSON.parse(readFileSync(new URL('../../../../shared/fixtures/remembered-history.json', import.meta.url), 'utf8'));
+    expect(rememberedOf(buildTranscript(events))).toEqual(['/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md']);
   });
 });
