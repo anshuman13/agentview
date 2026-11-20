@@ -129,6 +129,7 @@ import no.pradhan.agentview.nativeapp.codex.jobs.jobEdits
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.codex.jobs.tasksOf
 import no.pradhan.agentview.nativeapp.codex.meetings.actionCount
+import no.pradhan.agentview.nativeapp.codex.meetings.agendaMarkdown
 import no.pradhan.agentview.nativeapp.codex.meetings.displayName
 import no.pradhan.agentview.nativeapp.codex.meetings.filterMeetings
 import no.pradhan.agentview.nativeapp.codex.meetings.followUpText
@@ -730,6 +731,16 @@ class SharedCasesTest {
             assertEquals(name, c.getValue("hasContent").jsonPrimitive.boolean, hasContent(m, actions))
             assertEquals(name, c.str("followUp"), followUpText(m, actions))
             assertEquals(name, c.str("markdown"), meetingMarkdown(m, actions))
+        }
+    }
+
+    @Test fun agenda() {
+        for (c in cases("agenda")) {
+            val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()
+            f.putAll(c.getValue("meeting").jsonObject)
+            val points = c.getValue("points").jsonArray.map { it.jsonObject }.map { Row("items", "p", "work", f = mapOf("people" to it.getValue("people"), "title" to it.getValue("title"))) }
+            fun list(k: String) = c.getValue(k).jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(c.str("name"), c.str("markdown"), agendaMarkdown(Row("meetings", "m", "work", f = f), points, list("actions"), list("questions")))
         }
     }
 

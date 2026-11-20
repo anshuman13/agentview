@@ -60,6 +60,7 @@ import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.ListRow
@@ -237,7 +238,16 @@ private fun prepGroups(c: MeetingCtx, pr: PrepData): List<DigestGroup> {
 private fun LazyListScope.meetingPrep(c: MeetingCtx, pr: PrepData) {
     val groups = prepGroups(c, pr)
     if (groups.isEmpty() && pr.points.isEmpty() && pr.between.isEmpty()) return
-    item { SectionHeader("Prep") }
+    item {
+        val clip = LocalClipboardManager.current
+        SectionHeader("Prep", action = {
+            IconBtn("copy", "Copy agenda", {
+                val mine = (pr.prior.flatMap { it.open } + pr.brief.tasks.flatMap { it.second }).map { it.title ?: "" }
+                clip.setText(AnnotatedString(agendaMarkdown(c.m, pr.points, (pr.theirs + mine).distinct(), pr.questions.map { it.text })))
+                c.actions.say("Agenda copied")
+            })
+        })
+    }
     groups.forEach { g -> item(key = "prep-${g.outcome}") { GroupList("prep:${c.m.key}:${g.outcome}", g, capOpen = true, plain = g.outcome == "theirs" || g.outcome == "claims") } }
     if (pr.person != null && pr.between.isNotEmpty()) {
         item { SectionHeader("Between you and ${firstName(displayName(pr.person))}", pr.between.size.toString()) }
