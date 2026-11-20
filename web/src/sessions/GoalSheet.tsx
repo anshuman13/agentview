@@ -15,7 +15,7 @@ import { MAX_NAME, addPreset, removePreset, type GoalPreset } from '../../../sha
 import { span } from '../../../shared/util';
 import { planCondition } from '../../../shared/specTasks';
 import { BUILDS, CAPS, CAPS_USD, EVERY, STOPS } from './goalLogic';
-import { useWorkspace } from './folders';
+import { dirChoices, useWorkspace } from './folders';
 import { loadPresets, savePresets } from './goalPresets';
 import { useChatRun } from './useChatRun';
 import { usePlanProgress } from './usePlanProgress';
@@ -59,7 +59,7 @@ export function GoalSheet({ plan: planProp, here, from, onClose }: { plan?: stri
   const canHere = Boolean(here && !active);
   const target = canHere && inHere ? chatProvider : provider;
   const models = knownModels(provider);
-  const dirs = folders.flatMap((f) => [{ cwd: f.cwd, name: f.name }, ...f.trees.map((w) => ({ cwd: w.cwd, name: `${f.name} · ${w.name.split('/').pop()}` }))]);
+  const dirs = dirChoices(folders);
   if (cwd && !dirs.some((d) => d.cwd === cwd)) dirs.unshift({ cwd, name: cwd.split('/').pop() || cwd });
   const badEvery = Boolean(custom.trim()) && parseEvery(custom) === null;
   const ready = !badEvery && (!plan || (markdown !== null && !error));

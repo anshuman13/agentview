@@ -1,0 +1,7 @@
+[
+  { "name": "auto sends the text", "start": "Auto", "text": "fix the login", "mode": null, "specRequest": null, "first": "fix the login" },
+  { "name": "plan first sends the text", "start": "Plan first", "text": "fix the login", "mode": "plan", "specRequest": null, "first": "fix the login" },
+  { "name": "spec puts the text after the spec prompt", "start": "Spec", "text": "fix the login", "mode": "plan", "specRequest": "fix the login", "first": null },
+  { "name": "spec without text puts the bare spec prompt", "start": "Spec", "text": null, "mode": "plan", "specRequest": "", "first": null },
+  { "name": "no text sends nothing", "start": "Plan first", "text": null, "mode": "plan", "specRequest": null, "first": null }
+]

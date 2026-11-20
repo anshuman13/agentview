@@ -5,6 +5,7 @@ import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.ProviderOption
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.providerModes
+import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.workspace.specPrompt
 
 private val modelList = ListSerializer(ModelInfo.serializer())
@@ -25,13 +26,17 @@ fun lastModelKey(group: String) = if (group == "claude") "lastModel" else "lastM
 fun startModel(models: List<ModelInfo>, last: String?): String? =
     models.firstOrNull { it.value == last }?.value
 
-// The "Start as" choices of the new chat sheet: no mode keeps the chat's default; the others are set once the chat opens, and Spec also puts the spec request prefix in the composer.
+// The "Start as" choices of the new chat sheet (web START_MODES and startTexts in shared/providers.ts): no mode keeps the chat's default; the others are set once the chat opens, and Spec also puts the spec request prefix in the composer.
 class StartMode(val label: String, val mode: String?, val draft: ((String) -> String)? = null)
 
 val START_MODES = listOf(StartMode("Auto", null), StartMode("Plan first", "plan"), StartMode("Spec", "plan", ::specPrompt))
 
 // What the new chat gets: Spec puts the request in the composer after the spec prompt and sends nothing, the others send it as the first message.
 fun startTexts(m: StartMode, text: String?): Pair<String?, String?> = m.draft?.let { it(text.orEmpty()) to null } ?: (null to text)
+
+// The saved chats of a repo that are not open, newest first, for the Continue section of the new chat sheet (web recentInRepo).
+fun recentInRepo(saved: List<SavedSession>, openIds: Collection<String?>, cwd: String?, n: Int = 3) =
+    saved.filter { it.cwd == cwd && it.sessionId !in openIds }.sortedByDescending { it.lastModified }.take(n)
 
 // A start mode the provider does not offer (Plan on Codex) starts in Default.
 fun startModeFor(mode: String?, provider: String?) = if (mode != null && providerModes(provider).none { it.value == mode }) "default" else mode

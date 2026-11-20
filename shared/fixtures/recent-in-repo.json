@@ -1,0 +1,7 @@
+[
+  { "name": "none saved", "cwd": "/r/app", "open": [], "saved": [], "expected": [] },
+  { "name": "a chat in another repo is left out", "cwd": "/r/app", "open": [], "saved": [{ "sessionId": "a", "cwd": "/r/web", "lastModified": 5 }], "expected": [] },
+  { "name": "an open chat is left out", "cwd": "/r/app", "open": ["a"], "saved": [{ "sessionId": "a", "cwd": "/r/app", "lastModified": 5 }, { "sessionId": "b", "cwd": "/r/app", "lastModified": 4 }], "expected": ["b"] },
+  { "name": "four are trimmed to three", "cwd": "/r/app", "open": [], "saved": [{ "sessionId": "a", "cwd": "/r/app", "lastModified": 1 }, { "sessionId": "b", "cwd": "/r/app", "lastModified": 2 }, { "sessionId": "c", "cwd": "/r/app", "lastModified": 3 }, { "sessionId": "d", "cwd": "/r/app", "lastModified": 4 }], "expected": ["d", "c", "b"] },
+  { "name": "newest lastModified first", "cwd": "/r/app", "open": [], "saved": [{ "sessionId": "old", "cwd": "/r/app", "lastModified": 100 }, { "sessionId": "new", "cwd": "/r/app", "lastModified": 300 }, { "sessionId": "mid", "cwd": "/r/app", "lastModified": 200 }], "expected": ["new", "mid", "old"] }
+]

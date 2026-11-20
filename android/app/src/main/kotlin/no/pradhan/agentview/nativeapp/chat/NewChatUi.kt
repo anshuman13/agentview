@@ -6,10 +6,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.codex.meetings.displayName
+import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.sessions.since
+import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.ListRow
+import no.pradhan.agentview.nativeapp.ui.UNTITLED
+import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.app.lastModel
 import no.pradhan.agentview.nativeapp.app.modelsOf
 import no.pradhan.agentview.nativeapp.net.newestModels
@@ -42,6 +50,9 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
     var allRepos by remember { mutableStateOf(false) }
     var model by remember(models, group) { mutableStateOf(startModel(models, hub.lastModel(group))) }
     var startMode by remember { mutableStateOf(START_MODES.first()) }
+    val live by hub.store.state.select { it.live }
+    val ws by hub.workspace.collectAsState()
+    val scope = rememberCoroutineScope()
     val start = {
         val (draft, first) = startTexts(startMode, text?.invoke(repo))
         hub.newChat(repo, model, mode = startModeFor(startMode.mode, provider?.id ?: default), draft = draft, provider = provider?.id, text = first)
@@ -74,6 +85,18 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
                 }
             }
             if (rows.size < repos.size) Button("Show all ${repos.size}", { allRepos = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+        }
+        val recent = remember(ws.saved, live, repo) { recentInRepo(ws.saved, live.map { it.sessionId }, repo) }
+        if (!hub.readOnly && recent.isNotEmpty()) {
+            SectionHeader("Continue")
+            Group {
+                recent.forEachIndexed { i, s ->
+                    if (i > 0) Hairline()
+                    ListRow(s.title.ifBlank { UNTITLED }, since(s.lastModified), leading = { AvIcon("history") }, lines = 1, onClick = {
+                        scope.launch { if (hub.openSaved(s.sessionId)) { hub.link.value = DeepLink(view = "agents"); onDismiss() } }
+                    })
+                }
+            }
         }
         val shown = remember(models, model) { newestModels(models, model) }
         if (shown.isNotEmpty()) {

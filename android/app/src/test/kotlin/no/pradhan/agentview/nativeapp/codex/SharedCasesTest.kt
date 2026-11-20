@@ -63,6 +63,9 @@ import no.pradhan.agentview.nativeapp.chat.proposalState
 import no.pradhan.agentview.nativeapp.chat.usedClaimState
 import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.chat.startModeFor
+import no.pradhan.agentview.nativeapp.chat.START_MODES
+import no.pradhan.agentview.nativeapp.chat.recentInRepo
+import no.pradhan.agentview.nativeapp.chat.startTexts
 import no.pradhan.agentview.nativeapp.app.BarState
 import no.pradhan.agentview.nativeapp.app.FEATURES
 import no.pradhan.agentview.nativeapp.app.appCounts
@@ -450,6 +453,23 @@ class SharedCasesTest {
         for (c in cases("start-mode")) {
             val mode = c.nullable("mode")?.jsonPrimitive?.content
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, startModeFor(mode, c.nullable("provider")?.jsonPrimitive?.content))
+        }
+    }
+
+    @Test fun startTextsCases() {
+        for (c in cases("start-texts")) {
+            val m = START_MODES.first { it.label == c.str("start") }
+            assertEquals(c.str("name"), c.nullable("mode")?.jsonPrimitive?.content, m.mode)
+            val draft = c.nullable("specRequest")?.jsonPrimitive?.content?.let { specPrompt(it) }
+            assertEquals(c.str("name"), draft to c.nullable("first")?.jsonPrimitive?.content, startTexts(m, c.nullable("text")?.jsonPrimitive?.content))
+        }
+    }
+
+    @Test fun recentInRepoCases() {
+        for (c in cases("recent-in-repo")) {
+            val saved = c.getValue("saved").jsonArray.map { it.jsonObject.let { s -> SavedSession(s.str("sessionId"), cwd = s.str("cwd"), lastModified = s.getValue("lastModified").jsonPrimitive.long) } }
+            val open = c.getValue("open").jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, recentInRepo(saved, open, c.str("cwd")).map { it.sessionId })
         }
     }
 

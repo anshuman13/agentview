@@ -14,8 +14,9 @@ import { limitResume } from '../../shared/limitResume';
 import { buildsLine, finishedLine, goalEnd, mergeQuiet, roundsSummary, runDetail } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
-import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
-import { billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, type Billing } from '../../shared/providers';
+import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, SavedSession, Try } from '../../shared/protocol';
+import { START_MODES, billing, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
+import { recentInRepo } from './app/newChat';
 import { buildFolders, chatPlace, since } from './sessions/folders';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
@@ -722,6 +723,18 @@ describe('cases shared with the Android app', () => {
   type Table = { name: string; provider: Provider | null; label: string; billing: Billing; mark: string | null; modes: string[] };
   for (const c of cases<{ name: string; mode: string | null; provider: Provider | null; expected: string | null }>('start-mode')) {
     it(`startModeFor: ${c.name}`, () => expect(startModeFor(c.mode, c.provider ?? undefined)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; start: string; text: string | null; mode: string | null; specRequest: string | null; first: string | null }>('start-texts')) {
+    it(`startTexts: ${c.name}`, () => {
+      const m = START_MODES.find((x) => x.label === c.start)!;
+      expect(m.mode).toBe(c.mode);
+      expect(startTexts(m, c.text)).toEqual({ draft: c.specRequest === null ? null : specPrompt(c.specRequest), first: c.first });
+    });
+  }
+
+  for (const c of cases<{ name: string; cwd: string; open: string[]; saved: SavedSession[]; expected: string[] }>('recent-in-repo')) {
+    it(`recentInRepo: ${c.name}`, () => expect(recentInRepo(c.saved, c.open, c.cwd).map((s) => s.sessionId)).toEqual(c.expected));
   }
 
   const place = JSON.parse(readFileSync(new URL('../../shared/fixtures/chat-place.json', import.meta.url), 'utf8'));

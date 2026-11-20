@@ -16,7 +16,7 @@ import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
 import { NeedsYou } from './NeedsYou';
-import { newChat } from '../app/newChat';
+import { NewChatSheet } from './NewChatSheet';
 import { requestFind, takeFind } from '../chat/transcript/FindBar';
 import { MAC } from '../app/shell/keys';
 
@@ -109,6 +109,7 @@ export function OpenChats() {
   const [full, setFull] = useState<Set<string>>(new Set());
   const [opening, setOpening] = useState<string | null>(null);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
+  const [newIn, setNewIn] = useState<{ repo?: string } | null>(null);
   const actions = chatActions(setChats, setAsk);
   const { pins, setPin } = usePins();
   const pinSet = useMemo(() => new Set(pins), [pins]);
@@ -185,7 +186,7 @@ export function OpenChats() {
       <div className="sessions-bar">
         <FilterInput value={filter} set={setFilter} />
         {done.length > 0 && <IconButton icon="check-all" label="Mark all as read" onClick={markAllRead} />}
-        <IconButton icon="add" label="New session in a repo" onClick={() => setUi({ repoPicker: true })} />
+        <IconButton icon="add" label="New session in a repo" onClick={() => setNewIn({})} />
       </div>
       <NeedsYou n={shownWaiting.length} filter={filter}>
         {shownWaiting.map((c) => row(c, repoName(folders, c.cwd)))}
@@ -204,7 +205,7 @@ export function OpenChats() {
               <span className="name">{g.name}</span>
               <span className="meta"><GroupGlance g={g} seen={seen} /></span>
               <span className="acts">
-                <IconButton icon="add" label={`New chat in ${g.name}`} size="sm" small onClick={(e) => { e.stopPropagation(); newChat({ cwd: g.key }); }} />
+                <IconButton icon="add" label={`New chat in ${g.name}`} size="sm" small onClick={(e) => { e.stopPropagation(); setNewIn({ repo: g.key }); }} />
               </span>
             </div>
             {isOpen(g) && g.open.filter((c) => !c.pending).map((c) => row(c))}
@@ -222,6 +223,7 @@ export function OpenChats() {
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
+      {newIn && <NewChatSheet repo={newIn.repo} onClose={() => setNewIn(null)} />}
     </div>
   );
 }

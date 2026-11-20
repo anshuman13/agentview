@@ -207,6 +207,14 @@ export function findHere(folders: Folder[], cwd: string) {
   return { folder, tree, label: tree ? tree.name : folder?.repo?.branch ?? '' };
 }
 
+// The folders a new chat or goal can start in: each repo, then its worktrees as "repo · worktree"; the folder of cwd first.
+export function dirChoices(folders: Folder[], cwd = '') {
+  const dirs = folders.flatMap((f) => [{ cwd: f.cwd, name: f.name }, ...f.trees.map((w) => ({ cwd: w.cwd, name: `${f.name} · ${w.name.split('/').pop()}` }))]);
+  const here = cwd ? findHere(folders, cwd) : null;
+  const at = here?.tree?.cwd ?? here?.folder?.cwd;
+  return [...dirs.filter((d) => d.cwd === at), ...dirs.filter((d) => d.cwd !== at)];
+}
+
 const urgency = (c: LiveChat) => (c.pending ? 0 : c.running ? 1 : 2);
 export const byUrgency = (a: LiveChat, b: LiveChat) => urgency(a) - urgency(b) || b.lastActive - a.lastActive;
 
