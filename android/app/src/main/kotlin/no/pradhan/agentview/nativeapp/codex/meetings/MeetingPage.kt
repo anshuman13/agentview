@@ -353,7 +353,7 @@ private fun LazyListScope.meetingTranscript(folds: MeetingFolds, transcript: Res
     item { SectionHeader("Transcript", open = folds.transcriptOpen.value, onToggle = { folds.transcriptOpen.value = !folds.transcriptOpen.value }) }
     if (!folds.transcriptOpen.value) return
     when {
-        transcript == null -> item { Loading("Loading…") }
+        transcript == null -> item { Loading("Loading the transcript…") }
         transcript.isFailure -> item { ErrorHint("Could not load the transcript: ${transcript.exceptionOrNull()?.message}") }
         transcript.getOrNull().isNullOrEmpty() -> item { EmptyState("No transcript text kept") }
         else -> items(transcript.getOrNull()!!.lines().filter { it.isNotBlank() }) { line ->

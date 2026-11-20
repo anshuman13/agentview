@@ -87,7 +87,7 @@ private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, onBack: () 
                 item { Text("The report shows here when the agent finishes.", pad, style = Type.footnote, color = av.fgMuted) }
             } else {
                 item { Markdown(reportText(a), pad) }
-                item { Box(pad) { Button("Copy report", { clip.setText(AnnotatedString(reportText(a))) }, size = ButtonSize.Sm) } }
+                item { Box(pad) { Button("Copy report", { clip.setText(AnnotatedString(reportText(a))); hub.notice.value = "Report copied" }, size = ButtonSize.Sm) } }
             }
             if (a.prompt.isNotEmpty()) {
                 item { SectionHeader("Prompt", open = prompt, onToggle = { prompt = !prompt }) }

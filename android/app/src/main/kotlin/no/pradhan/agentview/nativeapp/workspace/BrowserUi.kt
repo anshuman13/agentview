@@ -107,7 +107,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 when (state.state) {
-                    "connecting" -> item { EmptyState("Connecting to Chrome…", if (state.own) null else "Allow remote debugging if Chrome asks", small = false) }
+                    "connecting" -> item { EmptyState("Connecting to Chrome…", if (state.own) null else "Allow remote debugging if Chrome asks", icon = "globe", small = false) }
                     "on" -> {
                         val f = frame
                         item {
@@ -135,7 +135,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                                     kbd = if (v.text.isEmpty() || '\n' in v.text || v.text.length > 200) TextFieldValue(KBD_SEED, TextRange(KBD_SEED.length)) else v
                                 }, Modifier.size(1.dp).alpha(0f).focusRequester(kbdFocus), keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Password))
                             }
-                            else EmptyState(if (tabs.tabs.isNotEmpty()) "Waiting for the tab to draw" else "No tab open in Chrome", "Pick a tab below", small = false)
+                            else EmptyState(if (tabs.tabs.isNotEmpty()) "Waiting for the tab to draw" else "No tab open in Chrome", "Pick a tab below", icon = "globe", small = false)
                         }
                         if (tabs.tabs.isNotEmpty()) {
                             item { SectionHeader("Tabs", tabs.tabs.size.toString()) }
@@ -150,7 +150,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                         }
                     }
                     else -> item {
-                        EmptyState("Show your Chrome here", if (state.own && state.reason == "nochrome") "Chrome is not running" else CHROME_REASONS[state.reason] ?: state.reason, small = false, action = if (state.reason != "server") ({
+                        EmptyState("Show your Chrome here", if (state.own && state.reason == "nochrome") "Chrome is not running" else CHROME_REASONS[state.reason] ?: state.reason, icon = "globe", small = false, action = if (state.reason != "server") ({
                             Button(if (state.reason == "nofda") "Open Full Disk Access settings" else "Connect Chrome", { send("setup") }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
                         }) else null)
                     }

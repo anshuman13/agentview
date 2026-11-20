@@ -89,7 +89,7 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
                     }
                 }
                 item { ErrorHint(load.error) }
-                if (info == null) { if (load.error.isEmpty()) item { Loading("Loading…") } }
+                if (info == null) { if (load.error.isEmpty()) item { Loading("Loading Observe…") } }
                 else {
                     if (info.config == null || info.config is JsonNull) item {
                         if (info.local) EmptyState("No Grafana settings for ${info.repo}", "It has no deploy app, so it runs only on this Mac", icon = "pulse")
@@ -148,7 +148,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         } else if (dash.data != null) EmptyState("No dashboards match", "Set grafana.query or grafana.dashboards in the settings")
 
         SectionHeader("Metrics, last 6 hours")
-        if (panels.busy && panels.data == null) Loading("Loading…")
+        if (panels.busy && panels.data == null) Loading("Loading the metrics…")
         ErrorHint(panels.error)
         panels.data?.let { p ->
             Group {
@@ -161,7 +161,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         }
 
         SectionHeader("Error logs, last hour", action = linkAction("Open", logs.data?.link, link))
-        if (logs.busy && logs.data == null) Loading("Loading…")
+        if (logs.busy && logs.data == null) Loading("Loading the error logs…")
         ErrorHint(logs.error)
         logs.data?.let { l ->
             Group {
@@ -173,7 +173,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         }
 
         SectionHeader("Error patterns", action = linkAction("Open", pats.data?.link, link))
-        if (pats.busy && pats.data == null) Loading("Loading…")
+        if (pats.busy && pats.data == null) Loading("Loading the error patterns…")
         ErrorHint(pats.error)
         pats.data?.let { p ->
             Group {

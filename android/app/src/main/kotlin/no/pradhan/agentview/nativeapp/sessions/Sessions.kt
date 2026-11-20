@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -20,11 +22,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.text
 import no.pradhan.agentview.nativeapp.chat.MessageHit
 import no.pradhan.agentview.nativeapp.chat.NewChatSheet
@@ -52,6 +56,8 @@ import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Fab
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.IconBtn
+import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.SearchField
@@ -158,6 +164,7 @@ private fun RepoSessions(repo: RepoGroup, rows: ChatRows, filters: SessionsFilte
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<MessageHit>, held: HeldOrder, onNewChat: (RepoChoice) -> Unit) {
     val hub = rows.hub
@@ -171,20 +178,31 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
     val waiting = remember(live, ws, filter) { waitingRows(live, ws, filter) }
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
+    var refreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val refresh = { scope.launch { refreshing = true; hub.refreshWorkspace(force = true)?.join(); refreshing = false }; Unit }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            PageHeader("Sessions") { IconBtn("target", "New goal", { hub.shell.goalSheet.value = GoalSheet.Start() }); IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) }); IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
+            PageHeader("Sessions") {
+                IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) })
+                MoreButton { close ->
+                    MenuItem("New goal", "target", { close(); hub.shell.goalSheet.value = GoalSheet.Start() })
+                    MenuItem("Refresh", "refresh", { close(); refresh() })
+                }
+            }
             SearchField(filter, { filters.filter = it }, "Search repos and sessions")
             ChipRow {
                 listOf(WORK, PERSONAL).forEach { k ->
                     Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
                 }
             }
-            when {
-                live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty() -> OfflineSessions(rows, waitingForServer)
-                groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty() && hits.isEmpty() ->
-                    EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No ${profileLabel(segment).lowercase()} sessions yet")
-                else -> SessionsList(rows, filters, groups, pinned, waiting, hits, held)
+            PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {
+                when {
+                    live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty() -> OfflineSessions(rows, waitingForServer)
+                    groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty() && hits.isEmpty() ->
+                        EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No ${profileLabel(segment).lowercase()} sessions yet")
+                    else -> SessionsList(rows, filters, groups, pinned, waiting, hits, held)
+                }
             }
         }
         if (!waitingForServer) Fab("add", "New chat", { onNewChat(RepoChoice(null, "")) }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))

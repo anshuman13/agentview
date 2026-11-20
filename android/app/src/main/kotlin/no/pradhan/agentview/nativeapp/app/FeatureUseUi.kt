@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,6 +32,7 @@ import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.SnackHost
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.plural
+import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 private const val SHOWN = 5
 
@@ -54,8 +54,8 @@ private fun <T> FeatureSection(label: String, rows: List<T>, title: (T) -> Strin
 // Every feature the Mac has counted (web FeatureUseSheet), split into never used and used, for the last 7 or 30 days; hidden features are listed apart.
 @Composable
 fun FeatureUseSheet(hub: Hub, onDismiss: () -> Unit) {
-    var days by remember { mutableStateOf<Map<String, Map<String, Int>>?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    val (load, reload) = rememberLoad { hub.api.featureUse() }
+    val days = load.data
     var span by remember { mutableStateOf(30) }
     val on by hub.featureUse.collectAsState()
     val hidden by hub.hiddenFeatures.collectAsState()
@@ -68,16 +68,13 @@ fun FeatureUseSheet(hub: Hub, onDismiss: () -> Unit) {
         }
         Unit
     }
-    LaunchedEffect(Unit) {
-        runCatching { hub.api.featureUse() }.onSuccess { days = it }.onFailure { error = it.message ?: "Unknown error" }
-    }
     val today = LocalDate.now().toString()
     Sheet(onDismiss, "Feature use") {
         SnackHost(snackState)
         if (on) Row(Modifier.padding(Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             listOf(7, 30).forEach { n -> Chip("$n days", { span = n }, on = span == n) }
         }
-        error?.let { EmptyState("Could not load feature use", it) }
+        if (days == null && load.error.isNotEmpty()) EmptyState("Could not load feature use", load.error, action = { Button("Retry", reload, size = ButtonSize.Sm) })
         days?.let { d ->
             val rows = remember(d, span) { featureRows(d, today, span) }
             val usedMeta = { u: UsedFeature ->

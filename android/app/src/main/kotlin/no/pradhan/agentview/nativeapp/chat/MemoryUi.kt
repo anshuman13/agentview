@@ -109,7 +109,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, onDismiss
     Sheet(onDismiss = onDismiss, title = "Memory", padded = false, full = false) {
         val list = files.data
         when {
-            list == null && files.busy -> Loading("Loading memory…")
+            list == null && files.busy -> Loading("Loading the memory…")
             files.error.isNotEmpty() && list.isNullOrEmpty() -> EmptyState("Could not load memory", files.error, action = { Button("Retry", reload, size = ButtonSize.Sm) })
             list.isNullOrEmpty() -> EmptyState("No memory", "No $file or memory files for this folder")
             else -> list.forEach { f ->

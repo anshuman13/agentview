@@ -285,12 +285,13 @@ private data class AdvisorLoads(
 
 @Composable
 private fun rememberAdvisorLoads(hub: Hub, root: String?, turns: String): AdvisorLoads {
-    val (advisors, reload) = rememberLoad { hub.advisors() }
+    val (advisors, reloadAdvisors) = rememberLoad { hub.advisors() }
     val (backlog, reloadBacklog) = rememberLoad(root) { root?.let { hub.backlog(it) } }
     val (specs, reloadSpecs) = rememberLoad(root) { root?.let { hub.specs(it) } }
     val (audits, reloadAudit) = rememberLoad(root) { root?.let { listOfNotNull(hub.audit(it)) } }
     var loadedTurns by remember { mutableStateOf(turns) }
-    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload(); reloadBacklog(); reloadSpecs(); reloadAudit() } }
+    val reload = { reloadAdvisors(); reloadBacklog(); reloadSpecs(); reloadAudit() }
+    LaunchedEffect(turns) { if (turns != loadedTurns) { loadedTurns = turns; reload() } }
     return AdvisorLoads(advisors, backlog, specs, audits, reload)
 }
 
@@ -342,8 +343,8 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
                 val project = root
                 when {
                     project == null -> Group { ListRow("Pick a project to see its work") }
-                    backlog.error.isNotEmpty() || specs.error.isNotEmpty() -> EmptyState("Could not load the board", icon = "list-ordered")
-                    board == null || items == null || specList == null -> Loading("Loading board")
+                    backlog.error.isNotEmpty() || specs.error.isNotEmpty() -> EmptyState("Could not load the board", backlog.error.ifEmpty { specs.error }, icon = "list-ordered", action = { Button("Retry", reload, size = ButtonSize.Sm) })
+                    board == null || items == null || specList == null -> Loading("Loading the board…")
                     else -> {
                         val stage = chip ?: board.defaultStage
                         val openSlugs = items.filter { it.status != "done" }.sortedBy { it.rank }.map { it.slug }
@@ -374,7 +375,7 @@ fun AdvisorsScreen(hub: Hub, onBack: () -> Unit, onOpen: () -> Unit) {
             }
         }
     }
-    if (sheetOpen) AdvisorConversationsSheet(hub, load, live, ws.seen, shownId, ::go) { sheetOpen = false }
+    if (sheetOpen) AdvisorConversationsSheet(hub, load, reload, live, ws.seen, shownId, ::go) { sheetOpen = false }
 }
 
 @Composable
@@ -404,13 +405,13 @@ private fun AuditSheet(audit: AuditInfo, onDismiss: () -> Unit) = Sheet(onDismis
 
 // Each advisor's open chat, its earlier conversations and its memory.
 @Composable
-private fun AdvisorConversationsSheet(hub: Hub, load: Loaded<List<AdvisorInfo>>, live: List<LiveChat>, seen: Map<String, Long>, shownId: String?, go: (suspend () -> Boolean) -> Unit, onDismiss: () -> Unit) {
+private fun AdvisorConversationsSheet(hub: Hub, load: Loaded<List<AdvisorInfo>>, reload: () -> Unit, live: List<LiveChat>, seen: Map<String, Long>, shownId: String?, go: (suspend () -> Boolean) -> Unit, onDismiss: () -> Unit) {
     var memory by rememberSaveable { mutableStateOf<String?>(null) }
 Sheet(onDismiss, "Conversations and memory", padded = false) {
     val info = load.data
     when {
-        info == null && load.error.isNotEmpty() -> EmptyState("Could not load the advisors", load.error, icon = "organization")
-        info == null -> Loading("Loading advisors")
+        info == null && load.error.isNotEmpty() -> EmptyState("Could not load the advisors", load.error, icon = "organization", action = { Button("Retry", reload, size = ButtonSize.Sm) })
+        info == null -> Loading("Loading the advisors…")
         else -> for (a in ADVISORS) {
             val c = live.firstOrNull { advisorOf(it.cwd)?.id == a.id }
             val state = c?.let { chatState(it, null, seen) }

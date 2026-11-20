@@ -82,8 +82,8 @@ fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
         WorkspaceHeader(hub, "Sketches", onBack) { IconBtn("refresh", "Refresh", reload) }
         PageBody {
             when {
-                sketches == null && load.error.isNotEmpty() -> EmptyState("Could not load sketches", load.error, icon = "paintcan")
-                sketches == null -> Loading("Loading sketches")
+                sketches == null && load.error.isNotEmpty() -> EmptyState("Could not load sketches", load.error, icon = "paintcan", action = { Button("Retry", reload, size = ButtonSize.Sm) })
+                sketches == null -> Loading("Loading sketches…")
                 sketches.isEmpty() -> EmptyState("No sketches yet", "Mockups the agent writes with /sketch show here", icon = "paintcan", action = { Button("New sketch", { newSketch(hub) }, size = ButtonSize.Sm) })
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     SectionHeader("Sketches", sketches.size.toString())
@@ -119,7 +119,7 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
     val isDark = dark ?: dark0
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, sketchTitle(file.name), onBack) {
-            MoreButton { close -> MenuItem("Copy path", "copy", { close(); clip.setText(AnnotatedString("$cwd/${file.path}")) }) }
+            MoreButton { close -> MenuItem("Copy path", "copy", { close(); clip.setText(AnnotatedString("$cwd/${file.path}")); hub.notice.value = "Path copied" }) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
             DeviceChips(desktop) { desktop = it }
@@ -130,7 +130,7 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
         val f = load.data
         Box(Modifier.fillMaxSize()) {
             when {
-                f == null && load.error.isEmpty() -> Loading("Loading sketch")
+                f == null && load.error.isEmpty() -> Loading("Loading the sketch…")
                 f == null || f.binary || f.error != null -> SketchProblem("It may have moved. Go back to the list")
                 else -> SketchPreview(f.content, isDark, desktop)
             }
@@ -152,7 +152,7 @@ internal fun SketchPreview(html: String, dark: Boolean, desktop: Boolean, modifi
 }
 
 @Composable
-private fun SketchProblem(hint: String) = EmptyState("Could not load the sketch", hint, icon = "paintcan")
+private fun SketchProblem(hint: String) = EmptyState("Could not show the sketch", hint, icon = "paintcan")
 
 private fun WebSettings.asSketch() = object : SketchSettings {
     override var javaScript by this@asSketch::javaScriptEnabled

@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.app
 
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -14,11 +15,11 @@ import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.withRestored
 import no.pradhan.agentview.nativeapp.ui.plural
 
-fun Hub.refreshWorkspace(force: Boolean = false) {
+fun Hub.refreshWorkspace(force: Boolean = false): Job? {
     val now = System.currentTimeMillis()
-    if (!force && now - workspaceAt < WORKSPACE_MIN_AGE_MS) return
+    if (!force && now - workspaceAt < WORKSPACE_MIN_AGE_MS) return null
     workspaceAt = now
-    viewModelScope.launch {
+    return viewModelScope.launch {
         val from = origin.value
         runCatching {
             coroutineScope {

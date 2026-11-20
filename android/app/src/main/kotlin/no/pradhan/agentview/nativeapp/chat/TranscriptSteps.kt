@@ -223,7 +223,7 @@ internal fun SpecCard(hub: Hub, chat: String, slug: String, path: String, bump: 
             gone -> {}
             d != null -> SpecBody(hub, d, open)
             load.error.isNotEmpty() -> LoadFailed("this build", reload)
-            else -> Loading("Loading build")
+            else -> Loading("Loading the build…")
         }
     }
 }

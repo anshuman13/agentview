@@ -105,7 +105,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (load.error.contains("no deploy app")) item { EmptyState("No deploy app here", "This repo has no .deploy/app.yaml", action = { SetupButton(hub, "deploy") }, icon = "rocket") }
                 else item { ErrorHint(load.error) }
-                if (s == null && load.error.isEmpty()) item { Loading("Loading…") }
+                if (s == null && load.error.isEmpty()) item { Loading("Loading the deploy…") }
                 if (s != null) deployEnvs(s, System.currentTimeMillis(), link, hub, started, { app = it }) { ask = it }
                 job.value?.let { deployJobSection(it, link) { job.value = null } }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }

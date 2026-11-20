@@ -100,7 +100,7 @@ fun PullsScreen(hub: Hub, onBack: () -> Unit, initial: Int? = null) {
             LazyColumn(Modifier.fillMaxSize()) {
                 val problem = ghProblem(load.error)
                 when {
-                    problem != null -> item { EmptyState(problem.title, problem.text + (problem.cmd?.let { "\n$it" } ?: ""), small = false) }
+                    problem != null -> item { EmptyState(problem.title, problem.text + (problem.cmd?.let { "\n$it" } ?: ""), icon = "git-pull-request", small = false) }
                     load.error.isNotEmpty() -> item { ErrorHint(load.error) }
                     load.data == null -> item { Hint("Loading…") }
                     load.data.isEmpty() -> item { EmptyState("No open pull requests", icon = "git-pull-request", small = false) }

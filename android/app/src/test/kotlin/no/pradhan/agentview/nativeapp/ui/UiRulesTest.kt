@@ -1,0 +1,42 @@
+package no.pradhan.agentview.nativeapp.ui
+
+import java.io.File
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class UiRulesTest {
+    private val dir = listOf(File("src/main/kotlin"), File("app/src/main/kotlin")).first { it.exists() }
+
+    private fun lines(skip: (File) -> Boolean = { false }) = dir.walkTopDown()
+        .filter { it.extension == "kt" && it.name != "Codicons.kt" && it.name != "Tokens.kt" && !skip(it) }
+        .flatMap { f -> f.readLines().mapIndexed { i, l -> Triple(f, i, l) } }
+        .toList()
+
+    private fun fails(rule: String, bad: List<Triple<File, Int, String>>) =
+        assertTrue("$rule: ${bad.map { "${it.first.name}:${it.second + 1}" }}", bad.isEmpty())
+
+    @Test fun loadingTextEndsInEllipsis() {
+        val text = Regex("""\bLoading\("([^"]*)"""")
+        val all = lines()
+        assertTrue(all.count { text.containsMatchIn(it.third) } > 10)
+        fails("Loading text without a trailing ellipsis", all.filter { l -> text.findAll(l.third).any { !it.groupValues[1].endsWith("…") } })
+    }
+
+    @Test fun pageEmptyStatesHaveAnIcon() {
+        fails("EmptyState with small = false and no icon", lines().filter { it.third.contains("EmptyState(") && it.third.contains("small = false") && !it.third.contains("icon =") })
+    }
+
+    @Test fun couldNotLoadOffersRetry() {
+        fails("Could not load without an action", lines().filter { it.third.contains("EmptyState(\"Could not load") && !it.third.contains("action =") })
+    }
+
+    @Test fun pageHeaderHoldsOneIconButton() {
+        fails("PageHeader with more than one IconBtn", lines().filter { it.third.contains("PageHeader(") && Regex("""\bIconBtn\(""").findAll(it.third).count() > 1 })
+    }
+
+    @Test fun everyCopyOutsideUiSaysSo() {
+        val all = lines { it.path.contains("/ui/") }.groupBy { it.first }
+        val bad = all.flatMap { (_, ls) -> ls.filter { l -> l.third.contains("clip.setText(") && ls.filter { it.second in l.second..l.second + 2 }.none { it.third.contains("opied") } } }
+        fails("clip.setText without a copied notice", bad)
+    }
+}
