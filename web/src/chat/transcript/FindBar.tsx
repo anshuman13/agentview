@@ -9,28 +9,31 @@ const HIT = 'find-hit';
 
 const clearHit = () => document.querySelectorAll(`.${HIT}`).forEach((el) => el.classList.remove(HIT));
 
-// Scrolls to the row drawn under `turn-<id>` and outlines it; the row may take a moment to draw after the window widens.
-export function showHit(id: string, tries = 20) {
-  const el = document.getElementById(`turn-${id}`);
-  if (!el) return tries ? void setTimeout(() => showHit(id, tries - 1), 100) : undefined;
+export function markHit(el: HTMLElement) {
   clearHit();
   el.classList.add(HIT);
-  el.scrollIntoView({ block: 'center' });
 }
 
 export const findLabel = (cur: number, count: number, earlier: number) => `${count ? `${cur + 1} of ${count}` : 'No matches'}${earlier > 0 ? ' · loaded only' : ''}`;
 
-// The bar above the transcript: a field, the hit count, Previous and Next (Enter and Shift+Enter) and Close (Esc). `go` scrolls to a hit.
-export function FindBar({ events, earlier, go, onClose }: { events: ChatEvent[]; earlier: number; go: (id: string) => void; onClose: () => void }) {
+// The bar above the transcript: a field, the hit count, Previous and Next (Enter and Shift+Enter) and Close (Esc). `go` scrolls to a hit and returns a function that stops its retries.
+export function FindBar({ events, earlier, go, onClose }: { events: ChatEvent[]; earlier: number; go: (id: string) => () => void; onClose: () => void }) {
   const [query, setQuery] = useState('');
   const [cur, setCur] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const hits = useMemo(() => findInChat(events, query), [events, query]);
   const at = Math.min(cur, Math.max(hits.length - 1, 0));
   useEffect(() => input.current?.focus(), []);
-  useEffect(() => clearHit, []);
-  useEffect(() => { if (hits[at]) go(hits[at]); }, [query, cur]);
-  const step = (dir: 1 | -1) => { if (hits.length) setCur(stepMatch(at, dir, hits.length)); };
+  const stop = useRef(() => {});
+  const show = (to: number) => { stop.current(); stop.current = go(hits[to]); };
+  useEffect(() => () => { stop.current(); clearHit(); }, []);
+  useEffect(() => { if (hits.length) show(at); }, [query]);
+  const step = (dir: 1 | -1) => {
+    if (!hits.length) return;
+    const to = stepMatch(at, dir, hits.length);
+    setCur(to);
+    show(to);
+  };
   return (
     <div className="tr-find">
       <label className="jb-search">

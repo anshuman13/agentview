@@ -9,6 +9,9 @@ export function todayTaskMenu(late: boolean): string[] {
   return late ? ['moveToday', 'snooze', 'open'] : ['snooze', 'open'];
 }
 
+// The name after "Is this yours? ·" on a meeting's group: the meeting's title when known, else the first row's people, else "Meeting".
+export const meetingGroupTitle = (title?: string | null, people?: string | null) => title || people || 'Meeting';
+
 // Suggested actions grouped by meeting, else by source with a person's own promises ("said:" ids) apart, in first-seen order.
 // A group never mixes profiles; its key is the profile and the meeting id or source.
 export function actionGroups<T extends { id: string; profile: string; meeting_id?: string | null; source?: string | null }>(rows: T[]): { key: string; rows: T[] }[] {

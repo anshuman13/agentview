@@ -153,7 +153,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         Hairline()
         if (panels.find) {
             BackHandler { panels.find = false }
-            FindBar(hub, view.events, earlier)
+            FindBar(hub, view.events, earlier) { panels.find = false }
         }
         prLoad.data?.let { pr ->
             ListRow(pr.title, prStripMeta(pr), leading = { StatusDot(checkDot(pr.checks)) }, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, onClick = { prOpen = pr.number })
@@ -239,7 +239,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
     val sessionId = live.sessionId ?: session?.sessionId
     MoreButton { close ->
         MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
-        MenuItem("Find in chat", "search", { close(); panels.find = true }, enabled = hasReply)
+        MenuItem("Find in chat", "search", { close(); panels.find = true })
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
         MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
         MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)

@@ -1,0 +1,6 @@
+[
+  { "name": "the meeting title wins", "title": "Weekly sync", "people": "Ana, Bo", "expected": "Weekly sync" },
+  { "name": "people when the title is unknown", "title": null, "people": "Ana, Bo", "expected": "Ana, Bo" },
+  { "name": "an empty title falls back to people", "title": "", "people": "Ana", "expected": "Ana" },
+  { "name": "Meeting when nothing is known", "title": null, "people": "", "expected": "Meeting" }
+]

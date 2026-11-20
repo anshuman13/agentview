@@ -51,7 +51,21 @@ private fun shrunkJpeg(file: File): ByteArray? {
     return ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 85, it) }.toByteArray()
 }
 
-private fun readUri(ctx: Context, uri: Uri) = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+private const val TOO_BIG = "Files over 50 MB cannot be attached"
+
+private class FileTooBig : Exception()
+
+// Reads at most MAX_FILE_BYTES + 1 bytes, so a provider that reports no size cannot fill the memory; over the limit it throws FileTooBig.
+private fun readUri(ctx: Context, uri: Uri) = ctx.contentResolver.openInputStream(uri)?.use { s ->
+    val out = ByteArrayOutputStream()
+    val buf = ByteArray(8192)
+    while (out.size() <= MAX_FILE_BYTES) {
+        val n = s.read(buf, 0, minOf(buf.size.toLong(), MAX_FILE_BYTES + 1 - out.size()).toInt())
+        if (n < 0) return@use out.toByteArray()
+        out.write(buf, 0, n)
+    }
+    throw FileTooBig()
+}
 
 // The add button with Take photo, Choose photo and Choose file, or with choose off a camera button; each upload goes to the Mac and its [Image: path] or [File: path] marker is handed to onPath.
 @Composable
@@ -81,9 +95,10 @@ fun rememberAttach(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Uni
         onUploading(1)
         hub.viewModelScope.launch {
             try {
-                val bytes = withContext(Dispatchers.IO) { runCatching(read).getOrNull() }
+                val got = withContext(Dispatchers.IO) { runCatching(read) }
+                val bytes = got.getOrNull()
                 val path = bytes?.let { hub.attach(name, mime, it) }
-                if (path != null) onPath(attachMark(mime, path)) else if (bytes == null) hub.notice.value = "Could not read the file"
+                if (path != null) onPath(attachMark(mime, path)) else if (bytes == null) hub.notice.value = if (got.exceptionOrNull() is FileTooBig) TOO_BIG else "Could not read the file"
             } finally {
                 onUploading(-1)
             }
@@ -113,7 +128,7 @@ fun rememberAttach(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Uni
             c.getColumnIndex(OpenableColumns.DISPLAY_NAME).let { if (it >= 0) c.getString(it) else null } to
                 c.getColumnIndex(OpenableColumns.SIZE).let { if (it >= 0 && !c.isNull(it)) c.getLong(it) else 0L }
         } ?: (null to 0L)
-        if (size > MAX_FILE_BYTES) { hub.notice.value = "Files over 50 MB cannot be attached"; return@rememberLauncherForActivityResult }
+        if (size > MAX_FILE_BYTES) { hub.notice.value = TOO_BIG; return@rememberLauncherForActivityResult }
         upload(name ?: uri.lastPathSegment ?: "file", ctx.contentResolver.getType(uri) ?: "application/octet-stream") { readUri(ctx, uri) }
     }
 

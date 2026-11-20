@@ -61,7 +61,7 @@ import { isOld } from '../../shared/claimAge';
 import { similarClaim } from '../../shared/claimMatch';
 import { editedClaimText } from '../../shared/claimEdit';
 import { claimActions, replaceTarget } from '../../shared/claimActions';
-import { actionGroups, actionMenu, todayTaskMenu } from '../../shared/actionMenu';
+import { actionGroups, actionMenu, meetingGroupTitle, todayTaskMenu } from '../../shared/actionMenu';
 import { isLate } from '../../shared/waiting';
 import { goalAtRisk } from './codex/data/tasks/goals';
 import { afterNextMeeting, nextFreeSlot, weekFreeMinutes, type Span } from './codex/data/tasks/plan';
@@ -267,6 +267,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; late: boolean; items: string[] }>('today-menu')) {
     it(`todayTaskMenu: ${c.name}`, () => expect(todayTaskMenu(c.late)).toEqual(c.items));
+  }
+
+  for (const c of cases<{ name: string; title: string | null; people: string; expected: string }>('group-title')) {
+    it(`meetingGroupTitle: ${c.name}`, () => expect(meetingGroupTitle(c.title, c.people)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; rows: { id: string; profile: string; meeting_id: string | null; source: string }[]; groups: { key: string; ids: string[] }[] }>('action-groups')) {

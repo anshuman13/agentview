@@ -332,6 +332,9 @@ fun actionMenu(status: String): ActionMenu {
 // The More menu items of a task row in the Overview's Today list (shared/actionMenu.ts, checked by shared/fixtures/today-menu.json).
 fun todayTaskMenu(late: Boolean) = if (late) listOf("moveToday", "snooze", "open") else listOf("snooze", "open")
 
+// The name after "Is this yours? ·" on a meeting's group (shared/actionMenu.ts, checked by shared/fixtures/group-title.json).
+fun meetingGroupTitle(title: String?, people: String?) = title?.takeIf { it.isNotEmpty() } ?: people?.takeIf { it.isNotEmpty() } ?: "Meeting"
+
 class ActionGroup(val key: String, val rows: List<Row>)
 
 // Suggested actions grouped by meeting, else by source with said promises apart (shared/actionMenu.ts, checked by shared/fixtures/action-groups.json).

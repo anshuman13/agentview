@@ -36,7 +36,8 @@ const acceptPatch = (row: ItemRow): Patch => ({ status: 'open', ...((row.rolls ?
 export function confirmAll(store: AssistantStore, rows: ItemRow[]) {
   const undo = rows.map((r) => [r, before(r, acceptPatch(r))] as const);
   for (const r of rows) void store.update(r, acceptPatch(r));
-  showSnack(`${rows.length} added to Today`, () => undo.forEach(([r, prev]) => void store.update(r, prev)));
+  const open = (r: ItemRow) => store.snapshot().items.find((i) => i.profile === r.profile && i.id === r.id)?.status === 'open';
+  showSnack(`${rows.length} added to Today`, () => undo.forEach(([r, prev]) => { if (open(r)) void store.update(r, prev); }));
 }
 
 export function dismissAll(store: AssistantStore, rows: ItemRow[]) {

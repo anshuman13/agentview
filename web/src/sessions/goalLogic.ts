@@ -60,10 +60,16 @@ export function usageLine(run: ChatRun) {
 }
 
 // The prompt of a round is in the transcript; it may take a moment to show after the chat opens.
-export function showTurn(id: string, tries = 20) {
-  const el = document.getElementById(`turn-${id}`);
-  if (el) el.scrollIntoView({ block: 'center' });
-  else if (tries) setTimeout(() => showTurn(id, tries - 1), 100);
+// Returns a function that stops the retries.
+export function showTurn(id: string, onFound?: (el: HTMLElement) => void) {
+  let timer: ReturnType<typeof setTimeout>;
+  const look = (tries: number) => {
+    const el = document.getElementById(`turn-${id}`);
+    if (el) { onFound?.(el); el.scrollIntoView({ block: 'center' }); }
+    else if (tries) timer = setTimeout(() => look(tries - 1), 100);
+  };
+  look(20);
+  return () => clearTimeout(timer);
 }
 
 export function openChat(ids: { chatId?: string | null; sessionId?: string | null }, report?: string) {

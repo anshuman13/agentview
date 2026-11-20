@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import no.pradhan.agentview.nativeapp.codex.meetings.actionGroups
+import no.pradhan.agentview.nativeapp.codex.meetings.meetingGroupTitle
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -108,7 +109,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: 
         val first = g.rows[0]
         val meeting = first.meetingId?.takeIf { it.isNotEmpty() }?.let { id -> meetings.firstOrNull { it.profile == first.profile && it.id == id } }
         val header = when {
-            !first.meetingId.isNullOrEmpty() -> "Is this yours? · ${meeting?.title ?: first.people?.takeIf { it.isNotEmpty() } ?: "Meeting"}"
+            !first.meetingId.isNullOrEmpty() -> "Is this yours? · ${meetingGroupTitle(meeting?.title, first.people)}"
             isSaid(first) -> "You said · ${channelOf(first).label}"
             else -> "Is this yours? · ${channelOf(first).label}"
         }
@@ -118,7 +119,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: 
                 Group {
                     g.rows.forEachIndexed { i, r ->
                         if (i > 0) Hairline()
-                        ListRow(r.title ?: "", if (showProfile) profileLabel(r.profile) else null, onClick = { onOpen(r) },
+                        ListRow(r.title ?: "", listOfNotNull(r.people?.takeIf { it.isNotEmpty() }, if (showProfile) profileLabel(r.profile) else null).joinToString(" · "), onClick = { onOpen(r) },
                             trailing = {
                                 Button("Add", { actions.accept(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                                 MoreButton { close -> MenuItem("Dismiss", "close", { close(); actions.dismiss(r) }) }

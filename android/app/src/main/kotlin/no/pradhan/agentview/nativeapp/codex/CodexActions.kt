@@ -11,6 +11,11 @@ fun unrollFor(at: Long?, now: Long): Map<String, Any?> = if (at != null && at >=
 
 private fun Row.col(k: String): Any? = if (k == "deleted") deleted else f[k]
 
+// web codex/meetings/ActionRow.tsx: at this many rolls a task goes back to review, and accepting it clears its rolls.
+private const val STALE_ROLLS = 3
+
+private fun acceptPatch(r: Row): Map<String, Any?> = mapOf<String, Any?>("status" to "open") + if ((r.rolls ?: 0) >= STALE_ROLLS) UNROLL else emptyMap()
+
 // The notes with the "Repeats:" first line set, replaced or (rule null) removed.
 fun withRule(text: String, rule: String?): String {
     val rest = if (isRepeat(text)) text.replaceFirst(Regex("^[^\\n]*\\n?"), "") else text
@@ -102,7 +107,7 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
         }
     }
     fun delete(r: Row) = change(r, mapOf("deleted" to true), "Deleted")
-    fun accept(r: Row) = change(r, mapOf("status" to "open"), "Added to Today")
+    fun accept(r: Row) = change(r, acceptPatch(r), "Added to Today")
     fun restore(r: Row) = change(r, mapOf("status" to "suggested"), "Back to review")
     fun dismiss(r: Row, text: String = "Dismissed") = change(r, mapOf("status" to "dismissed"), text)
     fun toNote(r: Row) {
@@ -121,10 +126,10 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
         }
     }
     fun acceptAll(rows: List<Row>) {
-        val done = rows.filter { store.update(it, mapOf("status" to "open")) }
+        val done = rows.filter { store.update(it, acceptPatch(it)) }
         if (done.isEmpty()) return
         snack("${done.size} added to Today") {
-            done.forEach { r -> val cur = store.current(r); if (cur.status == "open") store.update(cur, mapOf("status" to r.status)) }
+            done.forEach { r -> val cur = store.current(r); if (cur.status == "open") store.update(cur, acceptPatch(r).keys.associateWith { r.col(it) }) }
         }
     }
     fun edit(r: Row, patch: Map<String, Any?>) { store.update(r, patch) }

@@ -11,7 +11,8 @@ import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
 import { SpecCard, SpecRow } from './SpecCard';
 import { TranscriptBox } from './Box';
-import { FindBar, showHit } from './FindBar';
+import { FindBar, markHit } from './FindBar';
+import { showTurn } from '../../sessions/goalLogic';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
 import { createFoldBuilder, openWork, proposalState, type FoldRow, type Proposal } from './workFold';
@@ -221,21 +222,30 @@ function TranscriptView({ events, earlier, cwd, running, bill, failed, label }: 
   const { shown, start, from, staging, loading, showEarlier, reveal } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const [finding, setFinding] = useState(false);
   useEffect(() => {
-    const open = () => setFinding(true);
+    const open = () => { setFinding(true); document.querySelector<HTMLInputElement>('.tr-find input')?.focus(); };
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'f') { e.preventDefault(); open(); }
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f' || box.current?.offsetParent == null) return;
+      const at = document.activeElement;
+      if (at && at !== document.body && !box.current.closest('.brief')?.contains(at)) return;
+      e.preventDefault();
+      open();
     };
     window.addEventListener('agentview:find', open);
     window.addEventListener('keydown', onKey);
     return () => { window.removeEventListener('agentview:find', open); window.removeEventListener('keydown', onKey); };
   }, []);
+  const rowAt = (id: string) => list.findIndex((r) => (r.kind === 'item' ? r.it.id === id : r.hidden.some((h) => h.id === id)));
   const goToHit = (id: string) => {
-    const at = list.findIndex((r) => (r.kind === 'item' ? r.it.id === id : r.hidden.some((h) => h.id === id)));
-    if (at < 0) return;
+    let at = rowAt(id);
+    if (at < 0) {
+      const prompt = events.slice(0, events.findIndex((e) => e.id === id) + 1).reverse().find((e) => e.kind === 'user');
+      at = prompt ? rowAt(prompt.id) : -1;
+    }
+    if (at < 0) return () => {};
     const r = list[at];
     scroll.stick.current = false;
     reveal(list.length - at);
-    showHit(r.kind === 'item' ? r.it.id : `work:${r.id}`);
+    return showTurn(r.kind === 'item' ? r.it.id : `work:${r.id}`, markHit);
   };
   const runs = useMemo(() => exploreRuns(items), [items]);
   const bumps = useMemo(() => specBumps(items), [items]);

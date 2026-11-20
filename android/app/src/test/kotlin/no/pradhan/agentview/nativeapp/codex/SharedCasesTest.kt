@@ -860,6 +860,10 @@ class SharedCasesTest {
         for (c in cases("today-menu")) assertEquals(c.str("name"), c.getValue("items").jsonArray.map { it.jsonPrimitive.content }, no.pradhan.agentview.nativeapp.codex.meetings.todayTaskMenu(c.getValue("late").jsonPrimitive.boolean))
     }
 
+    @Test fun meetingGroupTitle() {
+        for (c in cases("group-title")) assertEquals(c.str("name"), c.str("expected"), no.pradhan.agentview.nativeapp.codex.meetings.meetingGroupTitle(c.nullable("title")?.jsonPrimitive?.content, c.str("people")))
+    }
+
     @Test fun actionGroups() {
         for (c in cases("action-groups")) {
             val rows = c.getValue("rows").jsonArray.map { it.jsonObject }.map { r ->
