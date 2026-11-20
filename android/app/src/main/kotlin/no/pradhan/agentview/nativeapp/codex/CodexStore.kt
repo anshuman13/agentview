@@ -1,7 +1,9 @@
 package no.pradhan.agentview.nativeapp.codex
 
 import java.io.File
+import java.io.IOException
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -11,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -21,6 +24,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.protocolJson
 
 const val SYNC_DELAY_MS = 400L
@@ -41,7 +45,16 @@ data class CodexState(
     val pending: Int = 0,
     val scans: List<SyncScan> = emptyList(),
     val paused: List<SyncPaused> = emptyList(),
+    val reconnecting: Boolean = false,
 )
+
+private val RETRY_AFTER_MS = listOf(2_000L, 5_000L, 15_000L)
+
+// The wait before the next retry of a sync that failed because the hub could not be reached, null when the error shows (web hubRetry).
+fun hubRetry(failures: Int, error: Throwable): Long? {
+    val status = (error as? ApiError)?.code ?: if (error is IOException) 0 else return null
+    return if (status in listOf(0, 502, 503, 504)) RETRY_AFTER_MS.getOrNull(failures) else null
+}
 
 // The hub's items, meetings and chats (web/src/codex/data/remote.ts RemoteStore without the on-device cache): pulled over
 // /api/assistant/changes, edited here with per-column times and pushed over /api/assistant/sync.
@@ -133,11 +146,11 @@ class CodexStore(
         }
     }
 
-    private fun publish(error: String? = state.value.error, loaded: Boolean = state.value.loaded) {
+    private fun publish(error: String? = state.value.error, loaded: Boolean = state.value.loaded, reconnecting: Boolean = state.value.reconnecting) {
         fun rows(t: String) = tables.getValue(t).values.toList()
         state.value = CodexState(
             rows("items"), rows("meetings"), rows("chats"), rows("pages"), rows("facts"), rows("jobs"), rows("runs"), rows("briefs"),
-            loaded, error, tables.values.sumOf { t -> t.values.count { it.dirty } }, scans, paused,
+            loaded, error, tables.values.sumOf { t -> t.values.count { it.dirty } }, scans, paused, reconnecting,
         )
     }
 
@@ -169,7 +182,25 @@ class CodexStore(
             reply["paused"]?.let { runCatching { protocolJson.decodeFromJsonElement(ListSerializer(SyncPaused.serializer()), it) }.getOrNull() })
     }
 
-    suspend fun sync() = lock.withLock {
+    // A sync that cannot reach the hub waits here between retries, outside the lock, so the 30 s timer, an edit's sync or
+    // a manual sync wakes it instead of starting another.
+    private var retryWait: CompletableDeferred<Unit>? = null
+
+    suspend fun sync() {
+        retryWait?.let { it.complete(Unit); return }
+        var failures = 0
+        while (true) {
+            val error = attempt() ?: return
+            val wait = hubRetry(failures++, error)
+            if (wait == null) return publish(error = error.message ?: "Sync failed", loaded = true, reconnecting = false)
+            publish(reconnecting = true)
+            val woken = CompletableDeferred<Unit>().also { retryWait = it }
+            withTimeoutOrNull(wait) { woken.await() }
+            retryWait = null
+        }
+    }
+
+    private suspend fun attempt(): Exception? = lock.withLock {
         try {
             val dirty = tables.values.flatMap { t -> t.values.filter { it.dirty } }
             var queue = dirty
@@ -196,9 +227,10 @@ class CodexStore(
                 if (refused.isNotEmpty()) error("${refused.size} change${if (refused.size > 1) "s" else ""} rejected: ${refused[0]["reason"]?.jsonPrimitive?.contentOrNull}")
             }
             if (changed) save()
-            publish(error = null, loaded = true)
+            publish(error = null, loaded = true, reconnecting = false)
+            null
         } catch (e: Exception) {
-            publish(error = e.message ?: "Sync failed", loaded = true)
+            e
         }
     }
 

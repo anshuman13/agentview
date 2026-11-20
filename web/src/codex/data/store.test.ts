@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { BaseStore } from './store';
+import { HubError } from './hubFetch';
 
 class Fake extends BaseStore {
   runs = 0;
@@ -47,5 +48,39 @@ describe('syncSoon', () => {
     expect(s.runs).toBe(2);
     s.release.shift()!(true);
     await next;
+  });
+});
+
+describe('hub retry', () => {
+  class Flaky extends Fake {
+    outcomes: (Error | boolean)[] = [];
+    protected async syncOnce() {
+      this.runs++;
+      const next = this.outcomes.shift() ?? true;
+      if (typeof next !== 'boolean') throw next;
+      return next;
+    }
+  }
+
+  it('shows reconnecting, not an error, while it waits to retry', async () => {
+    const s = new Flaky();
+    s.outcomes = [new HubError('Assistant hub unreachable', 502)];
+    const done = s.syncNow();
+    await tick();
+    expect(s.snapshot().sync).toMatchObject({ reconnecting: true, syncing: true, error: '' });
+    expect(s.syncSoon()).toBe(done);
+    expect(s.runs).toBe(1);
+    await s.syncNow();
+    await done;
+    expect(s.runs).toBe(2);
+    expect(s.snapshot().sync).toMatchObject({ reconnecting: false, syncing: false, error: '' });
+  });
+
+  it('shows another error at once', async () => {
+    const s = new Flaky();
+    s.outcomes = [new HubError('bad request', 400)];
+    await s.syncNow();
+    expect(s.runs).toBe(1);
+    expect(s.snapshot().sync).toMatchObject({ reconnecting: false, error: 'bad request' });
   });
 });

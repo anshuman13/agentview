@@ -132,7 +132,8 @@ export function Assistant() {
   return (
     <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
       <TasksHead list={list} heading={heading} filter={filter} searching={query != null} selecting={!!picked} onMenu={() => setDrawer(true)} onAdd={() => setAdding(true)} onSelect={() => setPicked(new Set())} onSearch={() => setQuery('')} />
-      {gate.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
+      {gate.reconnecting && <div className="as-error muted"><Icon name="sync" small /> Reconnecting to the hub…</div>}
+      {gate.error && !gate.reconnecting && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
       {calError && <div className="as-error"><Icon name="warning" small /> Calendar not updated <span title={calError} aria-label={calError}><Icon name="info" small /></span> · <button className="link" onClick={() => void retryCalendar()}>Retry</button></div>}
 
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>

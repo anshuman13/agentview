@@ -1,10 +1,11 @@
 import { edited, errorText } from './tasks/engine';
+import { hubRetry } from './hubFetch';
 import type { ItemFields, ItemRow, Paused, Profile, ScanHealth } from './sync';
 import type { Table, Tables } from './wiki/wiki';
 
 export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs'];
 
-type SyncStatus = { syncing: boolean; last: number; error: string; pending: number; saveError: boolean; paused: Paused[]; scans: ScanHealth[] };
+type SyncStatus = { syncing: boolean; reconnecting: boolean; last: number; error: string; pending: number; saveError: boolean; paused: Paused[]; scans: ScanHealth[] };
 export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'meeting_id' | 'rolls' | 'rolled_from' | 'rank' | 'source' | 'source_url' | 'people' | 'spent' | 'time_log' | 'goal' | 'priority' | 'tags' | 'remind' | 'draft' | 'assignee' | 'snoozed_until'>> & { deleted?: number };
 export type Parsed = { title: string; details: string | null; at: number | null };
 export type MeetingRef = { id: string; title: string | null } | null;
@@ -63,9 +64,10 @@ export abstract class BaseStore {
   private snap: Snapshot;
   private running: Promise<void> | null = null;
   private again = false;
+  private wake: (() => void) | null = null;
 
   constructor(phase: Snapshot['phase']) {
-    this.snap = { phase, message: '', items: [], sync: { syncing: false, last: 0, error: '', pending: 0, saveError: false, paused: [], scans: [] }, pages: [], facts: [], meetings: [], actions: [], jobs: [], runs: [], chats: [], briefs: [] };
+    this.snap = { phase, message: '', items: [], sync: { syncing: false, reconnecting: false, last: 0, error: '', pending: 0, saveError: false, paused: [], scans: [] }, pages: [], facts: [], meetings: [], actions: [], jobs: [], runs: [], chats: [], briefs: [] };
   }
 
   subscribe = (fn: () => void) => {
@@ -111,6 +113,7 @@ export abstract class BaseStore {
     if (!this.ready) return Promise.resolve();
     if (this.running) {
       this.again = true;
+      this.wake?.();
       return this.running;
     }
     return (this.running = this.loop().finally(() => (this.running = null)));
@@ -119,21 +122,37 @@ export abstract class BaseStore {
   private async loop() {
     this.setSync({ syncing: true });
     let last = 0;
+    let failures = 0;
     try {
       do {
         this.again = false;
         let changed = true;
         try {
           changed = await this.syncOnce();
+          failures = 0;
           if (this.ready) last = Date.now();
         } catch (err) {
           last = 0;
-          if (this.ready) this.setSync({ error: errorText(err) });
+          const wait = hubRetry(failures, err);
+          if (wait !== null && this.ready) {
+            failures++;
+            this.again = true;
+            this.setSync({ reconnecting: true });
+            await this.pause(wait);
+          } else if (this.ready) this.setSync({ error: errorText(err) });
         }
         if (changed) await this.refresh().catch(() => {});
       } while (this.again && this.ready);
     } finally {
-      this.setSync({ syncing: false, ...(last && { last, error: '' }) });
+      this.setSync({ syncing: false, reconnecting: false, ...(last && { last, error: '' }) });
     }
+  }
+
+  // A retry waits here inside the running sync, so the interval joins it and a manual sync cuts the wait short.
+  private pause(ms: number) {
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      this.wake = () => (clearTimeout(timer), resolve());
+    }).finally(() => (this.wake = null));
   }
 }

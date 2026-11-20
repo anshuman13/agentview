@@ -3,12 +3,15 @@ package no.pradhan.agentview.nativeapp.codex
 import java.io.File
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -125,6 +128,36 @@ class CodexStoreTest {
         s.sync()
         assertEquals(1, s.state.value.items.size)
         assertNotNull(s.state.value.error)
+    }
+
+    private fun flaky(scope: TestScope, pull: suspend () -> String) =
+        CodexStore(scope, { _, _ -> pull() }, { reply(9) }, { true }, {}, { 5000L }, EmptyCoroutineContext, null)
+
+    @Test fun anUnreachableHubIsRetriedInsideOneSyncThatAnotherSyncWakes() = runTest {
+        var calls = 0
+        val s = flaky(this) { if (++calls < 3) throw ApiError("Assistant hub unreachable", 502) else reply(5, change("a", "one", "open", 100, 1)) }
+        launch { s.sync() }
+        runCurrent()
+        assertEquals(1, calls)
+        assertTrue(s.state.value.reconnecting)
+        assertNull(s.state.value.error)
+        s.sync()
+        runCurrent()
+        assertEquals(2, calls)
+        advanceUntilIdle()
+        assertEquals(3, calls)
+        assertFalse(s.state.value.reconnecting)
+        assertNull(s.state.value.error)
+        assertEquals(1, s.state.value.items.size)
+    }
+
+    @Test fun theErrorShowsAfterTheLastRetryFails() = runTest {
+        var calls = 0
+        val s = flaky(this) { calls++; throw ApiError("Assistant hub unreachable", 502) }
+        s.sync()
+        assertEquals(4, calls)
+        assertFalse(s.state.value.reconnecting)
+        assertEquals("Assistant hub unreachable", s.state.value.error)
     }
 
     @Test fun aRestartShowsTheCachedRowsAndPullsOnlyWhatChanged() = runTest {
