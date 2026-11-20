@@ -53,6 +53,7 @@ import { ignoredToday } from './codex/data/tasks/review';
 import { HubError, hubRetry } from './codex/data/hubFetch';
 import type { Brief } from './codex/data/wiki/wiki';
 import { reviewQueue } from './codex/wiki/reviewQueue';
+import { addCheck, toggleCheck } from './codex/tasks/editor/taskChecklist';
 import { revertBlock } from './workspace/revertBlock';
 import { splitDiff } from './ui/DiffFiles';
 import { ago, markSegments, matchLabel, money, stepMatch } from './ui/util';
@@ -196,6 +197,10 @@ describe('cases shared with the Android app', () => {
       expect(todoProgress(todoCount(c.items))).toBe(c.progress);
       expect(todoCurrent(c.items)).toBe(c.current);
     });
+  }
+
+  for (const c of cases<{ name: string; text: string; toggle?: number; add?: string; expected: string }>('task-checklist')) {
+    it(`task checklist: ${c.name}`, () => expect(c.toggle === undefined ? addCheck(c.text, c.add ?? '') : toggleCheck(c.text, c.toggle)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; path: string; isSpec: boolean; md: string; tasks: SpecTask[]; progress: string; start: string | null; all: string }>('spec-tasks')) {

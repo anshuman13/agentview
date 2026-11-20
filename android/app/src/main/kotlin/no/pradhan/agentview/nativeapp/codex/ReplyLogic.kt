@@ -25,6 +25,26 @@ private val CHECK_RE = Regex("^\\s*[-*] \\[([ xX])\\](.*)$", RegexOption.MULTILI
 // web/src/codex/tasks/editor/taskChecklist.ts: the checklist lines of a text.
 fun checkItems(text: String?): List<Check> = CHECK_RE.findAll(text ?: "").map { Check(it.groupValues[1].lowercase() == "x", it.groupValues[2].trim()) }.toList()
 
+// Flips the box of the nth checklist line.
+fun toggleCheck(text: String, n: Int): String {
+    var i = 0
+    return CHECK_RE.replace(text) { m ->
+        val box = m.groupValues[1]
+        if (i++ == n) m.value.replaceFirst("[$box]", if (box.lowercase() == "x") "[ ]" else "[x]") else m.value
+    }
+}
+
+// Appends a new unticked line after the last checklist line, or at the end of the notes when there is none.
+fun addCheck(text: String, label: String): String {
+    val line = label.trim()
+    if (line.isEmpty()) return text
+    val lines = text.split("\n").toMutableList()
+    val last = lines.indexOfLast { CHECK_RE.containsMatchIn(it) }
+    if (last < 0) return "$text${if (text.isNotEmpty() && !text.endsWith("\n")) "\n" else ""}- [ ] $line"
+    lines.add(last + 1, "- [ ] $line")
+    return lines.joinToString("\n")
+}
+
 // An ask's text split into its quote (the lines before the first checklist line) and its steps.
 fun askParts(text: String?): AskParts {
     val t = (text ?: "").trim()

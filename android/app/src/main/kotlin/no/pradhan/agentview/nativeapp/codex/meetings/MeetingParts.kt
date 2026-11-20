@@ -24,6 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.coroutines.delay
@@ -46,7 +48,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.plural
 
 @Composable
-internal fun NotesField(hub: Hub, m: Row, templates: Boolean) {
+internal fun NotesField(hub: Hub, m: Row, templates: Boolean, focus: FocusRequester) {
     val remote = m.str("notes") ?: ""
     var field by remember(m.key) { mutableStateOf(TextFieldValue(remote)) }
     val text = field.text
@@ -63,7 +65,7 @@ internal fun NotesField(hub: Hub, m: Row, templates: Boolean) {
     LaunchedEffect(remote) { if (!dirty) field = TextFieldValue(remote) }
     LaunchedEffect(text) { if (dirty) { delay(NOTES_SAVE_MS); flush() } }
     DisposableEffect(m.key) { onDispose { flush() } }
-    TextField(field, { if (it.text != text) dirty = true; field = it }, Modifier.padding(horizontal = Tokens.listPad), minLines = 3,
+    TextField(field, { if (it.text != text) dirty = true; field = it }, Modifier.padding(horizontal = Tokens.listPad).focusRequester(focus), minLines = 3,
         placeholder = "Write your notes. They stay yours; the summary is written separately.")
     if (templates && text.isEmpty()) {
         val chips = remember(m.key) { notesTemplateChips(m, hub.notesTemplatePicks()) }

@@ -1,0 +1,9 @@
+[
+  { "name": "toggle the second of three", "text": "- [ ] a\n- [ ] b\n- [x] c", "toggle": 1, "expected": "- [ ] a\n- [x] b\n- [x] c" },
+  { "name": "toggle a capital X off", "text": "- [X] a\n- [ ] b", "toggle": 0, "expected": "- [ ] a\n- [ ] b" },
+  { "name": "toggle with star bullets", "text": "intro\n* [ ] a\n* [ ] b", "toggle": 1, "expected": "intro\n* [ ] a\n* [x] b" },
+  { "name": "add after the last line with prose after it", "text": "- [ ] a\n- [x] b\n\nmore notes", "add": "c", "expected": "- [ ] a\n- [x] b\n- [ ] c\n\nmore notes" },
+  { "name": "add to empty notes", "text": "", "add": "first", "expected": "- [ ] first" },
+  { "name": "add to notes with no checklist", "text": "just prose", "add": " review ", "expected": "just prose\n- [ ] review" },
+  { "name": "blank label leaves the notes unchanged", "text": "- [ ] a", "add": "   ", "expected": "- [ ] a" }
+]

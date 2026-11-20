@@ -122,6 +122,7 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
             FieldLabel("Notes")
             TextField(text, { text = it }, placeholder = "Notes", minLines = 3)
             NoteLinks(hub, text)
+            Checklist(text, !hub.readOnly && (row.status == "open" || row.status == "done")) { text = it }
             FieldLabel("Due")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 val late = (row.at ?: Long.MAX_VALUE) < now && row.status == "open"
@@ -246,6 +247,25 @@ private fun NoteLinks(hub: Hub, text: String) {
     }
 }
 
+// The "- [ ]" lines of the notes as rows that tick on a tap; both change the sheet's notes, which the sheet saves on close.
+@Composable
+private fun Checklist(text: String, canAdd: Boolean, onText: (String) -> Unit) {
+    val checks = remember(text) { checkItems(text) }
+    var label by remember { mutableStateOf("") }
+    Column {
+        if (checks.isNotEmpty()) {
+            SectionHeader("Checklist", "${checks.count { it.done }} of ${checks.size}")
+            Group {
+                checks.forEachIndexed { i, c ->
+                    if (i > 0) Hairline()
+                    ListRow(c.label, leading = { CheckCircle(c.done, "Tick ${c.label}") { onText(toggleCheck(text, i)) } }, strike = c.done)
+                }
+            }
+        }
+        if (canAdd) TextField(label, { label = it }, placeholder = "Add subtask", singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { onText(addCheck(text, label)); label = "" }))
+    }
+}
+
 // Quick capture: "call the bank tomorrow 9 #home" becomes a task due tomorrow 09:00 tagged home; the sheet stays open to add more.
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -308,7 +328,7 @@ fun parseCapture(typed: String, pickedAt: Long?, picked: Boolean, now: Long): Ca
 }
 
 @Composable
-fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onMeeting: (Row) -> Unit, onJob: (Row) -> Unit, onDismiss: () -> Unit) {
+fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onAsk: (Row) -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onNotes: (Row) -> Unit, onJob: (Row) -> Unit, onDismiss: () -> Unit) {
     var all by remember { mutableStateOf(setOf<String>()) }
     var onlyStale by remember { mutableStateOf(false) }
     val old = staleAsks(queue, now)
@@ -323,7 +343,7 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now:
             Group {
                 shown.forEachIndexed { i, n ->
                     if (i > 0) Hairline()
-                    NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson, onMeeting, onJob)
+                    NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson, onNotes, onJob)
                 }
                 if (shown.size < rows.size) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = all + label }) }
             }
@@ -350,7 +370,7 @@ private fun IgnoredSection(list: List<Ignored>) {
 }
 
 @Composable
-private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onStale: () -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onMeeting: (Row) -> Unit, onJob: (Row) -> Unit) {
+private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onStale: () -> Unit, onReview: () -> Unit, onPerson: (String) -> Unit, onNotes: (Row) -> Unit, onJob: (Row) -> Unit) {
     when (n) {
         is Need.FailedJobRow -> ListRow("${n.job.str("name")?.ifEmpty { null } ?: "Job"} failed", listOfNotNull(firstLine(n.run.str("output")).ifEmpty { null }, n.run.long("finished_at")?.let { agoText(it, now) }).joinToString(" · "), onClick = { onJob(n.job) },
             trailing = { Button("Run again", { runJobNow(hub, actions, n.job) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = canRunNow(n.job, listOf(n.run), now)) })
@@ -367,7 +387,7 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
                     MoreButton { close ->
                         ActionMenuItems(n.row, n.meeting, now, actions, hub.readOnly, close) {
                             MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(n.meeting, n.actions))); actions.say("Follow-up copied") })
-                            MenuItem("Notes", "edit", { close(); onMeeting(n.meeting) })
+                            MenuItem("Notes", "edit", { close(); onNotes(n.meeting) })
                         }
                     }
                 })

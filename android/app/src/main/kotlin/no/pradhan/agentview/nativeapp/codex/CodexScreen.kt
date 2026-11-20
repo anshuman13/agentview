@@ -230,7 +230,7 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
     when {
         !st.loaded -> Loading("Loading Codex…")
         extra != null -> ExtraContent(extra, hub, st, profile, now, actions, ops, nav.chips, nav.decisions, nav::toggleChip, nav::push, nav::pop, { nav.pop(); openNeeds() }, nav::openRow)
-        page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, openNeeds, { nav.page = "goals" }, { nav.adding = true }, meeting)
+        page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, openNeeds, { nav.page = "goals" }, { nav.adding = true }, meeting) { nav.push("meeting:${it.key}#notes") }
         page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" }, nav.picked, { nav.picked = it }, meeting)
         page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, nav::openRow) { nav.addingGoal = it.id; nav.adding = true }
         page == "search" -> SearchPage(st, profile, nav::openRow, meeting)
@@ -262,7 +262,7 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
     }
     if (nav.needsOpen) {
         val view by hub.needed.collectAsState()
-        NeedsSheet(view.list, view.queue, ignoredToday(st.briefs, profile, now), now, actions, ops.replies, hub, { nav.needsOpen = false; nav.editKey = it.key }, askAbout, { nav.needsOpen = false; nav.push("review") }, { nav.needsOpen = false; nav.push("person:$it") }, { nav.needsOpen = false; nav.push("meeting:${it.key}") }, { nav.needsOpen = false; nav.push("job:${it.key}") }) { nav.needsOpen = false }
+        NeedsSheet(view.list, view.queue, ignoredToday(st.briefs, profile, now), now, actions, ops.replies, hub, { nav.needsOpen = false; nav.editKey = it.key }, askAbout, { nav.needsOpen = false; nav.push("review") }, { nav.needsOpen = false; nav.push("person:$it") }, { nav.needsOpen = false; nav.push("meeting:${it.key}#notes") }, { nav.needsOpen = false; nav.push("job:${it.key}") }) { nav.needsOpen = false }
     }
 }
 

@@ -27,7 +27,7 @@ import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 
 // The pages the Codex tab shows beyond Overview, Tasks and Goals: Meetings, Wiki and Jobs with the pages under them.
-// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>", "person:<name>", "wiki:<key>" (ending in #<claim id> to open a claim), "job:<key>", "jobnew:<key>" (a job just added, its Edit sheet open), "series:<key>", "review" or "autopilot".
+// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>" (ending in #notes to focus My notes),"person:<name>", "wiki:<key>" (ending in #<claim id> to open a claim), "job:<key>", "jobnew:<key>" (a job just added, its Edit sheet open), "series:<key>", "review" or "autopilot".
 val EXTRA_ROOTS = setOf("meetings", "jobs", "wiki")
 const val ROUTE_SEP = '\u0001'
 
@@ -64,8 +64,8 @@ fun ExtraContent(
     when {
         route == "meetings" -> MeetingsListPage(hub, st, profile, now, chips, decisions, onChip, openMeeting)
         route.startsWith("meeting:") -> {
-            val m = st.meetings.firstOrNull { it.key == key && !it.deleted }
-            if (m == null) EmptyState("This meeting is gone", icon = "calendar") else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask)
+            val m = st.meetings.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
+            if (m == null) EmptyState("This meeting is gone", icon = "calendar") else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask, anchor == "notes")
         }
         route.startsWith("series:") -> SeriesPage(st, key, now, actions, hub.readOnly, openMeeting)
         route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }

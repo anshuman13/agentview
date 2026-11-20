@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
@@ -23,8 +24,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
@@ -134,7 +138,7 @@ private fun rememberTranscript(hub: Hub, m: Row, done: Boolean): Pair<Result<Str
 }
 
 @Composable
-fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskActions, ops: CodexOps, onMeeting: (Row) -> Unit, onPerson: (String) -> Unit, onSeries: (String) -> Unit, onTask: (Row) -> Unit) {
+fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskActions, ops: CodexOps, onMeeting: (Row) -> Unit, onPerson: (String) -> Unit, onSeries: (String) -> Unit, onTask: (Row) -> Unit, focusNotes: Boolean) {
     val c = MeetingCtx(hub, st, m, now, actions, ops, onMeeting, onPerson, onSeries, onTask)
     val state = meetingState(m, now)
     val all = remember(st.items, m.key) { actionsOf(st.items, m) }
@@ -146,11 +150,21 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val scrollFromEnd = { k: Int -> scope.launch { list.animateScrollToItem(list.layoutInfo.totalItemsCount - 1 - k) }; Unit }
+    val notesFocus = remember { FocusRequester() }
+    val toNotes = { scope.launch { if (list.scrollToKey(NOTES_KEY)) notesFocus.requestFocus() }; Unit }
+    var notesPending by rememberSaveable(m.key) { mutableStateOf(focusNotes) }
+    LaunchedEffect(m.key) {
+        if (notesPending) {
+            notesPending = false
+            snapshotFlow { list.layoutInfo.totalItemsCount }.first { it > 0 }
+            toNotes()
+        }
+    }
     LazyColumn(Modifier.fillMaxWidth(), list) {
-        meetingHeader(c, state, all)
+        meetingHeader(c, state, all, toNotes)
         if (isEvent(m)) {
-            item { NotesHeader(c, all) }
-            item { NotesField(hub, m, notesEmptyAtOpen) }
+            item(key = NOTES_KEY) { NotesHeader(c, all) }
+            item { NotesField(hub, m, notesEmptyAtOpen, notesFocus) }
             meetingActions(c, all, alwaysHeader = true)
             item { NewActionField(c, folds.newAction) }
         } else {
@@ -158,8 +172,8 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             meetingSummary(c, folds)
             meetingDecisions(c)
             prep?.let { meetingPrep(c, it) }
-            item { NotesHeader(c, all) }
-            item { NotesField(hub, m, notesEmptyAtOpen) }
+            item(key = NOTES_KEY) { NotesHeader(c, all) }
+            item { NotesField(hub, m, notesEmptyAtOpen, notesFocus) }
             item { SectionHeader("More", open = folds.more.value, onToggle = { folds.more.value = !folds.more.value }) }
             if (folds.more.value) meetingMore(c, state, all, folds, transcript, reloadTranscript, talk, scrollFromEnd)
         }
@@ -168,11 +182,23 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     if (folds.pinning.value) PinSheet(m, ops) { folds.pinning.value = false }
 }
 
-private fun LazyListScope.meetingHeader(c: MeetingCtx, state: MState, all: List<Row>) {
+private const val NOTES_KEY = "my-notes"
+
+// Steps down the list until the item with this key is laid out, then scrolls it to the top; false when the list has no such item.
+private suspend fun LazyListState.scrollToKey(key: Any): Boolean {
+    while (true) {
+        layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { animateScrollToItem(it.index); return true }
+        val last = layoutInfo.visibleItemsInfo.lastOrNull() ?: return false
+        if (last.index >= layoutInfo.totalItemsCount - 1) return false
+        scrollToItem(maxOf(last.index, firstVisibleItemIndex + 1))
+    }
+}
+
+private fun LazyListScope.meetingHeader(c: MeetingCtx, state: MState, all: List<Row>, onNotes: () -> Unit) {
     val m = c.m
     val links = linksOf(m)
     item {
-        MeetingTitle(c, state, all)
+        MeetingTitle(c, state, all, onNotes)
         if (!m.str("room").isNullOrEmpty() && m.long("room_me") == null) RoomMic(c.hub, m)
     }
     if (links.isNotEmpty()) {
@@ -185,7 +211,7 @@ private fun LazyListScope.meetingHeader(c: MeetingCtx, state: MState, all: List<
 }
 
 @Composable
-private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>) {
+private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>, onNotes: () -> Unit) {
     val m = c.m
     val link = safeHref(m.str("calendar_url"))
     val copyable = hasContent(m, all)
@@ -200,7 +226,8 @@ private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>) {
         if (isEvent(m)) Text("Event", style = Type.footnote, color = av.fgMuted)
         LRow(verticalAlignment = Alignment.CenterVertically) {
             Text(m.title?.ifEmpty { null } ?: UNTITLED, Modifier.weight(1f), style = Type.title)
-            if (state == MState.Live && link != null && !isEvent(m)) Button("Join", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (state == MState.Live && link != null && !isEvent(m)) Button("Join", { uri.openUri(link) }, icon = "device-camera-video", variant = ButtonVariant.Filled, size = ButtonSize.Sm)
+            else Button("Notes", onNotes, icon = "edit", variant = ButtonVariant.Filled, size = ButtonSize.Sm)
             if (link != null || copyable || canRead || hasNotes || !c.hub.readOnly) MoreButton { close ->
                 if (link != null) MenuItem("Open calendar", "calendar", { close(); uri.openUri(link) })
                 if (copyable) MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(m, all))); c.actions.say("Follow-up copied") })

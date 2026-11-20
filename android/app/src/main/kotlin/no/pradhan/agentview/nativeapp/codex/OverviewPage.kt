@@ -118,7 +118,7 @@ private fun rememberOverviewData(hub: Hub, st: CodexState, profile: String?, now
 }
 
 @Composable
-fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onGoals: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit) {
+fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onGoals: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit, onNotes: (Row) -> Unit) {
     val d = rememberOverviewData(hub, st, profile, now)
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }
     val free = remember(st.meetings, profile, now / 60_000) { weekFreeMinutes(timedMeetings(st.meetings, profile).map { it.startsAt!! to it.endsAt!! }, now) }
@@ -132,7 +132,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         if (failedCalendars.isNotEmpty()) item {
             Group { failedCalendars.forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(calendarFailText(h, failedCalendars.size), h.ok?.let { "Last synced ${clock(it)}" } ?: "Never synced") } }
         }
-        item { UpNextSection(hub, st, d, now, actions, onOpen, onNeeds, onAdd, onMeeting) }
+        item { UpNextSection(hub, st, d, now, actions, onOpen, onNeeds, onAdd, onMeeting, onNotes) }
         if (running.isNotEmpty()) runningSection(running, counts.running + counts.waiting) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
         planDaySection(d, plan, { plan = it }, now, actions)
@@ -142,7 +142,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
 }
 
 @Composable
-private fun UpNextSection(hub: Hub, st: CodexState, d: OverviewData, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit) {
+private fun UpNextSection(hub: Hub, st: CodexState, d: OverviewData, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit, onNotes: (Row) -> Unit) {
     val mt = d.mt
     val task = d.today.upNextTask
     if (mt.next != null || task != null) {
@@ -150,7 +150,7 @@ private fun UpNextSection(hub: Hub, st: CodexState, d: OverviewData, now: Long, 
         Group {
             mt.next?.let { m ->
                 val prep = { hub.askCodex(askIn(st, prepText(m), m.profile), m.profile) }
-                MeetingRow(m, now, upNext = true, onPrep = prep.takeIf { !hub.readOnly }) { onMeeting(m) }
+                MeetingRow(m, now, upNext = true, onPrep = prep.takeIf { !hub.readOnly }, onNotes = { onNotes(m) }) { onMeeting(m) }
             }
             if (mt.next != null && task != null) Hairline()
             task?.let { ListRow(it.title ?: "", it.at?.let { a -> clock(a) }, onClick = { onOpen(it) }, trailing = { Button("Done", { actions.done(it) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) }) }
@@ -269,7 +269,7 @@ private fun LazyListScope.goalsSection(st: CodexState, goals: List<Row>, free: L
 
 // The Up next meeting has Prep (null in read-only mode), Open calendar and Notes in its More menu; a Today meeting about to start has Join.
 @Composable
-private fun MeetingRow(m: Row, now: Long, upNext: Boolean, onPrep: (() -> Unit)? = null, onClick: () -> Unit) {
+private fun MeetingRow(m: Row, now: Long, upNext: Boolean, onPrep: (() -> Unit)? = null, onNotes: (() -> Unit)? = null, onClick: () -> Unit) {
     val live = isLive(m, now)
     val soon = joinMinutes(m, now)
     val link = safeHref(m.str("calendar_url"))
@@ -280,7 +280,7 @@ private fun MeetingRow(m: Row, now: Long, upNext: Boolean, onPrep: (() -> Unit)?
         if (upNext) MoreButton { close ->
             if (onPrep != null && !isSolo(m)) MenuItem("Prep", "sparkle", { close(); onPrep() })
             if (link != null && m.id.startsWith("cal:")) MenuItem("Open calendar", "calendar", { close(); uri.openUri(link) })
-            MenuItem("Notes", "edit", { close(); onClick() })
+            if (onNotes != null) MenuItem("Notes", "edit", { close(); onNotes() })
         }
         else if (!live && link != null && soon != null) Button("Join", { uri.openUri(link) }, icon = "device-camera-video", variant = ButtonVariant.Filled, size = ButtonSize.Sm)
     })

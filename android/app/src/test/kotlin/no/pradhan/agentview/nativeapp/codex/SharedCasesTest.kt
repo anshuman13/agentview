@@ -1424,6 +1424,13 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun taskChecklist() {
+        for (c in cases("task-checklist")) {
+            val n = c["toggle"]?.jsonPrimitive?.int
+            assertEquals(c.str("name"), c.str("expected"), if (n == null) addCheck(c.str("text"), c.str("add")) else toggleCheck(c.str("text"), n))
+        }
+    }
+
     @Test fun capabilities() {
         for (c in cases("capabilities")) {
             val caps = c.nullable("capabilities")?.let { protocolJson.decodeFromJsonElement<Capabilities>(it) } ?: Capabilities()
