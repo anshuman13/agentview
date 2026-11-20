@@ -25,7 +25,7 @@ export function WorkPane({ turn, onBack }: { turn: string; onBack: () => void })
       <div className="tr">
         <div className="tr-rows">
           {hidden.length === 0
-            ? <EmptyState size="md" icon="list-tree" title="No tool calls" hint="This turn is not in the loaded chat, or it ran no tools." />
+            ? <EmptyState size="md" icon="list-tree" title="No tool calls" hint="This turn is not in the loaded chat, or it ran no tools" />
             : hidden.map((it) => <Row key={it.id} it={it} cwd={cwd} settled={!running} />)}
         </div>
       </div>

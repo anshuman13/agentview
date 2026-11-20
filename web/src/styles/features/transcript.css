@@ -30,9 +30,9 @@
 .tr-assistant .md { color: var(--fg); line-height: var(--lh-relaxed); }
 .tr-assistant .md :is(p, ul, ol, pre) { margin-bottom: var(--sp-5); }
 .tr-assistant .md > :last-child, .tr-assistant .md > .md-b:last-child > :last-child { margin-bottom: 0; }
-.tr-system { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-faint); }
+.tr-system { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-muted); }
 .tr-system.err { color: var(--err); }
-.tr-auto { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-faint); cursor: pointer; }
+.tr-auto { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-muted); cursor: pointer; }
 .tr-auto-text { margin-top: var(--sp-2); white-space: pre-wrap; color: var(--fg-muted); }
 
 .tr-step {
@@ -58,9 +58,9 @@
 .tr-obj.mono { font-family: var(--mono); font-size: var(--fs-xs); }
 .tr-cmd {
   grid-column: 2 / -1; margin-top: -3px; padding-bottom: var(--sp-1); line-height: 17px;
-  font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.tr-dur { font-size: var(--fs-xs); color: var(--fg-faint); font-variant-numeric: tabular-nums; padding-right: var(--sp-1); }
+.tr-dur { font-size: var(--fs-xs); color: var(--fg-muted); font-variant-numeric: tabular-nums; padding-right: var(--sp-1); }
 .tr-err {
   grid-column: 2 / -1; font-size: var(--fs-xs); line-height: var(--line-sm); color: var(--err);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-bottom: var(--sp-2);
@@ -83,7 +83,7 @@
 .tr-file .tr-err { flex: none; max-width: 50%; padding: 0; }
 .tr-file.err { border-color: color-mix(in srgb, var(--err) 40%, transparent); border-left-color: var(--err); }
 .tr-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tr-dir { color: var(--fg-faint); }
+.tr-dir { color: var(--fg-muted); }
 .tr-count { flex: none; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 .tr-count .add { color: var(--diff-add); }
 .tr-count .del { color: var(--diff-del); }
@@ -103,13 +103,12 @@
 .tr-box > .tr-sub { margin: 0 var(--sp-4) var(--sp-4) var(--list-pad); }
 .tr-box > .tr-report { margin: 0 var(--sp-4) var(--sp-4); }
 .tr-steps { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-sm); }
-.tr-steps-head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--size-row); color: var(--fg-faint); font-size: var(--fs-xs); }
+.tr-steps-head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--size-row); color: var(--fg-muted); font-size: var(--fs-xs); }
 .tr-claims-chip { margin-left: auto; }
 .tr-claims-chip + .tr-tools { margin-left: 0; }
 .tr-claims { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; padding: 0 0 var(--sp-2) var(--sp-6); color: var(--fg-muted); line-height: 1.35; }
-.tr-claim-where { color: var(--fg-faint); }
-.tr-tools { margin-left: auto; display: inline-flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-2); border: 1px solid var(--border); border-radius: var(--radius-pill); background: none; color: var(--fg-muted); font: inherit; cursor: pointer; }
-@media (hover: hover) { .tr-tools:hover { color: var(--fg); border-color: var(--fg-faint); } }
+.tr-claim-where { color: var(--fg-muted); }
+.tr-tools { margin-left: auto; }
 .tr-tasks { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; padding: 0; list-style: none; }
 .tr-tasks > li { display: flex; gap: var(--sp-2); align-items: flex-start; color: var(--fg-muted); line-height: 1.35; }
 .tr-tasks > li > .icon { margin-top: 0.1em; flex: none; color: var(--fg-faint); }
@@ -121,7 +120,7 @@
 .tr-new::after { content: ''; flex: 1; border-top: 1px solid var(--danger); }
 .tr-day { display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-muted); font-size: var(--fs-xs); font-weight: var(--type-headline-weight); }
 .tr-day::before, .tr-day::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
-.tr-more { font-size: var(--fs-xs); line-height: var(--size-row); color: var(--fg-faint); cursor: pointer; }
+.tr-more { font-size: var(--fs-xs); line-height: var(--size-row); color: var(--fg-muted); cursor: pointer; }
 @media (hover: hover) { .tr-more:hover { color: var(--fg); } }
 
 @media (max-width: 900px) {

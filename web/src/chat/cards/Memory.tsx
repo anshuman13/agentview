@@ -3,6 +3,8 @@ import { appendRule, removeRule } from '../../../../shared/steering';
 import { setUi, useStore } from '../../app/store';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
+import { Skeleton } from '../../ui/Skeleton';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
@@ -56,7 +58,7 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
       setNote('Rule added');
       onSaved();
     } catch {
-      setNote('Could not save the rule. Your text is still here.');
+      setNote('Could not save the rule. Your text is still here');
       setBack(null);
     }
   };
@@ -66,7 +68,7 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
       setNote('Rule removed');
       onSaved();
     } catch {
-      setNote('Could not undo the rule.');
+      setNote('Could not undo the rule');
     }
     setBack(null);
   };
@@ -101,8 +103,8 @@ export function MemoryPick({ cwd, onClose }: { cwd: string; onClose: () => void 
   return (
     <Sheet label="Memory" onClose={onClose}>
       <Section label="Memory" />
-      {files === null && <div className="muted">Loading memory…</div>}
-      {files?.length === 0 && <div className="muted">No {file} or memory files for this folder</div>}
+      {files === null && <Skeleton rows={3} />}
+      {files?.length === 0 && <EmptyState size="sm" title={`No ${file} or memory files`} hint="Add a rule below to create one" />}
       {files?.map((f) => <Row key={f.path} title={f.name} meta={[f.description, memoryWhere(f, cwd)].filter(Boolean).join(' · ')} trailing={<Icon name="chevron-right" small />} onClick={() => setOpen(f)} />)}
       {files && <AddRule file={file} onSaved={() => setReloads((n) => n + 1)} />}
     </Sheet>

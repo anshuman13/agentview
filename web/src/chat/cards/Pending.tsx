@@ -298,7 +298,7 @@ function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {
           <Option key={o.label} n={n + 1} multi={multi} on={picked.includes(o.label) || answers[qq.question] === o.label} onPick={() => pick(o.label)} label={o.label} description={o.description} preview={o.preview} />
         ))}
         {other === null ? (
-          <Option n={qq.options.length + 1} multi={multi} on={false} onPick={() => setOther('')} label="Other…" className="pd-other" />
+          <Option n={qq.options.length + 1} multi={multi} on={false} onPick={() => setOther('')} label="Other" className="pd-other" />
         ) : (
           <input
             autoFocus

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useStore } from '../../app/store';
 import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
+import { plural } from '../../ui/util';
 import type { Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
 import { useModeText } from './ComposerFoot';
@@ -28,7 +29,7 @@ export function AddMenu({ uploading, setPick, attach }: AddMenuProps) {
         icon={uploading > 0 ? 'loading' : 'add'}
         spin={uploading > 0}
         label="Add"
-        title={uploading > 0 ? `Uploading ${uploading}` : 'Add files, MCP servers or change the model and mode'}
+        title={uploading > 0 ? `Uploading ${plural(uploading, 'file')}…` : 'Add files, MCP servers or change the model and mode'}
         onPointerDown={(e) => e.preventDefault()}
         onClick={() => setOpen((v) => !v)}
       />

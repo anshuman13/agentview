@@ -214,7 +214,7 @@ function TranscriptView({ events, earlier, cwd, running, bill }: { events: ChatE
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <EmptyState size="sm" icon="comment-discussion" title="No messages yet" hint="Your prompts, the agent's steps and replies show up here" />}
-      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? 'Loading earlier…' : `Show earlier (${hiddenCount(earlier, list.length, shown)} hidden)`}</div>}
+      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? <><Icon name="loading" small spin /> Loading earlier…</> :`Show earlier (${hiddenCount(earlier, list.length, shown)} hidden)`}</div>}
       {list.slice(from).map((r, i) => {
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
         const day = r.kind === 'item' ? days.get(r.it.id) : undefined;
@@ -314,7 +314,7 @@ function Tasks({ id, steps: all, now, tools, claims, live }: { id: string; steps
       <div className="tr-steps-head">
         {steps.length > 0 && <span>{done < steps.length ? `Tasks \u00b7 ${done} of ${steps.length}` : plural(steps.length, 'task')}</span>}
         {claims.length > 0 && <Chip size="sm" on={reading} className="tr-claims-chip" aria-expanded={reading} onClick={() => setReading((v) => !v)}>{`Used ${plural(claims.length, 'claim')}`}</Chip>}
-        {tools > 0 && <button className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{plural(tools, 'tool')}<Icon name="chevron-right" small /></button>}
+        {tools > 0 && <Chip size="sm" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{plural(tools, 'tool')}<Icon name="chevron-right" small /></Chip>}
       </div>
       {reading && <ul className="tr-claims">{claims.map((c) => <li key={c.id}>{c.text}{c.where && <span className="tr-claim-where"> ({c.where})</span>}</li>)}</ul>}
       {steps.length > 0 && <ul className="tr-tasks">
