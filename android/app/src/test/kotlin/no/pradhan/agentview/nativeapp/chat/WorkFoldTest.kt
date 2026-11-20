@@ -103,8 +103,8 @@ class WorkFoldTest {
     }
 
     @Test
-    fun theServersEventsForAMemoryWriteAreRemembered() {
+    fun theServersEventsForAMemoryWriteFoldIntoRemembered() {
         val events = protocolJson.decodeFromString<List<ChatEvent>>(File("../../shared/fixtures/remembered-history.json").readText())
-        assertEquals(listOf("/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md"), rememberedOf(buildTranscript(events)))
+        assertEquals(listOf("/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md"), fold(events).filterIsInstance<FoldRow.Fold>().single().remembered)
     }
 }

@@ -4,6 +4,7 @@ import { exploreLabelOf, exploreRunsOf } from '../../../../shared/explore';
 import { buildStageOf } from '../../../../shared/builds';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { firstLine } from '../../ui/util';
+import { MEMORY_FILE } from './workFold';
 
 export type ToolUse = Extract<ChatEvent, { kind: 'tool_use' }>;
 export type ToolResult = Extract<ChatEvent, { kind: 'tool_result' }>;
@@ -224,10 +225,10 @@ export function specCards(items: Item[]) {
 
 export const isDocFile = (path: string) => /\.(md|markdown|mdx)$/i.test(path) && !isSpecPath(path);
 
-// The item that holds each Markdown file's doc card: its latest successful write or edit.
+// The item that holds each Markdown file's doc card: its latest successful write or edit. Memory files stay in the work fold for its Remembered chip.
 export function docCards(items: Item[]) {
   const latest = new Map<string, string>();
-  for (const it of items) if (it.kind === 'file' && !it.error && isDocFile(it.path)) latest.set(it.path, it.id);
+  for (const it of items) if (it.kind === 'file' && !it.error && isDocFile(it.path) && !MEMORY_FILE.test(it.path)) latest.set(it.path, it.id);
   return new Set(latest.values());
 }
 

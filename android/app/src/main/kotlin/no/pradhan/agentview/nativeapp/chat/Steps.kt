@@ -229,10 +229,10 @@ fun specCardIds(items: List<Item>): Set<String> {
 
 fun isDocFile(path: String) = isMarkdown(path) && !isSpecPath(path)
 
-// web steps.ts docCards: the item holding each Markdown file's doc card, its latest successful write or edit.
+// web steps.ts docCards: the item holding each Markdown file's doc card, its latest successful write or edit. Memory files stay in the work fold for its Remembered chip.
 fun docCardIds(items: List<Item>): Set<String> {
     val latest = LinkedHashMap<String, String>()
-    for (it in items) if (it is Item.File && it.error == null && isDocFile(it.path)) latest[it.path] = it.id
+    for (it in items) if (it is Item.File && it.error == null && isDocFile(it.path) && !MEMORY_FILE.containsMatchIn(it.path)) latest[it.path] = it.id
     return latest.values.toSet()
 }
 

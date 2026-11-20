@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { buildTranscript, createTranscriptBuilder } from './steps';
-import { createFoldBuilder, foldTurns, rememberedOf, workTitle, type FoldRow } from './workFold';
+import { buildTranscript, createTranscriptBuilder, docCards, specCards } from './steps';
+import { createFoldBuilder, foldTurns, workTitle, type FoldRow } from './workFold';
 import type { ChatEvent } from '../../../../shared/protocol';
 
 let n = 0;
@@ -148,6 +148,8 @@ describe('claims read', () => {
 describe('remembered', () => {
   it('holds the memory file a Write in the server history wrote', () => {
     const events: ChatEvent[] = JSON.parse(readFileSync(new URL('../../../../shared/fixtures/remembered-history.json', import.meta.url), 'utf8'));
-    expect(rememberedOf(buildTranscript(events))).toEqual(['/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md']);
+    const items = buildTranscript(events);
+    const rows = foldTurns(items, events, new Set([...specCards(items), ...docCards(items)]));
+    expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.remembered] : []))).toEqual([['/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md']]);
   });
 });
