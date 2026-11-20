@@ -130,6 +130,23 @@ fun contestOf(f: Row): Contest? = runCatching {
     Contest((o["by"] as? JsonPrimitive)?.contentOrNull ?: "", (o["at"] as? JsonPrimitive)?.content?.toDouble()?.toLong() ?: 0L, (o["note"] as? JsonPrimitive)?.contentOrNull ?: "")
 }.getOrNull()
 
+class ClaimActions(val buttons: List<String>, val menu: List<String>)
+
+// At most two controls per claim row (shared/claimActions.ts, checked by shared/fixtures/claim-actions.json).
+fun claimActions(f: Row, stale: Boolean): ClaimActions {
+    val menu = buildList {
+        add("edit")
+        add("cite")
+        add(if (contestOf(f) == null) "contest" else "resolve")
+        add(if (f.str("state") == "retired") "restore" else "retire")
+    }
+    return when {
+        stale -> ClaimActions(listOf("confirm", "more"), menu)
+        f.str("state") == "proposed" -> ClaimActions(listOf("reject", "approve"), emptyList())
+        else -> ClaimActions(listOf("more"), menu)
+    }
+}
+
 fun factTime(f: Row) = maxOf(f.long("at") ?: 0L, contestOf(f)?.at ?: 0L, f.updatedAt)
 
 fun isOld(f: Row, now: Long): Boolean {

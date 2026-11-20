@@ -107,6 +107,7 @@ import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
+import no.pradhan.agentview.nativeapp.codex.wiki.claimActions
 import no.pradhan.agentview.nativeapp.codex.wiki.editedClaimText
 import no.pradhan.agentview.nativeapp.codex.wiki.isOld
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
@@ -616,6 +617,17 @@ class SharedCasesTest {
 
     @Test fun claimEdit() {
         for (c in cases("claim-edit")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, editedClaimText(c.nullable("old")?.jsonPrimitive?.content, c.str("next")))
+    }
+
+    @Test fun claimActions() {
+        for (c in cases("claim-actions")) {
+            val f = SYNCED_FIELDS.getValue("facts").associateWith { JsonNull as JsonElement }.toMutableMap()
+            c.nullable("state")?.let { f["state"] = toJson(it.jsonPrimitive.content) }
+            if (c.getValue("contested").jsonPrimitive.boolean) f["contested"] = toJson("""{"by":"a","at":1,"note":"x"}""")
+            val a = claimActions(Row("facts", "f", "work", f = f), c.getValue("stale").jsonPrimitive.boolean)
+            assertEquals(c.str("name"), c.getValue("buttons").jsonArray.map { it.jsonPrimitive.content }, a.buttons)
+            assertEquals(c.str("name"), c.getValue("menu").jsonArray.map { it.jsonPrimitive.content }, a.menu)
+        }
     }
 
     @Test fun latePromise() {

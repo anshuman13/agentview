@@ -50,7 +50,9 @@ import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.FieldLabel
@@ -162,7 +164,7 @@ private fun ProposeClaim(page: Row?, filter: String?, actions: TaskActions) {
 }
 
 @Composable
-private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, stale: Boolean = false) {
+private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOps, page: String, stale: Boolean = false) {
     val f = c.fact
     val menu = remember(f.key) { mutableStateOf(false) }
     var note by remember(f.key) { mutableStateOf("") }
@@ -176,7 +178,8 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
             withStyle(SpanStyle(color = av.warn)) { append(contest.note.takeIf { it.isNotEmpty() } ?: "Contested by ${contest.by} - ${agoText(contest.at, now)}") }
         } else {
             val bits = ArrayList<String>()
-            if (!proposed) {
+            if (proposed) bits.add("Proposed")
+            else {
                 if (stale) bits.add("Still true?")
                 sourcesOf(f).firstOrNull()?.let { bits.add(it.label) }
                 f.long("at")?.let { bits.add(shortDate(it, now)) }
@@ -187,27 +190,37 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
     var contesting by remember(f.key) { mutableStateOf(false) }
     var editing by remember(f.key) { mutableStateOf(false) }
     val retired = f.str("state") == "retired"
+    val acts = claimActions(f, stale)
     val links = sourcesOf(f).drop(1).mapNotNull { s -> safeHref(s.url)?.let { s to it } }
     val menuContent: @Composable ColumnScope.(() -> Unit) -> Unit = { dismiss ->
         val pick = { act: () -> Unit -> { dismiss(); act() } }
-        MenuItem("Edit", "edit", pick { editing = true })
-        MenuItem("Cite", "link", pick {
+        if ("edit" in acts.menu) MenuItem("Edit", "edit", pick { editing = true })
+        if ("cite" in acts.menu) MenuItem("Cite", "link", pick {
             val srcs = sourcesOf(f).map { it.label }
             val at = f.long("at")?.let { ", ${shortDate(it, now)}" } ?: ""
             clip.setText(AnnotatedString("$page: ${f.str("text") ?: ""}" + if (srcs.isNotEmpty()) " (${srcs.joinToString(", ")}$at)" else ""))
             actions.say("Claim copied")
         })
-        if (contest == null) MenuItem("Contest", "report", pick { contesting = true })
-        else MenuItem("Resolve", "check", pick { actions.change(f, mapOf("contested" to null), "Marked as resolved") })
+        if ("contest" in acts.menu) MenuItem("Contest", "report", pick { contesting = true })
+        if ("resolve" in acts.menu) MenuItem("Resolve", "check", pick { actions.change(f, mapOf("contested" to null), "Marked as resolved") })
         if (links.isNotEmpty()) MenuSeparator()
         links.forEach { (s, href) -> MenuItem("${s.kindLabel}: ${s.label}", s.icon, pick { uri.openUri(href) }) }
         c.old.forEach { o -> MenuItem("Replaced ${o.long("at")?.let { shortDate(it, now) } ?: ""}".trim(), "history", {}, enabled = false) }
         f.long("at")?.let { MenuSeparator(); MenuItem("${if (stale) "Still true? " else ""}Updated ${shortDate(it, now)}", "history", {}, enabled = false) }
-        MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired)
+        if ("retire" in acts.menu || "restore" in acts.menu) MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired)
     }
     Column {
-        ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = if (contest != null) 2 else 1, onClick = { expanded = !expanded }, onLongClick = if (proposed) null else ({ menu.value = true }),
-            trailing = if (proposed) ({ Badge("New", BadgeTone.New) }) else ({ MoreButton(expanded = menu, content = menuContent) }))
+        ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = if (contest != null) 2 else 1, onClick = { expanded = !expanded }, onLongClick = if (acts.menu.isEmpty()) null else ({ menu.value = true }),
+            trailing = {
+                acts.buttons.forEach { b ->
+                    when (b) {
+                        "reject" -> IconBtn("close", "Reject", { review.reject(listOf(f)) })
+                        "approve" -> IconBtn("check", "Approve", { review.approve(listOf(f)) })
+                        "confirm" -> Button("Confirm", { actions.change(f, mapOf("at" to System.currentTimeMillis()), "Claim confirmed") }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
+                        else -> MoreButton(expanded = menu, content = menuContent)
+                    }
+                }
+            })
         if (editing) ClaimTextSheet("Edit claim", f.str("text") ?: "", "Save", { editing = false }) { text ->
             editedClaimText(f.str("text"), text)?.let { actions.change(f, mapOf("text" to it), "Claim updated") }
         }
@@ -227,7 +240,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
 }
 
 @Composable
-fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
+fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions, review: ReviewOps) {
     val facts = remember(st.facts, page.profile) { st.facts.filter { it.profile == page.profile } }
     val groups = remember(facts, page.id, now / 60_000) { pageClaims(facts, page.id, now) }
     val older = remember(facts, page.id, now / 60_000) { olderClaims(facts, page.id, now) }
@@ -253,11 +266,11 @@ fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
         }
         groups.forEach { g ->
             item { SectionHeader(g.heading, g.claims.size.toString()) }
-            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, page.title ?: "") }
+            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "") }
         }
         if (older.isNotEmpty()) {
             item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
-            if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, page.title ?: "", stale = it.id in staleIds) }
+            if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, review, page.title ?: "", stale = it.id in staleIds) }
         }
         if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "They appear here as meetings, Slack threads and issues mention ${page.title}", icon = "book") }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }

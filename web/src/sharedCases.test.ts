@@ -51,6 +51,7 @@ import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
 import { similarClaim } from '../../shared/claimMatch';
 import { editedClaimText } from '../../shared/claimEdit';
+import { claimActions } from '../../shared/claimActions';
 import { isLate } from '../../shared/waiting';
 import { goalAtRisk } from './codex/data/tasks/goals';
 import { weekFreeMinutes, type Span } from './codex/data/tasks/plan';
@@ -205,6 +206,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; old: string | null; next: string; expected: string | null }>('claim-edit')) {
     it(`editedClaimText: ${c.name}`, () => expect(editedClaimText(c.old, c.next)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; state: string | null; contested: boolean; stale: boolean; buttons: string[]; menu: string[] }>('claim-actions')) {
+    it(`claimActions: ${c.name}`, () => expect(claimActions(c.state, c.contested, { stale: c.stale })).toEqual({ buttons: c.buttons, menu: c.menu }));
   }
 
   for (const c of cases<{ name: string; since: number[]; now: number[]; expected: boolean }>('late-promise')) {
