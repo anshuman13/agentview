@@ -24,7 +24,7 @@ type Props = { pick: Pick; close: () => void; back: () => void };
 export function SheetRows({ items, current, onPick }: { items: readonly (ComponentProps<typeof QuickPick>['items'][number] & { picker?: boolean })[]; current?: string | null; onPick: (value: string) => void }) {
   return (
     <div className="ui-group">
-      {items.map((i) => <Row key={i.value} title={i.label} meta={i.detail} trailing={i.value === current ? <Icon name="check" small /> : i.picker && <Icon name="chevron-right" small />} onClick={() => onPick(i.value)} />)}
+      {items.map((i) => <Row key={i.value} title={i.label} meta={i.detail} trailing={i.value === current ? <Icon name="check" small /> : i.picker && <Icon name="chevron-right" small />} disabled={i.disabled} onClick={() => onPick(i.value)} />)}
     </div>
   );
 }

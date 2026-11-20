@@ -3,7 +3,7 @@ import { Back } from '../app/touch/back';
 import { touch } from '../app/touch/touch';
 import { listKeys, useReturnFocus } from './util';
 
-type PickItem = { value: string; label: string; detail?: string };
+type PickItem = { value: string; label: string; detail?: string; disabled?: boolean };
 
 export function QuickPick({ title, items, current, anchor, extra, onPick, onClose }: {
   title: string;
@@ -44,11 +44,11 @@ export function QuickPick({ title, items, current, anchor, extra, onPick, onClos
           aria-controls={id}
           aria-activedescendant={results[idx] ? `${id}-${idx}` : undefined}
           onChange={(e) => { setQ(e.target.value); setIdx(0); }}
-          onKeyDown={listKeys({ count: results.length, idx, setIdx, onEnter: () => results[idx] && onPick(results[idx].value), onEscape: onClose })}
+          onKeyDown={listKeys({ count: results.length, idx, setIdx, onEnter: () => results[idx] && !results[idx].disabled && onPick(results[idx].value), onEscape: onClose })}
         />
         <ul id={id} role="listbox" aria-label={title}>
           {results.map((i, n) => (
-            <li key={i.value} id={`${id}-${n}`} role="option" aria-selected={n === idx} className={n === idx ? 'active' : ''} onClick={() => onPick(i.value)}>
+            <li key={i.value} id={`${id}-${n}`} role="option" aria-selected={n === idx} aria-disabled={i.disabled} className={`${n === idx ? 'active' : ''}${i.disabled ? ' muted' : ''}`} onClick={() => !i.disabled && onPick(i.value)}>
               <span>{i.label}</span>
               {i.detail && <span className="muted small detail">{i.detail}</span>}
               {i.value === current && <span className="tag">current</span>}

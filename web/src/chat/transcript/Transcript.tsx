@@ -453,7 +453,7 @@ function Folded({ id, className, children }: { id: string; className: string; ch
   );
 }
 
-function UserImage({ path }: { path: string }) {
+export function UserImage({ path }: { path: string }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   return (

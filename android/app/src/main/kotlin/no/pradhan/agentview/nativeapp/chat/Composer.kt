@@ -103,10 +103,12 @@ import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.TimeDialog
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import java.time.ZonedDateTime
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.app.sendAt
 import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.plural
@@ -242,6 +244,8 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
             val r = acceptSuggestion(s.text.text, trigger!!.start, s.text.selection.end, sg.insert)
             s.set(TextFieldValue(r.first, TextRange(r.second)))
         } else if (ghost.isNotEmpty()) GhostRow(s.text.text, ghost) { val next = s.text.text + ghost; s.set(TextFieldValue(next, TextRange(next.length))) }
+        val stale = staleSeconds(hub)
+        if (stale >= 30) Text("No update for ${stale}s", Modifier.padding(horizontal = Tokens.sp6), style = Type.footnote, color = c.fgMuted)
         Column(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape)) {
             if (s.uses.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 s.uses.forEach { u -> Chip(useLabel(u), { s.uses = s.uses - u }, icon = "plug", trailingIcon = "close", trailingLabel = "Remove") }
@@ -261,6 +265,22 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
         }
     }
     ComposerSheets(hub, s, uploading, session, run, sheet, attach) { sheet = it }
+}
+
+// Seconds since the event stream last sent anything, checked every 5 s while the app is visible; 0 in the background.
+@Composable
+private fun staleSeconds(hub: Hub): Int {
+    var stale by remember { mutableIntStateOf(0) }
+    WhileStarted {
+        try {
+            while (true) {
+                delay(5_000)
+                val seen = hub.stream.lastSeen
+                stale = if (seen > 0) ((System.currentTimeMillis() - seen) / 1000).toInt() else 0
+            }
+        } finally { stale = 0 }
+    }
+    return stale
 }
 
 private fun placeholderState(waiting: Boolean, compacting: Boolean, running: Boolean, hasUses: Boolean) = when {
@@ -427,8 +447,19 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
                 ListRow("Send at", "Send this message at a time today or tomorrow", leading = icon("clock"), onClick = { onSheet(Picker.SendAt) })
             }
             if (pct != null && pct >= 50) {
+                val codex = session?.provider == "codex"
+                val compacting = session?.compacting == true
+                val running = session?.running == true
+                val idle = !codex && !compacting && !running && !s.hub.readOnly
+                val meta = when {
+                    codex -> null
+                    compacting -> "Compacting…"
+                    running -> "Compacts when this turn ends"
+                    idle -> "Tap to compact"
+                    else -> null
+                }
                 Hairline(lead = true)
-                ListRow("$pct% context", leading = icon("pulse"))
+                ListRow("$pct% context", meta, leading = icon("pulse"), onClick = if (idle) ({ onSheet(null); s.hub.submit("/compact", false) {} }) else null)
             }
         }
     }

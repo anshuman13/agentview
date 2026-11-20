@@ -1,6 +1,7 @@
 import { useStore } from '../app/store';
 import { MemoryPick, RememberPick } from './cards/Memory';
 import { TodosPick } from './cards/Todos';
+import { ImagesPick } from './cards/Images';
 import { EFFORT_LABEL } from '../../../shared/protocol';
 import { menuModes, providerModes } from '../../../shared/providers';
 import { CopyPick, ForkPick, HooksPick, RemindPick, SettingsMenu, ToolsPick } from './SettingsMenu';
@@ -8,7 +9,7 @@ import { AccountPick, BuildPick, EffortPick, ModePick, ModelPick } from './Setti
 
 const MODE_ICON: Record<string, string> = { default: 'shield', acceptEdits: 'edit', plan: 'eye', readOnly: 'eye', auto: 'zap', dontAsk: 'circle-slash' };
 
-export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'build' | 'fork' | 'copy' | 'tools' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'remember' | 'todos' | 'hooks'; at: DOMRect; server?: string };
+export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'build' | 'fork' | 'copy' | 'tools' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'remind' | 'remember' | 'todos' | 'hooks' | 'images'; at: DOMRect; server?: string };
 
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -38,6 +39,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
     case 'hooks': return <HooksPick pick={pick} close={close} back={back} />;
     case 'todos': return <TodosPick anchor={pick.at} onClose={close} />;
     case 'memory': return <MemoryPick cwd={cwd} onClose={close} />;
+    case 'images': return <ImagesPick cwd={cwd} onClose={close} />;
     case 'model': return <ModelPick pick={pick} close={close} back={back} />;
     case 'effort': return <EffortPick pick={pick} close={close} back={back} />;
     case 'account': return <AccountPick pick={pick} close={close} back={back} />;

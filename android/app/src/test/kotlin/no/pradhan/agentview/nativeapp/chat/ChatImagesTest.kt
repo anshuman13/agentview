@@ -1,23 +1,23 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
+import java.io.File
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+// The cases in shared/fixtures/chat-images.json also run in web/src/sharedCases.test.ts.
 class ChatImagesTest {
-    private fun tool(id: String, name: String, path: String) = ChatEvent(id, "tool_use", name = name, input = buildJsonObject { put("file_path", JsonPrimitive(path)) })
-
     @Test fun listsImagesNewestFirstOnce() {
-        val events = listOf(
-            ChatEvent("u", "user", text = "look [Image: /tmp/paste.png]"),
-            tool("a", "Read", "/tmp/shot.png"),
-            tool("b", "Read", "src/main.kt"),
-            tool("c", "Write", "docs/chart.svg"),
-            tool("d", "Bash", "/tmp/x.png"),
-            tool("e", "Read", "/tmp/shot.png"),
-        )
-        assertEquals(listOf("/tmp/shot.png", "docs/chart.svg", "/tmp/paste.png"), chatImages(events))
+        for (c in Json.parseToJsonElement(File("../../shared/fixtures/chat-images.json").readText()).jsonArray.map { it.jsonObject }) {
+            val events = c.getValue("events").jsonArray.map { protocolJson.decodeFromJsonElement<ChatEvent>(it) }
+            val expected = c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(c.getValue("name").jsonPrimitive.content, expected, chatImages(events))
+        }
     }
 }

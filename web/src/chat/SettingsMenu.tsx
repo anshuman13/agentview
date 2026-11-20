@@ -1,5 +1,5 @@
 import { notice, send, setUi, useStore } from '../app/store';
-import { lastReply, remindChoices } from './composer/composerLogic';
+import { chatImages, lastReply, remindChoices } from './composer/composerLogic';
 import { runLine } from '../sessions/runLogic';
 import { useChatRun } from '../sessions/useChatRun';
 import { openGoal, startGoal } from '../sessions/goalLogic';
@@ -11,7 +11,7 @@ import { keyText } from '../app/shell/keys';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { endedRun, finishedLine, runDetail } from '../../../shared/goalText';
 import { since } from '../sessions/folders';
-import { firstLine } from '../ui/util';
+import { firstLine, plural } from '../ui/util';
 import { copyChatMarkdown, copyLastReply, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
 import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
@@ -59,7 +59,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
       ...(sessionId ? [picker('fork', 'Fork', 'Side chat or a new chat from a summary'), picker('remind', 'Remind me', 'Add a task to check this chat later')] : []),
       picker('remember', 'Remember…', 'Save a preference to Memory'),
       picker('copy', 'Copy', resumeCommand ? 'As Markdown or the terminal command' : 'As Markdown'),
-      picker('tools', 'Tools…', 'Saved prompts, memory, hooks, TODOs'),
+      picker('tools', 'Tools…', 'Saved prompts, memory, hooks, TODOs, images'),
     ]],
   ] as const;
   if (narrow) {
@@ -90,6 +90,7 @@ export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedC
   const cwd = useStore((s) => s.session.cwd);
   const instructionFiles = useStore((s) => s.session.instructionFiles);
   const hooks = useStore((s) => s.session.hooks) ?? [];
+  const images = chatImages(useStore((s) => s.events)).length;
   return (
     <ChoicePick
       back={() => setPick({ kind: 'menu', at: pick.at })}
@@ -100,6 +101,7 @@ export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedC
         { value: 'memory', label: 'Memory', detail: `${ruleFile(cwd, instructionFiles)} and memory files` },
         { value: 'hooks', label: 'Hooks', detail: hooks.length ? `${hooks.length}` : 'None' },
         { value: 'todos', label: 'TODOs', detail: 'TODO, FIXME and AI! comments in the repo' },
+        { value: 'images', label: 'Images', detail: images ? plural(images, 'image') : 'None', disabled: !images },
       ]}
       onPick={(v) => setPick({ kind: v as Pick['kind'], at: pick.at })}
       onClose={close}
