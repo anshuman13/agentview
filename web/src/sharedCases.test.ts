@@ -34,6 +34,7 @@ import { chatMarkdown, failedLine, handoffText, joinMarks, lastReply, markChip, 
 import { headerState, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
+import { cadenceLine, cadenceOf } from './codex/data/tasks/recur';
 import { needsYou } from './codex/summary/needsYou';
 import { ignoredToday } from './codex/data/tasks/review';
 import { HubError, hubRetry } from './codex/data/hubFetch';
@@ -44,7 +45,7 @@ import { ago, money } from './ui/util';
 import { setSystemTime } from '../../testing';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
-import { pageClaims, restatedClaim, type Fact, type Job, type Meeting } from './codex/data/wiki/wiki';
+import { pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page } from './codex/data/wiki/wiki';
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
 import { heldUntil, jobEdits, tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
@@ -221,6 +222,23 @@ describe('cases shared with the Android app', () => {
       expect(hasLiveClaims(groups)).toBe(c.hasLive);
     });
   }
+
+  it('cadence', () => {
+    const c = cases<never>('cadence') as unknown as { lines: { name: string; cadence: 'daily' | 'weekdays' | 'weekly' | 'monthly'; at: string | null; now: string; expected: string }[]; reads: { name: string; text: string | null; at: string | null; expected: string }[] };
+    const time = (s: string | null) => (s === null ? null : new Date(s).getTime());
+    for (const l of c.lines) expect(cadenceLine(l.cadence, time(l.at), time(l.now) as number), l.name).toBe(l.expected);
+    for (const r of c.reads) expect(cadenceOf(r.text, time(r.at)), r.name).toBe(r.expected);
+  });
+
+  it('staleFacts', () => {
+    type Row = Record<string, unknown>;
+    const c = cases<never>('stale-claims') as unknown as { now: number; pages: Row[]; meetings: (Row & { startsAgoDays: number })[]; facts: Row[]; expected: string[] };
+    const common = { profile: 'work', version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 };
+    const pages = c.pages.map((p) => ({ ...common, ...p })) as unknown as Page[];
+    const meetings = c.meetings.map(({ startsAgoDays, ...m }) => ({ ...common, ...m, starts_at: c.now - startsAgoDays * 86_400_000 })) as unknown as Meeting[];
+    const facts = c.facts.map((f) => ({ ...common, ...f })) as unknown as Fact[];
+    expect(staleFacts(facts, pages, meetings, c.now).map((f) => f.id)).toEqual(c.expected);
+  });
 
   for (const c of cases<{ name: string; old: string | null; next: string; expected: string | null }>('claim-edit')) {
     it(`editedClaimText: ${c.name}`, () => expect(editedClaimText(c.old, c.next)).toBe(c.expected));

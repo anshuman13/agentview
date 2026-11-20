@@ -121,6 +121,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.editedClaimText
 import no.pradhan.agentview.nativeapp.codex.wiki.hasLiveClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.isOld
 import no.pradhan.agentview.nativeapp.codex.wiki.pageClaims
+import no.pradhan.agentview.nativeapp.codex.wiki.staleFacts
 import no.pradhan.agentview.nativeapp.codex.wiki.wikiMarkdown
 import kotlinx.serialization.json.buildJsonArray
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
@@ -699,6 +700,30 @@ class SharedCasesTest {
 
     @Test fun claimEdit() {
         for (c in cases("claim-edit")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, editedClaimText(c.nullable("old")?.jsonPrimitive?.content, c.str("next")))
+    }
+
+    @Test fun cadence() {
+        val c = Json.parseToJsonElement(File("../../shared/fixtures/cadence.json").readText()).jsonObject
+        fun time(o: JsonObject, k: String) = o.nullable(k)?.jsonPrimitive?.content?.let { java.time.LocalDateTime.parse(it).atZone(codexZone).toInstant().toEpochMilli() }
+        for (l in c.getValue("lines").jsonArray.map { it.jsonObject }) assertEquals(l.str("name"), l.str("expected"), cadenceLine(l.str("cadence"), time(l, "at"), time(l, "now")!!))
+        for (r in c.getValue("reads").jsonArray.map { it.jsonObject }) assertEquals(r.str("name"), r.str("expected"), cadenceOf(r.nullable("text")?.jsonPrimitive?.content, time(r, "at"), 0L))
+    }
+
+    @Test fun staleClaims() {
+        val c = Json.parseToJsonElement(File("../../shared/fixtures/stale-claims.json").readText()).jsonObject
+        val now = c.getValue("now").jsonPrimitive.long
+        fun rows(table: String, key: String, fill: (JsonObject, MutableMap<String, JsonElement>) -> Unit) = c.getValue(key).jsonArray.map { it.jsonObject }.map { o ->
+            val f = SYNCED_FIELDS.getValue(table).associateWith { JsonNull as JsonElement }.toMutableMap()
+            fill(o, f)
+            Row(table, o.str("id"), "work", deleted = o["deleted"]?.jsonPrimitive?.booleanOrNull == true, f = f)
+        }
+        val pages = rows("pages", "pages") { o, f -> f["title"] = o.getValue("title") }
+        val meetings = rows("meetings", "meetings") { o, f ->
+            for (k in listOf("title", "summary", "decisions")) o[k]?.let { f[k] = it }
+            f["starts_at"] = toJson(now - o.getValue("startsAgoDays").jsonPrimitive.long * DAY_MS)
+        }
+        val facts = rows("facts", "facts") { o, f -> for (k in listOf("page_id", "at", "used_at", "superseded_by", "state")) o[k]?.let { f[k] = it } }
+        assertEquals(c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, staleFacts(facts, pages, meetings, now).map { it.id })
     }
 
     @Test fun claimActions() {

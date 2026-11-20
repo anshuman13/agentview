@@ -38,6 +38,7 @@ import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.app.icon
 import no.pradhan.agentview.nativeapp.chat.firstLine
 import no.pradhan.agentview.nativeapp.codex.CodexState
+import no.pradhan.agentview.nativeapp.codex.DAY_MS
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.TaskActions
 import no.pradhan.agentview.nativeapp.codex.firstLine
@@ -95,6 +96,8 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     val stats = remember(facts) { statsByPage(facts) }
     val hits = remember(pages, facts, query) { searchWiki(pages, facts, query) }
     val titles = remember(pages) { pages.associate { it.id to it.title } }
+    val stale = remember(pages, facts, st.meetings, profile, now / 60_000) { staleFacts(facts, pages, st.meetings.filter { matchesProfile(profile, it) }, now) }
+    var allStale by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             SearchField(query, { query = it }, "Search the wiki", Modifier.padding(top = Tokens.sp4))
@@ -117,6 +120,17 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             item { Group { ListRow("Review claims", onClick = onReview, trailing = { Badge("$waiting", BadgeTone.Quiet); Chevron() }) } }
         }
         item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Memory", plural(stats[null]?.claims ?: 0, "claim"), onClick = onMemory, trailing = { Chevron() }) } }
+        if (stale.isNotEmpty()) {
+            item { SectionHeader("Stale", stale.size.toString()) }
+            lazyGroup(if (allStale) stale else stale.take(3), key = { "stale:${it.key}" }) { f ->
+                val months = ((now - (f.long("at") ?: 0L)) / (30 * DAY_MS)).toInt()
+                val used = f.long("used_count")?.takeIf { it > 0 }
+                ListRow(f.str("text") ?: "", "${titles[f.str("page_id")]} · ${plural(months, "month")}" + (used?.let { " · Used on ${plural(it.toInt(), "day")}" } ?: ""), onClick = { onClaim(f) },
+                    trailing = { Button("Confirm", { actions.change(f, mapOf("at" to System.currentTimeMillis()), "Claim confirmed") }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) },
+                    menu = { dismiss -> MenuItem("Retire", "archive", { dismiss(); actions.change(f, mapOf("state" to "retired"), "Claim retired") }, danger = true) })
+            }
+            if (!allStale && stale.size > 3) item { Button("Show all ${stale.size}", { allStale = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
+        }
         overview?.let { o ->
             item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow(o.title ?: "Overview", o.str("summary")?.let { firstLine(it) }, onClick = { onOpen(o) }) } }
         }
