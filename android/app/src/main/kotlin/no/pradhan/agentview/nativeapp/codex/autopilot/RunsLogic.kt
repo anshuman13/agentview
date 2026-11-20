@@ -21,7 +21,10 @@ import no.pradhan.agentview.nativeapp.ui.agoShort
 
 private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "tries" to "Tries", "job" to "Job")
 
-fun runLine(run: ChatRun): String = when {
+// A prompt queued with Send at: a one-shot loop that has not fired yet (web sessions/runLogic.ts sendsAt).
+fun sendsAt(run: ChatRun): Long? = run.nextAt.takeIf { run.kind == "loop" && run.once && run.state == "running" && run.round == 0 }
+
+fun runLine(run: ChatRun): String = sendsAt(run)?.let { "Sends at ${clock(it)}" } ?: when {
     run.state == "paused" -> if (run.why.isNotEmpty()) "Paused · ${run.why}" else "Paused"
     run.kind == "goal" -> roundLine("Goal", run)
     run.kind == "tries" -> "Tries · ${run.tries.count { !it.dropped }} chats"

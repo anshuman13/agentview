@@ -35,6 +35,7 @@ import androidx.lifecycle.viewModelScope
 import java.util.UUID
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.handoffText
+import no.pradhan.agentview.nativeapp.chat.loopAt
 import no.pradhan.agentview.nativeapp.chat.lastModelKey
 import no.pradhan.agentview.nativeapp.chat.modelsKey
 import no.pradhan.agentview.nativeapp.chat.parseModels
@@ -120,6 +121,10 @@ fun Hub.submit(text: String, steer: Boolean, onLost: () -> Unit) {
         }
     }
 }
+
+// Sends the text once at HH:MM as /loop at, even while Claude runs.
+fun Hub.sendAt(time: String, text: String, onLost: () -> Unit) =
+    post(promptCmd(loopAt(time, text.trim()), false, UUID.randomUUID().toString()), store.wanted) { ok -> if (!ok) onLost() }
 
 fun Hub.interrupt() = post(interruptCmd(), store.wanted)
 

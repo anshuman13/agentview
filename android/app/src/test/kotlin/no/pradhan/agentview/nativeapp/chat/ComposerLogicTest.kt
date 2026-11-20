@@ -82,4 +82,12 @@ class ComposerLogicTest {
         assertEquals(BuildStep.Notice("Type the brief in the composer first"), buildStep(" \n", 0, false))
         assertEquals(BuildStep.Notice("Wait for the upload to finish"), buildStep("brief", 1, false))
     }
+
+    @Test
+    fun sendAtIsTodayWhileTheTimeIsAheadAndTomorrowOnceItHasPassed() {
+        val now = java.time.ZonedDateTime.of(2026, 11, 9, 14, 0, 0, 0, java.time.ZoneId.of("UTC")).toInstant().toEpochMilli()
+        assertEquals("today", laterDay(22, 0, now, java.time.ZoneId.of("UTC")))
+        assertEquals("tomorrow", laterDay(9, 30, now, java.time.ZoneId.of("UTC")))
+        assertEquals("/loop at 22:00 fix it", loopAt("22:00", "fix it"))
+    }
 }

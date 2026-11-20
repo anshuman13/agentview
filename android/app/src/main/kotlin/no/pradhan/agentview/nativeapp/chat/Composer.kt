@@ -82,7 +82,11 @@ import no.pradhan.agentview.nativeapp.ui.ChoiceRow
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
+import no.pradhan.agentview.nativeapp.ui.TimeDialog
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import java.time.ZonedDateTime
+import no.pradhan.agentview.nativeapp.codex.codexZone
+import no.pradhan.agentview.nativeapp.app.sendAt
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
@@ -93,7 +97,7 @@ private class Choice(val value: String, val label: String, val detail: String = 
 private val BUILD_CHOICES = listOf(Choice("off", "Off", "Prompts run as usual")) +
     Choice("flow", "Spec flow", "Spec, sketch and your approval before building")
 
-private enum class Picker { Add, Settings, Effort, Account, Build }
+private enum class Picker { Add, Settings, Effort, Account, Build, SendAt }
 
 private class ComposerState(val hub: Hub, val chatId: String) {
     var text by mutableStateOf(hub.draft(chatId).let { TextFieldValue(it, TextRange(it.length)) })
@@ -119,6 +123,14 @@ private class ComposerState(val hub: Hub, val chatId: String) {
                 hub.submit(buildPrompt(step.brief), false) { restore(step.brief) }
             }
         }
+    }
+
+    fun sendAt(time: String, uploading: Int) {
+        val t = text.text
+        if (t.isBlank()) return
+        if (uploading > 0) { hub.notice.value = "Wait for the upload to finish"; return }
+        set(TextFieldValue(""))
+        hub.sendAt(time, t) { restore(t) }
     }
 
     fun submit(steer: Boolean, uploading: Int) {
@@ -250,6 +262,11 @@ private fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: 
             }) { onSheet(null) }
         }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
+        Picker.SendAt -> {
+            val replaced = run?.kind?.takeIf { it == "goal" || it == "loop" }
+            val ahead = ZonedDateTime.now(codexZone).plusHours(1)
+            TimeDialog("Send at" + (replaced?.let { " · Replaces the running $it" } ?: ""), ahead.hour, 0, "Send", "Cancel", { h, m -> onSheet(null); s.sendAt("%02d:%02d".format(h, m), uploading) }, { onSheet(null) }, { onSheet(null) })
+        }
         null -> {}
     }
 }
@@ -270,6 +287,10 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
             if (session?.capabilities?.build == true) {
                 Hairline(lead = true)
                 ListRow("Build the brief", "Spec, review, build and test the text in the composer", leading = icon("tools"), onClick = { onSheet(null); s.build(uploading) })
+            }
+            if (s.text.text.isNotBlank()) {
+                Hairline(lead = true)
+                ListRow("Send at", "Send this message at a time today or tomorrow", leading = icon("clock"), onClick = { onSheet(Picker.SendAt) })
             }
             if (pct != null && pct >= 50) {
                 Hairline(lead = true)

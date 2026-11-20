@@ -96,6 +96,12 @@ fun ghProblem(error: String): GhProblem? = when {
 fun reviewBody(event: String, text: String) = buildJsonObject { put("event", event); put("body", text) }.toString()
 fun mergeBody(method: String) = buildJsonObject { put("method", method) }.toString()
 fun autoMergeBody(on: Boolean, method: String) = buildJsonObject { put("on", on); put("method", method) }.toString()
+fun fixBody(check: PrCheck) = buildJsonObject { put("name", check.name); put("url", check.url) }.toString()
+
+// The folder and prompt of a chat that fixes one failed check (POST /api/gh/pr/:n/fix).
+@Serializable data class PullFix(val cwd: String, val text: String)
+
+fun parsePullFix(body: String): PullFix = protocolJson.decodeFromString(PullFix.serializer(), body)
 
 val MERGE_METHODS = listOf("squash" to "Squash", "merge" to "Merge commit", "rebase" to "Rebase")
 

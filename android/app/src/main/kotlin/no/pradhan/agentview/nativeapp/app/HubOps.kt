@@ -28,7 +28,11 @@ import no.pradhan.agentview.nativeapp.ops.parseObserve
 import no.pradhan.agentview.nativeapp.ops.rollbackBody
 import no.pradhan.agentview.nativeapp.ops.PullRequest
 import no.pradhan.agentview.nativeapp.ops.PullRequestDetail
+import no.pradhan.agentview.nativeapp.ops.PrCheck
+import no.pradhan.agentview.nativeapp.ops.PullFix
+import no.pradhan.agentview.nativeapp.ops.fixBody
 import no.pradhan.agentview.nativeapp.ops.parsePullDetail
+import no.pradhan.agentview.nativeapp.ops.parsePullFix
 import no.pradhan.agentview.nativeapp.ops.parsePulls
 
 suspend fun Hub.deployJob(id: String): DeployJob = parseDeployJob(read("/api/deploy/job/$id"))
@@ -70,6 +74,9 @@ suspend fun Hub.pullDetail(number: Int): PullRequestDetail = parsePullDetail(rea
 
 fun Hub.actOnPull(number: Int, action: String, body: String, failure: String, done: (Boolean) -> Unit) =
     write("/api/gh/pr/$number/$action", body, failure, done)
+
+fun Hub.fixPull(number: Int, check: PrCheck, done: (PullFix?) -> Unit) =
+    write("/api/gh/pr/$number/fix", fixBody(check), "Could not start the fix", ::parsePullFix, done)
 
 suspend fun Hub.observe(repo: String): ObserveInfo = parseObserve(read("/api/observe" + if (repo.isNotEmpty()) "?repo=${enc(repo)}" else ""))
 

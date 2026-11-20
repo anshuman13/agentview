@@ -182,6 +182,7 @@ data class ChatRun(
     val branch: String = "",
     val review: String? = null,
     val pr: String? = null,
+    val once: Boolean = false,
 )
 
 @Serializable

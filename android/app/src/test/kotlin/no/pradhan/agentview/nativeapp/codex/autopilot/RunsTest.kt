@@ -48,6 +48,14 @@ class RunsTest {
         assertEquals("Archived", tryColumn(r, tries[2], live).state)
     }
 
+    @Test fun sendsAtNamesAOneShotLoopThatHasNotFired() {
+        val once = run("a").copy(round = 0, once = true)
+        assertEquals("Sends at 14:20", runLine(once))
+        assertEquals(null, sendsAt(once.copy(round = 1)))
+        assertEquals(null, sendsAt(once.copy(once = false)))
+        assertEquals(null, sendsAt(once.copy(state = "paused")))
+    }
+
     @Test fun stateLineForRunningPausedAndDone() {
         assertEquals("Loop · round 4 · next 14:20", runLine(run("a").copy(max = 0)))
         assertEquals("Goal · round 4 of 20 · next 14:20", runLine(run("a", kind = "goal")))

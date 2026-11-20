@@ -37,6 +37,8 @@ import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.app.actOnPull
+import no.pradhan.agentview.nativeapp.app.fixPull
+import no.pradhan.agentview.nativeapp.app.newChat
 import no.pradhan.agentview.nativeapp.app.pullDetail
 import no.pradhan.agentview.nativeapp.app.pulls
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -150,6 +152,11 @@ private class PullCtx(val hub: Hub, val pr: PullRequest, val ui: PullUi, private
         ui.busy = label
         hub.actOnPull(pr.number, path, body, "Could not $label") { ok -> ui.busy = ""; if (ok) { done(); reload(); onChanged() } }
     }
+
+    fun fix(check: PrCheck) {
+        ui.busy = "fix"
+        hub.fixPull(pr.number, check) { f -> ui.busy = ""; f?.let { hub.newChat(cwd = it.cwd, text = it.text) } }
+    }
 }
 
 @Composable
@@ -228,7 +235,7 @@ private fun PullBody(c: PullCtx, load: Loaded<PullRequestDetail>) {
             item { Column { Findings(c.hub, pr.number.toString()) { openFile = it.file } } }
             item { SectionHeader("Description") }
             item { Group { if (d.body.isBlank()) EmptyState("No description") else Column(Modifier.padding(Tokens.listPad)) { Markdown(d.body) } } }
-            pullChecks(d)
+            pullChecks(c, d)
             pullReviews(d, now)
             pullCommits(d)
             pullFiles(d, patch, openFile, patchScroll) { openFile = it }
@@ -251,7 +258,7 @@ private fun PullSummary(pr: PullRequest, now: Long) {
     }
 }
 
-private fun LazyListScope.pullChecks(d: PullRequestDetail) {
+private fun LazyListScope.pullChecks(pc: PullCtx, d: PullRequestDetail) {
     if (d.checks.isEmpty()) return
     item { SectionHeader("Checks", d.checks.size.toString()) }
     item {
@@ -259,7 +266,9 @@ private fun LazyListScope.pullChecks(d: PullRequestDetail) {
         Group {
             d.checks.forEachIndexed { i, c ->
                 if (i > 0) Hairline(lead = true)
-                ListRow(c.name, leading = { StatusDot(checkDot(c.state)) }, onClick = if (c.url.isNotEmpty()) ({ link(c.url) }) else null)
+                ListRow(c.name, leading = { StatusDot(checkDot(c.state)) }, onClick = if (c.url.isNotEmpty()) ({ link(c.url) }) else null, trailing = {
+                    if (c.state == "failure") Button("Fix with Claude", { pc.fix(c) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = pc.ui.idle && !pc.hub.readOnly)
+                })
             }
         }
     }

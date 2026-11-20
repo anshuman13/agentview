@@ -1,6 +1,10 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
 import no.pradhan.agentview.nativeapp.codex.Week
+import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.codex.meetings.Repeats
 import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.PlanUsage
@@ -92,6 +96,13 @@ fun buildStep(text: String, uploading: Int, readOnly: Boolean): BuildStep = when
     uploading > 0 -> BuildStep.Notice("Wait for the upload to finish")
     else -> BuildStep.Send(text.trim())
 }
+
+// The prompt that /loop at runs once at HH:MM (shared/util.ts loopAt).
+fun loopAt(time: String, text: String) = "/loop at $time $text"
+
+// The day a time picked in Send at falls on: today unless it has passed (web composerLogic.ts laterDay).
+fun laterDay(hour: Int, minute: Int, now: Long = System.currentTimeMillis(), zone: ZoneId = codexZone) =
+    if (LocalTime.of(hour, minute).isAfter(Instant.ofEpochMilli(now).atZone(zone).toLocalTime())) "today" else "tomorrow"
 
 fun appendWord(text: String, add: String) = "$text${if (text.isNotEmpty() && !text.last().isWhitespace()) " " else ""}$add"
 

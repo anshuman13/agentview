@@ -69,6 +69,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAg
     var board by rememberSaveable(run.id) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val stopOnly = run.kind == "tries" || run.kind == "job"
+    val scheduled = sendsAt(run) != null
     val goal = run.kind == "goal"
     val paused = run.state == "paused"
     val agents = live.agentList
@@ -89,12 +90,15 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAg
         TranscriptBox(
             hub, "loop:${run.id}", runLine(run), open = cardOpen, onToggle = toggleCard,
             action = {
-                if (run.kind == "tries") IconBtn("layout", "Open board", { board = true })
-                if (!stopOnly) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") })
-                if (stopOnly) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
-                else MoreButton { close ->
-                    if (!paused) { MenuItem("Run now", "debug-start", { close(); hub.runControl(run, "now") }, enabled = !hub.readOnly); MenuSeparator() }
-                    MenuItem("Stop", "debug-stop", { close(); hub.runControl(run, "stop") }, danger = true, enabled = !hub.readOnly)
+                if (scheduled) IconBtn("close", "Cancel", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
+                else {
+                    if (run.kind == "tries") IconBtn("layout", "Open board", { board = true })
+                    if (!stopOnly) IconBtn(if (paused) "debug-start" else "debug-pause", if (paused) "Resume" else "Pause", { hub.runControl(run, if (paused) "resume" else "pause") })
+                    if (stopOnly) IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
+                    else MoreButton { close ->
+                        if (!paused) { MenuItem("Run now", "debug-start", { close(); hub.runControl(run, "now") }, enabled = !hub.readOnly); MenuSeparator() }
+                        MenuItem("Stop", "debug-stop", { close(); hub.runControl(run, "stop") }, danger = true, enabled = !hub.readOnly)
+                    }
                 }
             },
         ) {
