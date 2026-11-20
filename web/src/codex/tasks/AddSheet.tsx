@@ -7,6 +7,7 @@ import { pad } from '../data/dates';
 import { withEstimate } from '../data/tasks/plan';
 import type { Profile } from '../data/sync';
 import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 import { Menu } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { readFlag } from '../../ui/util';
@@ -72,17 +73,17 @@ export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value
   return (
     <Sheet label="Date" onClose={onClose} className="as-date">
       <div className="as-date-head">
-        <button className="icon-btn" aria-label="Cancel" onClick={onClose}><Icon name="close" /></button>
+        <IconButton icon="close" label="Cancel" onClick={onClose} />
         <span>Date</span>
-        <button className="icon-btn as-date-ok" aria-label="Done" onClick={() => done()}><Icon name="check" /></button>
+        <IconButton icon="check" label="Done" className="as-date-ok" onClick={() => done()} />
       </div>
       <div className="as-date-quick">
         {quick.map(([icon, label, f]) => <button key={label} onClick={f}><Icon name={icon} /><span>{label}</span></button>)}
       </div>
       <div className="as-date-month">
         <span>{m.toLocaleDateString([], { month: 'long', year: m.getFullYear() === now.getFullYear() ? undefined : 'numeric' })}</span>
-        <button className="icon-btn" aria-label="Previous month" onClick={() => shift(-1)}><Icon name="chevron-left" /></button>
-        <button className="icon-btn" aria-label="Next month" onClick={() => shift(1)}><Icon name="chevron-right" /></button>
+        <IconButton icon="chevron-left" label="Previous month" onClick={() => shift(-1)} />
+        <IconButton icon="chevron-right" label="Next month" onClick={() => shift(1)} />
       </div>
       <div className="as-date-grid" role="grid">
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <span key={i} className="as-date-dow">{d}</span>)}
@@ -94,7 +95,7 @@ export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value
         <label className="as-date-row">
           <Icon name="clock" /><span>Time</span>
           <em>{time ?? 'None'}</em>
-          {time ? <button className="icon-btn" aria-label="Clear time" onClick={(e) => { e.preventDefault(); setTime(null); }}><Icon name="close" small /></button> : <Icon name="chevron-right" small />}
+          {time ? <IconButton icon="close" small label="Clear time" onClick={(e) => { e.preventDefault(); setTime(null); }} /> : <Icon name="chevron-right" small />}
           <input ref={timeInput} type="time" value={time ?? ''} onChange={(e) => setTime(e.target.value || null)} onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* opens on focus */ } }} />
         </label>
         {reminder && (

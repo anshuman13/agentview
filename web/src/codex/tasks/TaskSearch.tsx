@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactElement, type RefObject } from 'react';
 import { taskMatches } from '../data/ask/match';
 import type { ItemRow } from '../data/sync';
 import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Section, sectionCount } from '../../ui/Section';
 import type { List } from '../view';
@@ -28,7 +29,7 @@ export function SearchBar({ query, setQuery }: { query: string; setQuery: (q: st
     <div className="as-search">
       <Icon name="search" />
       <input autoFocus value={query} placeholder="Search tasks" aria-label="Search tasks" enterKeyHint="search" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery(null)} />
-      <button className="icon-btn" title="Close search" aria-label="Close search" onClick={() => setQuery(null)}><Icon name="close" /></button>
+      <IconButton icon="close" label="Close search" onClick={() => setQuery(null)} />
     </div>
   );
 }

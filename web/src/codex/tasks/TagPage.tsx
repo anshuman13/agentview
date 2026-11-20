@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useAssistant } from '../data';
 import { tagTasks } from '../data/tasks/tagTasks';
 import { rowKey } from '../data/sync';
-import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Section, sectionCount } from '../../ui/Section';
 import { setView, useEscapeBack } from '../view';
@@ -17,7 +17,7 @@ export function TagPage({ tag }: { tag: string }) {
   return (
     <div className="assistant tasks">
       <div className="tasks-head">
-        <button className="icon-btn" title="Back" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
+        <IconButton icon="arrow-left" label="Back" onClick={back} />
         <Section label={<button className="as-crumb" onClick={back}>Tasks</button>} />
       </div>
       <div className="as-scroll">

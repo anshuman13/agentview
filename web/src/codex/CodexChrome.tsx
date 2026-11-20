@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import type { AssistantStore, Snapshot } from './data/store';
 import { AssistantNav } from './nav';
 import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
 import { Back } from '../app/touch/back';
 
 export function LockedCodex({ root, snap, store }: { root: RefObject<HTMLDivElement | null>; snap: Pick<Snapshot, 'phase' | 'message'>; store: AssistantStore }) {
@@ -10,7 +11,7 @@ export function LockedCodex({ root, snap, store }: { root: RefObject<HTMLDivElem
       <Icon name="lock" />
       <div className="as-lock-title">Codex is locked</div>
       <div className="muted">{snap.message === 'Locked' ? 'Your tasks and notes are encrypted on this phone.' : snap.message}</div>
-      {snap.phase === 'locked' && <button className="btn primary lg" onClick={() => store.unlock()}>{snap.message === 'Locked' ? 'Unlock' : 'Retry'}</button>}
+      {snap.phase === 'locked' && <Button variant="primary" size="lg" onClick={() => store.unlock()}>{snap.message === 'Locked' ? 'Unlock' : 'Retry'}</Button>}
     </div>
   );
 }

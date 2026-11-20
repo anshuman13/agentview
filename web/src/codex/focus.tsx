@@ -5,6 +5,7 @@ import { estimateMin, focusTitle, minutesText } from './data/tasks/plan';
 import { appendSession } from './data/tasks/timeLog';
 import { apiUrl, fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
 import { save, stored } from '../ui/util';
 import { showSnack } from './view';
 import { UNTITLED } from '../../../shared/util';
@@ -109,8 +110,8 @@ export function FocusBar() {
         <Icon name="watch" small />
         <span className="as-focus-title">{focusTitle(title).slice(7) || UNTITLED}</span>
         {left > 0
-          ? <><span className="as-focus-time" role="timer">{elapsed(left)}</span><button className="btn sm" aria-label="Stop the focus timer" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button></>
-          : <><span className="as-focus-time over">Time's up</span><button className="btn sm" onClick={stopFocus}>Log {LENGTH}m</button><button className="btn sm" onClick={discardFocus}>Discard</button></>}
+          ? <><span className="as-focus-time" role="timer">{elapsed(left)}</span><Button size="sm" icon="debug-stop" aria-label="Stop the focus timer" onClick={stopFocus}>Stop</Button></>
+          : <><span className="as-focus-time over">Time's up</span><Button size="sm" onClick={stopFocus}>Log {LENGTH}m</Button><Button size="sm" onClick={discardFocus}>Discard</Button></>}
       </div>
     );
   }
@@ -122,7 +123,7 @@ export function FocusBar() {
       <Icon name="watch" small />
       <span className="as-focus-title">{focusTitle(title).slice(7) || UNTITLED}</span>
       <span className="as-focus-time" role="timer">{elapsed(ms)}{est != null && <span className="muted"> / {minutesText(est)}</span>}</span>
-      <button className="btn sm" aria-label="Stop the focus timer" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button>
+      <Button size="sm" icon="debug-stop" aria-label="Stop the focus timer" onClick={stopFocus}>Stop</Button>
     </div>
   );
 }

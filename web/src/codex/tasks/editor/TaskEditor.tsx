@@ -2,8 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject }
 import { useTaskDraft } from './draft';
 import { useAssistant } from '../../data';
 import type { ItemRow } from '../../data/sync';
-import { Icon } from '../../../ui/Icon';
-import { Button } from '../../../ui/Button';
+import { Button, IconButton } from '../../../ui/Button';
 import { Row } from '../../../ui/Row';
 import { Section } from '../../../ui/Section';
 import { fitHeight, reveal } from '../../../ui/util';
@@ -52,7 +51,7 @@ export function TaskEditor({ row, onClose, onAsk }: Props) {
     <div className="wk narrow as-page">
       <Back close={onClose} />
       <header className="wk-head">
-        <button className="icon-btn" title="Back to tasks" aria-label="Back" onClick={onClose}><Icon name="arrow-left" /></button>
+        <IconButton icon="arrow-left" label="Back" title="Back to tasks" onClick={onClose} />
       </header>
       <div className="wk-scroll" ref={scroller}>
         <div className={`as-edit ${row.profile}`} data-no-swipe>
