@@ -84,8 +84,8 @@ Desktop (main column ≥ 880px wide)
 - Meeting page (`web/src/codex/meetings/MeetingPage.tsx`): back, a Section header with the title, one button (Join
   while live with a calendar link, else Notes) and a More menu (Open calendar, Copy follow-up, Copy as Markdown, Read
   again, Delete notes with Undo), then chips for time, room, "Recorded 46 min", N people and the series, and the
-  people as links. The Android page has a More menu with Open calendar, Copy follow-up and Copy as Markdown (the
-  texts are checked against `shared/fixtures/meeting-copy.json`). Sections: My actions, To review (with Confirm all), Summary (AI), Pinned, Decisions, the prep
+  people as links. The Android page has the same More menu, and a Read now or Retry button on the state line (the
+  copy texts are checked against `shared/fixtures/meeting-copy.json`). Sections: My actions, To review (with Confirm all), Summary (AI), Pinned, Decisions, the prep
   card for an upcoming meeting, Talk time, earlier meetings of the series, My notes, then folded Unassigned, Others
   took, Not mine and the Transcript. Talk time is a bar of the top five speakers' share of words ("Name: text" lines
   or a name line before its text), with the action and decision counts.

@@ -25,7 +25,7 @@ export function Person({ name }: { name: string }) {
   const copy = () => {
     const resolved = resolvedQuestions();
     const text = personMarkdown(name, { commitments, questions: questions.filter((q) => !resolved.includes(questionKey(q))), points, tasks, pins, meetings: mine, claims });
-    copyText(text);
+    copyText(text, `${firstName(shown)} copied`);
   };
   return (
     <div className="wk narrow">

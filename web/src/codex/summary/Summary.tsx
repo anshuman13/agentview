@@ -85,7 +85,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
                 </div>
               ))}
               {!report.groups.length && <EmptyState size="sm" icon="checklist" title="No tasks in this range" hint="Pick another date or status" />}
-              <Button size="sm" icon="copy" onClick={() => copyText(report.markdown)}>Copy</Button>
+              <Button size="sm" icon="copy" onClick={() => copyText(report.markdown, 'Summary copied')}>Copy</Button>
             </div>
             <Panel padding="sm" className="sm-filter">
               <label><span>Date</span>

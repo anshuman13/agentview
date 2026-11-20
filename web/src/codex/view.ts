@@ -156,7 +156,7 @@ export function showSnack(text: string, undo?: () => void, ms = SNACK_MS) {
 }
 export const snackParked = (rows: unknown[]) => showSnack(rows.length === 1 ? '1 change not synced, edit it to retry' : `${rows.length} changes not synced, edit them to retry`);
 export const useSnack = () => snack.use();
-export const copyText = (text: string, done = 'Copied') => void copyToClipboard(text).then(() => showSnack(done), () => showSnack('Copy failed'));
+export const copyText = (text: string, done: string) => void copyToClipboard(text).then(() => showSnack(done), () => showSnack('Copy failed'));
 export function hideSnack() {
   snack.set(null);
 }

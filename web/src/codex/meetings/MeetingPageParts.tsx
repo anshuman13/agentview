@@ -112,7 +112,7 @@ export function MeetingMenu({ m, all, state, deleteNotes }: MenuProps) {
         <Menu trigger={more} onClose={() => setMenu(false)}>
           {link && <MenuItem icon="calendar" href={link} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
           {copyable && <MenuItem icon="mail" onClick={() => { setMenu(false); copyText(followUpText(m, all), 'Follow-up copied'); }}>Copy follow-up</MenuItem>}
-          {copyable && <MenuItem icon="copy" onClick={() => { setMenu(false); copyText(toMarkdown(m, all)); }}>Copy as Markdown</MenuItem>}
+          {copyable && <MenuItem icon="copy" onClick={() => { setMenu(false); copyText(toMarkdown(m, all), 'Meeting copied'); }}>Copy as Markdown</MenuItem>}
           {canRead && <MenuItem icon={reading ? 'loading' : 'sync'} spin={reading} disabled={reading} onClick={() => { setMenu(false); void read(); }}>{reading ? 'Reading' : 'Read again'}</MenuItem>}
           {m.notes && <MenuSeparator />}
           {m.notes && <MenuItem icon="trash" danger onClick={() => { setMenu(false); deleteNotes(); }}>Delete notes</MenuItem>}

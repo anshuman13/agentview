@@ -272,7 +272,7 @@ export function ReplyQueue({ rows, filtered = false, onClear, onAsk }: { rows: I
   };
   const sendText = `Send all ${faq.length} FAQ answers`;
   const copyLabel = `Copy ${admins} access and limit requests`;
-  const copyList = () => copyText(adminList(rows), `Copied ${admins} requests`);
+  const copyList = () => copyText(adminList(rows), `${admins} requests copied`);
   const both = faq.length >= 2 && admins >= 2;
   const fine = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
   const batch = both || (fine && !filtered) ? (

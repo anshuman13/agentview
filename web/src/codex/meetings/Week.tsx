@@ -52,7 +52,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
     ].join('\n').trim();
   };
   const [review, setReview] = useState(false);
-  const copy = () => copyText(markdown());
+  const copy = () => copyText(markdown(), 'Week copied');
   const empty = !r.decisions.length && !r.claims.length && !r.done.length && !r.open.length;
   return (
     <div className="mt-load">

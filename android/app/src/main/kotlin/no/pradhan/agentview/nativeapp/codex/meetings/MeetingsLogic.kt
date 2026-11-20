@@ -109,6 +109,15 @@ fun meetingState(m: Row, now: Long): MState {
     return MState.Waiting
 }
 
+// A calendar meeting that has started has a transcript to read.
+fun readable(m: Row, now: Long) = m.id.startsWith("cal:") && (m.startsAt ?: Long.MAX_VALUE) <= now
+
+fun readLabel(state: MState): String? = when (state) {
+    MState.Waiting -> "Read now"
+    MState.Missing -> "Retry"
+    else -> null
+}
+
 private val UNTICKED = Regex("""^\s*[-*]\s+\[ \]\s+(.+)$""")
 
 fun normalizeTitle(t: String) = t.lowercase().replace(Regex("""[^\p{L}\p{N}]+"""), " ").trim()
