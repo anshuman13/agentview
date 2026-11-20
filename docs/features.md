@@ -256,7 +256,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   You or Claude and the age, and a tap opens that chat, like Slack's message search. The web sidebar Sessions search
   shows the same Messages list under the repos
 - Hovering a sent prompt in the web transcript shows Use again, which puts that prompt in the composer to edit and send
-  again (like editing a Slack message); queued and stopping prompts do not have it.
+  again (like editing a Slack message), and Copy, which copies the prompt text ("Prompt copied"); queued and stopping
+  prompts have neither (a queued one has Send now).
 - Scrolled up in a web chat that is running or has new rows, a Jump to latest button shows, with the count of finished
   replies that arrived since you scrolled up (a badge, 9+ at most; the tooltip reads "Jump to latest · 2 new replies"), like
   Slack's new messages pill. It is one control: a pill on a desktop, a round button with the badge on the phone

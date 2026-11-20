@@ -74,6 +74,10 @@ export function copyLastReply() {
   if (reply) copyText(reply).then(() => notice('Reply copied'), () => notice('Could not copy'));
 }
 
+export function copyPrompt(text: string) {
+  copyText(text).then(() => notice('Prompt copied'), () => notice('Could not copy'));
+}
+
 export function copyResumeCommand(command: string) {
   copyText(command).then(() => notice('Copied. Stop this chat before resuming it in a terminal'), () => notice('Could not copy'));
 }
