@@ -254,8 +254,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Hovering a sent prompt in the web transcript shows Use again, which puts that prompt in the composer to edit and send
   again (like editing a Slack message); queued and stopping prompts do not have it.
 - Scrolled up in a web chat that is running or has new rows, a Jump to latest button shows, with the count of finished
-  replies that arrived since you scrolled up ("Jump to latest · 2 new replies"), like Slack's new messages pill. The phone's
-  Jump to latest shows the same count
+  replies that arrived since you scrolled up (a badge, 9+ at most; the tooltip reads "Jump to latest · 2 new replies"), like
+  Slack's new messages pill. It is one control: a pill on a desktop, a round button with the badge on the phone
 - The web transcript draws Slack-style day dividers (Today, Yesterday, "Tuesday 3 November") above each prompt that starts a
   new day, like the phone; a chat that stays within today has none
 - "TODOs" in the Tools sheet of the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
@@ -561,7 +561,7 @@ or a page puts focus back on what opened it.
 | ? | Show the keyboard shortcuts (outside text fields) |
 | ⌘K | Clear the terminal |
 | Enter | Send; Shift+Enter for a new line |
-| Tab | Accept the suggested command or the ghost text |
+| Tab | Accept the suggested command or the ghost text (a Tab chip follows the ghost text on a keyboard device) |
 | Shift+Tab | Cycle the permission mode |
 | ↑ / ↓ | Step through sent prompts when the box is empty |
 | Esc | Close a popup or clear a filter |
