@@ -5,7 +5,7 @@ import { weekStart } from '../data/dates';
 import type { ItemRow, Profile } from '../data/sync';
 import { attempt, openWeekGoals, showSnack, useView } from '../view';
 import { Section } from '../../ui/Section';
-import { Button, IconButton, chipClass } from '../../ui/Button';
+import { Button, Chip, IconButton, chipClass } from '../../ui/Button';
 
 function GoalInput({ row }: { row: ItemRow }) {
   const store = useAssistantStore();
@@ -25,8 +25,8 @@ function GoalInput({ row }: { row: ItemRow }) {
   );
 }
 
-// Up to three goals for the current week, on the Week view.
-export function WeekGoals({ now }: { now: number }) {
+// The add state of this week's goals: the target profile (the pick under All), its goals and the add action.
+export function useAddGoal(now: number) {
   const store = useAssistantStore();
   const items = useAssistantTable('items');
   const { filter } = useView();
@@ -43,19 +43,33 @@ export function WeekGoals({ now }: { now: number }) {
     if (!(await attempt(() => store.capture(t, GOAL, profile, weekStart(now)), 'Goal not saved'))) setText(t);
     adding.current = false;
   };
+  return { goals, profile, pick: filter === 'all' ? setPick : undefined, text, setText, add };
+}
+
+// The Work and Personal choice (under All only) and the field that adds a goal; hidden once the week is full.
+export function GoalField({ goals, profile, pick, text, setText, add }: ReturnType<typeof useAddGoal>) {
+  if (goals.length >= MAX_GOALS) return null;
+  return (
+    <>
+      {pick && (
+        <div className="gl-row">
+          <Chip tone="work" on={profile === 'work'} onClick={() => pick('work')}>Work</Chip>
+          <Chip tone="personal" on={profile === 'personal'} onClick={() => pick('personal')}>Personal</Chip>
+        </div>
+      )}
+      <input className="gl-input" value={text} placeholder="Add a goal for this week" aria-label="New goal" enterKeyHint="done" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void add(); else if (e.key === 'Escape') setText(''); }} />
+    </>
+  );
+}
+
+// Up to three goals for the current week, on the Week view.
+export function WeekGoals({ now }: { now: number }) {
+  const add = useAddGoal(now);
   return (
     <section className="mt-wk-sec">
-      <Section label="Goals this week" count={goals.length} action={<Button size="sm" variant="plain" onClick={openWeekGoals}>All goals</Button>} />
-      {goals.length > 0 && <div role="list" aria-label="Goals">{goals.map((g) => <GoalInput key={g.profile + g.id} row={g} />)}</div>}
-      {filter === 'all' && (
-        <select className={chipClass({ quiet: true })} value={pick} aria-label="Goal profile" onChange={(e) => setPick(e.target.value as Profile)}>
-          <option value="work">Work</option>
-          <option value="personal">Personal</option>
-        </select>
-      )}
-      {goals.length < MAX_GOALS && (
-        <input className="gl-input" value={text} placeholder="Add a goal" aria-label="New goal" enterKeyHint="done" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void add(); else if (e.key === 'Escape') setText(''); }} />
-      )}
+      <Section label="Goals this week" count={add.goals.length} action={<Button size="sm" variant="plain" onClick={openWeekGoals}>All goals</Button>} />
+      {add.goals.length > 0 && <div role="list" aria-label="Goals">{add.goals.map((g) => <GoalInput key={g.profile + g.id} row={g} />)}</div>}
+      <GoalField {...add} />
     </section>
   );
 }

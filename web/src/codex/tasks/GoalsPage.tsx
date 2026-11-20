@@ -4,11 +4,12 @@ import { GOAL, MAX_GOALS, goalHistory, goalSummary, goalsOf, moveBlock, reopenBl
 import { weekStart } from '../data/dates';
 import { atTime } from '../data/tasks/engine';
 import type { ItemRow } from '../data/sync';
-import { attempt, leaveOverlay, openTask, openWeek, previousList, showSnack, useEscapeBack, useView } from '../view';
+import { attempt, leaveOverlay, openTask, previousList, showSnack, useEscapeBack, useView } from '../view';
+import { GoalField, useAddGoal } from './Goals';
 import { useMinute } from './split';
 import { LISTS } from '../nav';
 import { dueText } from './Task';
-import { Button, IconButton } from '../../ui/Button';
+import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
@@ -73,6 +74,7 @@ export function GoalsPage() {
   const now = useMinute();
   const weeks = useMemo(() => goalHistory(items, now, filter === 'all' ? undefined : filter), [items, now, filter]);
   const busy = useRef(false);
+  const add = useAddGoal(now);
   useEscapeBack(leaveOverlay);
   const reopen = async (g: ItemRow) => {
     if (busy.current) return;
@@ -107,16 +109,19 @@ export function GoalsPage() {
       </header>
       <div className="wk-scroll">
         <div className="mt-page">
-          {gate.loading && !items.length ? <Skeleton /> : !weeks.length ? (
-            <EmptyState size="sm" icon="target" title="No goals yet" hint="Set goals in Meetings > Week" action={<Button size="sm" onClick={openWeek}>Open Week</Button>} />
-          ) : weeks.map((w) => (
-            <section key={w.start}>
-              <Section label={w.label} />
-              <div className="ui-group">
-                {w.goals.map((g) => <GoalGroup key={g.profile + g.id} goal={g} items={items} showProfile={filter === 'all'} now={now} reopen={reopen} move={move} rename={rename} remove={remove} />)}
-              </div>
-            </section>
-          ))}
+          {gate.loading && !items.length ? <Skeleton /> : (
+            <>
+              <div className="mt-wk-sec"><GoalField {...add} /></div>
+              {!weeks.length ? <EmptyState size="sm" icon="target" title="No goals yet" hint={`Set up to ${MAX_GOALS} goals for this week in the field above`} /> : weeks.map((w) => (
+                <section key={w.start}>
+                  <Section label={w.label} />
+                  <div className="ui-group">
+                    {w.goals.map((g) => <GoalGroup key={g.profile + g.id} goal={g} items={items} showProfile={filter === 'all'} now={now} reopen={reopen} move={move} rename={rename} remove={remove} />)}
+                  </div>
+                </section>
+              ))}
+            </>
+          )}
         </div>
       </div>
     </div>
