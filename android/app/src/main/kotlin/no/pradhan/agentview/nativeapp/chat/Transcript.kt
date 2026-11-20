@@ -267,7 +267,7 @@ private fun TaskLines(fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) ->
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(plural(fold.work.tools, "tool"), style = Type.label, color = av.fgMuted)
-                AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgMuted)
+                AvIcon("chevron-right", null, Tokens.sp5, tint = av.fgMuted)
             }
         }
         @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
@@ -277,9 +277,9 @@ private fun TaskLines(fold: FoldRow.Fold, live: Boolean, onOpenWork: (String) ->
         }
         steps.forEach { s ->
             when {
-                s.done -> Task({ AvIcon("check", null, Tokens.iconSm, tint = av.ok) }, s.title, av.fg)
+                s.done -> Task({ AvIcon("check", null, Tokens.sp5, tint = av.ok) }, s.title, av.fg)
                 s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
-                else -> Task({ AvIcon("circle-large-outline", null, Tokens.iconSm, tint = av.fgFaint) }, s.title, av.fgMuted)
+                else -> Task({ AvIcon("circle-large-outline", null, Tokens.sp5, tint = av.fgFaint) }, s.title, av.fgMuted)
             }
         }
         if (live && current == null && fold.now.isNotEmpty()) Task(spin, fold.now, av.fgStrong)
