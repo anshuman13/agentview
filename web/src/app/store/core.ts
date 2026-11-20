@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { type AttentionItem, type ChatRun, type LiveChat, type ReviewFindings, type ServerState } from '../../../../shared/protocol';
 import { apiUrl } from '../api';
 import { track } from '../featureUse';
+import { parseOutbox, type Queued } from './outboxLogic';
 
 export type GoalSheetState = { mode: 'start'; plan?: string; here?: boolean; from?: ChatRun } | { mode: 'detail'; run: string };
 
@@ -24,7 +25,10 @@ type UiState = {
 export const embedded = typeof window !== 'undefined' && window.self !== window.top;
 const storedBeside = () => { try { return embedded ? null : localStorage.getItem('agentview.beside') || null; } catch { return null; } };
 
-export type State = ServerState & { live: LiveChat[]; runs: ChatRun[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; ui: UiState };
+export const OUTBOX_KEY = 'agentview.outbox';
+const storedOutbox = () => { try { return parseOutbox(JSON.parse(localStorage.getItem(OUTBOX_KEY) ?? '[]')); } catch { return []; } };
+
+export type State = ServerState & { live: LiveChat[]; runs: ChatRun[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; outbox: Queued[]; ui: UiState };
 
 // The server's session fills these in; a field a server of another version leaves out keeps its default here.
 export const EMPTY_SESSION: State['session'] = { id: '', sessionId: null, model: null, effort: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], repeat: null, pr: null, account: 'main', accounts: [] };
@@ -40,6 +44,7 @@ let state: State = {
   attention: [],
   findings: {},
   seen: {},
+  outbox: storedOutbox(),
   ui: { connected: false, openFile: null, follow: false, switcherOpen: false, repoPicker: false, beside: storedBeside(), sketch: null, spec: null },
 };
 
