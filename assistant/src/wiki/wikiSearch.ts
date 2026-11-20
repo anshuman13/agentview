@@ -17,7 +17,7 @@ export function searchWiki(db: Database, query: string, profile: Profile) {
     "SELECT p.id, p.title, p.section, p.state FROM pages_fts JOIN pages p ON p.rowid = pages_fts.rowid WHERE pages_fts MATCH ? AND p.profile = ? AND p.deleted = 0 AND COALESCE(p.state, 'live') != 'rejected' ORDER BY bm25(pages_fts, 2, 1) LIMIT 10",
   ).all(match, profile) as Record<string, unknown>[];
   const claims = db.prepare(
-    'SELECT f.id, f.text, f.at, f.used_at, f.state, f.superseded_by, f.page_id, f.heading, p.title AS page_title FROM facts_fts JOIN facts f ON f.rowid = facts_fts.rowid LEFT JOIN pages p ON p.id = f.page_id WHERE facts_fts MATCH ? AND f.profile = ? AND f.deleted = 0 ORDER BY bm25(facts_fts), f.at DESC LIMIT 200',
+    'SELECT f.id, f.text, f.at, f.used_at, f.state, f.superseded_by, f.page_id, f.heading, p.title AS page_title FROM facts_fts JOIN facts f ON f.rowid = facts_fts.rowid LEFT JOIN pages p ON p.id = f.page_id WHERE facts_fts MATCH ? AND f.profile = ? AND f.deleted = 0 ORDER BY bm25(facts_fts, 2, 1), f.at DESC LIMIT 200',
   ).all(match, profile) as Record<string, unknown>[];
   return { pages, claims };
 }

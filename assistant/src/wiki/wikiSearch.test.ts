@@ -31,6 +31,39 @@ test('searchWiki ranks claims, matches on any word and scopes by profile', () =>
   expect(searchWiki(db, 'with that', 'work')).toEqual({ pages: [], claims: [] });
 });
 
+test('searchWiki finds a claim by its source label, text ranking first', () => {
+  const db = openDb(':memory:');
+  applyChanges(db, [
+    row('facts', 'f1', { text: 'The importer retries failed rows.', sources: JSON.stringify([{ kind: 'linear', label: 'AIE-924' }]) }),
+    row('facts', 'f2', { text: 'Ticket AIE-924 changed the deploy order.' }),
+    row('facts', 'f3', { text: 'Unrelated.', sources: JSON.stringify([{ kind: 'slack', label: 'label' }]) }),
+  ]);
+  expect(ids(searchWiki(db, 'AIE-924', 'work').claims)).toEqual(['f2', 'f1']);
+});
+
+test('openDb rebuilds a text-only claim index with the sources column and keeps the claims', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wikisearch-'));
+  const file = path.join(dir, 'hub.db');
+  try {
+    const first = openDb(file);
+    applyChanges(first, [row('facts', 'f1', { text: 'Importer notes.', sources: JSON.stringify([{ kind: 'pr', label: 'Build 77' }]) })]);
+    for (const suffix of ['ai', 'ad', 'au']) first.exec(`DROP TRIGGER facts_fts_${suffix}`);
+    first.exec('DROP TABLE facts_fts');
+    first.exec("CREATE VIRTUAL TABLE facts_fts USING fts5(text, content='facts', tokenize='unicode61 remove_diacritics 2')");
+    first.exec("INSERT INTO facts_fts(facts_fts) VALUES ('rebuild')");
+    expect(ids(searchWiki(first, 'build 77', 'work').claims)).toEqual([]);
+    first.close();
+    const db = openDb(file);
+    expect(ids(searchWiki(db, 'build 77', 'work').claims)).toEqual(['f1']);
+    expect(ids(searchWiki(db, 'importer', 'work').claims)).toEqual(['f1']);
+    applyChanges(db, [row('facts', 'f2', { text: 'More.', sources: JSON.stringify([{ kind: 'pr', label: 'Build 78' }]) })]);
+    expect(ids(searchWiki(db, '78', 'work').claims)).toEqual(['f2']);
+    db.close();
+  } finally {
+    fs.rmSync(dir, { recursive: true });
+  }
+});
+
 test('markUsed counts a day of use per live claim and leaves updated_at alone', () => {
   const day = 86_400_000;
   const db = openDb(':memory:');

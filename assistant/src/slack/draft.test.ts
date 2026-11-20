@@ -52,7 +52,7 @@ test('askContext ranks a Support FAQ claim first on a tie and keeps its link; li
   applyChanges(db, [
     row('pages', 'p1', { title: 'Billing', state: 'live' }),
     row('pages', 'p2', { title: 'Support FAQ', state: 'live' }),
-    row('facts', 'f1', { page_id: 'p1', text: 'Invoices export runs nightly to the finance bucket.' }),
+    row('facts', 'f1', { page_id: 'p1', text: 'Invoices export runs nightly to the finance bucket.', sources: JSON.stringify([{ kind: 'slack', label: 'x', url: 'https://example.com/u' }]) }),
     row('facts', 'f2', { page_id: 'p2', text: 'Invoices export runs nightly to the finance bucket.', sources: JSON.stringify([{ kind: 'slack', label: 'x', url: 'https://example.com/t' }]) }),
     row('facts', 'f3', { page_id: 'p1', text: 'Old invoices export.', superseded_by: 'f1' }),
   ]);
