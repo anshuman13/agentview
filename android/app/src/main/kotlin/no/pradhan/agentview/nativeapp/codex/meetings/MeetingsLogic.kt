@@ -107,6 +107,23 @@ fun meetingState(m: Row, now: Long): MState {
     return MState.Waiting
 }
 
+private val UNTICKED = Regex("""^\s*[-*]\s+\[ \]\s+(.+)$""")
+
+fun normalizeTitle(t: String) = t.lowercase().replace(Regex("""[^\p{L}\p{N}]+"""), " ").trim()
+
+// Mirrors shared/noteActions.ts: the unticked "- [ ] text" lines of the notes that no title matches yet, once strip has taken the due date out.
+fun unmadeActions(notes: String, titles: List<String>, strip: (String) -> String): List<String> {
+    val seen = titles.map(::normalizeTitle).toMutableSet()
+    val out = mutableListOf<String>()
+    for (line in notes.split('\n')) {
+        val text = UNTICKED.find(line)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() } ?: continue
+        val key = normalizeTitle(strip(text).ifEmpty { text })
+        if (key.isEmpty() || !seen.add(key)) continue
+        out.add(text)
+    }
+    return out
+}
+
 class ActionCount(val total: Int, val done: Int, val review: Int, val unassigned: Int, val dismissed: Int)
 
 fun actionCount(items: List<Row>, m: Row): ActionCount {

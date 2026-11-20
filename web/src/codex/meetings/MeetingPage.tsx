@@ -16,7 +16,7 @@ import { notesFocusFor, setView, showSnack, useEscapeBack } from '../view';
 import { ActionRow, confirmAll } from './ActionRow';
 import { PinList, PinnableSummary } from './Pins';
 import { Prep } from './Prep';
-import { AddAction, MeetingMenu, MeetingMore, Notes, StateLine } from './MeetingPageParts';
+import { AddAction, MeetingMenu, MeetingMore, NoteActions, Notes, StateLine } from './MeetingPageParts';
 import { RaiseWith } from './Raise';
 import { recentPeople } from '../data/meetings/points';
 import { talkTime } from '../data/meetings/talkTime';
@@ -71,6 +71,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
     <section className="mt-sec" ref={notesBox}>
       <h2>My notes</h2>
       <Notes m={m} editing={editing} setEditing={setEditing} />
+      <NoteActions m={m} all={all} />
     </section>
   );
   return (
