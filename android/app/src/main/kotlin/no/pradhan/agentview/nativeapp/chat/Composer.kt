@@ -244,8 +244,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
             val r = acceptSuggestion(s.text.text, trigger!!.start, s.text.selection.end, sg.insert)
             s.set(TextFieldValue(r.first, TextRange(r.second)))
         } else if (ghost.isNotEmpty()) GhostRow(s.text.text, ghost) { val next = s.text.text + ghost; s.set(TextFieldValue(next, TextRange(next.length))) }
-        val stale = staleSeconds(hub)
-        if (stale >= 30) Text("No update for ${stale}s", Modifier.padding(horizontal = Tokens.sp6), style = Type.footnote, color = c.fgMuted)
+        StaleNote(hub)
         Column(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape)) {
             if (s.uses.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 s.uses.forEach { u -> Chip(useLabel(u), { s.uses = s.uses - u }, icon = "plug", trailingIcon = "close", trailingLabel = "Remove") }
@@ -265,6 +264,13 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
         }
     }
     ComposerSheets(hub, s, uploading, session, run, sheet, attach) { sheet = it }
+}
+
+// "No update for Ns" once the event stream has been quiet for 30 s; its own composable so the 5 s tick recomposes only it.
+@Composable
+private fun StaleNote(hub: Hub) {
+    val stale = staleSeconds(hub)
+    if (stale >= 30) Text("No update for ${stale}s", Modifier.padding(horizontal = Tokens.sp6), style = Type.footnote, color = av.fgMuted)
 }
 
 // Seconds since the event stream last sent anything, checked every 5 s while the app is visible; 0 in the background.
@@ -447,12 +453,10 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
                 ListRow("Send at", "Send this message at a time today or tomorrow", leading = icon("clock"), onClick = { onSheet(Picker.SendAt) })
             }
             if (pct != null && pct >= 50) {
-                val codex = session?.provider == "codex"
                 val compacting = session?.compacting == true
                 val running = session?.running == true
-                val idle = !codex && !compacting && !running && !s.hub.readOnly
+                val idle = !compacting && !running && !s.hub.readOnly
                 val meta = when {
-                    codex -> null
                     compacting -> "Compacting…"
                     running -> "Compacts when this turn ends"
                     idle -> "Tap to compact"

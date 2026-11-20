@@ -175,6 +175,14 @@ private fun words(s: String): List<String> {
 
 // A person's name, or "First Last" derived from an email like first.last@host.
 fun displayName(s: String) = if ('@' in s) words(s).joinToString(" ") { it[0].uppercase() + it.drop(1).lowercase() }.ifEmpty { s.trim() } else s.trim()
+
+// An action row's meta: when it is due (open or suggested only), the assignee's first name, then `extra`.
+fun actionMeta(r: Row, now: Long, vararg extra: String?) = listOfNotNull(
+    r.at?.takeIf { r.status == "open" || r.status == "suggested" }?.let { whenText(it, now) },
+    r.str("assignee")?.takeIf { it.isNotEmpty() }?.let { firstName(displayName(it)) },
+    *extra,
+).joinToString(" · ")
+
 fun sameName(a: String, b: String) = words(a).joinToString(" ").lowercase() == words(b).joinToString(" ").lowercase()
 
 fun sharesGuests(people: List<String>, other: List<String>): Boolean {

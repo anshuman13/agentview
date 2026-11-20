@@ -210,7 +210,7 @@ private fun FeedSheet(facts: List<Row>, pages: List<Row>, now: Long, onDismiss: 
                 val f = e.fact
                 val contested = e.kind == FeedKind.Contested
                 val page = f.str("page_id")?.ifEmpty { null }?.let { titles["${f.profile}:$it"] ?: UNTITLED } ?: "Memory"
-                val by = if (contested) contestOf(f)?.let { "by ${it.by}" } else sourcesOf(f).firstOrNull()?.label
+                val by = contestOf(f)?.takeIf { contested }?.let { "by ${it.by}" } ?: sourcesOf(f).firstOrNull()?.label
                 ListRow(f.str("text") ?: "", listOfNotNull(page, by, agoText(e.at, now)).joinToString(" · "), onClick = { onClaim(f) },
                     state = if (contested) ({ Badge("Contested", BadgeTone.Waiting) }) else null)
             }
@@ -339,7 +339,7 @@ private fun PendingBanner(page: Row, proposed: List<Row>, decided: String?, read
         return
     }
     LayoutRow(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        Text((if (page.str("state") == "proposed") "New page with " else "") + "${proposed.size} proposed ${if (proposed.size == 1) "claim" else "claims"}", Modifier.weight(1f), style = Type.subheadline, color = av.fg)
+        Text((if (page.str("state") == "proposed") "New page with " else "") + plural(proposed.size, "proposed claim"), Modifier.weight(1f), style = Type.subheadline, color = av.fg)
         if (!readOnly) {
             Button("Reject all", onReject, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             Button("Approve all", onApprove, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)

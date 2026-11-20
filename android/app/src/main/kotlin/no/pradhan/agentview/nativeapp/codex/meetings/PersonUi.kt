@@ -121,7 +121,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, actions: TaskA
                         )
                     }
                 }
-                if (!allWaiting && waiting.size > 5) Button("Show all ${waiting.size}", { allWaiting = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (!allWaiting && waiting.size > 5) ShowAll(waiting.size) { allWaiting = true }
             }
         }
         if (inbox.mail.isNotEmpty()) {
@@ -133,21 +133,21 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, actions: TaskA
                         ListRow(w.subject, "sent ${agoShort(w.sentAt, now, " ago")}", onClick = safeHref(w.url)?.let { h -> { uri.openUri(h) } })
                     }
                 }
-                if (!allMail && inbox.mail.size > 5) Button("Show all ${inbox.mail.size}", { allMail = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (!allMail && inbox.mail.size > 5) ShowAll(inbox.mail.size) { allMail = true }
             }
         }
         if (tasks.isNotEmpty()) {
             item { SectionHeader("Open tasks", tasks.size.toString()) }
             item {
                 Group { (if (allTasks) tasks else tasks.take(5)).forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions) { onTask(r) } } }
-                if (!allTasks && tasks.size > 5) Button("Show all ${tasks.size}", { allTasks = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (!allTasks && tasks.size > 5) ShowAll(tasks.size) { allTasks = true }
             }
         }
         if (commitments.isNotEmpty()) {
             item { SectionHeader("Commitments", commitments.size.toString()) }
             item {
                 Group { (if (allCommitments) commitments else commitments.take(5)).forEachIndexed { i, c -> if (i > 0) Hairline(); ListRow(c.what, c.meeting.title, onClick = { onMeeting(c.meeting) }) } }
-                if (!allCommitments && commitments.size > 5) Button("Show all ${commitments.size}", { allCommitments = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (!allCommitments && commitments.size > 5) ShowAll(commitments.size) { allCommitments = true }
             }
         }
         if (points.isNotEmpty() || adding) {
@@ -172,7 +172,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, actions: TaskA
                     MeetingListRow(m, now, showProfile = false, onNotes = onNotes) { onMeeting(m) }
                 }
             }
-            if (mine.size > 5 && !all) Button("Show all ${mine.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (mine.size > 5 && !all) ShowAll(mine.size) { all = true }
         }
         if (claims.isNotEmpty()) {
             item { SectionHeader("In the wiki", claims.size.toString()) }
@@ -183,12 +183,16 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, actions: TaskA
                         ListRow(f.str("text") ?: "", f.str("page_id")?.let { titles[it] }, onClick = { onClaim(f) })
                     }
                 }
-                if (!allClaims && claims.size > 5) Button("Show all ${claims.size}", { allClaims = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (!allClaims && claims.size > 5) ShowAll(claims.size) { allClaims = true }
             }
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
 }
+
+@Composable
+private fun ShowAll(n: Int, onClick: () -> Unit) =
+    Button("Show all $n", onClick, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
 
 internal fun LazyListScope.seriesRows(prior: List<Row>, repeats: Repeats?, decisions: List<Pair<Row, String>>, undone: List<Pair<Row, Row>>, onMeeting: (Row) -> Unit) {
     val last = prior[0]

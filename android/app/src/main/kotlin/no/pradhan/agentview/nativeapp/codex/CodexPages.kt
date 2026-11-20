@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import no.pradhan.agentview.nativeapp.codex.meetings.actionGroups
-import no.pradhan.agentview.nativeapp.codex.meetings.displayName
+import no.pradhan.agentview.nativeapp.codex.meetings.actionMeta
 import no.pradhan.agentview.nativeapp.codex.meetings.meetingGroupTitle
 import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 import androidx.compose.foundation.layout.Row
@@ -128,12 +128,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: 
                 Group {
                     g.rows.forEachIndexed { i, r ->
                         if (i > 0) Hairline()
-                        val meta = listOfNotNull(
-                            dueText(r, now),
-                            r.str("assignee")?.takeIf { it.isNotEmpty() }?.let { displayName(it).substringBefore(' ') },
-                            r.text?.takeIf { it.isNotEmpty() },
-                            if (showProfile) profileLabel(r.profile) else null,
-                        ).joinToString(" · ")
+                        val meta = actionMeta(r, now, r.text?.takeIf { it.isNotEmpty() }, if (showProfile) profileLabel(r.profile) else null)
                         val inMeeting = !r.meetingId.isNullOrEmpty()
                         ListRow(r.title ?: "", meta, onClick = { onOpen(r) },
                             state = { Badge("Needs you", BadgeTone.Waiting) },

@@ -166,11 +166,7 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, readOnly: Boolea
     val status = r.status ?: ""
     val at = r.at
     val late = status == "open" && at != null && at < now
-    val rest = listOfNotNull(
-        if ((status == "open" || status == "suggested") && at != null) whenText(at, now) else null,
-        r.str("assignee")?.takeIf { it.isNotEmpty() }?.let { displayName(it).substringBefore(' ') },
-        from,
-    ).joinToString(" · ")
+    val rest = actionMeta(r, now, from)
     val meta = buildAnnotatedString {
         if (late) { pushStyle(SpanStyle(color = av.err)); append("Late"); pop(); if (rest.isNotEmpty()) append(" · ") }
         append(rest)
