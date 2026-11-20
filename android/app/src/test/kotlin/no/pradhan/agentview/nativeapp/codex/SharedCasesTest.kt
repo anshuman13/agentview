@@ -20,6 +20,9 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import no.pradhan.agentview.nativeapp.app.chatNotice
 import no.pradhan.agentview.nativeapp.app.BarEvent
 import no.pradhan.agentview.nativeapp.chat.failedLine
 import no.pradhan.agentview.nativeapp.chat.mergeTail
@@ -175,6 +178,17 @@ class SharedCasesTest {
         val fixture = Json.parseToJsonElement(File("../../shared/fixtures/chat-menu.json").readText()).jsonObject
         for (c in fixture.getValue("review").jsonArray.map { it.jsonObject }) {
             assertEquals(c.str("name"), c.str("expected"), reviewLabel(c.getValue("running").jsonPrimitive.boolean, c.getValue("hasChanges").jsonPrimitive.boolean))
+        }
+    }
+
+    @Test fun chatNotices() {
+        val base = buildJsonObject { put("id", "a"); put("title", "Fix tests"); put("cwd", "/Users/me/agentview/") }
+        for (c in cases("chat-notices")) {
+            val before = JsonObject(base + c.getValue("before").jsonObject).decode<LiveChat>()
+            val now = JsonObject(base + c.getValue("now").jsonObject).decode<LiveChat>()
+            val n = chatNotice(before, now, c.getValue("muted").jsonPrimitive.boolean)
+            val actual = n?.let { buildJsonObject { put("kind", it.kind.name.lowercase()); put("title", it.title); put("body", it.body); if (it.sub.isNotEmpty()) put("sub", it.sub) } } ?: JsonNull
+            assertEquals(c.str("name"), c.getValue("expected"), actual)
         }
     }
 

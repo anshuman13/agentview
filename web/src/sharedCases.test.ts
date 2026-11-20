@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
+import { chatNotices, type ChatNotice } from '../../shared/notices';
 import { advisorBoard, advisorLoopLine, advisorLoopOf, auditCountLine, defaultAdvisorRoot, specItemPrompt, type BacklogItem } from '../../shared/advisors';
 import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
@@ -385,6 +386,12 @@ describe('cases shared with the Android app', () => {
   const menu = JSON.parse(readFileSync(new URL('../../shared/fixtures/chat-menu.json', import.meta.url), 'utf8'));
   for (const c of menu.review) it(`reviewLabel: ${c.name}`, () => expect(reviewLabel(c.running, c.hasChanges)).toBe(c.expected));
   for (const c of menu.usage) it(`usageMenuLabel: ${c.name}`, () => expect(usageMenuLabel(c.account, c.week, c.fiveHour)).toBe(c.expected));
+
+  type NoticeCase = { name: string; before: Partial<LiveChat>; now: Partial<LiveChat>; muted: boolean; expected: unknown };
+  const liveChat = (c: Partial<LiveChat>) => ({ id: 'a', title: 'Fix tests', cwd: '/Users/me/agentview/', running: false, pending: 0, status: '', lastActive: 0, ...c }) as LiveChat;
+  for (const c of cases<NoticeCase>('chat-notices')) {
+    it(`chatNotices: ${c.name}`, () => expect(chatNotices(liveChat(c.before), liveChat(c.now), c.muted)).toEqual(c.expected as ChatNotice | null));
+  }
 
   type TryCase = { name: string; run: { rounds: Partial<ChatRun['rounds'][number]>[] }; try: Partial<Try>; live: Partial<LiveChat>[]; expected: { n: number; branch: string; state: string; line: string; edits: { add: number; del: number } | null; cost: number; archived: boolean } };
   for (const c of cases<TryCase>('try-column')) {

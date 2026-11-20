@@ -8,9 +8,9 @@ import { markSeen } from './seen';
 import { flushOutbox, send } from './send';
 import { cache, cacheShown, view } from './view';
 import { providerLabel } from '../../../../shared/providers';
+import { chatNotices } from '../../../../shared/notices';
 import { rememberModels } from '../newChat';
 
-const repo = (c: LiveChat) => c.cwd.split('/').pop();
 const focus = (id: string) => () => send({ type: 'view', id });
 
 function notifyBackground(chats: LiveChat[]) {
@@ -19,8 +19,8 @@ function notifyBackground(chats: LiveChat[]) {
   for (const c of chats) {
     const was = live.find((x) => x.id === c.id);
     if (!was || c.id === session.id) continue;
-    if (c.pending > was.pending) notify(`${providerLabel(c.provider)} needs you in ${repo(c)}`, c.title, focus(c.id));
-    else if (was.running && !c.running && !isMuted(c.sessionId)) notify(`${providerLabel(c.provider)} finished in ${repo(c)}`, c.title, focus(c.id));
+    const n = chatNotices(was, c, isMuted(c.sessionId));
+    if (n) notify(n.title, n.sub ? `${n.sub}\n${n.body}` : n.body, focus(c.id));
   }
 }
 

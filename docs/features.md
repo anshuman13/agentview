@@ -387,6 +387,8 @@ clicking it opens that chat in the browser (a GitHub item opens the Sessions vie
 The browser shows its own notification while the tab is hidden; clicking it opens the chat. The bell in the status
 bar turns browser notifications on or off.
 
+On the phone and in the browser, a chat that stops running notifies "<Provider> finished in <repo>" with the reply's first line as the body (the chat title as the phone's sub text, the first body line on web; the title alone when there is no reply line), and "<Provider> failed in <repo>" when it failed. A chat on a loop or goal never gets that notice: it notifies once when a round ends done, blocked, question or failed ("Loop in <repo>: blocked", the round line as the body), and quiet or progress rounds stay silent. Muted chats skip Finished and round notices. The rule is `chatNotices` in `shared/notices.ts` with `shared/fixtures/chat-notices.json`, mirrored in `chatNotice` in `app/ExtrasLogic.kt`.
+
 On the phone, an approval for Edit, Write or MultiEdit shows the file name and "+N -M" in the title and the first 8 changed lines (prefixed + or -) in the expanded text, so you can decide from the shade.
 
 For a phone in the background, the same notifications can go to an [ntfy](https://ntfy.sh) topic. Push is off

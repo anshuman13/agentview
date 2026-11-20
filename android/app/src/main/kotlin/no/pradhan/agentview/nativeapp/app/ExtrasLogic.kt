@@ -15,23 +15,36 @@ enum class NoticeKind(val channel: String, val label: String) {
 
 enum class NoticeAsk { None, Permission, Question }
 
-data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None, val permissionId: String = "", val detail: String = "", val slug: String = "")
+data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None, val permissionId: String = "", val detail: String = "", val slug: String = "", val sub: String = "")
 
 fun noticeId(n: Notice) = (n.kind.channel + n.chatId + n.slug).hashCode()
 
 fun repoName(c: LiveChat) = c.cwd.trimEnd('/').substringAfterLast('/')
 
-// web/src/app/store.ts notifyBackground: a chat that gained a pending request, or stopped running, since the last list.
-// A muted chat (Slack's mute) skips Finished; Needs you and Failed still come.
+private val ROUND_NOTICE = setOf("done", "blocked", "question", "failed")
+
+// shared/notices.ts chatNotices, cases in shared/fixtures/chat-notices.json: the one notice a chat's live-list change earns.
+// A muted chat (Slack's mute) skips Finished and round notices; Needs you and Failed still come.
+fun chatNotice(before: LiveChat, c: LiveChat, muted: Boolean): Notice? {
+    val who = providerLabel(c.provider)
+    val repo = repoName(c)
+    if (c.pending > before.pending) return Notice(NoticeKind.Approval, c.id, "$who needs you in $repo", c.title)
+    if (c.failed && !before.failed) return Notice(NoticeKind.Failed, c.id, "$who failed in $repo", c.title)
+    if (muted) return null
+    val run = c.run
+    if (run != null) {
+        if (before.run == null || run.round <= before.run.round || run.outcome !in ROUND_NOTICE) return null
+        return Notice(NoticeKind.Finished, c.id, "${if (run.kind == "goal") "Goal" else "Loop"} in $repo: ${run.outcome}", run.line?.ifEmpty { null } ?: c.title)
+    }
+    if (!before.running || c.running || c.failed) return null
+    val title = "$who finished in $repo"
+    return if (c.last.isNullOrEmpty()) Notice(NoticeKind.Finished, c.id, title, c.title) else Notice(NoticeKind.Finished, c.id, title, c.last, sub = c.title)
+}
+
 fun notices(was: List<LiveChat>, now: List<LiveChat>, shownId: String = "", muted: Set<String> = emptySet()): List<Notice> = now.mapNotNull { c ->
     if (c.id == shownId) return@mapNotNull null
     val before = was.firstOrNull { it.id == c.id } ?: return@mapNotNull null
-    when {
-        c.pending > before.pending -> Notice(NoticeKind.Approval, c.id, "${providerLabel(c.provider)} needs you in ${repoName(c)}", c.title)
-        c.failed && !before.failed -> Notice(NoticeKind.Failed, c.id, "${providerLabel(c.provider)} failed in ${repoName(c)}", c.title)
-        before.running && !c.running && !c.failed && c.sessionId !in muted -> Notice(NoticeKind.Finished, c.id, "${providerLabel(c.provider)} finished in ${repoName(c)}", c.title)
-        else -> null
-    }
+    chatNotice(before, c, c.sessionId in muted)
 }
 
 const val WAITING_MAX = 5

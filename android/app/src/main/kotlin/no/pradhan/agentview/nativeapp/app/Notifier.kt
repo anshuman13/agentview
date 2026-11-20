@@ -71,6 +71,7 @@ class Notifier(private val app: Application) {
             .setContentIntent(open(chatLink(n.chatId, n.slug), id))
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+        if (n.sub.isNotEmpty()) builder.setSubText(n.sub)
         if (n.detail.isNotEmpty()) builder.setStyle(NotificationCompat.BigTextStyle().bigText(n.detail))
         val replies = n.ask == NoticeAsk.Question || n.kind == NoticeKind.Finished
         if (n.ask == NoticeAsk.Permission) {
