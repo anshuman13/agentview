@@ -184,7 +184,7 @@ private fun ProposeClaim(page: Row?, filter: String?, actions: TaskActions) {
 }
 
 @Composable
-private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOps, page: String, stale: Boolean = false) {
+private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOps, page: String, stale: Boolean = false, ungiven: Boolean = false) {
     val f = c.fact
     val menu = remember(f.key) { mutableStateOf(false) }
     var note by remember(f.key) { mutableStateOf("") }
@@ -198,6 +198,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
             withStyle(SpanStyle(color = av.warn)) { append(contest.note.takeIf { it.isNotEmpty() } ?: "Contested by ${contest.by} - ${agoText(contest.at, now)}") }
         } else {
             val bits = ArrayList<String>()
+            if (ungiven) bits.add("Not given to chats")
             if (proposed) bits.add("Proposed")
             else {
                 if (stale) bits.add("Still true?")
@@ -266,6 +267,7 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
     val older = remember(facts, pid, now / 60_000) { olderClaims(facts, pid, now) }
     val stat = remember(facts) { statsByPage(facts)[pid] }
     var showOlder by rememberSaveable(page.key) { mutableStateOf(false) }
+    val ungiven = remember(facts, memory, now / 60_000) { if (memory) ungivenPreferences(facts, now) else emptySet() }
     val staleIds = older.filter { it.str("state") != "retired" }.map { it.id }.toSet()
     var summaryOpen by rememberSaveable(page.key) { mutableStateOf(false) }
     var renaming by rememberSaveable(page.key) { mutableStateOf(false) }
@@ -305,7 +307,7 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
         }
         groups.forEach { g ->
             item { SectionHeader(g.heading, g.claims.size.toString()) }
-            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "") }
+            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "", ungiven = it.fact.key in ungiven) }
         }
         if (older.isNotEmpty()) {
             item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }

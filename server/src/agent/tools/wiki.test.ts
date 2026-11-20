@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, expect, test, vi } from 'bun:test';
+import { givenPreferences, type Preference } from '../../../../shared/preferences.js';
 import { hubRows } from '../../integrations/assistant.js';
 import { preferencesText, wikiProposeTool, wikiSearchTool } from './wiki.js';
 import { stubGlobal, unstubAllGlobals } from '../../../../testing.js';
@@ -112,6 +114,28 @@ test('preferencesText lists the profile\'s live Memory claims newest first, capp
   expect(lines.slice(1, 4)).toEqual(['- Preference 0', '- Preference 1', '- Preference 2']);
   expect(lines).toHaveLength(16);
   expect(lines.join('\n')).not.toMatch(/On a page|Superseded|Old one|Proposed|Disputed|Personal/);
+});
+
+test('givenPreferences follows the shared cases', () => {
+  const cases = JSON.parse(readFileSync(new URL('../../../../shared/fixtures/preferences.json', import.meta.url), 'utf8')) as { name: string; profile: string; now: number; facts: Preference[]; expected: string[] }[];
+  for (const c of cases) expect(givenPreferences(c.facts, c.profile, c.now).map((f) => f.id), c.name).toEqual(c.expected);
+});
+
+test('wiki_propose reads a bracketed replaces id and refuses one that replaces nothing', async () => {
+  const fact = (id: string, profile: string, fields = {}) => ({ table: 'facts', id, profile, deleted: false, updated_at: 1, fields: { text: `Claim ${id} about gateways`, state: 'live', ...fields } });
+  const changes = [fact('live1', 'work'), fact('gone', 'work', { superseded_by: 'live1' }), fact('mine', 'personal'), fact('idea', 'work', { state: 'proposed' })];
+  const pushed: { changes: { fields: Record<string, unknown> }[] }[] = [];
+  stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') pushed.push(JSON.parse(String(init.body)));
+    return json(200, { version: 1, hasMore: false, changes: init?.method === 'POST' ? [] : changes });
+  }));
+  const replace = (replaces: string, text = 'Brand new unrelated claim') => wikiProposeTool.handler({ text, sources: [], replaces, profile: 'work' }, { cwd: '/tmp', chatId: 'c1', provider: 'claude', host: { setStatus: () => undefined, goal: () => false } });
+  expect(await replace('live1')).toStartWith('Proposed [');
+  expect(await replace('[live1]')).toStartWith('Proposed [');
+  expect(pushed.map((p) => p.changes[0]!.fields.replaces)).toEqual(['live1', 'live1']);
+  for (const id of ['nope', 'gone', 'mine', 'idea']) expect(await replace(`[${id}]`)).toBe(`No live claim [${id}] to replace. Call wiki_search for its id, or leave replaces out.`);
+  expect(await replace('nope', 'Claim live1 about gateways')).toContain('Similar to [live1]: Claim live1 about gateways.');
+  expect(pushed).toHaveLength(2);
 });
 
 test('preferencesText is empty and does not throw while the hub is unreachable', async () => {

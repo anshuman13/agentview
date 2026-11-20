@@ -24,7 +24,7 @@ export function ClaimTextForm({ draft, setDraft, onSave, onCancel, rows }: { dra
   );
 }
 
-export const Claim = memo(function Claim({ fact, old, page, flash, mentions, stale }: { fact: Fact; old: Fact[]; page: string; flash: boolean; mentions?: Mentions; stale?: boolean }) {
+export const Claim = memo(function Claim({ fact, old, page, flash, mentions, stale, ungiven }: { fact: Fact; old: Fact[]; page: string; flash: boolean; mentions?: Mentions; stale?: boolean; ungiven?: boolean }) {
   const review = useReview();
   const edits = useClaimEdits(fact, page);
   const proposed = fact.state === 'proposed';
@@ -62,6 +62,7 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
           ) : fact.text}
           meta={editing ? undefined : (
             <>
+              {ungiven && <span>Not given to chats</span>}
               {proposed && <span>Proposed</span>}
               {c && <span>Contested by {c.by} - {ago(c.at, ' ago')}</span>}
               {sources[0] && <SourceChip s={sources[0]} />}

@@ -1,0 +1,47 @@
+[
+  {"name": "16 claims give the 15 newest", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "p0", "profile": "work", "text": "Preference zero", "at": 9999999999000},
+    {"id": "p1", "profile": "work", "text": "Preference one", "at": 9999999998000},
+    {"id": "p2", "profile": "work", "text": "Preference two", "at": 9999999997000},
+    {"id": "p3", "profile": "work", "text": "Preference three", "at": 9999999996000},
+    {"id": "p4", "profile": "work", "text": "Preference four", "at": 9999999995000},
+    {"id": "p5", "profile": "work", "text": "Preference five", "at": 9999999994000},
+    {"id": "p6", "profile": "work", "text": "Preference six", "at": 9999999993000},
+    {"id": "p7", "profile": "work", "text": "Preference seven", "at": 9999999992000},
+    {"id": "p8", "profile": "work", "text": "Preference eight", "at": 9999999991000},
+    {"id": "p9", "profile": "work", "text": "Preference nine", "at": 9999999990000},
+    {"id": "p10", "profile": "work", "text": "Preference ten", "at": 9999999989000},
+    {"id": "p11", "profile": "work", "text": "Preference eleven", "at": 9999999988000},
+    {"id": "p12", "profile": "work", "text": "Preference twelve", "at": 9999999987000},
+    {"id": "p13", "profile": "work", "text": "Preference thirteen", "at": 9999999986000},
+    {"id": "p14", "profile": "work", "text": "Preference fourteen", "at": 9999999985000},
+    {"id": "p15", "profile": "work", "text": "Preference fifteen", "at": 9999999984000}
+  ], "expected": ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10", "p11", "p12", "p13", "p14"]},
+  {"name": "newest first whatever the order given", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "old", "profile": "work", "text": "Older", "at": 9999999990000},
+    {"id": "new", "profile": "work", "text": "Newer", "at": 9999999999000}
+  ], "expected": ["new", "old"]},
+  {"name": "a claim past 1500 characters ends the list", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "a", "profile": "work", "text": "Short", "at": 9999999999000},
+    {"id": "b", "profile": "work", "text": "abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi", "at": 9999999998000},
+    {"id": "c", "profile": "work", "text": "Short again", "at": 9999999997000}
+  ], "expected": ["a"]},
+  {"name": "whitespace counts as one space toward the cap", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "a", "profile": "work", "text": "  spaced     out\n\ntext  ", "at": 9999999999000}
+  ], "expected": ["a"]},
+  {"name": "contested, old, superseded, proposed, retired, page and other profile claims are left out", "profile": "work", "now": 10000000000000, "facts": [
+    {"id": "ok", "profile": "work", "text": "Given", "at": 9999999999000},
+    {"id": "disputed", "profile": "work", "text": "Contested", "at": 9999999999000, "contested": "{\"by\":\"you\",\"at\":1,\"note\":\"no\"}"},
+    {"id": "stale", "profile": "work", "text": "Old", "at": 9991000000000},
+    {"id": "used", "profile": "work", "text": "Old but used", "at": 9991000000000, "used_at": 9999999000000},
+    {"id": "gone", "profile": "work", "text": "Superseded", "at": 9999999999000, "superseded_by": "ok"},
+    {"id": "idea", "profile": "work", "text": "Proposed", "at": 9999999999000, "state": "proposed"},
+    {"id": "retired", "profile": "work", "text": "Retired", "at": 9999999999000, "state": "retired"},
+    {"id": "paged", "profile": "work", "text": "On a page", "at": 9999999999000, "page_id": "pg"},
+    {"id": "mine", "profile": "personal", "text": "Personal", "at": 9999999999000}
+  ], "expected": ["ok", "used"]},
+  {"name": "the other profile gets its own claims", "profile": "personal", "now": 10000000000000, "facts": [
+    {"id": "w", "profile": "work", "text": "Work", "at": 9999999999000},
+    {"id": "p", "profile": "personal", "text": "Personal", "at": 9999999999000}
+  ], "expected": ["p"]}
+]
