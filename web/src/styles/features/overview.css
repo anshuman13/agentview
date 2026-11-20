@@ -8,7 +8,7 @@
   .ov-today > .ui-section { position: sticky; top: 0; z-index: var(--z-raised); background: var(--group-page); }
 }
 .ov-more { align-self: flex-start; }
-.ov-group { display: flex; flex-direction: column; border-radius: 12px; background: var(--group-card); overflow: hidden; }
+.ov-group { display: flex; flex-direction: column; border-radius: var(--shape-lg); background: var(--group-card); overflow: hidden; }
 .ov-group:empty { display: none; }
 .ov-group > section + section { border-top: 1px solid var(--border); }
 .ov-group .ov-fold { margin: 0; padding: 0 var(--sp-6) var(--sp-8); }
