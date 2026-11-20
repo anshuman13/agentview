@@ -4,7 +4,7 @@ import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { execText } from '../execText.js';
-import { MAX_BRANCH_DIFF } from '../workspace/git.js';
+import { MAX_BRANCH_DIFF, git } from '../workspace/git.js';
 
 const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,headRefOid,additions,deletions';
 const lists = new Map<string, { at: number; prs: PullRequest[] }>();
@@ -202,6 +202,37 @@ async function act(cwd: string, n: string, verb: string, ...flags: string[]) {
   return { ok: true };
 }
 
+const FIX_LOG_LINES = 80;
+
+export const logTail = (log: string) => log.split('\n').filter((l) => l.trim()).slice(-FIX_LOG_LINES).join('\n');
+
+export function fixPrompt(pr: { number: number; title: string; branch: string }, check: string, log: string, local: boolean) {
+  return [
+    `The check "${check}" failed on pull request #${pr.number} (${pr.title}, branch ${pr.branch}).`,
+    local ? '' : `There is no local checkout of ${pr.branch}, so this is the repo root: check the branch out first, for example with gh pr checkout ${pr.number}.`,
+    log ? `The last ${FIX_LOG_LINES} lines of its failed log:\n\n\`\`\`\n${logTail(log)}\n\`\`\`` : 'No log was available for this check.',
+    'Fix the failure and run the checks. Do not push.',
+  ].filter(Boolean).join('\n\n');
+}
+
+// The folder of the local checkout of a branch (the repo or one of its worktrees), or undefined when none has it.
+async function checkoutOf(cwd: string, branch: string) {
+  const blocks = (await git(cwd, ['worktree', 'list', '--porcelain'])).split('\n\n');
+  const hit = blocks.find((b) => b.split('\n').includes(`branch refs/heads/${branch}`));
+  return hit?.match(/^worktree (.+)$/m)?.[1];
+}
+
+// Where a chat fixing a failed check starts and its first prompt.
+async function fixChat(cwd: string, n: string, body: Record<string, unknown>) {
+  const pr = (await listPrs(cwd)).find((p) => p.number === Number(n));
+  if (!pr) throw new NotFound(`Pull request #${n} is not open`);
+  const check = String(body.name ?? '');
+  const [, run, job] = /\/actions\/runs\/(\d+)(?:\/job\/(\d+))?/.exec(String(body.url ?? '')) ?? [];
+  const log = run ? await gh(cwd, 'run', 'view', ...(job ? ['--job', job] : [run]), '--log-failed').catch(() => '') : '';
+  const local = await checkoutOf(cwd, pr.branch).catch(() => undefined);
+  return { cwd: local ?? repoKey(cwd), text: fixPrompt(pr, check, log, Boolean(local)) };
+}
+
 export async function github(cwd: string, method: string, url: URL, readBody: () => Promise<string>) {
   const pathname = url.pathname;
   const [, , , what, n, action] = pathname.split('/');
@@ -232,6 +263,7 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
     if (!isMethod(body.method)) throw new Error('Method must be squash, merge or rebase');
     return auto.turn(cwd, Number(n), body.on === true, body.method);
   }
+  if (action === 'fix') return fixChat(cwd, n, body);
   if (action === 'checkout') return act(cwd, n, 'checkout');
   throw new NotFound(`Unknown GitHub route ${pathname}`);
 }

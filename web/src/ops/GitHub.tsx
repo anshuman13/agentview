@@ -7,11 +7,12 @@ import { Findings } from './Findings';
 import { Markdown } from '../chat/Chat';
 import { Counts, Files, splitDiff } from '../ui/DiffFiles';
 import { CheckIcon, StateChip, load, setViewOpen, useList } from './pulls';
-import { actOnPull, fetchPull } from './opsApi';
+import { actOnPull, fetchPull, fixPull } from './opsApi';
+import { newChat } from '../app/newChat';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
-import { ago, pressable, useSlot } from '../ui/util';
+import { ago, pressable, showChat, useSlot } from '../ui/util';
 import { askChat } from '../chat/chatActions';
 import { Skeleton } from '../ui/Skeleton';
 import { Row } from '../ui/Row';
@@ -201,6 +202,20 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
     }
   };
 
+  const fix = async (c: PullRequestDetail['checks'][number]) => {
+    setBusy(`fix:${c.name}`);
+    setError('');
+    try {
+      const { cwd, text } = await fixPull(pr.number, c.name, c.url);
+      showChat();
+      newChat({ cwd, text });
+    } catch (e) {
+      setError(errText(e));
+    } finally {
+      setBusy('');
+    }
+  };
+
   const armed = pr.autoMerge;
   const on = !!armed && !armed.error;
   const autoMerge = (on: boolean) => act('automerge', 'automerge', { on, method });
@@ -255,7 +270,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
             </div>
             <Section label="Checks" count={d.checks.length} />
             <div className="as-group gh-group">
-              {d.checks.map((c, i) => <Row key={i} href={c.url || undefined} plain={!c.url} leading={<CheckIcon state={c.state} />} title={c.name} />)}
+              {d.checks.map((c, i) => <Row key={i} href={c.url || undefined} plain={!c.url} leading={<CheckIcon state={c.state} />} title={c.name} trailing={c.state === 'failure' && <Button size="sm" icon="sparkle" disabled={!!busy} onClick={(e) => { e.preventDefault(); e.stopPropagation(); void fix(c); }}>Fix with Claude</Button>} />)}
               {!d.checks.length && <EmptyState size="sm" title="No checks" />}
             </div>
             <Section label="Reviews" count={d.reviews.length} />
