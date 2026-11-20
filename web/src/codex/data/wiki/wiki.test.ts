@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import type { ItemRow } from '../sync';
 import { dayLabel } from '../dates';
 import { clock } from '../../../../../shared/util';
-import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
+import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
 import { briefFor, decisionsWith, commitmentsOf, priorWith, seriesOf, seriesMeetings, seriesRepeats, seriesTitle, joinMinutes, meetingBadge, meetingMeta, openQuestions, searchMeetings, topicTimeline, trackedTopics } from '../meetings/meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
@@ -35,6 +35,14 @@ describe('wiki', () => {
     expect(f).toMatchObject({ text: 'Beta ships Friday', page_id: 'p1', profile: 'personal', state: 'proposed', added_by: 'you', at: 5, sources: null, dirty: 1 });
     expect(newFact('Loose', null, 'work', 5).page_id).toBeNull();
     expect(pageClaims([f], 'p1')[0].claims[0].fact.state).toBe('proposed');
+  });
+
+  it('remembers a chat as a live Memory claim with a Chat source of its title and folder', () => {
+    const f = rememberedFact('Use bun', 'work', 'Importer', '/Users/me/workspace/app/', 7);
+    expect(f).toMatchObject({ text: 'Use bun', page_id: null, state: 'live', added_by: 'you', at: 7, dirty: 1 });
+    expect(JSON.parse(f.sources!)).toEqual([{ kind: 'chat', label: 'Importer · app' }]);
+    expect(JSON.parse(f.field_times).sources).toBe(7);
+    expect(JSON.parse(rememberedFact('x', 'work', '', '/a/b', 7).sources!)[0].label).toBe('chat · b');
   });
 
   it('groups current claims by heading and keeps the ones they replaced', () => {

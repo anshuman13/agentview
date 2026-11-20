@@ -8,7 +8,8 @@ import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
-import { copyChatMarkdown, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
+import { Confirm } from '../ui/Confirm';
+import { copyChatMarkdown, copyResumeCommand, forkChat, rememberChat, remindChat, sideChat } from './chatActions';
 import { ruleFile } from './cards/Memory';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
@@ -48,6 +49,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     ]],
     ['Chat', [
       ...(sessionId ? [picker('fork', 'Fork', 'Side chat or a new chat from a summary'), picker('remind', 'Remind me', 'Add a task to check this chat later')] : []),
+      picker('remember', 'Remember…', 'Save a preference to Memory'),
       picker('copy', 'Copy', resumeCommand ? 'As Markdown or the terminal command' : 'As Markdown'),
       picker('tools', 'Tools…', 'Saved prompts, memory, hooks, TODOs'),
     ]],
@@ -143,6 +145,10 @@ export function RemindPick({ pick, close, back }: SubProps) {
       onClose={close}
     />
   );
+}
+
+export function RememberPick({ close }: { close: () => void }) {
+  return <Confirm title="Remember" detail="Saved to Memory for every later chat." action="Save" icon="lightbulb" input={{ value: '', placeholder: 'What to remember' }} run={async (text) => rememberChat(text)} onClose={close} />;
 }
 
 export function HooksPick({ pick, close, back }: SubProps) {

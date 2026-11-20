@@ -201,6 +201,13 @@ export function newFact(text: string, pageId: string | null, profile: Profile = 
   };
 }
 
+// A live Memory claim saved from a chat, with the chat's title and folder as its Chat source; android WikiLogic.kt chatSource says the same.
+export function rememberedFact(text: string, profile: Profile, title: string, cwd: string, now = Date.now()): Fact {
+  const fact = newFact(text, null, profile, now);
+  const label = `${title || 'chat'} · ${cwd.replace(/\/+$/, '').split('/').pop()}`;
+  return { ...fact, state: 'live', sources: JSON.stringify([{ kind: 'chat', label }]), field_times: JSON.stringify({ ...JSON.parse(fact.field_times), sources: now }) };
+}
+
 // Pages whose title or summary match every word, then current claims that do.
 export function searchWiki(pages: Page[], facts: Fact[], query: string) {
   const words = queryWords(query);

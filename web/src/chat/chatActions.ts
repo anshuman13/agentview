@@ -2,6 +2,9 @@ import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../a
 import { copyText, showChat } from '../ui/util';
 import { chatMarkdown, handoffText, replyNote } from './composer/composerLogic';
 import { assistantStore } from '../codex/data';
+import { rememberedFact } from '../codex/data/wiki/wiki';
+import { showSnack } from '../codex/view';
+import { profileOfPath } from '../../../shared/workspace';
 
 // Side chat (like Claude desktop's): forks this chat into the column beside it, so a question does not land in the
 // running chat. The server views the fork once it starts; the original moves back to the main column.
@@ -43,6 +46,16 @@ export async function remindChat(at: number) {
   const store = assistantStore();
   const row = await store.capture(`Check ${title}`, 'task', profile, at);
   await store.update(row, { source: 'chat', source_url: `${location.origin}/?session=${sessionId}` });
+}
+
+// A live Memory claim in the chat's profile; Undo deletes it.
+export function rememberChat(text: string) {
+  const st = getState();
+  const { cwd } = st.session;
+  const fact = rememberedFact(text, profileOfPath(cwd), st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd);
+  const store = assistantStore();
+  void store.editRow('facts', fact, {});
+  showSnack('Saved to Memory', () => void store.editRow('facts', fact, { deleted: 1 }));
 }
 
 export function copyChatMarkdown() {

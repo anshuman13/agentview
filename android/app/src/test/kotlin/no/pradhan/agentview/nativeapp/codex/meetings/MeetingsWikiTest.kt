@@ -30,7 +30,9 @@ import no.pradhan.agentview.nativeapp.codex.jobs.runsOf
 import no.pradhan.agentview.nativeapp.codex.parseRow
 import no.pradhan.agentview.nativeapp.codex.rowToChange
 import no.pradhan.agentview.nativeapp.codex.toJson
+import no.pradhan.agentview.nativeapp.codex.wiki.chatSource
 import no.pradhan.agentview.nativeapp.codex.wiki.contestOf
+import no.pradhan.agentview.nativeapp.codex.wiki.newFact
 import no.pradhan.agentview.nativeapp.codex.wiki.olderClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.pageClaims
 import no.pradhan.agentview.nativeapp.codex.wiki.pageNeedsReview
@@ -250,6 +252,21 @@ class MeetingsWikiTest {
         t = popRoute(t)
         assertEquals(listOf("meetings"), routesOf(t))
         assertEquals(emptyList<String>(), routesOf(popRoute(t)))
+    }
+
+    @Test fun aNewClaimIsTimedLikeTheWebOne() {
+        val f = newFact("  Use bun ", null, WORK, 7, "live", chatSource("Importer", "/Users/me/workspace/app/"), "c1")!!
+        assertEquals("Use bun", f.str("text"))
+        assertEquals("live", f.str("state"))
+        assertEquals("you", f.str("added_by"))
+        assertEquals(null, f.str("page_id"))
+        assertEquals(listOf("Importer · app"), sourcesOf(f).map { it.label })
+        assertEquals("chat", sourcesOf(f).single().kind)
+        assertEquals(setOf("text", "page_id", "at", "state", "added_by", "sources"), f.times.keys)
+        assertTrue(f.dirty)
+        assertEquals("proposed", newFact("Loose", null, PERSONAL, 7)!!.str("state"))
+        assertEquals("chat · b", sourcesOf(newFact("x", null, WORK, 7, sources = chatSource(" ", "/a/b"))!!).single().label)
+        assertNull(newFact("  ", null, WORK, 7))
     }
 
     @Test fun theStoreKeepsWikiAndJobRows() {

@@ -41,6 +41,7 @@ import no.pradhan.agentview.nativeapp.app.forkChat
 import no.pradhan.agentview.nativeapp.app.gitStatus
 import no.pradhan.agentview.nativeapp.app.pulls
 import no.pradhan.agentview.nativeapp.app.remindChat
+import no.pradhan.agentview.nativeapp.app.rememberFromChat
 import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.app.runControl
@@ -222,6 +223,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
         MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
         MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)
+        MenuItem("Remember…", "lightbulb", { close(); panels.dialog = "remember" })
         MenuItem("Share chat", "share", {
             close()
             val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, hub.store.state.value.events))
@@ -280,6 +282,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
     }
     when (panels.dialog) {
         "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { panels.dialog = null })
+        "remember" -> TextDialog("Remember", "", "Save", { hub.rememberFromChat(it, live.title, cwd) }, { panels.dialog = null }, maxLength = 400, detail = "Saved to Memory for every later chat.")
         "archive" -> ConfirmDialog("Archive this chat?", "${live.title}\n\nYou can restore it from the bin for 24 hours.", "Archive", { hub.archive(sessionId!!) }) { panels.dialog = null }
         "close" -> ConfirmDialog("Close this chat?", "The agent is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(live.id) }) { panels.dialog = null }
     }
