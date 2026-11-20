@@ -54,31 +54,29 @@ fun <T> Hub.write(path: String, body: String, failure: String, parse: (String) -
     writes.run(failure, { out = parse(api.post(path, body, pageChat)) }) { done(if (it) out else null) }
 }
 
-fun Hub.readWithRoomMic(m: Row, done: (Boolean) -> Unit) {
+private fun Hub.transcriptSync(done: (Boolean) -> Unit, block: suspend () -> Unit) {
     writes.run("Transcript sync failed", {
         try {
-            codex.update(m, mapOf("room_me" to 1))
-            codex.sync()
-            codex.state.value.error?.let { error("the room mic answer did not sync: $it") }
-            api.readTranscript(m.profile, m.id)
-            codex.sync()
-            notice.value = "Read again with the room mic as you"
+            block()
         } catch (e: Exception) {
             throw ApiError("Transcript sync failed: ${e.message}")
         }
     }, done)
 }
 
-fun Hub.readNow(m: Row, done: (Boolean) -> Unit) {
-    writes.run("Transcript sync failed", {
-        try {
-            val saved = api.readTranscript(m.profile, m.id)
-            codex.sync()
-            notice.value = if (saved > 0) "Read the transcript" else "No transcript found yet"
-        } catch (e: Exception) {
-            throw ApiError("Transcript sync failed: ${e.message}")
-        }
-    }, done)
+fun Hub.readWithRoomMic(m: Row, done: (Boolean) -> Unit) = transcriptSync(done) {
+    codex.update(m, mapOf("room_me" to 1))
+    codex.sync()
+    codex.state.value.error?.let { error("the room mic answer did not sync: $it") }
+    api.readTranscript(m.profile, m.id)
+    codex.sync()
+    notice.value = "Read again with the room mic as you"
+}
+
+fun Hub.readNow(m: Row, done: (Boolean) -> Unit) = transcriptSync(done) {
+    val saved = api.readTranscript(m.profile, m.id)
+    codex.sync()
+    notice.value = if (saved > 0) "Read the transcript" else "No transcript found yet"
 }
 
 internal fun Hub.write(failure: String, block: suspend () -> Unit) {

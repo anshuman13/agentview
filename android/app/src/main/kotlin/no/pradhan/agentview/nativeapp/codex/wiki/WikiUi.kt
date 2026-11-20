@@ -126,8 +126,8 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
                 val months = ((now - (f.long("at") ?: 0L)) / (30 * DAY_MS)).toInt()
                 val used = f.long("used_count")?.takeIf { it > 0 }
                 ListRow(f.str("text") ?: "", "${titles[f.str("page_id")]} · ${plural(months, "month")}" + (used?.let { " · Used on ${plural(it.toInt(), "day")}" } ?: ""), onClick = { onClaim(f) },
-                    trailing = { Button("Confirm", { actions.change(f, mapOf("at" to System.currentTimeMillis()), "Claim confirmed") }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) },
-                    menu = { dismiss -> MenuItem("Retire", "archive", { dismiss(); actions.change(f, mapOf("state" to "retired"), "Claim retired") }, danger = true) })
+                    trailing = { Button("Confirm", { actions.confirmClaim(f) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) },
+                    menu = { dismiss -> MenuItem("Retire", "archive", { dismiss(); actions.retireClaim(f) }, danger = true) })
             }
             if (!allStale && stale.size > 3) item { Button("Show all ${stale.size}", { allStale = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         }
@@ -168,6 +168,10 @@ internal fun ClaimTextSheet(title: String, initial: String, save: String, onDism
         }
     }
 }
+
+private fun TaskActions.confirmClaim(f: Row) = change(f, mapOf("at" to System.currentTimeMillis()), "Claim confirmed")
+
+private fun TaskActions.retireClaim(f: Row) = change(f, mapOf("state" to "retired"), "Claim retired")
 
 // Saves a proposed claim on the page, or in Memory when the page is null, for Review.
 @Composable
@@ -223,7 +227,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
         links.forEach { (s, href) -> MenuItem("${s.kindLabel}: ${s.label}", s.icon, pick { uri.openUri(href) }) }
         c.old.forEach { o -> MenuItem("Replaced ${o.long("at")?.let { shortDate(it, now) } ?: ""}".trim(), "history", {}, enabled = false) }
         f.long("at")?.let { MenuSeparator(); MenuItem("${if (stale) "Still true? " else ""}Updated ${shortDate(it, now)}", "history", {}, enabled = false) }
-        if ("retire" in acts.menu || "restore" in acts.menu) MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired)
+        if ("retire" in acts.menu || "restore" in acts.menu) MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { if (retired) actions.change(f, mapOf("state" to null), "Claim restored") else actions.retireClaim(f) }, danger = !retired)
     }
     Column {
         ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = if (contest != null) 2 else 1, onClick = { expanded = !expanded }, onLongClick = if (acts.menu.isEmpty()) null else ({ menu.value = true }),
@@ -232,7 +236,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, review: ReviewOp
                     when (b) {
                         "reject" -> IconBtn("close", "Reject", { review.reject(listOf(f)) })
                         "approve" -> IconBtn("check", "Approve", { review.approve(listOf(f)) })
-                        "confirm" -> Button("Confirm", { actions.change(f, mapOf("at" to System.currentTimeMillis()), "Claim confirmed") }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
+                        "confirm" -> Button("Confirm", { actions.confirmClaim(f) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
                         else -> MoreButton(expanded = menu, content = menuContent)
                     }
                 }

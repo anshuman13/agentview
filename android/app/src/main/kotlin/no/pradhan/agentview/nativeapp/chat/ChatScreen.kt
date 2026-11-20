@@ -189,7 +189,7 @@ private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Do
     val ws by hub.workspace.collectAsState()
     PageHeader(
         live.title.ifBlank { UNTITLED },
-        subtitle = { Text(chatPlace(ws, cwd),style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        subtitle = { Text(chatPlace(ws, cwd), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
     ) {
         ChatMenu(hub, live, session, hasReply, panels, canReview, running, cwd, onReview)
     }
@@ -260,7 +260,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
     if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false, action = { AgentsActions(hub, run, agents) }) {
         run?.let { r ->
             val line = listOfNotNull(runLine(r), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
-            Text(line, Modifier.fillMaxWidth().then(if (runDetail(r).opens)Modifier.heightIn(min = Tokens.touchSm).clickable { hub.shell.goalSheet.value = GoalSheet.Detail(r.id) } else Modifier).padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
+            Text(line, Modifier.fillMaxWidth().then(if (runDetail(r).opens) Modifier.heightIn(min = Tokens.touchSm).clickable { hub.shell.goalSheet.value = GoalSheet.Detail(r.id) } else Modifier).padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
         }
         AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
     }
@@ -298,7 +298,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
     when (panels.dialog) {
         "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { panels.dialog = null })
         "remember" -> TextDialog("Remember", "", "Save", { hub.rememberFromChat(it, live.title, cwd) }, { panels.dialog = null }, maxLength = 400, detail = "Saved to Memory for every later chat.")
-        "archive" -> ConfirmDialog("Archive this chat?", "${live.title}\n\nYou can restore it from the bin for 24 hours.", "Archive", { hub.archive(sessionId!!, live.title) }) { panels.dialog = null }
+        "archive" -> ConfirmDialog("Archive this chat?", "${live.title}\n\nYou can restore it from the bin for 24 hours.", "Archive", { hub.archive(sessionId!!) }) { panels.dialog = null }
         "close" -> ConfirmDialog("Close this chat?", "${live.title}\n\nThe agent is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(live.id) }) { panels.dialog = null }
     }
 }

@@ -72,18 +72,19 @@ fun Hub.rename(sessionId: String, title: String) = write("Could not rename the c
     workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.map { if (it.sessionId == sessionId) it.copy(title = title) else it }) }
 }
 
-fun Hub.archive(sessionId: String, title: String) = write("Could not archive the chat. It is still in the list.") {
-    val row = workspace.value.saved.firstOrNull { it.sessionId == sessionId } ?: SavedSession(sessionId, title)
+fun Hub.archive(sessionId: String) = write("Could not archive the chat. It is still in the list.") {
+    val row = workspace.value.saved.firstOrNull { it.sessionId == sessionId }
     val pinned = sessionId in workspace.value.pins
     api.archive(sessionId)
     workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.filter { it.sessionId != sessionId }) }
-    undoable.tryEmit(Undoable("Archived") { restore(row, pinned) })
+    undoable.tryEmit(Undoable("Archived") { restore(sessionId, row, pinned) })
 }
 
-private fun Hub.restore(row: SavedSession, pinned: Boolean) = write("Could not restore the chat. It is still in the bin.") {
-    api.restore(row.sessionId)
-    if (pinned) api.pin(row.sessionId, true)
-    workspace.value = withRestored(workspace.value, row, pinned)
+private fun Hub.restore(sessionId: String, row: SavedSession?, pinned: Boolean) = write("Could not restore the chat. It is still in the bin.") {
+    api.restore(sessionId)
+    if (row != null) workspace.value = withRestored(workspace.value, row, pinned)
+    if (pinned) runCatching { api.pin(sessionId, true) }
+    if (row == null) refreshWorkspace(force = true)
 }
 
 fun Hub.pin(sessionId: String, on: Boolean) = write("Could not ${if (on) "pin" else "unpin"} the chat. Try again.") {
