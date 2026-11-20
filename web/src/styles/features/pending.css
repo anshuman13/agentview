@@ -70,6 +70,7 @@ button.pd-option {
   .pd-actions { flex-direction: column; align-items: stretch; }
   .pd-nav { flex-direction: column-reverse; }
   .pd-actions .btn { width: 100%; }
+  .pd-actions .btn.btn-sm { height: var(--touch); }
   button.pd-option { min-height: var(--touch); padding: var(--sp-5) var(--sp-4); }
   .pd-other-input { min-height: var(--touch); font-size: var(--fs-2xl); }
 }

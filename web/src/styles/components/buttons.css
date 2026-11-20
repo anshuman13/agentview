@@ -51,6 +51,7 @@ button.link { background: transparent; border: 0; padding: 0; color: var(--link)
 /* Design system (docs/design-system.md): Button stacks variant and size classes on .btn; IconButton on .icon-btn. iOS styles: filled, tinted, gray, plain. */
 .btn.btn-sm, .btn.btn-md, .btn.btn-lg { position: relative; border: 0; border-radius: var(--radius-pill); font-weight: 500; }
 .btn.btn-sm { height: var(--control-sm); padding: 0 var(--sp-6); gap: var(--sp-2); font-size: var(--fs-sm); }
+.btn.btn-sm.show-toggle { padding: 0; align-self: flex-start; }
 .btn.btn-md { height: 34px; padding: 0 var(--sp-8); gap: var(--sp-3); font-size: var(--fs-md); }
 .btn.btn-lg { height: 50px; padding: 0 var(--sp-12); gap: var(--sp-4); border-radius: var(--shape-lg); font-size: var(--fs-body); font-weight: 600; }
 .btn.btn-filled { --fill: var(--accent-fill); color: var(--on-accent); }

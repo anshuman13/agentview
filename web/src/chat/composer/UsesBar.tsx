@@ -8,7 +8,7 @@ export function UsesBar({ uses, remove }: { uses: Use[]; remove: (u: Use) => voi
   return (
     <div className="cp-uses">
       {uses.map((u) => (
-        <Chip key={useLabel(u)} className="cp-use" icon="plug" size="sm" title={u.tool ? `Claude is asked to use ${toolId(u.server, u.tool)}` : `Claude is asked to use the ${u.server} MCP server`} aria-label={`Remove ${u.tool ?? u.server}`} onClick={() => remove(u)}>
+        <Chip key={useLabel(u)} className="cp-use" icon="plug" size="sm" title={`Remove (Claude is asked to use ${u.tool ? toolId(u.server, u.tool) : `the ${u.server} MCP server`})`} aria-label={`Remove ${u.tool ?? u.server}`} onClick={() => remove(u)}>
           <span>{u.server}</span>{u.tool && <span className="mono">{u.tool}</span>}<Icon name="close" small />
         </Chip>
       ))}
