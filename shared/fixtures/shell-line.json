@@ -1,0 +1,12 @@
+[
+  { "name": "bash", "lang": "bash", "code": "bun run test\n", "expected": "bun run test" },
+  { "name": "dollar prompt", "lang": "sh", "code": "$ git status", "expected": "git status" },
+  { "name": "zsh", "lang": "zsh", "code": "ls -la", "expected": "ls -la" },
+  { "name": "console", "lang": "console", "code": "$ npm test", "expected": "npm test" },
+  { "name": "shell upper case", "lang": "Shell", "code": "make", "expected": "make" },
+  { "name": "two lines", "lang": "bash", "code": "cd web\nbun run test", "expected": null },
+  { "name": "blank", "lang": "bash", "code": "  \n", "expected": null },
+  { "name": "prompt only", "lang": "bash", "code": "$ ", "expected": null },
+  { "name": "ts", "lang": "ts", "code": "const a = 1;", "expected": null },
+  { "name": "no language", "lang": null, "code": "bun run test", "expected": null }
+]

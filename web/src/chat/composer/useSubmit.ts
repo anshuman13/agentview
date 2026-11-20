@@ -1,22 +1,10 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { api, notice, prompt, queueNext, steer, useStore } from '../../app/store';
 import { save } from '../../ui/util';
-import { wsUrl } from '../../app/api';
 import { loopAt } from '../../../../shared/util';
 import { buildPrompt } from '../../../../shared/specTasks';
-import { remember, STORED_KEY, terminalId, withUses, type Use } from './composerLogic';
-
-async function runInTerminal(cmd: string) {
-  const id = await terminalId(api);
-  if (!id) return notice('Terminal unavailable');
-  window.dispatchEvent(new CustomEvent('agentview:terminal', { detail: id }));
-  const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(id)}`));
-  ws.onerror = () => notice('Terminal unavailable');
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ t: 'i', d: `${cmd}\r` }));
-    ws.close();
-  };
-}
+import { remember, STORED_KEY, withUses, type Use } from './composerLogic';
+import { runInTerminal } from '../chatApi';
 
 type Input = {
   text: string;
@@ -59,7 +47,7 @@ export function useSubmit(i: Input) {
     sendAfter.current = null;
     if (i.shell) {
       const cmd = t.slice(1).trim();
-      if (cmd) runInTerminal(cmd).catch(() => notice('Terminal unavailable'));
+      if (cmd) runInTerminal(cmd, true).catch(() => notice('Terminal unavailable'));
     } else {
       sendPrompt(t, stop);
     }

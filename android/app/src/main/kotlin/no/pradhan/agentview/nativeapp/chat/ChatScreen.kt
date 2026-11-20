@@ -79,6 +79,8 @@ import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.FilePath
 import no.pradhan.agentview.nativeapp.ui.LocalOpenFile
+import no.pradhan.agentview.nativeapp.ui.LocalRunCommand
+import no.pradhan.agentview.nativeapp.app.runInTerminal
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.workspace.FileScreen
 import no.pradhan.agentview.nativeapp.ui.StatusDot
@@ -172,7 +174,8 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
             val openFile = remember(panels) { { path: String, line: Int? -> panels.file = FilePath(path, line) } }
-            CompositionLocalProvider(LocalBuildSheets provides buildSheets, LocalOpenFile provides openFile) {
+            val runCommand = remember(hub) { if (hub.readOnly) null else { cmd: String -> hub.runInTerminal(cmd, enter = false); Unit } }
+            CompositionLocalProvider(LocalBuildSheets provides buildSheets, LocalOpenFile provides openFile, LocalRunCommand provides runCommand) {
                 val failed = if (live.failed && !running && !hub.readOnly) failedLine(view.events, providerLabel(live.provider)) else null
                 Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed)
             }

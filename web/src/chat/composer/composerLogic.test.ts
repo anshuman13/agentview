@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, laterDay, sharedTask, triggerAt, turnEnd, withUses, draftLine, readDraft } from './composerLogic';
+import { accept, addUse, append, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, laterDay, sharedTask, triggerAt, turnEnd, withUses, draftLine, readDraft } from './composerLogic';
 import { stubGlobal, unstubAllGlobals } from '../../../../testing';
 import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, SavedSession } from '../../../../shared/protocol';
@@ -61,6 +61,14 @@ describe('accept', () => {
   it('replaces the token under the caret and adds a space', () => {
     expect(accept('/comp', 0, 5, '/compact')).toEqual({ text: '/compact ', caret: 9 });
     expect(accept('fix @sto please', 4, 8, '@src/store.ts')).toEqual({ text: 'fix @src/store.ts  please', caret: 18 });
+  });
+});
+
+describe('append', () => {
+  it('adds after a space, and puts a quote in its own paragraph', () => {
+    expect(append('fix', 'this')).toBe('fix this');
+    expect(append('', '> a\n\n')).toBe('> a\n\n');
+    expect(append('see ', '> a\n\n')).toBe('see\n\n> a\n\n');
   });
 });
 

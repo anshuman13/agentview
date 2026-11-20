@@ -3,40 +3,13 @@ import { sendToChat } from '../app/store';
 import { showSnack } from '../codex/view';
 import { Button } from '../ui/Button';
 import { docAskPrompt } from '../../../shared/docEdit';
+import { useSelectionAt, type SelectionAt } from '../ui/useSelectionAt';
 
-type At = { quote: string; x: number; y: number };
+// Text selected in the rendered doc outside a block being edited.
+export const useSelectionAsk = (body: RefObject<HTMLElement | null>, scroller: RefObject<HTMLDivElement | null>) =>
+  useSelectionAt(body, scroller, (sel) => !body.current?.querySelector('.doc-b-edit')?.contains(sel.anchorNode));
 
-// Text selected in the rendered doc, placed under the selection in the scroller's coordinates.
-export function useSelectionAsk(body: RefObject<HTMLElement | null>, scroller: RefObject<HTMLDivElement | null>) {
-  const [at, setAt] = useState<At | null>(null);
-  const open = useRef(false);
-  useEffect(() => {
-    const read = () => {
-      if (open.current) return;
-      const sel = document.getSelection();
-      const el = body.current;
-      const box = scroller.current;
-      const quote = sel?.toString().trim() ?? '';
-      if (!sel || !el || !box || !quote || sel.rangeCount === 0 || !el.contains(sel.anchorNode) || el.querySelector('.doc-b-edit')?.contains(sel.anchorNode)) return setAt(null);
-      const r = sel.getRangeAt(0).getBoundingClientRect();
-      const b = box.getBoundingClientRect();
-      setAt({ quote, x: Math.max(8, Math.min(r.left - b.left, b.width - 320)), y: r.bottom - b.top + box.scrollTop + 6 });
-    };
-    let t: ReturnType<typeof setTimeout>;
-    const later = () => {
-      clearTimeout(t);
-      t = setTimeout(read, 250);
-    };
-    document.addEventListener('selectionchange', later);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener('selectionchange', later);
-    };
-  }, [body, scroller]);
-  return { at, clear: () => setAt(null), open };
-}
-
-export function DocAsk({ path, at, onDone, open }: { path: string; at: At; onDone: () => void; open: { current: boolean } }) {
+export function DocAsk({ path, at, onDone, open }: { path: string; at: SelectionAt; onDone: () => void; open: { current: boolean } }) {
   const [typing, setTyping] = useState(false);
   const [ask, setAsk] = useState('');
   useEffect(() => {

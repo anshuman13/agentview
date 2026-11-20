@@ -37,6 +37,8 @@ import { isSketchPath } from '../../../../shared/sketches';
 import { isRepoSpec, specSlug } from '../../../../shared/specTasks';
 import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
+import { quoteText } from '../../../../shared/composerText';
+import { useSelectionAt } from '../../ui/useSelectionAt';
 
 export function Transcript() {
   const events = useStore((s) => s.events);
@@ -63,6 +65,26 @@ function UnsentRows() {
   return <>{queuedFor(outbox, chat).map((q) => (
     <div key={q.id} className="tr-user unsent"><UserText id={q.id} text={q.text} /><span className="tr-stop"><Icon name="clock" small />Waiting to send<Button variant="plain" size="sm" onClick={() => cancelUnsent(q.id)}>Cancel</Button></span></div>
   ))}</>;
+}
+
+// The finished top-level reply a node lies in.
+const replyOf = (rows: HTMLElement | null, node: Node | null) => {
+  const reply = (node instanceof Element ? node : node?.parentElement)?.closest('.tr-assistant');
+  return reply && reply.parentElement === rows && !reply.classList.contains('streaming') ? reply : null;
+};
+
+function QuoteButton({ rows }: { rows: RefObject<HTMLDivElement | null> }) {
+  const { at, clear } = useSelectionAt(rows, rows, (sel) => {
+    const reply = replyOf(rows.current, sel.anchorNode);
+    return !!reply && reply === replyOf(rows.current, sel.focusNode);
+  });
+  if (!at) return null;
+  const quote = () => {
+    window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: quoteText(at.quote) } }));
+    document.getSelection()?.removeAllRanges();
+    clear();
+  };
+  return <Button size="sm" variant="filled" icon="quote" className="tr-quote" style={{ left: at.x, top: at.y }} onMouseDown={(e) => e.preventDefault()} onClick={quote}>Quote</Button>;
 }
 
 function lastUserId(items: Item[]) {
@@ -349,6 +371,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
       })}
       {failed && !running && <FailedLine key={events.length} events={events} label={label} />}
       <UnsentRows />
+      <QuoteButton rows={rows} />
       </div>
     </div>
     {!stuck && (behind || running) && (

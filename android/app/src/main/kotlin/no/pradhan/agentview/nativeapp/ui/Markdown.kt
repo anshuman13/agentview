@@ -41,9 +41,13 @@ import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import no.pradhan.agentview.nativeapp.chat.shellLine
 
 // Opens a file path named in inline code or a link, at its line; set by a chat, so file paths elsewhere stay plain.
 val LocalOpenFile = staticCompositionLocalOf<((String, Int?) -> Unit)?> { null }
+
+// Types a one-line shell command into the chat's terminal; set by a chat outside read-only mode, so code blocks elsewhere offer only Copy.
+val LocalRunCommand = staticCompositionLocalOf<((String) -> Unit)?> { null }
 
 @Composable
 fun inlineText(inlines: List<Inline>): AnnotatedString {
@@ -127,9 +131,12 @@ private fun MdBlockView(b: MdBlock) {
 @Composable
 fun CodeBlock(text: String, lang: String = "", modifier: Modifier = Modifier) {
     val clip = LocalClipboardManager.current
+    val run = LocalRunCommand.current
+    val cmd = run?.let { shellLine(lang, text) }
     Column(modifier.well(av)) {
-        Row(Modifier.fillMaxWidth().padding(start = Tokens.sp5, end = Tokens.sp2), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(lang, style = Type.footnote, color = av.fgMuted)
+        Row(Modifier.fillMaxWidth().padding(start = Tokens.sp5, end = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
+            Text(lang, style = Type.footnote, color = av.fgMuted, modifier = Modifier.weight(1f))
+            if (run != null && cmd != null) IconBtn("terminal", "Run in terminal", { run(cmd) })
             IconBtn("copy", "Copy code", { clip.setText(AnnotatedString(text)) })
         }
         Text(

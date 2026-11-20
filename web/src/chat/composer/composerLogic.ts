@@ -3,7 +3,6 @@ import { match } from '../../workspace/FileSwitcher';
 import { toolId } from '../../ops/mcpHelpers';
 import { firstLine } from '../../ui/util';
 import { compactAt, type ChatEvent, type SavedSession } from '../../../../shared/protocol';
-import { createTerm, listTerms } from '../../workspace/termApi';
 import { isBlock, nextClock } from '../../../../shared/util';
 import { timedMeetings } from '../../../../shared/plan';
 import { profileOfPath } from '../../../../shared/workspace';
@@ -63,7 +62,10 @@ export function currentMeeting(meetings: Meeting[], now: number) {
   return running[0] ?? soon[0] ?? null;
 }
 
-export const append = (text: string, add: string) => `${text}${text && !/\s$/.test(text) ? ' ' : ''}${add}`;
+export const append = (text: string, add: string) => {
+  if (text.trim() && add.startsWith('>')) return `${text.trimEnd()}\n\n${add}`;
+  return `${text}${text && !/\s$/.test(text) ? ' ' : ''}${add}`;
+};
 
 const MARK = '\\[(?:Image|File): [^\\]]+\\]';
 
@@ -152,23 +154,6 @@ export function failedLine(events: ChatEvent[], label: string) {
 export const contextPercent = (context: number | null, contextWindow?: number | null) => (context === null ? null : Math.min(100, Math.round((context / compactAt(contextWindow)) * 100)));
 
 export const fileCache = new Map<string, string[]>();
-
-export async function terminalId(url: (path: string) => string): Promise<string | null> {
-  try {
-    const listed = await listTerms(url('/api/terms'));
-    if (!listed.ok) return null;
-    const list: Array<{ id: string }> = await listed.json();
-    let term = list.at(-1);
-    if (!term) {
-      const created = await createTerm(url('/api/terms'));
-      if (!created.ok) return null;
-      term = await created.json();
-    }
-    return term?.id ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export const STORED_KEY = 'agentview.prompts';
 

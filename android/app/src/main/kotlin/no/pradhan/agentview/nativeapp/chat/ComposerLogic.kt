@@ -223,6 +223,16 @@ fun composerPlaceholder(label: String, state: String) = when (state) {
 // A prompt starting with "!" is a shell command for the chat's terminal, as on the web; null when it is a prompt or empty.
 fun shellCommand(text: String): String? = text.trim().takeIf { it.startsWith("!") }?.drop(1)?.trim()?.ifEmpty { null }
 
+private val SHELLS = setOf("bash", "sh", "shell", "zsh", "console")
+private val SHELL_PROMPT = Regex("""^\$(\s+|$)""")
+
+// shared/composerText.ts shellLine: the command of a one-line shell block in a reply, without a leading "$ " prompt.
+fun shellLine(lang: String?, code: String): String? {
+    if ((lang ?: "").lowercase() !in SHELLS) return null
+    val lines = code.trim().split('\n')
+    return if (lines.size == 1) lines[0].replace(SHELL_PROMPT, "").trim().ifEmpty { null } else null
+}
+
 // web composerLogic.ts draftKey: a draft lives under the chat's Claude session id, which outlives the live chat id, and under the live id until the chat has one.
 fun draftKey(chat: String, sessionId: String?) = sessionId?.ifEmpty { null } ?: chat
 

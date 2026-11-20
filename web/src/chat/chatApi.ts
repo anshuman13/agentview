@@ -1,6 +1,37 @@
-import { api } from '../app/store';
-import { apiUrl, fetchJson } from '../app/api';
+import { api, getState, notice } from '../app/store';
+import { apiUrl, fetchJson, wsUrl } from '../app/api';
 import type { MemoryFile } from './cards/memoryLogic';
+import { createTerm, listTerms } from '../workspace/termApi';
+
+async function terminalId(chat: string): Promise<string | null> {
+  try {
+    const listed = await listTerms(chat);
+    if (!listed.ok) return null;
+    const list: Array<{ id: string }> = await listed.json();
+    let term = list.at(-1);
+    if (!term) {
+      const created = await createTerm(chat);
+      if (!created.ok) return null;
+      term = await created.json();
+    }
+    return term?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Types the command into the chat's last terminal (or a new one) and shows it; with enter false the user presses Enter.
+export async function runInTerminal(cmd: string, enter: boolean) {
+  const id = await terminalId(getState().session.id);
+  if (!id) return notice('Terminal unavailable');
+  window.dispatchEvent(new CustomEvent('agentview:terminal', { detail: id }));
+  const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(id)}`));
+  ws.onerror = () => notice('Terminal unavailable');
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ t: 'i', d: enter ? `${cmd}\r` : cmd }));
+    ws.close();
+  };
+}
 
 export const fetchTodos = () => fetch(api('/api/git/todos')).then((r) => r.json());
 
