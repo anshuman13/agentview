@@ -213,7 +213,7 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         if (!hub.readOnly) item { Button("New job", { add(null) }, Modifier.padding(start = Tokens.listPad, top = Tokens.sp4), size = ButtonSize.Sm, icon = "add") }
         item { AutopilotRow(hub, waiting, onAutopilot) }
         if (jobs.isEmpty()) {
-            item { EmptyState("No jobs yet", "A job runs a prompt on a schedule, can add tasks, and sends you the result", icon = "history") }
+            item { EmptyState("No jobs yet", "A job runs a prompt on a schedule, can add tasks, and sends you the result", icon = "history", small = false) }
             if (!hub.readOnly) item { Button("Weekly digest", { add(WEEKLY_DIGEST) }, Modifier.padding(start = Tokens.listPad), size = ButtonSize.Sm, icon = "sparkle") }
         } else item {
             Group {
