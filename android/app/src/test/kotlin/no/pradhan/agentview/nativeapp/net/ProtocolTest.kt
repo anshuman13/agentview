@@ -82,8 +82,25 @@ class ProtocolTest {
     }
 
     @Test
-    fun backoffCapsAtFifteenSeconds() {
-        assertEquals(listOf(1000L, 2000L, 4000L, 8000L, 15000L, 15000L), (0..5).map(::backoffMs))
+    fun sseParserCommitsAnIdOnlyWhenItsEventCompletes() {
+        val ids = mutableListOf<String>()
+        val got = mutableListOf<String>()
+        val p = SseParser({ ids += it }, { got += it })
+        listOf("id: 1", "data: {\"cut\":").forEach(p::line)
+        assertEquals(emptyList<String>(), ids)
+        val q = SseParser({ ids += it }, { got += it })
+        listOf("id: 2", "data: {\"a\":1}", "", "event: tool", "id: 3", "data: x", "").forEach(q::line)
+        assertEquals(listOf("2", "3"), ids)
+        assertEquals(listOf("{\"a\":1}"), got)
+    }
+
+    @Test
+    fun backoffStaysWithinTwentyPercentOfEachStep() {
+        listOf(1000L, 2000L, 4000L, 8000L, 15000L, 15000L).forEachIndexed { attempt, step ->
+            assertEquals(step * 0.8, backoffMs(attempt) { 0.0 }.toDouble(), 1.0)
+            assertEquals(step.toDouble(), backoffMs(attempt) { 0.5 }.toDouble(), 1.0)
+            assertEquals(step * 1.2, backoffMs(attempt) { 1.0 }.toDouble(), 1.0)
+        }
     }
 
     @Test
