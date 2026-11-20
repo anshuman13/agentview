@@ -62,9 +62,14 @@ export function useSpotBack(scroller: RefObject<HTMLElement | null>, list: List)
   }, []);
 }
 
+// The view a wiki page was opened from by openWikiFrom, so its Back returns there.
+type Return = Pick<View, 'list' | 'open' | 'person' | 'series' | 'tag'>;
+let wikiReturn: Return | null = null;
+
 // The direction of the last change drives the page transition in CSS.
 export const setView = (patch: Partial<View>) => {
   const next = { ...view, ...patch };
+  if (next.list !== view.list || next.open !== view.open) wikiReturn = null;
   if (next.list !== view.list && patch.tag === undefined) next.tag = null;
   if (next.list !== view.list) {
     track(`list:${next.list === 'today' ? 'overview' : next.list}`);
@@ -88,6 +93,16 @@ export function openWeekGoals() {
 export function openWeek() {
   weekReturn = true;
   setView({ list: 'meetings' });
+}
+export function openWikiFrom(open: string, anchor: string | null) {
+  const { list, open: from, person, series, tag } = view;
+  setView({ person: null, list: 'wiki', open, anchor });
+  wikiReturn = { list, open: from, person, series, tag };
+}
+export function wikiBack() {
+  const r = wikiReturn;
+  wikiReturn = null;
+  setView(r ? { ...r, anchor: null } : { open: null, anchor: null });
 }
 export const previousList = () => prevList;
 export function leaveOverlay() {

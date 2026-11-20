@@ -61,10 +61,15 @@ import no.pradhan.agentview.nativeapp.ui.av
 private const val PAGE_SIZE = 30
 
 @Composable
-private fun MeetingListRow(m: Row, now: Long, showProfile: Boolean, noDay: Boolean = false, onClick: () -> Unit) {
+internal fun MeetingListRow(m: Row, now: Long, showProfile: Boolean, noDay: Boolean = false, onNotes: (Row) -> Unit, onClick: () -> Unit) {
     val live = isLive(m, now)
     val meta = listOfNotNull(meetingMeta(m, now, noDay), if (showProfile) profileLabel(m.profile) else null).joinToString(" · ")
-    ListRow(m.title ?: "Meeting", meta, state = if (live) ({ Badge("Live", BadgeTone.Running) }) else null, onClick = onClick)
+    val calendar = if (m.id.startsWith("cal:")) safeHref(m.str("calendar_url")) else null
+    val uri = LocalUriHandler.current
+    ListRow(m.title ?: "Meeting", meta, state = if (live) ({ Badge("Live", BadgeTone.Running) }) else null, onClick = onClick, menu = { close ->
+        if (calendar != null) MenuItem("Open calendar", "calendar", { close(); uri.openUri(calendar) })
+        MenuItem("Notes", "edit", { close(); onNotes(m) })
+    })
 }
 
 @Composable
@@ -79,7 +84,7 @@ private fun WaitingRowView(g: Waiting, hub: Hub) {
 }
 
 @Composable
-fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, onOpen: (Row) -> Unit) {
+fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, onNotes: (Row) -> Unit, onOpen: (Row) -> Unit) {
     val resolved by hub.resolvedQuestions.collectAsState()
     var query by rememberSaveable { mutableStateOf("") }
     var shown by rememberSaveable(query, chips.joinToString(), decisions) { mutableIntStateOf(PAGE_SIZE) }
@@ -127,7 +132,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
             }
             coming.forEach { g ->
                 item { SectionHeader(g.label, g.rows.size.toString()) }
-                item { Group { g.rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile, noDay = true) { onOpen(m) } } } }
+                item { Group { g.rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile, noDay = true, onNotes = onNotes) { onOpen(m) } } } }
             }
             if (coming.isEmpty()) item { EmptyState("Nothing on the calendar this week", icon = "calendar") }
             if (waiting.isNotEmpty()) {
@@ -145,7 +150,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
             val rows = g.rows.take(left)
             left -= rows.size
             item { SectionHeader(g.label) }
-            item { Group { rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile) { onOpen(m) } } } }
+            item { Group { rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile, onNotes = onNotes) { onOpen(m) } } } }
         }
         if (listed.sumOf { it.rows.size } > shown) item { Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         if (groups.isEmpty()) item {

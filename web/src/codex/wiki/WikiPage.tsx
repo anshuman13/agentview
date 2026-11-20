@@ -8,7 +8,7 @@ import { Button, IconButton } from '../../ui/Button';
 import { Sheet } from '../../ui/Sheet';
 import { EmptyState } from '../../ui/Panel';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { setView, useEscapeBack, useView } from '../view';
+import { useEscapeBack, useView, wikiBack } from '../view';
 import { AskBar } from './AskBar';
 import { usePageEdits } from './usePageEdits';
 import { useClaimAnchor } from './useClaimAnchor';
@@ -48,7 +48,7 @@ export function WikiPage({ id }: { id: string }) {
   const [decided, setDecided] = useState<string | null>(null);
   useEffect(() => { setDecided(null); setMenu(false); setAsking(false); setClaimDraft(null); setRenaming(null); }, [id]);
   const pending = useMemo(() => proposals(facts).filter((f) => (f.page_id ?? null) === pid), [facts, pid]);
-  const back = () => setView({ open: null, anchor: null });
+  const back = wikiBack;
   useEscapeBack(back);
   const edits = usePageEdits(page, pid, filter, back);
   const saveClaim = () => {

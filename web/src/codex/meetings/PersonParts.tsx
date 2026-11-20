@@ -6,7 +6,7 @@ import { Row } from '../../ui/Row';
 import { Section, sectionCount } from '../../ui/Section';
 import { CardRow } from '../overview/CardRow';
 import { dueText, taskMenu } from '../tasks/Task';
-import { openMeeting, openTask, setView } from '../view';
+import { openMeeting, openTask, openWikiFrom } from '../view';
 import { ago, safeHref } from '../../ui/util';
 import type { ItemRow } from '../data/sync';
 import type { commitmentsOf } from '../data/meetings/meetings';
@@ -126,7 +126,7 @@ export function WikiClaims({ name, claims, pageTitle }: { name: string; claims: 
     <section className="mt-sec">
       <Section label="In the wiki" count={sectionCount(claims.length)} />
       <Group rows={claims} name={name} row={(f) => (
-        <Row key={f.id} title={f.text} meta={f.page_id ? pageTitle.get(f.page_id) : undefined} onClick={() => setView({ person: null, list: 'wiki', open: f.page_id ?? MEMORY, anchor: f.id })} />
+        <Row key={f.id} title={f.text} meta={f.page_id ? pageTitle.get(f.page_id) : undefined} onClick={() => openWikiFrom(f.page_id ?? MEMORY, f.id)} />
       )} />
     </section>
   );

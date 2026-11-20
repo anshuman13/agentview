@@ -29,14 +29,12 @@ import no.pradhan.agentview.nativeapp.codex.PointList
 import no.pradhan.agentview.nativeapp.codex.QuestionList
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.WORK
-import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.dueText
 import no.pradhan.agentview.nativeapp.codex.firstName
 
 import no.pradhan.agentview.nativeapp.codex.pinsOf
 import no.pradhan.agentview.nativeapp.codex.pointsOf
-import no.pradhan.agentview.nativeapp.codex.weekdayDate
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.app.resolveQuestion
@@ -56,7 +54,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.plural
 
 @Composable
-fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps, onMeeting: (Row) -> Unit, onClaim: (Row) -> Unit, onTask: (Row) -> Unit) {
+fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps, onMeeting: (Row) -> Unit, onClaim: (Row) -> Unit, onTask: (Row) -> Unit, onNotes: (Row) -> Unit) {
     val mine = remember(st.meetings, name) { meetingsWith(st.meetings, name) }
     val shown = remember(st.meetings, name) { nameOf(st.meetings, name) }
     val email = if ('@' in name) name.trim() else mine.flatMap { peopleOf(it) }.firstOrNull { '@' in it && sameName(it, name) }
@@ -118,7 +116,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
             Group {
                 (if (all) mine else mine.take(5)).forEachIndexed { i, m ->
                     if (i > 0) Hairline()
-                    ListRow(m.title ?: "Meeting", m.startsAt?.let { "${weekdayDate(it)} · ${clock(it)}" }, onClick = { onMeeting(m) })
+                    MeetingListRow(m, now, showProfile = false, onNotes = onNotes) { onMeeting(m) }
                 }
             }
             if (mine.size > 5 && !all) Button("Show all ${mine.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
