@@ -105,6 +105,13 @@ private class ComposerState(val hub: Hub, val chatId: String) {
     private val draft = splitMarks(hub.draft(chatId))
     var text by mutableStateOf(TextFieldValue(draft.body, TextRange(draft.body.length)))
     var marks by mutableStateOf(draft.marks)
+
+    fun reload() {
+        val back = splitMarks(hub.draft(chatId))
+        marks = back.marks
+        text = TextFieldValue(back.body, TextRange(back.body.length))
+    }
+
     var dismissed by mutableStateOf("")
     var files by mutableStateOf<List<String>?>(null)
     val full get() = joinMarks(text.text, marks)
@@ -173,6 +180,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     val attach = rememberAttach(hub, { uploading += it }) { path -> s.replaceMarks(s.marks +"[Image: $path]") }
     var bar by remember(chatId) { mutableStateOf(barState(BarState(), if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled)) }
     val imeVisible = WindowInsets.isImeVisible
+    LaunchedEffect(chatId) { hub.draftChanged.collect { if (it == chatId) s.reload() } }
     LaunchedEffect(imeVisible) { bar = barState(bar, if (imeVisible) BarEvent.KeyboardUp else BarEvent.KeyboardDown) }
     LaunchedEffect(s.full.isEmpty()) { bar = barState(bar, if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled) }
     LaunchedEffect(bar) { hub.shell.composing.value = barHidden(bar) }

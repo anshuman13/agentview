@@ -5,6 +5,7 @@ import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.SessionInfo
+import no.pradhan.agentview.nativeapp.workspace.appendPrompt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -55,6 +56,12 @@ class ComposerLogicTest {
         )
         assertEquals(listOf(Part.Image("/x.png")), userParts("[Image: /x.png] "))
         assertEquals(listOf(Part.Text("plain")), userParts("plain"))
+    }
+
+    @Test fun usedAgainPromptJoinsANonEmptyDraftWithItsMarkersAsChips() {
+        val back = splitMarks(appendPrompt("half typed [Image: /a/one.png] ", "look at this\n[Image: /a/two.png] "))
+        assertEquals("half typed\n\nlook at this", back.body.trim().replace(" \n", "\n"))
+        assertEquals(listOf("[Image: /a/one.png]", "[Image: /a/two.png]"), back.marks)
     }
 
     @Test fun bangIsAShellCommand() {

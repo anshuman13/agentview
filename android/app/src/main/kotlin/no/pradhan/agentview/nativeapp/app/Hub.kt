@@ -126,6 +126,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val fileChanged = MutableSharedFlow<String>(extraBufferCapacity = 8)
 
+    val draftChanged = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
     // The integrations the server's settings file turns on (shared/protocol.ts PublicSettings).
     val deploy = MutableStateFlow(false)
 
@@ -454,6 +456,12 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         val chat = store.wanted
         setDraft(chat, appendPrompt(draft(chat), text))
         link.value = DeepLink(chat = chat)
+    }
+
+    // Adds a sent prompt to the composer of a chat that is already on screen (web agentview:insert).
+    fun useAgain(chat: String, text: String) {
+        setDraft(chat, appendPrompt(draft(chat), text))
+        draftChanged.tryEmit(chat)
     }
 
     // The chat the workspace pages act on: the one on screen, else the server's last viewed chat.
