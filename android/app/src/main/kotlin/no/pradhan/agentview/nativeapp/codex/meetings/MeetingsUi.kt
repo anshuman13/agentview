@@ -93,7 +93,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
     LazyColumn(Modifier.fillMaxWidth()) {
         if (decisions) {
             item { SectionHeader("Decisions", log.size.toString()) }
-            if (log.isEmpty()) item { EmptyState("No decisions yet", "Decisions come from the meeting summaries") }
+            if (log.isEmpty()) item { EmptyState("No decisions yet", "Decisions come from the meeting summaries", icon = "check") }
             else item {
                 Group {
                     log.take(shown).forEachIndexed { i, d ->
@@ -125,7 +125,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
                 item { SectionHeader(g.label, g.rows.size.toString()) }
                 item { Group { g.rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile, noDay = true) { onOpen(m) } } } }
             }
-            if (coming.isEmpty()) item { EmptyState("Nothing on the calendar this week") }
+            if (coming.isEmpty()) item { EmptyState("Nothing on the calendar this week", icon = "calendar") }
             if (waiting.isNotEmpty()) {
                 item { SectionHeader("Waiting on", waiting.size.toString()) }
                 item { Group { waiting.forEachIndexed { i, g -> if (i > 0) Hairline(); WaitingRowView(g, hub) } } }
@@ -145,8 +145,8 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
         }
         if (listed.sumOf { it.rows.size } > shown) item { Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         if (groups.isEmpty()) item {
-            if (chips.isNotEmpty()) EmptyState("No meetings match", "Try fewer filters")
-            else EmptyState(if (query.isNotEmpty()) "No meetings match" else "No past meetings yet", if (query.isNotEmpty()) "Search covers titles, people, notes, summaries and decisions" else "Coming meetings are listed by day")
+            if (chips.isNotEmpty()) EmptyState("No meetings match", "Try fewer filters", icon = "calendar", action = { Button("Clear filters", { chips.forEach(onChip) }, size = ButtonSize.Sm) })
+            else EmptyState(if (query.isNotEmpty()) "No meetings match" else "No past meetings yet", if (query.isNotEmpty()) "Search covers titles, people, notes, summaries and decisions" else "Coming meetings are listed by day", icon = "calendar")
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }

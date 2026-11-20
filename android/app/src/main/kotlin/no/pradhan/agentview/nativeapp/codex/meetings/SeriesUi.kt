@@ -74,7 +74,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
     var allOpen by rememberSaveable(key) { mutableStateOf(false) }
     var allOcc by rememberSaveable(key) { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxWidth()) {
-        if (members.isEmpty()) { item { EmptyState("No meetings") }; return@LazyColumn }
+        if (members.isEmpty()) { item { EmptyState("No meetings", icon = "calendar") }; return@LazyColumn }
         item {
             Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 LRow(verticalAlignment = Alignment.CenterVertically) {
@@ -87,7 +87,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
             }
         }
         item { SectionHeader("Open across the series") }
-        if (open.isEmpty()) item { EmptyState("Nothing open") }
+        if (open.isEmpty()) item { EmptyState("Nothing open", icon = "check") }
         else item {
             Group {
                 (if (allOpen) open else open.take(5)).forEachIndexed { i, (m, r) -> if (i > 0) Hairline(); ActionLine(r, m, now, actions, from = weekdayDate(m.startsAt!!)) }

@@ -99,7 +99,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             SearchField(query, { query = it }, "Search the wiki", Modifier.padding(top = Tokens.sp4))
         }
         if (query.isNotBlank()) {
-            if (hits.pages.isEmpty() && hits.claims.isEmpty()) item { EmptyState("Nothing in the wiki matches “$query”") }
+            if (hits.pages.isEmpty() && hits.claims.isEmpty()) item { EmptyState("Nothing in the wiki matches “$query”", icon = "search") }
             if (hits.pages.isNotEmpty()) {
                 item { SectionHeader("Pages", hits.pages.size.toString()) }
                 item { Group { hits.pages.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(p.title ?: "", p.str("summary")?.let { firstLine(it) }, onClick = { onOpen(p) }) } } }
@@ -118,7 +118,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
         overview?.let { o ->
             item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow(o.title ?: "Overview", o.str("summary")?.let { firstLine(it) }, onClick = { onOpen(o) }) } }
         }
-        if (sections.isEmpty() && overview == null) item { EmptyState("No pages yet") }
+        if (sections.isEmpty() && overview == null) item { EmptyState("No pages yet", icon = "book") }
         sections.forEach { s ->
             item { SectionHeader(s.name, s.pages.size.toString()) }
             item {

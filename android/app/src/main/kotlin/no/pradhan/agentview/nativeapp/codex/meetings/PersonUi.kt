@@ -97,7 +97,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
             item { PinList(pins, ops) { r -> mine.firstOrNull { it.profile == r.profile && it.id == r.meetingId }?.let(onMeeting) } }
         }
         item { SectionHeader("Meetings", mine.size.toString()) }
-        if (mine.isEmpty()) item { EmptyState("No meetings") }
+        if (mine.isEmpty()) item { EmptyState("No meetings", icon = "calendar") }
         else item {
             Group {
                 (if (all) mine else mine.take(5)).forEachIndexed { i, m ->
