@@ -27,6 +27,7 @@ export const startModel = (provider?: Provider) => {
 
 export function newChat(msg: Omit<Extract<ClientMessage, { type: 'new_session' }>, 'type'> = {}) {
   if (msg.model) rememberModel(msg.provider, msg.model);
-  const model = msg.fork ? msg.model : msg.model ?? startModel(msg.provider);
+  const wanted = msg.model ?? (msg.fork ? undefined : lastModel(msg.provider) ?? undefined);
+  const model = knownModels(msg.provider).some((m) => m.value === wanted) ? wanted : undefined;
   send({ type: 'new_session', ...msg, ...(model && { model }) });
 }

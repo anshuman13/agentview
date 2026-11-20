@@ -5,7 +5,7 @@ import { appSettings } from '../app/appSettings';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
-import type { SavedSession, Worktree } from '../../../shared/protocol';
+import type { LiveChat, SavedSession, Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
 import { pressable, save, stored } from '../ui/util';
 import { chatFinder, deleteChat, findHere, flip, groupByKind, invalidateWorkspace, segmentOf, usePins, useWorkspace, waitingChats, worktreeRequest, type Folder } from './folders';
@@ -24,7 +24,9 @@ export function Sessions() {
   const { folders, chats, setTrees, setChats } = useWorkspace(current + cwd);
   const { pins, setPin } = usePins();
   const liveKey = useStore((s) => s.live.map((c) => c.cwd).join('\n'));
-  const live = useStore((s) => s.live);
+  // Only the chats waiting on the user matter here, so the string keeps other live updates from re-rendering the list.
+  const waitingJson = useStore((s) => JSON.stringify(s.live.filter((c) => c.pending)));
+  const pending = useMemo<LiveChat[]>(() => JSON.parse(waitingJson), [waitingJson]);
   const [filter, setFilter] = useState('');
   const viewing = useStore((s) => s.session.id);
   const personalRoot = appSettings.use((s) => s.personalRoot);
@@ -45,7 +47,7 @@ export function Sessions() {
   useEffect(() => setOpening(null), [current, cwd]);
 
   const here = findHere(folders, cwd).folder?.cwd;
-  const waiting = useMemo(() => waitingChats(live, chats, folders, filter), [live, chats, folders, filter]);
+  const waiting = useMemo(() => waitingChats(pending, chats, folders, filter), [pending, chats, folders, filter]);
 
   const shown = useMemo(() => {
     const find = chatFinder(filter, chats);

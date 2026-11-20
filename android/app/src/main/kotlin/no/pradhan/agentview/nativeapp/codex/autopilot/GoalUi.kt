@@ -146,7 +146,7 @@ private fun GoalStartSheet(hub: Hub, sheet: GoalSheet.Start, onClose: () -> Unit
     var providerId by remember { mutableStateOf(defaultProvider) }
     val group = modelGroup(providerId, allProviders)
     val models by hub.modelsOf(group).collectAsState()
-    var model by remember(group) { mutableStateOf(startModel(models, hub.lastModel(group))) }
+    var model by remember(models, group) { mutableStateOf(startModel(models, hub.lastModel(group))) }
     var pickTime by remember { mutableStateOf(false) }
     var sent by remember { mutableStateOf(false) }
     val presets by hub.goalPresets.collectAsState()

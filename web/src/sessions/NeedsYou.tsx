@@ -14,8 +14,10 @@ const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', cha
 // Chats waiting on the user plus GitHub items the server flagged (failing CI, reviews, assigned issues).
 export function NeedsYou({ n, filter, children }: { n: number; filter: string; children: ReactNode }) {
   const all = useStore((s) => s.attention);
-  const words = queryWords(filter);
-  const items = useMemo(() => (words.length ? all.filter((it) => matcher(words)(it.repo, it.title)) : all), [all, filter]);
+  const items = useMemo(() => {
+    const words = queryWords(filter);
+    return words.length ? all.filter((it) => matcher(words)(it.repo, it.title)) : all;
+  }, [all, filter]);
   const cwd = useStore((s) => s.session.cwd);
   const live = useStore((s) => s.live);
   const prs = usePullRequests(cwd);
