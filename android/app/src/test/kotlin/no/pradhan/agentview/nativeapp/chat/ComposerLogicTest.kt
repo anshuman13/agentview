@@ -5,6 +5,7 @@ import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.SessionInfo
+import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.workspace.appendPrompt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -24,6 +25,16 @@ class ComposerLogicTest {
         assertEquals(listOf("web/src/Sessions.tsx", "android/Sessions.kt"), rankFiles(listOf("README.md", "android/Sessions.kt", "web/src/Sessions.tsx"), "sessions.t"))
         assertNull(commandTrigger("/co now", 7))
         assertEquals(Trigger(0, "c"), commandTrigger("/c more text", 2))
+    }
+
+    @Test
+    fun chatMentionListsChatsByTitle() {
+        assertEquals("tri", chatQuery(commandTrigger("see @chat:tri", 13)))
+        assertNull(chatQuery(commandTrigger("see @src", 8)))
+        assertNull(chatQuery(commandTrigger("/chat:tri", 9)))
+        val chats = listOf(SavedSession("a", "/tries worktrees", "/r"), SavedSession("b", "Day dividers", "/r"), SavedSession("c", "", "/r"))
+        assertEquals(listOf("a"), rankChats(chats, "tri").map { it.sessionId })
+        assertEquals(listOf("a", "b"), rankChats(chats, "").map { it.sessionId })
     }
 
     @Test

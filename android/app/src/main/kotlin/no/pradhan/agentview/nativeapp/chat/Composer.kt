@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,7 @@ import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.newestModels
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.app.refreshUsage
+import no.pradhan.agentview.nativeapp.app.refreshWorkspace
 import no.pradhan.agentview.nativeapp.app.runInTerminal
 import no.pradhan.agentview.nativeapp.app.setAccount
 import no.pradhan.agentview.nativeapp.app.setEffort
@@ -223,10 +225,14 @@ private fun rememberSuggestions(s: ComposerState, trigger: Trigger?, session: Se
     LaunchedEffect(s.chatId, trigger?.file) {
         if (trigger?.file == true && s.files == null) s.files = runCatching { s.hub.chatFiles(s.chatId) }.getOrDefault(emptyList())
     }
+    val chatQ = chatQuery(trigger)
+    LaunchedEffect(chatQ != null) { if (chatQ != null) s.hub.refreshWorkspace() }
+    val ws by s.hub.workspace.collectAsState()
     val files = s.files
-    val ranked = remember(files, trigger?.query, trigger?.file) { if (trigger?.file == true) rankFiles(files.orEmpty(), trigger.query) else emptyList() }
+    val ranked = remember(files, trigger?.query, trigger?.file) { if (trigger?.file == true && chatQ == null) rankFiles(files.orEmpty(), trigger.query) else emptyList() }
     return when {
         trigger == null || key == s.dismissed -> emptyList()
+        chatQ != null -> rankChats(ws.saved.filter { it.sessionId != session?.sessionId }, chatQ).map { Suggestion(it.title, it.cwd.substringAfterLast('/'), "@chat:${it.sessionId}") }
         trigger.file -> ranked.map { f -> Suggestion(f.substringAfterLast('/'), f.substringBeforeLast('/', ""), "@$f") }
         else -> rankCommands(session?.commands ?: emptyList(), trigger.query).map { Suggestion("/${it.name}", it.description, "/${it.name}") }
     }

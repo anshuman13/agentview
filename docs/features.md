@@ -208,7 +208,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   Send to all field that messages every try still in the run, reopening closed ones. When every try has reported, the
   parent chat gets one turn ("All N tries reported") that compares them and recommends one with a ROUND line, and the run
   ends ("all tries reported"); it also ends when the parent chat closes or on Keep
-- `@chat:` in the web composer lists the other chats by title; picking one inserts `@chat:<session id>`, and the server
+- `@chat:` in the web and phone composers lists the other chats by title; picking one inserts `@chat:<session id>`, and the server
   adds that chat's transcript path to the prompt so Claude can read it (the chat shows the prompt as typed)
 - "Fork chat" (New chat in the Fork pick of the web chat settings menu, the phone chat menu, or the palette) starts a new chat in the same folder and model
   whose first prompt asks Claude to read the old chat (through `@chat:`) and summarise it in at most 15 lines, so the work
