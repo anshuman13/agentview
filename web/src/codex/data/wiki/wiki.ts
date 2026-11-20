@@ -209,6 +209,12 @@ export function rememberedFact(text: string, profile: Profile, title: string, cw
   return { ...fact, state: 'live', sources: JSON.stringify([{ kind: 'chat', label }]), field_times: JSON.stringify({ ...JSON.parse(fact.field_times), sources: now }) };
 }
 
+// The current live Memory claim (no page) of the profile that the remembered text overlaps; android WikiLogic.kt rememberChanges says the same.
+export function rememberChanges(text: string, facts: Fact[], profile: Profile) {
+  const current = currentClaim(facts);
+  return similarClaim(text, live(facts).filter((f) => f.profile === profile && !f.page_id && current(f)).map((f) => ({ text: f.text ?? '', fact: f })))?.fact;
+}
+
 // Pages whose title or summary match every word, then current claims that do.
 export function searchWiki(pages: Page[], facts: Fact[], query: string) {
   const words = queryWords(query);

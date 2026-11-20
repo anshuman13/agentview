@@ -1,0 +1,8 @@
+[
+  {"name": "match", "text": "use spaces in golang files", "profile": "work", "facts": [{"id": "a", "profile": "work", "text": "use tabs in golang files"}, {"id": "b", "profile": "work", "text": "unrelated words entirely"}], "expected": "a"},
+  {"name": "no match", "text": "prefer small commits always", "profile": "work", "facts": [{"id": "a", "profile": "work", "text": "use tabs in golang files"}], "expected": null},
+  {"name": "page claim ignored", "text": "use spaces in golang files", "profile": "work", "facts": [{"id": "a", "profile": "work", "text": "use tabs in golang files", "page_id": "p"}], "expected": null},
+  {"name": "other profile ignored", "text": "use spaces in golang files", "profile": "work", "facts": [{"id": "a", "profile": "personal", "text": "use tabs in golang files"}], "expected": null},
+  {"name": "superseded ignored", "text": "use spaces in golang files", "profile": "work", "facts": [{"id": "a", "profile": "work", "text": "use tabs in golang files", "superseded_by": "c"}, {"id": "c", "profile": "work", "text": "something else entirely"}], "expected": null},
+  {"name": "retired ignored", "text": "use spaces in golang files", "profile": "work", "facts": [{"id": "a", "profile": "work", "text": "use tabs in golang files", "state": "retired"}], "expected": null}
+]
