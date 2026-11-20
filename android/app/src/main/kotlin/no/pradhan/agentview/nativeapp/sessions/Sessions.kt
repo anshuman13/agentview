@@ -81,8 +81,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     else AllSessions(rows, filters, hits) { newChat = it }
 
     newChat?.let { choice ->
-        val here = sessionCwd?.ifEmpty { null }?.let { c -> folderKey(c, ws.repos, ws.trees) }?.takeIf { k -> unfiltered.any { g -> g.key == k } }
-        val choices = unfiltered.sortedByDescending { g -> g.key == here }.map { g -> RepoChoice(g.key, g.name, ws.repos.firstOrNull { it.cwd == g.key }?.let(::repoDetail)) }
+        val (here, choices) = newChatChoices(unfiltered, ws, sessionCwd)
         NewChatSheet(hub, choice.key, choices, onDismiss = { newChat = null }, initial = here)
     }
     dialogs.Show(hub)

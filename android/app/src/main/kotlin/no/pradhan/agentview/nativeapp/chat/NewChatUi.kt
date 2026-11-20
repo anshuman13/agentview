@@ -30,7 +30,7 @@ class RepoChoice(val key: String?, val name: String, val detail: String? = null)
 
 // The sheet behind the new chat buttons: the repo when none is fixed (the open chat's repo first), and the model, which starts on the last one used.
 @Composable
-fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss: () -> Unit, initial: String? = null) {
+fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss: () -> Unit, initial: String? = null, text: String? = null) {
     val providers by hub.providers.collectAsState()
     val default by hub.defaultProvider.collectAsState()
     var picked by remember { mutableStateOf<ProviderOption?>(null) }
@@ -41,7 +41,7 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
     var model by remember(models, group) { mutableStateOf(startModel(models, hub.lastModel(group))) }
     var startMode by remember { mutableStateOf(START_MODES.first()) }
     val start = {
-        hub.newChat(repo, model, mode = startModeFor(startMode.mode, provider?.id ?: default), draft = startMode.draft, provider = provider?.id)
+        hub.newChat(repo, model, mode = startModeFor(startMode.mode, provider?.id ?: default), draft = startMode.draft, provider = provider?.id, text = text)
         onDismiss()
     }
     Sheet(onDismiss, "New chat", padded = false, full = false, action = { Button("Start", start, Modifier.padding(end = Tokens.sp5), variant = ButtonVariant.Filled, size = ButtonSize.Sm) }) {

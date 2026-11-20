@@ -74,3 +74,6 @@ fun openDaily(d: DailyChat?, live: List<LiveChat>): LiveChat? =
 
 fun parseDaily(s: String?): DailyChat? = s?.let { runCatching { protocolJson.decodeFromString(DailyChat.serializer(), it) }.getOrNull() }
 fun encodeDaily(d: DailyChat) = protocolJson.encodeToString(DailyChat.serializer(), d)
+
+// shared/taskChat.ts taskChatPrompt: the first message of a chat started from a task.
+fun taskChatPrompt(title: String?, text: String?, sourceUrl: String?) = listOf(title, text, sourceUrl).mapNotNull { it?.trim()?.ifEmpty { null } }.joinToString("\n\n")

@@ -1,0 +1,6 @@
+[
+  {"name": "title only", "task": {"title": "Fix the importer retry"}, "expected": "Fix the importer retry"},
+  {"name": "title, notes and link", "task": {"title": "Fix the importer retry", "text": "It retries forever on 429.\nSee the Sentry issue.", "sourceUrl": "https://sentry.io/issues/1"}, "expected": "Fix the importer retry\n\nIt retries forever on 429.\nSee the Sentry issue.\n\nhttps://sentry.io/issues/1"},
+  {"name": "blank notes and null link", "task": {"title": "Call the bank", "text": "  ", "sourceUrl": null}, "expected": "Call the bank"},
+  {"name": "no title", "task": {"text": "Only notes", "sourceUrl": "https://x.test"}, "expected": "Only notes\n\nhttps://x.test"}
+]

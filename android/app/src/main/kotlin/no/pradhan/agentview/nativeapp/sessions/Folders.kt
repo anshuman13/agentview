@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.sessions
 
 import java.util.Calendar
 import kotlinx.serialization.Serializable
+import no.pradhan.agentview.nativeapp.chat.RepoChoice
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.net.LiveChat
@@ -94,6 +95,12 @@ val ADVISORS = listOf(
 
 
 fun advisorOf(cwd: String) = ADVISORS.firstOrNull { cwd.trimEnd('/').endsWith("/.agentview/advisors/${it.id}") }
+
+// The repos the New chat sheet offers, the open chat's repo first, and that repo's key.
+fun newChatChoices(groups: List<RepoGroup>, ws: Workspace, sessionCwd: String?): Pair<String?, List<RepoChoice>> {
+    val here = sessionCwd?.ifEmpty { null }?.let { c -> folderKey(c, ws.repos, ws.trees) }?.takeIf { k -> groups.any { g -> g.key == k } }
+    return here to groups.sortedByDescending { g -> g.key == here }.map { g -> RepoChoice(g.key, g.name, ws.repos.firstOrNull { it.cwd == g.key }?.let(::repoDetail)) }
+}
 
 // A chat matches when every word of the query is in its title, repo or the title or first prompt of its saved copy.
 fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = ""): List<RepoGroup> {

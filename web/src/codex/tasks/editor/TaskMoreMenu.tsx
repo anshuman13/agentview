@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
+import { RepoPicker } from '../../../app/lazy';
+import { taskChatPrompt } from '../../../../../shared/taskChat';
 import { useAssistant } from '../../data';
 import { atTime } from '../../data/tasks/engine';
 import type { ItemRow, Profile } from '../../data/sync';
@@ -40,6 +42,7 @@ export function TaskMoreMenu({ row, draft, suggested, addEstimate, then, onAsk }
   const [snoozing, setSnoozing] = useState(false);
   const [tidying, setTidying] = useState(false);
   const [logging, setLogging] = useState(false);
+  const [starting, setStarting] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const src = sourceOf(row);
   const at = atTime(row.at);
@@ -113,6 +116,7 @@ export function TaskMoreMenu({ row, draft, suggested, addEstimate, then, onAsk }
       {row.draft && <MenuItem onClick={() => { setMenu(false); copyText(row.draft!); }} icon="copy">Copy draft</MenuItem>}
       {row.status === 'open' && <RaiseWith className="ui-menu-item" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
       <MenuItem onClick={then(() => onAsk(row))} icon="sparkle">Ask Claude</MenuItem>
+      <MenuItem onClick={() => { setMenu(false); save(); setStarting(true); }} icon="comment-discussion">Start a chat…</MenuItem>
       {at != null && <MenuItem onClick={() => { setMenu(false); act.due(row, null); }} icon="close">Clear due time</MenuItem>}
       <MenuItem danger onClick={then(() => act.remove(row))} icon="trash">Delete</MenuItem>
     </>
@@ -126,6 +130,7 @@ export function TaskMoreMenu({ row, draft, suggested, addEstimate, then, onAsk }
           {snoozing ? snoozeItems : mainItems}
         </Menu>
       )}
+      {starting && <Suspense fallback={null}><RepoPicker text={taskChatPrompt({ title, text, sourceUrl: row.source_url })} onClose={() => setStarting(false)} /></Suspense>}
     </div>
   );
 }
