@@ -227,6 +227,8 @@ When a chat stays idle for 5 minutes (nothing running or pending) and has a mess
 
 One Haiku run (job id `learn`) saves at most 3 preferences or corrections you stated, with the profile's live and proposed claims, page or not, as "already known". Each is a proposed Memory claim: `added_by` `claude:<chat id>`, one `chat` source with the chat title, id `learn:<hash of the text>`. A claim equal to any non-deleted claim of the profile in any state, or matching a secret pattern, is skipped. The To review card says "From chat <title>" ("Untitled" when empty) and the Claude chip links the chat; after approval the Memory row shows a "Chat" chip with the title as tooltip.
 
+When the new messages name a ticket id (`ABC-123`) or a pull request (`#123` or a github pull URL), the same run also gets the 5 wiki pages that best match the chat (`searchWiki`) and may save up to 2 decisions or status claims worded "As of <date>, ...". Each goes on a listed page, or on a new proposed page made from a title and section, with the same source, id scheme and dedupe as above. Chats that name no ticket or PR skip this part.
+
 ### Steps
 
 - [x] 15. Columns `state`, `replaces`, `added_by` and pages `state`; client types; proposed and rejected rows hidden from pages, feed and search
