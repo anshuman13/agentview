@@ -97,6 +97,7 @@ import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
 import no.pradhan.agentview.nativeapp.codex.wiki.isOld
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
+import no.pradhan.agentview.nativeapp.codex.wiki.similarClaim
 import no.pradhan.agentview.nativeapp.chat.appendRule
 import no.pradhan.agentview.nativeapp.chat.can
 import no.pradhan.agentview.nativeapp.net.Capabilities
@@ -513,6 +514,13 @@ class SharedCasesTest {
             c.nullable("at")?.let { f["at"] = toJson(it.jsonPrimitive.long) }
             c.nullable("used_at")?.let { f["used_at"] = toJson(it.jsonPrimitive.long) }
             assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, isOld(Row("facts", "f", "work", f = f), c.getValue("now").jsonPrimitive.long))
+        }
+    }
+
+    @Test fun similarClaim() {
+        for (c in cases("similar-claim")) {
+            val claims = c.getValue("claims").jsonArray.map { it.jsonObject.str("id") to it.jsonObject.str("text") }
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, similarClaim(c.str("text"), claims) { it.second }?.first)
         }
     }
 

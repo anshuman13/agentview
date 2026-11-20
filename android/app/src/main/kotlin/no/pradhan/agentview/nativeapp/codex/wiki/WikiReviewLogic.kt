@@ -10,16 +10,19 @@ class Change(val row: Row, val patch: Map<String, Any?>, val undo: Map<String, A
 private fun pageOf(pages: List<Row>, fact: Row) = pages.firstOrNull { it.id == fact.str("page_id") && it.profile == fact.profile }
 
 // Approving sets the claim live, its proposed page live, and supersedes the claim it replaces.
-fun approveChanges(fact: Row, pages: List<Row>, facts: List<Row>): List<Change> {
+fun approveChanges(fact: Row, pages: List<Row>, facts: List<Row>, replaces: String? = fact.str("replaces")): List<Change> {
     val page = pageOf(pages, fact)?.takeIf { it.str("state") == "proposed" }
     val current = currentClaims(facts)
-    val old = facts.firstOrNull { it.id == fact.str("replaces") && it.profile == fact.profile && !it.deleted && current(it) }
+    val old = facts.firstOrNull { it.id == replaces && it.profile == fact.profile && !it.deleted && current(it) }
     return listOfNotNull(
         Change(fact, mapOf("state" to "live"), mapOf("state" to "proposed")),
         page?.let { Change(it, mapOf("state" to "live"), mapOf("state" to "proposed")) },
         old?.let { Change(it, mapOf("superseded_by" to fact.id), mapOf("superseded_by" to null)) },
     )
 }
+
+fun replaceChanges(fact: Row, old: Row, pages: List<Row>, facts: List<Row>) =
+    listOf(Change(fact, mapOf("state" to "live", "replaces" to old.id), mapOf("state" to "proposed", "replaces" to null))) + approveChanges(fact, pages, facts, old.id).drop(1)
 
 fun approveAllChanges(list: List<Row>, pages: List<Row>, facts: List<Row>): List<Change> {
     val seen = HashSet<String>()
@@ -50,5 +53,6 @@ class ReviewOps(private val store: CodexStore, private val snack: (String, (() -
 
     private fun noun(n: Int) = plural(n, "claim")
     fun approve(list: List<Row>) { val s = store.state.value; run(approveAllChanges(list, s.pages, s.facts), "Approved ${noun(list.size)}") }
+    fun replace(fact: Row, old: Row) { val s = store.state.value; run(replaceChanges(fact, old, s.pages, s.facts), "Approved 1 claim, replacing the old one") }
     fun reject(list: List<Row>) { val s = store.state.value; run(rejectChanges(list, s.pages, s.facts), "Rejected ${noun(list.size)}") }
 }

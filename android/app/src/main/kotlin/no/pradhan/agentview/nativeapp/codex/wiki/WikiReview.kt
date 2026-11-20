@@ -66,6 +66,16 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.plural
 
+// The claim a proposal replaces or repeats, clamped to two lines; a tap shows all of it.
+@Composable
+private fun OldClaim(claim: Row, label: String, key: String) {
+    var full by remember(key, label) { mutableStateOf(false) }
+    Column(Modifier.heightIn(min = Tokens.touchSm).clickable { full = !full }) {
+        Text(label, style = Type.meta, color = av.metaFg)
+        Text(claim.str("text") ?: "", style = Type.subheadline, color = av.fgMuted, textDecoration = if (label == "Replaces") TextDecoration.LineThrough else null, maxLines = if (full) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
 // One proposed claim at a time with big Approve, Skip and Reject, so a long list can be cleared with the thumb.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -87,16 +97,15 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
     }
     val page = fact.str("page_id")?.let { id -> st.pages.firstOrNull { it.id == id && it.profile == fact.profile } }
     val old = fact.str("replaces")?.let { id -> st.facts.firstOrNull { it.id == id && it.profile == fact.profile } }
+    val similar = similarLive(fact, st.facts)
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
         Text("${total - left + 1} of $total", Modifier.padding(horizontal = Tokens.listPad), style = Type.label, color = av.fgMuted)
         Group {
             Column(Modifier.padding(Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
                 Text(listOfNotNull(page?.title, if (page?.str("state") == "proposed") "(new page)" else null, fact.str("heading")?.ifEmpty { null }).joinToString(" · ").ifEmpty { "Memory" }, style = Type.callout, color = av.fgMuted)
                 Text(fact.str("text") ?: "", style = Type.body, color = av.fg)
-                if (old != null) {
-                    var full by remember(fact.key) { mutableStateOf(false) }
-                    Text(old.str("text") ?: "", Modifier.heightIn(min = Tokens.touchSm).clickable { full = !full }, style = Type.subheadline, color = av.fgMuted, textDecoration = TextDecoration.LineThrough, maxLines = if (full) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
-                }
+                if (old != null) OldClaim(old, "Replaces", fact.key)
+                if (similar != null) OldClaim(similar, "Similar to", fact.key)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4), itemVerticalAlignment = Alignment.CenterVertically) {
                     sourcesOf(fact).forEach { s -> Chip(s.label, safeHref(s.url)?.let { u -> { uri.openUri(u) } }) }
                     fact.long("at")?.let { Text(shortDate(it, System.currentTimeMillis()), style = Type.meta, color = av.metaFg) }
@@ -106,6 +115,7 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
         }
         Column(Modifier.padding(horizontal = Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             Button("Approve", { ops.approve(listOf(fact)) }, Modifier.fillMaxWidth(), variant = ButtonVariant.Filled, size = ButtonSize.Lg)
+            if (similar != null) Button("Replace it", { ops.replace(fact, similar) }, Modifier.fillMaxWidth(), size = ButtonSize.Md)
             LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Button("Reject", { ops.reject(listOf(fact)) }, Modifier.weight(1f), variant = ButtonVariant.Danger, size = ButtonSize.Md)
                 Button("Skip", { if (queue.size == 1) onBack() else skipped = skipped.filter { it != fact.key } + fact.key }, Modifier.weight(1f), size = ButtonSize.Md)

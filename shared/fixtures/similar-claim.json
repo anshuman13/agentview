@@ -1,0 +1,10 @@
+[
+  {"name": "at the threshold", "text": "alpha beta gamma zulu yankee", "claims": [{"id": "a", "text": "alpha beta gamma delta epsilon"}, {"id": "b", "text": "unrelated words entirely"}], "expected": "a"},
+  {"name": "below the threshold", "text": "alpha beta zulu yankee xray", "claims": [{"id": "a", "text": "alpha beta gamma delta epsilon"}], "expected": null},
+  {"name": "first of equal matches", "text": "alpha beta gamma delta zulu", "claims": [{"id": "x", "text": "alpha beta gamma"}, {"id": "y", "text": "alpha beta gamma delta"}], "expected": "x"},
+  {"name": "best match wins", "text": "alpha beta gamma", "claims": [{"id": "x", "text": "alpha beta zulu"}, {"id": "y", "text": "alpha beta gamma delta"}], "expected": "y"},
+  {"name": "no key words", "text": "a an", "claims": [{"id": "a", "text": "alpha beta gamma delta epsilon"}], "expected": null},
+  {"name": "stop words and case are ignored", "text": "Should ALPHA beta GAMMA from with", "claims": [{"id": "a", "text": "alpha beta gamma"}], "expected": "a"},
+  {"name": "accented letters count as words", "text": "Möte väckas klockan sju", "claims": [{"id": "a", "text": "möte väckas klockan åtta"}], "expected": "a"},
+  {"name": "no claims", "text": "alpha beta gamma", "claims": [], "expected": null}
+]

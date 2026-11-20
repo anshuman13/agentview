@@ -37,6 +37,37 @@ fun currentClaims(facts: List<Row>): (Row) -> Boolean {
     return { f -> f.str("superseded_by").isNullOrEmpty() || "${f.profile}:${f.str("superseded_by")}" !in alive }
 }
 
+// STOP, SIMILAR, keyWords, overlap and similarClaim mirror shared/claimMatch.ts, checked by shared/fixtures/similar-claim.json.
+private val STOP = setOf("about", "after", "also", "from", "have", "into", "just", "more", "next", "only", "over", "should", "some", "than", "that", "their", "them", "then", "there", "they", "this", "until", "week", "when", "will", "with", "would")
+private val WORD = Regex("[\\p{L}\\p{N}]{4,}")
+private const val SIMILAR = 0.6
+
+private fun keyWords(t: String) = WORD.findAll(t.lowercase()).map { it.value }.filter { it !in STOP }.toSet()
+
+private fun overlap(a: Set<String>, b: Set<String>): Double {
+    val (short, long) = if (a.size <= b.size) a to b else b to a
+    return if (short.isEmpty()) 0.0 else short.count { it in long }.toDouble() / short.size
+}
+
+// The claim that overlaps the text most, when it reaches SIMILAR.
+fun <T> similarClaim(text: String, claims: List<T>, textOf: (T) -> String): T? {
+    val words = keyWords(text)
+    var best: T? = null
+    var top = SIMILAR
+    for (c in claims) {
+        val score = overlap(words, keyWords(textOf(c)))
+        if (score >= top && (best == null || score > top)) { best = c; top = score }
+    }
+    return best
+}
+
+// The current live claim of the proposal's profile that it repeats, when it names no claim to replace.
+fun similarLive(fact: Row, facts: List<Row>): Row? {
+    if (!fact.str("replaces").isNullOrEmpty()) return null
+    val current = currentClaims(facts)
+    return similarClaim(fact.str("text") ?: "", liveRows(facts).filter { it.profile == fact.profile && current(it) }) { it.str("text") ?: "" }
+}
+
 class PageStats(val claims: Int, val contested: Int, val updated: Long)
 
 fun statsByPage(facts: List<Row>): Map<String?, PageStats> {
