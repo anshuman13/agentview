@@ -45,6 +45,8 @@ fun wikiSections(pages: List<Row>): List<WikiSection> {
     return names.map { n -> WikiSection(n, rest.filter { (it.str("section")?.ifEmpty { null } ?: "Pages") == n }.sortedBy { it.long("sort") ?: 0L }) }
 }
 
+fun archivedPages(pages: List<Row>) = pages.filter { !it.deleted && it.str("state") == "retired" }.sortedByDescending { it.updatedAt }
+
 // A claim is current unless a live claim supersedes it.
 fun currentClaims(facts: List<Row>): (Row) -> Boolean {
     val alive = liveRows(facts).map { it.key }.toSet()

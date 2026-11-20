@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask/ask';
-import { live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki/wiki';
+import { archivedPages, live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki/wiki';
 import { Icon } from '../../ui/Icon';
 import { IconButton, Button } from '../../ui/Button';
 import { Row } from '../../ui/Row';
@@ -18,7 +18,7 @@ import { PageTile } from './PageTile';
 import { NeedsLook, ToReview } from './Review';
 import { usePullSync } from '../gestures/pullSync';
 import { MEMORY, shortDate } from './shared';
-import { plural } from '../../ui/util';
+import { ago, plural } from '../../ui/util';
 import { Sheet } from '../../ui/Sheet';
 
 const SECTION_ORDER = ['Teams', 'Projects', 'People', 'Practices'];
@@ -86,6 +86,22 @@ function PageRow({ page, proposed }: { page: Page; proposed: Set<string | null> 
   );
 }
 
+function Archived({ pages }: { pages: Page[] }) {
+  const store = useAssistantStore();
+  const restore = (p: Page) => {
+    void store.editRow('pages', p, { state: null });
+    showSnack(`Restored ${p.title}`, () => void store.editRow('pages', p, { state: 'retired' }));
+  };
+  return (
+    <div className="ui-group">
+      {pages.map((p) => (
+        <Row key={p.profile + p.id} plain leading={<PageTile page={p} />} title={p.title} meta={`${p.section || 'Pages'} · Archived ${ago(p.updated_at)}`}
+          trailing={<Button variant="plain" size="sm" onClick={() => restore(p)}>Restore</Button>} />
+      ))}
+    </div>
+  );
+}
+
 function NewPageField({ sort, onDone }: { sort: number; onDone: () => void }) {
   const store = useAssistantStore();
   const { filter } = useView();
@@ -144,15 +160,17 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [sheet, setSheet] = useState<'Feed' | 'Notes' | 'Ask' | null>(null);
+  const [sheet, setSheet] = useState<'Feed' | 'Notes' | 'Ask' | 'Archived pages' | null>(null);
   const add = useFocusBack<HTMLButtonElement>(adding);
   const more = useFocusBack<HTMLButtonElement>(sheet !== null);
   const overview = useMemo(() => live(pages).find((p) => p.section === 'overview'), [pages]);
   const groups = useMemo(() => sections(pages), [pages]);
+  const archived = useMemo(() => archivedPages(pages), [pages]);
+  useEffect(() => { if (sheet === 'Archived pages' && !archived.length) setSheet(null); }, [sheet, archived.length]);
   const stats = useMemo(() => statsByPage(facts), [facts]);
   const proposed = useMemo(() => proposedPageIds(facts), [facts]);
   const sort = Math.max(0, ...(groups.find((g) => g.name === 'Pages')?.pages ?? []).map((p) => p.sort ?? 0)) + 1;
-  const choose = (s: 'Feed' | 'Notes' | 'Ask') => () => { setMenu(false); setSheet(s); };
+  const choose = (s: NonNullable<typeof sheet>) => () => { setMenu(false); setSheet(s); };
   const newPageButton = <Button size="sm" variant="tinted" onClick={() => setAdding(true)}>New page</Button>;
   return (
     <div className="wk">
@@ -172,6 +190,7 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
             <MenuItem icon="history" onClick={choose('Feed')}>Feed</MenuItem>
             <MenuItem icon="note" onClick={choose('Notes')}>Notes</MenuItem>
             <MenuItem icon="sparkle" onClick={choose('Ask')}>Ask</MenuItem>
+            {archived.length > 0 && <MenuItem icon="archive" onClick={choose('Archived pages')}>Archived pages</MenuItem>}
           </Menu>
         )}
       </header>
@@ -206,6 +225,7 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
           {sheet === 'Feed' && <Feed pages={pages} facts={facts} />}
           {sheet === 'Notes' && <Notes query="" />}
           {sheet === 'Ask' && <AskBar placeholder="Ask the wiki" onAsk={(q) => { const ok = ask(wikiAskText(q, pages, facts), 'work'); if (ok) setSheet(null); return ok; }} />}
+          {sheet === 'Archived pages' && <Archived pages={archived} />}
         </Sheet>
       )}
     </div>

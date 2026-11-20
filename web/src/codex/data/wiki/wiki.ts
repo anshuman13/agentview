@@ -101,6 +101,8 @@ export const linksOf = (m: Meeting) => {
 
 export const live = <T extends Common & { state?: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted && (r.state ?? 'live') === 'live');
 
+export const archivedPages = (pages: Page[]) => pages.filter((p) => !p.deleted && p.state === 'retired').sort((a, b) => b.updated_at - a.updated_at);
+
 
 // A claim is current unless a live claim supersedes it.
 export function currentClaim(facts: Fact[]) {

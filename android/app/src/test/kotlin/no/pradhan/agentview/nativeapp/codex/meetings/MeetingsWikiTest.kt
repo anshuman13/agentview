@@ -48,6 +48,7 @@ import no.pradhan.agentview.nativeapp.codex.wiki.searchWiki
 import no.pradhan.agentview.nativeapp.codex.wiki.sourcesOf
 import no.pradhan.agentview.nativeapp.codex.wiki.statsByPage
 import no.pradhan.agentview.nativeapp.codex.wiki.wikiSections
+import no.pradhan.agentview.nativeapp.codex.wiki.archivedPages
 import no.pradhan.agentview.nativeapp.net.Queued
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -237,6 +238,14 @@ class MeetingsWikiTest {
         val s = wikiSections(pages)
         assertEquals(listOf("Teams", "Domain", "Pages"), s.map { it.name })
         assertEquals(listOf("First", "Orca"), s[0].pages.map { it.title })
+    }
+
+    @Test fun archivedPagesAreRetiredNotDeletedNewestFirst() {
+        val pages = listOf(
+            row("pages", "a", WORK, "state" to "retired").copy(updatedAt = 1), row("pages", "b", WORK, "state" to "retired").copy(updatedAt = 3),
+            row("pages", "c", WORK, "state" to "retired").copy(deleted = true), row("pages", "d", WORK), row("pages", "e", WORK, "state" to "proposed"),
+        )
+        assertEquals(listOf("b", "a"), archivedPages(pages).map { it.id })
     }
 
     @Test fun pageClaimsGroupByHeadingAndKeepReplacedOnes() {

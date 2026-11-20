@@ -79,6 +79,7 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.TextDialog
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.lazyGroup
 import kotlin.math.abs
@@ -117,6 +118,10 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     var allLoose by rememberSaveable { mutableStateOf(false) }
     var creating by remember { mutableStateOf(false) }
     var feedOpen by remember { mutableStateOf(false) }
+    val archived = remember(pages) { archivedPages(pages) }
+    var archivedOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(archived.isEmpty()) { if (archived.isEmpty()) archivedOpen = false }
+    var claimsShown by rememberSaveable(query) { mutableStateOf(CLAIMS_SHOWN) }
     var notesOpen by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf<Row?>(null) }
     val notes = remember(st.items, profile) { split(st.items, profile, now).notes }
@@ -151,7 +156,9 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             }
             if (hits.claims.isNotEmpty()) {
                 item { SectionHeader("Claims", hits.claims.size.toString()) }
-                item { Group { hits.claims.take(30).forEachIndexed { i, f -> if (i > 0) Hairline(); ListRow(f.str("text") ?: "", f.str("page_id")?.let { titles[it] } ?: "Memory", onClick = { onClaim(f) }) } } }
+                item { Group { hits.claims.take(claimsShown).forEachIndexed { i, f -> if (i > 0) Hairline(); ListRow(f.str("text") ?: "", f.str("page_id")?.let { titles[it] } ?: "Memory", onClick = { onClaim(f) }) } } }
+                val left = hits.claims.size - claimsShown
+                if (left > 0) item { Button("Show more ($left)", { claimsShown += CLAIMS_SHOWN }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
             }
             if (noteHits.isNotEmpty()) {
                 item { SectionHeader("Notes", noteHits.size.toString()) }
@@ -220,6 +227,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
                 }
             }
         }
+        if (archived.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Archived pages", trailing = { Chevron("${archived.size}") }, onClick = { archivedOpen = true }) } }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
     if (creating) TextDialog("New page", "", "Create", { title ->
@@ -227,9 +235,26 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
         newPage(title, "Pages", sort, proposalProfile(null, profile), System.currentTimeMillis())?.let { actions.create(it, "Page created"); onOpen(it) }
     }, { creating = false }, maxLength = 120)
     if (feedOpen) FeedSheet(facts, pages, now, { feedOpen = false }) { feedOpen = false; onClaim(it) }
+    if (archivedOpen) ArchivedSheet(archived, now, actions, readOnly) { archivedOpen = false }
     if (notesOpen) NotesSheet(notes, now, actions, proposalProfile(null, profile), readOnly, { notesOpen = false }) { note = it }
     note?.let { NoteSheet(it, actions) { note = null } }
     if (asking && onAsk != null) ClaimTextSheet("Ask", "", "Ask", { asking = false }, "Ask the wiki") { q -> onAsk(wikiAskText(q, pages, facts, null, now)) }
+}
+
+private const val CLAIMS_SHOWN = 50
+
+// Retired pages, newest first, each with Restore (web wiki/WikiIndex.tsx Archived).
+@Composable
+private fun ArchivedSheet(pages: List<Row>, now: Long, actions: TaskActions, readOnly: Boolean, onDismiss: () -> Unit) {
+    Sheet(onDismiss, "Archived pages", padded = false, count = pages.size.toString()) {
+        Group {
+            pages.forEachIndexed { i, p ->
+                if (i > 0) Hairline()
+                ListRow(p.title ?: UNTITLED, "${p.str("section")?.ifEmpty { null } ?: "Pages"} · Archived ${agoShort(p.updatedAt, now)}", leading = { PageTile(p) },
+                    trailing = if (readOnly) null else ({ Button("Restore", { actions.change(p, mapOf("state" to null), "Restored ${p.title}") }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }))
+            }
+        }
+    }
 }
 
 private const val NOTES_SHOWN = 20

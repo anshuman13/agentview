@@ -4,7 +4,7 @@ import type { ItemRow } from '../sync';
 import { dayLabel, dayStart } from '../dates';
 import { givenPreferences } from '../../../../../shared/preferences';
 import { clock } from '../../../../../shared/util';
-import { ungivenPreferences, decisionLog, approveAllChanges, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
+import { archivedPages, ungivenPreferences, decisionLog, approveAllChanges, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
 import { briefFor, decisionsWith, commitmentsOf, priorWith, seriesOf, seriesMeetings, seriesRepeats, seriesTitle, joinMinutes, meetingBadge, meetingMeta, openQuestions, searchMeetings, topicTimeline, trackedTopics } from '../meetings/meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
@@ -25,6 +25,12 @@ const facts = [
 ];
 
 describe('wiki', () => {
+  it('lists retired pages that are not deleted, newest first', () => {
+    const p = (id: string, extra: Partial<Page>): Page => ({ ...page(id, id), ...extra });
+    const rows = [p('a', { state: 'retired', updated_at: 1 }), p('b', { state: 'retired', updated_at: 3 }), p('c', { state: 'retired', deleted: 1 }), p('d', {}), p('e', { state: 'proposed' })];
+    expect(archivedPages(rows).map((r) => r.id)).toEqual(['b', 'a']);
+  });
+
   it('flags a page that has a proposed claim or is itself proposed', () => {
     const proposed = proposedPageIds([...facts, fact('g', 'p2', 'One', 'Gone', { state: 'proposed', deleted: 1 })]);
     expect(needsReview(pages[0], proposed)).toBe(true);
