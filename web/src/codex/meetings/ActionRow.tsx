@@ -127,7 +127,7 @@ export function ActionRow({ row, meeting, meta: metaText, noBadge, extraItems }:
               {snoozable && <MenuItem icon="clock" onClick={() => setMenu('snooze')}>Snooze</MenuItem>}
               <MenuItem icon="edit" onClick={close(() => openTask(row))}>Edit</MenuItem>
               {meeting && status === 'open' && <MenuItem icon="issues" href={linearIssue(row, meeting)} onClick={() => setMenu(null)}>New Linear issue</MenuItem>}
-              {meeting && <MenuItem icon="copy" onClick={close(() => copyText(draftFor(row, meeting)))}>Copy as message</MenuItem>}
+              {meeting && <MenuItem icon="copy" onClick={close(() => copyText(draftFor(row, meeting), 'Message copied'))}>Copy as message</MenuItem>}
               {!meeting && row.source_url && <MenuItem icon="link-external" href={safeHref(row.source_url)} onClick={() => setMenu(null)}>Open source</MenuItem>}
               {!meeting && row.draft && <MenuItem icon="copy" onClick={close(() => copyText(row.draft!, 'Draft copied'))}>Copy draft</MenuItem>}
               <MenuSeparator />

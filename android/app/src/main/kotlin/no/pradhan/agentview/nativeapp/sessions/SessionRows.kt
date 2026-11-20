@@ -125,7 +125,7 @@ class ChatRows(
         onUnread = { sessionId?.let { hub.markUnread(it) } },
         muted = sessionId != null && sessionId in muted,
         onMute = { sessionId?.let { hub.setMuted(it, it !in muted) } },
-        onLink = { sessionId?.let { clipboard.setText(AnnotatedString("${hub.origin.value}/?session=$it")); hub.notice.value = "Copied the chat link" } },
+        onLink = { sessionId?.let { clipboard.setText(AnnotatedString("${hub.origin.value}/?session=$it")); hub.notice.value = "Link copied" } },
     )
 
     fun openSaved(sessionId: String) {

@@ -188,7 +188,7 @@ private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>) {
             if (link != null || copyable || canRead || hasNotes) MoreButton { close ->
                 if (link != null) MenuItem("Open calendar", "calendar", { close(); uri.openUri(link) })
                 if (copyable) MenuItem("Copy follow-up", "mail", { close(); clip.setText(AnnotatedString(followUpText(m, all))); c.actions.say("Follow-up copied") })
-                if (copyable) MenuItem("Copy as Markdown", "copy", { close(); clip.setText(AnnotatedString(meetingMarkdown(m, all))); c.actions.say("Copied") })
+                if (copyable) MenuItem("Copy as Markdown", "copy", { close(); clip.setText(AnnotatedString(meetingMarkdown(m, all))); c.actions.say("Meeting copied") })
                 if (canRead) MenuItem(if (reading) "Reading" else "Read again", "sync", { close(); read() }, enabled = !reading)
                 if (hasNotes) MenuSeparator()
                 if (hasNotes) MenuItem("Delete notes", "trash", { close(); c.actions.change(m, mapOf("notes" to ""), "Notes deleted") }, danger = true)

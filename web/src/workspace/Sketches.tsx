@@ -83,7 +83,7 @@ function SketchView({ file, device, theme, onDevice, onTheme, onBack }: { file: 
           {menu && (
             <Menu trigger={more} onClose={() => setMenu(false)}>
               <MenuItem onClick={() => { setMenu(false); setUi({ openFile: file.path, follow: false }); }}>Open file</MenuItem>
-              <MenuItem onClick={() => { setMenu(false); copyText(`${cwd}/${file.path}`).then(() => notice('Copied the path'), () => notice('Copy failed')); }}>Copy path</MenuItem>
+              <MenuItem onClick={() => { setMenu(false); copyText(`${cwd}/${file.path}`).then(() => notice('Path copied'), () => notice('Copy failed')); }}>Copy path</MenuItem>
             </Menu>
           )}
         </span>

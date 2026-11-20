@@ -48,7 +48,7 @@ fun ReplySection(rows: List<Row>, filtered: Boolean, onClear: () -> Unit, now: L
     val sendText = "Send all ${faq.size} FAQ answers"
     val copyText = "Copy $admins access and limit requests"
     val sendAll = { sending = true; replies.sendAllFaq(faq) { sending = false } }
-    val copy = { clip.setText(AnnotatedString(adminList(rows))); actions.say("Copied $admins requests") }
+    val copy = { clip.setText(AnnotatedString(adminList(rows))); actions.say("$admins requests copied") }
     SectionHeader("Replies", rows.size.toString(), action = {
         when {
             filtered -> {

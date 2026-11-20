@@ -14,7 +14,7 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
   const people = useMemo(() => [...new Set(log.flatMap((d) => peopleOf(d.meeting)))].sort((a, b) => a.localeCompare(b)), [log]);
   const who = people.includes(person) ? person : '';
   const rows = decisionsWith(log, who);
-  const copy = () => copyText(decisionsMarkdown(rows));
+  const copy = () => copyText(decisionsMarkdown(rows), 'Decisions copied');
   return (
     <div className="mt-log">
       {(people.length > 0 || rows.length > 0) && (

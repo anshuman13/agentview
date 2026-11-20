@@ -123,7 +123,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
             case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={() => void onPin!(!pinned)}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
             case 'unread': return <MenuItem key={key} icon="mail" onClick={() => markUnread(sessionId!)}>Mark as unread</MenuItem>;
             case 'mute': return <MenuItem key={key} icon={muted ? 'bell' : 'bell-slash'} onClick={() => { setMuted(sessionId!, !muted); setMute(!muted); }}>{muted ? 'Unmute' : 'Mute'}</MenuItem>;
-            case 'link': return <MenuItem key={key} icon="link" onClick={() => copyText(`${location.origin}/?session=${sessionId}`, 'Copied the chat link')}>Copy link</MenuItem>;
+            case 'link': return <MenuItem key={key} icon="link" onClick={() => copyText(`${location.origin}/?session=${sessionId}`, 'Link copied')}>Copy link</MenuItem>;
             case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={() => setRenaming(true)}>Rename</MenuItem>;
             case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={onBeside!}>Open beside</MenuItem>;
             case 'close': return <MenuItem key={key} icon="close" onClick={onClose!}>Close chat</MenuItem>;

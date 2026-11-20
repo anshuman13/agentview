@@ -34,7 +34,7 @@ function Block({ name, children }: { name: string; children: ReactNode }) {
   const copyLink = () => {
     const { bare, width } = parseDesignQuery(location.search);
     replaceUrl(location.search, `#${id}`);
-    copyText(blockLink(location.origin, location.search, id, theme, bare ? 'phone' : width));
+    copyText(blockLink(location.origin, location.search, id, theme, bare ? 'phone' : width), 'Link copied');
   };
   return (
     <Guard retry>

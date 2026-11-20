@@ -66,7 +66,7 @@ export function rememberChat(text: string) {
 
 export function copyChatMarkdown() {
   const st = getState();
-  copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? '')).then(() => notice('Copied the chat as Markdown'), () => notice('Could not copy'));
+  copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? '')).then(() => notice('Chat copied'), () => notice('Could not copy'));
 }
 
 export function copyLastReply() {
