@@ -165,10 +165,7 @@ class ChatRows(
         }
         val draft = draftSnippet(hub.draft(c.id))
         return buildAnnotatedString {
-            if (draft != null) {
-                withStyle(SpanStyle(color = av.err)) { append("Draft: ") }
-                append("$draft · ")
-            }
+            appendDraft(draft)
             append(metaLine(repo, branch, c.model?.let(::shortModel), providerMark(c.provider), when_, pr?.text, c.todos?.let { "${it.done}/${it.total}" }))
             if (line != null) {
                 append(" · ")
@@ -184,13 +181,23 @@ class ChatRows(
         val branch = (s.gitBranch ?: repoBranch(s.cwd)).takeIf { !isDefaultBranch(it) }
         ChatRow(
             title = (if (opening.value == s.sessionId) "Opening… " else "") + s.title.ifBlank { "Untitled" },
-            meta = buildAnnotatedString { append(s.summary?.takeIf { it.isNotBlank() }?.let { metaLine(since(s.lastModified), it) } ?: metaLine(repo, branch, providerMark(s.provider), since(s.lastModified))) },
+            meta = buildAnnotatedString {
+                appendDraft(draftSnippet(hub.draftOfSession(s.sessionId)))
+                append(s.summary?.takeIf { it.isNotBlank() }?.let { metaLine(since(s.lastModified), it) } ?: metaLine(repo, branch, providerMark(s.provider), since(s.lastModified)))
+            },
             state = chatState(null, s, seen),
             selected = false,
             actions = actions(s.sessionId, s.title, null),
             onClick = { scope.launch { opening.value = s.sessionId; if (hub.openSaved(s.sessionId)) onOpen(); opening.value = null } },
         )
     }
+}
+
+@Composable
+private fun AnnotatedString.Builder.appendDraft(draft: String?) {
+    if (draft == null) return
+    withStyle(SpanStyle(color = av.err)) { append("Draft: ") }
+    append("$draft · ")
 }
 
 class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null)
@@ -245,7 +252,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
     val unread = shown == ChatState.Done || shown == ChatState.Needs
     ListRow(
         boldIf(unread, title),
-        meta, selected = selected, onClick = onClick,
+        meta, lines = 1, metaLines = 1, selected = selected, onClick = onClick,
         onLongClick = if (actions.canPin) actions.onRename else null,
         leading = { StateDot(shown) },
         state = when {

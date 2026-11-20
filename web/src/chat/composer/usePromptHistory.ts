@@ -1,20 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getState, useStore } from '../../app/store';
 import { storedStrings } from '../../ui/util';
-import { buildHistory, readDraft, saveDraft, STORED_KEY } from './composerLogic';
+import { buildHistory, draftKey, readDraft, saveDraft, STORED_KEY } from './composerLogic';
 import type { ChatEvent } from '../../../../shared/protocol';
 
 type Hist = { list: string[]; index: number; draft: string };
 
-export function useDraft(chat: string, onChatChange: () => void) {
-  const [text, setText] = useState(() => readDraft(chat));
-  const draftFor = useRef(chat);
+export function useDraft(chat: string, sessionId: string | null, onChatChange: () => void) {
+  const key = draftKey(chat, sessionId);
+  const [text, setText] = useState(() => readDraft(key, chat));
+  const draftFor = useRef({ chat, key });
   useEffect(() => {
-    if (draftFor.current === chat) return saveDraft(chat, text);
-    draftFor.current = chat;
-    setText(readDraft(chat));
+    const was = draftFor.current;
+    draftFor.current = { chat, key };
+    if (was.chat === chat) {
+      if (was.key !== key) saveDraft(was.key, '');
+      return saveDraft(key, text);
+    }
+    setText(readDraft(key, chat));
     onChatChange();
-  }, [chat, text]);
+  }, [chat, key, text]);
   return [text, setText] as const;
 }
 

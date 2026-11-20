@@ -168,7 +168,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
             Button("Continue at ${clock(resume.reset)}", { hub.sendAt(clock(resume.reset), resume.prompt) {} }, variant = ButtonVariant.Tinted, icon = "clock")
         }
         run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) }
-        Composer(hub, live.id, session, running, pending.isNotEmpty(), run)
+        Composer(hub, live.id, live.sessionId, session, running, pending.isNotEmpty(), run)
     }
     ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent, run)
     BuildSheetsHost(hub, live.id, buildSheets)

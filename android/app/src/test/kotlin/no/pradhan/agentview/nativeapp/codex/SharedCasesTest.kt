@@ -52,6 +52,7 @@ import no.pradhan.agentview.nativeapp.chat.foldTurns
 import no.pradhan.agentview.nativeapp.chat.WorkTitle
 import no.pradhan.agentview.nativeapp.chat.workTitle
 import no.pradhan.agentview.nativeapp.chat.chatMarkdown
+import no.pradhan.agentview.nativeapp.chat.draftKey
 import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.LimitResume
 import no.pradhan.agentview.nativeapp.chat.limitResume
@@ -336,6 +337,10 @@ class SharedCasesTest {
 
     @Test fun handoffText() {
         for (c in cases("handoff-text")) assertEquals(c.str("name"), c.str("expected"), handoffText(c.str("sessionId")))
+    }
+
+    @Test fun draftKey() {
+        for (c in cases("draft-key")) assertEquals(c.str("name"), c.str("expected"), draftKey(c.str("chat"), c.nullable("sessionId")?.jsonPrimitive?.content))
     }
 
     @Test fun latestChecklist() {

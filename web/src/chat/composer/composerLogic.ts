@@ -172,11 +172,22 @@ export async function terminalId(url: (path: string) => string): Promise<string 
 
 export const STORED_KEY = 'agentview.prompts';
 
-const draftKey = (chat: string) => `agentview.draft.${chat}`;
+// A draft lives under the chat's Claude session id, which outlives the live chat id, and under the live id until the chat has one.
+export const draftKey = (chat: string, sessionId?: string | null) => sessionId || chat;
 
-export function readDraft(chat: string) {
+const storageKey = (key: string) => `agentview.draft.${key}`;
+
+// A draft stored under the live id before the chat had a session id moves to the session id's key when read.
+export function readDraft(key: string, liveId?: string) {
   try {
-    return localStorage.getItem(draftKey(chat)) ?? '';
+    const stored = localStorage.getItem(storageKey(key));
+    if (stored || !liveId || liveId === key) return stored ?? '';
+    const old = localStorage.getItem(storageKey(liveId)) ?? '';
+    if (old) {
+      localStorage.setItem(storageKey(key), old);
+      localStorage.removeItem(storageKey(liveId));
+    }
+    return old;
   } catch {
     return '';
   }
@@ -185,10 +196,10 @@ export function readDraft(chat: string) {
 // The first non-empty line of a draft, for the sidebar's Draft: line.
 export const draftLine = (text: string) => text.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
 
-export function saveDraft(chat: string, text: string) {
+export function saveDraft(key: string, text: string) {
   try {
-    if (text) localStorage.setItem(draftKey(chat), text);
-    else localStorage.removeItem(draftKey(chat));
+    if (text) localStorage.setItem(storageKey(key), text);
+    else localStorage.removeItem(storageKey(key));
   } catch {}
 }
 
