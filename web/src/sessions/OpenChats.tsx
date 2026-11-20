@@ -10,7 +10,7 @@ import { ago, markSegments, pressable, save, stored } from '../ui/util';
 import { queryWords } from '../codex/data/ask/match';
 import { Bin } from './Bin';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
-import { byUrgency, chatFinder, chatState, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, repoName, usePins, useWorkspace, type Folder, type HeldOrder, type RepoGroup } from './folders';
+import { byUrgency, chatFinder, chatState, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, waitingChats, repoName, usePins, useWorkspace, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
@@ -110,6 +110,7 @@ export function OpenChats() {
     });
   }, [live, chats, folders, filter, pins]);
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
+  const shownWaiting = useMemo(() => waitingChats(live, chats, folders, filter), [live, chats, folders, filter]);
   const order = useMemo(() => {
     const pinned = pins.flatMap((id) => live.filter((c) => c.sessionId === id));
     return chatOrder(waiting, pinned, orderGroups(allGroups, frozen));
@@ -149,8 +150,8 @@ export function OpenChats() {
         <FilterInput value={filter} set={setFilter} />
         <IconButton icon="add" label="New session in a repo" onClick={() => setUi({ repoPicker: true })} />
       </div>
-      <NeedsYou n={waiting.length}>
-        {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
+      <NeedsYou n={shownWaiting.length} filter={filter}>
+        {shownWaiting.map((c) => row(c, c.cwd.split('/').pop()))}
       </NeedsYou>
       {pinnedRows.length > 0 && (
         <div className="tree needs">

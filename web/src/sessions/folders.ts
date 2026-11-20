@@ -209,6 +209,12 @@ export function findHere(folders: Folder[], cwd: string) {
 const urgency = (c: LiveChat) => (c.pending ? 0 : c.running ? 1 : 2);
 export const byUrgency = (a: LiveChat, b: LiveChat) => urgency(a) - urgency(b) || b.lastActive - a.lastActive;
 
+// The chats waiting on the user that match the search, most urgent first.
+export function waitingChats(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter: string) {
+  const find = chatFinder(filter, chats);
+  return live.filter((c) => c.pending && (!find.active || find.match(c.title, c.sessionId, repoName(folders, c.cwd)))).sort(byUrgency);
+}
+
 export const PINS_URL = '/api/sessions/pins';
 
 // Pins live on the Mac, so every device reads the same list; it reloads whenever the stream reconnects.

@@ -172,6 +172,16 @@ fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatIt
     }
 }
 
+// Chats waiting on the user that match the filter, most urgent first.
+fun waitingRows(live: List<LiveChat>, ws: Workspace, filter: String): List<LiveChat> {
+    val words = queryWords(filter)
+    val saved = ws.saved.associateBy { it.sessionId }
+    return live.filter { c ->
+        val s = saved[c.sessionId]
+        c.pending > 0 && (words.isEmpty() || matchesWords(words, c.title, s?.title, s?.firstPrompt, folderName(folderKey(c.cwd, ws.repos, ws.trees))))
+    }.sortedWith(byUrgency)
+}
+
 data class Glance(val running: Int, val needs: Int, val unread: Int)
 
 fun groupGlance(g: RepoGroup, seen: Map<String, Long>): Glance {

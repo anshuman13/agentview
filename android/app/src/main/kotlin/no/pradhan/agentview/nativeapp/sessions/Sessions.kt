@@ -165,7 +165,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
     val all = remember(live, ws, filter) { groupByRepo(live, ws, filter) }
     val groups = remember(all, segment) { all.filter { segmentOf(it.key) == segment } }
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
-    val waiting = remember(live) { live.filter { it.pending > 0 }.sortedWith(byUrgency) }
+    val waiting = remember(live, ws, filter) { waitingRows(live, ws, filter) }
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {

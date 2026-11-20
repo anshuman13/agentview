@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { matcher, queryWords } from '../codex/data/ask/match';
 import { notice, send, useStore } from '../app/store';
 import { attentionPost } from './sessionApi';
 import { Icon } from '../ui/Icon';
@@ -11,8 +12,10 @@ const PR_KINDS = new Set<AttentionItem['kind']>(['review', 'ci', 'changes', 'rea
 const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues', stale: 'history', commit: 'git-commit', deploy: 'rocket' };
 
 // Chats waiting on the user plus GitHub items the server flagged (failing CI, reviews, assigned issues).
-export function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
-  const items = useStore((s) => s.attention);
+export function NeedsYou({ n, filter, children }: { n: number; filter: string; children: ReactNode }) {
+  const all = useStore((s) => s.attention);
+  const words = queryWords(filter);
+  const items = useMemo(() => (words.length ? all.filter((it) => matcher(words)(it.repo, it.title)) : all), [all, filter]);
   const cwd = useStore((s) => s.session.cwd);
   const live = useStore((s) => s.live);
   const prs = usePullRequests(cwd);
