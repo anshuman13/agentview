@@ -1,4 +1,4 @@
-import { MAX_GOAL_ROUNDS, type ChatRun, type Round } from './protocol.js';
+import { MAX_GOAL_ROUNDS, type ChatRun, type Round, type RoundOutcome } from './protocol.js';
 import { clock, span } from './util.js';
 
 // The run a chat is on now: its last open run, as on the server (Runs.activeFor).
@@ -39,6 +39,15 @@ export function mergeQuiet(rounds: Round[]): RoundGroup[] {
   }
   return groups;
 }
+
+const SUMMARY_ORDER: RoundOutcome[] = ['done', 'progress', 'blocked', 'question', 'failed', 'quiet'];
+
+// How the kept rounds went, by outcome: "2 done · 1 blocked · 8 nothing to do" (Android roundsSummary, fixture rounds-summary.json).
+export const roundsSummary = (rounds: Round[]) =>
+  SUMMARY_ORDER.map((o) => [o, rounds.filter((r) => r.outcome === o).length] as const)
+    .filter(([, n]) => n > 0)
+    .map(([o, n]) => `${n} ${o === 'quiet' ? 'nothing to do' : o}`)
+    .join(' · ');
 
 export const roundGroupText = (g: RoundGroup) =>
   g.count > 1 ? `Rounds ${g.first.n}-${g.last.n} · ${clock(g.last.at)} · nothing to do` : g.last.report ? 'Weekly report' : roundText(g.last);

@@ -13,6 +13,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 import no.pradhan.agentview.nativeapp.net.ChatRun
+import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 
 // The goal sheet and detail (web/src/sessions/GoalSheet.tsx, GoalDetail.tsx, goalLogic.ts and shared/goalForm.ts).
@@ -153,6 +154,20 @@ fun usageLine(run: ChatRun): String {
     val cost = run.capUsd?.takeIf { it > 0 }?.let { "${money(run.costUsd)} of $$it cap" }
     val usage = listOfNotNull(week, five).joinToString(" · ").ifEmpty { run.capPct?.let { "$it% cap" } ?: if (builds == null && cost == null) "No cap" else "" }
     return listOfNotNull(usage.ifEmpty { null }, cost, builds).joinToString(" · ")
+}
+
+// The loop card's cap row (web goalLogic.ts capLine, fixture cap-line.json): the week's share and the run's cost against their caps,
+// near within 10 points or at 80% of the cost cap; null without a cap.
+data class CapLine(val text: String, val near: Boolean)
+
+fun capLine(run: ChatRun): CapLine? {
+    val week = run.usage?.week
+    val pct = run.capPct?.takeIf { it > 0 && billing(run.provider) != "none" }
+    val usd = run.capUsd?.takeIf { it > 0 }
+    val parts = listOfNotNull(pct?.let { if (week != null) "Week ${Math.round(week.pct)}% of $it% cap" else "Stops at $it% of the week" }, usd?.let { "${money(run.costUsd)} of $$it cap" })
+    if (parts.isEmpty()) return null
+    val near = (pct != null && week != null && week.pct >= pct - 10) || (usd != null && run.costUsd >= 0.8 * usd)
+    return CapLine(parts.joinToString(" · "), near)
 }
 
 // shared/goalText.ts buildsLine: a run's build limit as its rows show it; empty without one.

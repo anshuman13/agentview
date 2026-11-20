@@ -61,11 +61,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 
-// The loop card above the composer (web/src/chat/cards/LoopCard.tsx): state and Pause in the head, what is happening now, the running agents, then the plan line on a goal or the what line and cost on other kinds.
+// The loop card above the composer (web/src/chat/cards/LoopCard.tsx): state and Pause in the head, what is happening now, the running agents, then the plan line on a goal or the what line and cost on other kinds, the cap row and the Rounds row that shows the history.
 
 @Composable
 fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAgent: (String) -> Unit, onOpenAgents: () -> Unit) {
     var rounds by rememberSaveable(run.id) { mutableStateOf(false) }
+    var all by rememberSaveable(run.id) { mutableStateOf(false) }
     var board by rememberSaveable(run.id) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val stopOnly = run.kind == "tries" || run.kind == "job"
@@ -106,7 +107,7 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAg
             ListRow(
                 state.title, meta.ifEmpty { null }, lines = 2, compact = true,
                 leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
-                onClick = if ((goal || run.kind == "loop") && state.source == "round") ({ rounds = !rounds }) else detail,
+                onClick = detail,
             )
             agents.singleOrNull()?.let { a ->
                 ListRow(a.slug ?: a.description, "${a.type} · ${agentAge(a.startedAt, now)}", leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, compact = true, onClick = { onOpenAgent(a.id) })
@@ -114,8 +115,22 @@ fun LoopCard(hub: Hub, run: ChatRun, live: LiveChat, needsYou: Boolean, onOpenAg
             if (agents.size > 1) ListRow(plural(agents.size, "agent"), agents.joinToString(", ") { it.slug ?: it.description }, compact = true, leading = { AvIcon("hubot", null, Tokens.iconSm, tint = av.fgMuted) }, stateSlot = false, onClick = onOpenAgents)
             if (goal) ListRow(progress?.let { "Plan $it" } ?: run.what, compact = true, stateSlot = false, onClick = detail)
             else ListRow(run.what, money(run.costUsd, billing(run.provider)), compact = true, stateSlot = false, onClick = detail)
+            capLine(run)?.let { cap ->
+                ListRow(cap.text, lines = 1, compact = true, leading = { AvIcon("dashboard", null, Tokens.iconSm, tint = av.fgMuted) }, state = if (cap.near) ({ Badge("Near cap", BadgeTone.Waiting) }) else null)
+            }
+            if ((goal || run.kind == "loop") && run.rounds.isNotEmpty()) {
+                ListRow(
+                    plural(run.round, "round"), "${roundsSummary(run.rounds)} · ${money(run.rounds.sumOf { it.costUsd }, billing(run.provider))}", lines = 1, compact = true,
+                    trailing = { AvIcon(if (rounds) "chevron-up" else "chevron-down", null, Tokens.iconSm, tint = av.fgMuted) },
+                    onClick = { rounds = !rounds },
+                )
+                if (rounds) {
+                    val groups = mergeQuiet(run.rounds).asReversed()
+                    (if (all) groups else groups.take(10)).forEach { g -> RoundRow(g, run.provider, compact = true) { hub.showTurn.value = it } }
+                    if (!all && groups.size > 10) Button("Show all ${groups.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                }
+            }
             run.rounds.lastOrNull { it.report != null }?.let { r -> RoundRow(RoundGroup(r, r, 1, r.costUsd), run.provider, compact = true) { hub.showTurn.value = it } }
-            if (rounds && (goal || run.kind == "loop")) mergeQuiet(run.rounds).takeLast(10).asReversed().forEach { g -> RoundRow(g, run.provider, compact = true) { hub.showTurn.value = it } }
           }
         }
     }

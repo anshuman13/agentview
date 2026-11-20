@@ -11,7 +11,7 @@ import { appCounts } from '../../shared/counts';
 import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
 import { limitResume } from '../../shared/limitResume';
-import { buildsLine, finishedLine, goalEnd, mergeQuiet, runDetail } from '../../shared/goalText';
+import { buildsLine, finishedLine, goalEnd, mergeQuiet, roundsSummary, runDetail } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, ChatRun, LiveChat, Provider, Round, Try } from '../../shared/protocol';
@@ -40,6 +40,7 @@ import { can } from './chat/capabilitiesLogic';
 import { addUse, buildHistory, chatMarkdown, draftKey, failedLine, ghostFor, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
 import { composerPlaceholder, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
 import { headerState, runLine, stoppedText } from './sessions/runLogic';
+import { capLine } from './sessions/goalLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { cadenceLine, cadenceOf } from './codex/data/tasks/recur';
@@ -520,6 +521,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; rounds: Round[]; expected: [number, number, number, number][] }>('merge-quiet')) {
     it(`mergeQuiet: ${c.name}`, () => expect(mergeQuiet(c.rounds).map((g) => [g.first.n, g.last.n, g.count, g.costUsd])).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; rounds: Round[]; expected: string }>('rounds-summary')) {
+    it(`roundsSummary: ${c.name}`, () => expect(roundsSummary(c.rounds)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; run: Partial<ChatRun>; expected: ReturnType<typeof capLine> }>('cap-line')) {
+    it(`capLine: ${c.name}`, () => expect(capLine(run(c.run))).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; expected: string }>('run-line')) {

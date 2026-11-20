@@ -122,6 +122,9 @@ import no.pradhan.agentview.nativeapp.sessions.heldOrder
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
 import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
 import no.pradhan.agentview.nativeapp.codex.autopilot.mergeQuiet
+import no.pradhan.agentview.nativeapp.codex.autopilot.roundsSummary
+import no.pradhan.agentview.nativeapp.codex.autopilot.CapLine
+import no.pradhan.agentview.nativeapp.codex.autopilot.capLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
 import no.pradhan.agentview.nativeapp.chat.BuildEntry
@@ -558,6 +561,20 @@ class SharedCasesTest {
             val expected = c.getValue("expected").jsonArray.map { g -> g.jsonArray.map { it.jsonPrimitive.double } }
             val actual = mergeQuiet(rounds).map { listOf(it.first.n.toDouble(), it.last.n.toDouble(), it.count.toDouble(), it.costUsd) }
             assertEquals(c.str("name"), expected, actual)
+        }
+    }
+
+    @Test fun roundsSummary() {
+        for (c in cases("rounds-summary")) {
+            assertEquals(c.str("name"), c.str("expected"), roundsSummary(c.getValue("rounds").jsonArray.map { it.decode<Round>() }))
+        }
+    }
+
+    @Test fun capLine() {
+        for (c in cases("cap-line")) {
+            val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
+            val e = c.nullable("expected")?.jsonObject
+            assertEquals(c.str("name"), e?.let { CapLine(it.str("text"), it.getValue("near").jsonPrimitive.boolean) }, capLine(run))
         }
     }
 

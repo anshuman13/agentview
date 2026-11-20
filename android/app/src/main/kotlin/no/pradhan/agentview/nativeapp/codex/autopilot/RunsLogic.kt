@@ -89,6 +89,12 @@ fun mergeQuiet(rounds: List<Round>): List<RoundGroup> {
     return groups
 }
 
+// How the kept rounds went, by outcome: "2 done · 1 blocked · 8 nothing to do" (web shared/goalText.ts roundsSummary, fixture rounds-summary.json).
+fun roundsSummary(rounds: List<Round>) = listOf("done", "progress", "blocked", "question", "failed", "quiet")
+    .map { o -> o to rounds.count { it.outcome == o } }
+    .filter { it.second > 0 }
+    .joinToString(" · ") { (o, n) -> "$n ${if (o == "quiet") "nothing to do" else o}" }
+
 fun roundGroupText(g: RoundGroup) = if (g.count > 1) "Rounds ${g.first.n}-${g.last.n} · ${clock(g.last.at)} · nothing to do" else roundText(g.last)
 
 // The loop card's first row (web composerLogic loopNow): the agent's status or the last round, whichever is newer.

@@ -6,6 +6,7 @@ import type { ChatRun, RunOp } from '../../../shared/protocol';
 import { nextClock } from '../../../shared/util';
 import { buildsLine, goalEnd } from '../../../shared/goalText';
 import { ADVISOR_LOOP_EVERY } from '../../../shared/advisors';
+import { billing } from '../../../shared/providers';
 import { stoppedText } from './runLogic';
 import { showSnack } from '../codex/view';
 
@@ -58,6 +59,16 @@ export function usageLine(run: ChatRun) {
   const cost = run.capUsd ? `${money(run.costUsd)} of $${run.capUsd} cap` : '';
   const usage = parts.length ? parts.join(' · ') : run.capPct ? `${run.capPct}% cap` : cost || builds ? '' : 'No cap';
   return [usage, cost, builds].filter(Boolean).join(' · ');
+}
+
+// The loop card's cap row: the week's share and the run's cost against their caps, near within 10 points or at 80% of the cost cap; null without a cap (Android capLine, fixture cap-line.json).
+export function capLine(run: ChatRun) {
+  const week = run.usage?.week;
+  const pct = billing(run.provider) === 'none' ? 0 : run.capPct ?? 0;
+  const parts = [pct && (week ? `Week ${Math.round(week.pct)}% of ${pct}% cap` : `Stops at ${pct}% of the week`), run.capUsd && `${money(run.costUsd)} of $${run.capUsd} cap`].filter(Boolean);
+  if (!parts.length) return null;
+  const near = Boolean(pct && week && week.pct >= pct - 10) || Boolean(run.capUsd && run.costUsd >= 0.8 * run.capUsd);
+  return { text: parts.join(' · '), near };
 }
 
 let looking = 0;
