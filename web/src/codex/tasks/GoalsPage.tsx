@@ -48,11 +48,11 @@ function GoalGroup({ goal, items, showProfile, now, reopen, move, rename, remove
       <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={btn} onClose={() => setMenu(false)}>
-          <MenuItem onClick={() => { setMenu(false); cancelled.current = false; setEditing(true); }}>Rename</MenuItem>
-          {start === thisWeek && <MenuItem disabled={!!block} onClick={() => { setMenu(false); move(goal); }}>{block ? MOVE_TEXT[block] : 'Move to next week'}</MenuItem>}
-          {past && <MenuItem disabled={!!block} onClick={() => { setMenu(false); reopen(goal); }}>{block ? BLOCK_TEXT[block] : 'Reopen this week'}</MenuItem>}
+          <MenuItem icon="edit" onClick={() => { setMenu(false); cancelled.current = false; setEditing(true); }}>Rename</MenuItem>
+          {start === thisWeek && <MenuItem icon="arrow-right" disabled={!!block} onClick={() => { setMenu(false); move(goal); }}>{block ? MOVE_TEXT[block] : 'Move to next week'}</MenuItem>}
+          {past && <MenuItem icon="discard" disabled={!!block} onClick={() => { setMenu(false); reopen(goal); }}>{block ? BLOCK_TEXT[block] : 'Reopen this week'}</MenuItem>}
           <MenuSeparator />
-          <MenuItem danger onClick={() => { setMenu(false); remove(goal); }}>Delete</MenuItem>
+          <MenuItem danger icon="trash" onClick={() => { setMenu(false); remove(goal); }}>Delete</MenuItem>
         </Menu>
       )}
     </>

@@ -74,9 +74,9 @@ export function LoopCard() {
                 <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
                 {menu && (
                   <Menu trigger={more} onClose={() => setMenu(false)}>
-                    {!paused && <MenuItem onClick={() => { setMenu(false); control('now'); }}>Run now</MenuItem>}
+                    {!paused && <MenuItem icon="play" onClick={() => { setMenu(false); control('now'); }}>Run now</MenuItem>}
                     {!paused && <MenuSeparator />}
-                    <MenuItem danger onClick={() => { setMenu(false); stop(); }}>Stop</MenuItem>
+                    <MenuItem danger icon="debug-stop" onClick={() => { setMenu(false); stop(); }}>Stop</MenuItem>
                   </Menu>
                 )}
               </>
