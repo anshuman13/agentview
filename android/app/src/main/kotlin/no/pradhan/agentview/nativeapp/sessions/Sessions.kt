@@ -207,9 +207,12 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {
                 when {
                     live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty() -> OfflineSessions(rows, waitingForServer)
-                    groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty() && hits.isEmpty() ->
-                        EmptyState(if (filter.isNotBlank()) "No repo or chat matches" else "No ${profileLabel(segment).lowercase()} chats yet")
-                    else -> SessionsList(rows, filters, groups, pinned, waiting, hits, held)
+                    else -> {
+                        val empty = if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty() && hits.isEmpty()) {
+                            if (filter.isNotBlank()) "No repo or chat matches" else "No ${profileLabel(segment).lowercase()} chats yet"
+                        } else null
+                        SessionsList(rows, filters, groups, pinned, waiting, hits, held, empty)
+                    }
                 }
             }
         }
@@ -231,7 +234,7 @@ private fun OfflineSessions(rows: ChatRows, waitingForServer: Boolean) {
 }
 
 @Composable
-private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<RepoGroup>, pinned: List<ChatItem>, waiting: List<LiveChat>, hits: List<MessageHit>, held: HeldOrder) {
+private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<RepoGroup>, pinned: List<ChatItem>, waiting: List<LiveChat>, hits: List<MessageHit>, held: HeldOrder, empty: String?) {
     val ws = rows.ws
     val filter = filters.filter
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
@@ -240,6 +243,7 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
     var binOpen by remember { mutableStateOf(false) }
     var emptying by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
+        if (empty != null) item(key = "empty") { EmptyState(empty) }
         if (waiting.isNotEmpty()) {
             item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
             lazyGroup(waiting, { "needs-${it.id}" }) { rows.LiveRow(it, folderName(folderKey(it.cwd, ws.repos, ws.trees))) }

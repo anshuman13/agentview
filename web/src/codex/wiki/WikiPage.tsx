@@ -65,7 +65,7 @@ export function WikiPage({ id }: { id: string }) {
   return (
     <div className="wk">
       <header className="wk-head">
-        <IconButton icon="arrow-left" label="Back" title="Back to the wiki" onClick={back} />
+        <IconButton icon="arrow-left" label="Back" onClick={back} />
         {page && (
           <WikiPageHead page={page} isMemory={!pid} groups={groups} pending={pending} renaming={renaming} setRenaming={setRenaming} cancelled={edits.cancelled} onRename={rename} onPropose={() => setClaimDraft((v) => v ?? '')}
             menu={menu} setMenu={setMenu} moreBtn={moreBtn} onAsk={() => setAsking(true)} onArchive={edits.archive} />
@@ -73,7 +73,7 @@ export function WikiPage({ id }: { id: string }) {
       </header>
       <div className="wk-scroll">
         {!page ? (
-          <EmptyState size="sm" icon="book" title="This page is gone" action={<Button size="sm" onClick={back}>Back to the wiki</Button>} />
+          <EmptyState size="sm" icon="book" title="This page is gone" action={<Button size="sm" onClick={back}>Back</Button>} />
         ) : (
           <div className="wk-doc">
             <article className="wk-article">

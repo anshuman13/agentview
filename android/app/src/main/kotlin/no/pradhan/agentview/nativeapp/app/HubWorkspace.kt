@@ -127,7 +127,8 @@ private fun Hub.restore(sessionId: String, row: SavedSession?, pinned: Boolean) 
 private const val RESTORE_FAILED = "Could not restore the chat. It is still in the bin."
 
 fun Hub.loadBin() {
-    viewModelScope.launch { runCatching { api.bin() }.onSuccess { bin.value = it } }
+    val from = origin.value
+    viewModelScope.launch { runCatching { api.bin() }.onSuccess { if (from == origin.value) bin.value = it } }
 }
 
 fun Hub.restoreFromBin(sessionId: String) {
@@ -135,7 +136,11 @@ fun Hub.restoreFromBin(sessionId: String) {
     viewModelScope.launch {
         val ok = runCatching { api.restore(sessionId) }.isSuccess
         notice.value = if (ok) "Chat restored" else RESTORE_FAILED
-        if (ok) { refreshWorkspace(force = true); loadBin() }
+        if (ok) {
+            bin.value = bin.value.filterNot { it.sessionId == sessionId }
+            refreshWorkspace(force = true)
+            loadBin()
+        }
     }
 }
 
