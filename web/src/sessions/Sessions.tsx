@@ -13,6 +13,7 @@ import { FilterInput } from './FilterInput';
 import { RepoRow, SessionRow, WorktreeRow } from './RepoRow';
 import { WaitingRows } from './ChatRows';
 import { NeedsYou } from './NeedsYou';
+import { newChat } from '../app/newChat';
 
 const PAGE = 5;
 
@@ -65,7 +66,7 @@ export function Sessions() {
   const start = (dir: string) => {
     setError(null);
     invalidateWorkspace();
-    send({ type: 'new_session', cwd: dir });
+    newChat({ cwd: dir });
   };
 
   const call = async (url: string, fallback: string) => {

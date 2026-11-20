@@ -4,6 +4,7 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { QuickPick } from '../ui/QuickPick';
 import type { LiveChat } from '../../../shared/protocol';
 import { findHere, useWorkspace, worktreeRequest } from './folders';
+import { newChat } from '../app/newChat';
 
 export function FolderPicker({ onClose }: { onClose: () => void }) {
   const cwd = useStore((s) => s.session.cwd);
@@ -27,7 +28,7 @@ export function FolderPicker({ onClose }: { onClose: () => void }) {
   const pick = (v: string) => {
     if (v === 'new' && folder) return setAsk(worktreeRequest(folder, (_, err) => err && notice(err)));
     if (v.startsWith('live:')) send({ type: 'view', id: v.slice(5) });
-    if (v.startsWith('dir:')) send({ type: 'new_session', cwd: v.slice(4) });
+    if (v.startsWith('dir:')) newChat({ cwd: v.slice(4) });
     onClose();
   };
   return <QuickPick title="Switch worktree or chat" items={items} current={`live:${viewing}`} onPick={pick} onClose={onClose} />;

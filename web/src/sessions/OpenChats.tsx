@@ -15,6 +15,7 @@ import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
 import { NeedsYou } from './NeedsYou';
+import { newChat } from '../app/newChat';
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 const RECENT = 5;
@@ -165,7 +166,7 @@ export function OpenChats() {
               <span className="name">{g.name}</span>
               <span className="meta"><GroupGlance g={g} seen={seen} /></span>
               <span className="acts">
-                <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); send({ type: 'new_session', cwd: g.key }); }}><Icon name="add" small /></button>
+                <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); newChat({ cwd: g.key }); }}><Icon name="add" small /></button>
               </span>
             </div>
             {isOpen(g) && g.open.filter((c) => !c.pending).map((c) => row(c))}

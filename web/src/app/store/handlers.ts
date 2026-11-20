@@ -8,6 +8,7 @@ import { markSeen } from './seen';
 import { send } from './send';
 import { cache, cacheShown, view } from './view';
 import { providerLabel } from '../../../../shared/providers';
+import { rememberModels } from '../newChat';
 
 const repo = (c: LiveChat) => c.cwd.split('/').pop();
 const focus = (id: string) => () => send({ type: 'view', id });
@@ -148,9 +149,17 @@ function onAttention(m: Extract<ServerMessage, { type: 'attention' }>) {
   set({ attention: m.items });
 }
 
+// Model lists are kept per provider for the new chat and goal sheets, which open before any chat of that provider is on screen.
+function keepModels() {
+  const { session } = getState();
+  rememberModels(session.provider, session.models);
+}
+
 export function handle(m: ServerMessage) {
   switch (m.type) {
-    case 'init': return onInit(m);
+    case 'init':
+      onInit(m);
+      return keepModels();
     case 'findings': return setFindings(m.review);
     case 'error': return notice(m.text);
     case 'restarting': return setUi({ restarting: true });
@@ -160,7 +169,9 @@ export function handle(m: ServerMessage) {
     case 'pending': return onPending(m);
     case 'resolved': return set((s) => ({ pending: s.pending.filter((p) => p.id !== m.id) }));
     case 'file_changed': return onFileChanged(m);
-    case 'session': return set((s) => ({ session: { ...s.session, ...m.session } }));
+    case 'session':
+      set((s) => ({ session: { ...s.session, ...m.session } }));
+      return keepModels();
     case 'live': return onLive(m);
     case 'runs': return set({ runs: m.runs });
     case 'attention': return onAttention(m);
