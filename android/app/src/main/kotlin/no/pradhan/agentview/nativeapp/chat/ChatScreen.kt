@@ -32,6 +32,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.sendAt
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
@@ -159,6 +160,10 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         PendingList(pending, session?.permissionMode ?: "default", hub)
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", false) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
+        }
+        val resume = remember(view.events) { limitResume(view.events) }
+        if (resume != null && !running && run == null && !hub.readOnly) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
+            Button("Continue at ${clock(resume.reset)}", { hub.sendAt(clock(resume.reset), resume.prompt) {} }, variant = ButtonVariant.Tinted, icon = "clock")
         }
         run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) }
         Composer(hub, live.id, session, running, pending.isNotEmpty(), run)

@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../app/store';
 import { chatTitle as chatTitleOf, clock } from '../../../../shared/util';
+import { limitResume } from '../../../../shared/limitResume';
 import { REVIEW_LOCAL } from '../../ops/Findings';
 import { Pending } from '../../chat/cards/Pending';
 import { Composer } from '../../chat/Chat';
@@ -29,13 +30,6 @@ function lastReplyOf(turns: Turn[]) {
   for (let i = turns.length - 1; i >= 0; i--) if (turns[i].reply) return turns[i].reply;
 }
 
-// After a usage limit the last prompt can be sent again when the limit resets.
-function usageLimitOf(turns: Turn[]) {
-  const t = turns[turns.length - 1];
-  const reset = t && !t.phase ? t.notes.at(-1)?.reset : undefined;
-  return reset ? { at: clock(reset), prompt: t.prompt } : null;
-}
-
 export function Brief() {
   const events = useStore((s) => s.events);
   const status = useStore((s) => s.status);
@@ -62,7 +56,10 @@ export function Brief() {
   const extras = [advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const lastReply = lastReplyOf(turns);
   const doneSteps = useMemo(() => (turns.at(-1)?.notes ?? []).filter((n) => n.kind === 'done' && n.id.endsWith(':done')), [turns]);
-  const limit = useMemo(() => usageLimitOf(turns), [turns]);
+  const limit = useMemo(() => {
+    const resume = limitResume(events);
+    return resume && { at: clock(resume.reset), prompt: resume.prompt };
+  }, [events]);
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
   const phone = useNarrow();
   const run = useChatRun(sessionId);

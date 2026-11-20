@@ -256,7 +256,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   You or Claude and the age, and a tap opens that chat, like Slack's message search. The web sidebar Sessions search
   shows the same Messages list under the repos
 - Hovering a sent prompt in the web transcript shows Use again, which puts that prompt in the composer to edit and send
-  again (like editing a Slack message); queued and stopping prompts do not have it.
+  again (like editing a Slack message), and Copy, which copies the prompt text ("Prompt copied"); queued and stopping
+  prompts have neither (a queued one has Send now).
 - Scrolled up in a web chat that is running or has new rows, a Jump to latest button shows, with the count of finished
   replies that arrived since you scrolled up (a badge, 9+ at most; the tooltip reads "Jump to latest · 2 new replies"), like
   Slack's new messages pill. It is one control: a pill on a desktop, a round button with the badge on the phone
@@ -447,7 +448,8 @@ sends it once at that time. The chat composer's clock button (Send at, web) pick
 when it has passed, and sends the message as `/loop at HH:MM`; the menu says when it replaces a running loop or goal,
 and the loop card reads "Sends at HH:MM" with a Cancel button until it fires. When a turn ends on a usage limit,
 the timeline shows the reset time and a "Continue at
-HH:MM" link that schedules the last prompt that way. A fire that lands while
+HH:MM" link that schedules the last prompt that way (on the phone a Continue at button above the composer, while the
+chat is idle with no loop and not read-only; both clients use `limitResume`). A fire that lands while
 Claude is still working waits for the round to end. The loop lives in the AgentView server, so it survives a server
 restart and never depends on the CLI's own scheduled jobs. Your messages and Stop interrupt the current round but
 keep the loop; `/loop off` ends it. The loop card above the composer shows the round and the next fire time.
