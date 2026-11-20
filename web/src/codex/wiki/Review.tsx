@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
-import { approveAllChanges, chatOf, factTime, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki/wiki';
+import { approveAllChanges, chatOf, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki/wiki';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { MenuItem } from '../../ui/Menu';
@@ -198,7 +198,7 @@ function useLook() {
 function StaleRow({ fact: f, title }: { fact: Fact; title: Map<string, string | null> }) {
   const pageTitle = title.get(`${f.profile}:${f.page_id}`);
   const edits = useClaimEdits(f, pageTitle ?? '');
-  const months = Math.floor((Date.now() - factTime(f)) / (30 * 86_400_000));
+  const months = Math.floor((Date.now() - (f.at ?? 0)) / (30 * 86_400_000));
   return (
     <Row
       lines={2}
